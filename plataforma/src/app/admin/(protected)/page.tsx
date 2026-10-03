@@ -289,6 +289,16 @@ export default async function AdminHomePage() {
       action: 'Ver planes',
     });
   }
+  /* Sin lema, la portada del menú no tiene la frase bajo el nombre. Antes
+     salía «Sabor que enamora» de relleno; ahora se pide (CAT-03). */
+  if (resolved && !resolved.config.tagline && !resolved.content.portada.subtitle && allow('perfil') && !needsOnboarding) {
+    alerts.push({
+      key: 'lema', href: panelHref(base, '/admin/perfil'), level: 'info',
+      title: 'Tu menú no tiene lema',
+      desc: 'Una frase bajo tu nombre en la portada, como «Café de especialidad en la zona 10».',
+      action: 'Escribir lema',
+    });
+  }
   if (sinFoto > 0) {
     alerts.push({
       key: 'sin-foto', href: panelHref(base, '/admin/menu?filtro=sin-foto'), level: 'info',

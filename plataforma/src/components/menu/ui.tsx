@@ -7,7 +7,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { useId, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
-import { usePrice, useThemeConfig, useText } from '@/lib/theme/context';
+import { usePrice, useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { roleSize } from '@/lib/theme/resolve';
 
 /* ── Superficie de una pieza de la carta ──────────────────────
@@ -111,8 +111,20 @@ const TAG_MAP: Record<string, { icon: string }> = {
   veggie: { icon: 'leaf' }, veg: { icon: 'leaf' }, vegano: { icon: 'leaf' },
 };
 
+/** Lo escrito a mano en español que es una de las sugeridas («nuevo»). */
+const TAG_ALIAS: Record<string, string> = {
+  picante: 'hot', nuevo: 'new', nueva: 'new', favorito: 'fav', favorita: 'fav', vegano: 'veg', vegana: 'veg', veggie: 'veg',
+};
+
 export function Tag({ label, small = false }: { label: string; small?: boolean }) {
-  const meta = TAG_MAP[label.toLowerCase().trim()];
+  const content = useThemeContent();
+  const key = label.toLowerCase().trim();
+  const meta = TAG_MAP[key];
+  /* Las etiquetas sugeridas se guardan con su clave ('new', 'hot'…) y la
+     carta enseñaba la clave tal cual: «new», «nuevo» en minúscula. Se pinta
+     el nombre que el tema tiene para cada una (auditoría 2026-10-02, CAT-05). */
+  const alias = TAG_ALIAS[key] ?? key;
+  const shown = alias in content.tags ? content.tags[alias as keyof typeof content.tags] : label;
   /* Estaban a 9,5 y 10,5 px. «Picante» es justo el dato por el que alguien
      decide NO pedir un plato, y era el texto más pequeño de la carta. Pasan al
      piso del menú (12 px), que sigue multiplicando por el rol `tag` del tema.
@@ -130,7 +142,7 @@ export function Tag({ label, small = false }: { label: string; small?: boolean }
       }}
     >
       {meta && <Icon name={meta.icon} size={small ? 11 : 12} />}
-      {label}
+      {shown}
     </span>
   );
 }

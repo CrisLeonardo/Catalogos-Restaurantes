@@ -31,7 +31,7 @@ export default async function ResumenPage() {
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div>
-        <div className="t-kicker" style={{ fontSize: 11, marginBottom: 8 }}>{scope.name}</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)', marginBottom: 8 }}>{scope.name}</div>
         <h1 className="t-display" style={{ fontSize: 'clamp(22px, 4vw, 28px)', lineHeight: 1.15, margin: 0 }}>
           Resumen de hoy
         </h1>
@@ -61,7 +61,7 @@ export default async function ResumenPage() {
 
       {alerts.length > 0 && (
         <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div className="t-kicker" style={{ fontSize: 9.5 }}>Atención</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)' }}>Atención</div>
           {alerts.map((b) => (
             <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
               <Icon name="alertCircle" size={15} style={{ color: 'var(--c-warn)', flexShrink: 0 }} />
@@ -79,7 +79,7 @@ export default async function ResumenPage() {
       )}
 
       <div className="glass" style={{ borderRadius: 16, overflow: 'hidden' }}>
-        <div className="t-kicker" style={{ fontSize: 9.5, padding: '14px 18px 8px' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)', padding: '14px 18px 8px' }}>
           {varios ? 'Restaurante por restaurante · hoy' : 'Tu restaurante · hoy'}
         </div>
         {dash.branches.map((b) => (

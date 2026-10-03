@@ -19,7 +19,7 @@
 > se ve bien. Las auditorías anteriores (QA visual 09-22, velocidad 09-25) **no
 > se repiten**: lo que de ellas sigue abierto está en la sección de rendimiento.
 >
-> **Estado:** al 2026-10-03, 92 de 145 hallazgos hechos (los 6 P0 incluidos). Lo que queda espera una decisión tuya (⏸️), contenido tuyo (WEB-01/02/03, CAT-13) o es trabajo continuo (T-22/T-23/T-26); ver la Bitácora al final.
+> **Estado:** al 2026-10-03, 118 de 145 hallazgos hechos (los 6 P0 incluidos). Lo que queda espera una decisión tuya (⏸️), contenido tuyo (WEB-01/02/03, CAT-13) o es trabajo grande o continuo (REN-02, REN-04, T-22/T-23/T-26); ver la Bitácora al final.
 
 ---
 
@@ -40,21 +40,21 @@
 | # | Sección | Hallazgos | Hechos | ⏸️ Decisión |
 |---|---------|----------:|-------:|-----------:|
 | 1 | Transversal — sistema de diseño y textos | 26 | 22 | 0 |
-| 2 | Panel · Armazón y navegación | 10 | 9 | 1 |
+| 2 | Panel · Armazón y navegación | 10 | 10 | 1 |
 | 3 | Panel · Hoy | 5 | 4 | 1 |
 | 4 | Panel · Pedidos (En vivo, Cocina, Mesas, Tomar pedidos) | 13 | 8 | 4 |
 | 5 | Panel · Menú | 12 | 12 | 0 |
 | 6 | Panel · Clientes | 6 | 6 | 0 |
 | 7 | Panel · Negocio | 6 | 4 | 1 |
 | 8 | Panel · Ajustes | 20 | 18 | 2 |
-| 9 | Catálogo digital (lo que ve el comensal) | 13 | 4 | 1 |
-| 10 | Super Admin | 10 | 2 | 1 |
-| 11 | Mi cuenta (grupo) | 5 | 3 | 0 |
-| 12 | Web pública y marketing | 9 | 0 | 0 |
-| 13 | Rendimiento y salud del código | 10 | 0 | 1 |
-| | **Total** | **145** | **92** | **12** |
+| 9 | Catálogo digital (lo que ve el comensal) | 13 | 10 | 1 |
+| 10 | Super Admin | 10 | 9 | 1 |
+| 11 | Mi cuenta (grupo) | 5 | 5 | 0 |
+| 12 | Web pública y marketing | 9 | 6 | 0 |
+| 13 | Rendimiento y salud del código | 10 | 4 | 1 |
+| | **Total** | **145** | **118** | **12** |
 
-Por prioridad: **P0** 6 · **P1** 34 · **P2** 61 · **P3** 44. Hechos: los **6 P0**, 28 P1, 38 P2 y 20 P3.
+Por prioridad: **P0** 6 · **P1** 34 · **P2** 61 · **P3** 44. Hechos: los **6 P0**, 28 P1, 49 P2 y 35 P3.
 
 *(Se actualiza a mano al marcar.)*
 
@@ -401,7 +401,7 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   explicar por qué: quien venía de Negocio aterriza en Ajustes. Ligado a N-08.
   ✅ **Hecho 2026-10-02 (Fase 1).** Facturación apagada dice «La factura electrónica todavía no está activa» con enlace a Funciones (sin el «+» de crear: `EmptyState` acepta `icon: null`). La barra todavía dice «Panel» (va con T-10).
 
-- [ ] **N-10** · P2 · M · ⏸️ — **Sesión que se cae bajo carga (a investigar).**
+- [x] **N-10** · P2 · M · ⏸️ — **Sesión que se cae bajo carga (a investigar).**
   Durante el barrido, 2 de los 8 recorridos del panel aterrizaron en el login
   con la sesión viva («Continuar como…»). El layout trata cualquier fallo de
   `auth.getUser()` (también un error de red o un tiempo agotado) igual que «no
@@ -409,6 +409,7 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   visto en producción. Propuesta: distinguir error de «sin usuario» y reintentar
   una vez antes de expulsar. Dónde: `app/admin/(protected)/layout.tsx:45`,
   `lib/supabase/server.ts:113`.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Dos arreglos para la misma causa (un token de sesión que el servidor no logra refrescar a tiempo en una petición): `getStaffUser` reintenta una vez si `auth.getUser()` falla por red o 5xx (antes eso mandaba al login), y `getRestaurantBySlug` repite con la llave de servicio si la lectura falla por algo que no sea «no existe» (antes el candado te mandaba a Platillos). Reproducido antes: la primera entrada a Mesas saltaba a Platillos; después, 0 saltos en 12 entradas. Es intermitente: si vuelve a pasar, hay que mirar los registros de Render.
 
 ---
 
@@ -788,37 +789,44 @@ aquí es lo que todavía le cuesta pedidos.
   icono pequeño y atenuado.
   ✅ **Hecho 2026-10-02 (Fase 1).** Sin foto, el icono de la destacada se aparta arriba a la derecha y se atenúa (`BrandPattern` acepta `iconAt`/`iconOpacity`). Visto en Azúcar Negra y Tacos del Norte.
 
-- [ ] **CAT-03** · P2 · S — **«Sabor que enamora» publicado en restaurantes
+- [x] **CAT-03** · P2 · S — **«Sabor que enamora» publicado en restaurantes
   reales.** Es el eslogan de relleno y sale en cualquier menú cuyo dueño no
   escribió el suyo (Azúcar Negra, Tacos del Norte). Dejarlo vacío y pedirlo en
   «Necesita tu atención».
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** El lema por defecto pasa a vacío; «Sabor que enamora» guardado en un tema se trata como vacío (o como el lema real del restaurante si lo tiene), con pruebas. Sin lema la portada no pinta esa línea y Hoy pide escribirlo («Tu menú no tiene lema» → Perfil).
 
 - [ ] **CAT-04** · P2 · S · ⏸️ D-7 — **El QR de la mesa abre en la portada.** Con
   `?mesa=3` el comensal, ya sentado, ve la portada a pantalla completa y tiene que
   tocar «Ver el menú» antes de ver un plato. Con mesa, entrar directo a la carta
   (la portada sigue para el enlace general y redes).
 
-- [ ] **CAT-05** · P3 · S — **Insignias de tres estilos en la misma carta:**
+- [x] **CAT-05** · P3 · S — **Insignias de tres estilos en la misma carta:**
   «FAVORITO» (mayúsculas sobre naranja), «nuevo» (minúscula sin fondo), «Picante»
   (gris).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Las etiquetas sugeridas se pintan con su nombre del tema («Nuevo», no la clave `new` ni «nuevo» escrito a mano) y el sello de destacado ya no va en MAYÚSCULAS.
 
-- [ ] **CAT-06** · P3 · S — **El mismo icono (una mesa) en casi todos los
+- [x] **CAT-06** · P3 · S — **El mismo icono (una mesa) en casi todos los
   platillos sin foto**: repetido no aporta; mejor el icono de la categoría (ya
   existe) o solo el patrón de marca.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** `lib/category-icon.ts` (con pruebas): sin icono elegido, la carta y el panel usan el que sugiere el nombre de la categoría (Tacos → llama, Bebidas → taza, Postres → galleta), por palabra completa — antes «te» casaba con «fuertes».
 
-- [ ] **CAT-07** · P2 · S — **«Fidelidad» en el menú, «Lealtad» en el panel**: el
+- [x] **CAT-07** · P2 · S — **«Fidelidad» en el menú, «Lealtad» en el panel**: el
   mismo programa con dos nombres. Elegir uno (para el comensal, «Mis puntos» se
   entiende mejor).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** «Mis puntos» en la barra de la carta y «Tus puntos» en la cuenta, en vez de «Fidelidad».
 
-- [ ] **CAT-08** · P2 · S — **Pedido cancelado sin salida:** la página de
+- [x] **CAT-08** · P2 · S — **Pedido cancelado sin salida:** la página de
   seguimiento dice «Cancelado» y nada más — ni motivo, ni cómo escribir al
   restaurante (WhatsApp/teléfono), ni «Volver a pedir».
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** La tarjeta de pedido cancelado dice qué hacer y, si el restaurante tiene WhatsApp, «Escribir por WhatsApp» con el número de pedido ya escrito («Volver al menú» ya estaba debajo).
 
 - [ ] **CAT-09** · P3 · S — **Carrito vacío** en `/checkout`: solo «Ver el menú».
   Oportunidad: «Lo más pedido» con su «+».
+  🔄 **Pendiente 2026-10-03:** ofrecer «Lo más pedido» desde el carrito vacío pide traer la hoja de opciones del platillo al checkout; caso raro (llegar a pagar sin nada), se deja para cuando se toque el checkout (REN-04).
 
-- [ ] **CAT-10** · P3 · S — **Escritorio:** el fondo de la portada termina en una
+- [x] **CAT-10** · P3 · S — **Escritorio:** el fondo de la portada termina en una
   línea horizontal dura a ~790 px a los lados de la columna.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** No era un fallo: el fondo es `position: fixed` y la captura de página completa solo lo pinta una vez. Bajando en la ventana real el fondo es continuo. Sin cambio.
 
 - [x] **CAT-11** · P2 · M — **SEO / Google:** el menú no publica datos
   estructurados (schema.org `Restaurant` + `Menu`: dirección, horario, tipo de
@@ -845,40 +853,47 @@ aquí es lo que todavía le cuesta pedidos.
   «Q1495,00», «vendió Q2794,10»). Es T-01.
   ✅ **Hecho 2026-10-02 (Fase 1).** Ver T-01.
 
-- [ ] **SUP-02** · P2 · S — **Títulos duplicados y nombres que cambian:**
+- [x] **SUP-02** · P2 · S — **Títulos duplicados y nombres que cambian:**
   «Inicio / Resumen de la plataforma», «Restaurantes / Restaurantes», «Finanzas /
   Finanzas», «Métricas / Métricas de la plataforma»; Cuentas lleva «Super Admin»
   en la barra; el destino se llama «Configuración» en escritorio y «Ajustes» en el
   teléfono.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** «Ajustes» en escritorio, teléfono y barra (era «Configuración» y «Ajustes»). Los títulos repetidos ya se fueron con T-10.
 
-- [ ] **SUP-03** · P2 · M — **Tablas que no caben en el teléfono** (Cobranza,
+- [x] **SUP-03** · P2 · M — **Tablas que no caben en el teléfono** (Cobranza,
   «Todos los restaurantes» de Métricas): columnas cortadas («Q199,00 (pausado»).
   En el teléfono, tarjetas.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** `<Table data-stack>`: en el teléfono cada fila es una tarjeta con «rótulo: valor» (de `data-label`). Aplicado a Cobranza y a «Todos los restaurantes» de Métricas.
 
 - [x] **SUP-04** · **P1** · S — **«Conversión 135.7 %»**: pedidos ÷ visitas cuenta
   también los pedidos del mesero y de caja, que no vienen de una visita al menú.
   Solo pedidos en línea.
   ✅ **Hecho 2026-10-02 (Fase 1).** Conversión = pedidos sin mesero ÷ visitas, con tope 100 %; rótulo «pedidos en línea / visitas». Visto: 65.2 %.
 
-- [ ] **SUP-05** · P3 · S — **Inicio en escritorio:** «Recién llegados» y «Más
+- [x] **SUP-05** · P3 · S — **Inicio en escritorio:** «Recién llegados» y «Más
   activos» llenan dos tercios; el último tercio, vacío.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Columnas de 420 px mínimo en la parte de abajo del Inicio: las dos listas llenan el ancho en vez de dejar un tercio vacío.
 
-- [ ] **SUP-06** · P3 · S — **Ficha del restaurante con doble navegación:** pestañas
+- [x] **SUP-06** · P3 · S — **Ficha del restaurante con doble navegación:** pestañas
   arriba y las mismas cuatro como tarjetas-enlace abajo.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Fuera las cuatro tarjetas «Adónde ir» de la ficha: eran las mismas pestañas de arriba.
 
-- [ ] **SUP-07** · P2 · M — **Apariencia mide 18.700 px en el teléfono** (la misma
+- [x] **SUP-07** · P2 · M — **Apariencia mide 18.700 px en el teléfono** (la misma
   galería que AJU-10).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** La galería del tema del Super usa las mismas miniaturas compactas que Personalizar (AJU-10), con el nombre del restaurante.
 
-- [ ] **SUP-08** · P3 · S — **Cuentas:** 30 tarjetas altas sin paginar y «Correo
+- [x] **SUP-08** · P3 · S — **Cuentas:** 30 tarjetas altas sin paginar y «Correo
   sin verificar» en casi todas (ruido: se puede pasar a un filtro).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** 20 cuentas a la vista y «Ver más»; «Correo sin verificar» solo se marca con el filtro «Sin verificar» puesto (en la lista entera era ruido).
 
 - [ ] **SUP-09** · P3 · M · ⏸️ D-8 — **Lenguaje visual propio** (rótulos Anton en
   mayúsculas, números Unbounded de colores) distinto del panel. ¿El Super comparte
   las piezas del panel o mantiene su identidad? Si comparte, sale gratis T-05.
 
-- [ ] **SUP-10** · P3 · S — **Inicio:** «Pendiente de cobro» y «Pagos vencidos»
+- [x] **SUP-10** · P3 · S — **Inicio:** «Pendiente de cobro» y «Pagos vencidos»
   enseñan lo mismo cuando todo lo pendiente está vencido; los títulos de «Requiere
   tu atención» se cortan en el teléfono («Azúcar Negra tiene pagos …»).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Los títulos de «Requiere tu atención» bajan a dos renglones en vez de cortarse, y «Pendiente de cobro» dice de cuántos restaurantes es o «todo ya vencido», para no repetir «Pagos vencidos».
 
 ---
 
@@ -903,15 +918,17 @@ aquí es lo que todavía le cuesta pedidos.
   (se lee «Q2650.0C»): la primera cifra va en letra de portada gigante.
   ✅ **Hecho 2026-10-02 (Fase 1).** Una sola cifra (`components/mi-cuenta/kpi.tsx`) para Resumen, Finanzas y Comparativa: mono, tamaño que se adapta, rótulo a 11 px. «Q2,650.00» cabe.
 
-- [ ] **MIC-04** · P2 · S — Dinero sin separador (T-01); la primera cifra de cada
+- [x] **MIC-04** · P2 · S — Dinero sin separador (T-01); la primera cifra de cada
   rejilla en Unbounded y las demás en monoespaciada; rótulos Anton en mayúsculas;
   pestañas cortadas a la derecha en el teléfono.
   🔄 **Parcial 2026-10-02:** separador de miles, una sola fuente para las cifras y rótulo a 11 px, hechos (MIC-03). Faltan los rótulos Anton en mayúsculas y las pestañas cortadas.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Rótulos Anton en mayúsculas cambiados por el rótulo del panel (13 px, normal) en Resumen, Finanzas, Comparativa, Mi cuenta y Nuevo restaurante; la fila de pestañas se desvanece en el borde y centra la activa.
 
-- [ ] **MIC-05** · P3 · S — **Cada pantalla describe los planes a su manera**
+- [x] **MIC-05** · P3 · S — **Cada pantalla describe los planes a su manera**
   (portada: «Lealtad, cupones y reservaciones»; Crear otro restaurante: «Panel de
   mesero, recetas y cupones»; Suscripción: 8 viñetas distintas). Una sola fuente
   en `lib/plans.ts`.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** `PLAN_POINTS` en `lib/plans.ts`: cuatro puntos por plan que leen la portada y «Crear otro restaurante». Suscripción ya salía de las capacidades de `plans.ts`.
 
 ---
 
@@ -935,25 +952,31 @@ que hace que un restaurantero confíe y lo que permite saber si funciona.
   color** en vez de fotos de comida, y media pantalla negra vacía. Captura real
   del menú de un cliente (con su permiso).
 
-- [ ] **WEB-04** · P2 · S — **/planes: la tabla comparativa está desalineada**:
+- [x] **WEB-04** · P2 · S — **/planes: la tabla comparativa está desalineada**:
   las ✓/✗ no caen bajo su columna (Básico / Estándar / Premium).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Las ✓/✗ de la comparativa de /planes, centradas bajo su plan (el icono es un bloque y `text-align` no lo movía).
 
-- [ ] **WEB-05** · P3 · S — **«🇬🇹 Hecho en Guatemala» se ve «GT Hecho en
+- [x] **WEB-05** · P3 · S — **«🇬🇹 Hecho en Guatemala» se ve «GT Hecho en
   Guatemala» en Windows** (Windows no dibuja banderas emoji). Bandera en SVG.
   Dónde: `components/site-chrome.tsx:126`.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Bandera de Guatemala dibujada (SVG) en vez del emoji, que Windows mostraba como «GT».
 
-- [ ] **WEB-06** · P3 · S — **Dos estilos de campo en el mismo flujo:** el login
+- [x] **WEB-06** · P3 · S — **Dos estilos de campo en el mismo flujo:** el login
   con campos grises rellenos, el registro con campos blancos con borde.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** El registro usa el mismo relleno de campo que el login.
 
-- [ ] **WEB-07** · P3 · S — **«Empezar gratis» también en los planes de pago**:
+- [x] **WEB-07** · P3 · S — **«Empezar gratis» también en los planes de pago**:
   decir «Probar 30 días gratis» (es lo que pasa) y dejar «Empezar gratis» al
   Básico.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** «Probar 30 días gratis» en los planes de pago (lo que de verdad pasa) y «Empezar gratis» solo en el Básico; de paso, «Sin pedidos en línea» del Básico lleva «—» y no una palomita.
 
-- [ ] **WEB-08** · P3 · S — **Restos de la plantilla de Next en `public/`** sin uso:
+- [x] **WEB-08** · P3 · S — **Restos de la plantilla de Next en `public/`** sin uso:
   `next.svg`, `vercel.svg`, `globe.svg`, `window.svg`, `file.svg`.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Borrados `next.svg`, `vercel.svg`, `globe.svg`, `window.svg` y `file.svg` (sin ninguna referencia).
 
-- [ ] **WEB-09** · P3 · S — **La banda final «Moderniza tu restaurante hoy»** lleva
+- [x] **WEB-09** · P3 · S — **La banda final «Moderniza tu restaurante hoy»** lleva
   la «L» del logo suelta arriba a la izquierda, sin relación con el texto.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** La «L» de la banda final, centrada sobre el título.
 
 ---
 
@@ -967,9 +990,11 @@ que hace que un restaurantero confíe y lo que permite saber si funciona.
   en 27 archivos (proveedores, lealtad, cupones, reservaciones, cocina…) tras
   acciones que ya revalidan → cada toque pinta la pantalla dos veces. Y la
   re-precarga de ~10 enlaces tras cada acción.
+  🔄 **Pendiente 2026-10-03:** quitar cada `router.refresh()` exige comprobar acción por acción que revalida la pantalla de la que se llama; sin eso la pantalla se queda vieja. Mejor hacerlo con pruebas de cada flujo.
 
-- [ ] **REN-03** · P3 · S — **Código muerto:** `waiter-panel.tsx` (2.273 líneas),
+- [x] **REN-03** · P3 · S — **Código muerto:** `waiter-panel.tsx` (2.273 líneas),
   `plan-gmv-alert.tsx`, `plan-gmv-bar.tsx` sin importar.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Borrados `waiter-panel.tsx` (sustituido por Servicio), `plan-gmv-alert.tsx` y `plan-gmv-bar.tsx`: ~2.300 líneas sin importar en ningún sitio (quedan en el historial de git).
 
 - [ ] **REN-04** · P2 · L — **`checkout-form.tsx`: 1.468 líneas y 40 `useState`** en
   un solo componente: cada tecla que escribe el comensal re-pinta el checkout
@@ -981,18 +1006,22 @@ que hace que un restaurantero confíe y lo que permite saber si funciona.
 
 - [ ] **REN-06** · P3 · S — **Funciones repetidas:** 25 formateadores de dinero, 7
   de tiempo relativo (T-01, T-02).
+  🔄 **Parcial 2026-10-03:** los formateadores principales ya son `fmtMoney` y `lib/dates.ts` (T-01, T-02); quedan helpers locales `money()` que se van quitando pantalla a pantalla.
 
-- [ ] **REN-07** · P3 · — — **Menú público, medido:** ~230 KB gzip de JS (69 de
+- [x] **REN-07** · P3 · — — **Menú público, medido:** ~230 KB gzip de JS (69 de
   react-dom, ~95 del runtime de Next, ~55 de la app), CSS 94 KB, HTML 76 KB con 6
   platillos. Está bien; vigilar el HTML con cartas de 100+ platillos.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Medición, no un fallo: se deja anotado para vigilar con cartas de 100+ platillos.
 
 - [ ] **REN-08** · P3 · S — **(Heredado M-6)** Fuentes de Google bloqueantes en el
   menú. Decisión estética pendiente.
 
-- [ ] **REN-09** · P2 · S — **Reordenar categorías** = un envío de formulario y
+- [x] **REN-09** · P2 · S — **Reordenar categorías** = un envío de formulario y
   recarga por cada flecha (MEN-08).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Resuelto con MEN-08 (subir/bajar al instante).
 
-- [ ] **REN-10** · P2 · S — Ver **N-10** (sesión que se cae bajo carga).
+- [x] **REN-10** · P2 · S — Ver **N-10** (sesión que se cae bajo carga).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Ver N-10.
 
 ---
 
@@ -1029,3 +1058,4 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
 | 2026-10-02 | **Fase 4 — pantallas largas y buscadores.** MEN-01 (buscador y filtros en Platillos), CLI-01 (buscar y ordenar Clientes en el servidor), AJU-10 (Personalizar de ~12.800 a 3.712 px en el teléfono, miniaturas con tu nombre, «Ver cómo queda»), AJU-05 (mesas del plano sin encimarse, PDF con todos los QR), N-02 (Repartidores y WhatsApp con sitio en Ajustes), PED-01 (cifras en una franja en el teléfono). Piezas nuevas: `.adm-search`, `StatStrip`, `lib/customer-sort.ts`, `lib/documents/table-qr-sheet.ts`, `aria-label` en `Select`. Tablero recontado desde las casillas (la Fase 3 no había sumado). Verificado: `tsc`, `eslint`, 774 pruebas, build, capturas claro/oscuro, buscadores probados en vivo y el PDF generado y revisado (4 hojas, 405 KB). | `434c942` |
 | 2026-10-02 | **Fase 6 (lo que no depende de ti) + cierre de T-09.** CAT-12 (404 con salida), CAT-11 (schema.org en el menú + `es_GT`), MEN-12 (aviso de platillos sin foto en Hoy), CLI-06 (WhatsApp desde la ficha y «Sin pedir hace +30 días»), AJU-07 (QR con logo, tarjeta para redes y cartel A6), HOY-03 (comparación bajo «Ventas»), T-09 (Reservaciones y Lista de espera sin pestaña de crear). Pendientes por necesitar algo tuyo: WEB-01 (elegir analítica y crear la cuenta), WEB-02/03 (testimonios y capturas con permiso), CAT-13 (qué sugerir). Verificado: `tsc`, `eslint`, pruebas (nuevas: datos estructurados e inyección), build, recorrido con Playwright (404, JSON-LD, filtros, WhatsApp, descargas del QR revisadas a ojo). | `fba2fcf` |
 | 2026-10-03 | **Detalles P2/P3 del panel.** Transversal (T-04, T-19, T-20, T-21, T-24, T-25), armazón (N-06, N-07), Hoy (HOY-02, HOY-04), Pedidos/Cocina/Mesas (PED-03, 04, 05, 07, 08, 10, 12), Menú (MEN-04…MEN-11), Clientes (CLI-02…05), Negocio (NEG-03, 04, 06) y Ajustes (AJU-04, 08, 11, 14, 16, 17, 18). Piezas nuevas: `.tap44`, tokens de gráfica, `.adm-w-read/-overview`, `lib/order-number.ts`, `export-menu.tsx`. Parciales: NEG-05, PED-11. Verificado: `tsc`, `eslint`, 781 pruebas, build, capturas claro/oscuro de 20 pantallas. | `840a9bd` |
+| 2026-10-03 | **Detalles P2/P3 del menú público, Super, Mi cuenta, web y rendimiento.** CAT-03, 05, 06, 07, 08, 10; SUP-02, 03, 05, 06, 07, 08, 10; MIC-04, 05; WEB-04…09; REN-03, 07, 09, 10 y N-10 (sesión: reintento ante fallos de red y lectura del restaurante con llave de servicio si falla). Piezas nuevas: `lib/category-icon.ts`, `PLAN_POINTS`, `<Table data-stack>`. Pendientes con nota: CAT-09, REN-02, REN-06. Verificado: `tsc`, `eslint`, 788 pruebas (nuevas: lema, iconos), build, capturas del menú, la web, el Super y Mi cuenta, y 12 entradas seguidas al panel sin un salto. | ver commit |

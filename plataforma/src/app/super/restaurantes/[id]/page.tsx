@@ -128,29 +128,8 @@ export default async function FichaResumenPage({
         </Card>
       )}
 
-      {/* Adónde ir */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 10 }}>
-        <QuickLink href={`/super/restaurantes/${id}/informacion`} icon="list" title="Información" body="Nombre, slug, contacto, dirección, estado y ubicación en el mapa." />
-        <QuickLink href={`/super/restaurantes/${id}/plan`} icon="sparkle" title="Plan y módulos" body={`Plan ${planLabel(row.plan_actual)} · cambia funciones y módulos a la carta.`} />
-        <QuickLink href={`/super/restaurantes/${id}/apariencia`} icon="image" title="Apariencia" body="Tema, colores, plantillas y vista previa en vivo del menú." />
-        <QuickLink href={`/super/restaurantes/${id}/avanzado`} icon="settings" title="Avanzado" body="Duplicar el restaurante o eliminarlo definitivamente." />
-      </div>
+      {/* Sin las cuatro tarjetas «Adónde ir»: eran las mismas pestañas de
+          arriba otra vez, doble navegación (auditoría 2026-10-02, SUP-06). */}
     </div>
-  );
-}
-
-function QuickLink({ href, icon, title, body }: { href: string; icon: string; title: string; body: string }) {
-  return (
-    <Card variant="interactive" style={{ padding: 0 }}>
-      <Link href={href} style={{ display: 'flex', gap: 12, padding: '14px 16px', textDecoration: 'none', alignItems: 'flex-start' }}>
-        <span style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--brand-accent) 12%, transparent)', color: 'var(--brand-accent-ink)' }}>
-          <Icon name={icon} size={16} />
-        </span>
-        <span style={{ minWidth: 0 }}>
-          <span style={{ display: 'block', fontWeight: 700, fontSize: 13.5, color: 'var(--u-text)' }}>{title}</span>
-          <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-4)', marginTop: 3, lineHeight: 1.45 }}>{body}</span>
-        </span>
-      </Link>
-    </Card>
   );
 }

@@ -46,7 +46,7 @@ export default async function FinanzasGrupoPage({
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div>
-        <div className="t-kicker" style={{ fontSize: 11, marginBottom: 8 }}>{scope.name}</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)', marginBottom: 8 }}>{scope.name}</div>
         <h1 className="t-display" style={{ fontSize: 'clamp(22px, 4vw, 28px)', lineHeight: 1.15, margin: 0 }}>
           {varios ? 'Finanzas del grupo' : 'Finanzas'}
         </h1>
@@ -66,7 +66,7 @@ export default async function FinanzasGrupoPage({
       </div>
 
       <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>{varios ? 'Ingreso diario del grupo' : 'Ingreso diario'}</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)' }}>{varios ? 'Ingreso diario del grupo' : 'Ingreso diario'}</div>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 120 }}>
           {report.combinedSeries.map((d, i) => {
             const h = (d.revenue / maxRev) * 100;

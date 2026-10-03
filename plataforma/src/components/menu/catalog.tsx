@@ -33,6 +33,7 @@ import { DIETARY_TAG_MAP } from '@/lib/dietary-tags';
 import { useLocale, useLocalized } from '@/lib/locale/context';
 import { isUnavailable } from '@/lib/product-availability';
 import type { Category, Product } from '@/types';
+import { suggestIcon } from '@/lib/category-icon';
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon' | 'name_en'> & { availability?: WeeklyHours | null };
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'> & {
@@ -217,7 +218,8 @@ export default function Catalog({
 
   const catIcon = useMemo(() => {
     const m = new Map<string, string>();
-    for (const c of categories) m.set(c.id, pickIcon(c.icon));
+    // Sin icono elegido, el que sugiere el nombre (CAT-06), no la mesa de siempre.
+    for (const c of categories) m.set(c.id, c.icon && pickIcon(c.icon) !== 'utensils' ? pickIcon(c.icon) : suggestIcon(c.name));
     return m;
   }, [categories]);
 
@@ -1271,7 +1273,10 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, w
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 11px', borderRadius: 'var(--m-r-pill)',
               background: 'var(--brand-accent)', color: 'var(--brand-on-accent)',
-              fontSize: 'calc(var(--m-fs-xs) * var(--t-tag-size, 1))', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase',
+              /* Sin mayúsculas: las demás insignias de la carta van en
+                 minúscula y esta parecía de otro programa (CAT-05). El
+                 fondo de acento se queda: es la marca de «destacado». */
+              fontSize: 'calc(var(--m-fs-xs) * var(--t-tag-size, 1))', fontWeight: 700,
             }}
           >
             <Icon name="star" size={11} /> {content.tags.fav}

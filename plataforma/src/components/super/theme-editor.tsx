@@ -165,7 +165,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
             Galería prediseñada (7 estructuras × 22 estilos)
           </summary>
           <div style={{ paddingTop: 10 }}>
-            <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedBuiltin} />
+            <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedBuiltin} brandName={config.brandName} />
           </div>
         </details>
         <div style={{ height: 1, background: 'var(--u-hair)', margin: '4px 0' }} />

@@ -31,12 +31,31 @@ export const getRestaurantBySlug = cache(
     /* Restaurante y tema en UNA consulta (el tema cuelga del restaurante por
        su clave primaria, así que PostgREST lo incrusta). Antes eran dos en
        fila, y esto corre en cada pantalla del panel. */
-    const { data: row, error } = await supabase
+    let { data: row, error } = await supabase
       .from('restaurants')
       .select('*, restaurant_themes(*)')
       .eq('slug', slug)
       .eq('status', 'active')
       .single();
+
+    /* PGRST116 = no hay filas: el restaurante de verdad no existe. Cualquier
+       otro error —en la práctica, un token de sesión que el servidor no logró
+       refrescar a tiempo en esta petición— NO es «no existe»: el candado del
+       panel lo tomaba así y te mandaba a Platillos (o al login) con la sesión
+       viva, de vez en cuando (auditoría 2026-10-02, N-10/REN-10). Se repite
+       con la llave de servicio: esta fila la puede leer cualquiera
+       (`restaurants_select_active`, la usa el menú público), así que no se
+       da acceso a nada nuevo. */
+    if (error && error.code !== 'PGRST116') {
+      const retry = await createServiceClient()
+        .from('restaurants')
+        .select('*, restaurant_themes(*)')
+        .eq('slug', slug)
+        .eq('status', 'active')
+        .single();
+      row = retry.data;
+      error = retry.error;
+    }
 
     if (error || !row) return null;
 

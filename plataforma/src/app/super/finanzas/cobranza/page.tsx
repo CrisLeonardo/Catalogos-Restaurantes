@@ -106,7 +106,10 @@ export default async function CobranzaPage() {
         <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 12, color: 'var(--u-text)' }}>
           Restaurantes
         </h2>
-        <Table style={{ minWidth: 760 }}>
+        {/* `data-stack`: en el teléfono cada fila es una tarjeta con
+            «rótulo: valor»; a lo ancho, columnas de 760 px cortadas dentro
+            de un scroll («Q199,00 (pausado») — auditoría 2026-10-02, SUP-03. */}
+        <Table style={{ minWidth: 760 }} data-stack="">
           <TableHeader>
             <TableRow style={{ borderTop: 'none' }}>
               <TableHead>Restaurante</TableHead>
@@ -132,8 +135,8 @@ export default async function CobranzaPage() {
                       {r.slug}{r.status === 'suspended' ? ' · suspendido' : ''}
                     </div>
                   </TableCell>
-                  <TableCell><PlanChip plan={r.plan} /></TableCell>
-                  <TableCell style={{ fontFamily: 'var(--ui-font-mono)', whiteSpace: 'nowrap' }}>
+                  <TableCell data-label="Plan"><PlanChip plan={r.plan} /></TableCell>
+                  <TableCell data-label="Mensualidad" style={{ fontFamily: 'var(--ui-font-mono)', whiteSpace: 'nowrap' }}>
                     {r.config && r.config.monthly_fee > 0 ? (
                       <span>
                         {fmtMoney(r.config.monthly_fee, cur)}
@@ -143,7 +146,7 @@ export default async function CobranzaPage() {
                       <span style={{ color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-sans)', fontSize: 12.5 }}>sin configurar</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-label="Mes actual">
                     {trial ? (
                       <Badge variant="info" style={{ fontSize: 11 }}>Prueba · {trialDaysLeft(r.config)}d</Badge>
                     ) : (
@@ -155,10 +158,10 @@ export default async function CobranzaPage() {
                       />
                     )}
                   </TableCell>
-                  <TableCell className="text-right" style={{ fontFamily: 'var(--ui-font-mono)', color: r.pendingTotal > 0 ? 'var(--c-warn)' : 'var(--u-text-4)' }}>
+                  <TableCell data-label="Pendiente" className="text-right" style={{ fontFamily: 'var(--ui-font-mono)', color: r.pendingTotal > 0 ? 'var(--c-warn)' : 'var(--u-text-4)' }}>
                     {r.pendingTotal > 0 ? fmtMoney(r.pendingTotal, cur) : '—'}
                   </TableCell>
-                  <TableCell className="text-right" style={{ fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>{fmtMoney(r.salesRevenue30, cur)}</TableCell>
+                  <TableCell data-label="Su venta 30d" className="text-right" style={{ fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>{fmtMoney(r.salesRevenue30, cur)}</TableCell>
                   <TableCell className="text-right" style={{ whiteSpace: 'nowrap' }}>
                     <Link href={`/super/metricas/${r.restaurantId}`} style={{ fontSize: 12.5, color: 'var(--u-text-3)', textDecoration: 'none', marginRight: 12 }}>
                       Métricas

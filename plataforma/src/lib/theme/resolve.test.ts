@@ -95,3 +95,21 @@ describe('textos por defecto viejos guardados en el tema (T-13: «tú»)', () =>
     expect(t.content.checkout.namePh).toBe('¿Cómo te llamás, mae?');
   });
 });
+
+describe('lema de relleno «Sabor que enamora» (CAT-03)', () => {
+  it('ya no es el lema por defecto', () => {
+    expect(resolveTheme(null, 'x').config.tagline).toBe('');
+  });
+  it('si quedó guardado en el tema, se trata como vacío', () => {
+    const row = { config: { tagline: 'Sabor que enamora' } } as never;
+    expect(resolveTheme(row, 'x').config.tagline).toBe('');
+  });
+  it('y si el restaurante tiene su lema propio, gana el suyo', () => {
+    const row = { config: { tagline: 'Sabor que enamora' } } as never;
+    expect(resolveTheme(row, 'x', { tagline: 'Café de especialidad' }).config.tagline).toBe('Café de especialidad');
+  });
+  it('un lema escrito por el dueño no se toca', () => {
+    const row = { config: { tagline: 'El mejor pan de la zona 1' } } as never;
+    expect(resolveTheme(row, 'x').config.tagline).toBe('El mejor pan de la zona 1');
+  });
+});

@@ -43,6 +43,7 @@ export default async function PedidoPage({
         token={token}
         restaurantId={data.restaurant.id}
         initialOrder={order}
+        whatsapp={data.restaurant.orders_whatsapp || data.restaurant.whatsapp_number}
       />
     </ThemeProvider>
   );

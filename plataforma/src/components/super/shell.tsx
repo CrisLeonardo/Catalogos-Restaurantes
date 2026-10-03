@@ -26,7 +26,9 @@ const NAV: { href: string; label: string; icon: string; corto?: string }[] = [
   { href: '/super/grupos',        label: 'Grupos',        icon: 'users' },
   { href: '/super/metricas',      label: 'Métricas',      icon: 'chart' },
   { href: '/super/finanzas',      label: 'Finanzas',      icon: 'wallet' },
-  { href: '/super/configuracion', label: 'Configuración', icon: 'settings', corto: 'Ajustes' },
+  // «Ajustes» en todas partes, como en el panel: era «Configuración» en
+  // escritorio y «Ajustes» en el teléfono (auditoría 2026-10-02, SUP-02).
+  { href: '/super/configuracion', label: 'Ajustes',       icon: 'settings' },
 ];
 
 const TITLES: [string, string][] = [
@@ -37,7 +39,7 @@ const TITLES: [string, string][] = [
   ['/super/metricas',         'Métricas'],
   ['/super/finanzas',         'Finanzas'],
   ['/super/cobros',           'Finanzas'],
-  ['/super/configuracion',    'Configuración'],
+  ['/super/configuracion',    'Ajustes'],
 ];
 
 function isActive(pathname: string, href: string): boolean {

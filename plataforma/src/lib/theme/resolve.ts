@@ -146,6 +146,9 @@ function mergeTypography(
   return out;
 }
 
+/** El lema por defecto de antes (relleno). Ver CAT-03 en resolveTheme. */
+export const PLACEHOLDER_TAGLINE = 'Sabor que enamora';
+
 /** Semilla del nombre/tagline reales del restaurante (tabla restaurants). */
 export interface ThemeFallback {
   brandName?: string;
@@ -174,6 +177,12 @@ export function resolveTheme(
     ...stored,
     ...forced,
   };
+
+  // El lema de relleno de antes quedó guardado en muchos temas: se trata como
+  // vacío, o como el lema real del restaurante si lo tiene (CAT-03).
+  if (config.tagline === PLACEHOLDER_TAGLINE) {
+    config.tagline = seed.tagline && seed.tagline !== PLACEHOLDER_TAGLINE ? seed.tagline : '';
+  }
 
   // La forma del platillo se migró de `catalogView` a `cardStyle`: hay que
   // traducir lo que ya está guardado en vez de pisarlo con el default.

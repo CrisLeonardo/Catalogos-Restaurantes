@@ -21,7 +21,9 @@ export default function BottomNav({ active, ordersEnabled, loyaltyOn, onSelectMe
   const tabs: Array<{ key: NavTab; label: string; icon: string; action: () => void }> = [
     { key: 'menu',      label: 'Menú',      icon: 'home',    action: onSelectMenu },
     ...(ordersEnabled ? [{ key: 'pedidos' as NavTab, label: 'Pedidos',   icon: 'receipt', action: onSelectPedidos }] : []),
-    ...(loyaltyOn     ? [{ key: 'fidelidad' as NavTab, label: 'Fidelidad', icon: 'star',    action: onSelectFidelidad }] : []),
+    // «Mis puntos» y no «Fidelidad»: el panel lo llama «Lealtad», el
+    // comensal ninguna de las dos — lo que entiende es «puntos» (CAT-07).
+    ...(loyaltyOn     ? [{ key: 'fidelidad' as NavTab, label: 'Mis puntos', icon: 'star',    action: onSelectFidelidad }] : []),
     { key: 'cuenta',    label: 'Cuenta',    icon: 'user',    action: onSelectCuenta },
   ];
 

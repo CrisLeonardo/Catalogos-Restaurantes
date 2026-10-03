@@ -382,7 +382,10 @@ export const ELEMENT_TARGETS: { key: string; label: string; role: TypographyRole
 
 export const DEFAULT_CONFIG: ThemeConfig = {
   brandName: 'Tu Restaurante',
-  tagline: 'Sabor que enamora',
+  /* Vacío: «Sabor que enamora» era relleno y salía publicado en menús reales
+     cuyo dueño no había escrito su lema (auditoría 2026-10-02, CAT-03). Sin
+     lema, la portada no pinta esa línea y Hoy pide escribirlo. */
+  tagline: '',
   zone: '',
   logoUrl: null,
   markUrl: null,

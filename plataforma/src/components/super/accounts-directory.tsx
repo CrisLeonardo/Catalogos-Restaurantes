@@ -22,7 +22,7 @@
      que salen dentro son texto, no enlaces: un enlace dentro de otro no
      es HTML válido, y los locales ya son enlaces de verdad en la ficha. */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -94,6 +94,11 @@ export default function AccountsDirectory({ rows }: { rows: AccountDirectoryRow[
   const [filtro, setFiltro] = useState<Filtro>('all');
   const [sort, setSort] = useState<SortKey>('recent');
   const [verPin, setVerPin] = useState(false);
+  /* 20 a la vista y «Ver más»: eran 30 tarjetas altas de golpe, sin
+     paginar (auditoría 2026-10-02, SUP-08). Al cambiar filtro o búsqueda se
+     vuelve a 20. */
+  const [limite, setLimite] = useState(20);
+  useEffect(() => { setLimite(20); }, [filtro, sort, verPin]);
 
   const pins = useMemo(() => rows.filter((r) => r.esPin), [rows]);
   const base = useMemo(() => (verPin ? rows : rows.filter((r) => !r.esPin)), [rows, verPin]);
@@ -149,7 +154,7 @@ export default function AccountsDirectory({ rows }: { rows: AccountDirectoryRow[
           />
           <Input
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => { setQ(e.target.value); setLimite(20); }}
             placeholder="Buscar por correo, nombre o restaurante…"
             aria-label="Buscar cuenta"
             style={{ paddingLeft: 34 }}
@@ -211,16 +216,26 @@ export default function AccountsDirectory({ rows }: { rows: AccountDirectoryRow[
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {filtered.map((r) => (
-            <AccountCard key={r.id} row={r} />
+          {filtered.slice(0, limite).map((r) => (
+            <AccountCard key={r.id} row={r} marcarSinVerificar={filtro === 'sinVerificar'} />
           ))}
+          {filtered.length > limite && (
+            <button
+              type="button"
+              onClick={() => setLimite((n) => n + 20)}
+              className="press"
+              style={{ alignSelf: 'center', marginTop: 6, padding: '9px 18px', borderRadius: 99, cursor: 'pointer', border: '1px solid var(--u-hair-2)', background: 'var(--adm-card, transparent)', color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600 }}
+            >
+              Ver más ({filtered.length - limite} restantes)
+            </button>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function AccountCard({ row }: { row: AccountDirectoryRow }) {
+function AccountCard({ row, marcarSinVerificar }: { row: AccountDirectoryRow; marcarSinVerificar: boolean }) {
   const nombre = nombreDe(row);
   const conGoogle = row.providers.includes('google');
 
@@ -253,7 +268,9 @@ function AccountCard({ row }: { row: AccountDirectoryRow }) {
           {row.suspendida && <Badge variant="danger">Suspendida</Badge>}
           {esHuerfana(row) && <Badge variant="danger">Huérfana</Badge>}
           {esSinLocal(row) && <Badge variant="warn">Sin ningún local</Badge>}
-          {esSinVerificar(row) && <Badge variant="warn">Correo sin verificar</Badge>}
+          {/* Casi todas lo tenían: como insignia fija era ruido. Para eso
+              está el filtro «Sin verificar»; con él puesto, sí se marca. */}
+          {marcarSinVerificar && esSinVerificar(row) && <Badge variant="warn">Correo sin verificar</Badge>}
           {row.role === 'SUPER_ADMIN' && <Badge variant="accent">Super admin</Badge>}
           {row.esPin && <Badge variant="neutral">Acceso por PIN</Badge>}
         </div>

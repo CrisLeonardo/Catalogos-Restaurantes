@@ -21,7 +21,7 @@ export default function GoogleLoyaltyIntro({ onClose }: { onClose: () => void })
   return (
     <div
       role="dialog"
-      aria-label="Gana puntos de fidelidad"
+      aria-label="Gana puntos"
       style={{
         // Por encima de la barra de navegación (zIndex 90): el fondo
         // oscurecido debe dibujarse sobre ella; antes (zIndex 80) la barra
@@ -49,7 +49,7 @@ export default function GoogleLoyaltyIntro({ onClose }: { onClose: () => void })
           </div>
           <h2 className="t-display" style={{ fontSize: 'var(--m-fs-xl)', marginBottom: 8 }}>Gana puntos con cada pedido</h2>
           <p className="t-mute" style={{ fontSize: 'var(--m-fs-sm)', lineHeight: 1.55, marginBottom: 20 }}>
-            Para acumular y usar tus puntos de fidelidad necesitas iniciar sesión con tu cuenta de Google.
+            Para acumular y usar tus puntos necesitas iniciar sesión con tu cuenta de Google.
             Así te reconocemos en cualquier dispositivo, sin crear otra contraseña.
           </p>
           <GoogleSignInButton full label="Continuar con Google" returnTab="fidelidad" />

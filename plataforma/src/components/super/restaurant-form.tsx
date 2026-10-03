@@ -59,7 +59,7 @@ export default function RestaurantForm() {
       config: {
         ...DEFAULT_CONFIG,
         brandName: name.trim() || DEFAULT_CONFIG.brandName,
-        tagline: tagline.trim() || DEFAULT_CONFIG.tagline,
+        tagline: tagline.trim(),
       },
       content: DEFAULT_CONTENT,
       customCss: '',

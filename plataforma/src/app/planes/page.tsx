@@ -81,9 +81,12 @@ function PlanFeatureRow({ value }: { value: boolean | number | string }) {
   if (typeof value === 'boolean') {
     return (
       <>
+        {/* `display: block` + margen automático: el icono es un bloque y
+            `text-align: center` de la celda no lo centraba, así que las ✓/✗
+            no caían bajo su plan (auditoría 2026-10-02, WEB-04). */}
         {value
-          ? <Icon name="check" size={16} style={{ color: 'var(--c-ok)' }} />
-          : <Icon name="x" size={16} style={{ color: 'var(--u-text-4)' }} />}
+          ? <Icon name="check" size={16} style={{ color: 'var(--c-ok)', display: 'block', margin: '0 auto' }} />
+          : <Icon name="x" size={16} style={{ color: 'var(--u-text-4)', display: 'block', margin: '0 auto' }} />}
         <span className="sr-only">{value ? 'Incluido' : 'No incluido'}</span>
       </>
     );

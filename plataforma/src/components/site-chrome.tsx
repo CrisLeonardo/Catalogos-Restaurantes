@@ -123,7 +123,16 @@ export function SiteFooter({ home = false }: { home?: boolean }) {
           <span className="lp-body" style={{ fontSize: 12.5 }}>
             © {new Date().getFullYear()} Leogin · Todos los derechos reservados
           </span>
-          <span className="lp-body" style={{ fontSize: 12.5 }}>🇬🇹 Hecho en Guatemala</span>
+          {/* Bandera dibujada y no el emoji 🇬🇹: Windows no pinta banderas
+              emoji y se leía «GT Hecho en Guatemala» (WEB-05). */}
+          <span className="lp-body" style={{ fontSize: 12.5, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+            <svg width="18" height="12" viewBox="0 0 18 12" aria-hidden style={{ borderRadius: 2, boxShadow: '0 0 0 1px rgba(0,0,0,0.12)' }}>
+              <rect width="6" height="12" fill="#4997D0" />
+              <rect x="6" width="6" height="12" fill="#ffffff" />
+              <rect x="12" width="6" height="12" fill="#4997D0" />
+            </svg>
+            Hecho en Guatemala
+          </span>
         </div>
       </div>
     </footer>

@@ -7,7 +7,7 @@ import { Icon } from '@/components/icons';
 import TemplateGallery from '@/components/admin/template-gallery';
 import { findStructure, findTemplate } from '@/lib/theme/templates';
 import { createAnotherRestaurant, type NewRestaurantState } from '@/lib/actions/mi-cuenta';
-import { defaultPlanPricing, planPriceLabel, planPriceQ, type PlanPricing } from '@/lib/plans';
+import { PLAN_POINTS, defaultPlanPricing, planPriceLabel, planPriceQ, type PlanPricing } from '@/lib/plans';
 import {
   ErrorBox, Field, Stepper, Summary, WizardNav, inputStyle, localSlugify,
 } from '@/components/signup/wizard-ui';
@@ -69,12 +69,7 @@ function buildPlanCards(pricing: PlanPricing, esElPrimero: boolean): PlanCardDef
       priceLabel: planPriceLabel(pricing, 'BASICO'),
       priceUnit: '',
       trialLabel: 'Gratis para siempre, sin tarjeta',
-      features: [
-        { text: 'Menú digital con QR imprimible', positive: true },
-        { text: 'Hasta 150 productos · 1 usuario', positive: true },
-        { text: 'Tu logo y color de marca', positive: true },
-        { text: 'Sin pedidos en línea', positive: false },
-      ],
+      features: PLAN_POINTS.BASICO,
     },
     {
       code: 'ESTANDAR',
@@ -82,12 +77,7 @@ function buildPlanCards(pricing: PlanPricing, esElPrimero: boolean): PlanCardDef
       priceLabel: planPriceQ(pricing, 'ESTANDAR'),
       priceUnit: '/ mes',
       trialLabel: conPrueba ? `Con ${trial} días gratis` : 'Se suma a tu mensualidad',
-      features: [
-        { text: 'Elige 2 de 3 modos de pedido', positive: true },
-        { text: 'Alertas en tiempo real · WhatsApp', positive: true },
-        { text: 'Productos ilimitados · 2 usuarios', positive: true },
-        { text: 'Reportes financieros y corte de caja', positive: true },
-      ],
+      features: PLAN_POINTS.ESTANDAR,
     },
     {
       code: 'PREMIUM',
@@ -96,12 +86,7 @@ function buildPlanCards(pricing: PlanPricing, esElPrimero: boolean): PlanCardDef
       priceLabel: conPrueba ? `Gratis ${trial} días` : planPriceQ(pricing, 'PREMIUM'),
       priceUnit: conPrueba ? '' : '/ mes',
       trialLabel: conPrueba ? `luego ${planPriceLabel(pricing, 'PREMIUM')}` : 'Se suma a tu mensualidad',
-      features: [
-        { text: 'Para llevar, comer en local y delivery', positive: true },
-        { text: 'Panel de mesero, recetas y cupones', positive: true },
-        { text: 'Usuarios ilimitados · sin restricciones', positive: true },
-        { text: 'Analítica, inventario y personal', positive: true },
-      ],
+      features: PLAN_POINTS.PREMIUM,
     },
   ];
 }

@@ -112,7 +112,22 @@ export async function createClient() {
  */
 export const getStaffUser = cache(async () => {
   const supabase = await createClient();
-  return supabase.auth.getUser();
+  const first = await supabase.auth.getUser();
+  /* Un fallo de RED (tiempo agotado, Auth que no contesta, un 5xx) no es «no
+     hay sesión», pero el layout lo trataba igual y mandaba al login a quien
+     tenía la sesión viva («Continuar como…»), de vez en cuando y sobre todo
+     con el servidor cargado (auditoría 2026-10-02, N-10). Se reintenta UNA
+     vez; «sin sesión» de verdad (sin cookie, token inválido) se devuelve
+     tal cual. */
+  const err = first.error as (Error & { status?: number }) | null;
+  const transitorio = !!err && (
+    err.name === 'AuthRetryableFetchError' || err.status === 0 || (err.status ?? 0) >= 500
+  );
+  if (transitorio) {
+    await new Promise((r) => setTimeout(r, 150));
+    return supabase.auth.getUser();
+  }
+  return first;
 });
 
 /** Sesión del COMENSAL (menú público: cuenta Google, lealtad, mis pedidos). */

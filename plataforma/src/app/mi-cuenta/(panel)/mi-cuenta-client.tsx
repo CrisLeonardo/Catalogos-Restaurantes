@@ -42,7 +42,7 @@ export default function MiCuentaClient({
   return (
     <>
       <div className="anim-fade-up">
-        <div className="t-kicker" style={{ fontSize: 11, marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)', marginBottom: 12 }}>
           {groupName ?? 'Mi cuenta'}
         </div>
         {/* Sin nombre en el perfil, `accountName` es el correo, y «Hola,

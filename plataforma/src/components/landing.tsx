@@ -3,7 +3,7 @@ import { Icon } from '@/components/icons';
 import { LeoginMark } from '@/components/leogin-logo';
 import { SiteHeader, SiteFooter, SectionHead, contactHref } from '@/components/site-chrome';
 import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
-import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceQ, type PlanCode, type PlanPricing } from '@/lib/plans';
+import { PLANS, PLAN_POINTS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceQ, type PlanPricing } from '@/lib/plans';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 
 /* Cifras de la tira de confianza. Solo hechos verificables del producto —
@@ -67,15 +67,6 @@ const steps = (trialDays: number) => [
   { n: '3', title: 'Comparte tu QR',       body: 'Lo pones en las mesas o en el mostrador. Tus clientes escanean, ordenan, y tú recibes todo en tiempo real.' },
 ];
 
-/* Puntos de marketing por plan (los precios y el badge SIEMPRE salen de plans.ts,
-   fuente única de verdad — solo este texto descriptivo se cura a mano aquí). */
-const LANDING_PLAN_POINTS: Record<PlanCode, string[]> = {
-  BASICO: ['Menú digital con código QR', 'Gratis para siempre, hasta 150 productos', 'Personalización con logo y color', 'Sin pedidos en línea'],
-  ESTANDAR: ['Todo lo del plan Básico', 'Pedidos para llevar o a domicilio', 'Alertas en tiempo real + WhatsApp', 'Reportes financieros y corte de caja'],
-  PREMIUM: ['Para llevar, en local y a domicilio', 'Panel de mesero y mapa de mesas', 'Lealtad, cupones y reservaciones', 'Analítica, inventario y personal'],
-  PRO: [],
-};
-
 /* Los precios salen del PlanPricing vigente (overrides del super admin),
    no del default de plans.ts — por eso esto es función y no constante. */
 function landingPlans(pricing: PlanPricing) {
@@ -85,7 +76,8 @@ function landingPlans(pricing: PlanPricing) {
     price: pricing.prices[code] === 0 ? 'Gratis' : planPriceQ(pricing, code),
     isFree: pricing.prices[code] === 0,
     tagline: PLANS[code].tagline,
-    points: LANDING_PLAN_POINTS[code],
+    // Los mismos puntos que en Mi cuenta y Suscripción (MIC-05).
+    points: PLAN_POINTS[code],
     accent: PLANS[code].highlight,
     badge: PLANS[code].badge,
   }));
@@ -471,9 +463,11 @@ export default async function LeoginLanding() {
 
                 <ul style={{ listStyle: 'none', margin: '20px 0 24px', padding: 0, display: 'flex', flexDirection: 'column', gap: 11, flex: 1 }}>
                   {p.points.map((pt) => (
-                    <li key={pt} style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 13.5 }}>
-                      <Icon name="check" size={15} strokeWidth={2.6} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0, marginTop: 2 }} />
-                      <span style={{ color: 'var(--u-text-2)', lineHeight: 1.45 }}>{pt}</span>
+                    <li key={pt.text} style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 13.5 }}>
+                      {/* «Sin pedidos en línea» llevaba una palomita como si
+                          fuera algo a favor: lo que el plan no trae, con «—». */}
+                      <Icon name={pt.positive ? 'check' : 'minus'} size={15} strokeWidth={2.6} style={{ color: pt.positive ? 'var(--brand-accent-ink)' : 'var(--u-text-4)', flexShrink: 0, marginTop: 2 }} />
+                      <span style={{ color: pt.positive ? 'var(--u-text-2)' : 'var(--u-text-3)', lineHeight: 1.45 }}>{pt.text}</span>
                     </li>
                   ))}
                 </ul>
@@ -483,7 +477,9 @@ export default async function LeoginLanding() {
                   className={`lp-btn ${p.accent ? 'lp-btn-primary' : 'lp-btn-soft'}`}
                   style={{ width: '100%' }}
                 >
-                  Empezar gratis
+                  {/* En los de pago lo que pasa es una prueba, no «gratis»
+                      (WEB-07). */}
+                  {p.isFree ? 'Empezar gratis' : pricing.trialDays > 0 ? `Probar ${pricing.trialDays} días gratis` : 'Elegir este plan'}
                 </Link>
               </div>
             ))}
@@ -532,7 +528,12 @@ export default async function LeoginLanding() {
               }}
             />
             <div style={{ position: 'relative' }}>
-              <LeoginMark size={44} />
+              {/* Centrada: el logo es un bloque y el `text-align` de la banda
+                  no lo movía, así que quedaba suelto arriba a la izquierda
+                  (auditoría 2026-10-02, WEB-09). */}
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <LeoginMark size={44} />
+              </div>
               <h2
                 className="lp-h2"
                 style={{ color: '#F5F3EF', marginTop: 22 }}

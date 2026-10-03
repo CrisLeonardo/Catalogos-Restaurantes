@@ -103,7 +103,22 @@ export default async function SuperHomePage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: 10 }}>
         <StatCard label="Ingreso mensual (MRR)" value={fmtMoney(stats.mrr, stats.currency)} icon="wallet" tone="accent" href="/super/finanzas" />
         <StatCard label="Cobrado este mes" value={fmtMoney(stats.collectedThisMonth, stats.currency)} icon="checkCircle" tone="ok" href="/super/finanzas" />
-        <StatCard label="Pendiente de cobro" value={fmtMoney(stats.pendingTotal, stats.currency)} icon="clock" tone={stats.pendingTotal > 0 ? 'warn' : undefined} href="/super/finanzas" />
+        {/* Con todo lo pendiente ya vencido, «Pendiente de cobro» y «Pagos
+            vencidos» decían lo mismo: el primero dice ahora de cuántos
+            restaurantes es y si ya venció todo (auditoría 2026-10-02, SUP-10). */}
+        <StatCard
+          label="Pendiente de cobro"
+          value={fmtMoney(stats.pendingTotal, stats.currency)}
+          icon="clock"
+          tone={stats.pendingTotal > 0 ? 'warn' : undefined}
+          sub={(() => {
+            const deudores = rows.filter((r) => r.pendingTotal > 0);
+            if (deudores.length === 0) return 'nada pendiente';
+            if (deudores.every((r) => r.hasOverdue)) return 'todo ya vencido';
+            return `de ${deudores.length} ${deudores.length === 1 ? 'restaurante' : 'restaurantes'}`;
+          })()}
+          href="/super/finanzas"
+        />
         <StatCard label="Pagos vencidos" value={stats.overdueCount} icon="alertCircle" tone={stats.overdueCount > 0 ? 'danger' : undefined} sub={stats.overdueCount > 0 ? 'requieren acción' : 'todo al día'} href="/super/finanzas" />
         <StatCard label="Restaurantes activos" value={`${metrics.active}/${metrics.total}`} icon="utensils" sub={trials > 0 ? `${trials} en prueba` : undefined} href="/super/restaurantes" />
         <StatCard label="Pedidos 30 días" value={orders30.toLocaleString('es-GT')} icon="bag" sub={`${visits30.toLocaleString('es-GT')} visitas`} href="/super/metricas" />
@@ -142,8 +157,10 @@ export default async function SuperHomePage() {
                   <Icon name={a.icon} size={17} />
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</div>
-                  <div className="t-mute" style={{ fontSize: 12, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.body}</div>
+                  {/* En dos renglones si hace falta: cortado a «Azúcar Negra
+                      tiene pagos …» no se sabía qué pasaba (SUP-10). */}
+                  <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--u-text)', lineHeight: 1.3 }}>{a.title}</div>
+                  <div className="t-mute" style={{ fontSize: 12, marginTop: 2, lineHeight: 1.4 }}>{a.body}</div>
                 </div>
                 <Button variant="outline" size="sm" render={<Link href={a.href} />}>{a.cta}</Button>
               </div>
@@ -159,8 +176,9 @@ export default async function SuperHomePage() {
         )}
       </section>
 
-      {/* Actividad + listas */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14, alignItems: 'start' }}>
+      {/* Actividad + listas. Columnas de 420 px mínimo: con 300 cabían tres y
+          las dos listas dejaban el último tercio vacío (SUP-05). */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 420px), 1fr))', gap: 14, alignItems: 'start' }}>
         <Card style={{ gridColumn: '1 / -1' }}>
           <CardHeader style={{ paddingBottom: 8 }}>
             <CardTitle>Actividad de la plataforma · 30 días</CardTitle>

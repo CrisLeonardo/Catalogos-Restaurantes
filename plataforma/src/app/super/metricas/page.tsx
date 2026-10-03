@@ -81,7 +81,7 @@ export default async function MetricasPage() {
           <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 12, color: 'var(--u-text)' }}>
             Todos los restaurantes
           </h2>
-          <Table>
+          <Table data-stack="">
             <TableHeader>
               <TableRow style={{ borderTop: 'none' }}>
                 <TableHead>Restaurante</TableHead>
@@ -105,12 +105,12 @@ export default async function MetricasPage() {
                       </Link>
                       <div style={{ fontSize: 11, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)', marginTop: 2 }}>{r.slug}</div>
                     </TableCell>
-                    <TableCell><PlanChip plan={r.plan_actual} /></TableCell>
-                    <TableCell><StatusChip status={r.status} /></TableCell>
-                    <TableCell className="text-right" style={{ fontFamily: 'var(--ui-font-mono)' }}>{t?.visits30 ?? 0}</TableCell>
-                    <TableCell className="text-right" style={{ fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>{t?.unique30 ?? 0}</TableCell>
-                    <TableCell className="text-right" style={{ fontFamily: 'var(--ui-font-mono)' }}>{t?.orders30 ?? 0}</TableCell>
-                    <TableCell style={{ color: 'var(--u-text-4)', fontSize: 12, whiteSpace: 'nowrap' }}>
+                    <TableCell data-label="Plan"><PlanChip plan={r.plan_actual} /></TableCell>
+                    <TableCell data-label="Estado"><StatusChip status={r.status} /></TableCell>
+                    <TableCell data-label="Visitas 30d" className="text-right" style={{ fontFamily: 'var(--ui-font-mono)' }}>{t?.visits30 ?? 0}</TableCell>
+                    <TableCell data-label="Únicos" className="text-right" style={{ fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>{t?.unique30 ?? 0}</TableCell>
+                    <TableCell data-label="Pedidos 30d" className="text-right" style={{ fontFamily: 'var(--ui-font-mono)' }}>{t?.orders30 ?? 0}</TableCell>
+                    <TableCell data-label="Alta" style={{ color: 'var(--u-text-4)', fontSize: 12, whiteSpace: 'nowrap' }}>
                       {new Date(r.created_at).toLocaleDateString('es', { day: '2-digit', month: 'short', year: '2-digit' })}
                     </TableCell>
                     <TableCell className="text-right" style={{ whiteSpace: 'nowrap' }}>
