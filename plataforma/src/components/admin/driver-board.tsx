@@ -30,11 +30,11 @@ export default function DriverBoard({
   summary: ShiftSummary;
 }) {
   const cardSt: React.CSSProperties = {
-    border: '1px solid var(--u-hair)', borderRadius: 16,
+    border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)',
     padding: 16, marginBottom: 14,
   };
   const bigBtn: React.CSSProperties = {
-    width: '100%', padding: '14px 16px', borderRadius: 12,
+    width: '100%', padding: '14px 16px', borderRadius: 'var(--radius-lg)',
     fontSize: 15, fontWeight: 700, cursor: 'pointer', marginTop: 12,
     border: 'none',
   };
@@ -108,7 +108,7 @@ export default function DriverBoard({
 
             {/* Cobro: lo primero que necesita saber al llegar */}
             <div style={{
-              marginTop: 10, padding: 10, borderRadius: 10,
+              marginTop: 10, padding: 10, borderRadius: 'var(--radius-md)',
               background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
               fontVariantNumeric: 'tabular-nums',
             }}>
@@ -160,7 +160,7 @@ export default function DriverBoard({
                   defaultValue={esEfectivo ? o.total : ''}
                   style={{
                     width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-                    border: '1px solid var(--u-hair)', borderRadius: 11, padding: '11px 13px',
+                    border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-md)', padding: '11px 13px',
                     color: 'var(--u-text)', fontSize: 16, outline: 'none',
                   }}
                 />

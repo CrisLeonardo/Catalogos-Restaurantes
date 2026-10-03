@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import OrderCard, { printKitchenTicket, type PanelCurrency } from '@/components/admin/order-card';
+import { fmtCurrency } from '@/lib/money';
 import { isKitchenAutoPrintEnabled, markKitchenPrinted } from '@/lib/printing';
 import { Icon } from '@/components/icons';
 import { getOrdersPdfData, exportOrdersXlsx, updateOrderStatus } from '@/lib/actions/orders';
@@ -60,15 +61,7 @@ interface Props {
    solo queda refrescar los datos y programar la auto-confirmación. */
 
 /** Formatea un monto con la moneda REAL del restaurante (no "Q" fijo). */
-export function fmtMoney(n: number, c: PanelCurrency, decimals = 2): string {
-  let num: string;
-  try {
-    num = n.toLocaleString(c.locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-  } catch {
-    num = n.toLocaleString('es-GT', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-  }
-  return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
-}
+export const fmtMoney = fmtCurrency;
 
 export default function OrdersPanel(props: Props) {
   return <OrdersPanelInner {...props} />;

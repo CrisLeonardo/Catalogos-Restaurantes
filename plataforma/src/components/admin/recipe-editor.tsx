@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { fmtMoney } from '@/lib/money';
 import { Icon } from '@/components/icons';
 import { saveProductRecipe, type RecipeLineInput } from '@/lib/actions/recipes';
 import type { Ingredient, RecipeItem } from '@/lib/db/recipes';
@@ -186,14 +187,14 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
                 }}
                 title={l.ingredient_cost <= 0 ? 'Este insumo tiene costo 0 — actualízalo en Ingredientes' : undefined}
               >
-                Q {l.line_cost.toFixed(2)}
+                {fmtMoney(l.line_cost)}
               </span>
               <button
                 type="button"
                 onClick={() => removeLine(l.id)}
                 className="press"
                 style={{
-                  width: 28, height: 28, borderRadius: 8,
+                  width: 28, height: 28, borderRadius: 'var(--radius-sm)',
                   border: '1px solid var(--c-danger-bg)',
                   background: 'var(--c-danger-bg)',
                   cursor: 'pointer',
@@ -223,7 +224,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
             )}
             <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>Costo total:</span>
             <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--brand-accent-ink)', fontFamily: 'var(--ui-font-mono)' }}>
-              Q {totalCost.toFixed(2)}
+              {fmtMoney(totalCost)}
             </span>
           </div>
         </div>
@@ -235,7 +236,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
         borderRadius: 'var(--radius-lg)',
         padding: '16px',
       }}>
-        <p style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--u-text-4)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 14 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--u-text-4)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 14 }}>
           Agregar ingrediente
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

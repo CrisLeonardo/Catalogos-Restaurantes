@@ -57,12 +57,12 @@ export default function LoginWelcomeToast({
         opacity: entered ? 1 : 0,
         transition: 'transform 320ms var(--ease-entry, ease), opacity 320ms var(--ease-entry, ease)',
         display: 'flex', alignItems: 'center', gap: 12,
-        padding: '13px 16px', borderRadius: 16, maxWidth: 'calc(100vw - 32px)',
+        padding: '13px 16px', borderRadius: 'var(--radius-lg)', maxWidth: 'calc(100vw - 32px)',
         boxShadow: '0 16px 40px rgba(0,0,0,0.35)',
       }}
     >
       <span style={{
-        width: 36, height: 36, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center',
+        width: 36, height: 36, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
         background: 'rgba(var(--brand-accent-rgb,99,102,241),0.14)', color: 'var(--brand-accent-ink)',
       }}>
         <Icon name="sparkle" size={18} />
@@ -81,7 +81,7 @@ export default function LoginWelcomeToast({
         aria-label="Cerrar"
         className="press"
         style={{
-          flexShrink: 0, width: 26, height: 26, borderRadius: 99, border: 'none', cursor: 'pointer',
+          flexShrink: 0, width: 26, height: 26, borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
           background: 'transparent', color: 'var(--u-text-4)', display: 'grid', placeItems: 'center',
         }}
       >

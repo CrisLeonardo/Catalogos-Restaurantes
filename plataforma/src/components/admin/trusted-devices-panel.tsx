@@ -5,7 +5,6 @@
    la mano y decide si el PIN del personal vale SOLO en ellos. */
 
 import { useActionState, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Section } from '@/components/ui/section';
@@ -23,7 +22,6 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
   devices: TrustedDevice[];
   requiresTrusted: boolean;
 }) {
-  const router = useRouter();
   const [thisDeviceId, setThisDeviceId] = useState<string | null>(null);
   const [thisDeviceLabel, setThisDeviceLabel] = useState('Este dispositivo');
   const { confirmSubmit, dialog } = useConfirm();
@@ -37,8 +35,6 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
     setThisDeviceLabel(describeThisDevice());
   }, []);
 
-  useEffect(() => { if (trustState && 'ok' in trustState) router.refresh(); }, [trustState, router]);
-  useEffect(() => { if (policyState && 'ok' in policyState) router.refresh(); }, [policyState, router]);
 
   const isThisTrusted = !!thisDeviceId && devices.some((d) => d.device_id === thisDeviceId);
   const error = (trustState && 'error' in trustState && trustState.error)
@@ -64,14 +60,14 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
       <div
         style={{
           display: 'flex', alignItems: 'center', gap: 11,
-          padding: '11px 13px', borderRadius: 12,
+          padding: '11px 13px', borderRadius: 'var(--radius-lg)',
           border: '1px solid var(--u-hair)',
           background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
         }}
       >
         <span
           style={{
-            width: 32, height: 32, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center',
+            width: 32, height: 32, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
             background: isThisTrusted ? 'var(--c-ok-bg)' : 'color-mix(in srgb, var(--u-text) 7%, transparent)',
             color: isThisTrusted ? 'var(--c-ok)' : 'var(--u-text-3)',
           }}

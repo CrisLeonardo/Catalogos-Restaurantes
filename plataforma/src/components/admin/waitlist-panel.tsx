@@ -4,7 +4,6 @@
    lanzamiento). Anotar → Avisar (con WhatsApp si hay teléfono) → Sentar. */
 
 import { useEffect, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Stat, StatGroup } from '@/components/ui/stat';
@@ -53,7 +52,6 @@ function whatsappHref(phone: string, restaurantName: string): string {
 }
 
 export default function WaitlistPanel({ restaurantId, entries, recent, summary, freeTables }: Props) {
-  const router = useRouter();
   const [tab, setTab] = useState<'cola' | 'nueva'>('cola');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -82,7 +80,6 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
       if (res.error) { setError(res.error); return; }
       setForm({ customer_name: '', party_size: 2, phone: '', notes: '' });
       setTab('cola');
-      router.refresh();
     });
   }
 
@@ -92,7 +89,6 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
       const res = await action(restaurantId, id);
       setBusyId(null);
       if (res.error) { setError(res.error); return; }
-      router.refresh();
     });
   }
 
@@ -105,7 +101,6 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
       setBusyId(null);
       if (res.error) { setError(res.error); return; }
       setMesaDe((prev) => { const next = { ...prev }; delete next[id]; return next; });
-      router.refresh();
     });
   }
 
@@ -181,7 +176,7 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
             const busy = busyId === w.id && isPending;
             return (
               <Card key={w.id} className="flex flex-wrap items-center gap-3 p-3.5">
-                <div style={{ width: 8, height: 8, borderRadius: 99, background: w.status === 'NOTIFIED' ? 'var(--c-ok)' : 'var(--c-warn)', flexShrink: 0 }} />
+                <div style={{ width: 8, height: 8, borderRadius: 'var(--radius-full)', background: w.status === 'NOTIFIED' ? 'var(--c-ok)' : 'var(--c-warn)', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 160 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>{w.customer_name}</div>
                   <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
@@ -201,7 +196,7 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
                       rel="noopener noreferrer"
                       onClick={() => handleAction(w.id, markWaitlistNotified)}
                       className="press"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 999, background: '#25D366', color: '#fff', fontSize: 12.5, fontWeight: 600, textDecoration: 'none' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 'var(--radius-full)', background: '#25D366', color: '#fff', fontSize: 12.5, fontWeight: 600, textDecoration: 'none' }}
                     >
                       <Icon name="whatsapp" size={13} /> Avisar
                     </a>
@@ -219,7 +214,7 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
                       onChange={(e) => setMesaDe((prev) => ({ ...prev, [w.id]: e.target.value }))}
                       aria-label={`Mesa para ${w.customer_name}`}
                       style={{
-                        height: 32, borderRadius: 999, padding: '0 10px',
+                        height: 32, borderRadius: 'var(--radius-full)', padding: '0 10px',
                         border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
                         color: 'var(--u-text)', fontSize: 12.5, cursor: 'pointer',
                       }}
@@ -256,7 +251,7 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {recent.slice(0, 8).map((w) => (
               <div key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', fontSize: 12.5, color: 'var(--u-text-3)' }}>
-                <span style={{ width: 6, height: 6, borderRadius: 99, background: w.status === 'SEATED' ? 'var(--c-ok)' : 'var(--c-danger)', flexShrink: 0 }} />
+                <span style={{ width: 6, height: 6, borderRadius: 'var(--radius-full)', background: w.status === 'SEATED' ? 'var(--c-ok)' : 'var(--c-danger)', flexShrink: 0 }} />
                 <span style={{ color: 'var(--u-text-2)', fontWeight: 600 }}>{w.customer_name}</span>
                 <span>{w.party_size} {w.party_size === 1 ? 'persona' : 'personas'}</span>
                 <span>

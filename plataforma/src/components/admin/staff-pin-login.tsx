@@ -169,10 +169,10 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
                 className="press glass-quiet"
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-                  padding: '16px 8px', borderRadius: 14, border: 'none', cursor: 'pointer',
+                  padding: '16px 8px', borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer',
                 }}
               >
-                <div style={{ width: 40, height: 40, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 10%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}>
+                <div style={{ width: 40, height: 40, borderRadius: 'var(--radius-full)', background: 'color-mix(in srgb, var(--u-text) 10%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}>
                   <Icon name="user" size={19} />
                 </div>
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text)', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
@@ -225,7 +225,7 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
           <span
             key={i}
             style={{
-              width: 14, height: 14, borderRadius: 99,
+              width: 14, height: 14, borderRadius: 'var(--radius-full)',
               background: i < pin.length ? 'var(--u-text)' : 'transparent',
               border: '1.5px solid var(--u-hair-2)',
             }}
@@ -245,7 +245,7 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
             disabled={isPending}
             onClick={() => pressDigit(d)}
             className="press glass-quiet"
-            style={{ width: 64, height: 64, borderRadius: 16, border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 700, color: 'var(--u-text)' }}
+            style={{ width: 64, height: 64, borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 700, color: 'var(--u-text)' }}
           >
             {d}
           </button>
@@ -256,7 +256,7 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
           disabled={isPending}
           onClick={() => pressDigit('0')}
           className="press glass-quiet"
-          style={{ width: 64, height: 64, borderRadius: 16, border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 700, color: 'var(--u-text)' }}
+          style={{ width: 64, height: 64, borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 700, color: 'var(--u-text)' }}
         >
           0
         </button>
@@ -265,7 +265,7 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
           disabled={isPending}
           onClick={backspace}
           className="press glass-quiet"
-          style={{ width: 64, height: 64, borderRadius: 16, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)' }}
+          style={{ width: 64, height: 64, borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)' }}
           aria-label="Borrar"
         >
           <Icon name="x" size={18} />

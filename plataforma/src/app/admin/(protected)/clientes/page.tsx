@@ -252,7 +252,7 @@ export default async function AdminClientesPage({
                           </span>
                           <span
                             style={{
-                              fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
+                              fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-full)',
                               background: o.status === 'CANCEL' ? 'var(--c-danger-bg)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
                               color: o.status === 'CANCEL' ? 'var(--c-danger)' : 'var(--u-text-3)',
                             }}

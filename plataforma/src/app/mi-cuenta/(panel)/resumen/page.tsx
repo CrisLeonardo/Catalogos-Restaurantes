@@ -60,7 +60,7 @@ export default async function ResumenPage() {
       )}
 
       {alerts.length > 0 && (
-        <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="glass" style={{ borderRadius: 'var(--radius-lg)', padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)' }}>Atención</div>
           {alerts.map((b) => (
             <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
@@ -78,7 +78,7 @@ export default async function ResumenPage() {
         </div>
       )}
 
-      <div className="glass" style={{ borderRadius: 16, overflow: 'hidden' }}>
+      <div className="glass" style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)', padding: '14px 18px 8px' }}>
           {varios ? 'Restaurante por restaurante · hoy' : 'Tu restaurante · hoy'}
         </div>
@@ -95,14 +95,14 @@ export default async function ResumenPage() {
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 15, color: 'var(--u-text)' }}>{money(b.todaySales)}</div>
-              <div style={{ fontSize: 10.5, color: 'var(--u-text-4)' }}>14d {money(b.sales14)}</div>
+              <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>14d {money(b.sales14)}</div>
             </div>
             {/* `adminUrl` y no un subdominio a mano: el panel no vive en el
                 mismo sitio en local que en producción. */}
             <a
               href={adminUrl(b.slug)}
               className="press glass-quiet"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 10, fontSize: 12, color: 'var(--u-text-2)', textDecoration: 'none', whiteSpace: 'nowrap' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 'var(--radius-md)', fontSize: 12, color: 'var(--u-text-2)', textDecoration: 'none', whiteSpace: 'nowrap' }}
             >
               Administrar <Icon name="arrowUpRight" size={13} />
             </a>

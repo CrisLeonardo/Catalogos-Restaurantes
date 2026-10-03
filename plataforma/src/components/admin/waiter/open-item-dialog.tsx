@@ -151,7 +151,7 @@ export default function OpenItemDialog({
           disabled={!listo}
           className="press btn-accent"
           style={{
-            width: '100%', marginTop: 18, padding: 14, borderRadius: 13, border: 'none',
+            width: '100%', marginTop: 18, padding: 14, borderRadius: 'var(--radius-lg)', border: 'none',
             cursor: listo ? 'pointer' : 'default', fontWeight: 700, fontSize: 15,
             opacity: listo ? 1 : 0.5,
           }}
@@ -166,7 +166,7 @@ export default function OpenItemDialog({
           onClick={onClose}
           className="press glass-quiet"
           style={{
-            width: '100%', marginTop: 9, padding: 13, borderRadius: 13, border: 'none',
+            width: '100%', marginTop: 9, padding: 13, borderRadius: 'var(--radius-lg)', border: 'none',
             cursor: 'pointer', fontWeight: 600, fontSize: 14, color: 'var(--u-text-2)',
           }}
         >
@@ -178,7 +178,7 @@ export default function OpenItemDialog({
 }
 
 const campoStyle: React.CSSProperties = {
-  width: '100%', height: 48, marginTop: 6, padding: '0 14px', borderRadius: 12, outline: 'none',
+  width: '100%', height: 48, marginTop: 6, padding: '0 14px', borderRadius: 'var(--radius-lg)', outline: 'none',
   border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
   /* 16 px de piso: por debajo, Safari amplía la página al enfocar el campo
      y el mesero acaba con la pantalla desplazada. */
@@ -213,7 +213,7 @@ function Paso({ icon, label, onClick, disabled }: {
       aria-label={label}
       className="press"
       style={{
-        display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: 11,
+        display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: 'var(--radius-md)',
         border: '1px solid var(--u-hair-2)', background: 'none', color: 'var(--u-text-2)',
         cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.4 : 1,
       }}

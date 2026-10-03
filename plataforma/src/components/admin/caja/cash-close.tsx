@@ -208,7 +208,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
           className="press"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 8, height: 38, padding: '0 14px',
-            borderRadius: 11, border: '1px solid var(--u-hair-2)', background: 'none',
+            borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'none',
             color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500,
             cursor: guardando ? 'default' : 'pointer', opacity: guardando ? 0.6 : 1,
           }}
@@ -221,7 +221,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
         <div
           style={{
             display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-            padding: '10px 14px', borderRadius: 12, fontSize: 13,
+            padding: '10px 14px', borderRadius: 'var(--radius-lg)', fontSize: 13,
             border: '1px solid color-mix(in srgb, var(--c-warn) 32%, transparent)',
             background: 'color-mix(in srgb, var(--c-warn) 9%, transparent)',
           }}
@@ -240,7 +240,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
             })}
             className="press"
             style={{
-              height: 32, padding: '0 13px', borderRadius: 8, cursor: 'pointer',
+              height: 32, padding: '0 13px', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
               border: '1px solid var(--u-hair-2)', background: 'none',
               color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600,
             }}
@@ -253,7 +253,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
       {state.needsMigration && (
         <p
           style={{
-            margin: 0, padding: '10px 14px', borderRadius: 12, fontSize: 12.5, lineHeight: 1.5,
+            margin: 0, padding: '10px 14px', borderRadius: 'var(--radius-lg)', fontSize: 12.5, lineHeight: 1.5,
             color: 'var(--u-text-2)', border: '1px solid var(--u-hair)',
             background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
           }}
@@ -274,7 +274,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
         <div
           role="status"
           style={{
-            padding: '10px 14px', borderRadius: 12, fontSize: 13, fontWeight: 500,
+            padding: '10px 14px', borderRadius: 'var(--radius-lg)', fontSize: 13, fontWeight: 500,
             color: aviso.bad ? 'var(--c-danger)' : 'var(--u-text-2)',
             border: `1px solid ${aviso.bad ? 'var(--c-danger-line)' : 'var(--u-hair)'}`,
             background: aviso.bad ? 'var(--c-danger-bg)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
@@ -335,7 +335,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
                 className="press btn-accent"
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-                  height: 54, borderRadius: 14, border: 'none', cursor: 'pointer',
+                  height: 54, borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer',
                   fontSize: 16, fontWeight: 600, width: '100%',
                 }}
               >
@@ -350,7 +350,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
                 className="press btn-accent"
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-                  height: 54, borderRadius: 14, border: 'none', width: '100%',
+                  height: 54, borderRadius: 'var(--radius-lg)', border: 'none', width: '100%',
                   fontSize: 16, fontWeight: 600,
                   cursor: guardando || !hayConteo ? 'not-allowed' : 'pointer',
                   opacity: guardando || !hayConteo ? 0.6 : 1,
@@ -391,7 +391,7 @@ function PasoChip({ n, titulo, detalle, on, hecho, onClick, ultimo }: {
         <span
           className="t-mono"
           style={{
-            display: 'grid', placeItems: 'center', width: 28, height: 28, borderRadius: 99, flexShrink: 0,
+            display: 'grid', placeItems: 'center', width: 28, height: 28, borderRadius: 'var(--radius-full)', flexShrink: 0,
             fontSize: 13, fontWeight: 700,
             background: on ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)',
             color: on ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
@@ -410,7 +410,7 @@ function PasoChip({ n, titulo, detalle, on, hecho, onClick, ultimo }: {
         <span
           aria-hidden
           style={{
-            flex: 1, height: 2, borderRadius: 99, minWidth: 20,
+            flex: 1, height: 2, borderRadius: 'var(--radius-full)', minWidth: 20,
             background: on ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
           }}
         />
@@ -462,7 +462,7 @@ function PasoEfectivo({ counts, setCount, opening, setOpening }: {
               aria-describedby="caja-fondo-ayuda"
               style={{
                 width: '100%', height: 44, padding: '0 12px', textAlign: 'right',
-                borderRadius: 10, border: '1px solid var(--u-hair-2)', outline: 'none',
+                borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', outline: 'none',
                 background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)',
                 fontFamily: 'var(--ui-font-mono)', fontSize: 18, fontWeight: 600,
               }}
@@ -583,7 +583,7 @@ function PasoGastos({ restaurantId, state, onAviso }: {
               className="press"
               style={{
                 display: 'grid', placeItems: 'center', width: 32, height: 32, flexShrink: 0,
-                borderRadius: 9, border: '1px solid var(--u-hair-2)', background: 'none',
+                borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'none',
                 color: 'var(--u-text-3)', cursor: 'pointer',
               }}
             >
@@ -630,7 +630,7 @@ function PasoGastos({ restaurantId, state, onAviso }: {
             className="press"
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, height: 46,
-              borderRadius: 11, border: '1px dashed var(--u-hair-2)', background: 'none',
+              borderRadius: 'var(--radius-md)', border: '1px dashed var(--u-hair-2)', background: 'none',
               color: 'var(--u-text-2)', fontSize: 14, fontWeight: 600,
               cursor: pending ? 'default' : 'pointer',
               opacity: pending || !concept.trim() || !(parseFloat(amount) > 0) ? 0.55 : 1,
@@ -697,7 +697,7 @@ function PasoPropinas({ tips, setTips, total, notes, setNotes }: {
                 <span
                   className="t-mono"
                   style={{
-                    display: 'grid', placeItems: 'center', width: 30, height: 30, borderRadius: 99, flexShrink: 0,
+                    display: 'grid', placeItems: 'center', width: 30, height: 30, borderRadius: 'var(--radius-full)', flexShrink: 0,
                     background: 'color-mix(in srgb, var(--brand-accent) 10%, transparent)',
                     color: 'var(--brand-accent-ink)', fontSize: 13, fontWeight: 700,
                   }}
@@ -723,7 +723,7 @@ function PasoPropinas({ tips, setTips, total, notes, setNotes }: {
                   }}
                   style={{
                     width: 110, height: 44, padding: '0 12px', textAlign: 'right', flexShrink: 0,
-                    borderRadius: 10, border: '1px solid var(--u-hair-2)', outline: 'none',
+                    borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', outline: 'none',
                     background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)',
                     fontFamily: 'var(--ui-font-mono)', fontSize: 16, fontWeight: 600,
                   }}
@@ -788,7 +788,7 @@ function TarjetaCuadre({ ventasEfectivo, gastos, opening, contado, diferencia, c
           aria-live="polite"
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-            padding: '12px 14px', borderRadius: 12, fontSize: 14, fontWeight: 600,
+            padding: '12px 14px', borderRadius: 'var(--radius-lg)', fontSize: 14, fontWeight: 600,
             border: `1px solid ${cuadra ? 'var(--c-ok-line)' : 'color-mix(in srgb, var(--brand-accent) 34%, transparent)'}`,
             background: cuadra ? 'var(--c-ok-bg)' : 'color-mix(in srgb, var(--brand-accent) 8%, transparent)',
             color: cuadra ? 'var(--c-ok)' : 'var(--brand-accent-ink)',
@@ -826,7 +826,7 @@ function TarjetaGastos({ state, onAnotar }: { state: CajaState; onAnotar: () => 
         className="press"
         style={{
           display: 'flex', alignItems: 'center', gap: 9, height: 42, padding: '0 12px',
-          borderRadius: 11, border: '1px dashed var(--u-hair-2)', background: 'none',
+          borderRadius: 'var(--radius-md)', border: '1px dashed var(--u-hair-2)', background: 'none',
           color: 'var(--u-text-3)', fontSize: 13.5, cursor: 'pointer',
         }}
       >
@@ -897,7 +897,7 @@ function CierreHecho({ result, dateLabel, shift, cashierName, restaurantName, ti
         <div
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-            padding: '12px 14px', borderRadius: 12, fontSize: 14, fontWeight: 600,
+            padding: '12px 14px', borderRadius: 'var(--radius-lg)', fontSize: 14, fontWeight: 600,
             border: `1px solid ${cuadra ? 'var(--c-ok-line)' : 'color-mix(in srgb, var(--brand-accent) 34%, transparent)'}`,
             background: cuadra ? 'var(--c-ok-bg)' : 'color-mix(in srgb, var(--brand-accent) 8%, transparent)',
             color: cuadra ? 'var(--c-ok)' : 'var(--brand-accent-ink)',
@@ -928,7 +928,7 @@ function CierreHecho({ result, dateLabel, shift, cashierName, restaurantName, ti
           className="press"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 7, height: 40, padding: '0 14px',
-            borderRadius: 11, border: '1px solid var(--u-hair-2)', textDecoration: 'none',
+            borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', textDecoration: 'none',
             color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500,
           }}
         >
@@ -945,12 +945,12 @@ function CierreHecho({ result, dateLabel, shift, cashierName, restaurantName, ti
 
 const tarjeta: React.CSSProperties = {
   display: 'flex', flexDirection: 'column', gap: 10, padding: 16,
-  borderRadius: 15, border: '1px solid var(--u-hair)',
+  borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair)',
   background: 'var(--adm-card)', boxShadow: 'var(--adm-shadow-xs)',
 };
 
 const campo: React.CSSProperties = {
-  width: '100%', height: 46, padding: '0 13px', borderRadius: 10, outline: 'none',
+  width: '100%', height: 46, padding: '0 13px', borderRadius: 'var(--radius-md)', outline: 'none',
   border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
   color: 'var(--u-text)', fontSize: 14.5,
 };
@@ -985,7 +985,7 @@ function BotonSuave({ onClick, children }: { onClick: () => void; children: Reac
       className="press"
       style={{
         display: 'inline-flex', alignItems: 'center', height: 40, padding: '0 14px',
-        borderRadius: 11, border: '1px solid var(--u-hair-2)', background: 'none',
+        borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'none',
         color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
       }}
     >

@@ -71,7 +71,7 @@ export function Group({ children, style }: { children: ReactNode; style?: CSSPro
       style={{
         background: 'var(--adm-card)',
         border: '1px solid var(--adm-border)',
-        borderRadius: 12,
+        borderRadius: 'var(--radius-lg)',
         overflow: 'hidden',
         boxShadow: 'var(--adm-shadow-xs)',
         ...style,
@@ -165,7 +165,7 @@ export function Pill({ color, children, align = 'flex-start' }: {
 }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: align, gap: 6, fontSize: 13, color }}>
-      <span aria-hidden style={{ width: 7, height: 7, borderRadius: 99, background: 'currentColor', flexShrink: 0 }} />
+      <span aria-hidden style={{ width: 7, height: 7, borderRadius: 'var(--radius-full)', background: 'currentColor', flexShrink: 0 }} />
       {children}
     </span>
   );
@@ -175,7 +175,7 @@ export function Pill({ color, children, align = 'flex-start' }: {
 export function Tile({ children, accent = false }: { children: ReactNode; accent?: boolean }) {
   return (
     <span style={{
-      display: 'grid', placeItems: 'center', width: 26, height: 26, borderRadius: 7, flexShrink: 0,
+      display: 'grid', placeItems: 'center', width: 26, height: 26, borderRadius: 'var(--radius-sm)', flexShrink: 0,
       background: accent
         ? 'color-mix(in srgb, var(--adm-accent-500) 12%, transparent)'
         : 'color-mix(in srgb, var(--u-text) 8%, transparent)',

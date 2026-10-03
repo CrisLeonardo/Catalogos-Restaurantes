@@ -266,7 +266,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                 >
                   <span
                     style={{
-                      width: 8, height: 8, borderRadius: 99, flexShrink: 0,
+                      width: 8, height: 8, borderRadius: 'var(--radius-full)', flexShrink: 0,
                       background: d.on ? 'var(--c-ok)' : 'var(--u-hair-2)',
                     }}
                   />
@@ -300,7 +300,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                             className="press"
                             aria-label="Eliminar turno"
                             style={{
-                              width: 26, height: 26, borderRadius: 99, border: 'none',
+                              width: 26, height: 26, borderRadius: 'var(--radius-full)', border: 'none',
                               background: 'var(--c-danger-bg)', color: 'var(--c-danger)',
                               cursor: 'pointer', fontSize: 15, lineHeight: 1,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -407,7 +407,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                 className="press"
                 aria-label="Eliminar excepción"
                 style={{
-                  width: 26, height: 26, borderRadius: 99, border: 'none',
+                  width: 26, height: 26, borderRadius: 'var(--radius-full)', border: 'none',
                   background: 'var(--c-danger-bg)', color: 'var(--c-danger)',
                   cursor: 'pointer', fontSize: 15, lineHeight: 1,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 'auto',

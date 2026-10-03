@@ -117,7 +117,7 @@ export default function NuevaClaveClient() {
           disabled={isPending || entrando || mismatch || password.length < 8}
           className="press btn-accent"
           style={{
-            padding: '13px', borderRadius: 999, fontWeight: 600, fontSize: 15,
+            padding: '13px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 15,
             border: 'none', color: '#fff',
             cursor: isPending || entrando || mismatch ? 'not-allowed' : 'pointer',
             opacity: isPending || entrando || mismatch || password.length < 8 ? 0.6 : 1,

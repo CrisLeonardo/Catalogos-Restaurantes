@@ -4,7 +4,6 @@
    Usada en /admin/categorias. */
 
 import { useActionState, useEffect, useOptimistic, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon, ICON_PATHS } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,7 +32,7 @@ function CatIconPicker({ value, suggested, onChange }: {
   const [open, setOpen] = useState(false);
   const effective = value && ICON_PATHS[value] ? value : suggested;
   const cell = (active: boolean): React.CSSProperties => ({
-    width: 34, height: 34, display: 'grid', placeItems: 'center', borderRadius: 9, cursor: 'pointer',
+    width: 34, height: 34, display: 'grid', placeItems: 'center', borderRadius: 'var(--radius-md)', cursor: 'pointer',
     border: `1px solid ${active ? 'var(--brand-accent)' : 'var(--u-hair)'}`,
     background: active ? 'color-mix(in srgb, var(--brand-accent) 20%, transparent)' : 'transparent',
     color: 'var(--u-text)',
@@ -45,14 +44,14 @@ function CatIconPicker({ value, suggested, onChange }: {
         onClick={() => setOpen((o) => !o)}
         aria-label="Elegir ícono"
         className="press"
-        style={{ width: 44, height: 44, borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair)', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', cursor: 'pointer' }}
+        style={{ width: 44, height: 44, borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair)', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', cursor: 'pointer' }}
       >
         <Icon name={effective} size={22} />
       </button>
       {open && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
-          <div className="glass-solid anim-pop" style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 50, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, padding: 8, borderRadius: 14, width: 214 }}>
+          <div className="glass-solid anim-pop" style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 50, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, padding: 8, borderRadius: 'var(--radius-lg)', width: 214 }}>
             <button type="button" onClick={() => { onChange(null); setOpen(false); }} className="press"
               style={{ ...cell(value === null), gridColumn: 'span 5', width: 'auto', height: 32, display: 'flex', gap: 6, justifyContent: 'center', fontSize: 11.5, fontWeight: 600 }}>
               <Icon name="sparkle" size={13} /> Automático
@@ -91,7 +90,6 @@ interface Props {
 export default function CategoriesPanel({ restaurantId, categories, products }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showNew,   setShowNew]   = useState(false);
-  const router = useRouter();
   const toggleForms = useRef<Record<string, HTMLFormElement | null>>({});
 
   const count = (id: string) => products.filter((p) => p.category_id === id).length;
@@ -112,7 +110,6 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
   function onSaved() {
     setEditingId(null);
     setShowNew(false);
-    router.refresh();
   }
 
   return (
@@ -178,7 +175,7 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
             {/* Ícono */}
             <div
               style={{
-                width: 44, height: 44, borderRadius: 12,
+                width: 44, height: 44, borderRadius: 'var(--radius-lg)',
                 background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair)',
                 display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', flexShrink: 0,
               }}
@@ -438,7 +435,7 @@ function DeleteCatButton({
 /* ── Estilos utilitarios ──────────────────────────────────── */
 
 const reorderBtn: React.CSSProperties = {
-  width: 26, height: 26, borderRadius: 8,
+  width: 26, height: 26, borderRadius: 'var(--radius-sm)',
   border: '1px solid var(--u-hair)',
   background: 'transparent', color: 'var(--u-text-4)',
   cursor: 'pointer', display: 'grid', placeItems: 'center', padding: 0,
@@ -447,7 +444,7 @@ const reorderBtn: React.CSSProperties = {
 const inlineInput: React.CSSProperties = {
   background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
   border: '1px solid var(--u-hair-2)',
-  borderRadius: 10,
+  borderRadius: 'var(--radius-md)',
   padding: '9px 12px',
   color: 'var(--u-text)',
   fontSize: 14,

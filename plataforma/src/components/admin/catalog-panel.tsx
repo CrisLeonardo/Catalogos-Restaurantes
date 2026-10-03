@@ -311,7 +311,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                 <div className="catalog-cell-dish" style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, opacity: apagado, transition: 'opacity 160ms' }}>
                   <div
                     style={{
-                      width: 44, height: 44, borderRadius: 11, overflow: 'hidden',
+                      width: 44, height: 44, borderRadius: 'var(--radius-md)', overflow: 'hidden',
                       background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', flexShrink: 0,
                     }}
                   >
@@ -378,7 +378,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                 {/* Toggle disponibilidad */}
                 <div className="catalog-cell-avail" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   {!p.is_active ? (
-                    <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--c-danger)', padding: '3px 8px', borderRadius: 99, background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)' }}>
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--c-danger)', padding: '3px 8px', borderRadius: 'var(--radius-full)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)' }}>
                       Desactivado
                     </span>
                   ) : isOutOfStock(p) ? (
@@ -388,7 +388,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                     <Link
                       href={panelHref(base, '/admin/inventario')}
                       title="Repón existencias en Inventario"
-                      style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--c-warn)', padding: '3px 8px', borderRadius: 99, background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', textDecoration: 'none' }}
+                      style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--c-warn)', padding: '3px 8px', borderRadius: 'var(--radius-full)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', textDecoration: 'none' }}
                     >
                       Sin existencias
                     </Link>
@@ -427,7 +427,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
 function RowBadge({ label, color, bg }: { label: string; color: string; bg: string }) {
   return (
     <span style={{
-      display: 'inline-block', padding: '2px 7px', borderRadius: 99,
+      display: 'inline-block', padding: '2px 7px', borderRadius: 'var(--radius-full)',
       fontSize: 11, fontWeight: 600, background: bg, color,
       letterSpacing: '0.02em', whiteSpace: 'nowrap',
     }}>

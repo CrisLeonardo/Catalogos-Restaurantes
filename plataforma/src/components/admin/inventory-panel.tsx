@@ -5,7 +5,6 @@
    vía saveInventory. Badges de stock bajo / agotado. */
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { adjustStock, saveInventory, getProductMovements } from '@/lib/actions/inventory';
 import { Card } from '@/components/ui/card';
@@ -28,11 +27,11 @@ function MovementHistory({ movements }: { movements: StockMovement[] }) {
         <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, padding: '5px 2px', borderBottom: '1px solid var(--u-hair)' }}>
           <div>
             <div style={{ color: 'var(--u-text-2)' }}>{REASON_LABEL[m.reason] ?? m.reason}</div>
-            <div style={{ color: 'var(--u-text-4)', fontSize: 10.5 }}>{new Date(m.created_at).toLocaleString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+            <div style={{ color: 'var(--u-text-4)', fontSize: 11 }}>{new Date(m.created_at).toLocaleString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
           </div>
           <div style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)' }}>
             <div style={{ color: Number(m.delta) >= 0 ? 'var(--c-ok)' : 'var(--c-danger)' }}>{Number(m.delta) >= 0 ? '+' : ''}{m.delta}</div>
-            {m.unit_cost != null && <div style={{ color: 'var(--u-text-3)', fontSize: 10.5 }}>costo Q{Number(m.unit_cost).toFixed(4)} · prom. Q{Number(m.avg_cost_after).toFixed(4)}</div>}
+            {m.unit_cost != null && <div style={{ color: 'var(--u-text-3)', fontSize: 11 }}>costo Q{Number(m.unit_cost).toFixed(4)} · prom. Q{Number(m.avg_cost_after).toFixed(4)}</div>}
           </div>
         </div>
       ))}
@@ -48,7 +47,6 @@ interface Props {
 
 export default function InventoryPanel({ restaurantId, categories, products }: Props) {
   const [activeCat, setActiveCat] = useState('todos');
-  const router = useRouter();
 
   const list = products.filter((p) => activeCat === 'todos' || p.category_id === activeCat);
 
@@ -101,7 +99,6 @@ export default function InventoryPanel({ restaurantId, categories, products }: P
               product={p}
               restaurantId={restaurantId}
               last={i === list.length - 1}
-              onChanged={() => router.refresh()}
             />
           ))}
         </Card>
@@ -110,7 +107,7 @@ export default function InventoryPanel({ restaurantId, categories, products }: P
   );
 }
 
-function Row({ product, restaurantId, last, onChanged }: { product: Product; restaurantId: string; last: boolean; onChanged: () => void }) {
+function Row({ product, restaurantId, last }: { product: Product; restaurantId: string; last: boolean }) {
   const [pending, start] = useTransition();
   const [stockVal, setStockVal] = useState(String(product.stock ?? 0));
   const [thresholdVal, setThresholdVal] = useState(String(product.low_stock_threshold ?? 0));
@@ -128,7 +125,7 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
     fd.set('restaurantId', restaurantId);
     fd.set('id', product.id);
     fd.set('delta', String(delta));
-    start(async () => { await adjustStock(fd); onChanged(); });
+    start(async () => { await adjustStock(fd); });
   }
 
   function save(track: boolean) {
@@ -138,7 +135,7 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
     fd.set('track_stock', String(track));
     fd.set('stock', stockVal);
     fd.set('low_stock_threshold', thresholdVal);
-    start(async () => { await saveInventory(null, fd); setOpen(false); onChanged(); });
+    start(async () => { await saveInventory(null, fd); setOpen(false); });
   }
 
   function toggleHistory() {
@@ -222,7 +219,7 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
 
 const inputStyle: React.CSSProperties = {
   width: 110, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
-  borderRadius: 10, padding: '9px 11px', color: 'var(--u-text)', fontSize: 14,
+  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14,
   outline: 'none', fontFamily: 'var(--ui-font-mono)',
 };
 
@@ -252,7 +249,7 @@ function Tag({ text, tone }: { text: string; tone?: 'bad' | 'warn' | 'ok' }) {
   };
   const s = map[tone ?? 'none'];
   return (
-    <span style={{ fontSize: 11, fontWeight: 600, color: s.c, padding: '2px 8px', borderRadius: 99, background: s.b, border: `1px solid ${s.br}` }}>
+    <span style={{ fontSize: 11, fontWeight: 600, color: s.c, padding: '2px 8px', borderRadius: 'var(--radius-full)', background: s.b, border: `1px solid ${s.br}` }}>
       {text}
     </span>
   );

@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/server';
 import { resolveEffectiveRole } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath, updateTag } from 'next/cache';
+import { fmtMoney } from '@/lib/money';
 import {
   getBillingConfig,
   getInvoices,
@@ -276,7 +277,7 @@ export async function generateProrate(
   });
   if (error) return { error: error.message };
   revalidateBilling(restaurantId);
-  return { ok: true, msg: `Cobro prorrateado por ${cfg.currency} ${amount.toFixed(2)} (${daysRemaining} de ${daysInMonth} días).` };
+  return { ok: true, msg: `Cobro prorrateado por ${fmtMoney(amount, cfg.currency)} (${daysRemaining} de ${daysInMonth} días).` };
 }
 
 /* ── Cobro de implementación (setup) ────────────────────────── */

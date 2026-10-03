@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -74,7 +73,6 @@ function Aviso({ tono, children }: { tono: 'warn' | 'danger' | 'info'; children:
 }
 
 export default function FacturacionPanel({ restaurantId, settings, estado, documents, summary, invoiceable, hasSettingsRow }: Props) {
-  const router = useRouter();
   const listo = hasSettingsRow && estado.problemas.length === 0;
   const [tab, setTab] = useState<'emitir' | 'config' | 'historial'>(listo ? 'emitir' : 'config');
 
@@ -124,9 +122,9 @@ export default function FacturacionPanel({ restaurantId, settings, estado, docum
 
       <PageTabs tabs={[['emitir', 'Emitir'], ['config', 'Configuración'], ['historial', 'Historial']] as const} value={tab} onChange={setTab} />
 
-      {tab === 'config' && <SettingsForm restaurantId={restaurantId} settings={settings} estado={estado} onSaved={() => router.refresh()} />}
-      {tab === 'emitir' && <EmitForm restaurantId={restaurantId} settings={settings} invoiceable={invoiceable} listo={listo} onEmitted={() => router.refresh()} onGoConfig={() => setTab('config')} />}
-      {tab === 'historial' && <DocumentsList restaurantId={restaurantId} settings={settings} documents={documents} onChange={() => router.refresh()} />}
+      {tab === 'config' && <SettingsForm restaurantId={restaurantId} settings={settings} estado={estado} />}
+      {tab === 'emitir' && <EmitForm restaurantId={restaurantId} settings={settings} invoiceable={invoiceable} listo={listo} onGoConfig={() => setTab('config')} />}
+      {tab === 'historial' && <DocumentsList restaurantId={restaurantId} settings={settings} documents={documents} />}
     </div>
   );
 }
@@ -154,7 +152,7 @@ function Interruptor({ label, nota, checked, onChange }: { label: string; nota: 
 
 /* ── Configuración fiscal ───────────────────────────────────── */
 
-function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantId: string; settings: FelSettings; estado: FelEstadoConfig; onSaved: () => void }) {
+function SettingsForm({ restaurantId, settings, estado }: { restaurantId: string; settings: FelSettings; estado: FelEstadoConfig }) {
   const [p, setP] = useState<FelSettingsPatch>({
     provider: settings.provider,
     ambiente: settings.ambiente,
@@ -194,7 +192,6 @@ function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantI
       if (res.error) { setStatus({ error: res.error }); return; }
       markSaved();
       setStatus({ saved: true });
-      onSaved();
     });
   }
 
@@ -365,7 +362,7 @@ function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantI
 
 /* ── Emitir factura ─────────────────────────────────────────── */
 
-function EmitForm({ restaurantId, settings, invoiceable, listo, onEmitted, onGoConfig }: { restaurantId: string; settings: FelSettings; invoiceable: InvoiceableOrder[]; listo: boolean; onEmitted: () => void; onGoConfig: () => void }) {
+function EmitForm({ restaurantId, settings, invoiceable, listo, onGoConfig }: { restaurantId: string; settings: FelSettings; invoiceable: InvoiceableOrder[]; listo: boolean; onGoConfig: () => void }) {
   const [mode, setMode] = useState<'pedido' | 'libre'>('pedido');
   const [orderId, setOrderId] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -426,7 +423,6 @@ function EmitForm({ restaurantId, settings, invoiceable, listo, onEmitted, onGoC
       setEnCola(Boolean(res.aviso));
       setMsg(res.aviso ?? 'Factura emitida ✓');
       setOrderId(''); setDescripcion(''); setMonto('');
-      onEmitted();
     });
   }
 
@@ -524,7 +520,7 @@ function EmitForm({ restaurantId, settings, invoiceable, listo, onEmitted, onGoC
 
 /* ── Historial de documentos ────────────────────────────────── */
 
-function DocumentsList({ restaurantId, settings, documents, onChange }: { restaurantId: string; settings: FelSettings; documents: FelDocument[]; onChange: () => void }) {
+function DocumentsList({ restaurantId, settings, documents }: { restaurantId: string; settings: FelSettings; documents: FelDocument[] }) {
   const [isPending, start] = useTransition();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -544,7 +540,6 @@ function DocumentsList({ restaurantId, settings, documents, onChange }: { restau
       setBusy(null);
       if (res?.error) setError(res.error);
       else { setPidiendo(null); setMotivo(''); }
-      onChange();
     });
   }
 
@@ -555,7 +550,6 @@ function DocumentsList({ restaurantId, settings, documents, onChange }: { restau
       const res = await reintentarInvoice(restaurantId, id);
       setBusy(null);
       if (res?.error || res?.aviso) setError(res.error ?? res.aviso ?? null);
-      onChange();
     });
   }
 
@@ -630,7 +624,7 @@ function DocumentsList({ restaurantId, settings, documents, onChange }: { restau
                     )}
                   </td>
                   <td style={{ padding: '10px 12px' }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: `color-mix(in srgb, ${ESTADO_COLOR[d.estado] ?? '#888'} 13%, transparent)`, color: ESTADO_COLOR[d.estado] ?? '#888' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 'var(--radius-full)', background: `color-mix(in srgb, ${ESTADO_COLOR[d.estado] ?? '#888'} 13%, transparent)`, color: ESTADO_COLOR[d.estado] ?? '#888' }}>
                       {d.estado}
                     </span>
                     {/* El motivo importa más que el estado: "ERROR" a secas deja

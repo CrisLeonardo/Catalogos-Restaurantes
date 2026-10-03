@@ -30,6 +30,7 @@ import { useFormDirty } from '@/lib/use-form-dirty';
    `<Link>`). Fuera del panel devuelve la ruta tal cual. */
 import { usePathname as useRutaNavegador } from 'next/navigation';
 import { panelBaseFrom, panelHref } from '@/lib/panel-links';
+import { fmtMoney } from '@/lib/money';
 
 interface ProductFormProps {
   restaurantId: string;
@@ -117,7 +118,7 @@ function ToggleSwitch({ checked, onChange, ariaLabel }: { checked: boolean; onCh
       style={{
         width: 44,
         height: 26,
-        borderRadius: 999,
+        borderRadius: 'var(--radius-full)',
         border: 'none',
         cursor: 'pointer',
         background: checked ? 'var(--brand-accent)' : 'var(--u-hair-2)',
@@ -327,7 +328,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                         onClick={() => toggleTag(t.id)}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 5,
-                          padding: '7px 12px', borderRadius: 999, cursor: 'pointer',
+                          padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
                           border: `1px solid ${on ? 'transparent' : 'var(--u-hair-2)'}`,
                           background: on ? 'var(--u-text)' : 'transparent',
                           color: on ? 'var(--brand-bg)' : 'var(--u-text)',
@@ -346,7 +347,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                       onClick={() => setTags((prev) => prev.filter((x) => x !== t))}
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 5,
-                        padding: '7px 12px', borderRadius: 999, cursor: 'pointer',
+                        padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
                         border: '1px solid transparent',
                         background: 'var(--u-text)', color: 'var(--brand-bg)',
                         fontWeight: 600, fontSize: 12,
@@ -407,7 +408,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                         className="press"
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '7px 12px', borderRadius: 999, cursor: 'pointer',
+                          padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
                           border: `1px solid ${active ? 'var(--brand-accent)' : 'var(--u-hair-2)'}`,
                           background: active ? 'color-mix(in srgb, var(--brand-accent) 16%, transparent)' : 'transparent',
                           color: 'var(--u-text)', fontSize: 12.5, fontWeight: 500,
@@ -481,7 +482,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                   <span style={{ color: 'var(--u-text-3)' }}>
                     Utilidad:{' '}
                     <strong style={{ color: good ? 'var(--u-text)' : 'var(--c-danger, #f87171)' }}>
-                      {profit.toFixed(2)}
+                      {fmtMoney(profit)}
                     </strong>
                   </span>
                   <span style={{ color: 'var(--u-text-3)' }}>
@@ -584,7 +585,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                     className="press"
                     style={{
                       flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                      padding: '8px 10px', borderRadius: 12, cursor: 'pointer', minWidth: 56,
+                      padding: '8px 10px', borderRadius: 'var(--radius-lg)', cursor: 'pointer', minWidth: 56,
                       border: `1.5px solid ${on ? 'var(--u-text)' : 'var(--u-hair-2)'}`,
                       background: on ? 'var(--u-text)' : 'transparent',
                       color: on ? 'var(--brand-bg)' : 'var(--u-text-3)',

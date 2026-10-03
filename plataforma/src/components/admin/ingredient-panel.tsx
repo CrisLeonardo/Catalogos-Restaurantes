@@ -1,7 +1,6 @@
 'use client';
 
 import { Fragment, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { saveIngredient, deleteIngredient, getIngredientMovements } from '@/lib/actions/recipes';
 import { Card } from '@/components/ui/card';
@@ -25,11 +24,11 @@ function MovementHistory({ movements }: { movements: StockMovement[] }) {
         <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, padding: '5px 2px', borderBottom: '1px solid var(--u-hair)' }}>
           <div>
             <div style={{ color: 'var(--u-text-2)' }}>{REASON_LABEL[m.reason] ?? m.reason}</div>
-            <div style={{ color: 'var(--u-text-4)', fontSize: 10.5 }}>{new Date(m.created_at).toLocaleString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+            <div style={{ color: 'var(--u-text-4)', fontSize: 11 }}>{new Date(m.created_at).toLocaleString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
           </div>
           <div style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)' }}>
             <div style={{ color: Number(m.delta) >= 0 ? 'var(--c-ok)' : 'var(--c-danger)' }}>{Number(m.delta) >= 0 ? '+' : ''}{m.delta}</div>
-            {m.unit_cost != null && <div style={{ color: 'var(--u-text-3)', fontSize: 10.5 }}>costo Q{Number(m.unit_cost).toFixed(4)} · prom. Q{Number(m.avg_cost_after).toFixed(4)}</div>}
+            {m.unit_cost != null && <div style={{ color: 'var(--u-text-3)', fontSize: 11 }}>costo Q{Number(m.unit_cost).toFixed(4)} · prom. Q{Number(m.avg_cost_after).toFixed(4)}</div>}
           </div>
         </div>
       ))}
@@ -78,7 +77,6 @@ type EditState = {
 } | null;
 
 export default function IngredientPanel({ restaurantId, initialIngredients, usageCounts }: Props) {
-  const router = useRouter();
   const { confirm, dialog } = useConfirm();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -120,7 +118,6 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
       const res = await saveIngredient(fd);
       if (res?.error) { setError(res.error); return; }
       resetAdd();
-      router.refresh();
     });
   }
 
@@ -138,7 +135,6 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
       const res = await saveIngredient(fd);
       if (res?.error) { setError(res.error); return; }
       setEditState(null);
-      router.refresh();
     });
   }
 
@@ -154,7 +150,6 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
     startTransition(async () => {
       const res = await deleteIngredient(ing.id, restaurantId);
       if (res?.error) { setError(res.error); return; }
-      router.refresh();
     });
   }
 
@@ -243,7 +238,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
           {initialIngredients.map((ing, i) => {
             const usage = usageCounts[ing.id] ?? 0;
             const usageChip = usage > 0 ? (
-              <span style={{ fontSize: 12, background: 'color-mix(in srgb, var(--u-text) 7%, transparent)', padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: 12, background: 'color-mix(in srgb, var(--u-text) 7%, transparent)', padding: '2px 8px', borderRadius: 'var(--radius-full)', whiteSpace: 'nowrap' }}>
                 {usage} platillo{usage !== 1 ? 's' : ''}
               </span>
             ) : null;

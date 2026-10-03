@@ -126,7 +126,7 @@ export default function RestaurantsDirectory({ rows, planOrder }: { rows: Direct
                 <span
                   aria-hidden
                   style={{
-                    width: 38, height: 38, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center',
+                    width: 38, height: 38, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
                     background: `color-mix(in srgb, ${r.color ?? 'var(--brand-accent)'} 16%, transparent)`,
                     color: r.color ?? 'var(--brand-accent)',
                     fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15,
@@ -172,7 +172,7 @@ function FilterChip({ label, active, onClick, danger, dot }: {
       className="press"
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,
-        padding: '6px 12px', borderRadius: 99, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+        padding: '6px 12px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
         background: active
           ? (danger ? 'color-mix(in srgb, var(--c-danger) 14%, transparent)' : 'color-mix(in srgb, var(--brand-accent) 14%, transparent)')
           : 'var(--adm-card, color-mix(in srgb, var(--u-text) 5%, transparent))',
@@ -183,7 +183,7 @@ function FilterChip({ label, active, onClick, danger, dot }: {
         transition: 'all 140ms',
       }}
     >
-      {dot && <span style={{ width: 7, height: 7, borderRadius: 99, background: dot }} />}
+      {dot && <span style={{ width: 7, height: 7, borderRadius: 'var(--radius-full)', background: dot }} />}
       {label}
     </button>
   );

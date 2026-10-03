@@ -78,6 +78,15 @@ export function diaMes(v: string | Date, tz: string = TZ_GT): string {
     .format(typeof v === 'string' ? new Date(v) : v);
 }
 
+/** «lun 28 sept» — el día de una barra de gráfica (fecha sola «2026-09-28»). */
+export function diaSemana(ymd: string): string {
+  if (!esFechaSola(ymd)) return ymd;
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Intl.DateTimeFormat(LOCALE, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
+    .format(new Date(Date.UTC(y, m - 1, d, 12)))
+    .replace(',', '');
+}
+
 /** ¿El instante cae HOY en la zona dada? (para decir solo la hora de lo de hoy). */
 export function esHoy(v: string | Date, tz: string = TZ_GT, ahora: Date = new Date()): boolean {
   const dia = (d: Date) => {

@@ -30,7 +30,7 @@ export default function ReceiptDownloadButton({ data }: { data: ReceiptData }) {
       style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         // 40 px: esta fila del historial de cobros tambien se lee en el telefono.
-        minHeight: 40, padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: 600,
+        minHeight: 40, padding: '6px 14px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600,
         border: '1px solid var(--adm-border, var(--u-hair-2))',
         background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
         color: 'var(--brand-accent-ink)', cursor: busy ? 'wait' : 'pointer', whiteSpace: 'nowrap',

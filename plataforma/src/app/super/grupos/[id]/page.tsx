@@ -16,8 +16,8 @@ export default async function GrupoDetailPage({ params }: { params: Promise<{ id
   // sección de su Mi cuenta, y solo él entra ahí.
   const publicUrl = subdomainUrl(org.slug);
 
-  const card: React.CSSProperties = { borderRadius: 16, padding: 20 };
-  const sectionTitle: React.CSSProperties = { fontSize: 10.5, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 12 };
+  const card: React.CSSProperties = { borderRadius: 'var(--radius-lg)', padding: 20 };
+  const sectionTitle: React.CSSProperties = { fontSize: 11, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 12 };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -42,7 +42,7 @@ export default async function GrupoDetailPage({ params }: { params: Promise<{ id
                 <form action={unassignRestaurant}>
                   <input type="hidden" name="orgId" value={org.id} />
                   <input type="hidden" name="restaurantId" value={b.id} />
-                  <button type="submit" className="press" style={{ fontSize: 12, color: 'var(--c-danger)', background: 'none', border: '1px solid var(--c-danger-line)', borderRadius: 8, padding: '5px 10px', cursor: 'pointer' }}>Quitar</button>
+                  <button type="submit" className="press" style={{ fontSize: 12, color: 'var(--c-danger)', background: 'none', border: '1px solid var(--c-danger-line)', borderRadius: 'var(--radius-sm)', padding: '5px 10px', cursor: 'pointer' }}>Quitar</button>
                 </form>
               </div>
             ))}

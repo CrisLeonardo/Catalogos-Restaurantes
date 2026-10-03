@@ -236,7 +236,7 @@ export default function SalonCanvas({
           ) : (
             <div
               style={{
-                borderRadius: 14, border: '1px solid var(--u-hair)', overflow: 'hidden',
+                borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair)', overflow: 'hidden',
                 background: 'var(--adm-card)', boxShadow: 'var(--adm-shadow-xs)',
               }}
             >

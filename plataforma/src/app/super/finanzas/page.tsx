@@ -79,7 +79,7 @@ export default async function FinanzasResumenPage() {
 
         {fin.receivables.length === 0 ? (
           <Card style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ width: 36, height: 36, borderRadius: 11, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--c-ok) 14%, transparent)', color: 'var(--c-ok)', flexShrink: 0 }}>
+            <span style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--c-ok) 14%, transparent)', color: 'var(--c-ok)', flexShrink: 0 }}>
               <Icon name="checkCircle" size={18} />
             </span>
             <div>
@@ -163,7 +163,7 @@ export default async function FinanzasResumenPage() {
                 }}
               >
                 <span style={{
-                  width: 22, height: 22, borderRadius: 7, flexShrink: 0, display: 'grid', placeItems: 'center',
+                  width: 22, height: 22, borderRadius: 'var(--radius-sm)', flexShrink: 0, display: 'grid', placeItems: 'center',
                   fontSize: 11, fontWeight: 800, fontFamily: 'var(--ui-font-mono)',
                   background: i === 0 ? 'color-mix(in srgb, var(--brand-accent) 16%, transparent)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
                   color: i === 0 ? 'var(--brand-accent)' : 'var(--u-text-3)',

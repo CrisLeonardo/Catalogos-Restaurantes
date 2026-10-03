@@ -8,7 +8,8 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Icon } from '@/components/icons';
 import { planLabel } from '@/lib/db/billing';
-import { diaMes } from '@/lib/dates';
+import { diaMes, diaSemana } from '@/lib/dates';
+import { ChartReadout } from '@/components/ui/chart-readout';
 
 /* Colores por plan — mismos que usa la sidebar del panel admin. */
 export const PLAN_DOT: Record<string, string> = {
@@ -133,7 +134,7 @@ export function StatusChip({ status }: { status: string }) {
   const active = status === 'active';
   return (
     <Badge variant={active ? 'ok' : 'danger'}>
-      <span style={{ width: 6, height: 6, borderRadius: 99, background: 'currentColor', flexShrink: 0 }} />
+      <span style={{ width: 6, height: 6, borderRadius: 'var(--radius-full)', background: 'currentColor', flexShrink: 0 }} />
       {active ? 'Activo' : 'Suspendido'}
     </Badge>
   );
@@ -145,7 +146,7 @@ export function SavedBanner({ message }: { message: string }) {
     <div
       style={{
         padding: '12px 16px',
-        borderRadius: 12,
+        borderRadius: 'var(--radius-lg)',
         background: 'color-mix(in srgb, var(--c-ok) 10%, transparent)',
         border: '1px solid color-mix(in srgb, var(--c-ok) 25%, transparent)',
         color: 'var(--c-ok)',
@@ -176,7 +177,7 @@ export function EmptyState({
 }) {
   return (
     <Card style={{ padding: '44px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-      <span style={{ width: 46, height: 46, borderRadius: 14, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--brand-accent) 12%, transparent)', color: 'var(--brand-accent-ink)' }}>
+      <span style={{ width: 46, height: 46, borderRadius: 'var(--radius-lg)', display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--brand-accent) 12%, transparent)', color: 'var(--brand-accent-ink)' }}>
         <Icon name={icon} size={22} />
       </span>
       <div style={{ fontWeight: 700, fontSize: 15.5, color: 'var(--u-text)', fontFamily: 'var(--font-display)' }}>{title}</div>
@@ -232,6 +233,13 @@ export function IncomeChart({
 }
 
 /* ── Gráfica de actividad diaria (visitas + pedidos) ──────── */
+/** «lun 28 sept · 40 visitas · 3 pedidos» — lo que dice una columna al tocarla. */
+export function activityTip(d: { date: string; visits: number; orders: number }, isToday = false, extra?: string): string {
+  const v = `${d.visits.toLocaleString('es-GT')} ${d.visits === 1 ? 'visita' : 'visitas'}`;
+  const o = `${d.orders.toLocaleString('es-GT')} ${d.orders === 1 ? 'pedido' : 'pedidos'}`;
+  return [isToday ? 'hoy' : diaSemana(d.date), v, o, extra].filter(Boolean).join(' · ');
+}
+
 export function ActivityChart({
   series,
   height = 130,
@@ -255,11 +263,12 @@ export function ActivityChart({
           Pedidos · {totalO.toLocaleString('es-GT')}
         </span>
       </div>
+      <ChartReadout defaultTip={series.length ? activityTip(series[series.length - 1], true) : undefined}>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height }}>
-        {series.map((d) => (
+        {series.map((d, i) => (
           <div
             key={d.date}
-            title={`${d.date}: ${d.visits} visitas · ${d.orders} pedidos`}
+            data-tip={activityTip(d, i === series.length - 1)}
             style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 1, minWidth: 0, height: '100%' }}
           >
             <div style={{ width: '42%', height: `${(d.visits / maxVisits) * 100}%`, minHeight: d.visits > 0 ? 3 : 1, background: 'var(--chart-base)', borderRadius: '2px 2px 0 0' }} />
@@ -271,6 +280,7 @@ export function ActivityChart({
         <span>{series[0] ? diaMes(series[0].date) : null}</span>
         <span>hoy</span>
       </div>
+      </ChartReadout>
     </div>
   );
 }

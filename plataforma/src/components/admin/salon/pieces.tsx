@@ -432,7 +432,7 @@ export function TableCard({
                 {t.metrica.valor}
               </span>
               {t.metrica.etiqueta && (
-                <span style={{ display: 'block', fontSize: 10.5, color: 'var(--u-text-4)', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
+                <span style={{ display: 'block', fontSize: 11, color: 'var(--u-text-4)', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
                   {t.metrica.etiqueta}
                 </span>
               )}
@@ -482,15 +482,24 @@ export function TableCard({
           </span>
           {/* El mismo número que en la maqueta ancha (M-21): si el
               interruptor no llegara aquí, en el teléfono no haría nada —
-              y el teléfono es donde más se mira este salón. */}
-          <span
-            className="t-mono"
-            style={{
-              fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em', flexShrink: 0,
-              color: 'var(--u-text)', whiteSpace: 'nowrap',
-            }}
-          >
-            {t.metrica.valor}
+              y el teléfono es donde más se mira este salón. Con su rótulo,
+              como en la ancha: sin él, «Lista 8 min» y un «20 min» suelto
+              en la misma ficha no decían qué era cada reloj (PED-11). */}
+          <span style={{ flexShrink: 0, textAlign: 'right' }}>
+            <span
+              className="t-mono"
+              style={{
+                display: 'block', fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em',
+                color: 'var(--u-text)', whiteSpace: 'nowrap',
+              }}
+            >
+              {t.metrica.valor}
+            </span>
+            {t.metrica.etiqueta && (
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--u-text-4)', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
+                {t.metrica.etiqueta}
+              </span>
+            )}
           </span>
         </span>
       </button>
@@ -521,7 +530,7 @@ function MeseroMark({ mark }: { mark: { iniciales: string; tono: string } }) {
       className="t-mono"
       style={{
         display: 'grid', placeItems: 'center', flexShrink: 0,
-        width: 18, height: 18, borderRadius: 6,
+        width: 18, height: 18, borderRadius: 'var(--radius-sm)',
         fontSize: 11, fontWeight: 700, letterSpacing: '0.02em',
         color: '#fff', background: mark.tono,
       }}
@@ -542,8 +551,8 @@ function FueraChip() {
     <span
       title="Esta mesa no está en las mesas configuradas del salón"
       style={{
-        flexShrink: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.02em',
-        padding: '1px 6px', borderRadius: 6, textTransform: 'uppercase',
+        flexShrink: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.02em',
+        padding: '1px 6px', borderRadius: 'var(--radius-sm)', textTransform: 'uppercase',
         color: 'var(--c-warn)',
         background: 'color-mix(in srgb, var(--c-warn) 14%, transparent)',
       }}
@@ -725,7 +734,7 @@ export function TablePin({
       )}
       {/* En una mesa libre tampoco hay mesero que nombrar. */}
       {!libre && (
-        <span style={{ fontSize: 10.5, color: 'var(--u-text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 11, color: 'var(--u-text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {t.waiterName ?? 'Sin asignar'}
         </span>
       )}

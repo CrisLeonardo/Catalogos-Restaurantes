@@ -487,7 +487,7 @@ export default function AdminShell({
               quién es la pantalla, en qué modo está, qué hora es y cómo se sale. */}
           <div className="wp-servicebar">
             <span style={{
-              display: 'grid', placeItems: 'center', width: 26, height: 26, borderRadius: 7, flexShrink: 0,
+              display: 'grid', placeItems: 'center', width: 26, height: 26, borderRadius: 'var(--radius-sm)', flexShrink: 0,
               background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: 'var(--u-text-2)',
             }}>
               <Icon name="monitor" size={14} />
@@ -503,7 +503,7 @@ export default function AdminShell({
               className="press"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0,
-                height: 32, padding: '0 11px', borderRadius: 8, cursor: 'pointer',
+                height: 32, padding: '0 11px', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
                 border: '1px solid var(--adm-border-2)', background: 'none',
                 color: 'var(--u-text-2)', fontSize: 13, fontWeight: 500,
               }}
@@ -655,7 +655,7 @@ export default function AdminShell({
             >
               <span
                 style={{
-                  width: 8, height: 8, borderRadius: 99, flexShrink: 0,
+                  width: 8, height: 8, borderRadius: 'var(--radius-full)', flexShrink: 0,
                   background: PLAN_COLORS[planActual] ?? '#94a3b8',
                   boxShadow: `0 0 0 3px color-mix(in srgb, ${PLAN_COLORS[planActual] ?? '#94a3b8'} 18%, transparent)`,
                 }}
@@ -671,7 +671,7 @@ export default function AdminShell({
           <a
             href="/mi-cuenta"
             className="press glass-quiet admin-switch-restaurant"
-            style={{ borderRadius: 13, padding: '10px 12px', marginBottom: 8, textDecoration: 'none' }}
+            style={{ borderRadius: 'var(--radius-lg)', padding: '10px 12px', marginBottom: 8, textDecoration: 'none' }}
           >
             <Icon name="grid" size={15} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />
             <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-2)' }}>
@@ -681,15 +681,15 @@ export default function AdminShell({
           </a>
         )}
 
-        <div className="glass-quiet admin-usercard" style={{ borderRadius: 13, padding: 12 }}>
-          <div className="admin-usericon" style={{ width: 34, height: 34, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 10%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
+        <div className="glass-quiet admin-usercard" style={{ borderRadius: 'var(--radius-lg)', padding: 12 }}>
+          <div className="admin-usericon" style={{ width: 34, height: 34, borderRadius: 'var(--radius-full)', background: 'color-mix(in srgb, var(--u-text) 10%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
             <Icon name="user" size={17} />
           </div>
           <div className="admin-usermeta" style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 12.5, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {roleLabel}
             </div>
-            <div style={{ fontSize: 10.5, color: 'var(--u-text-3)' }}>{preview ? 'Vista previa' : 'Sesión activa'}</div>
+            <div style={{ fontSize: 11, color: 'var(--u-text-3)' }}>{preview ? 'Vista previa' : 'Sesión activa'}</div>
           </div>
           {!preview && <LogoutButton isOperatorSession={isOperatorSession} />}
         </div>
@@ -707,7 +707,7 @@ export default function AdminShell({
           </div>
           {isLive && (
             <Badge variant="accent" className="admin-live py-1.5">
-              <span style={{ width: 7, height: 7, borderRadius: 99, background: 'var(--adm-accent-500, var(--u-text))', boxShadow: '0 0 8px var(--adm-accent-500, var(--u-text))', animation: 'pulse-ring 2s infinite' }} /> En vivo
+              <span style={{ width: 7, height: 7, borderRadius: 'var(--radius-full)', background: 'var(--adm-accent-500, var(--u-text))', boxShadow: '0 0 8px var(--adm-accent-500, var(--u-text))', animation: 'pulse-ring 2s infinite' }} /> En vivo
             </Badge>
           )}
           {!preview && kioskEligible && (

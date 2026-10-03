@@ -119,7 +119,7 @@ function Fila({ r, timezone }: { r: AccessRow; timezone: string }) {
       </div>
       <span
         style={{
-          fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 99,
+          fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--radius-full)',
           whiteSpace: 'nowrap',
           color: r.method === 'soporte' ? '#f87171' : 'var(--u-text-3)',
           background: r.method === 'soporte'

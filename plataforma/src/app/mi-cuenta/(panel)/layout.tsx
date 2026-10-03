@@ -73,7 +73,7 @@ export default async function MiCuentaPanelLayout({ children }: { children: Reac
             className="press"
             style={{
               fontSize: 12.5, fontWeight: 600, cursor: 'pointer', padding: '6px 12px',
-              borderRadius: 99, border: '1px solid var(--u-hair-2)',
+              borderRadius: 'var(--radius-full)', border: '1px solid var(--u-hair-2)',
               background: 'transparent', color: 'var(--u-text-2)',
             }}
           >

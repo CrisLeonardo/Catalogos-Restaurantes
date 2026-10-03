@@ -33,7 +33,6 @@
    ════════════════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 
 import { Icon } from '@/components/icons';
 import {
@@ -164,7 +163,6 @@ export default function ServicioPanel({
   occupancy, calls, seatings, tableCount,
   pickupEnabled, tipEnabled, tipEnabledPickup, currency, floorPlan, hubUrl, hubToken,
 }: ServicioPanelProps) {
-  const router = useRouter();
   const servicio = useServiceMode();
   const now = useReloj();
   const mod = useTeclaMod();
@@ -1553,7 +1551,6 @@ export default function ServicioPanel({
           onDone={() => {
             setHoja(null);
             if (sel.kind === 'mesa') void cargarMesa(sel.n);
-            router.refresh();
           }}
         />
       )}

@@ -87,7 +87,7 @@ export default function GroupFinanceExport({ from, to }: { from: string; to: str
 
   const btnStyle = (pending: boolean): React.CSSProperties => ({
     display: 'inline-flex', alignItems: 'center', gap: 7, whiteSpace: 'nowrap',
-    padding: '10px 14px', borderRadius: 12, border: '1px solid var(--u-hair)',
+    padding: '10px 14px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair)',
     color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600, background: 'transparent',
     cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.7 : 1,
   });

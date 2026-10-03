@@ -1,7 +1,6 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useActionState } from 'react';
 import { Icon } from '@/components/icons';
 import { connectWhatsApp, disconnectWhatsApp, type WhatsAppState } from '@/lib/actions/whatsapp';
 import { FIELD_LABEL } from '@/components/admin/field-label';
@@ -28,25 +27,21 @@ export default function WhatsAppPanel({
   account: WhatsAppAccountView | null;
   tokenKeyReady: boolean;
 }) {
-  const router = useRouter();
   const [state, formAction, isPending] = useActionState<WhatsAppState, FormData>(
     connectWhatsApp,
     null,
   );
 
-  useEffect(() => {
-    if (state && 'ok' in state) router.refresh();
-  }, [state, router]);
 
   const labelSt: React.CSSProperties = FIELD_LABEL;
   const inputSt: React.CSSProperties = {
     width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-    border: '1px solid var(--u-hair)', borderRadius: 11, padding: '11px 13px',
+    border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-md)', padding: '11px 13px',
     color: 'var(--u-text)', fontSize: 14, outline: 'none',
   };
   const fieldSt: React.CSSProperties = { marginBottom: 14 };
   const avisoSt: React.CSSProperties = {
-    display: 'block', whiteSpace: 'normal', borderRadius: 12,
+    display: 'block', whiteSpace: 'normal', borderRadius: 'var(--radius-lg)',
     padding: 12, marginBottom: 18, lineHeight: 1.5, fontWeight: 600,
   };
 
@@ -76,7 +71,7 @@ export default function WhatsAppPanel({
       {account ? (
         <div
           style={{
-            border: '1px solid var(--u-hair)', borderRadius: 14,
+            border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)',
             padding: 16, marginBottom: 22,
           }}
         >

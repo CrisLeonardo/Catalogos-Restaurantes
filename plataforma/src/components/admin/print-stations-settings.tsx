@@ -118,7 +118,7 @@ export default function PrintStationsSettings() {
                 aria-label={`Nombre de la estación ${s.name}`}
               />
               {s.isDefault ? (
-                <span className="chip-ok" style={{ padding: '3px 9px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
+                <span className="chip-ok" style={{ padding: '3px 9px', borderRadius: 'var(--radius-full)', fontSize: 11, fontWeight: 700 }}>
                   Principal
                 </span>
               ) : (
@@ -217,7 +217,7 @@ export default function PrintStationsSettings() {
                       disabled={pendiente}
                       title="Quitar la estación puesta a mano en esos platos, para que vuelvan a seguir a su categoría."
                       style={{
-                        marginLeft: 7, padding: '1px 7px', borderRadius: 99, fontSize: 10.5,
+                        marginLeft: 7, padding: '1px 7px', borderRadius: 'var(--radius-full)', fontSize: 11,
                         fontWeight: 700, cursor: 'pointer', color: 'var(--brand-accent-ink)',
                         background: 'color-mix(in srgb, var(--brand-accent) 12%, transparent)',
                         border: '1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent)',

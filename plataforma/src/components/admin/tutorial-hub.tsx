@@ -107,7 +107,7 @@ export default function TutorialHub({ plan, modules, contact }: Props) {
           onChange={(e) => setQuery(e.target.value)}
           style={{
             width: '100%', padding: '11px 14px 11px 40px',
-            borderRadius: 12, border: '1.5px solid var(--u-hair)',
+            borderRadius: 'var(--radius-lg)', border: '1.5px solid var(--u-hair)',
             background: 'var(--surface-3, color-mix(in srgb, var(--u-text) 4%, transparent))',
             color: 'var(--u-text)', fontSize: 14, outline: 'none',
             boxSizing: 'border-box',
@@ -204,7 +204,7 @@ function ContactSupportCard({ contact }: { contact: PlatformContactSettings }) {
     <Card className="px-5 py-4.5 mt-1">
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
         <span style={{
-          width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+          width: 38, height: 38, borderRadius: 'var(--radius-md)', flexShrink: 0,
           display: 'grid', placeItems: 'center',
           background: 'rgba(var(--brand-accent-rgb,99,102,241),0.12)',
           color: 'var(--brand-accent-ink)',
@@ -341,7 +341,7 @@ function TutorialSection({
       >
         {/* Ícono */}
         <span style={{
-          width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+          width: 38, height: 38, borderRadius: 'var(--radius-md)', flexShrink: 0,
           display: 'grid', placeItems: 'center',
           background: locked
             ? 'color-mix(in srgb, var(--u-text) 4%, transparent)'
@@ -359,7 +359,7 @@ function TutorialSection({
             </span>
             {planLabel && (
               <span style={{
-                fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
+                fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-full)',
                 background: `color-mix(in srgb, ${labelColor} 13%, transparent)`, color: labelColor ?? '#94a3b8',
                 border: `1px solid color-mix(in srgb, ${labelColor} 25%, transparent)`,
                 textTransform: 'uppercase', letterSpacing: '0.04em',
@@ -419,7 +419,7 @@ function LockedContent({ planLabel, moduleKey }: { planLabel: string | null; mod
 
   return (
     <div style={{
-      borderRadius: 12, padding: '20px 18px', textAlign: 'center',
+      borderRadius: 'var(--radius-lg)', padding: '20px 18px', textAlign: 'center',
       background: 'var(--surface-3, color-mix(in srgb, var(--u-text) 3%, transparent))',
       border: '1.5px dashed var(--u-hair)',
     }}>
@@ -438,7 +438,7 @@ function LockedContent({ planLabel, moduleKey }: { planLabel: string | null; mod
             className="press"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+              padding: '8px 16px', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 600,
               background: 'var(--c-info-bg)', color: 'var(--c-info)', textDecoration: 'none',
             }}
           >
@@ -458,7 +458,7 @@ function LockedContent({ planLabel, moduleKey }: { planLabel: string | null; mod
             className="press"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+              padding: '8px 16px', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 600,
               background: 'var(--c-alt-bg)', color: 'var(--c-alt)', textDecoration: 'none',
             }}
           >
@@ -504,7 +504,7 @@ function StepItem({ step, number }: { step: TutorialStep; number: number }) {
       {/* Número + título */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
         <span style={{
-          width: 26, height: 26, borderRadius: 99, flexShrink: 0,
+          width: 26, height: 26, borderRadius: 'var(--radius-full)', flexShrink: 0,
           display: 'grid', placeItems: 'center',
           background: 'rgba(var(--brand-accent-rgb,99,102,241),0.14)',
           color: 'var(--brand-accent-ink)',
@@ -526,7 +526,7 @@ function StepItem({ step, number }: { step: TutorialStep; number: number }) {
       {step.route && (
         <div style={{
           display: 'flex', alignItems: 'flex-start', gap: 7,
-          marginLeft: 36, padding: '8px 12px', borderRadius: 9,
+          marginLeft: 36, padding: '8px 12px', borderRadius: 'var(--radius-md)',
           background: 'var(--surface-3, color-mix(in srgb, var(--u-text) 3%, transparent))',
           border: '1px solid var(--u-hair)',
         }}>
@@ -541,7 +541,7 @@ function StepItem({ step, number }: { step: TutorialStep; number: number }) {
       {step.tip && (
         <div style={{
           display: 'flex', alignItems: 'flex-start', gap: 8,
-          marginLeft: 36, padding: '9px 12px', borderRadius: 9,
+          marginLeft: 36, padding: '9px 12px', borderRadius: 'var(--radius-md)',
           background: 'rgba(var(--brand-accent-rgb,99,102,241),0.07)',
           border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.2)',
         }}>

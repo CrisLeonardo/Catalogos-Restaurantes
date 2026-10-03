@@ -49,7 +49,7 @@ export default async function SuperGruposPage() {
                 <span
                   aria-hidden
                   style={{
-                    width: 38, height: 38, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center',
+                    width: 38, height: 38, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
                     background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent-ink)',
                   }}
                 >

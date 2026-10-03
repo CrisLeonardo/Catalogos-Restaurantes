@@ -4,7 +4,7 @@
    orquestador (waiter-panel.tsx), la hoja de opciones del plato y el
    panel de la comanda. */
 
-import type { PanelCurrency } from '@/components/admin/order-card';
+import { fmtCurrency } from '@/lib/money';
 
 export interface CartLine {
   lineId: string;
@@ -92,12 +92,7 @@ export function newLineId(productId: string): string {
     y separadores de su país). */
 /** `decimals` baja a 0 para el pin del plano, donde en 100 px de ancho no
     caben los centavos («Q412» en vez de «Q412.00»). */
-export function money(n: number, c: PanelCurrency, decimals = 2): string {
-  let num: string;
-  try { num = n.toLocaleString(c.locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals }); }
-  catch { num = n.toFixed(decimals); }
-  return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
-}
+export const money = fmtCurrency;
 
 /** Cómo se lee una línea debajo de su nombre: las opciones elegidas y,
     al final, la nota para cocina. */

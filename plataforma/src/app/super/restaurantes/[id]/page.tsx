@@ -83,7 +83,7 @@ export default async function FichaResumenPage({
               }}
             >
               <span style={{
-                width: 32, height: 32, borderRadius: 10, flexShrink: 0, display: 'grid', placeItems: 'center',
+                width: 32, height: 32, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
                 background: `color-mix(in srgb, var(--c-${t.tone === 'info' ? 'ok' : t.tone}) 13%, transparent)`,
                 color: t.tone === 'info' ? 'var(--adm-info, #7dd3fc)' : `var(--c-${t.tone})`,
               }}>

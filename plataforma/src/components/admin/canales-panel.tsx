@@ -14,7 +14,6 @@
    ============================================================ */
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -50,7 +49,6 @@ export default function CanalesPanel({
   products: ChannelProductOption[];
   summary: ChannelSummary[];
 }) {
-  const router = useRouter();
   const [isPending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -68,7 +66,6 @@ export default function CanalesPanel({
       if (res.error) { setMsg(`Error: ${res.error}`); return; }
       setSku(''); setProductId('');
       setMsg('Mapeo guardado ✓');
-      router.refresh();
     });
   }
 
@@ -83,7 +80,6 @@ export default function CanalesPanel({
       const res = await deleteChannelMapping(restaurantId, id);
       setBusy(null);
       if (res.error) { setMsg(`Error: ${res.error}`); return; }
-      router.refresh();
     });
   }
 

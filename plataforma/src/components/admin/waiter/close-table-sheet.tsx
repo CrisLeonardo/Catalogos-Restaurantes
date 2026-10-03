@@ -140,7 +140,7 @@ export default function CloseTableSheet({
         {quedaSaldo && (
           <div
             style={{
-              display: 'flex', alignItems: 'flex-start', gap: 10, padding: '11px 13px', borderRadius: 12,
+              display: 'flex', alignItems: 'flex-start', gap: 10, padding: '11px 13px', borderRadius: 'var(--radius-lg)',
               border: '1px solid color-mix(in srgb, var(--c-warn) 34%, transparent)',
               background: 'color-mix(in srgb, var(--c-warn) 10%, transparent)',
             }}
@@ -188,7 +188,7 @@ export default function CloseTableSheet({
                     placeholder="0.00"
                     aria-label={`Cuánto se pagó en ${PAYMENT_LABEL[m].toLowerCase()}`}
                     style={{
-                      width: 130, height: 46, padding: '0 12px', borderRadius: 11, outline: 'none',
+                      width: 130, height: 46, padding: '0 12px', borderRadius: 'var(--radius-md)', outline: 'none',
                       border: '1px solid var(--u-hair-2)',
                       background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
                       color: 'var(--u-text)', fontFamily: 'var(--ui-font-mono)',
@@ -204,7 +204,7 @@ export default function CloseTableSheet({
               <div
                 style={{
                   display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-                  padding: '10px 13px', borderRadius: 11, marginTop: 2,
+                  padding: '10px 13px', borderRadius: 'var(--radius-md)', marginTop: 2,
                   background: mixtoListo
                     ? 'color-mix(in srgb, var(--c-ok) 10%, transparent)'
                     : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
@@ -234,7 +234,7 @@ export default function CloseTableSheet({
             onClick={() => { setMixto((v) => !v); setPartes({}); setRecibido(''); }}
             className="press"
             style={{
-              marginTop: 10, minHeight: 38, padding: '0 14px', borderRadius: 99, cursor: 'pointer',
+              marginTop: 10, minHeight: 38, padding: '0 14px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
               border: '1px solid var(--u-hair-2)', background: 'none',
               color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600,
             }}
@@ -258,7 +258,7 @@ export default function CloseTableSheet({
               placeholder={money(total)}
               aria-label="Con cuánto pagó el cliente"
               style={{
-                width: '100%', height: 52, padding: '0 14px', borderRadius: 12, outline: 'none',
+                width: '100%', height: 52, padding: '0 14px', borderRadius: 'var(--radius-lg)', outline: 'none',
                 border: `1.5px solid ${faltaEfectivo ? 'var(--c-danger)' : 'var(--u-hair-2)'}`,
                 background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
                 color: 'var(--u-text)', fontFamily: 'var(--ui-font-mono)',
@@ -295,7 +295,7 @@ export default function CloseTableSheet({
               <div
                 style={{
                   display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-                  padding: '11px 14px', borderRadius: 12,
+                  padding: '11px 14px', borderRadius: 'var(--radius-lg)',
                   background: 'color-mix(in srgb, var(--c-ok) 10%, transparent)',
                   border: '1px solid color-mix(in srgb, var(--c-ok) 30%, transparent)',
                 }}
@@ -329,7 +329,7 @@ export default function CloseTableSheet({
             )}
             className="press btn-accent"
             style={{
-              width: '100%', minHeight: 50, padding: '14px', borderRadius: 13, border: 'none',
+              width: '100%', minHeight: 50, padding: '14px', borderRadius: 'var(--radius-lg)', border: 'none',
               cursor: busy || faltaEfectivo ? 'not-allowed' : 'pointer',
               fontWeight: 700, fontSize: 15.5,
               opacity: busy || faltaEfectivo || (mixto && (!mixtoListo || sobraNoEfectivo)) ? 0.55 : 1,
@@ -347,7 +347,7 @@ export default function CloseTableSheet({
             disabled={busy}
             className="press glass-quiet"
             style={{
-              width: '100%', minHeight: 46, padding: '13px', borderRadius: 13, border: 'none',
+              width: '100%', minHeight: 46, padding: '13px', borderRadius: 'var(--radius-lg)', border: 'none',
               cursor: busy ? 'default' : 'pointer', fontWeight: 600, fontSize: 14, color: 'var(--u-text-2)',
             }}
           >
@@ -360,7 +360,7 @@ export default function CloseTableSheet({
 }
 
 const chipBtn: React.CSSProperties = {
-  minHeight: 38, padding: '0 14px', borderRadius: 99, cursor: 'pointer',
+  minHeight: 38, padding: '0 14px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
   border: '1px solid var(--u-hair-2)', background: 'none',
   color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 600,
   fontVariantNumeric: 'tabular-nums',

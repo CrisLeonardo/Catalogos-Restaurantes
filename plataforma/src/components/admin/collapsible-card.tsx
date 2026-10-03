@@ -51,7 +51,7 @@ export default function CollapsibleCard({ title, subtitle, icon, defaultOpen = t
         }}
       >
         {icon && (
-          <div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'var(--surface-3)', color: 'var(--u-text)' }}>
+          <div style={{ width: 34, height: 34, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center', background: 'var(--surface-3)', color: 'var(--u-text)' }}>
             <Icon name={icon} size={17} />
           </div>
         )}

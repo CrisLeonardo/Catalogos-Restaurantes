@@ -119,7 +119,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 13 }}>
         <div style={{
-          width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+          width: 40, height: 40, borderRadius: 'var(--radius-lg)', flexShrink: 0,
           background: 'rgba(var(--brand-accent-rgb,99,102,241),0.13)',
           display: 'grid', placeItems: 'center', color: 'var(--brand-accent-ink)',
         }}>
@@ -147,7 +147,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
             onClick={() => setSelected(feat)}
             style={{
               display: 'flex', flexDirection: 'column', gap: 8,
-              padding: '13px 12px', borderRadius: 14, textAlign: 'left',
+              padding: '13px 12px', borderRadius: 'var(--radius-lg)', textAlign: 'left',
               cursor: 'pointer', border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.15)',
               background: 'rgba(var(--brand-accent-rgb,99,102,241),0.04)',
               color: 'inherit', position: 'relative', overflow: 'hidden',
@@ -165,7 +165,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
             {/* Premium chip */}
             <span style={{
               position: 'absolute', top: 8, right: 8,
-              fontSize: 11, fontWeight: 800, padding: '2px 7px', borderRadius: 99,
+              fontSize: 11, fontWeight: 800, padding: '2px 7px', borderRadius: 'var(--radius-full)',
               background: 'rgba(var(--brand-accent-rgb,99,102,241),0.15)',
               color: 'var(--brand-accent-ink)', letterSpacing: '0.05em',
             }}>
@@ -225,14 +225,14 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
         >
           <div
             className="glass-solid anim-fade-up"
-            style={{ borderRadius: 22, padding: '26px 22px', maxWidth: 430, width: '100%' }}
+            style={{ borderRadius: 'var(--radius-xl)', padding: '26px 22px', maxWidth: 430, width: '100%' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                 <div style={{
-                  width: 44, height: 44, borderRadius: 13, flexShrink: 0,
+                  width: 44, height: 44, borderRadius: 'var(--radius-lg)', flexShrink: 0,
                   background: 'rgba(var(--brand-accent-rgb,99,102,241),0.13)',
                   display: 'grid', placeItems: 'center', color: 'var(--brand-accent-ink)',
                 }}>
@@ -305,7 +305,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
               rel="noopener noreferrer"
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                textDecoration: 'none', padding: '13px 0', borderRadius: 14,
+                textDecoration: 'none', padding: '13px 0', borderRadius: 'var(--radius-lg)',
                 fontWeight: 700, fontSize: 14, background: 'var(--brand-accent)', color: '#fff',
               }}
             >

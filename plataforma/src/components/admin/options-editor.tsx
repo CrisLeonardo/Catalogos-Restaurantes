@@ -49,7 +49,7 @@ export function cleanOptions(groups: ProductOptionGroup[]): ProductOptionGroup[]
 const fieldStyle: React.CSSProperties = {
   background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
   border: '1px solid var(--u-hair)',
-  borderRadius: 10,
+  borderRadius: 'var(--radius-md)',
   padding: '8px 10px',
   color: 'var(--u-text)',
   fontSize: 13,
@@ -97,7 +97,7 @@ export default function OptionsEditor({
             { title: 'Varios', example: '"Extras: queso +Q5, tocino +Q8" — puede marcar varios a la vez.' },
             { title: 'Combo', example: '"Incluye: hamburguesa + papas + bebida" — todo viene incluido y cada componente puede tener variantes (sabor de bebida, tipo de papas).' },
           ].map((t) => (
-            <div key={t.title} style={{ borderRadius: 12, padding: '11px 13px', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', border: '1px dashed var(--u-hair-2)' }}>
+            <div key={t.title} style={{ borderRadius: 'var(--radius-lg)', padding: '11px 13px', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', border: '1px dashed var(--u-hair-2)' }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text-2)', marginBottom: 4 }}>{t.title}</div>
               <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.5 }}>{t.example}</div>
             </div>
@@ -108,7 +108,7 @@ export default function OptionsEditor({
         <div
           key={group.id}
           className="glass-quiet"
-          style={{ borderRadius: 13, padding: 13, display: 'flex', flexDirection: 'column', gap: 10 }}
+          style={{ borderRadius: 'var(--radius-lg)', padding: 13, display: 'flex', flexDirection: 'column', gap: 10 }}
         >
           {/* Nombre + tipo + borrar */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -135,7 +135,7 @@ export default function OptionsEditor({
                     }
                     className="press"
                     style={{
-                      padding: '7px 11px', borderRadius: 99, fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
+                      padding: '7px 11px', borderRadius: 'var(--radius-full)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
                       border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
                       background: on ? (t === 'combo' ? 'var(--c-ok)' : 'var(--u-text)') : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
                       color: on ? (t === 'combo' ? '#fff' : 'var(--brand-bg, #0b0b0c)') : 'var(--u-text-3)',
@@ -152,7 +152,7 @@ export default function OptionsEditor({
               className="press"
               aria-label="Quitar grupo"
               style={{
-                width: 30, height: 30, borderRadius: 9, border: 'none', cursor: 'pointer',
+                width: 30, height: 30, borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer',
                 background: 'var(--c-danger-bg)', color: 'var(--c-danger)',
                 display: 'grid', placeItems: 'center', flexShrink: 0,
               }}
@@ -223,7 +223,7 @@ export default function OptionsEditor({
                       className="press"
                       aria-label="Variantes del componente"
                       style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0 9px', height: 28, borderRadius: 8,
+                        display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0 9px', height: 28, borderRadius: 'var(--radius-sm)',
                         border: `1px solid ${variantCount > 0 ? 'var(--c-ok-line)' : 'var(--u-hair)'}`, cursor: 'pointer',
                         background: variantCount > 0 ? 'var(--c-ok-bg)' : 'transparent',
                         color: variantCount > 0 ? 'var(--brand-accent, #22c55e)' : 'var(--u-text-4)',
@@ -242,7 +242,7 @@ export default function OptionsEditor({
                     className="press"
                     aria-label="Quitar opción"
                     style={{
-                      width: 28, height: 28, borderRadius: 8, border: 'none', cursor: 'pointer',
+                      width: 28, height: 28, borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer',
                       background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: 'var(--u-text-4)',
                       display: 'grid', placeItems: 'center', flexShrink: 0,
                     }}
@@ -292,7 +292,7 @@ export default function OptionsEditor({
                           className="press"
                           aria-label="Quitar variante"
                           style={{
-                            width: 24, height: 24, borderRadius: 7, border: 'none', cursor: 'pointer',
+                            width: 24, height: 24, borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer',
                             background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: 'var(--u-text-4)',
                             display: 'grid', placeItems: 'center', flexShrink: 0,
                           }}
@@ -310,7 +310,7 @@ export default function OptionsEditor({
                       className="press"
                       style={{
                         alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 4,
-                        padding: '5px 9px', borderRadius: 8, border: '1px dashed var(--u-hair-2)',
+                        padding: '5px 9px', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--u-hair-2)',
                         background: 'transparent', color: 'var(--u-text-3)', cursor: 'pointer', fontSize: 11, fontWeight: 600,
                       }}
                     >
@@ -331,7 +331,7 @@ export default function OptionsEditor({
               className="press"
               style={{
                 alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '6px 11px', borderRadius: 9, border: '1px dashed var(--u-hair-2)',
+                padding: '6px 11px', borderRadius: 'var(--radius-md)', border: '1px dashed var(--u-hair-2)',
                 background: 'transparent', color: 'var(--u-text-3)', cursor: 'pointer', fontSize: 12, fontWeight: 600,
               }}
             >
@@ -348,7 +348,7 @@ export default function OptionsEditor({
           className="press"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px',
-            borderRadius: 10, border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+            borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
             color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
           }}
         >
@@ -360,7 +360,7 @@ export default function OptionsEditor({
           className="press"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px',
-            borderRadius: 10, border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+            borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
             color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
           }}
         >
@@ -374,7 +374,7 @@ export default function OptionsEditor({
              punteado y texto rojo, tres colores para un botón más (MEN-07). */
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px',
-            borderRadius: 10, border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+            borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
             color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
           }}
         >

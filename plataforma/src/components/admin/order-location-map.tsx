@@ -63,7 +63,7 @@ export default function OrderLocationMap({ lat, lng }: Props) {
     <div style={{ position: 'relative' }}>
       <div
         ref={containerRef}
-        style={{ height: 200, borderRadius: 10, overflow: 'hidden' }}
+        style={{ height: 200, borderRadius: 'var(--radius-md)', overflow: 'hidden' }}
       />
       <a
         href={mapsUrl}
@@ -71,7 +71,7 @@ export default function OrderLocationMap({ lat, lng }: Props) {
         rel="noopener noreferrer"
         style={{
           position: 'absolute', bottom: 8, right: 8, zIndex: 1000,
-          background: '#fff', borderRadius: 7, padding: '5px 10px',
+          background: '#fff', borderRadius: 'var(--radius-sm)', padding: '5px 10px',
           fontSize: 11.5, fontWeight: 700, color: '#1a73e8',
           textDecoration: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
           display: 'flex', alignItems: 'center', gap: 4,

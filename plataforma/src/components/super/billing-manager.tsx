@@ -37,11 +37,11 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string }> 
 
 const inputStyle: React.CSSProperties = {
   width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
-  borderRadius: 11, padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
+  borderRadius: 'var(--radius-md)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
 const optionStyle: React.CSSProperties = { color: '#000', background: '#fff' };
 const labelStyle: React.CSSProperties = {
-  fontSize: 10.5, color: 'var(--u-text-3)', fontWeight: 600,
+  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 600,
   letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6, display: 'block',
 };
 
@@ -81,7 +81,7 @@ export default function BillingManager({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {toast && (
         <div style={{
-          padding: '10px 14px', borderRadius: 12, fontSize: 13.5, fontWeight: 500,
+          padding: '10px 14px', borderRadius: 'var(--radius-lg)', fontSize: 13.5, fontWeight: 500,
           background: toast.ok ? 'var(--c-ok-bg)' : 'var(--c-danger-bg)',
           border: `1px solid ${toast.ok ? 'var(--c-ok-line)' : 'var(--c-danger-line)'}`,
           color: toast.ok ? 'var(--c-ok)' : 'var(--c-danger)',
@@ -170,7 +170,7 @@ function ConfigCard({
 
         {config?.auto_price === false && Math.abs((config?.monthly_fee ?? 0) - suggestedFee) >= 1 && (
           <div style={{
-            padding: '9px 12px', borderRadius: 10, fontSize: 12.5, fontWeight: 600,
+            padding: '9px 12px', borderRadius: 'var(--radius-md)', fontSize: 12.5, fontWeight: 600,
             background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)',
           }}>
             ⚠ Precio manual desincronizado: cobra {fmtMoney(config?.monthly_fee ?? 0, currency)}/mes pero el precio
@@ -181,7 +181,7 @@ function ConfigCard({
 
         {!config?.suspended_for_nonpayment && config?.admin_override_suspend && (
           <div style={{
-            padding: '9px 12px', borderRadius: 10, fontSize: 12.5, fontWeight: 600,
+            padding: '9px 12px', borderRadius: 'var(--radius-md)', fontSize: 12.5, fontWeight: 600,
             background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', color: 'var(--c-warn)',
           }}>
             ⚡ Override activo: la suspensión automática por impago está pausada para este restaurante.
@@ -191,7 +191,7 @@ function ConfigCard({
 
         {/* Toggle de precio automático */}
         <label style={{
-          display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', borderRadius: 11,
+          display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', borderRadius: 'var(--radius-md)',
           background: auto ? 'var(--c-ok-bg)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
           border: `1px solid ${auto ? 'var(--c-ok-line)' : 'var(--u-hair)'}`, cursor: 'pointer',
         }}>
@@ -374,7 +374,7 @@ function InvoiceRow({
 
   return (
     <div style={{
-      padding: '10px 12px', borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
+      padding: '10px 12px', borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
       border: `1px solid ${overdue ? 'var(--c-danger-line)' : 'var(--u-hair)'}`,
       display: 'flex', flexDirection: 'column', gap: 8,
     }}>
@@ -383,11 +383,11 @@ function InvoiceRow({
           {inv.description ?? CONCEPT_LABEL[inv.concept]}
         </span>
         <span style={{
-          fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+          fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-full)',
           background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: 'var(--u-text-3)', letterSpacing: '0.05em',
         }}>{CONCEPT_LABEL[inv.concept]}</span>
         <span style={{
-          fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+          fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-full)',
           background: overdue ? 'var(--c-danger-bg)' : meta.bg,
           color: overdue ? 'var(--c-danger)' : meta.color, letterSpacing: '0.05em',
         }}>{overdue ? 'VENCIDO' : meta.label.toUpperCase()}</span>
@@ -468,7 +468,7 @@ function SuspensionBanner({
 
   return (
     <div style={{
-      padding: '12px 14px', borderRadius: 10, fontSize: 12.5,
+      padding: '12px 14px', borderRadius: 'var(--radius-md)', fontSize: 12.5,
       background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
     }}>

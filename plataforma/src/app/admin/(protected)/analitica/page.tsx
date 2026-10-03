@@ -178,8 +178,8 @@ function VelocityTable({ title, rows, accent }: { title: string; rows: Velocity[
             <span style={{ color: 'var(--u-text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '75%' }}>{r.name}</span>
             <span style={{ color: r.qty === 0 ? 'var(--c-danger)' : 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{r.qty}</span>
           </div>
-          <div style={{ height: 5, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', overflow: 'hidden' }}>
-            <div style={{ width: `${(r.qty / max) * 100}%`, height: '100%', background: accent ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 25%, transparent)', borderRadius: 99 }} />
+          <div style={{ height: 5, borderRadius: 'var(--radius-full)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', overflow: 'hidden' }}>
+            <div style={{ width: `${(r.qty / max) * 100}%`, height: '100%', background: accent ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 25%, transparent)', borderRadius: 'var(--radius-full)' }} />
           </div>
         </div>
       ))}
@@ -201,8 +201,8 @@ function SplitCard({ title, rows, total }: { title: string; rows: CountSplit[]; 
               <span style={{ color: 'var(--u-text-2)' }}>{r.label}</span>
               <span style={{ color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{r.count} · {pct.toFixed(0)}%</span>
             </div>
-            <div style={{ height: 6, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', overflow: 'hidden' }}>
-              <div style={{ width: `${pct}%`, height: '100%', background: 'var(--brand-accent)', borderRadius: 99 }} />
+            <div style={{ height: 6, borderRadius: 'var(--radius-full)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', overflow: 'hidden' }}>
+              <div style={{ width: `${pct}%`, height: '100%', background: 'var(--brand-accent)', borderRadius: 'var(--radius-full)' }} />
             </div>
           </div>
         );

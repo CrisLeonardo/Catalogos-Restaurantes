@@ -28,7 +28,8 @@ import {
   createBrandedWorkbook, addBrandedHeader, styleTableHeaderRow, freezeHeaderRow,
   writeStyledTable, autoFitColumns, setCurrencyCell, PERCENT_NUM_FMT, workbookToBase64,
 } from '@/lib/documents/excel';
-import { formatDateRangeLabel, longDate } from '@/lib/documents/format';
+import { formatDateRangeLabel, formatDocMoney, longDate } from '@/lib/documents/format';
+import { labelOf } from '@/lib/payment-method';
 import type { DocumentBranding } from '@/lib/documents/types';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
@@ -279,6 +280,7 @@ export async function deleteCashCount(
   if (error) return { error: error.message };
 
   revalidatePath('/admin/finanzas');
+  revalidatePath('/admin/caja'); // el historial de cortes vive en Caja
   return { ok: true };
 }
 
@@ -395,10 +397,10 @@ export async function exportSalesReportXlsx(
 
 /* ── Export del arqueo de caja — PDF (cliente) + Excel (servidor) ── */
 
-function summarizeByMethod(byMethod: Record<string, number> | null): string {
+function summarizeByMethod(byMethod: Record<string, number> | null, branding: DocumentBranding): string {
   if (!byMethod) return '';
   return Object.entries(byMethod)
-    .map(([method, amount]) => `${method === 'CASH' ? 'Efectivo' : method}: ${Number(amount).toFixed(2)}`)
+    .map(([method, amount]) => `${labelOf(method)}: ${formatDocMoney(Number(amount), branding)}`)
     .join(', ');
 }
 
@@ -440,7 +442,7 @@ export async function exportCashHistoryXlsx(
     rows.map((c) => [
       c.business_date, c.shift_label ?? '', c.cashier_name ?? '',
       Number(c.opening_float), Number(c.expected_cash), Number(c.counted_cash), Number(c.difference),
-      summarizeByMethod(c.by_method), c.notes ?? '',
+      summarizeByMethod(c.by_method, branding), c.notes ?? '',
     ]),
     { currencyCols: [4, 5, 6, 7] },
   );

@@ -32,6 +32,7 @@
   /* Redondez del panel: escala TODAS las tarjetas del admin (config
      adminPanelRadius). El menú del cliente no se ve afectado (la vista
      previa vive en un iframe con su propio documento). */
+  --radius-sm:  calc(8px * var(--admin-panel-radius, 1));
   --radius-md:  calc(10px * var(--admin-panel-radius, 1));
   --radius-lg:  calc(14px * var(--admin-panel-radius, 1));
   --radius-xl:  calc(20px * var(--admin-panel-radius, 1));

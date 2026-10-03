@@ -213,7 +213,7 @@ export default function NuevoRestaurante({
               >
                 {plan.badge && (
                   <span style={{
-                    fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+                    fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-full)',
                     background: 'var(--brand-accent)', color: '#fff', letterSpacing: '0.07em',
                     alignSelf: 'flex-start',
                   }}>
@@ -228,7 +228,7 @@ export default function NuevoRestaurante({
                     {plan.priceLabel}
                     {plan.priceUnit && <span style={{ fontSize: 12, fontWeight: 500 }}> {plan.priceUnit}</span>}
                   </div>
-                  <div style={{ fontSize: 10.5, color: 'var(--u-text-4)', marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>
                     {plan.trialLabel}
                   </div>
                 </div>
@@ -240,7 +240,7 @@ export default function NuevoRestaurante({
                     }}>
                       <span style={{
                         color: f.positive ? (active ? 'var(--brand-accent)' : 'var(--u-text-4)') : 'var(--u-text-4)',
-                        flexShrink: 0, lineHeight: 1.6, fontSize: 10,
+                        flexShrink: 0, lineHeight: 1.6, fontSize: 11,
                       }}>
                         {f.positive ? '✓' : '✗'}
                       </span>

@@ -255,7 +255,7 @@ export default async function SuscripcionPage() {
             ].map(({ icon, label, desc }) => (
               <div key={label} style={{
                 display: 'flex', gap: 9, alignItems: 'flex-start',
-                padding: '10px 11px', borderRadius: 11,
+                padding: '10px 11px', borderRadius: 'var(--radius-md)',
                 background: 'rgba(var(--brand-accent-rgb,99,102,241),0.05)',
                 border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.12)',
               }}>
@@ -386,7 +386,7 @@ export default async function SuscripcionPage() {
                     (auditoría 2026-10-02, AJU-13). Las instrucciones las escribe
                     Leogin en Super › Configuración › Soporte. */}
                 {contacto.payment_instructions && (
-                  <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)' }}>
+                  <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)' }}>
                     <div className="adm-label" style={{ marginBottom: 4 }}>Cómo pagar</div>
                     <div style={{ fontSize: 13.5, color: 'var(--u-text-2)', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
                       {contacto.payment_instructions}
@@ -399,7 +399,7 @@ export default async function SuscripcionPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn-accent press"
-                    style={{ marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 18px', borderRadius: 12, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}
+                    style={{ marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 18px', borderRadius: 'var(--radius-lg)', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}
                   >
                     <Icon name="whatsapp" size={16} /> Enviar comprobante de pago
                   </a>
@@ -480,7 +480,7 @@ function InvoiceRow({ inv, currency, restaurantName }: { inv: Invoice; currency:
             : CONCEPT_LABEL[inv.concept]
         }
       />
-      <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: meta.bg, color: meta.color, letterSpacing: '0.05em' }}>
+      <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--radius-full)', background: meta.bg, color: meta.color, letterSpacing: '0.05em' }}>
         {meta.label.toUpperCase()}
       </span>
       <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 15, color: 'var(--u-text)', minWidth: 90, textAlign: 'right' }}>

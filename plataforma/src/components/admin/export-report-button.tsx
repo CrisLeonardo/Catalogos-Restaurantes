@@ -115,7 +115,7 @@ export default function ExportReportButton({
   }
 
   const btnStyle: React.CSSProperties = {
-    padding: '8px 14px', borderRadius: 10, border: 'none',
+    padding: '8px 14px', borderRadius: 'var(--radius-md)', border: 'none',
     fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', cursor: 'pointer',
   };
 

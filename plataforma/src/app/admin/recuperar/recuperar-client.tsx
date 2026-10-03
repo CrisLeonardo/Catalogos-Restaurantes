@@ -47,7 +47,7 @@ function PorContacto({ slug }: { slug: string | null }) {
         className="press btn-accent"
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-          padding: '13px', borderRadius: 999, fontWeight: 600, fontSize: 15,
+          padding: '13px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 15,
           textDecoration: 'none', color: '#fff',
         }}
       >
@@ -173,7 +173,7 @@ export default function RecuperarClient({
             disabled={isPending}
             className="press btn-accent"
             style={{
-              padding: '13px', borderRadius: 999, fontWeight: 600, fontSize: 15,
+              padding: '13px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 15,
               border: 'none', color: '#fff', cursor: isPending ? 'not-allowed' : 'pointer',
               opacity: isPending ? 0.6 : 1,
             }}

@@ -99,12 +99,12 @@ export default async function MesasPage() {
         className="press"
         style={{
           display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
-          border: '1px solid var(--u-hair)', borderRadius: 14, textDecoration: 'none',
+          border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', textDecoration: 'none',
           background: 'var(--adm-card, transparent)',
         }}
       >
         <span style={{
-          display: 'grid', placeItems: 'center', width: 30, height: 30, borderRadius: 9, flexShrink: 0,
+          display: 'grid', placeItems: 'center', width: 30, height: 30, borderRadius: 'var(--radius-md)', flexShrink: 0,
           background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: 'var(--u-text-2)',
         }}>
           <Icon name="settings" size={16} />

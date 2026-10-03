@@ -43,7 +43,7 @@ const stepNumStyle: React.CSSProperties = {
   flexShrink: 0,
   width: 22,
   height: 22,
-  borderRadius: 99,
+  borderRadius: 'var(--radius-full)',
   background: 'var(--brand-accent, rgba(99,102,241,0.7))',
   display: 'grid',
   placeItems: 'center',
@@ -130,7 +130,7 @@ export function PrinterPicker({
       {missingOnThisPc && (
         <div style={{
           fontSize: 11.5, color: 'var(--u-text-3)', background: 'var(--c-warn-bg)',
-          border: '1px solid var(--c-warn-line)', borderRadius: 8,
+          border: '1px solid var(--c-warn-line)', borderRadius: 'var(--radius-sm)',
           padding: '7px 10px', lineHeight: 1.55, marginTop: 6,
         }}>
           Esta impresora no aparece entre las de la PC principal actual. Si cambiaste de
@@ -204,7 +204,7 @@ export function InstallSteps({
     <div style={{
       background: 'var(--c-ok-bg)',
       border: '1px solid var(--c-ok-line)',
-      borderRadius: 10,
+      borderRadius: 'var(--radius-md)',
       padding: '16px',
       display: 'flex',
       flexDirection: 'column',
@@ -247,7 +247,7 @@ export function InstallSteps({
             color: 'var(--u-text-4)',
             background: 'var(--c-warn-bg)',
             border: '1px solid var(--c-warn-line)',
-            borderRadius: 6,
+            borderRadius: 'var(--radius-sm)',
             padding: '6px 9px',
             lineHeight: 1.5,
           }}>
@@ -285,7 +285,7 @@ export function InstallSteps({
               oscuro); antes era rgba(0,0,0,0.4) y en el panel claro quedaba un
               gris sucio con poco contraste. */}
           <pre style={{
-            margin: 0, padding: '9px 11px', borderRadius: 8,
+            margin: 0, padding: '9px 11px', borderRadius: 'var(--radius-sm)',
             background: '#15171c', border: '1px solid var(--u-hair)',
             fontSize: 11, color: '#a5f3fc', fontFamily: 'monospace',
             whiteSpace: 'pre-wrap', wordBreak: 'break-all', lineHeight: 1.6,
@@ -301,7 +301,7 @@ export function InstallSteps({
           {/* Adaptativo: antes rgba(0,0,0,0.35) fijo — en panel claro era una caja
               oscura con texto oscuro (var --u-text-2), ilegible. */}
           <pre style={{
-            margin: 0, padding: '9px 11px', borderRadius: 8,
+            margin: 0, padding: '9px 11px', borderRadius: 'var(--radius-sm)',
             background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair)',
             fontSize: 11, color: 'var(--u-text-2)', fontFamily: 'monospace',
             whiteSpace: 'pre-wrap', wordBreak: 'break-all',
@@ -505,7 +505,7 @@ export default function PrintAgentSettings() {
           {printers.length === 0 && (
             <div style={{
               fontSize: 11.5, color: 'var(--u-text-4)', background: 'var(--c-warn-bg)',
-              border: '1px solid var(--c-warn-line)', borderRadius: 8, padding: '7px 10px', lineHeight: 1.55,
+              border: '1px solid var(--c-warn-line)', borderRadius: 'var(--radius-sm)', padding: '7px 10px', lineHeight: 1.55,
             }}>
               La PC principal todavía no ha enviado su lista de impresoras. Revisa que Leogin esté
               abierto en ella y pulsa «Actualizar». Mientras, puedes probar con el simulador en pantalla.
@@ -514,7 +514,7 @@ export default function PrintAgentSettings() {
 
           <div style={{
             fontSize: 11.5, color: 'var(--u-text-4)', background: 'var(--c-info-bg)',
-            border: '1px solid var(--c-info-line)', borderRadius: 8, padding: '7px 10px', lineHeight: 1.55,
+            border: '1px solid var(--c-info-line)', borderRadius: 'var(--radius-sm)', padding: '7px 10px', lineHeight: 1.55,
           }}>
             {/* Sin «documento» ni «preview:», que eran nombres internos de las
                 opciones (auditoría 2026-10-02, AJU-11). */}

@@ -89,7 +89,7 @@ export default function MiCuentaClient({
           >
             <span
               style={{
-                width: 38, height: 38, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center',
+                width: 38, height: 38, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
                 background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)',
                 color: 'var(--brand-accent-ink)',
               }}
@@ -237,12 +237,12 @@ function RowBody({ card, pending }: { card: MembershipCard; pending: boolean }) 
           alt=""
           width={42}
           height={42}
-          style={{ borderRadius: 11, objectFit: 'cover', display: 'block', flexShrink: 0 }}
+          style={{ borderRadius: 'var(--radius-md)', objectFit: 'cover', display: 'block', flexShrink: 0 }}
         />
       ) : (
         <span
           style={{
-            width: 42, height: 42, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center',
+            width: 42, height: 42, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
             background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: 'var(--u-text-3)',
           }}
         >
@@ -256,7 +256,7 @@ function RowBody({ card, pending }: { card: MembershipCard; pending: boolean }) 
             {card.name}
           </span>
           {card.paused && (
-            <span className="chip" style={{ flexShrink: 0, fontSize: 10 }}>Pausado</span>
+            <span className="chip" style={{ flexShrink: 0, fontSize: 11 }}>Pausado</span>
           )}
         </span>
         <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>

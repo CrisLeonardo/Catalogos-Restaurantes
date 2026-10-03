@@ -13,10 +13,10 @@ import { haceTiempo } from '@/lib/dates';
 
 const inputStyle: React.CSSProperties = {
   width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid color-mix(in srgb, var(--u-text) 12%, transparent)',
-  borderRadius: 11, padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
+  borderRadius: 'var(--radius-md)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
 const labelStyle: React.CSSProperties = {
-  fontSize: 10.5, color: 'var(--u-text-3)', fontWeight: 600,
+  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 600,
   letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6, display: 'block',
 };
 
@@ -26,7 +26,7 @@ export default function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow
 
   return (
     <div style={{
-      borderRadius: 16, background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+      borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
       border: '1px solid color-mix(in srgb, var(--u-text) 10%, transparent)', padding: '24px 26px', maxWidth: 680,
     }}>
       <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', marginBottom: 6 }}>
@@ -41,7 +41,7 @@ export default function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow
 
       {/* Token recién creado */}
       {justCreated && (
-        <div style={{ marginBottom: 18, padding: '14px 16px', borderRadius: 12, background: 'var(--c-ok-bg)', border: '1px solid var(--c-ok-line)' }}>
+        <div style={{ marginBottom: 18, padding: '14px 16px', borderRadius: 'var(--radius-lg)', background: 'var(--c-ok-bg)', border: '1px solid var(--c-ok-line)' }}>
           <div style={{ fontSize: 12.5, color: 'var(--c-ok)', fontWeight: 700, marginBottom: 8 }}>
             Llave creada — cópiala ahora, no se volverá a mostrar:
           </div>
@@ -69,7 +69,7 @@ export default function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow
           <p style={{ fontSize: 13, color: 'var(--c-danger)' }}>{state.error}</p>
         )}
         <button type="submit" disabled={pending} style={{
-          padding: '11px 22px', borderRadius: 10, fontWeight: 700, fontSize: 14,
+          padding: '11px 22px', borderRadius: 'var(--radius-md)', fontWeight: 700, fontSize: 14,
           cursor: pending ? 'not-allowed' : 'pointer', alignSelf: 'flex-start',
           background: pending ? 'color-mix(in srgb, var(--u-text) 8%, transparent)' : 'var(--u-text)',
           color: pending ? 'var(--u-text-3)' : 'var(--brand-bg)', border: 'none',
@@ -94,14 +94,14 @@ function CopyRow({ token }: { token: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-      <code style={{ flex: 1, fontSize: 12.5, color: 'var(--u-text)', background: 'rgba(0,0,0,0.25)', padding: '8px 10px', borderRadius: 8, wordBreak: 'break-all', fontFamily: 'var(--ui-font-mono)' }}>
+      <code style={{ flex: 1, fontSize: 12.5, color: 'var(--u-text)', background: 'rgba(0,0,0,0.25)', padding: '8px 10px', borderRadius: 'var(--radius-sm)', wordBreak: 'break-all', fontFamily: 'var(--ui-font-mono)' }}>
         {token}
       </code>
       <button
         type="button"
         onClick={async () => { try { await navigator.clipboard.writeText(token); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch {} }}
         className="press"
-        style={{ flexShrink: 0, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: 'var(--u-text)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}
+        style={{ flexShrink: 0, padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: 'var(--u-text)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}
       >
         {copied ? 'Copiado ✓' : 'Copiar'}
       </button>
@@ -122,14 +122,14 @@ function KeyRow({ k }: { k: ApiKeyRow }) {
         </div>
       </div>
       {revoked ? (
-        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: '#94a3b8' }}>REVOCADA</span>
+        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--radius-full)', background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: '#94a3b8' }}>REVOCADA</span>
       ) : (
         <button
           type="button"
           disabled={isPending}
           onClick={() => start(async () => { const r = await revokeApiKeyAction(k.id); if (!r.error) setRevoked(true); })}
           className="press"
-          style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 8, border: '1px solid var(--c-danger-line)', background: 'var(--c-danger-bg)', color: 'var(--c-danger)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+          style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-danger-line)', background: 'var(--c-danger-bg)', color: 'var(--c-danger)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
         >
           <Icon name="trash" size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Revocar
         </button>

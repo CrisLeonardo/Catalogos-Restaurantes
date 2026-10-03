@@ -15,7 +15,7 @@ export default function PlatformSettingsForm({ settings }: Props) {
   return (
     <div
       style={{
-        borderRadius: 16,
+        borderRadius: 'var(--radius-lg)',
         background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
         border: '1px solid color-mix(in srgb, var(--u-text) 10%, transparent)',
         padding: '24px 26px',
@@ -39,7 +39,7 @@ export default function PlatformSettingsForm({ settings }: Props) {
             defaultValue={settings.support_whatsapp}
             placeholder="+502 1234 5678"
             style={{
-              padding: '11px 14px', borderRadius: 10, fontSize: 14,
+              padding: '11px 14px', borderRadius: 'var(--radius-md)', fontSize: 14,
               background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
               border: '1px solid color-mix(in srgb, var(--u-text) 12%, transparent)',
               color: 'var(--u-text)',
@@ -63,7 +63,7 @@ export default function PlatformSettingsForm({ settings }: Props) {
             defaultValue={settings.support_email}
             placeholder="soporte@ejemplo.com"
             style={{
-              padding: '11px 14px', borderRadius: 10, fontSize: 14,
+              padding: '11px 14px', borderRadius: 'var(--radius-md)', fontSize: 14,
               background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
               border: '1px solid color-mix(in srgb, var(--u-text) 12%, transparent)',
               color: 'var(--u-text)',
@@ -88,7 +88,7 @@ export default function PlatformSettingsForm({ settings }: Props) {
             defaultValue={settings.payment_instructions}
             placeholder={'Depósito o transferencia a Banco Industrial\nCuenta monetaria 000-000000-0\nA nombre de …'}
             style={{
-              padding: '11px 14px', borderRadius: 10, fontSize: 14, lineHeight: 1.5,
+              padding: '11px 14px', borderRadius: 'var(--radius-md)', fontSize: 14, lineHeight: 1.5,
               background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
               border: '1px solid color-mix(in srgb, var(--u-text) 12%, transparent)',
               color: 'var(--u-text)',
@@ -105,13 +105,13 @@ export default function PlatformSettingsForm({ settings }: Props) {
         </div>
 
         {errorMsg && (
-          <p style={{ fontSize: 13, color: 'var(--c-danger)', padding: '10px 14px', borderRadius: 8, background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)' }}>
+          <p style={{ fontSize: 13, color: 'var(--c-danger)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)' }}>
             {errorMsg}
           </p>
         )}
 
         {saved && (
-          <p style={{ fontSize: 13, color: 'var(--c-ok)', padding: '10px 14px', borderRadius: 8, background: 'var(--c-ok-bg)', border: '1px solid var(--c-ok-line)' }}>
+          <p style={{ fontSize: 13, color: 'var(--c-ok)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'var(--c-ok-bg)', border: '1px solid var(--c-ok-line)' }}>
             Configuración guardada correctamente.
           </p>
         )}
@@ -120,7 +120,7 @@ export default function PlatformSettingsForm({ settings }: Props) {
           type="submit"
           disabled={pending}
           style={{
-            padding: '12px 24px', borderRadius: 10, fontWeight: 700, fontSize: 14,
+            padding: '12px 24px', borderRadius: 'var(--radius-md)', fontWeight: 700, fontSize: 14,
             cursor: pending ? 'not-allowed' : 'pointer',
             background: pending ? 'color-mix(in srgb, var(--u-text) 8%, transparent)' : 'var(--u-text)',
             color: pending ? 'var(--u-text-3)' : 'var(--brand-bg)',

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { saveSupplier, deleteSupplier, createPurchaseOrder, setPurchaseOrderStatus, type POLineInput } from '@/lib/actions/suppliers';
 import { Card } from '@/components/ui/card';
@@ -63,7 +62,6 @@ export default function ProveedoresPanel({ restaurantId, suppliers, orders, summ
 type EditState = { id?: string; name: string; contact_name: string; phone: string; email: string; notes: string } | null;
 
 function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppliers: Supplier[] }) {
-  const router = useRouter();
   const { confirm, dialog } = useConfirm();
   const [edit, setEdit] = useState<EditState>(null);
   const [isPending, start] = useTransition();
@@ -76,7 +74,6 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
       const res = await saveSupplier(restaurantId, edit);
       if (res.error) { setError(res.error); return; }
       setEdit(null);
-      router.refresh();
     });
   }
   async function remove(s: Supplier) {
@@ -84,7 +81,6 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
     start(async () => {
       const res = await deleteSupplier(restaurantId, s.id);
       if (res.error) { setError(res.error); return; }
-      router.refresh();
     });
   }
 
@@ -161,7 +157,6 @@ function OrdersTab({
   restaurantId: string; suppliers: Supplier[]; orders: PurchaseOrder[];
   products: PurchaseableProduct[]; ingredients: PurchaseableIngredient[];
 }) {
-  const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [supplierId, setSupplierId] = useState('');
   const [notes, setNotes] = useState('');
@@ -215,7 +210,6 @@ function OrdersTab({
       const res = await createPurchaseOrder(restaurantId, supplierId || null, notes, payload);
       if (res.error) { setError(res.error); return; }
       reset();
-      router.refresh();
     });
   }
   async function changeStatus(po: PurchaseOrder, estado: 'ENVIADA' | 'RECIBIDA' | 'CANCELADA') {
@@ -235,7 +229,6 @@ function OrdersTab({
     start(async () => {
       const res = await setPurchaseOrderStatus(restaurantId, po.id, estado);
       if (res.error) { setError(res.error); return; }
-      router.refresh();
     });
   }
 
@@ -315,7 +308,7 @@ function OrdersTab({
                   <div style={{ fontWeight: 700, fontSize: 14 }}>Orden #{String(po.folio).padStart(4, '0')}</div>
                   <div style={{ fontSize: 12, color: 'var(--u-text-3)' }}>{po.supplier_name || 'Sin proveedor'} · {new Date(po.created_at).toLocaleDateString('es-GT', { day: '2-digit', month: 'short' })}</div>
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: `color-mix(in srgb, ${ESTADO_COLOR[po.estado]} 13%, transparent)`, color: ESTADO_COLOR[po.estado] }}>{po.estado}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 'var(--radius-full)', background: `color-mix(in srgb, ${ESTADO_COLOR[po.estado]} 13%, transparent)`, color: ESTADO_COLOR[po.estado] }}>{po.estado}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 8 }}>
                 {(po.items ?? []).map((it) => {

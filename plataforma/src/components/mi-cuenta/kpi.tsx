@@ -21,7 +21,7 @@ export default function Kpi({ label, value, sub, hero, small }: {
   small?: boolean;
 }) {
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+    <div className="glass" style={{ borderRadius: 'var(--radius-lg)', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)' }}>{label}</div>
       <div
         className="t-mono"

@@ -17,25 +17,14 @@ import { sourceBadge } from '@/lib/order-source';
 import { assignDriver } from '@/lib/actions/drivers';
 import { esHoy } from '@/lib/dates';
 import { shortOrderNumber } from '@/lib/order-number';
+import { fmtCurrency, type PanelCurrency } from '@/lib/money';
 
 const OrderLocationMap = dynamic(() => import('./order-location-map'), { ssr: false });
 
 /** Moneda del restaurante (viene del tema resuelto en el servidor). */
-export interface PanelCurrency {
-  symbol: string;
-  position: 'prefix' | 'suffix';
-  locale: string;
-}
+export type { PanelCurrency };
 
-function money(n: number, c: PanelCurrency): string {
-  let num: string;
-  try {
-    num = n.toLocaleString(c.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  } catch {
-    num = n.toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-  return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
-}
+const money = (n: number, c: PanelCurrency): string => fmtCurrency(n, c);
 
 /* ── Origen del pedido ────────────────────────────────────────
    El dueño necesita distinguir de un vistazo si lo tomó un mesero, si el
@@ -499,7 +488,7 @@ export default function OrderCard({
                 onChange={(e) => e.currentTarget.form?.requestSubmit()}
                 style={{
                   background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-                  border: '1px solid var(--u-hair)', borderRadius: 9,
+                  border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-md)',
                   padding: '6px 9px', color: 'var(--u-text)', fontSize: 12, outline: 'none',
                   maxWidth: '100%',
                 }}
@@ -571,7 +560,7 @@ export default function OrderCard({
                     title="Anular este plato"
                     aria-label={`Anular ${item.name_snapshot}`}
                     className="press chip-danger order-void-x tap44"
-                    style={{ width: 22, height: 22, borderRadius: 7, borderWidth: 1, borderStyle: 'solid', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                    style={{ width: 22, height: 22, borderRadius: 'var(--radius-sm)', borderWidth: 1, borderStyle: 'solid', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
                   >
                     <Icon name="x" size={11} />
                   </button>
@@ -601,7 +590,7 @@ export default function OrderCard({
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <Icon name="tag" size={12} style={{ display: 'inline' }} /> Cupón
               {order.coupon_code && (
-                <span className="t-mono" style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 6px', borderRadius: 5, background: 'var(--c-ok-bg)' }}>
+                <span className="t-mono" style={{ fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--radius-sm)', background: 'var(--c-ok-bg)' }}>
                   {order.coupon_code}
                 </span>
               )}
@@ -661,7 +650,7 @@ export default function OrderCard({
             type="button"
             onClick={() => setMapOpen((v) => !v)}
             className="press btn-tinted chip-info"
-            style={{ padding: '6px 12px', fontSize: 12, borderRadius: 8 }}
+            style={{ padding: '6px 12px', fontSize: 12, borderRadius: 'var(--radius-sm)' }}
           >
             <Icon name="mapPin" size={13} /> {mapOpen ? 'Ocultar mapa' : 'Ver ubicación del cliente'}
           </button>

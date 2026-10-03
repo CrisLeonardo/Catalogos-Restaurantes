@@ -8,6 +8,7 @@ import { getDrivers, getDriversCashToday } from '@/lib/db/drivers';
 import DriversPanel from '@/components/admin/drivers-panel';
 import Link from '@/components/admin/panel-link';
 import { panelLink } from '@/lib/panel-links-server';
+import { fmtMoney } from '@/lib/money';
 
 export const metadata = { title: 'Repartidores – Panel admin' };
 
@@ -88,11 +89,11 @@ export default async function AdminRepartidoresPage() {
                       )}
                     </td>
                     <td style={{ padding: '10px' }}>{r.entregados}</td>
-                    <td style={{ padding: '10px' }}>Q{r.esperado.toFixed(2)}</td>
-                    <td style={{ padding: '10px' }}>Q{r.recibido.toFixed(2)}</td>
+                    <td style={{ padding: '10px' }}>{fmtMoney(r.esperado)}</td>
+                    <td style={{ padding: '10px' }}>{fmtMoney(r.recibido)}</td>
                     <td style={{ padding: '10px', fontWeight: 700 }}>
                       <span className={`chip ${r.diferencia < 0 ? 'chip-danger' : r.diferencia > 0 ? 'chip-warn' : 'chip-ok'}`}>
-                        {r.diferencia >= 0 ? '+' : '−'}Q{Math.abs(r.diferencia).toFixed(2)}
+                        {r.diferencia >= 0 ? '+' : '−'}{fmtMoney(Math.abs(r.diferencia))}
                       </span>
                     </td>
                   </tr>

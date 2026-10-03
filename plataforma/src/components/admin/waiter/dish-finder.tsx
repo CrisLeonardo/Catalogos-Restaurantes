@@ -196,7 +196,7 @@ export default function DishFinder({
             que verse el 3 antes de pulsar Enter, no después. */}
         {qty > 1 && (
           <span style={{
-            flexShrink: 0, padding: '2px 7px', borderRadius: 6,
+            flexShrink: 0, padding: '2px 7px', borderRadius: 'var(--radius-sm)',
             background: 'color-mix(in srgb, var(--adm-accent-500) 14%, transparent)',
             color: 'var(--brand-accent-ink)', fontFamily: 'var(--ui-font-mono)',
             fontSize: 12.5, fontWeight: 700,
@@ -243,7 +243,7 @@ export default function DishFinder({
                 className="press"
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  width: '100%', marginTop: 12, height: 44, borderRadius: 12, cursor: 'pointer',
+                  width: '100%', marginTop: 12, height: 44, borderRadius: 'var(--radius-lg)', cursor: 'pointer',
                   border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
                   color: 'var(--u-text)', fontSize: 14, fontWeight: 600,
                 }}
@@ -292,7 +292,7 @@ export default function DishFinder({
                     {agotado ? (
                       <span
                         style={{
-                          flexShrink: 0, padding: '3px 9px', borderRadius: 7, whiteSpace: 'nowrap',
+                          flexShrink: 0, padding: '3px 9px', borderRadius: 'var(--radius-sm)', whiteSpace: 'nowrap',
                           fontSize: 12, fontWeight: 700, letterSpacing: '0.02em',
                           background: 'color-mix(in srgb, var(--c-warn) 14%, transparent)',
                           color: 'var(--c-warn)',

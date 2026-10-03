@@ -6,11 +6,12 @@ import { useToastManager } from '@/components/ui/toast';
 import { exportCashHistoryXlsx, getCashHistoryPdfData } from '@/lib/actions/finanzas';
 import { createDoc, drawPdfHeader, brandedAutoTable, finalizePdf } from '@/lib/documents/pdf';
 import { formatDocMoney, longDate } from '@/lib/documents/format';
+import { labelOf } from '@/lib/payment-method';
 
-function methodSummary(byMethod: Record<string, number> | null): string {
+function methodSummary(byMethod: Record<string, number> | null, money: (n: number) => string): string {
   if (!byMethod) return '';
   return Object.entries(byMethod)
-    .map(([method, amount]) => `${method === 'CASH' ? 'Efectivo' : method}: ${Number(amount).toFixed(2)}`)
+    .map(([method, amount]) => `${labelOf(method)}: ${money(Number(amount))}`)
     .join(', ');
 }
 
@@ -57,7 +58,7 @@ export default function CashHistoryExportButton({ restaurantId }: { restaurantId
         body: rows.map((c) => [
           c.business_date, c.shift_label ?? '', c.cashier_name ?? '',
           money(Number(c.opening_float)), money(Number(c.expected_cash)), money(Number(c.counted_cash)), money(Number(c.difference)),
-          methodSummary(c.by_method), c.notes ?? '',
+          methodSummary(c.by_method, money), c.notes ?? '',
         ]),
         styles: { fontSize: 8 },
         columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' } },
@@ -70,7 +71,7 @@ export default function CashHistoryExportButton({ restaurantId }: { restaurantId
   }
 
   const btnStyle = (pending: boolean): React.CSSProperties => ({
-    padding: '5px 11px', borderRadius: 8, border: '1px solid var(--u-hair)',
+    padding: '5px 11px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--u-hair)',
     fontSize: 11.5, fontWeight: 600, color: 'var(--u-text-3)', background: 'transparent',
     cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.7 : 1,
   });

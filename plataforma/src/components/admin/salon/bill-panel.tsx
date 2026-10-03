@@ -76,7 +76,7 @@ export default function BillPanel({
       className="salon-bill"
       style={{
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
-        borderRadius: 16, border: '1px solid var(--u-hair)',
+        borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair)',
         background: 'var(--adm-card)', boxShadow: 'var(--adm-shadow-xs)',
       }}
       aria-label={`Cuenta de la mesa ${t.n}`}
@@ -115,7 +115,7 @@ export default function BillPanel({
           className="press"
           style={{
             display: 'grid', placeItems: 'center', width: 32, height: 32, flexShrink: 0,
-            borderRadius: 9, border: '1px solid var(--u-hair-2)', background: 'none',
+            borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'none',
             color: 'var(--u-text-2)', cursor: 'pointer',
           }}
         >
@@ -238,7 +238,7 @@ export default function BillPanel({
             disabled={busy}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              height: 46, borderRadius: 12, border: 'none', cursor: busy ? 'default' : 'pointer',
+              height: 46, borderRadius: 'var(--radius-lg)', border: 'none', cursor: busy ? 'default' : 'pointer',
               fontSize: 15, fontWeight: 600, opacity: busy ? 0.55 : 1, width: '100%',
             }}
           >
@@ -253,7 +253,7 @@ export default function BillPanel({
             disabled={!canWaiter}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              height: 46, borderRadius: 12, border: 'none', cursor: canWaiter ? 'pointer' : 'default',
+              height: 46, borderRadius: 'var(--radius-lg)', border: 'none', cursor: canWaiter ? 'pointer' : 'default',
               fontSize: 15, fontWeight: 600, opacity: canWaiter ? 1 : 0.55, width: '100%',
             }}
           >
@@ -329,7 +329,7 @@ function Paso({ icon, label, onClick, disabled }: {
       aria-label={label}
       className="press"
       style={{
-        display: 'grid', placeItems: 'center', width: 34, height: 34, borderRadius: 10,
+        display: 'grid', placeItems: 'center', width: 34, height: 34, borderRadius: 'var(--radius-md)',
         border: '1px solid var(--u-hair-2)', background: 'none', color: 'var(--u-text-2)',
         cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.4 : 1,
       }}
@@ -362,7 +362,7 @@ function Mesero({ value, waiters, onChange, disabled, hint }: {
           onChange={(e) => onChange(e.target.value)}
           aria-label="Mesero que atiende la mesa"
           style={{
-            height: 34, minWidth: 140, maxWidth: 190, borderRadius: 10, padding: '0 8px',
+            height: 34, minWidth: 140, maxWidth: 190, borderRadius: 'var(--radius-md)', padding: '0 8px',
             border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
             color: 'var(--u-text)', fontSize: 13.5, cursor: disabled ? 'default' : 'pointer',
           }}
@@ -402,7 +402,7 @@ function Secundario({ icon, label, onClick, disabled }: {
       className="press"
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-        height: 40, borderRadius: 11, cursor: disabled ? 'default' : 'pointer',
+        height: 40, borderRadius: 'var(--radius-md)', cursor: disabled ? 'default' : 'pointer',
         border: '1px solid var(--u-hair-2)', background: 'none',
         color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500, opacity: disabled ? 0.55 : 1,
       }}

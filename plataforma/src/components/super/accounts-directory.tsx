@@ -224,7 +224,7 @@ export default function AccountsDirectory({ rows }: { rows: AccountDirectoryRow[
               type="button"
               onClick={() => setLimite((n) => n + 20)}
               className="press"
-              style={{ alignSelf: 'center', marginTop: 6, padding: '9px 18px', borderRadius: 99, cursor: 'pointer', border: '1px solid var(--u-hair-2)', background: 'var(--adm-card, transparent)', color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600 }}
+              style={{ alignSelf: 'center', marginTop: 6, padding: '9px 18px', borderRadius: 'var(--radius-full)', cursor: 'pointer', border: '1px solid var(--u-hair-2)', background: 'var(--adm-card, transparent)', color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600 }}
             >
               Ver más ({filtered.length - limite} restantes)
             </button>
@@ -248,7 +248,7 @@ function AccountCard({ row, marcarSinVerificar }: { row: AccountDirectoryRow; ma
       <span
         aria-hidden
         style={{
-          width: 38, height: 38, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center',
+          width: 38, height: 38, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
           background: row.suspendida
             ? 'color-mix(in srgb, var(--c-danger) 14%, transparent)'
             : 'color-mix(in srgb, var(--brand-accent) 14%, transparent)',
@@ -295,7 +295,7 @@ function AccountCard({ row, marcarSinVerificar }: { row: AccountDirectoryRow; ma
                 key={l.restaurantId}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
-                  padding: '4px 10px', borderRadius: 99, fontSize: 11.5, fontWeight: 600,
+                  padding: '4px 10px', borderRadius: 'var(--radius-full)', fontSize: 11.5, fontWeight: 600,
                   color: 'var(--u-text-3)',
                   background: 'var(--adm-card, color-mix(in srgb, var(--u-text) 5%, transparent))',
                   border: '1px solid var(--adm-border, var(--u-hair))',
@@ -331,7 +331,7 @@ function FilterChip({ label, active, onClick, danger, title }: {
       className="press"
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,
-        padding: '6px 12px', borderRadius: 99, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+        padding: '6px 12px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
         background: active
           ? (danger ? 'color-mix(in srgb, var(--c-danger) 14%, transparent)' : 'color-mix(in srgb, var(--brand-accent) 14%, transparent)')
           : 'var(--adm-card, color-mix(in srgb, var(--u-text) 5%, transparent))',

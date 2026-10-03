@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,7 +39,6 @@ function couponStatus(c: Coupon): { label: string; color: string } {
 }
 
 export default function CuponesPanel({ restaurantId, coupons }: Props) {
-  const router = useRouter();
   const { confirm, dialog } = useConfirm();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -92,7 +90,6 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
         : await createCoupon(restaurantId, payload);
       if (res.error) { setError(res.error); return; }
       closeForm();
-      router.refresh();
     });
   }
 
@@ -102,7 +99,6 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
       const res = await toggleCoupon(restaurantId, id, !current);
       setBusyId(null);
       if (res.error) { setError(res.error); return; }
-      router.refresh();
     });
   }
 
@@ -116,7 +112,6 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
       const res = await deleteCoupon(restaurantId, id);
       setBusyId(null);
       if (res.error) { setError(res.error); return; }
-      router.refresh();
     });
   }
 
@@ -220,7 +215,7 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
             const busy = busyId === c.id && isPending;
             return (
               <Card key={c.id} className="flex flex-wrap items-center gap-3 p-3.5" style={{ opacity: busy ? 0.6 : 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 10, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 'var(--radius-md)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', flexShrink: 0 }}>
                   <Icon name="ticket" size={18} style={{ color: statusLabel === 'Activo' ? 'var(--brand-accent)' : 'var(--u-text-4)' }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 140 }}>
@@ -230,7 +225,7 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2, display: 'flex', flexWrap: 'wrap', gap: '2px 10px' }}>
                     <span>{c.discount_type === 'PERCENT' ? `${c.discount_value}% desc.` : `${fmtMoney(Number(c.discount_value))} desc.`}</span>
-                    {c.min_order && <span>Min: Q{Number(c.min_order).toFixed(2)}</span>}
+                    {c.min_order && <span>Mín.: {fmtMoney(Number(c.min_order))}</span>}
                     {c.max_uses && <span>Usos: {c.uses}/{c.max_uses}</span>}
                     {!c.max_uses && c.uses > 0 && <span>Usos: {c.uses}</span>}
                     {c.valid_until && <span>Vence: {new Date(c.valid_until).toLocaleDateString('es-GT', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}

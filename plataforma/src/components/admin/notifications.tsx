@@ -545,7 +545,7 @@ export default function AdminNotifications({
     'Activar notificaciones de pedidos nuevos';
 
   const btnBase: React.CSSProperties = {
-    width: 42, height: 42, borderRadius: 12, border: 'none', background: 'none',
+    width: 42, height: 42, borderRadius: 'var(--radius-lg)', border: 'none', background: 'none',
     display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer',
   };
 
@@ -567,7 +567,7 @@ export default function AdminNotifications({
         <Icon name="bell" size={19} />
         <span style={{
           position: 'absolute', top: 9, right: 9, width: 8, height: 8,
-          borderRadius: 99, background: dotColor, border: '2px solid var(--brand-bg)',
+          borderRadius: 'var(--radius-full)', background: dotColor, border: '2px solid var(--brand-bg)',
           transition: 'background 300ms',
         }} />
       </button>
@@ -588,7 +588,7 @@ export default function AdminNotifications({
         {audioBlocked && (
           <span style={{
             position: 'absolute', top: 9, right: 9, width: 8, height: 8,
-            borderRadius: 99, background: 'var(--c-danger)', border: '2px solid var(--brand-bg)',
+            borderRadius: 'var(--radius-full)', background: 'var(--c-danger)', border: '2px solid var(--brand-bg)',
           }} />
         )}
       </button>
@@ -599,7 +599,7 @@ export default function AdminNotifications({
           className="glass-solid"
           style={{
             position: 'fixed', top: 70, right: 16, zIndex: 9999,
-            width: 290, borderRadius: 16, padding: 16,
+            width: 290, borderRadius: 'var(--radius-lg)', padding: 16,
             border: '1px solid var(--glass-stroke)',
             boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
           }}
@@ -613,7 +613,7 @@ export default function AdminNotifications({
               type="button"
               onClick={() => setShowSoundPanel(false)}
               className="press"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--u-text-3)', padding: 2, borderRadius: 6 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--u-text-3)', padding: 2, borderRadius: 'var(--radius-sm)' }}
             >
               <Icon name="x" size={15} />
             </button>
@@ -645,7 +645,7 @@ export default function AdminNotifications({
             />
             <span style={{ fontSize: 11, color: 'var(--u-text-2)', lineHeight: 1.45 }}>
               Repetir el aviso hasta que alguien atienda el pedido
-              <span style={{ display: 'block', color: 'var(--u-text-3)', fontSize: 10.5 }}>
+              <span style={{ display: 'block', color: 'var(--u-text-3)', fontSize: 11 }}>
                 Se repite cada 22 s (máximo 10 veces) mientras la alerta siga en pantalla.
               </span>
             </span>
@@ -689,7 +689,7 @@ export default function AdminNotifications({
               🔇 El sonido está bloqueado por el navegador en esta pestaña. Toca cualquier botón (por ejemplo &quot;Probar&quot;) para activarlo.
             </p>
           )}
-          <p style={{ fontSize: 10.5, color: 'var(--u-text-3)', marginTop: 10, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 11, color: 'var(--u-text-3)', marginTop: 10, lineHeight: 1.5 }}>
             Los ajustes se guardan automáticamente en este dispositivo.
           </p>
         </div>
@@ -702,7 +702,7 @@ export default function AdminNotifications({
           style={{
             position: 'fixed', top: 70, right: showSoundPanel ? 322 : 16,
             zIndex: 9998, maxWidth: 320,
-            padding: '12px 15px', borderRadius: 14, fontSize: 12.5, lineHeight: 1.55,
+            padding: '12px 15px', borderRadius: 'var(--radius-lg)', fontSize: 12.5, lineHeight: 1.55,
             color: popup.type === 'error' ? 'var(--c-danger)' : 'var(--u-text-2)',
             border: `1px solid ${popup.type === 'error' ? 'var(--c-danger-line)' : 'var(--glass-stroke)'}`,
             transition: 'right 200ms',
@@ -764,21 +764,21 @@ function SoundRow({
           onChange={e => onVolume(Number(e.target.value) / 100)}
           style={{ flex: 1, accentColor: 'var(--brand-accent, #6366f1)', cursor: 'pointer' }}
         />
-        <span style={{ fontSize: 10.5, color: 'var(--u-text-3)', minWidth: 28, textAlign: 'right' }}>
+        <span style={{ fontSize: 11, color: 'var(--u-text-3)', minWidth: 28, textAlign: 'right' }}>
           {Math.round(volume * 100)}%
         </span>
       </div>
 
       {/* Repetición + probar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-        <span style={{ fontSize: 10.5, color: 'var(--u-text-3)' }}>Repetir:</span>
+        <span style={{ fontSize: 11, color: 'var(--u-text-3)' }}>Repetir:</span>
         {Array.from({ length: maxRepeat }, (_, i) => i + 1).map(n => (
           <button
             key={n}
             type="button"
             onClick={() => onRepeat(n)}
             style={{
-              padding: '2px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+              padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 11, cursor: 'pointer',
               background: repeat === n ? 'var(--c-alt-line)' : 'transparent',
               color:      repeat === n ? 'var(--u-text)' : 'var(--u-text-3)',
               border:     `1px solid ${repeat === n ? 'var(--c-alt-line)' : 'var(--glass-stroke)'}`,
@@ -792,7 +792,7 @@ function SoundRow({
           type="button"
           onClick={onTest}
           style={{
-            marginLeft: 'auto', padding: '2px 10px', borderRadius: 6, fontSize: 10.5,
+            marginLeft: 'auto', padding: '2px 10px', borderRadius: 'var(--radius-sm)', fontSize: 11,
             cursor: 'pointer', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
             color: 'var(--u-text-2)', border: '1px solid var(--glass-stroke)',
           }}

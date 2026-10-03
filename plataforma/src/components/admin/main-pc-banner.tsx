@@ -42,7 +42,7 @@ export default function MainPcBanner({ state }: { state: 'missing' | 'off' }) {
     <div
       style={{
         display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-        padding: '10px 14px', borderRadius: 11, marginBottom: 16,
+        padding: '10px 14px', borderRadius: 'var(--radius-md)', marginBottom: 16,
         background: `color-mix(in srgb, ${accent} 8%, transparent)`,
         border: `1px solid color-mix(in srgb, ${accent} 26%, transparent)`,
       }}
@@ -61,7 +61,7 @@ export default function MainPcBanner({ state }: { state: 'missing' | 'off' }) {
           href={panelHref(base, "/admin/mi-pc")}
           style={{
             fontSize: 12, fontWeight: 700, color: accent, textDecoration: 'none',
-            padding: '6px 12px', borderRadius: 99,
+            padding: '6px 12px', borderRadius: 'var(--radius-full)',
             border: `1px solid color-mix(in srgb, ${accent} 38%, transparent)`,
           }}
         >

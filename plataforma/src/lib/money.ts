@@ -11,8 +11,9 @@
 
    Ahora es `es-GT` (punto decimal, coma de miles), y las pantallas
    que tenían su propia copia la usan. Las que pintan con la moneda
-   que configuró el restaurante (pedidos, cuenta de la mesa) siguen
-   con `formatPrice` / `PanelCurrency`, que ya agrupaban bien.
+   que configuró el restaurante (pedidos, cuenta de la mesa, Tomar
+   pedidos) usan `fmtCurrency` con su `PanelCurrency` — antes eran
+   cuatro copias de la misma función (REN-06).
    ============================================================ */
 
 const LOCALE = 'es-GT';
@@ -35,4 +36,27 @@ export function fmtMoney(n: number, currency = 'GTQ', decimals = 2): string {
   const sym = currencySymbol(currency);
   const num = Number.isFinite(n) ? n : 0;
   return `${sym}${num.toLocaleString(LOCALE, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
+}
+
+/** Cómo escribe los importes un restaurante (Ajustes › Pedidos y cobro):
+ *  símbolo, delante o detrás, y los separadores de su país. */
+export interface PanelCurrency {
+  symbol: string;
+  position: 'prefix' | 'suffix';
+  locale: string;
+}
+
+/** Monto con la moneda REAL del restaurante (no "Q" fijo). Si el locale
+ *  guardado no es válido, cae a es-GT. `decimals = 0` para el pin del
+ *  plano, donde no caben los centavos («Q412»). */
+export function fmtCurrency(n: number, c: PanelCurrency, decimals = 2): string {
+  const num0 = Number.isFinite(n) ? n : 0;
+  const opts = { minimumFractionDigits: decimals, maximumFractionDigits: decimals };
+  let num: string;
+  try {
+    num = num0.toLocaleString(c.locale, opts);
+  } catch {
+    num = num0.toLocaleString(LOCALE, opts);
+  }
+  return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
 }

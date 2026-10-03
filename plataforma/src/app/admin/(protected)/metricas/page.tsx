@@ -11,6 +11,10 @@ import { Section } from '@/components/ui/section';
 import { Stat, StatGroup } from '@/components/ui/stat';
 import { EmptyState } from '@/components/ui/empty-state';
 import { fmtMoney } from '@/lib/money';
+import { ChartReadout } from '@/components/ui/chart-readout';
+import { diaSemana } from '@/lib/dates';
+import type { DaySale } from '@/lib/db/orders';
+import type { DayVisits } from '@/lib/actions/metrics';
 
 export const metadata = { title: 'Negocio – Panel admin' };
 
@@ -71,6 +75,10 @@ export default async function AdminNegocioPage() {
   const maxVisits = Math.max(...visits.series14.map((d) => d.visits), 1);
   const maxSales = Math.max(...(orderStats?.series.map((d) => d.total) ?? [0]), 1);
   const soldTop = orderStats?.topToday ?? [];
+  // Lo que dice cada barra al tocarla (NEG-05).
+  const dia = (d: { date: string; isToday: boolean }) => (d.isToday ? 'hoy' : diaSemana(d.date));
+  const salesTip = (d?: DaySale) => (d ? `${dia(d)} · ${money(d.total)}` : undefined);
+  const visitsTip = (d?: DayVisits) => (d ? `${dia(d)} · ${d.visits} ${d.visits === 1 ? 'visita' : 'visitas'}` : undefined);
 
   return (
     <div className="anim-fade-up adm-w-overview flex flex-col gap-6">
@@ -97,19 +105,21 @@ export default async function AdminNegocioPage() {
             <div className="t-mono text-[26px] leading-none font-semibold text-adm-text">
               {money(orderStats.totalLast14)}
             </div>
-            <div className="flex h-28 items-end gap-1.5">
+            <ChartReadout defaultTip={salesTip(orderStats.series.find((d) => d.isToday))}>
+            <div className="flex h-28 gap-1.5">
               {orderStats.series.map((day, i) => (
-                <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
-                  <div
-                    className="w-full rounded-t-[4px]"
-                    style={{
-                      height: `${Math.max((day.total / maxSales) * 100, day.total > 0 ? 6 : 2)}%`,
-                      minHeight: 2,
-                      background: day.isToday ? 'var(--chart-hi)' : 'var(--chart-base)',
-                      transition: 'height 400ms var(--ease-entry)',
-                    }}
-                    title={`${day.label}: ${money(day.total)}`}
-                  />
+                <div key={i} data-tip={salesTip(day)} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+                  <div className="flex min-h-0 w-full flex-1 items-end">
+                    <div
+                      className="w-full rounded-t-[4px]"
+                      style={{
+                        height: `${Math.max((day.total / maxSales) * 100, day.total > 0 ? 6 : 2)}%`,
+                        minHeight: 2,
+                        background: day.isToday ? 'var(--chart-hi)' : 'var(--chart-base)',
+                        transition: 'height 400ms var(--ease-entry)',
+                      }}
+                    />
+                  </div>
                   <span
                     className="t-mono text-[11px]"
                     style={{ color: day.isToday ? 'var(--u-text)' : 'var(--u-text-4)' }}
@@ -119,6 +129,7 @@ export default async function AdminNegocioPage() {
                 </div>
               ))}
             </div>
+            </ChartReadout>
           </Card>
         </Section>
       )}
@@ -152,19 +163,21 @@ export default async function AdminNegocioPage() {
               {visits.unique30} personas distintas en 30 días
             </span>
           </div>
-          <div className="flex h-24 items-end gap-1.5">
+          <ChartReadout defaultTip={visitsTip(visits.series14.find((d) => d.isToday))}>
+          <div className="flex h-24 gap-1.5">
             {visits.series14.map((day, i) => (
-              <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
-                <div
-                  className="w-full rounded-t-[4px]"
-                  style={{
-                    height: `${Math.max((day.visits / maxVisits) * 100, day.visits > 0 ? 6 : 2)}%`,
-                    minHeight: 2,
-                    background: day.isToday ? 'var(--chart-hi)' : 'var(--chart-base)',
-                    transition: 'height 400ms var(--ease-entry)',
-                  }}
-                  title={`${day.label}: ${day.visits} visitas`}
-                />
+              <div key={i} data-tip={visitsTip(day)} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+                <div className="flex min-h-0 w-full flex-1 items-end">
+                  <div
+                    className="w-full rounded-t-[4px]"
+                    style={{
+                      height: `${Math.max((day.visits / maxVisits) * 100, day.visits > 0 ? 6 : 2)}%`,
+                      minHeight: 2,
+                      background: day.isToday ? 'var(--chart-hi)' : 'var(--chart-base)',
+                      transition: 'height 400ms var(--ease-entry)',
+                    }}
+                  />
+                </div>
                 <span
                   className="t-mono text-[11px]"
                   style={{ color: day.isToday ? 'var(--u-text)' : 'var(--u-text-4)' }}
@@ -174,6 +187,7 @@ export default async function AdminNegocioPage() {
               </div>
             ))}
           </div>
+          </ChartReadout>
           <p className="text-[12.5px] leading-snug text-adm-text-4">
             Cada apertura de tu menú por un dispositivo cuenta una vez por sesión.
           </p>

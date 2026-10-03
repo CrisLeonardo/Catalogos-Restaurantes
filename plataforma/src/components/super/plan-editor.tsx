@@ -185,7 +185,7 @@ export default function PlanEditor({
                     position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)',
                     background: '#fbbf24', color: '#1a1a1a',
                     fontSize: 11, fontWeight: 700, letterSpacing: '0.05em',
-                    padding: '2px 6px', borderRadius: 99, whiteSpace: 'nowrap',
+                    padding: '2px 6px', borderRadius: 'var(--radius-full)', whiteSpace: 'nowrap',
                   }}>
                     NO PUBLICADO
                   </span>
@@ -194,7 +194,7 @@ export default function PlanEditor({
                     position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)',
                     background: 'var(--brand-accent)', color: '#fff',
                     fontSize: 11, fontWeight: 700, letterSpacing: '0.05em',
-                    padding: '2px 6px', borderRadius: 99, whiteSpace: 'nowrap',
+                    padding: '2px 6px', borderRadius: 'var(--radius-full)', whiteSpace: 'nowrap',
                   }}>
                     {meta.badge}
                   </span>
@@ -302,7 +302,7 @@ function ModuleRow({
         className={locked ? undefined : 'press'}
         aria-label={label}
         style={{
-          width: 40, height: 24, borderRadius: 12, flexShrink: 0,
+          width: 40, height: 24, borderRadius: 'var(--radius-lg)', flexShrink: 0,
           background: enabled ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 10%, transparent)',
           border: 'none', cursor: locked ? 'default' : 'pointer',
           position: 'relative', transition: 'background 200ms',

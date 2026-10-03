@@ -27,7 +27,6 @@
    ============================================================ */
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 /* `Link` es aqui `PanelLink`: traduce las rutas del panel al origen desde el
    que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
    Ver components/admin/panel-link.tsx. */
@@ -54,8 +53,9 @@ import { usePlanPricing } from '@/components/plan-pricing-context';
 import type { OrderType } from '@/lib/theme/defaults';
 import { usePathname as useRutaNavegador } from 'next/navigation';
 import { panelBaseFrom, panelHref } from '@/lib/panel-links';
+import { fmtMoney } from '@/lib/money';
 
-const q = (n: number) => 'Q' + Math.round(n).toLocaleString('es-GT');
+const q = (n: number) => fmtMoney(Math.round(n), 'GTQ', 0);
 
 /** ¿El plan incluye este módulo? (si no, solo está activo por excepción manual de Leogin). */
 function includedInPlan(plan: string | null | undefined, key: ActivatableModuleKey): boolean {
@@ -159,7 +159,6 @@ function LockedRow({ icon, label, description, lockLabel }: {
 export default function ModulesPanel({ restaurantId, modules, settings, orderTypes, supportWhatsapp, planActual, billedNow = null }: Props) {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = panelBaseFrom(useRutaNavegador());
-  const router = useRouter();
   const pricing = usePlanPricing();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -185,7 +184,6 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
       const res = await setModuleEnabled(restaurantId, key, next);
       setBusyKey(null);
       if (res.error) { setLocalSettings(prev); setError(res.error); return; }
-      router.refresh();
     });
   }
 
@@ -216,7 +214,6 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
         setError(res.error);
         return;
       }
-      router.refresh();
     });
   }
 

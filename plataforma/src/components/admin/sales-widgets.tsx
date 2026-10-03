@@ -1,6 +1,8 @@
 import { List, ListRow } from '@/components/ui/list';
 import { Section } from '@/components/ui/section';
 import type { DaySale, DayPace, TopProduct } from '@/lib/db/orders';
+import { ChartReadout } from '@/components/ui/chart-readout';
+import { diaSemana } from '@/lib/dates';
 
 /* ============================================================
    VENTAS — las dos piezas que comparten Hoy y Pedidos
@@ -28,6 +30,16 @@ type Money = (n: number) => string;
 function diffPercent(actual: number, referencia: number): number | null {
   if (referencia <= 0) return null;
   return Math.round(((actual - referencia) / referencia) * 100);
+}
+
+/** «lun 28 sept · Q1,234.00» (o «hoy · …») — lo que dice una barra al tocarla. */
+function dayTip(d: DaySale, money: Money): string {
+  return `${d.isToday ? 'hoy' : diaSemana(d.date)} · ${money(d.total)}`;
+}
+
+function todayTip(series: DaySale[], money: Money): string | undefined {
+  const hoy = series.find((d) => d.isToday);
+  return hoy ? dayTip(hoy, money) : undefined;
 }
 
 /* ── Cómo va el día ──────────────────────────────────────────── */
@@ -86,25 +98,30 @@ export function SalesTrendWidget({
               quede sin sitio. Con 220 px cabían las dos en un teléfono, pero
               a la cifra le tocaban 70 px para un importe que mide 118, y el
               texto se salía por debajo de las barras. */}
-          <div className="w-full max-w-[340px] min-w-[260px] flex-[2]">
-            <div className="flex h-24 items-end gap-[3px]">
+          <ChartReadout
+            className="w-full max-w-[340px] min-w-[260px] flex-[2]"
+            defaultTip={todayTip(series, money)}
+          >
+            {/* Cada columna ocupa todo el alto (no solo la barra): así se
+                puede tocar también la de un día flojo, de 2 px. */}
+            <div className="flex h-24 gap-[3px]">
               {series.map((d, i) => (
-                <span
-                  key={i}
-                  title={`${d.label}: ${money(d.total)}`}
-                  className="block min-w-[4px] flex-1 rounded-t-[3px]"
-                  style={{
-                    height: `${Math.max(d.total > 0 ? 6 : 2, (d.total / max) * 100)}%`,
-                    background: d.isToday ? 'var(--chart-hi)' : 'var(--chart-base)',
-                  }}
-                />
+                <span key={i} data-tip={dayTip(d, money)} className="flex min-w-[4px] flex-1 items-end">
+                  <span
+                    className="block w-full rounded-t-[3px]"
+                    style={{
+                      height: `${Math.max(d.total > 0 ? 6 : 2, (d.total / max) * 100)}%`,
+                      background: d.isToday ? 'var(--chart-hi)' : 'var(--chart-base)',
+                    }}
+                  />
+                </span>
               ))}
             </div>
             <div className="mt-1.5 flex justify-between text-[11px] text-adm-text-4">
               <span>hace 14 días</span>
               <span>hoy</span>
             </div>
-          </div>
+          </ChartReadout>
         </ListRow>
 
         {pace && delta !== null && (

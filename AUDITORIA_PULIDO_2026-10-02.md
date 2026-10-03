@@ -19,7 +19,7 @@
 > se ve bien. Las auditorías anteriores (QA visual 09-22, velocidad 09-25) **no
 > se repiten**: lo que de ellas sigue abierto está en la sección de rendimiento.
 >
-> **Estado:** al 2026-10-03, 118 de 145 hallazgos hechos (los 6 P0 incluidos). Lo que queda espera una decisión tuya (⏸️), contenido tuyo (WEB-01/02/03, CAT-13) o es trabajo grande o continuo (REN-02, REN-04, T-22/T-23/T-26); ver la Bitácora al final.
+> **Estado:** al 2026-10-03, 126 de 147 hallazgos hechos (los 6 P0 incluidos). Lo que queda espera una decisión tuya (⏸️: D-2…D-9), contenido tuyo (WEB-01/02/03, CAT-13) o es trabajo continuo que se hace pantalla a pantalla (T-22, T-26, REN-05); ver la Bitácora al final.
 
 ---
 
@@ -39,22 +39,22 @@
 
 | # | Sección | Hallazgos | Hechos | ⏸️ Decisión |
 |---|---------|----------:|-------:|-----------:|
-| 1 | Transversal — sistema de diseño y textos | 26 | 22 | 0 |
+| 1 | Transversal — sistema de diseño y textos | 26 | 23 | 0 |
 | 2 | Panel · Armazón y navegación | 10 | 10 | 1 |
 | 3 | Panel · Hoy | 5 | 4 | 1 |
-| 4 | Panel · Pedidos (En vivo, Cocina, Mesas, Tomar pedidos) | 13 | 8 | 4 |
+| 4 | Panel · Pedidos (En vivo, Cocina, Mesas, Tomar pedidos) | 14 | 10 | 4 |
 | 5 | Panel · Menú | 12 | 12 | 0 |
 | 6 | Panel · Clientes | 6 | 6 | 0 |
-| 7 | Panel · Negocio | 6 | 4 | 1 |
+| 7 | Panel · Negocio | 6 | 5 | 1 |
 | 8 | Panel · Ajustes | 20 | 18 | 2 |
-| 9 | Catálogo digital (lo que ve el comensal) | 13 | 10 | 1 |
+| 9 | Catálogo digital (lo que ve el comensal) | 14 | 11 | 1 |
 | 10 | Super Admin | 10 | 9 | 1 |
 | 11 | Mi cuenta (grupo) | 5 | 5 | 0 |
 | 12 | Web pública y marketing | 9 | 6 | 0 |
-| 13 | Rendimiento y salud del código | 10 | 4 | 1 |
-| | **Total** | **145** | **118** | **12** |
+| 13 | Rendimiento y salud del código | 10 | 7 | 1 |
+| | **Total** | **147** | **126** | **12** |
 
-Por prioridad: **P0** 6 · **P1** 34 · **P2** 61 · **P3** 44. Hechos: los **6 P0**, 28 P1, 49 P2 y 35 P3.
+Por prioridad: **P0** 6 · **P1** 34 · **P2** 62 · **P3** 45. Hechos: los **6 P0**, 28 P1, 52 P2 y 40 P3.
 
 *(Se actualiza a mano al marcar.)*
 
@@ -309,6 +309,7 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   iconos (9,5), encabezados de tabla de Finanzas (9,5), ejes de gráficas (7,5–9),
   insignias «NUEVO/POPULAR/VENCIDO/PAGADO» (9,5), URL bajo cada QR (9,5).
   ✅ **Hecho 2026-10-03 (detalles P2/P3).** 63 textos de 7,5–10 px subidos a 11 px en panel y Super (insignias, encabezados de tabla, ejes de gráficas, rótulos); también las etiquetas de días de Métricas. Se dejan los tamaños de los PDF (son puntos de imprenta) y el «MESA» decorativo de la ficha del plano.
+  ➕ **2026-10-03 (cierre):** el barrido encontró 37 más de 9–10,5 px (Ajustes del Super, Insumos, Inventario, avisos, Mi cuenta, pasos de «Nuevo restaurante»): todos a 11 px. Quedan a 10 px a propósito las etiquetas de la barra inferior del teléfono.
 
 ### Escala visual
 
@@ -317,8 +318,9 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   (400–900). Propuesta: 8 tamaños en tokens (`--fs-11 … --fs-32`) y 4 pesos; se
   migra pantalla a pantalla junto con lo demás (no de golpe).
 
-- [ ] **T-23** · P3 · M — **Radios sin escala:** 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+- [x] **T-23** · P3 · M — **Radios sin escala:** 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
   18 px. Ya existen `--radius-md/lg/xl/2xl`; usarlos.
+  ✅ **Hecho 2026-10-03 (cierre).** ~425 radios sueltos de 114 archivos (panel, Super, Mi cuenta) pasan al token más cercano: 5–8 → `--radius-sm` (nuevo, 8 px), 9–11 → `md`, 12–16 → `lg`, 18–22 → `xl`, 99/999 → `full`. Además de la armonía, ahora la «redondez del panel» que puede ajustar el dueño (`--admin-panel-radius`) se aplica a todo y no solo a las tarjetas. Se dejan los de 2–4 px (rayitas, barras) y las miniaturas de plantillas, que imitan el menú del comensal. Revisado en capturas de 16 pantallas del panel y 4 del Super.
 
 - [x] **T-24** · P2 · S — **Ancho de contenido distinto por pantalla:** Hoy y
   Ajustes ~1.040 px, Pedidos/Menú/Mesas a todo el ancho, Super con rejillas que
@@ -503,9 +505,15 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   de pestañas + botón antes de la primera mesa.
   ✅ **Hecho 2026-10-03 (detalles P2/P3).** Sin tocar el diseño de Mesas (D-2): la tira de cifras, que se desplaza, se desvanece en el borde derecho en el teléfono para que se vea que hay más. «En qué va» ya cabía.
 
-- [ ] **PED-11** · P3 · S — **Dos relojes en la ficha** («Lista 8 min» y «11 min»):
+- [x] **PED-11** · P3 · S — **Dos relojes en la ficha** («Lista 8 min» y «11 min»):
   en el teléfono no dice qué es cada uno (en escritorio sí: «en esta etapa»).
   🔄 **Parcial 2026-10-03:** el código ya rotula la cifra grande («en esta etapa», M-21); falta verlo con mesas ocupadas en el teléfono.
+  ✅ **Hecho 2026-10-03 (cierre).** Visto con mesas ocupadas: la ficha compacta del teléfono NO llevaba el rótulo. Ahora dice «25 min · en esta etapa» bajo la cifra, como la ancha (la cifra es desde que la comida entró a cocina; «Lista 8 min», cuánto lleva lista).
+
+- [x] **PED-14** · P3 · S — **«Mesa 4 · Mesa 4» en el aviso de pedido nuevo.**
+  (Encontrado al verificar PED-11.) Un pedido de mesa sin nombre llega con
+  «Mesa 4» como nombre y como dirección, y la tarjeta los pintaba los dos.
+  ✅ **Hecho 2026-10-03.** El renglón del aviso quita lo repetido: «Mesa 4 · hace 8 min».
 
 - [x] **PED-12** · P3 · S — **Texto de explicación permanente** («Las mesas se
   ordenan por urgencia, no por número…»): a la ayuda o a un «?».
@@ -633,9 +641,10 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   hueco vacío antes de «Cortes recientes»; «GASTOS DE HOY» vs «Cortes recientes».
   ✅ **Hecho 2026-10-03 (detalles P2/P3).** En el teléfono el turno baja a su propio renglón («turno (opcional)») y los tres pasos caben enteros sin las rayitas entre ellos; «Cortes recientes» con el mismo rótulo que «Gastos de hoy». El hueco antes de «Cortes recientes» es el sitio del botón «Siguiente» fijo abajo.
 
-- [ ] **NEG-05** · P3 · S — **Gráficas sin valores**: ni eje ni cifra al tocar una
+- [x] **NEG-05** · P3 · S — **Gráficas sin valores**: ni eje ni cifra al tocar una
   barra; ejes a 7,5–9 px.
   🔄 **Parcial 2026-10-03:** ejes y rótulos a 11 px (T-21) y colores comunes (T-19). Falta enseñar el valor al tocar una barra en el teléfono.
+  ✅ **Hecho 2026-10-03 (cierre).** `components/ui/chart-readout.tsx`: tocar una barra (o pasar el ratón) enmarca su columna y escribe debajo «mié 23 sept · Q1,234.00»; sin tocar nada dice la de hoy. Las gráficas siguen siendo del servidor (cada columna lleva `data-tip`) y la columna entera es tocable, también la de un día flojo de 2 px. En Hoy/Pedidos («Cómo va el día»), Negocio › Resumen (ventas y visitas), el Inicio y las Métricas del Super (visitas · pedidos · ventas) y Mi cuenta › Finanzas. `DaySale`/`DayVisits` llevan ahora la fecha; `diaSemana()` en `lib/dates.ts` (con prueba).
 
 - [x] **NEG-06** · P2 · S — **«Cerrar la caja del día»** aparece al final de
   Finanzas como enlace a Caja, que ya es una pestaña al lado: sobra.
@@ -823,6 +832,7 @@ aquí es lo que todavía le cuesta pedidos.
 - [ ] **CAT-09** · P3 · S — **Carrito vacío** en `/checkout`: solo «Ver el menú».
   Oportunidad: «Lo más pedido» con su «+».
   🔄 **Pendiente 2026-10-03:** ofrecer «Lo más pedido» desde el carrito vacío pide traer la hoja de opciones del platillo al checkout; caso raro (llegar a pagar sin nada), se deja para cuando se toque el checkout (REN-04).
+  Con REN-04 hecho, el checkout ya está partido y esto cabría como pieza aparte; sigue siendo un caso raro y lo dejo para cuando se decida CAT-13 (las dos son «sugerir platillos»).
 
 - [x] **CAT-10** · P3 · S — **Escritorio:** el fondo de la portada termina en una
   línea horizontal dura a ~790 px a los lados de la columna.
@@ -844,6 +854,12 @@ aquí es lo que todavía le cuesta pedidos.
 - [ ] **CAT-13** · P3 · M — **Marketing — subir el ticket:** sugerir «Acompáñalo
   con…» (bebida/postre de la carta) en la ficha del platillo y en el carrito. Es la
   palanca de venta más barata que tiene un menú digital.
+
+- [x] **CAT-14** · P2 · S — **La confirmación de un pedido para llevar decía «Pago:
+  Efectivo contra entrega».** (Encontrado al probar REN-04.) El formulario dice
+  «Efectivo · Pagas en el local al recoger», pero la confirmación usaba el texto
+  del domicilio.
+  ✅ **Hecho 2026-10-03.** Para llevar dice «Efectivo»; a domicilio sigue «Efectivo contra entrega».
 
 ---
 
@@ -986,27 +1002,30 @@ que hace que un restaurantero confíe y lo que permite saber si funciona.
   Render en Oregón y Supabase en Virginia: ~70 ms por consulta. No es código;
   pasos en `AUDITORIA_2026-09-25.md` §2. Sigue abierto.
 
-- [ ] **REN-02** · P2 · M — **(Heredado P-3/P-5)** Quedan **54 `router.refresh()`**
+- [x] **REN-02** · P2 · M — **(Heredado P-3/P-5)** Quedan **54 `router.refresh()`**
   en 27 archivos (proveedores, lealtad, cupones, reservaciones, cocina…) tras
   acciones que ya revalidan → cada toque pinta la pantalla dos veces. Y la
   re-precarga de ~10 enlaces tras cada acción.
   🔄 **Pendiente 2026-10-03:** quitar cada `router.refresh()` exige comprobar acción por acción que revalida la pantalla de la que se llama; sin eso la pantalla se queda vieja. Mejor hacerlo con pruebas de cada flujo.
+  ✅ **Hecho 2026-10-03 (cierre).** Comprobado en el código de Next 16 (`revalidate.js`, `action-handler.js`): una acción que llama a `revalidatePath`/`updateTag` ya trae la pantalla nueva en su propia respuesta. Revisadas ~50 acciones una por una: todas revalidan en el camino de éxito, así que fuera los `refresh()` de Lealtad, Proveedores, Cupones, Lista de espera, Reservaciones, Insumos, Inventario, Funciones, Canales, Facturación, Cocina, Salón, Tomar pedidos (anular), Personal, aparatos de confianza, WhatsApp, PIN de entrada, Repartidores, Categorías, Caja, temas (panel y Super), Mi cuenta y la lista de bienvenida. Dos acciones revalidaban otra pantalla que la que las llama y se corrigieron (borrar un arqueo ahora revalida Caja; el PIN de entrada, Personal), para no depender de que Next hoy revalide «todo». Se quedan los `refresh()` que vienen de avisos en vivo (Realtime) y los sondeos de respaldo. Medido: crear y borrar un insumo = **1** petición (antes 2). La re-precarga de enlaces tras una acción es el comportamiento normal de Next al invalidar su caché y con `loading.tsx` es barata: no se toca.
 
 - [x] **REN-03** · P3 · S — **Código muerto:** `waiter-panel.tsx` (2.273 líneas),
   `plan-gmv-alert.tsx`, `plan-gmv-bar.tsx` sin importar.
   ✅ **Hecho 2026-10-03 (detalles P2/P3).** Borrados `waiter-panel.tsx` (sustituido por Servicio), `plan-gmv-alert.tsx` y `plan-gmv-bar.tsx`: ~2.300 líneas sin importar en ningún sitio (quedan en el historial de git).
 
-- [ ] **REN-04** · P2 · L — **`checkout-form.tsx`: 1.468 líneas y 40 `useState`** en
+- [x] **REN-04** · P2 · L — **`checkout-form.tsx`: 1.468 líneas y 40 `useState`** en
   un solo componente: cada tecla que escribe el comensal re-pinta el checkout
   entero, en su teléfono. Dividir por pasos y memorizar.
+  ✅ **Hecho 2026-10-03 (cierre).** Partido en `components/checkout/`: `order-summary.tsx` (resumen memorizado — escribir el nombre o la dirección ya no vuelve a pintar la lista, el cupón ni la propina; la casilla del cupón vive dentro), `checkout-success.tsx` (confirmación con su encuesta: las estrellas ya no repintan el checkout), `form-parts.tsx` (opciones de pago, «sin conexión») y `checkout-model.ts` (tipos, distancia y el mensaje de WhatsApp como función pura). Los 8 `useState` del snapshot pasan a uno (`CheckoutDone`). Queda en 993 líneas y 22 `useState`. De paso: la confirmación se fija al confirmarse y ya no relee el formulario (si la sesión de mesa caducaba después, un pedido EN la mesa podía pasar a decir «Para llevar»). Probado de punta a punta en el build: platillo al carrito, cupón de prueba, pedido para llevar, confirmación y encuesta (pedido, calificación y cupón borrados después).
 
 - [ ] **REN-05** · P3 · L — **4.709 `style={{…}}` en línea:** objeto nuevo en cada
   pintado y la razón de que la CSP siga con `unsafe-inline` en estilos. Se van
   yendo solos con T-22/T-26.
 
-- [ ] **REN-06** · P3 · S — **Funciones repetidas:** 25 formateadores de dinero, 7
+- [x] **REN-06** · P3 · S — **Funciones repetidas:** 25 formateadores de dinero, 7
   de tiempo relativo (T-01, T-02).
   🔄 **Parcial 2026-10-03:** los formateadores principales ya son `fmtMoney` y `lib/dates.ts` (T-01, T-02); quedan helpers locales `money()` que se van quitando pantalla a pantalla.
+  ✅ **Hecho 2026-10-03 (cierre).** Las cuatro copias de «monto con la moneda del restaurante» (tarjeta de pedido, cuenta de la mesa, carrito de Tomar pedidos, Pedidos) son ahora `fmtCurrency` + `PanelCurrency` en `lib/money.ts` (con pruebas, incluido un locale inválido). Fuera los últimos `Q{n.toFixed(2)}` a la vista (Repartidores, mínimo de cupón, Lealtad, recetas, utilidad del platillo, cobro prorrateado). El resumen «por método» de los PDF/Excel de caja decía `CARD: 120.00`: ahora «Tarjeta: Q120.00» con la moneda del restaurante. Los `money()` que quedan son alias de una línea.
 
 - [x] **REN-07** · P3 · — — **Menú público, medido:** ~230 KB gzip de JS (69 de
   react-dom, ~95 del runtime de Next, ~55 de la app), CSS 94 KB, HTML 76 KB con 6
@@ -1042,8 +1061,8 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
 5. **Fase 5 — Servicio (con tu visto bueno, D-2).** PED-02, PED-06, PED-09, PED-13.
 6. 🔄 **Fase 6 — Marketing y extras. Casi entera 2026-10-02** (faltan WEB-01/02/03 y CAT-13). WEB-01 (medir primero), WEB-02, WEB-03,
    CAT-11, CAT-12, CAT-13, AJU-07, MEN-12, HOY-03, CLI-06.
-7. **Continuo.** T-22/T-23/T-26 (escala tipográfica y componentes) pantalla a
-   pantalla, a medida que se toca cada una.
+7. **Continuo.** T-22/T-26 (escala tipográfica y componentes) pantalla a
+   pantalla, a medida que se toca cada una. (T-23, los radios, ya se hizo de una vez.)
 
 ---
 
@@ -1059,3 +1078,4 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
 | 2026-10-02 | **Fase 6 (lo que no depende de ti) + cierre de T-09.** CAT-12 (404 con salida), CAT-11 (schema.org en el menú + `es_GT`), MEN-12 (aviso de platillos sin foto en Hoy), CLI-06 (WhatsApp desde la ficha y «Sin pedir hace +30 días»), AJU-07 (QR con logo, tarjeta para redes y cartel A6), HOY-03 (comparación bajo «Ventas»), T-09 (Reservaciones y Lista de espera sin pestaña de crear). Pendientes por necesitar algo tuyo: WEB-01 (elegir analítica y crear la cuenta), WEB-02/03 (testimonios y capturas con permiso), CAT-13 (qué sugerir). Verificado: `tsc`, `eslint`, pruebas (nuevas: datos estructurados e inyección), build, recorrido con Playwright (404, JSON-LD, filtros, WhatsApp, descargas del QR revisadas a ojo). | `fba2fcf` |
 | 2026-10-03 | **Detalles P2/P3 del panel.** Transversal (T-04, T-19, T-20, T-21, T-24, T-25), armazón (N-06, N-07), Hoy (HOY-02, HOY-04), Pedidos/Cocina/Mesas (PED-03, 04, 05, 07, 08, 10, 12), Menú (MEN-04…MEN-11), Clientes (CLI-02…05), Negocio (NEG-03, 04, 06) y Ajustes (AJU-04, 08, 11, 14, 16, 17, 18). Piezas nuevas: `.tap44`, tokens de gráfica, `.adm-w-read/-overview`, `lib/order-number.ts`, `export-menu.tsx`. Parciales: NEG-05, PED-11. Verificado: `tsc`, `eslint`, 781 pruebas, build, capturas claro/oscuro de 20 pantallas. | `840a9bd` |
 | 2026-10-03 | **Detalles P2/P3 del menú público, Super, Mi cuenta, web y rendimiento.** CAT-03, 05, 06, 07, 08, 10; SUP-02, 03, 05, 06, 07, 08, 10; MIC-04, 05; WEB-04…09; REN-03, 07, 09, 10 y N-10 (sesión: reintento ante fallos de red y lectura del restaurante con llave de servicio si falla). Piezas nuevas: `lib/category-icon.ts`, `PLAN_POINTS`, `<Table data-stack>`. Pendientes con nota: CAT-09, REN-02, REN-06. Verificado: `tsc`, `eslint`, 788 pruebas (nuevas: lema, iconos), build, capturas del menú, la web, el Super y Mi cuenta, y 12 entradas seguidas al panel sin un salto. | `669bbdd` |
+| 2026-10-03 | **Cierre de lo que no depende de ti.** NEG-05 (tocar una barra dice su cifra, en todas las gráficas), PED-11 (rótulo de la cifra grande en la ficha del teléfono), REN-02 (fuera ~45 `router.refresh()` sobrantes, comprobado acción por acción), REN-04 (checkout partido y memorizado), REN-06 (`fmtCurrency`), T-23 (radios a tokens), 37 textos más a 11 px (T-21), y dos hallazgos nuevos arreglados: PED-14 («Mesa 4 · Mesa 4») y CAT-14 («Efectivo contra entrega» al recoger). Verificado: `tsc`, `eslint`, 793 pruebas, cuatro builds de producción, recorrido con Playwright (lectura de barras en panel/Super/Mi cuenta, insumo creado y borrado con una sola petición, checkout de punta a punta), capturas de 16 pantallas del panel y 4 del Super. Pedidos de prueba y cupón borrados; los 3 pedidos puestos en curso para ver Mesas, devueltos a su estado. Lo que queda (21) espera D-2…D-9, contenido tuyo o es continuo. | (este commit) |

@@ -80,7 +80,7 @@ export default function TableJump({ tables, money, onPick, onClose }: {
         aria-label="Cambiar de mesa"
         className="anim-slide-up"
         style={{
-          width: '100%', maxWidth: 460, borderRadius: 16, overflow: 'hidden',
+          width: '100%', maxWidth: 460, borderRadius: 'var(--radius-lg)', overflow: 'hidden',
           background: 'var(--adm-bg)', border: '1px solid var(--adm-border-2)',
           boxShadow: '0 24px 60px rgba(0,0,0,0.45)',
         }}

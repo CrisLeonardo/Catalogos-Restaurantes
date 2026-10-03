@@ -129,7 +129,7 @@ export default async function SuperHomePage() {
         <SectionTitle icon="bellRing" title="Requiere tu atención" count={alerts.length} />
         {alerts.length === 0 ? (
           <Card style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ width: 36, height: 36, borderRadius: 11, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--c-ok) 14%, transparent)', color: 'var(--c-ok)', flexShrink: 0 }}>
+            <span style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--c-ok) 14%, transparent)', color: 'var(--c-ok)', flexShrink: 0 }}>
               <Icon name="checkCircle" size={18} />
             </span>
             <div>
@@ -149,7 +149,7 @@ export default async function SuperHomePage() {
               >
                 <span
                   style={{
-                    width: 34, height: 34, borderRadius: 10, flexShrink: 0, display: 'grid', placeItems: 'center',
+                    width: 34, height: 34, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
                     background: `color-mix(in srgb, var(--c-${a.tone === 'info' ? 'ok' : a.tone === 'warn' ? 'warn' : 'danger'}) 13%, transparent)`,
                     color: a.tone === 'info' ? 'var(--adm-info, #7dd3fc)' : a.tone === 'warn' ? 'var(--c-warn)' : 'var(--c-danger)',
                   }}
@@ -208,7 +208,7 @@ export default async function SuperHomePage() {
                   borderTop: i > 0 ? '1px solid var(--adm-border, var(--u-hair))' : 'none',
                 }}
               >
-                <span style={{ width: 9, height: 9, borderRadius: 99, flexShrink: 0, background: r.restaurant_themes[0]?.color_primary ?? 'var(--brand-accent)' }} />
+                <span style={{ width: 9, height: 9, borderRadius: 'var(--radius-full)', flexShrink: 0, background: r.restaurant_themes[0]?.color_primary ?? 'var(--brand-accent)' }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
                   <div style={{ fontSize: 11, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)' }}>
@@ -240,7 +240,7 @@ export default async function SuperHomePage() {
               >
                 <span
                   style={{
-                    width: 22, height: 22, borderRadius: 7, flexShrink: 0, display: 'grid', placeItems: 'center',
+                    width: 22, height: 22, borderRadius: 'var(--radius-sm)', flexShrink: 0, display: 'grid', placeItems: 'center',
                     fontSize: 11, fontWeight: 800, fontFamily: 'var(--ui-font-mono)',
                     background: i === 0 ? 'color-mix(in srgb, var(--brand-accent) 16%, transparent)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
                     color: i === 0 ? 'var(--brand-accent)' : 'var(--u-text-3)',
@@ -278,7 +278,7 @@ export default async function SuperHomePage() {
                   variant="neutral"
                   style={{ fontSize: 12.5, padding: '7px 12px', gap: 7 }}
                 >
-                  <span style={{ width: 8, height: 8, borderRadius: 99, background: PLAN_DOT[plan] ?? '#94a3b8' }} />
+                  <span style={{ width: 8, height: 8, borderRadius: 'var(--radius-full)', background: PLAN_DOT[plan] ?? '#94a3b8' }} />
                   {planLabel(plan)}
                   <strong style={{ fontFamily: 'var(--ui-font-mono)' }}>{count}</strong>
                 </Badge>
@@ -296,7 +296,7 @@ function SectionTitle({ icon, title, count }: { icon: string; title: string; cou
       <Icon name={icon} size={16} style={{ color: 'var(--brand-accent-ink)' }} />
       <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--u-text)', margin: 0 }}>{title}</h2>
       {count != null && count > 0 && (
-        <Badge variant="danger" style={{ fontSize: 10.5 }}>{count}</Badge>
+        <Badge variant="danger" style={{ fontSize: 11 }}>{count}</Badge>
       )}
     </div>
   );

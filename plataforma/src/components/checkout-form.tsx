@@ -3,23 +3,27 @@
 import React, { useEffect, useRef, useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
-import { Price, Field, PrimaryButton } from '@/components/menu/ui';
+import { Field, PrimaryButton } from '@/components/menu/ui';
 import { useCart } from '@/lib/cart-context';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { formatPrice, shadowCss, tipAppliesToType } from '@/lib/theme/resolve';
 import { createOrder, type CreateOrderResult } from '@/lib/actions/orders';
-import { validateCoupon } from '@/lib/actions/cupones';
 import { getMyCheckoutProfile } from '@/lib/actions/loyalty';
 import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer-local';
 import { getQueuedOrders, removeQueuedOrder, saveQueuedOrder } from '@/lib/order-queue';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { isValidGuatemalaPhone } from '@/lib/schemas';
-import { submitRating } from '@/lib/actions/encuestas';
 import { getScannedTable, clearScannedTable, watchScannedTable } from '@/lib/table-session';
 import { isKioskMode } from '@/lib/kiosk';
 import { useStableLinkPrefix } from '@/lib/tenant-client';
+import {
+  NO_ZONE, haversineKm, buildWhatsAppUrl,
+  type OrderType, type PendingSnapshot, type CheckoutDone,
+} from '@/components/checkout/checkout-model';
+import OrderSummary, { type AppliedCoupon } from '@/components/checkout/order-summary';
+import CheckoutSuccess from '@/components/checkout/checkout-success';
+import { PayOption, FormSection, CheckoutQueued } from '@/components/checkout/form-parts';
 
 const DeliveryMap = dynamic(() => import('./delivery-map'), {
   ssr: false,
@@ -34,18 +38,6 @@ const DeliveryMap = dynamic(() => import('./delivery-map'), {
     </div>
   ),
 });
-
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 interface Props {
   restaurantId: string;
@@ -68,23 +60,9 @@ interface Props {
 
 type Step = 'form' | 'success' | 'queued';
 
-/** Snapshot congelado al enviar — un reintento posterior (misma orden, mismo
-    clientId) usa exactamente estos valores en vez de releer el estado
-    en vivo del formulario. */
-interface PendingSnapshot {
-  itemsSnapshot: { name: string; opts: string; qty: number; sub: number }[];
-  feeSnapshot: number;
-  tipSnapshot: number;
-  totalSnapshot: number;
-  discountSnapshot: number;
-  paymentSnapshot: 'CASH' | 'CARD';
-  cashAmountSnapshot: number;
-  orderTypeSnapshot: OrderType;
-}
-type OrderType = 'PICKUP' | 'DELIVERY' | 'DINE_IN';
-
-const NO_ZONE = '__fuera__';
-
+/* Las piezas grandes viven en components/checkout/ (REN-04): el resumen
+   memorizado, la confirmación con su encuesta y la pantalla sin conexión.
+   Aquí quedan el formulario y el envío del pedido. */
 
 export default function CheckoutForm({
   restaurantId,
@@ -102,7 +80,6 @@ export default function CheckoutForm({
   const config  = useThemeConfig();
   const content = useThemeContent();
   const checkoutTitleT = useText('heading', 'checkoutTitle');
-  const confirmTitleT  = useText('heading', 'confirmationTitle');
   const { items, total, clearCart, pointsToRedeem } = useCart();
   // Prefijo del link estable de mesa (null hasta montar — ver useStableLinkPrefix).
   const stablePrefix = useStableLinkPrefix();
@@ -142,29 +119,11 @@ export default function CheckoutForm({
   }, [hubUrl]);
 
   const [step, setStep] = useState<Step>('form');
-  const [orderNumber, setOrderNumber] = useState('');
-  const [trackToken, setTrackToken] = useState('');
-  const [orderId, setOrderId] = useState('');
+  // Lo que enseña la confirmación; se fija al confirmarse (ver CheckoutDone).
+  const [done, setDone] = useState<CheckoutDone | null>(null);
   const [error, setError] = useState('');
   const [tried, setTried] = useState(false);
   const [isPending, start] = useTransition();
-
-  // Encuesta de satisfacción
-  const [ratingValue, setRatingValue] = useState(0);
-  const [ratingHover, setRatingHover] = useState(0);
-  const [ratingComment, setRatingComment] = useState('');
-  const [ratingSent, setRatingSent] = useState(false);
-  const [ratingError, setRatingError] = useState<string | null>(null);
-  const [ratingPending, startRating] = useTransition();
-
-  const [snapshot, setSnapshot] = useState<{ name: string; opts: string; qty: number; sub: number }[]>([]);
-  const [snapshotTotal, setSnapshotTotal] = useState(0);
-  const [snapshotFee, setSnapshotFee] = useState(0);
-  const [snapshotDiscount, setSnapshotDiscount] = useState(0);
-  const [snapshotPayment, setSnapshotPayment] = useState<'CASH' | 'CARD'>('CASH');
-  const [snapshotCashAmount, setSnapshotCashAmount] = useState(0);
-  const [snapshotOrderType, setSnapshotOrderType] = useState<OrderType>('DINE_IN');
-  const [snapshotTip, setSnapshotTip] = useState(0);
 
   // Cola offline (Fase 1): clientId estable + el payload/snapshot
   // congelados del intento actual, para reintentar sin duplicar el pedido
@@ -217,11 +176,8 @@ export default function CheckoutForm({
   // antes de montarlo, o el pin guardado nunca se restauraría.
   const [profileChecked, setProfileChecked] = useState(false);
 
-  // Cupón
-  const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState<{ discount: number; code: string } | null>(null);
-  const [couponMsg, setCouponMsg] = useState('');
-  const [couponChecking, setCouponChecking] = useState(false);
+  // Cupón aplicado (lo que se escribe en la casilla vive en OrderSummary).
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
 
   useEffect(() => {
     // Kiosko: JAMÁS autocompletar — serían los datos del cliente anterior.
@@ -355,24 +311,9 @@ export default function CheckoutForm({
 
   // Si cambia el carrito o el tipo de pedido, el cupón se revalida (se limpia).
   useEffect(() => {
-    if (appliedCoupon) { setAppliedCoupon(null); setCouponMsg(''); }
+    if (appliedCoupon) setAppliedCoupon(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [total, deliveryFee]);
-
-  async function applyCoupon() {
-    if (!couponCode.trim()) return;
-    setCouponChecking(true);
-    setCouponMsg('');
-    const res = await validateCoupon(restaurantId, couponCode.trim(), total);
-    setCouponChecking(false);
-    if (res.ok) {
-      setAppliedCoupon({ discount: res.discount, code: res.code });
-      setCouponMsg('');
-    } else {
-      setAppliedCoupon(null);
-      setCouponMsg(res.error);
-    }
-  }
 
   /** Aplica el resultado exitoso de createOrder (primer intento o reintento
       desde la cola) usando el snapshot congelado del pedido, no el estado
@@ -413,17 +354,24 @@ export default function CheckoutForm({
       }
     }
 
-    setSnapshot(snap.itemsSnapshot);
-    setSnapshotFee(snap.feeSnapshot);
-    setSnapshotDiscount(snap.discountSnapshot);
-    setSnapshotTip(snap.tipSnapshot);
-    setSnapshotTotal(snap.totalSnapshot);
-    setSnapshotPayment(snap.paymentSnapshot);
-    setSnapshotCashAmount(snap.cashAmountSnapshot);
-    setSnapshotOrderType(snap.orderTypeSnapshot);
-    setOrderNumber(result.orderNumber ?? '');
-    setTrackToken(result.publicToken ?? '');
-    setOrderId(result.orderId ?? '');
+    // Kiosko: el aparato del mostrador no tiene WhatsApp del cliente; el
+    // pedido ya entró por el sistema y la pantalla vuelve sola al menú.
+    const waUrl = isKioskMode() ? null : buildWhatsAppUrl({
+      whatsappNumber, config, content,
+      orderNumber: result.orderNumber ?? '',
+      snap,
+      form: { name, phone, address, zone, notes, tableNumber, coursePreference, deliveryLat, deliveryLng },
+    });
+    setDone({
+      orderNumber: result.orderNumber ?? '',
+      trackToken: result.publicToken ?? '',
+      orderId: result.orderId ?? '',
+      orderType: snap.orderTypeSnapshot,
+      payment: snap.paymentSnapshot,
+      tableNumber,
+      coursePreference,
+      waUrl,
+    });
 
     if (clientIdRef.current) removeQueuedOrder(restaurantId, clientIdRef.current);
     clientIdRef.current = null;
@@ -437,21 +385,6 @@ export default function CheckoutForm({
     clearCart();
     setStep('success');
 
-    // Kiosko: el aparato del mostrador no tiene WhatsApp del cliente; el
-    // pedido ya entró por el sistema y la pantalla vuelve sola al menú.
-    if (isKioskMode()) return;
-
-    const waUrl = buildWhatsAppUrl({
-      orderNumber: result.orderNumber ?? '',
-      snapshot: snap.itemsSnapshot,
-      fee: snap.feeSnapshot,
-      tip: snap.tipSnapshot,
-      total: snap.totalSnapshot,
-      discount: snap.discountSnapshot,
-      payment: snap.paymentSnapshot,
-      cashAmt: snap.cashAmountSnapshot,
-      orderType: snap.orderTypeSnapshot,
-    });
     if (waUrl) {
       // Nota: si esto corre desde un reintento automático (sin clic directo
       // del usuario), el navegador puede bloquear el popup — es un
@@ -660,74 +593,6 @@ export default function CheckoutForm({
     });
   }
 
-  function buildWhatsAppUrl(data?: {
-    orderNumber: string;
-    snapshot: { name: string; opts: string; qty: number; sub: number }[];
-    fee: number;
-    tip: number;
-    total: number;
-    discount?: number;
-    payment?: 'CASH' | 'CARD';
-    cashAmt?: number;
-    orderType?: OrderType;
-  }) {
-    if (!whatsappNumber) return null;
-    const num       = data?.orderNumber ?? orderNumber;
-    const lineItems = data?.snapshot ?? snapshot;
-    const fee       = data?.fee ?? snapshotFee;
-    const disc      = data?.discount ?? snapshotDiscount;
-    const tipAmt    = data?.tip ?? snapshotTip;
-    const tot       = data?.total ?? snapshotTotal;
-    const pmeth     = data?.payment ?? snapshotPayment;
-    const cAmt      = data?.cashAmt ?? snapshotCashAmount;
-    const oType     = data?.orderType ?? snapshotOrderType;
-    if (oType === 'DINE_IN') return null;
-    const clean     = whatsappNumber.replace(/\D/g, '');
-
-    const mapsLink = type === 'DELIVERY' && deliveryLat !== undefined && deliveryLng !== undefined
-      ? `\nhttps://maps.google.com/?q=${deliveryLat.toFixed(6)},${deliveryLng.toFixed(6)}`
-      : '';
-
-    let where: string;
-    if (type === 'DINE_IN') {
-      where = `🍴 Mesa ${tableNumber ?? '?'}${coursePreference ? ` · Servicio: ${coursePreference}` : ''}`;
-    } else if (type === 'PICKUP') {
-      where = content.checkout.pickup;
-    } else {
-      where = `${content.checkout.delivery}: ${address}${zone && zone !== NO_ZONE ? ` (${zone})` : ''}${mapsLink}`;
-    }
-
-    // Nota: emojis del set Unicode 6.0 (2010) — el más compatible entre
-    // versiones viejas de WhatsApp/fuentes de emoji. Se evitan adiciones más
-    // recientes (🛒 es Unicode 9.0, 🏷/🍽 son Unicode 7.0) que en teléfonos
-    // con fuente de emoji desactualizada salen como el cuadro "�".
-    const lines: string[] = [
-      `🍴 Nuevo pedido *${num}*`, '',
-      `👤 ${name}`, `📱 ${phone}`,
-      `📦 ${where}`, '',
-      '📋 Pedido:',
-      ...lineItems.map((i) => `• ${i.qty}x ${i.name}${i.opts ? ` (${i.opts})` : ''} — ${formatPrice(i.sub, config)}`), '',
-    ];
-    if (fee > 0) {
-      lines.push(`📦 ${content.cart.shipping}: ${formatPrice(fee, config)}`);
-    }
-    if (disc > 0) {
-      lines.push(`➖ Descuento: -${formatPrice(disc, config)}`);
-    }
-    if (tipAmt > 0) {
-      lines.push(`🙏 Propina (${config.tipPercent}%): ${formatPrice(tipAmt, config)}`);
-    }
-    lines.push(`💰 ${content.cart.total}: *${formatPrice(tot, config)}*`);
-    if (pmeth === 'CARD') {
-      lines.push(`💳 Pago: Tarjeta al recibir`);
-    } else {
-      const changeInfo = cAmt > 0 ? ` — paga con ${formatPrice(cAmt, config)} (cambio: ${formatPrice(cAmt - tot, config)})` : '';
-      lines.push(`💵 Pago: Efectivo${changeInfo}`);
-    }
-    if (notes) lines.push('', `📝 ${notes}`);
-    return `https://wa.me/${clean}?text=${encodeURIComponent(lines.join('\n'))}`;
-  }
-
   /* ── Carrito vacío ── */
   if (items.length === 0 && step !== 'success' && step !== 'queued') {
     return (
@@ -743,215 +608,20 @@ export default function CheckoutForm({
 
   /* ── Pedido en cola (sin conexión) ── */
   if (step === 'queued') {
-    return (
-      <main className="anim-fade-up themed-type" style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
-        <div style={{ textAlign: 'center', maxWidth: 360, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
-          <div style={{
-            width: 72, height: 72, borderRadius: '50%', display: 'grid', placeItems: 'center',
-            background: 'var(--surface-2)', color: 'var(--u-text-2)',
-          }}>
-            <Icon name="clock" size={34} strokeWidth={1.6} />
-          </div>
-          <div>
-            <h1 className="t-display" style={{ fontSize: 'var(--fs-h1)', marginBottom: 8 }}>Sin conexión</h1>
-            <p style={{ fontSize: 'var(--m-fs-md)', color: 'var(--u-text-2)', lineHeight: 1.5 }}>
-              Tu pedido se guardó. Se enviará solo en cuanto vuelva la señal —
-              no cierres esta pantalla.
-            </p>
-          </div>
-          {error && (
-            <p style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--c-danger, #ff6b6b)' }}>{error}</p>
-          )}
-          <button
-            onClick={retryQueued}
-            disabled={isPending}
-            className="btn-accent press"
-            style={{ padding: '13px 28px', borderRadius: 'var(--radius-lg)', fontSize: 'var(--m-fs-md)', fontWeight: 700, cursor: 'pointer', opacity: isPending ? 0.7 : 1 }}
-          >
-            {isPending ? 'Reintentando…' : 'Reintentar ahora'}
-          </button>
-        </div>
-      </main>
-    );
+    return <CheckoutQueued error={error} pending={isPending} onRetry={retryQueued} />;
   }
 
   /* ── Confirmación ── */
-  if (step === 'success') {
-    // Kiosko: sin WhatsApp ni seguimiento en el aparato compartido — solo el
-    // número de pedido grande y el regreso al menú para el siguiente cliente.
-    const waUrl = kiosk ? '' : buildWhatsAppUrl();
-    const subtitle = content.confirmation.subtitle || `${config.brandName} ya recibió tu pedido y lo está preparando.`;
-    const typeLabel = type === 'DINE_IN'
-      ? `Mesa ${tableNumber ?? '?'}`
-      : type === 'PICKUP'
-        ? content.checkout.pickup
-        : content.checkout.delivery;
+  if (step === 'success' && done) {
     return (
-      <main className="anim-fade-up themed-type" style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
-        <div style={{ textAlign: 'center', maxWidth: 360, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
-          <div className="anim-pop" style={{ width: 92, height: 92, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'var(--u-text)', color: 'var(--brand-bg)' }}>
-            <Icon name="check" size={46} strokeWidth={2.6} />
-          </div>
-          <div>
-            <h2 className="t-display" style={{ ...confirmTitleT.vars, fontSize: 30 * confirmTitleT.size }}>{content.confirmation.title}</h2>
-            <p className="t-serif" style={{ fontSize: 'var(--m-fs-lg)', marginTop: 8 }}>{subtitle}</p>
-          </div>
-          <div className="m-surface" style={{ borderRadius: 'var(--m-r-lg)', padding: 'var(--m-sp-4)', width: '100%', display: 'flex', flexDirection: 'column', gap: 'var(--m-sp-3)' }}>
-            <Row k={content.confirmation.orderNo} v={orderNumber || '—'} />
-            <Row k={content.confirmation.type} v={typeLabel} />
-            {type === 'DINE_IN' && coursePreference && (
-              <Row k="Servicio" v={coursePreference} />
-            )}
-            <Row k={content.confirmation.eta} v={content.confirmation.etaValue} />
-            {snapshotOrderType !== 'DINE_IN' && (
-              <Row
-                k={content.confirmation.payment}
-                v={snapshotPayment === 'CARD' ? content.checkout.payCard : content.checkout.payCash}
-              />
-            )}
-          </div>
-          {waUrl && (
-            <div style={{ width: '100%' }}>
-              <a href={waUrl} target="_blank" rel="noopener noreferrer" className="press"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '13px 24px', borderRadius: 'var(--radius-lg)', fontWeight: 700, fontSize: 'var(--m-fs-md)', textDecoration: 'none', color: '#fff', background: '#25D366', boxShadow: '0 4px 16px rgba(37,211,102,0.35)' }}>
-                <Icon name="whatsapp" size={18} /> Enviar pedido por WhatsApp
-              </a>
-              <p style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-3)', marginTop: 7, textAlign: 'center' }}>
-                Si WhatsApp no se abrió solo, toca el botón para confirmar con el restaurante.
-              </p>
-            </div>
-          )}
-          {trackToken && !kiosk && (
-            <PrimaryButton href={tp(`/pedido/${trackToken}`)} full iconRight="arrowRight">
-              {content.confirmation.track}
-            </PrimaryButton>
-          )}
-          {kiosk && (
-            <p style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)', lineHeight: 1.6, margin: 0 }}>
-              Guarda tu número de pedido{orderNumber ? ` (${orderNumber})` : ''} — te llamaremos
-              al mostrador cuando esté listo.
-            </p>
-          )}
-
-          {/* Encuesta de satisfacción */}
-          {encuestasActive && !ratingSent && (
-            <div className="m-surface" style={{ borderRadius: 'var(--m-r-lg)', padding: 'var(--m-sp-4)', width: '100%', display: 'flex', flexDirection: 'column', gap: 'var(--m-sp-3)', textAlign: 'left' }}>
-              <div style={{ fontSize: 'var(--m-fs-md)', fontWeight: 700, color: 'var(--u-text)', textAlign: 'center' }}>
-                ¿Cómo fue tu experiencia?
-              </div>
-              {/* Estrellas */}
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
-                {[1, 2, 3, 4, 5].map((s) => {
-                  const filled = s <= (ratingHover || ratingValue);
-                  return (
-                    <button
-                      key={s}
-                      type="button"
-                      className="press"
-                      onMouseEnter={() => setRatingHover(s)}
-                      onMouseLeave={() => setRatingHover(0)}
-                      onClick={() => setRatingValue(s)}
-                      /* Medían 32 px: acertar la estrella de al lado le da al
-                         restaurante una opinión que el comensal no quiso dar,
-                         y una encuesta no tiene deshacer. El dibujo sigue
-                         siendo de 28 px; lo que crece es la zona que se toca. */
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, minWidth: 'var(--m-tap)', minHeight: 'var(--m-tap)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
-                      aria-label={`${s} estrella${s !== 1 ? 's' : ''}`}
-                    >
-                      <svg width={28} height={28} viewBox="0 0 24 24"
-                        fill={filled ? 'var(--c-warn, #fbbf24)' : 'none'}
-                        stroke={filled ? 'var(--c-warn, #fbbf24)' : 'var(--u-text-3)'}
-                        strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
-                        style={{ transition: 'all 120ms' }}
-                      >
-                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                      </svg>
-                    </button>
-                  );
-                })}
-              </div>
-              {/* Comentario (solo si eligió estrella) */}
-              {ratingValue > 0 && (
-                <textarea
-                  value={ratingComment}
-                  onChange={(e) => setRatingComment(e.target.value)}
-                  placeholder="Comentario opcional…"
-                  rows={2}
-                  style={{
-                    background: 'var(--surface-1)', border: '1px solid var(--u-hair)',
-                    borderRadius: 'var(--m-r-sm)', padding: 'var(--m-sp-3)', color: 'var(--u-text)',
-                    fontSize: 'max(16px, var(--m-fs-md))', resize: 'none', width: '100%', outline: 'none',
-                    fontFamily: 'inherit',
-                  }}
-                />
-              )}
-              {ratingValue > 0 && (
-                <button
-                  type="button"
-                  disabled={ratingPending}
-                  className="press"
-                  onClick={() => {
-                    startRating(async () => {
-                      // El resultado sí importa: la acción puede rechazar
-                      // (pedido ya calificado, módulo apagado, exceso de
-                      // envíos). Antes se daba por enviada siempre y el
-                      // comensal veía "gracias" aunque no se guardara nada.
-                      const res = await submitRating({
-                        restaurantId,
-                        rating: ratingValue,
-                        comment: ratingComment || undefined,
-                        orderId: orderId || undefined,
-                        customerName: name || undefined,
-                      });
-                      if (res?.error) { setRatingError(res.error); return; }
-                      setRatingError(null);
-                      setRatingSent(true);
-                    });
-                  }}
-                  style={{
-                    padding: '11px', borderRadius: 'var(--m-r-md)', border: 'none',
-                    background: 'var(--brand-accent)', color: 'var(--brand-on-accent, #fff)',
-                    fontWeight: 700, fontSize: 'var(--m-fs-md)', cursor: ratingPending ? 'default' : 'pointer',
-                    opacity: ratingPending ? 0.7 : 1,
-                  }}
-                >
-                  {ratingPending ? 'Enviando…' : 'Enviar calificación'}
-                </button>
-              )}
-              {ratingError && (
-                <p role="alert" style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--c-danger)', margin: 0, textAlign: 'center', lineHeight: 1.45 }}>
-                  {ratingError}
-                </p>
-              )}
-            </div>
-          )}
-          {encuestasActive && ratingSent && (
-            <p style={{ fontSize: 'var(--m-fs-md)', color: 'var(--c-ok)', fontWeight: 600, textAlign: 'center' }}>
-              ¡Gracias por tu calificación! ⭐
-            </p>
-          )}
-
-          {kiosk ? (
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
-              <PrimaryButton href={tp('/')} full iconRight="arrowRight">
-                Hacer otro pedido
-              </PrimaryButton>
-              <p className="t-mute" style={{ fontSize: 'var(--m-fs-xs)', margin: 0 }}>
-                La pantalla volverá al menú automáticamente.
-              </p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-              <Link href={tp('/mis-pedidos')} className="press t-mute" style={{ fontSize: 'var(--m-fs-sm)', fontWeight: 600, textDecoration: 'none', padding: '0 12px', minHeight: 'var(--m-tap)', display: 'inline-flex', alignItems: 'center' }}>
-                Mis pedidos
-              </Link>
-              <Link href={tp('/')} className="press t-mute" style={{ fontSize: 'var(--m-fs-sm)', fontWeight: 600, textDecoration: 'none', padding: '0 12px', minHeight: 'var(--m-tap)', display: 'inline-flex', alignItems: 'center' }}>
-                {content.confirmation.again}
-              </Link>
-            </div>
-          )}
-        </div>
-      </main>
+      <CheckoutSuccess
+        done={done}
+        kiosk={kiosk}
+        encuestasActive={encuestasActive}
+        restaurantId={restaurantId}
+        customerName={name}
+        tp={tp}
+      />
     );
   }
 
@@ -965,110 +635,20 @@ export default function CheckoutForm({
         <h1 className="t-display" style={{ ...checkoutTitleT.vars, fontSize: 28 * checkoutTitleT.size }}>{content.checkout.title}</h1>
       </div>
 
-      {/* Resumen */}
-      {/* El resumen no flota sobre nada: es el contenido de la página. Los
-          interruptores de vidrio que SÍ hay en el checkout (opciones de pago
-          y campos del formulario) son del dueño y se respetan tal cual. */}
-      <div className="m-surface" style={{ borderRadius: 'var(--m-r-lg)', padding: 'var(--m-sp-4) var(--m-sp-4)', marginBottom: 'var(--m-sp-4)' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {items.map((item) => (
-            <div key={item.lineId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-              <span style={{ fontSize: 'var(--m-fs-md)', color: 'var(--u-text-2)', minWidth: 0, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                {item.rewardId && <Icon name="gift" size={13} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0 }} />}
-                <span>
-                  {item.quantity}× {item.name}
-                  {item.options && item.options.length > 0 && (
-                    <span style={{ display: 'block', fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-3)', marginTop: 1 }}>
-                      {item.options.map((o) => o.variantName ? `${o.choiceName} (${o.variantName})` : o.choiceName).join(' · ')}
-                    </span>
-                  )}
-                </span>
-              </span>
-              {item.rewardId
-                ? <span style={{ fontSize: 'var(--m-fs-sm)', fontWeight: 700, color: 'var(--brand-accent-ink)', whiteSpace: 'nowrap' }}>{(item.pointsCost ?? 0).toLocaleString('es-GT')} pts</span>
-                : <Price amount={item.price * item.quantity} size={13.5} muted />}
-            </div>
-          ))}
-          <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 7 }}>
-            {(deliveryFee > 0 || discount > 0 || tipAmount > 0) && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-3)' }}>{content.cart.subtotal}</span>
-                <Price amount={total} size={13.5} muted />
-              </div>
-            )}
-            {deliveryFee > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-3)' }}>{content.cart.shipping}</span>
-                <Price amount={deliveryFee} size={13.5} muted />
-              </div>
-            )}
-            {discount > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--c-ok)' }}>Descuento{appliedCoupon ? ` · ${appliedCoupon.code}` : ''}</span>
-                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--c-ok)', fontWeight: 600 }}>−{formatPrice(discount, config)}</span>
-              </div>
-            )}
-            {tipAmount > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-3)' }}>Propina ({config.tipPercent}%)</span>
-                <Price amount={tipAmount} size={13.5} muted />
-              </div>
-            )}
-            {pointsToRedeem > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--brand-accent-ink)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="gift" size={13} /> Recompensas (puntos a usar)</span>
-                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--brand-accent-ink)', fontWeight: 600 }}>{pointsToRedeem.toLocaleString('es-GT')} pts</span>
-              </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <span style={{ fontSize: 'var(--m-fs-lg)', fontWeight: 700, color: 'var(--u-text)' }}>{content.cart.total}</span>
-              <Price amount={finalTotal} size={20} />
-            </div>
-          </div>
-
-          {/* Cupón — solo si el restaurante tiene cupones activos */}
-          {hasCoupons && <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12 }}>
-            {appliedCoupon ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--c-ok)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <Icon name="checkCircle" size={15} /> Cupón {appliedCoupon.code} aplicado
-                </span>
-                <button type="button" onClick={() => { setAppliedCoupon(null); setCouponCode(''); setCouponMsg(''); }} className="press t-mute" style={{ fontSize: 'var(--m-fs-sm)', minHeight: 'var(--m-tap)', padding: '0 8px', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', color: 'var(--u-text-3)' }}>
-                  Quitar
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                  placeholder="¿Tienes un cupón?"
-                  style={{ flex: 1, minHeight: 'var(--m-tap)', background: 'var(--surface-2)', border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 'max(16px, var(--m-fs-md))', outline: 'none', textTransform: 'uppercase' }}
-                />
-                <button type="button" onClick={applyCoupon} disabled={couponChecking || !couponCode.trim()} className="press" style={{ padding: '0 18px', minHeight: 'var(--m-tap)', background: 'var(--surface-3)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair)', cursor: 'pointer', fontSize: 'var(--m-fs-sm)', fontWeight: 600, color: 'var(--u-text)', opacity: couponChecking || !couponCode.trim() ? 0.6 : 1 }}>
-                  {couponChecking ? '…' : 'Aplicar'}
-                </button>
-              </div>
-            )}
-            {couponMsg && <p style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--c-danger)', marginTop: 7 }}>{couponMsg}</p>}
-          </div>}
-
-          {/* Propina — obligatoria cuando el restaurante la habilita. */}
-          {tipAvailable && (
-            <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <Icon name="sparkle" size={15} style={{ color: 'var(--brand-accent-ink)' }} />
-                  Propina ({config.tipPercent}%)
-                </span>
-                <span style={{ fontSize: 'var(--m-fs-sm)', fontWeight: 700, color: 'var(--u-text)' }}>
-                  +{formatPrice(tipAmount, config)}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      <OrderSummary
+        restaurantId={restaurantId}
+        items={items}
+        total={total}
+        pointsToRedeem={pointsToRedeem}
+        deliveryFee={deliveryFee}
+        discount={discount}
+        tipAmount={tipAmount}
+        tipAvailable={tipAvailable}
+        finalTotal={finalTotal}
+        hasCoupons={hasCoupons}
+        appliedCoupon={appliedCoupon}
+        onCouponChange={setAppliedCoupon}
+      />
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Tipo de pedido */}
@@ -1409,60 +989,5 @@ export default function CheckoutForm({
         </PrimaryButton>
       </form>
     </main>
-  );
-}
-
-function PayOption({ icon, label, sublabel, selected, onClick, activeBg, activeText, glass, textShadow }: {
-  icon: string; label: string; sublabel: string; selected: boolean; onClick: () => void;
-  activeBg: string; activeText: string; glass?: boolean; textShadow?: string;
-}) {
-  // Glass: fondo translúcido + blur para que la opción se distinga de cualquier
-  // paleta de fondo (resuelve "no se ve qué dice"). El seleccionado gana un aro
-  // de acento + sombra para destacar sin depender solo del color.
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`press${glass ? ' glass-quiet' : ''}`}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 'var(--m-sp-3)',
-        padding: 'var(--m-sp-4)', minHeight: 'var(--m-tap)', borderRadius: 'var(--m-r-md)', width: '100%', textAlign: 'left', cursor: 'pointer',
-        border: `1.5px solid ${selected ? activeBg : (glass ? 'var(--u-hair-2)' : 'var(--u-hair-2)')}`,
-        background: glass ? undefined : (selected ? 'var(--surface-2)' : 'var(--surface-1)'),
-        boxShadow: selected ? `0 0 0 1.5px ${activeBg}, 0 8px 22px rgba(0,0,0,0.28)` : undefined,
-        transition: 'all 160ms',
-      }}
-    >
-      <div style={{ width: 42, height: 42, borderRadius: 'var(--m-r-md)', flexShrink: 0, display: 'grid', placeItems: 'center', background: selected ? activeBg : 'var(--surface-3)', color: selected ? activeText : 'var(--u-text)', transition: 'all 160ms' }}>
-        <Icon name={icon} size={20} />
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 'var(--m-fs-md)', color: 'var(--u-text)', textShadow }}>{label}</div>
-        <div style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-2)', marginTop: 2, textShadow }}>{sublabel}</div>
-      </div>
-      <span style={{ width: 22, height: 22, borderRadius: 'var(--m-r-pill)', flexShrink: 0, border: `2px solid ${selected ? activeBg : 'var(--u-hair-2)'}`, background: selected ? activeBg : 'transparent', display: 'grid', placeItems: 'center', transition: 'all 160ms' }}>
-        {selected && <Icon name="check" size={12} strokeWidth={3} style={{ color: activeText }} />}
-      </span>
-    </button>
-  );
-}
-
-function FormSection({ glass, children }: { glass: boolean; children: React.ReactNode }) {
-  if (glass) {
-    return (
-      <Glass style={{ padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {children}
-      </Glass>
-    );
-  }
-  return <>{children}</>;
-}
-
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-3)' }}>
-      <span>{k}</span>
-      <span className="t-mono" style={{ color: 'var(--u-text-2)' }}>{v}</span>
-    </div>
   );
 }

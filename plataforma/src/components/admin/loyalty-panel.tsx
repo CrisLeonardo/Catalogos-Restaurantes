@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
@@ -74,7 +73,6 @@ export default function LoyaltyPanel({ restaurantId, settings, accounts, custome
 }
 
 function SettingsForm({ restaurantId, settings, isNew }: { restaurantId: string; settings: LoyaltySettings; isNew: boolean }) {
-  const router = useRouter();
   const [p, setP] = useState<LoyaltySettingsPatch>({
     earn_rate: settings.earn_rate,
     earn_amount: settings.earn_amount,
@@ -94,7 +92,6 @@ function SettingsForm({ restaurantId, settings, isNew }: { restaurantId: string;
       if (res.error) { setStatus({ error: res.error }); return; }
       markSaved();
       setStatus({ saved: true });
-      router.refresh();
     });
   }
 
@@ -148,7 +145,6 @@ function SettingsForm({ restaurantId, settings, isNew }: { restaurantId: string;
 }
 
 function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string; rewards: RewardRow[]; products: RewardProduct[] }) {
-  const router = useRouter();
   const blank: RewardPatch = { product_id: '', title: '', description: '', image_url: '', points_cost: 100, active: true, stock: null, per_customer_limit: null, sort_order: 0 };
   const [form, setForm] = useState<RewardPatch>(blank);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -185,7 +181,6 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
       const res = await saveReward(restaurantId, form);
       if (res.error) { setMsg(`Error: ${res.error}`); return; }
       reset();
-      router.refresh();
     });
   }
 
@@ -193,12 +188,11 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
     start(async () => {
       await deleteReward(restaurantId, id);
       if (editingId === id) reset();
-      router.refresh();
     });
   }
 
   function toggle(id: string, active: boolean) {
-    start(async () => { await toggleReward(restaurantId, id, active); router.refresh(); });
+    start(async () => { await toggleReward(restaurantId, id, active); });
   }
 
   return (
@@ -241,7 +235,7 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {rewards.map((r) => (
             <Card key={r.id} className="flex items-center gap-3 p-3" style={{ opacity: r.active ? 1 : 0.6 }}>
-              <div style={{ width: 46, height: 46, borderRadius: 11, overflow: 'hidden', flexShrink: 0, background: 'var(--surface-2)', display: 'grid', placeItems: 'center', fontSize: 18 }}>
+              <div style={{ width: 46, height: 46, borderRadius: 'var(--radius-md)', overflow: 'hidden', flexShrink: 0, background: 'var(--surface-2)', display: 'grid', placeItems: 'center', fontSize: 18 }}>
                 {r.image_url
                   /* eslint-disable-next-line @next/next/no-img-element */
                   ? <img src={assetSrc(r.image_url, 96)} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -270,7 +264,6 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
 }
 
 function MembersTab({ restaurantId, accounts, customers, settings }: { restaurantId: string; accounts: LoyaltyAccount[]; customers: { id: string; name: string; phone: string }[]; settings: LoyaltySettings }) {
-  const router = useRouter();
   const [customerId, setCustomerId] = useState('');
   const [points, setPoints] = useState('');
   const [tipo, setTipo] = useState<'ADJUST' | 'REDEEM'>('ADJUST');
@@ -285,7 +278,6 @@ function MembersTab({ restaurantId, accounts, customers, settings }: { restauran
       if (res.error) { setMsg(`Error: ${res.error}`); return; }
       setMsg(`Saldo actualizado: ${res.balance} pts`);
       setPoints(''); setNote('');
-      router.refresh();
     });
   }
 
@@ -319,7 +311,7 @@ function MembersTab({ restaurantId, accounts, customers, settings }: { restauran
           <Button onClick={apply} disabled={isPending || !customerId} size="sm" className="rounded-adm-full">
             {isPending ? '…' : tipo === 'REDEEM' ? 'Restar puntos' : 'Sumar puntos'}
           </Button>
-          {tipo === 'REDEEM' && points && <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>≈ Q{((parseInt(points, 10) || 0) * settings.redeem_value).toFixed(2)} de descuento</span>}
+          {tipo === 'REDEEM' && points && <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>≈ {fmtMoney((parseInt(points, 10) || 0) * settings.redeem_value)} de descuento</span>}
           {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>{msg}</span>}
         </div>
       </Card>
@@ -340,7 +332,7 @@ function MembersTab({ restaurantId, accounts, customers, settings }: { restauran
                   <td style={{ padding: '10px 12px' }}><div style={{ fontWeight: 500 }}>{a.customer_name}</div><div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{a.customer_phone}</div></td>
                   <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontFamily: 'var(--ui-font-mono)', color: 'var(--brand-accent-ink)' }}>{a.points_balance.toLocaleString('es-GT')}</td>
                   <td className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{a.lifetime_points.toLocaleString('es-GT')}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>Q{(a.points_balance * settings.redeem_value).toFixed(2)}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{fmtMoney(a.points_balance * settings.redeem_value)}</td>
                 </tr>
               ))}
             </tbody>

@@ -108,15 +108,15 @@ export default function SuperShell({ children }: { children: React.ReactNode }) 
           ))}
         </nav>
 
-        <div className="glass-quiet admin-usercard" style={{ borderRadius: 13, padding: 12 }}>
-          <div className="admin-usericon" style={{ width: 34, height: 34, borderRadius: 99, background: 'color-mix(in srgb, var(--brand-accent) 16%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--brand-accent-ink)', flexShrink: 0 }}>
+        <div className="glass-quiet admin-usercard" style={{ borderRadius: 'var(--radius-lg)', padding: 12 }}>
+          <div className="admin-usericon" style={{ width: 34, height: 34, borderRadius: 'var(--radius-full)', background: 'color-mix(in srgb, var(--brand-accent) 16%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--brand-accent-ink)', flexShrink: 0 }}>
             <Icon name="key" size={16} />
           </div>
           <div className="admin-usermeta" style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 12.5, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               Super Admin
             </div>
-            <div style={{ fontSize: 10.5, color: 'var(--u-text-3)' }}>Toda la plataforma</div>
+            <div style={{ fontSize: 11, color: 'var(--u-text-3)' }}>Toda la plataforma</div>
           </div>
           <LogoutButton />
         </div>

@@ -61,7 +61,7 @@ export default function OrderTypesEditor({
                 className="press"
                 aria-label={label}
                 style={{
-                  width: 40, height: 24, borderRadius: 12,
+                  width: 40, height: 24, borderRadius: 'var(--radius-lg)',
                   background: enabled ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 10%, transparent)',
                   border: 'none', cursor: 'pointer', position: 'relative',
                   transition: 'background 200ms', flexShrink: 0,

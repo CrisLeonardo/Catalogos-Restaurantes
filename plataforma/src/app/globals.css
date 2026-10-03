@@ -110,7 +110,7 @@
 
   /* ── Espaciado / radios / sombras / motion ───────────────── */
   --space-2: 8px;  --space-3: 12px;  --space-4: 16px;  --space-6: 24px;  --space-8: 32px;
-  --radius-md: 10px;  --radius-lg: 14px;  --radius-xl: 20px;  --radius-2xl: 28px;  --radius-full: 9999px;
+  --radius-sm: 8px;  --radius-md: 10px;  --radius-lg: 14px;  --radius-xl: 20px;  --radius-2xl: 28px;  --radius-full: 9999px;
   --ease-out:   cubic-bezier(0.4, 0, 0.2, 1);
   --ease-entry: cubic-bezier(0.16, 1, 0.3, 1);
 
@@ -2395,4 +2395,27 @@ html[data-admin-area] {
   --chart-base: color-mix(in srgb, var(--u-text) 15%, transparent);
   --chart-alt: color-mix(in srgb, var(--adm-accent-500) 45%, transparent);
   --chart-empty: color-mix(in srgb, var(--u-text) 8%, transparent);
+}
+/* Tocar una barra dice su cifra (NEG-05, `components/ui/chart-readout.tsx`).
+   La columna elegida se enmarca; la línea de lectura reserva su alto. Sin
+   ámbito de panel: Mi cuenta (dominio principal) también tiene gráficas. */
+[data-tip] {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+[data-tip-on] {
+  outline: 2px solid color-mix(in srgb, var(--u-text) 40%, transparent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.chart-readout {
+  margin-top: 8px;
+  min-height: 18px;
+  font-family: var(--ui-font-mono);
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--u-text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

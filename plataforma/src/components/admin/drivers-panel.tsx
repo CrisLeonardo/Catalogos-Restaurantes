@@ -37,14 +37,13 @@ export default function DriversPanel({
     if (state && 'ok' in state) {
       setEditing(null);
       setShowForm(false);
-      router.refresh();
     }
   }, [state, router]);
 
   const labelSt: React.CSSProperties = FIELD_LABEL;
   const inputSt: React.CSSProperties = {
     width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-    border: '1px solid var(--u-hair)', borderRadius: 11, padding: '11px 13px',
+    border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-md)', padding: '11px 13px',
     color: 'var(--u-text)', fontSize: 14, outline: 'none',
   };
 

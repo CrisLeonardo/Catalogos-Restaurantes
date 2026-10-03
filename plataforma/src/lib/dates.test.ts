@@ -1,6 +1,6 @@
 /** Fechas y «hace cuánto» (auditoría 2026-10-02, T-02). */
 import { describe, it, expect } from 'vitest';
-import { haceTiempo, fechaCorta, mesYAnio, conMesesLegibles } from './dates';
+import { haceTiempo, fechaCorta, mesYAnio, conMesesLegibles, diaSemana } from './dates';
 
 const AHORA = Date.parse('2026-10-02T18:00:00Z');
 const MIN = 60_000;
@@ -40,5 +40,16 @@ describe('meses', () => {
   it('dentro de un texto, sin tocar fechas completas', () => {
     expect(conMesesLegibles('Mensualidad 2026-09')).toBe('Mensualidad septiembre de 2026');
     expect(conMesesLegibles('Vence 2026-09-01')).toBe('Vence 2026-09-01');
+  });
+});
+
+describe('diaSemana', () => {
+  it('«lun 28 sept», sin coma y sin correrse por la zona horaria', () => {
+    expect(diaSemana('2026-09-28')).toMatch(/^lun\.? 28 sept?\.?$/);
+    expect(diaSemana('2026-10-01')).toMatch(/^jue\.? 1 oct\.?$/);
+  });
+
+  it('lo que no es una fecha sola se devuelve tal cual', () => {
+    expect(diaSemana('ayer')).toBe('ayer');
   });
 });

@@ -6,7 +6,6 @@
    marca como cualquier otra; puede combinarse con secciones del panel. */
 
 import { useActionState, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -76,7 +75,6 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
       que iba a ser rechazado). */
   isOwner?: boolean;
 }) {
-  const router = useRouter();
   const [editor, setEditor] = useState<{ open: boolean; member: StaffMember | null }>({ open: false, member: null });
   /* La bitácora entera eran ~40 filas: 4.600 px de pantalla en el teléfono
      antes de llegar a los accesos (auditoría 2026-10-02, AJU-12). */
@@ -108,7 +106,7 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
         : 'Entra con PIN en el local';
     return (
       <ListRow key={m.id}>
-        <div style={{ width: 38, height: 38, borderRadius: 99, background: isMesero ? 'var(--c-warn-bg)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)', display: 'grid', placeItems: 'center', color: isMesero ? 'var(--c-warn)' : 'var(--u-text)', flexShrink: 0 }}>
+        <div style={{ width: 38, height: 38, borderRadius: 'var(--radius-full)', background: isMesero ? 'var(--c-warn-bg)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)', display: 'grid', placeItems: 'center', color: isMesero ? 'var(--c-warn)' : 'var(--u-text)', flexShrink: 0 }}>
           <Icon name={isMesero ? 'userPlus' : 'user'} size={18} />
         </div>
         <ListText
@@ -116,7 +114,7 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
             <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.full_name || 'Miembro del equipo'}</span>
               {isMesero && (
-                <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: 'var(--c-warn)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', borderRadius: 99, padding: '2px 8px' }}><Icon name="userPlus" size={11} /> Mesero</span>
+                <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: 'var(--c-warn)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', borderRadius: 'var(--radius-full)', padding: '2px 8px' }}><Icon name="userPlus" size={11} /> Mesero</span>
               )}
             </span>
           }
@@ -187,7 +185,7 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
           enabledSections={enabledSections}
           isOwner={isOwner}
           onClose={() => setEditor({ open: false, member: null })}
-          onSaved={() => { setEditor({ open: false, member: null }); router.refresh(); }}
+          onSaved={() => setEditor({ open: false, member: null })}
         />
       )}
     </div>
@@ -261,7 +259,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
   }
 
   const label: React.CSSProperties = FIELD_LABEL;
-  const input: React.CSSProperties = { width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)', borderRadius: 11, padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none' };
+  const input: React.CSSProperties = { width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-md)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none' };
 
   const isMesero = perms.includes('mesero');
 
@@ -298,7 +296,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                         onClick={() => applyPreset(p)}
                         className="press"
                         style={{
-                          padding: '7px 12px', borderRadius: 99, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+                          padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
                           border: `1.5px solid ${on ? 'var(--brand-accent)' : 'var(--u-hair)'}`,
                           background: on ? 'color-mix(in srgb, var(--brand-accent) 14%, transparent)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
                           color: on ? 'var(--u-text)' : 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -334,7 +332,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                     la otra desaparece en vez de dejarla ahí para escoger,
                     que era lo confuso. */}
                 <div style={{
-                  padding: '10px 12px', borderRadius: 11,
+                  padding: '10px 12px', borderRadius: 'var(--radius-md)',
                   border: '1.5px solid var(--brand-accent)',
                   background: 'color-mix(in srgb, var(--brand-accent) 10%, transparent)',
                 }}>
@@ -396,7 +394,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                   {username.length >= 3 && slug && (
                     <div
                       style={{
-                        marginTop: 8, padding: '9px 12px', borderRadius: 10,
+                        marginTop: 8, padding: '9px 12px', borderRadius: 'var(--radius-md)',
                         border: '1px solid var(--u-hair)',
                         background: 'color-mix(in srgb, var(--brand-accent) 8%, transparent)',
                         display: 'flex', alignItems: 'center', gap: 8,
@@ -449,7 +447,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                       onClick={() => toggle(s.key)}
                       className="press"
                       style={{
-                        padding: '7px 12px', borderRadius: 99, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+                        padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
                         border: `1px solid ${on ? 'transparent' : accent ? 'var(--c-warn-line)' : 'var(--u-hair)'}`,
                         // Relleno sólido = --c-warn-solid (el ámbar vivo), NO --c-warn
                         // (que es la TINTA, casi marrón en claro: con texto oscuro

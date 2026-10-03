@@ -18,7 +18,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%',
   background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
   border: '1px solid var(--u-hair)',
-  borderRadius: 11,
+  borderRadius: 'var(--radius-md)',
   padding: '10px 12px',
   color: 'var(--u-text)',
   fontSize: 14,
@@ -38,7 +38,6 @@ export default function EntryPinCard({ restaurantId, hasPin }: {
   useEffect(() => {
     if (state && 'ok' in state) {
       setEditing(false);
-      router.refresh();
     }
   }, [state, router]);
 
@@ -62,7 +61,7 @@ export default function EntryPinCard({ restaurantId, hasPin }: {
         <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <input type="hidden" name="restaurantId" value={restaurantId} />
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: 10.5, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 6, display: 'block' }}>
+            <label style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 6, display: 'block' }}>
               Nuevo PIN (4 dígitos)
             </label>
             <input

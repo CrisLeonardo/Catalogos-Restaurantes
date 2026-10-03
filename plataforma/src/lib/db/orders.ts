@@ -448,7 +448,7 @@ export async function getTableTurnsToday(restaurantId: string, timezone: string)
   return cierres.size;
 }
 
-export type DaySale    = { label: string; total: number; isToday: boolean };
+export type DaySale    = { label: string; date: string; total: number; isToday: boolean };
 export type TopProduct = { name: string; qty: number };
 
 /**
@@ -534,7 +534,7 @@ export async function getOrderStats(
     } catch {
       label = '·';
     }
-    series.push({ label, total: dayTotal, isToday: i === 0 });
+    series.push({ label, date: key, total: dayTotal, isToday: i === 0 });
   }
 
   // Top de productos de hoy.

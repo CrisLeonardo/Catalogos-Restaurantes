@@ -248,11 +248,6 @@ export default function KitchenDisplay({ restaurantId, initialOrders, yellowMin,
     return () => { cancelled = true; channel?.unsubscribe(); stopAuthSync(); };
   }, [restaurantId, announce, refreshSoon]);
 
-  /* Estable entre renders: si fuera `() => router.refresh()` en línea, cada
-     tarjeta recibiría una función nueva cada vez y el memo de KitchenCard no
-     serviría de nada. */
-  const refreshNow = useCallback(() => router.refresh(), [router]);
-
   const nuevos = orders.filter((o) => o.status === 'NEW').length;
   const clock = now == null ? '—' : new Date(now).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' });
 
@@ -263,7 +258,7 @@ export default function KitchenDisplay({ restaurantId, initialOrders, yellowMin,
   return (
     <div style={{ color: C.text, fontFamily: 'var(--ui-font, system-ui, sans-serif)', padding: 16 }}>
       {/* Franja de estado */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '10px 16px', marginBottom: 16, borderRadius: 12, border: `1px solid ${C.hair}`, background: C.panel }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '10px 16px', marginBottom: 16, borderRadius: 'var(--radius-lg)', border: `1px solid ${C.hair}`, background: C.panel }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
           <Icon name="flame" size={18} style={{ color: C.amber, flexShrink: 0 }} />
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontWeight: 700, fontSize: 14 }}>
@@ -271,7 +266,7 @@ export default function KitchenDisplay({ restaurantId, initialOrders, yellowMin,
             <span style={{ color: C.dim, fontSize: 12, fontWeight: 600 }}>en cocina</span>
           </span>
           {nuevos > 0 && (
-            <span style={{ padding: '2px 8px', borderRadius: 999, background: `color-mix(in srgb, ${C.blue} 13%, transparent)`, color: C.blue, fontSize: 12, fontWeight: 800 }}>
+            <span style={{ padding: '2px 8px', borderRadius: 'var(--radius-full)', background: `color-mix(in srgb, ${C.blue} 13%, transparent)`, color: C.blue, fontSize: 12, fontWeight: 800 }}>
               {nuevos} nuevo{nuevos !== 1 ? 's' : ''}
             </span>
           )}
@@ -303,7 +298,6 @@ export default function KitchenDisplay({ restaurantId, initialOrders, yellowMin,
                   color={mounted ? semaforo(elapsedMin, yellowMin, redMin, C) : C.green}
                   urgente={mounted && elapsedMin >= redMin}
                   C={C}
-                  onRefresh={refreshNow}
                 />
               );
             })}
@@ -319,12 +313,12 @@ export default function KitchenDisplay({ restaurantId, initialOrders, yellowMin,
 /**
  * Memoizada a propósito. Sus props son ahora todas estables o primitivas:
  * `order` conserva identidad entre renders del padre (viene tal cual del
- * server component), `C` es una constante de módulo, `onRefresh` va con
- * useCallback y `color`/`urgente` ya vienen resueltos. Resultado: el tablero
+ * server component), `C` es una constante de módulo y `color`/`urgente` ya
+ * vienen resueltos. Resultado: el tablero
  * puede actualizar su reloj sin tocar una sola tarjeta, y cada tarjeta solo
  * se vuelve a pintar cuando cambia su pedido o su tramo de semáforo.
  */
-const KitchenCard = memo(function KitchenCard({ order, color, urgente, C, onRefresh }: { order: OrderWithItems; color: string; urgente: boolean; C: Palette; onRefresh: () => void }) {
+const KitchenCard = memo(function KitchenCard({ order, color, urgente, C }: { order: OrderWithItems; color: string; urgente: boolean; C: Palette }) {
   const [isPending, start] = useTransition();
   const createdMs = new Date(order.created_at).getTime();
   const isNew = order.status === 'NEW';
@@ -332,15 +326,16 @@ const KitchenCard = memo(function KitchenCard({ order, color, urgente, C, onRefr
 
   function advance() {
     const next = isNew ? 'PREP' : 'READY';
+    /* Sin router.refresh(): updateOrderStatus llama a revalidarSalon() y la
+       respuesta de la acción ya trae la cocina nueva (REN-02). */
     start(async () => {
       await updateOrderStatus(order.id, next);
-      onRefresh();
     });
   }
 
   return (
     <div style={{
-      borderRadius: 14,
+      borderRadius: 'var(--radius-lg)',
       background: C.panel,
       border: `1px solid ${C.hair}`,
       borderTop: `4px solid ${color}`,
@@ -355,7 +350,7 @@ const KitchenCard = memo(function KitchenCard({ order, color, urgente, C, onRefr
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.02em' }} title={order.order_number}>{shortOrderNumber(order.order_number)}</span>
             {isNew && (
-              <span style={{ padding: '2px 8px', borderRadius: 999, background: `color-mix(in srgb, ${C.blue} 13%, transparent)`, color: C.blue, fontSize: 11, fontWeight: 800, animation: 'kdsPulse 1.6s ease-in-out infinite' }}>
+              <span style={{ padding: '2px 8px', borderRadius: 'var(--radius-full)', background: `color-mix(in srgb, ${C.blue} 13%, transparent)`, color: C.blue, fontSize: 11, fontWeight: 800, animation: 'kdsPulse 1.6s ease-in-out infinite' }}>
                 NUEVO
               </span>
             )}
@@ -365,7 +360,7 @@ const KitchenCard = memo(function KitchenCard({ order, color, urgente, C, onRefr
           </div>
         </div>
         {/* Temporizador con semáforo */}
-        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 999, background: `color-mix(in srgb, ${color} 10%, transparent)`, color, fontWeight: 800 }}>
+        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 'var(--radius-full)', background: `color-mix(in srgb, ${color} 10%, transparent)`, color, fontWeight: 800 }}>
           <Icon name="clock" size={14} />
           <span style={{ fontFamily: 'var(--ui-font-mono, monospace)', fontSize: 15, minWidth: 44, textAlign: 'right' }}><Cronometro createdMs={createdMs} /></span>
         </div>
@@ -407,8 +402,8 @@ const KitchenCard = memo(function KitchenCard({ order, color, urgente, C, onRefr
         })}
 
         {order.notes && (
-          <div style={{ marginTop: 2, padding: '8px 10px', borderRadius: 8, background: `color-mix(in srgb, ${C.amber} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${C.amber} 25%, transparent)` }}>
-            <div style={{ fontSize: 10.5, fontWeight: 900, letterSpacing: '0.05em', color: C.amber, textTransform: 'uppercase', marginBottom: 2 }}>Nota</div>
+          <div style={{ marginTop: 2, padding: '8px 10px', borderRadius: 'var(--radius-sm)', background: `color-mix(in srgb, ${C.amber} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${C.amber} 25%, transparent)` }}>
+            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.05em', color: C.amber, textTransform: 'uppercase', marginBottom: 2 }}>Nota</div>
             <div style={{ fontSize: 14, fontWeight: 600, color: C.text, lineHeight: 1.35 }}>{order.notes}</div>
           </div>
         )}
@@ -428,7 +423,7 @@ const KitchenCard = memo(function KitchenCard({ order, color, urgente, C, onRefr
           style={{
             width: '100%',
             padding: '14px 12px',
-            borderRadius: 11,
+            borderRadius: 'var(--radius-md)',
             border: 'none',
             cursor: isPending ? 'wait' : 'pointer',
             fontSize: 16,

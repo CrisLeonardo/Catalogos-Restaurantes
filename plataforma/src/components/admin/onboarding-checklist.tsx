@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { dismissOnboarding } from '@/lib/actions/restaurant';
 
@@ -24,7 +23,6 @@ export default function OnboardingChecklist({
   firstName: string;
   steps: OnboardingStep[];
 }) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [hidden, setHidden] = useState(false);
 
@@ -37,7 +35,6 @@ export default function OnboardingChecklist({
     startTransition(async () => {
       await dismissOnboarding(restaurantId);
       setHidden(true);
-      router.refresh();
     });
   }
 
@@ -47,7 +44,7 @@ export default function OnboardingChecklist({
     <div
       className="glass"
       style={{
-        borderRadius: 18, padding: 20, display: 'flex', flexDirection: 'column', gap: 16,
+        borderRadius: 'var(--radius-xl)', padding: 20, display: 'flex', flexDirection: 'column', gap: 16,
         border: '1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent)',
       }}
     >
@@ -79,8 +76,8 @@ export default function OnboardingChecklist({
 
       {/* Progreso */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ flex: 1, height: 6, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 10%, transparent)', overflow: 'hidden' }}>
-          <div style={{ width: `${(doneCount / total) * 100}%`, height: '100%', background: 'var(--brand-accent)', borderRadius: 99, transition: 'width 300ms' }} />
+        <div style={{ flex: 1, height: 6, borderRadius: 'var(--radius-full)', background: 'color-mix(in srgb, var(--u-text) 10%, transparent)', overflow: 'hidden' }}>
+          <div style={{ width: `${(doneCount / total) * 100}%`, height: '100%', background: 'var(--brand-accent)', borderRadius: 'var(--radius-full)', transition: 'width 300ms' }} />
         </div>
         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text-2)', flexShrink: 0 }}>{doneCount}/{total}</span>
       </div>
@@ -94,13 +91,13 @@ export default function OnboardingChecklist({
             className="press"
             style={{
               display: 'flex', alignItems: 'center', gap: 11, padding: '12px 14px',
-              borderRadius: 13, textDecoration: 'none',
+              borderRadius: 'var(--radius-lg)', textDecoration: 'none',
               background: s.done ? 'var(--c-ok-bg)' : 'var(--surface-3, color-mix(in srgb, var(--u-text) 4%, transparent))',
               border: `1px solid ${s.done ? 'var(--c-ok-line)' : 'var(--u-hair)'}`,
             }}
           >
             <span style={{
-              width: 32, height: 32, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center',
+              width: 32, height: 32, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
               background: s.done ? 'var(--c-ok-bg)' : 'rgba(var(--brand-accent-rgb, 99,102,241),0.12)',
               color: s.done ? 'var(--c-ok)' : 'var(--brand-accent)',
             }}>

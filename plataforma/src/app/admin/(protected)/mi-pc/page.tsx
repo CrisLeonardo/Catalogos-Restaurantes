@@ -100,7 +100,7 @@ export default async function AdminMiPcPage() {
       <Card className="p-5">
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
           <div style={{
-            width: 46, height: 46, borderRadius: 13, flexShrink: 0, display: 'grid', placeItems: 'center',
+            width: 46, height: 46, borderRadius: 'var(--radius-lg)', flexShrink: 0, display: 'grid', placeItems: 'center',
             background: 'var(--admin-panel-btn, var(--brand-accent))', color: 'var(--admin-panel-btn-text, #fff)',
           }}>
             <Icon name="monitor" size={22} />
@@ -127,7 +127,7 @@ export default async function AdminMiPcPage() {
         }}>
           {QUE_HACE.map((b) => (
             <div key={b.title} style={{
-              borderRadius: 14, padding: '13px 14px',
+              borderRadius: 'var(--radius-lg)', padding: '13px 14px',
               background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
               border: '1px solid var(--u-hair)',
             }}>
@@ -159,7 +159,7 @@ export default async function AdminMiPcPage() {
               {[{ icon: 'flame', label: 'Comandas de cocina', target: kitchenTarget },
                 { icon: 'receipt', label: 'Recibos de caja', target: receiptTarget }].map((p) => (
                 <div key={p.label} style={{
-                  display: 'flex', alignItems: 'center', gap: 10, borderRadius: 12, padding: '10px 13px',
+                  display: 'flex', alignItems: 'center', gap: 10, borderRadius: 'var(--radius-lg)', padding: '10px 13px',
                   background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair)',
                 }}>
                   <Icon name={p.icon} size={16} style={{ color: p.target ? 'var(--c-ok, #4ade80)' : 'var(--u-text-4)', flexShrink: 0 }} />
@@ -187,7 +187,7 @@ export default async function AdminMiPcPage() {
         <Card className="p-4.5">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <span style={{
-              width: 9, height: 9, borderRadius: 99, flexShrink: 0,
+              width: 9, height: 9, borderRadius: 'var(--radius-full)', flexShrink: 0,
               background: connected && hubReady ? 'var(--c-ok, #4ade80)' : 'var(--u-text-4)',
             }} />
             <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>

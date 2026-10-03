@@ -98,7 +98,7 @@ export default function DiscountDialog({
   };
   const campo: React.CSSProperties = {
     width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-    border: '1px solid var(--u-hair)', borderRadius: 12, padding: '10px 12px',
+    border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', padding: '10px 12px',
     color: 'var(--u-text)', fontSize: 16, outline: 'none', fontFamily: 'inherit',
   };
 
@@ -139,7 +139,7 @@ export default function DiscountDialog({
             onClick={onClose}
             aria-label="Cerrar"
             className="press glass-quiet"
-            style={{ width: 32, height: 32, borderRadius: 10, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}
+            style={{ width: 32, height: 32, borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}
           >
             <Icon name="x" size={16} />
           </button>
@@ -194,7 +194,7 @@ export default function DiscountDialog({
                 onClick={() => setMotivo(m)}
                 className="press"
                 style={{
-                  padding: '7px 12px', borderRadius: 999, cursor: 'pointer', minHeight: 34,
+                  padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer', minHeight: 34,
                   fontSize: 12.5, fontWeight: 600,
                   border: motivo === m ? '1.5px solid var(--brand-accent)' : '1px solid var(--u-hair-2)',
                   background: motivo === m ? 'color-mix(in srgb, var(--brand-accent) 10%, transparent)' : 'none',
@@ -229,7 +229,7 @@ export default function DiscountDialog({
                     className="press"
                     style={{
                       display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1,
-                      padding: '8px 13px', borderRadius: 11, cursor: 'pointer', minHeight: 44,
+                      padding: '8px 13px', borderRadius: 'var(--radius-md)', cursor: 'pointer', minHeight: 44,
                       justifyContent: 'center', textAlign: 'left',
                       border: firmante === a.id ? '1.5px solid var(--brand-accent)' : '1px solid var(--u-hair-2)',
                       background: firmante === a.id
@@ -288,7 +288,7 @@ export default function DiscountDialog({
           disabled={enviando || sinEncargados || !listo || aprob == null}
           className="press btn-accent"
           style={{
-            width: '100%', padding: 13, borderRadius: 13, border: 'none',
+            width: '100%', padding: 13, borderRadius: 'var(--radius-lg)', border: 'none',
             fontSize: 14.5, fontWeight: 700,
             cursor: listo && !enviando ? 'pointer' : 'default',
             opacity: listo && !enviando && !sinEncargados ? 1 : 0.55,
@@ -311,7 +311,7 @@ function Modo({ activo, onClick, children }: {
       className="press"
       aria-pressed={activo}
       style={{
-        width: 44, minHeight: 44, borderRadius: 11, cursor: 'pointer',
+        width: 44, minHeight: 44, borderRadius: 'var(--radius-md)', cursor: 'pointer',
         fontSize: 15, fontWeight: 700,
         border: activo ? '1.5px solid var(--brand-accent)' : '1px solid var(--u-hair-2)',
         background: activo ? 'color-mix(in srgb, var(--brand-accent) 10%, transparent)' : 'none',

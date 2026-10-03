@@ -38,7 +38,7 @@ export default async function ComparativaPage({
         </h1>
       </div>
 
-      <div className="glass" style={{ borderRadius: 16, padding: 16 }}>
+      <div className="glass" style={{ borderRadius: 'var(--radius-lg)', padding: 16 }}>
         <DateRangeForm from={from} to={to} basePath="/mi-cuenta/comparativa" />
       </div>
 
@@ -48,7 +48,7 @@ export default async function ComparativaPage({
         <Kpi label="Utilidad" value={money(report.totalProfit)} />
       </div>
 
-      <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="glass" style={{ borderRadius: 'var(--radius-lg)', padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)' }}>Ingreso por restaurante</div>
         {report.perBranch.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
@@ -62,10 +62,10 @@ export default async function ComparativaPage({
                 <span style={{ color: 'var(--u-text-2)', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.name}</span>
                 <span style={{ color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)', whiteSpace: 'nowrap' }}>{money(b.revenue)} · {share.toFixed(0)}%</span>
               </div>
-              <div style={{ height: 8, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', overflow: 'hidden' }}>
-                <div style={{ width: `${pct}%`, height: '100%', background: 'var(--brand-accent)', borderRadius: 99 }} />
+              <div style={{ height: 8, borderRadius: 'var(--radius-full)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', overflow: 'hidden' }}>
+                <div style={{ width: `${pct}%`, height: '100%', background: 'var(--brand-accent)', borderRadius: 'var(--radius-full)' }} />
               </div>
-              <div style={{ fontSize: 10.5, color: 'var(--u-text-4)' }}>{b.orders} pedidos · utilidad {money(b.profit)}{m != null ? ` · margen ${m.toFixed(0)}%` : ''}</div>
+              <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{b.orders} pedidos · utilidad {money(b.profit)}{m != null ? ` · margen ${m.toFixed(0)}%` : ''}</div>
             </div>
           );
         })}

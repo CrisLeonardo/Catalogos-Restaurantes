@@ -111,10 +111,10 @@ function TableQRCard({ tableNumber, restaurantId }: { tableNumber: number; resta
       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9,
       padding: '14px 10px 12px',
       background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
-      borderRadius: 14,
+      borderRadius: 'var(--radius-lg)',
       border: '1px solid var(--u-hair)',
     }}>
-      <div style={{ background: '#fff', borderRadius: 8, padding: 7, boxShadow: '0 1px 8px rgba(0,0,0,0.28)' }}>
+      <div style={{ background: '#fff', borderRadius: 'var(--radius-sm)', padding: 7, boxShadow: '0 1px 8px rgba(0,0,0,0.28)' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={qrSrc} alt={`Mesa ${tableNumber}`} width={96} height={96} style={{ display: 'block' }} />
       </div>

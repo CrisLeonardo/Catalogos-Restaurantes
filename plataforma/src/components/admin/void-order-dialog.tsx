@@ -76,7 +76,7 @@ export default function VoidOrderDialog({
   };
   const fieldStyle: React.CSSProperties = {
     width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-    border: '1px solid var(--u-hair)', borderRadius: 12, padding: '10px 12px',
+    border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', padding: '10px 12px',
     color: 'var(--u-text)', fontSize: 14, outline: 'none', fontFamily: 'inherit',
   };
 
@@ -110,7 +110,7 @@ export default function VoidOrderDialog({
             type="button"
             onClick={onClose}
             className="press glass-quiet"
-            style={{ width: 32, height: 32, borderRadius: 10, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}
+            style={{ width: 32, height: 32, borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}
           >
             <Icon name="x" size={16} />
           </button>
@@ -124,7 +124,7 @@ export default function VoidOrderDialog({
                 type="button"
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
                 className="press"
-                style={{ width: 36, height: 36, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', cursor: 'pointer', fontSize: 18, color: 'var(--u-text)' }}
+                style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', cursor: 'pointer', fontSize: 18, color: 'var(--u-text)' }}
               >
                 −
               </button>
@@ -133,7 +133,7 @@ export default function VoidOrderDialog({
                 type="button"
                 onClick={() => setQty((q) => Math.min(item.remainingQty, q + 1))}
                 className="press"
-                style={{ width: 36, height: 36, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', cursor: 'pointer', fontSize: 18, color: 'var(--u-text)' }}
+                style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', cursor: 'pointer', fontSize: 18, color: 'var(--u-text)' }}
               >
                 +
               </button>
@@ -171,7 +171,7 @@ export default function VoidOrderDialog({
                     className="press"
                     style={{
                       display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1,
-                      padding: '8px 13px', borderRadius: 11, cursor: 'pointer', minHeight: 44,
+                      padding: '8px 13px', borderRadius: 'var(--radius-md)', cursor: 'pointer', minHeight: 44,
                       justifyContent: 'center', textAlign: 'left',
                       border: firmante === a.id ? '1.5px solid var(--brand-accent)' : '1px solid var(--u-hair-2)',
                       background: firmante === a.id

@@ -39,7 +39,7 @@ export default function DateRangeForm({ from, to, basePath = '/admin/finanzas' }
 
   const inputStyle: React.CSSProperties = {
     background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
-    borderRadius: 10, padding: '8px 11px', color: 'var(--u-text)', fontSize: 13,
+    borderRadius: 'var(--radius-md)', padding: '8px 11px', color: 'var(--u-text)', fontSize: 13,
     outline: 'none', fontFamily: 'var(--ui-font-mono)',
   };
 
@@ -80,7 +80,7 @@ export default function DateRangeForm({ from, to, basePath = '/admin/finanzas' }
               aria-pressed={activo}
               className={activo ? 'press' : 'press glass-quiet'}
               style={{
-                padding: '10px 14px', minHeight: 40, borderRadius: 99, border: 'none', cursor: 'pointer',
+                padding: '10px 14px', minHeight: 40, borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
                 fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap',
                 background: activo ? 'var(--brand-accent)' : undefined,
                 color: activo ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',

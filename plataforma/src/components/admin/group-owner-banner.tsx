@@ -17,7 +17,7 @@ export default function GroupOwnerBanner({
       className="glass-quiet"
       style={{
         display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-        borderRadius: 14, padding: '11px 15px', marginBottom: 16,
+        borderRadius: 'var(--radius-lg)', padding: '11px 15px', marginBottom: 16,
         border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)',
         background: 'color-mix(in srgb, var(--brand-accent) 8%, transparent)',
       }}
@@ -33,7 +33,7 @@ export default function GroupOwnerBanner({
         className="press"
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
-          padding: '8px 14px', borderRadius: 99, fontSize: 12.5, fontWeight: 600,
+          padding: '8px 14px', borderRadius: 'var(--radius-full)', fontSize: 12.5, fontWeight: 600,
           background: 'var(--u-text)', color: 'var(--brand-bg)', textDecoration: 'none',
         }}
       >

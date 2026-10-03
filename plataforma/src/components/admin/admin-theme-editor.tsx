@@ -5,7 +5,6 @@
    No incluye: plantillas, CSS propio, pedidos/moneda (esos van en /admin/perfil). */
 
 import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
 import { List, ListRow, ListText } from '@/components/ui/list';
 import { Section as UiSection, SectionNote } from '@/components/ui/section';
 import { Switch } from '@/components/ui/switch';
@@ -83,7 +82,6 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
 
 /* ── Componente principal ─────────────────────────────────── */
 export default function AdminThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss: initialCss, ownerTemplates: initialOwnerTemplates }: Props) {
-  const router = useRouter();
   const [config, setConfig] = useState<ThemeConfig>(initialConfig);
   const [content, setContent] = useState<ThemeContent>(initialContent);
   const [ownerTemplates, setOwnerTemplates] = useState<RestaurantThemeTemplate[]>(initialOwnerTemplates);
@@ -140,7 +138,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
     start(async () => {
       const res = await saveAdminRestaurantTheme({ restaurantId, config, content, customCss, resetCustomCss: cssWasReset });
       if (res.error) setMsg(`Error: ${res.error}`);
-      else { setMsg('Publicado'); router.refresh(); }
+      else setMsg('Publicado');
     });
   }
 
@@ -281,7 +279,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                     className="press"
                     style={{
                       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                      border: '1.5px solid var(--u-hair-2)', borderRadius: 10, padding: '8px 10px',
+                      border: '1.5px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', padding: '8px 10px',
                       background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', cursor: 'pointer', minWidth: 68,
                     }}
                   >
@@ -290,7 +288,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                       <span style={{ width: 16, height: 16, borderRadius: 4, background: p.colorAccent }} />
                       <span style={{ width: 16, height: 16, borderRadius: 4, background: p.colorText, border: '1px solid rgba(0,0,0,0.1)' }} />
                     </div>
-                    <span style={{ fontSize: 10.5, color: 'var(--u-text-3)', fontWeight: 600 }}>{p.name}</span>
+                    <span style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 600 }}>{p.name}</span>
                   </button>
                 ))}
               </div>
@@ -847,7 +845,7 @@ function ContrastHint({ text, actionLabel, onFix }: { text: string; actionLabel:
         onClick={onFix}
         className="press"
         style={{
-          flexShrink: 0, padding: '7px 12px', borderRadius: 99, border: 'none', cursor: 'pointer',
+          flexShrink: 0, padding: '7px 12px', borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
           background: 'var(--u-text)', color: 'var(--admin-content-bg-solid, var(--brand-bg))',
           fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap',
         }}
@@ -897,7 +895,7 @@ function ColorCtl({ label, value, onChange }: { label: string; value: string; on
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label={label}
-        style={{ width: 34, height: 34, borderRadius: 8, border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0, background: 'transparent' }}
+        style={{ width: 34, height: 34, borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0, background: 'transparent' }}
       />
       <ListText title={label} />
       <input

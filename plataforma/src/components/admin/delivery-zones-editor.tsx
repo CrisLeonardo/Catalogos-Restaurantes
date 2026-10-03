@@ -115,7 +115,7 @@ export default function DeliveryZonesEditor({
                   className="press"
                   title={`Quitar ${z.nombre}`}
                   style={{
-                    width: 22, height: 22, borderRadius: 99, border: 'none', cursor: 'pointer',
+                    width: 22, height: 22, borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
                     background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: 'var(--u-text-3)',
                     display: 'grid', placeItems: 'center', flexShrink: 0,
                   }}

@@ -6,11 +6,15 @@ import DateRangeForm from '@/components/admin/date-range-form';
 import GroupFinanceExport from '@/components/mi-cuenta/group-finance-export';
 import { fmtMoney } from '@/lib/money';
 import Kpi from '@/components/mi-cuenta/kpi';
+import { ChartReadout } from '@/components/ui/chart-readout';
+import { diaSemana } from '@/lib/dates';
 
 export const metadata = { title: 'Finanzas — Leogin' };
 export const dynamic = 'force-dynamic';
 
 const money = (n: number) => fmtMoney(n);
+/** «lun 28 sept · Q1,234.00» — lo que dice una barra al tocarla. */
+const revenueTip = (d: { date: string; revenue: number }) => `${diaSemana(d.date)} · ${money(d.revenue)}`;
 function todayYmd(): string { return new Date().toLocaleDateString('en-CA'); }
 function shiftYmd(ymd: string, days: number): string {
   const d = new Date(`${ymd}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + days);
@@ -52,7 +56,7 @@ export default async function FinanzasGrupoPage({
         </h1>
       </div>
 
-      <div className="glass" style={{ borderRadius: 16, padding: 16, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+      <div className="glass" style={{ borderRadius: 'var(--radius-lg)', padding: 16, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <DateRangeForm from={from} to={to} basePath="/mi-cuenta/finanzas" />
         {report.perBranch.length > 0 && <GroupFinanceExport from={from} to={to} />}
       </div>
@@ -65,20 +69,29 @@ export default async function FinanzasGrupoPage({
         <Kpi label="Pedidos" value={String(report.totalOrders)} />
       </div>
 
-      <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="glass" style={{ borderRadius: 'var(--radius-lg)', padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)' }}>{varios ? 'Ingreso diario del grupo' : 'Ingreso diario'}</div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 120 }}>
+        {/* Tocar una barra dice su día y su cifra (NEG-05). */}
+        <ChartReadout
+          defaultTip={report.combinedSeries.length
+            ? revenueTip(report.combinedSeries[report.combinedSeries.length - 1])
+            : undefined}
+        >
+        <div style={{ display: 'flex', gap: 3, height: 120 }}>
           {report.combinedSeries.map((d, i) => {
             const h = (d.revenue / maxRev) * 100;
             return (
-              <div key={i} title={`${d.label}: ${money(d.revenue)}`} style={{ flex: 1, minWidth: 0, height: `${Math.max(h, d.revenue > 0 ? 5 : 1.5)}%`, minHeight: 2, borderRadius: '3px 3px 0 0', background: d.revenue > 0 ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)' }} />
+              <div key={i} data-tip={revenueTip(d)} style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'flex-end' }}>
+                <div style={{ width: '100%', height: `${Math.max(h, d.revenue > 0 ? 5 : 1.5)}%`, minHeight: 2, borderRadius: '3px 3px 0 0', background: d.revenue > 0 ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)' }} />
+              </div>
             );
           })}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9.5, color: 'var(--u-text-4)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--u-text-4)', marginTop: 6 }}>
           <span>{report.combinedSeries[0]?.label}</span>
           <span>{report.combinedSeries[report.combinedSeries.length - 1]?.label}</span>
         </div>
+        </ChartReadout>
       </div>
 
       {/* Con un solo restaurante esta tabla es una fila que repite los
@@ -87,9 +100,9 @@ export default async function FinanzasGrupoPage({
         <>
         {/* Contribución por restaurante — con margen y ticket promedio. La tabla
             se desplaza sola en pantallas angostas en vez de estrujar la página. */}
-        <div className="glass" style={{ borderRadius: 16, overflowX: 'auto' }}>
+        <div className="glass" style={{ borderRadius: 'var(--radius-lg)', overflowX: 'auto' }}>
           <div style={{ minWidth: 520 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 90px 100px', gap: 8, padding: '12px 18px', fontSize: 9.5, color: 'var(--u-text-4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 90px 100px', gap: 8, padding: '12px 18px', fontSize: 11, color: 'var(--u-text-4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               <span>Restaurante</span><span style={{ textAlign: 'right' }}>Ingreso</span><span style={{ textAlign: 'right' }}>Pedidos</span><span style={{ textAlign: 'right' }}>Utilidad</span>
             </div>
             {report.perBranch.map((b) => {
@@ -101,11 +114,11 @@ export default async function FinanzasGrupoPage({
                   <span style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text)' }}>{money(b.revenue)}</span>
                   <div style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>
                     {b.orders}
-                    <div style={{ fontSize: 10, color: 'var(--u-text-4)' }}>{money(ticket)} c/u</div>
+                    <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{money(ticket)} c/u</div>
                   </div>
                   <div style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>
                     {money(b.profit)}
-                    <div style={{ fontSize: 10, color: m != null && m < 0 ? 'var(--c-danger)' : 'var(--u-text-4)' }}>{m != null ? `${m.toFixed(0)}% margen` : '—'}</div>
+                    <div style={{ fontSize: 11, color: m != null && m < 0 ? 'var(--c-danger)' : 'var(--u-text-4)' }}>{m != null ? `${m.toFixed(0)}% margen` : '—'}</div>
                   </div>
                 </div>
               );
@@ -123,10 +136,10 @@ export default async function FinanzasGrupoPage({
 
 function FinanzasBloqueadas({ upgradeUrl }: { upgradeUrl: string | null }) {
   return (
-    <div className="anim-fade-up glass" style={{ borderRadius: 16, padding: '26px 24px', maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="anim-fade-up glass" style={{ borderRadius: 'var(--radius-lg)', padding: '26px 24px', maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 14 }}>
       <span
         style={{
-          width: 42, height: 42, borderRadius: 12, display: 'grid', placeItems: 'center',
+          width: 42, height: 42, borderRadius: 'var(--radius-lg)', display: 'grid', placeItems: 'center',
           background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)',
           color: 'var(--brand-accent-ink)',
         }}

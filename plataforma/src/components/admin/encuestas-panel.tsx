@@ -28,8 +28,8 @@ function DistBar({ label, count, total }: { label: string; count: number; total:
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', width: 14, textAlign: 'right', flexShrink: 0 }}>{label}</span>
-      <div style={{ flex: 1, height: 6, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 8%, transparent)' }}>
-        <div style={{ height: '100%', borderRadius: 99, background: 'var(--chart-hi)', width: `${pct}%`, transition: 'width 400ms' }} />
+      <div style={{ flex: 1, height: 6, borderRadius: 'var(--radius-full)', background: 'color-mix(in srgb, var(--u-text) 8%, transparent)' }}>
+        <div style={{ height: '100%', borderRadius: 'var(--radius-full)', background: 'var(--chart-hi)', width: `${pct}%`, transition: 'width 400ms' }} />
       </div>
       <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', width: 24, textAlign: 'right', flexShrink: 0 }}>{count}</span>
     </div>

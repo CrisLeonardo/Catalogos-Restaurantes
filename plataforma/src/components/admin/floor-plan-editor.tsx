@@ -414,18 +414,18 @@ export default function FloorPlanEditor({
           onClick={() => patch({ enabled: !enabled })}
           className="press"
           style={{
-            width: 44, height: 26, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3,
+            width: 44, height: 26, borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer', padding: 3,
             background: enabled ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
             display: 'flex', justifyContent: enabled ? 'flex-end' : 'flex-start',
             transition: 'background 180ms', flexShrink: 0,
           }}
         >
-          <span style={{ width: 20, height: 20, borderRadius: 99, background: enabled ? 'var(--brand-bg)' : 'var(--u-text)' }} />
+          <span style={{ width: 20, height: 20, borderRadius: 'var(--radius-full)', background: enabled ? 'var(--brand-bg)' : 'var(--u-text)' }} />
         </button>
       </div>
 
       {!enabled ? (
-        <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', padding: '12px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', border: '1px solid var(--u-hair)', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', padding: '12px 14px', borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', border: '1px solid var(--u-hair)', lineHeight: 1.5 }}>
           Desactivado: el mesero verá las mesas en una cuadrícula automática. Actívalo para diseñar tu salón por niveles.
         </div>
       ) : (
@@ -443,7 +443,7 @@ export default function FloorPlanEditor({
                       onChange={(e) => renameLevel(l.id, e.target.value)}
                       onBlur={() => setRenaming(null)}
                       onKeyDown={(e) => { if (e.key === 'Enter') setRenaming(null); }}
-                      style={{ width: 130, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair-2)', borderRadius: 99, padding: '7px 12px', color: 'var(--u-text)', fontSize: 13, outline: 'none' }}
+                      style={{ width: 130, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-full)', padding: '7px 12px', color: 'var(--u-text)', fontSize: 13, outline: 'none' }}
                     />
                   ) : (
                     <button
@@ -452,7 +452,7 @@ export default function FloorPlanEditor({
                       className="press"
                       title={on ? 'Toca de nuevo para renombrar' : ''}
                       style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 13px', borderRadius: 99, cursor: 'pointer',
+                        display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 13px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
                         border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
                         background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
                         color: on ? 'var(--brand-bg)' : 'var(--u-text-2)', fontSize: 13, fontWeight: 600,
@@ -481,7 +481,7 @@ export default function FloorPlanEditor({
                 type="button"
                 onClick={addLevel}
                 className="press"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 99, cursor: 'pointer', border: '1px dashed var(--u-hair-2)', background: 'transparent', color: 'var(--u-text-3)', fontSize: 12.5, fontWeight: 600 }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer', border: '1px dashed var(--u-hair-2)', background: 'transparent', color: 'var(--u-text-3)', fontSize: 12.5, fontWeight: 600 }}
               >
                 <Icon name="plus" size={13} /> Nivel
               </button>
@@ -500,7 +500,7 @@ export default function FloorPlanEditor({
             style={{
               position: 'relative', width: '100%', aspectRatio: `${VIRT_W} / ${VIRT_H}`,
               minHeight: 300,
-              borderRadius: 16, overflow: 'hidden',
+              borderRadius: 'var(--radius-lg)', overflow: 'hidden',
               border: '1px solid var(--u-hair-2)',
               background: 'color-mix(in srgb, var(--u-text) 2%, transparent)',
               touchAction: 'none', userSelect: 'none',
@@ -579,7 +579,7 @@ export default function FloorPlanEditor({
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => { e.stopPropagation(); removeFixture(f.id); }}
                         onKeyDown={(e) => { if (e.key === 'Enter') removeFixture(f.id); }}
-                        style={{ position: 'absolute', top: -11, right: -11, width: 24, height: 24, borderRadius: 99, background: 'var(--brand-bg)', border: '1px solid var(--u-hair-2)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--u-text)' }}
+                        style={{ position: 'absolute', top: -11, right: -11, width: 24, height: 24, borderRadius: 'var(--radius-full)', background: 'var(--brand-bg)', border: '1px solid var(--u-hair-2)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--u-text)' }}
                       >
                         <Icon name="x" size={12} />
                       </span>
@@ -587,7 +587,7 @@ export default function FloorPlanEditor({
                       <span
                         data-fx-handle={f.id}
                         aria-label={`Cambiar tamaño de ${fixtureLabel(f)}`}
-                        style={{ position: 'absolute', bottom: -11, right: -11, width: 24, height: 24, borderRadius: 7, background: 'var(--brand-accent)', border: '2px solid var(--brand-bg)', cursor: 'nwse-resize', touchAction: 'none' }}
+                        style={{ position: 'absolute', bottom: -11, right: -11, width: 24, height: 24, borderRadius: 'var(--radius-sm)', background: 'var(--brand-accent)', border: '2px solid var(--brand-bg)', cursor: 'nwse-resize', touchAction: 'none' }}
                       />
                     </>
                   )}
@@ -636,7 +636,7 @@ export default function FloorPlanEditor({
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => { e.stopPropagation(); unplaceTable(tb.n); }}
                     onKeyDown={(e) => { if (e.key === 'Enter') unplaceTable(tb.n); }}
-                    style={{ position: 'absolute', top: small ? -6 : -9, right: small ? -6 : -9, width: small ? 20 : 24, height: small ? 20 : 24, borderRadius: 99, background: 'var(--brand-bg)', border: '1px solid var(--u-hair-2)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--u-text)' }}
+                    style={{ position: 'absolute', top: small ? -6 : -9, right: small ? -6 : -9, width: small ? 20 : 24, height: small ? 20 : 24, borderRadius: 'var(--radius-full)', background: 'var(--brand-bg)', border: '1px solid var(--u-hair-2)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--u-text)' }}
                   >
                     <Icon name="x" size={small ? 10 : 12} />
                   </span>
@@ -676,7 +676,7 @@ export default function FloorPlanEditor({
                   onClick={() => addFixture(k)}
                   className="press"
                   title={`Agregar ${FIXTURE_META[k].label.toLowerCase()} a ${levels.find((l) => l.id === active)?.name ?? 'este nivel'}`}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 99, cursor: 'pointer', border: '1px dashed var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600 }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 'var(--radius-full)', cursor: 'pointer', border: '1px dashed var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600 }}
                 >
                   <Icon name={FIXTURE_META[k].icon} size={14} /> {FIXTURE_META[k].label}
                 </button>
@@ -687,20 +687,20 @@ export default function FloorPlanEditor({
                 tener dos barras ("Barra fría" / "Barra de café") y el número
                 de mesa no ayuda a distinguirlas. */}
             {selected && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 12, padding: '10px 12px', borderRadius: 12, border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 12, padding: '10px 12px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)' }}>
                 <Icon name={FIXTURE_META[selected.kind].icon} size={15} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />
                 <input
                   value={selected.label ?? ''}
                   onChange={(e) => renameFixture(selected.id, e.target.value)}
                   placeholder={FIXTURE_META[selected.kind].label}
                   aria-label="Nombre de la referencia"
-                  style={{ flex: 1, minWidth: 130, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)', borderRadius: 10, padding: '9px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none' }}
+                  style={{ flex: 1, minWidth: 130, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-md)', padding: '9px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none' }}
                 />
                 <button
                   type="button"
                   onClick={() => removeFixture(selected.id)}
                   className="press"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 13px', borderRadius: 10, cursor: 'pointer', border: '1px solid var(--c-danger-line, var(--u-hair-2))', background: 'transparent', color: 'var(--c-danger)', fontSize: 13, fontWeight: 600 }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 13px', borderRadius: 'var(--radius-md)', cursor: 'pointer', border: '1px solid var(--c-danger-line, var(--u-hair-2))', background: 'transparent', color: 'var(--c-danger)', fontSize: 13, fontWeight: 600 }}
                 >
                   <Icon name="trash" size={14} /> Quitar
                 </button>
@@ -725,7 +725,7 @@ export default function FloorPlanEditor({
                     key={tb.n}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 10px 6px 12px',
-                      borderRadius: 12, border: '1px solid var(--u-hair-2)',
+                      borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair-2)',
                       background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
                     }}
                   >
@@ -743,7 +743,7 @@ export default function FloorPlanEditor({
                         setSeats(tb.n, Number.isFinite(v) && v > 0 ? Math.min(40, v) : null);
                       }}
                       style={{
-                        width: 56, height: 40, textAlign: 'center', borderRadius: 10, outline: 'none',
+                        width: 56, height: 40, textAlign: 'center', borderRadius: 'var(--radius-md)', outline: 'none',
                         border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
                         color: 'var(--u-text)', fontFamily: 'var(--ui-font-mono)', fontSize: 15, fontWeight: 600,
                       }}
@@ -756,7 +756,7 @@ export default function FloorPlanEditor({
                       aria-label={`Nombre de la mesa ${tb.n}`}
                       onChange={(e) => setLabel(tb.n, e.target.value)}
                       style={{
-                        width: 104, height: 40, borderRadius: 10, outline: 'none', padding: '0 10px',
+                        width: 104, height: 40, borderRadius: 'var(--radius-md)', outline: 'none', padding: '0 10px',
                         border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
                         color: 'var(--u-text)', fontSize: 14,
                       }}
@@ -783,7 +783,7 @@ export default function FloorPlanEditor({
                     onClick={() => placeTable(n)}
                     className="press"
                     title={`Colocar mesa ${n} en ${levels.find((l) => l.id === active)?.name ?? 'este nivel'}`}
-                    style={{ width: 44, height: 44, borderRadius: 12, cursor: 'pointer', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', fontWeight: 700, fontSize: 15 }}
+                    style={{ width: 44, height: 44, borderRadius: 'var(--radius-lg)', cursor: 'pointer', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', fontWeight: 700, fontSize: 15 }}
                   >
                     {n}
                   </button>
@@ -806,7 +806,7 @@ function ZoomBtn({ children, label, onTap }: { children: React.ReactNode; label:
       onPointerDown={(e) => e.stopPropagation()}
       onClick={onTap}
       className="press glass-quiet"
-      style={{ width: 38, height: 38, borderRadius: 11, border: '1px solid var(--u-hair-2)', cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 700, color: 'var(--u-text)', lineHeight: 1 }}
+      style={{ width: 38, height: 38, borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 700, color: 'var(--u-text)', lineHeight: 1 }}
     >
       {children}
     </button>

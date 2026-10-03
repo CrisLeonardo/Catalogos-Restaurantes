@@ -16,13 +16,13 @@ import { savePricingSettings, type BillingState } from '@/lib/actions/billing';
 import type { PricingSettings } from '@/lib/db/billing';
 
 const labelStyle: React.CSSProperties = {
-  fontSize: 10.5, color: 'var(--u-text-3)', fontWeight: 600,
+  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 600,
   letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6,
   display: 'flex', alignItems: 'center', gap: 6,
 };
 const inputStyle: React.CSSProperties = {
   width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid color-mix(in srgb, var(--u-text) 12%, transparent)',
-  borderRadius: 11, padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
+  borderRadius: 'var(--radius-md)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
   fontFamily: 'var(--ui-font-mono)',
 };
 
@@ -68,7 +68,7 @@ function Field({
   return (
     <div>
       <label style={labelStyle}>
-        {dot && <span style={{ width: 8, height: 8, borderRadius: 99, background: dot, flexShrink: 0 }} />}
+        {dot && <span style={{ width: 8, height: 8, borderRadius: 'var(--radius-full)', background: dot, flexShrink: 0 }} />}
         {label}
       </label>
       <input name={name} type="number" min="0" step={step} defaultValue={value} style={inputStyle} />
@@ -145,7 +145,7 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
 
       {toast && (
         <p style={{
-          fontSize: 13, padding: '10px 14px', borderRadius: 8, margin: 0,
+          fontSize: 13, padding: '10px 14px', borderRadius: 'var(--radius-sm)', margin: 0,
           color: toast.ok ? 'var(--c-ok)' : 'var(--c-danger)',
           background: toast.ok ? 'var(--c-ok-bg)' : 'var(--c-danger-bg)',
           border: `1px solid ${toast.ok ? 'var(--c-ok-line)' : 'var(--c-danger-line)'}`,

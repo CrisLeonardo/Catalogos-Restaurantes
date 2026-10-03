@@ -86,6 +86,16 @@ function typeLabel(t: PendingNewOrder['order_type'], address: string | null): st
   return 'Para llevar';
 }
 
+/** «Ana · A domicilio · hace 3 min». Un pedido de mesa sin nombre llega con
+    «Mesa 4» como nombre Y como dirección: decirlo una vez («Mesa 4 · Mesa 4»
+    salía en el aviso). */
+function cardSubtitle(...parts: (string | null | undefined)[]): string {
+  return parts
+    .map((p) => p?.trim())
+    .filter((p, i, all): p is string => Boolean(p) && all.indexOf(p) === i)
+    .join(' · ');
+}
+
 export default function NewOrdersAlert({
   restaurantId,
   muteChime = false,
@@ -410,7 +420,7 @@ export default function NewOrdersAlert({
           className="glass-solid anim-slide-up"
           style={{
             display: 'flex', alignItems: 'center', gap: 12,
-            padding: '12px 14px', borderRadius: 16,
+            padding: '12px 14px', borderRadius: 'var(--radius-lg)',
             // Verde: inconfundible frente al ámbar de "llamada al mesero".
             // Vía tokens --c-*: el verde claro de antes era ilegible sobre la
             // tarjeta casi blanca del modo claro.
@@ -420,14 +430,14 @@ export default function NewOrdersAlert({
         >
           <div style={{ position: 'relative', flexShrink: 0 }}>
             <div style={{
-              width: 40, height: 40, borderRadius: 12,
+              width: 40, height: 40, borderRadius: 'var(--radius-lg)',
               display: 'grid', placeItems: 'center',
               background: 'var(--c-ok-bg)', color: 'var(--c-ok)',
             }}>
               <Icon name="bell" size={19} />
             </div>
             <span style={{
-              position: 'absolute', inset: -3, borderRadius: 15,
+              position: 'absolute', inset: -3, borderRadius: 'var(--radius-lg)',
               border: '2px solid color-mix(in srgb, var(--c-ok-solid) 50%, transparent)',
               animation: 'new-order-ping 1.6s ease-out infinite',
               pointerEvents: 'none',
@@ -442,7 +452,7 @@ export default function NewOrdersAlert({
               fontSize: 11.5, color: 'var(--c-ok)', marginTop: 2,
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
-              {o.customer_name} · {typeLabel(o.order_type, o.address)} · {timeAgo(o.created_at)}
+              {cardSubtitle(o.customer_name, typeLabel(o.order_type, o.address), timeAgo(o.created_at))}
             </div>
           </div>
 
@@ -452,7 +462,7 @@ export default function NewOrdersAlert({
               onClick={() => { dismiss(o.id); router.push(panelHref(panelBaseFrom(pathname), '/admin/pedidos')); }}
               className="press"
               style={{
-                padding: '7px 13px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                padding: '7px 13px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer',
                 fontSize: 12.5, fontWeight: 700,
                 background: 'var(--u-text)', color: 'var(--brand-bg)',
               }}
@@ -464,7 +474,7 @@ export default function NewOrdersAlert({
               onClick={() => dismiss(o.id)}
               className="press"
               style={{
-                padding: '4px 13px', borderRadius: 9, cursor: 'pointer',
+                padding: '4px 13px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
                 fontSize: 11, fontWeight: 600,
                 background: 'transparent', color: 'var(--u-text-3)',
                 border: '1px solid var(--glass-stroke)',
@@ -483,7 +493,7 @@ export default function NewOrdersAlert({
           className="glass-solid press"
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '10px 14px', borderRadius: 14, cursor: 'pointer',
+            padding: '10px 14px', borderRadius: 'var(--radius-lg)', cursor: 'pointer',
             border: '1px solid color-mix(in srgb, var(--c-ok-solid) 45%, transparent)',
             color: 'var(--c-ok)', fontSize: 13, fontWeight: 700,
             boxShadow: '0 12px 36px rgba(0,0,0,0.45)',
@@ -502,7 +512,7 @@ export default function NewOrdersAlert({
           onClick={dismissAll}
           className="press"
           style={{
-            alignSelf: 'flex-end', padding: '5px 12px', borderRadius: 9, cursor: 'pointer',
+            alignSelf: 'flex-end', padding: '5px 12px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
             fontSize: 11, fontWeight: 600,
             background: 'transparent', color: 'var(--u-text-3)',
             border: '1px solid var(--glass-stroke)',

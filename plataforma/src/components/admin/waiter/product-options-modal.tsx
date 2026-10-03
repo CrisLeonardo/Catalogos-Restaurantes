@@ -185,7 +185,7 @@ function ProductOptionsModal({
               {money(finalPrice, currency)} por unidad
             </div>
           </div>
-          <button onClick={onClose} aria-label="Cerrar" className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 10, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0, marginLeft: 10 }}>
+          <button onClick={onClose} aria-label="Cerrar" className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0, marginLeft: 10 }}>
             <Icon name="x" size={18} />
           </button>
         </div>
@@ -286,9 +286,9 @@ function ProductOptionsModal({
           <div className="opt-group">
             <div className="opt-head"><span className="opt-title">Cantidad</span></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <button type="button" aria-label="Quitar una" onClick={() => setQty((q) => Math.max(1, q - 1))} className="press glass-quiet" style={{ width: 44, height: 44, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--u-text)' }}>−</button>
+              <button type="button" aria-label="Quitar una" onClick={() => setQty((q) => Math.max(1, q - 1))} className="press glass-quiet" style={{ width: 44, height: 44, borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--u-text)' }}>−</button>
               <span style={{ fontSize: 20, fontWeight: 700, minWidth: 32, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{qty}</span>
-              <button type="button" aria-label="Agregar una" onClick={() => setQty((q) => Math.min(20, q + 1))} className="press glass-quiet" style={{ width: 44, height: 44, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--u-text)' }}>+</button>
+              <button type="button" aria-label="Agregar una" onClick={() => setQty((q) => Math.min(20, q + 1))} className="press glass-quiet" style={{ width: 44, height: 44, borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--u-text)' }}>+</button>
             </div>
           </div>
 
@@ -301,13 +301,13 @@ function ProductOptionsModal({
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 140))}
               placeholder="Sin cebolla, término medio…"
-              style={{ background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)', borderRadius: 12, padding: '12px 14px', color: 'var(--u-text)', fontSize: 15, outline: 'none', width: '100%' }}
+              style={{ background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', padding: '12px 14px', color: 'var(--u-text)', fontSize: 15, outline: 'none', width: '100%' }}
             />
           </div>
         </div>
 
         <div style={{ padding: '14px 20px', borderTop: '1px solid var(--u-hair)' }}>
-          <button type="button" onClick={handleAdd} className="press btn-accent" style={{ width: '100%', padding: '15px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <button type="button" onClick={handleAdd} className="press btn-accent" style={{ width: '100%', padding: '15px', borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <span>{initialLine ? 'Guardar cambios' : `Agregar ${qty > 1 ? `${qty} ×` : ''}`}</span>
             <span style={{ opacity: 0.55 }}>·</span>
             <span style={{ fontFamily: 'var(--ui-font-mono)' }}>{money(finalPrice * qty, currency)}</span>

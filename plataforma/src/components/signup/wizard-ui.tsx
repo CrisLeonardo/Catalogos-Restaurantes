@@ -63,7 +63,7 @@ export function Stepper({ steps, step }: { steps: string[]; step: number }) {
             background: i <= step ? 'var(--brand-accent)' : 'rgba(255,255,255,0.12)',
             transition: 'background 200ms',
           }} />
-          <span style={{ fontSize: 10.5, fontWeight: 600, color: i === step ? 'var(--u-text-2)' : 'var(--u-text-4)' }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: i === step ? 'var(--u-text-2)' : 'var(--u-text-4)' }}>
             {label}
           </span>
         </div>

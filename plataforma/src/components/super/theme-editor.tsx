@@ -5,7 +5,6 @@
    Aquí Leonardo "diseña" el sitio de cada restaurante. */
 
 import { useMemo, useState, useTransition, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import ImageUpload from '@/components/admin/image-upload';
@@ -45,7 +44,6 @@ interface Props {
 }
 
 export default function ThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss: initialCss, templates: initialTemplates = [], saveAction, showTemplates = true, showAdvanced = true, showOrdersAndCurrency = true }: Props) {
-  const router = useRouter();
   const [config, setConfig] = useState<ThemeConfig>(initialConfig);
   const [content, setContent] = useState<ThemeContent>(initialContent);
   const [css, setCss] = useState(initialCss);
@@ -149,7 +147,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
       const action = saveAction ?? saveRestaurantTheme;
       const res = await action({ restaurantId, config, content, customCss: css });
       if (res.error) setMsg(`Error: ${res.error}`);
-      else { setMsg('Guardado ✓'); router.refresh(); }
+      else setMsg('Guardado ✓');
     });
   }
 
@@ -554,7 +552,7 @@ const CONTENT_FIELDS: Record<keyof ThemeContent, [string, string][]> = {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div className="t-kicker" style={{ fontSize: 10.5 }}>{title}</div>
+      <div className="t-kicker" style={{ fontSize: 11 }}>{title}</div>
       {children}
     </Glass>
   );
@@ -598,7 +596,7 @@ function TextCtl({ label, value, onChange, placeholder }: { label: string; value
 function ColorCtl({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <input type="color" value={value} onChange={(e) => onChange(e.target.value)} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0, background: 'transparent' }} />
+      <input type="color" value={value} onChange={(e) => onChange(e.target.value)} style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0, background: 'transparent' }} />
       <span style={{ fontSize: 13.5, color: 'var(--u-text-2)', flex: 1 }}>{label}</span>
       <input type="text" value={value} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, width: 96, fontFamily: 'var(--ui-font-mono)', fontSize: 12, padding: '6px 8px' }} />
     </div>
@@ -609,8 +607,8 @@ function Toggle({ label, value, onChange }: { label: string; value: boolean; onC
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
       <span style={{ fontSize: 13.5, color: 'var(--u-text-2)' }}>{label}</span>
-      <button type="button" onClick={() => onChange(!value)} className="press" style={{ width: 42, height: 25, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3, background: value ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)', display: 'flex', justifyContent: value ? 'flex-end' : 'flex-start', transition: 'background 180ms', flexShrink: 0 }}>
-        <span style={{ width: 19, height: 19, borderRadius: 99, background: value ? 'var(--brand-bg)' : 'var(--u-text)' }} />
+      <button type="button" onClick={() => onChange(!value)} className="press" style={{ width: 42, height: 25, borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer', padding: 3, background: value ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)', display: 'flex', justifyContent: value ? 'flex-end' : 'flex-start', transition: 'background 180ms', flexShrink: 0 }}>
+        <span style={{ width: 19, height: 19, borderRadius: 'var(--radius-full)', background: value ? 'var(--brand-bg)' : 'var(--u-text)' }} />
       </button>
     </div>
   );

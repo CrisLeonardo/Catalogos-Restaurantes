@@ -186,7 +186,7 @@ export default function MainPcSwitch({ onChanged }: { onChanged?: () => void }) 
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Estado */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
-        <span style={{ width: 10, height: 10, borderRadius: 99, marginTop: 5, flexShrink: 0, background: TONE[status.tone] }} />
+        <span style={{ width: 10, height: 10, borderRadius: 'var(--radius-full)', marginTop: 5, flexShrink: 0, background: TONE[status.tone] }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--u-text)' }}>{status.label}</div>
           <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.55, marginTop: 3 }}>{status.detail}</div>
@@ -313,7 +313,7 @@ export default function MainPcSwitch({ onChanged }: { onChanged?: () => void }) 
 
       {msg && (
         <div style={{
-          fontSize: 12.5, lineHeight: 1.5, padding: '9px 12px', borderRadius: 10,
+          fontSize: 12.5, lineHeight: 1.5, padding: '9px 12px', borderRadius: 'var(--radius-md)',
           color: msg.bad ? 'var(--c-danger, #f87171)' : 'var(--u-text-2)',
           background: msg.bad
             ? 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)'

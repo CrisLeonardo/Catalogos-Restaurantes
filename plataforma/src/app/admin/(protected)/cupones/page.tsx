@@ -24,7 +24,7 @@ export default async function CuponesPage() {
   return (
     <div className="anim-fade-up">
       {!ordersEnabled && (
-        <div className="glass-quiet" style={{ borderRadius: 13, padding: '12px 16px', fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5, marginBottom: 14 }}>
+        <div className="glass-quiet" style={{ borderRadius: 'var(--radius-lg)', padding: '12px 16px', fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5, marginBottom: 14 }}>
           Los cupones se aplican en los pedidos en línea. Activa el módulo <strong>Pedidos</strong> (plan Estándar) para que tus clientes los usen al pagar.
         </div>
       )}

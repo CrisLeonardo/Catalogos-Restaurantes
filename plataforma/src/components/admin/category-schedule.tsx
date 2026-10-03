@@ -75,7 +75,7 @@ function matchedPreset(days: Record<DayKey, DayState>): string | null {
 const inputStyle: React.CSSProperties = {
   background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
   border: '1px solid var(--u-hair-2)',
-  borderRadius: 10,
+  borderRadius: 'var(--radius-md)',
   padding: '7px 9px',
   color: 'var(--u-text)',
   fontSize: 13.5,
@@ -115,7 +115,7 @@ export default function CategorySchedule({ defaultValue }: { defaultValue: Weekl
     }));
 
   const chip = (active: boolean): React.CSSProperties => ({
-    display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 99,
+    display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 'var(--radius-full)',
     cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
     border: `1px solid ${active ? 'transparent' : 'var(--u-hair-2)'}`,
     background: active ? 'var(--u-text)' : 'transparent',
@@ -123,7 +123,7 @@ export default function CategorySchedule({ defaultValue }: { defaultValue: Weekl
   });
 
   return (
-    <div style={{ border: '1px solid var(--u-hair)', borderRadius: 12, padding: 12, background: 'color-mix(in srgb, var(--u-text) 2%, transparent)' }}>
+    <div style={{ border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', padding: 12, background: 'color-mix(in srgb, var(--u-text) 2%, transparent)' }}>
       <input type="hidden" name="availability" value={value} />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
@@ -173,13 +173,13 @@ export default function CategorySchedule({ defaultValue }: { defaultValue: Weekl
                   className="press"
                   style={{
                     width: 92, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 7,
-                    padding: '6px 9px', borderRadius: 9, cursor: 'pointer', flexShrink: 0,
+                    padding: '6px 9px', borderRadius: 'var(--radius-md)', cursor: 'pointer', flexShrink: 0,
                     background: d.on ? 'color-mix(in srgb, var(--u-text) 7%, transparent)' : 'transparent',
                     border: `1px solid ${d.on ? 'var(--u-hair-2)' : 'var(--u-hair)'}`,
                     color: d.on ? 'var(--u-text)' : 'var(--u-text-4)', fontSize: 12.5, fontWeight: 600,
                   }}
                 >
-                  <span style={{ width: 7, height: 7, borderRadius: 99, flexShrink: 0, background: d.on ? 'var(--c-ok)' : 'var(--u-hair-2)' }} />
+                  <span style={{ width: 7, height: 7, borderRadius: 'var(--radius-full)', flexShrink: 0, background: d.on ? 'var(--c-ok)' : 'var(--u-hair-2)' }} />
                   {DAY_LABELS[day]}
                 </button>
                 {d.on ? (

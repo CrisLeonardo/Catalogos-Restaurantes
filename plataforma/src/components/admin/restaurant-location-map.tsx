@@ -143,7 +143,7 @@ export default function RestaurantLocationMap({ lat, lng, radiusKm, onLocationCh
         disabled={calibrating}
         style={{
           position: 'absolute', bottom: 10, right: 10, zIndex: 1000,
-          background: '#fff', border: 'none', borderRadius: 8,
+          background: '#fff', border: 'none', borderRadius: 'var(--radius-sm)',
           padding: '7px 12px', cursor: calibrating ? 'wait' : 'pointer',
           fontSize: 12, fontWeight: 600, color: '#333',
           display: 'flex', alignItems: 'center', gap: 5,
