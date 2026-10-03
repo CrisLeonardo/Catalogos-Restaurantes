@@ -19,7 +19,7 @@
 > se ve bien. Las auditorías anteriores (QA visual 09-22, velocidad 09-25) **no
 > se repiten**: lo que de ellas sigue abierto está en la sección de rendimiento.
 >
-> **Estado:** al 2026-10-03, 131 de 147 hallazgos hechos (los 6 P0 incluidos). D-2 y D-5 decididos y hechos. Lo que queda espera una decisión tuya (⏸️: D-3, D-4, D-6…D-9), contenido tuyo (WEB-01/02/03, CAT-13) o es trabajo continuo (T-22, T-26, REN-05); ver la Bitácora al final.
+> **Estado:** al 2026-10-03, 141 de 147 hallazgos hechos (los 6 P0 incluidos). D-1…D-8 decididos y hechos. Quedan: REN-01 (D-9, mover Render a Virginia: solo tú), WEB-02/03 (testimonios y capturas de clientes con su permiso) y lo continuo (T-22, T-26, REN-05). WEB-01 está programada y apagada hasta que crees la cuenta de analítica. Ver la Bitácora al final.
 
 ---
 
@@ -39,22 +39,22 @@
 
 | # | Sección | Hallazgos | Hechos | ⏸️ Decisión |
 |---|---------|----------:|-------:|-----------:|
-| 1 | Transversal — sistema de diseño y textos | 26 | 23 | 0 |
-| 2 | Panel · Armazón y navegación | 10 | 10 | 1 |
-| 3 | Panel · Hoy | 5 | 4 | 1 |
+| 1 | Transversal — sistema de diseño y textos | 26 | 24 | 0 |
+| 2 | Panel · Armazón y navegación | 10 | 10 | 0 |
+| 3 | Panel · Hoy | 5 | 5 | 0 |
 | 4 | Panel · Pedidos (En vivo, Cocina, Mesas, Tomar pedidos) | 14 | 14 | 0 |
 | 5 | Panel · Menú | 12 | 12 | 0 |
 | 6 | Panel · Clientes | 6 | 6 | 0 |
-| 7 | Panel · Negocio | 6 | 5 | 1 |
-| 8 | Panel · Ajustes | 20 | 19 | 1 |
-| 9 | Catálogo digital (lo que ve el comensal) | 14 | 11 | 1 |
-| 10 | Super Admin | 10 | 9 | 1 |
+| 7 | Panel · Negocio | 6 | 6 | 0 |
+| 8 | Panel · Ajustes | 20 | 20 | 0 |
+| 9 | Catálogo digital (lo que ve el comensal) | 14 | 14 | 0 |
+| 10 | Super Admin | 10 | 10 | 0 |
 | 11 | Mi cuenta (grupo) | 5 | 5 | 0 |
-| 12 | Web pública y marketing | 9 | 6 | 0 |
-| 13 | Rendimiento y salud del código | 10 | 7 | 1 |
-| | **Total** | **147** | **131** | **7** |
+| 12 | Web pública y marketing | 9 | 7 | 0 |
+| 13 | Rendimiento y salud del código | 10 | 8 | 1 |
+| | **Total** | **147** | **141** | **1** |
 
-Por prioridad: **P0** 6 · **P1** 34 · **P2** 62 · **P3** 45. Hechos: los **6 P0**, 30 P1, 55 P2 y 40 P3.
+Por prioridad: **P0** 6 · **P1** 34 · **P2** 62 · **P3** 45. Hechos: los **6 P0**, 33 P1, 58 P2 y 44 P3.
 
 *(Se actualiza a mano al marcar.)*
 
@@ -114,9 +114,11 @@ Estas cambian el trabajo; el resto se puede hacer sin preguntar.
   Propuesta: **Hoy** = el pulso (avisos, cifras del día, lo que está pasando);
   **Pedidos** = solo operación, sin gráficas; **Negocio › Resumen** = semana/mes
   con comparación contra el periodo anterior. ¿De acuerdo? (HOY-05, NEG-02)
+  ✅ **Decidido 2026-10-03: sí.** Hecho, ver HOY-05 y NEG-02.
 - **D-4 · Botones con texto blanco sobre el color de marca** (pendiente desde
   la auditoría del 09-22): en oscuro el naranja se aclara y el contraste baja a
   ~3:1. ¿Se oscurece el acento en los botones o se deja?
+  ✅ **Decidido 2026-10-03: se oscurece.** Todo relleno con texto blanco usa `#c2542f` (4,56:1) también en oscuro (token `--adm-accent-fill`); el coral claro queda para texto, iconos y bordes sobre el fondo.
 - **D-5 · QR de mesa con dirección corta.** Hoy cada QR lleva el UUID del
   restaurante (`/m/aaaaaaaa-aaaa-…/7`): el código sale más denso y la dirección
   es ilegible. Se puede pasar a `/m/<slug>/7` **manteniendo vivos los viejos**
@@ -125,11 +127,14 @@ Estas cambian el trabajo; el resto se puede hacer sin preguntar.
 - **D-6 · WhatsApp (API de Meta).** La pantalla pide «Phone number ID» y «token»
   de Meta y, si el servidor no está configurado, le enseña al dueño un error
   técnico. ¿La escondemos hasta que esté lista para un restaurantero? (AJU-15)
+  ✅ **Decidido 2026-10-03: sí, solo la ve el Super Admin.** Hecho, ver AJU-15.
 - **D-7 · QR de mesa directo a la carta.** Hoy el comensal sentado ve primero la
   portada a pantalla completa. ¿Entrar directo a la carta cuando viene con mesa?
   (CAT-04)
+  ✅ **Decidido 2026-10-03: sí.** Hecho, ver CAT-04.
 - **D-8 · El Super Admin, ¿comparte las piezas del panel o conserva su estilo
   propio** (rótulos Anton, números de color)? (SUP-09)
+  ✅ **Decidido 2026-10-03: comparte las piezas del panel.** Hecho, ver SUP-09.
 - **D-9 · Render en Virginia** (REN-01, heredado del 09-25): sigue siendo lo que
   más velocidad da y solo lo puedes hacer tú.
 
@@ -206,7 +211,7 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
 
 ### Componentes y patrones
 
-- [ ] **T-05** · P2 · M — **Cinco estilos de cifras (KPI).** (a) rejilla en una
+- [x] **T-05** · P2 · M — **Cinco estilos de cifras (KPI).** (a) rejilla en una
   tarjeta con número monoespaciado (Hoy, Pedidos, Clientes, Negocio); (b) tarjetas
   sueltas con número en Geist negrita (Lealtad); (c) píldoras «0 activos · 0 total»
   (Cupones); (d) Super Admin: rótulo Anton en mayúsculas + número Unbounded de
@@ -214,6 +219,7 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   (`components/ui/stat.tsx`).
   🔄 **Parcial 2026-10-02 (Fase 3):** Lealtad, Proveedores y Cupones ya usan `<StatGroup>/<Stat>` (Cupones solo si hay cupones). Quedan el Super (D-8) y la franja de Mesas (D-2).
   🔄 **2026-10-03:** la franja de Mesas, a una línea en el teléfono (D-2). Solo queda el Super (D-8).
+  ✅ **Hecho 2026-10-03.** Con D-8 el Super pinta sus cifras como `<Stat>` del panel (rótulo en minúscula, cifra en la mono, color solo para aviso o peligro) y con D-2 la franja de Mesas va a una línea: ya no quedan estilos de cifra sueltos.
 
 - [x] **T-06** · P1 · S — **Tres cifras en rejilla de dos = hueco.** En Hoy
   («Resumen del día»), Pedidos («Tiempos de hoy»), Inventario, Lista de espera,
@@ -441,9 +447,10 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   izquierda y las barras apretadas en el tercio derecho; mucho blanco.
   ✅ **Hecho 2026-10-03 (detalles P2/P3).** «Cómo va el día» y «Lo que más sale hoy» lado a lado cuando hay sitio (rejilla de 380 px mínimo); si solo hay una, ocupa todo.
 
-- [ ] **HOY-05** · P1 · M · ⏸️ D-3 — **Las mismas cifras en tres pantallas** (Hoy,
+- [x] **HOY-05** · P1 · M · ⏸️ D-3 — **Las mismas cifras en tres pantallas** (Hoy,
   Pedidos › En vivo, Negocio › Resumen): Ventas/Pedidos/Ticket + «14 días» + «Lo
   que más sale». Ver D-3.
+  ✅ **Hecho 2026-10-03 (D-3, `74cefb2`).** Cada pantalla contesta lo suyo: Hoy el pulso del día; Pedidos › En vivo solo operación («Pedidos hoy», «En curso», «En cocina ahora», «Listos sin entregar» y los tiempos), sin ventas, ticket ni gráficas, con «Exportar» en la fila de filtros (en el teléfono, solo el icono); Negocio › Resumen, semana o mes contra el periodo anterior (NEG-02).
 
 ---
 
@@ -636,8 +643,9 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   platillos con costo (1 de 10)» + invitación a cargar costos.
   ✅ **Hecho 2026-10-02 (Fase 1).** Aviso bajo las cifras cuando faltan costos: «La utilidad y el margen solo cuentan los platillos que tienen costo cargado: Q72.00 de Q2,781.00 vendidos (3%)».
 
-- [ ] **NEG-02** · P2 · M · ⏸️ D-3 — **Resumen repite Hoy.** Proponer periodo
+- [x] **NEG-02** · P2 · M · ⏸️ D-3 — **Resumen repite Hoy.** Proponer periodo
   (semana/mes) y comparación con el periodo anterior.
+  ✅ **Hecho 2026-10-03 (D-3, `74cefb2`).** «Últimos 7 días / Últimos 30 días» (`?periodo=mes`, se puede compartir): ventas, pedidos, ticket y visitas con «↑ 12 % vs. los 7 días anteriores» debajo (`lib/periodo.ts`, con pruebas; visitas del periodo con `lib/db/visits.ts`), ventas por día del periodo y lo más vendido del periodo. En la revisión en pantalla: la comparación baja a dos renglones en vez de cortarse en el teléfono y los días de la gráfica dicen «Do», «Lu»… como los de visitas (`9c7c14c`).
 
 - [x] **NEG-03** · P3 · S — **Analítica:** rótulos con paréntesis («Pedidos válidos
   (31 con cancelados)», «Franja pico (día fuerte: Vie)»); «Aplicar» negro y el
@@ -748,10 +756,11 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   verde metido en medio de una descripción.
   ✅ **Hecho 2026-10-03 (detalles P2/P3).** «Activado para ti» como etiqueta junto al nombre, no en verde dentro de la descripción. Conteos, insignias y enlaces ya estaban (N-05, N-07, T-20).
 
-- [ ] **AJU-15** · P1 · S · ⏸️ D-6 — **WhatsApp:** le enseña al dueño «Detalle
+- [x] **AJU-15** · P1 · S · ⏸️ D-6 — **WhatsApp:** le enseña al dueño «Detalle
   técnico: falta WHATSAPP_TOKEN_KEY» y un formulario de la API de Meta que no
   puede funcionar sin esa configuración del servidor.
   🔄 **Parcial 2026-10-02:** sin la clave del servidor ya no se enseña el formulario de Meta ni el «Detalle técnico»; el aviso dice que se escriba a soporte. Esconder la pantalla entera sigue pendiente de D-6.
+  ✅ **Hecho 2026-10-03 (D-6).** La pantalla sale del menú y de Ajustes para el dueño (`lib/whatsapp/visible.ts`; con `WHATSAPP_PARA_DUENOS = true` vuelve el día que haya alta guiada) y el Super Admin la sigue usando. A quien entra por la dirección se le explica («WhatsApp lo conectamos nosotros» → Ayuda) en vez de rebotarlo: el `redirect()` tras cargar el armazón hacía fallar al enrutador de Next (error #310 de React), encontrado al revisarlo (`9c7c14c`).
 
 - [x] **AJU-16** · P2 · S — **Repartidores:** barra «Panel», selector nativo del
   sistema, formulario siempre abierto. Ver N-02/N-03.
@@ -813,10 +822,11 @@ aquí es lo que todavía le cuesta pedidos.
   «Necesita tu atención».
   ✅ **Hecho 2026-10-03 (detalles P2/P3).** El lema por defecto pasa a vacío; «Sabor que enamora» guardado en un tema se trata como vacío (o como el lema real del restaurante si lo tiene), con pruebas. Sin lema la portada no pinta esa línea y Hoy pide escribirlo («Tu menú no tiene lema» → Perfil).
 
-- [ ] **CAT-04** · P2 · S · ⏸️ D-7 — **El QR de la mesa abre en la portada.** Con
+- [x] **CAT-04** · P2 · S · ⏸️ D-7 — **El QR de la mesa abre en la portada.** Con
   `?mesa=3` el comensal, ya sentado, ve la portada a pantalla completa y tiene que
   tocar «Ver el menú» antes de ver un plato. Con mesa, entrar directo a la carta
   (la portada sigue para el enlace general y redes).
+  ✅ **Hecho 2026-10-03 (D-7, `74cefb2`).** Con `?mesa=` o `/m/<slug>/<mesa>` la carta abre directo (sin portada, con el nombre del restaurante arriba); el enlace general y el de redes siguen con portada. Comprobado en el teléfono y en escritorio.
 
 - [x] **CAT-05** · P3 · S — **Insignias de tres estilos en la misma carta:**
   «FAVORITO» (mayúsculas sobre naranja), «nuevo» (minúscula sin fondo), «Picante»
@@ -838,10 +848,11 @@ aquí es lo que todavía le cuesta pedidos.
   restaurante (WhatsApp/teléfono), ni «Volver a pedir».
   ✅ **Hecho 2026-10-03 (detalles P2/P3).** La tarjeta de pedido cancelado dice qué hacer y, si el restaurante tiene WhatsApp, «Escribir por WhatsApp» con el número de pedido ya escrito («Volver al menú» ya estaba debajo).
 
-- [ ] **CAT-09** · P3 · S — **Carrito vacío** en `/checkout`: solo «Ver el menú».
+- [x] **CAT-09** · P3 · S — **Carrito vacío** en `/checkout`: solo «Ver el menú».
   Oportunidad: «Lo más pedido» con su «+».
   🔄 **Pendiente 2026-10-03:** ofrecer «Lo más pedido» desde el carrito vacío pide traer la hoja de opciones del platillo al checkout; caso raro (llegar a pagar sin nada), se deja para cuando se toque el checkout (REN-04).
   Con REN-04 hecho, el checkout ya está partido y esto cabría como pieza aparte; sigue siendo un caso raro y lo dejo para cuando se decida CAT-13 (las dos son «sugerir platillos»).
+  ✅ **Hecho 2026-10-03 (`0ecb0e2`).** Checkout con el carrito vacío: «Lo más pedido» (lo más vendido en 30 días, luego favoritos, luego la carta; solo de un toque y disponible) con su «+»; al tocar uno, el checkout aparece con ese platillo. Ventas en caché de una hora, carta en la caché de un minuto que ya existía (`components/checkout/empty-cart.tsx`, `getTopSellingProductIdsCached`).
 
 - [x] **CAT-10** · P3 · S — **Escritorio:** el fondo de la portada termina en una
   línea horizontal dura a ~790 px a los lados de la columna.
@@ -860,9 +871,10 @@ aquí es lo que todavía le cuesta pedidos.
   que ahí no tiene sentido.
   ✅ **Hecho 2026-10-02 (Fase 6).** 404 en dos versiones: en la dirección de un restaurante que no existe, «Este menú no existe», con «Ir a Leogin» y «¿Es tu restaurante? Crea tu menú gratis»; en el dominio principal, «Esta página no existe» con «Ir al inicio» (sin la palabra «subdominio»).
 
-- [ ] **CAT-13** · P3 · M — **Marketing — subir el ticket:** sugerir «Acompáñalo
+- [x] **CAT-13** · P3 · M — **Marketing — subir el ticket:** sugerir «Acompáñalo
   con…» (bebida/postre de la carta) en la ficha del platillo y en el carrito. Es la
   palanca de venta más barata que tiene un menú digital.
+  ✅ **Hecho 2026-10-03 (`0ecb0e2`).** «Acompáñalo con…» sin que el dueño tenga que armar nada: el NOMBRE de cada categoría dice si es bebida, acompañamiento o postre («Café», «Fríos», «Extras», «Dulce»…) y se ofrece lo que falta (`lib/menu-pairings.ts`, 15 pruebas). En la ficha son píldoras como las opciones y se suman al pulsar «Agregar» (el precio del botón las incluye; cerrar sin pedir no deja nada suelto); en el carrito se agregan al tocar. Solo platillos de un toque, disponibles y con su menú en horario; favoritos primero. Interruptor «Sugerir acompañamientos» en Personalizar › Menú (encendido por defecto). Probado de punta a punta: Lox del Barrio → Mocha + Roll + Cold Brew; marcar Mocha sube el botón de Q62 a Q88; en el carrito, solo postres.
 
 - [x] **CAT-14** · P2 · S — **La confirmación de un pedido para llevar decía «Pago:
   Efectivo contra entrega».** (Encontrado al probar REN-04.) El formulario dice
@@ -911,9 +923,10 @@ aquí es lo que todavía le cuesta pedidos.
   sin verificar» en casi todas (ruido: se puede pasar a un filtro).
   ✅ **Hecho 2026-10-03 (detalles P2/P3).** 20 cuentas a la vista y «Ver más»; «Correo sin verificar» solo se marca con el filtro «Sin verificar» puesto (en la lista entera era ruido).
 
-- [ ] **SUP-09** · P3 · M · ⏸️ D-8 — **Lenguaje visual propio** (rótulos Anton en
+- [x] **SUP-09** · P3 · M · ⏸️ D-8 — **Lenguaje visual propio** (rótulos Anton en
   mayúsculas, números Unbounded de colores) distinto del panel. ¿El Super comparte
   las piezas del panel o mantiene su identidad? Si comparte, sale gratis T-05.
+  ✅ **Hecho 2026-10-03 (D-8, `74cefb2`).** `StatCard` dibujada como `<Stat>`, rótulos de campo del panel (`FIELD_LABEL`), pestañas segmentadas en la ficha del restaurante, títulos sin Anton. Retoques tras verlo: «Ingreso mensual» sin «(MRR)» cortado, y el aviso del slug ya no dice que rompe los QR de mesa impresos (D-5 los mantiene vivos) (`9c7c14c`).
 
 - [x] **SUP-10** · P3 · S — **Inicio:** «Pendiente de cobro» y «Pagos vencidos»
   enseñan lo mismo cuando todo lo pendiente está vencido; los títulos de «Requiere
@@ -962,11 +975,12 @@ aquí es lo que todavía le cuesta pedidos.
 La portada comercial está bien escrita y bien construida. Lo que le falta es lo
 que hace que un restaurantero confíe y lo que permite saber si funciona.
 
-- [ ] **WEB-01** · **P1** · S — **No se mide nada.** Ni una herramienta de
+- [x] **WEB-01** · **P1** · S — **No se mide nada.** Ni una herramienta de
   analítica en la web: no se sabe cuántos la visitan, cuántos tocan «Crear mi
   restaurante», ni en qué paso del registro se van. Propuesta: analítica sin
   cookies (Plausible o Umami, no exige aviso de cookies) + 4 eventos: clic en el
   botón principal, registro iniciado, registro completado, primer platillo.
+  ✅ **Hecho 2026-10-03 (`0ecb0e2`) — falta encenderla.** Analítica sin cookies, Umami o Plausible (`lib/analytics.ts`): script con el nonce de la CSP solo en la web de Leogin (portada, /planes, /registro, Mi cuenta; nunca el menú ni el panel) y su origen en `connect-src`. Embudo: «Clic crear restaurante» en los 7 botones de alta (atributos, sin JavaScript), y «Cuenta creada», «Restaurante creado», «Primer platillo» desde el servidor con `after()` (no los borra un bloqueador ni frenan el alta). **Para encenderla:** crear el sitio en cloud.umami.is (gratis) y poner en Render `NEXT_PUBLIC_ANALYTICS_PROVIDER=umami` y `NEXT_PUBLIC_ANALYTICS_ID=<Website ID>` (ver `.env.local.example`), y volver a desplegar.
 
 - [ ] **WEB-02** · P2 · M — **Sin prueba social.** Ni un testimonio, logo de
   cliente, caso real (Rincón 502), cifra de restaurantes activos o foto de un
@@ -1041,8 +1055,9 @@ que hace que un restaurantero confíe y lo que permite saber si funciona.
   platillos. Está bien; vigilar el HTML con cartas de 100+ platillos.
   ✅ **Hecho 2026-10-03 (detalles P2/P3).** Medición, no un fallo: se deja anotado para vigilar con cartas de 100+ platillos.
 
-- [ ] **REN-08** · P3 · S — **(Heredado M-6)** Fuentes de Google bloqueantes en el
+- [x] **REN-08** · P3 · S — **(Heredado M-6)** Fuentes de Google bloqueantes en el
   menú. Decisión estética pendiente.
+  ✅ **Hecho 2026-10-03 (`0ecb0e2`), sin el costo estético.** Las 14 tipografías del catálogo que se pedían a Google van por next/font desde nuestro dominio, sin precarga (`app/catalog-fonts.ts`): cada menú baja solo las que usa, sin hoja externa que bloquee el pintado y con letra de respaldo de métricas ajustadas (sin salto). Medido en el menú: 0 peticiones a Google, 0 hojas externas. Dos pruebas impiden que una fuente nueva del catálogo vuelva a pedirse a Google.
 
 - [x] **REN-09** · P2 · S — **Reordenar categorías** = un envío de formulario y
   recarga por cada flecha (MEN-08).
@@ -1068,7 +1083,7 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
 4. ✅ **Fase 4 — Pantallas largas y buscadores. HECHA 2026-10-02.** MEN-01, CLI-01, AJU-10,
    AJU-05, AJU-12, N-02/N-03, PED-01.
 5. ✅ **Fase 5 — Servicio. HECHA 2026-10-03** (maqueta aprobada, D-2). PED-02, PED-06, PED-09, PED-13.
-6. 🔄 **Fase 6 — Marketing y extras. Casi entera 2026-10-02** (faltan WEB-01/02/03 y CAT-13). WEB-01 (medir primero), WEB-02, WEB-03,
+6. 🔄 **Fase 6 — Marketing y extras. Casi entera 2026-10-03** (WEB-01 y CAT-13 hechos el 10-03; faltan WEB-02/03, que piden testimonios y capturas tuyas). WEB-01 (medir primero), WEB-02, WEB-03,
    CAT-11, CAT-12, CAT-13, AJU-07, MEN-12, HOY-03, CLI-06.
 7. **Continuo.** T-22/T-26 (escala tipográfica y componentes) pantalla a
    pantalla, a medida que se toca cada una. (T-23, los radios, ya se hizo de una vez.)
@@ -1090,3 +1105,5 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
 | 2026-10-03 | **Cierre de lo que no depende de ti.** NEG-05 (tocar una barra dice su cifra, en todas las gráficas), PED-11 (rótulo de la cifra grande en la ficha del teléfono), REN-02 (fuera ~45 `router.refresh()` sobrantes, comprobado acción por acción), REN-04 (checkout partido y memorizado), REN-06 (`fmtCurrency`), T-23 (radios a tokens), 37 textos más a 11 px (T-21), y dos hallazgos nuevos arreglados: PED-14 («Mesa 4 · Mesa 4») y CAT-14 («Efectivo contra entrega» al recoger). Verificado: `tsc`, `eslint`, 793 pruebas, cuatro builds de producción, recorrido con Playwright (lectura de barras en panel/Super/Mi cuenta, insumo creado y borrado con una sola petición, checkout de punta a punta), capturas de 16 pantallas del panel y 4 del Super. Pedidos de prueba y cupón borrados; los 3 pedidos puestos en curso para ver Mesas, devueltos a su estado. Lo que queda (21) espera D-2…D-9, contenido tuyo o es continuo. | `a21f6af` |
 | 2026-10-03 | **D-5 hecho y maqueta de D-2.** AJU-06: QR de mesa con `/m/<slug>/<mesa>` (migración 134 con alias de slug para que un QR impreso sobreviva a un cambio de slug, y guardia para que nadie herede el slug de otro). Verificado: `tsc`, `eslint`, pruebas, build, recorrido con Playwright (slug, UUID, alias, inexistente, checkout, QR del PDF comparado píxel a píxel). D-2: maqueta publicada (https://claude.ai/artifact/JMFGLY23GhsNgDrU5KfvJP) con capturas reales del «antes» y la propuesta con los colores y letras del panel; pedidos de prueba devueltos a su estado. | `e050b0e` |
 | 2026-10-03 | **D-2 construido (maqueta aprobada; Mesas opción A).** PED-02 (tarjeta de pedido compacta, 410 → 238 px, reloj único, alarma al doble, «⋯»), PED-06 (tablero en tres columnas desde 1.280 px, gráfica y top debajo), PED-09 (libres en rejilla de cinco en el teléfono + tira de cifras de Mesas a una línea), PED-13 (agotados al final sin buscar, filtros desvanecidos, fila del riel en dos renglones). Verificado: `tsc`, `eslint`, pruebas, build, capturas en teléfono, 1.180, 1.280 y 1.440, claro y oscuro, el «⋯» abierto y un agotado de verdad en la carta; pedidos y plato de prueba devueltos a su estado. | `5b828e5` |
+| 2026-10-03 | **D-3, D-4, D-6, D-7, D-8 decididos y construidos**, y revisados en pantalla (build de producción, panel a 390 y 1.440 px en claro y oscuro, 13 pantallas del Super, menú con y sin mesa). Arreglado lo que salió al revisar: error #310 del enrutador al rebotar de /whatsapp (ahora aviso), «Exportar» que se comía dos filtros en el teléfono, comparación cortada en Resumen, «Ingreso mensual (M…» cortado y el aviso del slug que decía que rompe los QR de mesa. Relleno medido: `#c2542f` en claro y oscuro. | `74cefb2`, `9c7c14c` |
+| 2026-10-03 | **CAT-13, CAT-09, REN-08 y WEB-01.** «Acompáñalo con…» en ficha y carrito con regla propia y sus pruebas, «Lo más pedido» en el checkout vacío, las 14 tipografías restantes desde nuestro dominio (0 peticiones a Google en el menú) y la analítica sin cookies lista para encender. De paso: el nombre y el precio de cada línea del carrito salían pegados. Verificado: `tsc`, `eslint`, 825 pruebas (24 nuevas), build, recorrido con Playwright (ficha → carrito → checkout vacío → checkout con un platillo; aviso de WhatsApp sin errores). Quedan 6: REN-01 (tuyo), WEB-02/03 (contenido tuyo) y los continuos. | `0ecb0e2` |
