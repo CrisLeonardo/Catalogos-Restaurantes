@@ -16,7 +16,10 @@ import { useCart } from '@/lib/cart-context';
 import { getScannedTable, watchScannedTable, isStandaloneLaunch } from '@/lib/table-session';
 import { isKioskMode } from '@/lib/kiosk';
 import { getMyAccount } from '@/lib/actions/loyalty';
-import type { WeeklyHours } from '@/lib/hours';
+import { hasAnyHours, isOpenNow, type WeeklyHours } from '@/lib/hours';
+import { useThemeConfig } from '@/lib/theme/context';
+import { sugerirAcompanantes } from '@/lib/menu-pairings';
+import type { Sugerencia } from '@/components/menu/pairings';
 import type { Category, Product } from '@/types';
 import type { MenuReward } from '@/components/menu/rewards-section';
 
@@ -53,6 +56,22 @@ interface Props {
   restaurantLat?: number | null;
   restaurantLng?: number | null;
   deliveryRadiusKm?: number | null;
+}
+
+/** «Acompáñalo con…» para lo que ya se lleva (CAT-13, lib/menu-pairings.ts). */
+function acompanantesPara(base: string[], products: ProdItem[], categories: CatItem[], timezone: string): Sugerencia[] {
+  const now = new Date();
+  const catById = new Map(categories.map((c) => [c.id, c]));
+  return sugerirAcompanantes({
+    productos: products,
+    categorias: categories,
+    base,
+    categoriaAbierta: (id) => {
+      const c = catById.get(id);
+      return !c || !hasAnyHours(c.availability) || isOpenNow(c.availability, timezone, now);
+    },
+    now: now.getTime(),
+  });
 }
 
 function hasOptions(p: ProdItem): boolean {
@@ -143,6 +162,21 @@ export default function MenuClient({
   }, [restaurantId, loyaltyOn, googleAuthEnabled]);
 
   const count = items.reduce((s, i) => s + i.quantity, 0);
+
+  /* «Acompáñalo con…» (CAT-13). Se calcula con la carta que ya está en la
+     página: ni una consulta más. En la ficha, contra el platillo abierto y
+     lo que ya hay en el carrito; en el carrito, contra lo que lleva. */
+  const config = useThemeConfig();
+  const pairingsOn = ordersEnabled && config.suggestPairings !== false;
+  const enCarrito = useMemo(() => items.map((i) => i.productId), [items]);
+  const sheetPairings = useMemo(
+    () => (pairingsOn && selected ? acompanantesPara([selected.id, ...enCarrito], products, categories, timezone) : []),
+    [pairingsOn, selected, enCarrito, products, categories, timezone],
+  );
+  const cartPairings = useMemo(
+    () => (pairingsOn && cartOpen ? acompanantesPara(enCarrito, products, categories, timezone) : []),
+    [pairingsOn, cartOpen, enCarrito, products, categories, timezone],
+  );
   const catIcon = useMemo(() => {
     const m = new Map<string, string>();
     for (const c of categories) m.set(c.id, c.icon?.trim() ? c.icon : 'utensils');
@@ -194,12 +228,13 @@ export default function MenuClient({
           product={selected}
           icon={selected.icon || catIcon.get(selected.category_id ?? '') || 'utensils'}
           ordersEnabled={ordersEnabled}
+          acompanantes={sheetPairings}
           onClose={() => setSelected(null)}
         />
       )}
 
       {ordersEnabled && <CartBar onOpen={() => setCartOpen(true)} />}
-      {ordersEnabled && cartOpen && <CartPanel onClose={() => setCartOpen(false)} />}
+      {ordersEnabled && cartOpen && <CartPanel sugerencias={cartPairings} onClose={() => setCartOpen(false)} />}
       {ordersEnabled && restaurantId && !selected && !cartOpen && !kiosk && (
         <ActiveOrderChip restaurantId={restaurantId} />
       )}

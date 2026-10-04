@@ -18,6 +18,7 @@ import {
 } from '@/lib/actions/memberships';
 import type { RestaurantUser } from '@/lib/db/super-admin';
 import type { MemberRole } from '@/lib/membership-roles';
+import { FIELD_LABEL } from '@/components/admin/field-label';
 
 const empty: SuperState = null;
 const emptyMembership: MembershipState = null;
@@ -29,26 +30,9 @@ const PAPEL: { v: MemberRole; l: string }[] = [
   { v: 'WAITER',  l: 'Mesero' },
 ];
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-  border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)',
-  padding: '10px 12px',
-  color: 'var(--u-text)',
-  fontSize: 15,
-  outline: 'none',
-};
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 12,
-  color: 'var(--u-text-3)',
-  fontWeight: 500,
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase',
-  marginBottom: 6,
-  display: 'block',
-};
+/* El rótulo de campo del panel (D-8): en minúscula, no en mayúsculas de cartel. */
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 function genPassword(): string {
   // Sin caracteres ambiguos (0/O, 1/l) para dictar por teléfono.
@@ -180,14 +164,16 @@ function UserRow({
             action={revokeMembership}
             hiddenFields={{ userId: user.id, restaurantId }}
             label="Quitar de aquí"
-            confirm={`¿Quitarle a ${user.email ?? 'esta persona'} el acceso a este restaurante? Su cuenta de Leogin y sus otros locales no se tocan.`}
+            confirm={`¿Quitarle a ${user.email ?? 'esta persona'} el acceso a este restaurante?`}
+            description="Su cuenta de Leogin y sus otros locales no se tocan."
           />
         ) : (
           <DeleteButton
             action={deleteRestaurantUser}
             hiddenFields={{ userId: user.id, restaurantId }}
             label="Quitar"
-            confirm={`¿Quitar el acceso de ${user.email ?? 'este usuario'}? Ya no podrá iniciar sesión.`}
+            confirm={`¿Quitar el acceso de ${user.email ?? 'este usuario'}?`}
+            description="Ya no podrá iniciar sesión."
           />
         )}
       </div>
@@ -233,7 +219,7 @@ function ResetPasswordForm({
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Nueva contraseña (mín. 8)"
-          style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 14 }}
+          className="adm-field" style={{ fontFamily: 'monospace', fontSize: 14 }}
         />
         <button
           type="button"
@@ -334,7 +320,7 @@ function GrantAccessForm({ restaurantId }: { restaurantId: string }) {
   return (
     <Glass variant="quiet" style={{ padding: 16 }}>
       <p style={{ ...labelStyle, marginBottom: 4 }}>Dar acceso a alguien que ya tiene cuenta</p>
-      <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', margin: '0 0 12px', lineHeight: 1.55 }}>
+      <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '0 0 12px', lineHeight: 1.55 }}>
         Para traspasar el restaurante: nombra dueño al nuevo aquí y después quita al anterior
         arriba. En ese orden — un local no puede quedarse sin ninguna persona dueña.
       </p>
@@ -349,12 +335,12 @@ function GrantAccessForm({ restaurantId }: { restaurantId: string }) {
             type="email"
             required
             placeholder="persona@ejemplo.com"
-            style={inputStyle}
+            className="adm-field"
           />
         </div>
         <div>
           <label htmlFor="grant_role" style={labelStyle}>Papel</label>
-          <select id="grant_role" name="role" defaultValue="OWNER" style={{ ...inputStyle, cursor: 'pointer' }}>
+          <select id="grant_role" name="role" defaultValue="OWNER" className="adm-field" style={{ cursor: 'pointer' }}>
             {PAPEL.map((p) => (
               <option key={p.v} value={p.v} style={{ color: 'var(--u-text)' }}>{p.l}</option>
             ))}
@@ -376,7 +362,7 @@ function GrantAccessForm({ restaurantId }: { restaurantId: string }) {
 
       {state && 'error' in state && <ErrorMsg msg={state.error} />}
       {state && 'ok' in state && (
-        <p style={{ fontSize: 12.5, color: 'var(--c-ok)', margin: '10px 0 0' }}>{state.ok}</p>
+        <p style={{ fontSize: 12, color: 'var(--c-ok)', margin: '10px 0 0' }}>{state.ok}</p>
       )}
     </Glass>
   );
@@ -417,7 +403,7 @@ function AddUserForm({
             type="email"
             required
             placeholder="dueno@restaurante.com"
-            style={inputStyle}
+            className="adm-field"
           />
         </div>
 
@@ -428,7 +414,7 @@ function AddUserForm({
             name="full_name"
             type="text"
             placeholder="Nombre del encargado"
-            style={inputStyle}
+            className="adm-field"
           />
         </div>
 
@@ -491,7 +477,7 @@ function AddUserForm({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Mínimo 8 caracteres"
-              style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 14 }}
+              className="adm-field" style={{ fontFamily: 'monospace', fontSize: 14 }}
             />
             <button
               type="button"

@@ -46,7 +46,7 @@ export default async function AdminPerfilPage({
   if (!restaurant) redirect('/admin/login');
 
   return (
-    <div className="anim-fade-up max-w-[720px]">
+    <div className="anim-fade-up adm-w-read">
       {/* El título lo pone la barra de arriba ("Perfil"). Escribirlo otra vez
           diez píxeles más abajo no informaba: solo empujaba el formulario. */}
       {saved && (

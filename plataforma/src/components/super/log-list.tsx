@@ -129,7 +129,7 @@ function LogRowCard({ row, ocultarObjetivo }: { row: LogRow; ocultarObjetivo: bo
       <Icon name={a.icon} size={16} style={{ color, flexShrink: 0, marginTop: 2 }} />
 
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <div style={{ fontSize: 13.5, color: 'var(--u-text)', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 13, color: 'var(--u-text)', lineHeight: 1.5 }}>
           {conNombre ? a.conObjetivo : a.solo}
           {conNombre && (
             <>
@@ -140,7 +140,7 @@ function LogRowCard({ row, ocultarObjetivo }: { row: LogRow; ocultarObjetivo: bo
           {detalle(row) &&<span style={{ color: 'var(--u-text-4)' }}> · {detalle(row)}</span>}
         </div>
 
-        <div style={{ display: 'flex', gap: 10, fontSize: 11.5, color: 'var(--u-text-4)', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--u-text-4)', flexWrap: 'wrap' }}>
           <span>{row.actorEmail ?? 'cuenta borrada'}</span>
           <span title={new Date(row.createdAt).toLocaleString('es-GT')}>{cuando(row.createdAt)}</span>
           {row.ip && row.ip !== 'unknown' && (

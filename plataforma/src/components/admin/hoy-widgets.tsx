@@ -136,7 +136,7 @@ export async function HouseWidget({
 
         {waiting && (
           <ListLink href={panelHref(base, "/admin/lista-espera")}>
-            <span className="t-mono w-11 shrink-0 text-[19px] font-semibold text-adm-text">
+            <span className="t-mono w-11 shrink-0 text-[18px] font-semibold text-adm-text">
               {waiting.count}
             </span>
             <ListText
@@ -144,7 +144,7 @@ export async function HouseWidget({
               desc={`El primero de la fila llegó ${agoLabel(waiting.since, now)}.`}
             />
             <span
-              className="shrink-0 text-[13.5px] font-semibold"
+              className="shrink-0 text-[13px] font-semibold"
               style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}
             >
               Ver la fila
@@ -272,7 +272,7 @@ export async function RatingsWidget({ data, now, canSeeSurveys }: {
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             {data.distribution.map((n, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className="t-mono w-2.5 text-[11.5px] text-adm-text-4">{5 - i}</span>
+                <span className="t-mono w-2.5 text-[11px] text-adm-text-4">{5 - i}</span>
                 <span
                   className="h-1.5 flex-1 overflow-hidden rounded-adm-full"
                   style={{ background: 'color-mix(in srgb, var(--u-text) 9%, transparent)' }}
@@ -290,7 +290,7 @@ export async function RatingsWidget({ data, now, canSeeSurveys }: {
         {data.latest && (
           <ListRow>
             <div className="min-w-0 flex-1">
-              <div className="text-[13.5px] leading-snug text-adm-text-2">
+              <div className="text-[13px] leading-snug text-adm-text-2">
                 «{data.latest.comment}»
               </div>
               <div className="mt-0.5 text-[13px] text-adm-text-3">
@@ -329,7 +329,7 @@ export function OnlineWidget({ data, showOrders }: { data: OnlineData; showOrder
           {showOrders && <Stat label="Piden" value={`${conversion}%`} />}
         </StatGroup>
         {delta !== null && Math.abs(delta) >= 5 && (
-          <div className="border-t border-adm-border px-4 py-2.5 text-[13.5px] leading-snug text-adm-text-2 md:px-5.5">
+          <div className="border-t border-adm-border px-4 py-2.5 text-[13px] leading-snug text-adm-text-2 md:px-5.5">
             Un día normal recibe <span className="t-mono">{Math.round(data.typicalDay)}</span> visitas.
             Hoy vas{' '}
             <span className="t-mono" style={{ color: delta > 0 ? 'var(--c-ok)' : 'var(--u-text-2)' }}>

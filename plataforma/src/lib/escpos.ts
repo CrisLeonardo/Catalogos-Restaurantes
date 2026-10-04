@@ -3,6 +3,7 @@
 
 import type { OrderWithItems } from '@/lib/db/orders';
 import { labelOf, countsAsCash } from '@/lib/payment-method';
+import { shortOrderNumber } from '@/lib/order-number';
 
 // ── Fecha y hora del ticket ──────────────────────────────────────────────────
 /* Estos builders corren en DOS sitios con relojes distintos:
@@ -202,7 +203,10 @@ export function buildKitchenEscPos(
   // ese papel lo recoge el cantinero. En mayúsculas porque a doble tamaño
   // y a un metro de distancia es lo que se lee.
   b.bold(true).size(2).line((opts.station?.name ?? 'Cocina').toUpperCase()).size(1).bold(false)
-   .bold(true).size(2).line(`#${order.order_number}`).size(1).bold(false)
+   // «#57» y no «#ORD-2026-00057»: a doble tamaño, en papel de 58 mm, el
+   // número largo ocupaba el renglón entero (auditoría 2026-10-02, PED-03).
+   // El recibo conserva el número completo.
+   .bold(true).size(2).line(shortOrderNumber(order.order_number)).size(1).bold(false)
    .line(`${timeStr}  ${typeLabel}`);
 
   if (opts.station?.parte) b.line(opts.station.parte);

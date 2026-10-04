@@ -24,6 +24,8 @@ import {
   type BillingState,
 } from '@/lib/actions/billing';
 import type { BillingConfig, Invoice } from '@/lib/db/billing';
+import { fechaCorta } from '@/lib/dates';
+import { FIELD_LABEL } from '@/components/admin/field-label';
 
 const CONCEPT_LABEL: Record<string, string> = {
   MONTHLY: 'Mensualidad', SETUP: 'Implementación', PRORATE: 'Prorrateo', OTHER: 'Otro',
@@ -34,15 +36,9 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string }> 
   CANCELLED: { label: 'Cancelado', color: '#94a3b8', bg: 'color-mix(in srgb, var(--u-text) 8%, transparent)' },
 };
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
-  borderRadius: 11, padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-};
 const optionStyle: React.CSSProperties = { color: '#000', background: '#fff' };
-const labelStyle: React.CSSProperties = {
-  fontSize: 10.5, color: 'var(--u-text-3)', fontWeight: 600,
-  letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6, display: 'block',
-};
+/* El rótulo de campo del panel (D-8): en minúscula, no en mayúsculas de cartel. */
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 function todayYmd() { return new Date().toISOString().slice(0, 10); }
 function isOverdue(inv: Invoice) {
@@ -80,7 +76,7 @@ export default function BillingManager({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {toast && (
         <div style={{
-          padding: '10px 14px', borderRadius: 12, fontSize: 13.5, fontWeight: 500,
+          padding: '10px 14px', borderRadius: 'var(--radius-lg)', fontSize: 13, fontWeight: 500,
           background: toast.ok ? 'var(--c-ok-bg)' : 'var(--c-danger-bg)',
           border: `1px solid ${toast.ok ? 'var(--c-ok-line)' : 'var(--c-danger-line)'}`,
           color: toast.ok ? 'var(--c-ok)' : 'var(--c-danger)',
@@ -99,7 +95,7 @@ export default function BillingManager({
 
       {/* Acciones de cobro */}
       <Glass variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>Generar cobros</div>
+        <div className="adm-label">Generar cobros</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           <ActionButton action={generateMonthlyForRestaurant} hidden={{ restaurantId }} label="Mensualidad de este mes" onResult={setToast} />
           <ActionButton action={generateProrate} hidden={{ restaurantId }} label="Prorrateo (resto del mes)" onResult={setToast} />
@@ -115,7 +111,7 @@ export default function BillingManager({
       {/* Facturas */}
       <Glass variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <div className="t-kicker" style={{ fontSize: 9.5 }}>Historial de cobros</div>
+          <div className="adm-label">Historial de cobros</div>
           {pendingTotal > 0 && (
             <div style={{ fontSize: 13, color: 'var(--c-warn)', fontWeight: 600 }}>
               Pendiente: {fmtMoney(pendingTotal, currency)}
@@ -161,7 +157,7 @@ function ConfigCard({
     <Glass variant="quiet" style={{ padding: 18 }}>
       <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <input type="hidden" name="restaurantId" value={restaurantId} />
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>Configuración del cobro</div>
+        <div className="adm-label">Configuración del cobro</div>
 
         {config?.suspended_for_nonpayment && (
           <SuspensionBanner restaurantId={restaurantId} onResult={onResult} />
@@ -169,7 +165,7 @@ function ConfigCard({
 
         {config?.auto_price === false && Math.abs((config?.monthly_fee ?? 0) - suggestedFee) >= 1 && (
           <div style={{
-            padding: '9px 12px', borderRadius: 10, fontSize: 12.5, fontWeight: 600,
+            padding: '9px 12px', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 600,
             background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)',
           }}>
             ⚠ Precio manual desincronizado: cobra {fmtMoney(config?.monthly_fee ?? 0, currency)}/mes pero el precio
@@ -180,7 +176,7 @@ function ConfigCard({
 
         {!config?.suspended_for_nonpayment && config?.admin_override_suspend && (
           <div style={{
-            padding: '9px 12px', borderRadius: 10, fontSize: 12.5, fontWeight: 600,
+            padding: '9px 12px', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 600,
             background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', color: 'var(--c-warn)',
           }}>
             ⚡ Override activo: la suspensión automática por impago está pausada para este restaurante.
@@ -190,7 +186,7 @@ function ConfigCard({
 
         {/* Toggle de precio automático */}
         <label style={{
-          display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', borderRadius: 11,
+          display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', borderRadius: 'var(--radius-md)',
           background: auto ? 'var(--c-ok-bg)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
           border: `1px solid ${auto ? 'var(--c-ok-line)' : 'var(--u-hair)'}`, cursor: 'pointer',
         }}>
@@ -199,10 +195,10 @@ function ConfigCard({
             onChange={(e) => setAuto(e.target.checked)} style={{ width: 16, height: 16 }}
           />
           <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text)' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text)' }}>
               Precio automático según el plan
             </span>
-            <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>
+            <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
               {auto
                 ? `Plan ${planName}: ${fmtMoney(suggestedFee, currency)}/mes (incluye sucursales extra). Se actualiza solo al cambiar de plan.`
                 : 'Precio manual: escribe el monto que quieras (descuento, trato especial).'}
@@ -213,22 +209,22 @@ function ConfigCard({
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
           <div>
             <label style={labelStyle}>Implementación (una vez)</label>
-            <input name="setup_fee" type="number" min="0" step="0.01" defaultValue={config?.setup_fee ?? 0} style={inputStyle} />
+            <input name="setup_fee" type="number" min="0" step="0.01" defaultValue={config?.setup_fee ?? 0} className="adm-field" />
           </div>
           <div>
             <label style={labelStyle}>Mensualidad {auto && <span style={{ color: 'var(--c-ok)' }}>· auto</span>}</label>
             {auto ? (
-              <div style={{ ...inputStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--u-text)', opacity: 0.85 }}>
+              <div className="adm-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--u-text)', opacity: 0.85 }}>
                 <span style={{ fontWeight: 700, fontFamily: 'var(--ui-font-mono)' }}>{fmtMoney(suggestedFee, currency)}</span>
                 <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{planName}</span>
               </div>
             ) : (
-              <input name="monthly_fee" type="number" min="0" step="0.01" defaultValue={config?.monthly_fee ?? suggestedFee} style={inputStyle} />
+              <input name="monthly_fee" type="number" min="0" step="0.01" defaultValue={config?.monthly_fee ?? suggestedFee} className="adm-field" />
             )}
           </div>
           <div>
             <label style={labelStyle}>Moneda</label>
-            <select name="currency" defaultValue={config?.currency ?? 'GTQ'} style={inputStyle}>
+            <select name="currency" defaultValue={config?.currency ?? 'GTQ'} className="adm-field">
               <option value="GTQ" style={optionStyle}>GTQ (Q)</option>
               <option value="MXN" style={optionStyle}>MXN ($)</option>
               <option value="USD" style={optionStyle}>USD ($)</option>
@@ -236,29 +232,29 @@ function ConfigCard({
           </div>
           <div>
             <label style={labelStyle}>Día de cobro</label>
-            <input name="billing_day" type="number" min="1" max="28" defaultValue={config?.billing_day ?? 1} style={inputStyle} />
+            <input name="billing_day" type="number" min="1" max="28" defaultValue={config?.billing_day ?? 1} className="adm-field" />
           </div>
           <div>
             <label style={labelStyle}>Días de gracia</label>
-            <input name="grace_days" type="number" min="0" max="90" defaultValue={config?.grace_days ?? ''} placeholder={`${globalGraceDays} (global)`} style={inputStyle} />
+            <input name="grace_days" type="number" min="0" max="90" defaultValue={config?.grace_days ?? ''} placeholder={`${globalGraceDays} (global)`} className="adm-field" />
           </div>
           <div>
             <label style={labelStyle}>Inicio del servicio</label>
-            <input name="started_at" type="date" defaultValue={config?.started_at ?? ''} style={inputStyle} />
+            <input name="started_at" type="date" defaultValue={config?.started_at ?? ''} className="adm-field" />
           </div>
         </div>
 
         <div>
           <label style={labelStyle}>Notas internas</label>
-          <input name="notes" type="text" defaultValue={config?.notes ?? ''} placeholder="Descuento acordado, observaciones…" style={inputStyle} />
+          <input name="notes" type="text" defaultValue={config?.notes ?? ''} placeholder="Descuento acordado, observaciones…" className="adm-field" />
         </div>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: 'var(--u-text-2)', cursor: 'pointer' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--u-text-2)', cursor: 'pointer' }}>
           <input type="checkbox" name="active" defaultChecked={config?.active ?? true} style={{ width: 16, height: 16 }} />
           Cobro activo (se le sigue facturando la mensualidad)
         </label>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: config?.admin_override_suspend ? 'var(--c-warn)' : 'var(--u-text-2)', cursor: 'pointer' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: config?.admin_override_suspend ? 'var(--c-warn)' : 'var(--u-text-2)', cursor: 'pointer' }}>
           <input type="checkbox" name="admin_override_suspend" defaultChecked={config?.admin_override_suspend ?? false} style={{ width: 16, height: 16 }} />
           Pausar suspensión automática (override manual)
           {config?.admin_override_suspend && <span style={{ fontSize: 11, color: 'var(--c-warn)', fontWeight: 700 }}>ACTIVO</span>}
@@ -294,7 +290,7 @@ function ActionButton({
     <form action={formAction} style={{ display: 'inline-flex' }}>
       {Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
       <button type="submit" disabled={pending} className="press" style={{
-        padding: '8px 14px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5,
+        padding: '8px 14px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12,
         border: '1px solid var(--u-hair-2)', cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.55 : 1,
         background: danger ? 'var(--c-danger-bg)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
         color: danger ? 'var(--c-danger)' : 'var(--u-text)', whiteSpace: 'nowrap',
@@ -319,7 +315,7 @@ function ManualInvoiceForm({
   if (!open) {
     return (
       <button onClick={() => setOpen(true)} className="press" style={{
-        alignSelf: 'flex-start', padding: '8px 14px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5,
+        alignSelf: 'flex-start', padding: '8px 14px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12,
         border: '1px dashed var(--u-hair-2)', background: 'transparent', color: 'var(--u-text-3)', cursor: 'pointer',
       }}>+ Otro cobro</button>
     );
@@ -329,15 +325,15 @@ function ManualInvoiceForm({
       <input type="hidden" name="restaurantId" value={restaurantId} />
       <div style={{ flex: '2 1 160px' }}>
         <label style={labelStyle}>Concepto</label>
-        <input name="description" type="text" placeholder="Cambio de diseño, dominio…" style={inputStyle} required />
+        <input name="description" type="text" placeholder="Cambio de diseño, dominio…" className="adm-field" required />
       </div>
       <div style={{ flex: '1 1 90px' }}>
         <label style={labelStyle}>Monto</label>
-        <input name="amount" type="number" min="0" step="0.01" style={inputStyle} required />
+        <input name="amount" type="number" min="0" step="0.01" className="adm-field" required />
       </div>
       <div style={{ flex: '1 1 120px' }}>
         <label style={labelStyle}>Vence</label>
-        <input name="due_date" type="date" defaultValue={todayYmd()} style={inputStyle} />
+        <input name="due_date" type="date" defaultValue={todayYmd()} className="adm-field" />
       </div>
       <button type="submit" disabled={pending} className="press btn-accent" style={{
         padding: '10px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer', opacity: pending ? 0.6 : 1,
@@ -373,20 +369,20 @@ function InvoiceRow({
 
   return (
     <div style={{
-      padding: '10px 12px', borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
+      padding: '10px 12px', borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
       border: `1px solid ${overdue ? 'var(--c-danger-line)' : 'var(--u-hair)'}`,
       display: 'flex', flexDirection: 'column', gap: 8,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text)' }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text)' }}>
           {inv.description ?? CONCEPT_LABEL[inv.concept]}
         </span>
         <span style={{
-          fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+          fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-full)',
           background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: 'var(--u-text-3)', letterSpacing: '0.05em',
         }}>{CONCEPT_LABEL[inv.concept]}</span>
         <span style={{
-          fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+          fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-full)',
           background: overdue ? 'var(--c-danger-bg)' : meta.bg,
           color: overdue ? 'var(--c-danger)' : meta.color, letterSpacing: '0.05em',
         }}>{overdue ? 'VENCIDO' : meta.label.toUpperCase()}</span>
@@ -395,9 +391,9 @@ function InvoiceRow({
         </span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontSize: 11.5, color: 'var(--u-text-4)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontSize: 11, color: 'var(--u-text-4)' }}>
         {inv.due_date && <span>Vence {inv.due_date}</span>}
-        {inv.status === 'PAID' && inv.paid_at && <span>Pagado {inv.paid_at.slice(0, 10)}{inv.payment_method ? ` · ${inv.payment_method}` : ''}</span>}
+        {inv.status === 'PAID' && inv.paid_at && <span>Pagado el {fechaCorta(inv.paid_at)}{inv.payment_method ? ` · ${inv.payment_method}` : ''}</span>}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {inv.status === 'PENDING' ? (
             <button onClick={() => setPayOpen((v) => !v)} className="press" style={miniBtn('var(--c-ok)')}>Registrar pago</button>
@@ -436,11 +432,11 @@ function PayForm({
       <input type="hidden" name="restaurantId" value={restaurantId} />
       <div style={{ flex: '1 1 90px' }}>
         <label style={labelStyle}>Monto pagado</label>
-        <input name="paid_amount" type="number" min="0" step="0.01" defaultValue={inv.amount} style={inputStyle} />
+        <input name="paid_amount" type="number" min="0" step="0.01" defaultValue={inv.amount} className="adm-field" />
       </div>
       <div style={{ flex: '1 1 120px' }}>
         <label style={labelStyle}>Método</label>
-        <select name="payment_method" defaultValue="Transferencia" style={inputStyle}>
+        <select name="payment_method" defaultValue="Transferencia" className="adm-field">
           <option style={optionStyle}>Transferencia</option>
           <option style={optionStyle}>Efectivo</option>
           <option style={optionStyle}>Depósito</option>
@@ -467,7 +463,7 @@ function SuspensionBanner({
 
   return (
     <div style={{
-      padding: '12px 14px', borderRadius: 10, fontSize: 12.5,
+      padding: '12px 14px', borderRadius: 'var(--radius-md)', fontSize: 12,
       background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
     }}>
@@ -480,7 +476,7 @@ function SuspensionBanner({
       <form action={formAction} style={{ flexShrink: 0 }}>
         <input type="hidden" name="restaurantId" value={restaurantId} />
         <button type="submit" disabled={pending} className="press" style={{
-          padding: '8px 16px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 12.5,
+          padding: '8px 16px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 12,
           border: '1px solid var(--c-ok-line)', background: 'var(--c-ok-bg)',
           color: 'var(--c-ok)', cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.6 : 1,
           whiteSpace: 'nowrap',
@@ -494,7 +490,7 @@ function SuspensionBanner({
 
 function miniBtn(color: string): React.CSSProperties {
   return {
-    padding: '8px 14px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5,
+    padding: '8px 14px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12,
     border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color, cursor: 'pointer', whiteSpace: 'nowrap',
   };
 }

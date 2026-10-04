@@ -12,6 +12,7 @@ import { useActionState, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/icons';
+import { FIELD_LABEL } from '@/components/admin/field-label';
 import {
   resetAccountPassword,
   changeAccountEmail,
@@ -89,7 +90,7 @@ function ResetPasswordCard({ cuenta, conGoogle }: { cuenta: RescueAccount; conGo
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Mínimo 8 caracteres"
-            style={inputStyle}
+            className="adm-field"
           />
         </div>
         <Button type="button" variant="secondary" onClick={() => setPassword(generarPassword())}>
@@ -192,7 +193,7 @@ function ChangeEmailCard({ cuenta }: { cuenta: RescueAccount }) {
             disabled={bloqueado}
             defaultValue=""
             placeholder={cuenta.email ?? 'nombre@dominio.com'}
-            style={{ ...inputStyle, opacity: bloqueado ? 0.5 : 1 }}
+            className="adm-field" style={{ opacity: bloqueado ? 0.5 : 1 }}
           />
         </div>
         <Button type="submit" disabled={pending || bloqueado}>
@@ -249,7 +250,7 @@ function Seccion({
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         <Icon name={icon} size={17} style={{ color: 'var(--u-text-4)', flexShrink: 0, marginTop: 2 }} />
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--u-text)' }}>{titulo}</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>{titulo}</div>
           <p style={{ fontSize: 13, color: 'var(--u-text-4)', margin: '3px 0 0', lineHeight: 1.55 }}>
             {descripcion}
           </p>
@@ -269,7 +270,7 @@ function Aviso({ tono, children }: { tono: 'warn' | 'danger'; children: React.Re
         padding: '10px 12px', borderRadius: 'var(--radius-md)',
         background: `color-mix(in srgb, ${color} 10%, transparent)`,
         border: `1px solid color-mix(in srgb, ${color} 26%, transparent)`,
-        fontSize: 12.5, lineHeight: 1.55, color: 'var(--u-text-2, var(--u-text))',
+        fontSize: 12, lineHeight: 1.55, color: 'var(--u-text-2, var(--u-text))',
       }}
     >
       <Icon name="alertCircle" size={15} style={{ color, flexShrink: 0, marginTop: 1 }} />
@@ -287,7 +288,7 @@ function Resultado({ state }: { state: AccountActionState }) {
       role="status"
       style={{
         display: 'flex', gap: 8, alignItems: 'flex-start',
-        fontSize: 12.5, lineHeight: 1.55, color,
+        fontSize: 12, lineHeight: 1.55, color,
       }}
     >
       <Icon name={esError ? 'alertCircle' : 'checkCircle'} size={15} style={{ flexShrink: 0, marginTop: 1 }} />
@@ -306,27 +307,9 @@ function generarPassword(): string {
   return out;
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-  border: '1px solid var(--adm-border, var(--u-hair-2))',
-  borderRadius: 'var(--radius-md)',
-  padding: '10px 12px',
-  color: 'var(--u-text)',
-  // 16px es el piso que evita que Safari amplíe la pantalla al enfocar.
-  fontSize: 16,
-  outline: 'none',
-};
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 11.5,
-  color: 'var(--u-text-3)',
-  fontWeight: 600,
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase',
-  marginBottom: 6,
-  display: 'block',
-};
+/* El rótulo de campo del panel (D-8): en minúscula, no en mayúsculas de cartel. */
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 const notaStyle: React.CSSProperties = {
   fontSize: 12,

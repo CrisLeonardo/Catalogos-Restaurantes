@@ -7,6 +7,7 @@ import { StatCard, IncomeChart, EmptyState } from '@/components/super/ui';
 import { getFinanceOverview } from '@/lib/db/billing';
 import { reminderHref } from '@/lib/reminder';
 import { fmtMoney, currencySymbol } from '@/lib/money';
+import { fechaCorta } from '@/lib/dates';
 
 export const metadata = { title: 'Finanzas — Super Admin' };
 export const dynamic = 'force-dynamic';
@@ -31,13 +32,13 @@ export default async function FinanzasResumenPage() {
           growth={growth}
           sub={growth == null ? `mes pasado: ${fmtMoney(fin.collectedLastMonth, fin.currency)}` : undefined}
         />
-        <StatCard label="Ingreso mensual (MRR)" value={fmtMoney(fin.mrr, fin.currency)} icon="wallet" tone="accent" sub={`${fin.activeBilling} restaurante(s) facturando`} />
+        <StatCard label="Ingreso mensual (MRR)" value={fmtMoney(fin.mrr, fin.currency)} icon="wallet" tone="accent" sub={`${fin.activeBilling} ${fin.activeBilling === 1 ? 'restaurante facturando' : 'restaurantes facturando'}`} />
         <StatCard
           label="Pendiente de cobro"
           value={fmtMoney(fin.pendingTotal, fin.currency)}
           icon="clock"
           tone={fin.pendingTotal > 0 ? 'warn' : undefined}
-          sub={fin.receivables.length > 0 ? `${fin.receivables.length} restaurante(s)` : 'nada pendiente'}
+          sub={fin.receivables.length > 0 ? `${fin.receivables.length} ${fin.receivables.length === 1 ? 'restaurante' : 'restaurantes'}` : 'nada pendiente'}
         />
         <StatCard
           label="Vencido"
@@ -70,7 +71,7 @@ export default async function FinanzasResumenPage() {
       <section>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
           <Icon name="bellRing" size={16} style={{ color: 'var(--brand-accent-ink)' }} />
-          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--u-text)', margin: 0 }}>
+          <h2 style={{ fontWeight: 600, fontSize: 15, color: 'var(--u-text)', margin: 0 }}>
             Cuentas por cobrar
           </h2>
           {fin.receivables.length > 0 && <Badge variant={fin.overdueTotal > 0 ? 'danger' : 'warn'}>{fin.receivables.length}</Badge>}
@@ -78,12 +79,12 @@ export default async function FinanzasResumenPage() {
 
         {fin.receivables.length === 0 ? (
           <Card style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ width: 36, height: 36, borderRadius: 11, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--c-ok) 14%, transparent)', color: 'var(--c-ok)', flexShrink: 0 }}>
+            <span style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--c-ok) 14%, transparent)', color: 'var(--c-ok)', flexShrink: 0 }}>
               <Icon name="checkCircle" size={18} />
             </span>
             <div>
               <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>Nadie te debe nada</div>
-              <div className="t-mute" style={{ fontSize: 12.5, marginTop: 2 }}>Todos los cobros emitidos están pagados. 🎉</div>
+              <div className="t-mute" style={{ fontSize: 12, marginTop: 2 }}>Todos los cobros emitidos están pagados. 🎉</div>
             </div>
           </Card>
         ) : (
@@ -103,12 +104,12 @@ export default async function FinanzasResumenPage() {
                       <Link href={`/super/restaurantes/${r.restaurantId}/cobro`} style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {r.name}
                       </Link>
-                      {r.overdueTotal > 0 && <Badge variant="danger" style={{ fontSize: 10 }}>Vencido</Badge>}
-                      {r.status === 'suspended' && <Badge variant="neutral" style={{ fontSize: 10 }}>Suspendido</Badge>}
+                      {r.overdueTotal > 0 && <Badge variant="danger" style={{ fontSize: 11 }}>Vencido</Badge>}
+                      {r.status === 'suspended' && <Badge variant="neutral" style={{ fontSize: 11 }}>Suspendido</Badge>}
                     </div>
-                    <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 3 }}>
-                      {r.invoices.length} cobro(s) pendiente(s)
-                      {r.lastPaidAt ? ` · último pago ${r.lastPaidAt.slice(0, 10)}` : ' · nunca ha pagado'}
+                    <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 3 }}>
+                      {r.invoices.length} {r.invoices.length === 1 ? 'cobro pendiente' : 'cobros pendientes'}
+                      {r.lastPaidAt ? ` · último pago ${fechaCorta(r.lastPaidAt)}` : ' · nunca ha pagado'}
                     </div>
                   </div>
                   <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 800, fontSize: 15, color: r.overdueTotal > 0 ? 'var(--c-danger)' : 'var(--c-warn)', whiteSpace: 'nowrap' }}>
@@ -125,7 +126,7 @@ export default async function FinanzasResumenPage() {
                         Recordar pago
                       </Button>
                     ) : (
-                      <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', alignSelf: 'center' }} title="Agrega WhatsApp o email en la pestaña Información del restaurante">
+                      <span style={{ fontSize: 11, color: 'var(--u-text-4)', alignSelf: 'center' }} title="Agrega WhatsApp o email en la pestaña Información del restaurante">
                         sin contacto
                       </span>
                     )}
@@ -162,14 +163,14 @@ export default async function FinanzasResumenPage() {
                 }}
               >
                 <span style={{
-                  width: 22, height: 22, borderRadius: 7, flexShrink: 0, display: 'grid', placeItems: 'center',
+                  width: 22, height: 22, borderRadius: 'var(--radius-sm)', flexShrink: 0, display: 'grid', placeItems: 'center',
                   fontSize: 11, fontWeight: 800, fontFamily: 'var(--ui-font-mono)',
                   background: i === 0 ? 'color-mix(in srgb, var(--brand-accent) 16%, transparent)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
                   color: i === 0 ? 'var(--brand-accent)' : 'var(--u-text-3)',
                 }}>
                   {i + 1}
                 </span>
-                <span style={{ flex: 1, fontWeight: 600, fontSize: 13.5, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ flex: 1, fontWeight: 600, fontSize: 13, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {t.name}
                 </span>
                 <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 13, color: 'var(--u-text-2)' }}>

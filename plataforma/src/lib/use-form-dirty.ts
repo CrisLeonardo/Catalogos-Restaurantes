@@ -86,3 +86,14 @@ export function useFormDirty(): FormDirty {
 
   return { ref, dirty, markSaved };
 }
+
+/* Lo mismo para pantallas sin <form>, cuyo estado vive en React (un objeto
+   `patch` que se manda entero al guardar). Se compara contra la foto del
+   último guardado, no contra una bandera: quien toca un interruptor y lo
+   devuelve a como estaba no dejó nada pendiente. */
+export function useValueDirty<T>(value: T): { dirty: boolean; markSaved: () => void } {
+  const now = JSON.stringify(value);
+  const [baseline, setBaseline] = useState(now);
+  const markSaved = useCallback(() => setBaseline(now), [now]);
+  return { dirty: now !== baseline, markSaved };
+}

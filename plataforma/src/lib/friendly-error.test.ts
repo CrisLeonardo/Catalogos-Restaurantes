@@ -9,7 +9,7 @@ import { friendlyError, GENERIC_ERROR } from './friendly-error';
 describe('friendlyError', () => {
   it('traduce la caída de red más común', () => {
     expect(friendlyError(new TypeError('Failed to fetch')))
-      .toBe('No se pudo conectar. Revisá tu internet e intentá otra vez.');
+      .toBe('No se pudo conectar. Revisa tu internet e intenta otra vez.');
   });
 
   it('convierte los 500 en algo accionable', () => {
@@ -50,6 +50,6 @@ describe('friendlyError', () => {
   });
 
   it('acepta un string suelto, no solo Error', () => {
-    expect(friendlyError('Failed to fetch')).toContain('Revisá tu internet');
+    expect(friendlyError('Failed to fetch')).toContain('Revisa tu internet');
   });
 });

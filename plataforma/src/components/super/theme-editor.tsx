@@ -5,7 +5,6 @@
    Aquí Leonardo "diseña" el sitio de cada restaurante. */
 
 import { useMemo, useState, useTransition, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import ImageUpload from '@/components/admin/image-upload';
@@ -30,6 +29,7 @@ import {
 } from '@/lib/theme/defaults';
 import { buildThemeVars } from '@/lib/theme/resolve';
 import { applyTemplateToConfig, type BuiltinTemplate } from '@/lib/theme/templates';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 interface Props {
   restaurantId: string;
@@ -44,10 +44,10 @@ interface Props {
 }
 
 export default function ThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss: initialCss, templates: initialTemplates = [], saveAction, showTemplates = true, showAdvanced = true, showOrdersAndCurrency = true }: Props) {
-  const router = useRouter();
   const [config, setConfig] = useState<ThemeConfig>(initialConfig);
   const [content, setContent] = useState<ThemeContent>(initialContent);
   const [css, setCss] = useState(initialCss);
+  const { confirm, dialog } = useConfirm();
   const [isPending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -102,10 +102,10 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
     });
   }
 
-  function removeTemplate() {
+  async function removeTemplate() {
     const tpl = templates.find((t) => t.id === selectedTpl);
     if (!tpl) return;
-    if (!window.confirm(`¿Borrar la plantilla "${tpl.name}"?`)) return;
+    if (!(await confirm({ title: `¿Borrar la plantilla «${tpl.name}»?`, confirmLabel: 'Borrar' }))) return;
     startTpl(async () => {
       const res = await deleteThemeTemplate(tpl.id);
       if (res.error) { setTplMsg(`Error: ${res.error}`); return; }
@@ -147,12 +147,13 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
       const action = saveAction ?? saveRestaurantTheme;
       const res = await action({ restaurantId, config, content, customCss: css });
       if (res.error) setMsg(`Error: ${res.error}`);
-      else { setMsg('Guardado ✓'); router.refresh(); }
+      else setMsg('Guardado ✓');
     });
   }
 
   return (
     <div className="theme-editor-layout">
+    {dialog}
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
       {/* ── Plantillas ── */}
       {showTemplates && <Section title="Plantillas de tema">
@@ -162,7 +163,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
             Galería prediseñada (7 estructuras × 22 estilos)
           </summary>
           <div style={{ paddingTop: 10 }}>
-            <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedBuiltin} />
+            <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedBuiltin} brandName={config.brandName} />
           </div>
         </details>
         <div style={{ height: 1, background: 'var(--u-hair)', margin: '4px 0' }} />
@@ -175,15 +176,15 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
             <select
               value={selectedTpl}
               onChange={(e) => setSelectedTpl(e.target.value)}
-              style={{ ...selectStyle, flex: 1, minWidth: 160, cursor: 'pointer' }}
+              className="adm-field" style={{ ...selectStyle, flex: 1, minWidth: 160 }}
             >
               <option value="" style={optionStyle}>Elegir plantilla…</option>
               {templates.map((t) => <option key={t.id} value={t.id} style={optionStyle}>{t.name}</option>)}
             </select>
-            <button type="button" onClick={applyTemplate} disabled={!selectedTpl || tplPending} className="press btn-white" style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 12.5, border: 'none', cursor: 'pointer', opacity: !selectedTpl || tplPending ? 0.55 : 1 }}>
+            <button type="button" onClick={applyTemplate} disabled={!selectedTpl || tplPending} className="press btn-white" style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer', opacity: !selectedTpl || tplPending ? 0.55 : 1 }}>
               Aplicar
             </button>
-            <button type="button" onClick={removeTemplate} disabled={!selectedTpl || tplPending} className="press" style={{ padding: '9px 13px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5, border: '1px solid var(--c-danger-line)', background: 'transparent', color: 'var(--c-danger)', cursor: 'pointer', opacity: !selectedTpl || tplPending ? 0.55 : 1 }}>
+            <button type="button" onClick={removeTemplate} disabled={!selectedTpl || tplPending} className="press" style={{ padding: '9px 13px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12, border: '1px solid var(--c-danger-line)', background: 'transparent', color: 'var(--c-danger)', cursor: 'pointer', opacity: !selectedTpl || tplPending ? 0.55 : 1 }}>
               Borrar
             </button>
           </div>
@@ -194,13 +195,13 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
             value={tplName}
             onChange={(e) => setTplName(e.target.value)}
             placeholder="Nombre para el tema actual…"
-            style={{ ...inputStyle, flex: 1, minWidth: 160 }}
+            className="adm-field" style={{ flex: 1, minWidth: 160 }}
           />
-          <button type="button" onClick={saveAsTemplate} disabled={!tplName.trim() || tplPending} className="press" style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5, border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: 'var(--u-text)', cursor: 'pointer', opacity: !tplName.trim() || tplPending ? 0.55 : 1 }}>
+          <button type="button" onClick={saveAsTemplate} disabled={!tplName.trim() || tplPending} className="press" style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12, border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: 'var(--u-text)', cursor: 'pointer', opacity: !tplName.trim() || tplPending ? 0.55 : 1 }}>
             {tplPending ? 'Guardando…' : 'Guardar como plantilla'}
           </button>
         </div>
-        {tplMsg && <span style={{ fontSize: 12.5, color: tplMsg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>{tplMsg}</span>}
+        {tplMsg && <span style={{ fontSize: 12, color: tplMsg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>{tplMsg}</span>}
       </Section>}
 
       {/* ── Marca ── */}
@@ -213,7 +214,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         </Field>
         <Field label="Ícono de app instalada (PWA)">
           <ImageUpload restaurantId={restaurantId} currentUrl={config.pwaIconUrl} folder="pwa-icon" mode="icon" bgColor={config.colorBg} onUpload={(u) => setC('pwaIconUrl', u)} />
-          <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 4 }}>
+          <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 4 }}>
             Aparece en la pantalla de inicio cuando el cliente instala la app. Se convierte automáticamente a un ícono cuadrado (PNG 512×512) sobre el color de fondo del tema. Si no se sube, se usa el logo.
           </p>
         </Field>
@@ -260,7 +261,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
       <Section title="Glass y forma">
         <Segmented label="Estilo glass" value={config.glassIntensity} options={[['translucido', 'Translúcido'], ['esmerilado', 'Esmerilado'], ['solido', 'Denso']]} onChange={(v) => setC('glassIntensity', v as ThemeConfig['glassIntensity'])} />
         <Slider label="Cantidad de glass" value={config.glassAmount ?? 100} min={0} max={100} step={1} format={(v) => `${v}%`} onChange={(v) => setC('glassAmount', v)} />
-        <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+        <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: -4 }}>
           100 % = efecto completo del estilo seleccionado · 0 % = sólido puro (sin blur ni transparencia)
         </p>
         <Slider label="Redondeo" value={config.cornerRadius} min={0.4} max={1.8} step={0.1} onChange={(v) => setC('cornerRadius', v)} />
@@ -277,7 +278,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         <Slider label="Profundidad de sombras (tarjetas)" value={config.cardShadow} min={0} max={1.6} step={0.1} onChange={(v) => setC('cardShadow', v)} />
         <Slider label="Oscuridad del velo de modales" value={config.scrimOpacity} min={0} max={0.85} step={0.05} onChange={(v) => setC('scrimOpacity', v)} />
         <div style={{ height: 1, background: 'var(--u-hair)', margin: '4px 0' }} />
-        <p style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>Badge “No disponible” (vacío = automático por esquema).</p>
+        <p style={{ fontSize: 11, color: 'var(--u-text-4)' }}>Badge “No disponible” (vacío = automático por esquema).</p>
         <ColorOrAuto label="Fondo del badge" value={config.badgeBg} fallback="#1a1a1a" onChange={(v) => setC('badgeBg', v)} />
         <ColorOrAuto label="Texto del badge" value={config.badgeText} fallback="#ffffff" onChange={(v) => setC('badgeText', v)} />
       </Section>
@@ -341,6 +342,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         <Toggle label="Íconos de categoría" value={config.showCategoryIcons} onChange={(v) => setC('showCategoryIcons', v)} />
         <Toggle label="Mostrar tags" value={config.showTags} onChange={(v) => setC('showTags', v)} />
         <Toggle label="Favoritos como tarjeta destacada (máx. 3)" value={config.featuredFavorites} onChange={(v) => setC('featuredFavorites', v)} />
+        <Toggle label="Sugerir acompañamientos («Acompáñalo con…»)" value={config.suggestPairings} onChange={(v) => setC('suggestPairings', v)} />
       </Section>
 
       {/* ── Pedidos / Moneda ── */}
@@ -371,15 +373,15 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         )}
         <Segmented label="Color activo en checkout (tabs/opciones)" value={config.checkoutActiveColor} options={[['text', 'Blanco/texto'], ['accent', 'Acento del restaurante']]} onChange={(v) => setC('checkoutActiveColor', v as ThemeConfig['checkoutActiveColor'])} />
         <Toggle label="Glass en campos del formulario" value={config.checkoutFormGlass} onChange={(v) => setC('checkoutFormGlass', v)} />
-        <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+        <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: -4 }}>
           Agrupa los campos (nombre, mesa, notas…) en una tarjeta con efecto glass + blur. Útil cuando el fondo es una imagen o watermark intenso.
         </p>
         <Toggle label="Glass en opciones de pago (efectivo/tarjeta)" value={config.checkoutPayGlass} onChange={(v) => setC('checkoutPayGlass', v)} />
-        <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+        <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: -4 }}>
           Da a las tarjetas de Efectivo y Tarjeta un fondo glass con blur para que se distingan con cualquier paleta (resuelve el «no se ve qué dice»).
         </p>
         <Segmented label="Sombra de texto en checkout (legibilidad)" value={config.checkoutTextShadow} options={SHADOW_OPTIONS} onChange={(v) => setC('checkoutTextShadow', v as ThemeConfig['checkoutTextShadow'])} />
-        <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+        <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: -4 }}>
           Aplica una sombra a títulos y etiquetas del checkout para que el texto resalte sobre fondos vivos. Cada texto del menú también puede llevar su propia sombra en la sección de tipografía.
         </p>
         <TextCtl label="Símbolo de moneda" value={config.currencySymbol} onChange={(v) => setC('currencySymbol', v)} />
@@ -461,7 +463,9 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
             <button
               type="button"
               className="press"
-              onClick={() => { if (window.confirm('¿Limpiar el CSS personalizado?')) setCss(''); }}
+              onClick={async () => {
+                if (await confirm({ title: '¿Limpiar el CSS personalizado?', confirmLabel: 'Limpiar' })) setCss('');
+              }}
               style={{ padding: '7px 13px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--c-danger-line)', background: 'transparent', color: 'var(--c-danger)' }}
             >
               Limpiar
@@ -474,7 +478,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
           rows={10}
           spellCheck={false}
           placeholder={'.glass { border-radius: 4px; }\n.t-display { letter-spacing: 0; }'}
-          style={{ width: '100%', padding: '12px 14px', borderRadius: 'var(--radius-md)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)', color: 'var(--u-text)', fontSize: 13, fontFamily: 'var(--ui-font-mono)', outline: 'none', resize: 'vertical' }}
+          className="adm-field adm-field-mono" style={{ padding: '12px 14px', fontSize: 13 }}
         />
       </Section>}
 
@@ -549,7 +553,7 @@ const CONTENT_FIELDS: Record<keyof ThemeContent, [string, string][]> = {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div className="t-kicker" style={{ fontSize: 10.5 }}>{title}</div>
+      <div className="adm-label">{title}</div>
       {children}
     </Glass>
   );
@@ -558,22 +562,16 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <label style={{ fontSize: 12.5, color: 'var(--u-text-2)', fontWeight: 500 }}>{label}</label>
+      <label style={{ fontSize: 12, color: 'var(--u-text-2)', fontWeight: 500 }}>{label}</label>
       {children}
     </div>
   );
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-};
-
 // Select con fondo adaptativo al tema del panel (antes #1a1a1a fijo →
 // caja oscura flotando cuando el panel está en modo claro). Las <option>
 // van claras fijas: el desplegable nativo se dibuja aparte del tema.
 const selectStyle: React.CSSProperties = {
-  ...inputStyle,
   colorScheme: 'var(--admin-content-scheme, dark)' as React.CSSProperties['colorScheme'],
 };
 
@@ -585,7 +583,7 @@ const optionStyle: React.CSSProperties = {
 function TextCtl({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <Field label={label}>
-      <input type="text" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} style={inputStyle} />
+      <input type="text" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="adm-field" />
     </Field>
   );
 }
@@ -593,9 +591,9 @@ function TextCtl({ label, value, onChange, placeholder }: { label: string; value
 function ColorCtl({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <input type="color" value={value} onChange={(e) => onChange(e.target.value)} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0, background: 'transparent' }} />
-      <span style={{ fontSize: 13.5, color: 'var(--u-text-2)', flex: 1 }}>{label}</span>
-      <input type="text" value={value} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, width: 96, fontFamily: 'var(--ui-font-mono)', fontSize: 12, padding: '6px 8px' }} />
+      <input type="color" value={value} onChange={(e) => onChange(e.target.value)} style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0, background: 'transparent' }} />
+      <span style={{ fontSize: 13, color: 'var(--u-text-2)', flex: 1 }}>{label}</span>
+      <input type="text" value={value} onChange={(e) => onChange(e.target.value)} className="adm-field" style={{ width: 96, fontFamily: 'var(--ui-font-mono)', fontSize: 12, padding: '6px 8px' }} />
     </div>
   );
 }
@@ -603,9 +601,9 @@ function ColorCtl({ label, value, onChange }: { label: string; value: string; on
 function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-      <span style={{ fontSize: 13.5, color: 'var(--u-text-2)' }}>{label}</span>
-      <button type="button" onClick={() => onChange(!value)} className="press" style={{ width: 42, height: 25, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3, background: value ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)', display: 'flex', justifyContent: value ? 'flex-end' : 'flex-start', transition: 'background 180ms', flexShrink: 0 }}>
-        <span style={{ width: 19, height: 19, borderRadius: 99, background: value ? 'var(--brand-bg)' : 'var(--u-text)' }} />
+      <span style={{ fontSize: 13, color: 'var(--u-text-2)' }}>{label}</span>
+      <button type="button" onClick={() => onChange(!value)} className="press" style={{ width: 42, height: 25, borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer', padding: 3, background: value ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)', display: 'flex', justifyContent: value ? 'flex-end' : 'flex-start', transition: 'background 180ms', flexShrink: 0 }}>
+        <span style={{ width: 19, height: 19, borderRadius: 'var(--radius-full)', background: value ? 'var(--brand-bg)' : 'var(--u-text)' }} />
       </button>
     </div>
   );
@@ -618,7 +616,7 @@ function Segmented({ label, value, options, onChange }: { label: string; value: 
         {options.map(([val, lbl]) => {
           const on = value === val;
           return (
-            <button key={val} type="button" onClick={() => onChange(val)} className="press" style={{ padding: '7px 13px', borderRadius: 'var(--radius-full)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: on ? 'var(--brand-bg)' : 'var(--u-text-3)', transition: 'all 150ms' }}>
+            <button key={val} type="button" onClick={() => onChange(val)} className="press" style={{ padding: '7px 13px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: on ? 'var(--brand-bg)' : 'var(--u-text-3)', transition: 'all 150ms' }}>
               {lbl}
             </button>
           );
@@ -640,7 +638,7 @@ function Slider({ label, value, min, max, step, onChange, format }: { label: str
 function NumberCtl({ label, value, min, max, onChange }: { label: string; value: number; min: number; max: number; onChange: (v: number) => void }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-      <span style={{ fontSize: 13.5, color: 'var(--u-text-2)' }}>{label}</span>
+      <span style={{ fontSize: 13, color: 'var(--u-text-2)' }}>{label}</span>
       <input
         type="number"
         value={value}
@@ -650,7 +648,7 @@ function NumberCtl({ label, value, min, max, onChange }: { label: string; value:
           const n = Math.max(min, Math.min(max, parseInt(e.target.value, 10) || min));
           onChange(n);
         }}
-        style={{ ...inputStyle, width: 70, textAlign: 'center', padding: '6px 8px', fontSize: 14 }}
+        className="adm-field" style={{ width: 70, textAlign: 'center', padding: '6px 8px', fontSize: 14 }}
       />
     </div>
   );
@@ -689,7 +687,7 @@ function StringListCtl({ label, items, onChange }: { label: string; items: strin
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
             placeholder="Nueva preferencia…"
-            style={{ ...inputStyle, flex: 1, padding: '7px 10px', fontSize: 13 }}
+            className="adm-field" style={{ flex: 1, padding: '7px 10px', fontSize: 13 }}
           />
           <button
             type="button"
@@ -753,7 +751,7 @@ function FontCtl({ label, role, value, onChange }: { label: string; role: 'displ
   const has = opts.some((o) => o.family === value);
   return (
     <Field label={label}>
-      <select value={value} onChange={(e) => onChange(e.target.value)} style={{ ...selectStyle, cursor: 'pointer' }}>
+      <select value={value} onChange={(e) => onChange(e.target.value)} className="adm-field" style={selectStyle}>
         {!has && <option value={value} style={optionStyle}>{value}</option>}
         {opts.map((o) => <option key={o.family} value={o.family} style={optionStyle}>{o.label}</option>)}
       </select>

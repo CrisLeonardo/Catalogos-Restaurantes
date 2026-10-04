@@ -16,7 +16,11 @@ import { Switch } from '@/components/ui/switch';
 import { updateMenuLanguages } from '@/lib/actions/restaurant';
 import type { Restaurant } from '@/types';
 
-export default function MenuLanguagesEditor({ restaurant }: { restaurant: Restaurant }) {
+export default function MenuLanguagesEditor({ restaurant, translated }: {
+  restaurant: Restaurant;
+  /** Cuántos platillos a la vista tienen nombre en inglés (AJU-18). */
+  translated?: { done: number; total: number };
+}) {
   const formRef = useRef<HTMLFormElement>(null);
   const enabled = (restaurant.menu_languages ?? []).includes('en');
 
@@ -28,6 +32,17 @@ export default function MenuLanguagesEditor({ restaurant }: { restaurant: Restau
         title="Menú también en inglés"
         desc="Los platillos sin traducción se ven en español."
       />
+      {/* Cuánto falta, sin tener que abrir platillo por platillo: un
+          interruptor encendido con 0 traducidos no hace nada (AJU-18). */}
+      {translated && translated.total > 0 && (
+        <span
+          className="shrink-0 text-[13px]"
+          style={{ color: enabled && translated.done < translated.total ? 'var(--c-warn)' : 'var(--u-text-3)' }}
+          title={`${translated.done} de ${translated.total} platillos con nombre en inglés`}
+        >
+          {translated.done} de {translated.total}
+        </span>
+      )}
       <Switch
         checked={enabled}
         onCheckedChange={() => formRef.current?.requestSubmit()}

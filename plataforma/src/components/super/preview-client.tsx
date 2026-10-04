@@ -175,7 +175,7 @@ export default function PreviewClient({
         <div
           style={{
             position: 'fixed', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 80,
-            padding: '5px 12px', borderRadius: 999, fontSize: 11, fontWeight: 600,
+            padding: '5px 12px', borderRadius: 'var(--radius-full)', fontSize: 11, fontWeight: 600,
             background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.18)',
             color: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
             whiteSpace: 'nowrap', pointerEvents: 'none',

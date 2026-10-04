@@ -5,7 +5,6 @@
    No incluye: plantillas, CSS propio, pedidos/moneda (esos van en /admin/perfil). */
 
 import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
 import { List, ListRow, ListText } from '@/components/ui/list';
 import { Section as UiSection, SectionNote } from '@/components/ui/section';
 import { Switch } from '@/components/ui/switch';
@@ -18,6 +17,7 @@ import { saveAdminRestaurantTheme, type RestaurantThemeTemplate } from '@/lib/ac
 import { fontsForRole, SHADOW_OPTIONS, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
 import { isLight } from '@/lib/theme/resolve';
 import { applyTemplateToConfig, structureOfConfig, type BuiltinTemplate } from '@/lib/theme/templates';
+import { useLeaveGuard } from '@/components/admin/save-bar';
 
 /* ── Contraste WCAG (asistente de legibilidad) ─────────────
    El dueño no sabe de ratios: si elige colores que no se leen,
@@ -82,7 +82,6 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
 
 /* ── Componente principal ─────────────────────────────────── */
 export default function AdminThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss: initialCss, ownerTemplates: initialOwnerTemplates }: Props) {
-  const router = useRouter();
   const [config, setConfig] = useState<ThemeConfig>(initialConfig);
   const [content, setContent] = useState<ThemeContent>(initialContent);
   const [ownerTemplates, setOwnerTemplates] = useState<RestaurantThemeTemplate[]>(initialOwnerTemplates);
@@ -132,12 +131,14 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
     [config, content, customCss, initialConfig, initialContent, initialCss],
   );
 
+  const leaveDialog = useLeaveGuard(dirty && !isPending);
+
   function save() {
     setMsg(null);
     start(async () => {
       const res = await saveAdminRestaurantTheme({ restaurantId, config, content, customCss, resetCustomCss: cssWasReset });
       if (res.error) setMsg(`Error: ${res.error}`);
-      else { setMsg('Publicado'); router.refresh(); }
+      else setMsg('Publicado');
     });
   }
 
@@ -213,7 +214,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
             {/* Abre en la estructura que el menú ya está usando: si este
                 restaurante lleva meses con la carta en acordeón, empezar en
                 "Clásico" le enseñaría 22 diseños que no son el suyo. */}
-            <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedTpl} initialStructure={structureOfConfig(initialConfig)} />
+            <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedTpl} initialStructure={structureOfConfig(initialConfig)} brandName={config.brandName} />
             {appliedTpl && (
               <div
                 role="status"
@@ -223,7 +224,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 <span style={{ color: 'var(--c-ok)', flexShrink: 0, marginTop: 1 }}>
                   <Icon name="checkCircle" size={16} />
                 </span>
-                <span className="text-[12.5px] leading-relaxed text-adm-text-2">
+                <span className="text-[12px] leading-relaxed text-adm-text-2">
                   Plantilla aplicada. Revísala en la vista previa y pulsa <strong>Guardar cambios</strong> para publicarla,
                   o sigue personalizando en las otras pestañas.
                   {cssWasReset && (
@@ -259,7 +260,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
 
             <Section title="Información de marca">
               <TextCtl label="Nombre de marca" value={config.brandName} onChange={(v) => setC('brandName', v)} />
-              <TextCtl label="Tagline / lema" value={config.tagline} onChange={(v) => setC('tagline', v)} placeholder="Sabor que enamora…" />
+              <TextCtl label="Lema" value={config.tagline} onChange={(v) => setC('tagline', v)} placeholder="Sabor que enamora…" />
               <TextCtl label="Zona / ubicación" value={config.zone} onChange={(v) => setC('zone', v)} placeholder="Zona 1, Centro…" />
             </Section>
 
@@ -278,7 +279,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                     className="press"
                     style={{
                       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                      border: '1.5px solid var(--u-hair-2)', borderRadius: 10, padding: '8px 10px',
+                      border: '1.5px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', padding: '8px 10px',
                       background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', cursor: 'pointer', minWidth: 68,
                     }}
                   >
@@ -287,7 +288,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                       <span style={{ width: 16, height: 16, borderRadius: 4, background: p.colorAccent }} />
                       <span style={{ width: 16, height: 16, borderRadius: 4, background: p.colorText, border: '1px solid rgba(0,0,0,0.1)' }} />
                     </div>
-                    <span style={{ fontSize: 10.5, color: 'var(--u-text-3)', fontWeight: 600 }}>{p.name}</span>
+                    <span style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 600 }}>{p.name}</span>
                   </button>
                 ))}
               </div>
@@ -515,6 +516,12 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 Los productos con etiqueta «Favorito» o «Destacado» se muestran en grande, a todo lo ancho
                 (máximo 3), para guiar al cliente hacia tus platillos estrella.
               </Note>
+              <Toggle label="Sugerir acompañamientos («Acompáñalo con…»)" value={config.suggestPairings} onChange={(v) => setC('suggestPairings', v)} />
+              <Note>
+                Al abrir un platillo y en el carrito se ofrece una bebida, un acompañamiento o un postre de
+                tu carta, según el nombre de tus categorías (Bebidas, Café, Extras, Postres…). Solo lo que
+                está disponible y se agrega de un toque.
+              </Note>
             </Section>
 
             <Section title="Textos del menú">
@@ -533,7 +540,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               </div>
             </Section>
 
-            <Section title="Checkout y pago">
+            <Section title="Pago del pedido">
               <Segmented
                 label="Color del estado activo (tabs / opciones)"
                 value={config.checkoutActiveColor}
@@ -582,10 +589,10 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
             {([
               ['portada', 'Portada', [
                 ['title', 'Título (vacío = nombre del restaurante)'],
-                ['subtitle', 'Subtítulo (vacío = tagline)'],
+                ['subtitle', 'Subtítulo (vacío = el lema)'],
                 ['cta', 'Texto del botón'],
-                ['badgeOpen', 'Badge "Abierto"'],
-                ['badgeClosed', 'Badge "Cerrado"'],
+                ['badgeOpen', 'Etiqueta «Abierto»'],
+                ['badgeClosed', 'Etiqueta «Cerrado»'],
               ]],
               ['product', 'Producto', [
                 ['add', 'Botón "Agregar"'],
@@ -605,7 +612,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 ['checkout', 'Botón "Ir a pagar"'],
                 ['barCta', 'Barra flotante'],
               ]],
-              ['checkout', 'Checkout', [
+              ['checkout', 'Al pagar', [
                 ['title', 'Título'],
                 ['typeLabel', 'Tipo de pedido'],
                 ['delivery', 'A domicilio'],
@@ -674,6 +681,14 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
             hay algo sin publicar: un "Guardar cambios" permanente no dice
             nada, y en esta pantalla —donde todo se ve en vivo en la vista
             previa— la pregunta real es justamente "¿esto ya está publicado?". */}
+        {leaveDialog}
+        {/* Sin cambios pendientes, el hueco de abajo lo ocupa «Ver cómo
+            queda»; con cambios, la barra de guardar (que trae su «Ver»). */}
+        {!(dirty || isPending || msg) && (
+          <a href="#vista-previa" className="preview-jump press">
+            <Icon name="eye" size={15} /> Ver cómo queda
+          </a>
+        )}
         {(dirty || isPending || msg) && (
           <div className="adm-savebar" style={{ marginTop: 14 }}>
             <span
@@ -691,6 +706,15 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
             >
               Ver sitio ↗
             </a>
+            {/* En el teléfono «Ver sitio ↗» no cabe: este «Ver» baja a la
+                vista previa de la misma página. */}
+            <a
+              href="#vista-previa"
+              className="press preview-jump-inline"
+              style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', textDecoration: 'none', padding: '11px 14px', borderRadius: 'var(--radius-full)', border: '1px solid var(--u-hair-2)' }}
+            >
+              Ver
+            </a>
             <button
               onClick={save}
               disabled={isPending}
@@ -705,7 +729,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
       </div>
 
       {/* ── Panel de vista previa ── */}
-      <PreviewPane previewId={restaurantId} />
+      <PreviewPane previewId={restaurantId} id="vista-previa" />
     </div>
   );
 }
@@ -772,7 +796,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
     pinta como una fila con divisoria: va dentro de la lista pero callada. */
 function Note({ children }: { children: ReactNode }) {
   return (
-    <div className="px-4 py-3 text-[12.5px] leading-snug text-adm-text-3">{children}</div>
+    <div className="px-4 py-3 text-[12px] leading-snug text-adm-text-3">{children}</div>
   );
 }
 
@@ -791,9 +815,9 @@ function Row({
     return (
       <ListRow className="flex-col items-stretch gap-2">
         {label && (
-          <div className="text-[14.5px] font-medium text-adm-text">{label}</div>
+          <div className="text-[14px] font-medium text-adm-text">{label}</div>
         )}
-        {hint && <div className="-mt-1 text-[12.5px] leading-snug text-adm-text-3">{hint}</div>}
+        {hint && <div className="-mt-1 text-[12px] leading-snug text-adm-text-3">{hint}</div>}
         {children}
       </ListRow>
     );
@@ -827,9 +851,9 @@ function ContrastHint({ text, actionLabel, onFix }: { text: string; actionLabel:
         onClick={onFix}
         className="press"
         style={{
-          flexShrink: 0, padding: '7px 12px', borderRadius: 99, border: 'none', cursor: 'pointer',
+          flexShrink: 0, padding: '7px 12px', borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
           background: 'var(--u-text)', color: 'var(--admin-content-bg-solid, var(--brand-bg))',
-          fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap',
+          fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
         }}
       >
         {actionLabel}
@@ -842,16 +866,10 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   return <Row label={label} stacked>{children}</Row>;
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-};
-
-/* El select nativo sigue el esquema efectivo del contenido del panel
-   (--admin-content-scheme): así el popup del sistema no sale blanco en un
-   panel oscuro ni negro en un panel claro. */
+/* El select nativo (con `.adm-field`) sigue el esquema efectivo del
+   contenido del panel (--admin-content-scheme): así el popup del sistema no
+   sale blanco en un panel oscuro ni negro en un panel claro. */
 const selectStyle: React.CSSProperties = {
-  ...inputStyle,
   background: 'var(--admin-content-bg-solid, #1a1a1a)',
   colorScheme: 'var(--admin-content-scheme, dark)' as React.CSSProperties['colorScheme'],
 };
@@ -864,7 +882,7 @@ const optionStyle: React.CSSProperties = {
 function TextCtl({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <Row label={label} stacked>
-      <input type="text" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} style={inputStyle} />
+      <input type="text" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="adm-field" />
     </Row>
   );
 }
@@ -877,7 +895,7 @@ function ColorCtl({ label, value, onChange }: { label: string; value: string; on
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label={label}
-        style={{ width: 34, height: 34, borderRadius: 8, border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0, background: 'transparent' }}
+        style={{ width: 34, height: 34, borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0, background: 'transparent' }}
       />
       <ListText title={label} />
       <input
@@ -885,7 +903,7 @@ function ColorCtl({ label, value, onChange }: { label: string; value: string; on
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label={`${label} en hexadecimal`}
-        style={{ ...inputStyle, width: 96, fontFamily: 'var(--ui-font-mono)', fontSize: 12.5, padding: '7px 9px' }}
+        className="adm-field" style={{ width: 96, fontFamily: 'var(--ui-font-mono)', fontSize: 12, padding: '7px 9px' }}
       />
     </ListRow>
   );
@@ -919,7 +937,7 @@ function Segmented({ label, hint, value, options, onChange }: { label: string; h
               aria-checked={on}
               onClick={() => onChange(val)}
               className="press"
-              style={{ padding: '9px 14px', minHeight: 38, borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--adm-border)'}`, background: on ? 'var(--adm-accent-500)' : 'transparent', color: on ? 'var(--c-on-solid)' : 'var(--u-text-2)', transition: 'all 150ms' }}
+              style={{ padding: '9px 14px', minHeight: 38, borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--adm-border)'}`, background: on ? 'var(--adm-accent-fill)' : 'transparent', color: on ? 'var(--c-on-solid)' : 'var(--u-text-2)', transition: 'all 150ms' }}
             >
               {lbl}
             </button>
@@ -934,7 +952,7 @@ function Slider({ label, value, min, max, step, onChange }: { label: string; val
   return (
     <ListRow className="flex-col items-stretch gap-2">
       <div className="flex items-center gap-3">
-        <div className="flex-1 text-[14.5px] font-medium text-adm-text">{label}</div>
+        <div className="flex-1 text-[14px] font-medium text-adm-text">{label}</div>
         {/* El valor en la mono con cifras tabulares: al arrastrar, el numero
             no baila de ancho. Es la regla del panel para todas las cifras. */}
         <span className="t-mono text-[13px] text-adm-text-2">
@@ -956,7 +974,7 @@ function FontCtl({ label, role, value, onChange }: { label: string; role: 'displ
   const has = opts.some((o) => o.family === value);
   return (
     <Row label={label}>
-      <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={label} style={{ ...selectStyle, cursor: 'pointer', width: 'auto', maxWidth: 190 }}>
+      <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={label} className="adm-field adm-field-auto" style={{ ...selectStyle, maxWidth: 190 }}>
         {!has && <option value={value} style={optionStyle}>{value}</option>}
         {opts.map((o) => <option key={o.family} value={o.family} style={optionStyle}>{o.label}</option>)}
       </select>

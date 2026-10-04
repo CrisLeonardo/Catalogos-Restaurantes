@@ -72,7 +72,8 @@ export default async function FichaAvanzadoPage({
             action={deleteRestaurant}
             hiddenFields={{ id: row.id }}
             label="Eliminar"
-            confirm={`¿Eliminar "${row.name}" y todos sus datos? Esta acción no se puede deshacer.`}
+            confirm={`¿Eliminar «${row.name}»?`}
+            description="Se borran el restaurante y todos sus datos. No se puede deshacer."
           />
         </Glass>
       </section>
@@ -82,7 +83,7 @@ export default async function FichaAvanzadoPage({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17, marginBottom: 14, color: 'var(--u-text)' }}>
+    <h2 style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, color: 'var(--u-text)' }}>
       {children}
     </h2>
   );

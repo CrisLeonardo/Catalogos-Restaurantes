@@ -107,7 +107,7 @@ export function HojaMesa({
                 : 'Elige la mesa con la que se junta la cuenta.'}
             </div>
             {destinos.length === 0 ? (
-              <div className="sv-vacio" style={{ padding: '14px 0', fontSize: 13.5 }}>
+              <div className="sv-vacio" style={{ padding: '14px 0', fontSize: 13 }}>
                 No hay mesas disponibles para eso.
               </div>
             ) : (
@@ -242,8 +242,8 @@ export function HojaVoz({ productos, money, onClose, onAgregar }: {
         {fase === 'escuchando' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '20px 0' }}>
             <div className="sv-voz-ring"><Icon name="mic" size={30} /></div>
-            <div style={{ fontSize: 17, fontWeight: 600 }}>Escuchando…</div>
-            <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', maxWidth: 280, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 16, fontWeight: 600 }}>Escuchando…</div>
+            <div style={{ fontSize: 13, color: 'var(--u-text-3)', maxWidth: 280, lineHeight: 1.5 }}>
               Dicta como le hablarías a la cocina: «dos pepián y una limonada sin hielo».
             </div>
             {texto && <div style={{ fontSize: 14, color: 'var(--u-text-2)', fontStyle: 'italic' }}>«{texto}»</div>}
@@ -256,7 +256,7 @@ export function HojaVoz({ productos, money, onClose, onAgregar }: {
         {fase === 'error' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%', padding: '18px 0' }}>
             <div style={{ fontSize: 15, fontWeight: 600 }}>No se pudo dictar</div>
-            <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>{error}</div>
+            <div style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>{error}</div>
             <button type="button" className="sv-cta" data-tone="quiet" onClick={onClose}>Cerrar</button>
           </div>
         )}
@@ -285,8 +285,8 @@ export function HojaVoz({ productos, money, onClose, onAgregar }: {
                     }}
                   >
                     <Mono size={15} color="var(--brand-accent-ink)">{l.qty}×</Mono>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 600 }}>{l.producto.name}</span>
-                    {l.nota && <span style={{ fontSize: 12.5, color: 'var(--c-warn)', fontWeight: 500 }}>{l.nota}</span>}
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600 }}>{l.producto.name}</span>
+                    {l.nota && <span style={{ fontSize: 12, color: 'var(--c-warn)', fontWeight: 500 }}>{l.nota}</span>}
                     <Mono size={13} color="var(--u-text-3)">{money(l.producto.price * l.qty)}</Mono>
                   </div>
                 ))}

@@ -3,11 +3,13 @@ import { getMyGroupScope, getGroupDashboard } from '@/lib/db/group';
 import { adminUrl, subdomainUrl } from '@/lib/tenant';
 import { Icon } from '@/components/icons';
 import GroupLinkSection from '@/components/mi-cuenta/group-link-section';
+import { fmtMoney } from '@/lib/money';
+import Kpi from '@/components/mi-cuenta/kpi';
 
 export const metadata = { title: 'Resumen — Leogin' };
 export const dynamic = 'force-dynamic';
 
-const money = (n: number) => `Q${n.toFixed(2)}`;
+const money = (n: number) => fmtMoney(n);
 
 /**
  * RESUMEN — cómo va hoy, de un vistazo.
@@ -29,7 +31,7 @@ export default async function ResumenPage() {
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div>
-        <div className="t-kicker" style={{ fontSize: 11, marginBottom: 8 }}>{scope.name}</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)', marginBottom: 8 }}>{scope.name}</div>
         <h1 className="t-display" style={{ fontSize: 'clamp(22px, 4vw, 28px)', lineHeight: 1.15, margin: 0 }}>
           Resumen de hoy
         </h1>
@@ -58,8 +60,8 @@ export default async function ResumenPage() {
       )}
 
       {alerts.length > 0 && (
-        <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div className="t-kicker" style={{ fontSize: 9.5 }}>Atención</div>
+        <div className="glass" style={{ borderRadius: 'var(--radius-lg)', padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)' }}>Atención</div>
           {alerts.map((b) => (
             <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
               <Icon name="alertCircle" size={15} style={{ color: 'var(--c-warn)', flexShrink: 0 }} />
@@ -67,7 +69,7 @@ export default async function ResumenPage() {
                 <strong>{b.name}</strong>:{' '}
                 {[
                   b.paused ? 'pedidos pausados' : null,
-                  b.outStock > 0 ? `${b.outStock} agotado(s)` : null,
+                  b.outStock > 0 ? `${b.outStock} ${b.outStock === 1 ? 'agotado' : 'agotados'}` : null,
                   b.todaySales === 0 ? 'sin ventas hoy' : null,
                 ].filter(Boolean).join(' · ')}
               </span>
@@ -76,31 +78,31 @@ export default async function ResumenPage() {
         </div>
       )}
 
-      <div className="glass" style={{ borderRadius: 16, overflow: 'hidden' }}>
-        <div className="t-kicker" style={{ fontSize: 9.5, padding: '14px 18px 8px' }}>
+      <div className="glass" style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)', padding: '14px 18px 8px' }}>
           {varios ? 'Restaurante por restaurante · hoy' : 'Tu restaurante · hoy'}
         </div>
         {dash.branches.map((b) => (
           <div key={b.id} style={{ padding: '12px 18px', borderTop: '1px solid var(--u-hair)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 140 }}>
               <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>{b.name}</div>
-              <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2 }}>
+              <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>
                 {b.todayOrders} pedidos · ticket {money(b.todayTicket)}
                 {b.lowStock > 0 ? ` · ${b.lowStock} stock bajo` : ''}
-                {b.outStock > 0 ? ` · ${b.outStock} agotados` : ''}
+                {b.outStock > 0 ? ` · ${b.outStock} ${b.outStock === 1 ? 'agotado' : 'agotados'}` : ''}
                 {b.paused ? ' · pausado' : ''}
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 15, color: 'var(--u-text)' }}>{money(b.todaySales)}</div>
-              <div style={{ fontSize: 10.5, color: 'var(--u-text-4)' }}>14d {money(b.sales14)}</div>
+              <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>14d {money(b.sales14)}</div>
             </div>
             {/* `adminUrl` y no un subdominio a mano: el panel no vive en el
                 mismo sitio en local que en producción. */}
             <a
               href={adminUrl(b.slug)}
               className="press glass-quiet"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 10, fontSize: 12, color: 'var(--u-text-2)', textDecoration: 'none', whiteSpace: 'nowrap' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 'var(--radius-md)', fontSize: 12, color: 'var(--u-text-2)', textDecoration: 'none', whiteSpace: 'nowrap' }}
             >
               Administrar <Icon name="arrowUpRight" size={13} />
             </a>
@@ -111,12 +113,3 @@ export default async function ResumenPage() {
   );
 }
 
-function Kpi({ label, value, sub, hero, small }: { label: string; value: string; sub?: string; hero?: boolean; small?: boolean }) {
-  return (
-    <div className="glass" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-      <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: small ? 16 : hero ? 26 : 22, color: 'var(--u-text)', lineHeight: 1.1, whiteSpace: small ? 'nowrap' : undefined, overflow: small ? 'hidden' : undefined, textOverflow: small ? 'ellipsis' : undefined }}>{value}</div>
-      {sub && <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{sub}</div>}
-    </div>
-  );
-}

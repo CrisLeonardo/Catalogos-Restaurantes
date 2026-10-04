@@ -54,7 +54,7 @@ export default async function FichaResumenPage({
     todos.push({ icon: 'clock', tone: 'warn', text: `Tiene ${fmtMoney(pendingTotal, currency)} pendientes de pago.`, href: `/super/restaurantes/${id}/cobro`, cta: 'Ver cobros' });
   }
   if (onTrial && trialDaysLeft(billing) <= 5) {
-    todos.push({ icon: 'clock', tone: 'info', text: `Su prueba gratis termina en ${trialDaysLeft(billing)} día(s) — buen momento para confirmar su plan.`, href: `/super/restaurantes/${id}/cobro`, cta: 'Ver cobro' });
+    todos.push({ icon: 'clock', tone: 'info', text: `Su prueba gratis termina en ${trialDaysLeft(billing)} ${trialDaysLeft(billing) === 1 ? 'día' : 'días'} — buen momento para confirmar su plan.`, href: `/super/restaurantes/${id}/cobro`, cta: 'Ver cobro' });
   }
   if (!feeConfigured && !onTrial && row.status === 'active') {
     todos.push({ icon: 'wallet', tone: 'warn', text: 'Está activo pero no tiene mensualidad configurada.', href: `/super/restaurantes/${id}/cobro`, cta: 'Configurar' });
@@ -83,13 +83,13 @@ export default async function FichaResumenPage({
               }}
             >
               <span style={{
-                width: 32, height: 32, borderRadius: 10, flexShrink: 0, display: 'grid', placeItems: 'center',
+                width: 32, height: 32, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
                 background: `color-mix(in srgb, var(--c-${t.tone === 'info' ? 'ok' : t.tone}) 13%, transparent)`,
                 color: t.tone === 'info' ? 'var(--adm-info, #7dd3fc)' : `var(--c-${t.tone})`,
               }}>
                 <Icon name={t.icon} size={16} />
               </span>
-              <span style={{ flex: 1, fontSize: 13.5, color: 'var(--u-text-2)' }}>{t.text}</span>
+              <span style={{ flex: 1, fontSize: 13, color: 'var(--u-text-2)' }}>{t.text}</span>
               <Button variant="outline" size="sm" render={<Link href={t.href} />}>{t.cta}</Button>
             </div>
           ))}
@@ -111,7 +111,7 @@ export default async function FichaResumenPage({
           value={pendingTotal > 0 ? fmtMoney(pendingTotal, currency) : 'Q0'}
           icon={hasOverdue ? 'alertCircle' : 'clock'}
           tone={hasOverdue ? 'danger' : pendingTotal > 0 ? 'warn' : 'ok'}
-          sub={hasOverdue ? 'con cobros vencidos' : pendingTotal > 0 ? `${pending.length} cobro(s)` : 'al día'}
+          sub={hasOverdue ? 'con cobros vencidos' : pendingTotal > 0 ? `${pending.length} ${pending.length === 1 ? 'cobro' : 'cobros'}` : 'al día'}
           href={`/super/restaurantes/${id}/cobro`}
         />
         <StatCard label="Visitas 30 días" value={metrics.visits30.toLocaleString('es-GT')} icon="eye" growth={metrics.visitsGrowth} />
@@ -123,34 +123,13 @@ export default async function FichaResumenPage({
       {/* Actividad 30 días */}
       {(metrics.visits30 > 0 || metrics.orders30 > 0) && (
         <Card style={{ padding: '18px 20px' }}>
-          <div className="t-kicker" style={{ fontSize: 9.5, marginBottom: 12 }}>Actividad · 30 días</div>
+          <div className="adm-label" style={{ marginBottom: 12 }}>Actividad · 30 días</div>
           <ActivityChart series={metrics.series} height={110} />
         </Card>
       )}
 
-      {/* Adónde ir */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 10 }}>
-        <QuickLink href={`/super/restaurantes/${id}/informacion`} icon="list" title="Información" body="Nombre, slug, contacto, dirección, estado y ubicación en el mapa." />
-        <QuickLink href={`/super/restaurantes/${id}/plan`} icon="sparkle" title="Plan y módulos" body={`Plan ${planLabel(row.plan_actual)} · cambia funciones y módulos a la carta.`} />
-        <QuickLink href={`/super/restaurantes/${id}/apariencia`} icon="image" title="Apariencia" body="Tema, colores, plantillas y vista previa en vivo del menú." />
-        <QuickLink href={`/super/restaurantes/${id}/avanzado`} icon="settings" title="Avanzado" body="Duplicar el restaurante o eliminarlo definitivamente." />
-      </div>
+      {/* Sin las cuatro tarjetas «Adónde ir»: eran las mismas pestañas de
+          arriba otra vez, doble navegación (auditoría 2026-10-02, SUP-06). */}
     </div>
-  );
-}
-
-function QuickLink({ href, icon, title, body }: { href: string; icon: string; title: string; body: string }) {
-  return (
-    <Card variant="interactive" style={{ padding: 0 }}>
-      <Link href={href} style={{ display: 'flex', gap: 12, padding: '14px 16px', textDecoration: 'none', alignItems: 'flex-start' }}>
-        <span style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--brand-accent) 12%, transparent)', color: 'var(--brand-accent-ink)' }}>
-          <Icon name={icon} size={16} />
-        </span>
-        <span style={{ minWidth: 0 }}>
-          <span style={{ display: 'block', fontWeight: 700, fontSize: 13.5, color: 'var(--u-text)' }}>{title}</span>
-          <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-4)', marginTop: 3, lineHeight: 1.45 }}>{body}</span>
-        </span>
-      </Link>
-    </Card>
   );
 }

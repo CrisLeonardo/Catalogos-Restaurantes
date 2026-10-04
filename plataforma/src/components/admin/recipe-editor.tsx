@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { fmtMoney } from '@/lib/money';
 import { Icon } from '@/components/icons';
 import { saveProductRecipe, type RecipeLineInput } from '@/lib/actions/recipes';
 import type { Ingredient, RecipeItem } from '@/lib/db/recipes';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 /* El prefijo del origen unico para un `<a>` suelto (PanelLink solo cubre
    `<Link>`). Fuera del panel devuelve la ruta tal cual. */
 import { usePathname as useRutaNavegador } from 'next/navigation';
@@ -17,32 +20,14 @@ interface Props {
   onCostChange?: (cost: number | null) => void;
 }
 
-const inputStyle: React.CSSProperties = {
-  background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-  border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)',
-  padding: '9px 11px',
-  color: 'var(--u-text)',
-  fontSize: 13,
-  outline: 'none',
-  width: '100%',
-  boxSizing: 'border-box',
-};
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 10.5,
-  color: 'var(--u-text-4)',
-  fontWeight: 600,
-  letterSpacing: '0.05em',
-  textTransform: 'uppercase' as const,
-  marginBottom: 5,
-  display: 'block',
-};
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 export default function RecipeEditor({ productId, restaurantId, ingredients, initialRecipe, onCostChange }: Props) {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = panelBaseFrom(useRutaNavegador());
   const [lines, setLines] = useState<RecipeItem[]>(initialRecipe);
+  const { confirm, dialog } = useConfirm();
   const [selIngredient, setSelIngredient] = useState('');
   const [selQty, setSelQty] = useState('');
   const [isPending, startTransition] = useTransition();
@@ -138,6 +123,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {dialog}
 
       {/* Lista de líneas */}
       {lines.length > 0 && (
@@ -149,7 +135,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
             borderBottom: '1px solid var(--u-hair)',
           }}>
             {['Insumo', 'Cantidad', 'Costo', ''].map((h) => (
-              <span key={h} style={{ fontSize: 10, color: 'var(--u-text-4)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{h}</span>
+              <span key={h} style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{h}</span>
             ))}
           </div>
 
@@ -164,7 +150,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
               }}
             >
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
-                <span style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {l.ingredient_name}
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--u-text-4)', flexShrink: 0 }}>
@@ -178,11 +164,11 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
                 step="0.0001"
                 defaultValue={l.quantity}
                 onBlur={(e) => updateQty(l.id, e.target.value)}
-                style={{ ...inputStyle, textAlign: 'right', padding: '6px 10px', width: '100%' }}
+                className="adm-field adm-field-sm" style={{ textAlign: 'right', padding: '6px 10px', width: '100%' }}
               />
               <span
                 style={{
-                  fontSize: 12.5,
+                  fontSize: 12,
                   color: l.ingredient_cost <= 0 ? 'var(--c-warn)' : 'var(--u-text-2)',
                   textAlign: 'right',
                   fontFamily: 'var(--ui-font-mono)',
@@ -190,14 +176,14 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
                 }}
                 title={l.ingredient_cost <= 0 ? 'Este insumo tiene costo 0 — actualízalo en Ingredientes' : undefined}
               >
-                Q {l.line_cost.toFixed(2)}
+                {fmtMoney(l.line_cost)}
               </span>
               <button
                 type="button"
                 onClick={() => removeLine(l.id)}
                 className="press"
                 style={{
-                  width: 28, height: 28, borderRadius: 8,
+                  width: 28, height: 28, borderRadius: 'var(--radius-sm)',
                   border: '1px solid var(--c-danger-bg)',
                   background: 'var(--c-danger-bg)',
                   cursor: 'pointer',
@@ -227,7 +213,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
             )}
             <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>Costo total:</span>
             <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--brand-accent-ink)', fontFamily: 'var(--ui-font-mono)' }}>
-              Q {totalCost.toFixed(2)}
+              {fmtMoney(totalCost)}
             </span>
           </div>
         </div>
@@ -239,7 +225,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
         borderRadius: 'var(--radius-lg)',
         padding: '16px',
       }}>
-        <p style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--u-text-4)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 14 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--u-text-4)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 14 }}>
           Agregar ingrediente
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -249,7 +235,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
             <select
               value={selIngredient}
               onChange={(e) => setSelIngredient(e.target.value)}
-              style={{ ...inputStyle, color: selIngredient ? 'var(--u-text)' : 'var(--u-text-4)' }}
+              className="adm-field adm-field-sm" style={{ color: selIngredient ? 'var(--u-text)' : 'var(--u-text-4)' }}
             >
               <option value="">Seleccionar insumo…</option>
               {ingredients.map((ing) => (
@@ -274,7 +260,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
                 placeholder="0.00"
                 value={selQty}
                 onChange={(e) => setSelQty(e.target.value)}
-                style={inputStyle}
+                className="adm-field adm-field-sm"
               />
             </div>
             {selectedIng && selQty && parseFloat(selQty) > 0 && (
@@ -304,7 +290,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
               borderRadius: 'var(--radius-md)',
               border: 'none',
               cursor: canAdd ? 'pointer' : 'not-allowed',
-              fontSize: 13.5,
+              fontSize: 13,
               fontWeight: 600,
               opacity: canAdd ? 1 : 0.4,
               transition: 'opacity 150ms',
@@ -341,8 +327,12 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
         {lines.length > 0 && (
           <button
             type="button"
-            onClick={() => {
-              if (window.confirm('¿Eliminar toda la receta? El costo volverá a ser manual.')) {
+            onClick={async () => {
+              if (await confirm({
+                title: '¿Borrar toda la receta?',
+                description: 'El costo del platillo vuelve a escribirse a mano.',
+                confirmLabel: 'Borrar receta',
+              })) {
                 setLines([]);
                 setSaved(false);
                 notifyParent([]);

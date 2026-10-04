@@ -7,29 +7,13 @@ import {
   type SuperState,
 } from '@/lib/actions/super-admin';
 import type { Restaurant } from '@/types';
+import { FIELD_LABEL } from '@/components/admin/field-label';
 
 const empty: SuperState = null;
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-  border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)',
-  padding: '10px 12px',
-  color: 'var(--u-text)',
-  fontSize: 15,
-  outline: 'none',
-};
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 11.5,
-  color: 'var(--u-text-3)',
-  fontWeight: 600,
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase',
-  marginBottom: 6,
-  display: 'block',
-};
+/* El rótulo de campo del panel (D-8): en minúscula, no en mayúsculas de cartel. */
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 function Field({
   label,
@@ -74,32 +58,32 @@ export default function RestaurantEditForm({
           }}
         >
           <Field label="Nombre *">
-            <input name="name" type="text" required defaultValue={restaurant.name} style={inputStyle} />
+            <input name="name" type="text" required defaultValue={restaurant.name} className="adm-field" />
           </Field>
 
           <Field
             label="Slug"
             hint={
-              <>URL: <strong style={{ color: 'var(--u-text-3)' }}>{restaurant.slug}.{process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'leogin.online'}</strong> — cambiarlo rompe los QR ya impresos.</>
+              <>URL: <strong style={{ color: 'var(--u-text-3)' }}>{restaurant.slug}.{process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'leogin.online'}</strong> — si lo cambias, esta dirección y el QR general cambian; los QR de mesa ya impresos siguen funcionando.</>
             }
           >
-            <input name="slug" type="text" required defaultValue={restaurant.slug} style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 14 }} />
+            <input name="slug" type="text" required defaultValue={restaurant.slug} className="adm-field" style={{ fontFamily: 'monospace', fontSize: 14 }} />
           </Field>
 
           <Field label="Tagline" span2>
-            <input name="tagline" type="text" defaultValue={restaurant.tagline ?? ''} placeholder="Una frase que describe tu lugar" style={inputStyle} />
+            <input name="tagline" type="text" defaultValue={restaurant.tagline ?? ''} placeholder="Una frase que describe tu lugar" className="adm-field" />
           </Field>
 
           <Field label="Dirección" span2 hint="Se muestra en el selector de sucursal del grupo.">
-            <input name="address" type="text" defaultValue={restaurant.address ?? ''} placeholder="Ej. 5a Av. 10-23, Zona 1, Ciudad de Guatemala" style={inputStyle} />
+            <input name="address" type="text" defaultValue={restaurant.address ?? ''} placeholder="Ej. 5a Av. 10-23, Zona 1, Ciudad de Guatemala" className="adm-field" />
           </Field>
 
           <Field label="Email">
-            <input name="contact_email" type="email" defaultValue={restaurant.contact_email ?? ''} style={inputStyle} />
+            <input name="contact_email" type="email" defaultValue={restaurant.contact_email ?? ''} className="adm-field" />
           </Field>
 
           <Field label="WhatsApp" hint="Con código de país (ej. +502…). Se usa para avisos de pedidos y para contactar al dueño.">
-            <input name="whatsapp_number" type="tel" defaultValue={restaurant.whatsapp_number ?? ''} placeholder="+502 0000 0000" style={inputStyle} />
+            <input name="whatsapp_number" type="tel" defaultValue={restaurant.whatsapp_number ?? ''} placeholder="+502 0000 0000" className="adm-field" />
           </Field>
 
           <Field label="Estado" span2>
@@ -118,7 +102,7 @@ export default function RestaurantEditForm({
             padding: '12px 28px',
             borderRadius: 'var(--radius-full)',
             fontWeight: 600,
-            fontSize: 14.5,
+            fontSize: 14,
             border: 'none',
             cursor: isPending ? 'not-allowed' : 'pointer',
             opacity: isPending ? 0.7 : 1,

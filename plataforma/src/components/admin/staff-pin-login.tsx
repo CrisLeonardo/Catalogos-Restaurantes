@@ -138,7 +138,7 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
   }
 
   const linkStyle: React.CSSProperties = {
-    display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12.5, color: 'var(--u-text-3)',
+    display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--u-text-3)',
     background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 14,
   };
 
@@ -149,7 +149,7 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
           <Icon name="chevronLeft" size={14} /> Entrar con correo
         </button>
         <p className="t-display" style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>¿Quién eres?</p>
-        <p className="t-mute" style={{ fontSize: 12.5, marginBottom: 16 }}>Toca tu nombre para entrar con tu PIN.</p>
+        <p className="t-mute" style={{ fontSize: 12, marginBottom: 16 }}>Toca tu nombre para entrar con tu PIN.</p>
 
         {members === null ? (
           <p style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Cargando…</p>
@@ -169,13 +169,13 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
                 className="press glass-quiet"
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-                  padding: '16px 8px', borderRadius: 14, border: 'none', cursor: 'pointer',
+                  padding: '16px 8px', borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer',
                 }}
               >
-                <div style={{ width: 40, height: 40, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 10%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}>
+                <div style={{ width: 40, height: 40, borderRadius: 'var(--radius-full)', background: 'color-mix(in srgb, var(--u-text) 10%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}>
                   <Icon name="user" size={19} />
                 </div>
-                <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text)', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text)', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
                   {m.full_name || 'Sin nombre'}
                 </span>
               </button>
@@ -204,7 +204,7 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
         <p className="t-display" style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>
           {selected.full_name || 'Identificado'} — sin conexión
         </p>
-        <p className="t-mute" style={{ fontSize: 12.5 }}>
+        <p className="t-mute" style={{ fontSize: 12 }}>
           Te reconocimos con tu PIN, pero hace falta señal para entrar. Se completará solo en cuanto vuelva la conexión.
         </p>
       </Glass>
@@ -216,7 +216,7 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
       <button type="button" onClick={backToGrid} style={{ ...linkStyle, marginBottom: 10 }}>
         <Icon name="chevronLeft" size={14} /> Atrás
       </button>
-      <p className="t-display" style={{ fontSize: 17, fontWeight: 700, marginBottom: 18 }}>
+      <p className="t-display" style={{ fontSize: 16, fontWeight: 700, marginBottom: 18 }}>
         {selected.full_name || 'Tu PIN'}
       </p>
 
@@ -225,7 +225,7 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
           <span
             key={i}
             style={{
-              width: 14, height: 14, borderRadius: 99,
+              width: 14, height: 14, borderRadius: 'var(--radius-full)',
               background: i < pin.length ? 'var(--u-text)' : 'transparent',
               border: '1.5px solid var(--u-hair-2)',
             }}
@@ -245,7 +245,7 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
             disabled={isPending}
             onClick={() => pressDigit(d)}
             className="press glass-quiet"
-            style={{ width: 64, height: 64, borderRadius: 16, border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 700, color: 'var(--u-text)' }}
+            style={{ width: 64, height: 64, borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 700, color: 'var(--u-text)' }}
           >
             {d}
           </button>
@@ -256,7 +256,7 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
           disabled={isPending}
           onClick={() => pressDigit('0')}
           className="press glass-quiet"
-          style={{ width: 64, height: 64, borderRadius: 16, border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 700, color: 'var(--u-text)' }}
+          style={{ width: 64, height: 64, borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 700, color: 'var(--u-text)' }}
         >
           0
         </button>
@@ -265,7 +265,7 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
           disabled={isPending}
           onClick={backspace}
           className="press glass-quiet"
-          style={{ width: 64, height: 64, borderRadius: 16, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)' }}
+          style={{ width: 64, height: 64, borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)' }}
           aria-label="Borrar"
         >
           <Icon name="x" size={18} />

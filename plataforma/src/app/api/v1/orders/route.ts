@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'forbidden',
-        message: `Esta llave no tiene el permiso "${SCOPE}". Agregáselo en Canales.`,
+        message: `Esta llave no tiene el permiso "${SCOPE}". Agrégaselo en Canales.`,
       },
       { status: 403 },
     );

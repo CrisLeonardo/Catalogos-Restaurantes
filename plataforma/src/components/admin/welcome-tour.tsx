@@ -189,7 +189,7 @@ export default function WelcomeTour({ restaurantName, preview }: Props) {
         style={{
           ...bubbleStyle,
           zIndex: 9998,
-          borderRadius: 18,
+          borderRadius: 'var(--radius-xl)',
           padding: '20px 20px 16px',
           boxShadow: '0 24px 64px rgba(0,0,0,0.55)',
         }}
@@ -201,7 +201,7 @@ export default function WelcomeTour({ restaurantName, preview }: Props) {
             <div
               key={i}
               style={{
-                height: 3, flex: i === step ? 2 : 1, borderRadius: 99,
+                height: 3, flex: i === step ? 2 : 1, borderRadius: 'var(--radius-full)',
                 background: i < step
                   ? `rgba(${accentRgb}, 0.35)`
                   : i === step
@@ -215,7 +215,7 @@ export default function WelcomeTour({ restaurantName, preview }: Props) {
 
         {/* Step label */}
         <div style={{
-          fontSize: 10, fontWeight: 700, letterSpacing: '0.07em',
+          fontSize: 11, fontWeight: 700, letterSpacing: '0.07em',
           textTransform: 'uppercase', color: 'var(--brand-accent-ink, #6366f1)',
           marginBottom: 7,
         }}>
@@ -261,8 +261,8 @@ export default function WelcomeTour({ restaurantName, preview }: Props) {
                 onClick={() => setStep((s) => s - 1)}
                 className="press glass-quiet"
                 style={{
-                  border: 'none', cursor: 'pointer', borderRadius: 10,
-                  padding: '8px 13px', fontSize: 12.5, fontWeight: 600,
+                  border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-md)',
+                  padding: '8px 13px', fontSize: 12, fontWeight: 600,
                   color: 'var(--u-text-2)', background: 'none',
                   display: 'flex', alignItems: 'center', gap: 5,
                 }}
@@ -276,8 +276,8 @@ export default function WelcomeTour({ restaurantName, preview }: Props) {
               onClick={() => { if (isLast) complete(); else setStep((s) => s + 1); }}
               className="press"
               style={{
-                border: 'none', cursor: 'pointer', borderRadius: 10,
-                padding: '8px 18px', fontSize: 12.5, fontWeight: 700,
+                border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-md)',
+                padding: '8px 18px', fontSize: 12, fontWeight: 700,
                 background: 'var(--brand-accent, #6366f1)',
                 color: 'var(--brand-on-accent, #fff)',
                 display: 'flex', alignItems: 'center', gap: 5,

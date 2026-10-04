@@ -10,6 +10,8 @@ import { List, ListLink, ListRow, ListText } from '@/components/ui/list';
 import { Section } from '@/components/ui/section';
 import MenuLanguagesEditor from '@/components/admin/menu-languages-editor';
 import type { Restaurant } from '@/types';
+import { ACTIVATABLE_MODULES, isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
+import { whatsappVisiblePara } from '@/lib/whatsapp/visible';
 
 export const metadata = { title: 'Ajustes – Panel admin' };
 
@@ -58,11 +60,13 @@ export default async function AdminAjustesPage() {
   const slug = (await headers()).get('x-tenant-slug');
   let restaurant: Restaurant | null = ctx.restaurant ?? null;
   let dineInEnabled = false;
+  let deliveryEnabled = false;
   if (slug) {
     const data = await getRestaurantBySlug(slug);
     if (data) {
       restaurant = data.restaurant;
       dineInEnabled = data.resolved.config.orderTypes.includes('dine_in');
+      deliveryEnabled = data.resolved.config.orderTypes.includes('delivery');
     }
   }
 
@@ -99,12 +103,18 @@ export default async function AdminAjustesPage() {
   const plan = (restaurant?.plan_actual ?? 'BASICO') as PlanCode;
   const mesasAccesible = (plan !== 'BASICO' && plan !== 'ESTANDAR') || dineInEnabled;
 
-  const activeModules = modules ? Object.values(modules).filter(Boolean).length : 0;
+  /* La MISMA cuenta que la pantalla Funciones (modules-panel.tsx). Antes se
+     contaban todas las banderas encendidas del jsonb —pedidos, catálogo,
+     analítica…— y esta fila decía «15 activas» mientras Funciones, un toque
+     más allá, decía «8 funciones activas» (auditoría 2026-10-02, N-05). */
+  const activeModules = ACTIVATABLE_MODULES.filter((m) =>
+    isModuleActive((modules ?? {}) as ModulesMap, (restaurant?.module_settings ?? null) as ModuleSettings | null, m.key),
+  ).length;
   const planLabel = restaurant?.plan_actual ? (PLANS[restaurant.plan_actual as PlanCode]?.name ?? restaurant.plan_actual) : undefined;
 
   const negocio: Row[] = [
     { href: '/admin/perfil', icon: 'user', label: 'Perfil del negocio', desc: 'Nombre, contacto y datos de tu cuenta', key: 'perfil' },
-    { href: '/admin/ajustes/restaurante', icon: 'clock', label: 'Horarios', desc: 'A qué hora abrís cada día y la pausa de pedidos', key: 'ajustes' },
+    { href: '/admin/ajustes/restaurante', icon: 'clock', label: 'Horarios', desc: 'A qué hora abres cada día y la pausa de pedidos', key: 'ajustes' },
     /* Salón. ESTABA EN EL MENÚ Y NO EN ESTA LISTA (corregido el 2026-09-07):
        `admin-nav.ts` lo cuenta como pestaña del grupo Ajustes, pero el grupo
        tiene `index: true` —no dibuja fila de pestañas, dibuja esta portada—
@@ -116,10 +126,10 @@ export default async function AdminAjustesPage() {
       ? [{ href: '/admin/ajustes/salon', icon: 'grid', label: 'Salón', desc: 'Cuántas mesas hay, el plano del local y el QR de cada mesa', key: 'mesas' } as Row]
       : []),
     ...(ordersEnabled
-      ? [{ href: '/admin/ajustes/entrega', icon: 'mapPin', label: 'Zona de entrega', desc: 'Dónde estás y hasta dónde repartís a domicilio', key: 'ajustes' } as Row]
+      ? [{ href: '/admin/ajustes/entrega', icon: 'mapPin', label: 'Zona de entrega', desc: 'Dónde estás y hasta dónde repartes a domicilio', key: 'ajustes' } as Row]
       : []),
     { href: '/admin/personalizacion', icon: 'sparkle', label: 'Personalizar el sitio', desc: 'Colores, tipografía y plantilla de tu menú', key: 'personalizar' },
-    { href: '/admin/qr', icon: 'image', label: 'Código QR', desc: 'El código que ponés en las mesas y en el mostrador', key: 'qr' },
+    { href: '/admin/qr', icon: 'image', label: 'Código QR', desc: 'El código que pones en las mesas y en el mostrador', key: 'qr' },
   ];
 
   const servicio: Row[] = [
@@ -128,6 +138,15 @@ export default async function AdminAjustesPage() {
       : []),
     ...(ordersEnabled
       ? [{ href: '/admin/mi-pc', icon: 'monitor', label: 'La PC del local', desc: 'Imprime comandas sola y te cubre si se cae el internet', key: 'impresion', value: pcValue, tone: pcTone } as Row]
+      : []),
+    /* Mismo criterio que admin-nav.ts (N-02): Repartidores si se entrega a
+       domicilio; WhatsApp solo para quien puede conectarlo (D-6, ver
+       lib/whatsapp/visible.ts). */
+    ...(ordersEnabled && deliveryEnabled
+      ? [{ href: '/admin/repartidores', icon: 'truck', label: 'Repartidores', desc: 'Quién lleva los pedidos a domicilio', key: 'repartidores' } as Row]
+      : []),
+    ...(ordersEnabled && whatsappVisiblePara(profile.role)
+      ? [{ href: '/admin/whatsapp', icon: 'whatsapp', label: 'WhatsApp', desc: 'Avisos a tus clientes de cómo va su pedido', key: 'whatsapp' } as Row]
       : []),
   ];
 
@@ -138,9 +157,9 @@ export default async function AdminAjustesPage() {
   const cuenta: Row[] = [
     { href: '/admin/suscripcion', icon: 'wallet', label: 'Mi suscripción', desc: 'Tu plan, lo que incluye y cómo cambiarlo', key: 'suscripcion', value: planLabel },
     ...(showStaff
-      ? [{ href: '/admin/modulos', icon: 'grid', label: 'Funciones', desc: 'Encendé y apagá lo que usa tu restaurante', key: 'modulos', value: activeModules ? `${activeModules} activas` : undefined } as Row]
+      ? [{ href: '/admin/modulos', icon: 'grid', label: 'Funciones', desc: 'Enciende y apaga lo que usa tu restaurante', key: 'modulos', value: activeModules ? `${activeModules} activas` : undefined } as Row]
       : []),
-    { href: '/admin/respaldo', icon: 'download', label: 'Copia de tus datos', desc: 'Descargá todo lo tuyo cuando quieras', key: 'respaldo' },
+    { href: '/admin/respaldo', icon: 'download', label: 'Copia de tus datos', desc: 'Descarga todo lo tuyo cuando quieras', key: 'respaldo' },
     { href: '/admin/ayuda', icon: 'helpCircle', label: 'Ayuda y tutoriales', desc: 'Guías paso a paso de cada pantalla', key: 'ayuda' },
   ];
 
@@ -157,6 +176,20 @@ export default async function AdminAjustesPage() {
 
   const canEditIdiomas = allow('ajustes') && !!restaurant;
 
+  /* Cuántos platillos a la vista ya tienen su nombre en inglés, para la fila
+     «Menú también en inglés» (auditoría 2026-10-02, AJU-18). */
+  let translated: { done: number; total: number } | undefined;
+  if (canEditIdiomas && restaurantId) {
+    const db = createServiceClient();
+    const { data: prods } = await db
+      .from('products')
+      .select('name_en')
+      .eq('restaurant_id', restaurantId)
+      .eq('is_active', true);
+    const list = prods ?? [];
+    translated = { done: list.filter((p) => ((p.name_en as string | null) ?? '').trim() !== '').length, total: list.length };
+  }
+
   /* Sin una sola fila que enseñar. Pasa de verdad: a alguien del personal se
      le reparten permisos de operación (pedidos, mesas, cocina) y ninguno de
      ellos abre una pantalla de esta portada — y aun así el menú sigue
@@ -170,22 +203,26 @@ export default async function AdminAjustesPage() {
         <span className="mb-1 grid size-11 place-items-center rounded-adm-lg bg-adm-bg-2 text-adm-text-3">
           <Icon name="settings" size={20} />
         </span>
-        <div className="text-[15px] font-semibold text-adm-text">Aquí no hay nada para vos</div>
-        <p className="max-w-[46ch] text-[13.5px] leading-snug text-adm-text-3">
-          Los ajustes del restaurante los lleva quien tenga el permiso. Si necesitás
-          cambiar algo de esta pantalla, pedíselo a la persona dueña de la cuenta.
+        <div className="text-[15px] font-semibold text-adm-text">Aquí no hay nada para ti</div>
+        <p className="max-w-[46ch] text-[13px] leading-snug text-adm-text-3">
+          Los ajustes del restaurante los lleva quien tenga el permiso. Si necesitas
+          cambiar algo de esta pantalla, pídeselo a la persona dueña de la cuenta.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="anim-fade-up flex max-w-[1040px] flex-col gap-6">
+    <div className="anim-fade-up adm-w-overview flex flex-col gap-6">
       <p className="max-w-[52ch] text-[14px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
         Todo lo que se configura una vez y se olvida, ordenado por tema.
       </p>
 
-      <div className="adm-settings-index grid items-start gap-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
+      {/* Columnas CSS, no rejilla: las secciones tienen alturas muy distintas
+          (7 filas, 4, 1, 4) y en tres columnas de rejilla quedaban dos
+          tercios de pantalla vacíos abajo. Con `columns` se reparten por
+          altura en dos (auditoría 2026-10-02, N-06). */}
+      <div className="adm-settings-index">
         {groups.map((g) => (
           <Section key={g.title} title={g.title}>
             <List>
@@ -212,7 +249,7 @@ export default async function AdminAjustesPage() {
                   <span className="grid size-7 shrink-0 place-items-center rounded-adm-md" style={{ background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: 'var(--u-text-2)' }}>
                     <Icon name="globe" size={16} />
                   </span>
-                  <MenuLanguagesEditor restaurant={restaurant} />
+                  <MenuLanguagesEditor restaurant={restaurant} translated={translated} />
                 </ListRow>
               )}
             </List>

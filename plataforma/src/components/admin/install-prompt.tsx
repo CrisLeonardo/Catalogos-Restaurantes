@@ -90,7 +90,7 @@ function CloseButton({ onClick }: { onClick: () => void }) {
         flexShrink: 0, display: 'grid', placeItems: 'center',
         /* 36 y no 28: es la única salida de una hoja que tapa la pantalla
            entera, y con 28 px el pulgar fallaba y tocaba el velo. */
-        width: 36, height: 36, borderRadius: 99, border: 'none', cursor: 'pointer',
+        width: 36, height: 36, borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
         background: 'var(--surface-3)', color: 'var(--u-text-2)',
       }}
     >
@@ -121,13 +121,13 @@ function IOSSteps({ onDismiss }: { onDismiss: () => void }) {
         ].map((label, i) => (
           <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
             <span style={{
-              flexShrink: 0, width: 24, height: 24, borderRadius: 99,
+              flexShrink: 0, width: 24, height: 24, borderRadius: 'var(--radius-full)',
               background: 'var(--brand-accent)', display: 'grid', placeItems: 'center',
               fontSize: 11, fontWeight: 700, color: 'var(--brand-on-accent, #fff)',
             }}>
               {i + 1}
             </span>
-            <span style={{ fontSize: 13.5, color: 'var(--u-text-2)', lineHeight: 1.45, paddingTop: 3 }}>{label}</span>
+            <span style={{ fontSize: 13, color: 'var(--u-text-2)', lineHeight: 1.45, paddingTop: 3 }}>{label}</span>
           </li>
         ))}
       </ol>
@@ -159,7 +159,7 @@ function AndroidSteps({
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
-            width: 48, height: 48, borderRadius: 14, flexShrink: 0,
+            width: 48, height: 48, borderRadius: 'var(--radius-lg)', flexShrink: 0,
             background: 'var(--brand-accent)', display: 'grid', placeItems: 'center',
             color: 'var(--brand-on-accent, #fff)',
           }}>

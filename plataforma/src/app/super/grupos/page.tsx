@@ -23,7 +23,6 @@ export default async function SuperGruposPage() {
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <PageHeader
-        title="Grupos"
         subtitle={
           <>
             Se arman solos: cuando un dueño abre su segundo restaurante desde Mi cuenta,
@@ -50,21 +49,21 @@ export default async function SuperGruposPage() {
                 <span
                   aria-hidden
                   style={{
-                    width: 38, height: 38, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center',
+                    width: 38, height: 38, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
                     background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent-ink)',
                   }}
                 >
                   <Icon name="dashboard" size={18} />
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {o.name}
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)', marginTop: 2 }}>
                     {o.slug}
                   </div>
                 </div>
-                <span style={{ fontSize: 12.5, color: 'var(--u-text-3)', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 12, color: 'var(--u-text-3)', whiteSpace: 'nowrap' }}>
                   {o.branchCount} sucursal{o.branchCount === 1 ? '' : 'es'}
                 </span>
                 <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />

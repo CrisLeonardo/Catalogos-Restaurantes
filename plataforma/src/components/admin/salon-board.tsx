@@ -300,9 +300,8 @@ export default function SalonBoard({
       const res = await fn();
       setPendiente(null);
       setAviso({ text: res.error ?? hecho });
-      router.refresh();
     });
-  }, [router]);
+  }, []);
 
   const sentar = useCallback((n: number, pax: number | null, waiterId: string | null) => {
     const quien = waiters.find((w) => w.id === waiterId)?.name;
@@ -533,8 +532,8 @@ export default function SalonBoard({
           className="press btn-accent"
           style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexShrink: 0,
-            height: 44, padding: '0 18px', borderRadius: 12, border: 'none',
-            fontSize: 14.5, fontWeight: 600, cursor: waiterHref ? 'pointer' : 'default',
+            height: 44, padding: '0 18px', borderRadius: 'var(--radius-lg)', border: 'none',
+            fontSize: 14, fontWeight: 600, cursor: waiterHref ? 'pointer' : 'default',
             opacity: waiterHref ? 1 : 0.55,
           }}
         >
@@ -551,7 +550,7 @@ export default function SalonBoard({
           role="status"
           style={{
             display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-            padding: '10px 14px', borderRadius: 12, fontSize: 13, fontWeight: 500, color: 'var(--u-text-2)',
+            padding: '10px 14px', borderRadius: 'var(--radius-lg)', fontSize: 13, fontWeight: 500, color: 'var(--u-text-2)',
             border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
           }}
         >
@@ -563,7 +562,7 @@ export default function SalonBoard({
               className="press"
               style={{
                 flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7,
-                height: 34, padding: '0 14px', borderRadius: 9, cursor: 'pointer',
+                height: 34, padding: '0 14px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
                 border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
                 color: 'var(--u-text)', fontSize: 13, fontWeight: 600,
               }}
@@ -652,7 +651,7 @@ export default function SalonBoard({
           role="status"
           style={{
             display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-            padding: '9px 13px', borderRadius: 11, fontSize: 13,
+            padding: '9px 13px', borderRadius: 'var(--radius-md)', fontSize: 13,
             border: '1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent)',
             background: 'color-mix(in srgb, var(--brand-accent) 7%, transparent)',
           }}
@@ -669,9 +668,9 @@ export default function SalonBoard({
             onClick={() => setFiltro('todas')}
             className="press"
             style={{
-              flexShrink: 0, height: 32, padding: '0 13px', borderRadius: 9, cursor: 'pointer',
+              flexShrink: 0, height: 32, padding: '0 13px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
               border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
-              color: 'var(--u-text)', fontSize: 12.5, fontWeight: 600,
+              color: 'var(--u-text)', fontSize: 12, fontWeight: 600,
             }}
           >
             Ver todas
@@ -679,11 +678,18 @@ export default function SalonBoard({
         </div>
       )}
 
+      {/* La explicación, plegada: leída una vez sobra, y fija ocupaba sitio
+          en cada visita (auditoría 2026-10-02, PED-12). */}
       {view !== 'plano' && filtro === 'todas' && (
-        <p style={{ margin: 0, fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.5, padding: '0 2px' }}>
-          Las mesas se ordenan por urgencia, no por número. Una mesa libre no dice nada: solo se pinta la que
-          necesita a alguien ahora.
-        </p>
+        <details className="salon-help" style={{ fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.5, padding: '0 2px' }}>
+          <summary style={{ cursor: 'pointer', color: 'var(--u-text-3)', fontWeight: 600, width: 'fit-content' }}>
+            ¿En qué orden van las mesas?
+          </summary>
+          <p style={{ margin: '6px 0 0' }}>
+            Por urgencia, no por número. Una mesa libre no dice nada: solo se pinta la que
+            necesita a alguien ahora.
+          </p>
+        </details>
       )}
     </div>
   );
@@ -716,7 +722,7 @@ function Celda({ label, value, hint, accent, activo, onClick }: {
         {value}
       </div>
       {hint && (
-        <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1, lineHeight: 1.3 }}>
+        <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 1, lineHeight: 1.3 }}>
           {hint}
         </div>
       )}

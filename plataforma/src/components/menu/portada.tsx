@@ -360,7 +360,7 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
   /* ── Stack ── */
   const feats = [
     { t: subtitle, i: 'sparkle' },
-    { t: config.zone ? `Pedidos en ${config.zone}` : 'Pedí en línea', i: 'truck' },
+    { t: config.zone ? `Pedidos en ${config.zone}` : 'Pide en línea', i: 'truck' },
     { t: 'Hecho al momento', i: 'flame' },
   ].filter((f) => f.t);
   return (

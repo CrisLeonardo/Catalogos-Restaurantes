@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { computeTip, resolveTheme, tipAppliesToType } from './resolve';
-import { DEFAULT_CONFIG } from './defaults';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { computeTip, resolveTheme, tipAppliesToType, buildFontsHref, SELF_HOSTED_FONT_VARS } from './resolve';
+import { DEFAULT_CONFIG, FONT_OPTIONS } from './defaults';
 import type { ThemeConfig } from './defaults';
 
 /** Config base con propina obligatoria del 10% activa para DINE_IN. */
@@ -80,5 +82,60 @@ describe('resolveTheme · compatibilidad catalogView → cardStyle', () => {
   it('sin nada guardado usa el default (tarjeta)', () => {
     expect(resolveTheme(null).config.cardStyle).toBe('tarjeta');
     expect(resolveTheme({}).config.cardStyle).toBe('tarjeta');
+  });
+});
+
+describe('textos por defecto viejos guardados en el tema (T-13: «tú»)', () => {
+  it('el texto por defecto de antes se cambia por el de ahora', () => {
+    const t = resolveTheme({ content: { checkout: { namePh: '¿Cómo te llamás?', errName: 'Decinos tu nombre' } } });
+    expect(t.content.checkout.namePh).toBe('¿Cómo te llamas?');
+    expect(t.content.checkout.errName).toBe('Dinos tu nombre');
+  });
+
+  it('lo que escribió el dueño se respeta tal cual', () => {
+    const t = resolveTheme({ content: { checkout: { namePh: '¿Cómo te llamás, mae?' } } });
+    expect(t.content.checkout.namePh).toBe('¿Cómo te llamás, mae?');
+  });
+});
+
+describe('lema de relleno «Sabor que enamora» (CAT-03)', () => {
+  it('ya no es el lema por defecto', () => {
+    expect(resolveTheme(null, 'x').config.tagline).toBe('');
+  });
+  it('si quedó guardado en el tema, se trata como vacío', () => {
+    const row = { config: { tagline: 'Sabor que enamora' } } as never;
+    expect(resolveTheme(row, 'x').config.tagline).toBe('');
+  });
+  it('y si el restaurante tiene su lema propio, gana el suyo', () => {
+    const row = { config: { tagline: 'Sabor que enamora' } } as never;
+    expect(resolveTheme(row, 'x', { tagline: 'Café de especialidad' }).config.tagline).toBe('Café de especialidad');
+  });
+  it('un lema escrito por el dueño no se toca', () => {
+    const row = { config: { tagline: 'El mejor pan de la zona 1' } } as never;
+    expect(resolveTheme(row, 'x').config.tagline).toBe('El mejor pan de la zona 1');
+  });
+});
+
+describe('tipografías del catálogo, todas desde nuestro dominio (REN-08)', () => {
+  it('cada familia del editor tiene su variable de next/font', () => {
+    const sinVariable = FONT_OPTIONS.map((f) => f.family).filter((f) => !SELF_HOSTED_FONT_VARS[f]);
+    expect(sinVariable).toEqual([]);
+  });
+
+  it('y esa variable se declara de verdad (layout.tsx o app/catalog-fonts.ts)', () => {
+    const fuente = ['src/app/layout.tsx', 'src/app/catalog-fonts.ts']
+      .map((f) => readFileSync(path.join(process.cwd(), f), 'utf8'))
+      .join('\n');
+    const faltan = Object.values(SELF_HOSTED_FONT_VARS)
+      .map((v) => v.replace(/^var\((--[a-z0-9-]+)\)$/, '$1'))
+      .filter((name) => !fuente.includes(`'${name}'`));
+    expect(faltan).toEqual([]);
+  });
+
+  it('ningún tema del catálogo vuelve a pedir la hoja de Google', () => {
+    for (const f of FONT_OPTIONS) {
+      const config = { ...DEFAULT_CONFIG, fontDisplay: f.family, fontPoster: f.family, fontBody: f.family, fontSerif: f.family, fontMono: f.family };
+      expect(buildFontsHref(config)).toBeNull();
+    }
   });
 });

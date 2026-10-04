@@ -98,6 +98,9 @@ interface Props {
   /** "Comer en local" activo — da acceso a Mesas aunque el plan no incluya
    * el panel de mesero completo (ver layout.tsx y mesas/page.tsx). */
   dineInEnabled?: boolean;
+  /** «A domicilio» activo y conexión de WhatsApp lista: ver lib/admin-nav.ts (N-02). */
+  deliveryEnabled?: boolean;
+  whatsappReady?: boolean;
   /** Modo vista previa (Super Admin): nav sin navegar, sin cerrar sesión. */
   preview?: boolean;
   /** Sesión iniciada por PIN — cambia "Salir" por "Cambiar de usuario". */
@@ -121,7 +124,7 @@ export default function AdminShell({
   reservacionesActive = false, listaEsperaActive = false, encuestasActive = false, cuponesActive = false,
   llamadaMeseroActive = false,
   logoUrl, logoBg, zone, role, permissions, userName, canManageStaff, hasMultipleRestaurants = false,
-  planActual, dineInEnabled = false, preview = false,
+  planActual, dineInEnabled = false, deliveryEnabled = false, whatsappReady = false, preview = false,
   isOperatorSession = false, children,
 }: Props) {
   const realPathname = usePathname();
@@ -261,7 +264,7 @@ export default function AdminShell({
     ordersEnabled, analiticaEnabled, inventarioEnabled, ingredientesEnabled,
     personalEnabled, finanzasEnabled, felActive, proveedoresActive, loyaltyActive,
     reservacionesActive, listaEsperaActive, encuestasActive, cuponesActive,
-    dineInEnabled, planActual, showStaff, preview,
+    dineInEnabled, deliveryEnabled, whatsappReady, planActual, showStaff, preview,
   });
   const activeGroup = findGroup(groups, pathname);
 
@@ -332,14 +335,27 @@ export default function AdminShell({
     '/admin/analitica': 'Analítica',
     '/admin/finanzas': 'Finanzas',
     '/admin/personalizacion': 'Personalizar sitio',
-    '/admin/personal': 'Personal y permisos',
+    // «Personal y permisos» no cabía en el teléfono («Personal y permi…»).
+    '/admin/personal': 'Personal',
     '/admin/suscripcion': 'Mi suscripción',
-    '/admin/menu/productos': 'Producto',
+    // «Platillo», como dicen la pestaña («Platillos») y el resto del panel.
+    '/admin/menu/productos/new': 'Nuevo platillo',
+    '/admin/menu/productos': 'Platillo',
     '/admin/menu': 'Platillos',
-    '/admin/perfil': 'Perfil',
+    // El mismo nombre que en Ajustes (AJU-04): eran «Perfil» aquí y
+    // «Perfil del negocio» en la lista.
+    '/admin/perfil': 'Perfil del negocio',
     '/admin/ajustes/restaurante': 'Horarios',
     '/admin/ajustes/entrega': 'Zona de entrega',
     '/admin/ajustes/pedidos': 'Pedidos y cobro',
+    /* Estas cuatro caían en el «Panel» de reserva o en el «Ajustes» del
+       grupo: la barra no decía en qué pantalla se estaba (auditoría
+       2026-10-02, T-10). Van antes de '/admin/ajustes' porque gana el
+       primer prefijo que coincide. */
+    '/admin/ajustes/salon': 'Salón',
+    '/admin/repartidores': 'Repartidores',
+    '/admin/whatsapp': 'WhatsApp',
+    '/admin/facturacion': 'Facturación',
     '/admin/ajustes': 'Ajustes',
     '/admin/mi-pc': 'La PC del local',
     '/admin/qr': 'Código QR',
@@ -350,7 +366,7 @@ export default function AdminShell({
     '/admin/cupones': 'Cupones',
     '/admin/lealtad': 'Lealtad',
     '/admin/modulos': 'Funciones',
-    '/admin/respaldo': 'Copia de tus datos',
+    '/admin/respaldo': 'Copia de datos',
   };
   /* Estando en una pestaña, el título de arriba dice el GRUPO ("Menú") y la
      pestaña activa dice la pantalla ("Platillos"): antes ambos decían lo
@@ -471,7 +487,7 @@ export default function AdminShell({
               quién es la pantalla, en qué modo está, qué hora es y cómo se sale. */}
           <div className="wp-servicebar">
             <span style={{
-              display: 'grid', placeItems: 'center', width: 26, height: 26, borderRadius: 7, flexShrink: 0,
+              display: 'grid', placeItems: 'center', width: 26, height: 26, borderRadius: 'var(--radius-sm)', flexShrink: 0,
               background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: 'var(--u-text-2)',
             }}>
               <Icon name="monitor" size={14} />
@@ -487,7 +503,7 @@ export default function AdminShell({
               className="press"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0,
-                height: 32, padding: '0 11px', borderRadius: 8, cursor: 'pointer',
+                height: 32, padding: '0 11px', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
                 border: '1px solid var(--adm-border-2)', background: 'none',
                 color: 'var(--u-text-2)', fontSize: 13, fontWeight: 500,
               }}
@@ -582,8 +598,8 @@ export default function AdminShell({
                 )}
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14.5, color: 'var(--u-text)', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{restaurantName}</div>
-                <div className="t-kicker" style={{ fontSize: 9.5, marginTop: 3 }}>Panel{zone ? ` · ${zone}` : ''}</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14, color: 'var(--u-text)', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{restaurantName}</div>
+                <div className="t-kicker" style={{ fontSize: 11, marginTop: 3 }}>Panel{zone ? ` · ${zone}` : ''}</div>
               </div>
             </>
           );
@@ -635,11 +651,11 @@ export default function AdminShell({
           >
             <Badge
               variant="neutral"
-              className="nav-label justify-start border-none bg-transparent px-0 py-0 text-[12.5px] font-semibold text-[var(--u-text-2)]"
+              className="nav-label justify-start border-none bg-transparent px-0 py-0 text-[12px] font-semibold text-[var(--u-text-2)]"
             >
               <span
                 style={{
-                  width: 8, height: 8, borderRadius: 99, flexShrink: 0,
+                  width: 8, height: 8, borderRadius: 'var(--radius-full)', flexShrink: 0,
                   background: PLAN_COLORS[planActual] ?? '#94a3b8',
                   boxShadow: `0 0 0 3px color-mix(in srgb, ${PLAN_COLORS[planActual] ?? '#94a3b8'} 18%, transparent)`,
                 }}
@@ -655,25 +671,25 @@ export default function AdminShell({
           <a
             href="/mi-cuenta"
             className="press glass-quiet admin-switch-restaurant"
-            style={{ borderRadius: 13, padding: '10px 12px', marginBottom: 8, textDecoration: 'none' }}
+            style={{ borderRadius: 'var(--radius-lg)', padding: '10px 12px', marginBottom: 8, textDecoration: 'none' }}
           >
             <Icon name="grid" size={15} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />
-            <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-2)' }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 600, color: 'var(--u-text-2)' }}>
               Cambiar de restaurante
             </span>
             <Icon name="chevronRight" size={14} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
           </a>
         )}
 
-        <div className="glass-quiet admin-usercard" style={{ borderRadius: 13, padding: 12 }}>
-          <div className="admin-usericon" style={{ width: 34, height: 34, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 10%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
+        <div className="glass-quiet admin-usercard" style={{ borderRadius: 'var(--radius-lg)', padding: 12 }}>
+          <div className="admin-usericon" style={{ width: 34, height: 34, borderRadius: 'var(--radius-full)', background: 'color-mix(in srgb, var(--u-text) 10%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
             <Icon name="user" size={17} />
           </div>
           <div className="admin-usermeta" style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 600, fontSize: 12.5, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {roleLabel}
             </div>
-            <div style={{ fontSize: 10.5, color: 'var(--u-text-3)' }}>{preview ? 'Vista previa' : 'Sesión activa'}</div>
+            <div style={{ fontSize: 11, color: 'var(--u-text-3)' }}>{preview ? 'Vista previa' : 'Sesión activa'}</div>
           </div>
           {!preview && <LogoutButton isOperatorSession={isOperatorSession} />}
         </div>
@@ -691,7 +707,7 @@ export default function AdminShell({
           </div>
           {isLive && (
             <Badge variant="accent" className="admin-live py-1.5">
-              <span style={{ width: 7, height: 7, borderRadius: 99, background: 'var(--adm-accent-500, var(--u-text))', boxShadow: '0 0 8px var(--adm-accent-500, var(--u-text))', animation: 'pulse-ring 2s infinite' }} /> En vivo
+              <span style={{ width: 7, height: 7, borderRadius: 'var(--radius-full)', background: 'var(--adm-accent-500, var(--u-text))', boxShadow: '0 0 8px var(--adm-accent-500, var(--u-text))', animation: 'pulse-ring 2s infinite' }} /> En vivo
             </Badge>
           )}
           {!preview && kioskEligible && (

@@ -1,7 +1,6 @@
 'use client';
 
 import { Fragment, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { saveIngredient, deleteIngredient, getIngredientMovements } from '@/lib/actions/recipes';
 import { Card } from '@/components/ui/card';
@@ -10,12 +9,14 @@ import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
 import type { Ingredient } from '@/lib/db/recipes';
 import type { StockMovement } from '@/lib/db/kardex';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 const REASON_LABEL: Record<string, string> = { purchase: 'Compra a proveedor', adjust: 'Ajuste manual' };
 
 function MovementHistory({ movements }: { movements: StockMovement[] }) {
   if (movements.length === 0) {
-    return <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', padding: '6px 2px' }}>Sin movimientos registrados todavía — se llenará al recibir órdenes de compra vinculadas a este insumo.</p>;
+    return <p style={{ fontSize: 12, color: 'var(--u-text-4)', padding: '6px 2px' }}>Sin movimientos registrados todavía — se llenará al recibir órdenes de compra vinculadas a este insumo.</p>;
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 260, overflowY: 'auto' }}>
@@ -23,11 +24,11 @@ function MovementHistory({ movements }: { movements: StockMovement[] }) {
         <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, padding: '5px 2px', borderBottom: '1px solid var(--u-hair)' }}>
           <div>
             <div style={{ color: 'var(--u-text-2)' }}>{REASON_LABEL[m.reason] ?? m.reason}</div>
-            <div style={{ color: 'var(--u-text-4)', fontSize: 10.5 }}>{new Date(m.created_at).toLocaleString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+            <div style={{ color: 'var(--u-text-4)', fontSize: 11 }}>{new Date(m.created_at).toLocaleString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
           </div>
           <div style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)' }}>
             <div style={{ color: Number(m.delta) >= 0 ? 'var(--c-ok)' : 'var(--c-danger)' }}>{Number(m.delta) >= 0 ? '+' : ''}{m.delta}</div>
-            {m.unit_cost != null && <div style={{ color: 'var(--u-text-3)', fontSize: 10.5 }}>costo Q{Number(m.unit_cost).toFixed(4)} · prom. Q{Number(m.avg_cost_after).toFixed(4)}</div>}
+            {m.unit_cost != null && <div style={{ color: 'var(--u-text-3)', fontSize: 11 }}>costo Q{Number(m.unit_cost).toFixed(4)} · prom. Q{Number(m.avg_cost_after).toFixed(4)}</div>}
           </div>
         </div>
       ))}
@@ -49,26 +50,8 @@ const UNITS = [
 
 const UNIT_OPTIONS = UNITS.map((u) => ({ value: u, label: u }));
 
-const inputStyle: React.CSSProperties = {
-  background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-  border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)',
-  padding: '9px 11px',
-  color: 'var(--u-text)',
-  fontSize: 14,
-  outline: 'none',
-  width: '100%',
-};
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 11,
-  color: 'var(--u-text-3)',
-  fontWeight: 500,
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase',
-  marginBottom: 4,
-  display: 'block',
-};
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 interface Props {
   restaurantId: string;
@@ -84,7 +67,7 @@ type EditState = {
 } | null;
 
 export default function IngredientPanel({ restaurantId, initialIngredients, usageCounts }: Props) {
-  const router = useRouter();
+  const { confirm, dialog } = useConfirm();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [editState, setEditState] = useState<EditState>(null);
@@ -125,7 +108,6 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
       const res = await saveIngredient(fd);
       if (res?.error) { setError(res.error); return; }
       resetAdd();
-      router.refresh();
     });
   }
 
@@ -143,40 +125,45 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
       const res = await saveIngredient(fd);
       if (res?.error) { setError(res.error); return; }
       setEditState(null);
-      router.refresh();
     });
   }
 
-  function handleDelete(ing: Ingredient) {
+  async function handleDelete(ing: Ingredient) {
     const usage = usageCounts[ing.id] ?? 0;
-    const confirm_msg = usage > 0
-      ? `"${ing.name}" se usa en ${usage} receta(s). ¿Eliminar de todas formas?`
-      : `¿Eliminar "${ing.name}"?`;
-    if (!window.confirm(confirm_msg)) return;
+    if (!(await confirm({
+      title: `¿Eliminar «${ing.name}»?`,
+      description: usage > 0
+        ? `Se usa en ${usage} ${usage === 1 ? 'receta' : 'recetas'}: saldrá de ${usage === 1 ? 'ella' : 'todas'}.`
+        : undefined,
+    }))) return;
     setError(null);
     startTransition(async () => {
       const res = await deleteIngredient(ing.id, restaurantId);
       if (res?.error) { setError(res.error); return; }
-      router.refresh();
     });
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {dialog}
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <p style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 4 }}>
-            Define los insumos y su costo por unidad. Asígnalos a platillos para calcular el food cost automáticamente.
+            Define los insumos y su costo por unidad. Asígnalos a tus platillos para calcular su costo automáticamente.
           </p>
         </div>
-        <Button
-          type="button"
-          onClick={() => { setShowAdd(true); setEditState(null); }}
-          className="shrink-0 whitespace-nowrap rounded-adm-full"
-        >
-          + Nuevo insumo
-        </Button>
+        {/* Un solo botón para crear: con la lista vacía lo pone el estado
+            vacío, y con el formulario abierto sobra (auditoría 2026-10-02, T-09). */}
+        {initialIngredients.length > 0 && !showAdd && (
+          <Button
+            type="button"
+            onClick={() => { setShowAdd(true); setEditState(null); }}
+            className="shrink-0 whitespace-nowrap rounded-adm-full"
+          >
+            <Icon name="plus" size={15} /> Nuevo insumo
+          </Button>
+        )}
       </div>
 
 
@@ -197,7 +184,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
             <div className="ing-form-grid">
               <div className="ing-form-name">
                 <label style={labelStyle}>Nombre</label>
-                <input style={inputStyle} required value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ej: Tomate roma" />
+                <input className="adm-field" required value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ej: Tomate roma" />
               </div>
               <div>
                 <label style={labelStyle}>Unidad</label>
@@ -205,7 +192,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
               </div>
               <div>
                 <label style={labelStyle}>Costo / unidad</label>
-                <input style={inputStyle} type="number" inputMode="decimal" min="0" step="0.0001" required value={newCost} onChange={(e) => setNewCost(e.target.value)} placeholder="0.0000" />
+                <input className="adm-field" type="number" inputMode="decimal" min="0" step="0.0001" required value={newCost} onChange={(e) => setNewCost(e.target.value)} placeholder="0.0000" />
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -224,8 +211,8 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
       {initialIngredients.length === 0 && !showAdd ? (
         <EmptyState
           icon="flask"
-          title="Aún no tenés insumos registrados"
-          desc="Creá el primero para poder asignarlo a las recetas de tus platillos y calcular el food cost automáticamente."
+          title="Aún no tienes insumos registrados"
+          desc="Crea el primero para poder asignarlo a las recetas de tus platillos y calcular su costo automáticamente."
           action={{ label: 'Agregar el primero', onClick: () => setShowAdd(true) }}
         />
       ) : (
@@ -241,7 +228,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
           {initialIngredients.map((ing, i) => {
             const usage = usageCounts[ing.id] ?? 0;
             const usageChip = usage > 0 ? (
-              <span style={{ fontSize: 12, background: 'color-mix(in srgb, var(--u-text) 7%, transparent)', padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: 12, background: 'color-mix(in srgb, var(--u-text) 7%, transparent)', padding: '2px 8px', borderRadius: 'var(--radius-full)', whiteSpace: 'nowrap' }}>
                 {usage} platillo{usage !== 1 ? 's' : ''}
               </span>
             ) : null;
@@ -254,7 +241,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
                     <div className="ing-form-grid">
                       <div className="ing-form-name">
                         <label style={labelStyle}>Nombre</label>
-                        <input style={inputStyle} required value={editState.name} onChange={(e) => setEditState({ ...editState, name: e.target.value })} />
+                        <input className="adm-field" required value={editState.name} onChange={(e) => setEditState({ ...editState, name: e.target.value })} />
                       </div>
                       <div>
                         <label style={labelStyle}>Unidad</label>
@@ -262,7 +249,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
                       </div>
                       <div>
                         <label style={labelStyle}>Costo / unidad</label>
-                        <input style={inputStyle} type="number" inputMode="decimal" min="0" step="0.0001" required value={editState.cost_per_unit} onChange={(e) => setEditState({ ...editState, cost_per_unit: e.target.value })} />
+                        <input className="adm-field" type="number" inputMode="decimal" min="0" step="0.0001" required value={editState.cost_per_unit} onChange={(e) => setEditState({ ...editState, cost_per_unit: e.target.value })} />
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>

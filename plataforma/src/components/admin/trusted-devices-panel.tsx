@@ -5,7 +5,6 @@
    la mano y decide si el PIN del personal vale SOLO en ellos. */
 
 import { useActionState, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Section } from '@/components/ui/section';
@@ -13,23 +12,19 @@ import { Button } from '@/components/ui/button';
 import { getDeviceId, describeThisDevice } from '@/lib/device-id';
 import { trustCurrentDevice, forgetDevice, setTrustedDevicePolicy, type DeviceState } from '@/lib/actions/devices';
 import type { TrustedDevice } from '@/lib/auth/trusted-device';
+import { haceTiempo } from '@/lib/dates';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
-function timeAgo(iso: string): string {
-  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return 'hace un momento';
-  if (s < 3600) return `hace ${Math.floor(s / 60)} min`;
-  if (s < 86400) return `hace ${Math.floor(s / 3600)} h`;
-  return `hace ${Math.floor(s / 86400)} d`;
-}
+const timeAgo = (iso: string): string => haceTiempo(iso);
 
 export default function TrustedDevicesPanel({ restaurantId, devices, requiresTrusted }: {
   restaurantId: string;
   devices: TrustedDevice[];
   requiresTrusted: boolean;
 }) {
-  const router = useRouter();
   const [thisDeviceId, setThisDeviceId] = useState<string | null>(null);
   const [thisDeviceLabel, setThisDeviceLabel] = useState('Este dispositivo');
+  const { confirmSubmit, dialog } = useConfirm();
 
   const [trustState, trustAction, trusting] = useActionState<DeviceState, FormData>(trustCurrentDevice, null);
   const [policyState, policyAction, savingPolicy] = useActionState<DeviceState, FormData>(setTrustedDevicePolicy, null);
@@ -40,8 +35,6 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
     setThisDeviceLabel(describeThisDevice());
   }, []);
 
-  useEffect(() => { if (trustState && 'ok' in trustState) router.refresh(); }, [trustState, router]);
-  useEffect(() => { if (policyState && 'ok' in policyState) router.refresh(); }, [policyState, router]);
 
   const isThisTrusted = !!thisDeviceId && devices.some((d) => d.device_id === thisDeviceId);
   const error = (trustState && 'error' in trustState && trustState.error)
@@ -58,7 +51,7 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
       ) : undefined}
     >
       <Card className="p-4.5 flex flex-col gap-3.5">
-      <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
+      <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
         Estos son los aparatos que tu restaurante reconoce como suyos. Se apuntan solos
         cada vez que alguien entra con su PIN, así que la lista se llena sin que hagas nada.
       </p>
@@ -67,14 +60,14 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
       <div
         style={{
           display: 'flex', alignItems: 'center', gap: 11,
-          padding: '11px 13px', borderRadius: 12,
+          padding: '11px 13px', borderRadius: 'var(--radius-lg)',
           border: '1px solid var(--u-hair)',
           background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
         }}
       >
         <span
           style={{
-            width: 32, height: 32, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center',
+            width: 32, height: 32, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
             background: isThisTrusted ? 'var(--c-ok-bg)' : 'color-mix(in srgb, var(--u-text) 7%, transparent)',
             color: isThisTrusted ? 'var(--c-ok)' : 'var(--u-text-3)',
           }}
@@ -82,8 +75,8 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
           <Icon name="monitor" size={16} />
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text)' }}>{thisDeviceLabel}</div>
-          <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text)' }}>{thisDeviceLabel}</div>
+          <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 1 }}>
             {thisDeviceId === null
               ? 'Este navegador no permite recordar el aparato'
               : isThisTrusted ? 'Ya está autorizado' : 'Todavía no autorizado'}
@@ -116,20 +109,24 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
               }}
             >
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13.5, color: 'var(--u-text)', fontWeight: 500 }}>
+                <div style={{ fontSize: 13, color: 'var(--u-text)', fontWeight: 500 }}>
                   {d.label || 'Dispositivo sin nombre'}
                   {d.device_id === thisDeviceId && (
                     <span style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 400 }}> · este</span>
                   )}
                 </div>
-                <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+                <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 1 }}>
                   Última vez {timeAgo(d.last_seen_at)}
                   {d.auto ? ' · se apuntó solo al entrar con PIN' : ' · autorizado desde el panel'}
                 </div>
               </div>
               <form
                 action={forgetDevice}
-                onSubmit={(e) => { if (!confirm('¿Quitar este aparato? Si el PIN está protegido, dejará de poder entrar desde ahí.')) e.preventDefault(); }}
+                onSubmit={confirmSubmit({
+                  title: '¿Quitar este aparato?',
+                  description: 'Si el PIN está protegido, ya no se podrá entrar desde ahí.',
+                  confirmLabel: 'Quitar',
+                })}
                 style={{ flexShrink: 0 }}
               >
                 <input type="hidden" name="restaurantId" value={restaurantId} />
@@ -150,7 +147,7 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
         <input type="hidden" name="enabled" value={requiresTrusted ? 'false' : 'true'} />
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>
               El PIN solo funciona en estos aparatos
             </div>
             <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: '3px 0 0', lineHeight: 1.5 }}>
@@ -171,8 +168,9 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
         </div>
       </form>
 
-      {error && <div style={{ fontSize: 12.5, color: 'var(--c-danger)' }}>{error}</div>}
+      {error && <div style={{ fontSize: 12, color: 'var(--c-danger)' }}>{error}</div>}
       </Card>
+      {dialog}
     </Section>
   );
 }

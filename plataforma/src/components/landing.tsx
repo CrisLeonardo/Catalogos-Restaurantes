@@ -1,10 +1,13 @@
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
+import { conEvento, EVENTOS } from '@/lib/analytics';
 import { LeoginMark } from '@/components/leogin-logo';
 import { SiteHeader, SiteFooter, SectionHead, contactHref } from '@/components/site-chrome';
 import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
-import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceQ, type PlanCode, type PlanPricing } from '@/lib/plans';
+import { PLANS, PLAN_POINTS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceQ, type PlanPricing } from '@/lib/plans';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
+import { getLandingProof } from '@/lib/db/landing';
+import { LandingPhone, Testimonials } from '@/components/landing-proof';
 
 /* Cifras de la tira de confianza. Solo hechos verificables del producto —
    nada de "+200 restaurantes" ni promedios inventados.
@@ -67,15 +70,6 @@ const steps = (trialDays: number) => [
   { n: '3', title: 'Comparte tu QR',       body: 'Lo pones en las mesas o en el mostrador. Tus clientes escanean, ordenan, y tú recibes todo en tiempo real.' },
 ];
 
-/* Puntos de marketing por plan (los precios y el badge SIEMPRE salen de plans.ts,
-   fuente única de verdad — solo este texto descriptivo se cura a mano aquí). */
-const LANDING_PLAN_POINTS: Record<PlanCode, string[]> = {
-  BASICO: ['Menú digital con código QR', 'Gratis para siempre, hasta 150 productos', 'Personalización con logo y color', 'Sin pedidos en línea'],
-  ESTANDAR: ['Todo lo del plan Básico', 'Pedidos para llevar o a domicilio', 'Alertas en tiempo real + WhatsApp', 'Reportes financieros y corte de caja'],
-  PREMIUM: ['Para llevar, en local y a domicilio', 'Panel de mesero y mapa de mesas', 'Lealtad, cupones y reservaciones', 'Analítica, inventario y personal'],
-  PRO: [],
-};
-
 /* Los precios salen del PlanPricing vigente (overrides del super admin),
    no del default de plans.ts — por eso esto es función y no constante. */
 function landingPlans(pricing: PlanPricing) {
@@ -85,7 +79,8 @@ function landingPlans(pricing: PlanPricing) {
     price: pricing.prices[code] === 0 ? 'Gratis' : planPriceQ(pricing, code),
     isFree: pricing.prices[code] === 0,
     tagline: PLANS[code].tagline,
-    points: LANDING_PLAN_POINTS[code],
+    // Los mismos puntos que en Mi cuenta y Suscripción (MIC-05).
+    points: PLAN_POINTS[code],
     accent: PLANS[code].highlight,
     badge: PLANS[code].badge,
   }));
@@ -140,7 +135,7 @@ function structuredData(pricing: PlanPricing) {
 }
 
 export default async function LeoginLanding() {
-  const pricing = await getEffectivePlanPricing();
+  const [pricing, proof] = await Promise.all([getEffectivePlanPricing(), getLandingProof()]);
   const demoUrl = subdomainUrl(DEMO_SLUG);
   const ctaHref = contactHref();
 
@@ -177,7 +172,7 @@ export default async function LeoginLanding() {
               </p>
 
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 30 }}>
-                <Link href="/registro" className="lp-btn lp-btn-lg lp-btn-primary">
+                <Link href="/registro" {...conEvento('lp-btn lp-btn-lg lp-btn-primary', EVENTOS.clicCrear, 'portada')}>
                   Crear mi restaurante gratis
                 </Link>
                 <a href={demoUrl} className="lp-btn lp-btn-lg lp-btn-soft">
@@ -206,7 +201,7 @@ export default async function LeoginLanding() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <PhoneMockup />
+              <LandingPhone showcase={proof.showcase} />
             </div>
           </div>
         </section>
@@ -230,6 +225,14 @@ export default async function LeoginLanding() {
             ))}
           </div>
         </section>
+
+        {/* ── Ya lo usan (solo con testimonios guardados en el Super, WEB-02) ── */}
+        {proof.testimonials.length > 0 && (
+          <section id="clientes" className="lp-shell lp-section">
+            <SectionHead eyebrow="Ya lo usan" title="Restaurantes que ya trabajan con Leogin" center />
+            <Testimonials items={proof.testimonials} />
+          </section>
+        )}
 
         {/* ── El cambio: antes / con Leogin ─────────────────── */}
         <section id="producto" className="lp-shell lp-section">
@@ -471,19 +474,23 @@ export default async function LeoginLanding() {
 
                 <ul style={{ listStyle: 'none', margin: '20px 0 24px', padding: 0, display: 'flex', flexDirection: 'column', gap: 11, flex: 1 }}>
                   {p.points.map((pt) => (
-                    <li key={pt} style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 13.5 }}>
-                      <Icon name="check" size={15} strokeWidth={2.6} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0, marginTop: 2 }} />
-                      <span style={{ color: 'var(--u-text-2)', lineHeight: 1.45 }}>{pt}</span>
+                    <li key={pt.text} style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 13.5 }}>
+                      {/* «Sin pedidos en línea» llevaba una palomita como si
+                          fuera algo a favor: lo que el plan no trae, con «—». */}
+                      <Icon name={pt.positive ? 'check' : 'minus'} size={15} strokeWidth={2.6} style={{ color: pt.positive ? 'var(--brand-accent-ink)' : 'var(--u-text-4)', flexShrink: 0, marginTop: 2 }} />
+                      <span style={{ color: pt.positive ? 'var(--u-text-2)' : 'var(--u-text-3)', lineHeight: 1.45 }}>{pt.text}</span>
                     </li>
                   ))}
                 </ul>
 
                 <Link
                   href="/registro"
-                  className={`lp-btn ${p.accent ? 'lp-btn-primary' : 'lp-btn-soft'}`}
+                  {...conEvento(`lp-btn ${p.accent ? 'lp-btn-primary' : 'lp-btn-soft'}`, EVENTOS.clicCrear, `plan ${p.name}`)}
                   style={{ width: '100%' }}
                 >
-                  Empezar gratis
+                  {/* En los de pago lo que pasa es una prueba, no «gratis»
+                      (WEB-07). */}
+                  {p.isFree ? 'Empezar gratis' : pricing.trialDays > 0 ? `Probar ${pricing.trialDays} días gratis` : 'Elegir este plan'}
                 </Link>
               </div>
             ))}
@@ -532,7 +539,12 @@ export default async function LeoginLanding() {
               }}
             />
             <div style={{ position: 'relative' }}>
-              <LeoginMark size={44} />
+              {/* Centrada: el logo es un bloque y el `text-align` de la banda
+                  no lo movía, así que quedaba suelto arriba a la izquierda
+                  (auditoría 2026-10-02, WEB-09). */}
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <LeoginMark size={44} />
+              </div>
               <h2
                 className="lp-h2"
                 style={{ color: '#F5F3EF', marginTop: 22 }}
@@ -544,7 +556,7 @@ export default async function LeoginLanding() {
                 acompañemos en la configuración? Escríbenos por WhatsApp y lo vemos juntos.
               </p>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 30 }}>
-                <Link href="/registro" className="lp-btn lp-btn-lg lp-btn-primary">
+                <Link href="/registro" {...conEvento('lp-btn lp-btn-lg lp-btn-primary', EVENTOS.clicCrear, 'cierre')}>
                   Crear mi restaurante gratis
                 </Link>
                 <a
@@ -658,65 +670,6 @@ function PanelMockup() {
             <span style={{ fontSize: 8.5, fontWeight: 800, color: '#805600', background: 'rgba(128,86,0,0.10)', padding: '3px 8px', borderRadius: 99, letterSpacing: '0.05em' }}>EN COCINA</span>
             <span style={{ fontSize: 10.5, fontWeight: 600, color: 'rgba(23,22,26,0.8)' }}>Para llevar · #127</span>
             <span className="t-mono" style={{ marginLeft: 'auto', fontSize: 10, color: 'rgba(23,22,26,0.64)' }}>08:41</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Mockup del menú en un teléfono ────────────────────────────
-   Esta pantalla SÍ va oscura: es el menú de un restaurante, y el
-   tema por defecto de un tenant nuevo es el oscuro (#0b0b0c).    */
-function PhoneMockup() {
-  const items = [
-    { name: 'Tacos al pastor', desc: 'Con piña, cilantro y cebolla', price: 'Q45', g: 'linear-gradient(135deg,#e0873b,#b45309)' },
-    { name: 'Burrito de res',  desc: 'Frijol, arroz, queso y pico',  price: 'Q52', g: 'linear-gradient(135deg,#7fae2f,#3f6212)' },
-    { name: 'Horchata fría',   desc: 'Casera, con canela',           price: 'Q15', g: 'linear-gradient(135deg,#d9b48f,#8a6647)' },
-  ];
-  return (
-    <div style={{ position: 'relative' }}>
-      {/* Mismo criterio que en PanelMockup: halo contenido, sin inset negativo. */}
-      <div
-        aria-hidden
-        style={{
-          position: 'absolute', inset: 0,
-          background: 'radial-gradient(72% 58% at 50% 42%, color-mix(in srgb, var(--brand-accent) 19%, transparent), transparent 72%)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div className="lp-device lp-device-phone">
-        <div className="lp-device-screen-phone" style={{ background: '#0b0b0c' }}>
-          {/* Portada */}
-          <div style={{ padding: '18px 16px 14px', background: 'linear-gradient(180deg, rgba(217,119,87,0.22), transparent)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-              <span className="t-display" style={{ fontSize: 15, fontWeight: 800, color: '#F5F3EF' }}>Tu Restaurante</span>
-              <span style={{ fontSize: 9, fontWeight: 700, color: '#6ee7a8', background: 'rgba(110,231,168,0.14)', padding: '3px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>● Abierto</span>
-            </div>
-            <div style={{ fontSize: 10.5, color: 'rgba(245,243,239,0.55)', marginTop: 4 }}>Cocina de la casa · Zona 1</div>
-          </div>
-
-          {/* Productos */}
-          <div style={{ padding: '2px 12px', display: 'flex', flexDirection: 'column', gap: 9 }}>
-            {items.map((it) => (
-              <div key={it.name} style={{ display: 'flex', gap: 10, alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: 8 }}>
-                <div style={{ width: 50, height: 50, borderRadius: 11, flexShrink: 0, background: it.g }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 11.5, fontWeight: 700, color: '#F5F3EF' }}>{it.name}</div>
-                  <div style={{ fontSize: 9.5, color: 'rgba(245,243,239,0.5)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.desc}</div>
-                  <div className="t-mono" style={{ fontSize: 11.5, fontWeight: 800, color: '#e8a184', marginTop: 3 }}>{it.price}</div>
-                </div>
-                <span aria-hidden style={{ width: 26, height: 26, flexShrink: 0, borderRadius: 9, display: 'grid', placeItems: 'center', background: '#d97757', color: '#fff', fontSize: 16, fontWeight: 700, lineHeight: 1 }}>+</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Barra de carrito */}
-          <div style={{ margin: '14px 12px 0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#c2542f', color: '#fff', borderRadius: 13, padding: '11px 15px' }}>
-              <span style={{ fontSize: 11.5, fontWeight: 700 }}>Ver carrito · 3</span>
-              <span className="t-mono" style={{ fontSize: 11.5, fontWeight: 800 }}>Q112</span>
-            </div>
           </div>
         </div>
       </div>

@@ -17,6 +17,8 @@ import { sanitizeDietaryTags } from '@/lib/dietary-tags';
 import { PLANS, type PlanCode } from '@/lib/plans';
 import type { Category, Product, ProductOptionGroup } from '@/types';
 import { panelLink } from '@/lib/panel-links-server';
+import { registrarEvento } from '@/lib/analytics-server';
+import { EVENTOS } from '@/lib/analytics';
 
 export type ProductState = { error: string } | null;
 
@@ -216,6 +218,10 @@ export async function createProduct(prevState: ProductState, formData: FormData)
   }).select('id').single();
 
   if (error) return { error: error.message };
+
+  // Embudo de la web (WEB-01): el primer platillo es la señal de que el
+  // alta se convirtió en un restaurante de verdad. Sin datos del platillo.
+  if (!existing?.length) await registrarEvento(EVENTOS.primerPlatillo, '/admin/menu/productos/new');
 
   revalidatePath('/admin/menu');
   updateTag(`menu:${ctx.restaurantId}`);

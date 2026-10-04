@@ -81,7 +81,7 @@ function useEnabledPref(): [boolean, (v: boolean) => void] {
   return [enabled, setEnabled];
 }
 
-export default function PreviewPane({ previewId }: { previewId: string }) {
+export default function PreviewPane({ previewId, id }: { previewId: string; /** Ancla para saltar a la vista previa. */ id?: string }) {
   const [enabled, setEnabledPersist] = useEnabledPref();
   const [wide, setWide] = useState(false);
 
@@ -99,18 +99,18 @@ export default function PreviewPane({ previewId }: { previewId: string }) {
   }
 
   return (
-    <aside className="preview-pane">
+    <aside className="preview-pane" id={id}>
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span
           aria-hidden
           style={{
-            width: 8, height: 8, borderRadius: 99,
+            width: 8, height: 8, borderRadius: 'var(--radius-full)',
             background: enabled ? 'var(--c-ok)' : 'var(--u-text-4)',
             boxShadow: enabled ? '0 0 8px rgba(74,222,128,0.8)' : 'none', flexShrink: 0,
           }}
         />
-        <span className="t-kicker" style={{ fontSize: 10.5, flex: 1 }}>
+        <span className="adm-label" style={{ flex: 1 }}>
           {enabled ? 'Vista previa en vivo' : 'Vista previa'}
         </span>
 
@@ -130,7 +130,7 @@ export default function PreviewPane({ previewId }: { previewId: string }) {
           <div className={`preview-frame${wide ? ' is-wide' : ''}`}>
             <iframe key={src} src={src} title="Vista previa del restaurante" loading="lazy" />
           </div>
-          <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', textAlign: 'center', lineHeight: 1.5 }}>
+          <p style={{ fontSize: 11, color: 'var(--u-text-4)', textAlign: 'center', lineHeight: 1.5 }}>
             Los cambios del editor se reflejan al instante, sin guardar.
             <br />
             «Abrir en ventana» sirve para mostrarla al cliente en otra pantalla.
@@ -140,11 +140,11 @@ export default function PreviewPane({ previewId }: { previewId: string }) {
         /* Estado apagado: tarjeta ligera, sin iframe → no consume recursos */
         <div
           style={{
-            border: '1px dashed var(--u-hair-2)', borderRadius: 14, padding: '26px 18px',
+            border: '1px dashed var(--u-hair-2)', borderRadius: 'var(--radius-lg)', padding: '26px 18px',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center',
           }}
         >
-          <div style={{ width: 46, height: 46, borderRadius: 13, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text-3)' }}>
+          <div style={{ width: 46, height: 46, borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text-3)' }}>
             <Icon name="eye" size={22} />
           </div>
           <div>
@@ -166,7 +166,7 @@ export default function PreviewPane({ previewId }: { previewId: string }) {
               <Icon name="arrowUpRight" size={15} /> Abrir en pestaña nueva
             </button>
             <button type="button" onClick={openWindow} className="press"
-              style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5, border: 'none', background: 'transparent', color: 'var(--u-text-3)', cursor: 'pointer' }}>
+              style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12, border: 'none', background: 'transparent', color: 'var(--u-text-3)', cursor: 'pointer' }}>
               Abrir en ventana aparte
             </button>
           </div>
@@ -192,7 +192,7 @@ function PaneBtn({
       aria-label={label}
       className="press"
       style={{
-        width: 30, height: 30, borderRadius: 9, border: `1px solid ${active ? 'transparent' : 'var(--u-hair)'}`,
+        width: 30, height: 30, borderRadius: 'var(--radius-md)', border: `1px solid ${active ? 'transparent' : 'var(--u-hair)'}`,
         background: active ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
         color: active ? 'var(--brand-bg)' : 'var(--u-text-3)',
         display: 'grid', placeItems: 'center', cursor: 'pointer', transition: 'all 150ms',

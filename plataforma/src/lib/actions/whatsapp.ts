@@ -54,8 +54,8 @@ export async function connectWhatsApp(
   if (!isTokenKeyConfigured()) {
     return {
       error:
-        'Falta configurar WHATSAPP_TOKEN_KEY en el servidor. Sin esa clave no se ' +
-        'puede guardar el token de forma segura.',
+        'La conexión con WhatsApp todavía no está activa en Leogin. ' +
+        'Escríbenos a soporte y la activamos para tu restaurante.',
     };
   }
 

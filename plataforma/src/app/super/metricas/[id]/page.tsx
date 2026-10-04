@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Glass } from '@/components/glass';
-import { PageHeader } from '@/components/super/ui';
+import { PageHeader, activityTip } from '@/components/super/ui';
+import { ChartReadout } from '@/components/ui/chart-readout';
 import { getRestaurantFullById, getRestaurantDeepMetrics } from '@/lib/db/super-admin';
 import { getBillingConfig } from '@/lib/db/billing';
 import { fmtMoney } from '@/lib/money';
+import { diaMes } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,7 +53,7 @@ export default async function RestaurantMetricsPage({ params }: { params: Promis
           <Kpi label="Visitantes únicos" value={String(m.unique30)} />
           <Kpi label="Pedidos" value={String(m.orders30)} growth={m.ordersGrowth} />
           <Kpi label="Su venta" value={fmtMoney(m.revenue30, cur)} growth={m.revenueGrowth} />
-          <Kpi label="Conversión" value={`${m.conversion.toFixed(1)}%`} sub="pedidos / visitas" />
+          <Kpi label="Conversión" value={`${m.conversion.toFixed(1)}%`} sub="pedidos en línea / visitas" />
           <Kpi label="Ticket promedio" value={fmtMoney(m.avgTicket, cur)} />
         </div>
       </section>
@@ -119,9 +121,9 @@ function PricingHint({ orders, visits, revenue, fee, growth }: {
   }
 
   return (
-    <div style={{ display: 'flex', gap: 10, padding: '12px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', border: `1px solid color-mix(in srgb, ${tone} 20%, transparent)` }}>
-      <span style={{ width: 8, height: 8, borderRadius: 99, background: tone, marginTop: 6, flexShrink: 0 }} />
-      <span style={{ fontSize: 13.5, color: 'var(--u-text-2)', lineHeight: 1.55 }}>{text}</span>
+    <div style={{ display: 'flex', gap: 10, padding: '12px 14px', borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', border: `1px solid color-mix(in srgb, ${tone} 20%, transparent)` }}>
+      <span style={{ width: 8, height: 8, borderRadius: 'var(--radius-full)', background: tone, marginTop: 6, flexShrink: 0 }} />
+      <span style={{ fontSize: 13, color: 'var(--u-text-2)', lineHeight: 1.55 }}>{text}</span>
     </div>
   );
 }
@@ -131,23 +133,25 @@ function TrendChart({ series, currency }: { series: { date: string; visits: numb
   const maxOrders = Math.max(...series.map((s) => s.orders), 1);
   return (
     <Glass variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'flex', gap: 16, fontSize: 11.5, color: 'var(--u-text-3)' }}>
-        <Legend color="color-mix(in srgb, var(--u-text) 18%, transparent)" label="Visitas" />
-        <Legend color="var(--brand-accent)" label="Pedidos" />
+      <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--u-text-3)' }}>
+        <Legend color="var(--chart-base)" label="Visitas" />
+        <Legend color="var(--chart-hi)" label="Pedidos" />
       </div>
+      <ChartReadout defaultTip={series.length ? activityTip(series[series.length - 1], false, fmtMoney(series[series.length - 1].revenue, currency)) : undefined}>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 130 }}>
         {series.map((d, i) => (
-          <div key={i} title={`${d.date}: ${d.visits} visitas · ${d.orders} pedidos · ${fmtMoney(d.revenue, currency)}`}
+          <div key={i} data-tip={activityTip(d, false, fmtMoney(d.revenue, currency))}
             style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 1, minWidth: 0, height: '100%' }}>
-            <div style={{ width: '42%', height: `${(d.visits / maxVisits) * 100}%`, minHeight: d.visits > 0 ? 3 : 1, background: 'color-mix(in srgb, var(--u-text) 18%, transparent)', borderRadius: '2px 2px 0 0' }} />
-            <div style={{ width: '42%', height: `${(d.orders / maxOrders) * 100}%`, minHeight: d.orders > 0 ? 3 : 1, background: 'var(--brand-accent)', borderRadius: '2px 2px 0 0' }} />
+            <div style={{ width: '42%', height: `${(d.visits / maxVisits) * 100}%`, minHeight: d.visits > 0 ? 3 : 1, background: 'var(--chart-base)', borderRadius: '2px 2px 0 0' }} />
+            <div style={{ width: '42%', height: `${(d.orders / maxOrders) * 100}%`, minHeight: d.orders > 0 ? 3 : 1, background: 'var(--chart-hi)', borderRadius: '2px 2px 0 0' }} />
           </div>
         ))}
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9.5, color: 'var(--u-text-4)' }}>
-        <span>{series[0]?.date.slice(5)}</span>
-        <span>{series[series.length - 1]?.date.slice(5)}</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--u-text-4)' }}>
+        <span>{series[0] ? diaMes(series[0].date) : null}</span>
+        <span>{series.length ? diaMes(series[series.length - 1].date) : null}</span>
       </div>
+      </ChartReadout>
     </Glass>
   );
 }
@@ -164,14 +168,14 @@ function Legend({ color, label }: { color: string; label: string }) {
 function Kpi({ label, value, sub, growth }: { label: string; value: string; sub?: string; growth?: number | null }) {
   return (
     <Glass variant="quiet" style={{ padding: '16px 16px', display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, color: 'var(--u-text)', lineHeight: 1 }}>{value}</div>
+      <div className="adm-label">{label}</div>
+      <div className="t-mono" style={{ fontWeight: 600, fontSize: 24, color: 'var(--u-text)', lineHeight: 1 }}>{value}</div>
       {growth != null ? (
-        <div style={{ fontSize: 11.5, fontWeight: 600, color: growth >= 0 ? 'var(--c-ok)' : 'var(--c-danger)' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: growth >= 0 ? 'var(--c-ok)' : 'var(--c-danger)' }}>
           {growth >= 0 ? '▲' : '▼'} {Math.abs(growth).toFixed(0)}% vs. mes previo
         </div>
       ) : sub ? (
-        <div style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>{sub}</div>
+        <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{sub}</div>
       ) : null}
     </Glass>
   );
@@ -180,7 +184,7 @@ function Kpi({ label, value, sub, growth }: { label: string; value: string; sub?
 function MiniStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
+      <div className="adm-label">{label}</div>
       <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 18, color: 'var(--u-text)' }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{sub}</div>}
     </div>
@@ -188,5 +192,5 @@ function MiniStat({ label, value, sub }: { label: string; value: string; sub?: s
 }
 
 const sectionTitle: React.CSSProperties = {
-  fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 14, color: 'var(--u-text-2)',
+  fontWeight: 600, fontSize: 15, marginBottom: 14, color: 'var(--u-text-2)',
 };

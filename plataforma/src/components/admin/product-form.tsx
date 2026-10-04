@@ -23,10 +23,14 @@ import { createProduct, updateProduct, type ProductState } from '@/lib/actions/p
 import { DIETARY_TAG_OPTIONS } from '@/lib/dietary-tags';
 import type { Category, Product, ProductOptionGroup } from '@/types';
 import type { Ingredient, RecipeItem } from '@/lib/db/recipes';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import SaveBar from '@/components/admin/save-bar';
+import { useFormDirty } from '@/lib/use-form-dirty';
 /* El prefijo del origen unico para un `<a>` suelto (PanelLink solo cubre
    `<Link>`). Fuera del panel devuelve la ruta tal cual. */
 import { usePathname as useRutaNavegador } from 'next/navigation';
 import { panelBaseFrom, panelHref } from '@/lib/panel-links';
+import { fmtMoney } from '@/lib/money';
 
 interface ProductFormProps {
   restaurantId: string;
@@ -40,12 +44,32 @@ interface ProductFormProps {
 const emptyState: ProductState = null;
 
 /** Etiquetas rápidas — el resto se agrega como texto libre. */
+const moneyPrefix: React.CSSProperties = {
+  position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)',
+  fontSize: 14, color: 'var(--u-text-3)', pointerEvents: 'none',
+};
+
 const PRESET_TAGS = [
   { id: 'hot',  label: 'Picante',   icon: 'flame'   },
   { id: 'new',  label: 'Nuevo',     icon: 'sparkle' },
   { id: 'fav',  label: 'Favorito',  icon: 'star'    },
   { id: 'veg',  label: 'Vegano',    icon: 'leaf'    },
 ] as const;
+
+const foldTag = (s: string) => s.trim().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+/** Si el texto es el nombre de una etiqueta sugerida, su id («Nuevo» → 'new'). */
+function presetIdFor(text: string): string | null {
+  const f = foldTag(text);
+  return PRESET_TAGS.find((p) => foldTag(p.label) === f || p.id === f)?.id ?? null;
+}
+function normalizeTags(list: string[]): string[] {
+  const out: string[] = [];
+  for (const raw of list) {
+    const t = presetIdFor(raw) ?? raw;
+    if (t && !out.some((x) => foldTag(x) === foldTag(t))) out.push(t);
+  }
+  return out;
+}
 
 /** Ícono del patrón de marca cuando el platillo no tiene foto. */
 const PRODUCT_ICONS = [
@@ -94,7 +118,7 @@ function ToggleSwitch({ checked, onChange, ariaLabel }: { checked: boolean; onCh
       style={{
         width: 44,
         height: 26,
-        borderRadius: 999,
+        borderRadius: 'var(--radius-full)',
         border: 'none',
         cursor: 'pointer',
         background: checked ? 'var(--brand-accent)' : 'var(--u-hair-2)',
@@ -127,13 +151,21 @@ export default function ProductForm({ restaurantId, categories, product, default
   const action = isEdit ? updateProduct : createProduct;
 
   const [state, formAction, isPending] = useActionState(action, emptyState);
+  /* Al editar, la barra de guardar es la del resto del panel: sale con
+     cambios y avisa si te vas sin guardar. Al crear se queda el botón ancho
+     «Crear platillo», que es el final natural del formulario. */
+  const { ref: formRef, dirty } = useFormDirty();
   const [imageUrl, setImageUrl] = useState<string>(product?.image_url ?? '');
   const [isAvailable, setIsAvailable] = useState(product?.is_available ?? true);
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
   const [priceVal, setPriceVal] = useState<string>(product?.price != null ? String(product.price) : '');
   const [costVal, setCostVal] = useState<string>(product?.cost != null ? String(product.cost) : '');
   const [loyaltyPtsVal, setLoyaltyPtsVal] = useState<string>(product?.loyalty_points != null ? String(product.loyalty_points) : '');
-  const [tags, setTags] = useState<string[]>(product?.tags ?? []);
+  /* «Nuevo» escrito a mano y la sugerida «Nuevo» eran dos etiquetas
+     distintas y salían las dos (auditoría 2026-10-02, MEN-06). Lo que
+     coincide con una sugerida —sin tildes ni mayúsculas— se guarda como la
+     sugerida, también lo que ya venía guardado así. */
+  const [tags, setTags] = useState<string[]>(() => normalizeTags(product?.tags ?? []));
   const [customTagInput, setCustomTagInput] = useState('');
   const [icon, setIcon] = useState<string>(product?.icon ?? '');
   const [iconSearch, setIconSearch] = useState('');
@@ -142,8 +174,8 @@ export default function ProductForm({ restaurantId, categories, product, default
     setTags((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
   function addCustomTag() {
-    const t = customTagInput.trim();
-    if (!t || tags.includes(t)) { setCustomTagInput(''); return; }
+    const t = presetIdFor(customTagInput.trim()) ?? customTagInput.trim();
+    if (!t || tags.some((x) => foldTag(x) === foldTag(t))) { setCustomTagInput(''); return; }
     setTags((prev) => [...prev, t]);
     setCustomTagInput('');
   }
@@ -163,29 +195,11 @@ export default function ProductForm({ restaurantId, categories, product, default
     setDietaryTags((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   }
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-    border: '1px solid var(--u-hair-2)',
-    borderRadius: 'var(--radius-md)',
-    padding: '10px 12px',
-    color: 'var(--u-text)',
-    fontSize: 15,
-    outline: 'none',
-  };
 
-  const labelStyle: React.CSSProperties = {
-    fontSize: 12,
-    color: 'var(--u-text-3)',
-    fontWeight: 500,
-    letterSpacing: '0.04em',
-    textTransform: 'uppercase',
-    marginBottom: 6,
-    display: 'block',
-  };
+  const labelStyle: React.CSSProperties = FIELD_LABEL;
 
   return (
-    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Campos ocultos */}
       <input type="hidden" name="restaurantId" value={restaurantId} />
       {isEdit && <input type="hidden" name="id" value={product!.id} />}
@@ -201,7 +215,7 @@ export default function ProductForm({ restaurantId, categories, product, default
         {/* ══ Columna principal ══ */}
         <div className="pform-col">
           {/* ── Lo básico ── */}
-          <Glass variant="quiet" style={{ padding: 18 }}>
+          <Glass variant="quiet" className="pform-o-basico" style={{ padding: 18 }}>
             <SectionHead title="Lo básico" hint="Nombre, precio y dónde aparece en tu menú." />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(110px, 1fr)', gap: 12 }}>
@@ -214,23 +228,27 @@ export default function ProductForm({ restaurantId, categories, product, default
                     required
                     defaultValue={product?.name ?? ''}
                     placeholder="Ej: Café Latte"
-                    style={inputStyle}
+                    className="adm-field"
                   />
                 </div>
                 <div>
                   <label htmlFor="price" style={labelStyle}>Precio *</label>
-                  <input
-                    id="price"
-                    name="price"
-                    type="number" inputMode="decimal"
-                    required
-                    min="0"
-                    step="0.01"
-                    value={priceVal}
-                    onChange={(e) => setPriceVal(e.target.value)}
-                    placeholder="0.00"
-                    style={inputStyle}
-                  />
+                  {/* Con la «Q» dentro: un número suelto no dice que es dinero (MEN-05). */}
+                  <div style={{ position: 'relative' }}>
+                    <span aria-hidden style={moneyPrefix}>Q</span>
+                    <input
+                      id="price"
+                      name="price"
+                      type="number" inputMode="decimal"
+                      required
+                      min="0"
+                      step="0.01"
+                      value={priceVal}
+                      onChange={(e) => setPriceVal(e.target.value)}
+                      placeholder="0.00"
+                      className="adm-field" style={{ paddingLeft: 30 }}
+                    />
+                  </div>
                 </div>
               </div>
               <div>
@@ -239,7 +257,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                   id="category_id"
                   name="category_id"
                   defaultValue={product?.category_id ?? defaultCategoryId ?? ''}
-                  style={inputStyle}
+                  className="adm-field"
                 >
                   <option value="">Sin categoría</option>
                   {categories.map((c) => (
@@ -257,7 +275,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                   rows={3}
                   defaultValue={product?.description ?? ''}
                   placeholder="Describe el platillo: ingredientes, tamaño, qué lo hace especial…"
-                  style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
+                  className="adm-field" style={{ resize: 'vertical', lineHeight: 1.5 }}
                 />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -269,7 +287,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                     type="text"
                     defaultValue={product?.name_en ?? ''}
                     placeholder="Opcional"
-                    style={inputStyle}
+                    className="adm-field"
                   />
                 </div>
                 <div>
@@ -280,12 +298,12 @@ export default function ProductForm({ restaurantId, categories, product, default
                     type="text"
                     defaultValue={product?.description_en ?? ''}
                     placeholder="Opcional"
-                    style={inputStyle}
+                    className="adm-field"
                   />
                 </div>
               </div>
               <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: -6, display: 'block' }}>
-                Se muestran solo si activas el selector de idioma en Ajustes → Idiomas del menú. Sin traducción, el comensal ve el español.
+                Se muestran solo si activas «Menú también en inglés» en Ajustes. Sin traducción, el comensal ve el español.
               </span>
               <div>
                 <label style={labelStyle}>Etiquetas</label>
@@ -300,7 +318,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                         onClick={() => toggleTag(t.id)}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 5,
-                          padding: '7px 12px', borderRadius: 999, cursor: 'pointer',
+                          padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
                           border: `1px solid ${on ? 'transparent' : 'var(--u-hair-2)'}`,
                           background: on ? 'var(--u-text)' : 'transparent',
                           color: on ? 'var(--brand-bg)' : 'var(--u-text)',
@@ -319,7 +337,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                       onClick={() => setTags((prev) => prev.filter((x) => x !== t))}
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 5,
-                        padding: '7px 12px', borderRadius: 999, cursor: 'pointer',
+                        padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
                         border: '1px solid transparent',
                         background: 'var(--u-text)', color: 'var(--brand-bg)',
                         fontWeight: 600, fontSize: 12,
@@ -337,7 +355,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag(); } }}
                     placeholder="Etiqueta personalizada…"
                     maxLength={30}
-                    style={{ ...inputStyle, flex: 1 }}
+                    className="adm-field" style={{ flex: 1 }}
                   />
                   <button
                     type="button"
@@ -380,10 +398,10 @@ export default function ProductForm({ restaurantId, categories, product, default
                         className="press"
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '7px 12px', borderRadius: 999, cursor: 'pointer',
+                          padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
                           border: `1px solid ${active ? 'var(--brand-accent)' : 'var(--u-hair-2)'}`,
                           background: active ? 'color-mix(in srgb, var(--brand-accent) 16%, transparent)' : 'transparent',
-                          color: 'var(--u-text)', fontSize: 12.5, fontWeight: 500,
+                          color: 'var(--u-text)', fontSize: 12, fontWeight: 500,
                         }}
                       >
                         <span aria-hidden>{o.icon}</span> {o.label}
@@ -401,8 +419,10 @@ export default function ProductForm({ restaurantId, categories, product, default
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <label htmlFor="cost" style={labelStyle}>
-                  Costo{hasRecipe && <span style={{ color: 'var(--brand-accent-ink)', marginLeft: 6, fontSize: 10, fontWeight: 400 }}>desde receta</span>}
+                  Costo{hasRecipe && <span style={{ color: 'var(--brand-accent-ink)', marginLeft: 6, fontSize: 11, fontWeight: 400 }}>desde receta</span>}
                 </label>
+                <div style={{ position: 'relative' }}>
+                <span aria-hidden style={moneyPrefix}>Q</span>
                 <input
                   id="cost"
                   name="cost"
@@ -413,9 +433,10 @@ export default function ProductForm({ restaurantId, categories, product, default
                   onChange={hasRecipe ? undefined : (e) => setCostVal(e.target.value)}
                   readOnly={hasRecipe}
                   placeholder="0.00"
-                  style={{ ...inputStyle, opacity: hasRecipe ? 0.65 : 1, cursor: hasRecipe ? 'not-allowed' : 'text' }}
+                  className="adm-field" style={{ paddingLeft: 30, opacity: hasRecipe ? 0.65 : 1, cursor: hasRecipe ? 'not-allowed' : 'text' }}
                   title={hasRecipe ? 'Calculado automáticamente desde la receta' : undefined}
                 />
+                </div>
               </div>
               <div>
                 <label htmlFor="loyalty_points" style={labelStyle}>Puntos de lealtad</label>
@@ -428,7 +449,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                   value={loyaltyPtsVal}
                   onChange={(e) => setLoyaltyPtsVal(e.target.value)}
                   placeholder="Regla general"
-                  style={inputStyle}
+                  className="adm-field"
                 />
               </div>
             </div>
@@ -447,11 +468,11 @@ export default function ProductForm({ restaurantId, categories, product, default
               const margin = p > 0 ? (profit / p) * 100 : 0;
               const good = profit >= 0;
               return (
-                <div style={{ display: 'flex', gap: 16, marginTop: 12, fontSize: 12.5 }}>
+                <div style={{ display: 'flex', gap: 16, marginTop: 12, fontSize: 12 }}>
                   <span style={{ color: 'var(--u-text-3)' }}>
                     Utilidad:{' '}
                     <strong style={{ color: good ? 'var(--u-text)' : 'var(--c-danger, #f87171)' }}>
-                      {profit.toFixed(2)}
+                      {fmtMoney(profit)}
                     </strong>
                   </span>
                   <span style={{ color: 'var(--u-text-3)' }}>
@@ -497,7 +518,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                 <a href={panelHref(base, '/admin/modulos')} style={{ color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
                   panel de Módulos
                 </a>{' '}
-                para gestionar el food cost de tus platillos.
+                para llevar el costo de tus platillos.
               </p>
             </Glass>
           )}
@@ -505,7 +526,7 @@ export default function ProductForm({ restaurantId, categories, product, default
             <Glass variant="quiet" style={{ padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
               <span style={{ fontSize: 16, flexShrink: 0 }}>📋</span>
               <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-                Después de guardar el platillo podrás asignarle su <strong style={{ color: 'var(--u-text-2)' }}>receta</strong> e ingredientes para calcular el food cost automáticamente.
+                Después de guardar el platillo podrás asignarle su <strong style={{ color: 'var(--u-text-2)' }}>receta</strong> e ingredientes para calcular su costo automáticamente.
               </p>
             </Glass>
           )}
@@ -513,7 +534,7 @@ export default function ProductForm({ restaurantId, categories, product, default
 
         {/* ══ Columna lateral: foto + disponibilidad ══ */}
         <div className="pform-col pform-side">
-          <Glass variant="quiet" style={{ padding: 18 }}>
+          <Glass variant="quiet" className="pform-o-foto" style={{ padding: 18 }}>
             <SectionHead title="Foto del platillo" hint="Una buena foto vende más — se muestra en el menú y al abrir el platillo." />
             <ImageUpload
               restaurantId={restaurantId}
@@ -536,7 +557,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                 if (suggested && v.trim()) setIcon(suggested);
               }}
               placeholder="Buscar (ej: pizza, café, helado…)"
-              style={{ ...inputStyle, marginBottom: 10 }}
+              className="adm-field" style={{ marginBottom: 10 }}
             />
             <div className="u-noscroll" style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
               {PRODUCT_ICONS.filter((opt) => {
@@ -554,7 +575,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                     className="press"
                     style={{
                       flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                      padding: '8px 10px', borderRadius: 12, cursor: 'pointer', minWidth: 56,
+                      padding: '8px 10px', borderRadius: 'var(--radius-lg)', cursor: 'pointer', minWidth: 56,
                       border: `1.5px solid ${on ? 'var(--u-text)' : 'var(--u-hair-2)'}`,
                       background: on ? 'var(--u-text)' : 'transparent',
                       color: on ? 'var(--brand-bg)' : 'var(--u-text-3)',
@@ -562,14 +583,18 @@ export default function ProductForm({ restaurantId, categories, product, default
                     }}
                   >
                     <Icon name={opt.id} size={18} />
-                    <span style={{ fontSize: 9.5, fontWeight: 600 }}>{opt.label}</span>
+                    <span style={{ fontSize: 11, fontWeight: 600 }}>{opt.label}</span>
                   </button>
                 );
               })}
             </div>
           </Glass>
 
-          <Glass variant="quiet" style={{ padding: '14px 18px' }}>
+          {/* «Disponible» decía «Oculto en el menú» al apagarlo, y lo agotado NO
+              se oculta: se ve tachado y vuelve solo a las 12 h. Lo que de verdad
+              oculta es el interruptor de abajo. Dos interruptores que decían lo
+              mismo con palabras distintas (auditoría 2026-10-02, MEN-03). */}
+          <Glass variant="quiet" className="pform-o-estado" style={{ padding: '14px 18px' }}>
             <div
               style={{
                 display: 'flex',
@@ -579,30 +604,35 @@ export default function ProductForm({ restaurantId, categories, product, default
               }}
             >
               <div>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>Disponible</div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{isAvailable ? 'Hay existencias' : 'Agotado'}</div>
                 <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
-                  {isAvailable ? 'Visible en el menú' : 'Oculto en el menú'}
+                  {isAvailable
+                    ? 'Se puede pedir. Apágalo si se acabó por hoy.'
+                    : 'Se ve en el menú pero no se puede pedir. Vuelve solo en 12 h.'}
                 </div>
               </div>
-              <ToggleSwitch checked={isAvailable} onChange={() => setIsAvailable(!isAvailable)} ariaLabel="Disponibilidad" />
+              <ToggleSwitch checked={isAvailable} onChange={() => setIsAvailable(!isAvailable)} ariaLabel="Hay existencias" />
             </div>
           </Glass>
 
           {/* ── Activar / desactivar (oculto permanente, distinto de "Disponible") ── */}
           <Glass
             variant="quiet"
+            className="pform-o-estado"
             style={{ padding: '14px 18px', borderColor: !isActive ? 'var(--c-danger-line)' : undefined }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: isActive ? 'var(--u-text)' : 'var(--c-danger)' }}>
-                  {isActive ? 'Platillo activo' : 'Platillo desactivado'}
+                  {isActive ? 'Mostrar en el menú' : 'Oculto del menú'}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
-                  Desactivado → no aparece en el menú hasta que lo reactives
+                  {isActive
+                    ? 'Tus clientes lo ven en tu menú.'
+                    : 'No aparece en el menú hasta que lo vuelvas a encender.'}
                 </div>
               </div>
-              <ToggleSwitch checked={isActive} onChange={() => setIsActive(!isActive)} ariaLabel="Platillo activo" />
+              <ToggleSwitch checked={isActive} onChange={() => setIsActive(!isActive)} ariaLabel="Mostrar en el menú" />
             </div>
           </Glass>
         </div>
@@ -613,6 +643,14 @@ export default function ProductForm({ restaurantId, categories, product, default
           en el teléfono tiene que esquivar la barra de destinos y el hueco
           de la muesca cambia de sitio al hacerlo: eso es una media query, y
           una media query no cabe en un atributo `style`. */}
+      {isEdit ? (
+        <SaveBar
+          dirty={dirty}
+          pending={isPending}
+          status={state?.error ? { error: state.error } : null}
+          label="Guardar cambios"
+        />
+      ) : (
       <div className="pform-savebar">
         {state?.error && (
           <div
@@ -647,9 +685,10 @@ export default function ProductForm({ restaurantId, categories, product, default
             gap: 8,
           }}
         >
-          {isPending ? 'Guardando…' : (<><Icon name="check" size={16} /> {isEdit ? 'Guardar cambios' : 'Crear platillo'}</>)}
+          {isPending ? 'Guardando…' : (<><Icon name="check" size={16} /> Crear platillo</>)}
         </button>
       </div>
+      )}
     </form>
   );
 }

@@ -32,7 +32,9 @@ import { isOpenNow, nextOpenLabel, hasAnyHours, todayWindowLabel, type WeeklyHou
 import { DIETARY_TAG_MAP } from '@/lib/dietary-tags';
 import { useLocale, useLocalized } from '@/lib/locale/context';
 import { isUnavailable } from '@/lib/product-availability';
+import { esDestacado } from '@/lib/menu-pairings';
 import type { Category, Product } from '@/types';
+import { suggestIcon } from '@/lib/category-icon';
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon' | 'name_en'> & { availability?: WeeklyHours | null };
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'> & {
@@ -68,15 +70,13 @@ function fold(s: string): string {
    Con config.featuredFavorites, los productos etiquetados como favorito/
    destacado se dibujan como tarjeta GRANDE de ancho completo (máx. 3 por
    vista, para que "destacado" siga significando algo). Las etiquetas son
-   texto libre del dueño → se aceptan las variantes usuales. */
-const FEATURED_TAG_KEYS = new Set([
-  'fav', 'favorito', 'favorita', 'favorite',
-  'destacado', 'destacada', 'estrella', 'star',
-]);
+   texto libre del dueño → se aceptan las variantes usuales (la lista vive
+   en lib/menu-pairings.ts: «Acompáñalo con…» también pone primero a los
+   favoritos). */
 const FEATURED_LIMIT = 3;
 
 function isFeaturedTag(p: ProdItem): boolean {
-  return (p.tags ?? []).some((t) => FEATURED_TAG_KEYS.has(fold(t.trim())));
+  return esDestacado(p.tags);
 }
 
 /** Formas donde una tarjeta destacada tiene sentido. En 'texto' no hay arte que
@@ -217,7 +217,8 @@ export default function Catalog({
 
   const catIcon = useMemo(() => {
     const m = new Map<string, string>();
-    for (const c of categories) m.set(c.id, pickIcon(c.icon));
+    // Sin icono elegido, el que sugiere el nombre (CAT-06), no la mesa de siempre.
+    for (const c of categories) m.set(c.id, c.icon && pickIcon(c.icon) !== 'utensils' ? pickIcon(c.icon) : suggestIcon(c.name));
     return m;
   }, [categories]);
 
@@ -1044,15 +1045,29 @@ function CategoryCovers({
 /* ── Piezas de platillo ───────────────────────────────────── */
 
 /** Arte del producto: foto o BrandPattern según config.productArt. */
-function ProductArt({ p, icon, scale = 1, sizes = PRODUCT_ART_SIZES }: { p: ProdItem; icon: string; scale?: number; sizes?: string }) {
+function ProductArt({ p, icon, scale = 1, sizes = PRODUCT_ART_SIZES, behindText = false }: {
+  p: ProdItem; icon: string; scale?: number; sizes?: string;
+  /** El nombre y la descripción van ENCIMA del arte (tarjeta destacada). */
+  behindText?: boolean;
+}) {
   const config = useThemeConfig();
   const usePhoto = p.image_url && config.productArt !== 'pattern';
   if (usePhoto) {
     return <AssetImage src={p.image_url!} alt={p.name} fill style={{ objectFit: 'cover' }} sizes={sizes} />;
   }
+  /* Sin foto, la destacada pintaba el icono enorme y casi opaco al centro,
+     justo debajo del nombre y la descripción: trazo blanco bajo letra blanca,
+     ilegible («Mocha Negra», «Mole poblano»…). Ahí el icono se aparta arriba
+     a la derecha y se atenúa: sigue diciendo «aquí va un plato» sin tapar el
+     texto (auditoría 2026-10-02, CAT-02). */
   return (
     <div style={{ position: 'absolute', inset: 0, color: 'var(--u-text)' }}>
-      <BrandPattern icon={icon} seed={seedFromString(p.id)} iconScale={scale} />
+      <BrandPattern
+        icon={icon}
+        seed={seedFromString(p.id)}
+        iconScale={behindText ? 0.95 : scale}
+        {...(behindText ? { iconAt: { x: 74, y: 38 }, iconOpacity: 0.32 } : {})}
+      />
     </div>
   );
 }
@@ -1246,7 +1261,7 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, w
       ariaLabel={`Ver ${name}`}
     >
       <div className="m-tile-art" style={{ aspectRatio: String(FEATURED_RATIO[width] ?? 1.85) }}>
-        <ProductArt p={p} icon={icon} scale={1.35} sizes={FEATURED_ART_SIZES} />
+        <ProductArt p={p} icon={icon} scale={1.35} sizes={FEATURED_ART_SIZES} behindText />
         <div
           aria-hidden
           style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.68), rgba(0,0,0,0.24) 46%, rgba(0,0,0,0) 72%)' }}
@@ -1257,7 +1272,10 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, w
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 11px', borderRadius: 'var(--m-r-pill)',
               background: 'var(--brand-accent)', color: 'var(--brand-on-accent)',
-              fontSize: 'calc(var(--m-fs-xs) * var(--t-tag-size, 1))', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase',
+              /* Sin mayúsculas: las demás insignias de la carta van en
+                 minúscula y esta parecía de otro programa (CAT-05). El
+                 fondo de acento se queda: es la marca de «destacado». */
+              fontSize: 'calc(var(--m-fs-xs) * var(--t-tag-size, 1))', fontWeight: 700,
             }}
           >
             <Icon name="star" size={11} /> {content.tags.fav}

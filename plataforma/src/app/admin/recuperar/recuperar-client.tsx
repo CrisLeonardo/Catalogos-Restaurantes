@@ -7,16 +7,6 @@ import { requestPasswordReset, type ResetState } from '@/lib/actions/password-re
 
 const empty: ResetState = null;
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-  border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)',
-  padding: '12px 14px',
-  color: 'var(--u-text)',
-  fontSize: 16,
-  outline: 'none',
-};
 
 /* El contacto de Leogin, con el mismo patrón que /planes y /admin/suscripcion:
    WhatsApp si hay número configurado, y si no, correo — que también llega. */
@@ -47,14 +37,14 @@ function PorContacto({ slug }: { slug: string | null }) {
         className="press btn-accent"
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-          padding: '13px', borderRadius: 999, fontWeight: 600, fontSize: 15,
+          padding: '13px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 15,
           textDecoration: 'none', color: '#fff',
         }}
       >
         <Icon name={CONTACT_WA ? 'whatsapp' : 'mail'} size={17} />
         {CONTACT_WA ? 'Escribirnos por WhatsApp' : 'Escribirnos por correo'}
       </a>
-      <p style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--u-text-4)', margin: 0 }}>
+      <p style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--u-text-4)', margin: 0 }}>
         Te vamos a pedir un par de datos para confirmar que la cuenta es tuya antes de
         cambiarla. Es a propósito: si bastara con pedirlo, cualquiera podría hacerlo.
       </p>
@@ -79,10 +69,10 @@ export default function RecuperarClient({
   return (
     <div style={{ width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
-        <h1 style={{ fontSize: 21, fontWeight: 700, color: 'var(--u-text)', margin: '0 0 6px' }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--u-text)', margin: '0 0 6px' }}>
           Recupera tu contraseña
         </h1>
-        <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--u-text-3)', margin: 0 }}>
+        <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--u-text-3)', margin: 0 }}>
           {porCorreo
             ? 'Escribe el correo con el que entras a tu panel y te mandamos un enlace para crear una contraseña nueva.'
             : 'Escríbenos y te la cambiamos en el momento. Atendemos nosotros, no un robot.'}
@@ -90,7 +80,7 @@ export default function RecuperarClient({
         {/* Se dice ANTES de que lo intente, no después de un error: quien
             entra con el usuario de su restaurante no tiene buzón, y esta
             pantalla no puede ayudarle por mucho que lo escriba bien. */}
-        <p style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--u-text-4)', margin: '8px 0 0' }}>
+        <p style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--u-text-4)', margin: '8px 0 0' }}>
           ¿Entras con un usuario que te dio el restaurante (algo como <strong>carlos@turestaurante</strong>)
           o con un PIN? Esa no la reponemos nosotros: pídele a la persona dueña que te la cambie
           desde <strong>Personal</strong>, en su panel.
@@ -102,7 +92,7 @@ export default function RecuperarClient({
       {porCorreo && expirado && !sent && (
         <p
           style={{
-            padding: '10px 14px', borderRadius: 'var(--radius-md)', margin: 0, fontSize: 13.5,
+            padding: '10px 14px', borderRadius: 'var(--radius-md)', margin: 0, fontSize: 13,
             background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)',
             color: '#fbbf24',
           }}
@@ -119,7 +109,7 @@ export default function RecuperarClient({
           }}
         >
           <Icon name="check" size={18} style={{ color: '#4ade80', flexShrink: 0, marginTop: 1 }} />
-          <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--u-text-2)', margin: 0 }}>
+          <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--u-text-2)', margin: 0 }}>
             Si ese correo tiene una cuenta en Leogin, ya va en camino un enlace para cambiar la
             contraseña. Revisa también la carpeta de spam.
           </p>
@@ -152,14 +142,14 @@ export default function RecuperarClient({
               autoCorrect="off"
               spellCheck={false}
               placeholder="tu@email.com"
-              style={inputStyle}
+              className="adm-field adm-field-lg"
             />
           </div>
 
           {state && 'error' in state && (
             <p
               style={{
-                padding: '10px 14px', borderRadius: 'var(--radius-md)', margin: 0, fontSize: 13.5,
+                padding: '10px 14px', borderRadius: 'var(--radius-md)', margin: 0, fontSize: 13,
                 background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)',
                 color: '#f87171',
               }}
@@ -173,7 +163,7 @@ export default function RecuperarClient({
             disabled={isPending}
             className="press btn-accent"
             style={{
-              padding: '13px', borderRadius: 999, fontWeight: 600, fontSize: 15,
+              padding: '13px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 15,
               border: 'none', color: '#fff', cursor: isPending ? 'not-allowed' : 'pointer',
               opacity: isPending ? 0.6 : 1,
             }}

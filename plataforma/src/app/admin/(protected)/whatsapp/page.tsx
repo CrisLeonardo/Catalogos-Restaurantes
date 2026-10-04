@@ -5,7 +5,9 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { createServiceClient } from '@/lib/supabase/service';
 import { can } from '@/lib/permissions';
 import { isTokenKeyConfigured } from '@/lib/whatsapp/crypto';
+import { WHATSAPP_PARA_DUENOS } from '@/lib/whatsapp/visible';
 import WhatsAppPanel, { type WhatsAppAccountView } from '@/components/admin/whatsapp-panel';
+import { EmptyState } from '@/components/ui/empty-state';
 import { panelLink } from '@/lib/panel-links-server';
 
 export const metadata = { title: 'WhatsApp – Panel admin' };
@@ -25,6 +27,23 @@ export default async function AdminWhatsAppPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
   if (!can(ctx.profile.role, ctx.profile.permissions, 'whatsapp')) redirect(await panelLink('/admin'));
+  /* Hasta que haya alta guiada, solo el Super Admin conecta el número (D-6).
+     La pantalla ya no sale en el menú ni en Ajustes; a quien llegue por la
+     dirección se le explica en vez de rebotarlo. Un `redirect()` aquí, ya
+     con el armazón del panel en camino, hacía fallar al enrutador de Next
+     en el navegador (error #310 de React) antes de llegar a Ajustes. */
+  if (!WHATSAPP_PARA_DUENOS && ctx.profile.role !== 'SUPER_ADMIN') {
+    return (
+      <div className="anim-fade-up adm-w-read">
+        <EmptyState
+          icon="whatsapp"
+          title="WhatsApp lo conectamos nosotros"
+          desc="Para avisarle a cada cliente por WhatsApp cómo va su pedido hace falta conectar una cuenta de WhatsApp Business. Escríbenos desde Ayuda y la dejamos lista por ti; los avisos salen solos en cuanto quede conectada."
+          action={{ href: '/admin/ayuda', label: 'Ir a Ayuda', icon: null }}
+        />
+      </div>
+    );
+  }
 
   let restaurantId: string | null = null;
 

@@ -5,24 +5,48 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToastManager } from '@/components/ui/toast';
 import { subdomainUrl } from '@/lib/tenant';
+import { FIELD_LABEL } from '@/components/admin/field-label';
 
 interface Props {
   restaurantName: string;
   slug: string;
+  restaurantId: string;
+  /** Color de acento del restaurante (detalles de la tarjeta). */
+  accent: string;
+  /** Tiene logo: el QR lo lleva al centro. */
+  hasLogo: boolean;
 }
 
-export default function QRDisplay({ restaurantName, slug }: Props) {
+export default function QRDisplay({ restaurantName, slug, restaurantId, accent, hasLogo }: Props) {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [making, setMaking] = useState<null | 'redes' | 'cartel'>(null);
+
+  /* Tarjeta para redes y cartel para imprimir, con tu nombre y tu logo
+     (auditoría 2026-10-02, AJU-07). Se cargan al pedirlas. */
+  async function makeArt(kind: 'redes' | 'cartel') {
+    setMaking(kind);
+    try {
+      const art = await import('@/lib/documents/qr-art');
+      const opts = { url: menuUrl, restaurantName, restaurantId, accent };
+      if (kind === 'redes') await art.downloadQrSocialPng(opts);
+      else await art.downloadQrCardPdf(opts);
+      toast.add({ title: kind === 'redes' ? 'Tarjeta para redes descargada' : 'Cartel para imprimir descargado', type: 'success' });
+    } catch {
+      toast.add({ title: 'No se pudo armar el archivo', description: 'Revisa tu conexión e inténtalo otra vez.', type: 'error' });
+    } finally {
+      setMaking(null);
+    }
+  }
   const toast = useToastManager();
   // Este link SÍ lleva el slug (a diferencia del de las mesas): no se
   // imprime, es el que la gente teclea, pega en redes o pone en su bio para
   // pedir en línea — ahí lo memorable importa más que la permanencia. Los QR
-  // de mesa siguen en /m/<id>/<mesa> (stableTableUrl, tables-panel.tsx)
-  // porque esos sí se imprimen y no se pueden reimprimir si cambia el slug.
+  // de mesa van a /m/<slug>/<mesa> (stableTableUrl, tables-panel.tsx), que
+  // sobrevive a un cambio de slug gracias a los alias de la migración 134.
   const menuUrl = subdomainUrl(slug);
 
-  const qrSrc = `/api/qr?url=${encodeURIComponent(menuUrl)}`;
+  const qrSrc = `/api/qr?url=${encodeURIComponent(menuUrl)}${hasLogo ? '&ecc=H' : ''}`;
   const fileName = `qr-${restaurantName.toLowerCase().replace(/\s+/g, '-')}.png`;
 
   async function copyUrl() {
@@ -92,8 +116,9 @@ export default function QRDisplay({ restaurantName, slug }: Props) {
         <div
           style={{
             display: 'inline-block',
+            position: 'relative',
             background: '#ffffff',
-            borderRadius: 12,
+            borderRadius: 'var(--radius-lg)',
             padding: 16,
             boxShadow: '0 2px 16px rgba(0,0,0,0.35)',
           }}
@@ -106,6 +131,28 @@ export default function QRDisplay({ restaurantName, slug }: Props) {
             height={240}
             style={{ display: 'block' }}
           />
+          {/* El logo al centro, como en lo que se descarga (el QR va con
+              corrección alta para que se siga leyendo con él encima). */}
+          {hasLogo && (
+            <span
+              aria-hidden
+              style={{
+                position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+                width: 53, height: 53, borderRadius: 'var(--radius-md)', background: '#fff',
+                display: 'grid', placeItems: 'center', padding: 6,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/doc-logo/restaurant/${restaurantId}`}
+                alt=""
+                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                // Si el logo no se puede cargar, fuera el recuadro: mejor el QR
+                // limpio que una imagen rota encima.
+                onError={(e) => { const box = e.currentTarget.parentElement; if (box) box.style.display = 'none'; }}
+              />
+            </span>
+          )}
         </div>
 
         <p
@@ -121,18 +168,7 @@ export default function QRDisplay({ restaurantName, slug }: Props) {
 
       {/* URL */}
       <Card data-tour-step="qr-enlace" className="px-4.5 py-3.5">
-        <p
-          style={{
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: '0.08em',
-            color: 'var(--u-text-4)',
-            marginBottom: 8,
-            textTransform: 'uppercase',
-          }}
-        >
-          URL del menú
-        </p>
+        <p style={FIELD_LABEL}>Enlace del menú</p>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <code
@@ -160,18 +196,18 @@ export default function QRDisplay({ restaurantName, slug }: Props) {
         </div>
       </Card>
 
-      {/* Download */}
-      <Button
-        type="button"
-        onClick={downloadPng}
-        disabled={downloading}
-        data-tour-step="qr-descargar"
-        variant="secondary"
-        size="lg"
-        className="w-full rounded-adm-full"
-      >
-        {downloading ? 'Generando…' : '↓ Descargar QR (.png)'}
-      </Button>
+      {/* Descargas: lo listo para usar primero, el QR suelto al final */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }} data-tour-step="qr-descargar">
+        <Button type="button" onClick={() => makeArt('redes')} disabled={making !== null} size="lg" className="w-full rounded-adm-full">
+          {making === 'redes' ? 'Armando la tarjeta…' : 'Tarjeta para redes (PNG)'}
+        </Button>
+        <Button type="button" onClick={() => makeArt('cartel')} disabled={making !== null} variant="secondary" size="lg" className="w-full rounded-adm-full">
+          {making === 'cartel' ? 'Armando el cartel…' : 'Cartel para imprimir (PDF, A6)'}
+        </Button>
+        <Button type="button" onClick={downloadPng} disabled={downloading} variant="ghost" className="w-full rounded-adm-full">
+          {downloading ? 'Generando…' : 'Solo el código QR (PNG)'}
+        </Button>
+      </div>
 
       {/* Instructions */}
       <p
@@ -182,9 +218,10 @@ export default function QRDisplay({ restaurantName, slug }: Props) {
           padding: '0 2px',
         }}
       >
-        Imprime el QR y colócalo en las mesas de tu restaurante. Los clientes
-        podrán escanear el código con la cámara de su teléfono para ver tu menú
-        en línea.
+        La tarjeta va con tu nombre{hasLogo ? ' y tu logo' : ''}, lista para
+        publicar en Instagram o WhatsApp; el cartel se imprime en una hoja A5 y
+        se recorta. Para las mesas, cada una con su número, usa los QR de
+        Ajustes › Salón.
       </p>
     </div>
   );

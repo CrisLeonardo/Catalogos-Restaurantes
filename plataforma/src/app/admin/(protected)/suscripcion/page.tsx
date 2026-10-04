@@ -23,6 +23,8 @@ import { cn } from '@/lib/utils';
 import ReceiptDownloadButton from '@/components/super/receipt-download-button';
 import { panelLink, panelBase } from '@/lib/panel-links-server';
 import { panelHref } from '@/lib/panel-links';
+import { conMesesLegibles, fechaCorta } from '@/lib/dates';
+import { getPlatformContactSettings } from '@/lib/actions/super-admin';
 
 export const metadata = { title: 'Mi suscripción – Panel admin' };
 export const dynamic = 'force-dynamic';
@@ -30,7 +32,6 @@ export const dynamic = 'force-dynamic';
 const CONCEPT_LABEL: Record<string, string> = {
   MONTHLY: 'Mensualidad', SETUP: 'Implementación', PRORATE: 'Prorrateo', OTHER: 'Cobro',
 };
-const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
 const CONTACT_WA = process.env.NEXT_PUBLIC_CONTACT_WHATSAPP;
 const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'crisleonardo100@gmail.com';
@@ -41,7 +42,9 @@ function nextChargeLabel(billingDay: number): string {
   let m = now.getUTCMonth();
   const day = Math.min(28, Math.max(1, billingDay || 1));
   if (now.getUTCDate() > day) { m += 1; if (m > 11) { m = 0; y += 1; } }
-  return `${day} de ${MONTHS[m]} ${y}`;
+  // «1 nov 2026»: «1 de noviembre 2026» no cabía en su cifra y se cortaba
+  // con «…» hasta en escritorio (auditoría 2026-10-02, AJU-13).
+  return fechaCorta(`${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
 }
 
 function upgradeHref(restaurantName: string, targetPlan: string): string {
@@ -71,10 +74,11 @@ export default async function SuscripcionPage() {
   }
   if (!restaurantId) redirect('/admin/login');
 
-  const [billingResult, feeBreakdown, pricing] = await Promise.all([
+  const [billingResult, feeBreakdown, pricing, contacto] = await Promise.all([
     getMyBilling(restaurantId),
     getFeeBreakdown(restaurantId),
     getEffectivePlanPricing(),
+    getPlatformContactSettings(),
   ]);
   const { config, invoices, pendingTotal, currency } = billingResult;
 
@@ -100,6 +104,13 @@ export default async function SuscripcionPage() {
   const hasOverdue = pending.some((i) => isOverdue(i));
   const onTrial = isOnTrial(config);
   const trialLeft = trialDaysLeft(config);
+
+  /* «Enviar comprobante»: WhatsApp de soporte (Super › Configuración) o, si
+     no está, el del entorno. Con el monto y el restaurante ya escritos. */
+  const waPago = (contacto.support_whatsapp || CONTACT_WA || '').replace(/[^\d]/g, '');
+  const comprobanteHref = pendingTotal > 0 && waPago
+    ? `https://wa.me/${waPago}?text=${encodeURIComponent(`Hola, soy de ${restaurantName}. Te envío el comprobante de pago de ${fmtMoney(pendingTotal, currency)}.`)}`
+    : null;
 
   const nextPlanCode = nextPlan(currentPlan);
   const nextPlanInfo = nextPlanCode ? PLANS[nextPlanCode] : null;
@@ -142,7 +153,7 @@ export default async function SuscripcionPage() {
           <div className="t-mono" style={{ fontWeight: 600, fontSize: 28, color: 'var(--u-text)', lineHeight: 1.1, marginTop: 4 }}>
             {trialLeft} día{trialLeft !== 1 ? 's' : ''} restante{trialLeft !== 1 ? 's' : ''}
           </div>
-          <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 6, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 6, lineHeight: 1.5 }}>
             {trialLeft <= 3
               ? `Tu prueba termina pronto. Contáctanos para continuar sin interrupciones.`
               : `Tu restaurante está en vivo sin costo. Cuando termine la prueba, te avisaremos antes de cualquier cobro.`}
@@ -177,7 +188,7 @@ export default async function SuscripcionPage() {
             </div>
             <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>
               {planInfo?.hasOrders ? 'Sin límite de ventas' : 'Menú digital · sin pedidos'}
-              {includedCount > 0 ? ` · ${includedCount} módulos incluidos` : ''}
+              {includedCount > 0 ? ` · ${includedCount} ${includedCount === 1 ? 'función incluida' : 'funciones incluidas'}` : ''}
             </div>
           </div>
         </div>
@@ -201,7 +212,7 @@ export default async function SuscripcionPage() {
           target="_blank"
           rel="noopener noreferrer"
           className="adm-action-link"
-          style={{ marginTop: 10, fontSize: 12.5 }}
+          style={{ marginTop: 10, fontSize: 12 }}
         >
           Ver comparativa completa de planes <Icon name="arrowUpRight" size={13} />
         </a>
@@ -219,7 +230,7 @@ export default async function SuscripcionPage() {
           style={{ border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' }}
         >
           <div className="adm-label" style={{ color: 'var(--brand-accent-ink)' }}>Con Premium ({planPriceLabel(pricing, 'PREMIUM')}) desbloqueas</div>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 19, color: 'var(--u-text)', marginTop: 4, lineHeight: 1.15 }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--u-text)', marginTop: 4, lineHeight: 1.15 }}>
             Todo lo que falta en tu plan actual
           </div>
           <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 3, lineHeight: 1.5 }}>
@@ -235,7 +246,7 @@ export default async function SuscripcionPage() {
               { icon: 'calendar', label: 'Reservaciones en línea',   desc: 'Mesas llenas incluso entre semana' },
               { icon: 'chart',    label: 'Estadísticas avanzadas',   desc: 'Ventas, horas pico y ticket promedio' },
               { icon: 'users',    label: 'Usuarios ilimitados',      desc: 'Tu equipo opera sin depender de ti' },
-              { icon: 'truck',    label: 'Pedidos a domicilio',      desc: 'Canal de delivery con mapa integrado' },
+              { icon: 'truck',    label: 'Pedidos a domicilio',      desc: 'Entregas a domicilio con mapa integrado' },
               { icon: 'grid',     label: 'Comer en local (QR)',      desc: 'Pedidos desde la mesa del cliente' },
               { icon: 'userPlus', label: 'Panel de mesero',          desc: 'Tablet para tomar pedidos en sala' },
               { icon: 'bellRing', label: 'Alertas en tiempo real',   desc: 'Panel de cocina y pedidos en vivo' },
@@ -244,13 +255,13 @@ export default async function SuscripcionPage() {
             ].map(({ icon, label, desc }) => (
               <div key={label} style={{
                 display: 'flex', gap: 9, alignItems: 'flex-start',
-                padding: '10px 11px', borderRadius: 11,
+                padding: '10px 11px', borderRadius: 'var(--radius-md)',
                 background: 'rgba(var(--brand-accent-rgb,99,102,241),0.05)',
                 border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.12)',
               }}>
                 <Icon name={icon} size={15} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0, marginTop: 1 }} />
                 <div>
-                  <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text-2)', lineHeight: 1.2 }}>{label}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text-2)', lineHeight: 1.2 }}>{label}</div>
                   <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2, lineHeight: 1.35 }}>{desc}</div>
                 </div>
               </div>
@@ -317,10 +328,10 @@ export default async function SuscripcionPage() {
                     <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>
                       {p.name}
                     </div>
-                    <div style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>
+                    <div style={{ fontSize: 12, color: 'var(--u-text-3)' }}>
                       {planPriceLabel(pricing, code)}
                     </div>
-                    <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.4 }}>
+                    <div style={{ fontSize: 11, color: 'var(--u-text-4)', lineHeight: 1.4 }}>
                       {p.tagline}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--brand-accent-ink)', fontWeight: 700, marginTop: 4 }}>
@@ -339,7 +350,7 @@ export default async function SuscripcionPage() {
 
       {/* ── ¿Varias sucursales? ───────────────────────────────── */}
       <Card className="flex flex-wrap items-center justify-between gap-3 p-3.5">
-        <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
           <Icon name="grid" size={14} style={{ verticalAlign: 'middle', marginRight: 6, color: 'var(--u-text-4)' }} />
           ¿Tienes 2 o más sucursales? Obtén un panel de grupo consolidado para verlas todas juntas.
         </div>
@@ -348,7 +359,7 @@ export default async function SuscripcionPage() {
           target="_blank"
           rel="noopener noreferrer"
           className="adm-action-link"
-          style={{ fontSize: 12.5, whiteSpace: 'nowrap' }}
+          style={{ fontSize: 12, whiteSpace: 'nowrap' }}
         >
           Hablar con Leogin →
         </a>
@@ -364,19 +375,42 @@ export default async function SuscripcionPage() {
             <div className="adm-label">Estado de cuenta</div>
             {pendingTotal > 0 ? (
               <>
-                <div className="t-mono" style={{ fontWeight: 600, fontSize: 30, color: hasOverdue ? 'var(--c-danger)' : 'var(--c-warn)', lineHeight: 1, marginTop: 4 }}>
+                <div className="t-mono" style={{ fontWeight: 600, fontSize: 28, color: hasOverdue ? 'var(--c-danger)' : 'var(--c-warn)', lineHeight: 1, marginTop: 4 }}>
                   {fmtMoney(pendingTotal, currency)}
                 </div>
-                <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 4 }}>
-                  {hasOverdue ? 'Tienes pagos vencidos.' : 'Pendiente por pagar.'} {pending.length} cobro(s).
+                <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 4 }}>
+                  {hasOverdue ? 'Tienes pagos vencidos' : 'Pendiente por pagar'} · {pending.length} {pending.length === 1 ? 'cobro' : 'cobros'}.
                 </div>
+                {/* Con pagos pendientes, la pantalla decía cuánto se debía pero
+                    no CÓMO pagarlo: ni cuenta ni a quién mandar el comprobante
+                    (auditoría 2026-10-02, AJU-13). Las instrucciones las escribe
+                    Leogin en Super › Configuración › Soporte. */}
+                {contacto.payment_instructions && (
+                  <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)' }}>
+                    <div className="adm-label" style={{ marginBottom: 4 }}>Cómo pagar</div>
+                    <div style={{ fontSize: 13, color: 'var(--u-text-2)', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+                      {contacto.payment_instructions}
+                    </div>
+                  </div>
+                )}
+                {comprobanteHref && (
+                  <a
+                    href={comprobanteHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-accent press"
+                    style={{ marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 18px', borderRadius: 'var(--radius-lg)', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}
+                  >
+                    <Icon name="whatsapp" size={16} /> Enviar comprobante de pago
+                  </a>
+                )}
               </>
             ) : (
               <>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, color: 'var(--c-ok)', lineHeight: 1.1, marginTop: 4 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, color: 'var(--c-ok)', lineHeight: 1.1, marginTop: 4 }}>
                   Estás al día ✓
                 </div>
-                <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 4 }}>No tienes cobros pendientes. ¡Gracias!</div>
+                <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 4 }}>No tienes cobros pendientes. ¡Gracias!</div>
               </>
             )}
           </Card>
@@ -386,10 +420,10 @@ export default async function SuscripcionPage() {
             <Stat label="Mensualidad" value={fmtMoney(displayedMonthlyFee, currency)} />
             {config.setup_fee > 0 && <Stat label="Implementación" value={fmtMoney(config.setup_fee, currency)} />}
             <Stat label="Próximo cobro" value={nextChargeLabel(config.billing_day)} />
-            {config.started_at && <Stat label="Cliente desde" value={config.started_at.slice(0, 10)} />}
+            {config.started_at && <Stat label="Cliente desde" value={fechaCorta(config.started_at)} />}
           </StatGroup>
 
-          <Card className="p-3.5" style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+          <Card className="p-3.5" style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
             Los pagos se realizan al inicio de cada mes. Cuando registremos tu pago, el cobro
             aparecerá como <strong style={{ color: 'var(--c-ok)' }}>Pagado</strong> aquí mismo.
           </Card>
@@ -429,18 +463,24 @@ function InvoiceRow({ inv, currency, restaurantName }: { inv: Invoice; currency:
     : { label: 'Pendiente', color: 'var(--c-warn)', bg: 'var(--c-warn-bg)' };
 
   return (
-    <ListRow>
+    /* En el teléfono, el concepto va solo en su renglón y debajo el estado, el
+       monto y el recibo: los cuatro en una fila partían «Mensualidad 2026-07»
+       en cuatro líneas (auditoría 2026-10-02, AJU-13). */
+    <ListRow className="flex-wrap gap-y-2 sm:flex-nowrap">
       <ListText
-        title={inv.description ?? CONCEPT_LABEL[inv.concept]}
+        className="basis-full sm:basis-auto"
+        /* Las fechas venían crudas de la base («Mensualidad 2026-09», «Vence
+           el 2026-09-01»): auditoría 2026-10-02, T-02. */
+        title={conMesesLegibles(inv.description ?? CONCEPT_LABEL[inv.concept])}
         desc={
           inv.status === 'PAID' && inv.paid_at
-            ? `Pagado el ${inv.paid_at.slice(0, 10)}${inv.payment_method ? ` · ${inv.payment_method}` : ''}`
+            ? `Pagado el ${fechaCorta(inv.paid_at)}${inv.payment_method ? ` · ${inv.payment_method}` : ''}`
             : inv.due_date
-            ? `Vence el ${inv.due_date}`
+            ? `Vence el ${fechaCorta(inv.due_date)}`
             : CONCEPT_LABEL[inv.concept]
         }
       />
-      <span style={{ fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: meta.bg, color: meta.color, letterSpacing: '0.05em' }}>
+      <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--radius-full)', background: meta.bg, color: meta.color, letterSpacing: '0.05em' }}>
         {meta.label.toUpperCase()}
       </span>
       <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 15, color: 'var(--u-text)', minWidth: 90, textAlign: 'right' }}>
@@ -473,7 +513,7 @@ async function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; curren
         <Icon name="sparkle" size={15} style={{ color: 'var(--brand-accent)' }} />
         <div className="adm-label">Lo que pagarás este mes</div>
       </div>
-      <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5 }}>
+      <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5 }}>
         Precio fijo de tu plan: prender o apagar funciones y modos de pedido desde{' '}
         <a href={panelHref(base, '/admin/modulos')} style={{ color: 'var(--brand-accent-ink)', fontWeight: 600 }}>Funciones</a> no cambia tu mensualidad.
       </div>
@@ -482,7 +522,7 @@ async function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; curren
         <LineItem label={`Plan ${planLabel(b.plan)}`} value={fmtMoney(b.base, currency)} />
         <div style={{ height: 1, background: 'var(--u-hair)', margin: '2px 0' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>
             {autoPrice ? 'Tu mensualidad' : 'Mensualidad sugerida'}
           </span>
           <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 800, fontSize: 20, color: 'var(--u-text)' }}>
@@ -492,12 +532,12 @@ async function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; curren
       </div>
 
       {!autoPrice && (
-        <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 8, lineHeight: 1.45 }}>
+        <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 8, lineHeight: 1.45 }}>
           Tienes un precio acordado con nosotros; este desglose es informativo.
         </div>
       )}
 
-      <a href={panelHref(base, '/admin/modulos')} className="adm-action-link" style={{ marginTop: 10, fontSize: 12.5 }}>
+      <a href={panelHref(base, '/admin/modulos')} className="adm-action-link" style={{ marginTop: 10, fontSize: 12 }}>
         Gestionar mis modos de pedido y funciones <Icon name="arrowRight" size={13} />
       </a>
     </Card>
@@ -508,7 +548,7 @@ function LineItem({ label, value, accent }: { label: string; value: string; acce
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{label}</span>
-      <span style={{ fontFamily: 'var(--ui-font-mono)', fontSize: 13.5, fontWeight: 600, color: accent ?? 'var(--u-text-2)' }}>{value}</span>
+      <span style={{ fontFamily: 'var(--ui-font-mono)', fontSize: 13, fontWeight: 600, color: accent ?? 'var(--u-text-2)' }}>{value}</span>
     </div>
   );
 }

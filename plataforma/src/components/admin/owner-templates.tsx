@@ -84,7 +84,7 @@ export default function OwnerTemplates({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>Tus plantillas</div>
-          <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2 }}>
+          <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>
             Guarda tu propio diseño y vuelve a aplicarlo cuando quieras · {templates.length}/{MAX_TEMPLATES}
           </p>
         </div>
@@ -97,7 +97,7 @@ export default function OwnerTemplates({
             className="press"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 'var(--radius-full)',
-              fontSize: 12.5, fontWeight: 700, border: 'none', cursor: atLimit ? 'not-allowed' : 'pointer',
+              fontSize: 12, fontWeight: 700, border: 'none', cursor: atLimit ? 'not-allowed' : 'pointer',
               background: atLimit ? 'color-mix(in srgb, var(--u-text) 8%, transparent)' : 'var(--brand-accent)',
               color: atLimit ? 'var(--u-text-4)' : 'var(--brand-on-accent, #fff)', flexShrink: 0,
             }}
@@ -116,15 +116,13 @@ export default function OwnerTemplates({
             placeholder="Nombre de tu plantilla (ej. Verano 2026)"
             maxLength={60}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') { setNaming(false); setName(''); setErr(null); } }}
-            style={{
-              flex: '1 1 220px', padding: '9px 13px', borderRadius: 12, border: '1px solid var(--u-hair)',
-              background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', fontSize: 13, outline: 'none',
-            }}
+            className="adm-field"
+            style={{ flex: '1 1 220px', width: 'auto' }}
           />
-          <button type="button" onClick={handleSave} disabled={isPending} className="press btn-accent" style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', opacity: isPending ? 0.6 : 1 }}>
+          <button type="button" onClick={handleSave} disabled={isPending} className="press btn-accent" style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 12, cursor: 'pointer', opacity: isPending ? 0.6 : 1 }}>
             {isPending ? 'Guardando…' : 'Guardar'}
           </button>
-          <button type="button" onClick={() => { setNaming(false); setName(''); setErr(null); }} className="press" style={{ padding: '9px 14px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5, border: '1px solid var(--u-hair)', background: 'transparent', color: 'var(--u-text-2)', cursor: 'pointer' }}>
+          <button type="button" onClick={() => { setNaming(false); setName(''); setErr(null); }} className="press" style={{ padding: '9px 14px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12, border: '1px solid var(--u-hair)', background: 'transparent', color: 'var(--u-text-2)', cursor: 'pointer' }}>
             Cancelar
           </button>
         </div>
@@ -132,8 +130,8 @@ export default function OwnerTemplates({
       {err && <p style={{ fontSize: 12, color: 'var(--c-danger)', margin: 0 }}>{err}</p>}
 
       {templates.length === 0 && !naming ? (
-        <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', margin: 0, lineHeight: 1.5 }}>
-          Aún no tienes plantillas propias. Ajusta el diseño en las demás pestañas (o parte de una builtin) y guárdalo aquí para reutilizarlo.
+        <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: 0, lineHeight: 1.5 }}>
+          Aún no tienes plantillas propias. Ajusta el diseño en las demás pestañas (o parte de una de las plantillas incluidas) y guárdalo aquí para reutilizarlo.
         </p>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: 12 }}>
@@ -161,7 +159,7 @@ export default function OwnerTemplates({
                   <Thumb tpl={tpl} />
                   <div style={{ padding: '0 3px 3px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.name}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.name}</span>
                       {applied && (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: 'var(--brand-accent-ink, #D97757)', flexShrink: 0 }}>
                           <Icon name="checkCircle" size={11} /> Aplicada

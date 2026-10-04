@@ -35,6 +35,10 @@ interface BrandPatternProps {
   seed?: number;
   iconScale?: number;
   faint?: number;
+  /** Dónde va el icono (coordenadas del lienzo 0–100). Por defecto, al centro. */
+  iconAt?: { x: number; y: number };
+  /** Opacidad del trazo del icono (por defecto casi opaco). */
+  iconOpacity?: number;
   style?: CSSProperties;
 }
 
@@ -43,6 +47,8 @@ export function BrandPattern({
   seed = 0,
   iconScale = 1,
   faint = 0.16,
+  iconAt = { x: 50, y: 50 },
+  iconOpacity = 0.92,
   style,
 }: BrandPatternProps) {
   const rand = mulberry32(seed + 1);
@@ -74,9 +80,9 @@ export function BrandPattern({
         ))}
       </g>
       <g
-        transform={`translate(50 50) scale(${1.7 * iconScale}) translate(-12 -12)`}
+        transform={`translate(${iconAt.x} ${iconAt.y}) scale(${1.7 * iconScale}) translate(-12 -12)`}
         stroke="currentColor"
-        strokeOpacity="0.92"
+        strokeOpacity={iconOpacity}
         strokeWidth="1.5"
         fill="none"
         strokeLinecap="round"

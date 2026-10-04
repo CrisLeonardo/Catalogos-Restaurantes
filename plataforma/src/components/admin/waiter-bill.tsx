@@ -37,6 +37,7 @@ import type { PaymentMethod } from '@/lib/payment-method';
 import type { OrderWithItems } from '@/lib/db/orders';
 import type { OrderStatus } from '@/types';
 import type { PanelCurrency } from '@/components/admin/order-card';
+import { fmtCurrency } from '@/lib/money';
 
 export interface VoidTarget {
   orderId: string;
@@ -125,15 +126,7 @@ function fromSeats(lines: BillLine[]): SavedSplit | null {
 
 /* ── Utilidades de presentación ───────────────────────────── */
 
-function money(n: number, c: PanelCurrency): string {
-  let num: string;
-  try {
-    num = n.toLocaleString(c.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  } catch {
-    num = n.toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-  return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
-}
+const money = (n: number, c: PanelCurrency): string => fmtCurrency(n, c);
 
 /* El rótulo de cada bloque de la cuenta.
    ------------------------------------------------------------------
@@ -152,7 +145,7 @@ function money(n: number, c: PanelCurrency): string {
    viejo —tarjetas `.glass`, totales de 34 px, píldoras de colores— y era lo
    que hacía que cobrar pareciese otra aplicación. */
 const KICKER: React.CSSProperties = {
-  fontSize: 12.5, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase',
+  fontSize: 12, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase',
   color: 'var(--u-text-3)', padding: '0 4px 8px',
 };
 
@@ -412,7 +405,7 @@ export default function WaiterBill({
           ariaLabel="Cómo se reparte la cuenta"
           options={MODE_TABS.map((t) => ({ value: t.id, label: t.label }))}
         />
-        <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5, padding: '0 4px' }}>
+        <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5, padding: '0 4px' }}>
           {MODE_TABS.find((t) => t.id === mode)?.hint}
         </div>
       </div>
@@ -420,7 +413,7 @@ export default function WaiterBill({
       {/* ── Partes iguales: solo el contador ─────────────── */}
       {mode === 'equal' && (
         <Group style={{ padding: 16 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text-2)', textAlign: 'center' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', textAlign: 'center' }}>
             ¿Entre cuántas personas?
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, marginTop: 12 }}>
@@ -453,11 +446,11 @@ export default function WaiterBill({
                     onClick={() => setActivePerson(id)}
                     className="press"
                     style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 8px 8px 13px', borderRadius: 99,
+                      display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 8px 8px 13px', borderRadius: 'var(--radius-full)',
                       background: on ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--brand-accent) 13%, transparent)',
                       color: on ? 'var(--brand-on-accent, #fff)' : 'var(--u-text)',
                       border: `1px solid ${on ? 'var(--brand-accent)' : 'transparent'}`,
-                      fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
+                      fontSize: 13, fontWeight: 600, cursor: 'pointer',
                     }}
                   >
                     {renaming === id ? (
@@ -472,7 +465,7 @@ export default function WaiterBill({
                         }}
                         onBlur={() => commitRename(id)}
                         placeholder={`Persona ${id}`}
-                        style={{ width: 82, background: 'transparent', border: 'none', borderBottom: '1px solid currentColor', color: 'inherit', fontSize: 13.5, fontWeight: 600, outline: 'none', padding: 0 }}
+                        style={{ width: 82, background: 'transparent', border: 'none', borderBottom: '1px solid currentColor', color: 'inherit', fontSize: 13, fontWeight: 600, outline: 'none', padding: 0 }}
                       />
                     ) : (
                       // El nombre NO tiene onClick propio: el toque cae al span
@@ -490,7 +483,7 @@ export default function WaiterBill({
                         onClick={(e) => { e.stopPropagation(); setDraftName(names[id] ?? ''); setRenaming(id); }}
                         aria-label={`Editar nombre de ${label(id)}`}
                         className="press"
-                        style={{ width: 20, height: 20, borderRadius: 99, border: 'none', background: 'rgba(0,0,0,0.15)', color: 'inherit', cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0 }}
+                        style={{ width: 20, height: 20, borderRadius: 'var(--radius-full)', border: 'none', background: 'rgba(0,0,0,0.15)', color: 'inherit', cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0 }}
                       >
                         <Icon name="edit" size={11} />
                       </button>
@@ -501,7 +494,7 @@ export default function WaiterBill({
                         onClick={(e) => { e.stopPropagation(); removePerson(id); }}
                         aria-label={`Quitar ${label(id)}`}
                         className="press"
-                        style={{ width: 20, height: 20, borderRadius: 99, border: 'none', background: 'rgba(0,0,0,0.15)', color: 'inherit', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                        style={{ width: 20, height: 20, borderRadius: 'var(--radius-full)', border: 'none', background: 'rgba(0,0,0,0.15)', color: 'inherit', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
                       >
                         <Icon name="x" size={11} />
                       </button>
@@ -509,7 +502,7 @@ export default function WaiterBill({
                   </span>
                 );
               })}
-              <button type="button" onClick={addPerson} className="press glass-quiet" style={{ padding: '8px 16px', borderRadius: 99, border: '1px dashed var(--u-hair)', color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 13.5, fontWeight: 600 }}>
+              <button type="button" onClick={addPerson} className="press glass-quiet" style={{ padding: '8px 16px', borderRadius: 'var(--radius-full)', border: '1px dashed var(--u-hair)', color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
                 + Persona
               </button>
             </div>
@@ -518,12 +511,12 @@ export default function WaiterBill({
           {unassignedCount > 0 && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-              borderRadius: 12, padding: '10px 13px',
+              borderRadius: 'var(--radius-lg)', padding: '10px 13px',
               background: 'color-mix(in srgb, var(--c-warn, #f59e0b) 9%, transparent)',
               border: '1px solid color-mix(in srgb, var(--c-warn, #f59e0b) 28%, transparent)',
             }}>
               <Icon name="alertCircle" size={15} style={{ color: 'var(--c-warn)', flexShrink: 0 }} />
-              <span style={{ flex: 1, minWidth: 170, fontSize: 12.5, color: 'var(--u-text-2)', lineHeight: 1.45 }}>
+              <span style={{ flex: 1, minWidth: 170, fontSize: 12, color: 'var(--u-text-2)', lineHeight: 1.45 }}>
                 <b>{unassignedCount} plato{unassignedCount === 1 ? '' : 's'} sin asignar</b> ·{' '}
                 {money(split.unassigned?.total ?? 0, currency)} que nadie está pagando.
               </span>
@@ -531,7 +524,7 @@ export default function WaiterBill({
                 type="button"
                 onClick={() => assignRestTo(safeActive)}
                 className="press"
-                style={{ flexShrink: 0, padding: '7px 12px', borderRadius: 99, border: '1px solid color-mix(in srgb, var(--c-warn, #f59e0b) 40%, transparent)', background: 'transparent', color: 'var(--c-warn)', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
+                style={{ flexShrink: 0, padding: '7px 12px', borderRadius: 'var(--radius-full)', border: '1px solid color-mix(in srgb, var(--c-warn, #f59e0b) 40%, transparent)', background: 'transparent', color: 'var(--c-warn)', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
               >
                 Dárselos a {label(safeActive)}
               </button>
@@ -568,10 +561,10 @@ export default function WaiterBill({
             <div key={line.itemId}>
               <Hr />
               <div style={{ padding: '10px 16px', opacity: 0.55 }}>
-                <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', textDecoration: 'line-through' }}>
+                <div style={{ fontSize: 13, color: 'var(--u-text-3)', textDecoration: 'line-through' }}>
                   {line.voidedQuantity} · {line.name}
                 </div>
-                <div style={{ fontSize: 12.5, color: 'var(--c-danger)', fontWeight: 600, marginTop: 1 }}>Anulado · no se cobra</div>
+                <div style={{ fontSize: 12, color: 'var(--c-danger)', fontWeight: 600, marginTop: 1 }}>Anulado · no se cobra</div>
               </div>
             </div>
           ))}
@@ -598,7 +591,7 @@ export default function WaiterBill({
                     aria-label={isPaid ? `Marcar ${name} como no cobrado` : `Marcar ${name} como cobrado`}
                     className="press"
                     style={{
-                      width: 22, height: 22, flexShrink: 0, borderRadius: 7, cursor: 'pointer', display: 'grid', placeItems: 'center',
+                      width: 22, height: 22, flexShrink: 0, borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'grid', placeItems: 'center',
                       border: isPaid ? 'none' : '1.5px solid var(--adm-border-2)',
                       background: isPaid ? 'var(--c-ok)' : 'transparent',
                       color: '#ffffff',
@@ -607,7 +600,7 @@ export default function WaiterBill({
                     {isPaid && <Icon name="check" size={13} strokeWidth={3} />}
                   </button>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14.5, fontWeight: 500, color: 'var(--u-text)', textDecoration: isPaid ? 'line-through' : 'none' }}>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--u-text)', textDecoration: isPaid ? 'line-through' : 'none' }}>
                       {name}
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 1 }}>
@@ -626,7 +619,7 @@ export default function WaiterBill({
                     aria-label={`Imprimir ticket de ${name}`}
                     title="Imprimir este ticket"
                     className="press"
-                    style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 9, border: '1px solid var(--adm-border-2)', background: 'none', cursor: printing ? 'wait' : 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', opacity: printing ? 0.5 : 1 }}
+                    style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 'var(--radius-md)', border: '1px solid var(--adm-border-2)', background: 'none', cursor: printing ? 'wait' : 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', opacity: printing ? 0.5 : 1 }}
                   >
                     <Icon name="print" size={15} />
                   </button>
@@ -651,7 +644,7 @@ export default function WaiterBill({
             display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px',
             background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
           }}>
-            <span style={{ flex: 1, fontSize: 14.5, fontWeight: 600, color: allPaid ? 'var(--c-ok)' : 'var(--u-text)' }}>
+            <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: allPaid ? 'var(--c-ok)' : 'var(--u-text)' }}>
               {allPaid ? 'Todo cobrado' : 'Falta cobrar'}
             </span>
             {!allPaid && <Mono size={17}>{money(pendingTotal, currency)}</Mono>}
@@ -704,7 +697,7 @@ export default function WaiterBill({
 
       {printMsg && (
         <div style={{
-          fontSize: 12.5, lineHeight: 1.5, padding: '9px 12px', borderRadius: 10,
+          fontSize: 12, lineHeight: 1.5, padding: '9px 12px', borderRadius: 'var(--radius-md)',
           color: printMsg.bad ? 'var(--c-danger, #f87171)' : 'var(--c-ok, #4ade80)',
           background: printMsg.bad ? 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)' : 'color-mix(in srgb, var(--c-ok, #4ade80) 10%, transparent)',
         }}>
@@ -729,7 +722,7 @@ export default function WaiterBill({
           className="press"
           style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, flexShrink: 0,
-            height: 40, padding: '0 16px', borderRadius: 11, cursor: printing ? 'wait' : 'pointer',
+            height: 40, padding: '0 16px', borderRadius: 'var(--radius-md)', cursor: printing ? 'wait' : 'pointer',
             border: '1px solid var(--adm-border-2)', background: 'none',
             color: 'var(--u-text-2)', fontWeight: 600, fontSize: 14, opacity: printing ? 0.6 : 1,
           }}
@@ -742,7 +735,7 @@ export default function WaiterBill({
           disabled={freeing}
           onClick={() => setClosing(true)}
           className="press btn-accent"
-          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, flexShrink: 0, minHeight: 40, padding: '0 18px', borderRadius: 11, border: 'none', cursor: freeing ? 'default' : 'pointer', fontWeight: 600, fontSize: 14.5, opacity: freeing ? 0.6 : 1 }}
+          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, flexShrink: 0, minHeight: 40, padding: '0 18px', borderRadius: 'var(--radius-md)', border: 'none', cursor: freeing ? 'default' : 'pointer', fontWeight: 600, fontSize: 14, opacity: freeing ? 0.6 : 1 }}
         >
           {freeing ? 'Cerrando…' : (
             <>
@@ -803,7 +796,7 @@ export default function WaiterBill({
 function BillRow({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', minHeight: 40 }}>
-      <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: 'var(--u-text-3)' }}>{label}</span>
+      <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--u-text-3)' }}>{label}</span>
       <Mono size={14} color={accent ? 'var(--c-ok)' : 'var(--u-text-2)'}>{value}</Mono>
     </div>
   );
@@ -818,8 +811,8 @@ function StepBtn({ label, onClick, disabled }: { label: string; onClick: () => v
       aria-label={label === '+' ? 'Una persona más' : 'Una persona menos'}
       className="press glass-quiet"
       style={{
-        width: 52, height: 52, borderRadius: 16, border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
-        display: 'grid', placeItems: 'center', fontSize: 26, fontWeight: 600, color: 'var(--u-text)', opacity: disabled ? 0.35 : 1,
+        width: 52, height: 52, borderRadius: 'var(--radius-lg)', border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
+        display: 'grid', placeItems: 'center', fontSize: 24, fontWeight: 600, color: 'var(--u-text)', opacity: disabled ? 0.35 : 1,
       }}
     >
       {label}
@@ -864,7 +857,7 @@ function LineCard({
     >
       {interactive && (
         <span style={{
-          width: 22, height: 22, borderRadius: 7, flexShrink: 0, display: 'grid', placeItems: 'center',
+          width: 22, height: 22, borderRadius: 'var(--radius-sm)', flexShrink: 0, display: 'grid', placeItems: 'center',
           border: mine ? 'none' : '1.5px solid var(--adm-border-2)',
           background: mine ? 'var(--adm-accent-500)' : 'transparent',
           color: '#ffffff',
@@ -873,20 +866,20 @@ function LineCard({
         </span>
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14.5, fontWeight: 500, color: 'var(--u-text)' }}>
+        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--u-text)' }}>
           {line.quantity} · {line.name}
         </div>
         {line.options && (
           <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 1, lineHeight: 1.35 }}>{line.options}</div>
         )}
         {line.voidedQuantity > 0 && (
-          <div style={{ fontSize: 12.5, color: 'var(--c-danger)', fontWeight: 600, marginTop: 1 }}>
+          <div style={{ fontSize: 12, color: 'var(--c-danger)', fontWeight: 600, marginTop: 1 }}>
             {line.voidedQuantity} anulada{line.voidedQuantity === 1 ? '' : 's'}
           </div>
         )}
         {interactive && (
           <div style={{
-            fontSize: 12.5, marginTop: 2, fontWeight: 600,
+            fontSize: 12, marginTop: 2, fontWeight: 600,
             color: claimedBy.length === 0 ? 'var(--c-warn)' : 'var(--brand-accent-ink)',
           }}>
             {claimedBy.length === 0
@@ -905,7 +898,7 @@ function LineCard({
           title="Anular este plato"
           aria-label={`Anular ${line.name}`}
           className="press"
-          style={{ width: 26, height: 26, borderRadius: 8, border: '1px solid var(--c-danger-line)', background: 'var(--c-danger-bg)', color: 'var(--c-danger)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+          style={{ width: 26, height: 26, borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-danger-line)', background: 'var(--c-danger-bg)', color: 'var(--c-danger)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
         >
           <Icon name="x" size={12} />
         </button>

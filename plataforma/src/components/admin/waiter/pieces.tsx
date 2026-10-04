@@ -48,7 +48,7 @@ export function Label({ children, action, onAction, aside }: {
           onClick={onAction}
           style={{
             border: 'none', background: 'none', cursor: 'pointer', padding: 0,
-            fontSize: 12.5, fontWeight: 600, color: 'var(--brand-accent-ink)',
+            fontSize: 12, fontWeight: 600, color: 'var(--brand-accent-ink)',
           }}
         >
           {action}
@@ -71,7 +71,7 @@ export function Group({ children, style }: { children: ReactNode; style?: CSSPro
       style={{
         background: 'var(--adm-card)',
         border: '1px solid var(--adm-border)',
-        borderRadius: 12,
+        borderRadius: 'var(--radius-lg)',
         overflow: 'hidden',
         boxShadow: 'var(--adm-shadow-xs)',
         ...style,
@@ -98,7 +98,7 @@ export function Row({ lead, title, sub, right, trail, onClick, pad = '12px 16px'
     <>
       {lead}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14.5, fontWeight: 500, color: 'var(--u-text)' }}>{title}</div>
+        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--u-text)' }}>{title}</div>
         {sub ? <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 1, lineHeight: 1.35 }}>{sub}</div> : null}
       </div>
       {right ? <div style={{ flexShrink: 0, textAlign: 'right' }}>{right}</div> : null}
@@ -165,7 +165,7 @@ export function Pill({ color, children, align = 'flex-start' }: {
 }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: align, gap: 6, fontSize: 13, color }}>
-      <span aria-hidden style={{ width: 7, height: 7, borderRadius: 99, background: 'currentColor', flexShrink: 0 }} />
+      <span aria-hidden style={{ width: 7, height: 7, borderRadius: 'var(--radius-full)', background: 'currentColor', flexShrink: 0 }} />
       {children}
     </span>
   );
@@ -175,7 +175,7 @@ export function Pill({ color, children, align = 'flex-start' }: {
 export function Tile({ children, accent = false }: { children: ReactNode; accent?: boolean }) {
   return (
     <span style={{
-      display: 'grid', placeItems: 'center', width: 26, height: 26, borderRadius: 7, flexShrink: 0,
+      display: 'grid', placeItems: 'center', width: 26, height: 26, borderRadius: 'var(--radius-sm)', flexShrink: 0,
       background: accent
         ? 'color-mix(in srgb, var(--adm-accent-500) 12%, transparent)'
         : 'color-mix(in srgb, var(--u-text) 8%, transparent)',

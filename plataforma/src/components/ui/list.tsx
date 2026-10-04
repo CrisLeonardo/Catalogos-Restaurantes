@@ -89,7 +89,7 @@ function ListText({
 }: Omit<React.ComponentProps<'div'>, 'title'> & { title: React.ReactNode; desc?: React.ReactNode }) {
   return (
     <div data-slot="list-text" className={cn('min-w-0 flex-1', className)} {...props}>
-      <div className="text-[14.5px] font-medium text-adm-text">{title}</div>
+      <div className="text-[14px] font-medium text-adm-text">{title}</div>
       {desc && <div data-slot="list-desc" className="mt-0.5 text-[13px] leading-snug text-adm-text-3">{desc}</div>}
     </div>
   );

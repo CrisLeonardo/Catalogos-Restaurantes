@@ -10,7 +10,7 @@ import { PRICING_SETTINGS_TAG } from '@/lib/db/billing';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
 import { withPlanFloor, type PlanCode } from '@/lib/plans';
 import { logChannelChanges } from '@/lib/db/channel-history';
-import { slugify, validateSlug, crossSlugCollision } from '@/lib/slug';
+import { slugify, validateSlug, crossSlugCollision, slugAliasOfOther } from '@/lib/slug';
 import type { ThemeConfig, ThemeContent, OrderType } from '@/lib/theme/defaults';
 
 export type SuperState = { error: string } | null;
@@ -36,6 +36,8 @@ export async function createRestaurant(
   if (slugError) return { error: slugError };
   const collision = await crossSlugCollision(db, slug, 'restaurants');
   if (collision) return { error: collision };
+  const usado = await slugAliasOfOther(db, slug);
+  if (usado) return { error: usado };
 
   const { data: restaurant, error: rErr } = await db
     .from('restaurants')
@@ -96,6 +98,8 @@ export async function updateRestaurantBasic(
   if (slugError) return { error: slugError };
   const collision = await crossSlugCollision(db, slug, 'restaurants');
   if (collision) return { error: collision };
+  const usado = await slugAliasOfOther(db, slug, id);
+  if (usado) return { error: usado };
 
   const { error } = await db
     .from('restaurants')
@@ -791,6 +795,9 @@ export async function deleteOrganization(formData: FormData) {
 export interface PlatformContactSettings {
   support_whatsapp: string;
   support_email: string;
+  /** Cómo pagan los restaurantes su mensualidad (banco, cuenta, a nombre de
+   *  quién). Se les enseña en Mi suscripción cuando tienen algo pendiente. */
+  payment_instructions: string;
 }
 
 /** Lee los datos de contacto del soporte desde platform_settings. */
@@ -803,6 +810,7 @@ export async function getPlatformContactSettings(): Promise<PlatformContactSetti
   return {
     support_whatsapp: (map.support_whatsapp as string) ?? '',
     support_email: (map.support_email as string) ?? '',
+    payment_instructions: (map.payment_instructions as string) ?? '',
   };
 }
 
@@ -818,6 +826,8 @@ export async function savePlatformSettings(
 
   const whatsapp = String(formData.get('support_whatsapp') ?? '').trim();
   const email = String(formData.get('support_email') ?? '').trim();
+  const pago = String(formData.get('payment_instructions') ?? '').trim();
+  if (pago.length > 600) return { error: 'Las instrucciones de pago son muy largas (máximo 600 caracteres).' };
 
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return { error: 'El correo electrónico no es válido.' };
@@ -829,6 +839,7 @@ export async function savePlatformSettings(
     [
       { key: 'support_whatsapp', value: whatsapp },
       { key: 'support_email', value: email },
+      { key: 'payment_instructions', value: pago },
     ],
     { onConflict: 'key' },
   );
@@ -840,6 +851,10 @@ export async function savePlatformSettings(
   // aunque lo guardado aquí sea el contacto de soporte y no un precio.
   updateTag(PRICING_SETTINGS_TAG);
   revalidatePath('/super/configuracion');
+  // La pantalla desde la que se guarda (Next hoy revalida todo, pero no hay
+  // que depender de eso: ver la nota de REN-02 en el tablero).
+  revalidatePath('/super/configuracion/soporte');
   revalidatePath('/admin/ayuda');
+  revalidatePath('/admin/suscripcion');
   return { saved: true };
 }

@@ -373,7 +373,7 @@ export function TableCard({
         aria-label={`Mesa ${t.n}, libre. ${t.action.label}`}
       >
         <span className="t-mono" style={num(24)}>{t.n}</span>
-        {t.nombre && <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-3)' }}>{t.nombre}</span>}
+        {t.nombre && <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text-3)' }}>{t.nombre}</span>}
         {t.pax && <span style={{ fontSize: 12, color: 'var(--u-text-4)' }}>{t.pax}</span>}
       </button>
     );
@@ -405,14 +405,14 @@ export function TableCard({
                     un «Terraza de arriba» de dos renglones engorda la fila
                     entera de fichas por culpa de una sola. */}
                 {t.nombre && (
-                  <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-3)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text-3)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {t.nombre}
                   </span>
                 )}
                 {t.pax && <span style={{ fontSize: 12, color: 'var(--u-text-4)', flexShrink: 0 }}>{t.pax}</span>}
                 {t.fuera && <FueraChip />}
               </span>
-              <span style={{ display: 'block', fontSize: 12.5, marginTop: 5, fontWeight: 600, color: estadoInk(t) }}>
+              <span style={{ display: 'block', fontSize: 12, marginTop: 5, fontWeight: 600, color: estadoInk(t) }}>
                 {estadoDeFicha(t)}
               </span>
             </span>
@@ -432,7 +432,7 @@ export function TableCard({
                 {t.metrica.valor}
               </span>
               {t.metrica.etiqueta && (
-                <span style={{ display: 'block', fontSize: 10.5, color: 'var(--u-text-4)', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
+                <span style={{ display: 'block', fontSize: 11, color: 'var(--u-text-4)', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
                   {t.metrica.etiqueta}
                 </span>
               )}
@@ -450,7 +450,7 @@ export function TableCard({
             const reloj = t.tiempo && t.metrica.cual !== 'tiempo' ? t.tiempo : null;
             if (!etapa && !reloj) return null;
             return (
-              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 11.5, color: 'var(--u-text-3)' }}>
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 11, color: 'var(--u-text-3)' }}>
                 <span>{etapa}</span>
                 {reloj && <span className="t-mono" style={{ fontWeight: 600 }}>{reloj}</span>}
               </span>
@@ -482,15 +482,24 @@ export function TableCard({
           </span>
           {/* El mismo número que en la maqueta ancha (M-21): si el
               interruptor no llegara aquí, en el teléfono no haría nada —
-              y el teléfono es donde más se mira este salón. */}
-          <span
-            className="t-mono"
-            style={{
-              fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em', flexShrink: 0,
-              color: 'var(--u-text)', whiteSpace: 'nowrap',
-            }}
-          >
-            {t.metrica.valor}
+              y el teléfono es donde más se mira este salón. Con su rótulo,
+              como en la ancha: sin él, «Lista 8 min» y un «20 min» suelto
+              en la misma ficha no decían qué era cada reloj (PED-11). */}
+          <span style={{ flexShrink: 0, textAlign: 'right' }}>
+            <span
+              className="t-mono"
+              style={{
+                display: 'block', fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em',
+                color: 'var(--u-text)', whiteSpace: 'nowrap',
+              }}
+            >
+              {t.metrica.valor}
+            </span>
+            {t.metrica.etiqueta && (
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--u-text-4)', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
+                {t.metrica.etiqueta}
+              </span>
+            )}
           </span>
         </span>
       </button>
@@ -521,8 +530,8 @@ function MeseroMark({ mark }: { mark: { iniciales: string; tono: string } }) {
       className="t-mono"
       style={{
         display: 'grid', placeItems: 'center', flexShrink: 0,
-        width: 18, height: 18, borderRadius: 6,
-        fontSize: 9.5, fontWeight: 700, letterSpacing: '0.02em',
+        width: 18, height: 18, borderRadius: 'var(--radius-sm)',
+        fontSize: 11, fontWeight: 700, letterSpacing: '0.02em',
         color: '#fff', background: mark.tono,
       }}
     >
@@ -542,8 +551,8 @@ function FueraChip() {
     <span
       title="Esta mesa no está en las mesas configuradas del salón"
       style={{
-        flexShrink: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.02em',
-        padding: '1px 6px', borderRadius: 6, textTransform: 'uppercase',
+        flexShrink: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.02em',
+        padding: '1px 6px', borderRadius: 'var(--radius-sm)', textTransform: 'uppercase',
         color: 'var(--c-warn)',
         background: 'color-mix(in srgb, var(--c-warn) 14%, transparent)',
       }}
@@ -600,13 +609,13 @@ export function TableRow({
         {/* El renglón sí tiene el ancho de la pantalla: aquí la frase
             completa («Servida hace 21 min») se lee mejor que «Sin cobrar». */}
         <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: estadoInk(t) }}>
+          <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: estadoInk(t) }}>
             {estadoDeFicha(t, true)}
           </span>
           {/* Una mesa libre no tiene mesero, ni etapa, ni «Sin abrir» que
               contar: ya lo dijo la palabra «Libre» de arriba. */}
           {!libre && (
-            <span style={{ display: 'block', fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>
+            <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)', marginTop: 1 }}>
               {[
                 t.fuera && 'Sin configurar',
                 t.nombre,
@@ -624,7 +633,7 @@ export function TableRow({
             </span>
           )}
           {libre && (t.nombre || t.pax) && (
-            <span style={{ display: 'block', fontSize: 12.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+            <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-4)', marginTop: 1 }}>
               {[t.nombre, t.pax].filter(Boolean).join(' · ')}
             </span>
           )}
@@ -694,7 +703,7 @@ export function TablePin({
         <span
           className="t-mono"
           style={{
-            fontSize: 19, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1,
+            fontSize: 18, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1,
             color: libre ? 'var(--u-text-4)' : 'var(--u-text)',
           }}
         >
@@ -711,7 +720,7 @@ export function TablePin({
         )}
         <span style={{ flex: 1 }} />
         {t.totalCorto && (
-          <span className="t-mono" style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--u-text-2)', whiteSpace: 'nowrap' }}>
+          <span className="t-mono" style={{ fontSize: 11, fontWeight: 600, color: 'var(--u-text-2)', whiteSpace: 'nowrap' }}>
             {t.totalCorto}
           </span>
         )}
@@ -725,7 +734,7 @@ export function TablePin({
       )}
       {/* En una mesa libre tampoco hay mesero que nombrar. */}
       {!libre && (
-        <span style={{ fontSize: 10.5, color: 'var(--u-text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 11, color: 'var(--u-text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {t.waiterName ?? 'Sin asignar'}
         </span>
       )}

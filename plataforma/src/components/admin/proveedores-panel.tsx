@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { saveSupplier, deleteSupplier, createPurchaseOrder, setPurchaseOrderStatus, type POLineInput } from '@/lib/actions/suppliers';
 import { Card } from '@/components/ui/card';
@@ -10,6 +9,11 @@ import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/utils';
 import type { Supplier, PurchaseOrder, SupplierSummary, PurchaseableProduct, PurchaseableIngredient } from '@/lib/db/suppliers';
+import { fmtMoney } from '@/lib/money';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { Stat, StatGroup } from '@/components/ui/stat';
+import PageTabs from '@/components/admin/page-tabs';
 
 interface Props {
   restaurantId: string;
@@ -20,16 +24,9 @@ interface Props {
   ingredients: PurchaseableIngredient[];
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-};
-const labelStyle: React.CSSProperties = {
-  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em',
-  textTransform: 'uppercase', marginBottom: 4, display: 'block',
-};
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 function money(n: number) {
-  return 'Q ' + Number(n).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return fmtMoney(Number(n));
 }
 const ESTADO_COLOR: Record<string, string> = {
   BORRADOR: '#9aa3ad', ENVIADA: 'var(--c-warn)', RECIBIDA: 'var(--c-ok)', CANCELADA: 'var(--c-danger)',
@@ -40,20 +37,13 @@ export default function ProveedoresPanel({ restaurantId, suppliers, orders, summ
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-        <Kpi label="Proveedores" value={String(summary.suppliers)} />
-        <Kpi label="Órdenes abiertas" value={String(summary.ordenesAbiertas)} accent />
-        <Kpi label="Comprado este mes" value={money(summary.gastoMes)} />
-      </div>
+      <StatGroup>
+        <Stat label="Proveedores" value={String(summary.suppliers)} />
+        <Stat label="Órdenes abiertas" value={String(summary.ordenesAbiertas)} />
+        <Stat label="Comprado este mes" value={money(summary.gastoMes)} />
+      </StatGroup>
 
-      <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid var(--u-hair)' }}>
-        {([['ordenes', 'Órdenes de compra'], ['proveedores', 'Proveedores']] as const).map(([k, label]) => (
-          <button key={k} type="button" onClick={() => setTab(k)} className="press"
-            style={{ padding: '9px 16px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === k ? 'var(--brand-accent)' : 'transparent'}`, color: tab === k ? 'var(--u-text)' : 'var(--u-text-3)', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', marginBottom: -1 }}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <PageTabs tabs={[['ordenes', 'Órdenes de compra'], ['proveedores', 'Proveedores']] as const} value={tab} onChange={setTab} />
 
       {tab === 'proveedores'
         ? <SuppliersTab restaurantId={restaurantId} suppliers={suppliers} />
@@ -62,21 +52,13 @@ export default function ProveedoresPanel({ restaurantId, suppliers, orders, summ
   );
 }
 
-function Kpi({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <Card className="flex flex-col gap-1 p-3.5">
-      <span className="adm-label">{label}</span>
-      <span style={{ fontSize: 20, fontWeight: 800, color: accent ? 'var(--brand-accent)' : 'var(--u-text)', lineHeight: 1 }}>{value}</span>
-    </Card>
-  );
-}
 
 /* ── Proveedores ────────────────────────────────────────────── */
 
 type EditState = { id?: string; name: string; contact_name: string; phone: string; email: string; notes: string } | null;
 
 function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppliers: Supplier[] }) {
-  const router = useRouter();
+  const { confirm, dialog } = useConfirm();
   const [edit, setEdit] = useState<EditState>(null);
   const [isPending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -88,22 +70,21 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
       const res = await saveSupplier(restaurantId, edit);
       if (res.error) { setError(res.error); return; }
       setEdit(null);
-      router.refresh();
     });
   }
-  function remove(s: Supplier) {
-    if (!window.confirm(`¿Eliminar al proveedor "${s.name}"?`)) return;
+  async function remove(s: Supplier) {
+    if (!(await confirm({ title: `¿Eliminar al proveedor «${s.name}»?` }))) return;
     start(async () => {
       const res = await deleteSupplier(restaurantId, s.id);
       if (res.error) { setError(res.error); return; }
-      router.refresh();
     });
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {dialog}
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <Button onClick={() => setEdit({ name: '', contact_name: '', phone: '', email: '', notes: '' })} className="rounded-adm-full">+ Nuevo proveedor</Button>
+        {!edit && <Button onClick={() => setEdit({ name: '', contact_name: '', phone: '', email: '', notes: '' })} className="rounded-adm-full"><Icon name="plus" size={15} /> Nuevo proveedor</Button>}
       </div>
       {error && <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 13 }}>{error}</div>}
 
@@ -111,11 +92,11 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
         <Card className="p-4">
           <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 12 }}>{edit.id ? 'Editar proveedor' : 'Nuevo proveedor'}</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
-            <div><label style={labelStyle}>Nombre *</label><input style={inputStyle} value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></div>
-            <div><label style={labelStyle}>Contacto</label><input style={inputStyle} value={edit.contact_name} onChange={(e) => setEdit({ ...edit, contact_name: e.target.value })} /></div>
-            <div><label style={labelStyle}>Teléfono</label><input style={inputStyle} value={edit.phone} onChange={(e) => setEdit({ ...edit, phone: e.target.value })} /></div>
-            <div><label style={labelStyle}>Email</label><input style={inputStyle} value={edit.email} onChange={(e) => setEdit({ ...edit, email: e.target.value })} /></div>
-            <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle}>Notas</label><input style={inputStyle} value={edit.notes} onChange={(e) => setEdit({ ...edit, notes: e.target.value })} /></div>
+            <div><label style={labelStyle}>Nombre *</label><input className="adm-field" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></div>
+            <div><label style={labelStyle}>Contacto</label><input className="adm-field" value={edit.contact_name} onChange={(e) => setEdit({ ...edit, contact_name: e.target.value })} /></div>
+            <div><label style={labelStyle}>Teléfono</label><input className="adm-field" value={edit.phone} onChange={(e) => setEdit({ ...edit, phone: e.target.value })} /></div>
+            <div><label style={labelStyle}>Email</label><input className="adm-field" value={edit.email} onChange={(e) => setEdit({ ...edit, email: e.target.value })} /></div>
+            <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle}>Notas</label><input className="adm-field" value={edit.notes} onChange={(e) => setEdit({ ...edit, notes: e.target.value })} /></div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <Button onClick={save} disabled={isPending} size="sm" className="rounded-adm-full">{isPending ? 'Guardando…' : 'Guardar'}</Button>
@@ -127,8 +108,8 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
       {suppliers.length === 0 && !edit ? (
         <EmptyState
           icon="truck"
-          title="Aún no tenés proveedores registrados"
-          desc="Registrá a quién le comprás para llevar el control de tus órdenes de compra."
+          title="Aún no tienes proveedores registrados"
+          desc="Registra a quién le compras para llevar el control de tus órdenes de compra."
           action={{ label: 'Agregar el primero', onClick: () => setEdit({ name: '', contact_name: '', phone: '', email: '', notes: '' }) }}
         />
       ) : (
@@ -142,7 +123,7 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
             <tbody>
               {suppliers.map((s) => (
                 <tr key={s.id} style={{ borderBottom: '1px solid var(--u-hair)', opacity: s.active ? 1 : 0.5 }}>
-                  <td style={{ padding: '10px 12px', fontWeight: 500 }}>{s.name}{!s.active && <span style={{ fontSize: 10, color: 'var(--u-text-4)', marginLeft: 6 }}>inactivo</span>}</td>
+                  <td style={{ padding: '10px 12px', fontWeight: 500 }}>{s.name}{!s.active && <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginLeft: 6 }}>inactivo</span>}</td>
                   <td className="hide-mobile" style={{ padding: '10px 12px', color: 'var(--u-text-3)' }}>{s.contact_name || '—'}</td>
                   <td style={{ padding: '10px 12px', color: 'var(--u-text-3)' }}>{s.phone || '—'}</td>
                   <td style={{ padding: '10px 12px', textAlign: 'right' }}>
@@ -172,11 +153,11 @@ function OrdersTab({
   restaurantId: string; suppliers: Supplier[]; orders: PurchaseOrder[];
   products: PurchaseableProduct[]; ingredients: PurchaseableIngredient[];
 }) {
-  const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [supplierId, setSupplierId] = useState('');
   const [notes, setNotes] = useState('');
   const [lines, setLines] = useState<DraftLine[]>([{ ...EMPTY_LINE }]);
+  const { confirm, dialog } = useConfirm();
   const [isPending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -225,28 +206,33 @@ function OrdersTab({
       const res = await createPurchaseOrder(restaurantId, supplierId || null, notes, payload);
       if (res.error) { setError(res.error); return; }
       reset();
-      router.refresh();
     });
   }
-  function changeStatus(po: PurchaseOrder, estado: 'ENVIADA' | 'RECIBIDA' | 'CANCELADA') {
+  async function changeStatus(po: PurchaseOrder, estado: 'ENVIADA' | 'RECIBIDA' | 'CANCELADA') {
     if (estado === 'RECIBIDA') {
       const linked = (po.items ?? []).filter((it) => it.product_id || it.ingredient_id).length;
-      const msg = linked > 0
-        ? `Esta orden tiene ${linked} renglón(es) vinculado(s) a producto/insumo: al recibirla se sumará su stock y se recalculará el costo promedio ponderado. ¿Continuar?`
-        : '¿Marcar esta orden como recibida?';
-      if (!window.confirm(msg)) return;
+      if (!(await confirm({
+        title: '¿Marcar la orden como recibida?',
+        description: linked === 0
+          ? undefined
+          : linked === 1
+            ? 'Un renglón está ligado a un platillo o insumo: se suma a su existencia y se recalcula su costo.'
+            : `${linked} renglones están ligados a platillos o insumos: se suman a sus existencias y se recalcula su costo.`,
+        confirmLabel: 'Marcar recibida',
+        destructive: false,
+      }))) return;
     }
     start(async () => {
       const res = await setPurchaseOrderStatus(restaurantId, po.id, estado);
       if (res.error) { setError(res.error); return; }
-      router.refresh();
     });
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {dialog}
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        {!creating && <Button onClick={() => setCreating(true)} className="rounded-adm-full">+ Nueva orden</Button>}
+        {!creating && <Button onClick={() => setCreating(true)} className="rounded-adm-full"><Icon name="plus" size={15} /> Nueva orden</Button>}
       </div>
       {error && <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 13 }}>{error}</div>}
 
@@ -262,7 +248,7 @@ function OrdersTab({
                 onValueChange={setSupplierId}
               />
             </div>
-            <div><label style={labelStyle}>Notas</label><input style={inputStyle} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Entrega, referencia…" /></div>
+            <div><label style={labelStyle}>Notas</label><input className="adm-field" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Entrega, referencia…" /></div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -278,16 +264,16 @@ function OrdersTab({
                   onValueChange={(v) => setLink(i, v)}
                 />
                 <div className="po-line">
-                  <input style={inputStyle} placeholder="Descripción (insumo)" value={l.descripcion} onChange={(e) => setLine(i, { descripcion: e.target.value })} />
-                  <input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="decimal" min="0" step="0.001" placeholder="Cant." value={l.cantidad} onChange={(e) => setLine(i, { cantidad: e.target.value })} />
-                  <input style={inputStyle} placeholder="Unidad" value={l.unidad} onChange={(e) => setLine(i, { unidad: e.target.value })} />
-                  <input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="decimal" min="0" step="0.0001" placeholder="Costo Q" value={l.costo_unitario} onChange={(e) => setLine(i, { costo_unitario: e.target.value })} />
+                  <input className="adm-field" placeholder="Descripción (insumo)" value={l.descripcion} onChange={(e) => setLine(i, { descripcion: e.target.value })} />
+                  <input className="adm-field" style={{ textAlign: 'right' }} type="number" inputMode="decimal" min="0" step="0.001" placeholder="Cant." value={l.cantidad} onChange={(e) => setLine(i, { cantidad: e.target.value })} />
+                  <input className="adm-field" placeholder="Unidad" value={l.unidad} onChange={(e) => setLine(i, { unidad: e.target.value })} />
+                  <input className="adm-field" style={{ textAlign: 'right' }} type="number" inputMode="decimal" min="0" step="0.0001" placeholder="Costo Q" value={l.costo_unitario} onChange={(e) => setLine(i, { costo_unitario: e.target.value })} />
                   <Button type="button" variant="outline" size="icon" className="size-8 border-[var(--c-danger-line)] text-[var(--c-danger)]" aria-label="Quitar renglón" onClick={() => setLines((ls) => ls.length > 1 ? ls.filter((_, j) => j !== i) : ls)}><Icon name="x" size={13} /></Button>
                 </div>
               </div>
             ))}
             <Button type="button" variant="secondary" size="sm" className="self-start" onClick={() => setLines((ls) => [...ls, { ...EMPTY_LINE }])}>+ Renglón</Button>
-            <p style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>
+            <p style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
               Vincular un renglón a un producto o insumo real hace que, al marcar la orden como recibida, se sume su stock y se recalcule su costo promedio ponderado (Kardex). Sin vincular, el renglón queda solo como registro contable.
             </p>
           </div>
@@ -306,7 +292,7 @@ function OrdersTab({
         <EmptyState
           icon="receipt"
           title="Aún no has creado órdenes de compra"
-          desc="Una orden registra qué le pedís a un proveedor y suma el stock automáticamente al recibirla."
+          desc="Una orden registra qué le pides a un proveedor y suma el stock automáticamente al recibirla."
           action={{ label: 'Crear la primera', onClick: () => setCreating(true) }}
         />
       ) : (
@@ -318,13 +304,13 @@ function OrdersTab({
                   <div style={{ fontWeight: 700, fontSize: 14 }}>Orden #{String(po.folio).padStart(4, '0')}</div>
                   <div style={{ fontSize: 12, color: 'var(--u-text-3)' }}>{po.supplier_name || 'Sin proveedor'} · {new Date(po.created_at).toLocaleDateString('es-GT', { day: '2-digit', month: 'short' })}</div>
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: `color-mix(in srgb, ${ESTADO_COLOR[po.estado]} 13%, transparent)`, color: ESTADO_COLOR[po.estado] }}>{po.estado}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 'var(--radius-full)', background: `color-mix(in srgb, ${ESTADO_COLOR[po.estado]} 13%, transparent)`, color: ESTADO_COLOR[po.estado] }}>{po.estado}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 8 }}>
                 {(po.items ?? []).map((it) => {
                   const linkLabel = it.product_name ? `📦 ${it.product_name}` : it.ingredient_name ? `🧂 ${it.ingredient_name}` : null;
                   return (
-                    <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--u-text-2)' }}>
+                    <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--u-text-2)' }}>
                       <span>{it.cantidad} {it.unidad} · {it.descripcion}{linkLabel && <span style={{ color: 'var(--brand-accent-ink)' }}> · {linkLabel}</span>}</span>
                       <span style={{ fontFamily: 'var(--ui-font-mono)' }}>{money(Number(it.subtotal))}</span>
                     </div>

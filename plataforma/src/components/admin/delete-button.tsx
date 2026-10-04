@@ -1,24 +1,31 @@
 'use client';
 
+import { useConfirm } from '@/components/ui/confirm-dialog';
+
 interface DeleteButtonProps {
   action: (formData: FormData) => void;
   hiddenFields: Record<string, string>;
   label?: string;
+  /** La pregunta (título del diálogo). */
   confirm?: string;
+  /** Una línea debajo con la consecuencia. */
+  description?: string;
 }
 
 export default function DeleteButton({
   action,
   hiddenFields,
   label = 'Eliminar',
-  confirm: confirmMsg = '¿Eliminar? Esta acción no se puede deshacer.',
+  confirm: confirmMsg = '¿Eliminar?',
+  description = 'No se puede deshacer.',
 }: DeleteButtonProps) {
+  const { confirmSubmit, dialog } = useConfirm();
   return (
+    <>
+    {dialog}
     <form
       action={action}
-      onSubmit={(e) => {
-        if (!window.confirm(confirmMsg)) e.preventDefault();
-      }}
+      onSubmit={confirmSubmit({ title: confirmMsg, description, confirmLabel: label })}
     >
       {Object.entries(hiddenFields).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
@@ -40,5 +47,6 @@ export default function DeleteButton({
         {label}
       </button>
     </form>
+    </>
   );
 }

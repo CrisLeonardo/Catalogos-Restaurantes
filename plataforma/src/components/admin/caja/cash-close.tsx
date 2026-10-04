@@ -35,6 +35,7 @@ import {
   addCashExpense, deleteCashExpense, saveCajaDraft, discardCajaDraft, closeCaja,
   type CajaState, type TipShare, type CajaCloseResult,
 } from '@/lib/actions/finanzas';
+import { fmtMoney } from '@/lib/money';
 
 const BILLETES = DENOM_FIELDS.filter((d) => d.kind === 'B');
 const MONEDAS = DENOM_FIELDS.filter((d) => d.kind === 'M');
@@ -42,7 +43,7 @@ const MONEDAS = DENOM_FIELDS.filter((d) => d.kind === 'M');
 /* Con separador de miles. «Q4292.00» obliga a contar los dígitos con el
    dedo para saber si son cuatro mil o cuarenta y dos mil, y este número
    se lee de noche, con prisa. */
-const money = (n: number) => `Q${n.toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (n: number) => fmtMoney(n);
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
 /** En qué paso va el cierre. El dato vive en la nube (el borrador); el
@@ -170,14 +171,14 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
       {/* ── Contexto: qué día, qué turno, quién ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <div className="t-display" style={{ fontSize: 19, lineHeight: 1.15 }}>Cierre del día</div>
+          <div className="t-display" style={{ fontSize: 18, lineHeight: 1.15 }}>Cierre del día</div>
           {/* La fecha, el turno y quién cierra, en una línea — como en el
               lienzo. El turno se escribe AQUÍ y no en una tarjeta aparte:
               es parte de decir de qué cierre estamos hablando, no un paso
               más que hacer. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 13, color: 'var(--u-text-3)', marginTop: 2 }}>
             <span>{dateLabel}</span>
-            <span aria-hidden>·</span>
+            <span aria-hidden className="caja-sep-turno">·</span>
             <label htmlFor="caja-turno" className="sr-only">Nombre del turno</label>
             <input
               id="caja-turno"
@@ -186,7 +187,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
               list="caja-turnos"
               value={shift}
               onChange={(e) => setShift(e.target.value)}
-              placeholder="turno"
+              placeholder="turno (opcional)"
               size={Math.max(6, shift.length + 1)}
             />
             <datalist id="caja-turnos">
@@ -207,8 +208,8 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
           className="press"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 8, height: 38, padding: '0 14px',
-            borderRadius: 11, border: '1px solid var(--u-hair-2)', background: 'none',
-            color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500,
+            borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'none',
+            color: 'var(--u-text-2)', fontSize: 13, fontWeight: 500,
             cursor: guardando ? 'default' : 'pointer', opacity: guardando ? 0.6 : 1,
           }}
         >
@@ -220,7 +221,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
         <div
           style={{
             display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-            padding: '10px 14px', borderRadius: 12, fontSize: 13,
+            padding: '10px 14px', borderRadius: 'var(--radius-lg)', fontSize: 13,
             border: '1px solid color-mix(in srgb, var(--c-warn) 32%, transparent)',
             background: 'color-mix(in srgb, var(--c-warn) 9%, transparent)',
           }}
@@ -239,7 +240,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
             })}
             className="press"
             style={{
-              height: 32, padding: '0 13px', borderRadius: 8, cursor: 'pointer',
+              height: 32, padding: '0 13px', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
               border: '1px solid var(--u-hair-2)', background: 'none',
               color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600,
             }}
@@ -252,7 +253,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
       {state.needsMigration && (
         <p
           style={{
-            margin: 0, padding: '10px 14px', borderRadius: 12, fontSize: 12.5, lineHeight: 1.5,
+            margin: 0, padding: '10px 14px', borderRadius: 'var(--radius-lg)', fontSize: 12, lineHeight: 1.5,
             color: 'var(--u-text-2)', border: '1px solid var(--u-hair)',
             background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
           }}
@@ -273,7 +274,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
         <div
           role="status"
           style={{
-            padding: '10px 14px', borderRadius: 12, fontSize: 13, fontWeight: 500,
+            padding: '10px 14px', borderRadius: 'var(--radius-lg)', fontSize: 13, fontWeight: 500,
             color: aviso.bad ? 'var(--c-danger)' : 'var(--u-text-2)',
             border: `1px solid ${aviso.bad ? 'var(--c-danger-line)' : 'var(--u-hair)'}`,
             background: aviso.bad ? 'var(--c-danger-bg)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
@@ -334,7 +335,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
                 className="press btn-accent"
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-                  height: 54, borderRadius: 14, border: 'none', cursor: 'pointer',
+                  height: 54, borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer',
                   fontSize: 16, fontWeight: 600, width: '100%',
                 }}
               >
@@ -349,7 +350,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
                 className="press btn-accent"
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-                  height: 54, borderRadius: 14, border: 'none', width: '100%',
+                  height: 54, borderRadius: 'var(--radius-lg)', border: 'none', width: '100%',
                   fontSize: 16, fontWeight: 600,
                   cursor: guardando || !hayConteo ? 'not-allowed' : 'pointer',
                   opacity: guardando || !hayConteo ? 0.6 : 1,
@@ -390,9 +391,9 @@ function PasoChip({ n, titulo, detalle, on, hecho, onClick, ultimo }: {
         <span
           className="t-mono"
           style={{
-            display: 'grid', placeItems: 'center', width: 28, height: 28, borderRadius: 99, flexShrink: 0,
+            display: 'grid', placeItems: 'center', width: 28, height: 28, borderRadius: 'var(--radius-full)', flexShrink: 0,
             fontSize: 13, fontWeight: 700,
-            background: on ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)',
+            background: on ? 'var(--adm-accent-fill, var(--brand-accent))' : 'color-mix(in srgb, var(--u-text) 8%, transparent)',
             color: on ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
           }}
         >
@@ -409,8 +410,8 @@ function PasoChip({ n, titulo, detalle, on, hecho, onClick, ultimo }: {
         <span
           aria-hidden
           style={{
-            flex: 1, height: 2, borderRadius: 99, minWidth: 20,
-            background: on ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
+            flex: 1, height: 2, borderRadius: 'var(--radius-full)', minWidth: 20,
+            background: on ? 'var(--adm-accent-fill, var(--brand-accent))' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
           }}
         />
       )}
@@ -428,10 +429,10 @@ function PasoEfectivo({ counts, setCount, opening, setOpening }: {
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-        <span className="t-display" style={{ flex: 1, minWidth: 160, fontSize: 19, lineHeight: 1.15 }}>
-          Contá el efectivo
+        <span className="t-display" style={{ flex: 1, minWidth: 160, fontSize: 18, lineHeight: 1.15 }}>
+          Cuenta el efectivo
         </span>
-        <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Escribí cuántos hay de cada uno</span>
+        <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Escribe cuántos hay de cada uno</span>
       </div>
 
       <div className="caja-cards">
@@ -447,7 +448,7 @@ function PasoEfectivo({ counts, setCount, opening, setOpening }: {
           ))}
 
           <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label htmlFor="caja-fondo" style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>
+            <label htmlFor="caja-fondo" style={{ fontSize: 12, color: 'var(--u-text-3)' }}>
               Fondo con el que abriste
             </label>
             <input
@@ -459,15 +460,11 @@ function PasoEfectivo({ counts, setCount, opening, setOpening }: {
               value={opening}
               onChange={(e) => setOpening(e.target.value)}
               aria-describedby="caja-fondo-ayuda"
-              style={{
-                width: '100%', height: 44, padding: '0 12px', textAlign: 'right',
-                borderRadius: 10, border: '1px solid var(--u-hair-2)', outline: 'none',
-                background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)',
-                fontFamily: 'var(--ui-font-mono)', fontSize: 18, fontWeight: 600,
-              }}
+              className="adm-field adm-field-mono"
+              style={{ height: 44, padding: '0 12px', textAlign: 'right', fontSize: 18, fontWeight: 600 }}
             />
             {/* Sin esta línea nadie sabe si el fondo suma o resta al cuadre. */}
-            <p id="caja-fondo-ayuda" style={{ margin: 0, fontSize: 11.5, lineHeight: 1.4, color: 'var(--u-text-4)' }}>
+            <p id="caja-fondo-ayuda" style={{ margin: 0, fontSize: 11, lineHeight: 1.4, color: 'var(--u-text-4)' }}>
               Se descuenta del total contado para saber si cuadra.
             </p>
           </div>
@@ -543,7 +540,7 @@ function PasoGastos({ restaurantId, state, onAviso }: {
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-        <span className="t-display" style={{ flex: 1, minWidth: 160, fontSize: 19, lineHeight: 1.15 }}>
+        <span className="t-display" style={{ flex: 1, minWidth: 160, fontSize: 18, lineHeight: 1.15 }}>
           ¿Qué salió de la caja?
         </span>
         <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Mercado, gas, mandados…</span>
@@ -551,14 +548,14 @@ function PasoGastos({ restaurantId, state, onAviso }: {
 
       <Tarjeta titulo="Gastos de hoy">
         {state.expenses.length === 0 ? (
-          <p style={{ margin: 0, fontSize: 13.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
             Todavía no hay ninguno. Si hoy no se pagó nada con dinero de la caja, sigue al paso 3.
           </p>
         ) : state.expenses.map((g, i) => (
           <div
             key={g.id}
             style={{
-              display: 'flex', alignItems: 'center', gap: 10, minHeight: 44, fontSize: 13.5,
+              display: 'flex', alignItems: 'center', gap: 10, minHeight: 44, fontSize: 13,
               borderTop: i === 0 ? 'none' : '1px solid var(--u-hair)', paddingTop: i === 0 ? 0 : 8,
             }}
           >
@@ -582,7 +579,7 @@ function PasoGastos({ restaurantId, state, onAviso }: {
               className="press"
               style={{
                 display: 'grid', placeItems: 'center', width: 32, height: 32, flexShrink: 0,
-                borderRadius: 9, border: '1px solid var(--u-hair-2)', background: 'none',
+                borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'none',
                 color: 'var(--u-text-3)', cursor: 'pointer',
               }}
             >
@@ -600,7 +597,7 @@ function PasoGastos({ restaurantId, state, onAviso }: {
             onChange={(e) => setConcept(e.target.value)}
             placeholder="En qué se gastó (ej. mercado, gas)"
             aria-label="Concepto del gasto"
-            style={campo}
+            className="adm-field" style={campo}
           />
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <input
@@ -612,14 +609,14 @@ function PasoGastos({ restaurantId, state, onAviso }: {
               step="0.01"
               placeholder="Monto"
               aria-label="Monto del gasto"
-              style={{ ...campo, flex: '1 1 120px', fontFamily: 'var(--ui-font-mono)', textAlign: 'right' }}
+              className="adm-field adm-field-mono" style={{ ...campo, flex: '1 1 120px', width: 'auto', textAlign: 'right' }}
             />
             <input
               value={paidBy}
               onChange={(e) => setPaidBy(e.target.value)}
               placeholder="Quién lo pagó (opcional)"
               aria-label="Quién pagó el gasto"
-              style={{ ...campo, flex: '2 1 160px' }}
+              className="adm-field" style={{ ...campo, flex: '2 1 160px', width: 'auto' }}
             />
           </div>
           <button
@@ -629,7 +626,7 @@ function PasoGastos({ restaurantId, state, onAviso }: {
             className="press"
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, height: 46,
-              borderRadius: 11, border: '1px dashed var(--u-hair-2)', background: 'none',
+              borderRadius: 'var(--radius-md)', border: '1px dashed var(--u-hair-2)', background: 'none',
               color: 'var(--u-text-2)', fontSize: 14, fontWeight: 600,
               cursor: pending ? 'default' : 'pointer',
               opacity: pending || !concept.trim() || !(parseFloat(amount) > 0) ? 0.55 : 1,
@@ -678,7 +675,7 @@ function PasoPropinas({ tips, setTips, total, notes, setNotes }: {
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-        <span className="t-display" style={{ flex: 1, minWidth: 160, fontSize: 19, lineHeight: 1.15 }}>
+        <span className="t-display" style={{ flex: 1, minWidth: 160, fontSize: 18, lineHeight: 1.15 }}>
           Las propinas del turno
         </span>
         <span className="t-mono" style={{ fontSize: 18, fontWeight: 700, color: 'var(--u-text)' }}>{money(total)}</span>
@@ -686,7 +683,7 @@ function PasoPropinas({ tips, setTips, total, notes, setNotes }: {
 
       <Tarjeta titulo="Cómo se reparten">
         {tips.length === 0 ? (
-          <p style={{ margin: 0, fontSize: 13.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
             Hoy no entró ninguna propina. Puedes cerrar el turno igual.
           </p>
         ) : (
@@ -696,7 +693,7 @@ function PasoPropinas({ tips, setTips, total, notes, setNotes }: {
                 <span
                   className="t-mono"
                   style={{
-                    display: 'grid', placeItems: 'center', width: 30, height: 30, borderRadius: 99, flexShrink: 0,
+                    display: 'grid', placeItems: 'center', width: 30, height: 30, borderRadius: 'var(--radius-full)', flexShrink: 0,
                     background: 'color-mix(in srgb, var(--brand-accent) 10%, transparent)',
                     color: 'var(--brand-accent-ink)', fontSize: 13, fontWeight: 700,
                   }}
@@ -705,7 +702,7 @@ function PasoPropinas({ tips, setTips, total, notes, setNotes }: {
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--u-text)' }}>{t.name}</span>
-                  <span style={{ display: 'block', fontSize: 12.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+                  <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-4)', marginTop: 1 }}>
                     {t.tables === 0 ? 'sin mesas' : `${t.tables} ${t.tables === 1 ? 'mesa atendida' : 'mesas atendidas'}`}
                   </span>
                 </span>
@@ -720,12 +717,8 @@ function PasoPropinas({ tips, setTips, total, notes, setNotes }: {
                     const v = Math.max(0, parseFloat(e.target.value) || 0);
                     setTips(tips.map((x, j) => (j === i ? { ...x, amount: r2(v) } : x)));
                   }}
-                  style={{
-                    width: 110, height: 44, padding: '0 12px', textAlign: 'right', flexShrink: 0,
-                    borderRadius: 10, border: '1px solid var(--u-hair-2)', outline: 'none',
-                    background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)',
-                    fontFamily: 'var(--ui-font-mono)', fontSize: 16, fontWeight: 600,
-                  }}
+                  className="adm-field adm-field-mono"
+                  style={{ width: 110, height: 44, padding: '0 12px', textAlign: 'right', flexShrink: 0, fontSize: 16, fontWeight: 600 }}
                 />
               </div>
             ))}
@@ -738,7 +731,7 @@ function PasoPropinas({ tips, setTips, total, notes, setNotes }: {
             <div
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-                paddingTop: 8, borderTop: '1px solid var(--u-hair)', fontSize: 13.5,
+                paddingTop: 8, borderTop: '1px solid var(--u-hair)', fontSize: 13,
                 color: Math.abs(resto) < 0.005 ? 'var(--u-text-3)' : 'var(--c-warn)',
               }}
             >
@@ -755,7 +748,7 @@ function PasoPropinas({ tips, setTips, total, notes, setNotes }: {
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Incidentes, entrega de fondo, lo que haga falta…"
           aria-label="Observaciones del cierre"
-          style={campo}
+          className="adm-field" style={campo}
         />
       </Tarjeta>
     </>
@@ -775,7 +768,7 @@ function TarjetaCuadre({ ventasEfectivo, gastos, opening, contado, diferencia, c
       <div style={{ height: 1, background: 'var(--u-hair)' }} />
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
         <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)' }}>Total contado</span>
-        <span className="t-mono" style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--u-text)' }}>
+        <span className="t-mono" style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--u-text)' }}>
           {money(contado)}
         </span>
       </div>
@@ -787,7 +780,7 @@ function TarjetaCuadre({ ventasEfectivo, gastos, opening, contado, diferencia, c
           aria-live="polite"
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-            padding: '12px 14px', borderRadius: 12, fontSize: 14, fontWeight: 600,
+            padding: '12px 14px', borderRadius: 'var(--radius-lg)', fontSize: 14, fontWeight: 600,
             border: `1px solid ${cuadra ? 'var(--c-ok-line)' : 'color-mix(in srgb, var(--brand-accent) 34%, transparent)'}`,
             background: cuadra ? 'var(--c-ok-bg)' : 'color-mix(in srgb, var(--brand-accent) 8%, transparent)',
             color: cuadra ? 'var(--c-ok)' : 'var(--brand-accent-ink)',
@@ -812,7 +805,7 @@ function TarjetaGastos({ state, onAnotar }: { state: CajaState; onAnotar: () => 
           Nada salió de la caja todavía.
         </p>
       ) : state.expenses.map((g) => (
-        <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13.5 }}>
+        <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
           <span style={{ flex: 1, minWidth: 0, color: 'var(--u-text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {g.concept}
           </span>
@@ -825,8 +818,8 @@ function TarjetaGastos({ state, onAnotar }: { state: CajaState; onAnotar: () => 
         className="press"
         style={{
           display: 'flex', alignItems: 'center', gap: 9, height: 42, padding: '0 12px',
-          borderRadius: 11, border: '1px dashed var(--u-hair-2)', background: 'none',
-          color: 'var(--u-text-3)', fontSize: 13.5, cursor: 'pointer',
+          borderRadius: 'var(--radius-md)', border: '1px dashed var(--u-hair-2)', background: 'none',
+          color: 'var(--u-text-3)', fontSize: 13, cursor: 'pointer',
         }}
       >
         <Icon name="plus" size={15} strokeWidth={2} />
@@ -834,7 +827,7 @@ function TarjetaGastos({ state, onAnotar }: { state: CajaState; onAnotar: () => 
       </button>
       {state.expensesTotal > 0 && (
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', paddingTop: 8, borderTop: '1px solid var(--u-hair)' }}>
-          <span style={{ fontSize: 13.5, color: 'var(--u-text-2)' }}>Salió de la caja</span>
+          <span style={{ fontSize: 13, color: 'var(--u-text-2)' }}>Salió de la caja</span>
           <span className="t-mono" style={{ fontWeight: 700, fontSize: 16, color: 'var(--u-text)' }}>
             {money(state.expensesTotal)}
           </span>
@@ -891,12 +884,12 @@ function CierreHecho({ result, dateLabel, shift, cashierName, restaurantName, ti
         <div style={{ height: 1, background: 'var(--u-hair)' }} />
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)' }}>Total contado</span>
-          <span className="t-mono" style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em' }}>{money(result.counted)}</span>
+          <span className="t-mono" style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em' }}>{money(result.counted)}</span>
         </div>
         <div
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-            padding: '12px 14px', borderRadius: 12, fontSize: 14, fontWeight: 600,
+            padding: '12px 14px', borderRadius: 'var(--radius-lg)', fontSize: 14, fontWeight: 600,
             border: `1px solid ${cuadra ? 'var(--c-ok-line)' : 'color-mix(in srgb, var(--brand-accent) 34%, transparent)'}`,
             background: cuadra ? 'var(--c-ok-bg)' : 'color-mix(in srgb, var(--brand-accent) 8%, transparent)',
             color: cuadra ? 'var(--c-ok)' : 'var(--brand-accent-ink)',
@@ -927,8 +920,8 @@ function CierreHecho({ result, dateLabel, shift, cashierName, restaurantName, ti
           className="press"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 7, height: 40, padding: '0 14px',
-            borderRadius: 11, border: '1px solid var(--u-hair-2)', textDecoration: 'none',
-            color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500,
+            borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', textDecoration: 'none',
+            color: 'var(--u-text-2)', fontSize: 13, fontWeight: 500,
           }}
         >
           <Icon name="whatsapp" size={15} />
@@ -944,20 +937,17 @@ function CierreHecho({ result, dateLabel, shift, cashierName, restaurantName, ti
 
 const tarjeta: React.CSSProperties = {
   display: 'flex', flexDirection: 'column', gap: 10, padding: 16,
-  borderRadius: 15, border: '1px solid var(--u-hair)',
+  borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair)',
   background: 'var(--adm-card)', boxShadow: 'var(--adm-shadow-xs)',
 };
 
-const campo: React.CSSProperties = {
-  width: '100%', height: 46, padding: '0 13px', borderRadius: 10, outline: 'none',
-  border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-  color: 'var(--u-text)', fontSize: 14.5,
-};
+/* Con `.adm-field`: solo lo que este formulario tiene de suyo (más alto). */
+const campo: React.CSSProperties = { height: 46, padding: '0 13px' };
 
 function Tarjeta({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <div style={{ ...tarjeta, gap: 8 }}>
-      <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--u-text-4)' }}>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--u-text-4)' }}>
         {titulo}
       </div>
       {children}
@@ -968,7 +958,7 @@ function Tarjeta({ titulo, children }: { titulo: string; children: React.ReactNo
 function Linea({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-      <span style={{ fontSize: 13.5, color: 'var(--u-text-2)' }}>{label}</span>
+      <span style={{ fontSize: 13, color: 'var(--u-text-2)' }}>{label}</span>
       <span className="t-mono" style={{ fontWeight: 600, fontSize: 15, letterSpacing: '-0.02em', color: 'var(--u-text)' }}>
         {value}
       </span>
@@ -984,8 +974,8 @@ function BotonSuave({ onClick, children }: { onClick: () => void; children: Reac
       className="press"
       style={{
         display: 'inline-flex', alignItems: 'center', height: 40, padding: '0 14px',
-        borderRadius: 11, border: '1px solid var(--u-hair-2)', background: 'none',
-        color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
+        borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'none',
+        color: 'var(--u-text-2)', fontSize: 13, fontWeight: 500, cursor: 'pointer',
       }}
     >
       {children}

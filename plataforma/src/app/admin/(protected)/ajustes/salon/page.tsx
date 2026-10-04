@@ -18,7 +18,7 @@ import { panelLink } from '@/lib/panel-links-server';
 export const metadata = { title: 'Salón – Panel admin' };
 
 export default async function AjustesSalonPage() {
-  const { restaurantId, config, hasWaiterPanel, hasDineIn, isSuperAdmin, menuUrl } = await getSalonData();
+  const { restaurantId, slug, config, hasWaiterPanel, hasDineIn, isSuperAdmin, menuUrl } = await getSalonData();
 
   // Mismo candado que la pantalla de operación, para que no haya una
   // puerta de atrás a la configuración.
@@ -32,12 +32,14 @@ export default async function AjustesSalonPage() {
     );
   }
 
-  if (!restaurantId || !config) redirect(await panelLink('/admin/mesas'));
+  if (!restaurantId || !slug || !config) redirect(await panelLink('/admin/mesas'));
 
   return (
     <TablesPanel
       restaurantId={restaurantId}
+      slug={slug}
       menuUrl={menuUrl}
+      restaurantName={config.brandName}
       config={{
         orderTypes: config.orderTypes,
         dineInTableCount: config.dineInTableCount,

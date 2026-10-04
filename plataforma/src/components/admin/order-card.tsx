@@ -15,25 +15,19 @@ import {
 } from '@/lib/order-status';
 import { sourceBadge } from '@/lib/order-source';
 import { assignDriver } from '@/lib/actions/drivers';
+import { esHoy } from '@/lib/dates';
+import { shortOrderNumber } from '@/lib/order-number';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { fmtCurrency, type PanelCurrency } from '@/lib/money';
 
 const OrderLocationMap = dynamic(() => import('./order-location-map'), { ssr: false });
 
 /** Moneda del restaurante (viene del tema resuelto en el servidor). */
-export interface PanelCurrency {
-  symbol: string;
-  position: 'prefix' | 'suffix';
-  locale: string;
-}
+export type { PanelCurrency };
 
-function money(n: number, c: PanelCurrency): string {
-  let num: string;
-  try {
-    num = n.toLocaleString(c.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  } catch {
-    num = n.toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-  return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
-}
+const money = (n: number, c: PanelCurrency): string => fmtCurrency(n, c);
 
 /* ── Origen del pedido ────────────────────────────────────────
    El dueño necesita distinguir de un vistazo si lo tomó un mesero, si el
@@ -118,7 +112,7 @@ function buildKitchenHtml(order: OrderWithItems, restaurantName: string, format:
 <body>
 <div class="header">
   <div class="kitchen-label">COCINA</div>
-  <div class="order-num">#${order.order_number}</div>
+  <div class="order-num">${shortOrderNumber(order.order_number)}</div>
   <div class="meta">${timeStr} · <span class="tag">${orderTypeLabel}</span></div>
 </div>
 <div class="meta"><strong>Cliente:</strong> ${order.customer_name}</div>
@@ -403,62 +397,95 @@ export default function OrderCard({
   const clock = stageClock(order, kitchenYellowMin, kitchenRedMin);
   const elapsedMs = clock && now != null ? now - new Date(clock.since).getTime() : 0;
   const elapsedMin = elapsedMs / 60000;
-  const clockClass = clock && now != null ? clockChipClass(elapsedMin, clock) : 'chip-neutral';
-  const isLate = clock != null && now != null && elapsedMin >= clock.redMin;
+  /* UN solo reloj, con color por umbral (PED-02, maqueta D-2): verde a
+     tiempo, ámbar al pasar el aviso, rojo al pasar el límite. Antes el
+     tiempo salía tres veces (encabezado del grupo, chip y banda) y todo se
+     teñía de rojo aunque fuera un aviso: fatiga de alarma. */
+  const clockClass = clock && now != null
+    ? (elapsedMin < clock.yellowMin ? 'chip-ok' : clockChipClass(elapsedMin, clock))
+    : 'chip-neutral';
+  /* La alarma de verdad —banda y borde rojos— solo al DOBLE del límite. */
+  const isAlarm = clock != null && now != null && elapsedMin >= clock.redMin * 2;
 
   const origin = originLabel(order);
   const type = typeLabel(order);
+  /* El estado lo dice el grupo en el que está la tarjeta («Por enviar a
+     cocina», «En cocina», «Listos»): repetido en un chip era ruido. Se
+     queda donde el grupo no lo dice: en camino, servido, cerrado. */
+  const showStatus = !['NEW', 'PREP', 'READY'].includes(order.status);
+  /* En un pedido de mesa sin nombre, nombre y dirección son los dos
+     «Mesa 4»: se dice una vez. */
+  const showAddress = !!order.address && (order.order_type === 'DELIVERY' || order.address !== order.customer_name);
+  const entro = esHoy(order.created_at, ticketFormat.timezone)
+    ? `entró a las ${ticketTime(order.created_at, ticketFormat)}`
+    : `entró el ${ticketDateTime(order.created_at, ticketFormat)}`;
 
   return (
     <div
       style={{
         borderRadius: 'var(--radius-lg)',
-        background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-        border: '1px solid var(--u-hair)',
+        /* La misma ficha que el resto del panel (T-12): el gris al 4 % del
+           texto se veía apagado sobre el fondo gris en modo claro. */
+        background: 'var(--adm-card, color-mix(in srgb, var(--u-text) 4%, transparent))',
+        border: '1px solid var(--adm-border, var(--u-hair))',
         // Un pedido que se pasó del tiempo se ve distinto DESDE LEJOS: el borde
         // completo se tiñe. En una barra llena, nadie lee un chip pequeño.
-        boxShadow: isLate ? '0 0 0 1.5px var(--c-danger-line)' : 'none',
-        padding: '16px 18px',
-        display: 'flex', flexDirection: 'column', gap: 12,
+        boxShadow: isAlarm ? '0 0 0 1.5px var(--c-danger-line)' : 'var(--adm-shadow-xs, none)',
+        padding: 14,
+        display: 'flex', flexDirection: 'column', gap: 10,
         opacity: isTerminal ? 0.72 : 1,
         transition: 'opacity 200ms, box-shadow 200ms',
       }}
     >
       {/* Encabezado */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-            <span className="t-mono" style={{ fontSize: 12, color: 'var(--u-text-3)' }}>
-              {order.order_number}
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--u-text)', margin: 0, lineHeight: 1.2 }}>
+              {order.customer_name}
+            </h3>
+            <span className="t-mono" style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text-4)' }} title={order.order_number}>
+              {shortOrderNumber(order.order_number)}
             </span>
-            <span className={`chip ${STATUS_CHIP[order.status]}`}>{STATUS_LABEL[order.status]}</span>
+            {showStatus && <span className={`chip ${STATUS_CHIP[order.status]}`}>{STATUS_LABEL[order.status]}</span>}
+            {/* Cronómetro de la etapa actual: en el renglón del título, así
+                los datos de abajo usan todo el ancho de la tarjeta. */}
+            {clock && (
+              <span
+                className={`chip ${clockClass}`}
+                title={`${clock.label} desde ${ticketTime(clock.since, ticketFormat)}`}
+                style={{ flexShrink: 0, marginLeft: 'auto', alignSelf: 'center', fontVariantNumeric: 'tabular-nums' }}
+              >
+                <Icon name="clock" size={11} />
+                {now == null ? '—' : fmtElapsed(elapsedMs)}
+              </span>
+            )}
           </div>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', marginTop: 4 }}>
-            {order.customer_name}
-          </h3>
-          <p style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+          {/* Separados por espacio y no por «·»: si el renglón se parte, no
+              queda un punto colgando al final (cada dato ya lleva icono). */}
+          <p style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 4, display: 'flex', alignItems: 'center', columnGap: 12, rowGap: 2, flexWrap: 'wrap' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <Icon name={type.icon} size={12} style={{ display: 'inline' }} />
               {type.text}
             </span>
-            <span style={{ opacity: 0.4 }}>·</span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <Icon name={origin.icon} size={12} style={{ display: 'inline' }} />
               {origin.text}
             </span>
             {order.customer_phone && order.customer_phone !== '00000000' && (
               <>
-                <span style={{ opacity: 0.4 }}>·</span>
                 <a
                   href={`tel:${order.customer_phone}`}
+                  className="tap44"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'inherit', textDecoration: 'none' }}
                 >
                   <Icon name="phone" size={12} style={{ display: 'inline' }} /> {order.customer_phone}
                 </a>
               </>
             )}
+            <span style={{ whiteSpace: 'nowrap' }}>{entro}</span>
           </p>
-          {order.address && (
+          {showAddress && (
             <p style={{ fontSize: 12, color: 'var(--u-text-2)', marginTop: 3, display: 'flex', alignItems: 'flex-start', gap: 5 }}>
               <Icon name={order.order_type === 'DELIVERY' ? 'mapPin' : 'grid'} size={12} style={{ display: 'inline', flexShrink: 0, marginTop: 2 }} />
               <span>{order.address}{order.delivery_zone ? ` · ${order.delivery_zone}` : ''}</span>
@@ -483,7 +510,7 @@ export default function OrderCard({
               <input type="hidden" name="orderId" value={order.id} />
               <label
                 htmlFor={`drv-${order.id}`}
-                style={{ fontSize: 10, color: 'var(--u-text-4)', display: 'block', marginBottom: 4 }}
+                style={{ fontSize: 11, color: 'var(--u-text-4)', display: 'block', marginBottom: 4 }}
               >
                 Repartidor
               </label>
@@ -492,12 +519,8 @@ export default function OrderCard({
                 name="driverId"
                 defaultValue={order.driver_id ?? ''}
                 onChange={(e) => e.currentTarget.form?.requestSubmit()}
-                style={{
-                  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-                  border: '1px solid var(--u-hair)', borderRadius: 9,
-                  padding: '6px 9px', color: 'var(--u-text)', fontSize: 12, outline: 'none',
-                  maxWidth: '100%',
-                }}
+                className="adm-field adm-field-sm adm-field-auto"
+                style={{ maxWidth: '100%' }}
               >
                 <option value="">Sin asignar</option>
                 {drivers.map((d) => (
@@ -508,35 +531,24 @@ export default function OrderCard({
           )}
         </div>
 
-        {/* Cronómetro de la etapa actual */}
-        {clock && (
-          <span
-            className={`chip ${clockClass}`}
-            title={`${clock.label} desde ${ticketTime(clock.since, ticketFormat)}`}
-            style={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}
-          >
-            <Icon name="clock" size={11} />
-            {now == null ? '—' : fmtElapsed(elapsedMs)}
-          </span>
-        )}
       </div>
 
-      {clock && now != null && elapsedMin >= clock.yellowMin && (
-        <div className={`note ${elapsedMin >= clock.redMin ? 'note-danger' : 'note-warn'}`}>
+      {clock && isAlarm && (
+        <div className="note note-danger">
           <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
-          <span>{fmtElapsed(elapsedMs)} {clock.label}.</span>
+          <span>Lleva {fmtElapsed(elapsedMs)} {clock.label}: el doble de lo normal.</span>
         </div>
       )}
 
       {/* Items */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, borderTop: '1px solid var(--u-hair)', paddingTop: 8 }}>
         {order.items.map((item) => {
           const remaining = remainingQuantity(item, order.voids ?? []);
           const voidedQty = item.quantity - remaining;
           const unitPrice = item.quantity > 0 ? Number(item.subtotal) / item.quantity : 0;
           return (
             <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-              <span style={{ fontSize: 13, color: 'var(--u-text-2)', minWidth: 0 }}>
+              <span style={{ fontSize: 14, color: 'var(--u-text-2)', minWidth: 0 }}>
                 {remaining}× {item.name_snapshot}
                 {voidedQty > 0 && (
                   <span style={{ display: 'block', fontSize: 11, color: 'var(--c-danger)', marginTop: 1, fontWeight: 600 }}>
@@ -544,18 +556,18 @@ export default function OrderCard({
                   </span>
                 )}
                 {item.options_snapshot && item.options_snapshot.length > 0 && (
-                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>
+                  <span style={{ display: 'block', fontSize: 11, color: 'var(--u-text-3)', marginTop: 1 }}>
                     {item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(' · ')}
                   </span>
                 )}
                 {item.note && (
-                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--c-warn)', marginTop: 1, fontWeight: 700 }}>
+                  <span style={{ display: 'block', fontSize: 11, color: 'var(--c-warn)', marginTop: 1, fontWeight: 700 }}>
                     ⚠ {item.note}
                   </span>
                 )}
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text)' }}>
+                <span className="t-mono" style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text)' }}>
                   {money(unitPrice * remaining, currency)}
                 </span>
                 {!isTerminal && remaining > 0 && (
@@ -565,8 +577,8 @@ export default function OrderCard({
                     disabled={isPending}
                     title="Anular este plato"
                     aria-label={`Anular ${item.name_snapshot}`}
-                    className="press chip-danger order-void-x"
-                    style={{ width: 22, height: 22, borderRadius: 7, borderWidth: 1, borderStyle: 'solid', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                    className="press chip-danger order-void-x tap44"
+                    style={{ width: 22, height: 22, borderRadius: 'var(--radius-sm)', borderWidth: 1, borderStyle: 'solid', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
                   >
                     <Icon name="x" size={11} />
                   </button>
@@ -577,16 +589,16 @@ export default function OrderCard({
         })}
         {Number(order.delivery_fee) > 0 && (
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Envío</span>
-            <span style={{ fontSize: 12.5, color: 'var(--u-text-2)' }}>
+            <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>Envío</span>
+            <span style={{ fontSize: 12, color: 'var(--u-text-2)' }}>
               {money(Number(order.delivery_fee), currency)}
             </span>
           </div>
         )}
         {Number(order.tip) > 0 && (
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Propina</span>
-            <span style={{ fontSize: 12.5, color: 'var(--u-text-2)' }}>
+            <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>Propina</span>
+            <span style={{ fontSize: 12, color: 'var(--u-text-2)' }}>
               {money(Number(order.tip), currency)}
             </span>
           </div>
@@ -596,7 +608,7 @@ export default function OrderCard({
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <Icon name="tag" size={12} style={{ display: 'inline' }} /> Cupón
               {order.coupon_code && (
-                <span className="t-mono" style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 6px', borderRadius: 5, background: 'var(--c-ok-bg)' }}>
+                <span className="t-mono" style={{ fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--radius-sm)', background: 'var(--c-ok-bg)' }}>
                   {order.coupon_code}
                 </span>
               )}
@@ -613,14 +625,14 @@ export default function OrderCard({
           </div>
         )}
         <div style={{ borderTop: '1px solid var(--u-hair)', marginTop: 4, paddingTop: 6, display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 13, color: 'var(--u-text-2)' }}>Total</span>
+          <span style={{ fontSize: 14, color: 'var(--u-text-3)' }}>Total</span>
           <div style={{ textAlign: 'right' }}>
             {(Number(order.discount) > 0 || Number(order.loyalty_discount) > 0) && (
-              <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', textDecoration: 'line-through', marginBottom: 1 }}>
+              <div style={{ fontSize: 11, color: 'var(--u-text-4)', textDecoration: 'line-through', marginBottom: 1 }}>
                 {money(Number(order.total) + Number(order.discount) + Number(order.loyalty_discount), currency)}
               </div>
             )}
-            <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--u-text)' }}>
+            <span className="t-mono" style={{ fontSize: 16, fontWeight: 700, color: 'var(--u-text)' }}>
               {money(Number(order.total), currency)}
             </span>
           </div>
@@ -634,7 +646,7 @@ export default function OrderCard({
               {labelOf(order.payment_method)}
             </span>
             {countsAsCash(order.payment_method) && order.cash_amount != null && order.cash_amount > 0 && (
-              <p style={{ fontSize: 11.5, color: 'var(--u-text-3)', margin: 0 }}>
+              <p style={{ fontSize: 11, color: 'var(--u-text-3)', margin: 0 }}>
                 Paga con <strong style={{ color: 'var(--u-text-2)' }}>{money(Number(order.cash_amount), currency)}</strong>
                 {' · '}cambio: <strong style={{ color: 'var(--u-text-2)' }}>{money(Number(order.cash_amount) - Number(order.total), currency)}</strong>
               </p>
@@ -656,7 +668,7 @@ export default function OrderCard({
             type="button"
             onClick={() => setMapOpen((v) => !v)}
             className="press btn-tinted chip-info"
-            style={{ padding: '6px 12px', fontSize: 12, borderRadius: 8 }}
+            style={{ padding: '6px 12px', fontSize: 12, borderRadius: 'var(--radius-sm)' }}
           >
             <Icon name="mapPin" size={13} /> {mapOpen ? 'Ocultar mapa' : 'Ver ubicación del cliente'}
           </button>
@@ -667,11 +679,6 @@ export default function OrderCard({
           )}
         </div>
       )}
-
-      {/* Hora de entrada — SIEMPRE en la hora del restaurante, no la del navegador */}
-      <p style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
-        Entró: {ticketDateTime(order.created_at, ticketFormat)}
-      </p>
 
       {actionError && (
         <div className="note note-danger">
@@ -684,18 +691,20 @@ export default function OrderCard({
         </div>
       )}
 
-      {/* Acciones */}
+      {/* Acciones (PED-02): UN botón principal —lo que toca ahora— y «⋯» con
+          lo que se usa de vez en cuando (recibo, copia de comanda) y anular,
+          que es destructivo y no debe estar a un dedo del principal. */}
       {!isTerminal && (
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           {next && (
             <button
               onClick={handleAdvance}
               disabled={isPending}
               className="press btn-accent"
               style={{
-                flex: 1, padding: '11px 12px',
+                flex: 1, minHeight: 44, padding: '0 12px',
                 borderRadius: 'var(--radius-lg)',
-                fontWeight: 700, fontSize: 13,
+                fontWeight: 700, fontSize: 14,
                 cursor: isPending ? 'not-allowed' : 'pointer',
                 border: 'none',
                 opacity: isPending ? 0.7 : 1,
@@ -704,14 +713,35 @@ export default function OrderCard({
               {isPending ? '…' : nextLabel(order.status, order.order_type)}
             </button>
           )}
-          <button
-            onClick={() => setVoidTarget('order')}
-            disabled={isPending}
-            className="press btn-tinted chip-danger"
-            style={{ padding: '11px 14px', fontSize: 13 }}
-          >
-            Anular
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label={`Más acciones del pedido ${shortOrderNumber(order.order_number)}`}
+              className="press"
+              disabled={isPending}
+              style={{
+                width: 44, height: 44, flexShrink: 0, borderRadius: 'var(--radius-lg)',
+                display: 'grid', placeItems: 'center', cursor: 'pointer',
+                background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+                border: '1px solid var(--u-hair)', color: 'var(--u-text)',
+              }}
+            >
+              <Icon name="more" size={18} />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handlePrintReceipt} disabled={printing !== null} className="min-h-11">
+                <Icon name="print" size={15} /> {printing === 'receipt' ? 'Enviando…' : 'Recibo'}
+              </DropdownMenuItem>
+              {agentKitchen && (
+                <DropdownMenuItem onClick={() => handleReprintKitchen()} disabled={printing !== null} className="min-h-11">
+                  <Icon name="print" size={15} /> {printing === 'kitchen' ? 'Enviando…' : 'Copia de comanda'}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setVoidTarget('order')} variant="destructive" className="min-h-11">
+                <Icon name="x" size={15} /> Anular pedido
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )}
 
@@ -726,7 +756,7 @@ export default function OrderCard({
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '8px 10px', borderRadius: 'var(--radius-lg)',
-                fontSize: 12.5, fontWeight: 600,
+                fontSize: 12, fontWeight: 600,
               }}
             >
               <Icon name="alertCircle" size={14} />
@@ -751,8 +781,8 @@ export default function OrderCard({
         </div>
       )}
 
-      {/* Impresión — separada de las acciones de estado para que nadie
-          confunda "imprimir" con "avanzar el pedido". */}
+      {/* Impresión de un pedido ya cerrado (en uno vivo va en el «⋯»). */}
+      {isTerminal && (
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <button
           type="button"
@@ -794,6 +824,7 @@ export default function OrderCard({
           </button>
         )}
       </div>
+      )}
 
       {voidTarget && (
         <VoidOrderDialog

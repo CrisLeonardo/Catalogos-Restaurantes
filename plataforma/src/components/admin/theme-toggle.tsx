@@ -49,7 +49,7 @@ export default function AdminThemeToggle() {
       title={scheme === 'light' ? 'Cambiar a tema oscuro' : 'Cambiar a tema claro'}
       aria-label={scheme === 'light' ? 'Cambiar a tema oscuro' : 'Cambiar a tema claro'}
       className="press glass-quiet"
-      style={{ width: 42, height: 42, borderRadius: 12, display: 'grid', placeItems: 'center', color: 'var(--u-text)', border: 'none', cursor: 'pointer', background: 'none', flexShrink: 0 }}
+      style={{ width: 42, height: 42, borderRadius: 'var(--radius-lg)', display: 'grid', placeItems: 'center', color: 'var(--u-text)', border: 'none', cursor: 'pointer', background: 'none', flexShrink: 0 }}
     >
       <Icon name={scheme === 'light' ? 'moon' : 'sun'} size={18} />
     </button>

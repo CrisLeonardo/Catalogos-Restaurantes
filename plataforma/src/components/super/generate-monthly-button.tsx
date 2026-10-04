@@ -26,7 +26,7 @@ export default function GenerateMonthlyButton() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
         <form action={recAction}>
           <button type="submit" disabled={recPending} className="press" style={{
-            padding: '10px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13.5,
+            padding: '10px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13,
             border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: 'var(--u-text)',
             cursor: recPending ? 'not-allowed' : 'pointer', opacity: recPending ? 0.6 : 1,
           }}>
@@ -47,7 +47,7 @@ export default function GenerateMonthlyButton() {
           {msg.text}
         </span>
       ) : (
-        <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', textAlign: 'right' }}>
+        <span style={{ fontSize: 11, color: 'var(--u-text-4)', textAlign: 'right' }}>
           Se genera y revisa el impago automáticamente cada día.
         </span>
       )}

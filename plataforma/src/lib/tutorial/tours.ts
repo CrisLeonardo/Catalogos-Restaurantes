@@ -55,7 +55,7 @@ export const GUIDED_TOURS: GuidedTourDef[] = [
         target: null,
         path: '/admin/menu',
         title: 'Disponibilidad y orden',
-        desc: 'En la lista, el interruptor de cada platillo lo publica u oculta sin borrarlo (útil cuando algo se agota), y arrastrando desde el ícono ≡ cambias el orden en que los ve tu cliente.',
+        desc: 'En la lista, el interruptor de cada platillo lo marca agotado por hoy: se ve pero no se puede pedir, y vuelve solo a las 12 horas. Para sacarlo del menú del todo, entra a Editar y apaga «Mostrar en el menú».',
       },
     ],
   },
@@ -79,7 +79,7 @@ export const GUIDED_TOURS: GuidedTourDef[] = [
         target: null,
         path: '/admin/categorias',
         title: 'El orden importa',
-        desc: 'Arrastra las categorías para ordenarlas: el mismo orden que ves aquí es el que verá tu cliente. Pon las más vendidas al inicio.',
+        desc: 'Con las flechas ↑ ↓ de cada categoría cambias su lugar: el mismo orden que ves aquí es el que verá tu cliente. Pon las más vendidas al inicio.',
       },
     ],
   },
@@ -139,7 +139,7 @@ export const GUIDED_TOURS: GuidedTourDef[] = [
         target: 'ajustes',
         path: '/admin/perfil',
         title: 'Los datos de tu restaurante',
-        desc: 'Nombre, dirección, WhatsApp y zona de entrega: todo lo operativo vive en el perfil, dentro de Ajustes.',
+        desc: 'Nombre, lema, dirección, WhatsApp y correo: los datos que ven tus clientes. Está en Ajustes, igual que los horarios y la zona de entrega.',
       },
       {
         target: 'perfil-whatsapp',
@@ -148,10 +148,13 @@ export const GUIDED_TOURS: GuidedTourDef[] = [
         desc: 'Con tu número aquí, tus clientes pueden contactarte desde el menú con un toque. Formato: 8 dígitos o con el +502 delante.',
       },
       {
+        /* La pausa vive en Horarios desde que Ajustes se partió en pantallas;
+           este paso la buscaba en Perfil y no la encontraba (auditoría
+           2026-10-02, N-01). */
         target: 'perfil-pausa',
-        path: '/admin/perfil',
+        path: '/admin/ajustes/restaurante',
         title: 'Pausa de emergencia',
-        desc: '¿Cocina saturada o se fue el gas? Este interruptor pausa los pedidos al instante sin tocar tus horarios. Recuerda reanudar: no se quita solo.',
+        desc: '¿Cocina saturada o se fue el gas? Apaga «Recibiendo pedidos» y nadie puede pedir en línea, sin tocar tus horarios. Acuérdate de volver a encenderlo: no se enciende solo.',
       },
     ],
   },
@@ -169,7 +172,7 @@ export const GUIDED_TOURS: GuidedTourDef[] = [
         target: null,
         path: '/admin/pedidos',
         title: 'Avanza los estados',
-        desc: 'Cada tarjeta lleva su pedido por el flujo Nuevo → En preparación → Listo → Entregado. Tu cliente ve el avance en vivo desde su enlace de seguimiento, así dejas de recibir mensajes de "¿ya va?".',
+        desc: 'El botón grande de cada tarjeta lleva el pedido al siguiente paso: Enviar a cocina → Marcar listo → Entregado. Tu cliente ve el avance en vivo desde su enlace de seguimiento, así dejas de recibir mensajes de «¿ya va?».',
       },
       {
         target: 'cocina',

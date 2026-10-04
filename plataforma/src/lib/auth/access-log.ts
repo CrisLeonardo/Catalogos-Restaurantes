@@ -53,20 +53,25 @@ export async function getPanelAccessLog(restaurantId: string, limit = 20): Promi
   const db = createServiceClient();
   const { data } = await db
     .from('panel_access_log')
-    .select('id, method, ip, user_agent, created_at, profiles(full_name)')
+    .select('id, method, ip, user_agent, created_at, profiles(full_name, role)')
     .eq('restaurant_id', restaurantId)
     .order('created_at', { ascending: false })
     .limit(limit);
 
   return ((data ?? []) as unknown as Array<
-    Omit<AccessRow, 'actor_name'> & { profiles: { full_name: string | null } | null }
+    Omit<AccessRow, 'actor_name'> & { profiles: { full_name: string | null; role: string | null } | null }
   >).map((r) => ({
     id: r.id,
     method: r.method,
     ip: r.ip,
     user_agent: r.user_agent,
     created_at: r.created_at,
-    actor_name: r.profiles?.full_name ?? null,
+    // Sin nombre en el perfil, la lista decía «Cuenta sin nombre» en cada
+    // fila — casi siempre era el propio dueño (auditoría 2026-10-02, AJU-12).
+    actor_name: r.profiles?.full_name
+      ?? (r.profiles?.role === 'RESTAURANT_OWNER' ? 'Dueño del restaurante'
+        : r.profiles?.role === 'SUPER_ADMIN' ? 'Soporte de Leogin'
+        : r.profiles ? 'Miembro del equipo' : null),
   }));
 }
 

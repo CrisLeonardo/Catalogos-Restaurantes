@@ -10,7 +10,6 @@ export default function FinanzasLayout({ children }: { children: React.ReactNode
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <PageHeader
-        title="Finanzas"
         subtitle="Los números de Leogin: ingresos, cobranza y pagos de tus restaurantes."
       />
       <SectionTabs

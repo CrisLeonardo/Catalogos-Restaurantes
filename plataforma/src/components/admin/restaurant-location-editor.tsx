@@ -9,14 +9,15 @@
    valida que su pin caiga dentro del radio.
    ============================================================ */
 
-import { useActionState, useState, useCallback } from 'react';
+import { useActionState, useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { updateRestaurantLocation } from '@/lib/actions/restaurant';
+import { updateRestaurantLocation, type SaveState } from '@/lib/actions/restaurant';
 import type { Restaurant } from '@/types';
+import SaveBar from '@/components/admin/save-bar';
+import { useFormDirty } from '@/lib/use-form-dirty';
 
 const LocationMap = dynamic(
   () => import('./restaurant-location-map'),
@@ -40,10 +41,12 @@ const DEFAULT_LAT = 14.64072;
 const DEFAULT_LNG = -90.51327;
 const DEFAULT_RADIUS = 3;
 
-const empty = null;
+const empty: SaveState = null;
 
 export default function RestaurantLocationEditor({ restaurant }: { restaurant: Restaurant }) {
   const [state, formAction, isPending] = useActionState(updateRestaurantLocation, empty);
+  const { ref: formRef, dirty, markSaved } = useFormDirty();
+  useEffect(() => { if (state && 'saved' in state) markSaved(); }, [state, markSaved]);
 
   const [lat,    setLat]    = useState(restaurant.location_lat    ?? DEFAULT_LAT);
   const [lng,    setLng]    = useState(restaurant.location_lng    ?? DEFAULT_LNG);
@@ -58,7 +61,7 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
   }, []);
 
   return (
-    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <input type="hidden" name="restaurantId" value={restaurant.id} />
 
       {/* Datos enviados al servidor; se actualizan cuando el usuario mueve el pin */}
@@ -74,7 +77,7 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
               Validación por mapa (radio)
             </p>
             <p style={{ fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
-              El cliente verá un mapa en el checkout y solo podrá pedir si su pin
+              Al pedir, el cliente verá un mapa y solo podrá pedir si su pin
               cae dentro del radio que definas.
             </p>
           </div>
@@ -103,7 +106,7 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
             {/* Coordenadas en texto (solo lectura, informativo) */}
             <div style={{
               marginTop: 8, display: 'flex', gap: 8,
-              fontSize: 11.5, color: 'var(--u-text-4)', fontVariantNumeric: 'tabular-nums',
+              fontSize: 11, color: 'var(--u-text-4)', fontVariantNumeric: 'tabular-nums',
             }}>
               <span>Lat {lat.toFixed(5)}</span>
               <span>·</span>
@@ -151,14 +154,8 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
                     const v = parseFloat(e.target.value);
                     if (!isNaN(v) && v > 0) setRadius(v);
                   }}
-                  style={{
-                    width: 80,
-                    background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-                    border: '1px solid var(--u-hair-2)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: '7px 10px',
-                    color: 'var(--u-text)', fontSize: 14, outline: 'none',
-                  }}
+                  className="adm-field adm-field-sm"
+                  style={{ width: 80 }}
                 />
                 <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>km</span>
               </div>
@@ -167,31 +164,18 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
         )}
 
         {!geoEnabled && (
-          <div style={{
-            padding: '10px 14px', borderRadius: 'var(--radius-md)',
-            background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
-            fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.5,
-          }}>
-            <Icon name="mapPin" size={13} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-            La validación por mapa está desactivada. El checkout usará las zonas
-            de texto (si las configuraste) o aceptará cualquier dirección.
+          <div className="note note-info" style={{ fontWeight: 500 }}>
+            <Icon name="mapPin" size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+            <span>
+              La validación por mapa está apagada. Al pedir se usan las zonas
+              de abajo (si agregas alguna) o se acepta cualquier dirección.
+            </span>
           </div>
         )}
       </Card>
 
-      {state?.error && (
-        <div style={{
-          padding: '10px 14px', borderRadius: 'var(--radius-md)',
-          background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)',
-          color: 'var(--c-danger)', fontSize: 14,
-        }}>
-          {state.error}
-        </div>
-      )}
 
-      <Button type="submit" disabled={isPending} size="lg" className="w-full rounded-adm-full">
-        {isPending ? 'Guardando…' : 'Guardar ubicación y radio'}
-      </Button>
+      <SaveBar dirty={dirty} pending={isPending} status={state} label="Guardar ubicación" />
     </form>
   );
 }

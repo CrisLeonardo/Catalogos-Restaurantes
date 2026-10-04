@@ -105,13 +105,8 @@ export default function TutorialHub({ plan, modules, contact }: Props) {
           placeholder="Busca un tema: pedidos, QR, inventario, cupones…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          style={{
-            width: '100%', padding: '11px 14px 11px 40px',
-            borderRadius: 12, border: '1.5px solid var(--u-hair)',
-            background: 'var(--surface-3, color-mix(in srgb, var(--u-text) 4%, transparent))',
-            color: 'var(--u-text)', fontSize: 14, outline: 'none',
-            boxSizing: 'border-box',
-          }}
+          className="adm-field"
+          style={{ paddingLeft: 40, borderRadius: 'var(--radius-lg)' }}
         />
         {query && (
           <button
@@ -204,7 +199,7 @@ function ContactSupportCard({ contact }: { contact: PlatformContactSettings }) {
     <Card className="px-5 py-4.5 mt-1">
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
         <span style={{
-          width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+          width: 38, height: 38, borderRadius: 'var(--radius-md)', flexShrink: 0,
           display: 'grid', placeItems: 'center',
           background: 'rgba(var(--brand-accent-rgb,99,102,241),0.12)',
           color: 'var(--brand-accent-ink)',
@@ -212,7 +207,7 @@ function ContactSupportCard({ contact }: { contact: PlatformContactSettings }) {
           <Icon name="helpCircle" size={18} />
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>¿No encontraste lo que buscabas?</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>¿No encontraste lo que buscabas?</div>
           <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
             Escríbenos directamente y te respondemos a la brevedad.
           </div>
@@ -341,7 +336,7 @@ function TutorialSection({
       >
         {/* Ícono */}
         <span style={{
-          width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+          width: 38, height: 38, borderRadius: 'var(--radius-md)', flexShrink: 0,
           display: 'grid', placeItems: 'center',
           background: locked
             ? 'color-mix(in srgb, var(--u-text) 4%, transparent)'
@@ -354,12 +349,12 @@ function TutorialSection({
         {/* Título + descripción */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--u-text)' }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>
               {section.title}
             </span>
             {planLabel && (
               <span style={{
-                fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
+                fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-full)',
                 background: `color-mix(in srgb, ${labelColor} 13%, transparent)`, color: labelColor ?? '#94a3b8',
                 border: `1px solid color-mix(in srgb, ${labelColor} 25%, transparent)`,
                 textTransform: 'uppercase', letterSpacing: '0.04em',
@@ -419,17 +414,17 @@ function LockedContent({ planLabel, moduleKey }: { planLabel: string | null; mod
 
   return (
     <div style={{
-      borderRadius: 12, padding: '20px 18px', textAlign: 'center',
+      borderRadius: 'var(--radius-lg)', padding: '20px 18px', textAlign: 'center',
       background: 'var(--surface-3, color-mix(in srgb, var(--u-text) 3%, transparent))',
       border: '1.5px dashed var(--u-hair)',
     }}>
       <Icon name="lock" size={22} style={{ color: 'var(--u-text-4)', marginBottom: 10 }} />
       {isModule ? (
         <>
-          <p style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text-2)', margin: '0 0 6px' }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text-2)', margin: '0 0 6px' }}>
             Módulo no activado
           </p>
-          <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5, margin: '0 0 14px' }}>
+          <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5, margin: '0 0 14px' }}>
             Este módulo está disponible en tu plan pero necesita ser activado.
             Ve a Módulos para encenderlo.
           </p>
@@ -438,7 +433,7 @@ function LockedContent({ planLabel, moduleKey }: { planLabel: string | null; mod
             className="press"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+              padding: '8px 16px', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 600,
               background: 'var(--c-info-bg)', color: 'var(--c-info)', textDecoration: 'none',
             }}
           >
@@ -447,10 +442,10 @@ function LockedContent({ planLabel, moduleKey }: { planLabel: string | null; mod
         </>
       ) : (
         <>
-          <p style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text-2)', margin: '0 0 6px' }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text-2)', margin: '0 0 6px' }}>
             Disponible en {planLabel}
           </p>
-          <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5, margin: '0 0 14px' }}>
+          <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5, margin: '0 0 14px' }}>
             Esta funcionalidad forma parte de un plan superior. Mejora tu plan para desbloquearla.
           </p>
           <Link
@@ -458,7 +453,7 @@ function LockedContent({ planLabel, moduleKey }: { planLabel: string | null; mod
             className="press"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+              padding: '8px 16px', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 600,
               background: 'var(--c-alt-bg)', color: 'var(--c-alt)', textDecoration: 'none',
             }}
           >
@@ -504,7 +499,7 @@ function StepItem({ step, number }: { step: TutorialStep; number: number }) {
       {/* Número + título */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
         <span style={{
-          width: 26, height: 26, borderRadius: 99, flexShrink: 0,
+          width: 26, height: 26, borderRadius: 'var(--radius-full)', flexShrink: 0,
           display: 'grid', placeItems: 'center',
           background: 'rgba(var(--brand-accent-rgb,99,102,241),0.14)',
           color: 'var(--brand-accent-ink)',
@@ -526,12 +521,12 @@ function StepItem({ step, number }: { step: TutorialStep; number: number }) {
       {step.route && (
         <div style={{
           display: 'flex', alignItems: 'flex-start', gap: 7,
-          marginLeft: 36, padding: '8px 12px', borderRadius: 9,
+          marginLeft: 36, padding: '8px 12px', borderRadius: 'var(--radius-md)',
           background: 'var(--surface-3, color-mix(in srgb, var(--u-text) 3%, transparent))',
           border: '1px solid var(--u-hair)',
         }}>
           <Icon name="chevronRight" size={13} style={{ color: 'var(--u-text-4)', flexShrink: 0, marginTop: 2 }} />
-          <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.5, fontFamily: 'var(--font-mono, monospace)' }}>
+          <span style={{ fontSize: 11, color: 'var(--u-text-3)', lineHeight: 1.5, fontFamily: 'var(--font-mono, monospace)' }}>
             {step.route}
           </span>
         </div>
@@ -541,7 +536,7 @@ function StepItem({ step, number }: { step: TutorialStep; number: number }) {
       {step.tip && (
         <div style={{
           display: 'flex', alignItems: 'flex-start', gap: 8,
-          marginLeft: 36, padding: '9px 12px', borderRadius: 9,
+          marginLeft: 36, padding: '9px 12px', borderRadius: 'var(--radius-md)',
           background: 'rgba(var(--brand-accent-rgb,99,102,241),0.07)',
           border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.2)',
         }}>

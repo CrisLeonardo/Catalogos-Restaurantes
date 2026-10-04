@@ -3,6 +3,7 @@ import { unstable_cache } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import type { Category, Product } from '@/types';
+import { isOutOfStock } from '@/lib/product-availability';
 
 export type MenuData = {
   categories: Category[];
@@ -16,6 +17,30 @@ export type MenuData = {
 // la política RLS `products_select_available`, no hace falta pedirlo.
 export const PUBLIC_PRODUCT_COLUMNS =
   'id, category_id, name, name_en, description, description_en, price, image_url, icon, tags, dietary_tags, options, is_available, unavailable_at, sort_order';
+
+/**
+ * Lo que se le PIDE a la base para el menú público: lo de arriba más el
+ * inventario, que se usa aquí dentro y NO sale hacia el navegador.
+ *
+ * Hace falta porque `place_order` marca un platillo agotado CON hora al
+ * llegar a cero de existencias, y el menú lo devuelve solo a las 12 h
+ * (lib/product-availability.ts). Sin saber del stock, el comensal volvía a
+ * ver con su «+» algo que el servidor iba a rechazar por falta de
+ * existencias (auditoría 2026-10-02, CAT-01).
+ */
+const MENU_QUERY_COLUMNS = `${PUBLIC_PRODUCT_COLUMNS}, track_stock, stock`;
+
+/** Quita el inventario de cada fila y, si no hay existencias, la deja
+ *  «agotada sin reloj» (sin `unavailable_at` no vuelve sola). */
+function toPublicProducts(rows: Record<string, unknown>[] | null): Product[] {
+  return (rows ?? []).map((row) => {
+    const { track_stock, stock, ...p } = row;
+    if (isOutOfStock({ track_stock: track_stock as boolean | null, stock: stock as number | null })) {
+      return { ...p, is_available: false, unavailable_at: null } as unknown as Product;
+    }
+    return p as unknown as Product;
+  });
+}
 
 /**
  * Carga categorías y productos activos de un restaurante en una sola request.
@@ -34,14 +59,14 @@ export const getMenuData = cache(
         .order('sort_order'),
       supabase
         .from('products')
-        .select(PUBLIC_PRODUCT_COLUMNS)
+        .select(MENU_QUERY_COLUMNS)
         .eq('restaurant_id', restaurantId)
         .order('sort_order'),
     ]);
 
     return {
       categories: (categories as Category[]) ?? [],
-      products: (products as Product[]) ?? [],
+      products: toPublicProducts(products as Record<string, unknown>[] | null),
     };
   }
 );
@@ -68,7 +93,7 @@ export function getMenuDataCached(restaurantId: string): Promise<MenuData> {
           .order('sort_order'),
         db
           .from('products')
-          .select(PUBLIC_PRODUCT_COLUMNS)
+          .select(MENU_QUERY_COLUMNS)
           .eq('restaurant_id', restaurantId)
           .eq('is_active', true)
           .order('sort_order'),
@@ -76,7 +101,7 @@ export function getMenuDataCached(restaurantId: string): Promise<MenuData> {
 
       return {
         categories: (categories as Category[]) ?? [],
-        products: (products as Product[]) ?? [],
+        products: toPublicProducts(products as Record<string, unknown>[] | null),
       };
     },
     ['public-menu-data', restaurantId],
@@ -130,5 +155,41 @@ export function getWaiterCatalogCached(restaurantId: string): Promise<MenuData> 
     },
     ['waiter-catalog', restaurantId],
     { revalidate: 60, tags: [`menu:${restaurantId}`] },
+  )();
+}
+
+/**
+ * LO MÁS PEDIDO EN 30 DÍAS (auditoría 2026-10-02, CAT-09)
+ * ------------------------------------------------------------
+ * Ids de producto de más a menos unidades vendidas, para ofrecer «Lo más
+ * pedido» en el checkout cuando el carrito está vacío. Solo ids: el nombre
+ * y el precio salen de la carta pública (`getMenuDataCached`), así que
+ * aquí no viaja nada que el menú no enseñe ya. Una hora de caché: es una
+ * sugerencia, no un reporte.
+ */
+export function getTopSellingProductIdsCached(restaurantId: string): Promise<string[]> {
+  return unstable_cache(
+    async () => {
+      if (!/^[0-9a-f-]{36}$/i.test(restaurantId)) return [];
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const db = createServiceClient();
+      const { data, error } = await db
+        .from('order_items')
+        .select('product_id, quantity, order:orders!inner(restaurant_id, created_at, status)')
+        .eq('order.restaurant_id', restaurantId)
+        .gte('order.created_at', since)
+        .neq('order.status', 'CANCEL')
+        .not('product_id', 'is', null)
+        .limit(2000);
+      if (error || !data) return [];
+      const unidades = new Map<string, number>();
+      for (const row of data as { product_id: string | null; quantity: number }[]) {
+        if (!row.product_id) continue;
+        unidades.set(row.product_id, (unidades.get(row.product_id) ?? 0) + (Number(row.quantity) || 0));
+      }
+      return [...unidades.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
+    },
+    ['top-selling-products', restaurantId],
+    { revalidate: 3600 },
   )();
 }

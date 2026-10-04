@@ -26,17 +26,20 @@ const NAV: { href: string; label: string; icon: string; corto?: string }[] = [
   { href: '/super/grupos',        label: 'Grupos',        icon: 'users' },
   { href: '/super/metricas',      label: 'Métricas',      icon: 'chart' },
   { href: '/super/finanzas',      label: 'Finanzas',      icon: 'wallet' },
-  { href: '/super/configuracion', label: 'Configuración', icon: 'settings', corto: 'Ajustes' },
+  // «Ajustes» en todas partes, como en el panel: era «Configuración» en
+  // escritorio y «Ajustes» en el teléfono (auditoría 2026-10-02, SUP-02).
+  { href: '/super/configuracion', label: 'Ajustes',       icon: 'settings' },
 ];
 
 const TITLES: [string, string][] = [
   ['/super/restaurantes/new', 'Nuevo restaurante'],
   ['/super/restaurantes',     'Restaurantes'],
+  ['/super/cuentas',          'Cuentas'],
   ['/super/grupos',           'Grupos'],
   ['/super/metricas',         'Métricas'],
   ['/super/finanzas',         'Finanzas'],
   ['/super/cobros',           'Finanzas'],
-  ['/super/configuracion',    'Configuración'],
+  ['/super/configuracion',    'Ajustes'],
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -75,10 +78,10 @@ export default function SuperShell({ children }: { children: React.ReactNode }) 
             <LeoginMark size={24} />
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14.5, color: 'var(--u-text)', lineHeight: 1, whiteSpace: 'nowrap' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14, color: 'var(--u-text)', lineHeight: 1, whiteSpace: 'nowrap' }}>
               Leogin
             </div>
-            <div className="t-kicker" style={{ fontSize: 9.5, marginTop: 3, color: 'var(--brand-accent-ink)' }}>
+            <div className="t-kicker" style={{ fontSize: 11, marginTop: 3, color: 'var(--brand-accent-ink)' }}>
               Super Admin
             </div>
           </div>
@@ -105,15 +108,15 @@ export default function SuperShell({ children }: { children: React.ReactNode }) 
           ))}
         </nav>
 
-        <div className="glass-quiet admin-usercard" style={{ borderRadius: 13, padding: 12 }}>
-          <div className="admin-usericon" style={{ width: 34, height: 34, borderRadius: 99, background: 'color-mix(in srgb, var(--brand-accent) 16%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--brand-accent-ink)', flexShrink: 0 }}>
+        <div className="glass-quiet admin-usercard" style={{ borderRadius: 'var(--radius-lg)', padding: 12 }}>
+          <div className="admin-usericon" style={{ width: 34, height: 34, borderRadius: 'var(--radius-full)', background: 'color-mix(in srgb, var(--brand-accent) 16%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--brand-accent-ink)', flexShrink: 0 }}>
             <Icon name="key" size={16} />
           </div>
           <div className="admin-usermeta" style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 600, fontSize: 12.5, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               Super Admin
             </div>
-            <div style={{ fontSize: 10.5, color: 'var(--u-text-3)' }}>Toda la plataforma</div>
+            <div style={{ fontSize: 11, color: 'var(--u-text-3)' }}>Toda la plataforma</div>
           </div>
           <LogoutButton />
         </div>

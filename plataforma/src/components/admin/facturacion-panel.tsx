@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,6 +24,11 @@ import {
 } from '@/lib/fel/frases';
 import { interpretarReceptorId, explicarIdInvalido } from '@/lib/fel/nit';
 import type { FelSummary, InvoiceableOrder, FelEstadoConfig } from '@/lib/db/fel';
+import { fmtMoney } from '@/lib/money';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import SaveBar, { type SaveStatus } from '@/components/admin/save-bar';
+import { useValueDirty } from '@/lib/use-form-dirty';
+import PageTabs from '@/components/admin/page-tabs';
 
 interface Props {
   restaurantId: string;
@@ -36,17 +40,10 @@ interface Props {
   hasSettingsRow: boolean;
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-};
-const labelStyle: React.CSSProperties = {
-  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em',
-  textTransform: 'uppercase', marginBottom: 4, display: 'block',
-};
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 function money(n: number) {
-  return 'Q ' + Number(n).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return fmtMoney(Number(n));
 }
 
 const PROVIDERS: FelProvider[] = ['MANUAL', 'INFILE', 'G4S', 'DIGIFACT', 'OTRO'];
@@ -72,7 +69,6 @@ function Aviso({ tono, children }: { tono: 'warn' | 'danger' | 'info'; children:
 }
 
 export default function FacturacionPanel({ restaurantId, settings, estado, documents, summary, invoiceable, hasSettingsRow }: Props) {
-  const router = useRouter();
   const listo = hasSettingsRow && estado.problemas.length === 0;
   const [tab, setTab] = useState<'emitir' | 'config' | 'historial'>(listo ? 'emitir' : 'config');
 
@@ -120,19 +116,11 @@ export default function FacturacionPanel({ restaurantId, settings, estado, docum
         </Aviso>
       )}
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid var(--u-hair)' }}>
-        {([['emitir', 'Emitir'], ['config', 'Configuración'], ['historial', 'Historial']] as const).map(([k, label]) => (
-          <button key={k} type="button" onClick={() => setTab(k)} className="press"
-            style={{ padding: '9px 16px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === k ? 'var(--brand-accent)' : 'transparent'}`, color: tab === k ? 'var(--u-text)' : 'var(--u-text-3)', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', marginBottom: -1 }}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <PageTabs tabs={[['emitir', 'Emitir'], ['config', 'Configuración'], ['historial', 'Historial']] as const} value={tab} onChange={setTab} />
 
-      {tab === 'config' && <SettingsForm restaurantId={restaurantId} settings={settings} estado={estado} onSaved={() => router.refresh()} />}
-      {tab === 'emitir' && <EmitForm restaurantId={restaurantId} settings={settings} invoiceable={invoiceable} listo={listo} onEmitted={() => router.refresh()} onGoConfig={() => setTab('config')} />}
-      {tab === 'historial' && <DocumentsList restaurantId={restaurantId} settings={settings} documents={documents} onChange={() => router.refresh()} />}
+      {tab === 'config' && <SettingsForm restaurantId={restaurantId} settings={settings} estado={estado} />}
+      {tab === 'emitir' && <EmitForm restaurantId={restaurantId} settings={settings} invoiceable={invoiceable} listo={listo} onGoConfig={() => setTab('config')} />}
+      {tab === 'historial' && <DocumentsList restaurantId={restaurantId} settings={settings} documents={documents} />}
     </div>
   );
 }
@@ -151,7 +139,7 @@ function Interruptor({ label, nota, checked, onChange }: { label: string; nota: 
     <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', gridColumn: '1 / -1' }}>
       <Switch checked={checked} onCheckedChange={onChange} aria-label={label} />
       <div>
-        <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text)' }}>{label}</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text)' }}>{label}</div>
         <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>{nota}</div>
       </div>
     </div>
@@ -160,7 +148,7 @@ function Interruptor({ label, nota, checked, onChange }: { label: string; nota: 
 
 /* ── Configuración fiscal ───────────────────────────────────── */
 
-function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantId: string; settings: FelSettings; estado: FelEstadoConfig; onSaved: () => void }) {
+function SettingsForm({ restaurantId, settings, estado }: { restaurantId: string; settings: FelSettings; estado: FelEstadoConfig }) {
   const [p, setP] = useState<FelSettingsPatch>({
     provider: settings.provider,
     ambiente: settings.ambiente,
@@ -189,16 +177,17 @@ function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantI
     api_llave_firma: '',
   });
   const [isPending, start] = useTransition();
-  const [msg, setMsg] = useState<string | null>(null);
+  const [status, setStatus] = useState<SaveStatus>(null);
+  const { dirty, markSaved } = useValueDirty(p);
   function set<K extends keyof FelSettingsPatch>(k: K, v: FelSettingsPatch[K]) { setP((s) => ({ ...s, [k]: v })); }
 
   function save() {
-    setMsg(null);
+    setStatus(null);
     start(async () => {
       const res = await saveFelSettings(restaurantId, p);
-      if (res.error) { setMsg(`Error: ${res.error}`); return; }
-      setMsg('Guardado ✓');
-      onSaved();
+      if (res.error) { setStatus({ error: res.error }); return; }
+      markSaved();
+      setStatus({ saved: true });
     });
   }
 
@@ -211,35 +200,36 @@ function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantI
   const seccion: React.CSSProperties = { paddingTop: 4, borderTop: '1px solid var(--u-hair)' };
 
   return (
+    <>
     <Card className="flex flex-col gap-3.5 p-4">
       <div className="adm-label">Datos del emisor</div>
       <div style={grid}>
         <Fila label="NIT emisor">
-          <input style={inputStyle} value={p.nit_emisor} onChange={(e) => set('nit_emisor', e.target.value)} placeholder="3602978-5" />
+          <input className="adm-field" value={p.nit_emisor} onChange={(e) => set('nit_emisor', e.target.value)} placeholder="3602978-5" />
         </Fila>
         <Fila label="Nombre / razón social">
-          <input style={inputStyle} value={p.nombre_emisor} onChange={(e) => set('nombre_emisor', e.target.value)} />
+          <input className="adm-field" value={p.nombre_emisor} onChange={(e) => set('nombre_emisor', e.target.value)} />
         </Fila>
         <Fila label="Nombre comercial">
-          <input style={inputStyle} value={p.nombre_comercial} onChange={(e) => set('nombre_comercial', e.target.value)} />
+          <input className="adm-field" value={p.nombre_comercial} onChange={(e) => set('nombre_comercial', e.target.value)} />
         </Fila>
         <Fila label="Correo del emisor">
-          <input style={inputStyle} type="email" value={p.correo_emisor} onChange={(e) => set('correo_emisor', e.target.value)} placeholder="facturacion@turestaurante.com" />
+          <input className="adm-field" type="email" value={p.correo_emisor} onChange={(e) => set('correo_emisor', e.target.value)} placeholder="facturacion@turestaurante.com" />
         </Fila>
         <Fila label="Código establecimiento">
-          <input style={inputStyle} value={p.codigo_establecimiento} onChange={(e) => set('codigo_establecimiento', e.target.value)} />
+          <input className="adm-field" value={p.codigo_establecimiento} onChange={(e) => set('codigo_establecimiento', e.target.value)} />
         </Fila>
         <Fila label="Dirección" ancho>
-          <input style={inputStyle} value={p.direccion} onChange={(e) => set('direccion', e.target.value)} placeholder="Calle, zona, ciudad" />
+          <input className="adm-field" value={p.direccion} onChange={(e) => set('direccion', e.target.value)} placeholder="Calle, zona, ciudad" />
         </Fila>
         <Fila label="Municipio">
-          <input style={inputStyle} value={p.municipio} onChange={(e) => set('municipio', e.target.value)} placeholder="Guatemala" />
+          <input className="adm-field" value={p.municipio} onChange={(e) => set('municipio', e.target.value)} placeholder="Guatemala" />
         </Fila>
         <Fila label="Departamento">
-          <input style={inputStyle} value={p.departamento} onChange={(e) => set('departamento', e.target.value)} placeholder="Guatemala" />
+          <input className="adm-field" value={p.departamento} onChange={(e) => set('departamento', e.target.value)} placeholder="Guatemala" />
         </Fila>
         <Fila label="Código postal">
-          <input style={inputStyle} value={p.codigo_postal} onChange={(e) => set('codigo_postal', e.target.value)} placeholder="01001" />
+          <input className="adm-field" value={p.codigo_postal} onChange={(e) => set('codigo_postal', e.target.value)} placeholder="01001" />
         </Fila>
       </div>
       <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: 0 }}>
@@ -248,7 +238,7 @@ function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantI
       </p>
 
       <div className="adm-label" style={seccion}>Tu régimen fiscal</div>
-      <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0 }}>
+      <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0 }}>
         Esto decide las leyendas legales que salen impresas en cada factura y si tu cliente puede usarla como
         crédito fiscal. <strong>Confírmalo con tu contador</strong>: aparece en tu constancia del RTU.
       </p>
@@ -256,20 +246,20 @@ function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantI
         <Fila label="Régimen de IVA">
           <Select options={OPCIONES_REGIMEN_IVA.map((o) => ({ value: o.value, label: o.label }))}
             value={p.regimen_iva} onValueChange={(v) => set('regimen_iva', v as RegimenIva)} />
-          {notaIva && <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '4px 0 0' }}>{notaIva}</p>}
+          {notaIva && <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: '4px 0 0' }}>{notaIva}</p>}
         </Fila>
         <Fila label="Régimen de ISR">
           <Select options={OPCIONES_REGIMEN_ISR.map((o) => ({ value: o.value, label: o.label }))}
             value={p.regimen_isr} onValueChange={(v) => set('regimen_isr', v as RegimenIsr)} />
-          {notaIsr && <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '4px 0 0' }}>{notaIsr}</p>}
+          {notaIsr && <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: '4px 0 0' }}>{notaIsr}</p>}
         </Fila>
         {pideResolucion && (
           <>
             <Fila label="Número de resolución SAT">
-              <input style={inputStyle} value={p.numero_resolucion} onChange={(e) => set('numero_resolucion', e.target.value)} />
+              <input className="adm-field" value={p.numero_resolucion} onChange={(e) => set('numero_resolucion', e.target.value)} />
             </Fila>
             <Fila label="Fecha de la resolución">
-              <input style={inputStyle} type="date" value={p.fecha_resolucion} onChange={(e) => set('fecha_resolucion', e.target.value)} />
+              <input className="adm-field" type="date" value={p.fecha_resolucion} onChange={(e) => set('fecha_resolucion', e.target.value)} />
             </Fila>
           </>
         )}
@@ -287,7 +277,7 @@ function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantI
           {estado.frases.map((f) => (
             <div key={f} style={{ fontSize: 13, color: 'var(--u-text)', fontFamily: 'var(--ui-font-mono)' }}>· {f}</div>
           ))}
-          <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '6px 0 0' }}>
+          <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: '6px 0 0' }}>
             Se actualiza al guardar. Si algo no corresponde a tu régimen, corrígelo antes de emitir.
           </p>
         </div>
@@ -328,7 +318,7 @@ function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantI
         </Fila>
         {p.provider === 'MANUAL' && (
           <Fila label="Serie del registro interno">
-            <input style={inputStyle} value={p.serie_prefijo} onChange={(e) => set('serie_prefijo', e.target.value)} placeholder="INT" />
+            <input className="adm-field" value={p.serie_prefijo} onChange={(e) => set('serie_prefijo', e.target.value)} placeholder="INT" />
           </Fila>
         )}
       </div>
@@ -340,14 +330,14 @@ function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantI
         <>
           <div style={grid}>
             <Fila label="Usuario API">
-              <input style={inputStyle} value={p.api_usuario} onChange={(e) => set('api_usuario', e.target.value)} />
+              <input className="adm-field" value={p.api_usuario} onChange={(e) => set('api_usuario', e.target.value)} />
             </Fila>
             <Fila label="Clave / Token API">
-              <input style={inputStyle} type="password" value={p.api_clave} onChange={(e) => set('api_clave', e.target.value)}
+              <input className="adm-field" type="password" value={p.api_clave} onChange={(e) => set('api_clave', e.target.value)}
                 placeholder={settings.tiene_clave ? '•••••••• (guardada)' : ''} />
             </Fila>
             <Fila label="Llave de firma">
-              <input style={inputStyle} type="password" value={p.api_llave_firma} onChange={(e) => set('api_llave_firma', e.target.value)}
+              <input className="adm-field" type="password" value={p.api_llave_firma} onChange={(e) => set('api_llave_firma', e.target.value)}
                 placeholder={settings.tiene_llave_firma ? '•••••••• (guardada)' : ''} />
             </Fila>
           </div>
@@ -360,19 +350,15 @@ function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantI
         </>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Button onClick={save} disabled={isPending} className="rounded-adm-full">
-          {isPending ? 'Guardando…' : 'Guardar configuración'}
-        </Button>
-        {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>{msg}</span>}
-      </div>
     </Card>
+    <SaveBar dirty={dirty} pending={isPending} status={status} onSave={save} />
+    </>
   );
 }
 
 /* ── Emitir factura ─────────────────────────────────────────── */
 
-function EmitForm({ restaurantId, settings, invoiceable, listo, onEmitted, onGoConfig }: { restaurantId: string; settings: FelSettings; invoiceable: InvoiceableOrder[]; listo: boolean; onEmitted: () => void; onGoConfig: () => void }) {
+function EmitForm({ restaurantId, settings, invoiceable, listo, onGoConfig }: { restaurantId: string; settings: FelSettings; invoiceable: InvoiceableOrder[]; listo: boolean; onGoConfig: () => void }) {
   const [mode, setMode] = useState<'pedido' | 'libre'>('pedido');
   const [orderId, setOrderId] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -433,7 +419,6 @@ function EmitForm({ restaurantId, settings, invoiceable, listo, onEmitted, onGoC
       setEnCola(Boolean(res.aviso));
       setMsg(res.aviso ?? 'Factura emitida ✓');
       setOrderId(''); setDescripcion(''); setMonto('');
-      onEmitted();
     });
   }
 
@@ -465,10 +450,10 @@ function EmitForm({ restaurantId, settings, invoiceable, listo, onEmitted, onGoC
       ) : (
         <div style={grid}>
           <Fila label="Descripción">
-            <input style={inputStyle} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Consumo en restaurante" />
+            <input className="adm-field" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Consumo en restaurante" />
           </Fila>
           <Fila label="Monto (Q, con IVA)">
-            <input style={inputStyle} type="number" inputMode="decimal" min="0" step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)} placeholder="0.00" />
+            <input className="adm-field" type="number" inputMode="decimal" min="0" step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)} placeholder="0.00" />
           </Fila>
         </div>
       )}
@@ -477,20 +462,20 @@ function EmitForm({ restaurantId, settings, invoiceable, listo, onEmitted, onGoC
       <div style={grid}>
         <Fila label={extranjero ? 'Pasaporte / documento' : 'NIT o DPI'}>
           <input
-            style={{ ...inputStyle, borderColor: idInvalido ? 'var(--c-danger)' : 'var(--u-hair-2)' }}
+            className="adm-field" aria-invalid={idInvalido || undefined}
             value={receptorId}
             onChange={(e) => setReceptorId(e.target.value)}
             placeholder={extranjero ? 'AB123456' : 'CF'}
           />
         </Fila>
         <Fila label="Nombre">
-          <input style={inputStyle} value={nombre} onChange={(e) => setNombre(e.target.value)} />
+          <input className="adm-field" value={nombre} onChange={(e) => setNombre(e.target.value)} />
         </Fila>
         <Fila label="Correo (opcional)">
-          <input style={inputStyle} type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} placeholder="Para enviarle su factura" />
+          <input className="adm-field" type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} placeholder="Para enviarle su factura" />
         </Fila>
         <Fila label="Dirección">
-          <input style={inputStyle} value={direccion} onChange={(e) => setDireccion(e.target.value)} />
+          <input className="adm-field" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
         </Fila>
       </div>
 
@@ -531,7 +516,7 @@ function EmitForm({ restaurantId, settings, invoiceable, listo, onEmitted, onGoC
 
 /* ── Historial de documentos ────────────────────────────────── */
 
-function DocumentsList({ restaurantId, settings, documents, onChange }: { restaurantId: string; settings: FelSettings; documents: FelDocument[]; onChange: () => void }) {
+function DocumentsList({ restaurantId, settings, documents }: { restaurantId: string; settings: FelSettings; documents: FelDocument[] }) {
   const [isPending, start] = useTransition();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -551,7 +536,6 @@ function DocumentsList({ restaurantId, settings, documents, onChange }: { restau
       setBusy(null);
       if (res?.error) setError(res.error);
       else { setPidiendo(null); setMotivo(''); }
-      onChange();
     });
   }
 
@@ -562,7 +546,6 @@ function DocumentsList({ restaurantId, settings, documents, onChange }: { restau
       const res = await reintentarInvoice(restaurantId, id);
       setBusy(null);
       if (res?.error || res?.aviso) setError(res.error ?? res.aviso ?? null);
-      onChange();
     });
   }
 
@@ -585,7 +568,7 @@ function DocumentsList({ restaurantId, settings, documents, onChange }: { restau
       {pidiendo && (
         <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--u-hair)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <input
-            style={{ ...inputStyle, flex: 1, minWidth: 220 }}
+            className="adm-field" style={{ flex: 1, minWidth: 220 }}
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}
             placeholder={pidiendo.accion === 'anular' ? 'Motivo de la anulación (el SAT lo exige)' : 'Motivo del ajuste'}
@@ -618,10 +601,10 @@ function DocumentsList({ restaurantId, settings, documents, onChange }: { restau
                 <tr key={d.id} style={{ borderBottom: '1px solid var(--u-hair)' }}>
                   <td style={{ padding: '10px 12px', fontFamily: 'var(--ui-font-mono)' }}>
                     {d.serie || '—'}{d.numero ? `-${d.numero}` : ''}
-                    {d.tipo === 'NCRE' && <div style={{ fontSize: 10, color: 'var(--u-text-4)' }}>nota de crédito</div>}
+                    {d.tipo === 'NCRE' && <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>nota de crédito</div>}
                     {/* Un registro interno no es una factura. Decirlo, siempre. */}
                     {!d.es_fiscal && (
-                      <div style={{ fontSize: 10, color: 'var(--c-warn)', fontWeight: 700 }}>SIN VALIDEZ FISCAL</div>
+                      <div style={{ fontSize: 11, color: 'var(--c-warn)', fontWeight: 700 }}>SIN VALIDEZ FISCAL</div>
                     )}
                   </td>
                   <td style={{ padding: '10px 12px' }}>
@@ -633,11 +616,11 @@ function DocumentsList({ restaurantId, settings, documents, onChange }: { restau
                   <td style={{ padding: '10px 12px', fontFamily: 'var(--ui-font-mono)', whiteSpace: 'nowrap' }}>
                     {money(Number(d.monto_total))}
                     {Number(d.propina_excluida) > 0 && (
-                      <div style={{ fontSize: 10, color: 'var(--u-text-4)' }}>+{money(Number(d.propina_excluida))} propina</div>
+                      <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>+{money(Number(d.propina_excluida))} propina</div>
                     )}
                   </td>
                   <td style={{ padding: '10px 12px' }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: `color-mix(in srgb, ${ESTADO_COLOR[d.estado] ?? '#888'} 13%, transparent)`, color: ESTADO_COLOR[d.estado] ?? '#888' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 'var(--radius-full)', background: `color-mix(in srgb, ${ESTADO_COLOR[d.estado] ?? '#888'} 13%, transparent)`, color: ESTADO_COLOR[d.estado] ?? '#888' }}>
                       {d.estado}
                     </span>
                     {/* El motivo importa más que el estado: "ERROR" a secas deja
@@ -650,7 +633,7 @@ function DocumentsList({ restaurantId, settings, documents, onChange }: { restau
                   </td>
                   <td style={{ padding: '10px 12px', color: 'var(--u-text-3)', fontSize: 12, whiteSpace: 'nowrap' }}>
                     {new Date(d.created_at).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: '2-digit' })}
-                    {d.origen === 'CAJA' && <div style={{ fontSize: 10, color: 'var(--u-text-4)' }}>automática</div>}
+                    {d.origen === 'CAJA' && <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>automática</div>}
                   </td>
                   <td style={{ padding: '10px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                     {(d.estado === 'ERROR' || d.estado === 'PENDIENTE') && (

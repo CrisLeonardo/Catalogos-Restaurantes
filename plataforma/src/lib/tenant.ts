@@ -104,19 +104,19 @@ export function authPathFor(
  * URL pública y ESTABLE de una mesa, pensada para grabarse en el QR/NFC
  * que se IMPRIME y se pega en la mesa física.
  *
- * A diferencia de subdomainUrl() + "?mesa=N" (lo que se grababa antes),
- * esta URL nunca cambia aunque el restaurante cambie de slug o la
- * plataforma cambie de NEXT_PUBLIC_ROOT_DOMAIN: siempre vive en /m/<id>/<mesa>
- * del dominio raíz, y ese endpoint (src/app/m/[restaurantId]/[[...mesa]]/route.ts)
- * resuelve el slug VIGENTE en cada escaneo y redirige (302) al menú real.
- * Así una tarjeta ya impresa/laminada/grabada en NFC sigue funcionando para
- * siempre sin reimprimir nada, pase lo que pase del lado de la plataforma.
+ * Vive en /m/<slug>/<mesa> del dominio raíz y el proxy (§2b) la sirve con
+ * el menú del restaurante. Era /m/<restaurantId>/<mesa>: el UUID no cambia
+ * nunca, pero salía un QR más denso y una dirección ilegible (auditoría
+ * 2026-10-02, D-5). Con el slug sigue siendo igual de estable: si el Super
+ * le cambia el slug a un restaurante, el viejo queda en
+ * `restaurant_slug_aliases` (migración 134) y el QR impreso sigue abriendo
+ * su menú. Los QR ya impresos con UUID funcionan igual que siempre.
  *
- *   prod:  https://leogin.online/m/<restaurantId>/<mesa>
- *   local: http://localhost:3000/m/<restaurantId>/<mesa>
+ *   prod:  https://distleogin.com/m/<slug>/<mesa>
+ *   local: http://localhost:3000/m/<slug>/<mesa>
  */
-export function stableTableUrl(restaurantId: string, mesa: number): string {
-  return `${stableRootUrl()}/m/${restaurantId}/${mesa}`;
+export function stableTableUrl(slug: string, mesa: number): string {
+  return `${stableRootUrl()}/m/${slug}/${mesa}`;
 }
 
 /** Igual que stableTableUrl(), pero para el QR general del restaurante (sin mesa). */

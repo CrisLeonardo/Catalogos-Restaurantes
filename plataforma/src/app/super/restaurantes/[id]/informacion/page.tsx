@@ -46,7 +46,7 @@ export default async function FichaInformacionPage({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17, marginBottom: 14, color: 'var(--u-text)' }}>
+    <h2 style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, color: 'var(--u-text)' }}>
       {children}
     </h2>
   );

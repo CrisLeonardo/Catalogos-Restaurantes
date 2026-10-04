@@ -14,7 +14,6 @@
    ============================================================ */
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,15 +22,10 @@ import { Stat, StatGroup } from '@/components/ui/stat';
 import { saveChannelMapping, deleteChannelMapping } from '@/lib/actions/channels';
 import { CHANNELS } from '@/lib/channels';
 import type { ChannelMapRow, ChannelProductOption, ChannelSummary } from '@/lib/db/channels';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-};
-const labelStyle: React.CSSProperties = {
-  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em',
-  textTransform: 'uppercase', marginBottom: 4, display: 'block',
-};
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 const CANAL_LABEL: Record<string, string> = {
   PEDIDOSYA: 'PedidosYa',
@@ -51,7 +45,6 @@ export default function CanalesPanel({
   products: ChannelProductOption[];
   summary: ChannelSummary[];
 }) {
-  const router = useRouter();
   const [isPending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -60,6 +53,8 @@ export default function CanalesPanel({
   const [sku, setSku] = useState('');
   const [productId, setProductId] = useState('');
 
+  const { confirm, dialog } = useConfirm();
+
   function guardar() {
     setMsg(null);
     start(async () => {
@@ -67,18 +62,20 @@ export default function CanalesPanel({
       if (res.error) { setMsg(`Error: ${res.error}`); return; }
       setSku(''); setProductId('');
       setMsg('Mapeo guardado ✓');
-      router.refresh();
     });
   }
 
-  function borrar(id: string) {
-    if (!window.confirm('¿Quitar este mapeo? Los pedidos que ya entraron no se tocan.')) return;
+  async function borrar(id: string) {
+    if (!(await confirm({
+      title: '¿Quitar este mapeo?',
+      description: 'Los pedidos que ya entraron no se tocan.',
+      confirmLabel: 'Quitar',
+    }))) return;
     setBusy(id); setMsg(null);
     start(async () => {
       const res = await deleteChannelMapping(restaurantId, id);
       setBusy(null);
       if (res.error) { setMsg(`Error: ${res.error}`); return; }
-      router.refresh();
     });
   }
 
@@ -86,10 +83,12 @@ export default function CanalesPanel({
 
   return (
     <div className="flex flex-col gap-4">
+      {dialog}
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Canales externos</h1>
-        <p style={{ fontSize: 14, color: 'var(--u-text-3)', margin: '6px 0 0' }}>
-          Hacé que los pedidos de PedidosYa, Rappi o UberEats entren a tu cocina junto con los demás,
+        {/* Sin «Canales externos» aquí: la barra ya dice «Apps de delivery» y
+            eran dos nombres para la misma pantalla (auditoría 2026-10-02, T-10). */}
+        <p style={{ fontSize: 14, color: 'var(--u-text-3)', margin: 0 }}>
+          Haz que los pedidos de PedidosYa, Rappi o UberEats entren a tu cocina junto con los demás,
           en vez de vivir en una pantalla aparte.
         </p>
       </div>
@@ -123,7 +122,7 @@ export default function CanalesPanel({
           <div>
             <label style={labelStyle}>Identificador en esa app</label>
             <input
-              style={inputStyle}
+              className="adm-field"
               value={sku}
               onChange={(e) => setSku(e.target.value)}
               placeholder="burger-clasica"
@@ -133,7 +132,7 @@ export default function CanalesPanel({
             <label style={labelStyle}>Tu producto</label>
             <Select
               options={[
-                { value: '', label: 'Elegí un producto…' },
+                { value: '', label: 'Elige un producto…' },
                 ...products.map((p) => ({
                   value: p.id,
                   label: p.is_available ? p.name : `${p.name} (agotado)`,
@@ -185,7 +184,7 @@ export default function CanalesPanel({
                     <td style={{ padding: '10px 12px' }}>
                       {m.product_name}
                       {!m.product_available && (
-                        <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--u-text-4)' }}>agotado</span>
+                        <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--u-text-4)' }}>agotado</span>
                       )}
                     </td>
                     <td style={{ padding: '10px 12px', textAlign: 'right' }}>
@@ -211,7 +210,7 @@ export default function CanalesPanel({
           nombre de la app de donde vino.
         </p>
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: 0 }}>
-          ¿Ya tenés el conector y no llega nada? Escribinos: casi siempre es que a la llave le falta permiso.
+          ¿Ya tienes el conector y no llega nada? Escríbenos: casi siempre es que a la llave le falta permiso.
         </p>
       </Card>
     </div>

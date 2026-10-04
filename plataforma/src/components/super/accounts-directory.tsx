@@ -22,11 +22,10 @@
      que salen dentro son texto, no enlaces: un enlace dentro de otro no
      es HTML válido, y los locales ya son enlaces de verdad en la ficha. */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Icon } from '@/components/icons';
 import { EmptyState } from '@/components/super/ui';
 
@@ -94,6 +93,11 @@ export default function AccountsDirectory({ rows }: { rows: AccountDirectoryRow[
   const [filtro, setFiltro] = useState<Filtro>('all');
   const [sort, setSort] = useState<SortKey>('recent');
   const [verPin, setVerPin] = useState(false);
+  /* 20 a la vista y «Ver más»: eran 30 tarjetas altas de golpe, sin
+     paginar (auditoría 2026-10-02, SUP-08). Al cambiar filtro o búsqueda se
+     vuelve a 20. */
+  const [limite, setLimite] = useState(20);
+  useEffect(() => { setLimite(20); }, [filtro, sort, verPin]);
 
   const pins = useMemo(() => rows.filter((r) => r.esPin), [rows]);
   const base = useMemo(() => (verPin ? rows : rows.filter((r) => !r.esPin)), [rows, verPin]);
@@ -141,21 +145,20 @@ export default function AccountsDirectory({ rows }: { rows: AccountDirectoryRow[
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Búsqueda + orden */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: '1 1 220px', maxWidth: 380 }}>
-          <Icon
-            name="search"
-            size={15}
-            style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--u-text-4)', pointerEvents: 'none' }}
-          />
-          <Input
+        {/* El buscador del panel (`.adm-search`, D-8): tocar la lupa también enfoca. */}
+        <label className="adm-search" style={{ flex: '1 1 220px', maxWidth: 380 }}>
+          <Icon name="search" size={16} aria-hidden />
+          <input
+            type="search"
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => { setQ(e.target.value); setLimite(20); }}
             placeholder="Buscar por correo, nombre o restaurante…"
             aria-label="Buscar cuenta"
-            style={{ paddingLeft: 34 }}
+            autoComplete="off"
+            enterKeyHint="search"
           />
-        </div>
-        <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Ordenar por" style={selectStyle}>
+        </label>
+        <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Ordenar por" className="adm-field adm-field-auto">
           {SORTS.map((s) => (
             <option key={s.key} value={s.key}>Orden: {s.label}</option>
           ))}
@@ -211,16 +214,26 @@ export default function AccountsDirectory({ rows }: { rows: AccountDirectoryRow[
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {filtered.map((r) => (
-            <AccountCard key={r.id} row={r} />
+          {filtered.slice(0, limite).map((r) => (
+            <AccountCard key={r.id} row={r} marcarSinVerificar={filtro === 'sinVerificar'} />
           ))}
+          {filtered.length > limite && (
+            <button
+              type="button"
+              onClick={() => setLimite((n) => n + 20)}
+              className="press"
+              style={{ alignSelf: 'center', marginTop: 6, padding: '9px 18px', borderRadius: 'var(--radius-full)', cursor: 'pointer', border: '1px solid var(--u-hair-2)', background: 'var(--adm-card, transparent)', color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600 }}
+            >
+              Ver más ({filtered.length - limite} restantes)
+            </button>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function AccountCard({ row }: { row: AccountDirectoryRow }) {
+function AccountCard({ row, marcarSinVerificar }: { row: AccountDirectoryRow; marcarSinVerificar: boolean }) {
   const nombre = nombreDe(row);
   const conGoogle = row.providers.includes('google');
 
@@ -233,7 +246,7 @@ function AccountCard({ row }: { row: AccountDirectoryRow }) {
       <span
         aria-hidden
         style={{
-          width: 38, height: 38, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center',
+          width: 38, height: 38, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
           background: row.suspendida
             ? 'color-mix(in srgb, var(--c-danger) 14%, transparent)'
             : 'color-mix(in srgb, var(--brand-accent) 14%, transparent)',
@@ -247,19 +260,21 @@ function AccountCard({ row }: { row: AccountDirectoryRow }) {
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
         {/* Nombre + lo que hay que saber de un vistazo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', minWidth: 0 }}>
-          <span style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {nombre}
           </span>
           {row.suspendida && <Badge variant="danger">Suspendida</Badge>}
           {esHuerfana(row) && <Badge variant="danger">Huérfana</Badge>}
           {esSinLocal(row) && <Badge variant="warn">Sin ningún local</Badge>}
-          {esSinVerificar(row) && <Badge variant="warn">Correo sin verificar</Badge>}
+          {/* Casi todas lo tenían: como insignia fija era ruido. Para eso
+              está el filtro «Sin verificar»; con él puesto, sí se marca. */}
+          {marcarSinVerificar && esSinVerificar(row) && <Badge variant="warn">Correo sin verificar</Badge>}
           {row.role === 'SUPER_ADMIN' && <Badge variant="accent">Super admin</Badge>}
           {row.esPin && <Badge variant="neutral">Acceso por PIN</Badge>}
         </div>
 
         {/* Correo + cómo entra + cuándo entró */}
-        <div style={{ display: 'flex', gap: 12, fontSize: 11.5, color: 'var(--u-text-4)', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--u-text-4)', flexWrap: 'wrap', alignItems: 'center' }}>
           <span style={{ fontFamily: 'var(--ui-font-mono)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {row.email ?? 'sin correo'}
           </span>
@@ -278,7 +293,7 @@ function AccountCard({ row }: { row: AccountDirectoryRow }) {
                 key={l.restaurantId}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
-                  padding: '4px 10px', borderRadius: 99, fontSize: 11.5, fontWeight: 600,
+                  padding: '4px 10px', borderRadius: 'var(--radius-full)', fontSize: 11, fontWeight: 600,
                   color: 'var(--u-text-3)',
                   background: 'var(--adm-card, color-mix(in srgb, var(--u-text) 5%, transparent))',
                   border: '1px solid var(--adm-border, var(--u-hair))',
@@ -314,7 +329,7 @@ function FilterChip({ label, active, onClick, danger, title }: {
       className="press"
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,
-        padding: '6px 12px', borderRadius: 99, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+        padding: '6px 12px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
         background: active
           ? (danger ? 'color-mix(in srgb, var(--c-danger) 14%, transparent)' : 'color-mix(in srgb, var(--brand-accent) 14%, transparent)')
           : 'var(--adm-card, color-mix(in srgb, var(--u-text) 5%, transparent))',
@@ -330,12 +345,6 @@ function FilterChip({ label, active, onClick, danger, title }: {
   );
 }
 
-const selectStyle: React.CSSProperties = {
-  height: 40, padding: '0 12px', borderRadius: 'var(--radius-lg)', fontSize: 13,
-  background: 'var(--adm-card, color-mix(in srgb, var(--u-text) 5%, transparent))',
-  color: 'var(--u-text)', border: '1px solid var(--adm-border, var(--u-hair))',
-  cursor: 'pointer',
-};
 
 /** Nombre para enseñar: el suyo, o la parte del correo antes de la arroba. */
 function nombreDe(r: AccountDirectoryRow): string {

@@ -35,6 +35,8 @@ const CTX_DUEÑO: NavContext = {
   encuestasActive: true,
   cuponesActive: true,
   dineInEnabled: true,
+  deliveryEnabled: true,
+  whatsappReady: true,
   planActual: 'PREMIUM',
   showStaff: true,
   preview: false,

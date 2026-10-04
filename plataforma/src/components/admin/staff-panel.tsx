@@ -6,13 +6,12 @@
    marca como cualquier otra; puede combinarse con secciones del panel. */
 
 import { useActionState, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Section } from '@/components/ui/section';
-import { List, ListRow, ListText } from '@/components/ui/list';
+import { List, ListButton, ListRow, ListText } from '@/components/ui/list';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ADMIN_SECTIONS } from '@/lib/permissions';
 import {
@@ -21,6 +20,11 @@ import {
 } from '@/lib/actions/staff';
 import { setStaffPin, type StaffPinState } from '@/lib/actions/staff-pin';
 import { staffLoginHandle } from '@/lib/staff-email';
+import { haceTiempo } from '@/lib/dates';
+import { describirActividad, humanizarClave } from '@/lib/activity-labels';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useToastManager } from '@/components/ui/toast';
 
 /** Secciones que un gerente NO recibe con su plantilla.
     'suscripcion' es el cobro del restaurante: quién paga, cuánto y con qué
@@ -44,27 +48,14 @@ const ROLE_PRESETS: { key: string; label: string; icon: string; perms: string[] 
   { key: 'cocina', label: 'Cocina', icon: 'flame', perms: ['cocina'] },
 ];
 
-const STATUS_ES: Record<string, string> = {
-  NEW: 'Nuevo', PREP: 'Preparando', READY: 'Listo', TRANSIT: 'En camino', DELIVERED: 'Entregado', CANCEL: 'Cancelado',
-};
-function describeActivity(r: ActivityRow): string {
-  const who = r.actor_name ? `${r.actor_name}: ` : '';
-  if (r.action === 'order_status') return `${who}pedido → ${STATUS_ES[r.entity ?? ''] ?? r.entity ?? ''}`;
-  if (r.action === 'stock') return `${who}ajustó inventario`;
-  if (r.action === 'promo') return `${who}promoción "${r.entity ?? ''}"`;
-  if (r.action === 'staff') return `${who}gestión de personal`;
-  // Soporte de Leogin dentro del panel: el actor no es del restaurante, así
-  // que el nombre va en `entity` y no en `actor_name` (no está en su staff).
-  if (r.action === 'soporte') return `Soporte de Leogin entró al panel${r.entity ? ` (${r.entity})` : ''}`;
-  return `${who}${r.action}`;
-}
-function timeAgo(iso: string): string {
-  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return 'hace un momento';
-  if (s < 3600) return `hace ${Math.floor(s / 60)} min`;
-  if (s < 86400) return `hace ${Math.floor(s / 3600)} h`;
-  return `hace ${Math.floor(s / 86400)} d`;
-}
+/* La bitácora se dice con frases (lib/activity-labels.ts): antes caía al
+   nombre crudo de la acción y el dueño leía «order_void», «auto_archive» o
+   «pedido → SERVED» (auditoría 2026-10-02, T-15). */
+const describeActivity = (r: ActivityRow): string => describirActividad(r);
+
+/** Cuántas filas de la bitácora se ven antes de «Ver toda la actividad». */
+const ACTIVIDAD_VISIBLE = 10;
+const timeAgo = (iso: string): string => haceTiempo(iso);
 
 const SECTION_LABEL: Record<string, string> = Object.fromEntries(ADMIN_SECTIONS.map((s) => [s.key, s.label]));
 
@@ -84,12 +75,17 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
       que iba a ser rechazado). */
   isOwner?: boolean;
 }) {
-  const router = useRouter();
   const [editor, setEditor] = useState<{ open: boolean; member: StaffMember | null }>({ open: false, member: null });
+  /* La bitácora entera eran ~40 filas: 4.600 px de pantalla en el teléfono
+     antes de llegar a los accesos (auditoría 2026-10-02, AJU-12). */
+  const [verTodaActividad, setVerTodaActividad] = useState(false);
+  const actividadVisible = verTodaActividad ? activity : activity.slice(0, ACTIVIDAD_VISIBLE);
 
   function describePerms(m: StaffMember): string {
     if (m.permissions == null) return 'Acceso total';
-    const labels = m.permissions.map((p) => SECTION_LABEL[p] ?? p);
+    // Una llave que ya no está en ADMIN_SECTIONS (permisos viejos guardados
+    // en el perfil) se dice con palabras, no con la clave («aprobar_anulaciones»).
+    const labels = m.permissions.map((p) => SECTION_LABEL[p] ?? humanizarClave(p));
     if (labels.length === 0) return 'Sin acceso';
     if (labels.length <= 3) return labels.join(' · ');
     return `${labels.slice(0, 3).join(' · ')} +${labels.length - 3}`;
@@ -110,7 +106,7 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
         : 'Entra con PIN en el local';
     return (
       <ListRow key={m.id}>
-        <div style={{ width: 38, height: 38, borderRadius: 99, background: isMesero ? 'var(--c-warn-bg)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)', display: 'grid', placeItems: 'center', color: isMesero ? 'var(--c-warn)' : 'var(--u-text)', flexShrink: 0 }}>
+        <div style={{ width: 38, height: 38, borderRadius: 'var(--radius-full)', background: isMesero ? 'var(--c-warn-bg)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)', display: 'grid', placeItems: 'center', color: isMesero ? 'var(--c-warn)' : 'var(--u-text)', flexShrink: 0 }}>
           <Icon name={isMesero ? 'userPlus' : 'user'} size={18} />
         </div>
         <ListText
@@ -118,7 +114,7 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
             <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.full_name || 'Miembro del equipo'}</span>
               {isMesero && (
-                <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: 'var(--c-warn)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', borderRadius: 99, padding: '2px 8px' }}><Icon name="userPlus" size={11} /> Mesero</span>
+                <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: 'var(--c-warn)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', borderRadius: 'var(--radius-full)', padding: '2px 8px' }}><Icon name="userPlus" size={11} /> Mesero</span>
               )}
             </span>
           }
@@ -148,7 +144,7 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
           <EmptyState
             icon="users"
             title="Sin personal todavía"
-            desc="Agrega cajeros, ayudantes o meseros y elige a qué secciones acceden. Marca Mesero para que pueda tomar pedidos en mesa desde /admin/mesero."
+            desc="Agrega cajeros, ayudantes o meseros y elige a qué secciones acceden. Marca Mesero para que pueda tomar pedidos en mesa desde Pedidos › Tomar pedidos."
             action={{ label: 'Agregar el primero', onClick: () => setEditor({ open: true, member: null }) }}
           />
         ) : (
@@ -162,12 +158,21 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
           <Card className="p-4.5" style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin actividad registrada todavía.</Card>
         ) : (
           <List>
-            {activity.map((r) => (
+            {actividadVisible.map((r) => (
               <ListRow key={r.id}>
-                <span className="min-w-0 flex-1 truncate text-[13px] text-adm-text-2">{describeActivity(r)}</span>
+                <span className="min-w-0 flex-1 truncate text-[13px] text-adm-text-2" title={describeActivity(r)}>{describeActivity(r)}</span>
                 <span className="shrink-0 text-[11px] text-adm-text-4">{timeAgo(r.created_at)}</span>
               </ListRow>
             ))}
+            {activity.length > ACTIVIDAD_VISIBLE && (
+              <ListButton
+                onClick={() => setVerTodaActividad((v) => !v)}
+                className="gap-2 text-[13px] font-semibold"
+                style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}
+              >
+                {verTodaActividad ? 'Ver menos' : `Ver toda la actividad (${activity.length})`}
+              </ListButton>
+            )}
           </List>
         )}
       </Section>
@@ -180,7 +185,7 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
           enabledSections={enabledSections}
           isOwner={isOwner}
           onClose={() => setEditor({ open: false, member: null })}
-          onSaved={() => { setEditor({ open: false, member: null }); router.refresh(); }}
+          onSaved={() => setEditor({ open: false, member: null })}
         />
       )}
     </div>
@@ -233,21 +238,33 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
   const [state, formAction, isPending] = isNew ? createAction : updateAction;
 
   useEffect(() => { if (state && 'ok' in state) onSaved(); }, [state, onSaved]);
-  useEffect(() => { if (pinAction[0] && 'ok' in pinAction[0]) alert('PIN actualizado.'); }, [pinAction]);
-  useEffect(() => { if (passAction[0] && 'ok' in passAction[0]) alert('Contraseña actualizada. Pásasela a esta persona.'); }, [passAction]);
+  /* Aviso del panel en vez de `alert()` (caja del sistema operativo).
+     Dependen del RESULTADO, no de la tupla de useActionState, que es nueva
+     en cada render y repetía el aviso (auditoría 2026-10-02, T-16). */
+  const toast = useToastManager();
+  const { confirmSubmit, dialog } = useConfirm();
+  const pinResult = pinAction[0];
+  const passResult = passAction[0];
+  useEffect(() => {
+    if (pinResult && 'ok' in pinResult) toast.add({ title: 'PIN actualizado', type: 'success' });
+  }, [pinResult, toast]);
+  useEffect(() => {
+    if (passResult && 'ok' in passResult) {
+      toast.add({ title: 'Contraseña actualizada', description: 'Pásasela a esta persona.', type: 'success' });
+    }
+  }, [passResult, toast]);
 
   function toggle(key: string) {
     setPerms((prev) => prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]);
   }
 
-  const label: React.CSSProperties = { fontSize: 10.5, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 6, display: 'block' };
-  const input: React.CSSProperties = { width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)', borderRadius: 11, padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none' };
-
+  const label: React.CSSProperties = FIELD_LABEL;
   const isMesero = perms.includes('mesero');
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent showClose={false} className="flex w-[480px] max-w-[94vw] max-h-[90vh] flex-col p-0">
+        {dialog}
         <DialogHeader className="flex-row items-center justify-between px-5.5 py-4.5 border-b border-[var(--u-hair)] space-y-0">
           <DialogTitle className="t-display" style={{ fontSize: 20 }}>{isNew ? 'Nuevo miembro' : (member!.full_name || 'Miembro del equipo')}</DialogTitle>
           <Button type="button" onClick={onClose} variant="ghost" size="icon" aria-label="Cerrar"><Icon name="x" size={18} /></Button>
@@ -261,7 +278,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
 
             <div>
               <label style={label}>Nombre {isNew && '*'}</label>
-              <input name="full_name" required={isNew} defaultValue={member?.full_name ?? ''} placeholder="Ej. Carlos, Juan (cajero)…" style={input} />
+              <input name="full_name" required={isNew} defaultValue={member?.full_name ?? ''} placeholder="Ej. Carlos, Juan (cajero)…" className="adm-field" />
             </div>
 
             {isNew && (
@@ -277,7 +294,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                         onClick={() => applyPreset(p)}
                         className="press"
                         style={{
-                          padding: '7px 12px', borderRadius: 99, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+                          padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer', fontSize: 12, fontWeight: 600,
                           border: `1.5px solid ${on ? 'var(--brand-accent)' : 'var(--u-hair)'}`,
                           background: on ? 'color-mix(in srgb, var(--brand-accent) 14%, transparent)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
                           color: on ? 'var(--u-text)' : 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -288,7 +305,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                     );
                   })}
                 </div>
-                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 8 }}>
+                <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 8 }}>
                   Marca lo típico de ese rol para no revisar ~20 opciones — ajusta libremente las secciones de abajo después.
                   {isOwner && (
                     <>
@@ -313,14 +330,14 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                     la otra desaparece en vez de dejarla ahí para escoger,
                     que era lo confuso. */}
                 <div style={{
-                  padding: '10px 12px', borderRadius: 11,
+                  padding: '10px 12px', borderRadius: 'var(--radius-md)',
                   border: '1.5px solid var(--brand-accent)',
                   background: 'color-mix(in srgb, var(--brand-accent) 10%, transparent)',
                 }}>
                   <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>
                     {access === 'user' ? 'Con un usuario' : 'Con un PIN'}
                   </span>
-                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+                  <span style={{ display: 'block', fontSize: 11, color: 'var(--u-text-4)', marginTop: 1 }}>
                     {access === 'user' ? 'Desde donde sea' : 'En el aparato del local'}
                   </span>
                 </div>
@@ -338,9 +355,9 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                   maxLength={4}
                   required
                   placeholder="1234"
-                  style={{ ...input, letterSpacing: '0.3em' }}
+                  className="adm-field" style={{ letterSpacing: '0.3em' }}
                 />
-                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 6 }}>
+                <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 6 }}>
                   Con este PIN entrará desde &quot;¿Quién eres?&quot; en el dispositivo del local — sin email ni contraseña.
                 </p>
               </div>
@@ -364,7 +381,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                     placeholder="Ej. carlos"
                     value={username}
                     onChange={(e) => setUsername(e.target.value.toLowerCase().trim())}
-                    style={input}
+                    className="adm-field"
                   />
                   {/* La credencial se enseña ENTERA mientras se escribe. Es
                       la diferencia entre una credencial que solo funciona
@@ -375,20 +392,20 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                   {username.length >= 3 && slug && (
                     <div
                       style={{
-                        marginTop: 8, padding: '9px 12px', borderRadius: 10,
+                        marginTop: 8, padding: '9px 12px', borderRadius: 'var(--radius-md)',
                         border: '1px solid var(--u-hair)',
                         background: 'color-mix(in srgb, var(--brand-accent) 8%, transparent)',
                         display: 'flex', alignItems: 'center', gap: 8,
                       }}
                     >
                       <Icon name="key" size={13} />
-                      <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <span style={{ fontSize: 12, color: 'var(--u-text-2)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         Entrará escribiendo{' '}
                         <strong style={{ color: 'var(--u-text)' }}>{staffLoginHandle(username, slug)}</strong>
                       </span>
                     </div>
                   )}
-                  <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 6 }}>
+                  <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 6 }}>
                     Minúsculas, números, guion y guion bajo. Este usuario es solo de tu
                     restaurante: no ocupa ningún correo ni sirve en ningún otro local.
                   </p>
@@ -402,9 +419,9 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                     required
                     autoComplete="off"
                     placeholder="Ej. Sucursal2026"
-                    style={input}
+                    className="adm-field"
                   />
-                  <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 6, lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 6, lineHeight: 1.5 }}>
                     Pásale la credencial completa y la contraseña: con eso entra desde
                     esta misma dirección <em>o</em> desde el botón «Acceder» de la
                     página de Leogin, sin depender de tu cuenta. No aparecerá en la
@@ -428,7 +445,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                       onClick={() => toggle(s.key)}
                       className="press"
                       style={{
-                        padding: '7px 12px', borderRadius: 99, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+                        padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer', fontSize: 12, fontWeight: 600,
                         border: `1px solid ${on ? 'transparent' : accent ? 'var(--c-warn-line)' : 'var(--u-hair)'}`,
                         // Relleno sólido = --c-warn-solid (el ámbar vivo), NO --c-warn
                         // (que es la TINTA, casi marrón en claro: con texto oscuro
@@ -443,7 +460,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                   );
                 })}
               </div>
-              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 8 }}>
+              <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 8 }}>
                 {isMesero
                   ? 'Con la sección Mesero podrá tomar pedidos en mesa desde /admin/mesero. Si además marcas otras secciones, también entrará al panel admin.'
                   : 'Marca las secciones del panel a las que tendrá acceso. Marca Mesero para que tome pedidos en mesa.'}
@@ -465,11 +482,11 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                   <input type="hidden" name="userId" value={member!.id} />
                   <div style={{ flex: 1 }}>
                     <label style={label}>Cambiar PIN</label>
-                    <input name="pin" type="text" inputMode="numeric" pattern="\d{4}" maxLength={4} placeholder="1234" style={{ ...input, letterSpacing: '0.3em' }} />
+                    <input name="pin" type="text" inputMode="numeric" pattern="\d{4}" maxLength={4} placeholder="1234" className="adm-field" style={{ letterSpacing: '0.3em' }} />
                   </div>
                   <Button type="submit" variant="secondary" className="whitespace-nowrap">Cambiar</Button>
                 </form>
-                {pinAction[0] && 'error' in pinAction[0] && <div style={{ fontSize: 12.5, color: 'var(--c-danger)' }}>{pinAction[0].error}</div>}
+                {pinAction[0] && 'error' in pinAction[0] && <div style={{ fontSize: 12, color: 'var(--c-danger)' }}>{pinAction[0].error}</div>}
 
                 {/* Un acceso por usuario no tiene correo, así que no existe
                     "olvidé mi contraseña" para él: el buzón al que se
@@ -482,15 +499,22 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                       <input type="hidden" name="userId" value={member!.id} />
                       <div style={{ flex: 1 }}>
                         <label style={label}>Nueva contraseña de {staffLoginHandle(member!.username ?? '', slug)}</label>
-                        <input name="password" type="text" minLength={8} autoComplete="off" placeholder="Mínimo 8 caracteres" style={input} />
+                        <input name="password" type="text" minLength={8} autoComplete="off" placeholder="Mínimo 8 caracteres" className="adm-field" />
                       </div>
                       <Button type="submit" variant="secondary" className="whitespace-nowrap">Cambiar</Button>
                     </form>
-                    {passAction[0] && 'error' in passAction[0] && <div style={{ fontSize: 12.5, color: 'var(--c-danger)' }}>{passAction[0].error}</div>}
+                    {passAction[0] && 'error' in passAction[0] && <div style={{ fontSize: 12, color: 'var(--c-danger)' }}>{passAction[0].error}</div>}
                   </>
                 )}
 
-                <form action={removeStaff} onSubmit={(e) => { if (!confirm('¿Quitar a este miembro? Perderá el acceso.')) e.preventDefault(); }}>
+                <form
+                  action={removeStaff}
+                  onSubmit={confirmSubmit({
+                    title: '¿Quitar a esta persona del equipo?',
+                    description: 'Pierde el acceso al panel desde ya.',
+                    confirmLabel: 'Quitar',
+                  })}
+                >
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="userId" value={member!.id} />
                   <Button type="submit" variant="destructive" className="w-full">

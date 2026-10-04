@@ -253,6 +253,9 @@ export interface ThemeConfig {
   productArt: ProductArt;       // auto = foto si existe, si no patrón
   showTags: boolean;
   featuredFavorites: boolean;   // productos con etiqueta "Favorito" como tarjeta grande (máx. 3)
+  /** «Acompáñalo con…»: en la ficha y en el carrito se ofrecen bebida,
+      acompañamiento o postre de la propia carta (lib/menu-pairings.ts). */
+  suggestPairings: boolean;
 
   // ── Pedidos / checkout ──
   orderTypes: OrderType[];
@@ -382,7 +385,10 @@ export const ELEMENT_TARGETS: { key: string; label: string; role: TypographyRole
 
 export const DEFAULT_CONFIG: ThemeConfig = {
   brandName: 'Tu Restaurante',
-  tagline: 'Sabor que enamora',
+  /* Vacío: «Sabor que enamora» era relleno y salía publicado en menús reales
+     cuyo dueño no había escrito su lema (auditoría 2026-10-02, CAT-03). Sin
+     lema, la portada no pinta esa línea y Hoy pide escribirlo. */
+  tagline: '',
   zone: '',
   logoUrl: null,
   markUrl: null,
@@ -450,6 +456,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   productArt: 'auto',
   showTags: true,
   featuredFavorites: false,
+  suggestPairings: true,
 
   orderTypes: ['dine_in', 'delivery', 'pickup'],
   deliveryFee: 0,
@@ -626,7 +633,7 @@ export const DEFAULT_CONTENT: ThemeContent = {
     heading: 'El menú',
     searchPlaceholder: 'Buscar…',
     allLabel: 'Todo',
-    empty: 'Nada por aquí. Probá otra cosa.',
+    empty: 'Nada por aquí. Prueba otra cosa.',
   },
   product: {
     add: 'Agregar',
@@ -656,7 +663,7 @@ export const DEFAULT_CONTENT: ThemeContent = {
     delivery: 'A domicilio',
     pickup: 'Para llevar',
     name: 'Tu nombre',
-    namePh: '¿Cómo te llamás?',
+    namePh: '¿Cómo te llamas?',
     phone: 'Teléfono',
     phonePh: '5xxx xxxx',
     address: 'Dirección',
@@ -670,7 +677,7 @@ export const DEFAULT_CONTENT: ThemeContent = {
     courseNone: 'Sin preferencia',
     payLabel: 'Pago',
     payCash: 'Efectivo contra entrega',
-    payCashSub: 'Pagás cuando llega tu pedido',
+    payCashSub: 'Pagas cuando llega tu pedido',
     payCashPickup: 'Efectivo',
     payCashPickupSub: 'Pagas en el local al recoger',
     payCard: 'Tarjeta (paga al recibir)',
@@ -679,11 +686,11 @@ export const DEFAULT_CONTENT: ThemeContent = {
     cashAmountLabel: '¿Con cuánto vas a pagar?',
     cashAmountSub: 'Para que el repartidor lleve el cambio exacto.',
     confirm: 'Confirmar pedido',
-    errName: 'Decinos tu nombre',
+    errName: 'Dinos tu nombre',
     errPhone: 'Necesitamos un teléfono',
     errAddress: '¿A dónde lo llevamos?',
     closedTitle: 'Estamos cerrados',
-    closedMsg: 'Volvé en nuestro horario de atención. ¡Te esperamos!',
+    closedMsg: 'Vuelve en nuestro horario de atención. ¡Te esperamos!',
     pausedTitle: 'Pedidos en pausa',
     pausedMsg: '',
   },

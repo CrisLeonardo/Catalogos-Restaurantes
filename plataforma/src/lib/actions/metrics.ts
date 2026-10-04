@@ -47,6 +47,8 @@ export async function trackVisit(
 
 export interface DayVisits {
   label: string;
+  /** Fecha local «2026-09-28». */
+  date: string;
   visits: number;
   isToday: boolean;
 }
@@ -127,7 +129,7 @@ export async function getVisitStats(
       });
       label = short.charAt(0).toUpperCase() + short.slice(1, 2);
     } catch {}
-    return { label, visits: Number(visits), isToday: is_today };
+    return { label, date: day, visits: Number(visits), isToday: is_today };
   });
 
   return {

@@ -3,6 +3,8 @@
 import { Icon } from '@/components/icons';
 import { markPickedUp, markDelivered } from '@/lib/actions/drivers';
 import type { DriverOrder, ShiftSummary } from '@/lib/db/drivers';
+import { fmtMoney } from '@/lib/money';
+import { shortOrderNumber } from '@/lib/order-number';
 
 /* ============================================================
    Pantalla del repartidor (Fase 2)
@@ -17,7 +19,7 @@ import type { DriverOrder, ShiftSummary } from '@/lib/db/drivers';
    ============================================================ */
 
 function money(n: number): string {
-  return `Q${(n ?? 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return fmtMoney(n ?? 0);
 }
 
 export default function DriverBoard({
@@ -28,11 +30,11 @@ export default function DriverBoard({
   summary: ShiftSummary;
 }) {
   const cardSt: React.CSSProperties = {
-    border: '1px solid var(--u-hair)', borderRadius: 16,
+    border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)',
     padding: 16, marginBottom: 14,
   };
   const bigBtn: React.CSSProperties = {
-    width: '100%', padding: '14px 16px', borderRadius: 12,
+    width: '100%', padding: '14px 16px', borderRadius: 'var(--radius-lg)',
     fontSize: 15, fontWeight: 700, cursor: 'pointer', marginTop: 12,
     border: 'none',
   };
@@ -46,7 +48,7 @@ export default function DriverBoard({
 
       {/* Cuadre del turno */}
       <div style={{ ...cardSt, background: 'color-mix(in srgb, var(--u-text) 4%, transparent)' }}>
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--u-text-4)', marginBottom: 8 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--u-text-4)', marginBottom: 8 }}>
           Hoy
         </p>
         <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontVariantNumeric: 'tabular-nums' }}>
@@ -59,14 +61,14 @@ export default function DriverBoard({
         </div>
         {summary.sinRegistro > 0 && (
           <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 8 }}>
-            {summary.sinRegistro} entrega(s) sin efectivo anotado (pago con tarjeta al recibir, o quedó pendiente).
+            {summary.sinRegistro} {summary.sinRegistro === 1 ? 'entrega' : 'entregas'} sin efectivo anotado (pago con tarjeta al recibir, o quedó pendiente).
           </p>
         )}
       </div>
 
       {orders.length === 0 && (
         <p style={{ fontSize: 14, color: 'var(--u-text-3)', textAlign: 'center', padding: '32px 0' }}>
-          No tenés pedidos asignados ahora mismo.
+          No tienes pedidos asignados ahora mismo.
         </p>
       )}
 
@@ -83,7 +85,7 @@ export default function DriverBoard({
         return (
           <div key={o.id} style={cardSt}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <strong style={{ fontSize: 16 }}>{o.order_number}</strong>
+              <strong style={{ fontSize: 16 }}>{shortOrderNumber(o.order_number)}</strong>
               <span className={`chip ${enCamino ? 'chip-alt' : 'chip-ok'}`}>
                 {enCamino ? 'En camino' : 'Listo para salir'}
               </span>
@@ -106,17 +108,17 @@ export default function DriverBoard({
 
             {/* Cobro: lo primero que necesita saber al llegar */}
             <div style={{
-              marginTop: 10, padding: 10, borderRadius: 10,
+              marginTop: 10, padding: 10, borderRadius: 'var(--radius-md)',
               background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
               fontVariantNumeric: 'tabular-nums',
             }}>
               <p style={{ fontSize: 13 }}>
-                Cobrar <strong style={{ fontSize: 17 }}>{money(o.total)}</strong>
+                Cobrar <strong style={{ fontSize: 16 }}>{money(o.total)}</strong>
                 <span style={{ color: 'var(--u-text-4)' }}> · {esEfectivo ? 'efectivo' : 'tarjeta al recibir'}</span>
               </p>
               {cambio != null && cambio > 0 && (
                 <p style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 3 }}>
-                  Paga con {money(o.cash_amount!)} — llevá {money(cambio)} de cambio.
+                  Paga con {money(o.cash_amount!)} — lleva {money(cambio)} de cambio.
                 </p>
               )}
             </div>
@@ -156,11 +158,7 @@ export default function DriverBoard({
                   step="0.01"
                   min="0"
                   defaultValue={esEfectivo ? o.total : ''}
-                  style={{
-                    width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-                    border: '1px solid var(--u-hair)', borderRadius: 11, padding: '11px 13px',
-                    color: 'var(--u-text)', fontSize: 16, outline: 'none',
-                  }}
+                  className="adm-field adm-field-lg"
                 />
                 <button type="submit" className="btn-primary" style={bigBtn}>
                   Entregué el pedido

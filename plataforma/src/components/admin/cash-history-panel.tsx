@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { deleteCashCount, type CashCount } from '@/lib/actions/finanzas';
 import { DENOM_FIELDS } from '@/lib/finanzas-constants';
 import CashHistoryExportButton from '@/components/admin/cash-history-export-button';
+import { fmtMoney } from '@/lib/money';
 
-const money = (n: number) => `Q${n.toFixed(2)}`;
+const money = (n: number) => fmtMoney(n);
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -30,10 +30,10 @@ function DenomBreakdown({ breakdown }: { breakdown: Record<string, number> }) {
   const monedas  = entries.filter(d => d.kind === 'M');
 
   return (
-    <div style={{ marginTop: 8, padding: '10px 12px', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', borderRadius: 10, fontSize: 11.5 }}>
+    <div style={{ marginTop: 8, padding: '10px 12px', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', borderRadius: 'var(--radius-md)', fontSize: 11 }}>
       {billetes.length > 0 && (
         <div style={{ marginBottom: monedas.length > 0 ? 6 : 0 }}>
-          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--u-text-4)' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--u-text-4)' }}>
             Billetes
           </span>
           {billetes.map(d => (
@@ -46,7 +46,7 @@ function DenomBreakdown({ breakdown }: { breakdown: Record<string, number> }) {
       )}
       {monedas.length > 0 && (
         <div>
-          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--u-text-4)' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--u-text-4)' }}>
             Monedas
           </span>
           {monedas.map(d => (
@@ -64,7 +64,6 @@ function DenomBreakdown({ breakdown }: { breakdown: Record<string, number> }) {
 function CashCountCard({
   entry, restaurantId,
 }: { entry: CashCount; restaurantId: string }) {
-  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -82,8 +81,6 @@ function CashCountCard({
       if ('error' in result) {
         setDeleteError(result.error);
         setConfirmDelete(false);
-      } else {
-        router.refresh();
       }
     });
   };
@@ -99,7 +96,7 @@ function CashCountCard({
             </span>
             {entry.shift_label && (
               <span style={{
-                fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 99,
+                fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--radius-full)',
                 background: 'color-mix(in srgb, var(--u-text) 7%, transparent)', color: 'var(--u-text-3)',
                 letterSpacing: '0.04em',
               }}>
@@ -117,12 +114,12 @@ function CashCountCard({
           <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 14, color: diffColor }}>
             {diff >= 0 ? '+' : ''}{money(diff)}
           </div>
-          <div style={{ fontSize: 10, color: diffColor, opacity: 0.8 }}>{diffLabel}</div>
+          <div style={{ fontSize: 11, color: diffColor, opacity: 0.8 }}>{diffLabel}</div>
         </div>
       </div>
 
       {/* Fila de montos */}
-      <div style={{ display: 'flex', gap: 12, marginTop: 5, fontSize: 11.5, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)' }}>
+      <div style={{ display: 'flex', gap: 12, marginTop: 5, fontSize: 11, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)' }}>
         <span>Esp. {money(Number(entry.expected_cash))}</span>
         <span>·</span>
         <span>Cont. {money(Number(entry.counted_cash))}</span>
@@ -166,7 +163,7 @@ function CashCountCard({
             onClick={() => { setConfirmDelete(true); setDeleteError(null); }}
             style={{
               background: 'none', border: '1px solid var(--c-danger-line)', padding: '3px 9px',
-              borderRadius: 7, cursor: 'pointer', fontSize: 11, color: 'var(--c-danger)',
+              borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 11, color: 'var(--c-danger)',
               display: 'flex', alignItems: 'center', gap: 4,
             }}
           >
@@ -185,7 +182,7 @@ function CashCountCard({
               onClick={handleDelete}
               style={{
                 background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)',
-                padding: '3px 10px', borderRadius: 7, cursor: isPending ? 'not-allowed' : 'pointer',
+                padding: '3px 10px', borderRadius: 'var(--radius-sm)', cursor: isPending ? 'not-allowed' : 'pointer',
                 fontSize: 11, color: 'var(--c-danger)', fontWeight: 600,
               }}
             >
@@ -196,7 +193,7 @@ function CashCountCard({
               onClick={() => setConfirmDelete(false)}
               style={{
                 background: 'none', border: '1px solid var(--u-hair)', padding: '3px 9px',
-                borderRadius: 7, cursor: 'pointer', fontSize: 11, color: 'var(--u-text-3)',
+                borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 11, color: 'var(--u-text-3)',
               }}
             >
               Cancelar
@@ -205,7 +202,7 @@ function CashCountCard({
         )}
       </div>
       {deleteError && (
-        <div style={{ fontSize: 11.5, color: 'var(--c-danger)', marginTop: 4 }}>{deleteError}</div>
+        <div style={{ fontSize: 11, color: 'var(--c-danger)', marginTop: 4 }}>{deleteError}</div>
       )}
     </div>
   );
@@ -215,9 +212,9 @@ export default function CashHistoryPanel({
   history, restaurantId,
 }: { history: CashCount[]; restaurantId: string }) {
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 0 }}>
+    <div className="glass" style={{ borderRadius: 'var(--radius-lg)', padding: 18, display: 'flex', flexDirection: 'column', gap: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, gap: 8, flexWrap: 'wrap' }}>
-        <div className="adm-label">Cortes recientes</div>
+        <div className="adm-label adm-label-caps" style={{ color: 'var(--u-text-3)' }}>Cortes recientes</div>
         {history.length > 0 && <CashHistoryExportButton restaurantId={restaurantId} />}
       </div>
       {history.length === 0 ? (

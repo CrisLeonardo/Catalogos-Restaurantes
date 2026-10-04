@@ -183,7 +183,7 @@ export default function CommandSearch({ groups }: Props) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={onInputKey}
-            placeholder="Buscá una pantalla: impresora, QR, inventario…"
+            placeholder="Busca una pantalla: impresora, QR, inventario…"
             className="min-w-0 flex-1 bg-transparent text-[15px] text-adm-text outline-none placeholder:text-adm-text-4"
             autoComplete="off"
             spellCheck={false}
@@ -192,8 +192,8 @@ export default function CommandSearch({ groups }: Props) {
 
         <div className="max-h-[52vh] overflow-y-auto p-2">
           {hits.length === 0 ? (
-            <p className="px-3 py-6 text-center text-[13.5px] leading-snug text-adm-text-3">
-              Nada con ese nombre. Probá con lo que querés hacer —«cobrar», «horarios», «puntos»— o mirá el Centro de ayuda.
+            <p className="px-3 py-6 text-center text-[13px] leading-snug text-adm-text-3">
+              Nada con ese nombre. Prueba con lo que quieres hacer —«cobrar», «horarios», «puntos»— o mira el Centro de ayuda.
             </p>
           ) : (
             hits.map((h, i) => (
@@ -205,9 +205,9 @@ export default function CommandSearch({ groups }: Props) {
                 data-active={i === cursor ? '1' : '0'}
                 className="flex min-h-11 w-full items-center gap-3 rounded-adm-md px-3 text-left transition-colors data-[active=1]:bg-adm-card"
               >
-                <span className="min-w-0 flex-1 truncate text-[14.5px] font-medium text-adm-text">{h.label}</span>
+                <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-adm-text">{h.label}</span>
                 {h.locked && <Icon name="key" size={13} className="shrink-0 text-adm-text-4" />}
-                <span className="shrink-0 text-[12.5px] text-adm-text-3">{h.group}</span>
+                <span className="shrink-0 text-[12px] text-adm-text-3">{h.group}</span>
               </button>
             ))
           )}

@@ -4,7 +4,6 @@
    lanzamiento). Anotar → Avisar (con WhatsApp si hay teléfono) → Sentar. */
 
 import { useEffect, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Stat, StatGroup } from '@/components/ui/stat';
@@ -16,6 +15,8 @@ import {
   cancelWaitlistEntry,
 } from '@/lib/actions/waitlist';
 import type { WaitlistEntry, WaitlistSummary } from '@/lib/db/waitlist';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface Props {
   restaurantId: string;
@@ -28,14 +29,7 @@ interface Props {
   freeTables: number[];
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-};
-const labelStyle: React.CSSProperties = {
-  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em',
-  textTransform: 'uppercase' as const, marginBottom: 4, display: 'block',
-};
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 /** "hace 12 min" / "hace 1h 5min" — se recalcula solo con el reloj vivo. */
 function elapsedLabel(from: string, now: number): string {
@@ -54,7 +48,6 @@ function whatsappHref(phone: string, restaurantName: string): string {
 }
 
 export default function WaitlistPanel({ restaurantId, entries, recent, summary, freeTables }: Props) {
-  const router = useRouter();
   const [tab, setTab] = useState<'cola' | 'nueva'>('cola');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -83,7 +76,6 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
       if (res.error) { setError(res.error); return; }
       setForm({ customer_name: '', party_size: 2, phone: '', notes: '' });
       setTab('cola');
-      router.refresh();
     });
   }
 
@@ -93,7 +85,6 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
       const res = await action(restaurantId, id);
       setBusyId(null);
       if (res.error) { setError(res.error); return; }
-      router.refresh();
     });
   }
 
@@ -106,7 +97,6 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
       setBusyId(null);
       if (res.error) { setError(res.error); return; }
       setMesaDe((prev) => { const next = { ...prev }; delete next[id]; return next; });
-      router.refresh();
     });
   }
 
@@ -128,67 +118,71 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
         </div>
       )}
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid var(--u-hair)' }}>
-        {([['cola', 'En espera'], ['nueva', 'Agregar grupo']] as const).map(([k, lbl]) => (
-          <button key={k} type="button" onClick={() => setTab(k)} className="press"
-            style={{ padding: '9px 16px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === k ? 'var(--brand-accent)' : 'transparent'}`, color: tab === k ? 'var(--u-text)' : 'var(--u-text-3)', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', marginBottom: -1 }}>
-            {lbl}
-          </button>
-        ))}
-      </div>
+      {/* «+ Agregar grupo» arriba a la derecha en vez de una pestaña (T-09). */}
+      {tab === 'cola' && entries.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button type="button" onClick={() => setTab('nueva')} className="rounded-adm-full">
+            <Icon name="plus" size={15} /> Agregar grupo
+          </Button>
+        </div>
+      )}
 
       {tab === 'nueva' ? (
         <Card className="p-5" style={{ maxWidth: 480 }}>
+          <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 14 }}>Agregar a la lista de espera</p>
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
               <label style={labelStyle}>Nombre del grupo *</label>
-              <input style={inputStyle} value={form.customer_name} onChange={(e) => setField('customer_name', e.target.value)} required placeholder="Familia Pérez" autoFocus />
+              <input className="adm-field" value={form.customer_name} onChange={(e) => setField('customer_name', e.target.value)} required placeholder="Familia Pérez" autoFocus />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <label style={labelStyle}>Personas *</label>
-                <input style={inputStyle} type="number" inputMode="decimal" min={1} max={100} value={form.party_size} onChange={(e) => setField('party_size', parseInt(e.target.value) || 1)} required />
+                <input className="adm-field" type="number" inputMode="decimal" min={1} max={100} value={form.party_size} onChange={(e) => setField('party_size', parseInt(e.target.value) || 1)} required />
               </div>
               <div>
                 <label style={labelStyle}>Teléfono</label>
-                <input style={inputStyle} value={form.phone} onChange={(e) => setField('phone', e.target.value)} placeholder="Opcional — para avisar por WhatsApp" />
+                <input className="adm-field" value={form.phone} onChange={(e) => setField('phone', e.target.value)} placeholder="Opcional — para avisar por WhatsApp" />
               </div>
             </div>
             <div>
               <label style={labelStyle}>Notas</label>
-              <textarea style={{ ...inputStyle, resize: 'vertical', minHeight: 60 }} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Preferencia de mesa, ocasión especial…" />
+              <textarea className="adm-field" style={{ resize: 'vertical', minHeight: 60 }} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Preferencia de mesa, ocasión especial…" />
             </div>
-            <Button type="submit" disabled={isPending} className="self-start">
-              {isPending ? 'Agregando…' : 'Agregar a la lista'}
-            </Button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? 'Agregando…' : 'Agregar a la lista'}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setTab('cola')}>
+                Cancelar
+              </Button>
+            </div>
           </form>
         </Card>
       ) : entries.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--u-text-3)' }}>
-          <Icon name="users" size={36} style={{ marginBottom: 10, opacity: 0.3 }} />
-          <div style={{ fontSize: 14 }}>Nadie está esperando mesa ahora</div>
-          <Button type="button" onClick={() => setTab('nueva')} className="mt-3 rounded-adm-full" size="sm">
-            Agregar un grupo
-          </Button>
-        </div>
+        <EmptyState
+          icon="users"
+          title="Nadie está esperando mesa"
+          desc="Cuando el local se llene, anota aquí a cada grupo y avísales en cuanto su mesa esté lista."
+          action={{ label: 'Agregar un grupo', onClick: () => setTab('nueva') }}
+        />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {entries.map((w) => {
             const busy = busyId === w.id && isPending;
             return (
               <Card key={w.id} className="flex flex-wrap items-center gap-3 p-3.5">
-                <div style={{ width: 8, height: 8, borderRadius: 99, background: w.status === 'NOTIFIED' ? 'var(--c-ok)' : 'var(--c-warn)', flexShrink: 0 }} />
+                <div style={{ width: 8, height: 8, borderRadius: 'var(--radius-full)', background: w.status === 'NOTIFIED' ? 'var(--c-ok)' : 'var(--c-warn)', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 160 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>{w.customer_name}</div>
                   <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
                     {w.party_size} {w.party_size === 1 ? 'persona' : 'personas'} · {elapsedLabel(w.created_at, now)}
                     {w.phone ? ` · ${w.phone}` : ''}
                   </div>
-                  {w.notes && <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 3, fontStyle: 'italic' }}>{w.notes}</div>}
+                  {w.notes && <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 3, fontStyle: 'italic' }}>{w.notes}</div>}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 11.5, fontWeight: 600, color: w.status === 'NOTIFIED' ? 'var(--c-ok)' : 'var(--c-warn)' }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: w.status === 'NOTIFIED' ? 'var(--c-ok)' : 'var(--c-warn)' }}>
                     {w.status === 'NOTIFIED' ? 'Avisado' : 'Esperando'}
                   </span>
                   {w.status === 'WAITING' && w.phone && (
@@ -198,7 +192,7 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
                       rel="noopener noreferrer"
                       onClick={() => handleAction(w.id, markWaitlistNotified)}
                       className="press"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 999, background: '#25D366', color: '#fff', fontSize: 12.5, fontWeight: 600, textDecoration: 'none' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 'var(--radius-full)', background: '#25D366', color: '#fff', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}
                     >
                       <Icon name="whatsapp" size={13} /> Avisar
                     </a>
@@ -216,9 +210,9 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
                       onChange={(e) => setMesaDe((prev) => ({ ...prev, [w.id]: e.target.value }))}
                       aria-label={`Mesa para ${w.customer_name}`}
                       style={{
-                        height: 32, borderRadius: 999, padding: '0 10px',
+                        height: 32, borderRadius: 'var(--radius-full)', padding: '0 10px',
                         border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
-                        color: 'var(--u-text)', fontSize: 12.5, cursor: 'pointer',
+                        color: 'var(--u-text)', fontSize: 12, cursor: 'pointer',
                       }}
                     >
                       <option value="" style={{ color: 'var(--u-text)' }}>Sin mesa</option>
@@ -252,8 +246,8 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
           <div className="adm-label" style={{ marginBottom: 10 }}>Hoy más temprano</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {recent.slice(0, 8).map((w) => (
-              <div key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', fontSize: 12.5, color: 'var(--u-text-3)' }}>
-                <span style={{ width: 6, height: 6, borderRadius: 99, background: w.status === 'SEATED' ? 'var(--c-ok)' : 'var(--c-danger)', flexShrink: 0 }} />
+              <div key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', fontSize: 12, color: 'var(--u-text-3)' }}>
+                <span style={{ width: 6, height: 6, borderRadius: 'var(--radius-full)', background: w.status === 'SEATED' ? 'var(--c-ok)' : 'var(--c-danger)', flexShrink: 0 }} />
                 <span style={{ color: 'var(--u-text-2)', fontWeight: 600 }}>{w.customer_name}</span>
                 <span>{w.party_size} {w.party_size === 1 ? 'persona' : 'personas'}</span>
                 <span>

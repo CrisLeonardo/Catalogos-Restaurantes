@@ -32,6 +32,7 @@
   /* Redondez del panel: escala TODAS las tarjetas del admin (config
      adminPanelRadius). El menú del cliente no se ve afectado (la vista
      previa vive en un iframe con su propio documento). */
+  --radius-sm:  calc(8px * var(--admin-panel-radius, 1));
   --radius-md:  calc(10px * var(--admin-panel-radius, 1));
   --radius-lg:  calc(14px * var(--admin-panel-radius, 1));
   --radius-xl:  calc(20px * var(--admin-panel-radius, 1));
@@ -231,7 +232,7 @@
 .admin-search:hover { color: var(--u-text); background: color-mix(in srgb, var(--admin-panel-text) 9%, transparent); }
 .admin-search-label { flex: 1; min-width: 0; }
 .admin-search-kbd {
-  flex-shrink: 0; font-family: var(--ui-font-mono); font-size: 10.5px;
+  flex-shrink: 0; font-family: var(--ui-font-mono); font-size: 11px;
   letter-spacing: 0.02em; color: var(--u-text-4);
   border: 1px solid var(--admin-panel-hair); border-radius: 5px;
   padding: 1px 5px; background: transparent;
@@ -301,6 +302,24 @@
 }
 .adm-tabs-wide .admin-tab[data-active="1"] {
   background: var(--adm-card, var(--admin-panel-bg));
+}
+
+/* Pestañas dentro de una pantalla (Lealtad, Proveedores, Reservaciones,
+   Lista de espera, Facturación): el mismo control segmentado de la barra
+   de sección, no una fila subrayada propia (auditoría 2026-10-02, T-07).
+   A su medida en escritorio; en el teléfono se reparten el ancho, con alto
+   de dedo. Ver components/admin/page-tabs.tsx. */
+.adm-tabs-page { align-self: flex-start; }
+.adm-tabs-page .admin-tab {
+  border: none; cursor: pointer; background: transparent;
+  font-family: inherit; min-height: 36px;
+}
+.adm-tabs-page .admin-tab[data-active="1"] {
+  background: var(--adm-card, var(--admin-panel-bg));
+}
+@media (max-width: 767px) {
+  .adm-tabs-page { display: flex; width: 100%; align-self: stretch; }
+  .adm-tabs-page .admin-tab { flex: 1 0 auto; justify-content: center; min-height: 40px; }
 }
 
 /* Enlace de acción al pie de una tarjeta ("Ver la comparativa completa",
@@ -376,6 +395,34 @@
   .admin-navlink-pending[data-pending="1"] { animation: none; border-top-color: currentColor; opacity: 0.6; }}
 
 /* Tabla de catálogo: grid en escritorio, tarjeta de 2 filas en móvil */
+/* Buscador de una lista del panel (Platillos, Clientes). Un <label> que
+   envuelve icono + <input>, así tocar el icono también enfoca el campo.
+   16 px en el teléfono: con menos, Safari de iOS hace zoom al enfocarlo. */
+.adm-search {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 40px; padding: 0 12px;
+  border-radius: calc(12px * var(--admin-panel-radius, 1));
+  border: 1px solid var(--adm-border, var(--u-hair-2));
+  background: var(--adm-card, transparent);
+  color: var(--u-text-4);
+  box-shadow: var(--adm-shadow-xs, none);
+  cursor: text;
+  min-width: 0;
+}
+.adm-search:focus-within {
+  border-color: color-mix(in srgb, var(--brand-accent) 55%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-accent) 16%, transparent);
+}
+/* `width: 100%`: sin ancho propio, un <input> mide ~20 caracteres como
+   mínimo y empujaba el botón de al lado a otro renglón en el teléfono. */
+.adm-search input {
+  flex: 1; min-width: 0; width: 100%; height: 38px;
+  border: 0; outline: 0; background: transparent;
+  color: var(--u-text); font: inherit; font-size: 14px;
+}
+.adm-search input::placeholder { color: var(--u-text-4); }
+@media (max-width: 767px) { .adm-search input { font-size: 16px; } }
+
 .catalog-head, .catalog-row {
   display: grid; grid-template-columns: 1fr 110px 150px 90px;
   column-gap: 14px; align-items: center;
@@ -386,11 +433,14 @@
   display: grid; grid-template-columns: minmax(0, 1.6fr) 70px 110px 130px 90px;
   column-gap: 14px; align-items: center;
 }
+/* La línea «3 pedidos · Q88.50 · último 22 sep» bajo el nombre es para el
+   teléfono, donde las columnas no caben (auditoría 2026-10-02, CLI-01). */
+.customers-meta { display: none; }
 @media (max-width: 820px) {
   .customers-head { display: none; }
-  .customers-row { grid-template-columns: minmax(0, 1fr) auto auto; }
-  .customers-row > div:nth-child(4),
-  .customers-row > div:nth-child(5) { display: none; }}
+  .customers-row { grid-template-columns: minmax(0, 1fr); }
+  .customers-row > div:not(:first-child) { display: none; }
+  .customers-meta { display: block; }}
 
 /* Tabla de insumos (admin/ingredientes): grid en escritorio, tarjeta en móvil.
    En móvil las columnas Unidad/Costo/Platillos se ocultan y esa info se
@@ -468,7 +518,7 @@
     position: sticky; top: 0; z-index: 40;
     min-height: 54px; padding: 0 12px 0 16px; gap: 6px;
   }
-  .admin-topbar h1 { font-size: 19px; }
+  .admin-topbar h1 { font-size: 18px; }
 
   /* Barra de sección, pegada justo debajo. Solo se pinta si tiene pestañas
      o el "volver" (ver showSubbar en shell.tsx). */
@@ -716,7 +766,31 @@
 .btn-tinted.chip-solid:disabled { opacity: 0.55; }
 
 /* Pedidos: board (flex: 1) + sidebar de gráfica (300 px fijo) */
-.orders-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
+/* Pedidos › En vivo (PED-06, maqueta D-2). El tablero de pedidos ocupa todo
+   el ancho (las gráficas se fueron a Hoy y a Negocio, D-3). En escritorio,
+   una columna por etapa; más estrecho, los grupos apilados y sin las etapas
+   vacías. */
+.orders-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+.orders-col { margin-bottom: 26px; }
+.orders-col[data-empty="1"] { display: none; }
+.orders-col-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.orders-col-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+.orders-col-empty { display: none; }
+@media (min-width: 1280px) {
+  .orders-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; margin-bottom: 26px; }
+  .orders-col, .orders-col[data-empty="1"] {
+    display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 12px;
+    border-radius: var(--radius-xl); background: color-mix(in srgb, var(--u-text) 3.5%, transparent);
+  }
+  /* En una columna de ~370 px el título y su pista no caben en un renglón:
+     la pista baja debajo del título. */
+  .orders-col-head { margin: 0; padding: 2px 4px; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .orders-col-cards { display: flex; flex-direction: column; gap: 10px; }
+  .orders-col-empty {
+    display: block; padding: 28px 12px; text-align: center; font-size: 13px; color: var(--u-text-4);
+    border: 1px dashed var(--u-hair-2); border-radius: var(--radius-lg);
+  }
+}
 /* ── Ergonomía móvil/tablet (lanzamiento 2026-06) ─────────────── */
 .super-nav-scroll::-webkit-scrollbar { display: none; }
 
@@ -732,7 +806,6 @@
   .floor-edit-canvas { --floor-token: 56px; }
   .floor-map-vp { --floor-pin: 58px; }}
 
-@media (max-width: 1100px) { .orders-grid { grid-template-columns: 1fr; }}
 
 /* Sección que rompe el max-width del layout (centrado de 800px) */
 .bleed { width: 100vw; margin-left: calc(50% - 50vw); padding: 0 20px; }
@@ -783,6 +856,24 @@
 .adm-float-alert[data-side="left"]  { left: 16px; align-items: flex-start; }
 .adm-float-alert[data-side="right"] { right: 16px; }
 
+/* Mientras hay una tarjeta de «Pedido nuevo» flotando, el contenido gana su
+   alto en el acolchado de abajo: antes tapaba los últimos ~90 px de
+   cualquier pantalla (campos, interruptores, «Guardar») y no había forma de
+   bajar a verlos. La barra de guardar se sube por encima de la tarjeta en
+   vez de quedar debajo (auditoría 2026-10-02, T-04). Mismo corte que el
+   acolchado de la barra de destinos (820 px). */
+.admin-shell:has(.adm-float-stack) { --adm-float-h: 92px; }
+.admin-shell:has(.adm-float-stack) .admin-content { padding-bottom: calc(var(--adm-float-h) + 24px); }
+.admin-shell:has(.adm-float-stack) .adm-savebar { bottom: calc(var(--adm-float-h) + 12px); }
+@media (max-width: 820px) {
+  .admin-shell:has(.adm-float-stack) .admin-content {
+    padding-bottom: calc(var(--adm-nav-h) + 34px + var(--adm-float-h) + env(safe-area-inset-bottom, 0px));
+  }
+  .admin-shell:has(.adm-float-stack) .adm-savebar {
+    bottom: calc(var(--adm-nav-h) + 16px + var(--adm-float-h) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 @media (max-width: 1024px) {
   .adm-float-alert { bottom: calc(var(--adm-nav-h) + 16px + env(safe-area-inset-bottom, 0px)); }
   /* En modo servicio los avisos se montan DENTRO de .admin-kiosk, que no
@@ -819,7 +910,7 @@
   flex: 1; min-width: 0;
   padding: 7px 10px;
   border: none; border-radius: 7px; background: none; cursor: pointer;
-  font-size: 13.5px; font-weight: 500; color: var(--u-text-2);
+  font-size: 13px; font-weight: 500; color: var(--u-text-2);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .wp-seg > button[data-on="1"] {
@@ -838,7 +929,7 @@
    apilan, porque tres cosas en fila a 375 px no caben sin recortar
    el importe. */
 .wp-billact { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
-.wp-billact-note { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--u-text-3); }
+.wp-billact-note { margin: 0; font-size: 12px; line-height: 1.45; color: var(--u-text-3); }
 @media (min-width: 720px) {
   .wp-billact { flex-direction: row; align-items: center; gap: 14px; }
   .wp-billact-note { flex: 1; min-width: 0; }}
@@ -866,11 +957,11 @@
   box-sizing: content-box;
 }
 .wp-servicebar-name { font-size: 14px; font-weight: 600; color: var(--u-text); }
-.wp-servicebar-mode { font-size: 13.5px; color: var(--u-text-3); }
+.wp-servicebar-mode { font-size: 13px; color: var(--u-text-3); }
 @media (max-width: 599px) { .wp-servicebar-mode { display: none; }}
 .wp-servicebar-clock {
   font-family: var(--ui-font-mono); font-weight: 600; font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em; font-size: 13.5px; color: var(--u-text-3);
+  letter-spacing: -0.02em; font-size: 13px; color: var(--u-text-3);
 }
 
 /* Visor del plano del salón (zoom/paneo). El MUNDO sigue siendo 16/10 (las
@@ -883,12 +974,26 @@
 
 /* Formulario de platillo (crear/editar): una columna en móvil; en PC la
    columna lateral (foto + disponibilidad) acompaña al contenido principal. */
-.pform-grid { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
+.pform-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
 @media (min-width: 900px) { .pform-grid { grid-template-columns: minmax(0, 1fr) 340px; }}
 .pform-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-/* En móvil la foto va primero (es lo primero que se quiere ver); en PC vive
-   en la columna lateral derecha. */
-@media (max-width: 899.98px) { .pform-side { order: -1; }}
+/* Teléfono: una sola columna. Antes se subía la columna lateral ENTERA
+   (`.pform-side { order: -1 }`) para que la foto fuera primero, y con ella
+   subían el icono del patrón y los dos interruptores: el nombre y el precio
+   —lo que más se edita— quedaban cuartos (auditoría 2026-10-02, MEN-02).
+   Ahora las dos columnas se «disuelven» (`display: contents`) y cada tarjeta
+   se ordena sola: foto, lo básico, los interruptores, el resto, y el icono del
+   patrón al final (solo importa si no hay foto). En PC no cambia nada. */
+@media (max-width: 899.98px) {
+  /* `minmax(0, 1fr)` arriba es lo que permite esto: sin columnas que los
+     contengan (`min-width: 0` de `.pform-col`), las tarjetas son hijas
+     directas de la rejilla, y con `1fr` la fila con scroll del icono del
+     patrón estiraba la ficha a 809 px en un teléfono de 390. */
+  .pform-col { display: contents; }
+  .pform-o-foto { order: -3; }
+  .pform-o-basico { order: -2; }
+  .pform-o-estado { order: -1; }
+}
 
 /* COPIA de `.press` (la original sigue en globals.css). En el archivo único
    iba justo AQUÍ, después de todo lo de arriba: los enlaces del menú del
@@ -973,6 +1078,16 @@
   background: var(--adm-card); box-shadow: var(--adm-shadow-xs);
 }
 .salon-summary::-webkit-scrollbar { display: none; }
+/* En el teléfono las cuatro cifras no caben y la tira se desplaza, pero la
+   tercera salía cortada («Sin cobrar Q0.») sin ninguna pista de que hay
+   más: un desvanecido en el borde derecho lo dice (auditoría 2026-10-02,
+   PED-10). */
+@media (max-width: 640px) {
+  .salon-summary {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+            mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+  }
+}
 /* `1 0 auto` con suelo: las celdas crecen a partes iguales cuando sobra
    sitio y, cuando falta, la tira se desplaza en vez de encogerlas.
 
@@ -995,7 +1110,7 @@
   box-shadow: inset 0 -2px 0 var(--brand-accent);
 }
 .salon-summary > button { cursor: pointer; }
-.salon-summary-label { font-size: 12.5px; color: var(--u-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.salon-summary-label { font-size: 12px; color: var(--u-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .salon-summary-value {
   font-family: var(--ui-font-mono); font-weight: 700; font-size: 22px;
   letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
@@ -1012,7 +1127,7 @@
 .salon-seg > button {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   padding: 8px 13px; border: none; border-radius: 8px; background: none; cursor: pointer;
-  font-size: 13.5px; font-weight: 500; color: var(--u-text-2); white-space: nowrap;
+  font-size: 13px; font-weight: 500; color: var(--u-text-2); white-space: nowrap;
 }
 .salon-seg > button[data-on="1"] {
   background: var(--adm-card); color: var(--u-text); font-weight: 600;
@@ -1052,15 +1167,40 @@
      en dos columnas de 46%. */
   .salon-top { flex-direction: column; gap: 10px; }
   .salon-summary { width: 100%; flex-basis: auto; }
-  .salon-summary > div { flex: 0 0 46%; min-width: 0; padding: 11px 14px; }
-  .salon-summary-value { font-size: 20px; }
   .salon-seg { display: flex; width: 100%; }
   /* 44 y no 38: este bloque va DESPUÉS de la regla de `pointer: coarse`,
      y a igual especificidad gana el último. Con 38 aquí, el teléfono
      —que también es puntero grueso— perdía los 44 px que esa regla le
      acababa de dar. Los dos sitios dicen lo mismo a propósito. */
   .salon-seg > button { flex: 1; min-height: 44px; }
-  .salon-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }}
+  /* Las mesas libres en rejilla de cinco (PED-09, opción A de la maqueta
+     D-2): las fichas ocupadas a todo el ancho, cada libre en su celda, con
+     solo el número (el nombre y las sillas no caben en 60 px; el lector de
+     pantalla los sigue diciendo). */
+  .salon-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px 8px; }
+  .salon-grid > :not(.salon-hueco) { grid-column: 1 / -1; }
+  .salon-grid > .salon-hueco { min-height: 56px; padding: 0; justify-content: center; align-items: center; }
+  .salon-grid > .salon-hueco > :not(.t-mono) { display: none; }
+  .salon-grid > .salon-hueco > .t-mono { font-size: 18px !important; }
+  .salon-libres-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+    margin-top: 8px; font-size: 15px; font-weight: 600; color: var(--u-text);
+  }
+  /* La tira de cifras, a UNA línea como en En vivo (maqueta D-2): cifra y
+     rótulo en el mismo renglón. Las que filtran siguen siendo botones. */
+  .salon-summary > div,
+  .salon-summary > button {
+    flex: 0 0 auto; min-width: 0; display: flex; align-items: baseline; gap: 6px;
+    padding: 0 14px; height: 50px; align-items: center;
+  }
+  .salon-summary-value { order: -1; margin-top: 0; font-size: 16px; }
+  .salon-summary-label { font-size: 13px; }
+  .salon-summary > div > div:nth-child(3),
+  .salon-summary > button > div:nth-child(3) { display: none; }
+}
+/* Fuera del teléfono el rótulo de libres no existe: ahí las libres son
+   celdas de la misma rejilla que las ocupadas. */
+@media (min-width: 768px) { .salon-libres-head { display: none; } }
 
 /* ── Ficha de mesa ────────────────────────────────────────────
    Tres estados y nada más: te necesita (lo único con color), en
@@ -1128,18 +1268,18 @@
 .salon-act {
   margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 7px;
   height: 38px; border-radius: 10px; cursor: pointer;
-  font-size: 13.5px; font-weight: 600; width: 100%;
+  font-size: 13px; font-weight: 600; width: 100%;
   border: 1px solid var(--u-hair-2); background: none; color: var(--u-text-2);
 }
 .salon-act[data-primary="1"] {
-  border-color: var(--brand-accent); background: var(--brand-accent);
+  border-color: var(--adm-accent-fill, var(--brand-accent)); background: var(--adm-accent-fill, var(--brand-accent));
   color: var(--brand-on-accent, #fff);
 }
 .salon-act:disabled { cursor: default; opacity: 0.55; }
 /* «Cobrar», «Llevar a la mesa», «Atender»: el botón más pulsado del turno.
    38 px con ratón, 46 con el dedo — y el dedo lo decide el puntero, no el
    ancho de la ventana (ver `.wp-step`). */
-@media (max-width: 767px), (pointer: coarse) { .salon-act { height: 46px; font-size: 14.5px; }}
+@media (max-width: 767px), (pointer: coarse) { .salon-act { height: 46px; font-size: 14px; }}
 
 /* ── La fila de la vista Lista ────────────────────────────────
    En escritorio es un renglón: número, qué pasa, monto y la acción al
@@ -1207,7 +1347,7 @@
    tenía la suya, con distintas palabras y en distinto orden. */
 .salon-legend {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  font-size: 12.5px; color: var(--u-text-3);
+  font-size: 12px; color: var(--u-text-3);
 }
 .salon-legend > span { display: inline-flex; align-items: center; gap: 6px; }
 .salon-legend > span > span[data-tone] {
@@ -1262,7 +1402,7 @@
 .salon-plan-out-pins { display: flex; flex-wrap: wrap; gap: 10px; }
 .salon-plan-out-link {
   display: inline-flex; align-items: center; gap: 4px; margin-top: 2px;
-  font-size: 12.5px; font-weight: 600; color: var(--brand-accent-ink); text-decoration: none;
+  font-size: 12px; font-weight: 600; color: var(--brand-accent-ink); text-decoration: none;
 }
 .salon-plan-out-link:hover { text-decoration: underline; }
 @media (max-width: 1180px) {
@@ -1281,7 +1421,7 @@
   pointer-events: auto; transform: translateY(-6px);
   display: inline-flex; align-items: center; gap: 7px;
   height: 34px; padding: 0 14px; border-radius: 99px; cursor: pointer;
-  font-size: 12.5px; font-weight: 600;
+  font-size: 12px; font-weight: 600;
   border: 1px solid var(--u-hair-2); color: var(--u-text-2);
   background: var(--adm-card);
   box-shadow: 0 6px 20px color-mix(in srgb, var(--u-text) 16%, transparent);
@@ -1341,7 +1481,7 @@
   border: 1px solid color-mix(in srgb, var(--brand-accent) 34%, transparent);
   background: color-mix(in srgb, var(--brand-accent) 6%, transparent);
 }
-.ciclo-next-note { flex: 1; min-width: 180px; font-size: 13.5px; color: var(--u-text-2); line-height: 1.45; }
+.ciclo-next-note { flex: 1; min-width: 180px; font-size: 13px; color: var(--u-text-2); line-height: 1.45; }
 
 /* ── La barra del siguiente paso, pegada abajo ────────────────
    Estaba fijada SOLO por debajo de 767 px, y ese corte dejaba a la
@@ -1398,9 +1538,9 @@
     grid-template-areas: "qty name price" "meta meta meta";
     column-gap: 11px; row-gap: 8px; align-items: center;
   }
-  .ciclo-qty { grid-area: qty; width: 34px; height: 28px; border-radius: 8px; font-size: 13.5px; }
+  .ciclo-qty { grid-area: qty; width: 34px; height: 28px; border-radius: 8px; font-size: 13px; }
   .ciclo-name { grid-area: name; }
-  .ciclo-price { grid-area: price; width: auto !important; font-size: 14.5px; }
+  .ciclo-price { grid-area: price; width: auto !important; font-size: 14px; }
   .ciclo-meta {
     grid-area: meta; display: flex; align-items: center; gap: 10px;
     justify-content: flex-end; flex-wrap: wrap;
@@ -1434,7 +1574,7 @@
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 36px; height: 32px; padding: 0 11px; cursor: pointer;
   border-radius: 9px; border: 1px solid var(--u-hair-2); background: none;
-  font-family: var(--ui-font-mono); font-size: 13.5px; font-weight: 600;
+  font-family: var(--ui-font-mono); font-size: 13px; font-weight: 600;
   color: var(--u-text-2);
 }
 .ciclo-seats > button[data-on="1"] {
@@ -1504,6 +1644,20 @@
    incluida— es un campo de verdad: 26 px no se tocan con el pulgar. */
 @media (max-width: 767px), (pointer: coarse) { .caja-turno { height: 40px; padding: 0 10px; font-size: 15px; }}
 
+/* En el teléfono (auditoría 2026-10-02, NEG-04):
+   · el campo del turno, de 40 px de alto, metido entre «Sábado, 3 de
+     octubre ·» y «· Caja» parecía un hueco roto en la frase: baja a su
+     propio renglón, a lo ancho, y la frase queda «fecha · quién cierra»;
+   · los tres pasos no cabían y «Propinas» salía cortado por la derecha:
+     sin las rayitas entre pasos caben los tres enteros en 360 px. */
+@media (max-width: 520px) {
+  .caja-sep-turno { display: none; }
+  .caja-turno { order: 9; flex: 1 0 100%; max-width: none; margin-top: 4px; }
+  .caja-steps > div { flex: 1 1 0; padding-right: 8px; }
+  .caja-steps > div > span[aria-hidden] { display: none; }
+  .caja-steps > div > button { gap: 8px !important; }
+}
+
 /* La «×» de anular un plato en la tarjeta del pedido dibuja 22 px —más
    grande descuadraría la fila— pero se toca en 36 × 44: el área invisible
    de alrededor es la que recibe el dedo. */
@@ -1539,7 +1693,7 @@
 @media (max-width: 767px) {
   .caja-denom { grid-template-columns: 62px 1fr 86px; gap: 10px; }
   .caja-denom-label { font-size: 15px; }
-  .caja-denom input { height: 56px; padding: 0 14px; border-radius: 12px; font-size: 21px; }
+  .caja-denom input { height: 56px; padding: 0 14px; border-radius: 12px; font-size: 20px; }
   .caja-denom-sub { font-size: 14px; }}
 
 /* Pie fijo del cierre en el teléfono: el total contado y el paso
@@ -1799,6 +1953,13 @@
 }
 .sv-hs::-webkit-scrollbar { display: none; }
 .sv-hs > * { flex-shrink: 0; scroll-snap-align: start; }
+/* Los filtros del salón se desvanecen en el borde: «Falta…» se cortaba seco
+   y no se sabía que había más (PED-13, maqueta D-2). */
+.sv-hs-fade {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+          mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+  padding-right: 24px;
+}
 
 /* Lo que se desplaza en vertical: sin barra visible, pero con inercia. */
 .sv-vs {
@@ -1836,7 +1997,7 @@
   display: inline-flex; align-items: center; gap: 7px;
   height: var(--m-tap); padding: 0 15px; border-radius: var(--radius-md);
   border: 1px solid transparent; background: var(--surface-2);
-  color: var(--u-text-2); font: inherit; font-size: 13.5px; font-weight: 600;
+  color: var(--u-text-2); font: inherit; font-size: 13px; font-weight: 600;
   white-space: nowrap; cursor: pointer;
   transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
 }
@@ -1846,7 +2007,7 @@
 }
 .sv-pill[data-on="1"]:hover { background: var(--u-text); color: var(--brand-bg); }
 .sv-pill-count {
-  font-family: var(--ui-font-mono); font-size: 11.5px; font-weight: 600;
+  font-family: var(--ui-font-mono); font-size: 11px; font-weight: 600;
   opacity: 0.72;
 }
 
@@ -1861,7 +2022,7 @@
   font-size: 11px; font-weight: 600; white-space: nowrap;
   border: 1px solid var(--u-hair); background: var(--surface-1); color: var(--u-text-3);
 }
-.sv-chip[data-big="1"] { padding: 4px 9px; font-size: 11.5px; }
+.sv-chip[data-big="1"] { padding: 4px 9px; font-size: 11px; }
 
 .sv-chip[data-st] { background: var(--sv-bg); border-color: var(--sv-line); color: var(--sv-ink); }
 
@@ -1886,7 +2047,7 @@
 .sv-top-id { display: flex; align-items: center; gap: 10px; flex-shrink: 0; min-width: 0; }
 .sv-top-mark {
   width: 34px; height: 34px; flex-shrink: 0; border-radius: var(--radius-md);
-  background: var(--brand-accent); color: var(--brand-on-accent);
+  background: var(--adm-accent-fill, var(--brand-accent)); color: var(--brand-on-accent);
   display: grid; place-items: center; font-weight: 700; font-size: 15px;
   overflow: hidden;
 }
@@ -1900,7 +2061,7 @@
   display: inline-flex; align-items: center; gap: 8px;
   height: var(--m-tap); padding: 0 15px; border-radius: var(--radius-md);
   border: 1px solid var(--u-hair); background: var(--adm-card);
-  color: var(--u-text); font: inherit; font-size: 13.5px; cursor: pointer;
+  color: var(--u-text); font: inherit; font-size: 13px; cursor: pointer;
   white-space: nowrap;
 }
 .sv-tab:hover { border-color: var(--u-text-4); }
@@ -2002,7 +2163,7 @@
 .sv-mesa-n {
   flex-shrink: 0; width: 38px; height: 38px; border-radius: var(--radius-md);
   display: grid; place-items: center;
-  font-family: var(--ui-font-mono); font-size: 17px; font-weight: 600;
+  font-family: var(--ui-font-mono); font-size: 16px; font-weight: 600;
   background: var(--surface-2); color: inherit;
 }
 .sv-mesa[data-on="1"] .sv-mesa-n { background: color-mix(in srgb, var(--brand-bg) 14%, transparent); }
@@ -2023,6 +2184,11 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .sv-mesa-right { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.sv-mesa-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.sv-mesa-row + .sv-mesa-row { margin-top: 3px; }
+.sv-mesa-row > :first-child { flex: 1; min-width: 0; }
+.sv-mesa-row > :not(:first-child) { flex-shrink: 0; }
+.sv-mesa-row .sv-mesa-sub { margin-top: 0; }
 .sv-mesa-total { font-family: var(--ui-font-mono); font-size: 13px; font-weight: 600; }
 
 /* ── La mesa, en rejilla (móvil y vista de fichas) ──────────── */
@@ -2046,11 +2212,11 @@
 .sv-card[data-on="1"] { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
 .sv-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .sv-card-n {
-  font-family: var(--ui-font-mono); font-size: 30px; font-weight: 600;
+  font-family: var(--ui-font-mono); font-size: 28px; font-weight: 600;
   line-height: 1; letter-spacing: -0.02em;
 }
 .sv-card-name { display: block; font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
-.sv-card-sub { display: block; font-size: 12.5px; font-weight: 500; color: var(--u-text-3); margin-top: 2px; }
+.sv-card-sub { display: block; font-size: 12px; font-weight: 500; color: var(--u-text-3); margin-top: 2px; }
 .sv-card-total { display: block; font-family: var(--ui-font-mono); font-size: 15px; font-weight: 600; }
 
 /* ══════════════════════════════════════════════════════════════
@@ -2137,7 +2303,7 @@
 .sv-dish[data-out="1"] .sv-dish-price { opacity: 0.55; }
 .sv-dish[data-out="1"]:hover { border-color: var(--u-hair); }
 .sv-dish-name {
-  display: block; font-size: 14.5px; font-weight: 600; line-height: 1.25;
+  display: block; font-size: 14px; font-weight: 600; line-height: 1.25;
   letter-spacing: -0.01em; padding-right: 30px;
 }
 .sv-dish-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -2147,7 +2313,7 @@
 .sv-dish-opts {
   min-height: var(--m-tap); min-width: var(--m-tap); padding: 0 13px;
   display: grid; place-items: center; border: none; cursor: pointer;
-  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--u-text-2);
+  font: inherit; font-size: 12px; font-weight: 600; color: var(--u-text-2);
   border-radius: var(--radius-md); background: var(--surface-2);
   transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
 }
@@ -2157,7 +2323,7 @@
 }
 .sv-dish-q {
   position: absolute; top: 8px; right: 8px; min-width: 26px; height: 26px; padding: 0 7px;
-  border-radius: var(--radius-full); background: var(--brand-accent); color: var(--brand-on-accent);
+  border-radius: var(--radius-full); background: var(--adm-accent-fill, var(--brand-accent)); color: var(--brand-on-accent);
   font-family: var(--ui-font-mono); font-size: 13px; font-weight: 600;
   display: grid; place-items: center;
 }
@@ -2165,7 +2331,7 @@
    la esquina, se montaba sobre el nombre del plato. */
 .sv-dish-out {
   padding: 4px 9px; border-radius: 7px;
-  font-size: 11.5px; font-weight: 700; white-space: nowrap;
+  font-size: 11px; font-weight: 700; white-space: nowrap;
   background: var(--c-warn-bg); color: var(--c-warn);
 }
 /* La rejilla lleva el mismo margen lateral que el buscador y las
@@ -2201,8 +2367,8 @@
   background: var(--sv-info-fill); color: var(--c-on-solid);
   padding: 3px 7px; border-radius: 6px;
 }
-.sv-qr-title { font-size: 13.5px; font-weight: 600; color: var(--c-info); }
-.sv-qr-items { font-size: 12.5px; color: var(--c-info); line-height: 1.45; }
+.sv-qr-title { font-size: 13px; font-weight: 600; color: var(--c-info); }
+.sv-qr-items { font-size: 12px; color: var(--c-info); line-height: 1.45; }
 
 /* ── Renglón SIN ENVIAR (regla 3: apilado) ─────────────────── */
 .sv-line-new {
@@ -2272,7 +2438,7 @@
   border-radius: var(--radius-lg); background: var(--surface-1);
 }
 .sv-line-done .sv-line-q { color: var(--u-text-3); font-size: 13px; }
-.sv-line-done-name { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 500; color: var(--u-text-2); }
+.sv-line-done-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; color: var(--u-text-2); }
 .sv-line-done-total { font-family: var(--ui-font-mono); font-size: 13px; color: var(--u-text-3); }
 /* Cobrada en un cobro por partes: se queda a la vista, saldada. Borrarla
    sería anular una venta. Se apaga lo que se LEE, no los botones: en
@@ -2304,21 +2470,21 @@
 .sv-foot-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .sv-foot-label { font-size: 14px; font-weight: 500; color: var(--u-text-2); }
 .sv-foot-total {
-  font-family: var(--ui-font-mono); font-size: 26px; font-weight: 600; letter-spacing: -0.02em;
+  font-family: var(--ui-font-mono); font-size: 24px; font-weight: 600; letter-spacing: -0.02em;
 }
-.sv-foot-note { font-size: 12.5px; color: var(--u-text-3); line-height: 1.45; }
+.sv-foot-note { font-size: 12px; color: var(--u-text-3); line-height: 1.45; }
 .sv-foot-keys {
-  font-family: var(--ui-font-mono); font-size: 11.5px; color: var(--u-text-3); line-height: 1.5;
+  font-family: var(--ui-font-mono); font-size: 11px; color: var(--u-text-3); line-height: 1.5;
 }
 
 .sv-cta {
   display: flex; align-items: center; justify-content: center; gap: 10px;
   width: 100%; height: 54px; border: none; border-radius: var(--radius-lg);
   font: inherit; font-size: 16px; font-weight: 600; cursor: pointer;
-  background: var(--brand-accent); color: var(--brand-on-accent);
+  background: var(--adm-accent-fill, var(--brand-accent)); color: var(--brand-on-accent);
   transition: background 120ms var(--ease-out), opacity 120ms var(--ease-out);
 }
-.sv-cta:hover { background: var(--brand-accent-ink); }
+.sv-cta:hover { background: var(--adm-accent-fill-hover, var(--brand-accent-ink)); }
 .sv-cta:disabled { opacity: 0.55; cursor: default; }
 .sv-cta[data-tone="ok"] { background: var(--sv-ok-fill); color: var(--c-on-solid); }
 /* El hover oscurece un paso más. Antes iba a `--c-ok`, que es TINTA: en
@@ -2363,9 +2529,9 @@
   border-radius: var(--radius-lg); background: var(--surface-2); color: var(--u-text);
   display: grid; place-items: center; cursor: pointer; font: inherit;
 }
-.sv-m-title { font-size: 16.5px; font-weight: 600; letter-spacing: -0.02em; }
+.sv-m-title { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
 .sv-m-sala-title { font-size: 22px; font-weight: 600; letter-spacing: -0.03em; }
-.sv-m-sub { font-size: 12.5px; font-weight: 500; color: var(--u-text-3); margin-top: 1px; }
+.sv-m-sub { font-size: 12px; font-weight: 500; color: var(--u-text-3); margin-top: 1px; }
 
 /* La barra de abajo del móvil: resumen + acción. Se pega al canto y
    esquiva la barra de destinos del panel cuando la hay. */
@@ -2381,13 +2547,13 @@
 }
 .sv-m-resumen-label { font-size: 14px; font-weight: 600; color: var(--u-text-2); }
 .sv-m-resumen-total { font-family: var(--ui-font-mono); font-size: 18px; font-weight: 600; }
-.sv-m-cta { height: 56px; font-size: 16.5px; }
+.sv-m-cta { height: 56px; font-size: 16px; }
 
 /* El aviso del modo aprendiz: una frase, donde hace falta. */
 .sv-hint {
   padding: 12px 14px; border-radius: var(--radius-lg);
   background: var(--c-warn-bg); color: var(--c-warn);
-  font-size: 13.5px; font-weight: 500; line-height: 1.45;
+  font-size: 13px; font-weight: 500; line-height: 1.45;
 }
 .sv-hint-inline {
   font-size: 12px; color: var(--c-warn); background: var(--c-warn-bg);
@@ -2419,10 +2585,10 @@
   }}
 .sv-sheet-pad { padding: 18px 18px calc(22px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 16px; }
 .sv-sheet-head { display: flex; align-items: flex-start; gap: 12px; }
-.sv-sheet-title { font-size: 19px; font-weight: 600; letter-spacing: -0.02em; }
+.sv-sheet-title { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
 .sv-sheet-sub { font-size: 13px; color: var(--u-text-3); margin-top: 2px; }
 .sv-sheet-total {
-  font-family: var(--ui-font-mono); font-size: 30px; font-weight: 600;
+  font-family: var(--ui-font-mono); font-size: 28px; font-weight: 600;
   letter-spacing: -0.03em; margin-top: 4px;
 }
 .sv-x {
@@ -2444,21 +2610,21 @@
 .sv-opt {
   min-height: 46px; padding: 0 15px; border-radius: var(--radius-lg);
   border: 1.5px solid var(--u-hair); background: var(--adm-card); color: var(--u-text);
-  font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
   display: inline-flex; align-items: center; gap: 8px;
 }
 .sv-opt[data-on="1"] {
   border-color: var(--brand-accent); color: var(--brand-accent-ink);
   background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
 }
-.sv-opt-extra { font-family: var(--ui-font-mono); font-size: 12.5px; opacity: 0.8; }
+.sv-opt-extra { font-family: var(--ui-font-mono); font-size: 12px; opacity: 0.8; }
 .sv-opts-row { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* Segmentado (cuenta completa / partes iguales / por platos). */
 .sv-seg { display: flex; gap: 6px; padding: 4px; background: var(--surface-2); border-radius: var(--radius-lg); }
 .sv-seg > button {
   flex: 1; min-height: 42px; border: none; border-radius: var(--radius-md);
-  background: none; color: var(--u-text-3); font: inherit; font-size: 13.5px; font-weight: 600;
+  background: none; color: var(--u-text-3); font: inherit; font-size: 13px; font-weight: 600;
   cursor: pointer;
 }
 .sv-seg > button[data-on="1"] {
@@ -2518,7 +2684,7 @@
   border-color: var(--brand-accent);
   background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
 }
-.sv-pick-n { font-family: var(--ui-font-mono); font-size: 19px; font-weight: 600; }
+.sv-pick-n { font-family: var(--ui-font-mono); font-size: 18px; font-weight: 600; }
 .sv-pick-sub { font-size: 11px; color: var(--u-text-3); }
 
 /* El micrófono escuchando. */
@@ -2538,7 +2704,7 @@
   border-radius: var(--radius-lg); background: var(--surface-1);
 }
 .sv-atajo-k {
-  font-family: var(--ui-font-mono); font-size: 12.5px; font-weight: 600;
+  font-family: var(--ui-font-mono); font-size: 12px; font-weight: 600;
   background: var(--surface-3); padding: 5px 9px; border-radius: var(--radius-md);
   min-width: 92px; text-align: center; flex-shrink: 0;
 }
@@ -2561,7 +2727,7 @@
 .sv-palette > input {
   width: 100%; height: 60px; padding: 0 18px; border: none;
   border-bottom: 1px solid var(--u-hair); background: none; color: var(--u-text);
-  font: inherit; font-size: 17px; font-weight: 500; outline: none;
+  font: inherit; font-size: 16px; font-weight: 500; outline: none;
 }
 .sv-palette-list { max-height: 46vh; overflow-y: auto; padding: 8px; }
 .sv-pres {
@@ -2575,11 +2741,11 @@
   color: var(--u-text-2); background: var(--surface-3); padding: 4px 7px;
   border-radius: 6px; min-width: 66px; text-align: center; flex-shrink: 0;
 }
-.sv-pres-l { display: block; font-size: 14.5px; font-weight: 600; }
-.sv-pres-s { display: block; font-size: 12.5px; color: var(--u-text-3); margin-top: 1px; }
+.sv-pres-l { display: block; font-size: 14px; font-weight: 600; }
+.sv-pres-s { display: block; font-size: 12px; color: var(--u-text-3); margin-top: 1px; }
 .sv-palette-foot {
   padding: 9px 16px; border-top: 1px solid var(--u-hair); background: var(--surface-1);
-  font-family: var(--ui-font-mono); font-size: 11.5px; color: var(--u-text-3);
+  font-family: var(--ui-font-mono); font-size: 11px; color: var(--u-text-3);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -2596,14 +2762,14 @@
   display: flex; align-items: center; gap: 12px;
   background: var(--u-text); color: var(--brand-bg);
   padding: 13px 20px; border-radius: var(--radius-lg);
-  font-size: 14.5px; font-weight: 600;
+  font-size: 14px; font-weight: 600;
   box-shadow: var(--adm-shadow-lg, 0 12px 30px rgba(0,0,0,.4));
   animation: fade-up 180ms var(--ease-out) both;
 }
 .sv-toast[data-bad="1"] { background: var(--c-danger-solid); color: var(--c-on-solid); }
 .sv-toast-undo {
   border: none; background: color-mix(in srgb, var(--brand-bg) 18%, transparent);
-  color: inherit; font: inherit; font-size: 13.5px; font-weight: 700;
+  color: inherit; font: inherit; font-size: 13px; font-weight: 700;
   padding: 6px 12px; border-radius: var(--radius-md); cursor: pointer; flex-shrink: 0;
 }
 
@@ -2677,7 +2843,7 @@
      trozo enseñado, así que aquí NO se centra con transform. */
   border-radius: var(--radius-md); border: 1px dashed var(--u-hair-2);
   background: var(--surface-1); color: var(--u-text-3);
-  font-size: 11.5px; font-weight: 600; text-align: center; overflow: hidden;
+  font-size: 11px; font-weight: 600; text-align: center; overflow: hidden;
   padding: 2px 6px; pointer-events: none;
 }
 .sv-plano-mesa {
@@ -2691,7 +2857,7 @@
 .sv-plano-mesa[data-shape="circle"] { border-radius: 50%; }
 .sv-plano-mesa:hover { transform: translate(-50%, -50%) scale(1.04); }
 .sv-plano-mesa[data-on="1"] { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
-.sv-plano-n { font-family: var(--ui-font-mono); font-size: 19px; font-weight: 600; line-height: 1; }
+.sv-plano-n { font-family: var(--ui-font-mono); font-size: 18px; font-weight: 600; line-height: 1; }
 .sv-plano-sub {
   font-size: 10.5px; font-weight: 600; color: var(--sv-ink);
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -2780,4 +2946,81 @@
 @keyframes sv-puls {
   0%, 100% { opacity: 0.45; transform: scale(0.92); }
   50%      { opacity: 1;    transform: scale(1.05); }
+}
+
+/* ============================================================
+   FICHAS DEL PANEL — una sola superficie (auditoría 2026-10-02, T-12)
+   ------------------------------------------------------------
+   `.glass-quiet` y `.glass-solid` son superficies del MENÚ del
+   comensal: vidrio translúcido pensado para fondos oscuros con
+   imagen. Dentro del panel, en claro, salían gris sobre gris
+   (`rgba(0,0,0,.035)` encima del gris del fondo) junto a las
+   tarjetas blancas de `<Card>`: el formulario del platillo, la
+   ficha del restaurante del Super, las zonas de entrega… Aquí
+   se pintan como `<Card>`, con los tokens del panel, en claro
+   y en oscuro. El menú (y su vista previa, que es otro
+   documento) no lleva `data-admin-area` y no cambia.
+   ============================================================ */
+html[data-admin-area] .glass-quiet,
+html[data-admin-area] .glass-solid {
+  background: var(--adm-card);
+  border: 1px solid var(--adm-border);
+  box-shadow: var(--adm-shadow-sm);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Área de toque mínima de 44 px SIN cambiar el dibujo (auditoría
+   2026-10-02, T-20). Para los botoncitos que no pueden crecer sin romper su
+   fila —la «×» de anular un plato, las flechas de Categorías, la «×» de
+   quitar una mesa del plano, «Abrir … →», el teléfono del pedido—: un
+   `::after` transparente centrado que mide al menos 44 × 44. Solo con dedo
+   (`pointer: coarse`); con ratón sobraría y taparía al vecino. */
+@media (pointer: coarse) {
+  .tap44 { position: relative; }
+  .tap44::after {
+    content: ''; position: absolute; left: 50%; top: 50%;
+    width: max(100%, 44px); height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Portada de Ajustes: dos columnas que se reparten por altura (N-06). */
+.adm-settings-index { columns: 2 320px; column-gap: 24px; }
+.adm-settings-index > * { break-inside: avoid; margin-bottom: 24px; }
+
+/* Dos anchos de contenido (auditoría 2026-10-02, T-24). Había 620, 640,
+   720, 760 y 1.040 px según quién hizo cada pantalla.
+   · «lectura»: formularios y ajustes — una columna que se lee de arriba
+     abajo; más ancha, los campos se estiran sin sentido.
+   · «resumen»: portadas con varias tarjetas (Hoy, Ajustes, Métricas).
+   Las pantallas de operación (Pedidos, Menú, Mesas) usan el ancho entero. */
+.adm-w-read { max-width: 720px; }
+.adm-w-overview { max-width: 1040px; }
+
+/* Tablas apilables (`<Table data-stack>`): en el teléfono cada fila es una
+   tarjeta — la primera celda de título y las demás como «rótulo: valor»
+   (el rótulo sale de `data-label`). Auditoría 2026-10-02, SUP-03. */
+@media (max-width: 640px) {
+  table[data-stack] { min-width: 0 !important; }
+  table[data-stack] thead { display: none; }
+  table[data-stack] tr { display: block; padding: 12px 14px; }
+  table[data-stack] td { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; text-align: right; }
+  table[data-stack] td:first-child { display: block; text-align: left; padding-bottom: 8px; }
+  table[data-stack] td:last-child:not([data-label]) { justify-content: flex-end; padding-top: 8px; }
+  table[data-stack] td[data-label]::before {
+    content: attr(data-label); flex-shrink: 0;
+    font-family: var(--ui-font-sans); font-weight: 400;
+    font-size: 12px; color: var(--u-text-3); text-align: left;
+  }
+}
+
+/* ── Super › Configuración › Portada (WEB-02/03) ──
+   El formulario a la izquierda y el teléfono tal como sale hoy en la
+   portada a la derecha; en pantallas angostas, el teléfono debajo. */
+.landing-admin { display: grid; gap: 22px; align-items: start; grid-template-columns: minmax(0, 1fr); }
+.landing-admin-aside { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+@media (min-width: 1100px) {
+  .landing-admin { grid-template-columns: minmax(0, 720px) 300px; }
+  .landing-admin-aside { position: sticky; top: 88px; }
 }

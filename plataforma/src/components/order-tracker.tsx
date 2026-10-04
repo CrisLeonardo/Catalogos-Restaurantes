@@ -19,6 +19,7 @@ import { formatPrice } from '@/lib/theme/resolve';
 import { getPublicOrder, cancelPublicOrder, type PublicOrder } from '@/lib/actions/orders';
 import { useTenantPrefix } from '@/lib/tenant-client';
 import type { OrderStatus } from '@/types';
+import { waDigits } from '@/lib/reminder';
 
 const POLL_MS = 8000;
 // SERVED es terminal para el seguimiento del comensal: una vez servida la
@@ -45,10 +46,13 @@ export default function OrderTracker({
   token,
   restaurantId,
   initialOrder,
+  whatsapp,
 }: {
   token: string;
   restaurantId: string;
   initialOrder: PublicOrder;
+  /** WhatsApp del restaurante, para que un pedido cancelado tenga salida. */
+  whatsapp?: string | null;
 }) {
   const config = useThemeConfig();
   const content = useThemeContent();
@@ -279,6 +283,30 @@ export default function OrderTracker({
             <Icon name="x" size={26} strokeWidth={2.4} />
           </div>
           <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--u-text)' }}>{content.tracking.statusCancel}</div>
+          {/* Antes «Cancelado» y nada más: ni a quién preguntar ni cómo volver
+              a pedir (auditoría 2026-10-02, CAT-08). */}
+          <p style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-3)', lineHeight: 1.5, margin: '8px auto 0', maxWidth: 320 }}>
+            {waDigits(whatsapp)
+              ? 'Si no esperabas esto o tienes dudas, escríbele al restaurante.'
+              : 'Si no esperabas esto o tienes dudas, pregúntale al restaurante.'}
+          </p>
+          {/* «Volver al menú» ya está debajo de la cuenta: aquí solo la vía
+              para preguntar, si el restaurante tiene WhatsApp. */}
+          {waDigits(whatsapp) && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch', maxWidth: 320, margin: '16px auto 0' }}>
+            {waDigits(whatsapp) && (
+              <a
+                href={`https://wa.me/${waDigits(whatsapp)}?text=${encodeURIComponent(`Hola, mi pedido ${order.orderNumber} aparece como cancelado. ¿Me pueden ayudar?`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="press btn-accent"
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 46, borderRadius: 'var(--radius-lg)', fontWeight: 600, textDecoration: 'none' }}
+              >
+                <Icon name="whatsapp" size={17} /> Escribir por WhatsApp
+              </a>
+            )}
+          </div>
+          )}
         </Glass>
       ) : (
         /* Timeline */

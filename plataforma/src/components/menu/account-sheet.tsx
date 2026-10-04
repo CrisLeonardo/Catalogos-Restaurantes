@@ -247,7 +247,7 @@ export default function AccountSheet({
         {/* Tarjeta de puntos */}
         {loyaltyOn && balance != null && (
           <div className="m-surface" style={{ borderRadius: 'var(--m-r-lg)', padding: 'var(--m-sp-4)', background: 'linear-gradient(135deg, color-mix(in srgb, var(--brand-accent) 22%, transparent), var(--surface-2) 75%)' }}>
-            <div className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)' }}>Tus puntos de fidelidad</div>
+            <div className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)' }}>Tus puntos</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
               <span style={{ fontSize: 'calc(36px * var(--font-scale))', fontWeight: 800, color: 'var(--brand-accent-ink)', lineHeight: 0.95 }}>{fmtPts(balance)}</span>
               <span className="t-mute" style={{ fontSize: 'var(--m-fs-md)' }}>{balance === 1 ? 'punto' : 'puntos'}</span>
@@ -375,7 +375,7 @@ export default function AccountSheet({
                 <div style={{ fontWeight: 600, fontSize: 'var(--m-fs-md)', marginBottom: 6 }}>Accede con Google</div>
                 <p className="t-mute" style={{ fontSize: 'var(--m-fs-sm)', marginBottom: 12, lineHeight: 1.5 }}>
                   {loyaltyOn
-                    ? 'Inicia sesión para ver y usar tus puntos de fidelidad en cualquier dispositivo.'
+                    ? 'Inicia sesión para ver y usar tus puntos en cualquier dispositivo.'
                     : 'Guarda tus datos y encuentra tus pedidos en cualquier dispositivo.'}
                 </p>
                 <GoogleSignInButton full returnTab="cuenta" />

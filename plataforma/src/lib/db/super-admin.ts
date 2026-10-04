@@ -288,6 +288,9 @@ export type RestaurantTraffic = {
   unique30: number;
   /** Pedidos en los últimos 30 días (sin cancelados). */
   orders30: number;
+  /** De esos, los que hizo el comensal desde el menú (sin mesero): los únicos
+   *  que salen de una visita. Es la base de la conversión. */
+  online30: number;
 };
 
 /**
@@ -309,7 +312,7 @@ export const getAllRestaurantsTraffic = cache(
         .limit(100000),
       db
         .from('orders')
-        .select('restaurant_id')
+        .select('restaurant_id, waiter_id')
         .neq('status', 'CANCEL')
         .gte('created_at', sinceIso)
         .limit(100000),
@@ -320,7 +323,7 @@ export const getAllRestaurantsTraffic = cache(
 
     for (const v of visits ?? []) {
       const id = v.restaurant_id as string;
-      const t = map.get(id) ?? { visits30: 0, unique30: 0, orders30: 0 };
+      const t = map.get(id) ?? { visits30: 0, unique30: 0, orders30: 0, online30: 0 };
       t.visits30 += 1;
       map.set(id, t);
       let set = uniques.get(id);
@@ -333,8 +336,9 @@ export const getAllRestaurantsTraffic = cache(
     }
     for (const o of orders ?? []) {
       const id = o.restaurant_id as string;
-      const t = map.get(id) ?? { visits30: 0, unique30: 0, orders30: 0 };
+      const t = map.get(id) ?? { visits30: 0, unique30: 0, orders30: 0, online30: 0 };
       t.orders30 += 1;
+      if (!o.waiter_id) t.online30 += 1;
       map.set(id, t);
     }
     return map;
@@ -401,7 +405,7 @@ export const getRestaurantDeepMetrics = cache(
         .gte('created_at', start60Iso)
         .limit(100000),
       db.from('orders')
-        .select('total, created_at')
+        .select('total, created_at, waiter_id')
         .eq('restaurant_id', restaurantId)
         .neq('status', 'CANCEL')
         .gte('created_at', start60Iso)
@@ -433,11 +437,16 @@ export const getRestaurantDeepMetrics = cache(
     }
 
     let orders30 = 0, ordersPrev = 0, revenue30 = 0, revenuePrev = 0;
+    // Solo los del comensal desde el menú cuentan para la conversión: los del
+    // mesero o la caja no vienen de una visita, y con ellos la conversión
+    // pasaba del 100 % (auditoría 2026-10-02, SUP-04).
+    let online30 = 0;
     for (const o of orders ?? []) {
       const t = new Date(o.created_at as string).getTime();
       const amt = Number(o.total ?? 0);
       if (t >= splitMs) {
         orders30 += 1; revenue30 += amt;
+        if (!o.waiter_id) online30 += 1;
         const k = (o.created_at as string).slice(0, 10);
         const pt = seriesMap.get(k); if (pt) { pt.orders += 1; pt.revenue += amt; }
       } else { ordersPrev += 1; revenuePrev += amt; }
@@ -454,7 +463,7 @@ export const getRestaurantDeepMetrics = cache(
       visitsGrowth: growth(visits30, visitsPrev),
       ordersGrowth: growth(orders30, ordersPrev),
       revenueGrowth: growth(revenue30, revenuePrev),
-      conversion: visits30 > 0 ? (orders30 / visits30) * 100 : 0,
+      conversion: visits30 > 0 ? Math.min(100, (online30 / visits30) * 100) : 0,
       avgTicket: orders30 > 0 ? revenue30 / orders30 : 0,
       series: dayKeys.map((k) => seriesMap.get(k)!),
     };

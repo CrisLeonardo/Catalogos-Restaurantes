@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
+import { fmtMoney } from '@/lib/money';
 /* `Link` es aqui `PanelLink`: traduce las rutas del panel al origen desde el
    que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
    Ver components/admin/panel-link.tsx. */
@@ -14,6 +15,9 @@ import { Section, SectionNote } from '@/components/ui/section';
 import { Stat, StatGroup } from '@/components/ui/stat';
 import { EmptyState } from '@/components/ui/empty-state';
 import ClientesExportButton from '@/components/admin/clientes-export-button';
+import ClientesFiltros from '@/components/admin/clientes-filtros';
+import { parseCustomerSort } from '@/lib/customer-sort';
+import { waDigits } from '@/lib/reminder';
 import type { Customer, Order } from '@/types';
 
 export const metadata = { title: 'Clientes – Panel admin' };
@@ -27,7 +31,7 @@ export const metadata = { title: 'Clientes – Panel admin' };
    ============================================================ */
 
 function fmtQ(n: number): string {
-  return `Q${Number(n).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return fmtMoney(Number(n));
 }
 
 function fmtDate(iso: string | null, tz: string): string {
@@ -60,13 +64,14 @@ const STATUS_ES: Record<string, string> = {
 export default async function AdminClientesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ c?: string; page?: string }>;
+  searchParams: Promise<{ c?: string; page?: string; q?: string; orden?: string; inactivos?: string }>;
 }) {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
 
   let restaurantId: string | null = null;
   let timezone = 'America/Guatemala';
+  let restaurantName = '';
 
   if (ctx.profile.role === 'SUPER_ADMIN') {
     const headersList = await headers();
@@ -75,18 +80,23 @@ export default async function AdminClientesPage({
       const tenantData = await getRestaurantBySlug(slug);
       restaurantId = tenantData?.restaurant.id ?? null;
       timezone = tenantData?.restaurant.timezone ?? timezone;
+      restaurantName = tenantData?.restaurant.name ?? '';
     }
   } else {
     restaurantId = ctx.profile.restaurant_id;
     timezone = ctx.restaurant?.timezone ?? timezone;
+    restaurantName = ctx.restaurant?.name ?? '';
   }
 
   if (!restaurantId) redirect('/admin/login');
 
   const sp = await searchParams;
   const pageNum = Math.max(1, parseInt(sp.page ?? '1', 10) || 1);
-  const [{ customers, page, totalPages, total }, summary] = await Promise.all([
-    getCustomers(restaurantId, pageNum),
+  const q = (sp.q ?? '').slice(0, 60);
+  const sort = parseCustomerSort(sp.orden);
+  const inactivos = sp.inactivos === '30';
+  const [{ customers, page, totalPages }, summary] = await Promise.all([
+    getCustomers(restaurantId, pageNum, undefined, { q, sort, inactiveDays: inactivos ? 30 : undefined }),
     getCustomersSummary(restaurantId),
   ]);
   const selected = sp.c ? customers.find((c) => c.id === sp.c) ?? null : null;
@@ -107,19 +117,25 @@ export default async function AdminClientesPage({
     ? Math.round((recurrent / summary.buyersCount) * 100)
     : null;
   const { avgTicketRecurrent, avgTicketOneTime } = summary;
-  const pageHref = (p: number) => `/admin/clientes?page=${p}`;
+  /* Los enlaces conservan la búsqueda y el orden: abrir un cliente o pasar
+     de página no debe tirar lo que se escribió en el buscador. */
+  const href = (extra: Record<string, string | number | undefined>) => {
+    const p = new URLSearchParams();
+    if (q) p.set('q', q);
+    if (sort !== 'recientes') p.set('orden', sort);
+    if (inactivos) p.set('inactivos', '30');
+    for (const [k, v] of Object.entries(extra)) if (v !== undefined && v !== '') p.set(k, String(v));
+    const s = p.toString();
+    return s ? `/admin/clientes?${s}` : '/admin/clientes';
+  };
+  const pageHref = (p: number) => href({ page: p });
+  const buscando = q.trim() !== '' || inactivos;
 
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {total > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <ClientesExportButton restaurantId={restaurantId} />
-        </div>
-      )}
-
       <Section title="Resumen">
         <StatGroup>
-          <Stat label="Clientes registrados" value={String(total)} />
+          <Stat label="Clientes registrados" value={String(summary.totalCustomers)} />
           <Stat label="Recurrentes (2+ pedidos)" value={String(recurrent)} />
           {vuelvenPct !== null && <Stat label="De los que piden, vuelven" value={`${vuelvenPct}%`} />}
           <Stat label="Total histórico" value={fmtQ(totalSpent)} />
@@ -132,10 +148,21 @@ export default async function AdminClientesPage({
         )}
       </Section>
 
-      {customers.length === 0 ? (
+      {summary.totalCustomers > 0 && (
+        <ClientesFiltros q={q} sort={sort} inactive={inactivos} exportSlot={<ClientesExportButton restaurantId={restaurantId} />} />
+      )}
+
+      {customers.length === 0 && buscando ? (
+        <Card className="flex flex-col items-center gap-3 p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
+          {q.trim() ? `Ningún cliente coincide con «${q.trim()}».` : 'Nadie lleva más de 30 días sin pedir. Buena señal.'}
+          <Button render={<Link href="/admin/clientes" />} variant="secondary" size="sm" className="rounded-adm-full">
+            Ver todos
+          </Button>
+        </Card>
+      ) : customers.length === 0 ? (
         <EmptyState
           icon="users"
-          title="Aún no tenés clientes"
+          title="Aún no tienes clientes"
           desc="Se registran solos cuando alguien hace su primer pedido — no hace falta darlos de alta a mano."
           action={{ href: '/admin/qr', label: 'Comparte tu código QR' }}
         />
@@ -153,7 +180,8 @@ export default async function AdminClientesPage({
             return (
               <div key={c.id} style={{ borderBottom: i < customers.length - 1 ? '1px solid var(--u-hair)' : 'none' }}>
                 <Link
-                  href={isSel ? '/admin/clientes' : `/admin/clientes?c=${c.id}`}
+                  href={isSel ? href({ page: page > 1 ? page : undefined }) : href({ page: page > 1 ? page : undefined, c: c.id })}
+                  scroll={false}
                   className="customers-row press"
                   style={{
                     padding: '13px 18px', textDecoration: 'none',
@@ -164,38 +192,67 @@ export default async function AdminClientesPage({
                     <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {c.name}
                     </div>
-                    <div className="t-mono" style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2 }}>{c.phone}</div>
+                    <div className="t-mono" style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>{c.phone}</div>
+                    {/* En el teléfono las columnas se esconden y quedaban dos
+                        números sueltos («1  Q88.50»): aquí van con su palabra
+                        (auditoría 2026-10-02, CLI-01). */}
+                    <div className="customers-meta" style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 4 }}>
+                      {c.total_orders === 1 ? '1 pedido' : `${c.total_orders} pedidos`} · {fmtQ(Number(c.total_spent))}
+                      {c.last_order_at ? ` · último ${fmtDate(c.last_order_at, timezone)}` : ''}
+                    </div>
                   </div>
-                  <div className="t-mono" style={{ fontSize: 13.5, color: 'var(--u-text)' }}>{c.total_orders}</div>
-                  <div className="t-mono" style={{ fontSize: 13.5, color: 'var(--u-text)' }}>{fmtQ(Number(c.total_spent))}</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--u-text-2)' }}>{frequencyLabel(c)}</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>{fmtDate(c.last_order_at, timezone)}</div>
+                  <div className="t-mono" style={{ fontSize: 13, color: 'var(--u-text)' }}>{c.total_orders}</div>
+                  <div className="t-mono" style={{ fontSize: 13, color: 'var(--u-text)' }}>{fmtQ(Number(c.total_spent))}</div>
+                  <div style={{ fontSize: 12, color: 'var(--u-text-2)' }}>{frequencyLabel(c)}</div>
+                  <div style={{ fontSize: 12, color: 'var(--u-text-3)' }}>{fmtDate(c.last_order_at, timezone)}</div>
                 </Link>
 
                 {/* Detalle: historial del cliente seleccionado */}
                 {isSel && (
                   <div style={{ padding: '4px 18px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {/* Volver a traer al cliente: un toque abre WhatsApp con un
+                        saludo ya escrito (auditoría 2026-10-02, CLI-06). */}
+                    {waDigits(c.phone) && (
+                      <div>
+                        <Button
+                          render={
+                            <a
+                              href={`https://wa.me/${waDigits(c.phone)}?text=${encodeURIComponent(
+                                `¡Hola ${c.name.split(' ')[0]}! Te escribimos de ${restaurantName || 'tu restaurante de confianza'}.`,
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            />
+                          }
+                          variant="secondary"
+                          size="sm"
+                          className="rounded-adm-full"
+                        >
+                          <Icon name="whatsapp" size={14} /> Escribir por WhatsApp
+                        </Button>
+                      </div>
+                    )}
                     {c.default_address && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--u-text-3)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--u-text-3)' }}>
                         <Icon name="mapPin" size={13} />
                         {c.default_address}{c.default_zone ? ` · ${c.default_zone}` : ''}
                       </div>
                     )}
                     {selectedOrders.length === 0 ? (
-                      <div style={{ fontSize: 12.5, color: 'var(--u-text-4)' }}>
+                      <div style={{ fontSize: 12, color: 'var(--u-text-4)' }}>
                         Sin pedidos enlazados aún (los anteriores a esta función no se enlazan).
                       </div>
                     ) : (
                       selectedOrders.map((o) => (
                         <Card key={o.id} className="flex flex-wrap items-center gap-3 p-3">
-                          <span className="t-mono" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text)' }}>{o.order_number}</span>
-                          <span style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{fmtDate(o.created_at, timezone)}</span>
-                          <span style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>
+                          <span className="t-mono" style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text)' }}>{o.order_number}</span>
+                          <span style={{ fontSize: 11, color: 'var(--u-text-3)' }}>{fmtDate(o.created_at, timezone)}</span>
+                          <span style={{ fontSize: 11, color: 'var(--u-text-3)' }}>
                             {o.order_type === 'DELIVERY' ? `A domicilio${o.delivery_zone ? ` · ${o.delivery_zone}` : ''}` : 'Para llevar'}
                           </span>
                           <span
                             style={{
-                              fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
+                              fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-full)',
                               background: o.status === 'CANCEL' ? 'var(--c-danger-bg)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
                               color: o.status === 'CANCEL' ? 'var(--c-danger)' : 'var(--u-text-3)',
                             }}
@@ -223,7 +280,7 @@ export default async function AdminClientesPage({
           ) : (
             <Button variant="secondary" size="sm" className="rounded-adm-full" disabled>← Anteriores</Button>
           )}
-          <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Página {page} de {totalPages}</span>
+          <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>Página {page} de {totalPages}</span>
           {page < totalPages ? (
             <Button render={<Link href={pageHref(page + 1)} />} variant="secondary" size="sm" className="rounded-adm-full">Siguientes →</Button>
           ) : (

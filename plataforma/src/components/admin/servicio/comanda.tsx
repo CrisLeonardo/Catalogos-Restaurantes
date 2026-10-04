@@ -84,7 +84,7 @@ export default function Comanda({
               type="button"
               className="sv-cta"
               data-tone="info"
-              style={{ height: 44, fontSize: 13.5 }}
+              style={{ height: 44, fontSize: 13 }}
               onClick={onAceptarQr}
               disabled={ocupado}
             >
@@ -94,7 +94,7 @@ export default function Comanda({
               type="button"
               className="sv-cta"
               data-tone="quiet"
-              style={{ height: 44, fontSize: 13.5, width: 'auto', padding: '0 16px', flexShrink: 0 }}
+              style={{ height: 44, fontSize: 13, width: 'auto', padding: '0 16px', flexShrink: 0 }}
               onClick={onRechazarQr}
               disabled={ocupado}
             >

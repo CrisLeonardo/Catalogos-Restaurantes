@@ -1,4 +1,5 @@
 import { redirect, notFound } from 'next/navigation';
+import { Card } from '@/components/ui/card';
 /* `Link` es aquí `PanelLink`: el "Volver" llevaba a `/admin/menu` a secas y
    eso saca del panel a quien entró por el origen único (`/panel/<slug>/...`)
    — el botón de salir del formulario de un platillo, que es de los más
@@ -12,6 +13,7 @@ import { can } from '@/lib/permissions';
 import ProductForm from '@/components/admin/product-form';
 import DeleteButton from '@/components/admin/delete-button';
 import { deleteProduct } from '@/lib/actions/products';
+import { withEffectiveAvailability } from '@/lib/product-availability';
 
 export const metadata = { title: 'Editar producto – Panel admin' };
 
@@ -86,28 +88,45 @@ export default async function EditProductPage({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              maxWidth: 200,
+              minWidth: 0,
             }}
           >
             {product.name}
           </h1>
         </div>
-
-        <DeleteButton
-          action={deleteProduct}
-          hiddenFields={{ restaurantId, id: product.id }}
-          label="Eliminar"
-          confirm={`¿Eliminar "${product.name}" permanentemente?`}
-        />
       </div>
 
       <ProductForm
         restaurantId={restaurantId}
         categories={categories}
-        product={product}
+        /* «Disponible» arranca con lo que de verdad ve el comensal: lo agotado
+           hace más de 12 h ya volvió al menú (auditoría 2026-10-02, CAT-01). */
+        product={withEffectiveAvailability([product])[0]}
         ingredients={ingredients}
         initialRecipe={recipe}
       />
+
+      {/* Borrar, al final y aparte: arriba junto al título, en rojo, era lo
+          primero que se veía al abrir un platillo para cambiarle el precio
+          (auditoría 2026-10-02, MEN-04). */}
+      <Card
+        className="mt-8 flex flex-wrap items-center justify-between gap-3 p-4"
+        style={{ borderColor: 'var(--c-danger-line)' }}
+      >
+        <div style={{ minWidth: 0, flex: '1 1 240px' }}>
+          <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--u-text)' }}>Eliminar este platillo</p>
+          <p style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2, lineHeight: 1.5 }}>
+            Sale del menú para siempre. Si solo se acabó, mejor márcalo como agotado.
+          </p>
+        </div>
+        <DeleteButton
+          action={deleteProduct}
+          hiddenFields={{ restaurantId, id: product.id }}
+          label="Eliminar"
+          confirm={`¿Eliminar «${product.name}»?`}
+          description="Sale del menú para siempre. Si solo se acabó, mejor márcalo como agotado."
+        />
+      </Card>
     </div>
   );
 }

@@ -402,7 +402,7 @@ export default function FloorPlanEditor({
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
         <div>
           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--u-text)', marginBottom: 3 }}>Plano del salón</div>
-          <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.45 }}>
+          <div style={{ fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.45 }}>
             Coloca cada mesa donde está en tu restaurante. El mesero la verá en el mismo lugar.
           </div>
         </div>
@@ -414,18 +414,18 @@ export default function FloorPlanEditor({
           onClick={() => patch({ enabled: !enabled })}
           className="press"
           style={{
-            width: 44, height: 26, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3,
+            width: 44, height: 26, borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer', padding: 3,
             background: enabled ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
             display: 'flex', justifyContent: enabled ? 'flex-end' : 'flex-start',
             transition: 'background 180ms', flexShrink: 0,
           }}
         >
-          <span style={{ width: 20, height: 20, borderRadius: 99, background: enabled ? 'var(--brand-bg)' : 'var(--u-text)' }} />
+          <span style={{ width: 20, height: 20, borderRadius: 'var(--radius-full)', background: enabled ? 'var(--brand-bg)' : 'var(--u-text)' }} />
         </button>
       </div>
 
       {!enabled ? (
-        <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', padding: '12px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', border: '1px solid var(--u-hair)', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12, color: 'var(--u-text-4)', padding: '12px 14px', borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', border: '1px solid var(--u-hair)', lineHeight: 1.5 }}>
           Desactivado: el mesero verá las mesas en una cuadrícula automática. Actívalo para diseñar tu salón por niveles.
         </div>
       ) : (
@@ -443,7 +443,7 @@ export default function FloorPlanEditor({
                       onChange={(e) => renameLevel(l.id, e.target.value)}
                       onBlur={() => setRenaming(null)}
                       onKeyDown={(e) => { if (e.key === 'Enter') setRenaming(null); }}
-                      style={{ width: 130, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair-2)', borderRadius: 99, padding: '7px 12px', color: 'var(--u-text)', fontSize: 13, outline: 'none' }}
+                      className="adm-field adm-field-sm" style={{ width: 130, borderRadius: 'var(--radius-full)' }}
                     />
                   ) : (
                     <button
@@ -452,7 +452,7 @@ export default function FloorPlanEditor({
                       className="press"
                       title={on ? 'Toca de nuevo para renombrar' : ''}
                       style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 13px', borderRadius: 99, cursor: 'pointer',
+                        display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 13px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
                         border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
                         background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
                         color: on ? 'var(--brand-bg)' : 'var(--u-text-2)', fontSize: 13, fontWeight: 600,
@@ -481,7 +481,7 @@ export default function FloorPlanEditor({
                 type="button"
                 onClick={addLevel}
                 className="press"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 99, cursor: 'pointer', border: '1px dashed var(--u-hair-2)', background: 'transparent', color: 'var(--u-text-3)', fontSize: 12.5, fontWeight: 600 }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer', border: '1px dashed var(--u-hair-2)', background: 'transparent', color: 'var(--u-text-3)', fontSize: 12, fontWeight: 600 }}
               >
                 <Icon name="plus" size={13} /> Nivel
               </button>
@@ -500,7 +500,7 @@ export default function FloorPlanEditor({
             style={{
               position: 'relative', width: '100%', aspectRatio: `${VIRT_W} / ${VIRT_H}`,
               minHeight: 300,
-              borderRadius: 16, overflow: 'hidden',
+              borderRadius: 'var(--radius-lg)', overflow: 'hidden',
               border: '1px solid var(--u-hair-2)',
               background: 'color-mix(in srgb, var(--u-text) 2%, transparent)',
               touchAction: 'none', userSelect: 'none',
@@ -579,7 +579,7 @@ export default function FloorPlanEditor({
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => { e.stopPropagation(); removeFixture(f.id); }}
                         onKeyDown={(e) => { if (e.key === 'Enter') removeFixture(f.id); }}
-                        style={{ position: 'absolute', top: -11, right: -11, width: 24, height: 24, borderRadius: 99, background: 'var(--brand-bg)', border: '1px solid var(--u-hair-2)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--u-text)' }}
+                        style={{ position: 'absolute', top: -11, right: -11, width: 24, height: 24, borderRadius: 'var(--radius-full)', background: 'var(--brand-bg)', border: '1px solid var(--u-hair-2)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--u-text)' }}
                       >
                         <Icon name="x" size={12} />
                       </span>
@@ -587,7 +587,7 @@ export default function FloorPlanEditor({
                       <span
                         data-fx-handle={f.id}
                         aria-label={`Cambiar tamaño de ${fixtureLabel(f)}`}
-                        style={{ position: 'absolute', bottom: -11, right: -11, width: 24, height: 24, borderRadius: 7, background: 'var(--brand-accent)', border: '2px solid var(--brand-bg)', cursor: 'nwse-resize', touchAction: 'none' }}
+                        style={{ position: 'absolute', bottom: -11, right: -11, width: 24, height: 24, borderRadius: 'var(--radius-sm)', background: 'var(--brand-accent)', border: '2px solid var(--brand-bg)', cursor: 'nwse-resize', touchAction: 'none' }}
                       />
                     </>
                   )}
@@ -598,6 +598,13 @@ export default function FloorPlanEditor({
               const dragging = dragN === tb.n;
               const sx = tb.x * VIRT_W * t.s + t.x;
               const sy = tb.y * VIRT_H * t.s + t.y;
+              /* La mesa se achica con el plano: en el teléfono el plano mide
+                 ~360 px y dos mesas separadas un 15 % quedan a ~54 px, pero
+                 cada una medía 56 — salían encimadas, con sus «×» chocando
+                 (auditoría 2026-10-02, AJU-05). Entre 38 px y el tope de
+                 siempre (`--floor-token`); al hacer zoom vuelve a crecer. */
+              const tok = Math.round(Math.max(38, Math.min(68, 130 * t.s)));
+              const small = tok < 52;
               return (
                 <div
                   key={tb.n}
@@ -606,7 +613,7 @@ export default function FloorPlanEditor({
                     position: 'absolute',
                     left: sx,
                     top: sy,
-                    width: 'var(--floor-token, 68px)', height: 'var(--floor-token, 68px)',
+                    width: `min(${tok}px, var(--floor-token, 68px))`, height: `min(${tok}px, var(--floor-token, 68px))`,
                     transform: `translate(-50%, -50%) scale(${dragging ? 1.12 : 1})`,
                     transition: dragging ? 'none' : 'transform 120ms',
                     borderRadius: tb.shape === 'square' ? 14 : 99,
@@ -619,18 +626,19 @@ export default function FloorPlanEditor({
                     zIndex: dragging ? 5 : 1,
                   }}
                 >
-                  <span style={{ fontSize: 8.5, color: 'var(--u-text-4)', fontWeight: 600, pointerEvents: 'none', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Mesa</span>
-                  <span style={{ fontSize: 20, fontWeight: 800, lineHeight: 1, pointerEvents: 'none' }}>{tb.n}</span>
+                  {!small && <span style={{ fontSize: 8.5, color: 'var(--u-text-4)', fontWeight: 600, pointerEvents: 'none', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Mesa</span>}
+                  <span style={{ fontSize: small ? 16 : 20, fontWeight: 800, lineHeight: 1, pointerEvents: 'none' }}>{tb.n}</span>
                   <span
                     role="button"
+                    className="tap44"
                     aria-label={`Quitar mesa ${tb.n}`}
                     tabIndex={0}
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => { e.stopPropagation(); unplaceTable(tb.n); }}
                     onKeyDown={(e) => { if (e.key === 'Enter') unplaceTable(tb.n); }}
-                    style={{ position: 'absolute', top: -9, right: -9, width: 24, height: 24, borderRadius: 99, background: 'var(--brand-bg)', border: '1px solid var(--u-hair-2)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--u-text)' }}
+                    style={{ position: 'absolute', top: small ? -6 : -9, right: small ? -6 : -9, width: small ? 20 : 24, height: small ? 20 : 24, borderRadius: 'var(--radius-full)', background: 'var(--brand-bg)', border: '1px solid var(--u-hair-2)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--u-text)' }}
                   >
-                    <Icon name="x" size={12} />
+                    <Icon name="x" size={small ? 10 : 12} />
                   </span>
                 </div>
               );
@@ -648,16 +656,16 @@ export default function FloorPlanEditor({
             </div>
           </div>
 
-          <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -6, textAlign: 'center' }}>
+          <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: -6, textAlign: 'center' }}>
             Pellizca o usa + / − para acercar · arrastra el piso para moverte · arrastra una mesa o una referencia para colocarla
           </div>
 
           {/* Referencias del salón */}
           <div>
-            <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+            <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
               Referencias del salón
             </div>
-            <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.45, marginBottom: 9 }}>
+            <div style={{ fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.45, marginBottom: 9 }}>
               La barra, la recepción o la cocina le dan al mesero un punto de referencia para ubicar las mesas. Tócalas para agregarlas y arrástralas a su lugar.
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -668,7 +676,7 @@ export default function FloorPlanEditor({
                   onClick={() => addFixture(k)}
                   className="press"
                   title={`Agregar ${FIXTURE_META[k].label.toLowerCase()} a ${levels.find((l) => l.id === active)?.name ?? 'este nivel'}`}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 99, cursor: 'pointer', border: '1px dashed var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600 }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 'var(--radius-full)', cursor: 'pointer', border: '1px dashed var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600 }}
                 >
                   <Icon name={FIXTURE_META[k].icon} size={14} /> {FIXTURE_META[k].label}
                 </button>
@@ -679,20 +687,20 @@ export default function FloorPlanEditor({
                 tener dos barras ("Barra fría" / "Barra de café") y el número
                 de mesa no ayuda a distinguirlas. */}
             {selected && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 12, padding: '10px 12px', borderRadius: 12, border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 12, padding: '10px 12px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)' }}>
                 <Icon name={FIXTURE_META[selected.kind].icon} size={15} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />
                 <input
                   value={selected.label ?? ''}
                   onChange={(e) => renameFixture(selected.id, e.target.value)}
                   placeholder={FIXTURE_META[selected.kind].label}
                   aria-label="Nombre de la referencia"
-                  style={{ flex: 1, minWidth: 130, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)', borderRadius: 10, padding: '9px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none' }}
+                  className="adm-field" style={{ flex: 1, minWidth: 130, width: 'auto' }}
                 />
                 <button
                   type="button"
                   onClick={() => removeFixture(selected.id)}
                   className="press"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 13px', borderRadius: 10, cursor: 'pointer', border: '1px solid var(--c-danger-line, var(--u-hair-2))', background: 'transparent', color: 'var(--c-danger)', fontSize: 13, fontWeight: 600 }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 13px', borderRadius: 'var(--radius-md)', cursor: 'pointer', border: '1px solid var(--c-danger-line, var(--u-hair-2))', background: 'transparent', color: 'var(--c-danger)', fontSize: 13, fontWeight: 600 }}
                 >
                   <Icon name="trash" size={14} /> Quitar
                 </button>
@@ -705,10 +713,10 @@ export default function FloorPlanEditor({
               está llena como si está vacía. */}
           {tablesOnLevel.length > 0 && (
             <div>
-              <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+              <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
                 Sillas por mesa
               </div>
-              <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.45, marginBottom: 9 }}>
+              <div style={{ fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.45, marginBottom: 9 }}>
                 Cuánta gente cabe en cada una y, si quieres, cómo la llaman: «Terraza 2», «Barra A». El número no cambia —el QR y la cuenta siguen yendo por él—, es solo el nombre que se ve en el salón. Deja lo que no quieras decir en blanco.
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -717,7 +725,7 @@ export default function FloorPlanEditor({
                     key={tb.n}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 10px 6px 12px',
-                      borderRadius: 12, border: '1px solid var(--u-hair-2)',
+                      borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair-2)',
                       background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
                     }}
                   >
@@ -734,11 +742,8 @@ export default function FloorPlanEditor({
                         const v = parseInt(e.target.value, 10);
                         setSeats(tb.n, Number.isFinite(v) && v > 0 ? Math.min(40, v) : null);
                       }}
-                      style={{
-                        width: 56, height: 40, textAlign: 'center', borderRadius: 10, outline: 'none',
-                        border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-                        color: 'var(--u-text)', fontFamily: 'var(--ui-font-mono)', fontSize: 15, fontWeight: 600,
-                      }}
+                      className="adm-field adm-field-mono"
+                      style={{ width: 56, height: 40, padding: '0 6px', textAlign: 'center', fontSize: 15, fontWeight: 600 }}
                     />
                     <input
                       type="text"
@@ -747,11 +752,8 @@ export default function FloorPlanEditor({
                       maxLength={24}
                       aria-label={`Nombre de la mesa ${tb.n}`}
                       onChange={(e) => setLabel(tb.n, e.target.value)}
-                      style={{
-                        width: 104, height: 40, borderRadius: 10, outline: 'none', padding: '0 10px',
-                        border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-                        color: 'var(--u-text)', fontSize: 14,
-                      }}
+                      className="adm-field"
+                      style={{ width: 104, height: 40, padding: '0 10px' }}
                     />
                   </label>
                 ))}
@@ -761,11 +763,11 @@ export default function FloorPlanEditor({
 
           {/* Bandeja: mesas sin ubicar */}
           <div>
-            <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+            <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
               Mesas sin ubicar {tray.length > 0 ? `(${tray.length})` : ''}
             </div>
             {tray.length === 0 ? (
-              <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="checkCircle" size={14} style={{ color: 'var(--c-ok)' }} /> Todas las mesas están colocadas.</div>
+              <div style={{ fontSize: 12, color: 'var(--u-text-4)', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="checkCircle" size={14} style={{ color: 'var(--c-ok)' }} /> Todas las mesas están colocadas.</div>
             ) : (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {tray.map((n) => (
@@ -775,7 +777,7 @@ export default function FloorPlanEditor({
                     onClick={() => placeTable(n)}
                     className="press"
                     title={`Colocar mesa ${n} en ${levels.find((l) => l.id === active)?.name ?? 'este nivel'}`}
-                    style={{ width: 44, height: 44, borderRadius: 12, cursor: 'pointer', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', fontWeight: 700, fontSize: 15 }}
+                    style={{ width: 44, height: 44, borderRadius: 'var(--radius-lg)', cursor: 'pointer', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', fontWeight: 700, fontSize: 15 }}
                   >
                     {n}
                   </button>
@@ -798,7 +800,7 @@ function ZoomBtn({ children, label, onTap }: { children: React.ReactNode; label:
       onPointerDown={(e) => e.stopPropagation()}
       onClick={onTap}
       className="press glass-quiet"
-      style={{ width: 38, height: 38, borderRadius: 11, border: '1px solid var(--u-hair-2)', cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 700, color: 'var(--u-text)', lineHeight: 1 }}
+      style={{ width: 38, height: 38, borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 700, color: 'var(--u-text)', lineHeight: 1 }}
     >
       {children}
     </button>

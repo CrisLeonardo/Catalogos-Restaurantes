@@ -8,14 +8,16 @@
    · Zona horaria del restaurante.
    ============================================================ */
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select } from '@/components/ui/select';
-import { updateRestaurantOps, type RestaurantState } from '@/lib/actions/restaurant';
+import { updateRestaurantOps, type SaveState } from '@/lib/actions/restaurant';
 import { DAY_LABELS, DAY_ORDER, type DayKey, type HourInterval, type WeeklyHours, type HourExceptions } from '@/lib/hours';
 import type { Restaurant } from '@/types';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import SaveBar from '@/components/admin/save-bar';
+import { useFormDirty } from '@/lib/use-form-dirty';
 
 const TIMEZONES = [
   'America/Guatemala',
@@ -92,12 +94,16 @@ function buildExceptionsJson(rows: ExceptionRow[]): string {
   return Object.keys(out).length > 0 ? JSON.stringify(out) : '';
 }
 
-const empty: RestaurantState = null;
+const empty: SaveState = null;
 
 export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) {
   const [state, formAction, isPending] = useActionState(updateRestaurantOps, empty);
+  const { ref: formRef, dirty, markSaved } = useFormDirty();
+  useEffect(() => { if (state && 'saved' in state) markSaved(); }, [state, markSaved]);
   const [days, setDays] = useState<Record<DayKey, DayState>>(() => initDays(restaurant.hours));
   const [paused, setPaused] = useState(restaurant.orders_paused === true);
+  /** Ningún día encendido → se guarda `hours = null` → abierto siempre. */
+  const sinHorario = DAY_ORDER.every((d) => !days[d].on);
   const [timezone, setTimezone] = useState(restaurant.timezone || 'America/Guatemala');
   const [exceptions, setExceptions] = useState<ExceptionRow[]>(() => initExceptions(restaurant.hour_exceptions));
 
@@ -147,29 +153,11 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
       },
     }));
 
-  const inputStyle: React.CSSProperties = {
-    background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-    border: '1px solid var(--u-hair-2)',
-    borderRadius: 'var(--radius-md)',
-    padding: '8px 10px',
-    color: 'var(--u-text)',
-    fontSize: 14,
-    outline: 'none',
-    fontFamily: 'var(--ui-font-mono)',
-  };
 
-  const labelStyle: React.CSSProperties = {
-    fontSize: 12,
-    color: 'var(--u-text-3)',
-    fontWeight: 500,
-    letterSpacing: '0.04em',
-    textTransform: 'uppercase',
-    marginBottom: 6,
-    display: 'block',
-  };
+  const labelStyle: React.CSSProperties = FIELD_LABEL;
 
   return (
-    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <input type="hidden" name="restaurantId" value={restaurant.id} />
       <input type="hidden" name="hours" value={buildHoursJson(days)} />
       <input type="hidden" name="hour_exceptions" value={buildExceptionsJson(exceptions)} />
@@ -188,15 +176,17 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
             </div>
             <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
               {paused
-                ? 'El checkout está bloqueado hasta que reanudes.'
-                : '¿Cocina saturada? Pausa sin tocar tus horarios.'}
+                ? 'Tus clientes no pueden pedir hasta que lo vuelvas a encender.'
+                : '¿Cocina saturada? Apágalo para pausar sin tocar tus horarios.'}
             </div>
           </div>
+          {/* Encendido = recibiendo pedidos. Estaba al revés (`checked={paused}`):
+              el rótulo decía «Recibiendo pedidos» con el interruptor APAGADO, y
+              encenderlo pausaba (auditoría 2026-10-02, AJU-01). */}
           <Switch
-            checked={paused}
-            onCheckedChange={setPaused}
-            aria-label="Pausar pedidos"
-            className="data-[checked]:bg-[var(--c-warn-solid)] data-[checked]:border-[var(--c-warn-solid)]"
+            checked={!paused}
+            onCheckedChange={(on) => setPaused(!on)}
+            aria-label="Recibir pedidos"
           />
         </div>
         {paused && (
@@ -208,7 +198,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
               type="text"
               defaultValue={restaurant.pause_message ?? ''}
               placeholder="Estamos a tope. ¡Volvemos en 30 minutos!"
-              style={{ ...inputStyle, width: '100%', fontFamily: 'var(--ui-font-sans)' }}
+              className="adm-field adm-field-sm adm-field-mono adm-field-auto" style={{ width: '100%', fontFamily: 'var(--ui-font-sans)' }}
             />
           </div>
         )}
@@ -221,11 +211,27 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
       <Card className="p-4">
         <label style={labelStyle}>Horario de apertura</label>
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 12 }}>
-          El badge “Abierto/Cerrado” y el checkout se rigen por este horario.
-          Sin días activos = siempre abierto. Puedes agregar varios turnos por día
+          El aviso «Abierto/Cerrado» de tu menú y los pedidos en línea siguen este
+          horario. Puedes agregar varios turnos por día
           (p. ej. 7:00–10:00 y 13:00–21:00). Un cierre de madrugada (p. ej.
           20:00 a 02:00) cruza la medianoche sin problema.
         </p>
+        {/* Sin ningún día encendido el restaurante cuenta como ABIERTO SIEMPRE
+            (lib/hours.ts). Cada fila decía «Cerrado» y el dueño entendía lo
+            contrario de lo que pasa (auditoría 2026-10-02, AJU-02). */}
+        {sinHorario && (
+          <div
+            role="note"
+            style={{
+              marginBottom: 12, padding: '10px 12px', borderRadius: 'var(--radius-md)',
+              background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)',
+              color: 'var(--u-text-2)', fontSize: 13, lineHeight: 1.45,
+            }}
+          >
+            <strong style={{ color: 'var(--u-text)' }}>Sin horario: tu menú sale abierto a toda hora.</strong>{' '}
+            Toca los días que abres para poner tu horario.
+          </div>
+        )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {DAY_ORDER.map((day) => {
             const d = days[day];
@@ -250,7 +256,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                 >
                   <span
                     style={{
-                      width: 8, height: 8, borderRadius: 99, flexShrink: 0,
+                      width: 8, height: 8, borderRadius: 'var(--radius-full)', flexShrink: 0,
                       background: d.on ? 'var(--c-ok)' : 'var(--u-hair-2)',
                     }}
                   />
@@ -266,7 +272,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                           type="time"
                           value={iv.open}
                           onChange={(e) => setInterval(day, idx, { open: e.target.value })}
-                          style={inputStyle}
+                          className="adm-field adm-field-sm adm-field-mono adm-field-auto"
                           aria-label={`Apertura turno ${idx + 1} ${DAY_LABELS[day]}`}
                         />
                         <span style={{ color: 'var(--u-text-4)', fontSize: 13 }}>a</span>
@@ -274,7 +280,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                           type="time"
                           value={iv.close}
                           onChange={(e) => setInterval(day, idx, { close: e.target.value })}
-                          style={inputStyle}
+                          className="adm-field adm-field-sm adm-field-mono adm-field-auto"
                           aria-label={`Cierre turno ${idx + 1} ${DAY_LABELS[day]}`}
                         />
                         {d.intervals.length > 1 && (
@@ -284,7 +290,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                             className="press"
                             aria-label="Eliminar turno"
                             style={{
-                              width: 26, height: 26, borderRadius: 99, border: 'none',
+                              width: 26, height: 26, borderRadius: 'var(--radius-full)', border: 'none',
                               background: 'var(--c-danger-bg)', color: 'var(--c-danger)',
                               cursor: 'pointer', fontSize: 15, lineHeight: 1,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -312,7 +318,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                     )}
                   </div>
                 ) : (
-                  <span style={{ fontSize: 13, color: 'var(--u-text-4)', marginTop: 8 }}>Cerrado</span>
+                  <span style={{ fontSize: 13, color: 'var(--u-text-4)', marginTop: 12 }}>{sinHorario ? 'Sin horario' : 'Cerrado'}</span>
                 )}
               </div>
             );
@@ -342,7 +348,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                 type="date"
                 value={row.date}
                 onChange={(e) => patchException(idx, { date: e.target.value })}
-                style={{ ...inputStyle, width: 150 }}
+                className="adm-field adm-field-sm adm-field-mono adm-field-auto" style={{ width: 150 }}
                 aria-label={`Fecha excepción ${idx + 1}`}
               />
 
@@ -369,7 +375,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                         type="time"
                         value={iv.open}
                         onChange={(e) => setExceptionInterval(idx, ivIdx, { open: e.target.value })}
-                        style={inputStyle}
+                        className="adm-field adm-field-sm adm-field-mono adm-field-auto"
                         aria-label={`Apertura especial turno ${ivIdx + 1}`}
                       />
                       <span style={{ color: 'var(--u-text-4)', fontSize: 13 }}>a</span>
@@ -377,7 +383,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                         type="time"
                         value={iv.close}
                         onChange={(e) => setExceptionInterval(idx, ivIdx, { close: e.target.value })}
-                        style={inputStyle}
+                        className="adm-field adm-field-sm adm-field-mono adm-field-auto"
                         aria-label={`Cierre especial turno ${ivIdx + 1}`}
                       />
                     </div>
@@ -391,7 +397,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                 className="press"
                 aria-label="Eliminar excepción"
                 style={{
-                  width: 26, height: 26, borderRadius: 99, border: 'none',
+                  width: 26, height: 26, borderRadius: 'var(--radius-full)', border: 'none',
                   background: 'var(--c-danger-bg)', color: 'var(--c-danger)',
                   cursor: 'pointer', fontSize: 15, lineHeight: 1,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 'auto',
@@ -428,24 +434,8 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
         />
       </Card>
 
-      {state?.error && (
-        <div
-          style={{
-            padding: '10px 14px',
-            borderRadius: 'var(--radius-md)',
-            background: 'var(--c-danger-bg)',
-            border: '1px solid var(--c-danger-line)',
-            color: 'var(--c-danger)',
-            fontSize: 14,
-          }}
-        >
-          {state.error}
-        </div>
-      )}
 
-      <Button type="submit" disabled={isPending} size="lg" className="w-full rounded-adm-full">
-        {isPending ? 'Guardando…' : 'Guardar operación'}
-      </Button>
+      <SaveBar dirty={dirty} pending={isPending} status={state} label="Guardar horario" />
     </form>
   );
 }

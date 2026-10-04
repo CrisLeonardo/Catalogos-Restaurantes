@@ -1,3 +1,4 @@
+import { haceTiempo } from '@/lib/dates';
 /* ============================================================
    ¿QUÉ DICE EL PANEL SOBRE LA PC PRINCIPAL?
    ------------------------------------------------------------
@@ -54,8 +55,11 @@ function minutesSince(iso: string | null, now: number): number | null {
   return (now - t) / 60_000;
 }
 
-function agoLabel(mins: number): string {
-  return mins < 60 ? `hace ${Math.round(mins)} min` : `hace ${Math.round(mins / 60)} h`;
+/** «hace 5 min», «hace 3 h», «ayer», «hace 4 días», «el 11 jul 2026».
+ *  Solo sabía de minutos y horas: una PC apagada desde julio decía
+ *  «hace 2004 h» (auditoría 2026-10-02, T-02). */
+function agoLabel(mins: number, now: number): string {
+  return haceTiempo(now - mins * 60_000, now);
 }
 
 export function readMainPcStatus(
@@ -130,7 +134,7 @@ export function readMainPcStatus(
     on: true, isThisDevice, live: false, where, deviceLabel: name, tone: 'warn',
     label,
     detail: isThisDevice
-      ? `Sin responder desde ${agoLabel(mins)}. El servicio de esta computadora no está corriendo.`
-      : `Sin responder desde ${agoLabel(mins)}. ¿Está encendida y con internet?`,
+      ? `Sin responder desde ${agoLabel(mins, now)}. El servicio de esta computadora no está corriendo.`
+      : `Sin responder desde ${agoLabel(mins, now)}. ¿Está encendida y con internet?`,
   };
 }

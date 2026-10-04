@@ -88,7 +88,6 @@ export default async function SuperHomePage() {
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
       <PageHeader
-        title="Resumen de la plataforma"
         subtitle="Cómo va Leogin hoy: ingresos, actividad de los restaurantes y lo que requiere tu atención."
         actions={
           /* Sin «Nuevo grupo»: crear grupos a mano se retiró (el grupo nace
@@ -102,9 +101,24 @@ export default async function SuperHomePage() {
 
       {/* KPIs principales */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: 10 }}>
-        <StatCard label="Ingreso mensual (MRR)" value={fmtMoney(stats.mrr, stats.currency)} icon="wallet" tone="accent" href="/super/finanzas" />
+        <StatCard label="Ingreso mensual" value={fmtMoney(stats.mrr, stats.currency)} icon="wallet" tone="accent" href="/super/finanzas" sub="lo que se factura al mes" />
         <StatCard label="Cobrado este mes" value={fmtMoney(stats.collectedThisMonth, stats.currency)} icon="checkCircle" tone="ok" href="/super/finanzas" />
-        <StatCard label="Pendiente de cobro" value={fmtMoney(stats.pendingTotal, stats.currency)} icon="clock" tone={stats.pendingTotal > 0 ? 'warn' : undefined} href="/super/finanzas" />
+        {/* Con todo lo pendiente ya vencido, «Pendiente de cobro» y «Pagos
+            vencidos» decían lo mismo: el primero dice ahora de cuántos
+            restaurantes es y si ya venció todo (auditoría 2026-10-02, SUP-10). */}
+        <StatCard
+          label="Pendiente de cobro"
+          value={fmtMoney(stats.pendingTotal, stats.currency)}
+          icon="clock"
+          tone={stats.pendingTotal > 0 ? 'warn' : undefined}
+          sub={(() => {
+            const deudores = rows.filter((r) => r.pendingTotal > 0);
+            if (deudores.length === 0) return 'nada pendiente';
+            if (deudores.every((r) => r.hasOverdue)) return 'todo ya vencido';
+            return `de ${deudores.length} ${deudores.length === 1 ? 'restaurante' : 'restaurantes'}`;
+          })()}
+          href="/super/finanzas"
+        />
         <StatCard label="Pagos vencidos" value={stats.overdueCount} icon="alertCircle" tone={stats.overdueCount > 0 ? 'danger' : undefined} sub={stats.overdueCount > 0 ? 'requieren acción' : 'todo al día'} href="/super/finanzas" />
         <StatCard label="Restaurantes activos" value={`${metrics.active}/${metrics.total}`} icon="utensils" sub={trials > 0 ? `${trials} en prueba` : undefined} href="/super/restaurantes" />
         <StatCard label="Pedidos 30 días" value={orders30.toLocaleString('es-GT')} icon="bag" sub={`${visits30.toLocaleString('es-GT')} visitas`} href="/super/metricas" />
@@ -115,12 +129,12 @@ export default async function SuperHomePage() {
         <SectionTitle icon="bellRing" title="Requiere tu atención" count={alerts.length} />
         {alerts.length === 0 ? (
           <Card style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ width: 36, height: 36, borderRadius: 11, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--c-ok) 14%, transparent)', color: 'var(--c-ok)', flexShrink: 0 }}>
+            <span style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--c-ok) 14%, transparent)', color: 'var(--c-ok)', flexShrink: 0 }}>
               <Icon name="checkCircle" size={18} />
             </span>
             <div>
               <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>Todo en orden</div>
-              <div className="t-mute" style={{ fontSize: 12.5, marginTop: 2 }}>Sin pagos vencidos, pruebas por vencer ni restaurantes sin cobro configurado.</div>
+              <div className="t-mute" style={{ fontSize: 12, marginTop: 2 }}>Sin pagos vencidos, pruebas por vencer ni restaurantes sin cobro configurado.</div>
             </div>
           </Card>
         ) : (
@@ -135,7 +149,7 @@ export default async function SuperHomePage() {
               >
                 <span
                   style={{
-                    width: 34, height: 34, borderRadius: 10, flexShrink: 0, display: 'grid', placeItems: 'center',
+                    width: 34, height: 34, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
                     background: `color-mix(in srgb, var(--c-${a.tone === 'info' ? 'ok' : a.tone === 'warn' ? 'warn' : 'danger'}) 13%, transparent)`,
                     color: a.tone === 'info' ? 'var(--adm-info, #7dd3fc)' : a.tone === 'warn' ? 'var(--c-warn)' : 'var(--c-danger)',
                   }}
@@ -143,15 +157,17 @@ export default async function SuperHomePage() {
                   <Icon name={a.icon} size={17} />
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</div>
-                  <div className="t-mute" style={{ fontSize: 12, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.body}</div>
+                  {/* En dos renglones si hace falta: cortado a «Azúcar Negra
+                      tiene pagos …» no se sabía qué pasaba (SUP-10). */}
+                  <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--u-text)', lineHeight: 1.3 }}>{a.title}</div>
+                  <div className="t-mute" style={{ fontSize: 12, marginTop: 2, lineHeight: 1.4 }}>{a.body}</div>
                 </div>
                 <Button variant="outline" size="sm" render={<Link href={a.href} />}>{a.cta}</Button>
               </div>
             ))}
             {alerts.length > 6 && (
               <div style={{ padding: '10px 16px', borderTop: '1px solid var(--adm-border, var(--u-hair))', textAlign: 'center' }}>
-                <Link href="/super/finanzas" style={{ fontSize: 12.5, color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
+                <Link href="/super/finanzas" style={{ fontSize: 12, color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
                   Ver {alerts.length - 6} más en Finanzas →
                 </Link>
               </div>
@@ -160,8 +176,9 @@ export default async function SuperHomePage() {
         )}
       </section>
 
-      {/* Actividad + listas */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14, alignItems: 'start' }}>
+      {/* Actividad + listas. Columnas de 420 px mínimo: con 300 cabían tres y
+          las dos listas dejaban el último tercio vacío (SUP-05). */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 420px), 1fr))', gap: 14, alignItems: 'start' }}>
         <Card style={{ gridColumn: '1 / -1' }}>
           <CardHeader style={{ paddingBottom: 8 }}>
             <CardTitle>Actividad de la plataforma · 30 días</CardTitle>
@@ -191,9 +208,9 @@ export default async function SuperHomePage() {
                   borderTop: i > 0 ? '1px solid var(--adm-border, var(--u-hair))' : 'none',
                 }}
               >
-                <span style={{ width: 9, height: 9, borderRadius: 99, flexShrink: 0, background: r.restaurant_themes[0]?.color_primary ?? 'var(--brand-accent)' }} />
+                <span style={{ width: 9, height: 9, borderRadius: 'var(--radius-full)', flexShrink: 0, background: r.restaurant_themes[0]?.color_primary ?? 'var(--brand-accent)' }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
                   <div style={{ fontSize: 11, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)' }}>
                     {r.slug} · {new Date(r.created_at).toLocaleDateString('es', { day: '2-digit', month: 'short' })}
                   </div>
@@ -223,7 +240,7 @@ export default async function SuperHomePage() {
               >
                 <span
                   style={{
-                    width: 22, height: 22, borderRadius: 7, flexShrink: 0, display: 'grid', placeItems: 'center',
+                    width: 22, height: 22, borderRadius: 'var(--radius-sm)', flexShrink: 0, display: 'grid', placeItems: 'center',
                     fontSize: 11, fontWeight: 800, fontFamily: 'var(--ui-font-mono)',
                     background: i === 0 ? 'color-mix(in srgb, var(--brand-accent) 16%, transparent)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
                     color: i === 0 ? 'var(--brand-accent)' : 'var(--u-text-3)',
@@ -232,7 +249,7 @@ export default async function SuperHomePage() {
                   {i + 1}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
                   <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
                     {r.orders30} pedidos · {r.visits30} visitas · vendió {fmtMoney(r.salesRevenue30, r.config?.currency ?? stats.currency)}
                   </div>
@@ -259,9 +276,9 @@ export default async function SuperHomePage() {
                 <Badge
                   key={plan}
                   variant="neutral"
-                  style={{ fontSize: 12.5, padding: '7px 12px', gap: 7 }}
+                  style={{ fontSize: 12, padding: '7px 12px', gap: 7 }}
                 >
-                  <span style={{ width: 8, height: 8, borderRadius: 99, background: PLAN_DOT[plan] ?? '#94a3b8' }} />
+                  <span style={{ width: 8, height: 8, borderRadius: 'var(--radius-full)', background: PLAN_DOT[plan] ?? '#94a3b8' }} />
                   {planLabel(plan)}
                   <strong style={{ fontFamily: 'var(--ui-font-mono)' }}>{count}</strong>
                 </Badge>
@@ -277,9 +294,9 @@ function SectionTitle({ icon, title, count }: { icon: string; title: string; cou
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
       <Icon name={icon} size={16} style={{ color: 'var(--brand-accent-ink)' }} />
-      <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--u-text)', margin: 0 }}>{title}</h2>
+      <h2 style={{ fontWeight: 600, fontSize: 15, color: 'var(--u-text)', margin: 0 }}>{title}</h2>
       {count != null && count > 0 && (
-        <Badge variant="danger" style={{ fontSize: 10.5 }}>{count}</Badge>
+        <Badge variant="danger" style={{ fontSize: 11 }}>{count}</Badge>
       )}
     </div>
   );

@@ -10,6 +10,7 @@ import { Price, QtyStepper, PrimaryButton, ctaClass } from '@/components/menu/ui
 import { useCart } from '@/lib/cart-context';
 import { useThemeContent, useThemeConfig, useText } from '@/lib/theme/context';
 import { useTenantPrefix } from '@/lib/tenant-client';
+import { Acompanantes, type Sugerencia } from '@/components/menu/pairings';
 
 /* Barra inferior fija con el resumen del carrito. */
 export function CartBar({ onOpen, cartIconHidden }: { onOpen: () => void; cartIconHidden?: boolean }) {
@@ -43,8 +44,12 @@ export function CartBar({ onOpen, cartIconHidden }: { onOpen: () => void; cartIc
 }
 
 /* Panel del carrito (bottom-sheet). */
-export function CartPanel({ onClose }: { onClose: () => void }) {
-  const { items, updateQuantity, removeItem, total, pointsToRedeem } = useCart();
+export function CartPanel({ onClose, sugerencias = [] }: {
+  onClose: () => void;
+  /** «Acompáñalo con…» con lo que todavía no lleva (CAT-13). */
+  sugerencias?: Sugerencia[];
+}) {
+  const { items, addItem, updateQuantity, removeItem, total, pointsToRedeem } = useCart();
   const content = useThemeContent();
   const titleT = useText('heading', 'cartTitle');
   const checkoutHref = useTenantPrefix('/checkout');
@@ -109,7 +114,10 @@ export function CartPanel({ onClose }: { onClose: () => void }) {
                         Gratis · {(item.pointsCost ?? 0).toLocaleString('es-GT')} pts
                       </div>
                     ) : (
-                      <Price amount={item.price * item.quantity} size={14} style={{ marginTop: 3 }} />
+                      /* En bloque: el nombre es `inline-flex` (por el regalo) y el
+                         precio, un <span>; seguidos salían pegados en el mismo
+                         renglón («Lox del BarrioQ62.00»). */
+                      <Price amount={item.price * item.quantity} size={14} style={{ marginTop: 3, display: 'block' }} />
                     )}
                   </div>
                   {item.rewardId ? (
@@ -130,6 +138,16 @@ export function CartPanel({ onClose }: { onClose: () => void }) {
                   )}
                 </div>
               ))}
+
+              {/* Aquí se agregan al tocar: ya es el carrito. Lo agregado sale
+                  de la lista de arriba y deja de sugerirse. */}
+              <div style={{ marginTop: 'var(--m-sp-3)' }}>
+                <Acompanantes
+                  items={sugerencias}
+                  onToggle={(a) => addItem({ productId: a.id, name: a.name, price: a.price, image_url: a.image_url ?? null })}
+                  nota={{ es: 'Toca para agregar', en: 'Tap to add' }}
+                />
+              </div>
             </div>
 
             <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 'var(--m-sp-4)' }}>

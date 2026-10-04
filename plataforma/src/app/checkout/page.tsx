@@ -4,7 +4,9 @@ import { notFound } from 'next/navigation';
 import { CartProvider } from '@/lib/cart-context';
 import { ThemeProvider } from '@/lib/theme/context';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
-import { isOpenNow } from '@/lib/hours';
+import { hasAnyHours, isOpenNow } from '@/lib/hours';
+import { getMenuDataCached, getTopSellingProductIdsCached } from '@/lib/db/menu';
+import { masPedidos } from '@/lib/menu-pairings';
 import { hasActiveCoupons } from '@/lib/db/cupones';
 import { getDeliveryZones } from '@/lib/db/zones';
 import { isModuleActive } from '@/lib/modules';
@@ -46,6 +48,27 @@ export default async function CheckoutPage() {
   const modSettings = restaurant.module_settings ?? null;
   const encuestasActive = isModuleActive(mod, modSettings, 'encuestas');
 
+  /* «Lo más pedido» por si el carrito llega vacío (CAT-09). El carrito vive
+     en el teléfono, así que aquí no se sabe; las dos lecturas están en
+     caché (la carta, un minuto; las ventas, una hora) y la lista viaja
+     corta: cuatro platillos con nombre y precio. */
+  const [menu, topIds] = await Promise.all([
+    getMenuDataCached(restaurant.id),
+    getTopSellingProductIdsCached(restaurant.id),
+  ]);
+  const tz = restaurant.timezone || 'America/Guatemala';
+  const ahora = new Date();
+  const catById = new Map(menu.categories.map((c) => [c.id, c]));
+  const sugeridos = masPedidos({
+    productos: menu.products,
+    topIds,
+    categoriaAbierta: (id) => {
+      const c = catById.get(id);
+      return !c || !hasAnyHours(c.availability) || isOpenNow(c.availability, tz, ahora);
+    },
+    now: ahora.getTime(),
+  }).map((p) => ({ id: p.id, name: p.name, name_en: p.name_en, price: p.price, image_url: p.image_url }));
+
   if (paused || !open) {
     return (
       <ThemeProvider config={resolved.config} content={resolved.content}>
@@ -72,6 +95,7 @@ export default async function CheckoutPage() {
           encuestasActive={encuestasActive}
           hubUrl={hubUrl}
           hubToken={hubToken}
+          sugeridos={sugeridos}
         />
       </CartProvider>
     </ThemeProvider>

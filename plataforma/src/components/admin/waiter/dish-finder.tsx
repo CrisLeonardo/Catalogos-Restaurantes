@@ -185,7 +185,7 @@ export default function DishFinder({
 
   return (
     <section>
-      <Label aside={<span className="wp-wide-only" style={{ fontSize: 12.5, color: 'var(--u-text-4)' }}>no hace falta tocar nada</span>}>
+      <Label aside={<span className="wp-wide-only" style={{ fontSize: 12, color: 'var(--u-text-4)' }}>no hace falta tocar nada</span>}>
         Agregar sin salir de aquí
       </Label>
 
@@ -196,10 +196,10 @@ export default function DishFinder({
             que verse el 3 antes de pulsar Enter, no después. */}
         {qty > 1 && (
           <span style={{
-            flexShrink: 0, padding: '2px 7px', borderRadius: 6,
+            flexShrink: 0, padding: '2px 7px', borderRadius: 'var(--radius-sm)',
             background: 'color-mix(in srgb, var(--adm-accent-500) 14%, transparent)',
             color: 'var(--brand-accent-ink)', fontFamily: 'var(--ui-font-mono)',
-            fontSize: 12.5, fontWeight: 700,
+            fontSize: 12, fontWeight: 700,
           }}>
             ×{qty}
           </span>
@@ -228,7 +228,7 @@ export default function DishFinder({
 
       <div className="wp-finder-res" style={{ marginTop: 8 }}>
         {results.length === 0 ? (
-          <div style={{ padding: '18px 6px', fontSize: 13.5, color: 'var(--u-text-3)', textAlign: 'center' }}>
+          <div style={{ padding: '18px 6px', fontSize: 13, color: 'var(--u-text-3)', textAlign: 'center' }}>
             {/* Sin «disponible»: ahora los agotados SÍ salen, así que si no
                 hay nada es que ese plato no está en la carta. La palabra
                 sobraba y además insinuaba una respuesta que no era. */}
@@ -243,7 +243,7 @@ export default function DishFinder({
                 className="press"
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  width: '100%', marginTop: 12, height: 44, borderRadius: 12, cursor: 'pointer',
+                  width: '100%', marginTop: 12, height: 44, borderRadius: 'var(--radius-lg)', cursor: 'pointer',
                   border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
                   color: 'var(--u-text)', fontSize: 14, fontWeight: 600,
                 }}
@@ -271,7 +271,7 @@ export default function DishFinder({
                       style={{ flex: 1, minWidth: 0, textAlign: 'left', border: 'none', background: 'none', cursor: agotado ? 'default' : 'pointer', padding: 0 }}
                     >
                       <span style={{
-                        display: 'block', fontSize: 14.5, fontWeight: 500,
+                        display: 'block', fontSize: 14, fontWeight: 500,
                         color: agotado ? 'var(--u-text-3)' : 'var(--u-text)',
                         textDecoration: agotado ? 'line-through' : 'none',
                       }}>
@@ -292,7 +292,7 @@ export default function DishFinder({
                     {agotado ? (
                       <span
                         style={{
-                          flexShrink: 0, padding: '3px 9px', borderRadius: 7, whiteSpace: 'nowrap',
+                          flexShrink: 0, padding: '3px 9px', borderRadius: 'var(--radius-sm)', whiteSpace: 'nowrap',
                           fontSize: 12, fontWeight: 700, letterSpacing: '0.02em',
                           background: 'color-mix(in srgb, var(--c-warn) 14%, transparent)',
                           color: 'var(--c-warn)',

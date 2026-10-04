@@ -14,12 +14,14 @@
    en la tabla delivery_zones, no en el jsonb de restaurants.
    ============================================================ */
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
-import { updateDeliveryZones, type RestaurantState } from '@/lib/actions/restaurant';
+import { updateDeliveryZones, type ZonesState } from '@/lib/actions/restaurant';
+import SaveBar from '@/components/admin/save-bar';
+import { useFormDirty } from '@/lib/use-form-dirty';
 
-const empty: RestaurantState = null;
+const empty: ZonesState = null;
 
 export interface ZoneDraft {
   nombre: string;
@@ -33,6 +35,8 @@ export default function DeliveryZonesEditor({
   initialZones: ZoneDraft[];
 }) {
   const [state, formAction, isPending] = useActionState(updateDeliveryZones, empty);
+  const { ref: formRef, dirty, markSaved } = useFormDirty();
+  useEffect(() => { if (state && 'saved' in state) markSaved(); }, [state, markSaved]);
   const [zones, setZones] = useState<ZoneDraft[]>(initialZones);
   const [draft, setDraft] = useState('');
 
@@ -53,19 +57,16 @@ export default function DeliveryZonesEditor({
   }
 
   return (
-    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <input type="hidden" name="restaurantId" value={restaurantId} />
       <input type="hidden" name="zones" value={JSON.stringify(zones)} />
 
       <Glass variant="quiet" style={{ padding: 16 }}>
-        <label
-          style={{
-            fontSize: 12, color: 'var(--u-text-3)', fontWeight: 500,
-            letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6, display: 'block',
-          }}
-        >
-          Zonas a las que llega tu delivery
-        </label>
+        {/* Título de la ficha como el de «Validación por mapa», no un rótulo
+            en MAYÚSCULAS (auditoría 2026-10-02, T-11). */}
+        <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--u-text)', marginBottom: 4 }}>
+          Zonas a las que llevas a domicilio
+        </p>
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 12, lineHeight: 1.5 }}>
           Si agregas zonas, el cliente debe elegir la suya al pedir a domicilio y
           paga la tarifa de esa zona; si la suya no está, solo podrá pedir para
@@ -100,12 +101,8 @@ export default function DeliveryZonesEditor({
                   inputMode="decimal"
                   value={z.tarifa}
                   onChange={(e) => setTarifa(z.nombre, e.target.value)}
-                  style={{
-                    width: 84, background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-                    border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)',
-                    padding: '7px 9px', color: 'var(--u-text)', fontSize: 13, outline: 'none',
-                    fontVariantNumeric: 'tabular-nums',
-                  }}
+                  className="adm-field adm-field-sm"
+                  style={{ width: 84, fontVariantNumeric: 'tabular-nums' }}
                 />
 
                 <button
@@ -114,7 +111,7 @@ export default function DeliveryZonesEditor({
                   className="press"
                   title={`Quitar ${z.nombre}`}
                   style={{
-                    width: 22, height: 22, borderRadius: 99, border: 'none', cursor: 'pointer',
+                    width: 22, height: 22, borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
                     background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: 'var(--u-text-3)',
                     display: 'grid', placeItems: 'center', flexShrink: 0,
                   }}
@@ -136,11 +133,8 @@ export default function DeliveryZonesEditor({
               if (e.key === 'Enter') { e.preventDefault(); addZone(); }
             }}
             placeholder="Ej. Zona 1, Centro, San Cristóbal…"
-            style={{
-              flex: 1, background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
-              borderRadius: 'var(--radius-md)', padding: '10px 12px',
-              color: 'var(--u-text)', fontSize: 14, outline: 'none',
-            }}
+            className="adm-field"
+            style={{ flex: 1 }}
           />
           <button
             type="button"
@@ -157,30 +151,7 @@ export default function DeliveryZonesEditor({
         </div>
       </Glass>
 
-      {state?.error && (
-        <div
-          style={{
-            padding: '10px 14px', borderRadius: 'var(--radius-md)',
-            background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)',
-            color: 'var(--c-danger)', fontSize: 14,
-          }}
-        >
-          {state.error}
-        </div>
-      )}
-
-      <button
-        type="submit"
-        disabled={isPending}
-        className="press btn-accent"
-        style={{
-          width: '100%', padding: '14px', borderRadius: 'var(--radius-full)',
-          fontWeight: 600, fontSize: 15, border: 'none',
-          cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1,
-        }}
-      >
-        {isPending ? 'Guardando…' : 'Guardar zonas de entrega'}
-      </button>
+      <SaveBar dirty={dirty} pending={isPending} status={state} label="Guardar zonas" />
     </form>
   );
 }

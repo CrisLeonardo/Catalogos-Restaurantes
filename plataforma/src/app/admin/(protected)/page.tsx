@@ -30,6 +30,7 @@ import type { OrderStatus, Restaurant } from '@/types';
 import { mesaDeFila, direccionDeMesa } from '@/lib/mesa';
 import { panelBase } from '@/lib/panel-links-server';
 import { panelHref } from '@/lib/panel-links';
+import { fmtMoney } from '@/lib/money';
 
 export const metadata = { title: 'Hoy – Panel admin' };
 
@@ -218,7 +219,22 @@ export default async function AdminHomePage() {
     if (stale && (agent?.is_active as boolean | null) !== false) agentOffline = true;
   }
 
-  const fmt = (n: number) => (resolved ? formatPrice(n, resolved.config) : `Q${n.toFixed(2)}`);
+  /* Platillos a la vista sin foto (auditoría 2026-10-02, MEN-12). Sin foto
+     la carta vende menos y el dueño no lo ve hasta que alguien se lo dice.
+     Una consulta de conteo, y solo para quien puede editar el catálogo. */
+  let sinFoto = 0;
+  if (restaurantId && allow('catalogo') && !needsOnboarding) {
+    const db = createServiceClient();
+    const { count } = await db
+      .from('products')
+      .select('id', { count: 'exact', head: true })
+      .eq('restaurant_id', restaurantId)
+      .eq('is_active', true)
+      .or('image_url.is.null,image_url.eq.');
+    sinFoto = count ?? 0;
+  }
+
+  const fmt = (n: number) => (resolved ? formatPrice(n, resolved.config) : fmtMoney(n));
   const brandName = restaurant?.name ?? 'tu restaurante';
 
   // El menú público vive en el subdominio SIN "-admin": un href="/" relativo
@@ -273,10 +289,52 @@ export default async function AdminHomePage() {
       action: 'Ver planes',
     });
   }
+  /* Sin lema, la portada del menú no tiene la frase bajo el nombre. Antes
+     salía «Sabor que enamora» de relleno; ahora se pide (CAT-03). */
+  if (resolved && !resolved.config.tagline && !resolved.content.portada.subtitle && allow('perfil') && !needsOnboarding) {
+    alerts.push({
+      key: 'lema', href: panelHref(base, '/admin/perfil'), level: 'info',
+      title: 'Tu menú no tiene lema',
+      desc: 'Una frase bajo tu nombre en la portada, como «Café de especialidad en la zona 10».',
+      action: 'Escribir lema',
+    });
+  }
+  if (sinFoto > 0) {
+    alerts.push({
+      key: 'sin-foto', href: panelHref(base, '/admin/menu?filtro=sin-foto'), level: 'info',
+      title: sinFoto === 1 ? '1 platillo sin foto' : `${sinFoto} platillos sin foto`,
+      desc: 'Con foto se piden más: en un menú digital la gente elige con los ojos.',
+      action: 'Agregar fotos',
+    });
+  }
   alerts.sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]);
 
+  /* Con qué comparar las ventas de hoy, bajo la cifra (auditoría
+     2026-10-02, HOY-03): lo que un día igual —mismo día de la semana, las
+     cuatro semanas anteriores— llevaba A ESTA HORA (getDayPace). Con menos
+     de dos días de referencia no se dice nada: uno solo es casualidad. */
+  const pace = widgets?.pace ?? null;
+  let ventasVs: React.ReactNode = null;
+  if (stats && pace && pace.samples >= 2 && pace.typicalSoFar > 0) {
+    const delta = Math.round(((stats.todaySales - pace.typicalSoFar) / pace.typicalSoFar) * 100);
+    let dia = 'un día igual';
+    try {
+      dia = `un ${new Intl.DateTimeFormat('es-GT', { weekday: 'long', timeZone: timezone }).format(new Date(now))} normal`;
+    } catch { /* zona rara: se queda «un día igual» */ }
+    ventasVs = delta === 0
+      ? <>Igual que {dia}</>
+      : (
+        <>
+          <span style={{ color: delta > 0 ? 'var(--c-ok)' : 'var(--c-warn)', fontWeight: 600 }}>
+            {delta > 0 ? '↑' : '↓'} {Math.abs(delta)} %
+          </span>{' '}
+          vs. {dia}
+        </>
+      );
+  }
+
   return (
-    <div className="anim-fade-up flex max-w-[1040px] flex-col gap-6">
+    <div className="anim-fade-up adm-w-overview flex flex-col gap-6">
 
       {/* Cabecera: el título y las dos únicas acciones que no están en el menú.
           El bloque del título lleva un mínimo (no min-w-0): sin él, flexbox
@@ -288,10 +346,15 @@ export default async function AdminHomePage() {
           (flex-wrap) por si acaso en una pantalla muy angosta (~320px)
           tampoco entran juntos. */}
       <div className="flex flex-wrap items-end gap-4">
+        {/* «Hoy» ya lo dice la barra de arriba; aquí se repetía en letra de
+            portada a diez píxeles (auditoría 2026-10-02, T-10/HOY-02). La
+            cabecera dice ahora lo que la barra no: qué día es y de qué local. */}
         <div className="min-w-[190px] flex-1">
-          <h2 className="t-display" style={{ fontSize: 26, lineHeight: 1.15 }}>Hoy</h2>
-          <p style={{ fontSize: 14.5, color: 'var(--u-text-3)', marginTop: 6 }}>
-            {today} · {brandName}
+          <h2 style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.25, color: 'var(--u-text)', margin: 0 }}>
+            {today}
+          </h2>
+          <p style={{ fontSize: 14, color: 'var(--u-text-3)', marginTop: 3 }}>
+            {brandName}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
@@ -302,7 +365,7 @@ export default async function AdminHomePage() {
             className="press inline-flex items-center gap-2 rounded-adm-md px-3.5 py-2 no-underline"
             style={{
               border: '1px solid var(--u-hair-2)', color: 'var(--u-text-2)',
-              fontSize: 13.5, fontWeight: 500,
+              fontSize: 13, fontWeight: 500,
             }}
           >
             <Icon name="eye" size={15} />
@@ -312,7 +375,7 @@ export default async function AdminHomePage() {
             <Link
               href={panelHref(base, "/admin/menu/productos/new")}
               className="btn-accent press inline-flex items-center gap-2 rounded-adm-md px-3.5 py-2 no-underline"
-              style={{ fontSize: 13.5, fontWeight: 600 }}
+              style={{ fontSize: 13, fontWeight: 600 }}
             >
               <Icon name="plus" size={15} />
               Agregar platillo
@@ -335,7 +398,7 @@ export default async function AdminHomePage() {
                 <StatusDot tone={LEVEL_TONE[a.level]} size={9} />
                 <ListText title={a.title} desc={a.desc} />
                 <span
-                  className="shrink-0 text-[13.5px] font-semibold"
+                  className="shrink-0 text-[13px] font-semibold"
                   style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}
                 >
                   {a.action}
@@ -353,7 +416,7 @@ export default async function AdminHomePage() {
           action={allow('metricas') ? { href: panelHref(base, '/admin/metricas'), label: 'Ver el mes' } : undefined}
         >
           <StatGroup>
-            <Stat label="Ventas" value={fmt(stats.todaySales)} />
+            <Stat label="Ventas" value={fmt(stats.todaySales)} sub={ventasVs} />
             <Stat label="Pedidos" value={String(stats.todayOrders)} />
             <Stat label="Ticket promedio" value={fmt(stats.todayTicket)} />
           </StatGroup>
@@ -365,17 +428,21 @@ export default async function AdminHomePage() {
         <Section title="En curso">
           <List>
             {live.orders.map((o) => (
-              <ListLink key={o.id} href={panelHref(base, "/admin/pedidos")}>
-                <span className="w-26 shrink-0 text-[14.5px] font-semibold text-adm-text">
+              /* En el teléfono, dos renglones: las columnas de ancho fijo
+                 (104 + 116 + 96 px + huecos) no cabían en 358 px y el total
+                 se cortaba en «Q132.(» (auditoría 2026-10-02, HOY-01). Desde
+                 `sm` vuelve a ser la fila de cuatro columnas de siempre. */
+              <ListLink key={o.id} href={panelHref(base, "/admin/pedidos")} className="flex-wrap gap-y-1 sm:flex-nowrap">
+                <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-adm-text sm:w-26 sm:flex-none">
                   {orderLabel(o)}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[13.5px] text-adm-text-3">
+                <span className="order-last min-w-0 basis-full truncate text-[13px] text-adm-text-3 sm:order-none sm:basis-auto sm:flex-1">
                   {o.customer_name ? `${o.customer_name} · ` : ''}{agoLabel(o.created_at, now)}
                 </span>
-                <StatusPill tone={STATUS_TONE[o.status]} className="w-29 shrink-0">
+                <StatusPill tone={STATUS_TONE[o.status]} className="shrink-0 sm:w-29">
                   {STATUS_LABEL_SHORT[o.status]}
                 </StatusPill>
-                <span className="t-mono w-24 shrink-0 text-right text-[14.5px] text-adm-text">
+                <span className="t-mono shrink-0 text-right text-[14px] text-adm-text sm:w-24">
                   {fmt(Number(o.total))}
                 </span>
               </ListLink>
@@ -414,19 +481,24 @@ export default async function AdminHomePage() {
         <HouseWidget data={widgets.house} now={now} canSeeTables={allow('mesas')} />
       )}
 
-      {/* 6 · Cómo va el día — la misma pieza que usa Pedidos */}
-      {stats && stats.series.length > 0 && stats.totalLast14 > 0 && (
-        <SalesTrendWidget
-          series={stats.series}
-          totalLast14={stats.totalLast14}
-          todaySales={stats.todaySales}
-          pace={widgets?.pace ?? null}
-          money={fmt}
-        />
+      {/* 6 y 7 · Cómo va el día y lo que más sale, lado a lado cuando hay
+          sitio: a lo ancho, la cifra quedaba a la izquierda y las barras
+          (con tope de 340 px) a la derecha, con media tarjeta en blanco en
+          medio (auditoría 2026-10-02, HOY-04). Si solo hay una, ocupa todo. */}
+      {stats && ((stats.series.length > 0 && stats.totalLast14 > 0) || stats.topToday.length > 0) && (
+        <div className="grid items-start gap-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))' }}>
+          {stats.series.length > 0 && stats.totalLast14 > 0 && (
+            <SalesTrendWidget
+              series={stats.series}
+              totalLast14={stats.totalLast14}
+              todaySales={stats.todaySales}
+              pace={widgets?.pace ?? null}
+              money={fmt}
+            />
+          )}
+          {stats.topToday.length > 0 && <TopTodayWidget items={stats.topToday} />}
+        </div>
       )}
-
-      {/* 7 · Lo que más sale hoy */}
-      {stats && stats.topToday.length > 0 && <TopTodayWidget items={stats.topToday} />}
 
       {/* 8 · Tu menú en línea */}
       {widgets?.online && <OnlineWidget data={widgets.online} showOrders={ordersEnabled} />}

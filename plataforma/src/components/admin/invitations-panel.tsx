@@ -14,6 +14,7 @@ import { Section } from '@/components/ui/section';
 import { Button } from '@/components/ui/button';
 import { revokeInvitation } from '@/lib/actions/invitations';
 import type { PendingInvitation } from '@/lib/auth/invitations';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 const ROLE_LABEL: Record<string, string> = {
   MANAGER: 'Gerente',
@@ -31,11 +32,11 @@ export default function InvitationsPanel({ restaurantId, invitations }: {
   restaurantId: string;
   invitations: PendingInvitation[];
 }) {
-
+  const { confirmSubmit, dialog } = useConfirm();
   return (
     <Section title="Invitaciones pendientes">
       <Card className="p-4.5 flex flex-col gap-3.5">
-      <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
+      <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
         Enlaces que enviaste antes y siguen vivos. Quien los abra entrará con normalidad.
         Si ya no quieres que entre, revócalo aquí. Para dar acceso a alguien nuevo,
         usa <strong>Nuevo miembro</strong> arriba: se crea con un usuario y una contraseña
@@ -55,16 +56,21 @@ export default function InvitationsPanel({ restaurantId, invitations }: {
               }}
             >
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13.5, color: 'var(--u-text)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: 13, color: 'var(--u-text)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {inv.email}
                 </div>
-                <div style={{ fontSize: 11.5, color: inv.expired ? 'var(--c-danger)' : 'var(--u-text-4)', marginTop: 1 }}>
+                <div style={{ fontSize: 11, color: inv.expired ? 'var(--c-danger)' : 'var(--u-text-4)', marginTop: 1 }}>
                   {ROLE_LABEL[inv.role] ?? inv.role} · {whenExpires(inv.expiresAt, inv.expired)}
                 </div>
               </div>
               <form
                 action={revokeInvitation}
-                onSubmit={(e) => { if (!confirm('¿Cancelar esta invitación? El enlace dejará de funcionar.')) e.preventDefault(); }}
+                onSubmit={confirmSubmit({
+                  title: '¿Cancelar esta invitación?',
+                  description: 'El enlace que mandaste dejará de funcionar.',
+                  confirmLabel: 'Cancelar invitación',
+                  cancelLabel: 'No',
+                })}
                 style={{ flexShrink: 0 }}
               >
                 <input type="hidden" name="restaurantId" value={restaurantId} />
@@ -79,6 +85,7 @@ export default function InvitationsPanel({ restaurantId, invitations }: {
       )}
 
       </Card>
+      {dialog}
     </Section>
   );
 }

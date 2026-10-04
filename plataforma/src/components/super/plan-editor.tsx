@@ -150,11 +150,11 @@ export default function PlanEditor({
 
       {/* Plan selector */}
       <Glass variant="quiet" style={{ padding: 16 }}>
-        <p style={{ fontSize: 12, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 12 }}>
+        <p style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 600, marginBottom: 12 }}>
           Plan
         </p>
         {isLegacy && (
-          <div style={{ marginBottom: 12, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', color: 'var(--c-warn)', fontSize: 12.5 }}>
+          <div style={{ marginBottom: 12, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', color: 'var(--c-warn)', fontSize: 12 }}>
             Plan heredado «{rawPlan}». Selecciona el nuevo plan para actualizarlo.
           </div>
         )}
@@ -184,8 +184,8 @@ export default function PlanEditor({
                   <span style={{
                     position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)',
                     background: '#fbbf24', color: '#1a1a1a',
-                    fontSize: 8, fontWeight: 700, letterSpacing: '0.05em',
-                    padding: '2px 6px', borderRadius: 99, whiteSpace: 'nowrap',
+                    fontSize: 11, fontWeight: 700, letterSpacing: '0.05em',
+                    padding: '2px 6px', borderRadius: 'var(--radius-full)', whiteSpace: 'nowrap',
                   }}>
                     NO PUBLICADO
                   </span>
@@ -193,8 +193,8 @@ export default function PlanEditor({
                   <span style={{
                     position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)',
                     background: 'var(--brand-accent)', color: '#fff',
-                    fontSize: 8, fontWeight: 700, letterSpacing: '0.05em',
-                    padding: '2px 6px', borderRadius: 99, whiteSpace: 'nowrap',
+                    fontSize: 11, fontWeight: 700, letterSpacing: '0.05em',
+                    padding: '2px 6px', borderRadius: 'var(--radius-full)', whiteSpace: 'nowrap',
                   }}>
                     {meta.badge}
                   </span>
@@ -205,7 +205,7 @@ export default function PlanEditor({
                 <div style={{ fontWeight: 700, fontSize: 14, color: active ? 'var(--u-text)' : 'var(--u-text-2)', marginBottom: 1 }}>
                   {meta.price}
                 </div>
-                <div style={{ fontSize: 9, color: 'var(--u-text-4)' }}>
+                <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
                   {meta.sub}
                 </div>
               </button>
@@ -216,7 +216,7 @@ export default function PlanEditor({
 
       {/* Incluido en el plan */}
       <Glass variant="quiet" style={{ padding: 16 }}>
-        <p style={{ fontSize: 12, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 12 }}>
+        <p style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 600, marginBottom: 12 }}>
           Incluido en el plan
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -235,7 +235,7 @@ export default function PlanEditor({
 
       {/* Módulos gestionados por Leogin */}
       <Glass variant="quiet" style={{ padding: 16 }}>
-        <p style={{ fontSize: 12, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>
+        <p style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 600, marginBottom: 6 }}>
           Módulos gestionados por Leogin
         </p>
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '0 0 12px', lineHeight: 1.5, display: 'flex', gap: 7 }}>
@@ -302,7 +302,7 @@ function ModuleRow({
         className={locked ? undefined : 'press'}
         aria-label={label}
         style={{
-          width: 40, height: 24, borderRadius: 12, flexShrink: 0,
+          width: 40, height: 24, borderRadius: 'var(--radius-lg)', flexShrink: 0,
           background: enabled ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 10%, transparent)',
           border: 'none', cursor: locked ? 'default' : 'pointer',
           position: 'relative', transition: 'background 200ms',

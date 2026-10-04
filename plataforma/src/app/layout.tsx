@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Unbounded, Anton, Instrument_Serif, JetBrains_Mono } from 'next/font/google';
+import { CATALOG_FONT_VARS } from './catalog-fonts';
+import { analiticaConfig } from '@/lib/analytics';
 import { headers, cookies } from 'next/headers';
 import './globals.css';
 import ThemeBackground from '@/components/theme-background';
@@ -177,7 +179,7 @@ export default async function RootLayout({
         data-admin-area=""
         data-scheme={adminScheme}
         data-glass="translucido"
-        className={`${geistSans.variable} ${BRAND_FONT_VARS} h-full antialiased`}
+        className={`${geistSans.variable} ${BRAND_FONT_VARS} ${CATALOG_FONT_VARS} h-full antialiased`}
         style={{ colorScheme: adminScheme }}
       >
         <body className="min-h-full flex flex-col">{children}</body>
@@ -214,6 +216,11 @@ export default async function RootLayout({
   const isPlatform = !slug;
   const scheme = resolved?.config.scheme ?? (isPlatform ? 'light' : 'dark');
 
+  // Analítica sin cookies, solo en la web de Leogin (WEB-01, lib/analytics.ts).
+  // Lleva el nonce de la petición: la CSP no deja correr scripts sin él.
+  const analitica = isPlatform ? analiticaConfig() : null;
+  const nonce = analitica ? headersList.get('x-nonce') ?? undefined : undefined;
+
   // Serializar vars como :root{} para <style> en el body.
   // Un <style> en body aplica al documento completo igual que en <head>,
   // pero evita conflictos con el manejo de <head> de Next.js App Router.
@@ -240,7 +247,7 @@ export default async function RootLayout({
       // ventana desde React ni el salto de maqueta que eso traería.
       // Ver el bloque «LIENZO DEL MENÚ» en globals.css.
       data-canvas={resolved?.config.layoutWidth ?? 'movil'}
-      className={`${geistSans.variable} ${BRAND_FONT_VARS} h-full antialiased`}
+      className={`${geistSans.variable} ${BRAND_FONT_VARS} ${CATALOG_FONT_VARS} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {/* Variables del tema: stylesheet en vez de inline style → el customCss
@@ -273,6 +280,17 @@ export default async function RootLayout({
         <OfflineSupport />
 
         {children}
+
+        {analitica && (
+          <script
+            defer
+            src={analitica.script}
+            nonce={nonce}
+            {...(analitica.proveedor === 'umami'
+              ? { 'data-website-id': analitica.id, 'data-do-not-track': 'true' }
+              : { 'data-domain': analitica.id })}
+          />
+        )}
 
         {/* CSS propio del restaurante: último en el documento → puede sobrescribir todo. */}
         {resolved?.customCss ? (

@@ -6,16 +6,6 @@ import { setNewPassword, type ResetState } from '@/lib/actions/password-reset';
 
 const empty: ResetState = null;
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-  border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)',
-  padding: '12px 14px',
-  color: 'var(--u-text)',
-  fontSize: 16,
-  outline: 'none',
-};
 
 const labelStyle: React.CSSProperties = {
   fontSize: 12, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.03em',
@@ -40,10 +30,10 @@ export default function NuevaClaveClient() {
   return (
     <div style={{ width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
-        <h1 style={{ fontSize: 21, fontWeight: 700, color: 'var(--u-text)', margin: '0 0 6px' }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--u-text)', margin: '0 0 6px' }}>
           Crea tu contraseña nueva
         </h1>
-        <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--u-text-3)', margin: 0 }}>
+        <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--u-text-3)', margin: 0 }}>
           Con esta contraseña entrarás a tu panel a partir de ahora.
         </p>
       </div>
@@ -61,7 +51,7 @@ export default function NuevaClaveClient() {
               autoComplete="new-password"
               required
               minLength={8}
-              style={inputStyle}
+              className="adm-field adm-field-lg"
             />
             <button
               type="button"
@@ -78,7 +68,7 @@ export default function NuevaClaveClient() {
               <Icon name="eye" size={17} />
             </button>
           </div>
-          <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '6px 0 0' }}>Mínimo 8 caracteres.</p>
+          <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: '6px 0 0' }}>Mínimo 8 caracteres.</p>
         </div>
 
         <div>
@@ -91,10 +81,10 @@ export default function NuevaClaveClient() {
             onChange={(e) => setPassword2(e.target.value)}
             autoComplete="new-password"
             required
-            style={inputStyle}
+            className="adm-field adm-field-lg"
           />
           {mismatch && (
-            <p style={{ fontSize: 11.5, color: '#f87171', margin: '6px 0 0' }}>
+            <p style={{ fontSize: 11, color: '#f87171', margin: '6px 0 0' }}>
               Las dos contraseñas no coinciden.
             </p>
           )}
@@ -103,7 +93,7 @@ export default function NuevaClaveClient() {
         {state && 'error' in state && (
           <p
             style={{
-              padding: '10px 14px', borderRadius: 'var(--radius-md)', margin: 0, fontSize: 13.5,
+              padding: '10px 14px', borderRadius: 'var(--radius-md)', margin: 0, fontSize: 13,
               background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)',
               color: '#f87171',
             }}
@@ -117,7 +107,7 @@ export default function NuevaClaveClient() {
           disabled={isPending || entrando || mismatch || password.length < 8}
           className="press btn-accent"
           style={{
-            padding: '13px', borderRadius: 999, fontWeight: 600, fontSize: 15,
+            padding: '13px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 15,
             border: 'none', color: '#fff',
             cursor: isPending || entrando || mismatch ? 'not-allowed' : 'pointer',
             opacity: isPending || entrando || mismatch || password.length < 8 ? 0.6 : 1,

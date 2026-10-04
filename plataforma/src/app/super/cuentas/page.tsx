@@ -14,12 +14,11 @@ export default async function CuentasPage() {
     return (
       <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <PageHeader
-          title="Cuentas"
           subtitle="Las personas que entran a Leogin, con restaurante o sin él."
         />
         <Card style={{ padding: 20, display: 'flex', gap: 13, alignItems: 'flex-start' }}>
           <Icon name="alertCircle" size={20} style={{ color: 'var(--c-warn)', flexShrink: 0, marginTop: 1 }} />
-          <div style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--u-text-3)' }}>
+          <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--u-text-3)' }}>
             <div style={{ fontWeight: 700, color: 'var(--u-text)', marginBottom: 4 }}>
               Falta correr la migración 131 en esta base
             </div>
@@ -61,7 +60,6 @@ export default async function CuentasPage() {
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <PageHeader
-        title="Cuentas"
         subtitle={
           <>
             {personas} {personas === 1 ? 'persona' : 'personas'} con cuenta de Leogin.

@@ -19,14 +19,14 @@ export default async function PlanLockedScreen({ feature, description, icon = 'u
   const pricing = await getEffectivePlanPricing();
   return (
     <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div className="glass-solid anim-fade-up" style={{ maxWidth: 440, width: '100%', borderRadius: 22, padding: '32px 26px', textAlign: 'center' }}>
-        <div style={{ width: 52, height: 52, margin: '0 auto 16px', borderRadius: 16, background: 'rgba(var(--brand-accent-rgb,99,102,241),0.13)', display: 'grid', placeItems: 'center', color: 'var(--brand-accent-ink)' }}>
+      <div className="glass-solid anim-fade-up" style={{ maxWidth: 440, width: '100%', borderRadius: 'var(--radius-xl)', padding: '32px 26px', textAlign: 'center' }}>
+        <div style={{ width: 52, height: 52, margin: '0 auto 16px', borderRadius: 'var(--radius-lg)', background: 'rgba(var(--brand-accent-rgb,99,102,241),0.13)', display: 'grid', placeItems: 'center', color: 'var(--brand-accent-ink)' }}>
           <Icon name={icon} size={24} />
         </div>
-        <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 19, color: 'var(--u-text)', margin: 0 }}>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--u-text)', margin: 0 }}>
           {feature} requiere Premium
         </h2>
-        <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', lineHeight: 1.6, margin: '10px 0 22px' }}>
+        <p style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.6, margin: '10px 0 22px' }}>
           {description}
         </p>
         <Link

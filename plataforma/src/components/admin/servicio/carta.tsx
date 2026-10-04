@@ -90,12 +90,15 @@ export default function Carta({
      que se parece a lo que estás escribiendo. */
   const dishes = useMemo(() => {
     const porCat = cat ? activos.filter((p) => p.category_id === cat) : activos;
-    if (!term) return porCat.filter((p) => p.is_available || p.is_active);
-    const conNombre = porCat.filter((p) => coincide(`${p.name} ${catName.get(p.category_id ?? '') ?? ''}`, term));
-    // Lo que se puede pedir primero; lo agotado después, pero visible.
+    const lista = term
+      ? porCat.filter((p) => coincide(`${p.name} ${catName.get(p.category_id ?? '') ?? ''}`, term))
+      : porCat.filter((p) => p.is_available || p.is_active);
+    // Lo que se puede pedir primero; lo agotado después, pero visible. Sin
+    // buscar también (PED-13): antes, sin término, la rejilla seguía el
+    // orden de la base y un agotado podía salir el primero.
     return [
-      ...conNombre.filter((p) => p.is_available),
-      ...conNombre.filter((p) => !p.is_available),
+      ...lista.filter((p) => p.is_available),
+      ...lista.filter((p) => !p.is_available),
     ];
   }, [activos, cat, term, catName]);
 
@@ -207,7 +210,7 @@ export default function Carta({
                 type="button"
                 className="sv-cta"
                 data-tone="quiet"
-                style={{ marginTop: 16, maxWidth: 340, marginInline: 'auto', height: 48, fontSize: 14.5 }}
+                style={{ marginTop: 16, maxWidth: 340, marginInline: 'auto', height: 48, fontSize: 14 }}
                 onClick={() => onOpenItem(term)}
               >
                 <Icon name="plus" size={16} />

@@ -67,7 +67,7 @@ export default function BillLine({
 
   if (compacta) {
     return (
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 13.5 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 13 }}>
         <span className="t-mono" style={{ width: 22, flexShrink: 0, fontWeight: 600, color: 'var(--u-text-3)' }}>
           {l.qty}
         </span>
@@ -99,8 +99,8 @@ export default function BillLine({
           —el asiento— y a tamaño real los dos se leían igual. */}
       <span className="ciclo-chip ciclo-qty" aria-hidden>×{l.qty}</span>
       <span className="ciclo-name" style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: 'block', fontSize: 14.5, fontWeight: 500, color: 'var(--u-text)' }}>{l.name}</span>
-        <span style={{ display: 'block', fontSize: 12.5, marginTop: 1, color: detalle ? 'var(--brand-accent-ink)' : 'var(--u-text-4)' }}>
+        <span style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--u-text)' }}>{l.name}</span>
+        <span style={{ display: 'block', fontSize: 12, marginTop: 1, color: detalle ? 'var(--brand-accent-ink)' : 'var(--u-text-4)' }}>
           {detalle || 'Sin notas'}
         </span>
       </span>

@@ -106,7 +106,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
   PREMIUM: {
     code: 'PREMIUM',
     name: 'Premium',
-    tagline: 'Para llevar, comer en local y delivery — panel de mesero, analítica e inventario',
+    tagline: 'Para llevar, comer en local y a domicilio — panel de mesero, analítica e inventario',
     badge: 'MÁS POPULAR',
     highlight: true,
     priceMonthly: 349,
@@ -332,3 +332,39 @@ export const PLAN_ACCENT_INK: Record<PlanCode, string> = {
 /* ── Grupos y franquicias ──────────────────────────────────────── */
 
 export const GROUP_PANEL_FEE = 299;
+
+/* ============================================================
+   LO QUE SE DICE DE CADA PLAN (auditoría 2026-10-02, MIC-05)
+   ------------------------------------------------------------
+   La portada, «Crear otro restaurante» y Suscripción describían los
+   planes cada una a su manera («Lealtad, cupones y reservaciones»
+   aquí, «Panel de mesero, recetas y cupones» allá). Cuatro puntos por
+   plan, aquí, y todas las pantallas los leen de este sitio. `false`
+   marca lo que el plan NO trae (se pinta tachado o en gris).
+   ============================================================ */
+export const PLAN_POINTS: Record<PlanCode, { text: string; positive: boolean }[]> = {
+  BASICO: [
+    { text: 'Menú digital con código QR', positive: true },
+    { text: 'Hasta 150 productos · 1 usuario', positive: true },
+    { text: 'Tu logo y color de marca', positive: true },
+    { text: 'Sin pedidos en línea', positive: false },
+  ],
+  ESTANDAR: [
+    { text: 'Elige 2 de 3 modos de pedido', positive: true },
+    { text: 'Avisos en tiempo real y WhatsApp', positive: true },
+    { text: 'Productos ilimitados · 2 usuarios', positive: true },
+    { text: 'Reportes financieros y corte de caja', positive: true },
+  ],
+  PREMIUM: [
+    { text: 'Para llevar, comer en local y a domicilio', positive: true },
+    { text: 'Panel de mesero y plano de mesas', positive: true },
+    { text: 'Lealtad, cupones y reservaciones', positive: true },
+    { text: 'Analítica, inventario y personal', positive: true },
+  ],
+  PRO: [
+    { text: 'Todo lo de Premium', positive: true },
+    { text: 'Facturación electrónica (FEL)', positive: true },
+    { text: 'Proveedores y compras', positive: true },
+    { text: 'Soporte prioritario', positive: true },
+  ],
+};

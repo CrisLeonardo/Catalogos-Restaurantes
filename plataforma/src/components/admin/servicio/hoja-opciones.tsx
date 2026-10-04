@@ -231,7 +231,7 @@ export default function HojaOpciones({
                             type="button"
                             className="sv-opt"
                             data-on={on ? '1' : '0'}
-                            style={{ minHeight: 40, fontSize: 13.5 }}
+                            style={{ minHeight: 40, fontSize: 13 }}
                             aria-pressed={on}
                             onClick={() => setVariantes((prev) => ({ ...prev, [choice.id]: v.id }))}
                           >

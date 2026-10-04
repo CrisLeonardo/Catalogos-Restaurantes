@@ -202,7 +202,7 @@ export default function HojaCobro({
             border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', padding: 12,
             display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--surface-1)',
           }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600 }}>{sugerencias.label}</div>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>{sugerencias.label}</div>
             <div className="sv-opts-row">
               {sugerencias.items.map((p) => (
                 <button key={p.id} type="button" className="sv-fav" onClick={() => onSugerir(p)}>
@@ -236,13 +236,13 @@ export default function HojaCobro({
               <button type="button" className="sv-step" style={{ width: 46, height: 46 }} onClick={() => setPersonas((n) => Math.max(1, n - 1))} aria-label="Una persona menos">−</button>
               <div style={{ minWidth: 76, textAlign: 'center' }}>
                 <Mono size={20}>{personas}</Mono>
-                <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', fontWeight: 500 }}>personas</div>
+                <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500 }}>personas</div>
               </div>
               <button type="button" className="sv-step" style={{ width: 46, height: 46 }} onClick={() => setPersonas((n) => Math.min(20, n + 1))} aria-label="Una persona más">+</button>
             </div>
             <div style={{ textAlign: 'right' }}>
               <Mono size={22}>{money(r2(pendiente / Math.max(1, personas)))}</Mono>
-              <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', fontWeight: 500 }}>cada uno</div>
+              <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500 }}>cada uno</div>
             </div>
           </div>
         )}
@@ -263,7 +263,7 @@ export default function HojaCobro({
                   onClick={() => setMarcadas((prev) => (on ? prev.filter((x) => x !== l.id) : [...prev, l.id]))}
                 >
                   <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                    <span style={{ display: 'block', fontSize: 14.5, fontWeight: 600 }}>
+                    <span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>
                       {l.cantidad}× {l.nombre}
                     </span>
                     <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)', marginTop: 1 }}>
@@ -333,7 +333,7 @@ export default function HojaCobro({
           </div>
         )}
 
-        <button type="button" className="sv-cta" data-tone="ok" style={{ height: 58, fontSize: 16.5 }} onClick={cobrar} disabled={!puede}>
+        <button type="button" className="sv-cta" data-tone="ok" style={{ height: 58, fontSize: 16 }} onClick={cobrar} disabled={!puede}>
           {busy ? 'Cobrando…' : cta}
         </button>
 
@@ -350,7 +350,7 @@ export default function HojaCobro({
 function Fila({ label, valor, tone }: { label: string; valor: string; tone?: 'ok' }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
-      <span style={{ fontSize: 13.5, color: 'var(--u-text-3)' }}>{label}</span>
+      <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{label}</span>
       <Mono size={14} weight={500} color={tone === 'ok' ? 'var(--c-ok)' : 'var(--u-text-2)'}>{valor}</Mono>
     </div>
   );

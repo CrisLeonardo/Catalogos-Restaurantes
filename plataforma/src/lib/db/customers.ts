@@ -1,11 +1,20 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import type { Customer, Order } from '@/types';
+import type { CustomerSort } from '@/lib/customer-sort';
 
 /* Lecturas del registro de clientes para el panel del dueño.
    Como el resto de src/lib/db, usa el service role: las páginas
    que llaman ya validaron la sesión y el restaurante del admin. */
 
 export const CUSTOMERS_PAGE_SIZE = 20;
+
+/* Texto de búsqueda listo para un filtro `or=` de PostgREST: fuera las comas,
+   paréntesis, comodines y barras, que cambian el sentido del filtro. */
+function searchTerms(q: string): { text: string; digits: string } | null {
+  const text = q.replace(/[,()*%\\:"]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
+  if (!text) return null;
+  return { text, digits: text.replace(/\D/g, '') };
+}
 
 export interface CustomersPage {
   customers: Customer[];
@@ -25,26 +34,55 @@ export async function getCustomers(
   restaurantId: string,
   page = 1,
   pageSize = CUSTOMERS_PAGE_SIZE,
+  opts: { q?: string; sort?: CustomerSort; inactiveDays?: number } = {},
 ): Promise<CustomersPage> {
   const db = createServiceClient();
   const size = Math.min(Math.max(pageSize, 1), 100);
 
+  /* Buscar por nombre o por teléfono. El teléfono se guarda solo con
+     dígitos, así que «5555-1234» o «5555 1234» lo encuentran igual. */
+  const terms = opts.q ? searchTerms(opts.q) : null;
+  const orFilter = terms
+    ? [`name.ilike.*${terms.text}*`, ...(terms.digits.length >= 3 ? [`phone.ilike.*${terms.digits}*`] : [])].join(',')
+    : null;
+
+  /* «No vuelven»: su último pedido fue hace más de N días (CLI-06). Quien
+     nunca pidió no entra: no es alguien que dejó de venir. */
+  const inactiveBefore = opts.inactiveDays
+    ? new Date(Date.now() - opts.inactiveDays * 86_400_000).toISOString()
+    : null;
+
   // Total para la paginación.
-  const { count } = await db
+  let countQuery = db
     .from('customers')
     .select('id', { count: 'exact', head: true })
     .eq('restaurant_id', restaurantId);
+  if (orFilter) countQuery = countQuery.or(orFilter);
+  if (inactiveBefore) countQuery = countQuery.lt('last_order_at', inactiveBefore);
+  const { count } = await countQuery;
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / size));
   const safePage = Math.min(Math.max(page, 1), totalPages);
   const from = (safePage - 1) * size;
 
-  const { data: customers } = await db
+  /* «Más gasto» y «Más pedidos» ordenan por las columnas guardadas de la
+     ficha, que pueden contar un pedido que luego se canceló; la cifra que se
+     enseña sí sale de los pedidos entregados (abajo). Para ordenar basta. */
+  let dataQuery = db
     .from('customers')
     .select('*')
-    .eq('restaurant_id', restaurantId)
-    .order('last_order_at', { ascending: false, nullsFirst: false })
-    .range(from, from + size - 1);
+    .eq('restaurant_id', restaurantId);
+  if (orFilter) dataQuery = dataQuery.or(orFilter);
+  if (inactiveBefore) dataQuery = dataQuery.lt('last_order_at', inactiveBefore);
+  const sort = opts.sort ?? 'recientes';
+  dataQuery = sort === 'gasto'
+    ? dataQuery.order('total_spent', { ascending: false }).order('last_order_at', { ascending: false, nullsFirst: false })
+    : sort === 'pedidos'
+      ? dataQuery.order('total_orders', { ascending: false }).order('last_order_at', { ascending: false, nullsFirst: false })
+      : sort === 'nombre'
+        ? dataQuery.order('name', { ascending: true })
+        : dataQuery.order('last_order_at', { ascending: false, nullsFirst: false });
+  const { data: customers } = await dataQuery.range(from, from + size - 1);
 
   const ids = (customers ?? []).map((c) => c.id as string);
   // Solo pedidos entregados de ESTA página (cancelados no cuentan).

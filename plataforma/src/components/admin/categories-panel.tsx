@@ -3,45 +3,20 @@
 /* CategoriesPanel — gestión de categorías estilo prototipo.
    Usada en /admin/categorias. */
 
-import { useActionState, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useActionState, useEffect, useOptimistic, useRef, useState } from 'react';
 import { Icon, ICON_PATHS } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { EmptyState } from '@/components/ui/empty-state';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { CAT_ICON_MAP, suggestIcon } from '@/lib/category-icon';
 
-function fold(s: string): string {
-  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-}
-
-const CAT_ICON_MAP: [string, string[]][] = [
-  ['coffee',    ['cafe', 'coffee', 'te', 'latte', 'capuchino', 'espreso', 'expreso', 'boba', 'jugo', 'refresco', 'cocoa', 'matcha']],
-  ['sparkle',   ['cocktail', 'coctel', 'bar', 'alcohol', 'cerveza', 'beer', 'vino', 'wine', 'copa', 'bebida alcoholica', 'cantina']],
-  ['ice',       ['frappe', 'smoothie', 'batido', 'licuado', 'malteada', 'shake', 'frio', 'agua fresca']],
-  ['flame',     ['parrilla', 'grill', 'brasa', 'bbq', 'barbecue', 'carne', 'asado', 'parrillada', 'alitas', 'wings']],
-  ['leaf',      ['vegano', 'vegetal', 'ensalada', 'salad', 'saludable', 'verde', 'organico', 'natural', 'verduras', 'fruta', 'fruit', 'vegetariano']],
-  ['cookie',    ['postre', 'dessert', 'pastel', 'torta', 'dulce', 'sweet', 'galleta', 'helado', 'gelatina', 'flan', 'brownie', 'crepa', 'waffle', 'pan dulce']],
-  ['croissant', ['sandwich', 'sanwich', 'hamburguesa', 'burger', 'torta', 'wrap', 'hot dog', 'hotdog', 'baguette', 'pan', 'bread', 'tostada', 'quesadilla', 'burritos']],
-  ['milk',      ['lacteo', 'queso', 'leche', 'dairy', 'yogurt', 'yogur', 'cremoso']],
-  ['wheat',     ['pasta', 'arroz', 'rice', 'cereal', 'harina', 'espagueti', 'fideos', 'noodles']],
-  ['star',      ['especial', 'special', 'premium', 'signature', 'chef', 'popular', 'favorito', 'destacado', 'promocion', 'oferta', 'combo']],
-  ['bagel',     ['pizza', 'donut', 'dona', 'bagel', 'empanada', 'gordita', 'arepa']],
-  ['utensils',  []],
-];
-
-function suggestIcon(name: string): string {
-  const n = fold(name);
-  for (const [icon, kws] of CAT_ICON_MAP) {
-    for (const kw of kws) {
-      if (n.includes(fold(kw))) return icon;
-    }
-  }
-  return 'utensils';
-}
-
-function CatIconDisplay({ icon }: { icon: string | null }) {
-  if (!icon) return <Icon name="utensils" size={22} />;
+/* Sin icono elegido, el que sugiere el nombre (Café → taza, Dulce →
+   galleta) y no la misma mesa genérica en todas (auditoría 2026-10-02,
+   MEN-08). */
+function CatIconDisplay({ icon, name }: { icon: string | null; name: string }) {
+  if (!icon) return <Icon name={suggestIcon(name)} size={22} />;
   if (ICON_PATHS[icon]) return <Icon name={icon} size={22} />;
   return <span style={{ fontSize: 20, lineHeight: 1 }}>{icon}</span>;
 }
@@ -57,7 +32,7 @@ function CatIconPicker({ value, suggested, onChange }: {
   const [open, setOpen] = useState(false);
   const effective = value && ICON_PATHS[value] ? value : suggested;
   const cell = (active: boolean): React.CSSProperties => ({
-    width: 34, height: 34, display: 'grid', placeItems: 'center', borderRadius: 9, cursor: 'pointer',
+    width: 34, height: 34, display: 'grid', placeItems: 'center', borderRadius: 'var(--radius-md)', cursor: 'pointer',
     border: `1px solid ${active ? 'var(--brand-accent)' : 'var(--u-hair)'}`,
     background: active ? 'color-mix(in srgb, var(--brand-accent) 20%, transparent)' : 'transparent',
     color: 'var(--u-text)',
@@ -69,16 +44,16 @@ function CatIconPicker({ value, suggested, onChange }: {
         onClick={() => setOpen((o) => !o)}
         aria-label="Elegir ícono"
         className="press"
-        style={{ width: 44, height: 44, borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair)', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', cursor: 'pointer' }}
+        style={{ width: 44, height: 44, borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair)', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', cursor: 'pointer' }}
       >
         <Icon name={effective} size={22} />
       </button>
       {open && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
-          <div className="glass-solid anim-pop" style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 50, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, padding: 8, borderRadius: 14, width: 214 }}>
+          <div className="glass-solid anim-pop" style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 50, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, padding: 8, borderRadius: 'var(--radius-lg)', width: 214 }}>
             <button type="button" onClick={() => { onChange(null); setOpen(false); }} className="press"
-              style={{ ...cell(value === null), gridColumn: 'span 5', width: 'auto', height: 32, display: 'flex', gap: 6, justifyContent: 'center', fontSize: 11.5, fontWeight: 600 }}>
+              style={{ ...cell(value === null), gridColumn: 'span 5', width: 'auto', height: 32, display: 'flex', gap: 6, justifyContent: 'center', fontSize: 11, fontWeight: 600 }}>
               <Icon name="sparkle" size={13} /> Automático
             </button>
             {CAT_ICONS.map((ic) => (
@@ -115,27 +90,38 @@ interface Props {
 export default function CategoriesPanel({ restaurantId, categories, products }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showNew,   setShowNew]   = useState(false);
-  const router = useRouter();
   const toggleForms = useRef<Record<string, HTMLFormElement | null>>({});
 
   const count = (id: string) => products.filter((p) => p.category_id === id).length;
 
+  /* Subir/bajar al instante: antes cada flecha esperaba al servidor y a la
+     recarga para mover la tarjeta, y con dos toques seguidos el segundo
+     caía sobre el orden viejo. La tarjeta se mueve ya; el servidor confirma
+     por detrás y, al volver, `categories` trae el orden de verdad (MEN-08). */
+  const [lista, mover] = useOptimistic(categories, (state, { id, dir }: { id: string; dir: -1 | 1 }) => {
+    const i = state.findIndex((c) => c.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= state.length) return state;
+    const next = [...state];
+    [next[i], next[j]] = [next[j], next[i]];
+    return next;
+  });
+
   function onSaved() {
     setEditingId(null);
     setShowNew(false);
-    router.refresh();
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 720 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <h1 className="t-poster" style={{ fontSize: 20 }}>Categorías del menú</h1>
-          <p style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 3, margin: '3px 0 0' }}>
-            Ordená cómo aparecen en la app del cliente.
-          </p>
-        </div>
+        {/* Sin el «CATEGORÍAS DEL MENÚ» en letra de cartel: la pestaña ya dice
+            dónde se está, y ningún otro listado del panel lleva encabezado
+            propio (auditoría 2026-10-02, T-10). */}
+        <p style={{ fontSize: 13, color: 'var(--u-text-3)', margin: 0 }}>
+          Ordena cómo aparecen en tu menú con las flechas.
+        </p>
         <Button onClick={() => setShowNew(true)} className="rounded-adm-full">
           <Icon name="plus" size={15} /> Nueva
         </Button>
@@ -146,13 +132,13 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
         <EmptyState
           icon="tag"
           title="Sin categorías aún"
-          desc="Creá una para organizar tu menú — entradas, bebidas, postres…"
+          desc="Crea una para organizar tu menú — entradas, bebidas, postres…"
           action={{ label: 'Crear la primera', onClick: () => setShowNew(true) }}
         />
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {categories.map((c, i) => (
+        {lista.map((c, i) => (
           <Card
             key={c.id}
             className="flex items-center gap-3 p-4"
@@ -161,23 +147,23 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
             {/* Reordenar ↑↓ */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
               {i > 0 ? (
-                <form action={moveCategoryUp}>
+                <form action={async (fd) => { mover({ id: c.id, dir: -1 }); await moveCategoryUp(fd); }}>
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="id"           value={c.id} />
                   <input type="hidden" name="sort_order"   value={String(c.sort_order)} />
-                  <button type="submit" className="press" style={reorderBtn} title="Subir">
+                  <button type="submit" className="press tap44" style={reorderBtn} title="Subir">
                     <Icon name="arrowUp" size={12} />
                   </button>
                 </form>
               ) : (
                 <div style={{ width: 26, height: 26 }} />
               )}
-              {i < categories.length - 1 ? (
-                <form action={moveCategoryDown}>
+              {i < lista.length - 1 ? (
+                <form action={async (fd) => { mover({ id: c.id, dir: 1 }); await moveCategoryDown(fd); }}>
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="id"           value={c.id} />
                   <input type="hidden" name="sort_order"   value={String(c.sort_order)} />
-                  <button type="submit" className="press" style={reorderBtn} title="Bajar">
+                  <button type="submit" className="press tap44" style={reorderBtn} title="Bajar">
                     <Icon name="arrowDown" size={12} />
                   </button>
                 </form>
@@ -189,12 +175,12 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
             {/* Ícono */}
             <div
               style={{
-                width: 44, height: 44, borderRadius: 12,
+                width: 44, height: 44, borderRadius: 'var(--radius-lg)',
                 background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair)',
                 display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', flexShrink: 0,
               }}
             >
-              <CatIconDisplay icon={c.icon} />
+              <CatIconDisplay icon={c.icon} name={c.name} />
             </div>
 
             {/* Nombre + contador / formulario inline */}
@@ -209,7 +195,7 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
-                    fontWeight: 600, fontSize: 15.5,
+                    fontWeight: 600, fontSize: 15,
                     color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                   }}
                 >
@@ -313,14 +299,14 @@ function NewCategoryForm({
             autoFocus
             value={catName}
             onChange={(e) => setCatName(e.target.value)}
-            style={{ ...inlineInput, flex: 1 }}
+            className="adm-field adm-field-auto" style={{ flex: 1 }}
           />
         </div>
         <input
           name="name_en"
           type="text"
           placeholder="Nombre en inglés (opcional)"
-          style={inlineInput}
+          className="adm-field adm-field-auto"
         />
         <CategorySchedule defaultValue={null} />
         {state && 'error' in state && (
@@ -382,7 +368,7 @@ function InlineEditForm({
           value={catName}
           onChange={(e) => setCatName(e.target.value)}
           autoFocus
-          style={{ ...inlineInput, flex: 1, minWidth: 0 }}
+          className="adm-field adm-field-auto" style={{ flex: 1, minWidth: 0 }}
         />
         <Button type="submit" disabled={isPending} aria-label="Guardar" size="icon" className="size-8.5 shrink-0 rounded-adm-full">
           {isPending ? '…' : <Icon name="check" size={15} strokeWidth={2.6} />}
@@ -396,7 +382,7 @@ function InlineEditForm({
         type="text"
         defaultValue={category.name_en ?? ''}
         placeholder="Nombre en inglés (opcional)"
-        style={inlineInput}
+        className="adm-field adm-field-auto"
       />
       <CategorySchedule defaultValue={category.availability} />
       {state && 'error' in state && (
@@ -417,16 +403,18 @@ function DeleteCatButton({
   categoryId: string;
   name: string;
 }) {
-  const ref = useRef<HTMLFormElement>(null);
-
-  function handleClick(e: React.MouseEvent) {
-    if (!window.confirm(`¿Eliminar la categoría "${name}"?`)) {
-      e.preventDefault();
-    }
-  }
+  const { confirmSubmit, dialog } = useConfirm();
 
   return (
-    <form ref={ref} action={deleteCategoryModal} style={{ flexShrink: 0 }}>
+    <>
+    {dialog}
+    <form
+      action={deleteCategoryModal}
+      // Este botón solo sale en categorías sin platillos, así que no hay
+      // nada más que advertir que el borrado mismo.
+      onSubmit={confirmSubmit({ title: `¿Eliminar la categoría «${name}»?` })}
+      style={{ flexShrink: 0 }}
+    >
       <input type="hidden" name="restaurantId" value={restaurantId} />
       <input type="hidden" name="id"           value={categoryId} />
       <Button
@@ -434,32 +422,23 @@ function DeleteCatButton({
         variant="outline"
         size="icon"
         className="size-8.5 text-[var(--u-text-4)]"
-        onClick={handleClick}
         title="Eliminar categoría"
+        aria-label={`Eliminar la categoría ${name}`}
       >
         <Icon name="trash" size={14} />
       </Button>
     </form>
+    </>
   );
 }
 
 /* ── Estilos utilitarios ──────────────────────────────────── */
 
 const reorderBtn: React.CSSProperties = {
-  width: 26, height: 26, borderRadius: 8,
+  width: 26, height: 26, borderRadius: 'var(--radius-sm)',
   border: '1px solid var(--u-hair)',
   background: 'transparent', color: 'var(--u-text-4)',
   cursor: 'pointer', display: 'grid', placeItems: 'center', padding: 0,
 };
 
-const inlineInput: React.CSSProperties = {
-  background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
-  border: '1px solid var(--u-hair-2)',
-  borderRadius: 10,
-  padding: '9px 12px',
-  color: 'var(--u-text)',
-  fontSize: 14,
-  outline: 'none',
-  fontFamily: 'var(--font-sans)',
-};
 

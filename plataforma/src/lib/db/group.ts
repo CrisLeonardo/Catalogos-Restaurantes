@@ -210,22 +210,49 @@ export async function getGroupDashboard(branches: Restaurant[]): Promise<GroupDa
 
 /* ── Reporte consolidado por rango ──────────────────────────── */
 
+/* COSTO Y MARGEN — mismas cuentas que el panel (lib/db/reports.ts).
+   ------------------------------------------------------------------
+   La utilidad solo existe para los platillos que tienen costo cargado, así
+   que el margen se mide sobre el ingreso de ESOS platillos (`costedRevenue`)
+   y el costo es la suma de sus costos. Antes Mi cuenta derivaba el costo
+   como «ingreso − utilidad»: con 1 de 10 platillos costeados decía costo
+   Q2,759 y margen 1 % donde el panel decía costo Q37 y margen 48 %, para
+   los mismos pedidos (auditoría 2026-10-02, MIC-01). */
+export type BranchFigures = {
+  id: string; name: string;
+  revenue: number; orders: number; profit: number;
+  /** Costo de lo vendido (solo platillos con costo cargado). */
+  cost: number;
+  /** Ingreso de los platillos con costo: la base del margen. */
+  costedRevenue: number;
+  marginPct: number | null;
+};
+
 export type GroupReport = {
   totalRevenue: number;
   totalOrders: number;
   totalProfit: number;
-  perBranch: { id: string; name: string; revenue: number; orders: number; profit: number }[];
+  totalCost: number;
+  totalCostedRevenue: number;
+  /** null si ningún platillo vendido tiene costo cargado. */
+  totalMarginPct: number | null;
+  perBranch: BranchFigures[];
   combinedSeries: { date: string; label: string; revenue: number }[];
 };
+
+const marginOf = (profit: number, costedRevenue: number): number | null =>
+  costedRevenue > 0 ? (profit / costedRevenue) * 100 : null;
 
 export async function getGroupReport(branches: Restaurant[], from: string, to: string): Promise<GroupReport> {
   const reports = await Promise.all(
     branches.map((b) => getSalesReport(b.id, from, to, b.timezone || 'America/Guatemala')),
   );
 
-  const perBranch = branches.map((b, i) => ({
+  const perBranch: BranchFigures[] = branches.map((b, i) => ({
     id: b.id, name: b.name,
     revenue: reports[i].revenue, orders: reports[i].orders, profit: reports[i].profit,
+    cost: reports[i].cost, costedRevenue: reports[i].costedRevenue,
+    marginPct: marginOf(reports[i].profit, reports[i].costedRevenue),
   })).sort((a, b) => b.revenue - a.revenue);
 
   // Serie combinada por fecha (suma de todas las sucursales).
@@ -241,10 +268,15 @@ export async function getGroupReport(branches: Restaurant[], from: string, to: s
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([date, v]) => ({ date, label: v.label, revenue: v.revenue }));
 
+  const totalProfit = perBranch.reduce((s, b) => s + b.profit, 0);
+  const totalCostedRevenue = perBranch.reduce((s, b) => s + b.costedRevenue, 0);
   return {
     totalRevenue: perBranch.reduce((s, b) => s + b.revenue, 0),
     totalOrders: perBranch.reduce((s, b) => s + b.orders, 0),
-    totalProfit: perBranch.reduce((s, b) => s + b.profit, 0),
+    totalProfit,
+    totalCost: perBranch.reduce((s, b) => s + b.cost, 0),
+    totalCostedRevenue,
+    totalMarginPct: marginOf(totalProfit, totalCostedRevenue),
     perBranch,
     combinedSeries,
   };

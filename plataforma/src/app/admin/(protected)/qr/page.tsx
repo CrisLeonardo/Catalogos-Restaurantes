@@ -14,12 +14,16 @@ export default async function QRPage() {
   let restaurantId: string | null = null;
   let restaurantName = 'Mi restaurante';
   let slug: string | null = tenantSlug;
+  let accent = '#D97757';
+  let hasLogo = false;
 
   if (tenantSlug) {
     const data = await getRestaurantBySlug(tenantSlug);
     if (data) {
       restaurantName = data.restaurant.name;
       restaurantId = data.restaurant.id;
+      accent = data.resolved.config.colorAccent || accent;
+      hasLogo = !!data.resolved.config.logoUrl;
     }
   } else if (ctx?.restaurant) {
     restaurantName = ctx.restaurant.name;
@@ -28,15 +32,15 @@ export default async function QRPage() {
   }
 
   return (
-    <div style={{ maxWidth: 400, margin: '0 auto' }}>
+    <div style={{ maxWidth: 420 }}>
       {/* El título ya lo pone la barra de arriba ("Código QR"). */}
       <p style={{ fontSize: 14, color: 'var(--u-text-3)', marginBottom: 20 }}>
         Compártelo en redes o en tu bio: es el link con el que la gente pide
-        en línea. Para las mesas, usa los QR de la sección Mesas.
+        en línea. Para las mesas, usa los QR de Ajustes › Salón.
       </p>
 
       {restaurantId && slug ? (
-        <QRDisplay restaurantName={restaurantName} slug={slug} />
+        <QRDisplay restaurantName={restaurantName} slug={slug} restaurantId={restaurantId} accent={accent} hasLogo={hasLogo} />
       ) : (
         <p style={{ fontSize: 14, color: 'var(--u-text-3)' }}>
           No se pudo determinar la URL del menú. Verifica que el restaurante

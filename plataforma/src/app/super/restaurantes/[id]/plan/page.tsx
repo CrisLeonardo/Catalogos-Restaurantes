@@ -6,6 +6,7 @@ import OrderTypesEditor from '@/components/super/order-types-editor';
 import { getRestaurantFullById } from '@/lib/db/super-admin';
 import { getEffectivePlanPricing, getFeeBreakdown } from '@/lib/db/billing';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
+import { fmtMoney } from '@/lib/money';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Plan y módulos — Super Admin' };
@@ -32,7 +33,7 @@ export default async function FichaPlanPage({
     tagline: row.tagline,
   });
 
-  const fmtQ = (n: number) => 'Q' + n.toLocaleString('es-GT', { maximumFractionDigits: 0 });
+  const fmtQ = (n: number) => fmtMoney(n, 'GTQ', 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -51,7 +52,7 @@ export default async function FichaPlanPage({
 
       {feeBreakdown && (
         <section>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17, marginBottom: 12, color: 'var(--u-text)' }}>
+          <h2 style={{ fontWeight: 600, fontSize: 15, marginBottom: 12, color: 'var(--u-text)' }}>
             Desglose de mensualidad
           </h2>
           <Glass variant="quiet" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -73,7 +74,7 @@ function Row({ label, value, bold, color }: { label: string; value: string; bold
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
       <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{label}</span>
-      <span style={{ fontSize: bold ? 17 : 13.5, fontWeight: bold ? 800 : 600, fontFamily: 'var(--ui-font-mono)', color: color ?? (bold ? 'var(--u-text)' : 'var(--u-text-2)') }}>
+      <span style={{ fontSize: bold ? 16 : 13, fontWeight: bold ? 800 : 600, fontFamily: 'var(--ui-font-mono)', color: color ?? (bold ? 'var(--u-text)' : 'var(--u-text-2)') }}>
         {value}
       </span>
     </div>

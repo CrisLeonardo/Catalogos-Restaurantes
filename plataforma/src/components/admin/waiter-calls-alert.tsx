@@ -246,7 +246,7 @@ export default function WaiterCallsAlert({
           className="glass-solid anim-slide-up"
           style={{
             display: 'flex', alignItems: 'center', gap: 12,
-            padding: '12px 14px', borderRadius: 16,
+            padding: '12px 14px', borderRadius: 'var(--radius-lg)',
             border: '1px solid var(--c-warn-line)',
             boxShadow: '0 12px 36px rgba(0,0,0,0.45)',
           }}
@@ -254,7 +254,7 @@ export default function WaiterCallsAlert({
           {/* Icono con pulso */}
           <div style={{ position: 'relative', flexShrink: 0 }}>
             <div style={{
-              width: 40, height: 40, borderRadius: 12,
+              width: 40, height: 40, borderRadius: 'var(--radius-lg)',
               display: 'grid', placeItems: 'center',
               background: 'var(--c-warn-bg)', color: 'var(--c-warn)',
             }}>
@@ -262,7 +262,7 @@ export default function WaiterCallsAlert({
             </div>
             {/* Anillo de pulso */}
             <span style={{
-              position: 'absolute', inset: -3, borderRadius: 15,
+              position: 'absolute', inset: -3, borderRadius: 'var(--radius-lg)',
               border: '2px solid var(--c-warn-line)',
               animation: 'waiter-ping 1.6s ease-out infinite',
               pointerEvents: 'none',
@@ -273,7 +273,7 @@ export default function WaiterCallsAlert({
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)', lineHeight: 1.2 }}>
               {c.table_number ? `Mesa ${c.table_number}` : 'Llamada al mesero'}
             </div>
-            <div style={{ fontSize: 11.5, color: 'var(--c-warn)', marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: 'var(--c-warn)', marginTop: 2 }}>
               Solicita atención · {timeAgo(c.created_at)}
             </div>
           </div>
@@ -284,9 +284,9 @@ export default function WaiterCallsAlert({
             disabled={resolving}
             className="press"
             style={{
-              flexShrink: 0, padding: '8px 14px', borderRadius: 10, border: 'none',
+              flexShrink: 0, padding: '8px 14px', borderRadius: 'var(--radius-md)', border: 'none',
               cursor: resolving ? 'not-allowed' : 'pointer',
-              fontSize: 12.5, fontWeight: 700,
+              fontSize: 12, fontWeight: 700,
               background: 'var(--u-text)', color: 'var(--brand-bg)',
               opacity: resolving ? 0.7 : 1,
             }}
@@ -303,7 +303,7 @@ export default function WaiterCallsAlert({
           className="glass-solid press"
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '10px 14px', borderRadius: 14, cursor: 'pointer',
+            padding: '10px 14px', borderRadius: 'var(--radius-lg)', cursor: 'pointer',
             border: '1px solid var(--c-warn-line)',
             color: 'var(--c-warn)', fontSize: 13, fontWeight: 700,
             boxShadow: '0 12px 36px rgba(0,0,0,0.45)',

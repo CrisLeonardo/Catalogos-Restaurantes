@@ -21,7 +21,10 @@ export default async function MetricasPage() {
   const totalVisits30 = [...traffic.values()].reduce((s, t) => s + t.visits30, 0);
   const totalUnique30 = [...traffic.values()].reduce((s, t) => s + t.unique30, 0);
   const totalOrders30 = [...traffic.values()].reduce((s, t) => s + t.orders30, 0);
-  const conversion = totalVisits30 > 0 ? (totalOrders30 / totalVisits30) * 100 : 0;
+  // Solo pedidos del comensal desde el menú: los del mesero o la caja no
+  // salen de una visita y empujaban esto por encima del 100 % (SUP-04).
+  const totalOnline30 = [...traffic.values()].reduce((s, t) => s + t.online30, 0);
+  const conversion = totalVisits30 > 0 ? Math.min(100, (totalOnline30 / totalVisits30) * 100) : 0;
 
   // Tabla ordenada por actividad (los que más visitas generan primero).
   const sorted = [...restaurants].sort(
@@ -31,7 +34,6 @@ export default async function MetricasPage() {
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <PageHeader
-        title="Métricas de la plataforma"
         subtitle="Actividad global de los últimos 30 días. Entra a un restaurante para ver su detalle, crecimiento y evaluación de cobro."
       />
 
@@ -41,7 +43,7 @@ export default async function MetricasPage() {
         <StatCard label="Visitas 30 días" value={totalVisits30.toLocaleString('es-GT')} icon="eye" />
         <StatCard label="Visitantes únicos" value={totalUnique30.toLocaleString('es-GT')} icon="users" />
         <StatCard label="Pedidos 30 días" value={totalOrders30.toLocaleString('es-GT')} icon="bag" tone="ok" />
-        <StatCard label="Conversión" value={`${conversion.toFixed(1)}%`} icon="chart" sub="pedidos / visitas" />
+        <StatCard label="Conversión" value={`${conversion.toFixed(1)}%`} icon="chart" sub="pedidos en línea / visitas" />
       </div>
 
       {/* Gráfica global */}
@@ -62,8 +64,8 @@ export default async function MetricasPage() {
         </CardHeader>
         <CardContent style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {PLAN_ORDER.filter((p) => (metrics.byPlan[p] ?? 0) > 0).map((p) => (
-            <Badge key={p} variant="neutral" style={{ fontSize: 12.5, padding: '7px 12px', gap: 7 }}>
-              <span style={{ width: 8, height: 8, borderRadius: 99, background: PLAN_DOT[p] }} />
+            <Badge key={p} variant="neutral" style={{ fontSize: 12, padding: '7px 12px', gap: 7 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 'var(--radius-full)', background: PLAN_DOT[p] }} />
               {planLabel(p)} <strong style={{ fontFamily: 'var(--ui-font-mono)' }}>{metrics.byPlan[p]}</strong>
             </Badge>
           ))}
@@ -76,10 +78,10 @@ export default async function MetricasPage() {
       {/* Tabla completa */}
       {restaurants.length > 0 && (
         <section>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 12, color: 'var(--u-text)' }}>
+          <h2 style={{ fontWeight: 600, fontSize: 15, marginBottom: 12, color: 'var(--u-text)' }}>
             Todos los restaurantes
           </h2>
-          <Table>
+          <Table data-stack="">
             <TableHeader>
               <TableRow style={{ borderTop: 'none' }}>
                 <TableHead>Restaurante</TableHead>
@@ -103,16 +105,16 @@ export default async function MetricasPage() {
                       </Link>
                       <div style={{ fontSize: 11, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)', marginTop: 2 }}>{r.slug}</div>
                     </TableCell>
-                    <TableCell><PlanChip plan={r.plan_actual} /></TableCell>
-                    <TableCell><StatusChip status={r.status} /></TableCell>
-                    <TableCell className="text-right" style={{ fontFamily: 'var(--ui-font-mono)' }}>{t?.visits30 ?? 0}</TableCell>
-                    <TableCell className="text-right" style={{ fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>{t?.unique30 ?? 0}</TableCell>
-                    <TableCell className="text-right" style={{ fontFamily: 'var(--ui-font-mono)' }}>{t?.orders30 ?? 0}</TableCell>
-                    <TableCell style={{ color: 'var(--u-text-4)', fontSize: 12, whiteSpace: 'nowrap' }}>
+                    <TableCell data-label="Plan"><PlanChip plan={r.plan_actual} /></TableCell>
+                    <TableCell data-label="Estado"><StatusChip status={r.status} /></TableCell>
+                    <TableCell data-label="Visitas 30d" className="text-right" style={{ fontFamily: 'var(--ui-font-mono)' }}>{t?.visits30 ?? 0}</TableCell>
+                    <TableCell data-label="Únicos" className="text-right" style={{ fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>{t?.unique30 ?? 0}</TableCell>
+                    <TableCell data-label="Pedidos 30d" className="text-right" style={{ fontFamily: 'var(--ui-font-mono)' }}>{t?.orders30 ?? 0}</TableCell>
+                    <TableCell data-label="Alta" style={{ color: 'var(--u-text-4)', fontSize: 12, whiteSpace: 'nowrap' }}>
                       {new Date(r.created_at).toLocaleDateString('es', { day: '2-digit', month: 'short', year: '2-digit' })}
                     </TableCell>
                     <TableCell className="text-right" style={{ whiteSpace: 'nowrap' }}>
-                      <Link href={`/super/metricas/${r.id}`} style={{ fontSize: 12.5, color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
+                      <Link href={`/super/metricas/${r.id}`} style={{ fontSize: 12, color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
                         Detalle →
                       </Link>
                     </TableCell>

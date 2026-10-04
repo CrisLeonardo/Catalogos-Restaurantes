@@ -27,7 +27,6 @@
    ============================================================ */
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 /* `Link` es aqui `PanelLink`: traduce las rutas del panel al origen desde el
    que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
    Ver components/admin/panel-link.tsx. */
@@ -43,6 +42,7 @@ import {
   MODULE_GROUPS,
   isModuleActive,
   showsInPanel,
+  moduleBadge,
   type ActivatableModuleKey,
   type ModuleMeta,
   type ModulesMap,
@@ -53,8 +53,9 @@ import { usePlanPricing } from '@/components/plan-pricing-context';
 import type { OrderType } from '@/lib/theme/defaults';
 import { usePathname as useRutaNavegador } from 'next/navigation';
 import { panelBaseFrom, panelHref } from '@/lib/panel-links';
+import { fmtMoney } from '@/lib/money';
 
-const q = (n: number) => 'Q' + Math.round(n).toLocaleString('es-GT');
+const q = (n: number) => fmtMoney(Math.round(n), 'GTQ', 0);
 
 /** ¿El plan incluye este módulo? (si no, solo está activo por excepción manual de Leogin). */
 function includedInPlan(plan: string | null | undefined, key: ActivatableModuleKey): boolean {
@@ -105,7 +106,7 @@ const BADGE_COLOR: Record<string, string> = { POPULAR: 'chip-warn', NUEVO: 'chip
 
 function Badge({ label }: { label: string }) {
   return (
-    <span className={`chip ${BADGE_COLOR[label] ?? 'chip-neutral'}`} style={{ fontSize: 9.5, padding: '1px 7px' }}>
+    <span className={`chip ${BADGE_COLOR[label] ?? 'chip-neutral'}`} style={{ fontSize: 11, padding: '1px 7px' }}>
       {label}
     </span>
   );
@@ -130,11 +131,12 @@ function RowIcon({ name, on }: { name: string; on?: boolean }) {
 }
 
 /** Título de fila con su chip opcional. */
-function RowTitle({ label, badge }: { label: string; badge?: string }) {
+function RowTitle({ label, badge, extra }: { label: string; badge?: string; extra?: string }) {
   return (
     <span className="flex flex-wrap items-center gap-1.5">
       {label}
       {badge && <Badge label={badge} />}
+      {extra && <span className="chip chip-ok" style={{ fontSize: 11, padding: '1px 7px' }}>{extra}</span>}
     </span>
   );
 }
@@ -157,7 +159,6 @@ function LockedRow({ icon, label, description, lockLabel }: {
 export default function ModulesPanel({ restaurantId, modules, settings, orderTypes, supportWhatsapp, planActual, billedNow = null }: Props) {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = panelBaseFrom(useRutaNavegador());
-  const router = useRouter();
   const pricing = usePlanPricing();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -183,7 +184,6 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
       const res = await setModuleEnabled(restaurantId, key, next);
       setBusyKey(null);
       if (res.error) { setLocalSettings(prev); setError(res.error); return; }
-      router.refresh();
     });
   }
 
@@ -214,7 +214,6 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
         setError(res.error);
         return;
       }
-      router.refresh();
     });
   }
 
@@ -255,7 +254,10 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
       <ListRow key={m.key}>
         <RowIcon name={m.icon} on={on} />
         <ListText
-          title={<RowTitle label={m.label} badge={m.badge} />}
+          /* «Activado para tu restaurante» iba en verde metido en medio de
+             la descripción; ahora es una etiqueta junto al nombre
+             (auditoría 2026-10-02, AJU-14). */
+          title={<RowTitle label={m.label} badge={moduleBadge(m)} extra={byException ? 'Activado para ti' : undefined} />}
           desc={
             <>
               {m.description}
@@ -263,15 +265,9 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
               {on && m.href && (
                 <>
                   {' '}
-                  <Link href={m.href} className="font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
+                  <Link href={m.href} className="tap44 font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
                     Abrir {m.navLabel ?? m.label} →
                   </Link>
-                </>
-              )}
-              {byException && (
-                <>
-                  {' '}
-                  <span style={{ color: 'var(--c-ok)' }}>Activado para tu restaurante.</span>
                 </>
               )}
             </>
@@ -294,12 +290,12 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
       <ListRow key={m.key}>
         <RowIcon name={m.icon} on={active} />
         <ListText
-          title={<RowTitle label={m.label} badge={m.badge} />}
+          title={<RowTitle label={m.label} badge={moduleBadge(m)} />}
           desc={
             <>
               {m.description}{' '}
               {active && m.href ? (
-                <Link href={m.href} className="font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
+                <Link href={m.href} className="tap44 font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
                   Abrir {m.navLabel ?? m.label} →
                 </Link>
               ) : (
@@ -324,10 +320,10 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
   }
 
   return (
-    <div className="flex max-w-[760px] flex-col gap-6">
+    <div className="adm-w-read flex flex-col gap-6">
       <p className="text-[14px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
-        Encendé solo lo que usa tu restaurante. Lo que apagues desaparece de tu
-        panel y podés volver a prenderlo cuando quieras.
+        Enciende solo lo que usa tu restaurante. Lo que apagues desaparece de tu
+        panel y puedes volver a encenderlo cuando quieras.
       </p>
 
       {error && <div className="note note-danger">{error}</div>}
@@ -372,7 +368,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                       {on && m.configHref && (
                         <>
                           {' '}
-                          <Link href={m.configHref} className="font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
+                          <Link href={m.configHref} className="tap44 font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
                             Configurar →
                           </Link>
                         </>
@@ -393,7 +389,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
         <SectionNote>
           Al menos uno tiene que estar activo.
           {isBasico && <> El plan Básico es solo menú digital: los pedidos en línea empiezan en Estándar ({planPriceLabel(pricing, 'ESTANDAR')}).</>}
-          {isEstandar && <> Tu plan Estándar incluye {ESTANDAR_MAX_ORDER_TYPES} de los 3 modos y vos elegís cuáles; para tener los tres a la vez, Premium ({premiumLabel}).</>}
+          {isEstandar && <> Tu plan Estándar incluye {ESTANDAR_MAX_ORDER_TYPES} de los 3 modos y tú eliges cuáles; para tener los tres a la vez, Premium ({premiumLabel}).</>}
         </SectionNote>
       </Section>
 
@@ -466,17 +462,17 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
           </List>
           <SectionNote>
             Esto es lo que tu plan {PLANS[currentPlan].name} todavía no incluye.{' '}
-            <Link href={panelHref(base, "/admin/suscripcion")} className="font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
+            <Link href={panelHref(base, "/admin/suscripcion")} className="tap44 font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
               Ver la comparativa →
             </Link>
           </SectionNote>
         </Section>
       )}
 
-      <p className="px-4 text-[12.5px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
-        ¿Tenés varias sucursales? Se unen en un panel de grupo con métricas
+      <p className="px-4 text-[12px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
+        ¿Tienes varias sucursales? Se unen en un panel de grupo con métricas
         consolidadas.{' '}
-        <Link href={panelHref(base, "/admin/ayuda")} className="font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
+        <Link href={panelHref(base, "/admin/ayuda")} className="tap44 font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
           Hablar con Leogin →
         </Link>
       </p>

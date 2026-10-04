@@ -1,11 +1,13 @@
 import { redirect } from 'next/navigation';
 import { getMyGroupScope, getGroupReport } from '@/lib/db/group';
 import DateRangeForm from '@/components/admin/date-range-form';
+import { fmtMoney } from '@/lib/money';
+import Kpi from '@/components/mi-cuenta/kpi';
 
 export const metadata = { title: 'Comparativa — Leogin' };
 export const dynamic = 'force-dynamic';
 
-const money = (n: number) => `Q${n.toFixed(2)}`;
+const money = (n: number) => fmtMoney(n);
 function todayYmd(): string { return new Date().toLocaleDateString('en-CA'); }
 function shiftYmd(ymd: string, days: number): string {
   const d = new Date(`${ymd}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + days);
@@ -30,13 +32,13 @@ export default async function ComparativaPage({
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div>
-        <div className="t-kicker" style={{ fontSize: 11, marginBottom: 8 }}>{scope.name}</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)', marginBottom: 8 }}>{scope.name}</div>
         <h1 className="t-display" style={{ fontSize: 'clamp(22px, 4vw, 28px)', lineHeight: 1.15, margin: 0 }}>
           Comparativa
         </h1>
       </div>
 
-      <div className="glass" style={{ borderRadius: 16, padding: 16 }}>
+      <div className="glass" style={{ borderRadius: 'var(--radius-lg)', padding: 16 }}>
         <DateRangeForm from={from} to={to} basePath="/mi-cuenta/comparativa" />
       </div>
 
@@ -46,24 +48,24 @@ export default async function ComparativaPage({
         <Kpi label="Utilidad" value={money(report.totalProfit)} />
       </div>
 
-      <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>Ingreso por restaurante</div>
+      <div className="glass" style={{ borderRadius: 'var(--radius-lg)', padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)' }}>Ingreso por restaurante</div>
         {report.perBranch.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
         ) : report.perBranch.map((b) => {
           const pct = (b.revenue / maxRevenue) * 100;
           const share = report.totalRevenue > 0 ? (b.revenue / report.totalRevenue) * 100 : 0;
-          const m = b.revenue > 0 ? (b.profit / b.revenue) * 100 : null;
+          const m = b.marginPct;
           return (
             <div key={b.id} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, gap: 10 }}>
                 <span style={{ color: 'var(--u-text-2)', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.name}</span>
                 <span style={{ color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)', whiteSpace: 'nowrap' }}>{money(b.revenue)} · {share.toFixed(0)}%</span>
               </div>
-              <div style={{ height: 8, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', overflow: 'hidden' }}>
-                <div style={{ width: `${pct}%`, height: '100%', background: 'var(--brand-accent)', borderRadius: 99 }} />
+              <div style={{ height: 8, borderRadius: 'var(--radius-full)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', overflow: 'hidden' }}>
+                <div style={{ width: `${pct}%`, height: '100%', background: 'var(--brand-accent)', borderRadius: 'var(--radius-full)' }} />
               </div>
-              <div style={{ fontSize: 10.5, color: 'var(--u-text-4)' }}>{b.orders} pedidos · utilidad {money(b.profit)}{m != null ? ` · margen ${m.toFixed(0)}%` : ''}</div>
+              <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{b.orders} pedidos · utilidad {money(b.profit)}{m != null ? ` · margen ${m.toFixed(0)}%` : ''}</div>
             </div>
           );
         })}
@@ -72,11 +74,3 @@ export default async function ComparativaPage({
   );
 }
 
-function Kpi({ label, value, hero }: { label: string; value: string; hero?: boolean }) {
-  return (
-    <div className="glass" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-      <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 26 : 22, color: 'var(--u-text)', lineHeight: 1.1 }}>{value}</div>
-    </div>
-  );
-}

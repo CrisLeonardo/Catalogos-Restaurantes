@@ -6,11 +6,7 @@ import { getSalesReport, type Split } from '@/lib/db/reports';
 import { can } from '@/lib/permissions';
 import DateRangeForm from '@/components/admin/date-range-form';
 import ExportReportButton from '@/components/admin/export-report-button';
-/* `Link` es aqui `PanelLink`: traduce las rutas del panel al origen desde el
-   que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
-   Ver components/admin/panel-link.tsx. */
-import Link from '@/components/admin/panel-link';
-import { Icon } from '@/components/icons';
+import { fmtMoney } from '@/lib/money';
 import { Card } from '@/components/ui/card';
 import { Section } from '@/components/ui/section';
 import { Stat, StatGroup } from '@/components/ui/stat';
@@ -34,7 +30,7 @@ export const metadata = { title: 'Finanzas – Panel admin' };
    estuvo lo encuentre.
    ============================================================ */
 
-const money = (n: number) => `Q${n.toFixed(2)}`;
+const money = (n: number) => fmtMoney(n);
 
 function todayInTz(tz: string): string {
   try { return new Date().toLocaleDateString('en-CA', { timeZone: tz }); }
@@ -118,9 +114,22 @@ export default async function AdminFinanzasPage({
       </Section>
 
       {report.marginPct == null && report.orders > 0 && (
-        <Card className="p-3.5" style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+        <Card className="p-3.5" style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
           Aún no hay costos capturados en tus productos: la utilidad y el margen aparecerán
           cuando pongas el <strong>Costo</strong> en el editor de cada platillo.
+        </Card>
+      )}
+
+      {/* Con costos a medias, «Utilidad Q34.50 (margen 48 %)» junto a un
+          ingreso de Q2,794 se lee como que el negocio gana Q34. Es la utilidad
+          de los platillos que SÍ tienen costo, y hay que decirlo con la cifra
+          (auditoría 2026-10-02, NEG-01). */}
+      {report.marginPct != null && report.productRevenue > 0 && report.costedRevenue < report.productRevenue * 0.95 && (
+        <Card className="p-3.5" style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+          La utilidad y el margen solo cuentan los platillos que tienen costo cargado:{' '}
+          <strong>{money(report.costedRevenue)}</strong> de <strong>{money(report.productRevenue)}</strong> vendidos
+          ({Math.round((report.costedRevenue / report.productRevenue) * 100)}%). Pon el <strong>Costo</strong> en
+          el resto de tus platillos para ver la utilidad completa.
         </Card>
       )}
 
@@ -144,7 +153,7 @@ export default async function AdminFinanzasPage({
             );
           })}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9.5, color: 'var(--u-text-4)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--u-text-4)' }}>
           <span>{report.series[0]?.label}</span>
           <span>{report.series[report.series.length - 1]?.label}</span>
         </div>
@@ -165,33 +174,6 @@ export default async function AdminFinanzasPage({
         )}
       </div>
 
-      {/* El arqueo se mudó a su propia pestaña: aquí queda el camino. */}
-      <Link
-        href="/admin/caja"
-        className="press"
-        style={{
-          display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
-          border: '1px solid var(--u-hair)', borderRadius: 14, textDecoration: 'none',
-          background: 'var(--adm-card, transparent)',
-        }}
-      >
-        <span style={{
-          display: 'grid', placeItems: 'center', width: 30, height: 30, borderRadius: 9, flexShrink: 0,
-          background: 'color-mix(in srgb, var(--brand-accent) 12%, transparent)', color: 'var(--brand-accent-ink)',
-        }}>
-          <Icon name="banknote" size={16} />
-        </span>
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: 14.5, fontWeight: 500, color: 'var(--u-text)' }}>
-            Cerrar la caja del día
-          </span>
-          <span style={{ display: 'block', fontSize: 13, color: 'var(--u-text-3)', marginTop: 1, lineHeight: 1.35 }}>
-            Contar el efectivo, anotar lo que salió de la caja y repartir las propinas
-          </span>
-        </span>
-        <span style={{ fontSize: 13, color: 'var(--u-text-3)', flexShrink: 0 }}>Negocio › Caja</span>
-        <Icon name="chevronRight" size={17} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
-      </Link>
     </div>
   );
 }
@@ -206,12 +188,12 @@ function SplitCard({ title, rows, total }: { title: string; rows: Split[]; total
         const pct = total > 0 ? (r.revenue / total) * 100 : 0;
         return (
           <div key={r.key} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
               <span style={{ color: 'var(--u-text-2)' }}>{r.label}</span>
               <span style={{ color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{money(r.revenue)} · {pct.toFixed(0)}%</span>
             </div>
-            <div style={{ height: 6, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', overflow: 'hidden' }}>
-              <div style={{ width: `${pct}%`, height: '100%', background: 'var(--brand-accent)', borderRadius: 99 }} />
+            <div style={{ height: 6, borderRadius: 'var(--radius-full)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', overflow: 'hidden' }}>
+              <div style={{ width: `${pct}%`, height: '100%', background: 'var(--brand-accent)', borderRadius: 'var(--radius-full)' }} />
             </div>
           </div>
         );
@@ -228,7 +210,7 @@ function ProductTable({ title, rows, colA, colB }: { title: string; rows: { name
         <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 56px 90px', gap: 8, fontSize: 9.5, color: 'var(--u-text-4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 56px 90px', gap: 8, fontSize: 11, color: 'var(--u-text-4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             <span>Producto</span><span style={{ textAlign: 'right' }}>{colA}</span><span style={{ textAlign: 'right' }}>{colB}</span>
           </div>
           {rows.map((r, i) => (

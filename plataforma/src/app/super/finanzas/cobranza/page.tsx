@@ -38,7 +38,7 @@ export default async function CobranzaPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
-        <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 13, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
           Periodo <strong style={{ color: 'var(--u-text)' }}>{periodLabel(period)}</strong> ·{' '}
           {fmtMoney(stats.collectedThisMonth, stats.currency)} cobrado ·{' '}
           <span style={{ color: stats.pendingTotal > 0 ? 'var(--c-warn)' : 'var(--u-text-3)' }}>
@@ -53,7 +53,7 @@ export default async function CobranzaPage() {
         <section>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
             <Icon name="alertCircle" size={16} style={{ color: 'var(--c-danger)' }} />
-            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--c-danger)', margin: 0 }}>
+            <h2 style={{ fontWeight: 600, fontSize: 15, color: 'var(--c-danger)', margin: 0 }}>
               Con mora vencida y aún activos
             </h2>
             <Badge variant="danger">{needsSuspension.length}</Badge>
@@ -103,10 +103,13 @@ export default async function CobranzaPage() {
 
       {/* Tabla */}
       <section>
-        <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 12, color: 'var(--u-text)' }}>
+        <h2 style={{ fontWeight: 600, fontSize: 15, marginBottom: 12, color: 'var(--u-text)' }}>
           Restaurantes
         </h2>
-        <Table style={{ minWidth: 760 }}>
+        {/* `data-stack`: en el teléfono cada fila es una tarjeta con
+            «rótulo: valor»; a lo ancho, columnas de 760 px cortadas dentro
+            de un scroll («Q199,00 (pausado») — auditoría 2026-10-02, SUP-03. */}
+        <Table style={{ minWidth: 760 }} data-stack="">
           <TableHeader>
             <TableRow style={{ borderTop: 'none' }}>
               <TableHead>Restaurante</TableHead>
@@ -132,20 +135,20 @@ export default async function CobranzaPage() {
                       {r.slug}{r.status === 'suspended' ? ' · suspendido' : ''}
                     </div>
                   </TableCell>
-                  <TableCell><PlanChip plan={r.plan} /></TableCell>
-                  <TableCell style={{ fontFamily: 'var(--ui-font-mono)', whiteSpace: 'nowrap' }}>
+                  <TableCell data-label="Plan"><PlanChip plan={r.plan} /></TableCell>
+                  <TableCell data-label="Mensualidad" style={{ fontFamily: 'var(--ui-font-mono)', whiteSpace: 'nowrap' }}>
                     {r.config && r.config.monthly_fee > 0 ? (
                       <span>
                         {fmtMoney(r.config.monthly_fee, cur)}
                         {!r.config.active && !trial && <span style={{ color: 'var(--u-text-4)' }}> (pausado)</span>}
                       </span>
                     ) : (
-                      <span style={{ color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-sans)', fontSize: 12.5 }}>sin configurar</span>
+                      <span style={{ color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-sans)', fontSize: 12 }}>sin configurar</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-label="Mes actual">
                     {trial ? (
-                      <Badge variant="info" style={{ fontSize: 10 }}>Prueba · {trialDaysLeft(r.config)}d</Badge>
+                      <Badge variant="info" style={{ fontSize: 11 }}>Prueba · {trialDaysLeft(r.config)}d</Badge>
                     ) : (
                       <MonthBadge
                         hasOverdue={r.hasOverdue}
@@ -155,15 +158,15 @@ export default async function CobranzaPage() {
                       />
                     )}
                   </TableCell>
-                  <TableCell className="text-right" style={{ fontFamily: 'var(--ui-font-mono)', color: r.pendingTotal > 0 ? 'var(--c-warn)' : 'var(--u-text-4)' }}>
+                  <TableCell data-label="Pendiente" className="text-right" style={{ fontFamily: 'var(--ui-font-mono)', color: r.pendingTotal > 0 ? 'var(--c-warn)' : 'var(--u-text-4)' }}>
                     {r.pendingTotal > 0 ? fmtMoney(r.pendingTotal, cur) : '—'}
                   </TableCell>
-                  <TableCell className="text-right" style={{ fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>{fmtMoney(r.salesRevenue30, cur)}</TableCell>
+                  <TableCell data-label="Su venta 30d" className="text-right" style={{ fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>{fmtMoney(r.salesRevenue30, cur)}</TableCell>
                   <TableCell className="text-right" style={{ whiteSpace: 'nowrap' }}>
-                    <Link href={`/super/metricas/${r.restaurantId}`} style={{ fontSize: 12.5, color: 'var(--u-text-3)', textDecoration: 'none', marginRight: 12 }}>
+                    <Link href={`/super/metricas/${r.restaurantId}`} style={{ fontSize: 12, color: 'var(--u-text-3)', textDecoration: 'none', marginRight: 12 }}>
                       Métricas
                     </Link>
-                    <Link href={`/super/restaurantes/${r.restaurantId}/cobro`} style={{ fontSize: 12.5, color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
+                    <Link href={`/super/restaurantes/${r.restaurantId}/cobro`} style={{ fontSize: 12, color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
                       Gestionar
                     </Link>
                   </TableCell>
@@ -184,10 +187,10 @@ export default async function CobranzaPage() {
 function MonthBadge({ hasOverdue, status, hasMonthly, configured }: {
   hasOverdue: boolean; status: string | null; hasMonthly: boolean; configured: boolean;
 }) {
-  if (hasOverdue) return <Badge variant="danger" style={{ fontSize: 10 }}>Vencido</Badge>;
-  if (status === 'PAID') return <Badge variant="ok" style={{ fontSize: 10 }}>Pagado</Badge>;
-  if (status === 'PENDING') return <Badge variant="warn" style={{ fontSize: 10 }}>Pendiente</Badge>;
+  if (hasOverdue) return <Badge variant="danger" style={{ fontSize: 11 }}>Vencido</Badge>;
+  if (status === 'PAID') return <Badge variant="ok" style={{ fontSize: 11 }}>Pagado</Badge>;
+  if (status === 'PENDING') return <Badge variant="warn" style={{ fontSize: 11 }}>Pendiente</Badge>;
   if (!configured) return <span style={{ color: 'var(--u-text-4)' }}>—</span>;
-  if (!hasMonthly) return <Badge variant="neutral" style={{ fontSize: 10 }}>Sin generar</Badge>;
+  if (!hasMonthly) return <Badge variant="neutral" style={{ fontSize: 11 }}>Sin generar</Badge>;
   return <span style={{ color: 'var(--u-text-4)' }}>—</span>;
 }

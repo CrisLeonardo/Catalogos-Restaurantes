@@ -31,12 +31,31 @@ export const getRestaurantBySlug = cache(
     /* Restaurante y tema en UNA consulta (el tema cuelga del restaurante por
        su clave primaria, así que PostgREST lo incrusta). Antes eran dos en
        fila, y esto corre en cada pantalla del panel. */
-    const { data: row, error } = await supabase
+    let { data: row, error } = await supabase
       .from('restaurants')
       .select('*, restaurant_themes(*)')
       .eq('slug', slug)
       .eq('status', 'active')
       .single();
+
+    /* PGRST116 = no hay filas: el restaurante de verdad no existe. Cualquier
+       otro error —en la práctica, un token de sesión que el servidor no logró
+       refrescar a tiempo en esta petición— NO es «no existe»: el candado del
+       panel lo tomaba así y te mandaba a Platillos (o al login) con la sesión
+       viva, de vez en cuando (auditoría 2026-10-02, N-10/REN-10). Se repite
+       con la llave de servicio: esta fila la puede leer cualquiera
+       (`restaurants_select_active`, la usa el menú público), así que no se
+       da acceso a nada nuevo. */
+    if (error && error.code !== 'PGRST116') {
+      const retry = await createServiceClient()
+        .from('restaurants')
+        .select('*, restaurant_themes(*)')
+        .eq('slug', slug)
+        .eq('status', 'active')
+        .single();
+      row = retry.data;
+      error = retry.error;
+    }
 
     if (error || !row) return null;
 
@@ -126,6 +145,46 @@ export const getRestaurantBySlugCached = cache(
     const row = await fetchRestaurantByIdCached(idRow.id as string);
     if (!row) return null;
 
+    const themeRow = row.theme ?? defaultTheme(row.restaurant.id);
+    return {
+      restaurant: row.restaurant,
+      theme: themeRow,
+      resolved: resolveTheme(themeRow, slug, {
+        brandName: row.restaurant.name,
+        tagline: row.restaurant.tagline,
+      }),
+    };
+  }
+);
+
+/**
+ * Igual que getRestaurantBySlugCached, pero por id. Para la portada de
+ * Leogin, que enseña el menú de un restaurante elegido en el Super
+ * (vitrina y testimonios, WEB-02/03): el id no cambia aunque cambie el
+ * slug. Mismos dos niveles: «sigue activo» en vivo, la fila cacheada.
+ */
+export const getRestaurantByIdCached = cache(
+  async (restaurantId: string): Promise<RestaurantWithTheme | null> => {
+    if (
+      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      !/^[0-9a-f-]{36}$/i.test(restaurantId)
+    ) {
+      return null;
+    }
+
+    const { data: live } = await createServiceClient()
+      .from('restaurants')
+      .select('slug')
+      .eq('id', restaurantId)
+      .eq('status', 'active')
+      .maybeSingle();
+    if (!live) return null;
+
+    const row = await fetchRestaurantByIdCached(restaurantId);
+    if (!row) return null;
+
+    const slug = live.slug as string;
     const themeRow = row.theme ?? defaultTheme(row.restaurant.id);
     return {
       restaurant: row.restaurant,

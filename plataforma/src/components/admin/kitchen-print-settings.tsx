@@ -156,7 +156,7 @@ export default function KitchenPrintSettings() {
             fontSize: 12, color: 'var(--u-text-4)',
             background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
             border: '1px solid var(--u-hair)',
-            borderRadius: 8, padding: '8px 12px',
+            borderRadius: 'var(--radius-sm)', padding: '8px 12px',
           }}>
             Web USB no disponible en este navegador. Usa Chrome o Edge para configurar impresoras USB sin instalar nada.
           </div>
@@ -165,7 +165,7 @@ export default function KitchenPrintSettings() {
 
             {/* Impresora cocina USB */}
             <div>
-              <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-2)', display: 'block', marginBottom: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text-2)', display: 'block', marginBottom: 6 }}>
                 Impresora de cocina (USB)
               </label>
               {usbKitchen ? (
@@ -192,7 +192,7 @@ export default function KitchenPrintSettings() {
 
             {/* Impresora caja/recibos USB */}
             <div>
-              <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-2)', display: 'block', marginBottom: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text-2)', display: 'block', marginBottom: 6 }}>
                 Impresora de caja / recibos (USB)
               </label>
               {usbReceipt ? (
@@ -224,10 +224,10 @@ export default function KitchenPrintSettings() {
             )}
 
             <div style={{
-              fontSize: 11.5, color: 'var(--u-text-4)',
+              fontSize: 11, color: 'var(--u-text-4)',
               background: 'var(--c-warn-bg)',
               border: '1px solid var(--c-warn-line)',
-              borderRadius: 8, padding: '7px 10px', lineHeight: 1.55,
+              borderRadius: 'var(--radius-sm)', padding: '7px 10px', lineHeight: 1.55,
             }}>
               En Windows, si el sistema ya tiene instalado un driver para la impresora,
               puede que el acceso USB falle. En ese caso usa el <strong style={{ color: 'var(--u-text-3)' }}>Agente

@@ -12,6 +12,7 @@ import PrintStationsSettings from '@/components/admin/print-stations-settings';
 import { Card } from '@/components/ui/card';
 import { Section } from '@/components/ui/section';
 import { Button } from '@/components/ui/button';
+import { haceTiempo } from '@/lib/dates';
 
 export const metadata = { title: 'Mi PC del local – Panel admin' };
 
@@ -34,13 +35,7 @@ export const metadata = { title: 'Mi PC del local – Panel admin' };
    redirigen aquí (ver sus page.tsx) para no romper enlaces viejos.
    ============================================================ */
 
-function timeAgo(iso: string): string {
-  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
-  if (mins < 60) return `hace ${mins} min`;
-  const hours = Math.round(mins / 60);
-  if (hours < 48) return `hace ${hours} h`;
-  return `hace ${Math.round(hours / 24)} días`;
-}
+const timeAgo = (iso: string): string => haceTiempo(iso);
 
 const QUE_HACE = [
   {
@@ -105,7 +100,7 @@ export default async function AdminMiPcPage() {
       <Card className="p-5">
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
           <div style={{
-            width: 46, height: 46, borderRadius: 13, flexShrink: 0, display: 'grid', placeItems: 'center',
+            width: 46, height: 46, borderRadius: 'var(--radius-lg)', flexShrink: 0, display: 'grid', placeItems: 'center',
             background: 'var(--admin-panel-btn, var(--brand-accent))', color: 'var(--admin-panel-btn-text, #fff)',
           }}>
             <Icon name="monitor" size={22} />
@@ -115,7 +110,7 @@ export default async function AdminMiPcPage() {
                 de arriba ya dice "La PC del local", y lo que el dueño viene a
                 averiguar es si está funcionando. Antes el estado era una
                 pastilla de 11 px al lado de un título repetido. */}
-            <h2 className="t-display" style={{ fontSize: 21, lineHeight: 1.1, color: connected ? 'var(--c-ok)' : 'var(--c-warn)' }}>
+            <h2 className="t-display" style={{ fontSize: 20, lineHeight: 1.1, color: connected ? 'var(--c-ok)' : 'var(--c-warn)' }}>
               {connected ? 'Todo listo' : active && agent ? 'Sin responder' : 'Sin PC principal'}
             </h2>
             <p style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.55, margin: '6px 0 0' }}>
@@ -132,7 +127,7 @@ export default async function AdminMiPcPage() {
         }}>
           {QUE_HACE.map((b) => (
             <div key={b.title} style={{
-              borderRadius: 14, padding: '13px 14px',
+              borderRadius: 'var(--radius-lg)', padding: '13px 14px',
               background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
               border: '1px solid var(--u-hair)',
             }}>
@@ -140,7 +135,7 @@ export default async function AdminMiPcPage() {
                 <Icon name={b.icon} size={16} style={{ color: 'var(--brand-accent-ink, var(--u-text))' }} />
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>{b.title}</span>
               </div>
-              <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.55 }}>{b.desc}</div>
+              <div style={{ fontSize: 11, color: 'var(--u-text-3)', lineHeight: 1.55 }}>{b.desc}</div>
             </div>
           ))}
         </div>
@@ -164,13 +159,13 @@ export default async function AdminMiPcPage() {
               {[{ icon: 'flame', label: 'Comandas de cocina', target: kitchenTarget },
                 { icon: 'receipt', label: 'Recibos de caja', target: receiptTarget }].map((p) => (
                 <div key={p.label} style={{
-                  display: 'flex', alignItems: 'center', gap: 10, borderRadius: 12, padding: '10px 13px',
+                  display: 'flex', alignItems: 'center', gap: 10, borderRadius: 'var(--radius-lg)', padding: '10px 13px',
                   background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair)',
                 }}>
                   <Icon name={p.icon} size={16} style={{ color: p.target ? 'var(--c-ok, #4ade80)' : 'var(--u-text-4)', flexShrink: 0 }} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 600 }}>{p.label}</div>
-                    <div style={{ fontSize: 12.5, fontWeight: 700, color: p.target ? 'var(--u-text)' : 'var(--u-text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: p.target ? 'var(--u-text)' : 'var(--u-text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {p.target || 'Sin asignar — elígela abajo'}
                     </div>
                   </div>
@@ -178,7 +173,7 @@ export default async function AdminMiPcPage() {
               ))}
             </div>
           ) : (
-            <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.6, margin: '0 0 14px' }}>
+            <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.6, margin: '0 0 14px' }}>
               En cuanto la PC principal esté conectada, aquí aparecerán sus impresoras para que elijas
               cuál imprime las comandas de cocina y cuál los recibos de caja. Pueden ser la misma.
             </p>
@@ -192,17 +187,17 @@ export default async function AdminMiPcPage() {
         <Card className="p-4.5">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <span style={{
-              width: 9, height: 9, borderRadius: 99, flexShrink: 0,
+              width: 9, height: 9, borderRadius: 'var(--radius-full)', flexShrink: 0,
               background: connected && hubReady ? 'var(--c-ok, #4ade80)' : 'var(--u-text-4)',
             }} />
-            <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>
               {connected && hubReady ? 'Protegido' : 'Sin proteger'}
             </span>
             {lastSeen && !connected && (
-              <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>· última señal {timeAgo(lastSeen)}</span>
+              <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>· última señal {timeAgo(lastSeen)}</span>
             )}
           </div>
-          <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.6, margin: 0 }}>
+          <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.6, margin: 0 }}>
             {connected && hubReady
               ? 'Si se corta la señal, tus meseros y los QR de las mesas siguen tomando pedidos: los recibe esta PC por tu WiFi y las comandas se imprimen igual. Al volver el internet todo se sincroniza solo, sin duplicados y sin que nadie tenga que hacer nada.'
               : 'Con la PC principal encendida, un corte de internet deja de detener el local: los pedidos siguen entrando por tu WiFi y se sincronizan solos al volver la señal.'}
@@ -210,7 +205,7 @@ export default async function AdminMiPcPage() {
           {kdsUrl && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--u-hair)' }}>
               <div style={{ flex: 1, minWidth: 220 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text)' }}>Pantalla de cocina de respaldo</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text)' }}>Pantalla de cocina de respaldo</div>
                 <div style={{ fontSize: 11, color: 'var(--u-text-3)', lineHeight: 1.5, marginTop: 3 }}>
                   Ábrela en la tablet de cocina (misma red WiFi) y déjala de marcador: muestra los pedidos aunque no haya internet.
                 </div>

@@ -10,7 +10,8 @@ import { getMenuDataCached } from '@/lib/db/menu';
 import { resolveTheme } from '@/lib/theme/resolve';
 import { isOpenNow, nextOpenLabel } from '@/lib/hours';
 import { isModuleActive } from '@/lib/modules';
-import { DEMO_SLUG, rootDomainForUrls, isAdminSubdomain, isGroupSubdomain } from '@/lib/tenant';
+import { DEMO_SLUG, rootDomainForUrls, isAdminSubdomain, isGroupSubdomain, subdomainUrl } from '@/lib/tenant';
+import { currencyCodeFor, jsonLdScript, restaurantJsonLd } from '@/lib/seo/restaurant-jsonld';
 import { DEMO_CATEGORIES, DEMO_PRODUCTS } from '@/lib/demo-menu';
 import { getPublicLoyaltyCached, type PublicReward } from '@/lib/db/loyalty';
 import { isGoogleAuthEnabled } from '@/lib/auth-config';
@@ -82,7 +83,8 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
       url: menuUrl,
       siteName: name,
-      locale: 'es_MX',
+      // es_GT como la portada de Leogin; antes decía es_MX (CAT-11).
+      locale: 'es_GT',
       type: 'website',
       images: logo ? [{ url: logo }] : undefined,
     },
@@ -176,7 +178,24 @@ export default async function Home({
   // WhatsApp de contacto para el panel "Mi cuenta".
   const whatsappNumber = data.restaurant.orders_whatsapp || data.restaurant.whatsapp_number || null;
 
+  /* Ficha para Google: restaurante, horario y carta con precios
+     (schema.org, auditoría 2026-10-02, CAT-11). Con lo ya cargado. */
+  const jsonLd = restaurantJsonLd({
+    name: data.restaurant.name,
+    description: data.restaurant.tagline,
+    url: subdomainUrl(slug),
+    logo: data.resolved.config.logoUrl,
+    address: data.restaurant.address,
+    telephone: whatsappNumber,
+    hours: data.restaurant.hours,
+    currency: currencyCodeFor(data.resolved.config.currencySymbol, data.resolved.config.locale),
+    categories: menu.categories,
+    products: menu.products,
+  });
+
   return (
+    <>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }} />
     <MenuShell
       config={data.resolved.config}
       content={data.resolved.content}
@@ -198,6 +217,7 @@ export default async function Home({
       deliveryRadiusKm={data.restaurant.delivery_radius_km}
       menuLanguages={data.restaurant.menu_languages ?? []}
     />
+    </>
   );
 }
 

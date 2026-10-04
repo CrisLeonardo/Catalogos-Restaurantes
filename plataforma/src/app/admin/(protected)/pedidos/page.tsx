@@ -4,7 +4,7 @@ import { getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
-import { getPanelOrders, getOrderStats, getDayPace, orderClosedAt } from '@/lib/db/orders';
+import { getPanelOrders, getOrderStats, orderClosedAt } from '@/lib/db/orders';
 import type { TimesData } from '@/components/admin/times-widget';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import { getFallosDeImpresion } from '@/lib/db/print-stations';
@@ -64,14 +64,11 @@ export default async function PedidosPage() {
   const agentKitchen = !!(agent?.kitchen_target);
   const agentReceipt = !!(agent?.receipt_target);
 
-  const [panelOrders, stats, drivers, pace] = await Promise.all([
+  // Sin `getDayPace`: la gráfica que lo usaba se fue a Hoy (D-3).
+  const [panelOrders, stats, drivers] = await Promise.all([
     getPanelOrders(restaurantId, timezone),
     getOrderStats(restaurantId, timezone),
     getDrivers(restaurantId),
-    // Con qué comparar el día. Es la misma pieza que la portada Hoy, así que
-    // también necesita su referencia; la consulta va acotada a los cuatro
-    // días iguales anteriores.
-    getDayPace(restaurantId, timezone),
   ]);
 
   /* ── Tiempos de hoy ──────────────────────────────────────────
@@ -148,7 +145,6 @@ export default async function PedidosPage() {
       autoConfirmMinutes={themeConfig.autoConfirmMinutes}
       drivers={activeDrivers}
       times={times}
-      pace={pace}
     />
   );
 }

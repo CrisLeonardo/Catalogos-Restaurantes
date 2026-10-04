@@ -20,7 +20,7 @@ export default function VerifyEmailBanner({ email }: { email: string | null }) {
     <div
       style={{
         display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-        borderRadius: 14, padding: '11px 15px', marginBottom: 16,
+        borderRadius: 'var(--radius-lg)', padding: '11px 15px', marginBottom: 16,
         border: '1px solid rgba(245,158,11,0.3)',
         background: 'rgba(245,158,11,0.08)',
       }}
@@ -51,8 +51,8 @@ export default function VerifyEmailBanner({ email }: { email: string | null }) {
         }
         className="press"
         style={{
-          whiteSpace: 'nowrap', padding: '8px 14px', borderRadius: 99,
-          fontSize: 12.5, fontWeight: 600, border: 'none',
+          whiteSpace: 'nowrap', padding: '8px 14px', borderRadius: 'var(--radius-full)',
+          fontSize: 12, fontWeight: 600, border: 'none',
           background: 'var(--u-text)', color: 'var(--brand-bg)',
           cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.6 : 1,
         }}

@@ -229,10 +229,18 @@ function parseHourExceptions(raw: string | null): { exceptions: HourExceptions |
 
 /* ── Cobertura de delivery: zonas a las que llega el restaurante ── */
 
+/** Respuesta de las acciones que GUARDAN Y SE QUEDAN en su pantalla. Horario,
+ *  zona de entrega y zonas terminaban en `redirect('/admin/perfil?saved=1')`:
+ *  quien guardaba su horario aparecía de golpe en Perfil, otra pantalla
+ *  (auditoría 2026-10-02, AJU-20). Ahora responden «guardado» y el editor lo
+ *  dice en su sitio. */
+export type SaveState = { error: string } | { saved: true } | null;
+export type ZonesState = SaveState;
+
 export async function updateDeliveryZones(
-  prevState: RestaurantState,
+  prevState: ZonesState,
   formData: FormData,
-): Promise<RestaurantState> {
+): Promise<ZonesState> {
   const ctx = await resolveContext(formData);
   if (!ctx) return { error: 'No autorizado.' };
 
@@ -303,18 +311,23 @@ export async function updateDeliveryZones(
     await ctx.db.from('delivery_zones').update({ activo: false }).in('id', aDesactivar);
   }
 
-  revalidatePath('/admin/perfil');
+  /* Antes terminaba en `redirect('/admin/perfil?saved=1')`: quien guardaba
+     sus zonas desde Repartidores aparecía de golpe en Perfil, otra pantalla
+     (auditoría 2026-10-02, N-03). Se queda donde está y el editor dice que
+     guardó. */
+  revalidatePath('/admin/ajustes/entrega');
+  revalidatePath('/admin/repartidores');
   revalidatePath('/');
   updateTag(`restaurant:${ctx.restaurantId}`);
-  redirect(await panelLink('/admin/perfil?saved=1'));
+  return { saved: true };
 }
 
 /* ── Geolocalización del restaurante + radio de entrega ─────── */
 
 export async function updateRestaurantLocation(
-  prevState: RestaurantState,
+  prevState: SaveState,
   formData: FormData,
-): Promise<RestaurantState> {
+): Promise<SaveState> {
   const ctx = await resolveContext(formData);
   if (!ctx) return { error: 'No autorizado.' };
 
@@ -353,15 +366,15 @@ export async function updateRestaurantLocation(
     revalidatePath(`/super/restaurantes/${ctx.restaurantId}`, 'layout');
     redirect(`/super/restaurantes/${ctx.restaurantId}/informacion?saved=location`);
   }
-  revalidatePath('/admin/perfil');
+  revalidatePath('/admin/ajustes/entrega');
   revalidatePath('/');
-  redirect(await panelLink('/admin/perfil?saved=1'));
+  return { saved: true };
 }
 
 export async function updateRestaurantOps(
-  prevState: RestaurantState,
+  prevState: SaveState,
   formData: FormData,
-): Promise<RestaurantState> {
+): Promise<SaveState> {
   const ctx = await resolveContext(formData);
   if (!ctx) return { error: 'No autorizado.' };
 
@@ -391,10 +404,10 @@ export async function updateRestaurantOps(
 
   if (error) return { error: error.message };
 
-  revalidatePath('/admin/perfil');
+  revalidatePath('/admin/ajustes/restaurante');
   revalidatePath('/');
   updateTag(`restaurant:${ctx.restaurantId}`);
-  redirect(await panelLink('/admin/perfil?saved=1'));
+  return { saved: true };
 }
 
 /** Idiomas de menú soportados hoy además del español (siempre disponible). */
@@ -436,7 +449,7 @@ export async function saveOrdersAndCurrency(input: {
   > & Partial<Pick<ThemeConfig,
     'floorPlan' | 'kdsYellowMin' | 'kdsRedMin' | 'kdsConfirmFirst' |
     'salonReadyMin' | 'salonUnpaidMin' | 'salonUnacceptedMin' |
-    'autoConfirmEnabled' | 'autoConfirmMinutes' | 'tipOrderTypes'
+    'autoConfirmEnabled' | 'autoConfirmMinutes' | 'tipOrderTypes' | 'deliveryFee'
   >>;
 }): Promise<SaveThemeResult> {
   const supabase = await createClient();
@@ -484,6 +497,12 @@ export async function saveOrdersAndCurrency(input: {
   const existingConfig = (row?.config as Record<string, unknown>) ?? {};
   const previousOrderTypes = (existingConfig.orderTypes as OrderType[] | undefined) ?? input.patch.orderTypes;
   const newConfig = { ...existingConfig, ...input.patch };
+  // Viene de un campo numérico del navegador: se acota igual que en el
+  // esquema del pedido (0 a 10,000) para no guardar un negativo ni un NaN.
+  if ('deliveryFee' in input.patch) {
+    const fee = Number(input.patch.deliveryFee);
+    newConfig.deliveryFee = Number.isFinite(fee) ? Math.max(0, Math.min(10_000, Math.round(fee * 100) / 100)) : 0;
+  }
 
   const { error } = await db
     .from('restaurant_themes')

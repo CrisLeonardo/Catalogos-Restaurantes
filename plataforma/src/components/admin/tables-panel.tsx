@@ -10,6 +10,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import type { ThemeConfig, FloorPlan } from '@/lib/theme/defaults';
+import SaveBar, { type SaveStatus } from '@/components/admin/save-bar';
+import { useValueDirty } from '@/lib/use-form-dirty';
 
 type Patch = Pick<ThemeConfig,
   'orderTypes' | 'dineInTableCount' | 'dineInCourseOptions' |
@@ -19,9 +21,16 @@ type Patch = Pick<ThemeConfig,
 
 interface Props {
   restaurantId: string;
+  /** Va en el QR de cada mesa: /m/<slug>/<mesa>. */
+  slug: string;
   menuUrl: string | null;
   config: Patch;
+  /** Para la hoja de QR imprimible. */
+  restaurantName?: string;
 }
+
+/** Cuántos QR se ven antes de «Ver los N»: el PDF cubre la descarga de todos. */
+const QR_PREVIEW = 8;
 
 function toggleIn<T>(arr: T[], val: T, on: boolean): T[] {
   const has = arr.includes(val);
@@ -30,14 +39,13 @@ function toggleIn<T>(arr: T[], val: T, on: boolean): T[] {
   return arr;
 }
 
-function TableQRCard({ tableNumber, restaurantId }: { tableNumber: number; restaurantId: string }) {
+function TableQRCard({ tableNumber, slug }: { tableNumber: number; slug: string }) {
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
   const toast = useToastManager();
-  // Link ESTABLE (no la URL final del menú): sigue funcionando aunque el
-  // restaurante cambie de slug o la plataforma de dominio — ver
-  // src/app/m/[restaurantId]/[[...mesa]]/route.ts.
-  const tableUrl = stableTableUrl(restaurantId, tableNumber);
+  // Link ESTABLE corto (/m/<slug>/<mesa>, no la URL del subdominio): sigue
+  // funcionando aunque el restaurante cambie de slug — ver stableTableUrl.
+  const tableUrl = stableTableUrl(slug, tableNumber);
   const qrSrc = `/api/qr?url=${encodeURIComponent(tableUrl)}`;
 
   async function copyLink() {
@@ -104,41 +112,28 @@ function TableQRCard({ tableNumber, restaurantId }: { tableNumber: number; resta
       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9,
       padding: '14px 10px 12px',
       background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
-      borderRadius: 14,
+      borderRadius: 'var(--radius-lg)',
       border: '1px solid var(--u-hair)',
     }}>
-      <div style={{ background: '#fff', borderRadius: 8, padding: 7, boxShadow: '0 1px 8px rgba(0,0,0,0.28)' }}>
+      <div style={{ background: '#fff', borderRadius: 'var(--radius-sm)', padding: 7, boxShadow: '0 1px 8px rgba(0,0,0,0.28)' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={qrSrc} alt={`Mesa ${tableNumber}`} width={96} height={96} style={{ display: 'block' }} />
       </div>
       <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--u-text)' }}>Mesa {tableNumber}</span>
 
-      {/* Enlace para NFC */}
-      <div
-        title={tableUrl}
-        style={{
-          fontSize: 9.5,
-          color: 'var(--u-text-4)',
-          wordBreak: 'break-all',
-          textAlign: 'center',
-          lineHeight: 1.4,
-          maxWidth: 120,
-          cursor: 'text',
-          userSelect: 'all',
-        }}
-      >
-        {tableUrl}
-      </div>
+      {/* El enlace para NFC ya no se escribe entero en la tarjeta (9,5 px
+          partidos en cuatro renglones): «Copiar enlace» lo copia (AJU-05). */}
 
       <div style={{ display: 'flex', gap: 6 }}>
         <Button
           onClick={copyLink}
+          title={tableUrl}
           variant="outline"
           size="sm"
           className="h-auto rounded-adm-full px-2.5 py-1 text-[11px]"
           style={copied ? { background: 'var(--c-ok-bg)', color: 'var(--c-ok)', borderColor: 'transparent' } : undefined}
         >
-          {copied ? '✓ Copiado' : 'Copiar'}
+          {copied ? '✓ Copiado' : 'Copiar enlace'}
         </Button>
         <Button
           onClick={downloadPng}
@@ -154,10 +149,34 @@ function TableQRCard({ tableNumber, restaurantId }: { tableNumber: number; resta
   );
 }
 
-export default function TablesPanel({ restaurantId, menuUrl, config: initial }: Props) {
+export default function TablesPanel({ restaurantId, slug, menuUrl, config: initial, restaurantName }: Props) {
   const [patch, setPatch] = useState<Patch>(initial);
+  const [showAllQr, setShowAllQr] = useState(false);
+  const [sheetBusy, setSheetBusy] = useState(false);
+  const qrToast = useToastManager();
+
+  /* Todos los QR en un PDF A4, seis por hoja y con línea de corte. Usa la
+     cantidad de mesas GUARDADA: un QR de una mesa que aún no existe en el
+     servidor no lleva a ningún lado. */
+  async function downloadSheet() {
+    setSheetBusy(true);
+    try {
+      const { downloadTableQrSheet } = await import('@/lib/documents/table-qr-sheet');
+      await downloadTableQrSheet({
+        slug,
+        restaurantName: restaurantName?.trim() || 'Tu restaurante',
+        tableCount: initial.dineInTableCount,
+      });
+      qrToast.add({ title: 'PDF con los QR descargado', type: 'success' });
+    } catch {
+      qrToast.add({ title: 'No se pudo armar el PDF', description: 'Revisa tu conexión e inténtalo otra vez.', type: 'error' });
+    } finally {
+      setSheetBusy(false);
+    }
+  }
   const [isPending, start] = useTransition();
-  const [msg, setMsg] = useState<string | null>(null);
+  const [status, setStatus] = useState<SaveStatus>(null);
+  const { dirty, markSaved } = useValueDirty(patch);
 
   const dineInEnabled = patch.orderTypes.includes('dine_in');
 
@@ -166,7 +185,7 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
   }
 
   function save() {
-    setMsg(null);
+    setStatus(null);
     // Limpia mesas del plano que ya no existen (si se redujo el número de mesas).
     const fp = patch.floorPlan;
     const cleaned: Patch = {
@@ -175,13 +194,14 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
     };
     start(async () => {
       const res = await saveOrdersAndCurrency({ restaurantId, patch: cleaned });
-      if (res.error) setMsg(`Error: ${res.error}`);
-      else setMsg('Guardado ✓');
+      if (res.error) { setStatus({ error: res.error }); return; }
+      markSaved();
+      setStatus({ saved: true });
     });
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 760 }}>
+    <div className="adm-w-read" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
       {/* ── Configuración ── */}
       <Card className="flex flex-col gap-3.5 p-4.5">
@@ -190,14 +210,14 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--u-text)', marginBottom: 3 }}>Comer en local</div>
-            <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.4 }}>
+            <div style={{ fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.4 }}>
               Activa el modo mesa para que los clientes pidan desde su mesa.
             </div>
           </div>
           <Switch
             aria-label="Comer en local"
             checked={dineInEnabled}
-            onCheckedChange={(on) => { set('orderTypes', toggleIn(patch.orderTypes, 'dine_in', on)); setMsg(null); }}
+            onCheckedChange={(on) => { set('orderTypes', toggleIn(patch.orderTypes, 'dine_in', on)); }}
           />
         </div>
 
@@ -207,7 +227,7 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
             paddingTop: 12, borderTop: '1px solid var(--u-hair)',
           }}>
             <div>
-              <div style={{ fontSize: 13.5, color: 'var(--u-text-2)', fontWeight: 500 }}>Número de mesas</div>
+              <div style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 500 }}>Número de mesas</div>
               <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>Se generará un QR por cada mesa</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -241,34 +261,30 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
             <FloorPlanEditor
               tableCount={patch.dineInTableCount}
               value={patch.floorPlan ?? { enabled: false, levels: [{ id: 'l1', name: 'Planta baja' }], tables: [] }}
-              onChange={(fp: FloorPlan) => { set('floorPlan', fp); setMsg(null); }}
+              onChange={(fp: FloorPlan) => { set('floorPlan', fp); }}
             />
           </div>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 10, borderTop: '1px solid var(--u-hair)' }}>
-          <Button onClick={save} disabled={isPending} className="rounded-adm-full">
-            {isPending ? 'Guardando…' : 'Guardar cambios'}
-          </Button>
-          {msg && (
-            <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>
-              {msg}
-            </span>
-          )}
-        </div>
       </Card>
+      <SaveBar dirty={dirty} pending={isPending} status={status} onSave={save} />
 
       {/* ── QR por mesa ── */}
       {dineInEnabled && menuUrl ? (
         <div>
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', marginBottom: 4 }}>
-              Códigos QR por mesa
+          <div style={{ marginBottom: 14, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 260px' }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--u-text)', marginBottom: 4 }}>
+                Códigos QR por mesa
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
+                Cada QR lleva al cliente al menú con su mesa ya elegida para el pedido.
+                Descárgalos todos en una hoja lista para imprimir y recortar.
+              </div>
             </div>
-            <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
-              Cada QR lleva al cliente al menú con su mesa pre-seleccionada en el checkout.
-              Imprime cada código y colócalo en la mesa correspondiente.
-            </div>
+            <Button type="button" onClick={downloadSheet} disabled={sheetBusy} className="shrink-0 rounded-adm-full">
+              <Icon name="download" size={15} /> {sheetBusy ? 'Armando el PDF…' : 'Descargar todos (PDF)'}
+            </Button>
           </div>
 
           <div style={{
@@ -276,15 +292,22 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
             gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
             gap: 10,
           }}>
-            {Array.from({ length: patch.dineInTableCount }, (_, i) => i + 1).map((n) => (
-              <TableQRCard key={n} tableNumber={n} restaurantId={restaurantId} />
+            {Array.from({ length: showAllQr ? patch.dineInTableCount : Math.min(patch.dineInTableCount, QR_PREVIEW) }, (_, i) => i + 1).map((n) => (
+              <TableQRCard key={n} tableNumber={n} slug={slug} />
             ))}
           </div>
+          {patch.dineInTableCount > QR_PREVIEW && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
+              <Button type="button" variant="secondary" size="sm" className="rounded-adm-full" onClick={() => setShowAllQr((v) => !v)}>
+                {showAllQr ? 'Ver menos' : `Ver los ${patch.dineInTableCount} QR`}
+              </Button>
+            </div>
+          )}
         </div>
       ) : !dineInEnabled ? (
         <Card className="flex flex-col items-center gap-2.5 p-7 text-center">
           <Icon name="utensils" size={28} style={{ color: 'var(--u-text-4)' }} />
-          <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', fontWeight: 500 }}>
+          <div style={{ fontSize: 13, color: 'var(--u-text-3)', fontWeight: 500 }}>
             Activa “Comer en local” y guarda para generar los QR por mesa.
           </div>
         </Card>

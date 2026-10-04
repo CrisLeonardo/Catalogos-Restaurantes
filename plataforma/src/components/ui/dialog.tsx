@@ -55,7 +55,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
 function DialogTitle({ className, ...props }: React.ComponentProps<typeof BaseDialog.Title>) {
   return (
     <BaseDialog.Title
-      className={cn('text-[17px] font-bold text-adm-text', className)}
+      className={cn('text-[16px] font-bold text-adm-text', className)}
       {...props}
     />
   );

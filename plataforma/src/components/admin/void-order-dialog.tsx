@@ -74,11 +74,6 @@ export default function VoidOrderDialog({
     fontSize: 12, fontWeight: 700, color: 'var(--u-text-3)', marginBottom: 6,
     textTransform: 'uppercase', letterSpacing: '0.04em',
   };
-  const fieldStyle: React.CSSProperties = {
-    width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-    border: '1px solid var(--u-hair)', borderRadius: 12, padding: '10px 12px',
-    color: 'var(--u-text)', fontSize: 14, outline: 'none', fontFamily: 'inherit',
-  };
 
   return (
     <div
@@ -98,7 +93,7 @@ export default function VoidOrderDialog({
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--u-text)' }}>
               {item ? `Anular ${item.name}` : 'Anular pedido'}
             </div>
-            <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
               {orderStatus === 'NEW'
                 ? 'Todavía no se ha enviado a cocina.'
                 : pidePin
@@ -110,7 +105,7 @@ export default function VoidOrderDialog({
             type="button"
             onClick={onClose}
             className="press glass-quiet"
-            style={{ width: 32, height: 32, borderRadius: 10, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}
+            style={{ width: 32, height: 32, borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}
           >
             <Icon name="x" size={16} />
           </button>
@@ -124,20 +119,20 @@ export default function VoidOrderDialog({
                 type="button"
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
                 className="press"
-                style={{ width: 36, height: 36, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', cursor: 'pointer', fontSize: 18, color: 'var(--u-text)' }}
+                style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', cursor: 'pointer', fontSize: 18, color: 'var(--u-text)' }}
               >
                 −
               </button>
-              <span style={{ fontSize: 17, fontWeight: 700, minWidth: 26, textAlign: 'center' }}>{qty}</span>
+              <span style={{ fontSize: 16, fontWeight: 700, minWidth: 26, textAlign: 'center' }}>{qty}</span>
               <button
                 type="button"
                 onClick={() => setQty((q) => Math.min(item.remainingQty, q + 1))}
                 className="press"
-                style={{ width: 36, height: 36, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', cursor: 'pointer', fontSize: 18, color: 'var(--u-text)' }}
+                style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', cursor: 'pointer', fontSize: 18, color: 'var(--u-text)' }}
               >
                 +
               </button>
-              <span style={{ fontSize: 12.5, color: 'var(--u-text-4)' }}>de {item.remainingQty} disponibles</span>
+              <span style={{ fontSize: 12, color: 'var(--u-text-4)' }}>de {item.remainingQty} disponibles</span>
             </div>
           </div>
         )}
@@ -149,7 +144,7 @@ export default function VoidOrderDialog({
             onChange={(e) => setReason(e.target.value)}
             placeholder="Ej. el cliente lo devolvió, error al tomar el pedido…"
             rows={2}
-            style={{ ...fieldStyle, resize: 'none' }}
+            className="adm-field" style={{ resize: 'none' }}
           />
         </div>
 
@@ -171,7 +166,7 @@ export default function VoidOrderDialog({
                     className="press"
                     style={{
                       display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1,
-                      padding: '8px 13px', borderRadius: 11, cursor: 'pointer', minHeight: 44,
+                      padding: '8px 13px', borderRadius: 'var(--radius-md)', cursor: 'pointer', minHeight: 44,
                       justifyContent: 'center', textAlign: 'left',
                       border: firmante === a.id ? '1.5px solid var(--brand-accent)' : '1px solid var(--u-hair-2)',
                       background: firmante === a.id
@@ -180,7 +175,7 @@ export default function VoidOrderDialog({
                     }}
                     aria-pressed={firmante === a.id}
                   >
-                    <span style={{ fontSize: 13.5, fontWeight: 600 }}>{a.name}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{a.name}</span>
                     <span style={{ fontSize: 11, opacity: 0.75 }}>{a.role}</span>
                   </button>
                 ))}
@@ -198,10 +193,9 @@ export default function VoidOrderDialog({
                   onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, PIN_LENGTH))}
                   placeholder={'•'.repeat(PIN_LENGTH)}
                   aria-label="PIN del encargado"
-                  className="t-mono"
                   /* 18px de suelo: por debajo de 16 Safari amplía la página
                      entera al enfocar y la hoja se sale de la pantalla. */
-                  style={{ ...fieldStyle, width: 132, fontSize: 18, letterSpacing: '0.3em', textAlign: 'center' }}
+                  className="adm-field adm-field-mono" style={{ width: 132, fontSize: 18, letterSpacing: '0.3em', textAlign: 'center' }}
                 />
               </div>
             )}
@@ -231,7 +225,7 @@ export default function VoidOrderDialog({
           onClick={handleSubmit}
           disabled={submitting || sinEncargados || !listo || aprob == null}
           className="press btn-tinted chip-solid chip-danger"
-          style={{ width: '100%', padding: '13px', fontSize: 14.5, fontWeight: 700 }}
+          style={{ width: '100%', padding: '13px', fontSize: 14, fontWeight: 700 }}
         >
           {submitting ? 'Anulando…' : item ? `Anular ${qty}× ${item.name}` : 'Anular pedido completo'}
         </button>

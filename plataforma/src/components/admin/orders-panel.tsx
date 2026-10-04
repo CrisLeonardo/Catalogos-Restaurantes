@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import OrderCard, { printKitchenTicket, type PanelCurrency } from '@/components/admin/order-card';
+import { fmtCurrency } from '@/lib/money';
 import { isKitchenAutoPrintEnabled, markKitchenPrinted } from '@/lib/printing';
 import { Icon } from '@/components/icons';
 import { getOrdersPdfData, exportOrdersXlsx, updateOrderStatus } from '@/lib/actions/orders';
@@ -12,12 +13,11 @@ import { createDoc, drawPdfHeader, brandedAutoTable, finalizePdf } from '@/lib/d
 import { formatDocMoney, longDate } from '@/lib/documents/format';
 import type { TicketFormat } from '@/lib/escpos';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { useToastManager } from '@/components/ui/toast';
-import { Stat, StatGroup } from '@/components/ui/stat';
-import type { OrderWithItems, OrderStats, DayPace } from '@/lib/db/orders';
+import { Stat, StatGroup, StatStrip } from '@/components/ui/stat';
+import type { OrderWithItems, OrderStats } from '@/lib/db/orders';
 import { TimesWidget, type TimesData } from '@/components/admin/times-widget';
-import { SalesTrendWidget, TopTodayWidget } from '@/components/admin/sales-widgets';
+import ExportMenu from '@/components/admin/export-menu';
 import type { Order } from '@/types';
 
 /** Tipo de servicio tal como lo guarda la tabla `orders` (no confundir con el
@@ -33,7 +33,6 @@ interface Props {
   /** null cuando hoy no hubo pedidos cerrados suficientes para medir. */
   times?:         TimesData | null;
   /** Con qué comparar el día. null si no hay días iguales anteriores. */
-  pace?:          DayPace | null;
   currency:       PanelCurrency;
   timezone:       string;
   /** Umbrales del semáforo de cocina (Personalización → Cocina). */
@@ -60,15 +59,7 @@ interface Props {
    solo queda refrescar los datos y programar la auto-confirmación. */
 
 /** Formatea un monto con la moneda REAL del restaurante (no "Q" fijo). */
-export function fmtMoney(n: number, c: PanelCurrency, decimals = 2): string {
-  let num: string;
-  try {
-    num = n.toLocaleString(c.locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-  } catch {
-    num = n.toLocaleString('es-GT', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-  }
-  return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
-}
+export const fmtMoney = fmtCurrency;
 
 export default function OrdersPanel(props: Props) {
   return <OrdersPanelInner {...props} />;
@@ -97,7 +88,7 @@ const TYPE_FILTERS: { id: 'ALL' | ServiceType; label: string; icon: string }[] =
 ];
 
 function OrdersPanelInner({
-  activeOrders, closedToday, restaurantId, restaurantName, stats, times, pace, currency, timezone,
+  activeOrders, closedToday, restaurantId, restaurantName, stats, times, currency, timezone,
   kitchenYellowMin = 10, kitchenRedMin = 20,
   agentKitchen = false, agentReceipt = false,
   fallosDeImpresion = {},
@@ -363,24 +354,43 @@ function OrdersPanelInner({
     drivers, restaurantId,
   };
 
+  const enCocina = activeOrders.filter((o) => o.status === 'PREP').length;
+  const listos = activeOrders.filter((o) => o.status === 'READY' || o.status === 'TRANSIT').length;
+
   const countByType = (t: 'ALL' | ServiceType) =>
     t === 'ALL' ? activeOrders.length : activeOrders.filter((o) => o.order_type === t).length;
 
   return (
     <>
-      {/* KPIs — calculados en el servidor con la zona horaria del restaurante */}
-      <StatGroup className="mb-4.5">
-        <Stat label={`Ventas hoy (${stats.todayOrders} ${stats.todayOrders === 1 ? 'pedido' : 'pedidos'})`} value={fmtMoney(stats.todaySales, currency)} />
-        <Stat label={`Pedidos hoy (${activeOrders.length} en curso)`} value={String(stats.todayOrders)} />
-        <Stat label="Ticket promedio hoy" value={fmtMoney(stats.todayTicket, currency)} />
-        <Stat label="En cocina (preparándose ahora)" value={String(activeOrders.filter((o) => o.status === 'PREP').length)} />
+      {/* Cifras de OPERACIÓN (D-3, auditoría 2026-10-02): cuántos van, dónde
+          están y cuánto se tarda. Lo que se vendió, el ticket y las gráficas
+          viven en Hoy y en Negocio › Resumen; aquí repetían esas pantallas.
+          En el teléfono, en una franja de una línea (PED-01). */}
+      <StatStrip
+        className="mb-4 md:hidden"
+        items={[
+          { value: String(stats.todayOrders), label: stats.todayOrders === 1 ? 'pedido hoy' : 'pedidos hoy' },
+          { value: String(activeOrders.length), label: 'en curso' },
+          { value: String(enCocina), label: 'en cocina' },
+          { value: String(listos), label: listos === 1 ? 'listo sin entregar' : 'listos sin entregar', tone: listos > 0 ? 'warn' as const : undefined },
+          ...(times
+            ? [
+                { value: `${times.avgTotal} min`, label: 'a la mesa' },
+                ...(times.slow > 0 ? [{ value: String(times.slow), label: 'pasaron de 30 min', tone: 'warn' as const }] : []),
+              ]
+            : []),
+        ]}
+      />
+      <StatGroup className="mb-4.5 max-md:hidden">
+        <Stat label="Pedidos hoy" value={String(stats.todayOrders)} />
+        <Stat label="En curso" value={String(activeOrders.length)} />
+        <Stat label="En cocina ahora" value={String(enCocina)} />
+        <Stat label="Listos sin entregar" value={String(listos)} />
       </StatGroup>
 
-      {/* Cuánto se está tardando hoy. Va justo debajo de las cifras del día
-          porque contesta la otra mitad de la misma pregunta: cuánto se vendió
-          y cuánto se hizo esperar a la gente por ello. */}
+      {/* Cuánto se está tardando hoy: la otra mitad de la operación. */}
       {times && (
-        <div className="mb-4.5">
+        <div className="mb-4.5 max-md:hidden">
           <TimesWidget data={times} />
         </div>
       )}
@@ -391,7 +401,8 @@ function OrdersPanelInner({
         <div style={{ minWidth: 0 }}>
           {/* Filtro por tipo de servicio: un local con mucho domicilio necesita
               poder mirar SOLO domicilio sin que el resto le estorbe. */}
-          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <div className="u-noscroll" style={{ display: 'flex', gap: 7, overflowX: 'auto', flex: 1, minWidth: 0 }}>
             {TYPE_FILTERS.map((f) => {
               const on = typeFilter === f.id;
               const n = countByType(f.id);
@@ -402,11 +413,11 @@ function OrdersPanelInner({
                   onClick={() => setTypeFilter(f.id)}
                   className="press"
                   style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, whiteSpace: 'nowrap',
                     padding: '7px 13px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
-                    fontSize: 12.5, fontWeight: 600,
+                    fontSize: 12, fontWeight: 600,
                     border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
-                    background: on ? 'var(--adm-accent-500, var(--brand-accent))' : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
+                    background: on ? 'var(--adm-accent-fill, var(--brand-accent))' : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
                     color: on ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
                   }}
                 >
@@ -417,6 +428,15 @@ function OrdersPanelInner({
               );
             })}
           </div>
+          {/* Los pedidos del día en Excel o PDF: un menú en la fila de filtros
+              (antes, dos botones debajo de las gráficas que ya no están). */}
+          <ExportMenu
+            onExcel={downloadExcel}
+            onPdf={downloadPdf}
+            busy={isExportingXls ? 'excel' : isExportingPdf ? 'pdf' : null}
+            compact
+          />
+          </div>
 
           {visibleActive.length === 0 ? (
             <Card className="mb-7 p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
@@ -424,32 +444,44 @@ function OrdersPanelInner({
               No hay pedidos en curso{typeFilter !== 'ALL' ? ' de este tipo' : ''}.
             </Card>
           ) : (
-            STAGES.map((stage) => {
-              const orders = visibleActive.filter((o) => stage.statuses.includes(o.status));
-              if (orders.length === 0) return null;
-              return (
-                <section key={stage.id} style={{ marginBottom: 26 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
-                    <h2 className="t-poster" style={{ fontSize: 18 }}>
-                      {stage.title}
-                      <span style={{ marginLeft: 8, fontSize: 13, color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>
-                        {orders.length}
-                      </span>
-                    </h2>
-                    <span className="adm-label">{stage.hint}</span>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 12 }}>
-                    {orders.map((order) => <OrderCard key={order.id} order={order} {...cardProps} />)}
-                  </div>
-                </section>
-              );
-            })
+            /* El tablero (PED-06, maqueta D-2): en escritorio, una columna por
+               etapa —Por enviar · En cocina · Listos— y el turno entero a la
+               vista sin bajar; antes eran grupos apilados en una página de
+               2.900 px. En el teléfono y la tablet, los grupos uno debajo de
+               otro, como siempre (el corte vive en admin.css). */
+            <div className="orders-board">
+              {STAGES.map((stage) => {
+                const orders = visibleActive.filter((o) => stage.statuses.includes(o.status));
+                return (
+                  <section key={stage.id} className="orders-col" data-empty={orders.length === 0 ? '1' : '0'}>
+                    <div className="orders-col-head">
+                      {/* Encabezado de grupo como el resto del panel, no en letra de
+                          cartel en mayúsculas (auditoría 2026-10-02, PED-04/T-10). */}
+                      <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--u-text)', margin: 0 }}>
+                        {stage.title}
+                        <span style={{ marginLeft: 8, fontSize: 13, color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>
+                          {orders.length}
+                        </span>
+                      </h2>
+                      <span className="adm-label">{stage.hint}</span>
+                    </div>
+                    {orders.length === 0
+                      ? <div className="orders-col-empty">Nada por aquí</div>
+                      : (
+                        <div className="orders-col-cards">
+                          {orders.map((order) => <OrderCard key={order.id} order={order} {...cardProps} />)}
+                        </div>
+                      )}
+                  </section>
+                );
+              })}
+            </div>
           )}
 
           {servedOpen.length > 0 && (
             <section style={{ marginBottom: 26 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
-                <h2 className="t-poster" style={{ fontSize: 18 }}>
+                <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--u-text)', margin: 0 }}>
                   Servidos, mesa abierta
                   <span style={{ marginLeft: 8, fontSize: 13, color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>
                     {servedOpen.length}
@@ -489,42 +521,6 @@ function OrdersPanelInner({
           )}
         </div>
 
-        {/* Right: gráfica + top + export */}
-        <aside style={{ width: '100%', minWidth: 0 }}>
-          {/* Las MISMAS dos piezas que pinta la portada Hoy. Antes esta
-              pantalla tenía sus propias copias, con el aspecto anterior al
-              rediseño. */}
-          <div className="mb-3 flex flex-col gap-3">
-            <SalesTrendWidget
-              series={stats.series}
-              totalLast14={stats.totalLast14}
-              todaySales={stats.todaySales}
-              pace={pace ?? null}
-              money={(n) => fmtMoney(n, currency)}
-            />
-            {stats.topToday.length > 0 && <TopTodayWidget items={stats.topToday} />}
-          </div>
-          <div className="mt-3 flex gap-2">
-            <Button
-              onClick={downloadExcel}
-              disabled={isExportingXls || isExportingPdf}
-              variant="secondary"
-              size="sm"
-              className="flex-1"
-            >
-              {isExportingXls ? '…' : <><Icon name="download" size={13} /> Excel</>}
-            </Button>
-            <Button
-              onClick={downloadPdf}
-              disabled={isExportingXls || isExportingPdf}
-              variant="secondary"
-              size="sm"
-              className="flex-1"
-            >
-              {isExportingPdf ? '…' : <><Icon name="download" size={13} /> PDF</>}
-            </Button>
-          </div>
-        </aside>
       </div>
     </>
   );

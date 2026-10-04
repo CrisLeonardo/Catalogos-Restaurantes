@@ -7,20 +7,16 @@ import { PLANS, type PlanCode } from '@/lib/plans';
 import CatalogPanel from '@/components/admin/catalog-panel';
 import ProductosExportButton from '@/components/admin/productos-export-button';
 import { OffMenuWidget, type OffMenuItem } from '@/components/admin/off-menu-widget';
-import { isUnavailable } from '@/lib/product-availability';
+import { isUnavailable, withEffectiveAvailability } from '@/lib/product-availability';
+import { haceTiempo } from '@/lib/dates';
 
 export const metadata = { title: 'Catálogo – Panel admin' };
 
-/** "hace 20 min" / "hace 3 h". Nunca pasa de doce horas: a las doce el
- *  platillo vuelve solo al menú y deja de estar en esta lista. */
-function desdeHace(ms: number): string {
-  const mins = Math.max(0, Math.round(ms / 60_000));
-  if (mins < 1) return 'recién';
-  if (mins < 60) return `hace ${mins} min`;
-  return `hace ${Math.floor(mins / 60)} h`;
-}
-
-export default async function AdminMenuPage() {
+export default async function AdminMenuPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filtro?: string }>;
+}) {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
 
@@ -74,7 +70,9 @@ export default async function AdminMenuPage() {
       // El inventario es quien lo apaga solo al llegar a cero; cualquier otro
       // caso lo marcó una persona.
       reason: p.track_stock && Number(p.stock ?? 0) <= 0 ? 'inventario' as const : 'mano' as const,
-      since: p.unavailable_at ? desdeHace(ahora - new Date(p.unavailable_at).getTime()) : null,
+      // Lo marcado a mano vuelve solo a las 12 h; lo que se quedó sin
+      // existencias sigue aquí hasta que se reponga (puede llevar días).
+      since: p.unavailable_at ? haceTiempo(p.unavailable_at, ahora) : null,
     }))
     // Primero lo que se apagó solo: es lo que se está dejando de vender sin
     // que nadie lo haya decidido.
@@ -85,15 +83,15 @@ export default async function AdminMenuPage() {
       {apagados.length > 0 && (
         <OffMenuWidget items={apagados.slice(0, 4)} total={apagados.length} />
       )}
-      {products.length > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <ProductosExportButton restaurantId={restaurantId} />
-        </div>
-      )}
+      {/* La lista recibe la disponibilidad YA resuelta con la regla del menú:
+          antes pintaba la columna cruda y enseñaba «Agotado» en platillos que
+          el comensal estaba pidiendo (auditoría 2026-10-02, CAT-01). */}
       <CatalogPanel
+        exportSlot={<ProductosExportButton restaurantId={restaurantId} />}
+        initialStatus={(await searchParams).filtro}
         restaurantId={restaurantId}
         categories={categories}
-        products={products}
+        products={withEffectiveAvailability(products, ahora)}
         maxProducts={maxProducts}
       />
     </div>

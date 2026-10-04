@@ -5,7 +5,6 @@
    vía saveInventory. Badges de stock bajo / agotado. */
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { adjustStock, saveInventory, getProductMovements } from '@/lib/actions/inventory';
 import { Card } from '@/components/ui/card';
@@ -20,7 +19,7 @@ const REASON_LABEL: Record<string, string> = {
 
 function MovementHistory({ movements }: { movements: StockMovement[] }) {
   if (movements.length === 0) {
-    return <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', padding: '6px 2px' }}>Sin movimientos registrados todavía.</p>;
+    return <p style={{ fontSize: 12, color: 'var(--u-text-4)', padding: '6px 2px' }}>Sin movimientos registrados todavía.</p>;
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 260, overflowY: 'auto' }}>
@@ -28,11 +27,11 @@ function MovementHistory({ movements }: { movements: StockMovement[] }) {
         <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, padding: '5px 2px', borderBottom: '1px solid var(--u-hair)' }}>
           <div>
             <div style={{ color: 'var(--u-text-2)' }}>{REASON_LABEL[m.reason] ?? m.reason}</div>
-            <div style={{ color: 'var(--u-text-4)', fontSize: 10.5 }}>{new Date(m.created_at).toLocaleString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+            <div style={{ color: 'var(--u-text-4)', fontSize: 11 }}>{new Date(m.created_at).toLocaleString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
           </div>
           <div style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)' }}>
             <div style={{ color: Number(m.delta) >= 0 ? 'var(--c-ok)' : 'var(--c-danger)' }}>{Number(m.delta) >= 0 ? '+' : ''}{m.delta}</div>
-            {m.unit_cost != null && <div style={{ color: 'var(--u-text-3)', fontSize: 10.5 }}>costo Q{Number(m.unit_cost).toFixed(4)} · prom. Q{Number(m.avg_cost_after).toFixed(4)}</div>}
+            {m.unit_cost != null && <div style={{ color: 'var(--u-text-3)', fontSize: 11 }}>costo Q{Number(m.unit_cost).toFixed(4)} · prom. Q{Number(m.avg_cost_after).toFixed(4)}</div>}
           </div>
         </div>
       ))}
@@ -48,7 +47,6 @@ interface Props {
 
 export default function InventoryPanel({ restaurantId, categories, products }: Props) {
   const [activeCat, setActiveCat] = useState('todos');
-  const router = useRouter();
 
   const list = products.filter((p) => activeCat === 'todos' || p.category_id === activeCat);
 
@@ -101,7 +99,6 @@ export default function InventoryPanel({ restaurantId, categories, products }: P
               product={p}
               restaurantId={restaurantId}
               last={i === list.length - 1}
-              onChanged={() => router.refresh()}
             />
           ))}
         </Card>
@@ -110,7 +107,7 @@ export default function InventoryPanel({ restaurantId, categories, products }: P
   );
 }
 
-function Row({ product, restaurantId, last, onChanged }: { product: Product; restaurantId: string; last: boolean; onChanged: () => void }) {
+function Row({ product, restaurantId, last }: { product: Product; restaurantId: string; last: boolean }) {
   const [pending, start] = useTransition();
   const [stockVal, setStockVal] = useState(String(product.stock ?? 0));
   const [thresholdVal, setThresholdVal] = useState(String(product.low_stock_threshold ?? 0));
@@ -128,7 +125,7 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
     fd.set('restaurantId', restaurantId);
     fd.set('id', product.id);
     fd.set('delta', String(delta));
-    start(async () => { await adjustStock(fd); onChanged(); });
+    start(async () => { await adjustStock(fd); });
   }
 
   function save(track: boolean) {
@@ -138,7 +135,7 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
     fd.set('track_stock', String(track));
     fd.set('stock', stockVal);
     fd.set('low_stock_threshold', thresholdVal);
-    start(async () => { await saveInventory(null, fd); setOpen(false); onChanged(); });
+    start(async () => { await saveInventory(null, fd); setOpen(false); });
   }
 
   function toggleHistory() {
@@ -148,9 +145,13 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
 
   return (
     <div style={{ padding: '12px 16px', borderBottom: last ? 'none' : '1px solid var(--u-hair)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 14.5, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      {/* Con `wrap` y un mínimo para el nombre: en el teléfono los cinco
+          controles (− 26 + ⏱ ⚙) se comían el renglón y el nombre del
+          platillo quedaba cortado detrás. Ahora, si no caben, bajan al
+          renglón siguiente (auditoría 2026-10-02, MEN-10). */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px 12px', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 150px', minWidth: 0 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {product.name}
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 3 }}>
@@ -162,9 +163,9 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
         </div>
 
         {tracked ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
             <Stepper onClick={() => quick(-1)} disabled={pending || stock <= 0} icon="minus" label="Restar uno" />
-            <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 17, minWidth: 34, textAlign: 'center', color: isOut ? 'var(--c-danger)' : 'var(--u-text)' }}>
+            <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 16, minWidth: 34, textAlign: 'center', color: isOut ? 'var(--c-danger)' : 'var(--u-text)' }}>
               {stock}
             </span>
             <Stepper onClick={() => quick(1)} disabled={pending} icon="plus" label="Sumar uno" />
@@ -185,7 +186,7 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
       {/* Historial de movimientos (Kardex): entradas por compra, ventas, ajustes */}
       {history !== null && (
         <Card variant="flat" className="p-3">
-          {loadingHistory ? <p style={{ fontSize: 12.5, color: 'var(--u-text-4)' }}>Cargando…</p> : <MovementHistory movements={history} />}
+          {loadingHistory ? <p style={{ fontSize: 12, color: 'var(--u-text-4)' }}>Cargando…</p> : <MovementHistory movements={history} />}
         </Card>
       )}
 
@@ -193,10 +194,10 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
       {open && (
         <Card variant="flat" className="flex flex-wrap items-end gap-3 p-3">
           <Field label="Stock exacto">
-            <input type="number" inputMode="decimal" min="0" value={stockVal} onChange={(e) => setStockVal(e.target.value)} style={inputStyle} />
+            <input type="number" inputMode="decimal" min="0" value={stockVal} onChange={(e) => setStockVal(e.target.value)} className="adm-field adm-field-mono" style={{ width: 110 }} />
           </Field>
           <Field label="Alertar cuando ≤">
-            <input type="number" inputMode="decimal" min="0" value={thresholdVal} onChange={(e) => setThresholdVal(e.target.value)} style={inputStyle} />
+            <input type="number" inputMode="decimal" min="0" value={thresholdVal} onChange={(e) => setThresholdVal(e.target.value)} className="adm-field adm-field-mono" style={{ width: 110 }} />
           </Field>
           <Button onClick={() => save(true)} disabled={pending} size="sm">
             {pending ? '…' : tracked ? 'Guardar' : 'Activar'}
@@ -216,11 +217,6 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
   );
 }
 
-const inputStyle: React.CSSProperties = {
-  width: 110, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
-  borderRadius: 10, padding: '9px 11px', color: 'var(--u-text)', fontSize: 14,
-  outline: 'none', fontFamily: 'var(--ui-font-mono)',
-};
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -248,7 +244,7 @@ function Tag({ text, tone }: { text: string; tone?: 'bad' | 'warn' | 'ok' }) {
   };
   const s = map[tone ?? 'none'];
   return (
-    <span style={{ fontSize: 11, fontWeight: 600, color: s.c, padding: '2px 8px', borderRadius: 99, background: s.b, border: `1px solid ${s.br}` }}>
+    <span style={{ fontSize: 11, fontWeight: 600, color: s.c, padding: '2px 8px', borderRadius: 'var(--radius-full)', background: s.b, border: `1px solid ${s.br}` }}>
       {text}
     </span>
   );

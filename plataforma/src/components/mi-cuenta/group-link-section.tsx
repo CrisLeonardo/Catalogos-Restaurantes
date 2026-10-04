@@ -12,7 +12,6 @@
    ============================================================ */
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { createGroupLink } from '@/lib/actions/mi-cuenta';
 import GroupLinkCard from './group-link-card';
@@ -20,7 +19,6 @@ import GroupLinkCard from './group-link-card';
 export default function GroupLinkSection({ url, groupName }: { url: string | null; groupName: string }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
 
   if (url) return <GroupLinkCard url={url} groupName={groupName} />;
 
@@ -29,19 +27,18 @@ export default function GroupLinkSection({ url, groupName }: { url: string | nul
     start(async () => {
       const res = await createGroupLink();
       if ('error' in res) { setError(res.error); return; }
-      router.refresh();
     });
   }
 
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>Link de pedidos en línea · grupo</div>
-      <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.55 }}>
+    <div className="glass" style={{ borderRadius: 'var(--radius-lg)', padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)' }}>Link de pedidos en línea · grupo</div>
+      <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.55 }}>
         Un <strong>único link</strong> para todos tus restaurantes: detecta la ubicación del
         cliente y lo lleva a la sucursal más cercana para pedir. Ideal para Instagram,
         WhatsApp o flyers, en vez de repartir un link por local.
       </p>
-      {error && <p style={{ fontSize: 12.5, color: 'var(--c-danger)', margin: 0 }}>{error}</p>}
+      {error && <p style={{ fontSize: 12, color: 'var(--c-danger)', margin: 0 }}>{error}</p>}
       <div>
         <button
           type="button"

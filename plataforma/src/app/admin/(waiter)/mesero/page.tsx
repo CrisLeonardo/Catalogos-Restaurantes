@@ -18,6 +18,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getActiveTableNumbers, getPendingTableCalls, getWaiterActiveOrders } from '@/lib/db/orders';
 import { getOpenTableSessions } from '@/lib/db/table-sessions';
 import { getWaiterCatalogCached } from '@/lib/db/menu';
+import { withEffectiveAvailability } from '@/lib/product-availability';
 import { getMasPedidosCached } from '@/lib/db/servicio';
 import { getAgentHubInfo } from '@/lib/print-agent';
 import ServicioPanel from '@/components/admin/servicio/servicio-panel';
@@ -107,7 +108,10 @@ export default async function MeseroPage() {
       restaurantName={restaurantName}
       logoUrl={resolvedConfig?.logoUrl ?? null}
       categories={catalogo.categories}
-      products={catalogo.products}
+      /* Con la disponibilidad que ve el comensal: antes el mesero tenía
+         «Agotado» un platillo que el menú ya había devuelto a las 12 h
+         (auditoría 2026-10-02, CAT-01). */
+      products={withEffectiveAvailability(catalogo.products)}
       masPedidos={masPedidos}
       initialOrders={activeOrders}
       occupancy={occupancy}

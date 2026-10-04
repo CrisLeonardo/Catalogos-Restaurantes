@@ -10,16 +10,6 @@ import { type PlanPricing } from '@/lib/plans';
 import { adminUrl } from '@/lib/tenant';
 import LeoginInstallBanner from '@/components/leogin-install-banner';
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-  border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)',
-  padding: '12px 14px',
-  color: 'var(--u-text)',
-  fontSize: 16,
-  outline: 'none',
-};
 
 export default function MiCuentaClient({
   cards, pricing, accountName, canCreate, groupName,
@@ -42,13 +32,18 @@ export default function MiCuentaClient({
   return (
     <>
       <div className="anim-fade-up">
-        <div className="t-kicker" style={{ fontSize: 11, marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)', marginBottom: 12 }}>
           {groupName ?? 'Mi cuenta'}
         </div>
-        <h1 className="t-display" style={{ fontSize: 'clamp(26px, 5vw, 36px)', lineHeight: 1.1, margin: 0 }}>
-          Hola, {accountName.split(' ')[0]}
+        {/* Sin nombre en el perfil, `accountName` es el correo, y «Hola,
+            dueno@azucarnegra.test» en letra de portada no se cortaba: la página
+            entera medía 430 px en un teléfono de 390 (auditoría 2026-10-02,
+            MIC-02). Se saluda con lo de antes de la arroba y, por si acaso, la
+            palabra puede partirse. */}
+        <h1 className="t-display" style={{ fontSize: 'clamp(26px, 5vw, 36px)', lineHeight: 1.1, margin: 0, overflowWrap: 'anywhere' }}>
+          Hola, {accountName.split('@')[0].split(' ')[0]}
         </h1>
-        <p className="t-mute" style={{ fontSize: 14.5, marginTop: 8, marginBottom: 26 }}>
+        <p className="t-mute" style={{ fontSize: 14, marginTop: 8, marginBottom: 26 }}>
           {cards.length === 0
             ? 'Todavía no tienes ningún restaurante. Crea el primero aquí abajo.'
             : cards.length === 1
@@ -84,7 +79,7 @@ export default function MiCuentaClient({
           >
             <span
               style={{
-                width: 38, height: 38, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center',
+                width: 38, height: 38, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
                 background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)',
                 color: 'var(--brand-accent-ink)',
               }}
@@ -92,7 +87,7 @@ export default function MiCuentaClient({
               <Icon name="plus" size={18} />
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: 'var(--u-text)' }}>
+              <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>
                 {esElPrimero ? 'Crear mi restaurante' : 'Crear otro restaurante'}
               </span>
               <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)', marginTop: 1 }}>
@@ -204,13 +199,13 @@ function RestaurantRow({ card, onAskPin }: { card: MembershipCard; onAskPin: () 
         <RowBody card={card} pending={isPending || entrando} />
       </button>
       {state && 'error' in state && (
-        <p style={{ fontSize: 12.5, color: 'var(--c-danger)', margin: '6px 0 0' }}>{state.error}</p>
+        <p style={{ fontSize: 12, color: 'var(--c-danger)', margin: '6px 0 0' }}>{state.error}</p>
       )}
       {/* Sin JavaScript el formulario de arriba no lleva a ninguna parte: la
           acción devuelve la URL en vez de redirigir (ver useEnterPanel). Un
           enlace normal es la salida, y no cuesta nada tenerla. */}
       <noscript>
-        <a href={adminUrl(card.slug)} style={{ fontSize: 12.5 }}>Entrar a {card.name}</a>
+        <a href={adminUrl(card.slug)} style={{ fontSize: 12 }}>Entrar a {card.name}</a>
       </noscript>
       <TeamLink card={card} />
     </form>
@@ -232,12 +227,12 @@ function RowBody({ card, pending }: { card: MembershipCard; pending: boolean }) 
           alt=""
           width={42}
           height={42}
-          style={{ borderRadius: 11, objectFit: 'cover', display: 'block', flexShrink: 0 }}
+          style={{ borderRadius: 'var(--radius-md)', objectFit: 'cover', display: 'block', flexShrink: 0 }}
         />
       ) : (
         <span
           style={{
-            width: 42, height: 42, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center',
+            width: 42, height: 42, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
             background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: 'var(--u-text-3)',
           }}
         >
@@ -247,11 +242,11 @@ function RowBody({ card, pending }: { card: MembershipCard; pending: boolean }) 
 
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ fontSize: 15.5, fontWeight: 700, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {card.name}
           </span>
           {card.paused && (
-            <span className="chip" style={{ flexShrink: 0, fontSize: 10 }}>Pausado</span>
+            <span className="chip" style={{ flexShrink: 0, fontSize: 11 }}>Pausado</span>
           )}
         </span>
         <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
@@ -278,7 +273,7 @@ function EntryPinDialog({ card, onClose }: { card: MembershipCard; onClose: () =
   return (
     <Backdrop onClose={onClose}>
       <Glass style={{ padding: '26px 24px', width: '100%', maxWidth: 340 }}>
-        <p className="t-display" style={{ fontSize: 19, fontWeight: 700, margin: 0 }}>{card.name}</p>
+        <p className="t-display" style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{card.name}</p>
         <p className="t-mute" style={{ fontSize: 13, margin: '6px 0 18px' }}>
           Escribe el PIN de este restaurante para entrar.
         </p>
@@ -295,7 +290,7 @@ function EntryPinDialog({ card, onClose }: { card: MembershipCard; onClose: () =
             autoFocus
             autoComplete="off"
             placeholder="••••"
-            style={{ ...inputStyle, letterSpacing: '0.5em', textAlign: 'center', fontSize: 22 }}
+            className="adm-field adm-field-lg" style={{ letterSpacing: '0.5em', textAlign: 'center', fontSize: 22 }}
           />
 
           {state && 'error' in state && (
@@ -317,7 +312,7 @@ function EntryPinDialog({ card, onClose }: { card: MembershipCard; onClose: () =
           <button
             type="button"
             onClick={onClose}
-            style={{ background: 'none', border: 'none', color: 'var(--u-text-3)', fontSize: 12.5, cursor: 'pointer' }}
+            style={{ background: 'none', border: 'none', color: 'var(--u-text-3)', fontSize: 12, cursor: 'pointer' }}
           >
             Cancelar
           </button>

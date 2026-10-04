@@ -42,7 +42,7 @@ function Section({ title, action, aside, className, children, ...props }: Props)
             /* `py/-my`: 38 px de zona táctil sin mover el encabezado. Con
                solo la línea de texto eran 19 px — «Ver el mes» y «Ver
                mesas» se fallaban con el pulgar. */
-            className="-my-2.5 py-2.5 text-[12.5px] font-semibold no-underline"
+            className="-my-2.5 py-2.5 text-[12px] font-semibold no-underline"
             style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}
           >
             {action.label}
@@ -66,7 +66,7 @@ function Section({ title, action, aside, className, children, ...props }: Props)
 function SectionNote({ className, ...props }: React.ComponentProps<'p'>) {
   return (
     <p
-      className={cn('mt-2 px-4 text-[12.5px] leading-snug text-adm-text-3', className)}
+      className={cn('mt-2 px-4 text-[12px] leading-snug text-adm-text-3', className)}
       {...props}
     />
   );

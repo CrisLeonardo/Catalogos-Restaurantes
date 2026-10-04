@@ -33,7 +33,6 @@
    ════════════════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 
 import { Icon } from '@/components/icons';
 import {
@@ -79,6 +78,7 @@ import type { TableSeating } from '@/lib/db/table-sessions';
 import type { FloorPlan } from '@/lib/theme/defaults';
 import type { Category, OrderStatus, Product } from '@/types';
 import { assetSrc } from '@/lib/asset-image';
+import { shortOrderNumber } from '@/lib/order-number';
 
 /* ── Borrador del pedido en curso ──────────────────────────────
    El carrito vive en memoria: sin esto, salir de la pantalla a media
@@ -163,7 +163,6 @@ export default function ServicioPanel({
   occupancy, calls, seatings, tableCount,
   pickupEnabled, tipEnabled, tipEnabledPickup, currency, floorPlan, hubUrl, hubToken,
 }: ServicioPanelProps) {
-  const router = useRouter();
   const servicio = useServiceMode();
   const now = useReloj();
   const mod = useTeclaMod();
@@ -1039,7 +1038,7 @@ export default function ServicioPanel({
   const subSel = sel.kind === 'mesa' && mesaSel
     ? `${subtituloDeMesa(mesaSel)}${mesaSel.mesero ? ` · ${mesaSel.mesero}` : ''}`
     : sel.kind === 'llevar' ? 'Mostrador · no ocupa mesa'
-    : pedidoSel ? `${pedidoSel.order_number} · mostrador` : '';
+    : pedidoSel ? `${shortOrderNumber(pedidoSel.order_number)} · mostrador` : '';
 
   const nivelesPlano = useMemo(() => nivelesConMesas(floorPlan), [floorPlan]);
   const nivelActivo = nivel ?? nivelesPlano[0]?.id ?? '';
@@ -1216,7 +1215,7 @@ export default function ServicioPanel({
                 )}
               </div>
 
-              <div className="sv-hs">
+              <div className="sv-hs sv-hs-fade">
                 {FILTROS.map((f) => (
                   <Pill key={f} on={filtro === f} onClick={() => setFiltro(f)}>{f}</Pill>
                 ))}
@@ -1236,7 +1235,7 @@ export default function ServicioPanel({
               {!movil && pickupEnabled && (
                 <button type="button" className="sv-llevar" onClick={() => setHoja({ k: 'llevar' })}>
                   <span className="sv-llevar-ico"><Icon name="bag" size={16} /></span>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
                     Para llevar
                   </span>
                 </button>
@@ -1266,7 +1265,7 @@ export default function ServicioPanel({
                         <span className="sv-mesa-n"><Icon name="bag" size={17} /></span>
                         <span className="sv-mesa-id">
                           <span className="sv-mesa-title">{o.customer_name}</span>
-                          <span className="sv-mesa-sub">{o.order_number}</span>
+                          <span className="sv-mesa-sub">{shortOrderNumber(o.order_number)}</span>
                         </span>
                         <span className="sv-mesa-right">
                           <span className="sv-mesa-total">{redondear(Number(o.total ?? 0))}</span>
@@ -1552,7 +1551,6 @@ export default function ServicioPanel({
           onDone={() => {
             setHoja(null);
             if (sel.kind === 'mesa') void cargarMesa(sel.n);
-            router.refresh();
           }}
         />
       )}

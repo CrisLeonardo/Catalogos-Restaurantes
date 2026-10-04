@@ -23,7 +23,7 @@
    la cuenta al lado, el mesero entra en el ciclo de la mesa.
    ============================================================ */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 /* `Link` es aqui `PanelLink`: traduce las rutas del panel al origen desde el
    que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
    Ver components/admin/panel-link.tsx. */
@@ -31,7 +31,7 @@ import Link from '@/components/admin/panel-link';
 import { Icon, type IconName } from '@/components/icons';
 import { FIXTURE_META, fixtureLabel } from '@/components/admin/salon/fixtures';
 import { TableCard, TableRow, TablePin, type SalonTable } from '@/components/admin/salon/pieces';
-import { TONE_LABEL, TONE_ORDER } from '@/lib/table-state';
+import { TONE_LABEL, TONE_ORDER, tableTone } from '@/lib/table-state';
 import type { FloorPlan } from '@/lib/theme/defaults';
 
 /** Las tres formas de mirar el mismo salón. */
@@ -222,21 +222,42 @@ export default function SalonCanvas({
           {cambio && <BotonReordenar onClick={reordenar} />}
           {view === 'fichas' ? (
             <div className="salon-grid">
-              {vistas.map((t) => (
-                <TableCard
-                  key={t.n}
-                  t={t}
-                  onOpen={() => onOpen(t.n)}
-                  onAction={() => onAction(t)}
-                  disabled={disabled(t)}
-                  busy={busyTable === t.n}
-                />
-              ))}
+              {vistas.map((t, i) => {
+                const libre = tableTone(t.state) === 'libre';
+                /* En el teléfono las libres van en rejilla de cinco (PED-09,
+                   opción A de la maqueta D-2): diecisiete renglones de 60 px
+                   para enseñar un número eran ~1.000 px de scroll vacío. Las
+                   libres ya vienen al final (orden por urgencia); el rótulo
+                   va delante de la primera y en PC no se pinta. */
+                const primeraLibre = libre && (i === 0 || tableTone(vistas[i - 1].state) !== 'libre');
+                return (
+                  <Fragment key={t.n}>
+                    {primeraLibre && (
+                      <div className="salon-libres-head">
+                        <span>
+                          Libres{' '}
+                          <span className="t-mono" style={{ color: 'var(--u-text-4)', fontWeight: 500 }}>
+                            {vistas.length - i}
+                          </span>
+                        </span>
+                        <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--u-text-3)' }}>Toca una para sentar</span>
+                      </div>
+                    )}
+                    <TableCard
+                      t={t}
+                      onOpen={() => onOpen(t.n)}
+                      onAction={() => onAction(t)}
+                      disabled={disabled(t)}
+                      busy={busyTable === t.n}
+                    />
+                  </Fragment>
+                );
+              })}
             </div>
           ) : (
             <div
               style={{
-                borderRadius: 14, border: '1px solid var(--u-hair)', overflow: 'hidden',
+                borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair)', overflow: 'hidden',
                 background: 'var(--adm-card)', boxShadow: 'var(--adm-shadow-xs)',
               }}
             >
@@ -262,14 +283,14 @@ export default function SalonCanvas({
   return (
     <div className="salon-floor">
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', fontSize: 12.5, color: 'var(--u-text-3)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--u-text-3)' }}>
           {levels.length > 1 && levels.map((l) => (
             <button
               key={l.id}
               type="button"
               onClick={() => setNivel(l.id)}
               style={{
-                border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 12.5,
+                border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 12,
                 fontWeight: l.id === nivel ? 600 : 400,
                 color: l.id === nivel ? 'var(--u-text-2)' : 'var(--u-text-4)',
               }}

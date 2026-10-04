@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,8 @@ import {
   deleteReservation,
 } from '@/lib/actions/reservaciones';
 import type { Reservation, ReservationSummary } from '@/lib/db/reservaciones';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 interface Props {
   restaurantId: string;
@@ -48,14 +49,7 @@ const NEXT_STATUS: Partial<Record<ReservationStatus, ReservationStatus>> = {
   SEATED: 'COMPLETED',
 };
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-};
-const labelStyle: React.CSSProperties = {
-  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em',
-  textTransform: 'uppercase' as const, marginBottom: 4, display: 'block',
-};
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 function formatDate(date: string) {
   const d = new Date(date + 'T00:00:00');
@@ -86,8 +80,8 @@ function groupByDate(reservations: Reservation[]): [string, Reservation[]][] {
 }
 
 export default function ReservacionesPanel({ restaurantId, reservations, summary, freeTables }: Props) {
-  const router = useRouter();
   const [tab, setTab] = useState<'activas' | 'nueva'>('activas');
+  const { confirm, dialog } = useConfirm();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -110,7 +104,6 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
       if (res.error) { setError(res.error); return; }
       setForm({ customer_name: '', customer_phone: '', party_size: 2, date: new Date().toISOString().slice(0, 10), time: '19:00', notes: '' });
       setTab('activas');
-      router.refresh();
     });
   }
 
@@ -129,18 +122,16 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
       setBusyId(null);
       if (res.error) { setError(res.error); return; }
       setMesaDe((prev) => { const next = { ...prev }; delete next[id]; return next; });
-      router.refresh();
     });
   }
 
-  function handleDelete(id: string) {
-    if (!confirm('¿Eliminar esta reservación?')) return;
+  async function handleDelete(id: string) {
+    if (!(await confirm({ title: '¿Eliminar esta reservación?' }))) return;
     setBusyId(id);
     startTransition(async () => {
       const res = await deleteReservation(restaurantId, id);
       setBusyId(null);
       if (res.error) { setError(res.error); return; }
-      router.refresh();
     });
   }
 
@@ -148,6 +139,7 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {dialog}
       <StatGroup>
         <Stat label="Hoy" value={String(summary.today)} />
         <Stat label="Pendientes" value={String(summary.pending)} />
@@ -161,48 +153,55 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
         </div>
       )}
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid var(--u-hair)' }}>
-        {([['activas', 'Reservaciones'], ['nueva', 'Nueva reservación']] as const).map(([k, lbl]) => (
-          <button key={k} type="button" onClick={() => setTab(k)} className="press"
-            style={{ padding: '9px 16px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === k ? 'var(--brand-accent)' : 'transparent'}`, color: tab === k ? 'var(--u-text)' : 'var(--u-text-3)', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', marginBottom: -1 }}>
-            {lbl}
-          </button>
-        ))}
-      </div>
+      {/* «+ Nueva reservación» arriba a la derecha, como en el resto del panel,
+          en vez de una pestaña que escondía la lista (auditoría 2026-10-02,
+          T-09). Con la lista vacía la acción la trae el estado vacío. */}
+      {tab === 'activas' && grouped.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button type="button" onClick={() => setTab('nueva')} className="rounded-adm-full">
+            <Icon name="plus" size={15} /> Nueva reservación
+          </Button>
+        </div>
+      )}
 
       {tab === 'nueva' ? (
         <Card className="p-5" style={{ maxWidth: 520 }}>
+          <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 14 }}>Nueva reservación</p>
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Nombre del cliente *</label>
-                <input style={inputStyle} value={form.customer_name} onChange={(e) => setField('customer_name', e.target.value)} required placeholder="Juan García" />
+                <input className="adm-field" value={form.customer_name} onChange={(e) => setField('customer_name', e.target.value)} required placeholder="Juan García" />
               </div>
               <div>
                 <label style={labelStyle}>Teléfono</label>
-                <input style={inputStyle} value={form.customer_phone} onChange={(e) => setField('customer_phone', e.target.value)} placeholder="+502 0000-0000" />
+                <input className="adm-field" value={form.customer_phone} onChange={(e) => setField('customer_phone', e.target.value)} placeholder="+502 0000-0000" />
               </div>
               <div>
                 <label style={labelStyle}>Personas *</label>
-                <input style={inputStyle} type="number" inputMode="decimal" min={1} max={100} value={form.party_size} onChange={(e) => setField('party_size', parseInt(e.target.value) || 1)} required />
+                <input className="adm-field" type="number" inputMode="decimal" min={1} max={100} value={form.party_size} onChange={(e) => setField('party_size', parseInt(e.target.value) || 1)} required />
               </div>
               <div>
                 <label style={labelStyle}>Fecha *</label>
-                <input style={inputStyle} type="date" value={form.date} onChange={(e) => setField('date', e.target.value)} required />
+                <input className="adm-field" type="date" value={form.date} onChange={(e) => setField('date', e.target.value)} required />
               </div>
               <div>
                 <label style={labelStyle}>Hora *</label>
-                <input style={inputStyle} type="time" value={form.time} onChange={(e) => setField('time', e.target.value)} required />
+                <input className="adm-field" type="time" value={form.time} onChange={(e) => setField('time', e.target.value)} required />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Notas</label>
-                <textarea style={{ ...inputStyle, resize: 'vertical', minHeight: 60 }} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Preferencias, alergia, ocasión especial…" />
+                <textarea className="adm-field" style={{ resize: 'vertical', minHeight: 60 }} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Preferencias, alergia, ocasión especial…" />
               </div>
             </div>
-            <Button type="submit" disabled={isPending} className="self-start">
-              {isPending ? 'Guardando…' : 'Guardar reservación'}
-            </Button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? 'Guardando…' : 'Guardar reservación'}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setTab('activas')}>
+                Cancelar
+              </Button>
+            </div>
           </form>
         </Card>
       ) : grouped.length === 0 ? (
@@ -225,7 +224,7 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
                   const busy = busyId === r.id && isPending;
                   return (
                     <Card key={r.id} className="flex flex-wrap items-center gap-3 p-3.5">
-                      <div style={{ width: 8, height: 8, borderRadius: 99, background: STATUS_COLOR[r.status], flexShrink: 0 }} />
+                      <div style={{ width: 8, height: 8, borderRadius: 'var(--radius-full)', background: STATUS_COLOR[r.status], flexShrink: 0 }} />
                       <div style={{ flex: 1, minWidth: 160 }}>
                         <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>{r.customer_name}</div>
                         <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
@@ -233,10 +232,10 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
                           {r.table_number ? ` · mesa ${r.table_number}` : ''}
                           {r.customer_phone ? ` · ${r.customer_phone}` : ''}
                         </div>
-                        {r.notes && <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 3, fontStyle: 'italic' }}>{r.notes}</div>}
+                        {r.notes && <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 3, fontStyle: 'italic' }}>{r.notes}</div>}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                        <span style={{ fontSize: 11.5, fontWeight: 600, color: STATUS_COLOR[r.status] }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: STATUS_COLOR[r.status] }}>
                           {STATUS_LABEL[r.status]}
                         </span>
                         {/* En qué mesa se sientan (M-04). Solo en el paso que
@@ -248,9 +247,9 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
                             onChange={(e) => setMesaDe((prev) => ({ ...prev, [r.id]: e.target.value }))}
                             aria-label={`Mesa para ${r.customer_name}`}
                             style={{
-                              height: 32, borderRadius: 999, padding: '0 10px',
+                              height: 32, borderRadius: 'var(--radius-full)', padding: '0 10px',
                               border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
-                              color: 'var(--u-text)', fontSize: 12.5, cursor: 'pointer',
+                              color: 'var(--u-text)', fontSize: 12, cursor: 'pointer',
                             }}
                           >
                             <option value="" style={{ color: 'var(--u-text)' }}>Sin mesa</option>

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
@@ -12,6 +11,12 @@ import {
 } from '@/lib/actions/loyalty';
 import type { LoyaltySettings, LoyaltyAccount, LoyaltySummary, RewardRow } from '@/lib/db/loyalty';
 import { assetSrc } from '@/lib/asset-image';
+import { fmtMoney } from '@/lib/money';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import SaveBar, { type SaveStatus } from '@/components/admin/save-bar';
+import { useValueDirty } from '@/lib/use-form-dirty';
+import { Stat, StatGroup } from '@/components/ui/stat';
+import PageTabs from '@/components/admin/page-tabs';
 
 interface RewardProduct { id: string; name: string; price: number; image_url: string | null; cost: number | null }
 
@@ -26,14 +31,7 @@ interface Props {
   products: RewardProduct[];
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-};
-const labelStyle: React.CSSProperties = {
-  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em',
-  textTransform: 'uppercase', marginBottom: 4, display: 'block',
-};
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 type Tab = 'miembros' | 'recompensas' | 'config';
 
@@ -42,46 +40,35 @@ export default function LoyaltyPanel({ restaurantId, settings, accounts, custome
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-        <Kpi label="Miembros" value={String(summary.members)} />
-        <Kpi label="Puntos vigentes" value={summary.puntosVigentes.toLocaleString('es-GT')} accent />
-        <Kpi label="Canjeados este mes" value={summary.canjeadosMes.toLocaleString('es-GT')} />
-        <Kpi label="Recompensas activas" value={String(rewards.filter((r) => r.active).length)} />
-      </div>
+      {/* La fila de cifras del panel (`StatGroup`), no cuatro tarjetas sueltas
+          con su propia letra (auditoría 2026-10-02, T-05). */}
+      <StatGroup>
+        <Stat label="Miembros" value={summary.members.toLocaleString('es-GT')} />
+        <Stat label="Puntos vigentes" value={summary.puntosVigentes.toLocaleString('es-GT')} />
+        <Stat label="Canjeados este mes" value={summary.canjeadosMes.toLocaleString('es-GT')} />
+        <Stat label="Recompensas activas" value={String(rewards.filter((r) => r.active).length)} />
+      </StatGroup>
 
+      {/* Los campos de Configuración ya traen valores (1 punto por cada Q10…),
+          así que «configura las tasas» no se entendía: lo que falta es
+          GUARDARLAS, aunque sean esas (auditoría 2026-10-02, CLI-02). */}
       {!hasSettings && (
-        <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', color: 'var(--c-warn)', fontSize: 13 }}>
-          Configura las tasas del programa para empezar a acumular puntos.
+        <div className="note note-warn" style={{ fontSize: 13 }}>
+          El programa todavía no está activo: revisa las tasas en Configuración y guárdalas
+          (aunque te sirvan las que vienen) para empezar a dar puntos.
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid var(--u-hair)' }}>
-        {([['miembros', 'Miembros'], ['recompensas', 'Recompensas'], ['config', 'Configuración']] as const).map(([k, label]) => (
-          <button key={k} type="button" onClick={() => setTab(k)} className="press"
-            style={{ padding: '9px 16px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === k ? 'var(--brand-accent)' : 'transparent'}`, color: tab === k ? 'var(--u-text)' : 'var(--u-text-3)', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', marginBottom: -1 }}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <PageTabs tabs={[['miembros', 'Miembros'], ['recompensas', 'Recompensas'], ['config', 'Configuración']] as const} value={tab} onChange={setTab} />
 
-      {tab === 'config' && <SettingsForm restaurantId={restaurantId} settings={settings} />}
+      {tab === 'config' && <SettingsForm restaurantId={restaurantId} settings={settings} isNew={!hasSettings} />}
       {tab === 'miembros' && <MembersTab restaurantId={restaurantId} accounts={accounts} customers={customers} settings={settings} />}
       {tab === 'recompensas' && <RewardsTab restaurantId={restaurantId} rewards={rewards} products={products} />}
     </div>
   );
 }
 
-function Kpi({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <Card className="flex flex-col gap-1 p-3.5">
-      <span className="adm-label">{label}</span>
-      <span style={{ fontSize: 20, fontWeight: 800, color: accent ? 'var(--brand-accent)' : 'var(--u-text)', lineHeight: 1 }}>{value}</span>
-    </Card>
-  );
-}
-
-function SettingsForm({ restaurantId, settings }: { restaurantId: string; settings: LoyaltySettings }) {
-  const router = useRouter();
+function SettingsForm({ restaurantId, settings, isNew }: { restaurantId: string; settings: LoyaltySettings; isNew: boolean }) {
   const [p, setP] = useState<LoyaltySettingsPatch>({
     earn_rate: settings.earn_rate,
     earn_amount: settings.earn_amount,
@@ -90,31 +77,35 @@ function SettingsForm({ restaurantId, settings }: { restaurantId: string; settin
     rewards_enabled: settings.rewards_enabled,
   });
   const [isPending, start] = useTransition();
-  const [msg, setMsg] = useState<string | null>(null);
+  const [status, setStatus] = useState<SaveStatus>(null);
+  const { dirty, markSaved } = useValueDirty(p);
   function set<K extends keyof LoyaltySettingsPatch>(k: K, v: LoyaltySettingsPatch[K]) { setP((s) => ({ ...s, [k]: v })); }
 
   function save() {
-    setMsg(null);
+    setStatus(null);
     start(async () => {
       const res = await saveLoyaltySettings(restaurantId, p);
-      if (res.error) { setMsg(`Error: ${res.error}`); return; }
-      setMsg('Guardado ✓');
-      router.refresh();
+      if (res.error) { setStatus({ error: res.error }); return; }
+      markSaved();
+      setStatus({ saved: true });
     });
   }
 
   return (
+    <>
     <Card className="flex flex-col gap-3.5 p-4">
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-        <div><label style={labelStyle}>Puntos otorgados</label><input style={inputStyle} type="number" inputMode="decimal" min="0" step="0.1" value={p.earn_rate} onChange={(e) => set('earn_rate', parseFloat(e.target.value) || 0)} /></div>
-        <div><label style={labelStyle}>Por cada Q gastados</label><input style={inputStyle} type="number" inputMode="decimal" min="0.01" step="1" value={p.earn_amount} onChange={(e) => set('earn_amount', parseFloat(e.target.value) || 0)} /></div>
-        <div><label style={labelStyle}>Mínimo para canjear (puntos)</label><input style={inputStyle} type="number" inputMode="decimal" min="0" step="1" value={p.min_redeem} onChange={(e) => set('min_redeem', parseInt(e.target.value, 10) || 0)} /></div>
-        <div><label style={labelStyle}>Puntos de bienvenida</label><input style={inputStyle} type="number" inputMode="decimal" min="0" step="1" value={p.signup_bonus} onChange={(e) => set('signup_bonus', parseInt(e.target.value, 10) || 0)} /></div>
+        <div><label style={labelStyle}>Puntos otorgados</label><input className="adm-field" type="number" inputMode="decimal" min="0" step="0.1" value={p.earn_rate} onChange={(e) => set('earn_rate', parseFloat(e.target.value) || 0)} /></div>
+        <div><label style={labelStyle}>Por cada Q gastados</label><input className="adm-field" type="number" inputMode="decimal" min="0.01" step="1" value={p.earn_amount} onChange={(e) => set('earn_amount', parseFloat(e.target.value) || 0)} /></div>
+        <div><label style={labelStyle}>Mínimo para canjear (puntos)</label><input className="adm-field" type="number" inputMode="decimal" min="0" step="1" value={p.min_redeem} onChange={(e) => set('min_redeem', parseInt(e.target.value, 10) || 0)} /></div>
+        <div><label style={labelStyle}>Puntos de bienvenida</label><input className="adm-field" type="number" inputMode="decimal" min="0" step="1" value={p.signup_bonus} onChange={(e) => set('signup_bonus', parseInt(e.target.value, 10) || 0)} /></div>
       </div>
 
-      <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13.5, color: 'var(--u-text-2)' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--u-text-2)' }}>
         <Switch checked={p.rewards_enabled} onCheckedChange={(v) => set('rewards_enabled', v)} />
-        Mostrar el catálogo de <strong>Recompensas</strong> en el menú (canje de puntos por productos)
+        {/* En un <span>: sueltos, el texto y el <strong> eran tres hijos del
+            flex y la frase se partía en columnas en el teléfono. */}
+        <span>Mostrar el catálogo de <strong>Recompensas</strong> en el menú (canje de puntos por productos)</span>
       </label>
 
       <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
@@ -122,21 +113,34 @@ function SettingsForm({ restaurantId, settings }: { restaurantId: string; settin
         los puntos exactos de cada producto en su ficha (Menú → editar producto → <em>Puntos de lealtad</em>).
         Los puntos se acumulan cuando el pedido se marca <strong>entregado</strong>.
       </p>
-      <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-        La identidad de lealtad es siempre la <strong>cuenta de Google</strong> del comensal: los pedidos hechos <strong>sin sesión iniciada</strong> (invitados) no acumulan puntos automáticamente ni reciben los puntos de bienvenida, aunque sí quedan registrados como pedido normal. Si un invitado inicia sesión más tarde, sus pedidos anteriores no ganan puntos retroactivamente.
-      </p>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Button onClick={save} disabled={isPending} className="rounded-adm-full">
-          {isPending ? 'Guardando…' : 'Guardar configuración'}
-        </Button>
-        {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>{msg}</span>}
-      </div>
+      {/* Plegado: es la letra pequeña del programa, se lee una vez. */}
+      <details style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--u-text-2)', width: 'fit-content' }}>
+          ¿Quién acumula puntos?
+        </summary>
+        <p style={{ margin: '6px 0 0' }}>
+          Solo quien pide con su <strong>cuenta de Google</strong>. Los pedidos sin sesión (invitados)
+          quedan registrados como pedido normal, pero no suman puntos ni reciben los de bienvenida; y si
+          esa persona inicia sesión más tarde, sus pedidos anteriores no ganan puntos.
+        </p>
+      </details>
     </Card>
+    {/* Recién creado el programa, los valores de muestra también hay que
+        guardarlos: la barra sale aunque no se haya tocado nada. */}
+    <SaveBar
+      dirty={dirty || (isNew && !status)}
+      pending={isPending}
+      status={status}
+      onSave={save}
+      label={isNew && !dirty ? 'Activar el programa' : 'Guardar'}
+      hint={isNew && !dirty ? 'El programa aún no está activo' : undefined}
+      guardLeave={dirty}
+    />
+    </>
   );
 }
 
 function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string; rewards: RewardRow[]; products: RewardProduct[] }) {
-  const router = useRouter();
   const blank: RewardPatch = { product_id: '', title: '', description: '', image_url: '', points_cost: 100, active: true, stock: null, per_customer_limit: null, sort_order: 0 };
   const [form, setForm] = useState<RewardPatch>(blank);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -173,7 +177,6 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
       const res = await saveReward(restaurantId, form);
       if (res.error) { setMsg(`Error: ${res.error}`); return; }
       reset();
-      router.refresh();
     });
   }
 
@@ -181,12 +184,11 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
     start(async () => {
       await deleteReward(restaurantId, id);
       if (editingId === id) reset();
-      router.refresh();
     });
   }
 
   function toggle(id: string, active: boolean) {
-    start(async () => { await toggleReward(restaurantId, id, active); router.refresh(); });
+    start(async () => { await toggleReward(restaurantId, id, active); });
   }
 
   return (
@@ -197,18 +199,18 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
           <div>
             <label style={labelStyle}>Producto del menú</label>
             <Select
-              options={[{ value: '', label: '— Recompensa sin producto —' }, ...products.map((p) => ({ value: p.id, label: `${p.name} · Q${Number(p.price).toFixed(2)}` }))]}
+              options={[{ value: '', label: '— Recompensa sin producto —' }, ...products.map((p) => ({ value: p.id, label: `${p.name} · ${fmtMoney(Number(p.price))}` }))]}
               value={form.product_id ?? ''}
               onValueChange={pickProduct}
             />
           </div>
-          <div><label style={labelStyle}>Nombre visible</label><input style={inputStyle} value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Ej. Hamburguesa gratis" /></div>
-          <div><label style={labelStyle}>Costo en puntos</label><input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="decimal" min="1" step="1" value={form.points_cost} onChange={(e) => set('points_cost', parseInt(e.target.value, 10) || 0)} /></div>
+          <div><label style={labelStyle}>Nombre visible</label><input className="adm-field" value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Ej. Hamburguesa gratis" /></div>
+          <div><label style={labelStyle}>Costo en puntos</label><input className="adm-field" style={{ textAlign: 'right' }} type="number" inputMode="decimal" min="1" step="1" value={form.points_cost} onChange={(e) => set('points_cost', parseInt(e.target.value, 10) || 0)} /></div>
         </div>
-        <div><label style={labelStyle}>Descripción (opcional)</label><input style={inputStyle} value={form.description ?? ''} onChange={(e) => set('description', e.target.value)} placeholder="Detalle breve de la recompensa" /></div>
+        <div><label style={labelStyle}>Descripción (opcional)</label><input className="adm-field" value={form.description ?? ''} onChange={(e) => set('description', e.target.value)} placeholder="Detalle breve de la recompensa" /></div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-          <div><label style={labelStyle}>Stock límite (vacío = ilimitado)</label><input style={inputStyle} type="number" inputMode="decimal" min="0" step="1" value={form.stock ?? ''} onChange={(e) => set('stock', e.target.value === '' ? null : parseInt(e.target.value, 10))} /></div>
-          <div><label style={labelStyle}>Máx. por cliente (vacío = sin límite)</label><input style={inputStyle} type="number" inputMode="decimal" min="1" step="1" value={form.per_customer_limit ?? ''} onChange={(e) => set('per_customer_limit', e.target.value === '' ? null : parseInt(e.target.value, 10))} /></div>
+          <div><label style={labelStyle}>Stock límite (vacío = ilimitado)</label><input className="adm-field" type="number" inputMode="decimal" min="0" step="1" value={form.stock ?? ''} onChange={(e) => set('stock', e.target.value === '' ? null : parseInt(e.target.value, 10))} /></div>
+          <div><label style={labelStyle}>Máx. por cliente (vacío = sin límite)</label><input className="adm-field" type="number" inputMode="decimal" min="1" step="1" value={form.per_customer_limit ?? ''} onChange={(e) => set('per_customer_limit', e.target.value === '' ? null : parseInt(e.target.value, 10))} /></div>
         </div>
         <label style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', fontSize: 13, color: 'var(--u-text-2)' }}>
           <Switch checked={form.active !== false} onCheckedChange={(v) => set('active', v)} />
@@ -229,7 +231,7 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {rewards.map((r) => (
             <Card key={r.id} className="flex items-center gap-3 p-3" style={{ opacity: r.active ? 1 : 0.6 }}>
-              <div style={{ width: 46, height: 46, borderRadius: 11, overflow: 'hidden', flexShrink: 0, background: 'var(--surface-2)', display: 'grid', placeItems: 'center', fontSize: 18 }}>
+              <div style={{ width: 46, height: 46, borderRadius: 'var(--radius-md)', overflow: 'hidden', flexShrink: 0, background: 'var(--surface-2)', display: 'grid', placeItems: 'center', fontSize: 18 }}>
                 {r.image_url
                   /* eslint-disable-next-line @next/next/no-img-element */
                   ? <img src={assetSrc(r.image_url, 96)} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -237,7 +239,7 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{r.title}</div>
-                <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2 }}>
+                <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>
                   {r.product_name ? r.product_name : 'Sin producto'}
                   {r.stock != null && ` · stock ${r.stock}`}
                   {r.per_customer_limit != null && ` · máx ${r.per_customer_limit}/cliente`}
@@ -258,7 +260,6 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
 }
 
 function MembersTab({ restaurantId, accounts, customers, settings }: { restaurantId: string; accounts: LoyaltyAccount[]; customers: { id: string; name: string; phone: string }[]; settings: LoyaltySettings }) {
-  const router = useRouter();
   const [customerId, setCustomerId] = useState('');
   const [points, setPoints] = useState('');
   const [tipo, setTipo] = useState<'ADJUST' | 'REDEEM'>('ADJUST');
@@ -273,7 +274,6 @@ function MembersTab({ restaurantId, accounts, customers, settings }: { restauran
       if (res.error) { setMsg(`Error: ${res.error}`); return; }
       setMsg(`Saldo actualizado: ${res.balance} pts`);
       setPoints(''); setNote('');
-      router.refresh();
     });
   }
 
@@ -292,7 +292,7 @@ function MembersTab({ restaurantId, accounts, customers, settings }: { restauran
               onValueChange={setCustomerId}
             />
           </div>
-          <div><label style={labelStyle}>Puntos</label><input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="numeric" min="1" step="1" value={points} onChange={(e) => setPoints(e.target.value)} /></div>
+          <div><label style={labelStyle}>Puntos</label><input className="adm-field" style={{ textAlign: 'right' }} type="number" inputMode="numeric" min="1" step="1" value={points} onChange={(e) => setPoints(e.target.value)} /></div>
           <div>
             <label style={labelStyle}>Tipo</label>
             <Select
@@ -302,12 +302,12 @@ function MembersTab({ restaurantId, accounts, customers, settings }: { restauran
             />
           </div>
         </div>
-        <div><label style={labelStyle}>Nota (opcional)</label><input style={inputStyle} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Motivo del ajuste" /></div>
+        <div><label style={labelStyle}>Nota (opcional)</label><input className="adm-field" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Motivo del ajuste" /></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Button onClick={apply} disabled={isPending || !customerId} size="sm" className="rounded-adm-full">
             {isPending ? '…' : tipo === 'REDEEM' ? 'Restar puntos' : 'Sumar puntos'}
           </Button>
-          {tipo === 'REDEEM' && points && <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>≈ Q{((parseInt(points, 10) || 0) * settings.redeem_value).toFixed(2)} de descuento</span>}
+          {tipo === 'REDEEM' && points && <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>≈ {fmtMoney((parseInt(points, 10) || 0) * settings.redeem_value)} de descuento</span>}
           {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>{msg}</span>}
         </div>
       </Card>
@@ -328,7 +328,7 @@ function MembersTab({ restaurantId, accounts, customers, settings }: { restauran
                   <td style={{ padding: '10px 12px' }}><div style={{ fontWeight: 500 }}>{a.customer_name}</div><div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{a.customer_phone}</div></td>
                   <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontFamily: 'var(--ui-font-mono)', color: 'var(--brand-accent-ink)' }}>{a.points_balance.toLocaleString('es-GT')}</td>
                   <td className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{a.lifetime_points.toLocaleString('es-GT')}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>Q{(a.points_balance * settings.redeem_value).toFixed(2)}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{fmtMoney(a.points_balance * settings.redeem_value)}</td>
                 </tr>
               ))}
             </tbody>

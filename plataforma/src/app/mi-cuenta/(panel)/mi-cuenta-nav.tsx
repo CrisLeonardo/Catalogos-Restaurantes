@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Icon } from '@/components/icons';
+import { useEffect, useRef } from 'react';
 
 /* ============================================================
    Las secciones de Mi cuenta.
@@ -27,6 +28,14 @@ export default function MiCuentaNav({
   upgradeUrl: string | null;
 }) {
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
+  // La pestaña activa, a la vista (solo se toca el scroll de la propia fila).
+  useEffect(() => {
+    const box = navRef.current;
+    if (!box || box.scrollWidth <= box.clientWidth) return;
+    const active = box.querySelector<HTMLElement>('[aria-current="page"]');
+    if (active) box.scrollLeft = active.offsetLeft - (box.clientWidth - active.offsetWidth) / 2;
+  }, [pathname]);
 
   const tabs: Tab[] = [
     { href: '/mi-cuenta', label: 'Restaurantes', icon: 'bag' },
@@ -43,10 +52,17 @@ export default function MiCuentaNav({
 
   return (
     <nav
+      ref={navRef}
       aria-label="Secciones de mi cuenta"
       style={{
         display: 'flex', gap: 6, overflowX: 'auto', margin: '0 0 22px',
         paddingBottom: 2, scrollbarWidth: 'none',
+        /* En el teléfono las pestañas no caben y la última salía cortada sin
+           pista de que hay más: se desvanece el borde derecho y la activa
+           se centra sola (auditoría 2026-10-02, MIC-04). */
+        WebkitMaskImage: 'linear-gradient(to right, #000 calc(100% - 28px), transparent)',
+        maskImage: 'linear-gradient(to right, #000 calc(100% - 28px), transparent)',
+        paddingRight: 28,
       }}
     >
       {tabs.map((t) => {
