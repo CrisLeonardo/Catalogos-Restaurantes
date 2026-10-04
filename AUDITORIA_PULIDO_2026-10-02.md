@@ -19,7 +19,7 @@
 > se ve bien. Las auditorías anteriores (QA visual 09-22, velocidad 09-25) **no
 > se repiten**: lo que de ellas sigue abierto está en la sección de rendimiento.
 >
-> **Estado:** al 2026-10-03, **145 de 148** hallazgos hechos (los 6 P0 incluidos). D-1…D-8 decididos y hechos. Quedan 3: REN-01 (D-9, mover Render a Virginia: solo tú), WEB-02 (la herramienta está; faltan los testimonios de tus clientes) y REN-05 (continuo). WEB-01 está programada y apagada hasta que crees la cuenta de analítica. Lo que solo puedes hacer tú está en la lista de abajo. Ver la Bitácora al final.
+> **Estado:** al 2026-10-04, **146 de 148** hallazgos hechos (los 6 P0 incluidos) y **fusionados a `main`**. D-1…D-9 decididos y hechos (D-9: Render ya está en Virginia). Quedan 2: WEB-02 (la herramienta está; faltan los testimonios de tus clientes) y REN-05 (continuo). WEB-01 está programada y apagada a propósito: la analítica queda para después. Lo que solo puedes hacer tú está en la lista de abajo. Ver la Bitácora al final.
 
 ## Lo que solo puedes hacer tú
 
@@ -30,19 +30,18 @@ En el orden en que conviene:
    migración de esta rama y se puede correr antes o después de desplegar: el
    código funciona sin ella, pero sin ella un QR de mesa impreso deja de abrir
    el menú si algún día cambias el slug de ese restaurante.
-2. **Fusionar la rama `auditoria-pulido-2026-10-02` a `main` y desplegar.** Nada
-   de lo de este tablero está en producción todavía. (Si me lo pides, la fusiono
-   yo y la subo.)
-3. **Encender la analítica (WEB-01):** crear el sitio en cloud.umami.is (gratis)
-   y poner en Render `NEXT_PUBLIC_ANALYTICS_PROVIDER=umami` y
-   `NEXT_PUBLIC_ANALYTICS_ID=<Website ID>`; volver a desplegar.
-4. **Portada (WEB-02/03):** ya en producción, Super › Configuración › Portada:
+2. ✅ ~~Fusionar la rama a `main` y desplegar.~~ Fusionada y subida el 2026-10-04.
+3. **Portada (WEB-02/03):** ya en producción, Super › Configuración › Portada:
    elegir el restaurante cuyo menú sale en el teléfono y escribir 2–3
    testimonios, cada uno con el permiso de ese cliente.
-5. **REN-01 (D-9): mover el servicio de Render a Virginia**, junto a Supabase.
-   Es lo que más velocidad da (~70 ms menos por consulta). Pasos en
-   `AUDITORIA_2026-09-25.md` §2 (I-1); de paso, revisar I-2 (si sigue en el
-   plan gratuito, que se duerme a los 15 min).
+4. **Más adelante — analítica (WEB-01):** cuando lo decidas, crear el sitio en
+   cloud.umami.is (gratis) y poner en Render `NEXT_PUBLIC_ANALYTICS_PROVIDER=umami`
+   y `NEXT_PUBLIC_ANALYTICS_ID=<Website ID>`; volver a desplegar. Mientras no
+   estén, no se carga ningún script.
+5. ✅ ~~REN-01: Render a Virginia.~~ Hecho por ti (confirmado el 2026-10-04).
+   `render.yaml` sigue diciendo `region: oregon`: si tu servicio NO es un
+   Blueprint de Render da igual; si lo es, cámbialo a `virginia` desde el panel
+   de Render o pídemelo, sabiendo que un Blueprint sincroniza al subir el cambio.
 
 ---
 
@@ -74,10 +73,10 @@ En el orden en que conviene:
 | 10 | Super Admin | 11 | 11 | 0 |
 | 11 | Mi cuenta (grupo) | 5 | 5 | 0 |
 | 12 | Web pública y marketing | 9 | 8 | 0 |
-| 13 | Rendimiento y salud del código | 10 | 8 | 1 |
-| | **Total** | **148** | **145** | **1** |
+| 13 | Rendimiento y salud del código | 10 | 9 | 0 |
+| | **Total** | **148** | **146** | **0** |
 
-Por prioridad: **P0** 6 · **P1** 34 · **P2** 63 · **P3** 45. Hechos: los **6 P0**, 33 P1, 62 P2 y 44 P3.
+Por prioridad: **P0** 6 · **P1** 34 · **P2** 63 · **P3** 45. Hechos: los **6 P0**, 34 P1, 62 P2 y 44 P3.
 
 *(Se actualiza a mano al marcar.)*
 
@@ -160,6 +159,7 @@ Estas cambian el trabajo; el resto se puede hacer sin preguntar.
   ✅ **Decidido 2026-10-03: comparte las piezas del panel.** Hecho, ver SUP-09.
 - **D-9 · Render en Virginia** (REN-01, heredado del 09-25): sigue siendo lo que
   más velocidad da y solo lo puedes hacer tú.
+  ✅ **Hecho por ti** (confirmado el 2026-10-04).
 
 ---
 
@@ -1055,9 +1055,10 @@ que hace que un restaurantero confíe y lo que permite saber si funciona.
 
 ## 13 · Rendimiento y salud del código
 
-- [ ] **REN-01** · **P1** · — · ⏸️ D-9 — **(Heredado I-1, el que más velocidad da)**
+- [x] **REN-01** · **P1** · — · ⏸️ D-9 — **(Heredado I-1, el que más velocidad da)**
   Render en Oregón y Supabase en Virginia: ~70 ms por consulta. No es código;
   pasos en `AUDITORIA_2026-09-25.md` §2. Sigue abierto.
+  ✅ **Hecho por el dueño** (confirmado el 2026-10-04): el servicio de Render ya está en Virginia, junto a Supabase. Queda alinear `region:` en `render.yaml` (ver «Lo que solo puedes hacer tú»).
 
 - [x] **REN-02** · P2 · M — **(Heredado P-3/P-5)** Quedan **54 `router.refresh()`**
   en 27 archivos (proveedores, lealtad, cupones, reservaciones, cocina…) tras
@@ -1144,3 +1145,4 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
 | 2026-10-03 | **D-3, D-4, D-6, D-7, D-8 decididos y construidos**, y revisados en pantalla (build de producción, panel a 390 y 1.440 px en claro y oscuro, 13 pantallas del Super, menú con y sin mesa). Arreglado lo que salió al revisar: error #310 del enrutador al rebotar de /whatsapp (ahora aviso), «Exportar» que se comía dos filtros en el teléfono, comparación cortada en Resumen, «Ingreso mensual (M…» cortado y el aviso del slug que decía que rompe los QR de mesa. Relleno medido: `#c2542f` en claro y oscuro. | `74cefb2`, `9c7c14c` |
 | 2026-10-03 | **CAT-13, CAT-09, REN-08 y WEB-01.** «Acompáñalo con…» en ficha y carrito con regla propia y sus pruebas, «Lo más pedido» en el checkout vacío, las 14 tipografías restantes desde nuestro dominio (0 peticiones a Google en el menú) y la analítica sin cookies lista para encender. De paso: el nombre y el precio de cada línea del carrito salían pegados. Verificado: `tsc`, `eslint`, 825 pruebas (24 nuevas), build, recorrido con Playwright (ficha → carrito → checkout vacío → checkout con un platillo; aviso de WhatsApp sin errores). Quedan 6: REN-01 (tuyo), WEB-02/03 (contenido tuyo) y los continuos. | `0ecb0e2` |
 | 2026-10-03 | **Cierre 2: T-22, T-26, WEB-03 y la herramienta de WEB-02.** Escala tipográfica única en el área de personal (23 tamaños → 12, pesos 400–800) con una prueba que la vigila; campo único `.adm-field` en lugar de 45 copias de `inputStyle` (~230 campos, ahora con anillo de foco visible y 16 px en el teléfono), `Input`/`Textarea`/`Select` base son esa pieza y fuera 5 componentes base sin uso; Super › Configuración › **Portada** para elegir el restaurante cuyo menú real sale en el teléfono de la portada y escribir los testimonios de «Ya lo usan» (sin migración); Soporte del Super con las piezas del panel. Hallazgo nuevo arreglado: SUP-11 (`/super/cobros` daba React #310). Verificado: `tsc`, `eslint`, 841 pruebas (16 nuevas), dos builds de producción, barrido de 338 capturas (panel 160 + 2, Super 96 + 20 repetidas tras los últimos cambios, Mi cuenta 20, públicas 36, portada 4) sin desbordes ni errores salvo el de cobros, ya resuelto; vitrina y testimonio probados de punta a punta (sin permiso no guarda) con fotos de prueba, anillo de foco y barra de guardar comprobados con teclado. Fotos de prueba y ajustes de portada borrados de la base local. Quedan 3: REN-01 (tuyo), WEB-02 (tus testimonios) y REN-05 (continuo). | `db86e67` |
+| 2026-10-04 | **Fusión a `main`.** REN-01 cerrado (Render ya en Virginia, lo hiciste tú) y la analítica (WEB-01) queda apagada a propósito para más adelante. La rama `auditoria-pulido-2026-10-02` se fusiona a `main` y se sube. Pendiente tuyo: la migración 134 en producción y llenar Super › Portada. | — |
