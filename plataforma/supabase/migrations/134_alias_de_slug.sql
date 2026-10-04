@@ -93,3 +93,12 @@ drop trigger if exists restaurants_impedir_slug_de_otro on public.restaurants;
 create trigger restaurants_impedir_slug_de_otro
   before insert or update of slug on public.restaurants
   for each row execute function public.impedir_slug_de_otro();
+
+-- ── Nadie las llama desde fuera (patrón de la migración 084) ──
+-- Son funciones de disparador `security definer`: solo las ejecuta la base
+-- al cambiar un slug. Postgres concede EXECUTE a PUBLIC por defecto, y
+-- scripts/audit-security-definer.mjs (en la CI) exige cerrarlas.
+revoke execute on function public.guardar_slug_anterior() from public, anon, authenticated;
+grant execute on function public.guardar_slug_anterior() to service_role;
+revoke execute on function public.impedir_slug_de_otro() from public, anon, authenticated;
+grant execute on function public.impedir_slug_de_otro() to service_role;

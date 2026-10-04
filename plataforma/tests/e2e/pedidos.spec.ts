@@ -53,6 +53,11 @@ function tenantUrl(slug: string, path = '/'): string {
   return `http://${slug}.${rootDomain}${path}`;
 }
 
+/** El panel vive en el dominio raíz, en /panel/<slug>/… (PLAN_ORIGEN_UNICO.md). */
+function panelUrl(slug: string, path = ''): string {
+  return `http://${rootDomain}/panel/${slug}${path}`;
+}
+
 async function makeTenant(tag: string): Promise<TestTenant> {
   const slug = `pw-${tag}-${SUFFIX}`;
   const { data: r, error: rErr } = await admin
@@ -89,8 +94,12 @@ async function makeTenant(tag: string): Promise<TestTenant> {
 
 async function cleanupTenant(t: TestTenant | undefined) {
   if (!t) return;
-  try { await admin.auth.admin.deleteUser(t.ownerId); } catch { /* ya no existe */ }
+  // Primero el restaurante: arrastra sus pedidos y sus anulaciones. Al revés,
+  // la anulación que hace la prueba (`order_voids.requested_by` apunta al
+  // perfil del dueño, sin `on delete`) impedía borrar la cuenta y en local
+  // se iban juntando dueños de prueba.
   try { await admin.from('restaurants').delete().eq('id', t.id); } catch { /* ya no existe */ }
+  try { await admin.auth.admin.deleteUser(t.ownerId); } catch { /* ya no existe */ }
 }
 
 test.describe('Fase 0 — cobertura mínima E2E', () => {
@@ -108,6 +117,15 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
   });
 
   test('crear pedido desde el menú público y anularlo desde el panel admin', async ({ page }) => {
+    // En CI corre contra `next dev`: cada pantalla se compila la primera vez
+    // que se pide (menú, checkout, login, pedidos), y eso solo ya se comía
+    // los 60 s por defecto.
+    test.setTimeout(180_000);
+    // El tour de bienvenida del panel se abre encima la primera vez y tapa
+    // los botones: aquí se da por visto, como haría el dueño.
+    await page.addInitScript(() => {
+      try { localStorage.setItem('leogin_tour_completed', 'true'); } catch { /* sin almacenamiento */ }
+    });
     await page.goto(tenantUrl(tenantA.slug, '/'));
 
     const verMenu = page.getByRole('button', { name: 'Ver el menú' });
@@ -133,15 +151,26 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
     // una diferencia de texto y no de un fallo de verdad. El nombre del
     // producto ya lleva un sufijo aleatorio por corrida, asi que buscarlo
     // como subcadena sigue siendo inequivoco.
-    await page.getByRole('button', { name: `Agregar ${tenantA.productName}` }).click();
+    //
+    // Con `next dev` el primer toque puede llegar antes de que la carta
+    // termine de hidratarse y perderse: entonces el checkout sale vacío y la
+    // prueba fallaba lejos de la causa. Se toca hasta que aparezca la barra
+    // del carrito (agregar dos veces no cambia nada de lo que se comprueba).
+    const agregar = page.getByRole('button', { name: `Agregar ${tenantA.productName}` });
+    await expect(async () => {
+      await agregar.click();
+      await expect(page.getByText('Ver carrito')).toBeVisible({ timeout: 3_000 });
+    }).toPass({ timeout: 60_000 });
     await page.goto(tenantUrl(tenantA.slug, '/checkout'));
 
     await page.getByRole('button', { name: 'Para llevar' }).click();
-    await page.getByPlaceholder('¿Cómo te llamás?').fill('Cliente de Prueba Playwright');
+    // «tú», no «vos», desde la auditoría 2026-10-02 (D-1).
+    await page.getByPlaceholder('¿Cómo te llamas?').fill('Cliente de Prueba Playwright');
     await page.getByPlaceholder('5xxx xxxx').fill('55551234');
     await page.getByRole('button', { name: 'Confirmar pedido' }).click();
 
-    await expect(page.getByText('¡Pedido enviado!')).toBeVisible({ timeout: 20_000 });
+    // 60 s: con `next dev` la primera vez se compila la acción del pedido.
+    await expect(page.getByText('¡Pedido enviado!')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByText('Número de pedido')).toBeVisible();
 
     const { data: orders, error: ordersErr } = await admin
@@ -153,7 +182,7 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
     expect(orders![0].status).toBe('NEW');
     const orderId = orders![0].id as string;
 
-    await page.goto(tenantUrl(tenantA.slug, '/admin/login'));
+    await page.goto(panelUrl(tenantA.slug, '/login'));
     // En el subdominio de un restaurante el campo se llama "Correo o usuario":
     // ahí caben las dos credenciales, la del dueño y la del administrador que
     // el dueño da de alta (ver PLAN_ACCESO_MULTICUENTA.md §13).
@@ -165,24 +194,36 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
     // entra directo al panel. Lo que este paso comprueba es que el login
     // TERMINÓ, no a qué pantalla lleva; la navegación a /admin/pedidos que
     // viene justo debajo es explícita y no depende de esto.
-    await page.waitForURL(/\/(mi-cuenta|admin\/(menu|pedidos))/, { timeout: 40_000 });
-    await page.waitForLoadState('load');
+    // Se espera a SALIR del login, no a una pantalla concreta: esperaba
+    // /admin/menu o /admin/pedidos y el panel abre en Hoy desde agosto y vive
+    // en /panel/<slug> desde el origen único — por eso llevaba roto desde
+    // septiembre sin que fallara nada de verdad.
+    await page.waitForURL((u) => !u.pathname.endsWith('/login'), { timeout: 60_000 });
+    // Al entrar, el panel quita el `?welcome=1` de la URL él solo: si se
+    // navega a otra pantalla en ese instante, el navegador aborta el `goto`.
+    await page.waitForURL((u) => !u.search.includes('welcome'), { timeout: 30_000 });
+    await page.waitForLoadState('networkidle').catch(() => {});
 
-    await page.goto(tenantUrl(tenantA.slug, '/admin/pedidos'), { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('button', { name: 'Cancelar' })).toHaveCount(1);
-    await page.getByRole('button', { name: 'Cancelar' }).click();
-    await expect(page.getByText('Anular pedido', { exact: true })).toBeVisible({ timeout: 10_000 });
+    await page.goto(panelUrl(tenantA.slug, '/pedidos'), { waitUntil: 'domcontentloaded' });
+    // La tarjeta compacta (auditoría 2026-10-02, PED-02) lleva «Anular
+    // pedido» dentro de su menú «⋯», no como botón suelto.
+    const masAcciones = page.getByRole('button', { name: /^Más acciones del pedido/ });
+    await expect(masAcciones).toHaveCount(1, { timeout: 30_000 });
+    await masAcciones.click();
+    await page.getByRole('menuitem', { name: 'Anular pedido' }).click();
 
+    // La señal de que el diálogo está abierto es su campo de motivo, no el
+    // texto «Anular pedido»: ese lo lleva también el elemento del menú «⋯»,
+    // que sigue en pantalla mientras se cierra (dos coincidencias).
     const reasonBox = page.getByPlaceholder('Ej. el cliente lo devolvió, error al tomar el pedido…');
-    await expect(reasonBox).toBeVisible();
+    await expect(reasonBox).toBeVisible({ timeout: 10_000 });
     await reasonBox.fill('Prueba automatizada Playwright — cobertura mínima Fase 0');
     await page.getByRole('button', { name: 'Anular pedido completo' }).click();
 
     // Espera algo DEFINITIVO (no el label transitorio "Anulando…"): o el
     // diálogo se cierra de verdad (éxito), o queda un mensaje de error visible.
-    const dialogTitle = page.getByText('Anular pedido', { exact: true });
     const result = await Promise.race([
-      dialogTitle.waitFor({ state: 'hidden', timeout: 15_000 }).then(() => 'closed' as const),
+      reasonBox.waitFor({ state: 'hidden', timeout: 15_000 }).then(() => 'closed' as const),
       page.waitForTimeout(15_000).then(() => 'timeout' as const),
     ]);
     if (result !== 'closed') {
