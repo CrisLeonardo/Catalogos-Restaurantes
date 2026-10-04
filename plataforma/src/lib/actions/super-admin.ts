@@ -851,6 +851,9 @@ export async function savePlatformSettings(
   // aunque lo guardado aquí sea el contacto de soporte y no un precio.
   updateTag(PRICING_SETTINGS_TAG);
   revalidatePath('/super/configuracion');
+  // La pantalla desde la que se guarda (Next hoy revalida todo, pero no hay
+  // que depender de eso: ver la nota de REN-02 en el tablero).
+  revalidatePath('/super/configuracion/soporte');
   revalidatePath('/admin/ayuda');
   revalidatePath('/admin/suscripcion');
   return { saved: true };

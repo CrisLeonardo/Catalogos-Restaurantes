@@ -18,11 +18,6 @@ import { FIELD_LABEL } from '@/components/admin/field-label';
 
 /* El rótulo de campo del panel (D-8), con sitio para un icono al lado. */
 const labelStyle: React.CSSProperties = { ...FIELD_LABEL, display: 'flex', alignItems: 'center', gap: 6 };
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid color-mix(in srgb, var(--u-text) 12%, transparent)',
-  borderRadius: 'var(--radius-md)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-  fontFamily: 'var(--ui-font-mono)',
-};
 
 const PLAN_COLORS: Record<string, string> = {
   BASICO: '#94a3b8', ESTANDAR: '#10b981', PREMIUM: '#6366f1', PRO: '#a855f7',
@@ -39,9 +34,9 @@ function Section({
 }) {
   return (
     <Card style={{ padding: '20px 22px' }}>
-      <h3 style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--u-text)', margin: 0 }}>{title}</h3>
+      <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)', margin: 0 }}>{title}</h3>
       {description && (
-        <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', margin: '6px 0 0', lineHeight: 1.55, maxWidth: 640 }}>
+        <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '6px 0 0', lineHeight: 1.55, maxWidth: 640 }}>
           {description}
         </p>
       )}
@@ -69,7 +64,7 @@ function Field({
         {dot && <span style={{ width: 8, height: 8, borderRadius: 'var(--radius-full)', background: dot, flexShrink: 0 }} />}
         {label}
       </label>
-      <input name={name} type="number" min="0" step={step} defaultValue={value} style={inputStyle} />
+      <input name={name} type="number" min="0" step={step} defaultValue={value} className="adm-field adm-field-mono" />
     </div>
   );
 }
@@ -88,7 +83,7 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
       {/* Aviso de alcance: esto ES el precio publicado */}
       <Card style={{ padding: '13px 16px', display: 'flex', gap: 10, alignItems: 'flex-start', border: '1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent)' }}>
         <Icon name="sparkle" size={16} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0, marginTop: 1 }} />
-        <p style={{ fontSize: 12.5, color: 'var(--u-text-2)', margin: 0, lineHeight: 1.55 }}>
+        <p style={{ fontSize: 12, color: 'var(--u-text-2)', margin: 0, lineHeight: 1.55 }}>
           Estos precios son la <strong>única fuente de verdad</strong>: al guardar se actualizan la página
           pública de planes, el registro, los upsells del panel de cada restaurante y la mensualidad
           de todos los que estén en precio automático.
@@ -130,11 +125,11 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
           <Field name="trial_days"      label="Días de prueba (1er restaurante)" value={pricing.trialDays} step="1" />
         </Grid>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: 'var(--u-text-2)', cursor: 'pointer' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--u-text-2)', cursor: 'pointer' }}>
             <input type="checkbox" name="billing_auto_generate" defaultChecked={pricing.autoGenerate} style={{ width: 16, height: 16 }} />
             Generar la mensualidad automáticamente cada mes
           </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: 'var(--u-text-2)', cursor: 'pointer' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--u-text-2)', cursor: 'pointer' }}>
             <input type="checkbox" name="billing_auto_suspend" defaultChecked={pricing.autoSuspend} style={{ width: 16, height: 16 }} />
             Suspender automáticamente al pasar los días de gracia sin pago
           </label>
@@ -151,7 +146,7 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
       )}
 
       <button type="submit" disabled={pending} className="press btn-accent" style={{
-        padding: '13px 28px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 14.5,
+        padding: '13px 28px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 14,
         cursor: pending ? 'not-allowed' : 'pointer', border: 'none', alignSelf: 'flex-start',
         opacity: pending ? 0.6 : 1,
       }}>

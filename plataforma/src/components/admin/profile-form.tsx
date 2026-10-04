@@ -37,16 +37,6 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
 
   const whatsappErr = validateWhatsApp(whatsappVal);
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-    border: '1px solid var(--u-hair-2)',
-    borderRadius: 'var(--radius-md)',
-    padding: '10px 12px',
-    color: 'var(--u-text)',
-    fontSize: 15,
-    outline: 'none',
-  };
 
   /* Rótulo en minúscula como el resto del panel (`.adm-label`), no en
      MAYÚSCULAS espaciadas (auditoría 2026-10-02, T-11). */
@@ -80,7 +70,7 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
               type="text"
               required
               defaultValue={restaurant.name}
-              style={inputStyle}
+              className="adm-field"
             />
             </div>
 
@@ -92,7 +82,7 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
               type="text"
               defaultValue={restaurant.tagline ?? ''}
               placeholder="Una frase que describe tu lugar"
-              style={inputStyle}
+              className="adm-field"
             />
             </div>
 
@@ -104,7 +94,7 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
               type="text"
               defaultValue={restaurant.address ?? ''}
               placeholder="Ej. 5a Av. 10-23, Zona 1"
-              style={inputStyle}
+              className="adm-field"
             />
             <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>
               Se muestra cuando los clientes eligen sucursal en el enlace del grupo.
@@ -119,7 +109,7 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
               type="email"
               defaultValue={restaurant.contact_email ?? ''}
               placeholder="hola@mirestaurante.com"
-              style={inputStyle}
+              className="adm-field"
             />
             </div>
           </Card>
@@ -133,10 +123,7 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
               value={whatsappVal}
               onChange={(e) => setWhatsappVal(e.target.value)}
               placeholder="5555 1234"
-              style={{
-                ...inputStyle,
-                borderColor: whatsappErr ? 'var(--c-danger-line)' : undefined,
-              }}
+              className="adm-field" aria-invalid={whatsappErr ? true : undefined}
             />
             {whatsappErr ? (
               <p style={{ fontSize: 12, color: 'var(--c-danger)', marginTop: 6 }}>{whatsappErr}</p>
@@ -150,7 +137,7 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--u-hair-2)' }}>
               <div>
-                <div style={{ fontSize: 13.5, fontWeight: 600 }}>Recibir pedidos por WhatsApp</div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>Recibir pedidos por WhatsApp</div>
                 <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>
                   Al confirmar, el comensal ve el botón para enviarte el pedido por WhatsApp a este número.
                 </p>

@@ -52,7 +52,7 @@ export default function VerifyEmailBanner({ email }: { email: string | null }) {
         className="press"
         style={{
           whiteSpace: 'nowrap', padding: '8px 14px', borderRadius: 'var(--radius-full)',
-          fontSize: 12.5, fontWeight: 600, border: 'none',
+          fontSize: 12, fontWeight: 600, border: 'none',
           background: 'var(--u-text)', color: 'var(--brand-bg)',
           cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.6 : 1,
         }}

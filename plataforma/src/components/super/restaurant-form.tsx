@@ -19,16 +19,6 @@ function slugify(text: string): string {
     .slice(0, 60);
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-  border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)',
-  padding: '10px 12px',
-  color: 'var(--u-text)',
-  fontSize: 15,
-  outline: 'none',
-};
 
 /* El rótulo de campo del panel (D-8): en minúscula, no en mayúsculas de cartel. */
 const labelStyle: React.CSSProperties = FIELD_LABEL;
@@ -76,7 +66,7 @@ export default function RestaurantForm() {
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
           placeholder="Tu Restaurante"
-          style={inputStyle}
+          className="adm-field"
         />
       </Glass>
 
@@ -93,7 +83,7 @@ export default function RestaurantForm() {
             setSlugEdited(true);
           }}
           placeholder="mi-restaurante"
-          style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 14 }}
+          className="adm-field" style={{ fontFamily: 'monospace', fontSize: 14 }}
         />
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>
           URL:{' '}
@@ -112,7 +102,7 @@ export default function RestaurantForm() {
           value={tagline}
           onChange={(e) => setTagline(e.target.value)}
           placeholder="Una frase que describe tu lugar"
-          style={inputStyle}
+          className="adm-field"
         />
       </Glass>
 
@@ -123,7 +113,7 @@ export default function RestaurantForm() {
           name="contact_email"
           type="email"
           placeholder="hola@restaurante.com"
-          style={inputStyle}
+          className="adm-field"
         />
       </Glass>
 
@@ -134,7 +124,7 @@ export default function RestaurantForm() {
           name="whatsapp_number"
           type="tel"
           placeholder="+502 5555 0000"
-          style={inputStyle}
+          className="adm-field"
         />
       </Glass>
 

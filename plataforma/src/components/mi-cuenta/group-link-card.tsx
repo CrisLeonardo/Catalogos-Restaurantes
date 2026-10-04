@@ -24,7 +24,7 @@ export default function GroupLinkCard({ url, groupName }: { url: string; groupNa
   return (
     <div className="glass" style={{ borderRadius: 'var(--radius-lg)', padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)' }}>Link de pedidos en línea · grupo</div>
-      <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.55 }}>
+      <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.55 }}>
         Comparte <strong>este único link</strong> en Instagram, WhatsApp o flyers. Detecta la
         ubicación del cliente y lo lleva a la sucursal más cercana para pedir.
       </p>

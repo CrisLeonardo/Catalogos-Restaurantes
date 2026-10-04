@@ -154,7 +154,7 @@ export default function PlanEditor({
           Plan
         </p>
         {isLegacy && (
-          <div style={{ marginBottom: 12, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', color: 'var(--c-warn)', fontSize: 12.5 }}>
+          <div style={{ marginBottom: 12, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', color: 'var(--c-warn)', fontSize: 12 }}>
             Plan heredado «{rawPlan}». Selecciona el nuevo plan para actualizarlo.
           </div>
         )}

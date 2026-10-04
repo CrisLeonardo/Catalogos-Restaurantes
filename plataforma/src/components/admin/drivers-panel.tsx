@@ -41,11 +41,6 @@ export default function DriversPanel({
   }, [state, router]);
 
   const labelSt: React.CSSProperties = FIELD_LABEL;
-  const inputSt: React.CSSProperties = {
-    width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-    border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-md)', padding: '11px 13px',
-    color: 'var(--u-text)', fontSize: 14, outline: 'none',
-  };
 
   /* Antes: el formulario «Agregar repartidor» siempre abierto debajo de la
      lista y un «Repartidores» repetido bajo la barra. Ahora, como el resto
@@ -75,25 +70,25 @@ export default function DriversPanel({
             <input type="hidden" name="restaurantId" value={restaurantId} />
             <input type="hidden" name="id" value={editing?.id ?? ''} />
 
-            <p style={{ fontSize: 15, fontWeight: 650, marginBottom: 14 }}>
+            <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 14 }}>
               {editing ? `Editar a ${editing.nombre}` : 'Nuevo repartidor'}
             </p>
 
             <div style={{ marginBottom: 14 }}>
               <label style={labelSt} htmlFor="d-nombre">Nombre</label>
-              <input id="d-nombre" name="nombre" required style={inputSt}
+              <input id="d-nombre" name="nombre" required className="adm-field"
                 defaultValue={editing?.nombre ?? ''} key={`n-${editing?.id ?? 'new'}`} />
             </div>
 
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <div style={{ marginBottom: 14, flex: '1 1 200px' }}>
                 <label style={labelSt} htmlFor="d-tel">Teléfono</label>
-                <input id="d-tel" name="telefono" style={inputSt}
+                <input id="d-tel" name="telefono" className="adm-field"
                   defaultValue={editing?.telefono ?? ''} key={`t-${editing?.id ?? 'new'}`} />
               </div>
               <div style={{ marginBottom: 14, flex: '1 1 200px' }}>
                 <label style={labelSt} htmlFor="d-veh">Vehículo</label>
-                <input id="d-veh" name="vehiculo" style={inputSt} placeholder="Moto, bicicleta…"
+                <input id="d-veh" name="vehiculo" className="adm-field" placeholder="Moto, bicicleta…"
                   defaultValue={editing?.vehiculo ?? ''} key={`v-${editing?.id ?? 'new'}`} />
               </div>
             </div>

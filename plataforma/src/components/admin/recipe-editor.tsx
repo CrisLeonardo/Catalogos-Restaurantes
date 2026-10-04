@@ -20,17 +20,6 @@ interface Props {
   onCostChange?: (cost: number | null) => void;
 }
 
-const inputStyle: React.CSSProperties = {
-  background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-  border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)',
-  padding: '9px 11px',
-  color: 'var(--u-text)',
-  fontSize: 13,
-  outline: 'none',
-  width: '100%',
-  boxSizing: 'border-box',
-};
 
 const labelStyle: React.CSSProperties = FIELD_LABEL;
 
@@ -161,7 +150,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
               }}
             >
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
-                <span style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {l.ingredient_name}
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--u-text-4)', flexShrink: 0 }}>
@@ -175,11 +164,11 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
                 step="0.0001"
                 defaultValue={l.quantity}
                 onBlur={(e) => updateQty(l.id, e.target.value)}
-                style={{ ...inputStyle, textAlign: 'right', padding: '6px 10px', width: '100%' }}
+                className="adm-field adm-field-sm" style={{ textAlign: 'right', padding: '6px 10px', width: '100%' }}
               />
               <span
                 style={{
-                  fontSize: 12.5,
+                  fontSize: 12,
                   color: l.ingredient_cost <= 0 ? 'var(--c-warn)' : 'var(--u-text-2)',
                   textAlign: 'right',
                   fontFamily: 'var(--ui-font-mono)',
@@ -246,7 +235,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
             <select
               value={selIngredient}
               onChange={(e) => setSelIngredient(e.target.value)}
-              style={{ ...inputStyle, color: selIngredient ? 'var(--u-text)' : 'var(--u-text-4)' }}
+              className="adm-field adm-field-sm" style={{ color: selIngredient ? 'var(--u-text)' : 'var(--u-text-4)' }}
             >
               <option value="">Seleccionar insumo…</option>
               {ingredients.map((ing) => (
@@ -271,7 +260,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
                 placeholder="0.00"
                 value={selQty}
                 onChange={(e) => setSelQty(e.target.value)}
-                style={inputStyle}
+                className="adm-field adm-field-sm"
               />
             </div>
             {selectedIng && selQty && parseFloat(selQty) > 0 && (
@@ -301,7 +290,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
               borderRadius: 'var(--radius-md)',
               border: 'none',
               cursor: canAdd ? 'pointer' : 'not-allowed',
-              fontSize: 13.5,
+              fontSize: 13,
               fontWeight: 600,
               opacity: canAdd ? 1 : 0.4,
               transition: 'opacity 150ms',

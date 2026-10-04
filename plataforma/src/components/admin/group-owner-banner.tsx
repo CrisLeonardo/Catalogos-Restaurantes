@@ -33,7 +33,7 @@ export default function GroupOwnerBanner({
         className="press"
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
-          padding: '8px 14px', borderRadius: 'var(--radius-full)', fontSize: 12.5, fontWeight: 600,
+          padding: '8px 14px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600,
           background: 'var(--u-text)', color: 'var(--brand-bg)', textDecoration: 'none',
         }}
       >

@@ -224,7 +224,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 <span style={{ color: 'var(--c-ok)', flexShrink: 0, marginTop: 1 }}>
                   <Icon name="checkCircle" size={16} />
                 </span>
-                <span className="text-[12.5px] leading-relaxed text-adm-text-2">
+                <span className="text-[12px] leading-relaxed text-adm-text-2">
                   Plantilla aplicada. Revísala en la vista previa y pulsa <strong>Guardar cambios</strong> para publicarla,
                   o sigue personalizando en las otras pestañas.
                   {cssWasReset && (
@@ -796,7 +796,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
     pinta como una fila con divisoria: va dentro de la lista pero callada. */
 function Note({ children }: { children: ReactNode }) {
   return (
-    <div className="px-4 py-3 text-[12.5px] leading-snug text-adm-text-3">{children}</div>
+    <div className="px-4 py-3 text-[12px] leading-snug text-adm-text-3">{children}</div>
   );
 }
 
@@ -815,9 +815,9 @@ function Row({
     return (
       <ListRow className="flex-col items-stretch gap-2">
         {label && (
-          <div className="text-[14.5px] font-medium text-adm-text">{label}</div>
+          <div className="text-[14px] font-medium text-adm-text">{label}</div>
         )}
-        {hint && <div className="-mt-1 text-[12.5px] leading-snug text-adm-text-3">{hint}</div>}
+        {hint && <div className="-mt-1 text-[12px] leading-snug text-adm-text-3">{hint}</div>}
         {children}
       </ListRow>
     );
@@ -853,7 +853,7 @@ function ContrastHint({ text, actionLabel, onFix }: { text: string; actionLabel:
         style={{
           flexShrink: 0, padding: '7px 12px', borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
           background: 'var(--u-text)', color: 'var(--admin-content-bg-solid, var(--brand-bg))',
-          fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap',
+          fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
         }}
       >
         {actionLabel}
@@ -866,16 +866,10 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   return <Row label={label} stacked>{children}</Row>;
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-};
-
-/* El select nativo sigue el esquema efectivo del contenido del panel
-   (--admin-content-scheme): así el popup del sistema no sale blanco en un
-   panel oscuro ni negro en un panel claro. */
+/* El select nativo (con `.adm-field`) sigue el esquema efectivo del
+   contenido del panel (--admin-content-scheme): así el popup del sistema no
+   sale blanco en un panel oscuro ni negro en un panel claro. */
 const selectStyle: React.CSSProperties = {
-  ...inputStyle,
   background: 'var(--admin-content-bg-solid, #1a1a1a)',
   colorScheme: 'var(--admin-content-scheme, dark)' as React.CSSProperties['colorScheme'],
 };
@@ -888,7 +882,7 @@ const optionStyle: React.CSSProperties = {
 function TextCtl({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <Row label={label} stacked>
-      <input type="text" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} style={inputStyle} />
+      <input type="text" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="adm-field" />
     </Row>
   );
 }
@@ -909,7 +903,7 @@ function ColorCtl({ label, value, onChange }: { label: string; value: string; on
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label={`${label} en hexadecimal`}
-        style={{ ...inputStyle, width: 96, fontFamily: 'var(--ui-font-mono)', fontSize: 12.5, padding: '7px 9px' }}
+        className="adm-field" style={{ width: 96, fontFamily: 'var(--ui-font-mono)', fontSize: 12, padding: '7px 9px' }}
       />
     </ListRow>
   );
@@ -958,7 +952,7 @@ function Slider({ label, value, min, max, step, onChange }: { label: string; val
   return (
     <ListRow className="flex-col items-stretch gap-2">
       <div className="flex items-center gap-3">
-        <div className="flex-1 text-[14.5px] font-medium text-adm-text">{label}</div>
+        <div className="flex-1 text-[14px] font-medium text-adm-text">{label}</div>
         {/* El valor en la mono con cifras tabulares: al arrastrar, el numero
             no baila de ancho. Es la regla del panel para todas las cifras. */}
         <span className="t-mono text-[13px] text-adm-text-2">
@@ -980,7 +974,7 @@ function FontCtl({ label, role, value, onChange }: { label: string; role: 'displ
   const has = opts.some((o) => o.family === value);
   return (
     <Row label={label}>
-      <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={label} style={{ ...selectStyle, cursor: 'pointer', width: 'auto', maxWidth: 190 }}>
+      <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={label} className="adm-field adm-field-auto" style={{ ...selectStyle, maxWidth: 190 }}>
         {!has && <option value={value} style={optionStyle}>{value}</option>}
         {opts.map((o) => <option key={o.family} value={o.family} style={optionStyle}>{o.label}</option>)}
       </select>

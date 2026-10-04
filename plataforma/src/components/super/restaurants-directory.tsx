@@ -9,7 +9,6 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Icon } from '@/components/icons';
 import { PlanChip, StatusChip, EmptyState, PLAN_DOT } from '@/components/super/ui';
 import { fmtMoney } from '@/lib/money';
@@ -71,21 +70,24 @@ export default function RestaurantsDirectory({ rows, planOrder }: { rows: Direct
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Búsqueda + filtros */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: '1 1 220px', maxWidth: 380 }}>
-          <Icon name="search" size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--u-text-4)', pointerEvents: 'none' }} />
-          <Input
+        {/* El buscador del panel (`.adm-search`, D-8). */}
+        <label className="adm-search" style={{ flex: '1 1 220px', maxWidth: 380 }}>
+          <Icon name="search" size={16} aria-hidden />
+          <input
+            type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar por nombre o slug…"
             aria-label="Buscar restaurante"
-            style={{ paddingLeft: 34 }}
+            autoComplete="off"
+            enterKeyHint="search"
           />
-        </div>
+        </label>
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value as SortKey)}
           aria-label="Ordenar por"
-          style={selectStyle}
+          className="adm-field adm-field-auto"
         >
           {SORTS.map((s) => <option key={s.key} value={s.key}>Orden: {s.label}</option>)}
         </select>
@@ -137,13 +139,13 @@ export default function RestaurantsDirectory({ rows, planOrder }: { rows: Direct
 
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    <span style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {r.name}
                     </span>
                     {r.hasOverdue && <Badge variant="danger" style={{ fontSize: 11 }}>Vencido</Badge>}
                     {r.onTrial && <Badge variant="info" style={{ fontSize: 11 }}>Prueba · {r.trialDays}d</Badge>}
                   </div>
-                  <div style={{ display: 'flex', gap: 12, marginTop: 3, fontSize: 11.5, color: 'var(--u-text-4)', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 12, marginTop: 3, fontSize: 11, color: 'var(--u-text-4)', flexWrap: 'wrap' }}>
                     <span style={{ fontFamily: 'var(--ui-font-mono)' }}>{r.slug}</span>
                     <span className="hide-mobile">{r.visits30} visitas · {r.orders30} pedidos 30d</span>
                     {r.monthlyFee > 0 && <span className="hide-mobile">{fmt(r.monthlyFee, r.currency)}/mes</span>}
@@ -189,12 +191,6 @@ function FilterChip({ label, active, onClick, danger, dot }: {
   );
 }
 
-const selectStyle: React.CSSProperties = {
-  height: 40, padding: '0 12px', borderRadius: 'var(--radius-lg)', fontSize: 13,
-  background: 'var(--adm-card, color-mix(in srgb, var(--u-text) 5%, transparent))',
-  color: 'var(--u-text)', border: '1px solid var(--adm-border, var(--u-hair))',
-  cursor: 'pointer',
-};
 
 const PLAN_LABELS: Record<string, string> = { BASICO: 'Básico', ESTANDAR: 'Estándar', PREMIUM: 'Premium', PRO: 'Pro' };
 function labelOf(plan: string): string { return PLAN_LABELS[plan] ?? plan; }

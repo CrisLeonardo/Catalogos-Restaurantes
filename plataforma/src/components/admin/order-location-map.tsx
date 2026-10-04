@@ -72,7 +72,7 @@ export default function OrderLocationMap({ lat, lng }: Props) {
         style={{
           position: 'absolute', bottom: 8, right: 8, zIndex: 1000,
           background: '#fff', borderRadius: 'var(--radius-sm)', padding: '5px 10px',
-          fontSize: 11.5, fontWeight: 700, color: '#1a73e8',
+          fontSize: 11, fontWeight: 700, color: '#1a73e8',
           textDecoration: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
           display: 'flex', alignItems: 'center', gap: 4,
         }}

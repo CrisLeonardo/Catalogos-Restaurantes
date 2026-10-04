@@ -96,11 +96,6 @@ export default function DiscountDialog({
     fontSize: 12, fontWeight: 700, color: 'var(--u-text-3)', marginBottom: 6,
     textTransform: 'uppercase', letterSpacing: '0.04em',
   };
-  const campo: React.CSSProperties = {
-    width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-    border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', padding: '10px 12px',
-    color: 'var(--u-text)', fontSize: 16, outline: 'none', fontFamily: 'inherit',
-  };
 
   return (
     <div
@@ -128,7 +123,7 @@ export default function DiscountDialog({
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--u-text)' }}>
               Descuento · Mesa {tableNumber}
             </div>
-            <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
               {pidePin
                 ? 'Un descuento lo autoriza un encargado.'
                 : 'Queda firmado a tu nombre, con el motivo.'}
@@ -172,10 +167,10 @@ export default function DiscountDialog({
               inputMode="decimal"
               placeholder={kind === 'percent' ? '10' : '0.00'}
               aria-label={kind === 'percent' ? 'Porcentaje de descuento' : 'Importe del descuento'}
-              style={{ ...campo, flex: 1, minWidth: 0 }}
+              className="adm-field adm-field-lg" style={{ flex: 1, minWidth: 0 }}
             />
           </div>
-          <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 6 }}>
+          <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 6 }}>
             {/* El número que importa es el que se le quita a la cuenta, no el
                 que se teclea: «10 %» no dice nada hasta que dice Q41.20. */}
             {valido
@@ -195,7 +190,7 @@ export default function DiscountDialog({
                 className="press"
                 style={{
                   padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer', minHeight: 34,
-                  fontSize: 12.5, fontWeight: 600,
+                  fontSize: 12, fontWeight: 600,
                   border: motivo === m ? '1.5px solid var(--brand-accent)' : '1px solid var(--u-hair-2)',
                   background: motivo === m ? 'color-mix(in srgb, var(--brand-accent) 10%, transparent)' : 'none',
                   color: motivo === m ? 'var(--brand-accent-ink)' : 'var(--u-text-2)',
@@ -212,7 +207,7 @@ export default function DiscountDialog({
             placeholder="O escríbelo…"
             aria-label="Motivo del descuento"
             maxLength={200}
-            style={campo}
+            className="adm-field adm-field-lg"
           />
         </div>
 
@@ -238,7 +233,7 @@ export default function DiscountDialog({
                     }}
                     aria-pressed={firmante === a.id}
                   >
-                    <span style={{ fontSize: 13.5, fontWeight: 600 }}>{a.name}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{a.name}</span>
                     <span style={{ fontSize: 11, opacity: 0.75 }}>{a.role}</span>
                   </button>
                 ))}
@@ -256,8 +251,7 @@ export default function DiscountDialog({
                   onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, PIN_LENGTH))}
                   placeholder={'•'.repeat(PIN_LENGTH)}
                   aria-label="PIN del encargado"
-                  className="t-mono"
-                  style={{ ...campo, width: 132, fontSize: 18, letterSpacing: '0.3em', textAlign: 'center' }}
+                  className="adm-field adm-field-lg adm-field-mono" style={{ width: 132, fontSize: 18, letterSpacing: '0.3em', textAlign: 'center' }}
                 />
               </div>
             )}
@@ -289,7 +283,7 @@ export default function DiscountDialog({
           className="press btn-accent"
           style={{
             width: '100%', padding: 13, borderRadius: 'var(--radius-lg)', border: 'none',
-            fontSize: 14.5, fontWeight: 700,
+            fontSize: 14, fontWeight: 700,
             cursor: listo && !enviando ? 'pointer' : 'default',
             opacity: listo && !enviando && !sinEncargados ? 1 : 0.55,
           }}

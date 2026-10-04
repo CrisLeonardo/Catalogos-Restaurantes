@@ -51,10 +51,10 @@ export default async function PagosPage() {
         return (
           <section key={month}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
-              <h2 style={{ fontWeight: 650, fontSize: 15.5, color: 'var(--u-text)', margin: 0, textTransform: 'capitalize' }}>
+              <h2 style={{ fontWeight: 600, fontSize: 15, color: 'var(--u-text)', margin: 0, textTransform: 'capitalize' }}>
                 {monthTitle(month)}
               </h2>
-              <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 13.5, color: 'var(--c-ok)' }}>
+              <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 13, color: 'var(--c-ok)' }}>
                 {fmtMoney(total, fin.currency)}
               </span>
               <span className="t-mute" style={{ fontSize: 12 }}>{payments.length} {payments.length === 1 ? 'pago' : 'pagos'}</span>
@@ -69,10 +69,10 @@ export default async function PagosPage() {
                   }}
                 >
                   <div style={{ flex: '1 1 220px', minWidth: 0 }}>
-                    <Link href={`/super/restaurantes/${p.restaurantId}/cobro`} style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--u-text)', textDecoration: 'none' }}>
+                    <Link href={`/super/restaurantes/${p.restaurantId}/cobro`} style={{ fontWeight: 600, fontSize: 13, color: 'var(--u-text)', textDecoration: 'none' }}>
                       {p.restaurantName}
                     </Link>
-                    <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {conMesesLegibles(p.description ?? CONCEPT_LABEL[p.concept])} · {fechaCorta(p.paidAt)}{p.method ? ` · ${p.method}` : ''}
                     </div>
                   </div>

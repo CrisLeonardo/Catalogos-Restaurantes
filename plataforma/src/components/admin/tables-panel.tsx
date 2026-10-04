@@ -210,7 +210,7 @@ export default function TablesPanel({ restaurantId, slug, menuUrl, config: initi
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--u-text)', marginBottom: 3 }}>Comer en local</div>
-            <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.4 }}>
+            <div style={{ fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.4 }}>
               Activa el modo mesa para que los clientes pidan desde su mesa.
             </div>
           </div>
@@ -227,7 +227,7 @@ export default function TablesPanel({ restaurantId, slug, menuUrl, config: initi
             paddingTop: 12, borderTop: '1px solid var(--u-hair)',
           }}>
             <div>
-              <div style={{ fontSize: 13.5, color: 'var(--u-text-2)', fontWeight: 500 }}>Número de mesas</div>
+              <div style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 500 }}>Número de mesas</div>
               <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>Se generará un QR por cada mesa</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -274,10 +274,10 @@ export default function TablesPanel({ restaurantId, slug, menuUrl, config: initi
         <div>
           <div style={{ marginBottom: 14, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 260px' }}>
-              <div style={{ fontSize: 15, fontWeight: 650, color: 'var(--u-text)', marginBottom: 4 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--u-text)', marginBottom: 4 }}>
                 Códigos QR por mesa
               </div>
-              <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
                 Cada QR lleva al cliente al menú con su mesa ya elegida para el pedido.
                 Descárgalos todos en una hoja lista para imprimir y recortar.
               </div>
@@ -307,7 +307,7 @@ export default function TablesPanel({ restaurantId, slug, menuUrl, config: initi
       ) : !dineInEnabled ? (
         <Card className="flex flex-col items-center gap-2.5 p-7 text-center">
           <Icon name="utensils" size={28} style={{ color: 'var(--u-text-4)' }} />
-          <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', fontWeight: 500 }}>
+          <div style={{ fontSize: 13, color: 'var(--u-text-3)', fontWeight: 500 }}>
             Activa “Comer en local” y guarda para generar los QR por mesa.
           </div>
         </Card>

@@ -40,10 +40,6 @@ interface Props {
   hasSettingsRow: boolean;
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-};
 const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 function money(n: number) {
@@ -143,7 +139,7 @@ function Interruptor({ label, nota, checked, onChange }: { label: string; nota: 
     <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', gridColumn: '1 / -1' }}>
       <Switch checked={checked} onCheckedChange={onChange} aria-label={label} />
       <div>
-        <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text)' }}>{label}</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text)' }}>{label}</div>
         <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>{nota}</div>
       </div>
     </div>
@@ -209,31 +205,31 @@ function SettingsForm({ restaurantId, settings, estado }: { restaurantId: string
       <div className="adm-label">Datos del emisor</div>
       <div style={grid}>
         <Fila label="NIT emisor">
-          <input style={inputStyle} value={p.nit_emisor} onChange={(e) => set('nit_emisor', e.target.value)} placeholder="3602978-5" />
+          <input className="adm-field" value={p.nit_emisor} onChange={(e) => set('nit_emisor', e.target.value)} placeholder="3602978-5" />
         </Fila>
         <Fila label="Nombre / razón social">
-          <input style={inputStyle} value={p.nombre_emisor} onChange={(e) => set('nombre_emisor', e.target.value)} />
+          <input className="adm-field" value={p.nombre_emisor} onChange={(e) => set('nombre_emisor', e.target.value)} />
         </Fila>
         <Fila label="Nombre comercial">
-          <input style={inputStyle} value={p.nombre_comercial} onChange={(e) => set('nombre_comercial', e.target.value)} />
+          <input className="adm-field" value={p.nombre_comercial} onChange={(e) => set('nombre_comercial', e.target.value)} />
         </Fila>
         <Fila label="Correo del emisor">
-          <input style={inputStyle} type="email" value={p.correo_emisor} onChange={(e) => set('correo_emisor', e.target.value)} placeholder="facturacion@turestaurante.com" />
+          <input className="adm-field" type="email" value={p.correo_emisor} onChange={(e) => set('correo_emisor', e.target.value)} placeholder="facturacion@turestaurante.com" />
         </Fila>
         <Fila label="Código establecimiento">
-          <input style={inputStyle} value={p.codigo_establecimiento} onChange={(e) => set('codigo_establecimiento', e.target.value)} />
+          <input className="adm-field" value={p.codigo_establecimiento} onChange={(e) => set('codigo_establecimiento', e.target.value)} />
         </Fila>
         <Fila label="Dirección" ancho>
-          <input style={inputStyle} value={p.direccion} onChange={(e) => set('direccion', e.target.value)} placeholder="Calle, zona, ciudad" />
+          <input className="adm-field" value={p.direccion} onChange={(e) => set('direccion', e.target.value)} placeholder="Calle, zona, ciudad" />
         </Fila>
         <Fila label="Municipio">
-          <input style={inputStyle} value={p.municipio} onChange={(e) => set('municipio', e.target.value)} placeholder="Guatemala" />
+          <input className="adm-field" value={p.municipio} onChange={(e) => set('municipio', e.target.value)} placeholder="Guatemala" />
         </Fila>
         <Fila label="Departamento">
-          <input style={inputStyle} value={p.departamento} onChange={(e) => set('departamento', e.target.value)} placeholder="Guatemala" />
+          <input className="adm-field" value={p.departamento} onChange={(e) => set('departamento', e.target.value)} placeholder="Guatemala" />
         </Fila>
         <Fila label="Código postal">
-          <input style={inputStyle} value={p.codigo_postal} onChange={(e) => set('codigo_postal', e.target.value)} placeholder="01001" />
+          <input className="adm-field" value={p.codigo_postal} onChange={(e) => set('codigo_postal', e.target.value)} placeholder="01001" />
         </Fila>
       </div>
       <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: 0 }}>
@@ -242,7 +238,7 @@ function SettingsForm({ restaurantId, settings, estado }: { restaurantId: string
       </p>
 
       <div className="adm-label" style={seccion}>Tu régimen fiscal</div>
-      <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0 }}>
+      <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0 }}>
         Esto decide las leyendas legales que salen impresas en cada factura y si tu cliente puede usarla como
         crédito fiscal. <strong>Confírmalo con tu contador</strong>: aparece en tu constancia del RTU.
       </p>
@@ -250,20 +246,20 @@ function SettingsForm({ restaurantId, settings, estado }: { restaurantId: string
         <Fila label="Régimen de IVA">
           <Select options={OPCIONES_REGIMEN_IVA.map((o) => ({ value: o.value, label: o.label }))}
             value={p.regimen_iva} onValueChange={(v) => set('regimen_iva', v as RegimenIva)} />
-          {notaIva && <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '4px 0 0' }}>{notaIva}</p>}
+          {notaIva && <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: '4px 0 0' }}>{notaIva}</p>}
         </Fila>
         <Fila label="Régimen de ISR">
           <Select options={OPCIONES_REGIMEN_ISR.map((o) => ({ value: o.value, label: o.label }))}
             value={p.regimen_isr} onValueChange={(v) => set('regimen_isr', v as RegimenIsr)} />
-          {notaIsr && <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '4px 0 0' }}>{notaIsr}</p>}
+          {notaIsr && <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: '4px 0 0' }}>{notaIsr}</p>}
         </Fila>
         {pideResolucion && (
           <>
             <Fila label="Número de resolución SAT">
-              <input style={inputStyle} value={p.numero_resolucion} onChange={(e) => set('numero_resolucion', e.target.value)} />
+              <input className="adm-field" value={p.numero_resolucion} onChange={(e) => set('numero_resolucion', e.target.value)} />
             </Fila>
             <Fila label="Fecha de la resolución">
-              <input style={inputStyle} type="date" value={p.fecha_resolucion} onChange={(e) => set('fecha_resolucion', e.target.value)} />
+              <input className="adm-field" type="date" value={p.fecha_resolucion} onChange={(e) => set('fecha_resolucion', e.target.value)} />
             </Fila>
           </>
         )}
@@ -281,7 +277,7 @@ function SettingsForm({ restaurantId, settings, estado }: { restaurantId: string
           {estado.frases.map((f) => (
             <div key={f} style={{ fontSize: 13, color: 'var(--u-text)', fontFamily: 'var(--ui-font-mono)' }}>· {f}</div>
           ))}
-          <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '6px 0 0' }}>
+          <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: '6px 0 0' }}>
             Se actualiza al guardar. Si algo no corresponde a tu régimen, corrígelo antes de emitir.
           </p>
         </div>
@@ -322,7 +318,7 @@ function SettingsForm({ restaurantId, settings, estado }: { restaurantId: string
         </Fila>
         {p.provider === 'MANUAL' && (
           <Fila label="Serie del registro interno">
-            <input style={inputStyle} value={p.serie_prefijo} onChange={(e) => set('serie_prefijo', e.target.value)} placeholder="INT" />
+            <input className="adm-field" value={p.serie_prefijo} onChange={(e) => set('serie_prefijo', e.target.value)} placeholder="INT" />
           </Fila>
         )}
       </div>
@@ -334,14 +330,14 @@ function SettingsForm({ restaurantId, settings, estado }: { restaurantId: string
         <>
           <div style={grid}>
             <Fila label="Usuario API">
-              <input style={inputStyle} value={p.api_usuario} onChange={(e) => set('api_usuario', e.target.value)} />
+              <input className="adm-field" value={p.api_usuario} onChange={(e) => set('api_usuario', e.target.value)} />
             </Fila>
             <Fila label="Clave / Token API">
-              <input style={inputStyle} type="password" value={p.api_clave} onChange={(e) => set('api_clave', e.target.value)}
+              <input className="adm-field" type="password" value={p.api_clave} onChange={(e) => set('api_clave', e.target.value)}
                 placeholder={settings.tiene_clave ? '•••••••• (guardada)' : ''} />
             </Fila>
             <Fila label="Llave de firma">
-              <input style={inputStyle} type="password" value={p.api_llave_firma} onChange={(e) => set('api_llave_firma', e.target.value)}
+              <input className="adm-field" type="password" value={p.api_llave_firma} onChange={(e) => set('api_llave_firma', e.target.value)}
                 placeholder={settings.tiene_llave_firma ? '•••••••• (guardada)' : ''} />
             </Fila>
           </div>
@@ -454,10 +450,10 @@ function EmitForm({ restaurantId, settings, invoiceable, listo, onGoConfig }: { 
       ) : (
         <div style={grid}>
           <Fila label="Descripción">
-            <input style={inputStyle} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Consumo en restaurante" />
+            <input className="adm-field" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Consumo en restaurante" />
           </Fila>
           <Fila label="Monto (Q, con IVA)">
-            <input style={inputStyle} type="number" inputMode="decimal" min="0" step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)} placeholder="0.00" />
+            <input className="adm-field" type="number" inputMode="decimal" min="0" step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)} placeholder="0.00" />
           </Fila>
         </div>
       )}
@@ -466,20 +462,20 @@ function EmitForm({ restaurantId, settings, invoiceable, listo, onGoConfig }: { 
       <div style={grid}>
         <Fila label={extranjero ? 'Pasaporte / documento' : 'NIT o DPI'}>
           <input
-            style={{ ...inputStyle, borderColor: idInvalido ? 'var(--c-danger)' : 'var(--u-hair-2)' }}
+            className="adm-field" aria-invalid={idInvalido || undefined}
             value={receptorId}
             onChange={(e) => setReceptorId(e.target.value)}
             placeholder={extranjero ? 'AB123456' : 'CF'}
           />
         </Fila>
         <Fila label="Nombre">
-          <input style={inputStyle} value={nombre} onChange={(e) => setNombre(e.target.value)} />
+          <input className="adm-field" value={nombre} onChange={(e) => setNombre(e.target.value)} />
         </Fila>
         <Fila label="Correo (opcional)">
-          <input style={inputStyle} type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} placeholder="Para enviarle su factura" />
+          <input className="adm-field" type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} placeholder="Para enviarle su factura" />
         </Fila>
         <Fila label="Dirección">
-          <input style={inputStyle} value={direccion} onChange={(e) => setDireccion(e.target.value)} />
+          <input className="adm-field" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
         </Fila>
       </div>
 
@@ -572,7 +568,7 @@ function DocumentsList({ restaurantId, settings, documents }: { restaurantId: st
       {pidiendo && (
         <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--u-hair)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <input
-            style={{ ...inputStyle, flex: 1, minWidth: 220 }}
+            className="adm-field" style={{ flex: 1, minWidth: 220 }}
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}
             placeholder={pidiendo.accion === 'anular' ? 'Motivo de la anulación (el SAT lo exige)' : 'Motivo del ajuste'}

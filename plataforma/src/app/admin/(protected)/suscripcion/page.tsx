@@ -153,7 +153,7 @@ export default async function SuscripcionPage() {
           <div className="t-mono" style={{ fontWeight: 600, fontSize: 28, color: 'var(--u-text)', lineHeight: 1.1, marginTop: 4 }}>
             {trialLeft} día{trialLeft !== 1 ? 's' : ''} restante{trialLeft !== 1 ? 's' : ''}
           </div>
-          <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 6, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 6, lineHeight: 1.5 }}>
             {trialLeft <= 3
               ? `Tu prueba termina pronto. Contáctanos para continuar sin interrupciones.`
               : `Tu restaurante está en vivo sin costo. Cuando termine la prueba, te avisaremos antes de cualquier cobro.`}
@@ -212,7 +212,7 @@ export default async function SuscripcionPage() {
           target="_blank"
           rel="noopener noreferrer"
           className="adm-action-link"
-          style={{ marginTop: 10, fontSize: 12.5 }}
+          style={{ marginTop: 10, fontSize: 12 }}
         >
           Ver comparativa completa de planes <Icon name="arrowUpRight" size={13} />
         </a>
@@ -230,7 +230,7 @@ export default async function SuscripcionPage() {
           style={{ border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' }}
         >
           <div className="adm-label" style={{ color: 'var(--brand-accent-ink)' }}>Con Premium ({planPriceLabel(pricing, 'PREMIUM')}) desbloqueas</div>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 19, color: 'var(--u-text)', marginTop: 4, lineHeight: 1.15 }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--u-text)', marginTop: 4, lineHeight: 1.15 }}>
             Todo lo que falta en tu plan actual
           </div>
           <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 3, lineHeight: 1.5 }}>
@@ -261,7 +261,7 @@ export default async function SuscripcionPage() {
               }}>
                 <Icon name={icon} size={15} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0, marginTop: 1 }} />
                 <div>
-                  <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text-2)', lineHeight: 1.2 }}>{label}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text-2)', lineHeight: 1.2 }}>{label}</div>
                   <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2, lineHeight: 1.35 }}>{desc}</div>
                 </div>
               </div>
@@ -328,10 +328,10 @@ export default async function SuscripcionPage() {
                     <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>
                       {p.name}
                     </div>
-                    <div style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>
+                    <div style={{ fontSize: 12, color: 'var(--u-text-3)' }}>
                       {planPriceLabel(pricing, code)}
                     </div>
-                    <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.4 }}>
+                    <div style={{ fontSize: 11, color: 'var(--u-text-4)', lineHeight: 1.4 }}>
                       {p.tagline}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--brand-accent-ink)', fontWeight: 700, marginTop: 4 }}>
@@ -350,7 +350,7 @@ export default async function SuscripcionPage() {
 
       {/* ── ¿Varias sucursales? ───────────────────────────────── */}
       <Card className="flex flex-wrap items-center justify-between gap-3 p-3.5">
-        <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
           <Icon name="grid" size={14} style={{ verticalAlign: 'middle', marginRight: 6, color: 'var(--u-text-4)' }} />
           ¿Tienes 2 o más sucursales? Obtén un panel de grupo consolidado para verlas todas juntas.
         </div>
@@ -359,7 +359,7 @@ export default async function SuscripcionPage() {
           target="_blank"
           rel="noopener noreferrer"
           className="adm-action-link"
-          style={{ fontSize: 12.5, whiteSpace: 'nowrap' }}
+          style={{ fontSize: 12, whiteSpace: 'nowrap' }}
         >
           Hablar con Leogin →
         </a>
@@ -375,10 +375,10 @@ export default async function SuscripcionPage() {
             <div className="adm-label">Estado de cuenta</div>
             {pendingTotal > 0 ? (
               <>
-                <div className="t-mono" style={{ fontWeight: 600, fontSize: 30, color: hasOverdue ? 'var(--c-danger)' : 'var(--c-warn)', lineHeight: 1, marginTop: 4 }}>
+                <div className="t-mono" style={{ fontWeight: 600, fontSize: 28, color: hasOverdue ? 'var(--c-danger)' : 'var(--c-warn)', lineHeight: 1, marginTop: 4 }}>
                   {fmtMoney(pendingTotal, currency)}
                 </div>
-                <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 4 }}>
+                <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 4 }}>
                   {hasOverdue ? 'Tienes pagos vencidos' : 'Pendiente por pagar'} · {pending.length} {pending.length === 1 ? 'cobro' : 'cobros'}.
                 </div>
                 {/* Con pagos pendientes, la pantalla decía cuánto se debía pero
@@ -388,7 +388,7 @@ export default async function SuscripcionPage() {
                 {contacto.payment_instructions && (
                   <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)' }}>
                     <div className="adm-label" style={{ marginBottom: 4 }}>Cómo pagar</div>
-                    <div style={{ fontSize: 13.5, color: 'var(--u-text-2)', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+                    <div style={{ fontSize: 13, color: 'var(--u-text-2)', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
                       {contacto.payment_instructions}
                     </div>
                   </div>
@@ -407,10 +407,10 @@ export default async function SuscripcionPage() {
               </>
             ) : (
               <>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, color: 'var(--c-ok)', lineHeight: 1.1, marginTop: 4 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, color: 'var(--c-ok)', lineHeight: 1.1, marginTop: 4 }}>
                   Estás al día ✓
                 </div>
-                <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 4 }}>No tienes cobros pendientes. ¡Gracias!</div>
+                <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 4 }}>No tienes cobros pendientes. ¡Gracias!</div>
               </>
             )}
           </Card>
@@ -423,7 +423,7 @@ export default async function SuscripcionPage() {
             {config.started_at && <Stat label="Cliente desde" value={fechaCorta(config.started_at)} />}
           </StatGroup>
 
-          <Card className="p-3.5" style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+          <Card className="p-3.5" style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
             Los pagos se realizan al inicio de cada mes. Cuando registremos tu pago, el cobro
             aparecerá como <strong style={{ color: 'var(--c-ok)' }}>Pagado</strong> aquí mismo.
           </Card>
@@ -513,7 +513,7 @@ async function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; curren
         <Icon name="sparkle" size={15} style={{ color: 'var(--brand-accent)' }} />
         <div className="adm-label">Lo que pagarás este mes</div>
       </div>
-      <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5 }}>
+      <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5 }}>
         Precio fijo de tu plan: prender o apagar funciones y modos de pedido desde{' '}
         <a href={panelHref(base, '/admin/modulos')} style={{ color: 'var(--brand-accent-ink)', fontWeight: 600 }}>Funciones</a> no cambia tu mensualidad.
       </div>
@@ -522,7 +522,7 @@ async function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; curren
         <LineItem label={`Plan ${planLabel(b.plan)}`} value={fmtMoney(b.base, currency)} />
         <div style={{ height: 1, background: 'var(--u-hair)', margin: '2px 0' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>
             {autoPrice ? 'Tu mensualidad' : 'Mensualidad sugerida'}
           </span>
           <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 800, fontSize: 20, color: 'var(--u-text)' }}>
@@ -532,12 +532,12 @@ async function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; curren
       </div>
 
       {!autoPrice && (
-        <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 8, lineHeight: 1.45 }}>
+        <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 8, lineHeight: 1.45 }}>
           Tienes un precio acordado con nosotros; este desglose es informativo.
         </div>
       )}
 
-      <a href={panelHref(base, '/admin/modulos')} className="adm-action-link" style={{ marginTop: 10, fontSize: 12.5 }}>
+      <a href={panelHref(base, '/admin/modulos')} className="adm-action-link" style={{ marginTop: 10, fontSize: 12 }}>
         Gestionar mis modos de pedido y funciones <Icon name="arrowRight" size={13} />
       </a>
     </Card>
@@ -548,7 +548,7 @@ function LineItem({ label, value, accent }: { label: string; value: string; acce
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{label}</span>
-      <span style={{ fontFamily: 'var(--ui-font-mono)', fontSize: 13.5, fontWeight: 600, color: accent ?? 'var(--u-text-2)' }}>{value}</span>
+      <span style={{ fontFamily: 'var(--ui-font-mono)', fontSize: 13, fontWeight: 600, color: accent ?? 'var(--u-text-2)' }}>{value}</span>
     </div>
   );
 }

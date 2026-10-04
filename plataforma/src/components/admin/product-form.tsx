@@ -195,16 +195,6 @@ export default function ProductForm({ restaurantId, categories, product, default
     setDietaryTags((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   }
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-    border: '1px solid var(--u-hair-2)',
-    borderRadius: 'var(--radius-md)',
-    padding: '10px 12px',
-    color: 'var(--u-text)',
-    fontSize: 15,
-    outline: 'none',
-  };
 
   const labelStyle: React.CSSProperties = FIELD_LABEL;
 
@@ -238,7 +228,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                     required
                     defaultValue={product?.name ?? ''}
                     placeholder="Ej: Café Latte"
-                    style={inputStyle}
+                    className="adm-field"
                   />
                 </div>
                 <div>
@@ -256,7 +246,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                       value={priceVal}
                       onChange={(e) => setPriceVal(e.target.value)}
                       placeholder="0.00"
-                      style={{ ...inputStyle, paddingLeft: 30 }}
+                      className="adm-field" style={{ paddingLeft: 30 }}
                     />
                   </div>
                 </div>
@@ -267,7 +257,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                   id="category_id"
                   name="category_id"
                   defaultValue={product?.category_id ?? defaultCategoryId ?? ''}
-                  style={inputStyle}
+                  className="adm-field"
                 >
                   <option value="">Sin categoría</option>
                   {categories.map((c) => (
@@ -285,7 +275,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                   rows={3}
                   defaultValue={product?.description ?? ''}
                   placeholder="Describe el platillo: ingredientes, tamaño, qué lo hace especial…"
-                  style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
+                  className="adm-field" style={{ resize: 'vertical', lineHeight: 1.5 }}
                 />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -297,7 +287,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                     type="text"
                     defaultValue={product?.name_en ?? ''}
                     placeholder="Opcional"
-                    style={inputStyle}
+                    className="adm-field"
                   />
                 </div>
                 <div>
@@ -308,7 +298,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                     type="text"
                     defaultValue={product?.description_en ?? ''}
                     placeholder="Opcional"
-                    style={inputStyle}
+                    className="adm-field"
                   />
                 </div>
               </div>
@@ -365,7 +355,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag(); } }}
                     placeholder="Etiqueta personalizada…"
                     maxLength={30}
-                    style={{ ...inputStyle, flex: 1 }}
+                    className="adm-field" style={{ flex: 1 }}
                   />
                   <button
                     type="button"
@@ -411,7 +401,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                           padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
                           border: `1px solid ${active ? 'var(--brand-accent)' : 'var(--u-hair-2)'}`,
                           background: active ? 'color-mix(in srgb, var(--brand-accent) 16%, transparent)' : 'transparent',
-                          color: 'var(--u-text)', fontSize: 12.5, fontWeight: 500,
+                          color: 'var(--u-text)', fontSize: 12, fontWeight: 500,
                         }}
                       >
                         <span aria-hidden>{o.icon}</span> {o.label}
@@ -443,7 +433,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                   onChange={hasRecipe ? undefined : (e) => setCostVal(e.target.value)}
                   readOnly={hasRecipe}
                   placeholder="0.00"
-                  style={{ ...inputStyle, paddingLeft: 30, opacity: hasRecipe ? 0.65 : 1, cursor: hasRecipe ? 'not-allowed' : 'text' }}
+                  className="adm-field" style={{ paddingLeft: 30, opacity: hasRecipe ? 0.65 : 1, cursor: hasRecipe ? 'not-allowed' : 'text' }}
                   title={hasRecipe ? 'Calculado automáticamente desde la receta' : undefined}
                 />
                 </div>
@@ -459,7 +449,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                   value={loyaltyPtsVal}
                   onChange={(e) => setLoyaltyPtsVal(e.target.value)}
                   placeholder="Regla general"
-                  style={inputStyle}
+                  className="adm-field"
                 />
               </div>
             </div>
@@ -478,7 +468,7 @@ export default function ProductForm({ restaurantId, categories, product, default
               const margin = p > 0 ? (profit / p) * 100 : 0;
               const good = profit >= 0;
               return (
-                <div style={{ display: 'flex', gap: 16, marginTop: 12, fontSize: 12.5 }}>
+                <div style={{ display: 'flex', gap: 16, marginTop: 12, fontSize: 12 }}>
                   <span style={{ color: 'var(--u-text-3)' }}>
                     Utilidad:{' '}
                     <strong style={{ color: good ? 'var(--u-text)' : 'var(--c-danger, #f87171)' }}>
@@ -567,7 +557,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                 if (suggested && v.trim()) setIcon(suggested);
               }}
               placeholder="Buscar (ej: pizza, café, helado…)"
-              style={{ ...inputStyle, marginBottom: 10 }}
+              className="adm-field" style={{ marginBottom: 10 }}
             />
             <div className="u-noscroll" style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
               {PRODUCT_ICONS.filter((opt) => {

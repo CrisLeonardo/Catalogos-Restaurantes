@@ -46,15 +46,6 @@ export function cleanOptions(groups: ProductOptionGroup[]): ProductOptionGroup[]
     .filter((g) => g.name.length > 0 && g.choices.length > 0);
 }
 
-const fieldStyle: React.CSSProperties = {
-  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-  border: '1px solid var(--u-hair)',
-  borderRadius: 'var(--radius-md)',
-  padding: '8px 10px',
-  color: 'var(--u-text)',
-  fontSize: 13,
-  outline: 'none',
-};
 
 export default function OptionsEditor({
   value,
@@ -99,7 +90,7 @@ export default function OptionsEditor({
           ].map((t) => (
             <div key={t.title} style={{ borderRadius: 'var(--radius-lg)', padding: '11px 13px', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', border: '1px dashed var(--u-hair-2)' }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text-2)', marginBottom: 4 }}>{t.title}</div>
-              <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.5 }}>{t.example}</div>
+              <div style={{ fontSize: 11, color: 'var(--u-text-4)', lineHeight: 1.5 }}>{t.example}</div>
             </div>
           ))}
         </div>
@@ -117,7 +108,7 @@ export default function OptionsEditor({
               value={group.name}
               onChange={(e) => setGroup(group.id, { name: e.target.value })}
               placeholder="Nombre del grupo (Tamaño, Extras…)"
-              style={{ ...fieldStyle, flex: 1, minWidth: 140, fontWeight: 600 }}
+              className="adm-field adm-field-sm adm-field-auto" style={{ flex: 1, minWidth: 140, fontWeight: 600 }}
             />
             <div style={{ display: 'flex', gap: 4 }}>
               {([['single', 'Elegir 1'], ['multi', 'Varios'], ['combo', 'Combo']] as const).map(([t, lbl]) => {
@@ -135,7 +126,7 @@ export default function OptionsEditor({
                     }
                     className="press"
                     style={{
-                      padding: '7px 11px', borderRadius: 'var(--radius-full)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
+                      padding: '7px 11px', borderRadius: 'var(--radius-full)', fontSize: 11, fontWeight: 600, cursor: 'pointer',
                       border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
                       background: on ? (t === 'combo' ? 'var(--c-ok)' : 'var(--u-text)') : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
                       color: on ? (t === 'combo' ? '#fff' : 'var(--brand-bg, #0b0b0c)') : 'var(--u-text-3)',
@@ -163,7 +154,7 @@ export default function OptionsEditor({
 
           {/* Reglas del grupo */}
           {group.type === 'single' ? (
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--u-text-3)', cursor: 'pointer', width: 'fit-content' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--u-text-3)', cursor: 'pointer', width: 'fit-content' }}>
               <input
                 type="checkbox"
                 checked={group.required ?? false}
@@ -177,7 +168,7 @@ export default function OptionsEditor({
               Todos los componentes aparecen <strong>incluidos por defecto</strong>. El precio base del producto es el plato principal; el precio de cada componente se suma automáticamente al total que ve el cliente en el menú.
             </p>
           ) : (
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--u-text-3)' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--u-text-3)' }}>
               Máximo de opciones
               <input
                 type="number" inputMode="decimal"
@@ -185,7 +176,7 @@ export default function OptionsEditor({
                 max={20}
                 value={group.max ?? 0}
                 onChange={(e) => setGroup(group.id, { max: Math.max(0, Math.min(20, Number(e.target.value) || 0)) })}
-                style={{ ...fieldStyle, width: 64, fontFamily: 'var(--ui-font-mono)' }}
+                className="adm-field adm-field-sm adm-field-auto" style={{ width: 64, fontFamily: 'var(--ui-font-mono)' }}
               />
               <span style={{ color: 'var(--u-text-4)' }}>(0 = sin límite)</span>
             </label>
@@ -204,7 +195,7 @@ export default function OptionsEditor({
                     value={choice.name}
                     onChange={(e) => setChoice(group.id, choice.id, { name: e.target.value })}
                     placeholder={group.type === 'combo' ? 'Componente (Papas fritas, Gaseosa…)' : 'Opción (Grande, Extra queso…)'}
-                    style={{ ...fieldStyle, flex: 1, minWidth: 0 }}
+                    className="adm-field adm-field-sm adm-field-auto" style={{ flex: 1, minWidth: 0 }}
                   />
                   <span style={{ fontSize: 12, color: 'var(--u-text-4)' }}>{group.type === 'combo' ? 'Q' : '+'}</span>
                   <input
@@ -213,7 +204,7 @@ export default function OptionsEditor({
                     min={group.type === 'combo' ? 0 : undefined}
                     value={choice.priceDelta}
                     onChange={(e) => setChoice(group.id, choice.id, { priceDelta: Number(e.target.value) || 0 })}
-                    style={{ ...fieldStyle, width: 78, fontFamily: 'var(--ui-font-mono)' }}
+                    className="adm-field adm-field-sm adm-field-auto" style={{ width: 78, fontFamily: 'var(--ui-font-mono)' }}
                     aria-label={group.type === 'combo' ? 'Precio del componente' : 'Precio extra'}
                   />
                   {group.type === 'combo' && (
@@ -269,7 +260,7 @@ export default function OptionsEditor({
                             setChoice(group.id, choice.id, { variants });
                           }}
                           placeholder="Variante (Coca-Cola, Papas rústicas…)"
-                          style={{ ...fieldStyle, flex: 1, minWidth: 0, fontSize: 12.5 }}
+                          className="adm-field adm-field-sm adm-field-auto" style={{ flex: 1, minWidth: 0, fontSize: 12 }}
                         />
                         <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>+</span>
                         <input
@@ -280,7 +271,7 @@ export default function OptionsEditor({
                             const variants = (choice.variants ?? []).map((v) => v.id === variant.id ? { ...v, priceDelta: Number(e.target.value) || 0 } : v);
                             setChoice(group.id, choice.id, { variants });
                           }}
-                          style={{ ...fieldStyle, width: 68, fontFamily: 'var(--ui-font-mono)', fontSize: 12.5 }}
+                          className="adm-field adm-field-sm adm-field-auto" style={{ width: 68, fontFamily: 'var(--ui-font-mono)', fontSize: 12 }}
                           aria-label="Precio extra de la variante"
                         />
                         <button
@@ -349,7 +340,7 @@ export default function OptionsEditor({
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px',
             borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-            color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+            color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 12, fontWeight: 600,
           }}
         >
           <Icon name="plus" size={13} /> Grupo &ldquo;elegir uno&rdquo; (tamaños)
@@ -361,7 +352,7 @@ export default function OptionsEditor({
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px',
             borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-            color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+            color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 12, fontWeight: 600,
           }}
         >
           <Icon name="plus" size={13} /> Grupo &ldquo;varios&rdquo; (extras)
@@ -375,7 +366,7 @@ export default function OptionsEditor({
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px',
             borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-            color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+            color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 12, fontWeight: 600,
           }}
         >
           <Icon name="plus" size={13} /> Combo (componentes incluidos)

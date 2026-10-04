@@ -23,10 +23,10 @@ export default async function PlanLockedScreen({ feature, description, icon = 'u
         <div style={{ width: 52, height: 52, margin: '0 auto 16px', borderRadius: 'var(--radius-lg)', background: 'rgba(var(--brand-accent-rgb,99,102,241),0.13)', display: 'grid', placeItems: 'center', color: 'var(--brand-accent-ink)' }}>
           <Icon name={icon} size={24} />
         </div>
-        <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 19, color: 'var(--u-text)', margin: 0 }}>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--u-text)', margin: 0 }}>
           {feature} requiere Premium
         </h2>
-        <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', lineHeight: 1.6, margin: '10px 0 22px' }}>
+        <p style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.6, margin: '10px 0 22px' }}>
           {description}
         </p>
         <Link

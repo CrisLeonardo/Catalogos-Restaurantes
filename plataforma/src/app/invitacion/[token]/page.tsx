@@ -124,7 +124,7 @@ function Notice({ message }: { message: string }) {
       >
         <Icon name="mail" size={20} />
       </span>
-      <p style={{ fontSize: 14.5, color: 'var(--u-text-2)', lineHeight: 1.55, margin: '0 0 18px' }}>
+      <p style={{ fontSize: 14, color: 'var(--u-text-2)', lineHeight: 1.55, margin: '0 0 18px' }}>
         {message}
       </p>
       <Link
@@ -132,7 +132,7 @@ function Notice({ message }: { message: string }) {
         className="press btn-accent"
         style={{
           display: 'inline-block', padding: '11px 22px', borderRadius: 'var(--radius-full)',
-          fontWeight: 600, fontSize: 14.5, textDecoration: 'none',
+          fontWeight: 600, fontSize: 14, textDecoration: 'none',
         }}
       >
         Ir al acceso

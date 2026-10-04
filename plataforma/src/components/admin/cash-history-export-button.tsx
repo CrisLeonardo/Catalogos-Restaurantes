@@ -72,7 +72,7 @@ export default function CashHistoryExportButton({ restaurantId }: { restaurantId
 
   const btnStyle = (pending: boolean): React.CSSProperties => ({
     padding: '5px 11px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--u-hair)',
-    fontSize: 11.5, fontWeight: 600, color: 'var(--u-text-3)', background: 'transparent',
+    fontSize: 11, fontWeight: 600, color: 'var(--u-text-3)', background: 'transparent',
     cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.7 : 1,
   });
 

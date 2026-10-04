@@ -53,7 +53,7 @@ function CatIconPicker({ value, suggested, onChange }: {
           <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
           <div className="glass-solid anim-pop" style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 50, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, padding: 8, borderRadius: 'var(--radius-lg)', width: 214 }}>
             <button type="button" onClick={() => { onChange(null); setOpen(false); }} className="press"
-              style={{ ...cell(value === null), gridColumn: 'span 5', width: 'auto', height: 32, display: 'flex', gap: 6, justifyContent: 'center', fontSize: 11.5, fontWeight: 600 }}>
+              style={{ ...cell(value === null), gridColumn: 'span 5', width: 'auto', height: 32, display: 'flex', gap: 6, justifyContent: 'center', fontSize: 11, fontWeight: 600 }}>
               <Icon name="sparkle" size={13} /> Automático
             </button>
             {CAT_ICONS.map((ic) => (
@@ -119,7 +119,7 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
         {/* Sin el «CATEGORÍAS DEL MENÚ» en letra de cartel: la pestaña ya dice
             dónde se está, y ningún otro listado del panel lleva encabezado
             propio (auditoría 2026-10-02, T-10). */}
-        <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', margin: 0 }}>
+        <p style={{ fontSize: 13, color: 'var(--u-text-3)', margin: 0 }}>
           Ordena cómo aparecen en tu menú con las flechas.
         </p>
         <Button onClick={() => setShowNew(true)} className="rounded-adm-full">
@@ -195,7 +195,7 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
-                    fontWeight: 600, fontSize: 15.5,
+                    fontWeight: 600, fontSize: 15,
                     color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                   }}
                 >
@@ -299,14 +299,14 @@ function NewCategoryForm({
             autoFocus
             value={catName}
             onChange={(e) => setCatName(e.target.value)}
-            style={{ ...inlineInput, flex: 1 }}
+            className="adm-field adm-field-auto" style={{ flex: 1 }}
           />
         </div>
         <input
           name="name_en"
           type="text"
           placeholder="Nombre en inglés (opcional)"
-          style={inlineInput}
+          className="adm-field adm-field-auto"
         />
         <CategorySchedule defaultValue={null} />
         {state && 'error' in state && (
@@ -368,7 +368,7 @@ function InlineEditForm({
           value={catName}
           onChange={(e) => setCatName(e.target.value)}
           autoFocus
-          style={{ ...inlineInput, flex: 1, minWidth: 0 }}
+          className="adm-field adm-field-auto" style={{ flex: 1, minWidth: 0 }}
         />
         <Button type="submit" disabled={isPending} aria-label="Guardar" size="icon" className="size-8.5 shrink-0 rounded-adm-full">
           {isPending ? '…' : <Icon name="check" size={15} strokeWidth={2.6} />}
@@ -382,7 +382,7 @@ function InlineEditForm({
         type="text"
         defaultValue={category.name_en ?? ''}
         placeholder="Nombre en inglés (opcional)"
-        style={inlineInput}
+        className="adm-field adm-field-auto"
       />
       <CategorySchedule defaultValue={category.availability} />
       {state && 'error' in state && (
@@ -441,14 +441,4 @@ const reorderBtn: React.CSSProperties = {
   cursor: 'pointer', display: 'grid', placeItems: 'center', padding: 0,
 };
 
-const inlineInput: React.CSSProperties = {
-  background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
-  border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)',
-  padding: '9px 12px',
-  color: 'var(--u-text)',
-  fontSize: 14,
-  outline: 'none',
-  fontFamily: 'var(--font-sans)',
-};
 

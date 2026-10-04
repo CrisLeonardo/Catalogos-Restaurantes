@@ -167,7 +167,7 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
             {activity.length > ACTIVIDAD_VISIBLE && (
               <ListButton
                 onClick={() => setVerTodaActividad((v) => !v)}
-                className="gap-2 text-[13.5px] font-semibold"
+                className="gap-2 text-[13px] font-semibold"
                 style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}
               >
                 {verTodaActividad ? 'Ver menos' : `Ver toda la actividad (${activity.length})`}
@@ -259,8 +259,6 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
   }
 
   const label: React.CSSProperties = FIELD_LABEL;
-  const input: React.CSSProperties = { width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-md)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none' };
-
   const isMesero = perms.includes('mesero');
 
   return (
@@ -280,7 +278,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
 
             <div>
               <label style={label}>Nombre {isNew && '*'}</label>
-              <input name="full_name" required={isNew} defaultValue={member?.full_name ?? ''} placeholder="Ej. Carlos, Juan (cajero)…" style={input} />
+              <input name="full_name" required={isNew} defaultValue={member?.full_name ?? ''} placeholder="Ej. Carlos, Juan (cajero)…" className="adm-field" />
             </div>
 
             {isNew && (
@@ -296,7 +294,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                         onClick={() => applyPreset(p)}
                         className="press"
                         style={{
-                          padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+                          padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer', fontSize: 12, fontWeight: 600,
                           border: `1.5px solid ${on ? 'var(--brand-accent)' : 'var(--u-hair)'}`,
                           background: on ? 'color-mix(in srgb, var(--brand-accent) 14%, transparent)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
                           color: on ? 'var(--u-text)' : 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -307,7 +305,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                     );
                   })}
                 </div>
-                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 8 }}>
+                <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 8 }}>
                   Marca lo típico de ese rol para no revisar ~20 opciones — ajusta libremente las secciones de abajo después.
                   {isOwner && (
                     <>
@@ -339,7 +337,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                   <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>
                     {access === 'user' ? 'Con un usuario' : 'Con un PIN'}
                   </span>
-                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+                  <span style={{ display: 'block', fontSize: 11, color: 'var(--u-text-4)', marginTop: 1 }}>
                     {access === 'user' ? 'Desde donde sea' : 'En el aparato del local'}
                   </span>
                 </div>
@@ -357,9 +355,9 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                   maxLength={4}
                   required
                   placeholder="1234"
-                  style={{ ...input, letterSpacing: '0.3em' }}
+                  className="adm-field" style={{ letterSpacing: '0.3em' }}
                 />
-                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 6 }}>
+                <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 6 }}>
                   Con este PIN entrará desde &quot;¿Quién eres?&quot; en el dispositivo del local — sin email ni contraseña.
                 </p>
               </div>
@@ -383,7 +381,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                     placeholder="Ej. carlos"
                     value={username}
                     onChange={(e) => setUsername(e.target.value.toLowerCase().trim())}
-                    style={input}
+                    className="adm-field"
                   />
                   {/* La credencial se enseña ENTERA mientras se escribe. Es
                       la diferencia entre una credencial que solo funciona
@@ -401,13 +399,13 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                       }}
                     >
                       <Icon name="key" size={13} />
-                      <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <span style={{ fontSize: 12, color: 'var(--u-text-2)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         Entrará escribiendo{' '}
                         <strong style={{ color: 'var(--u-text)' }}>{staffLoginHandle(username, slug)}</strong>
                       </span>
                     </div>
                   )}
-                  <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 6 }}>
+                  <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 6 }}>
                     Minúsculas, números, guion y guion bajo. Este usuario es solo de tu
                     restaurante: no ocupa ningún correo ni sirve en ningún otro local.
                   </p>
@@ -421,9 +419,9 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                     required
                     autoComplete="off"
                     placeholder="Ej. Sucursal2026"
-                    style={input}
+                    className="adm-field"
                   />
-                  <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 6, lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 6, lineHeight: 1.5 }}>
                     Pásale la credencial completa y la contraseña: con eso entra desde
                     esta misma dirección <em>o</em> desde el botón «Acceder» de la
                     página de Leogin, sin depender de tu cuenta. No aparecerá en la
@@ -447,7 +445,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                       onClick={() => toggle(s.key)}
                       className="press"
                       style={{
-                        padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+                        padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer', fontSize: 12, fontWeight: 600,
                         border: `1px solid ${on ? 'transparent' : accent ? 'var(--c-warn-line)' : 'var(--u-hair)'}`,
                         // Relleno sólido = --c-warn-solid (el ámbar vivo), NO --c-warn
                         // (que es la TINTA, casi marrón en claro: con texto oscuro
@@ -462,7 +460,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                   );
                 })}
               </div>
-              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 8 }}>
+              <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 8 }}>
                 {isMesero
                   ? 'Con la sección Mesero podrá tomar pedidos en mesa desde /admin/mesero. Si además marcas otras secciones, también entrará al panel admin.'
                   : 'Marca las secciones del panel a las que tendrá acceso. Marca Mesero para que tome pedidos en mesa.'}
@@ -484,11 +482,11 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                   <input type="hidden" name="userId" value={member!.id} />
                   <div style={{ flex: 1 }}>
                     <label style={label}>Cambiar PIN</label>
-                    <input name="pin" type="text" inputMode="numeric" pattern="\d{4}" maxLength={4} placeholder="1234" style={{ ...input, letterSpacing: '0.3em' }} />
+                    <input name="pin" type="text" inputMode="numeric" pattern="\d{4}" maxLength={4} placeholder="1234" className="adm-field" style={{ letterSpacing: '0.3em' }} />
                   </div>
                   <Button type="submit" variant="secondary" className="whitespace-nowrap">Cambiar</Button>
                 </form>
-                {pinAction[0] && 'error' in pinAction[0] && <div style={{ fontSize: 12.5, color: 'var(--c-danger)' }}>{pinAction[0].error}</div>}
+                {pinAction[0] && 'error' in pinAction[0] && <div style={{ fontSize: 12, color: 'var(--c-danger)' }}>{pinAction[0].error}</div>}
 
                 {/* Un acceso por usuario no tiene correo, así que no existe
                     "olvidé mi contraseña" para él: el buzón al que se
@@ -501,11 +499,11 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                       <input type="hidden" name="userId" value={member!.id} />
                       <div style={{ flex: 1 }}>
                         <label style={label}>Nueva contraseña de {staffLoginHandle(member!.username ?? '', slug)}</label>
-                        <input name="password" type="text" minLength={8} autoComplete="off" placeholder="Mínimo 8 caracteres" style={input} />
+                        <input name="password" type="text" minLength={8} autoComplete="off" placeholder="Mínimo 8 caracteres" className="adm-field" />
                       </div>
                       <Button type="submit" variant="secondary" className="whitespace-nowrap">Cambiar</Button>
                     </form>
-                    {passAction[0] && 'error' in passAction[0] && <div style={{ fontSize: 12.5, color: 'var(--c-danger)' }}>{passAction[0].error}</div>}
+                    {passAction[0] && 'error' in passAction[0] && <div style={{ fontSize: 12, color: 'var(--c-danger)' }}>{passAction[0].error}</div>}
                   </>
                 )}
 

@@ -471,7 +471,7 @@ export default function TemplateGallery({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>1 · La estructura</span>
-          <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>
+          <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
             cómo se recorre tu carta · {MENU_STRUCTURES.length} para elegir
           </span>
         </div>
@@ -493,7 +493,7 @@ export default function TemplateGallery({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>2 · El estilo</span>
-          <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>
+          <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
             {shown.length} paletas con la estructura «{structure.name}»
           </span>
         </div>
@@ -539,15 +539,15 @@ export default function TemplateGallery({
                 </div>
                 <div style={{ padding: '0 3px 3px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text)', flex: 1, minWidth: 0 }}>{tpl.name}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text)', flex: 1, minWidth: 0 }}>{tpl.name}</span>
                     {applied ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: 'var(--brand-accent-ink, #D97757)', flexShrink: 0 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--brand-accent-ink, #D97757)', flexShrink: 0 }}>
                         <Icon name="checkCircle" size={11} /> {mode === 'pick' ? 'Elegida' : 'Aplicada'}
                       </span>
                     ) : (
                       <span
                         style={{
-                          fontSize: 9.5, fontWeight: 700, borderRadius: 99, padding: '1.5px 7px', flexShrink: 0,
+                          fontSize: 11, fontWeight: 600, borderRadius: 99, padding: '1px 7px', flexShrink: 0,
                           color: 'var(--u-text-4)', border: '1px solid var(--u-hair)',
                         }}
                       >
@@ -555,7 +555,7 @@ export default function TemplateGallery({
                       </span>
                     )}
                   </div>
-                  <p className="tpl-desc" style={{ fontSize: 10.5, color: 'var(--u-text-4)', lineHeight: 1.4, marginTop: 3 }}>{tpl.desc}</p>
+                  <p className="tpl-desc" style={{ fontSize: 11, color: 'var(--u-text-4)', lineHeight: 1.4, marginTop: 3 }}>{tpl.desc}</p>
                 </div>
               </button>
             );
@@ -570,7 +570,7 @@ export default function TemplateGallery({
             style={{
               alignSelf: 'center', padding: '9px 18px', borderRadius: 99, cursor: 'pointer',
               border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-              color: 'var(--u-text-2)', fontSize: 12.5, fontWeight: 700,
+              color: 'var(--u-text-2)', fontSize: 12, fontWeight: 700,
             }}
           >
             {showAll ? 'Ver menos' : `Ver los ${shown.length} estilos de «${structure.name}»`}

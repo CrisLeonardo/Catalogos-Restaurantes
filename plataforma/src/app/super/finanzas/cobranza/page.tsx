@@ -38,7 +38,7 @@ export default async function CobranzaPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
-        <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 13, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
           Periodo <strong style={{ color: 'var(--u-text)' }}>{periodLabel(period)}</strong> ·{' '}
           {fmtMoney(stats.collectedThisMonth, stats.currency)} cobrado ·{' '}
           <span style={{ color: stats.pendingTotal > 0 ? 'var(--c-warn)' : 'var(--u-text-3)' }}>
@@ -53,7 +53,7 @@ export default async function CobranzaPage() {
         <section>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
             <Icon name="alertCircle" size={16} style={{ color: 'var(--c-danger)' }} />
-            <h2 style={{ fontWeight: 650, fontSize: 15.5, color: 'var(--c-danger)', margin: 0 }}>
+            <h2 style={{ fontWeight: 600, fontSize: 15, color: 'var(--c-danger)', margin: 0 }}>
               Con mora vencida y aún activos
             </h2>
             <Badge variant="danger">{needsSuspension.length}</Badge>
@@ -103,7 +103,7 @@ export default async function CobranzaPage() {
 
       {/* Tabla */}
       <section>
-        <h2 style={{ fontWeight: 650, fontSize: 15.5, marginBottom: 12, color: 'var(--u-text)' }}>
+        <h2 style={{ fontWeight: 600, fontSize: 15, marginBottom: 12, color: 'var(--u-text)' }}>
           Restaurantes
         </h2>
         {/* `data-stack`: en el teléfono cada fila es una tarjeta con
@@ -143,7 +143,7 @@ export default async function CobranzaPage() {
                         {!r.config.active && !trial && <span style={{ color: 'var(--u-text-4)' }}> (pausado)</span>}
                       </span>
                     ) : (
-                      <span style={{ color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-sans)', fontSize: 12.5 }}>sin configurar</span>
+                      <span style={{ color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-sans)', fontSize: 12 }}>sin configurar</span>
                     )}
                   </TableCell>
                   <TableCell data-label="Mes actual">
@@ -163,10 +163,10 @@ export default async function CobranzaPage() {
                   </TableCell>
                   <TableCell data-label="Su venta 30d" className="text-right" style={{ fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>{fmtMoney(r.salesRevenue30, cur)}</TableCell>
                   <TableCell className="text-right" style={{ whiteSpace: 'nowrap' }}>
-                    <Link href={`/super/metricas/${r.restaurantId}`} style={{ fontSize: 12.5, color: 'var(--u-text-3)', textDecoration: 'none', marginRight: 12 }}>
+                    <Link href={`/super/metricas/${r.restaurantId}`} style={{ fontSize: 12, color: 'var(--u-text-3)', textDecoration: 'none', marginRight: 12 }}>
                       Métricas
                     </Link>
-                    <Link href={`/super/restaurantes/${r.restaurantId}/cobro`} style={{ fontSize: 12.5, color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
+                    <Link href={`/super/restaurantes/${r.restaurantId}/cobro`} style={{ fontSize: 12, color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
                       Gestionar
                     </Link>
                   </TableCell>

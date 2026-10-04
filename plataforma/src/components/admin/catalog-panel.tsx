@@ -172,7 +172,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
           <span
             className="shrink-0"
             style={{
-              fontSize: 11.5, fontWeight: 600,
+              fontSize: 11, fontWeight: 600,
               color: atProductLimit ? 'var(--c-danger)' : nearProductLimit ? '#fb923c' : 'var(--u-text-4)',
             }}
           >
@@ -234,7 +234,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
       )}
 
       {filtering && list.length > 0 && (
-        <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: '-4px 0 0' }}>
+        <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: '-4px 0 0' }}>
           {list.length === 1 ? '1 platillo' : `${list.length} platillos`} de {products.length}
           {' · '}
           <button type="button" onClick={clearFilters} className="press" style={{ background: 'none', border: 'none', padding: 0, color: 'var(--brand-accent-ink)', fontWeight: 600, cursor: 'pointer', font: 'inherit' }}>
@@ -330,7 +330,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                   <div style={{ minWidth: 0 }}>
                     <div
                       style={{
-                        fontWeight: 600, fontSize: 14.5,
+                        fontWeight: 600, fontSize: 14,
                         color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                       }}
                     >
@@ -338,7 +338,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                     </div>
                     <div
                       style={{
-                        fontSize: 11.5, color: 'var(--u-text-4)', whiteSpace: 'nowrap',
+                        fontSize: 11, color: 'var(--u-text-4)', whiteSpace: 'nowrap',
                         overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 300,
                       }}
                     >
@@ -378,7 +378,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                 {/* Toggle disponibilidad */}
                 <div className="catalog-cell-avail" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   {!p.is_active ? (
-                    <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--c-danger)', padding: '3px 8px', borderRadius: 'var(--radius-full)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--c-danger)', padding: '3px 8px', borderRadius: 'var(--radius-full)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)' }}>
                       Desactivado
                     </span>
                   ) : isOutOfStock(p) ? (
@@ -388,7 +388,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                     <Link
                       href={panelHref(base, '/admin/inventario')}
                       title="Repón existencias en Inventario"
-                      style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--c-warn)', padding: '3px 8px', borderRadius: 'var(--radius-full)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', textDecoration: 'none' }}
+                      style={{ fontSize: 11, fontWeight: 600, color: 'var(--c-warn)', padding: '3px 8px', borderRadius: 'var(--radius-full)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', textDecoration: 'none' }}
                     >
                       Sin existencias
                     </Link>

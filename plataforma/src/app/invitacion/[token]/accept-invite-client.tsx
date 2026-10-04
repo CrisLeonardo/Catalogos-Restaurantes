@@ -12,19 +12,9 @@ const ROLE_TEXT: Record<string, string> = {
   WAITER: 'como mesero',
 };
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-  border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)',
-  padding: '12px 14px',
-  color: 'var(--u-text)',
-  fontSize: 16,
-  outline: 'none',
-};
 
 const labelStyle: React.CSSProperties = {
-  fontSize: 11.5, color: 'var(--u-text-3)', fontWeight: 600,
+  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 600,
   letterSpacing: '0.04em', textTransform: 'uppercase',
   display: 'block', marginBottom: 6,
 };
@@ -66,10 +56,10 @@ export default function AcceptInviteClient({
         >
           <Icon name="userPlus" size={21} />
         </span>
-        <p className="t-display" style={{ fontSize: 21, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>
+        <p className="t-display" style={{ fontSize: 20, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>
           Te invitaron a {restaurantName}
         </p>
-        <p className="t-mute" style={{ fontSize: 13.5, margin: '8px 0 0', lineHeight: 1.5 }}>
+        <p className="t-mute" style={{ fontSize: 13, margin: '8px 0 0', lineHeight: 1.5 }}>
           Vas a entrar {ROLE_TEXT[role] ?? 'al equipo'} con <strong style={{ color: 'var(--u-text-2)' }}>{email}</strong>.
         </p>
       </div>
@@ -88,7 +78,7 @@ export default function AcceptInviteClient({
             {!hasAccount && (
               <div>
                 <label style={labelStyle} htmlFor="full_name">Tu nombre</label>
-                <input id="full_name" name="full_name" required placeholder="Tu nombre y apellido" style={inputStyle} />
+                <input id="full_name" name="full_name" required placeholder="Tu nombre y apellido" className="adm-field adm-field-lg" />
               </div>
             )}
 
@@ -103,9 +93,9 @@ export default function AcceptInviteClient({
                 required
                 minLength={hasAccount ? undefined : 8}
                 autoComplete={hasAccount ? 'current-password' : 'new-password'}
-                style={inputStyle}
+                className="adm-field adm-field-lg"
               />
-              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '6px 0 0', lineHeight: 1.45 }}>
+              <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: '6px 0 0', lineHeight: 1.45 }}>
                 {hasAccount
                   ? 'Ya tienes cuenta en Leogin con ese correo: entra con la contraseña de siempre.'
                   : 'Mínimo 8 caracteres. Es tuya: nadie del restaurante la conoce.'}
@@ -148,7 +138,7 @@ export default function AcceptInviteClient({
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '18px 0' }}>
             <span style={{ flex: 1, height: 1, background: 'var(--u-hair-2)' }} />
-            <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', whiteSpace: 'nowrap' }}>o</span>
+            <span style={{ fontSize: 11, color: 'var(--u-text-4)', whiteSpace: 'nowrap' }}>o</span>
             <span style={{ flex: 1, height: 1, background: 'var(--u-hair-2)' }} />
           </div>
           <GoogleStaffButton
@@ -156,7 +146,7 @@ export default function AcceptInviteClient({
             label="Continuar con Google"
             next={`/invitacion/${encodeURIComponent(token)}`}
           />
-          <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.45 }}>
+          <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.45 }}>
             Tiene que ser la cuenta de <strong style={{ color: 'var(--u-text-3)' }}>{email}</strong>:
             la invitación es para ese correo.
           </p>
@@ -164,7 +154,7 @@ export default function AcceptInviteClient({
       )}
 
       {sessionEmail && !sessionMatches && (
-        <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '14px 0 0', textAlign: 'center', lineHeight: 1.45 }}>
+        <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: '14px 0 0', textAlign: 'center', lineHeight: 1.45 }}>
           Ahora mismo tienes la sesión iniciada como {sessionEmail}. La invitación es para {email}.
         </p>
       )}

@@ -37,11 +37,6 @@ export default function DateRangeForm({ from, to, basePath = '/admin/finanzas' }
     setF(nf); setT(nt); go(nf, nt);
   }
 
-  const inputStyle: React.CSSProperties = {
-    background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
-    borderRadius: 'var(--radius-md)', padding: '8px 11px', color: 'var(--u-text)', fontSize: 13,
-    outline: 'none', fontFamily: 'var(--ui-font-mono)',
-  };
 
   /* Las dos casillas de fecha no tenían nombre: eran dos recuadros iguales
      separados por una flecha. Visualmente se adivina; para cualquier lectura
@@ -56,12 +51,12 @@ export default function DateRangeForm({ from, to, basePath = '/admin/finanzas' }
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <label htmlFor="rango-desde" style={{ fontSize: 11.5, color: 'var(--u-text-4)', fontWeight: 600 }}>Desde</label>
-        <input id="rango-desde" type="date" value={f} max={t} onChange={(e) => setF(e.target.value)} style={inputStyle} />
+        <label htmlFor="rango-desde" style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 600 }}>Desde</label>
+        <input id="rango-desde" type="date" value={f} max={t} onChange={(e) => setF(e.target.value)} className="adm-field adm-field-sm adm-field-mono adm-field-auto" />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <label htmlFor="rango-hasta" style={{ fontSize: 11.5, color: 'var(--u-text-4)', fontWeight: 600 }}>Hasta</label>
-        <input id="rango-hasta" type="date" value={t} min={f} onChange={(e) => setT(e.target.value)} style={inputStyle} />
+        <label htmlFor="rango-hasta" style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 600 }}>Hasta</label>
+        <input id="rango-hasta" type="date" value={t} min={f} onChange={(e) => setT(e.target.value)} className="adm-field adm-field-sm adm-field-mono adm-field-auto" />
       </div>
       {/* Neutro: en negro competía con el periodo elegido en naranja, dos
           colores para el mismo control (NEG-03). */}
@@ -81,7 +76,7 @@ export default function DateRangeForm({ from, to, basePath = '/admin/finanzas' }
               className={activo ? 'press' : 'press glass-quiet'}
               style={{
                 padding: '10px 14px', minHeight: 40, borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
-                fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap',
+                fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
                 background: activo ? 'var(--adm-accent-fill, var(--brand-accent))' : undefined,
                 color: activo ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
                 boxShadow: activo ? '0 4px 14px color-mix(in srgb, var(--brand-accent) 28%, transparent)' : undefined,

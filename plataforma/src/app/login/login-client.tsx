@@ -66,16 +66,6 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
   // identidad — justo donde hace falta.
   useEffect(() => { getDeviceId(); }, []);
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-    border: '1px solid var(--u-hair-2)',
-    borderRadius: 'var(--radius-md)',
-    padding: '12px 14px',
-    color: 'var(--u-text)',
-    fontSize: 16,
-    outline: 'none',
-  };
 
   const hasTenant = !!restaurantName;
 
@@ -194,7 +184,7 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
                 borderRadius: 'var(--radius-md)',
                 background: 'rgba(220,50,50,0.12)',
                 border: '1px solid rgba(220,50,50,0.25)',
-                color: 'var(--c-danger)', fontSize: 13.5,
+                color: 'var(--c-danger)', fontSize: 13,
               }}
             >
               No pudimos completar el acceso con Google. Inténtalo otra vez o entra con tu correo.
@@ -209,7 +199,7 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
               <GoogleStaffButton />
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18 }}>
                 <span style={{ flex: 1, height: 1, background: 'var(--u-hair-2)' }} />
-                <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', whiteSpace: 'nowrap' }}>o con tu correo</span>
+                <span style={{ fontSize: 11, color: 'var(--u-text-4)', whiteSpace: 'nowrap' }}>o con tu correo</span>
                 <span style={{ flex: 1, height: 1, background: 'var(--u-hair-2)' }} />
               </div>
             </div>
@@ -259,10 +249,10 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
                 spellCheck={false}
                 autoFocus
                 placeholder={slug ? 'tu@email.com  ·  o tu usuario' : 'tu@email.com  ·  o carlos@turestaurante'}
-                style={inputStyle}
+                className="adm-field adm-field-lg"
               />
               {!slug && (
-                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 6, lineHeight: 1.5 }}>
+                <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 6, lineHeight: 1.5 }}>
                   ¿Te dieron un usuario? Escríbelo con la dirección de tu
                   restaurante detrás — <strong>carlos@turestaurante</strong> — o entra
                   directo desde la dirección de tu local.
@@ -291,7 +281,7 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
                 type="password"
                 required
                 autoComplete="current-password"
-                style={inputStyle}
+                className="adm-field adm-field-lg"
               />
             </div>
 
@@ -335,7 +325,7 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
             <a
               href="/admin/recuperar"
               style={{
-                fontSize: 12.5, color: 'var(--u-text-3)', textAlign: 'center',
+                fontSize: 12, color: 'var(--u-text-3)', textAlign: 'center',
                 textDecoration: 'none', marginTop: 2,
               }}
             >
@@ -410,7 +400,7 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
               <Icon name="key" size={17} />
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontSize: 13.5, fontWeight: 700, color: 'var(--u-text-2)' }}>
+              <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--u-text-2)' }}>
                 El PIN solo funciona en los aparatos del local
               </span>
               <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)', marginTop: 2, lineHeight: 1.5 }}>

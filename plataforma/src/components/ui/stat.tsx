@@ -85,11 +85,11 @@ function Stat({
 }) {
   return (
     <div data-slot="stat" className={cn('min-w-0 px-4 py-3.5 md:px-5.5 md:py-4.5', className)} {...props}>
-      <div className="text-[13px] text-adm-text-3 md:text-[13.5px]">{label}</div>
+      <div className="text-[13px] text-adm-text-3 md:text-[13px]">{label}</div>
       {/* En el teléfono la cifra baja a 23 px: con dos columnas, un importe
           como "Q7,920.00" a 28 px se sale de su celda. */}
       <div
-        className="t-mono mt-1.5 truncate text-[23px] leading-tight font-semibold text-adm-text md:text-[length:var(--stat-fs,28px)]"
+        className="t-mono mt-1.5 truncate text-[22px] leading-tight font-semibold text-adm-text md:text-[length:var(--stat-fs,28px)]"
         style={tone ? { color: TONE_COLOR[tone] } : undefined}
       >
         {value}
@@ -130,7 +130,7 @@ function StatStrip({ items, className }: { items: StripItem[]; className?: strin
           >
             {it.value}
           </span>
-          <span className="text-[12.5px] text-adm-text-3">{it.label}</span>
+          <span className="text-[12px] text-adm-text-3">{it.label}</span>
         </span>
       ))}
     </div>

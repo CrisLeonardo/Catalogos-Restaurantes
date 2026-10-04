@@ -78,7 +78,7 @@ export default function SuperShell({ children }: { children: React.ReactNode }) 
             <LeoginMark size={24} />
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14.5, color: 'var(--u-text)', lineHeight: 1, whiteSpace: 'nowrap' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14, color: 'var(--u-text)', lineHeight: 1, whiteSpace: 'nowrap' }}>
               Leogin
             </div>
             <div className="t-kicker" style={{ fontSize: 11, marginTop: 3, color: 'var(--brand-accent-ink)' }}>
@@ -113,7 +113,7 @@ export default function SuperShell({ children }: { children: React.ReactNode }) 
             <Icon name="key" size={16} />
           </div>
           <div className="admin-usermeta" style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 600, fontSize: 12.5, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               Super Admin
             </div>
             <div style={{ fontSize: 11, color: 'var(--u-text-3)' }}>Toda la plataforma</div>

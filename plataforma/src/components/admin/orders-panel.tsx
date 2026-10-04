@@ -415,7 +415,7 @@ function OrdersPanelInner({
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, whiteSpace: 'nowrap',
                     padding: '7px 13px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
-                    fontSize: 12.5, fontWeight: 600,
+                    fontSize: 12, fontWeight: 600,
                     border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
                     background: on ? 'var(--adm-accent-fill, var(--brand-accent))' : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
                     color: on ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
@@ -457,7 +457,7 @@ function OrdersPanelInner({
                     <div className="orders-col-head">
                       {/* Encabezado de grupo como el resto del panel, no en letra de
                           cartel en mayúsculas (auditoría 2026-10-02, PED-04/T-10). */}
-                      <h2 style={{ fontSize: 15.5, fontWeight: 650, color: 'var(--u-text)', margin: 0 }}>
+                      <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--u-text)', margin: 0 }}>
                         {stage.title}
                         <span style={{ marginLeft: 8, fontSize: 13, color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>
                           {orders.length}
@@ -481,7 +481,7 @@ function OrdersPanelInner({
           {servedOpen.length > 0 && (
             <section style={{ marginBottom: 26 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
-                <h2 style={{ fontSize: 15.5, fontWeight: 650, color: 'var(--u-text)', margin: 0 }}>
+                <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--u-text)', margin: 0 }}>
                   Servidos, mesa abierta
                   <span style={{ marginLeft: 8, fontSize: 13, color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>
                     {servedOpen.length}

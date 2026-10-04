@@ -86,7 +86,7 @@ export default async function ResumenPage() {
           <div key={b.id} style={{ padding: '12px 18px', borderTop: '1px solid var(--u-hair)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 140 }}>
               <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>{b.name}</div>
-              <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2 }}>
+              <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>
                 {b.todayOrders} pedidos · ticket {money(b.todayTicket)}
                 {b.lowStock > 0 ? ` · ${b.lowStock} stock bajo` : ''}
                 {b.outStock > 0 ? ` · ${b.outStock} ${b.outStock === 1 ? 'agotado' : 'agotados'}` : ''}

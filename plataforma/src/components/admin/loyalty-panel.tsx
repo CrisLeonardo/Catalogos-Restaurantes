@@ -31,10 +31,6 @@ interface Props {
   products: RewardProduct[];
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-};
 const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 type Tab = 'miembros' | 'recompensas' | 'config';
@@ -99,13 +95,13 @@ function SettingsForm({ restaurantId, settings, isNew }: { restaurantId: string;
     <>
     <Card className="flex flex-col gap-3.5 p-4">
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-        <div><label style={labelStyle}>Puntos otorgados</label><input style={inputStyle} type="number" inputMode="decimal" min="0" step="0.1" value={p.earn_rate} onChange={(e) => set('earn_rate', parseFloat(e.target.value) || 0)} /></div>
-        <div><label style={labelStyle}>Por cada Q gastados</label><input style={inputStyle} type="number" inputMode="decimal" min="0.01" step="1" value={p.earn_amount} onChange={(e) => set('earn_amount', parseFloat(e.target.value) || 0)} /></div>
-        <div><label style={labelStyle}>Mínimo para canjear (puntos)</label><input style={inputStyle} type="number" inputMode="decimal" min="0" step="1" value={p.min_redeem} onChange={(e) => set('min_redeem', parseInt(e.target.value, 10) || 0)} /></div>
-        <div><label style={labelStyle}>Puntos de bienvenida</label><input style={inputStyle} type="number" inputMode="decimal" min="0" step="1" value={p.signup_bonus} onChange={(e) => set('signup_bonus', parseInt(e.target.value, 10) || 0)} /></div>
+        <div><label style={labelStyle}>Puntos otorgados</label><input className="adm-field" type="number" inputMode="decimal" min="0" step="0.1" value={p.earn_rate} onChange={(e) => set('earn_rate', parseFloat(e.target.value) || 0)} /></div>
+        <div><label style={labelStyle}>Por cada Q gastados</label><input className="adm-field" type="number" inputMode="decimal" min="0.01" step="1" value={p.earn_amount} onChange={(e) => set('earn_amount', parseFloat(e.target.value) || 0)} /></div>
+        <div><label style={labelStyle}>Mínimo para canjear (puntos)</label><input className="adm-field" type="number" inputMode="decimal" min="0" step="1" value={p.min_redeem} onChange={(e) => set('min_redeem', parseInt(e.target.value, 10) || 0)} /></div>
+        <div><label style={labelStyle}>Puntos de bienvenida</label><input className="adm-field" type="number" inputMode="decimal" min="0" step="1" value={p.signup_bonus} onChange={(e) => set('signup_bonus', parseInt(e.target.value, 10) || 0)} /></div>
       </div>
 
-      <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13.5, color: 'var(--u-text-2)' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--u-text-2)' }}>
         <Switch checked={p.rewards_enabled} onCheckedChange={(v) => set('rewards_enabled', v)} />
         {/* En un <span>: sueltos, el texto y el <strong> eran tres hijos del
             flex y la frase se partía en columnas en el teléfono. */}
@@ -118,7 +114,7 @@ function SettingsForm({ restaurantId, settings, isNew }: { restaurantId: string;
         Los puntos se acumulan cuando el pedido se marca <strong>entregado</strong>.
       </p>
       {/* Plegado: es la letra pequeña del programa, se lee una vez. */}
-      <details style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+      <details style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
         <summary style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--u-text-2)', width: 'fit-content' }}>
           ¿Quién acumula puntos?
         </summary>
@@ -208,13 +204,13 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
               onValueChange={pickProduct}
             />
           </div>
-          <div><label style={labelStyle}>Nombre visible</label><input style={inputStyle} value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Ej. Hamburguesa gratis" /></div>
-          <div><label style={labelStyle}>Costo en puntos</label><input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="decimal" min="1" step="1" value={form.points_cost} onChange={(e) => set('points_cost', parseInt(e.target.value, 10) || 0)} /></div>
+          <div><label style={labelStyle}>Nombre visible</label><input className="adm-field" value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Ej. Hamburguesa gratis" /></div>
+          <div><label style={labelStyle}>Costo en puntos</label><input className="adm-field" style={{ textAlign: 'right' }} type="number" inputMode="decimal" min="1" step="1" value={form.points_cost} onChange={(e) => set('points_cost', parseInt(e.target.value, 10) || 0)} /></div>
         </div>
-        <div><label style={labelStyle}>Descripción (opcional)</label><input style={inputStyle} value={form.description ?? ''} onChange={(e) => set('description', e.target.value)} placeholder="Detalle breve de la recompensa" /></div>
+        <div><label style={labelStyle}>Descripción (opcional)</label><input className="adm-field" value={form.description ?? ''} onChange={(e) => set('description', e.target.value)} placeholder="Detalle breve de la recompensa" /></div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-          <div><label style={labelStyle}>Stock límite (vacío = ilimitado)</label><input style={inputStyle} type="number" inputMode="decimal" min="0" step="1" value={form.stock ?? ''} onChange={(e) => set('stock', e.target.value === '' ? null : parseInt(e.target.value, 10))} /></div>
-          <div><label style={labelStyle}>Máx. por cliente (vacío = sin límite)</label><input style={inputStyle} type="number" inputMode="decimal" min="1" step="1" value={form.per_customer_limit ?? ''} onChange={(e) => set('per_customer_limit', e.target.value === '' ? null : parseInt(e.target.value, 10))} /></div>
+          <div><label style={labelStyle}>Stock límite (vacío = ilimitado)</label><input className="adm-field" type="number" inputMode="decimal" min="0" step="1" value={form.stock ?? ''} onChange={(e) => set('stock', e.target.value === '' ? null : parseInt(e.target.value, 10))} /></div>
+          <div><label style={labelStyle}>Máx. por cliente (vacío = sin límite)</label><input className="adm-field" type="number" inputMode="decimal" min="1" step="1" value={form.per_customer_limit ?? ''} onChange={(e) => set('per_customer_limit', e.target.value === '' ? null : parseInt(e.target.value, 10))} /></div>
         </div>
         <label style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', fontSize: 13, color: 'var(--u-text-2)' }}>
           <Switch checked={form.active !== false} onCheckedChange={(v) => set('active', v)} />
@@ -243,7 +239,7 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{r.title}</div>
-                <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2 }}>
+                <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>
                   {r.product_name ? r.product_name : 'Sin producto'}
                   {r.stock != null && ` · stock ${r.stock}`}
                   {r.per_customer_limit != null && ` · máx ${r.per_customer_limit}/cliente`}
@@ -296,7 +292,7 @@ function MembersTab({ restaurantId, accounts, customers, settings }: { restauran
               onValueChange={setCustomerId}
             />
           </div>
-          <div><label style={labelStyle}>Puntos</label><input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="numeric" min="1" step="1" value={points} onChange={(e) => setPoints(e.target.value)} /></div>
+          <div><label style={labelStyle}>Puntos</label><input className="adm-field" style={{ textAlign: 'right' }} type="number" inputMode="numeric" min="1" step="1" value={points} onChange={(e) => setPoints(e.target.value)} /></div>
           <div>
             <label style={labelStyle}>Tipo</label>
             <Select
@@ -306,7 +302,7 @@ function MembersTab({ restaurantId, accounts, customers, settings }: { restauran
             />
           </div>
         </div>
-        <div><label style={labelStyle}>Nota (opcional)</label><input style={inputStyle} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Motivo del ajuste" /></div>
+        <div><label style={labelStyle}>Nota (opcional)</label><input className="adm-field" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Motivo del ajuste" /></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Button onClick={apply} disabled={isPending || !customerId} size="sm" className="rounded-adm-full">
             {isPending ? '…' : tipo === 'REDEEM' ? 'Restar puntos' : 'Sumar puntos'}

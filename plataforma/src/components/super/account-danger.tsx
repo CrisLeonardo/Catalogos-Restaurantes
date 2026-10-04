@@ -60,7 +60,7 @@ export default function AccountDanger({
       <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <Icon name="alertCircle" size={17} style={{ color: 'var(--c-danger)', flexShrink: 0, marginTop: 2 }} />
         <div style={{ flex: '1 1 260px', minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--u-text)' }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>
             {suspendida ? 'Reactivar la cuenta' : 'Suspender la cuenta'}
           </div>
           <p style={{ fontSize: 13, color: 'var(--u-text-4)', margin: '3px 0 0', lineHeight: 1.55 }}>
@@ -82,7 +82,7 @@ export default function AccountDanger({
         <div
           role="status"
           style={{
-            display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, lineHeight: 1.55,
+            display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12, lineHeight: 1.55,
             color: 'error' in state ? 'var(--c-danger)' : 'var(--c-ok)',
           }}
         >
@@ -97,7 +97,7 @@ export default function AccountDanger({
       <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <Icon name="trash" size={17} style={{ color: 'var(--c-danger)', flexShrink: 0, marginTop: 2 }} />
         <div style={{ flex: '1 1 260px', minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--u-text)' }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>
             Borrar la cuenta
           </div>
           <p style={{ fontSize: 13, color: 'var(--u-text-4)', margin: '3px 0 0', lineHeight: 1.55 }}>
@@ -111,7 +111,7 @@ export default function AccountDanger({
                 marginTop: 10, padding: '10px 12px', borderRadius: 'var(--radius-md)',
                 background: 'color-mix(in srgb, var(--c-danger) 10%, transparent)',
                 border: '1px solid color-mix(in srgb, var(--c-danger) 26%, transparent)',
-                fontSize: 12.5, lineHeight: 1.6, color: 'var(--u-text-2, var(--u-text))',
+                fontSize: 12, lineHeight: 1.6, color: 'var(--u-text-2, var(--u-text))',
               }}
             >
               No se puede todavía: es la <strong>única persona dueña</strong> de{' '}

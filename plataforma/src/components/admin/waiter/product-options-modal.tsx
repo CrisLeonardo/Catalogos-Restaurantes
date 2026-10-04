@@ -301,7 +301,7 @@ function ProductOptionsModal({
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 140))}
               placeholder="Sin cebolla, término medio…"
-              style={{ background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', padding: '12px 14px', color: 'var(--u-text)', fontSize: 15, outline: 'none', width: '100%' }}
+              className="adm-field adm-field-lg" style={{ borderRadius: 'var(--radius-lg)' }}
             />
           </div>
         </div>

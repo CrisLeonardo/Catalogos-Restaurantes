@@ -114,7 +114,7 @@ export default async function AdminFinanzasPage({
       </Section>
 
       {report.marginPct == null && report.orders > 0 && (
-        <Card className="p-3.5" style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+        <Card className="p-3.5" style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
           Aún no hay costos capturados en tus productos: la utilidad y el margen aparecerán
           cuando pongas el <strong>Costo</strong> en el editor de cada platillo.
         </Card>
@@ -125,7 +125,7 @@ export default async function AdminFinanzasPage({
           de los platillos que SÍ tienen costo, y hay que decirlo con la cifra
           (auditoría 2026-10-02, NEG-01). */}
       {report.marginPct != null && report.productRevenue > 0 && report.costedRevenue < report.productRevenue * 0.95 && (
-        <Card className="p-3.5" style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+        <Card className="p-3.5" style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
           La utilidad y el margen solo cuentan los platillos que tienen costo cargado:{' '}
           <strong>{money(report.costedRevenue)}</strong> de <strong>{money(report.productRevenue)}</strong> vendidos
           ({Math.round((report.costedRevenue / report.productRevenue) * 100)}%). Pon el <strong>Costo</strong> en
@@ -188,7 +188,7 @@ function SplitCard({ title, rows, total }: { title: string; rows: Split[]; total
         const pct = total > 0 ? (r.revenue / total) * 100 : 0;
         return (
           <div key={r.key} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
               <span style={{ color: 'var(--u-text-2)' }}>{r.label}</span>
               <span style={{ color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{money(r.revenue)} · {pct.toFixed(0)}%</span>
             </div>

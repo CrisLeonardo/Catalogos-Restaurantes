@@ -55,9 +55,10 @@ function Select({
         data-slot="select-trigger"
         aria-label={ariaLabel}
         className={cn(
-          'flex h-10 w-full items-center justify-between gap-2 rounded-adm-lg border border-adm-border bg-adm-card px-3.5 text-[13.5px] text-adm-text outline-none transition-colors',
-          'hover:border-adm-border-2 focus-visible:border-adm-accent-500 focus-visible:ring-2 focus-visible:ring-adm-accent-500/25',
-          'disabled:pointer-events-none disabled:opacity-50 data-[popup-open]:border-adm-accent-500',
+          // Se ve como los demás campos (`.adm-field`, T-26): antes era una
+          // ficha blanca con borde junto a campos con relleno gris.
+          'adm-field flex items-center justify-between gap-2 text-left cursor-pointer',
+          'disabled:pointer-events-none',
           className
         )}
       >

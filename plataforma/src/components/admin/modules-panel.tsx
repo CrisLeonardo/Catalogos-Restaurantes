@@ -469,7 +469,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
         </Section>
       )}
 
-      <p className="px-4 text-[12.5px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
+      <p className="px-4 text-[12px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
         ¿Tienes varias sucursales? Se unen en un panel de grupo con métricas
         consolidadas.{' '}
         <Link href={panelHref(base, "/admin/ayuda")} className="tap44 font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>

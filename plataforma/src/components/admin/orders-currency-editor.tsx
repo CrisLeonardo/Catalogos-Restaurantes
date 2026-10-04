@@ -70,13 +70,6 @@ function ejemploLocale(locale: string): string {
 }
 
 /** Campo de una fila: corto y a la derecha, donde va el valor. */
-const fieldStyle: React.CSSProperties = {
-  background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-  border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)',
-  padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-  minHeight: 40,
-};
 
 /** Fila con interruptor. */
 function ToggleRow({ label, desc, value, onChange }: {
@@ -107,8 +100,7 @@ function NumberRow({ label, desc, value, min, max, suffix, onChange }: {
             onChange(n);
           }}
           aria-label={label}
-          className="t-mono"
-          style={{ ...fieldStyle, width: 72, textAlign: 'center', padding: '8px 6px' }}
+          className="adm-field adm-field-auto adm-field-mono" style={{ width: 72, textAlign: 'center', padding: '8px 6px' }}
         />
         {suffix && <span className="text-[13px] text-adm-text-3">{suffix}</span>}
       </div>
@@ -164,8 +156,7 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
             <input
               type="text" value={patch.currencySymbol} aria-label="Símbolo de la moneda"
               onChange={(e) => set('currencySymbol', e.target.value)}
-              className="t-mono"
-              style={{ ...fieldStyle, width: 72, textAlign: 'center' }}
+              className="adm-field adm-field-auto adm-field-mono" style={{ width: 72, textAlign: 'center' }}
             />
           </ListRow>
           <ListRow>
@@ -198,8 +189,7 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
                   value={patch.deliveryFee}
                   onChange={(e) => set('deliveryFee', Math.max(0, Math.min(10000, parseFloat(e.target.value) || 0)))}
                   aria-label="Envío a domicilio"
-                  className="t-mono"
-                  style={{ ...fieldStyle, width: 84, textAlign: 'center', padding: '8px 6px' }}
+                  className="adm-field adm-field-auto adm-field-mono" style={{ width: 84, textAlign: 'center', padding: '8px 6px' }}
                 />
                 {patch.currencyPosition === 'suffix' && <span className="text-[13px] text-adm-text-3">{sym}</span>}
               </div>
@@ -347,7 +337,7 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
             <select
               value={patch.locale} aria-label="Formato de números"
               onChange={(e) => set('locale', e.target.value)}
-              style={{ ...fieldStyle, width: 'auto', maxWidth: 190 }}
+              className="adm-field adm-field-auto" style={{ width: 'auto', maxWidth: 190 }}
             >
               {LOCALES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
               {!LOCALES.some((l) => l.value === patch.locale) && patch.locale && (
@@ -364,7 +354,7 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
         </List>
       </Section>
 
-      <p className="px-4 text-[12.5px] leading-snug text-adm-text-3">
+      <p className="px-4 text-[12px] leading-snug text-adm-text-3">
         Los modos de pedido (domicilio, para llevar, comer en local) se
         encienden en Funciones. La cantidad de mesas y sus QR, en Ajustes › Salón.
       </p>

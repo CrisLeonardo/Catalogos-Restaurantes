@@ -68,7 +68,7 @@ export default function LoginWelcomeToast({
         <Icon name="sparkle" size={18} />
       </span>
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           Bienvenido a {restaurantName}
         </div>
         <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 1 }}>

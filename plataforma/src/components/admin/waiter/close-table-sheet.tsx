@@ -128,10 +128,10 @@ export default function CloseTableSheet({
         style={{ width: '100%', maxWidth: 460, padding: '22px 20px 26px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}
       >
         <div>
-          <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--u-text)' }}>
+          <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--u-text)' }}>
             Cerrar la mesa {tableNumber}
           </div>
-          <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 5, lineHeight: 1.45 }}>
+          <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 5, lineHeight: 1.45 }}>
             Se cobran {money(total)} y la mesa queda libre. Los pedidos se cierran y ya no se pueden editar.
           </div>
         </div>
@@ -187,14 +187,8 @@ export default function CloseTableSheet({
                     inputMode="decimal"
                     placeholder="0.00"
                     aria-label={`Cuánto se pagó en ${PAYMENT_LABEL[m].toLowerCase()}`}
-                    style={{
-                      width: 130, height: 46, padding: '0 12px', borderRadius: 'var(--radius-md)', outline: 'none',
-                      border: '1px solid var(--u-hair-2)',
-                      background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-                      color: 'var(--u-text)', fontFamily: 'var(--ui-font-mono)',
-                      fontVariantNumeric: 'tabular-nums',
-                      fontSize: 17, fontWeight: 600, textAlign: 'right',
-                    }}
+                    className="adm-field adm-field-mono"
+                    style={{ width: 130, height: 46, padding: '0 12px', fontSize: 16, fontWeight: 600, textAlign: 'right' }}
                   />
                 </label>
               ))}
@@ -213,7 +207,7 @@ export default function CloseTableSheet({
                     : 'var(--u-hair)'}`,
                 }}
               >
-                <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text-2)' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)' }}>
                   {mixtoListo ? 'Cuadra' : faltaMixto > 0 ? 'Falta' : 'Sobra'}
                 </span>
                 <span className="t-mono" style={{ fontSize: 18, fontWeight: 700, color: 'var(--u-text)' }}>
@@ -257,12 +251,10 @@ export default function CloseTableSheet({
               inputMode="decimal"
               placeholder={money(total)}
               aria-label="Con cuánto pagó el cliente"
+              className="adm-field adm-field-mono"
+              aria-invalid={faltaEfectivo || undefined}
               style={{
-                width: '100%', height: 52, padding: '0 14px', borderRadius: 'var(--radius-lg)', outline: 'none',
-                border: `1.5px solid ${faltaEfectivo ? 'var(--c-danger)' : 'var(--u-hair-2)'}`,
-                background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-                color: 'var(--u-text)', fontFamily: 'var(--ui-font-mono)',
-                fontVariantNumeric: 'tabular-nums',
+                height: 52, padding: '0 14px', borderRadius: 'var(--radius-lg)', borderWidth: 1.5,
                 /* Piso de 16 px: por debajo, Safari amplía la página al
                    enfocar el campo y el mesero pierde de vista el vuelto. */
                 fontSize: 20, fontWeight: 600, textAlign: 'right',
@@ -331,7 +323,7 @@ export default function CloseTableSheet({
             style={{
               width: '100%', minHeight: 50, padding: '14px', borderRadius: 'var(--radius-lg)', border: 'none',
               cursor: busy || faltaEfectivo ? 'not-allowed' : 'pointer',
-              fontWeight: 700, fontSize: 15.5,
+              fontWeight: 700, fontSize: 15,
               opacity: busy || faltaEfectivo || (mixto && (!mixtoListo || sobraNoEfectivo)) ? 0.55 : 1,
             }}
           >
@@ -362,6 +354,6 @@ export default function CloseTableSheet({
 const chipBtn: React.CSSProperties = {
   minHeight: 38, padding: '0 14px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
   border: '1px solid var(--u-hair-2)', background: 'none',
-  color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 600,
+  color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600,
   fontVariantNumeric: 'tabular-nums',
 };

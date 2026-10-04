@@ -204,7 +204,7 @@ export default async function AdminAjustesPage() {
           <Icon name="settings" size={20} />
         </span>
         <div className="text-[15px] font-semibold text-adm-text">Aquí no hay nada para ti</div>
-        <p className="max-w-[46ch] text-[13.5px] leading-snug text-adm-text-3">
+        <p className="max-w-[46ch] text-[13px] leading-snug text-adm-text-3">
           Los ajustes del restaurante los lleva quien tenga el permiso. Si necesitas
           cambiar algo de esta pantalla, pídeselo a la persona dueña de la cuenta.
         </p>

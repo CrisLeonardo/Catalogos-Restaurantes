@@ -48,7 +48,7 @@ export function Label({ children, action, onAction, aside }: {
           onClick={onAction}
           style={{
             border: 'none', background: 'none', cursor: 'pointer', padding: 0,
-            fontSize: 12.5, fontWeight: 600, color: 'var(--brand-accent-ink)',
+            fontSize: 12, fontWeight: 600, color: 'var(--brand-accent-ink)',
           }}
         >
           {action}
@@ -98,7 +98,7 @@ export function Row({ lead, title, sub, right, trail, onClick, pad = '12px 16px'
     <>
       {lead}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14.5, fontWeight: 500, color: 'var(--u-text)' }}>{title}</div>
+        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--u-text)' }}>{title}</div>
         {sub ? <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 1, lineHeight: 1.35 }}>{sub}</div> : null}
       </div>
       {right ? <div style={{ flexShrink: 0, textAlign: 'right' }}>{right}</div> : null}

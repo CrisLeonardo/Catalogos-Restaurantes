@@ -72,16 +72,6 @@ function matchedPreset(days: Record<DayKey, DayState>): string | null {
   return PRESETS.find((p) => p.open === first.open && p.close === first.close)?.key ?? null;
 }
 
-const inputStyle: React.CSSProperties = {
-  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-  border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)',
-  padding: '7px 9px',
-  color: 'var(--u-text)',
-  fontSize: 13.5,
-  outline: 'none',
-  fontFamily: 'var(--ui-font-mono)',
-};
 
 export default function CategorySchedule({ defaultValue }: { defaultValue: WeeklyHours | null }) {
   const hasInitial = !!defaultValue && Object.keys(defaultValue).length > 0;
@@ -116,7 +106,7 @@ export default function CategorySchedule({ defaultValue }: { defaultValue: Weekl
 
   const chip = (active: boolean): React.CSSProperties => ({
     display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 'var(--radius-full)',
-    cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+    cursor: 'pointer', fontSize: 12, fontWeight: 600,
     border: `1px solid ${active ? 'transparent' : 'var(--u-hair-2)'}`,
     background: active ? 'var(--u-text)' : 'transparent',
     color: active ? 'var(--brand-bg)' : 'var(--u-text-2)',
@@ -129,7 +119,7 @@ export default function CategorySchedule({ defaultValue }: { defaultValue: Weekl
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
         <Icon name="clock" size={15} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text)' }}>Disponibilidad por horario</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text)' }}>Disponibilidad por horario</div>
           <div style={{ fontSize: 11, color: 'var(--u-text-4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {enabled && summary ? summary : 'Disponible todo el día'}
           </div>
@@ -176,7 +166,7 @@ export default function CategorySchedule({ defaultValue }: { defaultValue: Weekl
                     padding: '6px 9px', borderRadius: 'var(--radius-md)', cursor: 'pointer', flexShrink: 0,
                     background: d.on ? 'color-mix(in srgb, var(--u-text) 7%, transparent)' : 'transparent',
                     border: `1px solid ${d.on ? 'var(--u-hair-2)' : 'var(--u-hair)'}`,
-                    color: d.on ? 'var(--u-text)' : 'var(--u-text-4)', fontSize: 12.5, fontWeight: 600,
+                    color: d.on ? 'var(--u-text)' : 'var(--u-text-4)', fontSize: 12, fontWeight: 600,
                   }}
                 >
                   <span style={{ width: 7, height: 7, borderRadius: 'var(--radius-full)', flexShrink: 0, background: d.on ? 'var(--c-ok)' : 'var(--u-hair-2)' }} />
@@ -184,12 +174,12 @@ export default function CategorySchedule({ defaultValue }: { defaultValue: Weekl
                 </button>
                 {d.on ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <input type="time" value={d.intervals[0].open} onChange={(e) => setIv(day, 0, { open: e.target.value })} style={inputStyle} aria-label={`Inicio ${DAY_LABELS[day]}`} />
-                    <span style={{ color: 'var(--u-text-4)', fontSize: 12.5 }}>a</span>
-                    <input type="time" value={d.intervals[0].close} onChange={(e) => setIv(day, 0, { close: e.target.value })} style={inputStyle} aria-label={`Fin ${DAY_LABELS[day]}`} />
+                    <input type="time" value={d.intervals[0].open} onChange={(e) => setIv(day, 0, { open: e.target.value })} className="adm-field adm-field-sm adm-field-mono adm-field-auto" aria-label={`Inicio ${DAY_LABELS[day]}`} />
+                    <span style={{ color: 'var(--u-text-4)', fontSize: 12 }}>a</span>
+                    <input type="time" value={d.intervals[0].close} onChange={(e) => setIv(day, 0, { close: e.target.value })} className="adm-field adm-field-sm adm-field-mono adm-field-auto" aria-label={`Fin ${DAY_LABELS[day]}`} />
                   </div>
                 ) : (
-                  <span style={{ fontSize: 12.5, color: 'var(--u-text-4)' }}>No disponible</span>
+                  <span style={{ fontSize: 12, color: 'var(--u-text-4)' }}>No disponible</span>
                 )}
               </div>
             );

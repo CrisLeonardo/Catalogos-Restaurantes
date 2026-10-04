@@ -240,7 +240,7 @@ export default function SalonCanvas({
                             {vistas.length - i}
                           </span>
                         </span>
-                        <span style={{ fontSize: 12.5, fontWeight: 400, color: 'var(--u-text-3)' }}>Toca una para sentar</span>
+                        <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--u-text-3)' }}>Toca una para sentar</span>
                       </div>
                     )}
                     <TableCard
@@ -283,14 +283,14 @@ export default function SalonCanvas({
   return (
     <div className="salon-floor">
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', fontSize: 12.5, color: 'var(--u-text-3)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--u-text-3)' }}>
           {levels.length > 1 && levels.map((l) => (
             <button
               key={l.id}
               type="button"
               onClick={() => setNivel(l.id)}
               style={{
-                border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 12.5,
+                border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 12,
                 fontWeight: l.id === nivel ? 600 : 400,
                 color: l.id === nivel ? 'var(--u-text-2)' : 'var(--u-text-4)',
               }}

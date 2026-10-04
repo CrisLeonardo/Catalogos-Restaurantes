@@ -113,7 +113,7 @@ export default function DriverBoard({
               fontVariantNumeric: 'tabular-nums',
             }}>
               <p style={{ fontSize: 13 }}>
-                Cobrar <strong style={{ fontSize: 17 }}>{money(o.total)}</strong>
+                Cobrar <strong style={{ fontSize: 16 }}>{money(o.total)}</strong>
                 <span style={{ color: 'var(--u-text-4)' }}> · {esEfectivo ? 'efectivo' : 'tarjeta al recibir'}</span>
               </p>
               {cambio != null && cambio > 0 && (
@@ -158,11 +158,7 @@ export default function DriverBoard({
                   step="0.01"
                   min="0"
                   defaultValue={esEfectivo ? o.total : ''}
-                  style={{
-                    width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-                    border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-md)', padding: '11px 13px',
-                    color: 'var(--u-text)', fontSize: 16, outline: 'none',
-                  }}
+                  className="adm-field adm-field-lg"
                 />
                 <button type="submit" className="btn-primary" style={bigBtn}>
                   Entregué el pedido

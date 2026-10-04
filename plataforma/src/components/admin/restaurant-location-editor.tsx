@@ -106,7 +106,7 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
             {/* Coordenadas en texto (solo lectura, informativo) */}
             <div style={{
               marginTop: 8, display: 'flex', gap: 8,
-              fontSize: 11.5, color: 'var(--u-text-4)', fontVariantNumeric: 'tabular-nums',
+              fontSize: 11, color: 'var(--u-text-4)', fontVariantNumeric: 'tabular-nums',
             }}>
               <span>Lat {lat.toFixed(5)}</span>
               <span>·</span>
@@ -154,14 +154,8 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
                     const v = parseFloat(e.target.value);
                     if (!isNaN(v) && v > 0) setRadius(v);
                   }}
-                  style={{
-                    width: 80,
-                    background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-                    border: '1px solid var(--u-hair-2)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: '7px 10px',
-                    color: 'var(--u-text)', fontSize: 14, outline: 'none',
-                  }}
+                  className="adm-field adm-field-sm"
+                  style={{ width: 80 }}
                 />
                 <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>km</span>
               </div>

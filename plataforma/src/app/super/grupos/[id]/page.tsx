@@ -23,7 +23,7 @@ export default async function GrupoDetailPage({ params }: { params: Promise<{ id
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Link href="/super/grupos" className="press t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>← Grupos</Link>
       <div>
-        <h1 className="t-display" style={{ fontSize: 26 }}>{org.name}</h1>
+        <h1 className="t-display" style={{ fontSize: 24 }}>{org.name}</h1>
         <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="t-mono" style={{ fontSize: 13, color: 'var(--brand-accent-ink)', textDecoration: 'none' }}>
           {org.slug} · link de pedidos del grupo →
         </a>
@@ -33,12 +33,12 @@ export default async function GrupoDetailPage({ params }: { params: Promise<{ id
       <div className="glass" style={card}>
         <div style={sectionTitle}>Sucursales del grupo ({branches.length})</div>
         {branches.length === 0 ? (
-          <p style={{ fontSize: 13.5, color: 'var(--u-text-4)', margin: 0 }}>Aún no hay sucursales asignadas.</p>
+          <p style={{ fontSize: 13, color: 'var(--u-text-4)', margin: 0 }}>Aún no hay sucursales asignadas.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {branches.map((b) => (
               <div key={b.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                <span style={{ fontSize: 14, color: 'var(--u-text)' }}>{b.name} <span className="t-mono" style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>· {b.slug}</span></span>
+                <span style={{ fontSize: 14, color: 'var(--u-text)' }}>{b.name} <span className="t-mono" style={{ fontSize: 11, color: 'var(--u-text-4)' }}>· {b.slug}</span></span>
                 <form action={unassignRestaurant}>
                   <input type="hidden" name="orgId" value={org.id} />
                   <input type="hidden" name="restaurantId" value={b.id} />
@@ -54,11 +54,11 @@ export default async function GrupoDetailPage({ params }: { params: Promise<{ id
           <form action={assignRestaurantToOrg} style={{ display: 'flex', gap: 8, marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--u-hair)' }}>
             <input type="hidden" name="orgId" value={org.id} />
             {/* Fondo adaptativo (antes #1a1a1a fijo → caja oscura con el panel en modo claro). */}
-            <select name="restaurantId" required defaultValue="" style={{ flex: 1, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none' }}>
+            <select name="restaurantId" required defaultValue="" className="adm-field" style={{ flex: 1, width: 'auto' }}>
               <option value="" disabled style={{ background: '#fff', color: '#888' }}>Agregar una sucursal…</option>
               {available.map((r) => <option key={r.id} value={r.id} style={{ background: '#fff', color: '#111' }}>{r.name} ({r.slug})</option>)}
             </select>
-            <button type="submit" className="press glass-quiet" style={{ padding: '10px 16px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer', fontSize: 13.5, fontWeight: 600, color: 'var(--u-text-2)' }}>Asignar</button>
+            <button type="submit" className="press glass-quiet" style={{ padding: '10px 16px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)' }}>Asignar</button>
           </form>
         )}
       </div>
@@ -69,13 +69,13 @@ export default async function GrupoDetailPage({ params }: { params: Promise<{ id
       <div className="glass" style={card}>
         <div style={sectionTitle}>Quién lo administra</div>
         {owners.length === 0 ? (
-          <p style={{ fontSize: 13.5, color: 'var(--u-text-4)', margin: 0 }}>
+          <p style={{ fontSize: 13, color: 'var(--u-text-4)', margin: 0 }}>
             Nadie tiene este grupo en su perfil todavía.
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {owners.map((o) => (
-              <div key={o.id} style={{ fontSize: 13.5, color: 'var(--u-text-2)' }}>
+              <div key={o.id} style={{ fontSize: 13, color: 'var(--u-text-2)' }}>
                 {o.full_name ? `${o.full_name} · ` : ''}<span className="t-mono" style={{ color: 'var(--u-text-3)' }}>{o.email}</span>
               </div>
             ))}

@@ -165,7 +165,7 @@ export default function KitchenPrintSettings() {
 
             {/* Impresora cocina USB */}
             <div>
-              <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-2)', display: 'block', marginBottom: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text-2)', display: 'block', marginBottom: 6 }}>
                 Impresora de cocina (USB)
               </label>
               {usbKitchen ? (
@@ -192,7 +192,7 @@ export default function KitchenPrintSettings() {
 
             {/* Impresora caja/recibos USB */}
             <div>
-              <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-2)', display: 'block', marginBottom: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text-2)', display: 'block', marginBottom: 6 }}>
                 Impresora de caja / recibos (USB)
               </label>
               {usbReceipt ? (
@@ -224,7 +224,7 @@ export default function KitchenPrintSettings() {
             )}
 
             <div style={{
-              fontSize: 11.5, color: 'var(--u-text-4)',
+              fontSize: 11, color: 'var(--u-text-4)',
               background: 'var(--c-warn-bg)',
               border: '1px solid var(--c-warn-line)',
               borderRadius: 'var(--radius-sm)', padding: '7px 10px', lineHeight: 1.55,

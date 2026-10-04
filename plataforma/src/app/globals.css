@@ -1833,6 +1833,50 @@ button:focus { outline: none; }
    sobre fondos claros). */
 button:focus-visible { outline: 2px solid color-mix(in srgb, var(--u-text, #ffffff) 70%, transparent); outline-offset: 2px; }
 
+/* ── CAMPO DE TEXTO DEL PERSONAL (auditoría 2026-10-02, T-26) ──
+   Panel, Super, Mi cuenta y las pantallas de entrar. Había 32 copias de
+   `inputStyle` escritas a mano en cada formulario: cuatro rellenos, tres
+   bordes, siete acolchados y cinco tamaños de letra, y TODAS con
+   `outline: none` sin nada en su lugar — al entrar a un campo con el
+   teclado no se veía dónde estabas. Esta es la única; un formulario solo
+   pone en línea lo que de verdad es suyo (un ancho, letra mono…).
+   · -sm: celdas de tabla y editores apretados (horarios, recetas).
+   · -lg: las pantallas de entrar (login, clave, invitación).
+   En el teléfono, 16 px: con menos, Safari acerca la página al tocarlo
+   (menos -sm, que va en filas donde 16 px no cabe). */
+.adm-field {
+  width: 100%; min-height: 40px; padding: 9px 12px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--u-text) 4%, transparent);
+  border: 1px solid var(--u-hair-2);
+  color: var(--u-text);
+  font: inherit; font-size: 14px; line-height: 1.4;
+  outline: none;
+  transition: border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+}
+.adm-field::placeholder { color: var(--u-text-4); }
+.adm-field:focus-visible {
+  border-color: var(--adm-accent-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--adm-accent-500) 22%, transparent);
+}
+div.adm-field:focus-within {
+  border-color: var(--adm-accent-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--adm-accent-500) 22%, transparent);
+}
+.adm-field:disabled, .adm-field[data-disabled] { opacity: 0.55; cursor: not-allowed; }
+/* El Select del panel (Base UI) es un botón con la misma pieza: abierto
+   se marca como enfocado, y no lleva el anillo genérico de los botones. */
+.adm-field[data-popup-open] { border-color: var(--adm-accent-500); }
+button.adm-field:focus-visible { outline: none; }
+.adm-field[aria-invalid="true"] { border-color: var(--c-danger); }
+textarea.adm-field { resize: vertical; line-height: 1.5; min-height: 72px; }
+.adm-field-mono { font-family: var(--ui-font-mono); font-variant-numeric: tabular-nums; }
+.adm-field-auto { width: auto; }
+select.adm-field { cursor: pointer; }
+.adm-field-sm { min-height: 34px; padding: 7px 10px; font-size: 13px; }
+.adm-field-lg { min-height: 46px; padding: 12px 14px; font-size: 16px; }
+@media (max-width: 767px) { .adm-field:not(.adm-field-sm) { font-size: 16px; } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
 }
@@ -2241,6 +2285,87 @@ html[data-platform] .asphalt::after { display: none; }
 .lp-device-screen-phone { border-radius: 31px; overflow: hidden; aspect-ratio: 9 / 19; }
 .lp-device-desk { width: 100%; max-width: 470px; border-radius: 18px; padding: 9px; }
 .lp-device-screen-desk { border-radius: 11px; overflow: hidden; }
+
+/* ── Teléfono de la portada: menú real o ejemplo (WEB-03) ──
+   Los colores salen del restaurante en vitrina (--ph-*), no del sitio:
+   es SU menú. Ver components/landing-proof.tsx. Las letras van chicas a
+   propósito: es un teléfono dibujado a escala, como las miniaturas de
+   plantillas (T-21 las deja fuera). */
+.lp-ph { position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 0; }
+.lp-ph-halo {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(72% 58% at 50% 42%, color-mix(in srgb, var(--brand-accent) 19%, transparent), transparent 72%);
+}
+.lp-ph-screen {
+  position: relative; display: flex; flex-direction: column;
+  background: var(--ph-bg); color: var(--ph-text);
+  --ph-muted: color-mix(in srgb, var(--ph-text) 58%, transparent);
+  --ph-surface: color-mix(in srgb, var(--ph-text) 6%, transparent);
+  --ph-line: color-mix(in srgb, var(--ph-text) 8%, transparent);
+}
+.lp-ph-head { padding: 24px 14px 12px; background: linear-gradient(180deg, color-mix(in srgb, var(--ph-accent) 24%, transparent), transparent); }
+.lp-ph-brand { display: flex; align-items: center; gap: 9px; }
+.lp-ph-logo {
+  width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; object-fit: cover;
+  display: grid; place-items: center; background: var(--ph-surface);
+  font-family: var(--font-display); font-weight: 800; font-size: 14px; color: var(--ph-accent-ink);
+}
+.lp-ph-name, .lp-ph-line, .lp-ph-item-name, .lp-ph-item-desc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lp-ph-name { font-family: var(--font-display); font-weight: 800; font-size: 15px; line-height: 1.2; }
+.lp-ph-line { font-size: 10.5px; color: var(--ph-muted); margin-top: 2px; }
+.lp-ph-chips { display: flex; gap: 6px; padding: 4px 14px 12px; overflow: hidden; }
+.lp-ph-chip {
+  flex-shrink: 0; padding: 5px 10px; border-radius: 999px; white-space: nowrap;
+  font-size: 10px; font-weight: 600; background: var(--ph-surface); color: var(--ph-muted);
+}
+.lp-ph-chip[data-on] { background: var(--ph-accent); color: var(--ph-on-accent); }
+.lp-ph-items { display: flex; flex-direction: column; gap: 8px; padding: 0 12px; }
+.lp-ph-item {
+  display: flex; align-items: center; gap: 10px; padding: 7px;
+  border-radius: 14px; background: var(--ph-surface); border: 1px solid var(--ph-line);
+}
+.lp-ph-art {
+  width: 52px; height: 52px; flex-shrink: 0; border-radius: 11px; object-fit: cover;
+  display: grid; place-items: center; color: var(--ph-accent-ink);
+  background: color-mix(in srgb, var(--ph-accent) 16%, var(--ph-bg));
+}
+.lp-ph-item-name { font-size: 11.5px; font-weight: 700; }
+.lp-ph-item-desc { font-size: 9.5px; color: var(--ph-muted); margin-top: 2px; }
+.lp-ph-price { font-size: 11.5px; font-weight: 800; margin-top: 3px; color: var(--ph-accent-ink); }
+.lp-ph-add {
+  width: 26px; height: 26px; flex-shrink: 0; border-radius: 9px;
+  display: grid; place-items: center; background: var(--ph-accent); color: var(--ph-on-accent);
+}
+.lp-ph-cart {
+  position: absolute; left: 12px; right: 12px; bottom: 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 11px 15px; border-radius: 13px;
+  background: var(--ph-accent); color: var(--ph-on-accent);
+  font-size: 11.5px; font-weight: 700;
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--ph-accent) 35%, transparent);
+}
+.lp-ph-caption { position: relative; font-size: 13px; color: var(--u-text-4); }
+
+/* Enlace de texto del sitio (subrayado al pasar). */
+.lp-link { color: var(--brand-accent-ink); font-weight: 600; text-decoration: none; }
+@media (hover: hover) { .lp-link:hover { text-decoration: underline; text-underline-offset: 3px; } }
+
+/* ── «Ya lo usan»: testimonios de clientes con permiso (WEB-02) ── */
+.lp-quotes {
+  display: grid; gap: 16px; margin-top: 34px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+}
+.lp-quotes[data-count="1"] { max-width: 640px; margin-left: auto; margin-right: auto; }
+.lp-quote { display: flex; flex-direction: column; gap: 18px; padding: 24px 22px; margin: 0; }
+.lp-quote-text { margin: 0; font-size: 16px; line-height: 1.6; color: var(--u-text); text-wrap: pretty; flex: 1; }
+.lp-quote-who { display: flex; align-items: center; gap: 12px; }
+.lp-quote-logo {
+  width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; object-fit: cover;
+  display: grid; place-items: center; background: var(--lp-card-2); border: 1px solid var(--lp-line);
+  font-family: var(--font-display); font-weight: 800; font-size: 16px;
+}
+.lp-quote-person { display: block; font-size: 14px; font-weight: 600; color: var(--u-text); }
+.lp-quote-role { display: block; font-size: 13px; color: var(--u-text-4); margin-top: 2px; }
 
 /* ── Pie ─────────────────────────────────────────────────── */
 .lp-footer-grid {

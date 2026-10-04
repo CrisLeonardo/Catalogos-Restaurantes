@@ -24,10 +24,6 @@ interface Props {
   ingredients: PurchaseableIngredient[];
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-};
 const labelStyle: React.CSSProperties = FIELD_LABEL;
 function money(n: number) {
   return fmtMoney(Number(n));
@@ -96,11 +92,11 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
         <Card className="p-4">
           <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 12 }}>{edit.id ? 'Editar proveedor' : 'Nuevo proveedor'}</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
-            <div><label style={labelStyle}>Nombre *</label><input style={inputStyle} value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></div>
-            <div><label style={labelStyle}>Contacto</label><input style={inputStyle} value={edit.contact_name} onChange={(e) => setEdit({ ...edit, contact_name: e.target.value })} /></div>
-            <div><label style={labelStyle}>Teléfono</label><input style={inputStyle} value={edit.phone} onChange={(e) => setEdit({ ...edit, phone: e.target.value })} /></div>
-            <div><label style={labelStyle}>Email</label><input style={inputStyle} value={edit.email} onChange={(e) => setEdit({ ...edit, email: e.target.value })} /></div>
-            <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle}>Notas</label><input style={inputStyle} value={edit.notes} onChange={(e) => setEdit({ ...edit, notes: e.target.value })} /></div>
+            <div><label style={labelStyle}>Nombre *</label><input className="adm-field" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></div>
+            <div><label style={labelStyle}>Contacto</label><input className="adm-field" value={edit.contact_name} onChange={(e) => setEdit({ ...edit, contact_name: e.target.value })} /></div>
+            <div><label style={labelStyle}>Teléfono</label><input className="adm-field" value={edit.phone} onChange={(e) => setEdit({ ...edit, phone: e.target.value })} /></div>
+            <div><label style={labelStyle}>Email</label><input className="adm-field" value={edit.email} onChange={(e) => setEdit({ ...edit, email: e.target.value })} /></div>
+            <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle}>Notas</label><input className="adm-field" value={edit.notes} onChange={(e) => setEdit({ ...edit, notes: e.target.value })} /></div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <Button onClick={save} disabled={isPending} size="sm" className="rounded-adm-full">{isPending ? 'Guardando…' : 'Guardar'}</Button>
@@ -252,7 +248,7 @@ function OrdersTab({
                 onValueChange={setSupplierId}
               />
             </div>
-            <div><label style={labelStyle}>Notas</label><input style={inputStyle} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Entrega, referencia…" /></div>
+            <div><label style={labelStyle}>Notas</label><input className="adm-field" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Entrega, referencia…" /></div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -268,16 +264,16 @@ function OrdersTab({
                   onValueChange={(v) => setLink(i, v)}
                 />
                 <div className="po-line">
-                  <input style={inputStyle} placeholder="Descripción (insumo)" value={l.descripcion} onChange={(e) => setLine(i, { descripcion: e.target.value })} />
-                  <input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="decimal" min="0" step="0.001" placeholder="Cant." value={l.cantidad} onChange={(e) => setLine(i, { cantidad: e.target.value })} />
-                  <input style={inputStyle} placeholder="Unidad" value={l.unidad} onChange={(e) => setLine(i, { unidad: e.target.value })} />
-                  <input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="decimal" min="0" step="0.0001" placeholder="Costo Q" value={l.costo_unitario} onChange={(e) => setLine(i, { costo_unitario: e.target.value })} />
+                  <input className="adm-field" placeholder="Descripción (insumo)" value={l.descripcion} onChange={(e) => setLine(i, { descripcion: e.target.value })} />
+                  <input className="adm-field" style={{ textAlign: 'right' }} type="number" inputMode="decimal" min="0" step="0.001" placeholder="Cant." value={l.cantidad} onChange={(e) => setLine(i, { cantidad: e.target.value })} />
+                  <input className="adm-field" placeholder="Unidad" value={l.unidad} onChange={(e) => setLine(i, { unidad: e.target.value })} />
+                  <input className="adm-field" style={{ textAlign: 'right' }} type="number" inputMode="decimal" min="0" step="0.0001" placeholder="Costo Q" value={l.costo_unitario} onChange={(e) => setLine(i, { costo_unitario: e.target.value })} />
                   <Button type="button" variant="outline" size="icon" className="size-8 border-[var(--c-danger-line)] text-[var(--c-danger)]" aria-label="Quitar renglón" onClick={() => setLines((ls) => ls.length > 1 ? ls.filter((_, j) => j !== i) : ls)}><Icon name="x" size={13} /></Button>
                 </div>
               </div>
             ))}
             <Button type="button" variant="secondary" size="sm" className="self-start" onClick={() => setLines((ls) => [...ls, { ...EMPTY_LINE }])}>+ Renglón</Button>
-            <p style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>
+            <p style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
               Vincular un renglón a un producto o insumo real hace que, al marcar la orden como recibida, se sume su stock y se recalcule su costo promedio ponderado (Kardex). Sin vincular, el renglón queda solo como registro contable.
             </p>
           </div>
@@ -314,7 +310,7 @@ function OrdersTab({
                 {(po.items ?? []).map((it) => {
                   const linkLabel = it.product_name ? `📦 ${it.product_name}` : it.ingredient_name ? `🧂 ${it.ingredient_name}` : null;
                   return (
-                    <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--u-text-2)' }}>
+                    <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--u-text-2)' }}>
                       <span>{it.cantidad} {it.unidad} · {it.descripcion}{linkLabel && <span style={{ color: 'var(--brand-accent-ink)' }}> · {linkLabel}</span>}</span>
                       <span style={{ fontFamily: 'var(--ui-font-mono)' }}>{money(Number(it.subtotal))}</span>
                     </div>

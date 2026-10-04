@@ -156,11 +156,11 @@ function FinanzasBloqueadas({ upgradeUrl }: { upgradeUrl: string | null }) {
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {upgradeUrl && (
-          <a href={upgradeUrl} className="press btn-accent" style={{ padding: '11px 18px', borderRadius: 'var(--radius-full)', fontSize: 13.5, fontWeight: 600, textDecoration: 'none' }}>
+          <a href={upgradeUrl} className="press btn-accent" style={{ padding: '11px 18px', borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
             Ver mi plan
           </a>
         )}
-        <Link href="/mi-cuenta/resumen" className="press glass-quiet" style={{ padding: '11px 18px', borderRadius: 'var(--radius-full)', fontSize: 13.5, fontWeight: 600, color: 'var(--u-text-2)', textDecoration: 'none' }}>
+        <Link href="/mi-cuenta/resumen" className="press glass-quiet" style={{ padding: '11px 18px', borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', textDecoration: 'none' }}>
           Ir al resumen
         </Link>
       </div>

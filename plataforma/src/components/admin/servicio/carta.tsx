@@ -210,7 +210,7 @@ export default function Carta({
                 type="button"
                 className="sv-cta"
                 data-tone="quiet"
-                style={{ marginTop: 16, maxWidth: 340, marginInline: 'auto', height: 48, fontSize: 14.5 }}
+                style={{ marginTop: 16, maxWidth: 340, marginInline: 'auto', height: 48, fontSize: 14 }}
                 onClick={() => onOpenItem(term)}
               >
                 <Icon name="plus" size={16} />

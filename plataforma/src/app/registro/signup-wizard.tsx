@@ -8,7 +8,7 @@ import GoogleStaffButton from '@/components/auth/google-staff-button';
 import GoogleG from '@/components/auth/google-g';
 import { signupAccount, type SignupState } from '@/lib/actions/signup';
 import { defaultPlanPricing, type PlanPricing } from '@/lib/plans';
-import { ErrorBox, Field, Stepper, WizardNav, inputStyle } from '@/components/signup/wizard-ui';
+import { ErrorBox, Field, Stepper, WizardNav } from '@/components/signup/wizard-ui';
 
 const empty: SignupState = null;
 
@@ -206,11 +206,11 @@ export default function SignupWizard({
         ) : null}
 
         <Field label="Tu nombre">
-          <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre y apellido" style={inputStyle} />
+          <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre y apellido" className="adm-field adm-field-lg" />
         </Field>
         {!withGoogle && (
         <Field label="Correo" hint="Con este correo entrarás a tu panel y recuperarás tu contraseña si se te olvida. Revísalo bien.">
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" autoComplete="email" style={inputStyle} />
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" autoComplete="email" className="adm-field adm-field-lg" />
         </Field>
         )}
         {!withGoogle && (
@@ -222,7 +222,7 @@ export default function SignupWizard({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="new-password"
-              style={inputStyle}
+              className="adm-field adm-field-lg"
             />
             <button
               type="button"
@@ -252,7 +252,7 @@ export default function SignupWizard({
             value={password2}
             onChange={(e) => setPassword2(e.target.value)}
             autoComplete="new-password"
-            style={inputStyle}
+            className="adm-field adm-field-lg"
           />
         </Field>
         </>

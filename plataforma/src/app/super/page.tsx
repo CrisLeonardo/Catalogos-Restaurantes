@@ -134,7 +134,7 @@ export default async function SuperHomePage() {
             </span>
             <div>
               <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>Todo en orden</div>
-              <div className="t-mute" style={{ fontSize: 12.5, marginTop: 2 }}>Sin pagos vencidos, pruebas por vencer ni restaurantes sin cobro configurado.</div>
+              <div className="t-mute" style={{ fontSize: 12, marginTop: 2 }}>Sin pagos vencidos, pruebas por vencer ni restaurantes sin cobro configurado.</div>
             </div>
           </Card>
         ) : (
@@ -159,7 +159,7 @@ export default async function SuperHomePage() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   {/* En dos renglones si hace falta: cortado a «Azúcar Negra
                       tiene pagos …» no se sabía qué pasaba (SUP-10). */}
-                  <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--u-text)', lineHeight: 1.3 }}>{a.title}</div>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--u-text)', lineHeight: 1.3 }}>{a.title}</div>
                   <div className="t-mute" style={{ fontSize: 12, marginTop: 2, lineHeight: 1.4 }}>{a.body}</div>
                 </div>
                 <Button variant="outline" size="sm" render={<Link href={a.href} />}>{a.cta}</Button>
@@ -167,7 +167,7 @@ export default async function SuperHomePage() {
             ))}
             {alerts.length > 6 && (
               <div style={{ padding: '10px 16px', borderTop: '1px solid var(--adm-border, var(--u-hair))', textAlign: 'center' }}>
-                <Link href="/super/finanzas" style={{ fontSize: 12.5, color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
+                <Link href="/super/finanzas" style={{ fontSize: 12, color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
                   Ver {alerts.length - 6} más en Finanzas →
                 </Link>
               </div>
@@ -210,7 +210,7 @@ export default async function SuperHomePage() {
               >
                 <span style={{ width: 9, height: 9, borderRadius: 'var(--radius-full)', flexShrink: 0, background: r.restaurant_themes[0]?.color_primary ?? 'var(--brand-accent)' }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
                   <div style={{ fontSize: 11, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)' }}>
                     {r.slug} · {new Date(r.created_at).toLocaleDateString('es', { day: '2-digit', month: 'short' })}
                   </div>
@@ -249,7 +249,7 @@ export default async function SuperHomePage() {
                   {i + 1}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
                   <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
                     {r.orders30} pedidos · {r.visits30} visitas · vendió {fmtMoney(r.salesRevenue30, r.config?.currency ?? stats.currency)}
                   </div>
@@ -276,7 +276,7 @@ export default async function SuperHomePage() {
                 <Badge
                   key={plan}
                   variant="neutral"
-                  style={{ fontSize: 12.5, padding: '7px 12px', gap: 7 }}
+                  style={{ fontSize: 12, padding: '7px 12px', gap: 7 }}
                 >
                   <span style={{ width: 8, height: 8, borderRadius: 'var(--radius-full)', background: PLAN_DOT[plan] ?? '#94a3b8' }} />
                   {planLabel(plan)}
@@ -294,7 +294,7 @@ function SectionTitle({ icon, title, count }: { icon: string; title: string; cou
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
       <Icon name={icon} size={16} style={{ color: 'var(--brand-accent-ink)' }} />
-      <h2 style={{ fontWeight: 650, fontSize: 15.5, color: 'var(--u-text)', margin: 0 }}>{title}</h2>
+      <h2 style={{ fontWeight: 600, fontSize: 15, color: 'var(--u-text)', margin: 0 }}>{title}</h2>
       {count != null && count > 0 && (
         <Badge variant="danger" style={{ fontSize: 11 }}>{count}</Badge>
       )}

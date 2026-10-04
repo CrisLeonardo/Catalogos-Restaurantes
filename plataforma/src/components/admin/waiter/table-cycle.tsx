@@ -447,7 +447,7 @@ export default function TableCycle(p: Props) {
         <div className="ciclo-head-id">
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
             <span className="t-display" style={{ fontSize: 24, lineHeight: 1.1 }}>{titulo}</span>
-            <span style={{ fontSize: 13.5, color: 'var(--u-text-3)' }}>
+            <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>
               {[
                 personas ? `${personas} ${personas === 1 ? 'persona' : 'personas'}` : null,
                 desde(occ?.since, now),
@@ -462,7 +462,7 @@ export default function TableCycle(p: Props) {
             estaba quedando al final de un scroll de menú entero. */}
         {total > 0 && (
           <span className="ciclo-head-total">
-            <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Total</span>
+            <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>Total</span>
             <span className="t-mono" style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--u-text)' }}>
               {money(total)}
             </span>
@@ -498,7 +498,7 @@ export default function TableCycle(p: Props) {
                 className="t-mono"
                 style={{
                   display: 'grid', placeItems: 'center', width: 26, height: 26, borderRadius: 'var(--radius-full)', flexShrink: 0,
-                  fontSize: 12.5, fontWeight: 700,
+                  fontSize: 12, fontWeight: 700,
                   background: ahora ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)',
                   color: ahora ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
                 }}
@@ -506,7 +506,7 @@ export default function TableCycle(p: Props) {
                 {i + 1}
               </span>
               <span style={{ minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 13.5, fontWeight: 600, color: ahora ? 'var(--brand-accent-ink)' : 'var(--u-text-2)' }}>
+                <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: ahora ? 'var(--brand-accent-ink)' : 'var(--u-text-2)' }}>
                   {t.titulo}
                 </span>
                 <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-4)', marginTop: 1 }}>
@@ -584,7 +584,7 @@ export default function TableCycle(p: Props) {
                 pedido para llevar no tiene tiempos que repartir. */}
             {mesa != null && (
               <div className="ciclo-seats" role="group" aria-label="Tiempo al que se apuntan los platos nuevos">
-                <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Tiempo</span>
+                <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>Tiempo</span>
                 <button
                   type="button"
                   className="press"
@@ -612,7 +612,7 @@ export default function TableCycle(p: Props) {
             )}
             {puedeRepartir && (
               <div className="ciclo-seats" role="group" aria-label="Asiento al que se apuntan los platos nuevos">
-                <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Asiento</span>
+                <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>Asiento</span>
                 {[null, ...Array.from({ length: Math.max(2, Math.min(personas ?? 4, MAX_ASIENTOS)) }, (_, i) => i + 1)].map((n) => (
                   <button
                     key={n ?? 'mesa'}
@@ -642,7 +642,7 @@ export default function TableCycle(p: Props) {
             }}
           >
             {ordersLoading && lineas.length === 0 ? (
-              <p style={{ margin: 0, padding: '22px 15px', fontSize: 13.5, color: 'var(--u-text-3)' }}>
+              <p style={{ margin: 0, padding: '22px 15px', fontSize: 13, color: 'var(--u-text-3)' }}>
                 Cargando la cuenta…
               </p>
             ) : lineas.map((l) => (
@@ -658,7 +658,7 @@ export default function TableCycle(p: Props) {
                   <>
                     <span
                       style={{
-                        fontSize: 12.5, fontWeight: 600, flexShrink: 0,
+                        fontSize: 12, fontWeight: 600, flexShrink: 0,
                         color: l.status === 'SERVED' ? 'var(--u-text-4)' : 'var(--brand-accent-ink)',
                       }}
                     >
@@ -750,7 +750,7 @@ export default function TableCycle(p: Props) {
               alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 7,
               height: 38, padding: '0 13px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
               border: '1px solid var(--u-hair-2)', background: 'none',
-              color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500,
+              color: 'var(--u-text-2)', fontSize: 13, fontWeight: 500,
             }}
           >
             <Icon name="bag" size={15} />
@@ -771,10 +771,10 @@ export default function TableCycle(p: Props) {
                 <span className="ciclo-chip" data-seat={r.seat != null ? '1' : '0'} aria-hidden>
                   {r.seat ?? '·'}
                 </span>
-                <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: 'var(--u-text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--u-text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {r.seat == null ? 'De la mesa' : r.nombres.slice(0, 2).join(' · ')}
                 </span>
-                <span className="t-mono" style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--u-text)' }}>
+                <span className="t-mono" style={{ fontWeight: 600, fontSize: 13, color: 'var(--u-text)' }}>
                   {money(r.total)}
                 </span>
               </div>
@@ -788,7 +788,7 @@ export default function TableCycle(p: Props) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 height: 40, borderRadius: 'var(--radius-md)', cursor: occ ? 'pointer' : 'default',
                 border: '1px solid var(--u-hair-2)', background: 'none',
-                color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500, opacity: occ ? 1 : 0.55,
+                color: 'var(--u-text-2)', fontSize: 13, fontWeight: 500, opacity: occ ? 1 : 0.55,
               }}
             >
               <Icon name="list" size={15} />
@@ -825,7 +825,7 @@ export default function TableCycle(p: Props) {
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               height: 46, padding: '0 16px', borderRadius: 'var(--radius-lg)', cursor: 'pointer',
               border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
-              color: 'var(--u-text-2)', fontSize: 14.5, fontWeight: 500,
+              color: 'var(--u-text-2)', fontSize: 14, fontWeight: 500,
             }}
           >
             <Icon name="bell" size={16} />
@@ -842,7 +842,7 @@ export default function TableCycle(p: Props) {
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               height: 46, padding: '0 16px', borderRadius: 'var(--radius-lg)', cursor: 'pointer',
               border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
-              color: 'var(--u-text-2)', fontSize: 14.5, fontWeight: 500,
+              color: 'var(--u-text-2)', fontSize: 14, fontWeight: 500,
             }}
           >
             <Icon name="print" size={16} />
@@ -857,7 +857,7 @@ export default function TableCycle(p: Props) {
           style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 9,
             height: 46, padding: '0 22px', borderRadius: 'var(--radius-lg)', border: 'none',
-            fontSize: 15.5, fontWeight: 600, cursor: ocupado ? 'default' : 'pointer',
+            fontSize: 15, fontWeight: 600, cursor: ocupado ? 'default' : 'pointer',
             opacity: ocupado ? 0.6 : 1,
           }}
         >
@@ -1015,7 +1015,7 @@ function MasAcciones({ puedeMover, onJuntar, onMover, onNota, onArticuloLibre }:
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           height: 40, minWidth: 44, padding: '0 14px', flexShrink: 0,
           borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'none',
-          color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
+          color: 'var(--u-text-2)', fontSize: 13, fontWeight: 500, cursor: 'pointer',
         }}
       >
         <Icon name="more" size={17} />
@@ -1053,7 +1053,7 @@ function MasAcciones({ puedeMover, onJuntar, onMover, onNota, onArticuloLibre }:
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: 'var(--u-text)' }}>{o.label}</span>
-                  <span style={{ display: 'block', fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>{o.hint}</span>
+                  <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)', marginTop: 1 }}>{o.hint}</span>
                 </span>
               </button>
             ))}
@@ -1080,7 +1080,7 @@ const tarjeta: React.CSSProperties = {
 
 function Fila({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', fontSize: 13.5, color: 'var(--u-text-2)' }}>
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', fontSize: 13, color: 'var(--u-text-2)' }}>
       <span>{label}</span>
       <span className="t-mono" style={{ fontWeight: 600 }}>{value}</span>
     </div>

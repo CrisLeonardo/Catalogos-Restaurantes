@@ -103,7 +103,7 @@ export default function TableJump({ tables, money, onPick, onClose }: {
 
         <div style={{ padding: 12, maxHeight: '52vh', overflowY: 'auto' }}>
           {results.length === 0 ? (
-            <div style={{ padding: '24px 8px', textAlign: 'center', fontSize: 13.5, color: 'var(--u-text-3)' }}>
+            <div style={{ padding: '24px 8px', textAlign: 'center', fontSize: 13, color: 'var(--u-text-3)' }}>
               No hay ninguna mesa {q}.
             </div>
           ) : (

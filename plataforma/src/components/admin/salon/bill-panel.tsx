@@ -93,7 +93,7 @@ export default function BillPanel({
           <div style={{ fontSize: 14, fontWeight: 700, marginTop: 4, color: estadoInk(t) }}>
             {estadoDeFicha(t)}
           </div>
-          <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
             {libre
               ? 'Sin abrir'
               : [t.waiterName ?? 'Sin asignar', sentados && `sentados hace ${sentados}`].filter(Boolean).join(' · ')}
@@ -127,7 +127,7 @@ export default function BillPanel({
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 9 }}>
         {libre ? (
           <>
-            <p style={{ margin: 0, fontSize: 13.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
               Mesa libre. Anota quién llegó y queda ocupada aunque tarden en pedir:
               así nadie más la sienta y su reloj empieza a contar.
             </p>
@@ -161,19 +161,19 @@ export default function BillPanel({
             />
 
             {sinPedido ? (
-              <p style={{ margin: 0, fontSize: 13.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
                 Sentados y todavía sin pedir. La cuenta empieza en cuanto alguien
                 les apunte el primer plato.
               </p>
             ) : loading ? (
-              <p style={{ margin: 0, fontSize: 13.5, color: 'var(--u-text-3)' }}>Cargando la cuenta…</p>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-3)' }}>Cargando la cuenta…</p>
             ) : error ? (
-              <p style={{ margin: 0, fontSize: 13.5, color: 'var(--c-danger)', lineHeight: 1.5 }}>{error}</p>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--c-danger)', lineHeight: 1.5 }}>{error}</p>
             ) : (
               <>
             <div className="adm-label" style={{ color: 'var(--u-text-3)' }}>La cuenta</div>
             {vivas.length === 0 ? (
-              <p style={{ margin: 0, fontSize: 13.5, color: 'var(--u-text-3)' }}>Todavía no hay platos apuntados.</p>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-3)' }}>Todavía no hay platos apuntados.</p>
             ) : vivas.map((l) => (
               /* LA MISMA fila que la pantalla del mesero (M-22). Antes eran
                  dos árboles distintos y ya divergían: aquí no se veían ni
@@ -300,7 +300,7 @@ function Personas({ value, onChange, disabled }: {
   };
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: 'var(--u-text-2)' }}>Personas</span>
+      <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--u-text-2)' }}>Personas</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         <Paso icon="minus" label="Una persona menos" onClick={() => paso(-1)} disabled={disabled || value == null} />
         <span
@@ -355,7 +355,7 @@ function Mesero({ value, waiters, onChange, disabled, hint }: {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: 'var(--u-text-2)' }}>Atiende</span>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--u-text-2)' }}>Atiende</span>
         <select
           value={value}
           disabled={disabled}
@@ -364,7 +364,7 @@ function Mesero({ value, waiters, onChange, disabled, hint }: {
           style={{
             height: 34, minWidth: 140, maxWidth: 190, borderRadius: 'var(--radius-md)', padding: '0 8px',
             border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
-            color: 'var(--u-text)', fontSize: 13.5, cursor: disabled ? 'default' : 'pointer',
+            color: 'var(--u-text)', fontSize: 13, cursor: disabled ? 'default' : 'pointer',
           }}
         >
           {/* Chrome en Windows pinta el `option` con el color del sistema si
@@ -404,7 +404,7 @@ function Secundario({ icon, label, onClick, disabled }: {
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
         height: 40, borderRadius: 'var(--radius-md)', cursor: disabled ? 'default' : 'pointer',
         border: '1px solid var(--u-hair-2)', background: 'none',
-        color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500, opacity: disabled ? 0.55 : 1,
+        color: 'var(--u-text-2)', fontSize: 13, fontWeight: 500, opacity: disabled ? 0.55 : 1,
       }}
     >
       <Icon name={icon} size={15} />

@@ -20,16 +20,6 @@ import type React from 'react';
 /* El mismo relleno que el login: con blanco al 5 %, en la web clara el
    registro tenía campos blancos con borde y el login grises rellenos — dos
    estilos de campo en el mismo flujo (auditoría 2026-10-02, WEB-06). */
-export const inputStyle: React.CSSProperties = {
-  width: '100%',
-  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-  border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)',
-  padding: '12px 14px',
-  color: 'var(--u-text)',
-  fontSize: 16,
-  outline: 'none',
-};
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (

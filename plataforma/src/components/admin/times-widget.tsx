@@ -35,7 +35,7 @@ export function TimesWidget({ data }: { data: TimesData }) {
           />
         </StatGroup>
         {data.worst && (
-          <div className="border-t border-adm-border px-4 py-2.5 text-[13.5px] leading-snug text-adm-text-2 md:px-5.5">
+          <div className="border-t border-adm-border px-4 py-2.5 text-[13px] leading-snug text-adm-text-2 md:px-5.5">
             El más lento fue {data.worst.label}, con{' '}
             <span className="t-mono">{data.worst.minutes} min</span>.
           </div>

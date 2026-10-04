@@ -361,7 +361,7 @@ export default function GuidedTourHost() {
                 className="press glass-quiet"
                 style={{
                   border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-md)',
-                  padding: '8px 13px', fontSize: 12.5, fontWeight: 600,
+                  padding: '8px 13px', fontSize: 12, fontWeight: 600,
                   color: 'var(--u-text-2)', background: 'none',
                   display: 'flex', alignItems: 'center', gap: 5,
                 }}
@@ -376,7 +376,7 @@ export default function GuidedTourHost() {
               className="press"
               style={{
                 border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-md)',
-                padding: '8px 18px', fontSize: 12.5, fontWeight: 700,
+                padding: '8px 18px', fontSize: 12, fontWeight: 700,
                 background: 'var(--brand-accent, #6366f1)',
                 color: 'var(--brand-on-accent, #fff)',
                 display: 'flex', alignItems: 'center', gap: 5,

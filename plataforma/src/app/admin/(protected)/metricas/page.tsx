@@ -151,7 +151,7 @@ export default async function AdminNegocioPage({
       {actual && (
         <Section title={`Ventas por día · últimos ${dias} días`}>
           <Card className="flex flex-col gap-4 p-5">
-            <div className="t-mono text-[26px] leading-none font-semibold text-adm-text">
+            <div className="t-mono text-[24px] leading-none font-semibold text-adm-text">
               {money(actual.revenue)}
             </div>
             <ChartReadout defaultTip={salesTip(serie[serie.length - 1])}>
@@ -202,7 +202,7 @@ export default async function AdminNegocioPage({
                 <span className="t-mono shrink-0 text-[14px] text-adm-text-3">
                   {p.qty} {p.qty === 1 ? 'unidad' : 'unidades'}
                 </span>
-                <span className="t-mono w-28 shrink-0 text-right text-[14.5px] text-adm-text">{money(p.revenue)}</span>
+                <span className="t-mono w-28 shrink-0 text-right text-[14px] text-adm-text">{money(p.revenue)}</span>
               </ListRow>
             ))}
           </List>
@@ -213,7 +213,7 @@ export default async function AdminNegocioPage({
       <Section title="Visitas · últimos 14 días">
         <Card className="flex flex-col gap-4 p-5">
           <div className="flex items-baseline gap-3">
-            <span className="t-mono text-[26px] leading-none font-semibold text-adm-text">
+            <span className="t-mono text-[24px] leading-none font-semibold text-adm-text">
               {visits.series14.reduce((s, d) => s + d.visits, 0)}
             </span>
             <span className="text-[13px] text-adm-text-3">
@@ -245,7 +245,7 @@ export default async function AdminNegocioPage({
             ))}
           </div>
           </ChartReadout>
-          <p className="text-[12.5px] leading-snug text-adm-text-4">
+          <p className="text-[12px] leading-snug text-adm-text-4">
             Cada apertura de tu menú por un dispositivo cuenta una vez por sesión.
           </p>
         </Card>

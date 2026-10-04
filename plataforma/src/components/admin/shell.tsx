@@ -598,7 +598,7 @@ export default function AdminShell({
                 )}
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14.5, color: 'var(--u-text)', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{restaurantName}</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14, color: 'var(--u-text)', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{restaurantName}</div>
                 <div className="t-kicker" style={{ fontSize: 11, marginTop: 3 }}>Panel{zone ? ` · ${zone}` : ''}</div>
               </div>
             </>
@@ -651,7 +651,7 @@ export default function AdminShell({
           >
             <Badge
               variant="neutral"
-              className="nav-label justify-start border-none bg-transparent px-0 py-0 text-[12.5px] font-semibold text-[var(--u-text-2)]"
+              className="nav-label justify-start border-none bg-transparent px-0 py-0 text-[12px] font-semibold text-[var(--u-text-2)]"
             >
               <span
                 style={{
@@ -674,7 +674,7 @@ export default function AdminShell({
             style={{ borderRadius: 'var(--radius-lg)', padding: '10px 12px', marginBottom: 8, textDecoration: 'none' }}
           >
             <Icon name="grid" size={15} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />
-            <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-2)' }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 600, color: 'var(--u-text-2)' }}>
               Cambiar de restaurante
             </span>
             <Icon name="chevronRight" size={14} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
@@ -686,7 +686,7 @@ export default function AdminShell({
             <Icon name="user" size={17} />
           </div>
           <div className="admin-usermeta" style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 600, fontSize: 12.5, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {roleLabel}
             </div>
             <div style={{ fontSize: 11, color: 'var(--u-text-3)' }}>{preview ? 'Vista previa' : 'Sesión activa'}</div>

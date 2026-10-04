@@ -702,7 +702,7 @@ export default function AdminNotifications({
           style={{
             position: 'fixed', top: 70, right: showSoundPanel ? 322 : 16,
             zIndex: 9998, maxWidth: 320,
-            padding: '12px 15px', borderRadius: 'var(--radius-lg)', fontSize: 12.5, lineHeight: 1.55,
+            padding: '12px 15px', borderRadius: 'var(--radius-lg)', fontSize: 12, lineHeight: 1.55,
             color: popup.type === 'error' ? 'var(--c-danger)' : 'var(--u-text-2)',
             border: `1px solid ${popup.type === 'error' ? 'var(--c-danger-line)' : 'var(--glass-stroke)'}`,
             transition: 'right 200ms',
@@ -750,7 +750,7 @@ function SoundRow({
 }) {
   return (
     <div style={{ marginBottom: 2 }}>
-      <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--u-text-2)', marginBottom: 7 }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--u-text-2)', marginBottom: 7 }}>
         {label}
       </div>
 

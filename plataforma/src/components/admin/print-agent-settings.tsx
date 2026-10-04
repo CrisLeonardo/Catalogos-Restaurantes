@@ -21,18 +21,9 @@ import SaveBar, { type SaveStatus } from '@/components/admin/save-bar';
 
 // ── Estilos ────────────────────────────────────────────────────────────────────
 
-const selectStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '9px 11px',
-  borderRadius: 'var(--radius-md)',
-  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-  border: '1px solid var(--u-hair)',
-  color: 'var(--u-text)',
-  fontSize: 13,
-};
 
 const labelStyle: React.CSSProperties = {
-  fontSize: 12.5,
+  fontSize: 12,
   fontWeight: 600,
   color: 'var(--u-text-2)',
   display: 'block',
@@ -123,13 +114,13 @@ export function PrinterPicker({
           onChange={(e) => onChange(e.target.value)}
           onBlur={(e) => onCommit?.(e.target.value)}
           placeholder="tcp://192.168.1.50:9100"
-          style={{ ...selectStyle, marginTop: 6, fontFamily: 'monospace', fontSize: 12 }}
+          className="adm-field" style={{ marginTop: 6, fontFamily: 'monospace', fontSize: 12 }}
         />
       )}
 
       {missingOnThisPc && (
         <div style={{
-          fontSize: 11.5, color: 'var(--u-text-3)', background: 'var(--c-warn-bg)',
+          fontSize: 11, color: 'var(--u-text-3)', background: 'var(--c-warn-bg)',
           border: '1px solid var(--c-warn-line)', borderRadius: 'var(--radius-sm)',
           padding: '7px 10px', lineHeight: 1.55, marginTop: 6,
         }}>
@@ -218,7 +209,7 @@ export function InstallSteps({
       <div style={stepBoxStyle}>
         <span style={stepNumStyle}>1</span>
         <div style={stepContentStyle}>
-          <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', fontWeight: 600 }}>
+          <span style={{ fontSize: 12, color: 'var(--u-text-2)', fontWeight: 600 }}>
             Descarga el instalador en la PC del local
           </span>
           <Button render={<a href={downloadHref} />} className="self-start">
@@ -235,10 +226,10 @@ export function InstallSteps({
       <div style={stepBoxStyle}>
         <span style={stepNumStyle}>2</span>
         <div style={stepContentStyle}>
-          <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', fontWeight: 600 }}>
+          <span style={{ fontSize: 12, color: 'var(--u-text-2)', fontWeight: 600 }}>
             Haz <strong>doble clic</strong> en el archivo descargado
           </span>
-          <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.55 }}>
+          <span style={{ fontSize: 11, color: 'var(--u-text-4)', lineHeight: 1.55 }}>
             Se instala solo y queda funcionando — sin abrir nada más. Aparecerá un aviso
             {' '}<strong style={{ color: 'var(--u-text-3)' }}>«Agente instalado correctamente»</strong>.
           </span>
@@ -261,10 +252,10 @@ export function InstallSteps({
       <div style={stepBoxStyle}>
         <span style={stepNumStyle}>3</span>
         <div style={stepContentStyle}>
-          <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', fontWeight: 600 }}>
+          <span style={{ fontSize: 12, color: 'var(--u-text-2)', fontWeight: 600 }}>
             Vuelve aquí y pulsa «Actualizar»
           </span>
-          <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
+          <span style={{ fontSize: 11, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
             En unos segundos el estado cambiará a{' '}
             <span style={{ color: 'var(--c-ok)', fontWeight: 600 }}>● Conectado</span>
             {' '}y verás las impresoras detectadas.
@@ -274,11 +265,11 @@ export function InstallSteps({
 
       {/* Alternativa: instalación manual avanzada (PowerShell) */}
       <details style={{ marginTop: 4 }}>
-        <summary style={{ fontSize: 11.5, color: 'var(--u-text-4)', cursor: 'pointer', userSelect: 'none' }}>
+        <summary style={{ fontSize: 11, color: 'var(--u-text-4)', cursor: 'pointer', userSelect: 'none' }}>
           Instalación avanzada (PowerShell / config manual)
         </summary>
         <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+          <span style={{ fontSize: 11, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
             Equivalente por línea de comandos (PowerShell como Administrador, desde la carpeta <code>dist</code>):
           </span>
           {/* Bloque "terminal": oscuro SÓLIDO a propósito (el cian necesita fondo
@@ -295,7 +286,7 @@ export function InstallSteps({
               Copiar comando
             </Button>
           </div>
-          <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.5, marginTop: 4 }}>
+          <span style={{ fontSize: 11, color: 'var(--u-text-3)', lineHeight: 1.5, marginTop: 4 }}>
             O descarga el config y colócalo junto al exe:
           </span>
           {/* Adaptativo: antes rgba(0,0,0,0.35) fijo — en panel claro era una caja
@@ -442,7 +433,7 @@ export default function PrintAgentSettings() {
       {/* El estado de la PC y el interruptor de encenderla/apagarla los lleva
           MainPcSwitch, arriba en la misma pantalla (/admin/mi-pc). Aquí solo
           quedan las impresoras: qué se imprime y dónde. */}
-      <div style={{ fontSize: 12.5, fontWeight: 600, color: conn.color }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: conn.color }}>
         {conn.text}
         {config?.exists && (
           <span style={{ color: 'var(--u-text-4)', fontWeight: 500 }}>
@@ -458,7 +449,7 @@ export default function PrintAgentSettings() {
       {config?.exists && (
         <Card variant="flat" className="flex items-start gap-3 p-3.5">
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text)' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text)' }}>
               Pausar pedidos en línea si el local pierde internet
             </div>
             <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.55, margin: '5px 0 0' }}>
@@ -484,11 +475,11 @@ export default function PrintAgentSettings() {
         <div style={{ fontSize: 12, color: 'var(--u-text-4)' }}>Cargando…</div>
       ) : !config?.exists ? (
         <details>
-          <summary style={{ fontSize: 11.5, color: 'var(--u-text-4)', cursor: 'pointer', userSelect: 'none' }}>
+          <summary style={{ fontSize: 11, color: 'var(--u-text-4)', cursor: 'pointer', userSelect: 'none' }}>
             Instalar el servicio a mano (avanzado)
           </summary>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
-            <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+            <span style={{ fontSize: 11, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
               Lo normal es encender el interruptor de arriba desde la PC del local. Esto es el
               camino largo: genera un token e instala el servicio tú mismo.
             </span>
@@ -504,7 +495,7 @@ export default function PrintAgentSettings() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {printers.length === 0 && (
             <div style={{
-              fontSize: 11.5, color: 'var(--u-text-4)', background: 'var(--c-warn-bg)',
+              fontSize: 11, color: 'var(--u-text-4)', background: 'var(--c-warn-bg)',
               border: '1px solid var(--c-warn-line)', borderRadius: 'var(--radius-sm)', padding: '7px 10px', lineHeight: 1.55,
             }}>
               La PC principal todavía no ha enviado su lista de impresoras. Revisa que Leogin esté
@@ -513,7 +504,7 @@ export default function PrintAgentSettings() {
           )}
 
           <div style={{
-            fontSize: 11.5, color: 'var(--u-text-4)', background: 'var(--c-info-bg)',
+            fontSize: 11, color: 'var(--u-text-4)', background: 'var(--c-info-bg)',
             border: '1px solid var(--c-info-line)', borderRadius: 'var(--radius-sm)', padding: '7px 10px', lineHeight: 1.55,
           }}>
             {/* Sin «documento» ni «preview:», que eran nombres internos de las

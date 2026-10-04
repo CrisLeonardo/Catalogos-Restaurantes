@@ -153,16 +153,6 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
       },
     }));
 
-  const inputStyle: React.CSSProperties = {
-    background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-    border: '1px solid var(--u-hair-2)',
-    borderRadius: 'var(--radius-md)',
-    padding: '8px 10px',
-    color: 'var(--u-text)',
-    fontSize: 14,
-    outline: 'none',
-    fontFamily: 'var(--ui-font-mono)',
-  };
 
   const labelStyle: React.CSSProperties = FIELD_LABEL;
 
@@ -208,7 +198,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
               type="text"
               defaultValue={restaurant.pause_message ?? ''}
               placeholder="Estamos a tope. ¡Volvemos en 30 minutos!"
-              style={{ ...inputStyle, width: '100%', fontFamily: 'var(--ui-font-sans)' }}
+              className="adm-field adm-field-sm adm-field-mono adm-field-auto" style={{ width: '100%', fontFamily: 'var(--ui-font-sans)' }}
             />
           </div>
         )}
@@ -282,7 +272,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                           type="time"
                           value={iv.open}
                           onChange={(e) => setInterval(day, idx, { open: e.target.value })}
-                          style={inputStyle}
+                          className="adm-field adm-field-sm adm-field-mono adm-field-auto"
                           aria-label={`Apertura turno ${idx + 1} ${DAY_LABELS[day]}`}
                         />
                         <span style={{ color: 'var(--u-text-4)', fontSize: 13 }}>a</span>
@@ -290,7 +280,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                           type="time"
                           value={iv.close}
                           onChange={(e) => setInterval(day, idx, { close: e.target.value })}
-                          style={inputStyle}
+                          className="adm-field adm-field-sm adm-field-mono adm-field-auto"
                           aria-label={`Cierre turno ${idx + 1} ${DAY_LABELS[day]}`}
                         />
                         {d.intervals.length > 1 && (
@@ -358,7 +348,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                 type="date"
                 value={row.date}
                 onChange={(e) => patchException(idx, { date: e.target.value })}
-                style={{ ...inputStyle, width: 150 }}
+                className="adm-field adm-field-sm adm-field-mono adm-field-auto" style={{ width: 150 }}
                 aria-label={`Fecha excepción ${idx + 1}`}
               />
 
@@ -385,7 +375,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                         type="time"
                         value={iv.open}
                         onChange={(e) => setExceptionInterval(idx, ivIdx, { open: e.target.value })}
-                        style={inputStyle}
+                        className="adm-field adm-field-sm adm-field-mono adm-field-auto"
                         aria-label={`Apertura especial turno ${ivIdx + 1}`}
                       />
                       <span style={{ color: 'var(--u-text-4)', fontSize: 13 }}>a</span>
@@ -393,7 +383,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                         type="time"
                         value={iv.close}
                         onChange={(e) => setExceptionInterval(idx, ivIdx, { close: e.target.value })}
-                        style={inputStyle}
+                        className="adm-field adm-field-sm adm-field-mono adm-field-auto"
                         aria-label={`Cierre especial turno ${ivIdx + 1}`}
                       />
                     </div>

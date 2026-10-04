@@ -61,7 +61,7 @@ export default async function AdminRepartidoresPage() {
           manos del repartidor y esto es lo único que permite verificarlo. */}
       {cash.length > 0 && (
         <section style={{ marginTop: 36, maxWidth: 720 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Cuadre de hoy</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Cuadre de hoy</h2>
           <p style={{ fontSize: 13, color: 'var(--u-text-3)', marginBottom: 16 }}>
             Solo pedidos en efectivo: los de tarjeta al recibir no pasan por el repartidor.
           </p>
@@ -108,7 +108,7 @@ export default async function AdminRepartidoresPage() {
           al mapa y al radio: la entrega se configuraba en dos pantallas y esta
           no está en ningún menú (auditoría 2026-10-02, N-03). */}
       <section style={{ marginTop: 28, maxWidth: 720 }}>
-        <h2 style={{ fontSize: 15.5, fontWeight: 650, marginBottom: 4 }}>Zonas de entrega</h2>
+        <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Zonas de entrega</h2>
         <p style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
           Las zonas y lo que cobras por cada una están en{' '}
           {/* Enlace en línea: `.adm-action-link` le da alto de fila en el

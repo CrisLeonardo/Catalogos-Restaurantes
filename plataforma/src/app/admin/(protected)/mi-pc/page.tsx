@@ -110,7 +110,7 @@ export default async function AdminMiPcPage() {
                 de arriba ya dice "La PC del local", y lo que el dueño viene a
                 averiguar es si está funcionando. Antes el estado era una
                 pastilla de 11 px al lado de un título repetido. */}
-            <h2 className="t-display" style={{ fontSize: 21, lineHeight: 1.1, color: connected ? 'var(--c-ok)' : 'var(--c-warn)' }}>
+            <h2 className="t-display" style={{ fontSize: 20, lineHeight: 1.1, color: connected ? 'var(--c-ok)' : 'var(--c-warn)' }}>
               {connected ? 'Todo listo' : active && agent ? 'Sin responder' : 'Sin PC principal'}
             </h2>
             <p style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.55, margin: '6px 0 0' }}>
@@ -135,7 +135,7 @@ export default async function AdminMiPcPage() {
                 <Icon name={b.icon} size={16} style={{ color: 'var(--brand-accent-ink, var(--u-text))' }} />
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>{b.title}</span>
               </div>
-              <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.55 }}>{b.desc}</div>
+              <div style={{ fontSize: 11, color: 'var(--u-text-3)', lineHeight: 1.55 }}>{b.desc}</div>
             </div>
           ))}
         </div>
@@ -165,7 +165,7 @@ export default async function AdminMiPcPage() {
                   <Icon name={p.icon} size={16} style={{ color: p.target ? 'var(--c-ok, #4ade80)' : 'var(--u-text-4)', flexShrink: 0 }} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 600 }}>{p.label}</div>
-                    <div style={{ fontSize: 12.5, fontWeight: 700, color: p.target ? 'var(--u-text)' : 'var(--u-text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: p.target ? 'var(--u-text)' : 'var(--u-text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {p.target || 'Sin asignar — elígela abajo'}
                     </div>
                   </div>
@@ -173,7 +173,7 @@ export default async function AdminMiPcPage() {
               ))}
             </div>
           ) : (
-            <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.6, margin: '0 0 14px' }}>
+            <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.6, margin: '0 0 14px' }}>
               En cuanto la PC principal esté conectada, aquí aparecerán sus impresoras para que elijas
               cuál imprime las comandas de cocina y cuál los recibos de caja. Pueden ser la misma.
             </p>
@@ -190,14 +190,14 @@ export default async function AdminMiPcPage() {
               width: 9, height: 9, borderRadius: 'var(--radius-full)', flexShrink: 0,
               background: connected && hubReady ? 'var(--c-ok, #4ade80)' : 'var(--u-text-4)',
             }} />
-            <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>
               {connected && hubReady ? 'Protegido' : 'Sin proteger'}
             </span>
             {lastSeen && !connected && (
-              <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>· última señal {timeAgo(lastSeen)}</span>
+              <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>· última señal {timeAgo(lastSeen)}</span>
             )}
           </div>
-          <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.6, margin: 0 }}>
+          <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.6, margin: 0 }}>
             {connected && hubReady
               ? 'Si se corta la señal, tus meseros y los QR de las mesas siguen tomando pedidos: los recibe esta PC por tu WiFi y las comandas se imprimen igual. Al volver el internet todo se sincroniza solo, sin duplicados y sin que nadie tenga que hacer nada.'
               : 'Con la PC principal encendida, un corte de internet deja de detener el local: los pedidos siguen entrando por tu WiFi y se sincronizan solos al volver la señal.'}
@@ -205,7 +205,7 @@ export default async function AdminMiPcPage() {
           {kdsUrl && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--u-hair)' }}>
               <div style={{ flex: 1, minWidth: 220 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text)' }}>Pantalla de cocina de respaldo</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text)' }}>Pantalla de cocina de respaldo</div>
                 <div style={{ fontSize: 11, color: 'var(--u-text-3)', lineHeight: 1.5, marginTop: 3 }}>
                   Ábrela en la tablet de cocina (misma red WiFi) y déjala de marcador: muestra los pedidos aunque no haya internet.
                 </div>

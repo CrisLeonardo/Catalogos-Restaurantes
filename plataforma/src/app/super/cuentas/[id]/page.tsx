@@ -36,7 +36,7 @@ export default async function CuentaPage({ params }: { params: Promise<{ id: str
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <PageHeader title="Cuenta" backHref="/super/cuentas" backLabel="Cuentas" />
-        <Card style={{ padding: 20, fontSize: 13.5, lineHeight: 1.6, color: 'var(--u-text-3)' }}>
+        <Card style={{ padding: 20, fontSize: 13, lineHeight: 1.6, color: 'var(--u-text-3)' }}>
           Falta correr la migración <code>131_vista_cuentas.sql</code> en esta base.
         </Card>
       </div>
@@ -86,7 +86,7 @@ export default async function CuentaPage({ params }: { params: Promise<{ id: str
         </SectionTitle>
 
         {c.locales.length === 0 ? (
-          <Card style={{ padding: 18, fontSize: 13.5, lineHeight: 1.6, color: 'var(--u-text-3)' }}>
+          <Card style={{ padding: 18, fontSize: 13, lineHeight: 1.6, color: 'var(--u-text-3)' }}>
             {c.huerfana ? (
               <>
                 Su restaurante se borró y su cuenta se quedó atrás. Puede seguir entrando al
@@ -112,8 +112,8 @@ export default async function CuentaPage({ params }: { params: Promise<{ id: str
                   style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', textDecoration: 'none' }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--u-text)' }}>{l.name}</div>
-                    <div style={{ display: 'flex', gap: 10, marginTop: 3, fontSize: 11.5, color: 'var(--u-text-4)', flexWrap: 'wrap' }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>{l.name}</div>
+                    <div style={{ display: 'flex', gap: 10, marginTop: 3, fontSize: 11, color: 'var(--u-text-4)', flexWrap: 'wrap' }}>
                       <span style={{ fontFamily: 'var(--ui-font-mono)' }}>{l.slug}</span>
                       <span>{ROL_LOCAL[l.role] ?? l.role}</span>
                       {l.legacy && <span style={{ color: 'var(--c-warn)' }}>sin membresía</span>}
@@ -135,7 +135,7 @@ export default async function CuentaPage({ params }: { params: Promise<{ id: str
         {/* Quien va a pulsar estos botones merece saber si queda escrito o no.
             Y mientras la 132 no haya corrido, la respuesta honesta es que no:
             decir «queda registrado» sin que sea verdad es peor que callarlo. */}
-        <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', margin: 0, lineHeight: 1.55 }}>
+        <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: 0, lineHeight: 1.55 }}>
           {bitacora.migracionPendiente
             ? 'Nada de esto queda registrado en esta base: falta correr la migración 132.'
             : 'Todo esto queda registrado —quién, cuándo y desde qué IP— y se ve abajo, en el historial de la cuenta.'}

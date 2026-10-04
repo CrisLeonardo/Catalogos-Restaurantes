@@ -127,7 +127,7 @@ function IOSSteps({ onDismiss }: { onDismiss: () => void }) {
             }}>
               {i + 1}
             </span>
-            <span style={{ fontSize: 13.5, color: 'var(--u-text-2)', lineHeight: 1.45, paddingTop: 3 }}>{label}</span>
+            <span style={{ fontSize: 13, color: 'var(--u-text-2)', lineHeight: 1.45, paddingTop: 3 }}>{label}</span>
           </li>
         ))}
       </ol>

@@ -13,7 +13,7 @@ export default async function BitacoraPage() {
     return (
       <Card style={{ padding: 20, display: 'flex', gap: 13, alignItems: 'flex-start' }}>
         <Icon name="alertCircle" size={20} style={{ color: 'var(--c-warn)', flexShrink: 0, marginTop: 1 }} />
-        <div style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--u-text-3)' }}>
+        <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--u-text-3)' }}>
           <div style={{ fontWeight: 700, color: 'var(--u-text)', marginBottom: 4 }}>
             Falta correr la migración 132 en esta base
           </div>

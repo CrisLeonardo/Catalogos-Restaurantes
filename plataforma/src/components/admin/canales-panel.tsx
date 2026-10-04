@@ -25,10 +25,6 @@ import type { ChannelMapRow, ChannelProductOption, ChannelSummary } from '@/lib/
 import { FIELD_LABEL } from '@/components/admin/field-label';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-};
 const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 const CANAL_LABEL: Record<string, string> = {
@@ -126,7 +122,7 @@ export default function CanalesPanel({
           <div>
             <label style={labelStyle}>Identificador en esa app</label>
             <input
-              style={inputStyle}
+              className="adm-field"
               value={sku}
               onChange={(e) => setSku(e.target.value)}
               placeholder="burger-clasica"

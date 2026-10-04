@@ -37,7 +37,7 @@ export default function Kpi({ label, value, sub, hero, small }: {
       >
         {value}
       </div>
-      {sub && <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 11, color: 'var(--u-text-3)' }}>{sub}</div>}
     </div>
   );
 }

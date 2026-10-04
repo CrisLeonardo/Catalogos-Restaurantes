@@ -71,7 +71,7 @@ export default async function FinanzasResumenPage() {
       <section>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
           <Icon name="bellRing" size={16} style={{ color: 'var(--brand-accent-ink)' }} />
-          <h2 style={{ fontWeight: 650, fontSize: 15.5, color: 'var(--u-text)', margin: 0 }}>
+          <h2 style={{ fontWeight: 600, fontSize: 15, color: 'var(--u-text)', margin: 0 }}>
             Cuentas por cobrar
           </h2>
           {fin.receivables.length > 0 && <Badge variant={fin.overdueTotal > 0 ? 'danger' : 'warn'}>{fin.receivables.length}</Badge>}
@@ -84,7 +84,7 @@ export default async function FinanzasResumenPage() {
             </span>
             <div>
               <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>Nadie te debe nada</div>
-              <div className="t-mute" style={{ fontSize: 12.5, marginTop: 2 }}>Todos los cobros emitidos están pagados. 🎉</div>
+              <div className="t-mute" style={{ fontSize: 12, marginTop: 2 }}>Todos los cobros emitidos están pagados. 🎉</div>
             </div>
           </Card>
         ) : (
@@ -107,7 +107,7 @@ export default async function FinanzasResumenPage() {
                       {r.overdueTotal > 0 && <Badge variant="danger" style={{ fontSize: 11 }}>Vencido</Badge>}
                       {r.status === 'suspended' && <Badge variant="neutral" style={{ fontSize: 11 }}>Suspendido</Badge>}
                     </div>
-                    <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 3 }}>
+                    <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 3 }}>
                       {r.invoices.length} {r.invoices.length === 1 ? 'cobro pendiente' : 'cobros pendientes'}
                       {r.lastPaidAt ? ` · último pago ${fechaCorta(r.lastPaidAt)}` : ' · nunca ha pagado'}
                     </div>
@@ -126,7 +126,7 @@ export default async function FinanzasResumenPage() {
                         Recordar pago
                       </Button>
                     ) : (
-                      <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', alignSelf: 'center' }} title="Agrega WhatsApp o email en la pestaña Información del restaurante">
+                      <span style={{ fontSize: 11, color: 'var(--u-text-4)', alignSelf: 'center' }} title="Agrega WhatsApp o email en la pestaña Información del restaurante">
                         sin contacto
                       </span>
                     )}
@@ -170,7 +170,7 @@ export default async function FinanzasResumenPage() {
                 }}>
                   {i + 1}
                 </span>
-                <span style={{ flex: 1, fontWeight: 600, fontSize: 13.5, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ flex: 1, fontWeight: 600, fontSize: 13, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {t.name}
                 </span>
                 <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 13, color: 'var(--u-text-2)' }}>

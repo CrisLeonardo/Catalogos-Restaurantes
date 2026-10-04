@@ -53,7 +53,7 @@ export async function OffMenuWidget({ items, total }: { items: OffMenuItem[]; to
               }
             />
             <span
-              className="shrink-0 text-[13.5px] font-semibold"
+              className="shrink-0 text-[13px] font-semibold"
               style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}
             >
               {p.reason === 'inventario' ? 'Reponer' : 'Reactivar'}

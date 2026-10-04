@@ -27,7 +27,7 @@ export default function LogoutButton({ variant = 'pill', isOperatorSession = fal
             color: isOperatorSession ? 'var(--u-text-2)' : 'var(--c-danger)',
             padding: '10px 12px',
             borderRadius: 'var(--radius-md)',
-            fontSize: 13.5,
+            fontSize: 13,
             fontWeight: 600,
             cursor: 'pointer',
             textAlign: 'left',

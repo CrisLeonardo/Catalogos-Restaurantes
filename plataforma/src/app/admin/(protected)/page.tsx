@@ -365,7 +365,7 @@ export default async function AdminHomePage() {
             className="press inline-flex items-center gap-2 rounded-adm-md px-3.5 py-2 no-underline"
             style={{
               border: '1px solid var(--u-hair-2)', color: 'var(--u-text-2)',
-              fontSize: 13.5, fontWeight: 500,
+              fontSize: 13, fontWeight: 500,
             }}
           >
             <Icon name="eye" size={15} />
@@ -375,7 +375,7 @@ export default async function AdminHomePage() {
             <Link
               href={panelHref(base, "/admin/menu/productos/new")}
               className="btn-accent press inline-flex items-center gap-2 rounded-adm-md px-3.5 py-2 no-underline"
-              style={{ fontSize: 13.5, fontWeight: 600 }}
+              style={{ fontSize: 13, fontWeight: 600 }}
             >
               <Icon name="plus" size={15} />
               Agregar platillo
@@ -398,7 +398,7 @@ export default async function AdminHomePage() {
                 <StatusDot tone={LEVEL_TONE[a.level]} size={9} />
                 <ListText title={a.title} desc={a.desc} />
                 <span
-                  className="shrink-0 text-[13.5px] font-semibold"
+                  className="shrink-0 text-[13px] font-semibold"
                   style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}
                 >
                   {a.action}
@@ -433,16 +433,16 @@ export default async function AdminHomePage() {
                  se cortaba en «Q132.(» (auditoría 2026-10-02, HOY-01). Desde
                  `sm` vuelve a ser la fila de cuatro columnas de siempre. */
               <ListLink key={o.id} href={panelHref(base, "/admin/pedidos")} className="flex-wrap gap-y-1 sm:flex-nowrap">
-                <span className="min-w-0 flex-1 truncate text-[14.5px] font-semibold text-adm-text sm:w-26 sm:flex-none">
+                <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-adm-text sm:w-26 sm:flex-none">
                   {orderLabel(o)}
                 </span>
-                <span className="order-last min-w-0 basis-full truncate text-[13.5px] text-adm-text-3 sm:order-none sm:basis-auto sm:flex-1">
+                <span className="order-last min-w-0 basis-full truncate text-[13px] text-adm-text-3 sm:order-none sm:basis-auto sm:flex-1">
                   {o.customer_name ? `${o.customer_name} · ` : ''}{agoLabel(o.created_at, now)}
                 </span>
                 <StatusPill tone={STATUS_TONE[o.status]} className="shrink-0 sm:w-29">
                   {STATUS_LABEL_SHORT[o.status]}
                 </StatusPill>
-                <span className="t-mono shrink-0 text-right text-[14.5px] text-adm-text sm:w-24">
+                <span className="t-mono shrink-0 text-right text-[14px] text-adm-text sm:w-24">
                   {fmt(Number(o.total))}
                 </span>
               </ListLink>

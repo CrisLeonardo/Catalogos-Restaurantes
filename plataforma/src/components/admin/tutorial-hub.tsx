@@ -105,13 +105,8 @@ export default function TutorialHub({ plan, modules, contact }: Props) {
           placeholder="Busca un tema: pedidos, QR, inventario, cupones…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          style={{
-            width: '100%', padding: '11px 14px 11px 40px',
-            borderRadius: 'var(--radius-lg)', border: '1.5px solid var(--u-hair)',
-            background: 'var(--surface-3, color-mix(in srgb, var(--u-text) 4%, transparent))',
-            color: 'var(--u-text)', fontSize: 14, outline: 'none',
-            boxSizing: 'border-box',
-          }}
+          className="adm-field"
+          style={{ paddingLeft: 40, borderRadius: 'var(--radius-lg)' }}
         />
         {query && (
           <button
@@ -212,7 +207,7 @@ function ContactSupportCard({ contact }: { contact: PlatformContactSettings }) {
           <Icon name="helpCircle" size={18} />
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>¿No encontraste lo que buscabas?</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>¿No encontraste lo que buscabas?</div>
           <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
             Escríbenos directamente y te respondemos a la brevedad.
           </div>
@@ -354,7 +349,7 @@ function TutorialSection({
         {/* Título + descripción */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--u-text)' }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>
               {section.title}
             </span>
             {planLabel && (
@@ -426,10 +421,10 @@ function LockedContent({ planLabel, moduleKey }: { planLabel: string | null; mod
       <Icon name="lock" size={22} style={{ color: 'var(--u-text-4)', marginBottom: 10 }} />
       {isModule ? (
         <>
-          <p style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text-2)', margin: '0 0 6px' }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text-2)', margin: '0 0 6px' }}>
             Módulo no activado
           </p>
-          <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5, margin: '0 0 14px' }}>
+          <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5, margin: '0 0 14px' }}>
             Este módulo está disponible en tu plan pero necesita ser activado.
             Ve a Módulos para encenderlo.
           </p>
@@ -447,10 +442,10 @@ function LockedContent({ planLabel, moduleKey }: { planLabel: string | null; mod
         </>
       ) : (
         <>
-          <p style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text-2)', margin: '0 0 6px' }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text-2)', margin: '0 0 6px' }}>
             Disponible en {planLabel}
           </p>
-          <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5, margin: '0 0 14px' }}>
+          <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5, margin: '0 0 14px' }}>
             Esta funcionalidad forma parte de un plan superior. Mejora tu plan para desbloquearla.
           </p>
           <Link
@@ -531,7 +526,7 @@ function StepItem({ step, number }: { step: TutorialStep; number: number }) {
           border: '1px solid var(--u-hair)',
         }}>
           <Icon name="chevronRight" size={13} style={{ color: 'var(--u-text-4)', flexShrink: 0, marginTop: 2 }} />
-          <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.5, fontFamily: 'var(--font-mono, monospace)' }}>
+          <span style={{ fontSize: 11, color: 'var(--u-text-3)', lineHeight: 1.5, fontFamily: 'var(--font-mono, monospace)' }}>
             {step.route}
           </span>
         </div>

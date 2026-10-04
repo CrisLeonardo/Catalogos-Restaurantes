@@ -1235,7 +1235,7 @@ export default function ServicioPanel({
               {!movil && pickupEnabled && (
                 <button type="button" className="sv-llevar" onClick={() => setHoja({ k: 'llevar' })}>
                   <span className="sv-llevar-ico"><Icon name="bag" size={16} /></span>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
                     Para llevar
                   </span>
                 </button>

@@ -51,7 +51,7 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
       ) : undefined}
     >
       <Card className="p-4.5 flex flex-col gap-3.5">
-      <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
+      <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
         Estos son los aparatos que tu restaurante reconoce como suyos. Se apuntan solos
         cada vez que alguien entra con su PIN, así que la lista se llena sin que hagas nada.
       </p>
@@ -75,8 +75,8 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
           <Icon name="monitor" size={16} />
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text)' }}>{thisDeviceLabel}</div>
-          <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text)' }}>{thisDeviceLabel}</div>
+          <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 1 }}>
             {thisDeviceId === null
               ? 'Este navegador no permite recordar el aparato'
               : isThisTrusted ? 'Ya está autorizado' : 'Todavía no autorizado'}
@@ -109,13 +109,13 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
               }}
             >
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13.5, color: 'var(--u-text)', fontWeight: 500 }}>
+                <div style={{ fontSize: 13, color: 'var(--u-text)', fontWeight: 500 }}>
                   {d.label || 'Dispositivo sin nombre'}
                   {d.device_id === thisDeviceId && (
                     <span style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 400 }}> · este</span>
                   )}
                 </div>
-                <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+                <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 1 }}>
                   Última vez {timeAgo(d.last_seen_at)}
                   {d.auto ? ' · se apuntó solo al entrar con PIN' : ' · autorizado desde el panel'}
                 </div>
@@ -147,7 +147,7 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
         <input type="hidden" name="enabled" value={requiresTrusted ? 'false' : 'true'} />
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>
               El PIN solo funciona en estos aparatos
             </div>
             <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: '3px 0 0', lineHeight: 1.5 }}>
@@ -168,7 +168,7 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
         </div>
       </form>
 
-      {error && <div style={{ fontSize: 12.5, color: 'var(--c-danger)' }}>{error}</div>}
+      {error && <div style={{ fontSize: 12, color: 'var(--c-danger)' }}>{error}</div>}
       </Card>
       {dialog}
     </Section>

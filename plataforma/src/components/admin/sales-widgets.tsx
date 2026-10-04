@@ -126,7 +126,7 @@ export function SalesTrendWidget({
 
         {pace && delta !== null && (
           <ListRow className="py-2.5">
-            <div className="text-[13.5px] leading-snug text-adm-text-2">
+            <div className="text-[13px] leading-snug text-adm-text-2">
               Un día como hoy a esta hora va en{' '}
               <span className="t-mono">{money(pace.typicalSoFar)}</span>.{' '}
               {delta === 0 ? (

@@ -273,7 +273,7 @@ export default function WaiterCallsAlert({
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)', lineHeight: 1.2 }}>
               {c.table_number ? `Mesa ${c.table_number}` : 'Llamada al mesero'}
             </div>
-            <div style={{ fontSize: 11.5, color: 'var(--c-warn)', marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: 'var(--c-warn)', marginTop: 2 }}>
               Solicita atención · {timeAgo(c.created_at)}
             </div>
           </div>
@@ -286,7 +286,7 @@ export default function WaiterCallsAlert({
             style={{
               flexShrink: 0, padding: '8px 14px', borderRadius: 'var(--radius-md)', border: 'none',
               cursor: resolving ? 'not-allowed' : 'pointer',
-              fontSize: 12.5, fontWeight: 700,
+              fontSize: 12, fontWeight: 700,
               background: 'var(--u-text)', color: 'var(--brand-bg)',
               opacity: resolving ? 0.7 : 1,
             }}

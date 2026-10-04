@@ -89,7 +89,7 @@ export default async function FichaResumenPage({
               }}>
                 <Icon name={t.icon} size={16} />
               </span>
-              <span style={{ flex: 1, fontSize: 13.5, color: 'var(--u-text-2)' }}>{t.text}</span>
+              <span style={{ flex: 1, fontSize: 13, color: 'var(--u-text-2)' }}>{t.text}</span>
               <Button variant="outline" size="sm" render={<Link href={t.href} />}>{t.cta}</Button>
             </div>
           ))}

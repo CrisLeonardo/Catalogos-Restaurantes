@@ -49,10 +49,6 @@ const NEXT_STATUS: Partial<Record<ReservationStatus, ReservationStatus>> = {
   SEATED: 'COMPLETED',
 };
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-};
 const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 function formatDate(date: string) {
@@ -170,32 +166,32 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
 
       {tab === 'nueva' ? (
         <Card className="p-5" style={{ maxWidth: 520 }}>
-          <p style={{ fontSize: 15, fontWeight: 650, marginBottom: 14 }}>Nueva reservación</p>
+          <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 14 }}>Nueva reservación</p>
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Nombre del cliente *</label>
-                <input style={inputStyle} value={form.customer_name} onChange={(e) => setField('customer_name', e.target.value)} required placeholder="Juan García" />
+                <input className="adm-field" value={form.customer_name} onChange={(e) => setField('customer_name', e.target.value)} required placeholder="Juan García" />
               </div>
               <div>
                 <label style={labelStyle}>Teléfono</label>
-                <input style={inputStyle} value={form.customer_phone} onChange={(e) => setField('customer_phone', e.target.value)} placeholder="+502 0000-0000" />
+                <input className="adm-field" value={form.customer_phone} onChange={(e) => setField('customer_phone', e.target.value)} placeholder="+502 0000-0000" />
               </div>
               <div>
                 <label style={labelStyle}>Personas *</label>
-                <input style={inputStyle} type="number" inputMode="decimal" min={1} max={100} value={form.party_size} onChange={(e) => setField('party_size', parseInt(e.target.value) || 1)} required />
+                <input className="adm-field" type="number" inputMode="decimal" min={1} max={100} value={form.party_size} onChange={(e) => setField('party_size', parseInt(e.target.value) || 1)} required />
               </div>
               <div>
                 <label style={labelStyle}>Fecha *</label>
-                <input style={inputStyle} type="date" value={form.date} onChange={(e) => setField('date', e.target.value)} required />
+                <input className="adm-field" type="date" value={form.date} onChange={(e) => setField('date', e.target.value)} required />
               </div>
               <div>
                 <label style={labelStyle}>Hora *</label>
-                <input style={inputStyle} type="time" value={form.time} onChange={(e) => setField('time', e.target.value)} required />
+                <input className="adm-field" type="time" value={form.time} onChange={(e) => setField('time', e.target.value)} required />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Notas</label>
-                <textarea style={{ ...inputStyle, resize: 'vertical', minHeight: 60 }} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Preferencias, alergia, ocasión especial…" />
+                <textarea className="adm-field" style={{ resize: 'vertical', minHeight: 60 }} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Preferencias, alergia, ocasión especial…" />
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -236,10 +232,10 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
                           {r.table_number ? ` · mesa ${r.table_number}` : ''}
                           {r.customer_phone ? ` · ${r.customer_phone}` : ''}
                         </div>
-                        {r.notes && <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 3, fontStyle: 'italic' }}>{r.notes}</div>}
+                        {r.notes && <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 3, fontStyle: 'italic' }}>{r.notes}</div>}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                        <span style={{ fontSize: 11.5, fontWeight: 600, color: STATUS_COLOR[r.status] }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: STATUS_COLOR[r.status] }}>
                           {STATUS_LABEL[r.status]}
                         </span>
                         {/* En qué mesa se sientan (M-04). Solo en el paso que
@@ -253,7 +249,7 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
                             style={{
                               height: 32, borderRadius: 'var(--radius-full)', padding: '0 10px',
                               border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
-                              color: 'var(--u-text)', fontSize: 12.5, cursor: 'pointer',
+                              color: 'var(--u-text)', fontSize: 12, cursor: 'pointer',
                             }}
                           >
                             <option value="" style={{ color: 'var(--u-text)' }}>Sin mesa</option>

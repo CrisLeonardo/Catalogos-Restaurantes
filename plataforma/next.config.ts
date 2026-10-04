@@ -33,6 +33,11 @@ const nextConfig: NextConfig = {
          estas dos líneas junto con CANALES_HABILITADO de la página. */
       { source: '/panel/:slug/canales', destination: '/panel/:slug', permanent: false },
       { source: '/admin/canales', destination: '/admin', permanent: false },
+      /* Cobros vive dentro de Finanzas › Cobranza. La página vieja hacía
+         `redirect()` con el armazón del Super ya transmitiéndose y el
+         navegador lanzaba React #310 (encontrado en el barrido del
+         2026-10-03). Aquí se redirige antes de pintar nada. */
+      { source: '/super/cobros', destination: '/super/finanzas/cobranza', permanent: false },
     ];
   },
   images: {

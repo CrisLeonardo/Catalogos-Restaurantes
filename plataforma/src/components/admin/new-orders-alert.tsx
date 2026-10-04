@@ -449,7 +449,7 @@ export default function NewOrdersAlert({
               Pedido nuevo · {shortOrderNumber(o.order_number)}
             </div>
             <div style={{
-              fontSize: 11.5, color: 'var(--c-ok)', marginTop: 2,
+              fontSize: 11, color: 'var(--c-ok)', marginTop: 2,
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
               {cardSubtitle(o.customer_name, typeLabel(o.order_type, o.address), timeAgo(o.created_at))}
@@ -463,7 +463,7 @@ export default function NewOrdersAlert({
               className="press"
               style={{
                 padding: '7px 13px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer',
-                fontSize: 12.5, fontWeight: 700,
+                fontSize: 12, fontWeight: 700,
                 background: 'var(--u-text)', color: 'var(--brand-bg)',
               }}
             >

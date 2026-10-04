@@ -130,7 +130,7 @@ export default function PreviewPane({ previewId, id }: { previewId: string; /** 
           <div className={`preview-frame${wide ? ' is-wide' : ''}`}>
             <iframe key={src} src={src} title="Vista previa del restaurante" loading="lazy" />
           </div>
-          <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', textAlign: 'center', lineHeight: 1.5 }}>
+          <p style={{ fontSize: 11, color: 'var(--u-text-4)', textAlign: 'center', lineHeight: 1.5 }}>
             Los cambios del editor se reflejan al instante, sin guardar.
             <br />
             «Abrir en ventana» sirve para mostrarla al cliente en otra pantalla.
@@ -166,7 +166,7 @@ export default function PreviewPane({ previewId, id }: { previewId: string; /** 
               <Icon name="arrowUpRight" size={15} /> Abrir en pestaña nueva
             </button>
             <button type="button" onClick={openWindow} className="press"
-              style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5, border: 'none', background: 'transparent', color: 'var(--u-text-3)', cursor: 'pointer' }}>
+              style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12, border: 'none', background: 'transparent', color: 'var(--u-text-3)', cursor: 'pointer' }}>
               Abrir en ventana aparte
             </button>
           </div>

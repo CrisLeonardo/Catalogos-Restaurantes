@@ -84,10 +84,10 @@ export default function OpenItemDialog({
         onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
         style={{ width: '100%', maxWidth: 460, padding: '22px 20px 28px' }}
       >
-        <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--u-text)' }}>
+        <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--u-text)' }}>
           Artículo libre
         </div>
-        <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 6, lineHeight: 1.45 }}>
+        <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 6, lineHeight: 1.45 }}>
           Algo que no está en la carta: el plato del día, un descorche, un recargo.
           Entra a la cuenta como cualquier otro y queda registrado.
         </div>
@@ -100,7 +100,7 @@ export default function OpenItemDialog({
             placeholder="Descorche, plato del día…"
             aria-label="Nombre del artículo"
             maxLength={80}
-            style={campoStyle}
+            className="adm-field adm-field-lg" style={campoStyle}
           />
         </Campo>
 
@@ -118,14 +118,14 @@ export default function OpenItemDialog({
               inputMode="decimal"
               placeholder="0.00"
               aria-label="Precio del artículo"
-              style={{ ...campoStyle, marginTop: 0 }}
+              className="adm-field adm-field-lg" style={{ ...campoStyle, marginTop: 0 }}
             />
           </div>
           <div style={{ flexShrink: 0 }}>
             <Etiqueta>Cantidad</Etiqueta>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, height: 48 }}>
               <Paso icon="minus" label="Uno menos" onClick={() => setQty((q) => Math.max(1, q - 1))} disabled={qty <= 1} />
-              <span className="t-mono" style={{ minWidth: 30, textAlign: 'center', fontSize: 17, fontWeight: 700, color: 'var(--u-text)' }}>
+              <span className="t-mono" style={{ minWidth: 30, textAlign: 'center', fontSize: 16, fontWeight: 700, color: 'var(--u-text)' }}>
                 {qty}
               </span>
               <Paso icon="plus" label="Uno más" onClick={() => setQty((q) => Math.min(99, q + 1))} />
@@ -141,7 +141,7 @@ export default function OpenItemDialog({
             placeholder="Sin hielo, para llevar…"
             aria-label="Nota del artículo"
             maxLength={140}
-            style={campoStyle}
+            className="adm-field adm-field-lg" style={campoStyle}
           />
         </Campo>
 
@@ -177,13 +177,10 @@ export default function OpenItemDialog({
   );
 }
 
-const campoStyle: React.CSSProperties = {
-  width: '100%', height: 48, marginTop: 6, padding: '0 14px', borderRadius: 'var(--radius-lg)', outline: 'none',
-  border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-  /* 16 px de piso: por debajo, Safari amplía la página al enfocar el campo
-     y el mesero acaba con la pantalla desplazada. */
-  color: 'var(--u-text)', fontSize: 16,
-};
+/* Con `.adm-field adm-field-lg` (16 px de piso: por debajo, Safari amplía
+   la página al enfocar el campo y el mesero acaba con la pantalla
+   desplazada). Aquí solo lo propio: más alto, para el dedo. */
+const campoStyle: React.CSSProperties = { height: 48, marginTop: 6, padding: '0 14px', borderRadius: 'var(--radius-lg)' };
 
 function Etiqueta({ children }: { children: React.ReactNode }) {
   return (

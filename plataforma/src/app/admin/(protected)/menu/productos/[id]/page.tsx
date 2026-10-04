@@ -115,7 +115,7 @@ export default async function EditProductPage({
       >
         <div style={{ minWidth: 0, flex: '1 1 240px' }}>
           <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--u-text)' }}>Eliminar este platillo</p>
-          <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 2, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2, lineHeight: 1.5 }}>
             Sale del menú para siempre. Si solo se acabó, mejor márcalo como agotado.
           </p>
         </div>

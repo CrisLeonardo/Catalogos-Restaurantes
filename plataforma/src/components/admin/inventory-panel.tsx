@@ -19,7 +19,7 @@ const REASON_LABEL: Record<string, string> = {
 
 function MovementHistory({ movements }: { movements: StockMovement[] }) {
   if (movements.length === 0) {
-    return <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', padding: '6px 2px' }}>Sin movimientos registrados todavía.</p>;
+    return <p style={{ fontSize: 12, color: 'var(--u-text-4)', padding: '6px 2px' }}>Sin movimientos registrados todavía.</p>;
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 260, overflowY: 'auto' }}>
@@ -151,7 +151,7 @@ function Row({ product, restaurantId, last }: { product: Product; restaurantId: 
           renglón siguiente (auditoría 2026-10-02, MEN-10). */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px 12px', flexWrap: 'wrap' }}>
         <div style={{ flex: '1 1 150px', minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 14.5, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {product.name}
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 3 }}>
@@ -165,7 +165,7 @@ function Row({ product, restaurantId, last }: { product: Product; restaurantId: 
         {tracked ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
             <Stepper onClick={() => quick(-1)} disabled={pending || stock <= 0} icon="minus" label="Restar uno" />
-            <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 17, minWidth: 34, textAlign: 'center', color: isOut ? 'var(--c-danger)' : 'var(--u-text)' }}>
+            <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 16, minWidth: 34, textAlign: 'center', color: isOut ? 'var(--c-danger)' : 'var(--u-text)' }}>
               {stock}
             </span>
             <Stepper onClick={() => quick(1)} disabled={pending} icon="plus" label="Sumar uno" />
@@ -186,7 +186,7 @@ function Row({ product, restaurantId, last }: { product: Product; restaurantId: 
       {/* Historial de movimientos (Kardex): entradas por compra, ventas, ajustes */}
       {history !== null && (
         <Card variant="flat" className="p-3">
-          {loadingHistory ? <p style={{ fontSize: 12.5, color: 'var(--u-text-4)' }}>Cargando…</p> : <MovementHistory movements={history} />}
+          {loadingHistory ? <p style={{ fontSize: 12, color: 'var(--u-text-4)' }}>Cargando…</p> : <MovementHistory movements={history} />}
         </Card>
       )}
 
@@ -194,10 +194,10 @@ function Row({ product, restaurantId, last }: { product: Product; restaurantId: 
       {open && (
         <Card variant="flat" className="flex flex-wrap items-end gap-3 p-3">
           <Field label="Stock exacto">
-            <input type="number" inputMode="decimal" min="0" value={stockVal} onChange={(e) => setStockVal(e.target.value)} style={inputStyle} />
+            <input type="number" inputMode="decimal" min="0" value={stockVal} onChange={(e) => setStockVal(e.target.value)} className="adm-field adm-field-mono" style={{ width: 110 }} />
           </Field>
           <Field label="Alertar cuando ≤">
-            <input type="number" inputMode="decimal" min="0" value={thresholdVal} onChange={(e) => setThresholdVal(e.target.value)} style={inputStyle} />
+            <input type="number" inputMode="decimal" min="0" value={thresholdVal} onChange={(e) => setThresholdVal(e.target.value)} className="adm-field adm-field-mono" style={{ width: 110 }} />
           </Field>
           <Button onClick={() => save(true)} disabled={pending} size="sm">
             {pending ? '…' : tracked ? 'Guardar' : 'Activar'}
@@ -217,11 +217,6 @@ function Row({ product, restaurantId, last }: { product: Product; restaurantId: 
   );
 }
 
-const inputStyle: React.CSSProperties = {
-  width: 110, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
-  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14,
-  outline: 'none', fontFamily: 'var(--ui-font-mono)',
-};
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

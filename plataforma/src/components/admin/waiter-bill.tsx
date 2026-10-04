@@ -145,7 +145,7 @@ const money = (n: number, c: PanelCurrency): string => fmtCurrency(n, c);
    viejo —tarjetas `.glass`, totales de 34 px, píldoras de colores— y era lo
    que hacía que cobrar pareciese otra aplicación. */
 const KICKER: React.CSSProperties = {
-  fontSize: 12.5, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase',
+  fontSize: 12, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase',
   color: 'var(--u-text-3)', padding: '0 4px 8px',
 };
 
@@ -405,7 +405,7 @@ export default function WaiterBill({
           ariaLabel="Cómo se reparte la cuenta"
           options={MODE_TABS.map((t) => ({ value: t.id, label: t.label }))}
         />
-        <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5, padding: '0 4px' }}>
+        <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5, padding: '0 4px' }}>
           {MODE_TABS.find((t) => t.id === mode)?.hint}
         </div>
       </div>
@@ -413,7 +413,7 @@ export default function WaiterBill({
       {/* ── Partes iguales: solo el contador ─────────────── */}
       {mode === 'equal' && (
         <Group style={{ padding: 16 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text-2)', textAlign: 'center' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', textAlign: 'center' }}>
             ¿Entre cuántas personas?
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, marginTop: 12 }}>
@@ -450,7 +450,7 @@ export default function WaiterBill({
                       background: on ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--brand-accent) 13%, transparent)',
                       color: on ? 'var(--brand-on-accent, #fff)' : 'var(--u-text)',
                       border: `1px solid ${on ? 'var(--brand-accent)' : 'transparent'}`,
-                      fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
+                      fontSize: 13, fontWeight: 600, cursor: 'pointer',
                     }}
                   >
                     {renaming === id ? (
@@ -465,7 +465,7 @@ export default function WaiterBill({
                         }}
                         onBlur={() => commitRename(id)}
                         placeholder={`Persona ${id}`}
-                        style={{ width: 82, background: 'transparent', border: 'none', borderBottom: '1px solid currentColor', color: 'inherit', fontSize: 13.5, fontWeight: 600, outline: 'none', padding: 0 }}
+                        style={{ width: 82, background: 'transparent', border: 'none', borderBottom: '1px solid currentColor', color: 'inherit', fontSize: 13, fontWeight: 600, outline: 'none', padding: 0 }}
                       />
                     ) : (
                       // El nombre NO tiene onClick propio: el toque cae al span
@@ -502,7 +502,7 @@ export default function WaiterBill({
                   </span>
                 );
               })}
-              <button type="button" onClick={addPerson} className="press glass-quiet" style={{ padding: '8px 16px', borderRadius: 'var(--radius-full)', border: '1px dashed var(--u-hair)', color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 13.5, fontWeight: 600 }}>
+              <button type="button" onClick={addPerson} className="press glass-quiet" style={{ padding: '8px 16px', borderRadius: 'var(--radius-full)', border: '1px dashed var(--u-hair)', color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
                 + Persona
               </button>
             </div>
@@ -516,7 +516,7 @@ export default function WaiterBill({
               border: '1px solid color-mix(in srgb, var(--c-warn, #f59e0b) 28%, transparent)',
             }}>
               <Icon name="alertCircle" size={15} style={{ color: 'var(--c-warn)', flexShrink: 0 }} />
-              <span style={{ flex: 1, minWidth: 170, fontSize: 12.5, color: 'var(--u-text-2)', lineHeight: 1.45 }}>
+              <span style={{ flex: 1, minWidth: 170, fontSize: 12, color: 'var(--u-text-2)', lineHeight: 1.45 }}>
                 <b>{unassignedCount} plato{unassignedCount === 1 ? '' : 's'} sin asignar</b> ·{' '}
                 {money(split.unassigned?.total ?? 0, currency)} que nadie está pagando.
               </span>
@@ -561,10 +561,10 @@ export default function WaiterBill({
             <div key={line.itemId}>
               <Hr />
               <div style={{ padding: '10px 16px', opacity: 0.55 }}>
-                <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', textDecoration: 'line-through' }}>
+                <div style={{ fontSize: 13, color: 'var(--u-text-3)', textDecoration: 'line-through' }}>
                   {line.voidedQuantity} · {line.name}
                 </div>
-                <div style={{ fontSize: 12.5, color: 'var(--c-danger)', fontWeight: 600, marginTop: 1 }}>Anulado · no se cobra</div>
+                <div style={{ fontSize: 12, color: 'var(--c-danger)', fontWeight: 600, marginTop: 1 }}>Anulado · no se cobra</div>
               </div>
             </div>
           ))}
@@ -600,7 +600,7 @@ export default function WaiterBill({
                     {isPaid && <Icon name="check" size={13} strokeWidth={3} />}
                   </button>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14.5, fontWeight: 500, color: 'var(--u-text)', textDecoration: isPaid ? 'line-through' : 'none' }}>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--u-text)', textDecoration: isPaid ? 'line-through' : 'none' }}>
                       {name}
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 1 }}>
@@ -644,7 +644,7 @@ export default function WaiterBill({
             display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px',
             background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
           }}>
-            <span style={{ flex: 1, fontSize: 14.5, fontWeight: 600, color: allPaid ? 'var(--c-ok)' : 'var(--u-text)' }}>
+            <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: allPaid ? 'var(--c-ok)' : 'var(--u-text)' }}>
               {allPaid ? 'Todo cobrado' : 'Falta cobrar'}
             </span>
             {!allPaid && <Mono size={17}>{money(pendingTotal, currency)}</Mono>}
@@ -697,7 +697,7 @@ export default function WaiterBill({
 
       {printMsg && (
         <div style={{
-          fontSize: 12.5, lineHeight: 1.5, padding: '9px 12px', borderRadius: 'var(--radius-md)',
+          fontSize: 12, lineHeight: 1.5, padding: '9px 12px', borderRadius: 'var(--radius-md)',
           color: printMsg.bad ? 'var(--c-danger, #f87171)' : 'var(--c-ok, #4ade80)',
           background: printMsg.bad ? 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)' : 'color-mix(in srgb, var(--c-ok, #4ade80) 10%, transparent)',
         }}>
@@ -735,7 +735,7 @@ export default function WaiterBill({
           disabled={freeing}
           onClick={() => setClosing(true)}
           className="press btn-accent"
-          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, flexShrink: 0, minHeight: 40, padding: '0 18px', borderRadius: 'var(--radius-md)', border: 'none', cursor: freeing ? 'default' : 'pointer', fontWeight: 600, fontSize: 14.5, opacity: freeing ? 0.6 : 1 }}
+          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, flexShrink: 0, minHeight: 40, padding: '0 18px', borderRadius: 'var(--radius-md)', border: 'none', cursor: freeing ? 'default' : 'pointer', fontWeight: 600, fontSize: 14, opacity: freeing ? 0.6 : 1 }}
         >
           {freeing ? 'Cerrando…' : (
             <>
@@ -796,7 +796,7 @@ export default function WaiterBill({
 function BillRow({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', minHeight: 40 }}>
-      <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: 'var(--u-text-3)' }}>{label}</span>
+      <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--u-text-3)' }}>{label}</span>
       <Mono size={14} color={accent ? 'var(--c-ok)' : 'var(--u-text-2)'}>{value}</Mono>
     </div>
   );
@@ -812,7 +812,7 @@ function StepBtn({ label, onClick, disabled }: { label: string; onClick: () => v
       className="press glass-quiet"
       style={{
         width: 52, height: 52, borderRadius: 'var(--radius-lg)', border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
-        display: 'grid', placeItems: 'center', fontSize: 26, fontWeight: 600, color: 'var(--u-text)', opacity: disabled ? 0.35 : 1,
+        display: 'grid', placeItems: 'center', fontSize: 24, fontWeight: 600, color: 'var(--u-text)', opacity: disabled ? 0.35 : 1,
       }}
     >
       {label}
@@ -866,20 +866,20 @@ function LineCard({
         </span>
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14.5, fontWeight: 500, color: 'var(--u-text)' }}>
+        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--u-text)' }}>
           {line.quantity} · {line.name}
         </div>
         {line.options && (
           <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 1, lineHeight: 1.35 }}>{line.options}</div>
         )}
         {line.voidedQuantity > 0 && (
-          <div style={{ fontSize: 12.5, color: 'var(--c-danger)', fontWeight: 600, marginTop: 1 }}>
+          <div style={{ fontSize: 12, color: 'var(--c-danger)', fontWeight: 600, marginTop: 1 }}>
             {line.voidedQuantity} anulada{line.voidedQuantity === 1 ? '' : 's'}
           </div>
         )}
         {interactive && (
           <div style={{
-            fontSize: 12.5, marginTop: 2, fontWeight: 600,
+            fontSize: 12, marginTop: 2, fontWeight: 600,
             color: claimedBy.length === 0 ? 'var(--c-warn)' : 'var(--brand-accent-ink)',
           }}>
             {claimedBy.length === 0

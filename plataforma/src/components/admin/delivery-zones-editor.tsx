@@ -101,12 +101,8 @@ export default function DeliveryZonesEditor({
                   inputMode="decimal"
                   value={z.tarifa}
                   onChange={(e) => setTarifa(z.nombre, e.target.value)}
-                  style={{
-                    width: 84, background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-                    border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)',
-                    padding: '7px 9px', color: 'var(--u-text)', fontSize: 13, outline: 'none',
-                    fontVariantNumeric: 'tabular-nums',
-                  }}
+                  className="adm-field adm-field-sm"
+                  style={{ width: 84, fontVariantNumeric: 'tabular-nums' }}
                 />
 
                 <button
@@ -137,11 +133,8 @@ export default function DeliveryZonesEditor({
               if (e.key === 'Enter') { e.preventDefault(); addZone(); }
             }}
             placeholder="Ej. Zona 1, Centro, San Cristóbal…"
-            style={{
-              flex: 1, background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
-              borderRadius: 'var(--radius-md)', padding: '10px 12px',
-              color: 'var(--u-text)', fontSize: 14, outline: 'none',
-            }}
+            className="adm-field"
+            style={{ flex: 1 }}
           />
           <button
             type="button"

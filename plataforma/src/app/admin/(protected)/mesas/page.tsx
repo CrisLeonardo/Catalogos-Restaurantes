@@ -110,7 +110,7 @@ export default async function MesasPage() {
           <Icon name="settings" size={16} />
         </span>
         <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: 14.5, fontWeight: 500, color: 'var(--u-text)' }}>
+          <span style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--u-text)' }}>
             Configuración del salón
           </span>
           <span style={{ display: 'block', fontSize: 13, color: 'var(--u-text-3)', marginTop: 1, lineHeight: 1.35 }}>

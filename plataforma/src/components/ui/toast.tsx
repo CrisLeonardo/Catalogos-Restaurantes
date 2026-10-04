@@ -51,7 +51,7 @@ function ToastList() {
         <Icon name={meta.name} size={18} className={cn('mt-0.5 shrink-0', meta.className)} />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <BaseToast.Title className="text-[13px] font-semibold text-adm-text" />
-          <BaseToast.Description className="text-[12.5px] text-adm-text-3" />
+          <BaseToast.Description className="text-[12px] text-adm-text-3" />
         </div>
         {/* Acción del aviso — hoy siempre "Deshacer". Es la pieza que permite
             dejar de preguntar "¿estás seguro?" antes de cada cosa: la acción
@@ -60,7 +60,7 @@ function ToastList() {
         {toast.actionProps && (
           <BaseToast.Action
             className={cn(
-              'shrink-0 self-center rounded-adm-md px-2.5 py-1.5 text-[12.5px] font-semibold outline-none transition-colors',
+              'shrink-0 self-center rounded-adm-md px-2.5 py-1.5 text-[12px] font-semibold outline-none transition-colors',
               'text-[var(--brand-accent-ink,var(--adm-accent-500))] hover:bg-adm-card',
               'focus-visible:ring-2 focus-visible:ring-adm-accent-500/40'
             )}

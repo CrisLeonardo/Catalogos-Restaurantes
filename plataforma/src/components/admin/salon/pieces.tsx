@@ -373,7 +373,7 @@ export function TableCard({
         aria-label={`Mesa ${t.n}, libre. ${t.action.label}`}
       >
         <span className="t-mono" style={num(24)}>{t.n}</span>
-        {t.nombre && <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-3)' }}>{t.nombre}</span>}
+        {t.nombre && <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text-3)' }}>{t.nombre}</span>}
         {t.pax && <span style={{ fontSize: 12, color: 'var(--u-text-4)' }}>{t.pax}</span>}
       </button>
     );
@@ -405,14 +405,14 @@ export function TableCard({
                     un «Terraza de arriba» de dos renglones engorda la fila
                     entera de fichas por culpa de una sola. */}
                 {t.nombre && (
-                  <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-3)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text-3)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {t.nombre}
                   </span>
                 )}
                 {t.pax && <span style={{ fontSize: 12, color: 'var(--u-text-4)', flexShrink: 0 }}>{t.pax}</span>}
                 {t.fuera && <FueraChip />}
               </span>
-              <span style={{ display: 'block', fontSize: 12.5, marginTop: 5, fontWeight: 600, color: estadoInk(t) }}>
+              <span style={{ display: 'block', fontSize: 12, marginTop: 5, fontWeight: 600, color: estadoInk(t) }}>
                 {estadoDeFicha(t)}
               </span>
             </span>
@@ -450,7 +450,7 @@ export function TableCard({
             const reloj = t.tiempo && t.metrica.cual !== 'tiempo' ? t.tiempo : null;
             if (!etapa && !reloj) return null;
             return (
-              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 11.5, color: 'var(--u-text-3)' }}>
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 11, color: 'var(--u-text-3)' }}>
                 <span>{etapa}</span>
                 {reloj && <span className="t-mono" style={{ fontWeight: 600 }}>{reloj}</span>}
               </span>
@@ -609,13 +609,13 @@ export function TableRow({
         {/* El renglón sí tiene el ancho de la pantalla: aquí la frase
             completa («Servida hace 21 min») se lee mejor que «Sin cobrar». */}
         <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: estadoInk(t) }}>
+          <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: estadoInk(t) }}>
             {estadoDeFicha(t, true)}
           </span>
           {/* Una mesa libre no tiene mesero, ni etapa, ni «Sin abrir» que
               contar: ya lo dijo la palabra «Libre» de arriba. */}
           {!libre && (
-            <span style={{ display: 'block', fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>
+            <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)', marginTop: 1 }}>
               {[
                 t.fuera && 'Sin configurar',
                 t.nombre,
@@ -633,7 +633,7 @@ export function TableRow({
             </span>
           )}
           {libre && (t.nombre || t.pax) && (
-            <span style={{ display: 'block', fontSize: 12.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+            <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-4)', marginTop: 1 }}>
               {[t.nombre, t.pax].filter(Boolean).join(' · ')}
             </span>
           )}
@@ -703,7 +703,7 @@ export function TablePin({
         <span
           className="t-mono"
           style={{
-            fontSize: 19, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1,
+            fontSize: 18, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1,
             color: libre ? 'var(--u-text-4)' : 'var(--u-text)',
           }}
         >
@@ -720,7 +720,7 @@ export function TablePin({
         )}
         <span style={{ flex: 1 }} />
         {t.totalCorto && (
-          <span className="t-mono" style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--u-text-2)', whiteSpace: 'nowrap' }}>
+          <span className="t-mono" style={{ fontSize: 11, fontWeight: 600, color: 'var(--u-text-2)', whiteSpace: 'nowrap' }}>
             {t.totalCorto}
           </span>
         )}

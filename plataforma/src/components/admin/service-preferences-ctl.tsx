@@ -34,10 +34,8 @@ export function ServicePreferencesCtl({ items, onChange }: { items: string[]; on
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
           placeholder="Nueva preferencia…"
-          style={{
-            flex: 1, background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
-            borderRadius: 'var(--radius-md)', padding: '7px 10px', color: 'var(--u-text)', fontSize: 13, outline: 'none',
-          }}
+          className="adm-field adm-field-sm"
+          style={{ flex: 1 }}
         />
         <button
           type="button"

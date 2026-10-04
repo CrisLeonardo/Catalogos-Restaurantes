@@ -80,7 +80,7 @@ export default function RespaldoPanel({ restaurantId }: { restaurantId: string }
         {pending ? 'Generando…' : 'Descargar la copia (.xlsx)'}
       </Button>
 
-      <p className="text-[12.5px] leading-snug" style={{ color: 'var(--u-text-4)' }}>
+      <p className="text-[12px] leading-snug" style={{ color: 'var(--u-text-4)' }}>
         El archivo lleva datos personales de tus clientes: guárdalo con el mismo
         cuidado que cualquier otro documento sensible de tu negocio.
       </p>

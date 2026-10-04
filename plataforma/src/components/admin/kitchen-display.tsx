@@ -348,7 +348,7 @@ const KitchenCard = memo(function KitchenCard({ order, color, urgente, C }: { or
       <div style={{ padding: '12px 14px 10px', borderBottom: `1px solid ${C.hair}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.02em' }} title={order.order_number}>{shortOrderNumber(order.order_number)}</span>
+            <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em' }} title={order.order_number}>{shortOrderNumber(order.order_number)}</span>
             {isNew && (
               <span style={{ padding: '2px 8px', borderRadius: 'var(--radius-full)', background: `color-mix(in srgb, ${C.blue} 13%, transparent)`, color: C.blue, fontSize: 11, fontWeight: 800, animation: 'kdsPulse 1.6s ease-in-out infinite' }}>
                 NUEVO
@@ -374,7 +374,7 @@ const KitchenCard = memo(function KitchenCard({ order, color, urgente, C }: { or
           const fullyVoided = remaining === 0;
           return (
             <div key={item.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', opacity: fullyVoided ? 0.45 : 1 }}>
-              <span style={{ fontSize: 18, fontWeight: 900, color: C.text, minWidth: 32, lineHeight: 1.2, textDecoration: fullyVoided ? 'line-through' : 'none' }}>
+              <span style={{ fontSize: 18, fontWeight: 800, color: C.text, minWidth: 32, lineHeight: 1.2, textDecoration: fullyVoided ? 'line-through' : 'none' }}>
                 {fullyVoided ? item.quantity : remaining}×
               </span>
               <div style={{ minWidth: 0 }}>
@@ -403,7 +403,7 @@ const KitchenCard = memo(function KitchenCard({ order, color, urgente, C }: { or
 
         {order.notes && (
           <div style={{ marginTop: 2, padding: '8px 10px', borderRadius: 'var(--radius-sm)', background: `color-mix(in srgb, ${C.amber} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${C.amber} 25%, transparent)` }}>
-            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.05em', color: C.amber, textTransform: 'uppercase', marginBottom: 2 }}>Nota</div>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.05em', color: C.amber, textTransform: 'uppercase', marginBottom: 2 }}>Nota</div>
             <div style={{ fontSize: 14, fontWeight: 600, color: C.text, lineHeight: 1.35 }}>{order.notes}</div>
           </div>
         )}

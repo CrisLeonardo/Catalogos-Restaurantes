@@ -34,11 +34,6 @@ export default function WhatsAppPanel({
 
 
   const labelSt: React.CSSProperties = FIELD_LABEL;
-  const inputSt: React.CSSProperties = {
-    width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-    border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-md)', padding: '11px 13px',
-    color: 'var(--u-text)', fontSize: 14, outline: 'none',
-  };
   const fieldSt: React.CSSProperties = { marginBottom: 14 };
   const avisoSt: React.CSSProperties = {
     display: 'block', whiteSpace: 'normal', borderRadius: 'var(--radius-lg)',
@@ -115,13 +110,13 @@ export default function WhatsAppPanel({
 
         <div style={fieldSt}>
           <label style={labelSt} htmlFor="wa-pnid">ID del número (phone number ID)</label>
-          <input id="wa-pnid" name="phone_number_id" required style={inputSt}
+          <input id="wa-pnid" name="phone_number_id" required className="adm-field"
             defaultValue={account?.phoneNumberId ?? ''} placeholder="123456789012345" />
         </div>
 
         <div style={fieldSt}>
           <label style={labelSt} htmlFor="wa-token">Token de acceso</label>
-          <input id="wa-token" name="access_token" type="password" required style={inputSt}
+          <input id="wa-token" name="access_token" type="password" required className="adm-field"
             placeholder="EAAG..." autoComplete="off" />
           <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 5 }}>
             Se guarda cifrado y no se vuelve a mostrar. Para cambiarlo, pégalo de nuevo.
@@ -130,13 +125,13 @@ export default function WhatsAppPanel({
 
         <div style={fieldSt}>
           <label style={labelSt} htmlFor="wa-display">Número visible (opcional)</label>
-          <input id="wa-display" name="display_phone" style={inputSt}
+          <input id="wa-display" name="display_phone" className="adm-field"
             defaultValue={account?.displayPhone ?? ''} placeholder="+502 5555 1234" />
         </div>
 
         <div style={fieldSt}>
           <label style={labelSt} htmlFor="wa-waba">ID de la cuenta de WhatsApp Business (opcional)</label>
-          <input id="wa-waba" name="waba_id" style={inputSt}
+          <input id="wa-waba" name="waba_id" className="adm-field"
             defaultValue={account?.wabaId ?? ''} placeholder="987654321098765" />
         </div>
 

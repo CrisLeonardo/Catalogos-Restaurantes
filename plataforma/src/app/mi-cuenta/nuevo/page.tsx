@@ -72,7 +72,7 @@ export default async function NuevoRestaurantePage() {
         <h1 className="t-display" style={{ fontSize: 'clamp(24px, 5vw, 32px)', lineHeight: 1.1, margin: '0 0 8px' }}>
           {esElPrimero ? 'Vamos a crear tu restaurante' : 'Crea otro restaurante'}
         </h1>
-        <p className="t-mute" style={{ fontSize: 14.5, margin: '0 0 24px', lineHeight: 1.55 }}>
+        <p className="t-mute" style={{ fontSize: 14, margin: '0 0 24px', lineHeight: 1.55 }}>
           Entrarás con esta misma cuenta, sin otro correo ni otra contraseña.
         </p>
 

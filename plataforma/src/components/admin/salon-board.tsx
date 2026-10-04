@@ -533,7 +533,7 @@ export default function SalonBoard({
           style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexShrink: 0,
             height: 44, padding: '0 18px', borderRadius: 'var(--radius-lg)', border: 'none',
-            fontSize: 14.5, fontWeight: 600, cursor: waiterHref ? 'pointer' : 'default',
+            fontSize: 14, fontWeight: 600, cursor: waiterHref ? 'pointer' : 'default',
             opacity: waiterHref ? 1 : 0.55,
           }}
         >
@@ -670,7 +670,7 @@ export default function SalonBoard({
             style={{
               flexShrink: 0, height: 32, padding: '0 13px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
               border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
-              color: 'var(--u-text)', fontSize: 12.5, fontWeight: 600,
+              color: 'var(--u-text)', fontSize: 12, fontWeight: 600,
             }}
           >
             Ver todas
@@ -681,7 +681,7 @@ export default function SalonBoard({
       {/* La explicación, plegada: leída una vez sobra, y fija ocupaba sitio
           en cada visita (auditoría 2026-10-02, PED-12). */}
       {view !== 'plano' && filtro === 'todas' && (
-        <details className="salon-help" style={{ fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.5, padding: '0 2px' }}>
+        <details className="salon-help" style={{ fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.5, padding: '0 2px' }}>
           <summary style={{ cursor: 'pointer', color: 'var(--u-text-3)', fontWeight: 600, width: 'fit-content' }}>
             ¿En qué orden van las mesas?
           </summary>
@@ -722,7 +722,7 @@ function Celda({ label, value, hint, accent, activo, onClick }: {
         {value}
       </div>
       {hint && (
-        <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1, lineHeight: 1.3 }}>
+        <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 1, lineHeight: 1.3 }}>
           {hint}
         </div>
       )}

@@ -46,7 +46,7 @@ export function PageHeader({
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div style={{ minWidth: 0 }}>
           {title && <h1 className="t-display" style={{ fontSize: 24, marginBottom: subtitle ? 5 : 0 }}>{title}</h1>}
-          {subtitle && <p className="t-mute" style={{ fontSize: 13.5, lineHeight: 1.5, maxWidth: 640 }}>{subtitle}</p>}
+          {subtitle && <p className="t-mute" style={{ fontSize: 13, lineHeight: 1.5, maxWidth: 640 }}>{subtitle}</p>}
         </div>
         {actions && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flexShrink: 0 }}>{actions}</div>}
       </div>
@@ -180,8 +180,8 @@ export function EmptyState({
       <span style={{ width: 46, height: 46, borderRadius: 'var(--radius-lg)', display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--brand-accent) 12%, transparent)', color: 'var(--brand-accent-ink)' }}>
         <Icon name={icon} size={22} />
       </span>
-      <div style={{ fontWeight: 650, fontSize: 15.5, color: 'var(--u-text)' }}>{title}</div>
-      {body && <p className="t-mute" style={{ fontSize: 13.5, maxWidth: 420, lineHeight: 1.55 }}>{body}</p>}
+      <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--u-text)' }}>{title}</div>
+      {body && <p className="t-mute" style={{ fontSize: 13, maxWidth: 420, lineHeight: 1.55 }}>{body}</p>}
       {action && <div style={{ marginTop: 8 }}>{action}</div>}
     </Card>
   );
@@ -253,7 +253,7 @@ export function ActivityChart({
   const totalO = series.reduce((s, d) => s + d.orders, 0);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ display: 'flex', gap: 16, fontSize: 11.5, color: 'var(--u-text-3)', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--u-text-3)', flexWrap: 'wrap' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--chart-base)' }} />
           Visitas · {totalV.toLocaleString('es-GT')}

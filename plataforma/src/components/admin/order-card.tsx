@@ -441,10 +441,10 @@ export default function OrderCard({
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-            <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--u-text)', margin: 0, lineHeight: 1.2 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--u-text)', margin: 0, lineHeight: 1.2 }}>
               {order.customer_name}
             </h3>
-            <span className="t-mono" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-4)' }} title={order.order_number}>
+            <span className="t-mono" style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text-4)' }} title={order.order_number}>
               {shortOrderNumber(order.order_number)}
             </span>
             {showStatus && <span className={`chip ${STATUS_CHIP[order.status]}`}>{STATUS_LABEL[order.status]}</span>}
@@ -463,7 +463,7 @@ export default function OrderCard({
           </div>
           {/* Separados por espacio y no por «·»: si el renglón se parte, no
               queda un punto colgando al final (cada dato ya lleva icono). */}
-          <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 4, display: 'flex', alignItems: 'center', columnGap: 12, rowGap: 2, flexWrap: 'wrap' }}>
+          <p style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 4, display: 'flex', alignItems: 'center', columnGap: 12, rowGap: 2, flexWrap: 'wrap' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <Icon name={type.icon} size={12} style={{ display: 'inline' }} />
               {type.text}
@@ -519,12 +519,8 @@ export default function OrderCard({
                 name="driverId"
                 defaultValue={order.driver_id ?? ''}
                 onChange={(e) => e.currentTarget.form?.requestSubmit()}
-                style={{
-                  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-                  border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-md)',
-                  padding: '6px 9px', color: 'var(--u-text)', fontSize: 12, outline: 'none',
-                  maxWidth: '100%',
-                }}
+                className="adm-field adm-field-sm adm-field-auto"
+                style={{ maxWidth: '100%' }}
               >
                 <option value="">Sin asignar</option>
                 {drivers.map((d) => (
@@ -560,18 +556,18 @@ export default function OrderCard({
                   </span>
                 )}
                 {item.options_snapshot && item.options_snapshot.length > 0 && (
-                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>
+                  <span style={{ display: 'block', fontSize: 11, color: 'var(--u-text-3)', marginTop: 1 }}>
                     {item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(' · ')}
                   </span>
                 )}
                 {item.note && (
-                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--c-warn)', marginTop: 1, fontWeight: 700 }}>
+                  <span style={{ display: 'block', fontSize: 11, color: 'var(--c-warn)', marginTop: 1, fontWeight: 700 }}>
                     ⚠ {item.note}
                   </span>
                 )}
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-                <span className="t-mono" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text)' }}>
+                <span className="t-mono" style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text)' }}>
                   {money(unitPrice * remaining, currency)}
                 </span>
                 {!isTerminal && remaining > 0 && (
@@ -593,16 +589,16 @@ export default function OrderCard({
         })}
         {Number(order.delivery_fee) > 0 && (
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Envío</span>
-            <span style={{ fontSize: 12.5, color: 'var(--u-text-2)' }}>
+            <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>Envío</span>
+            <span style={{ fontSize: 12, color: 'var(--u-text-2)' }}>
               {money(Number(order.delivery_fee), currency)}
             </span>
           </div>
         )}
         {Number(order.tip) > 0 && (
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Propina</span>
-            <span style={{ fontSize: 12.5, color: 'var(--u-text-2)' }}>
+            <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>Propina</span>
+            <span style={{ fontSize: 12, color: 'var(--u-text-2)' }}>
               {money(Number(order.tip), currency)}
             </span>
           </div>
@@ -632,7 +628,7 @@ export default function OrderCard({
           <span style={{ fontSize: 14, color: 'var(--u-text-3)' }}>Total</span>
           <div style={{ textAlign: 'right' }}>
             {(Number(order.discount) > 0 || Number(order.loyalty_discount) > 0) && (
-              <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', textDecoration: 'line-through', marginBottom: 1 }}>
+              <div style={{ fontSize: 11, color: 'var(--u-text-4)', textDecoration: 'line-through', marginBottom: 1 }}>
                 {money(Number(order.total) + Number(order.discount) + Number(order.loyalty_discount), currency)}
               </div>
             )}
@@ -650,7 +646,7 @@ export default function OrderCard({
               {labelOf(order.payment_method)}
             </span>
             {countsAsCash(order.payment_method) && order.cash_amount != null && order.cash_amount > 0 && (
-              <p style={{ fontSize: 11.5, color: 'var(--u-text-3)', margin: 0 }}>
+              <p style={{ fontSize: 11, color: 'var(--u-text-3)', margin: 0 }}>
                 Paga con <strong style={{ color: 'var(--u-text-2)' }}>{money(Number(order.cash_amount), currency)}</strong>
                 {' · '}cambio: <strong style={{ color: 'var(--u-text-2)' }}>{money(Number(order.cash_amount) - Number(order.total), currency)}</strong>
               </p>
@@ -760,7 +756,7 @@ export default function OrderCard({
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '8px 10px', borderRadius: 'var(--radius-lg)',
-                fontSize: 12.5, fontWeight: 600,
+                fontSize: 12, fontWeight: 600,
               }}
             >
               <Icon name="alertCircle" size={14} />

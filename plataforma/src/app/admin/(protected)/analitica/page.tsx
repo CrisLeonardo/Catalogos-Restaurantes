@@ -102,7 +102,7 @@ export default async function AdminAnaliticaPage({
       </Section>
 
       {a.avgPrepMin == null && a.validOrders > 0 && (
-        <Card className="p-3.5" style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+        <Card className="p-3.5" style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
           Los tiempos de preparación y entrega se miden desde que cambias el estado de los
           pedidos (Nuevo → Listo → Entregado). Empezarán a aparecer con los próximos pedidos.
         </Card>
@@ -197,7 +197,7 @@ function SplitCard({ title, rows, total }: { title: string; rows: CountSplit[]; 
         const pct = total > 0 ? (r.count / total) * 100 : 0;
         return (
           <div key={r.key} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
               <span style={{ color: 'var(--u-text-2)' }}>{r.label}</span>
               <span style={{ color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{r.count} · {pct.toFixed(0)}%</span>
             </div>

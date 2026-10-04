@@ -19,10 +19,6 @@ interface Props {
   coupons: Coupon[];
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-};
 const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 const emptyForm = {
@@ -157,7 +153,7 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
               <div>
                 <label style={labelStyle}>Código *</label>
-                <input style={inputStyle} value={form.code} onChange={(e) => setField('code', e.target.value.toUpperCase())} required placeholder="VERANO20" />
+                <input className="adm-field" value={form.code} onChange={(e) => setField('code', e.target.value.toUpperCase())} required placeholder="VERANO20" />
               </div>
               <div>
                 <label style={labelStyle}>Tipo *</label>
@@ -169,23 +165,23 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
               </div>
               <div>
                 <label style={labelStyle}>Valor * ({form.discount_type === 'PERCENT' ? '%' : 'Q'})</label>
-                <input style={inputStyle} type="number" inputMode="decimal" min={0.01} max={form.discount_type === 'PERCENT' ? 100 : undefined} step={0.01} value={form.discount_value} onChange={(e) => setField('discount_value', e.target.value)} required placeholder={form.discount_type === 'PERCENT' ? '10' : '25.00'} />
+                <input className="adm-field" type="number" inputMode="decimal" min={0.01} max={form.discount_type === 'PERCENT' ? 100 : undefined} step={0.01} value={form.discount_value} onChange={(e) => setField('discount_value', e.target.value)} required placeholder={form.discount_type === 'PERCENT' ? '10' : '25.00'} />
               </div>
               <div>
                 <label style={labelStyle}>Orden mínima (Q)</label>
-                <input style={inputStyle} type="number" inputMode="decimal" min={0} step={0.01} value={form.min_order} onChange={(e) => setField('min_order', e.target.value)} placeholder="Sin mínimo" />
+                <input className="adm-field" type="number" inputMode="decimal" min={0} step={0.01} value={form.min_order} onChange={(e) => setField('min_order', e.target.value)} placeholder="Sin mínimo" />
               </div>
               <div>
                 <label style={labelStyle}>Máx. de usos</label>
-                <input style={inputStyle} type="number" inputMode="decimal" min={1} value={form.max_uses} onChange={(e) => setField('max_uses', e.target.value)} placeholder="Ilimitado" />
+                <input className="adm-field" type="number" inputMode="decimal" min={1} value={form.max_uses} onChange={(e) => setField('max_uses', e.target.value)} placeholder="Ilimitado" />
               </div>
               <div>
                 <label style={labelStyle}>Válido hasta</label>
-                <input style={inputStyle} type="date" value={form.valid_until} onChange={(e) => setField('valid_until', e.target.value)} />
+                <input className="adm-field" type="date" value={form.valid_until} onChange={(e) => setField('valid_until', e.target.value)} />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Descripción interna</label>
-                <input style={inputStyle} value={form.description} onChange={(e) => setField('description', e.target.value)} placeholder="ej. Campaña verano 2026" />
+                <input className="adm-field" value={form.description} onChange={(e) => setField('description', e.target.value)} placeholder="ej. Campaña verano 2026" />
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
@@ -230,7 +226,7 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
                     {!c.max_uses && c.uses > 0 && <span>Usos: {c.uses}</span>}
                     {c.valid_until && <span>Vence: {new Date(c.valid_until).toLocaleDateString('es-GT', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
                   </div>
-                  {c.description && <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2 }}>{c.description}</div>}
+                  {c.description && <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>{c.description}</div>}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                   <Switch

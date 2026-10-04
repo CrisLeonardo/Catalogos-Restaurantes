@@ -29,10 +29,6 @@ interface Props {
   freeTables: number[];
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
-};
 const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 /** "hace 12 min" / "hace 1h 5min" — se recalcula solo con el reloj vivo. */
@@ -133,25 +129,25 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
 
       {tab === 'nueva' ? (
         <Card className="p-5" style={{ maxWidth: 480 }}>
-          <p style={{ fontSize: 15, fontWeight: 650, marginBottom: 14 }}>Agregar a la lista de espera</p>
+          <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 14 }}>Agregar a la lista de espera</p>
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
               <label style={labelStyle}>Nombre del grupo *</label>
-              <input style={inputStyle} value={form.customer_name} onChange={(e) => setField('customer_name', e.target.value)} required placeholder="Familia Pérez" autoFocus />
+              <input className="adm-field" value={form.customer_name} onChange={(e) => setField('customer_name', e.target.value)} required placeholder="Familia Pérez" autoFocus />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <label style={labelStyle}>Personas *</label>
-                <input style={inputStyle} type="number" inputMode="decimal" min={1} max={100} value={form.party_size} onChange={(e) => setField('party_size', parseInt(e.target.value) || 1)} required />
+                <input className="adm-field" type="number" inputMode="decimal" min={1} max={100} value={form.party_size} onChange={(e) => setField('party_size', parseInt(e.target.value) || 1)} required />
               </div>
               <div>
                 <label style={labelStyle}>Teléfono</label>
-                <input style={inputStyle} value={form.phone} onChange={(e) => setField('phone', e.target.value)} placeholder="Opcional — para avisar por WhatsApp" />
+                <input className="adm-field" value={form.phone} onChange={(e) => setField('phone', e.target.value)} placeholder="Opcional — para avisar por WhatsApp" />
               </div>
             </div>
             <div>
               <label style={labelStyle}>Notas</label>
-              <textarea style={{ ...inputStyle, resize: 'vertical', minHeight: 60 }} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Preferencia de mesa, ocasión especial…" />
+              <textarea className="adm-field" style={{ resize: 'vertical', minHeight: 60 }} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Preferencia de mesa, ocasión especial…" />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <Button type="submit" disabled={isPending}>
@@ -183,10 +179,10 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
                     {w.party_size} {w.party_size === 1 ? 'persona' : 'personas'} · {elapsedLabel(w.created_at, now)}
                     {w.phone ? ` · ${w.phone}` : ''}
                   </div>
-                  {w.notes && <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 3, fontStyle: 'italic' }}>{w.notes}</div>}
+                  {w.notes && <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 3, fontStyle: 'italic' }}>{w.notes}</div>}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 11.5, fontWeight: 600, color: w.status === 'NOTIFIED' ? 'var(--c-ok)' : 'var(--c-warn)' }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: w.status === 'NOTIFIED' ? 'var(--c-ok)' : 'var(--c-warn)' }}>
                     {w.status === 'NOTIFIED' ? 'Avisado' : 'Esperando'}
                   </span>
                   {w.status === 'WAITING' && w.phone && (
@@ -196,7 +192,7 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
                       rel="noopener noreferrer"
                       onClick={() => handleAction(w.id, markWaitlistNotified)}
                       className="press"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 'var(--radius-full)', background: '#25D366', color: '#fff', fontSize: 12.5, fontWeight: 600, textDecoration: 'none' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 'var(--radius-full)', background: '#25D366', color: '#fff', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}
                     >
                       <Icon name="whatsapp" size={13} /> Avisar
                     </a>
@@ -216,7 +212,7 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
                       style={{
                         height: 32, borderRadius: 'var(--radius-full)', padding: '0 10px',
                         border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
-                        color: 'var(--u-text)', fontSize: 12.5, cursor: 'pointer',
+                        color: 'var(--u-text)', fontSize: 12, cursor: 'pointer',
                       }}
                     >
                       <option value="" style={{ color: 'var(--u-text)' }}>Sin mesa</option>
@@ -250,7 +246,7 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
           <div className="adm-label" style={{ marginBottom: 10 }}>Hoy más temprano</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {recent.slice(0, 8).map((w) => (
-              <div key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', fontSize: 12.5, color: 'var(--u-text-3)' }}>
+              <div key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', fontSize: 12, color: 'var(--u-text-3)' }}>
                 <span style={{ width: 6, height: 6, borderRadius: 'var(--radius-full)', background: w.status === 'SEATED' ? 'var(--c-ok)' : 'var(--c-danger)', flexShrink: 0 }} />
                 <span style={{ color: 'var(--u-text-2)', fontWeight: 600 }}>{w.customer_name}</span>
                 <span>{w.party_size} {w.party_size === 1 ? 'persona' : 'personas'}</span>

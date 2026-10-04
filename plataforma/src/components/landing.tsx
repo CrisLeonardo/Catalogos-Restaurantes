@@ -6,6 +6,8 @@ import { SiteHeader, SiteFooter, SectionHead, contactHref } from '@/components/s
 import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
 import { PLANS, PLAN_POINTS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceQ, type PlanPricing } from '@/lib/plans';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
+import { getLandingProof } from '@/lib/db/landing';
+import { LandingPhone, Testimonials } from '@/components/landing-proof';
 
 /* Cifras de la tira de confianza. Solo hechos verificables del producto —
    nada de "+200 restaurantes" ni promedios inventados.
@@ -133,7 +135,7 @@ function structuredData(pricing: PlanPricing) {
 }
 
 export default async function LeoginLanding() {
-  const pricing = await getEffectivePlanPricing();
+  const [pricing, proof] = await Promise.all([getEffectivePlanPricing(), getLandingProof()]);
   const demoUrl = subdomainUrl(DEMO_SLUG);
   const ctaHref = contactHref();
 
@@ -199,7 +201,7 @@ export default async function LeoginLanding() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <PhoneMockup />
+              <LandingPhone showcase={proof.showcase} />
             </div>
           </div>
         </section>
@@ -223,6 +225,14 @@ export default async function LeoginLanding() {
             ))}
           </div>
         </section>
+
+        {/* ── Ya lo usan (solo con testimonios guardados en el Super, WEB-02) ── */}
+        {proof.testimonials.length > 0 && (
+          <section id="clientes" className="lp-shell lp-section">
+            <SectionHead eyebrow="Ya lo usan" title="Restaurantes que ya trabajan con Leogin" center />
+            <Testimonials items={proof.testimonials} />
+          </section>
+        )}
 
         {/* ── El cambio: antes / con Leogin ─────────────────── */}
         <section id="producto" className="lp-shell lp-section">
@@ -660,65 +670,6 @@ function PanelMockup() {
             <span style={{ fontSize: 8.5, fontWeight: 800, color: '#805600', background: 'rgba(128,86,0,0.10)', padding: '3px 8px', borderRadius: 99, letterSpacing: '0.05em' }}>EN COCINA</span>
             <span style={{ fontSize: 10.5, fontWeight: 600, color: 'rgba(23,22,26,0.8)' }}>Para llevar · #127</span>
             <span className="t-mono" style={{ marginLeft: 'auto', fontSize: 10, color: 'rgba(23,22,26,0.64)' }}>08:41</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Mockup del menú en un teléfono ────────────────────────────
-   Esta pantalla SÍ va oscura: es el menú de un restaurante, y el
-   tema por defecto de un tenant nuevo es el oscuro (#0b0b0c).    */
-function PhoneMockup() {
-  const items = [
-    { name: 'Tacos al pastor', desc: 'Con piña, cilantro y cebolla', price: 'Q45', g: 'linear-gradient(135deg,#e0873b,#b45309)' },
-    { name: 'Burrito de res',  desc: 'Frijol, arroz, queso y pico',  price: 'Q52', g: 'linear-gradient(135deg,#7fae2f,#3f6212)' },
-    { name: 'Horchata fría',   desc: 'Casera, con canela',           price: 'Q15', g: 'linear-gradient(135deg,#d9b48f,#8a6647)' },
-  ];
-  return (
-    <div style={{ position: 'relative' }}>
-      {/* Mismo criterio que en PanelMockup: halo contenido, sin inset negativo. */}
-      <div
-        aria-hidden
-        style={{
-          position: 'absolute', inset: 0,
-          background: 'radial-gradient(72% 58% at 50% 42%, color-mix(in srgb, var(--brand-accent) 19%, transparent), transparent 72%)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div className="lp-device lp-device-phone">
-        <div className="lp-device-screen-phone" style={{ background: '#0b0b0c' }}>
-          {/* Portada */}
-          <div style={{ padding: '18px 16px 14px', background: 'linear-gradient(180deg, rgba(217,119,87,0.22), transparent)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-              <span className="t-display" style={{ fontSize: 15, fontWeight: 800, color: '#F5F3EF' }}>Tu Restaurante</span>
-              <span style={{ fontSize: 9, fontWeight: 700, color: '#6ee7a8', background: 'rgba(110,231,168,0.14)', padding: '3px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>● Abierto</span>
-            </div>
-            <div style={{ fontSize: 10.5, color: 'rgba(245,243,239,0.55)', marginTop: 4 }}>Cocina de la casa · Zona 1</div>
-          </div>
-
-          {/* Productos */}
-          <div style={{ padding: '2px 12px', display: 'flex', flexDirection: 'column', gap: 9 }}>
-            {items.map((it) => (
-              <div key={it.name} style={{ display: 'flex', gap: 10, alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: 8 }}>
-                <div style={{ width: 50, height: 50, borderRadius: 11, flexShrink: 0, background: it.g }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 11.5, fontWeight: 700, color: '#F5F3EF' }}>{it.name}</div>
-                  <div style={{ fontSize: 9.5, color: 'rgba(245,243,239,0.5)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.desc}</div>
-                  <div className="t-mono" style={{ fontSize: 11.5, fontWeight: 800, color: '#e8a184', marginTop: 3 }}>{it.price}</div>
-                </div>
-                <span aria-hidden style={{ width: 26, height: 26, flexShrink: 0, borderRadius: 9, display: 'grid', placeItems: 'center', background: '#d97757', color: '#fff', fontSize: 16, fontWeight: 700, lineHeight: 1 }}>+</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Barra de carrito */}
-          <div style={{ margin: '14px 12px 0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#c2542f', color: '#fff', borderRadius: 13, padding: '11px 15px' }}>
-              <span style={{ fontSize: 11.5, fontWeight: 700 }}>Ver carrito · 3</span>
-              <span className="t-mono" style={{ fontSize: 11.5, fontWeight: 800 }}>Q112</span>
-            </div>
           </div>
         </div>
       </div>

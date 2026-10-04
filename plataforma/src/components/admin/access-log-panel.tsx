@@ -70,7 +70,7 @@ export default function AccessLogPanel({
        usaban `.adm-label`. Ahora es un <Section> como todos. */
     <Section title="Últimos accesos al panel">
       <Card style={{ padding: 18 }}>
-      <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: '0 0 14px', lineHeight: 1.5 }}>
+      <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: '0 0 14px', lineHeight: 1.5 }}>
         Cada vez que alguien entra a tu panel queda anotado aquí. Si ves un acceso que no
         reconoces, cambia tu contraseña.
       </p>
@@ -109,10 +109,10 @@ function Fila({ r, timezone }: { r: AccessRow; timezone: string }) {
       }}
     >
       <div style={{ flex: 1, minWidth: 170 }}>
-        <div style={{ fontSize: 13.5, color: 'var(--u-text)', fontWeight: 500 }}>
+        <div style={{ fontSize: 13, color: 'var(--u-text)', fontWeight: 500 }}>
           {r.actor_name ?? 'Cuenta sin nombre'}
         </div>
-        <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+        <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 1 }}>
           {describeDevice(r.user_agent)}
           {ip ? ` · ${ip}` : ''}
         </div>

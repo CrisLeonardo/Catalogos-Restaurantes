@@ -192,7 +192,7 @@ export default async function AdminClientesPage({
                     <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {c.name}
                     </div>
-                    <div className="t-mono" style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2 }}>{c.phone}</div>
+                    <div className="t-mono" style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>{c.phone}</div>
                     {/* En el teléfono las columnas se esconden y quedaban dos
                         números sueltos («1  Q88.50»): aquí van con su palabra
                         (auditoría 2026-10-02, CLI-01). */}
@@ -201,10 +201,10 @@ export default async function AdminClientesPage({
                       {c.last_order_at ? ` · último ${fmtDate(c.last_order_at, timezone)}` : ''}
                     </div>
                   </div>
-                  <div className="t-mono" style={{ fontSize: 13.5, color: 'var(--u-text)' }}>{c.total_orders}</div>
-                  <div className="t-mono" style={{ fontSize: 13.5, color: 'var(--u-text)' }}>{fmtQ(Number(c.total_spent))}</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--u-text-2)' }}>{frequencyLabel(c)}</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>{fmtDate(c.last_order_at, timezone)}</div>
+                  <div className="t-mono" style={{ fontSize: 13, color: 'var(--u-text)' }}>{c.total_orders}</div>
+                  <div className="t-mono" style={{ fontSize: 13, color: 'var(--u-text)' }}>{fmtQ(Number(c.total_spent))}</div>
+                  <div style={{ fontSize: 12, color: 'var(--u-text-2)' }}>{frequencyLabel(c)}</div>
+                  <div style={{ fontSize: 12, color: 'var(--u-text-3)' }}>{fmtDate(c.last_order_at, timezone)}</div>
                 </Link>
 
                 {/* Detalle: historial del cliente seleccionado */}
@@ -233,21 +233,21 @@ export default async function AdminClientesPage({
                       </div>
                     )}
                     {c.default_address && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--u-text-3)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--u-text-3)' }}>
                         <Icon name="mapPin" size={13} />
                         {c.default_address}{c.default_zone ? ` · ${c.default_zone}` : ''}
                       </div>
                     )}
                     {selectedOrders.length === 0 ? (
-                      <div style={{ fontSize: 12.5, color: 'var(--u-text-4)' }}>
+                      <div style={{ fontSize: 12, color: 'var(--u-text-4)' }}>
                         Sin pedidos enlazados aún (los anteriores a esta función no se enlazan).
                       </div>
                     ) : (
                       selectedOrders.map((o) => (
                         <Card key={o.id} className="flex flex-wrap items-center gap-3 p-3">
-                          <span className="t-mono" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text)' }}>{o.order_number}</span>
-                          <span style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{fmtDate(o.created_at, timezone)}</span>
-                          <span style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>
+                          <span className="t-mono" style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text)' }}>{o.order_number}</span>
+                          <span style={{ fontSize: 11, color: 'var(--u-text-3)' }}>{fmtDate(o.created_at, timezone)}</span>
+                          <span style={{ fontSize: 11, color: 'var(--u-text-3)' }}>
                             {o.order_type === 'DELIVERY' ? `A domicilio${o.delivery_zone ? ` · ${o.delivery_zone}` : ''}` : 'Para llevar'}
                           </span>
                           <span
@@ -280,7 +280,7 @@ export default async function AdminClientesPage({
           ) : (
             <Button variant="secondary" size="sm" className="rounded-adm-full" disabled>← Anteriores</Button>
           )}
-          <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Página {page} de {totalPages}</span>
+          <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>Página {page} de {totalPages}</span>
           {page < totalPages ? (
             <Button render={<Link href={pageHref(page + 1)} />} variant="secondary" size="sm" className="rounded-adm-full">Siguientes →</Button>
           ) : (

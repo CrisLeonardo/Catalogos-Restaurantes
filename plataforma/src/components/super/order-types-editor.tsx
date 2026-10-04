@@ -44,7 +44,7 @@ export default function OrderTypesEditor({
       <p style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 600, margin: 0 }}>
         Tipos de pedido
       </p>
-      <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '-4px 0 0', lineHeight: 1.45 }}>
+      <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: '-4px 0 0', lineHeight: 1.45 }}>
         En planes Premium+, cada método de pedido apagado descuenta Q50 de la mensualidad
         automática (máx. 2 de los 3 — siempre se paga al menos un método). En Estándar el dueño
         puede elegir hasta 2 de los 3 modos desde su panel — aquí puedes fijar cualquier

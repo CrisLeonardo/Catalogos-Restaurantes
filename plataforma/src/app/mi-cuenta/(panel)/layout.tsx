@@ -64,7 +64,7 @@ export default async function MiCuentaPanelLayout({ children }: { children: Reac
       >
         <LeoginLogo size={24} />
         <span style={{ flex: 1 }} />
-        <span style={{ fontSize: 12.5, color: 'var(--u-text-3)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 12, color: 'var(--u-text-3)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {user.email}
         </span>
         <form action={logout}>
@@ -72,7 +72,7 @@ export default async function MiCuentaPanelLayout({ children }: { children: Reac
             type="submit"
             className="press"
             style={{
-              fontSize: 12.5, fontWeight: 600, cursor: 'pointer', padding: '6px 12px',
+              fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: '6px 12px',
               borderRadius: 'var(--radius-full)', border: '1px solid var(--u-hair-2)',
               background: 'transparent', color: 'var(--u-text-2)',
             }}

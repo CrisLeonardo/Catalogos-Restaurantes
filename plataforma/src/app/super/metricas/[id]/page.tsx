@@ -123,7 +123,7 @@ function PricingHint({ orders, visits, revenue, fee, growth }: {
   return (
     <div style={{ display: 'flex', gap: 10, padding: '12px 14px', borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', border: `1px solid color-mix(in srgb, ${tone} 20%, transparent)` }}>
       <span style={{ width: 8, height: 8, borderRadius: 'var(--radius-full)', background: tone, marginTop: 6, flexShrink: 0 }} />
-      <span style={{ fontSize: 13.5, color: 'var(--u-text-2)', lineHeight: 1.55 }}>{text}</span>
+      <span style={{ fontSize: 13, color: 'var(--u-text-2)', lineHeight: 1.55 }}>{text}</span>
     </div>
   );
 }
@@ -133,7 +133,7 @@ function TrendChart({ series, currency }: { series: { date: string; visits: numb
   const maxOrders = Math.max(...series.map((s) => s.orders), 1);
   return (
     <Glass variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'flex', gap: 16, fontSize: 11.5, color: 'var(--u-text-3)' }}>
+      <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--u-text-3)' }}>
         <Legend color="var(--chart-base)" label="Visitas" />
         <Legend color="var(--chart-hi)" label="Pedidos" />
       </div>
@@ -171,11 +171,11 @@ function Kpi({ label, value, sub, growth }: { label: string; value: string; sub?
       <div className="adm-label">{label}</div>
       <div className="t-mono" style={{ fontWeight: 600, fontSize: 24, color: 'var(--u-text)', lineHeight: 1 }}>{value}</div>
       {growth != null ? (
-        <div style={{ fontSize: 11.5, fontWeight: 600, color: growth >= 0 ? 'var(--c-ok)' : 'var(--c-danger)' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: growth >= 0 ? 'var(--c-ok)' : 'var(--c-danger)' }}>
           {growth >= 0 ? '▲' : '▼'} {Math.abs(growth).toFixed(0)}% vs. mes previo
         </div>
       ) : sub ? (
-        <div style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>{sub}</div>
+        <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{sub}</div>
       ) : null}
     </Glass>
   );
@@ -192,5 +192,5 @@ function MiniStat({ label, value, sub }: { label: string; value: string; sub?: s
 }
 
 const sectionTitle: React.CSSProperties = {
-  fontWeight: 650, fontSize: 15.5, marginBottom: 14, color: 'var(--u-text-2)',
+  fontWeight: 600, fontSize: 15, marginBottom: 14, color: 'var(--u-text-2)',
 };

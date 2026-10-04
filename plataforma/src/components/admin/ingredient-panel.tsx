@@ -16,7 +16,7 @@ const REASON_LABEL: Record<string, string> = { purchase: 'Compra a proveedor', a
 
 function MovementHistory({ movements }: { movements: StockMovement[] }) {
   if (movements.length === 0) {
-    return <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', padding: '6px 2px' }}>Sin movimientos registrados todavía — se llenará al recibir órdenes de compra vinculadas a este insumo.</p>;
+    return <p style={{ fontSize: 12, color: 'var(--u-text-4)', padding: '6px 2px' }}>Sin movimientos registrados todavía — se llenará al recibir órdenes de compra vinculadas a este insumo.</p>;
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 260, overflowY: 'auto' }}>
@@ -50,16 +50,6 @@ const UNITS = [
 
 const UNIT_OPTIONS = UNITS.map((u) => ({ value: u, label: u }));
 
-const inputStyle: React.CSSProperties = {
-  background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-  border: '1px solid var(--u-hair-2)',
-  borderRadius: 'var(--radius-md)',
-  padding: '9px 11px',
-  color: 'var(--u-text)',
-  fontSize: 14,
-  outline: 'none',
-  width: '100%',
-};
 
 const labelStyle: React.CSSProperties = FIELD_LABEL;
 
@@ -194,7 +184,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
             <div className="ing-form-grid">
               <div className="ing-form-name">
                 <label style={labelStyle}>Nombre</label>
-                <input style={inputStyle} required value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ej: Tomate roma" />
+                <input className="adm-field" required value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ej: Tomate roma" />
               </div>
               <div>
                 <label style={labelStyle}>Unidad</label>
@@ -202,7 +192,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
               </div>
               <div>
                 <label style={labelStyle}>Costo / unidad</label>
-                <input style={inputStyle} type="number" inputMode="decimal" min="0" step="0.0001" required value={newCost} onChange={(e) => setNewCost(e.target.value)} placeholder="0.0000" />
+                <input className="adm-field" type="number" inputMode="decimal" min="0" step="0.0001" required value={newCost} onChange={(e) => setNewCost(e.target.value)} placeholder="0.0000" />
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -251,7 +241,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
                     <div className="ing-form-grid">
                       <div className="ing-form-name">
                         <label style={labelStyle}>Nombre</label>
-                        <input style={inputStyle} required value={editState.name} onChange={(e) => setEditState({ ...editState, name: e.target.value })} />
+                        <input className="adm-field" required value={editState.name} onChange={(e) => setEditState({ ...editState, name: e.target.value })} />
                       </div>
                       <div>
                         <label style={labelStyle}>Unidad</label>
@@ -259,7 +249,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
                       </div>
                       <div>
                         <label style={labelStyle}>Costo / unidad</label>
-                        <input style={inputStyle} type="number" inputMode="decimal" min="0" step="0.0001" required value={editState.cost_per_unit} onChange={(e) => setEditState({ ...editState, cost_per_unit: e.target.value })} />
+                        <input className="adm-field" type="number" inputMode="decimal" min="0" step="0.0001" required value={editState.cost_per_unit} onChange={(e) => setEditState({ ...editState, cost_per_unit: e.target.value })} />
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>

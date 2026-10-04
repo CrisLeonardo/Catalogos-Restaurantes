@@ -30,7 +30,7 @@ function DenomBreakdown({ breakdown }: { breakdown: Record<string, number> }) {
   const monedas  = entries.filter(d => d.kind === 'M');
 
   return (
-    <div style={{ marginTop: 8, padding: '10px 12px', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', borderRadius: 'var(--radius-md)', fontSize: 11.5 }}>
+    <div style={{ marginTop: 8, padding: '10px 12px', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', borderRadius: 'var(--radius-md)', fontSize: 11 }}>
       {billetes.length > 0 && (
         <div style={{ marginBottom: monedas.length > 0 ? 6 : 0 }}>
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--u-text-4)' }}>
@@ -119,7 +119,7 @@ function CashCountCard({
       </div>
 
       {/* Fila de montos */}
-      <div style={{ display: 'flex', gap: 12, marginTop: 5, fontSize: 11.5, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)' }}>
+      <div style={{ display: 'flex', gap: 12, marginTop: 5, fontSize: 11, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)' }}>
         <span>Esp. {money(Number(entry.expected_cash))}</span>
         <span>·</span>
         <span>Cont. {money(Number(entry.counted_cash))}</span>
@@ -202,7 +202,7 @@ function CashCountCard({
         )}
       </div>
       {deleteError && (
-        <div style={{ fontSize: 11.5, color: 'var(--c-danger)', marginTop: 4 }}>{deleteError}</div>
+        <div style={{ fontSize: 11, color: 'var(--c-danger)', marginTop: 4 }}>{deleteError}</div>
       )}
     </div>
   );

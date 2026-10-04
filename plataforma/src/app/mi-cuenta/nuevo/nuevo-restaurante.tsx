@@ -9,7 +9,7 @@ import { findStructure, findTemplate } from '@/lib/theme/templates';
 import { createAnotherRestaurant, type NewRestaurantState } from '@/lib/actions/mi-cuenta';
 import { PLAN_POINTS, defaultPlanPricing, planPriceLabel, planPriceQ, type PlanPricing } from '@/lib/plans';
 import {
-  ErrorBox, Field, Stepper, Summary, WizardNav, inputStyle, localSlugify,
+  ErrorBox, Field, Stepper, Summary, WizardNav, localSlugify,
 } from '@/components/signup/wizard-ui';
 
 /* ============================================================
@@ -180,7 +180,7 @@ export default function NuevoRestaurante({
 
       {/* ── Paso 0: Tu plan ── */}
       <div style={{ display: step === 0 ? 'flex' : 'none', flexDirection: 'column', gap: 12 }}>
-        <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 13, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
           {conPrueba
             ? `Elige el plan con el que quieres empezar. Todos incluyen ${trialDays} días gratis.`
             : 'Elige el plan de este restaurante. Se cobra aparte y se suma a tu mensualidad desde hoy: la prueba gratis es solo para el primero.'}
@@ -235,7 +235,7 @@ export default function NuevoRestaurante({
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {plan.features.map((f) => (
                     <li key={f.text} style={{
-                      fontSize: 11.5, color: f.positive ? 'var(--u-text-3)' : 'var(--u-text-4)',
+                      fontSize: 11, color: f.positive ? 'var(--u-text-3)' : 'var(--u-text-4)',
                       display: 'flex', gap: 5, alignItems: 'flex-start',
                     }}>
                       <span style={{
@@ -256,7 +256,7 @@ export default function NuevoRestaurante({
         {/* Sub-selector: Estándar elige 2 de 3 modos de pedido */}
         {selectedPlan === 'ESTANDAR' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, fontWeight: 600 }}>
+            <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, fontWeight: 600 }}>
               Elige 2 modos de pedido (mismo precio, {planPriceLabel(pricing, 'ESTANDAR')})
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
@@ -285,9 +285,9 @@ export default function NuevoRestaurante({
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <Icon name={b.icon} size={16} style={{ color: active ? 'var(--brand-accent)' : 'var(--u-text-3)' }} />
-                      <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>{b.title}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>{b.title}</span>
                     </div>
-                    <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.45 }}>{b.desc}</span>
+                    <span style={{ fontSize: 11, color: 'var(--u-text-3)', lineHeight: 1.45 }}>{b.desc}</span>
                   </button>
                 );
               })}
@@ -306,20 +306,21 @@ export default function NuevoRestaurante({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ej. Tu Restaurante"
-            style={inputStyle}
+            className="adm-field adm-field-lg"
           />
         </Field>
         <Field label="Dirección de tu menú" hint="Así llegarán tus clientes. Puedes cambiarla.">
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 0,
-            background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair-2)',
-            borderRadius: 'var(--radius-md)', overflow: 'hidden',
-          }}>
+          {/* El recuadro es el campo (se marca al enfocar el texto de dentro). */}
+          <div className="adm-field adm-field-lg" style={{ display: 'flex', alignItems: 'center', padding: 0, overflow: 'hidden' }}>
             <input
               value={effectiveSlug}
               onChange={(e) => { setSlugEdited(true); setSlug(localSlugify(e.target.value)); }}
               placeholder="turestaurante"
-              style={{ ...inputStyle, border: 'none', background: 'transparent', flex: 1, minWidth: 0 }}
+              aria-label="Dirección de tu menú"
+              style={{
+                flex: 1, minWidth: 0, padding: '12px 14px', border: 'none', background: 'transparent',
+                color: 'inherit', font: 'inherit', outline: 'none',
+              }}
             />
             <span style={{ fontSize: 13, color: 'var(--u-text-4)', padding: '0 12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
               .{rootDomain.replace(/:\d+$/, '')}
@@ -327,9 +328,9 @@ export default function NuevoRestaurante({
           </div>
         </Field>
         <Field label="WhatsApp del restaurante" hint="Opcional. Para las alertas de pedido; se cambia luego en Ajustes.">
-          <input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+502 0000 0000" style={inputStyle} />
+          <input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+502 0000 0000" className="adm-field adm-field-lg" />
         </Field>
-        <Glass variant="quiet" style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 12.5, color: 'var(--u-text-3)' }}>
+        <Glass variant="quiet" style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--u-text-3)' }}>
           <Icon name="eye" size={16} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0 }} />
           <span>Tu menú vivirá en <strong style={{ color: 'var(--u-text)' }}>{previewHost}</strong></span>
         </Glass>
@@ -337,7 +338,7 @@ export default function NuevoRestaurante({
 
       {/* ── Paso 2: Tu estilo (plantilla visual de inicio) ── */}
       <div style={{ display: step === 2 ? 'flex' : 'none', flexDirection: 'column', gap: 12 }}>
-        <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 13, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
           Elige primero cómo se recorre tu carta y después con qué colores nace: son
           dos decisiones distintas y cualquier color va en cualquier estructura.
           Es solo el punto de partida — todo se cambia luego en «Personalizar».
@@ -385,7 +386,7 @@ export default function NuevoRestaurante({
                 ? `${trialDays} días de prueba gratis`
                 : 'Se cobra desde hoy'}
           </div>
-          <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
             {selectedPlan === 'BASICO'
               ? 'Tu restaurante queda en vivo con tu menú digital. Sin tarjeta. Sin compromiso. Cancela cuando quieras.'
               : conPrueba
@@ -409,7 +410,7 @@ export default function NuevoRestaurante({
         isPending={isPending}
       />
 
-      <p style={{ textAlign: 'center', fontSize: 12.5, color: 'var(--u-text-4)', margin: 0 }}>
+      <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--u-text-4)', margin: 0 }}>
         <Link href="/mi-cuenta" style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'none' }}>
           Volver a Mi cuenta
         </Link>

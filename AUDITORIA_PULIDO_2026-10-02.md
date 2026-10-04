@@ -19,7 +19,30 @@
 > se ve bien. Las auditorías anteriores (QA visual 09-22, velocidad 09-25) **no
 > se repiten**: lo que de ellas sigue abierto está en la sección de rendimiento.
 >
-> **Estado:** al 2026-10-03, 141 de 147 hallazgos hechos (los 6 P0 incluidos). D-1…D-8 decididos y hechos. Quedan: REN-01 (D-9, mover Render a Virginia: solo tú), WEB-02/03 (testimonios y capturas de clientes con su permiso) y lo continuo (T-22, T-26, REN-05). WEB-01 está programada y apagada hasta que crees la cuenta de analítica. Ver la Bitácora al final.
+> **Estado:** al 2026-10-03, **145 de 148** hallazgos hechos (los 6 P0 incluidos). D-1…D-8 decididos y hechos. Quedan 3: REN-01 (D-9, mover Render a Virginia: solo tú), WEB-02 (la herramienta está; faltan los testimonios de tus clientes) y REN-05 (continuo). WEB-01 está programada y apagada hasta que crees la cuenta de analítica. Lo que solo puedes hacer tú está en la lista de abajo. Ver la Bitácora al final.
+
+## Lo que solo puedes hacer tú
+
+En el orden en que conviene:
+
+1. **Correr la migración 134 en producción** (Supabase → SQL Editor → pegar
+   `plataforma/supabase/migrations/134_alias_de_slug.sql` → Run). Es la única
+   migración de esta rama y se puede correr antes o después de desplegar: el
+   código funciona sin ella, pero sin ella un QR de mesa impreso deja de abrir
+   el menú si algún día cambias el slug de ese restaurante.
+2. **Fusionar la rama `auditoria-pulido-2026-10-02` a `main` y desplegar.** Nada
+   de lo de este tablero está en producción todavía. (Si me lo pides, la fusiono
+   yo y la subo.)
+3. **Encender la analítica (WEB-01):** crear el sitio en cloud.umami.is (gratis)
+   y poner en Render `NEXT_PUBLIC_ANALYTICS_PROVIDER=umami` y
+   `NEXT_PUBLIC_ANALYTICS_ID=<Website ID>`; volver a desplegar.
+4. **Portada (WEB-02/03):** ya en producción, Super › Configuración › Portada:
+   elegir el restaurante cuyo menú sale en el teléfono y escribir 2–3
+   testimonios, cada uno con el permiso de ese cliente.
+5. **REN-01 (D-9): mover el servicio de Render a Virginia**, junto a Supabase.
+   Es lo que más velocidad da (~70 ms menos por consulta). Pasos en
+   `AUDITORIA_2026-09-25.md` §2 (I-1); de paso, revisar I-2 (si sigue en el
+   plan gratuito, que se duerme a los 15 min).
 
 ---
 
@@ -39,7 +62,7 @@
 
 | # | Sección | Hallazgos | Hechos | ⏸️ Decisión |
 |---|---------|----------:|-------:|-----------:|
-| 1 | Transversal — sistema de diseño y textos | 26 | 24 | 0 |
+| 1 | Transversal — sistema de diseño y textos | 26 | 26 | 0 |
 | 2 | Panel · Armazón y navegación | 10 | 10 | 0 |
 | 3 | Panel · Hoy | 5 | 5 | 0 |
 | 4 | Panel · Pedidos (En vivo, Cocina, Mesas, Tomar pedidos) | 14 | 14 | 0 |
@@ -48,13 +71,13 @@
 | 7 | Panel · Negocio | 6 | 6 | 0 |
 | 8 | Panel · Ajustes | 20 | 20 | 0 |
 | 9 | Catálogo digital (lo que ve el comensal) | 14 | 14 | 0 |
-| 10 | Super Admin | 10 | 10 | 0 |
+| 10 | Super Admin | 11 | 11 | 0 |
 | 11 | Mi cuenta (grupo) | 5 | 5 | 0 |
-| 12 | Web pública y marketing | 9 | 7 | 0 |
+| 12 | Web pública y marketing | 9 | 8 | 0 |
 | 13 | Rendimiento y salud del código | 10 | 8 | 1 |
-| | **Total** | **147** | **141** | **1** |
+| | **Total** | **148** | **145** | **1** |
 
-Por prioridad: **P0** 6 · **P1** 34 · **P2** 62 · **P3** 45. Hechos: los **6 P0**, 33 P1, 58 P2 y 44 P3.
+Por prioridad: **P0** 6 · **P1** 34 · **P2** 63 · **P3** 45. Hechos: los **6 P0**, 33 P1, 62 P2 y 44 P3.
 
 *(Se actualiza a mano al marcar.)*
 
@@ -320,13 +343,15 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   insignias «NUEVO/POPULAR/VENCIDO/PAGADO» (9,5), URL bajo cada QR (9,5).
   ✅ **Hecho 2026-10-03 (detalles P2/P3).** 63 textos de 7,5–10 px subidos a 11 px en panel y Super (insignias, encabezados de tabla, ejes de gráficas, rótulos); también las etiquetas de días de Métricas. Se dejan los tamaños de los PDF (son puntos de imprenta) y el «MESA» decorativo de la ficha del plano.
   ➕ **2026-10-03 (cierre):** el barrido encontró 37 más de 9–10,5 px (Ajustes del Super, Insumos, Inventario, avisos, Mi cuenta, pasos de «Nuevo restaurante»): todos a 11 px. Quedan a 10 px a propósito las etiquetas de la barra inferior del teléfono.
+  ➕ **2026-10-03 (cierre 2):** el barrido encontró cuatro más en Personalizar y la barra de arriba: la descripción y la etiqueta de cada plantilla (10,5 y 9,5 px), «Aplicada» (10 px) y el «Ctrl K» del buscador (10,5 px): a 11 px.
 
 ### Escala visual
 
-- [ ] **T-22** · P2 · L — **No hay escala tipográfica.** 1.900 `fontSize` en línea
+- [x] **T-22** · P2 · L — **No hay escala tipográfica.** 1.900 `fontSize` en línea
   con ~40 tamaños distintos (13, 12,5, 12, 13,5, 11,5, 11, 14,5, 9,5…) y 7 pesos
   (400–900). Propuesta: 8 tamaños en tokens (`--fs-11 … --fs-32`) y 4 pesos; se
   migra pantalla a pantalla junto con lo demás (no de golpe).
+  ✅ **Hecho 2026-10-03 (cierre 2).** Una escala para el panel, el Super, Mi cuenta y las pantallas de entrar: **11 · 12 · 13 · 14 · 15 · 16 · 18 · 20 · 22 · 24 · 28 · 32** (y 40 para una cifra grande). Lo que caía entre dos pasos baja al de abajo (12,5 → 12, 13,5 → 13, 11,5 → 11, 17 → 16, 19 → 18, 21 → 20, 26 → 24, 30 → 28): ~560 tamaños en línea, 50 clases `text-[Npx]` (también las de `Button`) y ~55 reglas de admin.css. En el área de personal había 23 tamaños distintos de 11 px para arriba; quedan 12. Pesos: 550 → 500, 650 → 600, 900 → 800 (quedan 400–800). Bajar y nunca subir es a propósito: medio punto no se nota a la vista y así nada que hoy cabe se corta. Una prueba (`lib/type-scale.test.ts`) impide que vuelvan los tamaños sueltos. No se pasó a tokens `--fs-*`: con el número de la escala la regla es la misma, la prueba la hace cumplir y no hacía falta meter `var()` en 1.700 sitios. Por debajo de 11 px no se toca (dibujos a escala y la barra inferior, ver T-21).
 
 - [x] **T-23** · P3 · M — **Radios sin escala:** 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
   18 px. Ya existen `--radius-md/lg/xl/2xl`; usarlos.
@@ -342,10 +367,11 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   ficha y en el menú). Opcional: iconos propios o dejarlos (se reconocen bien).
   ✅ **Hecho 2026-10-03 (detalles P2/P3).** Se dejan los emojis de alérgenos: se reconocen de un vistazo y un icono propio por alérgeno no mejoraría la lectura. Decisión tomada, sin cambio.
 
-- [ ] **T-26** · P2 · L — **Componentes base que casi no se usan**: `Input` (2
+- [x] **T-26** · P2 · L — **Componentes base que casi no se usan**: `Input` (2
   usos), `Tabs`, `Sheet`, `Skeleton`, `Textarea`, `Tooltip` (0) — mientras 4.700
   `style={{…}}` reimplementan lo mismo a mano. Es la raíz de T-05…T-12: cada
   pantalla dibuja sus propias piezas.
+  ✅ **Hecho 2026-10-03 (cierre 2).** Lo que más se repetía eran los campos: **45 copias** de `inputStyle`/`fieldStyle`/`selectStyle` escritas a mano en 50 archivos (cuatro rellenos, tres bordes, siete acolchados, cinco tamaños). Ahora hay uno, `.adm-field` (globals.css), con `-sm` (filas apretadas), `-lg` (pantallas de entrar), `-mono` y `-auto`, en ~230 campos del panel, el Super, Mi cuenta, el registro y el login; y los base `Input`, `Textarea` y `Select` son esa misma pieza (el `Select` era una ficha blanca con borde junto a campos con relleno). De paso, **accesibilidad**: todos esos campos tenían `outline: none` sin nada en su lugar —con el teclado no se veía en qué campo estabas—; ahora llevan anillo de foco. En el teléfono van a 16 px (Safari ya no acerca la página al tocarlos) y el error se marca con `aria-invalid` en vez de un borde puesto a mano. Los buscadores del Super usan el del panel (`.adm-search`). Fuera los base que no usaba nadie (`tabs`, `sheet`, `skeleton`, `tooltip`, `separator`): el panel ya tenía su pieza para cada cosa (`PageTabs`, la hoja del mesero, `PageSkeleton`, la lectura de gráficas) y tener dos era justo la confusión. Lo que queda de estilos en línea es REN-05.
 
 - [x] **T-04** · P2 · S — **Aviso «Pedido nuevo» tapa el contenido.** En el
   teléfono queda fijo sobre los últimos ~90 px de cualquier pantalla (campos,
@@ -933,6 +959,12 @@ aquí es lo que todavía le cuesta pedidos.
   tu atención» se cortan en el teléfono («Azúcar Negra tiene pagos …»).
   ✅ **Hecho 2026-10-03 (detalles P2/P3).** Los títulos de «Requiere tu atención» bajan a dos renglones en vez de cortarse, y «Pendiente de cobro» dice de cuántos restaurantes es o «todo ya vencido», para no repetir «Pagos vencidos».
 
+- [x] **SUP-11** · P2 · S — **Un enlace viejo a `/super/cobros` rompía el enrutador.**
+  (Encontrado en el barrido del cierre 2.) La página vieja hacía `redirect()` a
+  Finanzas › Cobranza con el armazón del Super ya en camino y el navegador
+  lanzaba React #310 — la misma trampa que /whatsapp.
+  ✅ **Hecho 2026-10-03 (cierre 2).** La redirección pasa a `next.config.ts` (antes de pintar nada); la página queda de respaldo. Comprobado: sin error.
+
 ---
 
 ## 11 · Mi cuenta (grupo)
@@ -986,10 +1018,12 @@ que hace que un restaurantero confíe y lo que permite saber si funciona.
   cliente, caso real (Rincón 502), cifra de restaurantes activos o foto de un
   local usándolo. Para un dueño de restaurante en Guatemala es lo que más
   convence. Sección «Ya lo usan» con 2–3 casos con nombre y foto.
+  🔄 **Herramienta lista 2026-10-03 — falta tu contenido.** Super › Configuración › **Portada** › «Ya lo usan»: hasta 3 testimonios (restaurante, quién lo dice, cargo y la frase, con una casilla de «tengo su permiso»). La sección aparece sola en la portada, debajo de las cifras, con el logo y el nombre del restaurante y enlace a su menú; si un restaurante se suspende, su testimonio deja de salir solo. Sin testimonios, la sección no existe. Lo único que falta: pedirle a 2–3 clientes su frase y su permiso, y escribirlos ahí.
 
-- [ ] **WEB-03** · P2 · M — **El teléfono de la portada enseña cuadros de
+- [x] **WEB-03** · P2 · M — **El teléfono de la portada enseña cuadros de
   color** en vez de fotos de comida, y media pantalla negra vacía. Captura real
   del menú de un cliente (con su permiso).
+  ✅ **Hecho 2026-10-03 (cierre 2).** Mejor que una captura (que se queda vieja): el teléfono pinta **el menú real** del restaurante que elijas en Super › Configuración › Portada —nombre, logo, los colores de su tema, sus platillos con foto (los más pedidos primero) y los precios en su moneda— con «Menú real de …» enlazado debajo, y se actualiza solo cuando el restaurante cambia su carta. Pide marcar que tienes su permiso. Sin elegir, el ejemplo ya no son cuadros: iconos de comida, chips de categorías y la pantalla llena. Para estrenarlo: elegir el restaurante en el Super (en producción, después de desplegar).
 
 - [x] **WEB-04** · P2 · S — **/planes: la tabla comparativa está desalineada**:
   las ✓/✗ no caen bajo su columna (Básico / Estándar / Premium).
@@ -1044,6 +1078,7 @@ que hace que un restaurantero confíe y lo que permite saber si funciona.
 - [ ] **REN-05** · P3 · L — **4.709 `style={{…}}` en línea:** objeto nuevo en cada
   pintado y la razón de que la CSP siga con `unsafe-inline` en estilos. Se van
   yendo solos con T-22/T-26.
+  🔄 **2026-10-03:** con T-26 salieron las 45 constantes de estilo de campo repetidas y ~230 campos pasaron a una clase; los `style={{…}}` quedan en ~4.550 (−160 desde el inicio de la rama). Sigue siendo continuo: cada pantalla que se toque, a clases. Quitar `unsafe-inline` de la CSP de estilos exige llegar a cero (y que React no escriba `style=` en el HTML), así que no es realista a corto plazo.
 
 - [x] **REN-06** · P3 · S — **Funciones repetidas:** 25 formateadores de dinero, 7
   de tiempo relativo (T-01, T-02).
@@ -1083,10 +1118,11 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
 4. ✅ **Fase 4 — Pantallas largas y buscadores. HECHA 2026-10-02.** MEN-01, CLI-01, AJU-10,
    AJU-05, AJU-12, N-02/N-03, PED-01.
 5. ✅ **Fase 5 — Servicio. HECHA 2026-10-03** (maqueta aprobada, D-2). PED-02, PED-06, PED-09, PED-13.
-6. 🔄 **Fase 6 — Marketing y extras. Casi entera 2026-10-03** (WEB-01 y CAT-13 hechos el 10-03; faltan WEB-02/03, que piden testimonios y capturas tuyas). WEB-01 (medir primero), WEB-02, WEB-03,
+6. 🔄 **Fase 6 — Marketing y extras. Casi entera 2026-10-03** (WEB-01, CAT-13 y WEB-03 hechos; WEB-02 tiene la herramienta y espera los testimonios de tus clientes). WEB-01 (medir primero), WEB-02, WEB-03,
    CAT-11, CAT-12, CAT-13, AJU-07, MEN-12, HOY-03, CLI-06.
-7. **Continuo.** T-22/T-26 (escala tipográfica y componentes) pantalla a
-   pantalla, a medida que se toca cada una. (T-23, los radios, ya se hizo de una vez.)
+7. **Continuo.** REN-05 (estilos en línea → clases) pantalla a pantalla, a medida
+   que se toca cada una. T-22 (escala tipográfica), T-23 (radios) y T-26 (campo
+   único) ya se hicieron de una vez, con una prueba que vigila la escala.
 
 ---
 
@@ -1107,3 +1143,4 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
 | 2026-10-03 | **D-2 construido (maqueta aprobada; Mesas opción A).** PED-02 (tarjeta de pedido compacta, 410 → 238 px, reloj único, alarma al doble, «⋯»), PED-06 (tablero en tres columnas desde 1.280 px, gráfica y top debajo), PED-09 (libres en rejilla de cinco en el teléfono + tira de cifras de Mesas a una línea), PED-13 (agotados al final sin buscar, filtros desvanecidos, fila del riel en dos renglones). Verificado: `tsc`, `eslint`, pruebas, build, capturas en teléfono, 1.180, 1.280 y 1.440, claro y oscuro, el «⋯» abierto y un agotado de verdad en la carta; pedidos y plato de prueba devueltos a su estado. | `5b828e5` |
 | 2026-10-03 | **D-3, D-4, D-6, D-7, D-8 decididos y construidos**, y revisados en pantalla (build de producción, panel a 390 y 1.440 px en claro y oscuro, 13 pantallas del Super, menú con y sin mesa). Arreglado lo que salió al revisar: error #310 del enrutador al rebotar de /whatsapp (ahora aviso), «Exportar» que se comía dos filtros en el teléfono, comparación cortada en Resumen, «Ingreso mensual (M…» cortado y el aviso del slug que decía que rompe los QR de mesa. Relleno medido: `#c2542f` en claro y oscuro. | `74cefb2`, `9c7c14c` |
 | 2026-10-03 | **CAT-13, CAT-09, REN-08 y WEB-01.** «Acompáñalo con…» en ficha y carrito con regla propia y sus pruebas, «Lo más pedido» en el checkout vacío, las 14 tipografías restantes desde nuestro dominio (0 peticiones a Google en el menú) y la analítica sin cookies lista para encender. De paso: el nombre y el precio de cada línea del carrito salían pegados. Verificado: `tsc`, `eslint`, 825 pruebas (24 nuevas), build, recorrido con Playwright (ficha → carrito → checkout vacío → checkout con un platillo; aviso de WhatsApp sin errores). Quedan 6: REN-01 (tuyo), WEB-02/03 (contenido tuyo) y los continuos. | `0ecb0e2` |
+| 2026-10-03 | **Cierre 2: T-22, T-26, WEB-03 y la herramienta de WEB-02.** Escala tipográfica única en el área de personal (23 tamaños → 12, pesos 400–800) con una prueba que la vigila; campo único `.adm-field` en lugar de 45 copias de `inputStyle` (~230 campos, ahora con anillo de foco visible y 16 px en el teléfono), `Input`/`Textarea`/`Select` base son esa pieza y fuera 5 componentes base sin uso; Super › Configuración › **Portada** para elegir el restaurante cuyo menú real sale en el teléfono de la portada y escribir los testimonios de «Ya lo usan» (sin migración); Soporte del Super con las piezas del panel. Hallazgo nuevo arreglado: SUP-11 (`/super/cobros` daba React #310). Verificado: `tsc`, `eslint`, 841 pruebas (16 nuevas), dos builds de producción, barrido de 338 capturas (panel 160 + 2, Super 96 + 20 repetidas tras los últimos cambios, Mi cuenta 20, públicas 36, portada 4) sin desbordes ni errores salvo el de cobros, ya resuelto; vitrina y testimonio probados de punta a punta (sin permiso no guarda) con fotos de prueba, anillo de foco y barra de guardar comprobados con teclado. Fotos de prueba y ajustes de portada borrados de la base local. Quedan 3: REN-01 (tuyo), WEB-02 (tus testimonios) y REN-05 (continuo). | `PENDIENTE` |

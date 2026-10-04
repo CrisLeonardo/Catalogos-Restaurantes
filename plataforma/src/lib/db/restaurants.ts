@@ -157,6 +157,46 @@ export const getRestaurantBySlugCached = cache(
   }
 );
 
+/**
+ * Igual que getRestaurantBySlugCached, pero por id. Para la portada de
+ * Leogin, que enseña el menú de un restaurante elegido en el Super
+ * (vitrina y testimonios, WEB-02/03): el id no cambia aunque cambie el
+ * slug. Mismos dos niveles: «sigue activo» en vivo, la fila cacheada.
+ */
+export const getRestaurantByIdCached = cache(
+  async (restaurantId: string): Promise<RestaurantWithTheme | null> => {
+    if (
+      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      !/^[0-9a-f-]{36}$/i.test(restaurantId)
+    ) {
+      return null;
+    }
+
+    const { data: live } = await createServiceClient()
+      .from('restaurants')
+      .select('slug')
+      .eq('id', restaurantId)
+      .eq('status', 'active')
+      .maybeSingle();
+    if (!live) return null;
+
+    const row = await fetchRestaurantByIdCached(restaurantId);
+    if (!row) return null;
+
+    const slug = live.slug as string;
+    const themeRow = row.theme ?? defaultTheme(row.restaurant.id);
+    return {
+      restaurant: row.restaurant,
+      theme: themeRow,
+      resolved: resolveTheme(themeRow, slug, {
+        brandName: row.restaurant.name,
+        tagline: row.restaurant.tagline,
+      }),
+    };
+  }
+);
+
 function fetchRestaurantByIdCached(restaurantId: string) {
   return unstable_cache(
     async (): Promise<{ restaurant: Restaurant; theme: RestaurantTheme | null } | null> => {

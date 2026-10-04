@@ -41,7 +41,7 @@ interface Props {
 
 function EmptyState({ icon, title, desc, action, className }: Props) {
   const actionClass =
-    'btn-accent press mt-2 inline-flex min-h-11 items-center gap-2 rounded-adm-md border-0 px-4 text-[13.5px] font-semibold no-underline';
+    'btn-accent press mt-2 inline-flex min-h-11 items-center gap-2 rounded-adm-md border-0 px-4 text-[13px] font-semibold no-underline';
   return (
     <div
       data-slot="empty-state"
@@ -56,7 +56,7 @@ function EmptyState({ icon, title, desc, action, className }: Props) {
         </span>
       )}
       <div className="text-[15px] font-semibold text-adm-text">{title}</div>
-      <p className="max-w-[46ch] text-[13.5px] leading-snug text-adm-text-3">{desc}</p>
+      <p className="max-w-[46ch] text-[13px] leading-snug text-adm-text-3">{desc}</p>
       {action.href ? (
         <Link href={action.href} className={actionClass}>
           {action.icon !== null && <Icon name={action.icon ?? 'plus'} size={15} />}

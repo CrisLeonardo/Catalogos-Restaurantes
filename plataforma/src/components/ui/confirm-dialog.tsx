@@ -98,7 +98,7 @@ export function useConfirm() {
         <DialogHeader className="mb-0 pr-0">
           <DialogTitle className="text-[16px] leading-snug">{opts?.title}</DialogTitle>
           {opts?.description && (
-            <DialogDescription className="text-[13.5px] leading-relaxed text-adm-text-2">
+            <DialogDescription className="text-[13px] leading-relaxed text-adm-text-2">
               {opts.description}
             </DialogDescription>
           )}
