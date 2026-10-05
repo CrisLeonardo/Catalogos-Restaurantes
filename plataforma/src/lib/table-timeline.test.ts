@@ -107,6 +107,18 @@ describe('tableTimeline', () => {
     ]);
   });
 
+  it('la anulación dice quién la hizo, aunque ya no esté en el equipo', () => {
+    const t = tableTimeline([pedido({
+      created_at: '2026-08-26T12:07:00Z',
+      items: [item('a', 'Limonada', 3)],
+      voids: [
+        { item_id: 'a', quantity: 1, reason: 'Se equivocó', created_at: '2026-08-26T12:10:00Z', requested_by: null, requested_by_name: 'Ana' },
+        { item_id: 'a', quantity: 1, reason: 'Sin nombre', created_at: '2026-08-26T12:11:00Z' },
+      ],
+    })]);
+    expect(t.filter((e) => e.text.startsWith('Se anuló')).map((e) => e.who)).toEqual(['Ana', null]);
+  });
+
   it('deja fuera la comanda cancelada entera', () => {
     const t = tableTimeline([
       pedido({ status: 'CANCEL', created_at: '2026-08-26T12:07:00Z', items: [item('a', 'Sopa', 1)] }),

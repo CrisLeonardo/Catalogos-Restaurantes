@@ -19,7 +19,7 @@
 > se ve bien. Las auditorías anteriores (QA visual 09-22, velocidad 09-25) **no
 > se repiten**: lo que de ellas sigue abierto está en la sección de rendimiento.
 >
-> **Estado:** al 2026-10-04, **146 de 148** hallazgos hechos (los 6 P0 incluidos) y **fusionados a `main`**. D-1…D-9 decididos y hechos (D-9: Render ya está en Virginia). Quedan 2: WEB-02 (la herramienta está; faltan los testimonios de tus clientes) y REN-05 (continuo). WEB-01 está programada y apagada a propósito: la analítica queda para después. Lo que solo puedes hacer tú está en la lista de abajo. Ver la Bitácora al final.
+> **Estado:** al 2026-10-05, **147 de 149** hallazgos hechos (los 6 P0 incluidos) y **fusionados a `main`**. D-1…D-9 decididos y hechos (D-9: Render ya está en Virginia). Quedan 2: WEB-02 (la herramienta está; faltan los testimonios de tus clientes) y REN-05 (continuo). WEB-01 está programada y apagada a propósito: la analítica queda para después. Lo que solo puedes hacer tú está en la lista de abajo. Ver la Bitácora al final.
 
 ## Lo que solo puedes hacer tú
 
@@ -32,6 +32,9 @@ En el orden en que conviene:
    el menú si algún día cambias el slug de ese restaurante.
    (Desde el 2026-10-04 también cierra los permisos de sus dos funciones; si
    la corriste antes de esa fecha, córrela otra vez: es idempotente.)
+   Y después la **135** (`135_anulaciones_sin_atar_al_personal.sql`, AJU-21):
+   sin ella no se puede quitar del equipo a quien haya anulado un pedido —
+   ahora la pantalla lo avisa en vez de fingir que lo hizo.
 2. ✅ ~~Fusionar la rama a `main` y desplegar.~~ Fusionada y subida el 2026-10-04.
 3. **Portada (WEB-02/03):** ya en producción, Super › Configuración › Portada:
    elegir el restaurante cuyo menú sale en el teléfono y escribir 2–3
@@ -70,15 +73,15 @@ En el orden en que conviene:
 | 5 | Panel · Menú | 12 | 12 | 0 |
 | 6 | Panel · Clientes | 6 | 6 | 0 |
 | 7 | Panel · Negocio | 6 | 6 | 0 |
-| 8 | Panel · Ajustes | 20 | 20 | 0 |
+| 8 | Panel · Ajustes | 21 | 21 | 0 |
 | 9 | Catálogo digital (lo que ve el comensal) | 14 | 14 | 0 |
 | 10 | Super Admin | 11 | 11 | 0 |
 | 11 | Mi cuenta (grupo) | 5 | 5 | 0 |
 | 12 | Web pública y marketing | 9 | 8 | 0 |
 | 13 | Rendimiento y salud del código | 10 | 9 | 0 |
-| | **Total** | **148** | **146** | **0** |
+| | **Total** | **149** | **147** | **0** |
 
-Por prioridad: **P0** 6 · **P1** 34 · **P2** 63 · **P3** 45. Hechos: los **6 P0**, 34 P1, 62 P2 y 44 P3.
+Por prioridad: **P0** 6 · **P1** 35 · **P2** 63 · **P3** 45. Hechos: los **6 P0**, 35 P1, 62 P2 y 44 P3.
 
 *(Se actualiza a mano al marcar.)*
 
@@ -814,6 +817,14 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   aparecías en Perfil, otra pantalla, sin saber si se había guardado lo tuyo.
   ✅ **Hecho 2026-10-02 (Fase 2).** Las tres acciones responden «guardado» y el editor lo dice en su sitio («Cambios guardados», «Zonas guardadas»). Probado en vivo en Horarios.
 
+- [x] **AJU-21** · **P1** · S — **«Quitar del equipo» no quitaba a quien había anulado un pedido.**
+  (Encontrado el 2026-10-04 al arreglar la prueba E2E.) `order_voids` ataba a
+  quien anuló y a quien firmó a su perfil sin `on delete` (migración 079): borrar
+  esa cuenta fallaba, y ni Personal ni «Borrar la cuenta» del Super miraban el
+  error — la ficha se cerraba, la persona seguía en el equipo y la bitácora decía
+  que se había quitado.
+  ✅ **Hecho 2026-10-05.** Migración **135**: cada anulación guarda el nombre de quien la hizo y de quien la firmó (las de antes se rellenan; las nuevas, con un disparador), y las dos referencias pasan a `on delete set null`, así que el rastro antifraude no se pierde al borrar la cuenta (y una anulación firmada por alguien ya borrado no se confunde con «nadie firmó»). Personal y el Super ahora revisan el resultado: si no se pudo, lo dicen en la pantalla y no apuntan nada en la bitácora. De paso, la línea de tiempo de la mesa dice quién anuló, y la ficha de Personal ya no enseña la ruta interna `/admin/mesero`. Probado contra la base local: reproducido el fallo antes de la 135, y después borrado desde Personal y desde el Super con la anulación conservando los nombres; los dos avisos de error comprobados en pantalla con un bloqueo puesto a propósito.
+
 ---
 
 ## 9 · Catálogo digital (lo que ve el comensal)
@@ -1149,3 +1160,4 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
 | 2026-10-03 | **Cierre 2: T-22, T-26, WEB-03 y la herramienta de WEB-02.** Escala tipográfica única en el área de personal (23 tamaños → 12, pesos 400–800) con una prueba que la vigila; campo único `.adm-field` en lugar de 45 copias de `inputStyle` (~230 campos, ahora con anillo de foco visible y 16 px en el teléfono), `Input`/`Textarea`/`Select` base son esa pieza y fuera 5 componentes base sin uso; Super › Configuración › **Portada** para elegir el restaurante cuyo menú real sale en el teléfono de la portada y escribir los testimonios de «Ya lo usan» (sin migración); Soporte del Super con las piezas del panel. Hallazgo nuevo arreglado: SUP-11 (`/super/cobros` daba React #310). Verificado: `tsc`, `eslint`, 841 pruebas (16 nuevas), dos builds de producción, barrido de 338 capturas (panel 160 + 2, Super 96 + 20 repetidas tras los últimos cambios, Mi cuenta 20, públicas 36, portada 4) sin desbordes ni errores salvo el de cobros, ya resuelto; vitrina y testimonio probados de punta a punta (sin permiso no guarda) con fotos de prueba, anillo de foco y barra de guardar comprobados con teclado. Fotos de prueba y ajustes de portada borrados de la base local. Quedan 3: REN-01 (tuyo), WEB-02 (tus testimonios) y REN-05 (continuo). | `db86e67` |
 | 2026-10-04 | **Fusión a `main`.** REN-01 cerrado (Render ya en Virginia, lo hiciste tú) y la analítica (WEB-01) queda apagada a propósito para más adelante. La rama `auditoria-pulido-2026-10-02` se fusiona a `main` y se sube. Pendiente tuyo: la migración 134 en producción y llenar Super › Portada. | — |
 | 2026-10-04 | **CI de `main` en verde otra vez.** La primera corrida tras la fusión falló en la auditoría de `security definer`: las dos funciones de disparador de la migración 134 quedaban ejecutables por `anon`/`authenticated` (corregido en la propia 134 con el patrón de la 084). Y la prueba E2E llevaba rota desde septiembre por cambios a propósito de la app (URL `/panel/<slug>`, el panel abre en Hoy, «¿Cómo te llamas?», «Anular pedido» dentro del «⋯»): puesta al día y más tolerante con `next dev` (espera a que la carta se hidrate y a que se compile la acción del pedido). Verificado en local: tipos, lint, las dos auditorías de la base y la E2E 5 veces seguidas en verde. Encontrado de paso (tarea aparte): borrar a alguien que anuló un pedido falla en silencio (`order_voids` → `profiles` sin `on delete`). | — |
+| 2026-10-05 | **AJU-21: borrar a quien anuló pedidos.** Migración 135 (nombre guardado en cada anulación, referencias `on delete set null`) y Personal/Super revisan el resultado de borrar. E2E más tolerante con `next dev` en frío (reintenta la visita a Pedidos si el navegador la aborta, como pasó en la CI). Verificado: tipos, lint, 842 pruebas, las dos auditorías de la base, la E2E en frío (tras borrar `.next`) y dos veces en caliente, borrado probado en Personal y en el Super. Ojo: el servidor de desarrollo local servía 404 en todo el panel menos Hoy por una caché vieja de `.next` tras un `next build` y un reinicio (la trampa ya conocida): borrar `.next` lo arregla. | — |

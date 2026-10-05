@@ -44,6 +44,7 @@ export default function AccountDanger({
   sinDueño: LocalEnRiesgo[];
 }) {
   const [state, action, pending] = useActionState(toggleAccountSuspension, vacio);
+  const [borrado, borrar] = useActionState(deleteAccount, vacio);
   const bloqueado = sinDueño.length > 0;
 
   return (
@@ -138,11 +139,14 @@ export default function AccountDanger({
 
         {!bloqueado && (
           <DeleteButton
-            action={deleteAccount}
+            action={borrar}
             hiddenFields={{ userId }}
             label="Borrar la cuenta"
             confirm={`¿Borrar la cuenta de ${email ?? 'esta persona'}?`}
           />
+        )}
+        {borrado && 'error' in borrado && (
+          <p role="alert" style={{ margin: 0, fontSize: 13, color: 'var(--c-danger)', lineHeight: 1.5 }}>{borrado.error}</p>
         )}
       </div>
     </Card>

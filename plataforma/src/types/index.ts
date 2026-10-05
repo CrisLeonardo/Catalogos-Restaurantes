@@ -303,9 +303,15 @@ export interface OrderVoid {
   /** Unidades anuladas de ese ítem; NULL cuando item_id es NULL. */
   quantity: number | null;
   reason: string;
-  requested_by: string;
-  /** NULL = el propio solicitante ya tenía permiso de encargado (auto-aprobado). */
+  /** Quién anuló. NULL solo si su cuenta se borró: entonces queda su nombre
+   *  en `requested_by_name` (migración 135). */
+  requested_by: string | null;
+  /** Quién firmó. NULL = nadie firmó (pedido aún en NEW, ver la 126), salvo
+   *  que `approved_by_name` diga quién: firmó alguien cuya cuenta se borró. */
   approved_by: string | null;
+  /** Nombres guardados al anular (migración 135; sin ella no vienen). */
+  requested_by_name?: string | null;
+  approved_by_name?: string | null;
   created_at: string;
 }
 

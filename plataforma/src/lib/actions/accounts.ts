@@ -335,11 +335,14 @@ export async function toggleAccountSuspension(
 /* ── 6. Borrar la cuenta ────────────────────────────────────
    Lo único de esta pantalla que no tiene vuelta atrás. */
 
-export async function deleteAccount(formData: FormData) {
+export async function deleteAccount(
+  _prevState: AccountActionState,
+  formData: FormData,
+): Promise<AccountActionState> {
   const userId = (formData.get('userId') as string)?.trim();
 
   const ctx = await objetivo(userId);
-  if ('fallo' in ctx) return;
+  if ('fallo' in ctx) return ctx.fallo;
   const { sesion, cuenta } = ctx;
 
   /* El candado de la fase 4, por el otro camino. Quitarle a alguien el
@@ -352,9 +355,19 @@ export async function deleteAccount(formData: FormData) {
      Se vuelve a comprobar aquí y no solo en la pantalla: entre que se pinta
      el botón y se pulsa puede haber pasado cualquier cosa. */
   const sinDueño = await localesQueSeQuedanSinDueño(userId);
-  if (sinDueño.length) return;
+  if (sinDueño.length) {
+    return { error: 'Esta cuenta es la única dueña de algún local: nombra otro dueño primero.' };
+  }
 
-  await sesion.db.auth.admin.deleteUser(userId);
+  /* Antes no se miraba el resultado y la bitácora apuntaba «cuenta.borrar»
+     aunque la cuenta siguiera ahí (pasaba con quien había anulado algún
+     pedido, hasta la migración 135). */
+  const { error } = await sesion.db.auth.admin.deleteUser(userId);
+  if (error) {
+    return {
+      error: `No se pudo borrar la cuenta (${error.message}). Si esta persona anuló algún pedido y la base no tiene la migración 135, córrela y vuelve a intentarlo.`,
+    };
+  }
 
   // El correo se congela en la propia fila: dentro de un segundo esta cuenta
   // ya no existe y sin él la bitácora diría «se borró la cuenta 77991e3c…».

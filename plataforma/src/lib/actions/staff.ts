@@ -433,14 +433,24 @@ export async function resetStaffPassword(prevState: StaffState, formData: FormDa
   return { ok: true };
 }
 
-export async function removeStaff(formData: FormData) {
+export async function removeStaff(_prevState: StaffState, formData: FormData): Promise<StaffState> {
   const ctx = await ownerCtx(formData.get('restaurantId') as string | null);
-  if (!ctx) return;
+  if (!ctx) return { error: 'No autorizado.' };
   const userId = (formData.get('userId') as string)?.trim();
-  if (!userId || !(await assertStaffOfRestaurant(ctx, userId))) return;
-  await ctx.db.auth.admin.deleteUser(userId); // el profile cae por FK cascade
+  if (!userId || !(await assertStaffOfRestaurant(ctx, userId))) return { error: 'No autorizado.' };
+
+  /* El perfil cae en cascada. Antes no se miraba el resultado: si borrar
+     fallaba —pasaba con quien había anulado algún pedido, porque
+     `order_voids` lo ataba a su perfil hasta la migración 135— la persona
+     seguía en el equipo y la bitácora decía que se había quitado. */
+  const { error } = await ctx.db.auth.admin.deleteUser(userId);
+  if (error) {
+    console.error('[removeStaff] no se pudo borrar la cuenta', userId, error.message);
+    return { error: 'No se pudo quitar a esta persona del equipo. Inténtalo otra vez; si sigue pasando, escríbenos a soporte.' };
+  }
   await logActivity({ restaurantId: ctx.restaurantId, actorId: ctx.userId, action: 'staff', entity: userId, meta: { removed: true } });
   revalidatePath('/admin/personal');
+  return { ok: true };
 }
 
 /** Lista el personal con permiso "mesero" (toma pedidos en mesa). */

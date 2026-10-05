@@ -98,7 +98,9 @@ export function tableTimeline(orders: OrderWithItems[]): TimelineEvent[] {
         ? (o.items ?? []).find((it) => it.id === v.item_id)?.name_snapshot ?? 'un plato'
         : 'la comanda entera';
       const cuantos = v.item_id && v.quantity ? `${v.quantity} · ` : '';
-      out.push({ at: v.created_at, text: `Se anuló ${cuantos}${nombre} · ${v.reason}`, who: null });
+      // Quién anuló, con el nombre guardado al anular: sigue saliendo aunque
+      // esa persona ya no esté en el equipo (migración 135).
+      out.push({ at: v.created_at, text: `Se anuló ${cuantos}${nombre} · ${v.reason}`, who: v.requested_by_name ?? null });
     }
   }
 

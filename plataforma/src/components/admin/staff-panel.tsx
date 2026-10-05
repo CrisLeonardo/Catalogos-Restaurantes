@@ -234,10 +234,13 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
   const updateAction = useActionState<StaffState, FormData>(updateStaffPermissions, null);
   const pinAction = useActionState<StaffPinState, FormData>(setStaffPin, null);
   const passAction = useActionState<StaffState, FormData>(resetStaffPassword, null);
+  const [removeState, removeAction, removing] = useActionState<StaffState, FormData>(removeStaff, null);
 
   const [state, formAction, isPending] = isNew ? createAction : updateAction;
 
   useEffect(() => { if (state && 'ok' in state) onSaved(); }, [state, onSaved]);
+  // Quitado de verdad: se cierra la ficha (la lista ya llega sin esa persona).
+  useEffect(() => { if (removeState && 'ok' in removeState) onSaved(); }, [removeState, onSaved]);
   /* Aviso del panel en vez de `alert()` (caja del sistema operativo).
      Dependen del RESULTADO, no de la tupla de useActionState, que es nueva
      en cada render y repetía el aviso (auditoría 2026-10-02, T-16). */
@@ -462,7 +465,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
               </div>
               <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 8 }}>
                 {isMesero
-                  ? 'Con la sección Mesero podrá tomar pedidos en mesa desde /admin/mesero. Si además marcas otras secciones, también entrará al panel admin.'
+                  ? 'Con la sección Mesero podrá tomar pedidos en mesa desde Pedidos › Tomar pedidos. Si además marcas otras secciones, también las verá en el panel.'
                   : 'Marca las secciones del panel a las que tendrá acceso. Marca Mesero para que tome pedidos en mesa.'}
               </p>
             </div>
@@ -508,7 +511,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                 )}
 
                 <form
-                  action={removeStaff}
+                  action={removeAction}
                   onSubmit={confirmSubmit({
                     title: '¿Quitar a esta persona del equipo?',
                     description: 'Pierde el acceso al panel desde ya.',
@@ -517,9 +520,12 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                 >
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="userId" value={member!.id} />
-                  <Button type="submit" variant="destructive" className="w-full">
-                    Quitar del equipo
+                  <Button type="submit" variant="destructive" className="w-full" disabled={removing}>
+                    {removing ? 'Quitando…' : 'Quitar del equipo'}
                   </Button>
+                  {removeState && 'error' in removeState && (
+                    <div role="alert" style={{ fontSize: 12, color: 'var(--c-danger)', marginTop: 8 }}>{removeState.error}</div>
+                  )}
                 </form>
               </div>
             </>

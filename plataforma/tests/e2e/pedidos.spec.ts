@@ -119,8 +119,8 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
   test('crear pedido desde el menú público y anularlo desde el panel admin', async ({ page }) => {
     // En CI corre contra `next dev`: cada pantalla se compila la primera vez
     // que se pide (menú, checkout, login, pedidos), y eso solo ya se comía
-    // los 60 s por defecto.
-    test.setTimeout(180_000);
+    // los 60 s por defecto (medido en frío: 46 s solo para compilar el login).
+    test.setTimeout(300_000);
     // El tour de bienvenida del panel se abre encima la primera vez y tapa
     // los botones: aquí se da por visto, como haría el dueño.
     await page.addInitScript(() => {
@@ -198,17 +198,24 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
     // /admin/menu o /admin/pedidos y el panel abre en Hoy desde agosto y vive
     // en /panel/<slug> desde el origen único — por eso llevaba roto desde
     // septiembre sin que fallara nada de verdad.
-    await page.waitForURL((u) => !u.pathname.endsWith('/login'), { timeout: 60_000 });
+    await page.waitForURL((u) => !u.pathname.endsWith('/login'), { timeout: 120_000 });
     // Al entrar, el panel quita el `?welcome=1` de la URL él solo: si se
     // navega a otra pantalla en ese instante, el navegador aborta el `goto`.
     await page.waitForURL((u) => !u.search.includes('welcome'), { timeout: 30_000 });
     await page.waitForLoadState('networkidle').catch(() => {});
 
-    await page.goto(panelUrl(tenantA.slug, '/pedidos'), { waitUntil: 'domcontentloaded' });
     // La tarjeta compacta (auditoría 2026-10-02, PED-02) lleva «Anular
     // pedido» dentro de su menú «⋯», no como botón suelto.
+    //
+    // Con `next dev` en frío (siempre, en la CI) la primera visita a Pedidos
+    // compila la pantalla y el navegador puede abortar esa navegación
+    // (net::ERR_ABORTED, visto dos veces seguidas en la CI del 2026-10-04):
+    // se reintenta la visita hasta ver la tarjeta del pedido.
     const masAcciones = page.getByRole('button', { name: /^Más acciones del pedido/ });
-    await expect(masAcciones).toHaveCount(1, { timeout: 30_000 });
+    await expect(async () => {
+      await page.goto(panelUrl(tenantA.slug, '/pedidos'), { waitUntil: 'domcontentloaded' });
+      await expect(masAcciones).toHaveCount(1, { timeout: 20_000 });
+    }).toPass({ timeout: 120_000 });
     await masAcciones.click();
     await page.getByRole('menuitem', { name: 'Anular pedido' }).click();
 
