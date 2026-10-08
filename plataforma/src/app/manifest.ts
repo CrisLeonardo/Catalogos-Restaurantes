@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { headers } from 'next/headers';
 import { DEMO_SLUG } from '@/lib/tenant';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
+import { LEOGIN_PWA_ICONS } from '@/lib/pwa-leogin-icons';
 
 /**
  * Manifest PWA dinámico:
@@ -65,10 +66,8 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
         { src: iconSrc, sizes: '512x512', type: mimeFor(appIcon), purpose: 'any' },
         { src: iconSrc, sizes: '512x512', type: mimeFor(appIcon), purpose: 'maskable' },
       ]
-    : [
-        { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-        { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      ];
+    // Mismos íconos que /api/admin-manifest (mismo `id`): ver pwa-leogin-icons.ts.
+    : [...LEOGIN_PWA_ICONS];
 
   // id explícito: Chrome 97+ lo usa para distinguir PWAs del mismo origen.
   // El catálogo tiene id='/' y el admin tiene id='/admin/', así pueden

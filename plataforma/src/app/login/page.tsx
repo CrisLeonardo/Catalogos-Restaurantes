@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
-import { getRestaurantBySlug, getRestaurantSlugById } from '@/lib/db/restaurants';
+import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { DEMO_SLUG, authPathFor } from '@/lib/tenant';
-import { getResumeSession } from '@/lib/auth/resume';
+import { getBareLoginSlug, getResumeSession } from '@/lib/auth/resume';
 import { getAgentHubInfo } from '@/lib/print-agent';
 import { isGoogleAuthEnabled } from '@/lib/auth-config';
 import { getPinAccess, readDeviceId, restaurantIdForDevice } from '@/lib/auth/trusted-device';
@@ -23,10 +23,8 @@ export default async function LoginPage({
   if (!slug && !authError) {
     const deviceId = await readDeviceId();
     const restaurantIdConocido = deviceId ? await restaurantIdForDevice(deviceId) : null;
-    if (restaurantIdConocido) {
-      const known = await getRestaurantSlugById(restaurantIdConocido);
-      if (known?.status === 'active') redirect(authPathFor('/admin/login', known.slug));
-    }
+    const slugConocido = await getBareLoginSlug(restaurantIdConocido);
+    if (slugConocido) redirect(authPathFor('/admin/login', slugConocido));
   }
 
   let restaurantName: string | null = null;

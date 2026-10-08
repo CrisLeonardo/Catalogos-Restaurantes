@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { headers } from 'next/headers';
 import { getTenantSlug, isAdminSubdomain } from '@/lib/tenant';
+import { LEOGIN_PWA_ICONS } from '@/lib/pwa-leogin-icons';
 
 /**
  * Manifiesto PWA del panel de administración.
@@ -24,8 +25,6 @@ import { getTenantSlug, isAdminSubdomain } from '@/lib/tenant';
 export async function GET(_request: NextRequest) {
   const headersList = await headers();
   const name = 'Leogin';
-  const iconSrc = '/icon-512.png';
-  const iconType = 'image/png';
 
   // El scope tiene que cubrir la URL que ve el navegador, y eso depende del
   // origen desde el que se sirva esto:
@@ -64,10 +63,7 @@ export async function GET(_request: NextRequest) {
     orientation: 'portrait',
     background_color: '#0b0b0c',
     theme_color: '#0b0b0c',
-    icons: [
-      { src: iconSrc, sizes: '512x512', type: iconType, purpose: 'any' },
-      { src: iconSrc, sizes: '512x512', type: iconType, purpose: 'maskable' },
-    ],
+    icons: LEOGIN_PWA_ICONS,
   };
 
   return Response.json(manifest, {

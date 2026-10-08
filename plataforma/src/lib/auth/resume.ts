@@ -1,5 +1,6 @@
 import 'server-only';
 import { myOrganizationId } from '@/lib/db/admin';
+import { getRestaurantSlugById } from '@/lib/db/restaurants';
 
 import { cookies, headers } from 'next/headers';
 import { createClient, getStaffUser } from '@/lib/supabase/server';
@@ -33,6 +34,50 @@ export type ResumeSession = {
    */
   lowPrivilege: boolean;
 };
+
+/**
+ * A qué restaurante mandar un login "en seco" (dominio raíz, sin slug): el de
+ * la sesión de personal que YA está viva en este aparato, y solo si no hay,
+ * el que el aparato tiene registrado por PIN.
+ *
+ * Reportado el 2026-10-08: entrar con azucarnegra, salir, entrar con
+ * rincon502 y volver a abrir el ícono de Leogin llevaba a la grilla de PIN de
+ * Azúcar Negra. La pista del aparato (`restaurant_devices`) solo se actualiza
+ * con un PIN correcto —nunca con un login de correo y contraseña—, así que
+ * seguía apuntando al restaurante viejo aunque la sesión viva fuera de otro.
+ * Y como en un aparato de confianza el "Continuar como" de un dueño se
+ * esconde, la sesión viva de rincon502 ni siquiera se ofrecía.
+ */
+export async function getBareLoginSlug(deviceRestaurantId: string | null): Promise<string | null> {
+  let restaurantId = deviceRestaurantId;
+  try {
+    const { data: { user } } = await getStaffUser();
+    if (user) {
+      const seen = (await cookies()).get(SESSION_SEEN_COOKIE)?.value;
+      if (!isSessionStale(seen, user.id)) {
+        const supabase = await createClient();
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('restaurant_id')
+          .eq('id', user.id)
+          .single();
+        if (profile?.restaurant_id) restaurantId = profile.restaurant_id as string;
+      }
+    }
+  } catch {
+    /* sin sesión utilizable → manda la pista del aparato */
+  }
+  if (!restaurantId) return null;
+  const known = await getRestaurantSlugById(restaurantId);
+  if (known?.status === 'active') return known.slug;
+  // La sesión apuntaba a un restaurante que ya no está activo: se cae a la
+  // pista del aparato antes de rendirse.
+  if (restaurantId !== deviceRestaurantId && deviceRestaurantId) {
+    const viaDevice = await getRestaurantSlugById(deviceRestaurantId);
+    if (viaDevice?.status === 'active') return viaDevice.slug;
+  }
+  return null;
+}
 
 export async function getResumeSession(
   opts: { restaurantId?: string | null; pinTrusted?: boolean } = {},
