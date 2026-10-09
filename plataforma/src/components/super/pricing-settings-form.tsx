@@ -15,13 +15,12 @@ import { Icon } from '@/components/icons';
 import { savePricingSettings, type BillingState } from '@/lib/actions/billing';
 import type { PricingSettings } from '@/lib/db/billing';
 import { FIELD_LABEL } from '@/components/admin/field-label';
+import { PLAN_COLOR_VAR } from '@/lib/plans';
 
 /* El rótulo de campo del panel (D-8), con sitio para un icono al lado. */
 const labelStyle: React.CSSProperties = { ...FIELD_LABEL, display: 'flex', alignItems: 'center', gap: 6 };
 
-const PLAN_COLORS: Record<string, string> = {
-  BASICO: '#94a3b8', ESTANDAR: '#10b981', PREMIUM: '#6366f1', PRO: '#a855f7',
-};
+const PLAN_COLORS: Record<string, string> = PLAN_COLOR_VAR;
 
 function Section({
   title,

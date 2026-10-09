@@ -270,7 +270,7 @@ export default async function SuperHomePage() {
                   variant="neutral"
                   style={{ fontSize: 12, padding: '7px 12px', gap: 7 }}
                 >
-                  <span style={{ width: 8, height: 8, borderRadius: 'var(--radius-full)', background: PLAN_DOT[plan] ?? '#94a3b8' }} />
+                  <span style={{ width: 8, height: 8, borderRadius: 'var(--radius-full)', background: PLAN_DOT[plan] ?? PLAN_DOT.BASICO }} />
                   {planLabel(plan)}
                   <strong style={{ fontFamily: 'var(--ui-font-mono)' }}>{count}</strong>
                 </Badge>

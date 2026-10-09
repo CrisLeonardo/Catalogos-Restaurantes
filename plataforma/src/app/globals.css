@@ -2554,6 +2554,30 @@ html[data-admin-area] {
   --chart-alt: color-mix(in srgb, var(--adm-accent-500) 45%, transparent);
   --chart-empty: color-mix(in srgb, var(--u-text) 8%, transparent);
 }
+/* Color de cada plan — UNA sola paleta (2026-10-09). Había cuatro: la web
+   pública pintaba Premium en coral (PLAN_ACCENT de lib/plans.ts), el Super
+   en índigo, el panel del dueño en violeta y el formulario de precios en
+   otro índigo. Ahora todas leen estas variables: en claro son los mismos
+   hex que PLAN_ACCENT; en el panel oscuro, la misma familia un paso más
+   clara para que se vea sobre el fondo. Premium = coral de la marca. */
+:root {
+  --plan-basico:   #475569;
+  --plan-estandar: #047857;
+  --plan-premium:  #c2542f;
+  --plan-pro:      #6d28d9;
+}
+html[data-admin-area] {
+  --plan-basico:   #a8b0bc;
+  --plan-estandar: #34d399;
+  --plan-premium:  #e58a5f;
+  --plan-pro:      #a78bfa;
+}
+html[data-admin-area][data-scheme="light"] {
+  --plan-basico:   #475569;
+  --plan-estandar: #047857;
+  --plan-premium:  #c2542f;
+  --plan-pro:      #6d28d9;
+}
 /* Tocar una barra dice su cifra (NEG-05, `components/ui/chart-readout.tsx`).
    La columna elegida se enmarca; la línea de lectura reserva su alto. Sin
    ámbito de panel: Mi cuenta (dominio principal) también tiene gráficas. */

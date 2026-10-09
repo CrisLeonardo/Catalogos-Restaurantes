@@ -29,6 +29,7 @@ import { buildNav, findGroup, type NavGroup } from '@/lib/admin-nav';
 import SectionTabs from '@/components/admin/section-tabs';
 import CommandSearch from '@/components/admin/command-search';
 import AdminMoreMenu from '@/components/admin/admin-more-menu';
+import { PLAN_COLOR_VAR } from '@/lib/plans';
 
 
 
@@ -108,9 +109,7 @@ interface Props {
   children: React.ReactNode;
 }
 
-const PLAN_COLORS: Record<string, string> = {
-  BASICO: '#94a3b8', ESTANDAR: 'var(--c-ok)', PREMIUM: 'var(--c-alt)', PRO: '#a855f7',
-};
+const PLAN_COLORS: Record<string, string> = PLAN_COLOR_VAR;
 const PLAN_NAMES: Record<string, string> = {
   BASICO: 'Básico', ESTANDAR: 'Estándar', PREMIUM: 'Premium', PRO: 'Pro',
 };
@@ -656,8 +655,8 @@ export default function AdminShell({
               <span
                 style={{
                   width: 8, height: 8, borderRadius: 'var(--radius-full)', flexShrink: 0,
-                  background: PLAN_COLORS[planActual] ?? '#94a3b8',
-                  boxShadow: `0 0 0 3px color-mix(in srgb, ${PLAN_COLORS[planActual] ?? '#94a3b8'} 18%, transparent)`,
+                  background: PLAN_COLORS[planActual] ?? PLAN_COLORS.BASICO,
+                  boxShadow: `0 0 0 3px color-mix(in srgb, ${PLAN_COLORS[planActual] ?? PLAN_COLORS.BASICO} 18%, transparent)`,
                 }}
               />
               Plan {PLAN_NAMES[planActual] ?? planActual}
@@ -748,7 +747,7 @@ export default function AdminShell({
               restaurantName={restaurantName}
               roleLabel={roleLabel}
               planLabel={planActual ? (PLAN_NAMES[planActual] ?? planActual) : null}
-              planColor={planActual ? (PLAN_COLORS[planActual] ?? '#94a3b8') : undefined}
+              planColor={planActual ? (PLAN_COLORS[planActual] ?? PLAN_COLORS.BASICO) : undefined}
               hasMultipleRestaurants={hasMultipleRestaurants}
               helpSection={helpSection}
               isOperatorSession={isOperatorSession}
