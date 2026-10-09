@@ -160,7 +160,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         {/* Galería integrada (prediseñadas): la misma que ve el dueño. */}
         <details open>
           <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)' }}>
-            Galería prediseñada (7 estructuras × 22 estilos)
+            Galería prediseñada (8 estructuras × 25 estilos)
           </summary>
           <div style={{ paddingTop: 10 }}>
             <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedBuiltin} brandName={config.brandName} />
@@ -318,7 +318,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
 
       {/* ── Portada ── */}
       <Section title="Portada">
-        <Segmented label="Variante" value={config.portadaVariant} options={[['spotlight', 'Spotlight'], ['poster', 'Poster'], ['stack', 'Stack'], ['fullbleed', 'A sangre'], ['ticket', 'Comanda'], ['directo', 'Directo'], ['none', 'Ninguna']]} onChange={(v) => setC('portadaVariant', v as ThemeConfig['portadaVariant'])} />
+        <Segmented label="Variante" value={config.portadaVariant} options={[['spotlight', 'Spotlight'], ['poster', 'Poster'], ['stack', 'Stack'], ['fullbleed', 'A sangre'], ['vitrina', 'Vitrina'], ['ticket', 'Comanda'], ['directo', 'Directo'], ['none', 'Ninguna']]} onChange={(v) => setC('portadaVariant', v as ThemeConfig['portadaVariant'])} />
         <Toggle label="Mostrar logo" value={config.portadaShowLogo} onChange={(v) => setC('portadaShowLogo', v)} />
         <Toggle label="Mostrar badge 'Abierto'" value={config.portadaShowBadge} onChange={(v) => setC('portadaShowBadge', v)} />
         <Toggle label="Punto de estado (respira)" value={config.portadaShowStatus} onChange={(v) => setC('portadaShowStatus', v)} />
@@ -331,7 +331,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
       {/* ── Catálogo ── */}
       <Section title="Catálogo">
         <Segmented label="Navegación" value={config.catalogNav} options={[['chips', 'Píldoras'], ['secciones', 'Secciones'], ['acordeon', 'Acordeón'], ['portadas', 'Portadas']]} onChange={(v) => setC('catalogNav', v as ThemeConfig['catalogNav'])} />
-        <Segmented label="Forma del platillo" value={config.cardStyle} options={[['tarjeta', 'Tarjeta'], ['fila', 'Fila'], ['texto', 'Texto'], ['mosaico', 'Mosaico'], ['carrusel', 'Carrusel']]} onChange={(v) => setC('cardStyle', v as ThemeConfig['cardStyle'])} />
+        <Segmented label="Forma del platillo" value={config.cardStyle} options={[['tarjeta', 'Tarjeta'], ['fila', 'Fila'], ['texto', 'Texto'], ['mosaico', 'Mosaico'], ['carrusel', 'Carrusel'], ['pieza', 'Pieza']]} onChange={(v) => setC('cardStyle', v as ThemeConfig['cardStyle'])} />
         <Segmented label="Ancho" value={config.layoutWidth} options={[['movil', 'Móvil'], ['ancho', 'Ancho'], ['revista', 'Revista']]} onChange={(v) => setC('layoutWidth', v as ThemeConfig['layoutWidth'])} />
         {/* Las columnas solo aplican a rejilla/mosaico en la columna de móvil. */}
         {(config.cardStyle === 'tarjeta' || config.cardStyle === 'mosaico') && config.layoutWidth === 'movil' && (
@@ -519,11 +519,12 @@ function toggleIn<T>(arr: T[], val: T, on: boolean): T[] {
 
 /* ── Definiciones de textos ── */
 const SECTION_LABELS: Record<keyof ThemeContent, string> = {
-  portada: 'Portada', catalog: 'Catálogo', product: 'Producto', cart: 'Carrito',
+  portada: 'Portada', vitrina: 'Cinta y lanzamiento', catalog: 'Catálogo', product: 'Producto', cart: 'Carrito',
   checkout: 'Checkout', confirmation: 'Confirmación', tracking: 'Seguimiento', tags: 'Etiquetas',
 };
 const CONTENT_FIELDS: Record<keyof ThemeContent, [string, string][]> = {
   portada: [['title', 'Título (vacío = nombre)'], ['subtitle', 'Subtítulo (vacío = tagline)'], ['cta', 'Botón'], ['badgeOpen', 'Badge abierto'], ['badgeClosed', 'Badge cerrado'], ['posterKicker', 'Kicker (poster)']],
+  vitrina: [['ticker', 'Cinta de anuncios (frases con «·»)'], ['launchTitle', 'Lanzamiento: nombre de la edición'], ['launchKicker', 'Lanzamiento: línea de arriba'], ['launchClosed', 'Lanzamiento: texto al cerrar']],
   catalog: [['kicker', 'Kicker'], ['heading', 'Título del menú'], ['searchPlaceholder', 'Placeholder búsqueda'], ['allLabel', 'Etiqueta "Todo"'], ['empty', 'Mensaje vacío']],
   product: [['add', 'Botón agregar'], ['soldOut', 'Agotado'], ['prepTime', 'Tiempo de prep.'], ['fresh', 'Etiqueta "fresco"'], ['chooseOne', 'Opción obligatoria'], ['optional', 'Opción opcional']],
   cart: [['title', 'Título'], ['empty', 'Vacío'], ['emptyCta', 'Botón vacío'], ['subtotal', 'Subtotal'], ['shipping', 'Envío'], ['free', 'Gratis'], ['total', 'Total'], ['checkout', 'Botón pagar'], ['barCta', 'Barra: ver carrito'], ['itemsOne', '"producto"'], ['itemsMany', '"productos"']],

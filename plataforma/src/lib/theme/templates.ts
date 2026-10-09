@@ -5,10 +5,10 @@
    independientes, y ese cruce es lo que hace que no todos los menús de la
    plataforma se sientan primos.
 
-   · ESTRUCTURA (7) — el esqueleto. Cómo se recorre la carta (catalogNav),
+   · ESTRUCTURA (8) — el esqueleto. Cómo se recorre la carta (catalogNav),
      qué forma tiene cada platillo (cardStyle), cuánto ancho ocupa la página
      (layoutWidth) y con qué portada se entra.
-   · ESTILO / PALETA (22) — la piel. Color, tipografía, fondo, vidrio,
+   · ESTILO / PALETA (25) — la piel. Color, tipografía, fondo, vidrio,
      esquinas, botones.
 
    Antes había 16 plantillas de estilo que compartían UN esqueleto y 6
@@ -89,7 +89,7 @@ function typo(...layers: Array<TypoOverrides | undefined>): ThemeTypography {
    EJE 1 · ESTRUCTURA (el esqueleto)
    ============================================================ */
 
-export type StructureId = 'clasico' | 'carta' | 'revista' | 'kiosco' | 'estantes' | 'pizarra' | 'compacto';
+export type StructureId = 'clasico' | 'carta' | 'revista' | 'kiosco' | 'estantes' | 'pizarra' | 'compacto' | 'vitrina';
 
 /** Las claves que definen el ESQUELETO. Todo lo que no está aquí es piel y lo
     pone la paleta — así ninguna combinación se pelea consigo misma. */
@@ -213,6 +213,25 @@ export const MENU_STRUCTURES: MenuStructure[] = [
     config: {
       layoutWidth: 'movil', catalogNav: 'acordeon', cardStyle: 'fila',
       portadaVariant: 'directo', showCategoryIcons: true, showTags: true, featuredFavorites: false,
+    },
+  },
+  {
+    id: 'vitrina',
+    name: 'Vitrina',
+    desc: 'Una pieza por pantalla: foto enorme, nombre de cartel y portada que se anuncia como lanzamiento.',
+    hint: 'Para marcas que venden con la pura vista: postres de autor, ediciones limitadas, drops, tiendas que solo venden en línea. Necesita buenas fotos.',
+    signature: 'cereza',
+    config: {
+      layoutWidth: 'movil', catalogNav: 'secciones', cardStyle: 'pieza',
+      portadaVariant: 'vitrina', showCategoryIcons: false, showTags: true, featuredFavorites: false,
+    },
+    // El nombre del producto ES el cartel: va en la letra de póster y en
+    // mayúsculas, como el rótulo de una vitrina. El tamaño lo pone la pieza.
+    typography: {
+      poster: { transform: 'uppercase', tracking: 0, weight: 400, lineHeight: 0.92 },
+      heading: { font: 'poster', transform: 'uppercase', tracking: 0, weight: 400, lineHeight: 0.86 },
+      productName: { font: 'poster', transform: 'uppercase', tracking: 0, weight: 400, lineHeight: 0.92 },
+      price: { font: 'poster', weight: 400 },
     },
   },
 ];
@@ -600,6 +619,57 @@ export const STYLE_PALETTES: StylePalette[] = [
     },
     own: { portadaVariant: 'directo', cardStyle: 'fila' },
   },
+  /* ── Las tres de la Vitrina ──
+     Superficies planas, sin vidrio ni brillo: la foto del producto pone todo
+     el color y la página no compite con ella. Letra condensada de cartel. */
+  {
+    id: 'cereza',
+    name: 'Cereza',
+    desc: 'Hueso, tinta negra y un rojo cereza de etiqueta: el de las tiendas de lanzamiento.',
+    mode: 'Claro',
+    config: {
+      colorBg: '#f2f1ec', colorBg2: '#e6e4dc', colorText: '#111110',
+      colorAccent: '#c8102e', onAccent: '#ffffff', scheme: 'light',
+      fontDisplay: 'Anton', fontPoster: 'Anton', fontBody: 'Manrope',
+      fontSerif: 'Instrument Serif', fontMono: 'JetBrains Mono',
+      backgroundType: 'solid', ambientGlow: false, sheen: false, grain: false,
+      glassIntensity: 'solido', glassAmount: 0, cornerRadius: 0.5, cardShadow: 0,
+      ctaStyle: 'accent', checkoutActiveColor: 'accent',
+    },
+    own: { portadaVariant: 'fullbleed' },
+  },
+  {
+    id: 'cacao',
+    name: 'Cacao',
+    desc: 'Chocolate amargo con un rosa de fresa que resalta sin gritar.',
+    mode: 'Oscuro',
+    config: {
+      colorBg: '#1b120e', colorBg2: '#271a14', colorText: '#f4e9df',
+      colorAccent: '#f08bb0', onAccent: '#1b120e', scheme: 'dark',
+      fontDisplay: 'Anton', fontPoster: 'Anton', fontBody: 'Manrope',
+      fontSerif: 'Instrument Serif', fontMono: 'JetBrains Mono',
+      backgroundType: 'solid', ambientGlow: false, sheen: false, grain: false,
+      glassIntensity: 'solido', glassAmount: 0, cornerRadius: 0.5, cardShadow: 0,
+      ctaStyle: 'accent', checkoutActiveColor: 'accent',
+    },
+    own: { portadaVariant: 'fullbleed' },
+  },
+  {
+    id: 'pistache',
+    name: 'Pistache',
+    desc: 'Verde pistache suave con tinta índigo: dulce, fresco y nada genérico.',
+    mode: 'Claro',
+    config: {
+      colorBg: '#dce5cf', colorBg2: '#cbd8ba', colorText: '#17240f',
+      colorAccent: '#3a2a86', onAccent: '#ffffff', scheme: 'light',
+      fontDisplay: 'Anton', fontPoster: 'Anton', fontBody: 'Manrope',
+      fontSerif: 'Instrument Serif', fontMono: 'JetBrains Mono',
+      backgroundType: 'solid', ambientGlow: false, sheen: false, grain: false,
+      glassIntensity: 'solido', glassAmount: 0, cornerRadius: 0.5, cardShadow: 0,
+      ctaStyle: 'accent', checkoutActiveColor: 'accent',
+    },
+    own: { portadaVariant: 'fullbleed' },
+  },
 ];
 
 export function findPalette(id: string): StylePalette | undefined {
@@ -671,14 +741,14 @@ export function palettesForStructure(structure: MenuStructure): StylePalette[] {
   return [...signature, ...STYLE_PALETTES.filter((p) => p.id !== structure.signature)];
 }
 
-/** Las 22 plantillas de una estructura, listas para la galería. */
+/** Las plantillas de una estructura (una por paleta), listas para la galería. */
 export function templatesForStructure(structureId: StructureId): BuiltinTemplate[] {
   const structure = findStructure(structureId);
   if (!structure) return [];
   return palettesForStructure(structure).map((p) => composeTemplate(structure, p));
 }
 
-/** La galería completa: 7 estructuras × 22 paletas. */
+/** La galería completa: cada estructura × cada paleta. */
 export const BUILTIN_TEMPLATES: BuiltinTemplate[] = MENU_STRUCTURES.flatMap((s) =>
   palettesForStructure(s).map((p) => composeTemplate(s, p)),
 );

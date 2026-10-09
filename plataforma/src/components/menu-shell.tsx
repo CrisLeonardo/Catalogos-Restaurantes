@@ -6,6 +6,8 @@ import { CartProvider } from '@/lib/cart-context';
 import { ThemeProvider } from '@/lib/theme/context';
 import { LocaleProvider } from '@/lib/locale/context';
 import Portada from '@/components/menu/portada';
+import Cinta from '@/components/menu/cinta';
+import { esDestacado } from '@/lib/menu-pairings';
 import MenuClient from '@/components/menu-client';
 import VisitTracker from '@/components/visit-tracker';
 import InstallBanner from '@/components/install-banner';
@@ -84,6 +86,16 @@ export default function MenuShell({ config, content, categories, products, resta
     [config, initialMesa],
   );
 
+  /* La portada Vitrina vende con una foto. Si el dueño no subió imagen de
+     fondo, se usa la de un producto de su carta: primero uno marcado como
+     favorito/destacado (la misma regla que la carta), si no el primero con foto. */
+  const vitrinaFoto = useMemo(() => {
+    if (cfg.portadaVariant !== 'vitrina' || cfg.backgroundImage) return null;
+    const conFoto = products.filter((p) => p.image_url);
+    const fav = conFoto.find((p) => esDestacado(p.tags));
+    return (fav ?? conFoto[0])?.image_url ?? null;
+  }, [cfg.portadaVariant, cfg.backgroundImage, products]);
+
   return (
     <ThemeProvider config={cfg} content={content}>
       <LocaleProvider restaurantId={restaurantId} extraLanguages={menuLanguages}>
@@ -99,7 +111,8 @@ export default function MenuShell({ config, content, categories, products, resta
           className="themed-type menu-canvas"
           style={{ paddingBottom: `calc(${ordersEnabled ? '80px' : '64px'} + env(safe-area-inset-bottom, 0px))` }}
         >
-          <Portada isOpen={isOpen} />
+          <Cinta />
+          <Portada isOpen={isOpen} fallbackImage={vitrinaFoto} />
           <div id="menu" style={{ scrollMarginTop: 16, paddingTop: 12 }}>
             {!isOpen && (
               <div

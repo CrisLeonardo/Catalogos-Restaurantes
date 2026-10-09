@@ -415,7 +415,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 value={config.portadaVariant}
                 options={[
                   ['spotlight', 'Spotlight'], ['poster', 'Poster'], ['stack', 'Stack'],
-                  ['fullbleed', 'Foto a sangre'], ['ticket', 'Comanda'],
+                  ['fullbleed', 'Foto a sangre'], ['vitrina', 'Vitrina'], ['ticket', 'Comanda'],
                   ['directo', 'Directo al menú'], ['none', 'Sin portada'],
                 ]}
                 onChange={(v) => setC('portadaVariant', v as ThemeConfig['portadaVariant'])}
@@ -462,7 +462,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               <Segmented
                 label="Forma de cada platillo"
                 value={config.cardStyle}
-                options={[['tarjeta', 'Tarjeta'], ['fila', 'Fila'], ['texto', 'Texto'], ['mosaico', 'Mosaico'], ['carrusel', 'Carrusel']]}
+                options={[['tarjeta', 'Tarjeta'], ['fila', 'Fila'], ['texto', 'Texto'], ['mosaico', 'Mosaico'], ['carrusel', 'Carrusel'], ['pieza', 'Pieza grande']]}
                 onChange={(v) => setC('cardStyle', v as ThemeConfig['cardStyle'])}
               />
               <Note>
@@ -521,6 +521,62 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 Al abrir un platillo y en el carrito se ofrece una bebida, un acompañamiento o un postre de
                 tu carta, según el nombre de tus categorías (Bebidas, Café, Extras, Postres…). Solo lo que
                 está disponible y se agrega de un toque.
+              </Note>
+            </Section>
+
+            <Section title="Cinta y lanzamientos">
+              <Note>
+                Para vender como una tienda de lanzamientos: una cinta de anuncios que corre arriba del
+                menú, ediciones con cuenta regresiva y el aviso de que quedan pocas. Todo es opcional y
+                funciona con cualquier estructura; luce más con «Vitrina».
+              </Note>
+              <TextCtl
+                label="Cinta de anuncios"
+                value={content.vitrina.ticker}
+                placeholder="Pedidos hasta las 18:00 · Envíos a zona 10 y 14 · Recoge sin costo"
+                onChange={(v) => setT('vitrina', 'ticker', v)}
+              />
+              <Note>Separa las frases con «·». Déjala vacía para no mostrar la cinta.</Note>
+
+              <Toggle label="Modo lanzamiento (drop)" value={config.launchMode} onChange={(v) => setC('launchMode', v)} />
+              <Note>
+                Para quien vende por ediciones: la portada Vitrina anuncia la edición con su cuenta
+                regresiva y cada producto lleva su número (Nº 01 / 06). Apágalo si vendes todos los días.
+              </Note>
+              {config.launchMode && (
+                <>
+                  <TextCtl label="Nombre de la edición" value={content.vitrina.launchTitle} placeholder="Drop 007" onChange={(v) => setT('vitrina', 'launchTitle', v)} />
+                  <TextCtl label="Línea de arriba" value={content.vitrina.launchKicker} placeholder="Edición limitada · 18 oct" onChange={(v) => setT('vitrina', 'launchKicker', v)} />
+                  <Row label="Cierra el" stacked>
+                    <input
+                      type="datetime-local"
+                      value={config.launchEndsAt ?? ''}
+                      onChange={(e) => setC('launchEndsAt', e.target.value || null)}
+                      className="adm-field"
+                    />
+                  </Row>
+                  <TextCtl label="Texto cuando ya cerró" value={content.vitrina.launchClosed} onChange={(v) => setT('vitrina', 'launchClosed', v)} />
+                  <Note>
+                    La cuenta regresiva es un anuncio: al llegar a cero dice que la edición cerró, pero no
+                    apaga tus productos. Márcalos como agotados cuando se acaben.
+                  </Note>
+                </>
+              )}
+
+              <Toggle label="Avisar cuando quedan pocas" value={config.showStockLeft} onChange={(v) => setC('showStockLeft', v)} />
+              {config.showStockLeft && (
+                <Slider
+                  label={`Avisar desde ${config.stockLeftBelow} ${config.stockLeftBelow === 1 ? 'unidad' : 'unidades'}`}
+                  value={config.stockLeftBelow}
+                  min={1}
+                  max={50}
+                  step={1}
+                  onChange={(v) => setC('stockLeftBelow', v)}
+                />
+              )}
+              <Note>
+                Muestra «¡Solo quedan 4!» en los productos que llevan inventario. El cliente solo ve el
+                número cuando ya quedan pocas; tu inventario completo no sale del panel.
               </Note>
             </Section>
 
@@ -756,6 +812,7 @@ const CARD_HINT: Record<string, string> = {
   texto: 'Carta impresa: sin imágenes, nombre y precio unidos por una línea de puntos.',
   mosaico: 'Tarjetas de alturas desiguales que encajan como una revista.',
   carrusel: 'Cada categoría es una fila que se desliza de lado.',
+  pieza: 'Un producto por pantalla: foto enorme, nombre de cartel y un botón grande. Para vender con la pura vista.',
 };
 
 const PORTADA_HINT: Record<string, string> = {
@@ -763,6 +820,7 @@ const PORTADA_HINT: Record<string, string> = {
   poster: 'El nombre enorme alineado a la izquierda, como un cartel.',
   stack: 'Logo arriba y tres tarjetas con lo que te distingue.',
   fullbleed: 'Tu imagen de fondo a pantalla completa con el nombre encima (súbela en «Fondo»).',
+  vitrina: 'Foto a pantalla completa con tu nombre a tamaño de cartel. Si no subes imagen de fondo, usa la de tu producto favorito.',
   ticket: 'Una comanda de papel, con bordes dentados y letra de máquina.',
   directo: 'Solo un encabezado pequeño: el menú empieza de inmediato, sin pantalla de bienvenida.',
   none: 'Sin ninguna cabecera: el menú arranca en seco.',

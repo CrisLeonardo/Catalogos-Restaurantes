@@ -144,6 +144,25 @@ export function Thumb({ tpl, name }: { tpl: BuiltinTemplate; /** Nombre del rest
         </div>
       );
     }
+    if (c.cardStyle === 'pieza') {
+      /* Vitrina: una pieza a toda la columna (dos en lienzo ancho), con el
+         nombre de cartel y el botón grande debajo. */
+      const n = wide ? 2 : 1;
+      return (
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${n}, 1fr)`, gap: 6 }}>
+          {Array.from({ length: n }, (_, i) => (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div style={{ height: wide ? 30 : 54, borderRadius: r(4), border: `1px solid ${hair}`, background: `linear-gradient(150deg, ${rgbaOf(c.colorAccent, 0.5)}, ${rgbaOf(c.colorText, 0.16)})` }} />
+              <div style={{ fontSize: wide ? 7 : 10, lineHeight: 0.9, color: c.colorText, textTransform: 'uppercase', ...approxFont(c.fontPoster, true) }}>Brownie</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                <div style={{ fontSize: wide ? 6.5 : 8, color: c.colorText, ...approxFont(c.fontPoster, true) }}>Q45</div>
+                <div style={{ width: '48%', height: wide ? 6 : 8, borderRadius: 99, background: c.colorAccent }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
     if (c.cardStyle === 'fila') {
       const rows = wide ? [0.9, 0.7, 0.8, 0.75] : [0.9, 0.7, 0.8];
       return (
@@ -325,6 +344,16 @@ export function Thumb({ tpl, name }: { tpl: BuiltinTemplate; /** Nombre del rest
           </div>
         </div>
       )}
+      {c.portadaVariant === 'vitrina' && (
+        <div style={{ position: 'relative', height: wide ? 38 : 88, margin: '-8px -8px 0', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(120% 90% at 70% 20%, ${rgbaOf(c.colorAccent, 0.55)}, transparent 70%), linear-gradient(180deg, ${c.colorBg2}, #1a1a1a)` }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.78), rgba(0,0,0,0.1) 70%)' }} />
+          <div style={{ position: 'absolute', left: 8, right: 8, bottom: wide ? 4 : 7 }}>
+            <div style={{ fontSize: wide ? 15 : 24, lineHeight: 0.84, color: '#fff', textTransform: 'uppercase', maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'clip', ...approxFont(c.fontPoster, true) }}>{corto}</div>
+            <div style={{ ...cta(), width: wide ? '36%' : '46%', margin: wide ? '3px 0 0' : '5px 0 0' }}>Ver el menú</div>
+          </div>
+        </div>
+      )}
       {c.portadaVariant === 'ticket' && (
         <div style={{ width: wide ? '58%' : '80%', margin: wide ? '1px auto 0' : '3px auto 0', background: tileBg, border: `1px solid ${hair}`, borderRadius: 2, padding: wide ? '5px 7px' : '7px 8px', textAlign: 'center', position: 'relative' }}>
           <div style={{ fontSize: 4.5, letterSpacing: '0.2em', color: text2, textTransform: 'uppercase', fontFamily: 'ui-monospace, monospace' }}>EST · 2024</div>
@@ -370,6 +399,8 @@ function StructureGlyph({ id }: { id: StructureId }) {
     estantes: <>{bar(2, 3, 3, 5, 0.5, 1.2)}{bar(2, 11, 3, 5, 0.5, 1.2)}{bar(6, 3, 5.5, 5, 1, 1.2)}{bar(6, 11, 5.5, 5, 1, 1.2)}{bar(12.5, 3, 5.5, 5, 0.5, 1.2)}{bar(12.5, 11, 5.5, 5, 0.5, 1.2)}</>,
     pizarra: <>{bar(2, 2, 14, 3, 1, 1.2)}{bar(3.5, 6.5, 8, 1.4, 0.55)}{bar(3.5, 9.5, 6, 1.4, 0.55)}{bar(2, 13, 14, 3, 0.45, 1.2)}</>,
     compacto: <>{bar(2, 2, 14, 3, 1, 1.2)}{bar(2, 6.5, 14, 2.4, 0.5, 1)}{bar(2, 10, 14, 2.4, 0.5, 1)}{bar(2, 13.5, 14, 2.4, 0.5, 1)}</>,
+    // Una pieza que llena la columna, con su nombre de cartel debajo.
+    vitrina: <>{bar(3, 1.5, 12, 10.5, 1, 1.2)}{bar(3, 13.5, 9, 2.2, 0.75, 0.6)}{bar(3, 16.2, 5, 1.3, 0.45, 0.5)}</>,
   };
   return <svg viewBox="0 0 18 18" style={s} aria-hidden>{paths[id]}</svg>;
 }

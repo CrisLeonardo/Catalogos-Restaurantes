@@ -1477,6 +1477,217 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
 }
 .m-chip[data-dim="1"] { opacity: 0.55; }
 
+/* ── Pieza de Vitrina ─────────────────────────────────────────
+   Una pieza por pantalla (ver PiezaTile en components/menu/catalog.tsx).
+   Sin superficie propia a propósito: ni tarjeta, ni vidrio, ni sombra. La
+   foto pone todo el color y la página no compite con ella; lo que separa una
+   pieza de la siguiente es un filete, como en un catálogo impreso. */
+.m-pieza {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-sp-3);
+  padding-block: var(--m-sp-5) var(--m-sp-6);
+  border-bottom: 1px solid var(--u-hair);
+}
+.m-pieza-art {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 4 / 5;
+  padding: 0;
+  border: 0;
+  border-radius: var(--m-r-md);
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--surface-1);
+  color: inherit;
+}
+.m-pieza-art img { transition: transform 800ms cubic-bezier(.2, .7, .2, 1), filter 300ms; }
+@media (hover: hover) {
+  .m-pieza-art:hover img { transform: scale(1.035); }
+}
+.m-pieza-art:focus-visible { outline: 3px solid var(--brand-accent); outline-offset: 3px; }
+/* Número de edición (modo lanzamiento) y etiqueta del dueño: rectos, pegados
+   a la foto como una etiqueta de precio, no píldoras flotando. */
+.m-pieza-num,
+.m-pieza-flag {
+  position: absolute;
+  top: var(--m-sp-3);
+  padding: 5px 8px;
+  border-radius: 2px;
+  font-family: var(--ui-font-mono);
+  font-size: var(--m-fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.m-pieza-num { left: var(--m-sp-3); background: var(--brand-bg); color: var(--u-text); }
+.m-pieza-flag { right: var(--m-sp-3); background: var(--brand-accent); color: var(--brand-on-accent); }
+.m-pieza[data-unavailable="1"] .m-pieza-art img { filter: grayscale(1); opacity: 0.55; }
+.m-pieza-stamp {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.m-pieza-stamp > span {
+  font-family: var(--font-poster);
+  font-size: clamp(42px, 14vw, 68px);
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--brand-accent-ink);
+  border: 5px solid currentColor;
+  padding: 8px 18px 4px;
+  transform: rotate(-12deg);
+  background: color-mix(in srgb, var(--brand-bg) 74%, transparent);
+}
+.m-pieza-name { margin: var(--m-sp-1) 0 0; text-wrap: balance; overflow-wrap: anywhere; }
+.m-pieza[data-unavailable="1"] .m-pieza-name { color: var(--u-text-3); }
+.m-pieza-desc { margin: 0; font-size: var(--m-fs-md); line-height: 1.5; max-width: 42ch; }
+.m-pieza-left {
+  font-family: var(--ui-font-mono);
+  font-size: var(--m-fs-sm);
+  font-weight: 700;
+  color: var(--brand-accent-ink);
+}
+.m-pieza-buy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--m-sp-3);
+  margin-top: var(--m-sp-1);
+}
+.m-pieza-buy .ct-price { line-height: 1; }
+.m-pieza-cta {
+  flex: 0 1 220px;
+  min-height: 52px;
+  padding: 0 var(--m-sp-4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--m-sp-2);
+  border-radius: var(--m-r-pill);
+  font-size: var(--m-fs-sm);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.m-pieza-cta[data-off="1"] {
+  background: transparent;
+  color: var(--u-text-3);
+  border: 1.5px solid var(--u-hair-2);
+  cursor: default;
+}
+
+/* «Quedan 3»: insignia de acento abajo a la izquierda de la foto en las
+   formas con arte; en línea junto al nombre en la fila. */
+.m-left-badge {
+  position: absolute;
+  left: var(--m-sp-2);
+  bottom: var(--m-sp-2);
+  padding: 3px 8px;
+  border-radius: var(--m-r-pill);
+  font-size: calc(var(--m-fs-xs) * var(--t-tag-size, 1));
+  font-weight: 700;
+  background: var(--brand-accent);
+  color: var(--brand-on-accent);
+}
+.m-left-badge[data-inline="1"] { position: static; }
+
+/* ── Portada Vitrina ───────────────────────────────────────────
+   Sobre la foto siempre hay un velo oscuro, así que aquí el texto es blanco
+   fijo (no los tokens del tema, que en una paleta clara serían tinta negra
+   sobre una foto oscura). El remate del titular va en el acento. */
+.is-vitrina .m-vitrina-title {
+  color: #fff;
+  line-height: 0.84;
+  letter-spacing: -0.005em;
+  overflow-wrap: normal;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+}
+.is-vitrina .m-vitrina-title em { font-style: normal; color: var(--brand-accent); }
+.m-vitrina-kicker {
+  font-family: var(--ui-font-mono);
+  font-size: var(--m-fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.9);
+}
+.m-vitrina-sub {
+  margin: 0;
+  max-width: 32ch;
+  font-size: var(--m-fs-lg);
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+}
+.m-vitrina-count { display: flex; gap: var(--m-sp-2); }
+.m-vitrina-count > div {
+  width: 62px;
+  padding: 8px 0 6px;
+  text-align: center;
+  border-radius: var(--m-r-sm, 6px);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: #fff;
+}
+.m-vitrina-count b {
+  display: block;
+  font-family: var(--ui-font-mono);
+  font-size: 22px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.m-vitrina-count span {
+  font-family: var(--ui-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.m-vitrina-closed {
+  padding: 8px 14px;
+  border-radius: var(--m-r-pill);
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  color: #fff;
+  font-weight: 700;
+  font-size: var(--m-fs-sm);
+}
+
+/* ── Cinta de anuncios ────────────────────────────────────────
+   Corre de derecha a izquierda a todo el ancho de la ventana. El texto va
+   duplicado (dos mitades iguales) y se desplaza media pista: así el bucle
+   no tiene costura. Sin animaciones o con movimiento reducido, se queda
+   quieta y se lee la primera mitad. */
+.m-cinta {
+  overflow: hidden;
+  white-space: nowrap;
+  background: var(--brand-accent);
+  color: var(--brand-on-accent);
+  font-family: var(--ui-font-mono);
+  font-size: var(--m-fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding-block: 9px;
+}
+.m-cinta-track { display: inline-flex; width: max-content; }
+.m-cinta[data-anim="1"] .m-cinta-track { animation: cinta var(--m-cinta-dur, 30s) linear infinite; }
+.m-cinta-half { display: inline-flex; gap: 1.6em; padding-right: 1.6em; }
+@keyframes cinta { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .m-cinta[data-anim="1"] .m-cinta-track { animation: none; }
+}
+
 /* ── Encabezado de sección ────────────────────────────────── */
 .m-sec {
   display: flex;
@@ -1484,6 +1695,10 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
   gap: var(--m-sp-3);
   padding-bottom: var(--m-sp-2);
   border-bottom: 1px solid var(--u-hair);
+}
+.m-sec[data-poster="1"] {
+  border-bottom: 2px solid var(--u-text);
+  padding-top: var(--m-sp-5);
 }
 .m-sec-btn {
   display: flex;
@@ -1977,6 +2192,9 @@ select.adm-field { cursor: pointer; }
 }
 .menu-card-lazy[data-shape="fila"] {
   contain-intrinsic-height: auto 96px;  /* miniatura de 74 px + relleno */
+}
+.menu-card-lazy[data-shape="pieza"] {
+  contain-intrinsic-height: auto 690px; /* foto 4:5 de una columna de móvil + nombre, precio y botón */
 }
 
 /* ============================================================

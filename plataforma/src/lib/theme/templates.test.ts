@@ -6,10 +6,10 @@ import {
 import { DEFAULT_CONFIG, DEFAULT_TYPOGRAPHY } from './defaults';
 
 describe('galería = estructura × paleta', () => {
-  it('cruza las 7 estructuras con las 22 paletas', () => {
-    expect(MENU_STRUCTURES).toHaveLength(7);
-    expect(STYLE_PALETTES).toHaveLength(22);
-    expect(BUILTIN_TEMPLATES).toHaveLength(7 * 22);
+  it('cruza las 8 estructuras con las 25 paletas', () => {
+    expect(MENU_STRUCTURES).toHaveLength(8);
+    expect(STYLE_PALETTES).toHaveLength(25);
+    expect(BUILTIN_TEMPLATES).toHaveLength(8 * 25);
     for (const s of MENU_STRUCTURES) {
       expect(templatesForStructure(s.id)).toHaveLength(STYLE_PALETTES.length);
     }
@@ -104,8 +104,25 @@ describe('compatibilidad de ids', () => {
     ['pizarra', { layoutWidth: 'movil', catalogNav: 'acordeon', cardStyle: 'texto', portadaVariant: 'poster' }],
     ['estantes', { layoutWidth: 'ancho', catalogNav: 'secciones', cardStyle: 'carrusel', portadaVariant: 'directo' }],
     ['compacto', { layoutWidth: 'movil', catalogNav: 'acordeon', cardStyle: 'fila', portadaVariant: 'directo' }],
+    ['vitrina-cereza', { layoutWidth: 'movil', catalogNav: 'secciones', cardStyle: 'pieza', portadaVariant: 'vitrina', featuredFavorites: false }],
   ])('%s conserva su esqueleto publicado', (id, skeleton) => {
     expect(findTemplate(id)!.config).toMatchObject(skeleton);
+  });
+});
+
+describe('Vitrina', () => {
+  it('abre con Cereza y pone el nombre del producto en letra de cartel', () => {
+    const t = templatesForStructure('vitrina')[0];
+    expect(t.id).toBe('vitrina-cereza');
+    expect(t.config.typography?.productName.font).toBe('poster');
+    expect(t.config.typography?.productName.transform).toBe('uppercase');
+  });
+
+  it('aplicar la plantilla no toca el lanzamiento ni el aviso de existencias', () => {
+    const prev = { ...DEFAULT_CONFIG, launchMode: true, launchEndsAt: '2026-10-18T18:00', showStockLeft: true, stockLeftBelow: 5 };
+    const next = applyTemplateToConfig(prev, findTemplate('vitrina-cacao')!);
+    expect(next).toMatchObject({ launchMode: true, launchEndsAt: '2026-10-18T18:00', showStockLeft: true, stockLeftBelow: 5 });
+    expect(next.cardStyle).toBe('pieza');
   });
 });
 

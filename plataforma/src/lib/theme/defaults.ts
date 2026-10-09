@@ -23,7 +23,7 @@ export type BackgroundType = 'asphalt' | 'solid' | 'gradient' | 'image';
 export type GrainStyle = 'fino' | 'grueso' | 'papel';
 export type CtaStyle = 'white' | 'accent' | 'outline';
 export type CheckoutActiveColor = 'text' | 'accent';
-export type PortadaVariant = 'spotlight' | 'poster' | 'stack' | 'fullbleed' | 'ticket' | 'directo' | 'none';
+export type PortadaVariant = 'spotlight' | 'poster' | 'stack' | 'fullbleed' | 'ticket' | 'directo' | 'vitrina' | 'none';
 export type CatalogView = 'grid' | 'list';
 export type ProductArt = 'auto' | 'pattern' | 'photo';
 export type OrderType = 'delivery' | 'pickup' | 'dine_in';
@@ -47,7 +47,8 @@ export type CardStyle =
   | 'fila'      // fila horizontal con miniatura (equivale a catalogView 'list')
   | 'texto'     // SIN imagen: nombre · línea de puntos · precio (carta impresa)
   | 'mosaico'   // alturas alternas y arte dominante (editorial)
-  | 'carrusel'; // fila horizontal desplazable por categoría
+  | 'carrusel'  // fila horizontal desplazable por categoría
+  | 'pieza';    // una pieza por pantalla: foto grande, nombre de cartel (Vitrina)
 
 /** Ambición del lienzo: cuánto quiere crecer el menú cuando hay pantalla de
     sobra. NO es un ancho fijo — en un teléfono los tres valen lo mismo y de
@@ -253,6 +254,20 @@ export interface ThemeConfig {
   productArt: ProductArt;       // auto = foto si existe, si no patrón
   showTags: boolean;
   featuredFavorites: boolean;   // productos con etiqueta "Favorito" como tarjeta grande (máx. 3)
+  /** «Quedan pocas»: avisa cuántas unidades quedan cuando el producto lleva
+      inventario y baja de `stockLeftBelow`. Solo ese número viaja al
+      navegador, y solo si esto está encendido (ver lib/db/menu.ts). */
+  showStockLeft: boolean;
+  stockLeftBelow: number;       // 1–50: a partir de cuántas se avisa
+
+  // ── Vitrina: cinta y lanzamiento ── (los textos viven en content.vitrina)
+  /** Lanzamiento ("drop"): la portada Vitrina muestra el título de la edición
+      y una cuenta regresiva, y las piezas van numeradas (Nº 01 / 06). */
+  launchMode: boolean;
+  /** Cierre del lanzamiento, ISO local sin zona ('2026-10-18T18:00'). Se
+      interpreta en la hora del aparato del comensal. null = sin cuenta. */
+  launchEndsAt: string | null;
+
   /** «Acompáñalo con…»: en la ficha y en el carrito se ofrecen bebida,
       acompañamiento o postre de la propia carta (lib/menu-pairings.ts). */
   suggestPairings: boolean;
@@ -457,6 +472,10 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   showTags: true,
   featuredFavorites: false,
   suggestPairings: true,
+  showStockLeft: false,
+  stockLeftBelow: 10,
+  launchMode: false,
+  launchEndsAt: null,
 
   orderTypes: ['dine_in', 'delivery', 'pickup'],
   deliveryFee: 0,
@@ -515,6 +534,14 @@ export interface ThemeContent {
     badgeOpen: string;
     badgeClosed: string;      // cuando el horario dice "cerrado"
     posterKicker: string;     // "EST · GUATEMALA" en variante poster
+  };
+  /** Textos de la estructura Vitrina. La cinta se pinta en CUALQUIER
+      estructura si tiene texto; el resto solo con el modo lanzamiento. */
+  vitrina: {
+    ticker: string;           // cinta de anuncios; frases separadas por «·» o salto de línea. Vacío = sin cinta
+    launchTitle: string;      // "DROP 007": la última palabra va en el color de acento
+    launchKicker: string;     // "Edición limitada · 18 oct"
+    launchClosed: string;     // lo que dice la cuenta cuando ya cerró
   };
   catalog: {
     kicker: string;           // vacío = "{brandName} · {zone}"
@@ -627,6 +654,12 @@ export const DEFAULT_CONTENT: ThemeContent = {
     badgeOpen: 'Abierto ahora',
     badgeClosed: 'Cerrado ahora',
     posterKicker: 'EST · 2024',
+  },
+  vitrina: {
+    ticker: '',
+    launchTitle: 'Drop 001',
+    launchKicker: 'Edición limitada',
+    launchClosed: 'Esta edición ya cerró',
   },
   catalog: {
     kicker: '',
