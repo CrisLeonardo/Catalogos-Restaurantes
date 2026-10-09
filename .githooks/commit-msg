@@ -1,0 +1,14 @@
+#!/bin/sh
+# Avisa (NO bloquea) si el mensaje de commit es demasiado vago.
+# Formato esperado: tipo(ámbito): qué cambió  — ver docs/guias/FLUJO_GIT.md
+
+msg=$(sed '/^#/d' "$1" | head -1)
+
+case "$msg" in Merge*|Revert*|fixup!*|squash!*) exit 0;; esac
+
+len=$(printf '%s' "$msg" | wc -c | tr -d ' ')
+if [ "$len" -lt 15 ]; then
+  printf '\n\033[33m⚠ Mensaje muy corto (%s caracteres): "%s"\033[0m\n' "$len" "$msg"
+  printf '  Dentro de unos meses nadie sabrá qué hacía. Formato: tipo(ámbito): qué cambió\n\n'
+fi
+exit 0

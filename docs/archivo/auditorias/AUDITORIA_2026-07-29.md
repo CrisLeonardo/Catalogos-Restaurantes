@@ -67,10 +67,10 @@ que le falta algo y tú no sabes que se lo debes. Es la clase de cosa que se
 descubre en una llamada de cancelación.
 
 **Cómo lo dejé.** Una única fuente de verdad. `withPlanFloor()` en
-[plans.ts](plataforma/src/lib/plans.ts) deriva de `PLANS` + `INCLUDED_MODULES` el
+[plans.ts](../../../plataforma/src/lib/plans.ts) deriva de `PLANS` + `INCLUDED_MODULES` el
 mínimo que cada plan garantiza, y se aplica en el alta y al guardar plan desde el
 super admin. Además hay un trigger en base de datos
-([migración 095](plataforma/supabase/migrations/095_plan_floor_y_lista_espera_cobro.sql))
+([migración 095](../../../plataforma/supabase/migrations/095_plan_floor_y_lista_espera_cobro.sql))
 que lo impone en cada `insert`/`update`, venga el cambio de donde venga — mismo
 razonamiento que ya usaste con `trg_restaurant_channel_log`: un trigger no se
 puede olvidar. El piso solo **añade**; nunca apaga un módulo comprado a la carta.
@@ -124,7 +124,7 @@ si hubo exposición real.
 
 **Cómo lo dejé.** Comparación explícita de `organization_id` en los dos sitios que
 resuelven la sucursal ([layout](plataforma/src/app/admin/(protected)/layout.tsx) y
-[getAdminContext](plataforma/src/lib/db/admin.ts)), con el porqué escrito al lado
+[getAdminContext](../../../plataforma/src/lib/db/admin.ts)), con el porqué escrito al lado
 para que nadie lo vuelva a "simplificar". Las server actions ya estaban bien: usan
 `resolveGroupBranchId()`, que sí compara la organización.
 
@@ -446,7 +446,7 @@ petición** y lo hace todavía más lento. Es el bucle clásico del doble clic.
 
 **Lo que hice:**
 
-- Un esqueleto de contenido ([page-skeleton.tsx](plataforma/src/components/admin/page-skeleton.tsx))
+- Un esqueleto de contenido ([page-skeleton.tsx](../../../plataforma/src/components/admin/page-skeleton.tsx))
   con `loading.tsx` en todo el panel admin, en el super admin y específicos para
   las tres pantallas más pesadas (Finanzas, Analítica, Métricas). El menú lateral
   no se redibuja: se queda fijo y solo cambia el contenido, que es la sensación

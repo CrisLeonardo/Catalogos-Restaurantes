@@ -1,7 +1,9 @@
 # Prototipo/exploración de diseño con su propio repo git anidado.
-# No se versiona dentro de este repo (ver CHECKLIST_CORRECCIONES.md).
+# No se versiona dentro de este repo (ver docs/registros/CHECKLIST_CORRECCIONES.md).
 Nuevo Diseño Admin/Cambio UI/UX V1/
 
 # Bytecode de los generadores de los lienzos de diseño
 __pycache__/
 *.pyc
+# (mismo prototipo si se mueve a docs/diseno/)
+docs/diseno/nuevo-diseno-admin/Cambio UI/UX V1/

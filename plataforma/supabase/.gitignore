@@ -6,3 +6,6 @@
 .env.keys
 .env.local
 .env.*.local
+
+# Consultas guardadas del Studio local (pueden traer UUID/credenciales de pruebas)
+snippets/
