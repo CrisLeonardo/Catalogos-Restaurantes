@@ -12,13 +12,13 @@ const buttonVariants = cva(
         primary:
           'bg-adm-accent-fill text-white shadow-adm-accent hover:bg-adm-accent-fill-hover',
         secondary:
-          'bg-adm-card text-adm-text border border-adm-border hover:bg-adm-card-hover',
+          'bg-adm-card text-adm-text border border-adm-border-2 shadow-adm-xs hover:bg-adm-card-hover',
         outline:
           'bg-transparent text-adm-text border border-adm-border-2 hover:bg-adm-card',
         ghost:
           'bg-transparent text-adm-text-2 hover:bg-adm-card hover:text-adm-text',
         destructive:
-          'bg-adm-danger/10 text-adm-danger hover:bg-adm-danger/20',
+          'bg-adm-danger/10 text-adm-danger border border-adm-danger/30 hover:bg-adm-danger/20',
         link:
           'bg-transparent text-adm-accent-ink underline-offset-4 hover:underline p-0 h-auto',
       },

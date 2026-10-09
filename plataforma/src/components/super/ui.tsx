@@ -8,13 +8,12 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Icon } from '@/components/icons';
 import { planLabel } from '@/lib/db/billing';
+import { PLAN_COLOR_VAR } from '@/lib/plans';
 import { diaMes, diaSemana } from '@/lib/dates';
 import { ChartReadout } from '@/components/ui/chart-readout';
 
-/* Colores por plan — mismos que usa la sidebar del panel admin. */
-export const PLAN_DOT: Record<string, string> = {
-  BASICO: '#94a3b8', ESTANDAR: '#10b981', PREMIUM: '#6366f1', PRO: '#a855f7',
-};
+/* Colores por plan — la paleta única de lib/plans.ts (`--plan-*`). */
+export const PLAN_DOT: Record<string, string> = PLAN_COLOR_VAR;
 
 /* ── Encabezado de página ─────────────────────────────────── */
 export function PageHeader({
@@ -116,15 +115,22 @@ export function StatCard({
 /* ── Chips de plan y estado ───────────────────────────────── */
 export function PlanChip({ plan }: { plan: string | null | undefined }) {
   const p = plan ?? 'BASICO';
-  const dot = PLAN_DOT[p] ?? '#94a3b8';
+  const dot = PLAN_DOT[p] ?? PLAN_DOT.BASICO;
   return (
     <Badge
       variant="neutral"
-      /* La TINTA mezcla el color del plan con la del texto: el color puro
-         era legible en oscuro y en el claro por defecto se quedaba en
-         2.3:1 («Estándar» verde, «Básico» gris sobre blanco). */
-      style={{ background: `color-mix(in srgb, ${dot} 13%, transparent)`, color: `color-mix(in srgb, ${dot} 62%, var(--u-text))`, borderColor: `color-mix(in srgb, ${dot} 28%, transparent)` }}
+      /* Chip SÓLIDO (2026-10-09): relleno opaco mezclado con la tarjeta (no
+         con `transparent`), canto a juego y un punto del color del plan.
+         Antes era un lavado al 13 % con borde al 28 %: se veía pálido,
+         «chafa». La TINTA mezcla el color del plan con la del texto para
+         pasar 4.5:1 en los dos temas. */
+      style={{
+        background: `color-mix(in srgb, ${dot} 14%, var(--adm-card, #fff))`,
+        color: `color-mix(in srgb, ${dot} 72%, var(--u-text))`,
+        borderColor: `color-mix(in srgb, ${dot} 45%, var(--adm-card, #fff))`,
+      }}
     >
+      <span aria-hidden style={{ width: 6, height: 6, borderRadius: 'var(--radius-full)', background: dot, flexShrink: 0 }} />
       {planLabel(p)}
     </Badge>
   );

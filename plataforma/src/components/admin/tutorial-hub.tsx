@@ -45,7 +45,7 @@ interface Props {
 
 const PLAN_COLORS: Record<string, string> = {
   'Plan Popular': 'var(--c-warn)',
-  'Plan Premium': 'var(--c-alt)',
+  'Plan Premium': 'var(--plan-premium)',
   /* Tinta del sistema y no un hex: #14b8a6 era legible en oscuro y se
      quedaba en 2.2:1 sobre el blanco del tema claro. */
   'Módulo': 'var(--c-info)',

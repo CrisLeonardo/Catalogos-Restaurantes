@@ -216,8 +216,18 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
       await page.goto(panelUrl(tenantA.slug, '/pedidos'), { waitUntil: 'domcontentloaded' });
       await expect(masAcciones).toHaveCount(1, { timeout: 20_000 });
     }).toPass({ timeout: 120_000 });
-    await masAcciones.click();
-    await page.getByRole('menuitem', { name: 'Anular pedido' }).click();
+    // El menú «⋯» se abre hasta ver «Anular pedido». Con `next dev` la
+    // pantalla puede terminar de compilar JUSTO después del toque y recargar
+    // entera (en la traza de la CI del 2026-10-09: `[HMR] connected` otra vez
+    // tras el clic): el menú se cierra y la prueba esperaba 5 min a un
+    // elemento que ya no iba a aparecer. Solo se vuelve a tocar si el menú no
+    // está abierto — tocar el disparador con el menú abierto lo cerraría.
+    const anular = page.getByRole('menuitem', { name: 'Anular pedido' });
+    await expect(async () => {
+      if (!(await anular.isVisible().catch(() => false))) await masAcciones.click();
+      await expect(anular).toBeVisible({ timeout: 5_000 });
+    }).toPass({ timeout: 90_000 });
+    await anular.click();
 
     // La señal de que el diálogo está abierto es su campo de motivo, no el
     // texto «Anular pedido»: ese lo lleva también el elemento del menú «⋯»,

@@ -391,8 +391,9 @@ function Chip({ on, onClick, title, children }: { on: boolean; onClick: () => vo
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 7,
         padding: '7px 13px', borderRadius: 99, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-        border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
-        background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
+        border: `1px solid ${on ? 'transparent' : 'var(--adm-border-2, var(--u-hair))'}`,
+        background: on ? 'var(--u-text)' : 'var(--adm-card, color-mix(in srgb, var(--u-text) 5%, transparent))',
+        boxShadow: on ? 'none' : 'var(--adm-shadow-xs, none)',
         color: on ? 'var(--admin-content-bg-solid, var(--brand-bg))' : 'var(--u-text-3)',
         transition: 'background 150ms, color 150ms',
       }}
@@ -527,11 +528,18 @@ export default function TemplateGallery({
                 style={{
                   display: 'flex', flexDirection: 'column', gap: 7, textAlign: 'left',
                   padding: 7, borderRadius: 15, cursor: 'pointer',
-                  border: `1.5px solid ${applied ? 'var(--brand-accent, #D97757)' : 'var(--u-hair)'}`,
+                  /* Tarjeta SÓLIDA (2026-10-09): fondo opaco de tarjeta, canto
+                     visible y sombra de contacto. Antes era un velo al 3 %
+                     con un hilo casi invisible: la miniatura parecía flotar
+                     sin marco. La elegida se rodea con un anillo de acento. */
+                  border: `1.5px solid ${applied ? 'var(--brand-accent, #D97757)' : 'var(--adm-border-2, var(--u-hair-2))'}`,
                   background: applied
-                    ? 'color-mix(in srgb, var(--brand-accent, #D97757) 8%, transparent)'
-                    : 'color-mix(in srgb, var(--u-text) 3%, transparent)',
-                  transition: 'border-color 150ms, background 150ms',
+                    ? 'color-mix(in srgb, var(--brand-accent, #D97757) 7%, var(--adm-card, var(--brand-bg)))'
+                    : 'var(--adm-card, color-mix(in srgb, var(--u-text) 4%, transparent))',
+                  boxShadow: applied
+                    ? '0 0 0 3px color-mix(in srgb, var(--brand-accent, #D97757) 22%, transparent), var(--adm-shadow-sm, none)'
+                    : 'var(--adm-shadow-xs, none)',
+                  transition: 'border-color 150ms, background 150ms, box-shadow 150ms',
                 }}
               >
                 <div className="tpl-thumb-box">
@@ -548,7 +556,8 @@ export default function TemplateGallery({
                       <span
                         style={{
                           fontSize: 11, fontWeight: 600, borderRadius: 99, padding: '1px 7px', flexShrink: 0,
-                          color: 'var(--u-text-4)', border: '1px solid var(--u-hair)',
+                          color: 'var(--u-text-3)', border: '1px solid var(--adm-border-2, var(--u-hair-2))',
+                          background: 'var(--adm-bg, transparent)',
                         }}
                       >
                         {tpl.mode}
@@ -569,7 +578,7 @@ export default function TemplateGallery({
             className="press"
             style={{
               alignSelf: 'center', padding: '9px 18px', borderRadius: 99, cursor: 'pointer',
-              border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
+              border: '1px solid var(--adm-border-2, var(--u-hair))', background: 'var(--adm-card, color-mix(in srgb, var(--u-text) 5%, transparent))',
               color: 'var(--u-text-2)', fontSize: 12, fontWeight: 700,
             }}
           >

@@ -88,8 +88,8 @@
   --u-text-3:  rgba(245, 243, 239, 0.50);
   /* 0.32 daba 2.65:1 sobre el fondo oscuro → reprobaba WCAG AA. 0.48 ≈ 4.6:1. */
   --u-text-4:  rgba(245, 243, 239, 0.48);
-  --u-hair:    rgba(245, 243, 239, 0.10);
-  --u-hair-2:  rgba(245, 243, 239, 0.18);
+  --u-hair:    rgba(245, 243, 239, 0.12);
+  --u-hair-2:  rgba(245, 243, 239, 0.21);
 
   /* ── LIQUID GLASS (default = translúcido) ────────────────── */
   /* El Super Admin elige translucido | esmerilado | solido por tenant. */
@@ -211,10 +211,12 @@
   --surface-base:   255, 255, 255;
   --surface-tint:   1;
   --card-shadow:    1;
-  --surface-1:      rgba(var(--surface-base), calc(0.03 * var(--surface-tint)));
-  --surface-2:      rgba(var(--surface-base), calc(0.05 * var(--surface-tint)));
-  --surface-3:      rgba(var(--surface-base), calc(0.08 * var(--surface-tint)));
-  --surface-strong: rgba(var(--surface-base), calc(0.12 * var(--surface-tint)));
+  /* Un punto más de cuerpo (2026-10-09; antes 3/5/8/12 %): al 5 % la
+     tarjeta de un platillo apenas se separaba del fondo. */
+  --surface-1:      rgba(var(--surface-base), calc(0.045 * var(--surface-tint)));
+  --surface-2:      rgba(var(--surface-base), calc(0.07 * var(--surface-tint)));
+  --surface-3:      rgba(var(--surface-base), calc(0.10 * var(--surface-tint)));
+  --surface-strong: rgba(var(--surface-base), calc(0.14 * var(--surface-tint)));
   --surface-strike: var(--u-text-3);
   --scrim:          rgba(0, 0, 0, 0.55);
   --badge-bg:       rgba(0, 0, 0, 0.62);
@@ -331,8 +333,8 @@ html[data-scheme="light"] {
 html[data-scheme="light"] {
   --glass-stroke: rgba(0, 0, 0, 0.08);
   --glass-hi:     rgba(255, 255, 255, 0.90);
-  --u-hair:       rgba(0, 0, 0, 0.10);
-  --u-hair-2:     rgba(0, 0, 0, 0.16);
+  --u-hair:       rgba(0, 0, 0, 0.13);
+  --u-hair-2:     rgba(0, 0, 0, 0.20);
 
   /* ── Tinta secundaria: MÁS opaca en claro que en oscuro ──────────────
      La misma opacidad NO da el mismo contraste en los dos modos. Con tinta
@@ -415,10 +417,14 @@ html[data-admin-area] {
   --admin-content-text-2: rgba(245, 243, 239, 0.74);
   --admin-content-text-3: rgba(245, 243, 239, 0.56);
   --admin-content-text-4: rgba(245, 243, 239, 0.53);
-  --admin-content-hair:   rgba(245, 243, 239, 0.10);
-  --admin-content-hair-2: rgba(245, 243, 239, 0.18);
-  --admin-content-bg-solid: #0b0b0c;
+  --admin-content-hair:   rgba(245, 243, 239, 0.12);
+  --admin-content-hair-2: rgba(245, 243, 239, 0.20);
+  --admin-content-bg-solid: #0c0b0a;
   --admin-content-scheme: dark;
+  /* Los diálogos y menús se montan en <body>, fuera de .admin-main: sin
+     esto se quedaban con el hilo viejo del menú del comensal. */
+  --u-hair:   var(--admin-content-hair);
+  --u-hair-2: var(--admin-content-hair-2);
 
   /* ── Rediseño 2026-07-12 — namespace `--adm-*` (prefijo propio para no
      chocar con `--surface-1/2/3` del menú del tenant, que ya existen con
@@ -442,20 +448,26 @@ html[data-admin-area] {
   --adm-accent-800: #7c3a27;
   --adm-accent-900: #5c2c1f;
 
-  --adm-bg:         #0a0a0d;  /* fondo de página */
-  --adm-bg-2:       #131317;  /* sidebar / topbar */
-  --adm-card:       #17171c;  /* tarjetas */
+  /* Neutros CÁLIDOS (2026-10-09). Antes eran grises con un punto de azul
+     (#0a0a0d, #17171c) debajo de una tinta cálida (#F5F3EF) y un acento
+     coral: dos temperaturas peleando. Ahora el gris tira al mismo lado que
+     el coral y el texto. */
+  --adm-bg:         #0c0b0a;  /* fondo de página */
+  --adm-bg-2:       #141311;  /* sidebar / topbar */
+  --adm-card:       #1a1917;  /* tarjetas */
   /* El riel de Tomar pedidos. Tiene token propio y no reusa --adm-bg-2
      porque ahí lo que manda es otra cosa: el riel tiene que separarse del
      panel de al lado Y dejar que las fichas de mesa (--adm-card) floten
      encima. En claro --adm-bg-2 es blanco puro, o sea el MISMO color de la
      ficha: doce tarjetas blancas sobre fondo blanco, que era justo lo que
      hacía que el salón se viera plano y vacío. */
-  --wp-side:        #101014;
-  --adm-card-hover: #1c1c22;
-  --adm-overlay:    #1f1f26;  /* modales / popovers / dropdowns */
-  --adm-border:     rgba(255, 255, 255, 0.08);
-  --adm-border-2:   rgba(255, 255, 255, 0.14);
+  --wp-side:        #110f0e;
+  --adm-card-hover: #211f1c;
+  --adm-overlay:    #24221f;  /* modales / popovers / dropdowns */
+  /* Bordes con cuerpo (2026-10-09): al 8 % el canto de la tarjeta casi no
+     se veía y todo parecía flotar sin forma —«se ve chafa»—. */
+  --adm-border:     rgba(255, 245, 235, 0.11);
+  --adm-border-2:   rgba(255, 245, 235, 0.18);
 
   /* Switch apagado: en oscuro el --adm-card ya contrasta con la mayoría de
      fondos, pero se refuerza el borde para que el track se distinga incluso
@@ -463,8 +475,10 @@ html[data-admin-area] {
   --adm-switch-off-bg:     var(--adm-card-hover);
   --adm-switch-off-border: rgba(255, 255, 255, 0.22);
 
-  --adm-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.30);
-  --adm-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.36);
+  /* xs/sm llevan un brillo de 1 px arriba: el canto superior iluminado es
+     lo que hace que una tarjeta oscura se lea como pieza y no como mancha. */
+  --adm-shadow-xs: inset 0 1px 0 rgba(255, 245, 235, 0.04), 0 1px 2px rgba(0, 0, 0, 0.40);
+  --adm-shadow-sm: inset 0 1px 0 rgba(255, 245, 235, 0.05), 0 1px 2px rgba(0, 0, 0, 0.40), 0 4px 12px rgba(0, 0, 0, 0.30);
   --adm-shadow-md: 0 10px 28px rgba(0, 0, 0, 0.44);
   --adm-shadow-lg: 0 20px 52px rgba(0, 0, 0, 0.52);
   --adm-shadow-xl: 0 32px 80px rgba(0, 0, 0, 0.60);
@@ -484,8 +498,8 @@ html[data-admin-area] {
 html[data-admin-area][data-scheme="light"] {
   /* Paleta CLARA del panel: neutra, alto contraste, acento coral -600
      (el coral base no alcanza AA sobre fondo claro). */
-  --brand-bg:     #f4f4f6;
-  --brand-bg-2:   #ebebef;
+  --brand-bg:     #f2f1ee;
+  --brand-bg-2:   #e9e7e3;
   --brand-text:   #17161a;
   --brand-accent: #c2542f;
   --brand-on-accent: #ffffff;
@@ -505,8 +519,8 @@ html[data-admin-area][data-scheme="light"] {
   --admin-panel-text-2:  rgba(23, 22, 26, 0.82);
   --admin-panel-text-3:  rgba(23, 22, 26, 0.72);
   --admin-panel-text-4:  rgba(23, 22, 26, 0.64);
-  --admin-panel-hair:    rgba(0, 0, 0, 0.08);
-  --admin-panel-hair-2:  rgba(0, 0, 0, 0.14);
+  --admin-panel-hair:    rgba(28, 22, 16, 0.12);
+  --admin-panel-hair-2:  rgba(28, 22, 16, 0.19);
   --admin-panel-card:    rgba(0, 0, 0, 0.045);
   --admin-panel-btn:     #c2542f;
   --admin-panel-btn-text: #ffffff;
@@ -515,10 +529,12 @@ html[data-admin-area][data-scheme="light"] {
   --admin-content-text-2: rgba(23, 22, 26, 0.82);
   --admin-content-text-3: rgba(23, 22, 26, 0.72);
   --admin-content-text-4: rgba(23, 22, 26, 0.64);
-  --admin-content-hair:   rgba(0, 0, 0, 0.10);
-  --admin-content-hair-2: rgba(0, 0, 0, 0.16);
-  --admin-content-bg-solid: #f4f4f6;
+  --admin-content-hair:   rgba(28, 22, 16, 0.13);
+  --admin-content-hair-2: rgba(28, 22, 16, 0.21);
+  --admin-content-bg-solid: #f2f1ee;
   --admin-content-scheme: light;
+  --u-hair:   var(--admin-content-hair);
+  --u-hair-2: var(--admin-content-hair-2);
 
   /* ── Rediseño 2026-07-12 — mismo namespace `--adm-*` que el modo oscuro.
      Base #f4f4f6/#17161a ya auditada por WCAG, no se toca: solo se añaden
@@ -536,28 +552,36 @@ html[data-admin-area][data-scheme="light"] {
   --adm-accent-800: #6b2b13;
   --adm-accent-900: #4d1f0d;
 
-  --adm-bg:         #f4f4f6;
+  /* Fondo un punto más cálido y más hondo (antes #f4f4f6, gris frío): la
+     tarjeta blanca necesita algo de qué separarse para leerse sólida, y el
+     gris tira ahora hacia el coral del acento en vez de hacia el azul. */
+  --adm-bg:         #f2f1ee;
   --adm-bg-2:       #ffffff;
   --adm-card:       #ffffff;
   /* Ver la nota del tema oscuro: en claro el riel va un punto MÁS oscuro
      que el panel, para que la ficha blanca tenga sobre qué destacar. */
-  --wp-side:        #ebebef;
-  --adm-card-hover: #f7f7f9;
+  --wp-side:        #e9e7e3;
+  --adm-card-hover: #faf9f7;
   --adm-overlay:    #ffffff;
-  --adm-border:     rgba(0, 0, 0, 0.08);
-  --adm-border-2:   rgba(0, 0, 0, 0.14);
+  /* Bordes visibles (antes 8 % / 14 %): con una tarjeta blanca sobre un
+     fondo casi blanco, el canto ES la tarjeta. */
+  --adm-border:     rgba(28, 22, 16, 0.12);
+  --adm-border-2:   rgba(28, 22, 16, 0.20);
 
   /* Switch apagado: --adm-card es blanco puro, igual que la mayoría de
      tarjetas del panel — sin esto el track "desaparece" cuando está
      desactivado. Un gris visible + borde más marcado lo distingue. */
-  --adm-switch-off-bg:     #e4e4e9;
+  --adm-switch-off-bg:     #e4e2de;
   --adm-switch-off-border: rgba(0, 0, 0, 0.22);
 
-  --adm-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --adm-shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.06);
-  --adm-shadow-md: 0 8px 20px rgba(0, 0, 0, 0.08);
-  --adm-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.10);
-  --adm-shadow-xl: 0 24px 60px rgba(0, 0, 0, 0.12);
+  /* Sombras con «contacto» (2026-10-09): una línea corta y nítida pegada
+     a la tarjeta + un halo suave. Antes solo había halo al 4-6 %, que en
+     pantalla no se ve: la tarjeta parecía recortada en papel. */
+  --adm-shadow-xs: 0 1px 2px rgba(28, 22, 16, 0.08);
+  --adm-shadow-sm: 0 1px 2px rgba(28, 22, 16, 0.07), 0 3px 10px rgba(28, 22, 16, 0.06);
+  --adm-shadow-md: 0 2px 4px rgba(28, 22, 16, 0.06), 0 10px 24px rgba(28, 22, 16, 0.10);
+  --adm-shadow-lg: 0 4px 8px rgba(28, 22, 16, 0.06), 0 18px 44px rgba(28, 22, 16, 0.13);
+  --adm-shadow-xl: 0 6px 12px rgba(28, 22, 16, 0.07), 0 28px 64px rgba(28, 22, 16, 0.16);
   --adm-shadow-accent: 0 8px 20px color-mix(in srgb, var(--adm-accent-500) 22%, transparent);
 
   --adm-info:       #0369a1;
@@ -1217,14 +1241,33 @@ html { overflow-x: clip; }
   position: relative;
   background: var(--surface-2);
   border: 1px solid var(--u-hair);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, calc(0.18 * var(--card-shadow, 1)));
+  /* Canto superior iluminado + sombra de contacto + halo (2026-10-09).
+     Con solo 1 px de sombra la pieza no tenía peso: parecía una calcomanía
+     sobre el fondo. Las dos sombras siguen multiplicando por `cardShadow`. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 1px 2px rgba(0, 0, 0, calc(0.22 * var(--card-shadow, 1))),
+    0 6px 16px rgba(0, 0, 0, calc(0.14 * var(--card-shadow, 1)));
   transition: background 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+/* En claro la tarjeta SUBE hacia el blanco en vez de oscurecerse: un velo
+   gris al 7 % sobre fondo claro se lee como mancha, no como pieza. Opaca,
+   tintada con el fondo de la paleta, y `surfaceTint` sigue mandando: más
+   tinte = más blanca = más separada del fondo. */
+html[data-scheme="light"] .m-surface {
+  background: color-mix(in srgb, var(--brand-bg) clamp(0%, calc(50% - 15% * var(--surface-tint)), 100%), #ffffff);
+  box-shadow:
+    0 1px 2px rgba(28, 22, 16, calc(0.08 * var(--card-shadow, 1))),
+    0 4px 14px rgba(28, 22, 16, calc(0.07 * var(--card-shadow, 1)));
 }
 .m-surface[data-clickable="1"] { cursor: pointer; }
 @media (hover: hover) {
   .m-surface[data-clickable="1"]:hover {
     background: var(--surface-3);
     border-color: var(--u-hair-2);
+  }
+  html[data-scheme="light"] .m-surface[data-clickable="1"]:hover {
+    background: color-mix(in srgb, var(--brand-bg) clamp(0%, calc(30% - 10% * var(--surface-tint)), 100%), #ffffff);
   }
 }
 .m-surface[data-clickable="1"]:active { background: var(--surface-strong); }
@@ -2531,6 +2574,30 @@ html[data-admin-area] {
   --chart-base: color-mix(in srgb, var(--u-text) 15%, transparent);
   --chart-alt: color-mix(in srgb, var(--adm-accent-500) 45%, transparent);
   --chart-empty: color-mix(in srgb, var(--u-text) 8%, transparent);
+}
+/* Color de cada plan — UNA sola paleta (2026-10-09). Había cuatro: la web
+   pública pintaba Premium en coral (PLAN_ACCENT de lib/plans.ts), el Super
+   en índigo, el panel del dueño en violeta y el formulario de precios en
+   otro índigo. Ahora todas leen estas variables: en claro son los mismos
+   hex que PLAN_ACCENT; en el panel oscuro, la misma familia un paso más
+   clara para que se vea sobre el fondo. Premium = coral de la marca. */
+:root {
+  --plan-basico:   #475569;
+  --plan-estandar: #047857;
+  --plan-premium:  #c2542f;
+  --plan-pro:      #6d28d9;
+}
+html[data-admin-area] {
+  --plan-basico:   #a8b0bc;
+  --plan-estandar: #34d399;
+  --plan-premium:  #e58a5f;
+  --plan-pro:      #a78bfa;
+}
+html[data-admin-area][data-scheme="light"] {
+  --plan-basico:   #475569;
+  --plan-estandar: #047857;
+  --plan-premium:  #c2542f;
+  --plan-pro:      #6d28d9;
 }
 /* Tocar una barra dice su cifra (NEG-05, `components/ui/chart-readout.tsx`).
    La columna elegida se enmarca; la línea de lectura reserva su alto. Sin

@@ -315,6 +315,16 @@ export const PLAN_ACCENT: Record<PlanCode, string> = {
   PRO: '#6d28d9',
 };
 
+/* El mismo color como variable CSS (`--plan-*`, globals.css): sale de esta
+   paleta en claro y sube un paso en el panel oscuro. Es lo que usan el
+   Super y el panel del dueño — chips, puntos de la barra lateral, precios. */
+export const PLAN_COLOR_VAR: Record<PlanCode, string> = {
+  BASICO: 'var(--plan-basico)',
+  ESTANDAR: 'var(--plan-estandar)',
+  PREMIUM: 'var(--plan-premium)',
+  PRO: 'var(--plan-pro)',
+};
+
 /* Misma familia, un paso más oscura, para cuando el color va como TEXTO.
    Es la misma separación que ya existe entre --brand-accent (rellenos) y
    --brand-accent-ink (tinta) en globals.css, y por el mismo motivo: el coral

@@ -482,8 +482,11 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         />
       </Section>}
 
-      {/* ── Guardar ── */}
-      <div style={{ position: 'sticky', bottom: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', flexWrap: 'wrap' }}>
+      {/* ── Guardar ──
+          La pastilla `.adm-savebar` de las demás pantallas. Antes era una fila
+          pegada abajo SIN fondo: al desplazar, las tarjetas de plantillas
+          pasaban por detrás del botón «Vista previa» y se veía roto. */}
+      <div className="adm-savebar" style={{ flexWrap: 'wrap' }}>
         <button onClick={save} disabled={isPending} className="press btn-white" style={{ padding: '12px 22px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 14, border: 'none', cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1 }}>
           {isPending ? 'Guardando…' : 'Guardar apariencia'}
         </button>
@@ -493,7 +496,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
           target="_blank"
           rel="noopener noreferrer"
           className="press"
-          style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', textDecoration: 'none', padding: '11px 16px', borderRadius: 'var(--radius-full)', border: '1px solid var(--u-hair-2)' }}
+          style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text)', textDecoration: 'none', padding: '11px 16px', borderRadius: 'var(--radius-full)', border: '1px solid var(--adm-border-2, var(--u-hair-2))', background: 'var(--adm-card, transparent)' }}
         >
           Vista previa ↗
         </a>
