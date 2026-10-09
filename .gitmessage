@@ -1,0 +1,7 @@
+# tipo(ámbito): qué cambió, en presente y sin punto final   (máx. ~70 caracteres)
+#
+# tipos:   feat fix docs chore refactor test perf audit
+# ámbitos: caja servicio menu super acceso agente desktop ci sql ...
+#
+# Cuerpo (opcional): por qué se hizo, no qué líneas cambiaron.
+# Si toca SQL, indica la migración:  (migración 141)

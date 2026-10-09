@@ -1,0 +1,3 @@
+# Los hooks son scripts de sh: deben quedar siempre con LF (CRLF los rompe en Git Bash)
+.githooks/* text eol=lf
+.gitmessage text eol=lf

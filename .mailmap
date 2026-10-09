@@ -1,0 +1,5 @@
+# Unifica las identidades de autor del historial (sin reescribirlo).
+# Formato: Nombre canónico <correo canónico> Nombre en el commit <correo en el commit>
+Cristopher Leonardo Zepeda Esquivel <crisleonardo100@gmail.com> Leonardo Zepeda <crisleonardo100@gmail.com>
+Cristopher Leonardo Zepeda Esquivel <crisleonardo100@gmail.com> Cristopher Leonardo Zepeda Esquivel (Leo) <crisleonardo100@gmail.com>
+Cristopher Leonardo Zepeda Esquivel <crisleonardo100@gmail.com> Cristopher Leonardo Zepeda Esquivel <crisleonardo100@.com>

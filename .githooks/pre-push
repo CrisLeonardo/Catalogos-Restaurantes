@@ -1,0 +1,18 @@
+#!/bin/sh
+# Rechaza el push directo a main (el repositorio es privado en plan gratuito, así
+# que GitHub no deja proteger la rama). El cambio entra por Pull Request.
+# Saltarlo a propósito (emergencia en producción):  PERMITIR_PUSH_MAIN=1 git push
+#
+# No molesta a las etiquetas ni a otras ramas: solo mira refs/heads/main.
+
+[ "$PERMITIR_PUSH_MAIN" = "1" ] && exit 0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    printf '\n\033[31m✗ Push directo a main bloqueado.\033[0m\n'
+    printf '  Trabaja en una rama y abre un Pull Request (ver docs/guias/FLUJO_GIT.md).\n'
+    printf '  Si es una emergencia:  PERMITIR_PUSH_MAIN=1 git push\n\n'
+    exit 1
+  fi
+done
+exit 0
