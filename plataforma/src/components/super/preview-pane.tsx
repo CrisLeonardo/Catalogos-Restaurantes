@@ -137,14 +137,16 @@ export default function PreviewPane({ previewId, id }: { previewId: string; /** 
           </p>
         </>
       ) : (
-        /* Estado apagado: tarjeta ligera, sin iframe → no consume recursos */
+        /* Estado apagado: tarjeta sin iframe → no consume recursos. Sólida
+           como las demás (antes un contorno punteado sin fondo). */
         <div
           style={{
-            border: '1px dashed var(--u-hair-2)', borderRadius: 'var(--radius-lg)', padding: '26px 18px',
+            border: '1px solid var(--adm-border, var(--u-hair-2))', borderRadius: 'var(--radius-lg)', padding: '26px 18px',
+            background: 'var(--adm-card, transparent)', boxShadow: 'var(--adm-shadow-sm, none)',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center',
           }}
         >
-          <div style={{ width: 46, height: 46, borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text-3)' }}>
+          <div style={{ width: 46, height: 46, borderRadius: 'var(--radius-lg)', background: 'var(--adm-bg, color-mix(in srgb, var(--u-text) 5%, transparent))', border: '1px solid var(--adm-border, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text-3)' }}>
             <Icon name="eye" size={22} />
           </div>
           <div>
@@ -162,7 +164,7 @@ export default function PreviewPane({ previewId, id }: { previewId: string; /** 
               <Icon name="eye" size={15} /> Activar vista previa en vivo
             </button>
             <button type="button" onClick={openTab} className="press"
-              style={{ padding: '11px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              style={{ padding: '11px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: '1px solid var(--adm-border-2, var(--u-hair-2))', background: 'var(--adm-card, color-mix(in srgb, var(--u-text) 4%, transparent))', boxShadow: 'var(--adm-shadow-xs, none)', color: 'var(--u-text)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <Icon name="arrowUpRight" size={15} /> Abrir en pestaña nueva
             </button>
             <button type="button" onClick={openWindow} className="press"
