@@ -5,6 +5,8 @@ import { resolveStaffDestination } from '@/lib/auth/destination';
 import { logPanelAccess } from '@/lib/auth/access-log';
 import { writeSessionActivity } from '@/lib/auth/session-activity';
 import { publicOrigin } from '@/lib/public-origin';
+import { aalDelToken, pasoSegundoFactor } from '@/lib/auth/segundo-factor-policy';
+import { marcarIdentidadConfirmada } from '@/lib/auth/reauth';
 
 export const runtime = 'nodejs';
 
@@ -30,19 +32,25 @@ export const runtime = 'nodejs';
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const code = searchParams.get('code');
-  const intent = searchParams.get('intent') === 'signup' ? 'signup' : 'login';
+  const rawIntent = searchParams.get('intent');
+  // 'reauth' (ACC-09): la persona ya estaba dentro y volvió a Google solo para
+  // confirmar que es ella antes de algo delicado — se la devuelve a la misma
+  // pantalla, no a su destino de siempre.
+  const intent = rawIntent === 'signup' || rawIntent === 'reauth' ? rawIntent : 'login';
 
   const origin = publicOrigin(request);
 
   /** Solo rutas relativas del mismo origen (evita redirecciones abiertas). */
   const rawNext = searchParams.get('next') ?? '';
-  const safeNext = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : null;
+  // `/\` también: los navegadores lo leen como `//` (otro dominio).
+  const safeNext = rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.startsWith('/\\')
+    ? rawNext : null;
 
   // Un fallo a mitad del registro (lo más común: cancelar en la pantalla de
   // Google) devuelve al wizard, no al login: ahí está el borrador guardado y
   // ahí es donde la persona quería estar. Aterrizar en el login le habría
   // borrado de la vista el plan, el nombre y la plantilla que ya eligió.
-  const failUrl = intent === 'signup' && safeNext ? safeNext : '/admin/login';
+  const failUrl = intent !== 'login' && safeNext ? safeNext : '/admin/login';
   const fail = (reason: string) => {
     console.error(`[admin/auth/google/callback] ${reason}`);
     return NextResponse.redirect(`${origin}${failUrl}?auth_error=1`);
@@ -87,6 +95,20 @@ export async function GET(request: NextRequest) {
   // Arranca el reloj de inactividad (checklist 2026-08-25 §2) desde ya,
   // cubra o no restaurante todavía — igual que login() con correo.
   await writeSessionActivity(user.id);
+
+  // Segundo factor (ACC-01): Google tampoco basta para el Super Admin. Y hay
+  // que desviarlo AQUÍ: sin el código la base no le deja leer ni su perfil
+  // (migración 137), y abajo un perfil vacío se lee como «cuenta nueva» y
+  // terminaría en /registro.
+  const { data: { session } } = await supabase.auth.getSession();
+  if (pasoSegundoFactor(user, aalDelToken(session?.access_token)) !== 'listo') {
+    return NextResponse.redirect(`${origin}/admin/dos-pasos`);
+  }
+
+  if (intent === 'reauth' && safeNext) {
+    await marcarIdentidadConfirmada(user.id);
+    return NextResponse.redirect(`${origin}${safeNext}`);
+  }
 
   const { data: profile, error: perfilErr } = await supabase
     .from('profiles')

@@ -1,4 +1,6 @@
 'use server';
+import { identidadReciente } from '@/lib/auth/reauth';
+import { reauthRequerida } from '@/lib/auth/reauth-policy';
 
 /* ============================================================
    CLIENTES — export a PDF/Excel
@@ -62,6 +64,8 @@ async function authAndFetch(restaurantId: string): Promise<CustomersExportData |
   if (!can(efectivo.role, efectivo.permissions, 'clientes')) {
     return { error: 'No autorizado.' };
   }
+  // ACC-09: delicado → «confirma que eres tú» si hace más de 10 min.
+  if (!(await identidadReciente())) return reauthRequerida();
 
   const db = createServiceClient();
   const [{ data: rest }, includeLoyalty] = await Promise.all([

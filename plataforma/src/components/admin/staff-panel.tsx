@@ -24,6 +24,7 @@ import { haceTiempo } from '@/lib/dates';
 import { describirActividad, humanizarClave } from '@/lib/activity-labels';
 import { FIELD_LABEL } from '@/components/admin/field-label';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useReauth } from '@/components/auth/reauth';
 import { useToastManager } from '@/components/ui/toast';
 
 /** Secciones que un gerente NO recibe con su plantilla.
@@ -245,7 +246,10 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
      Dependen del RESULTADO, no de la tupla de useActionState, que es nueva
      en cada render y repetía el aviso (auditoría 2026-10-02, T-16). */
   const toast = useToastManager();
-  const { confirmSubmit, dialog } = useConfirm();
+  const { confirm, dialog } = useConfirm();
+  // ACC-09: reponer la contraseña del gerente y sacar a alguien del equipo
+  // piden confirmar identidad si hace más de 10 min.
+  const { reauthSubmit, dialog: reauthDialog } = useReauth();
   const pinResult = pinAction[0];
   const passResult = passAction[0];
   useEffect(() => {
@@ -268,6 +272,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent showClose={false} className="flex w-[480px] max-w-[94vw] max-h-[90vh] flex-col p-0">
         {dialog}
+        {reauthDialog}
         <DialogHeader className="flex-row items-center justify-between px-5.5 py-4.5 border-b border-[var(--u-hair)] space-y-0">
           <DialogTitle className="t-display" style={{ fontSize: 20 }}>{isNew ? 'Nuevo miembro' : (member!.full_name || 'Miembro del equipo')}</DialogTitle>
           <Button type="button" onClick={onClose} variant="ghost" size="icon" aria-label="Cerrar"><Icon name="x" size={18} /></Button>
@@ -497,7 +502,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                     recuperación, y por eso es del dueño. */}
                 {isOwner && member!.access === 'user' && (
                   <>
-                    <form action={passAction[1]} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                    <form action={passAction[1]} onSubmit={reauthSubmit()} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                       <input type="hidden" name="restaurantId" value={restaurantId} />
                       <input type="hidden" name="userId" value={member!.id} />
                       <div style={{ flex: 1 }}>
@@ -512,11 +517,11 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
 
                 <form
                   action={removeAction}
-                  onSubmit={confirmSubmit({
+                  onSubmit={reauthSubmit(() => confirm({
                     title: '¿Quitar a esta persona del equipo?',
                     description: 'Pierde el acceso al panel desde ya.',
                     confirmLabel: 'Quitar',
-                  })}
+                  }))}
                 >
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="userId" value={member!.id} />

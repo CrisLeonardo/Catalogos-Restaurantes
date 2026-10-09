@@ -1,6 +1,7 @@
 'use client';
 
 import { Icon } from '@/components/icons';
+import { useReportarError } from '@/lib/observability/report-client-error';
 
 export default function SuperError({
   error,
@@ -9,6 +10,8 @@ export default function SuperError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // MON-01: que Leogin se entere, no solo quien lo está viendo.
+  useReportarError(error);
   return (
     <div
       style={{

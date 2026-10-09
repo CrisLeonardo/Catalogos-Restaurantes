@@ -1,4 +1,5 @@
 'use server';
+import { puedeEnSeccion, SIN_SECCION } from '@/lib/auth/seccion';
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
@@ -32,6 +33,9 @@ async function resolveRestaurantId(formRestaurantId?: string | null): Promise<Re
   if (groupBranchId) return { restaurantId: groupBranchId };
   const own = await resolveOwnRestaurantId(profile.restaurant_id);
   if (!own) return { error: 'Sin restaurante' };
+  // SEC-06: ingredientes y recetas se editan desde Ingredientes, desde la
+  // ficha del platillo (Catálogo) o desde Inventario.
+  if (!(await puedeEnSeccion(own, 'ingredientes', 'catalogo', 'inventario'))) return { error: SIN_SECCION };
   return { restaurantId: own };
 }
 

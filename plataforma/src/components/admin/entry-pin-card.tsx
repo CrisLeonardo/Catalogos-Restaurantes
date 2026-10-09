@@ -13,6 +13,7 @@ import { Section } from '@/components/ui/section';
 import { Button } from '@/components/ui/button';
 import { updateEntryPin, type EntryPinState } from '@/lib/actions/mi-cuenta';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useReauth } from '@/components/auth/reauth';
 
 
 export default function EntryPinCard({ restaurantId, hasPin }: {
@@ -21,7 +22,9 @@ export default function EntryPinCard({ restaurantId, hasPin }: {
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
-  const { confirmSubmit, dialog } = useConfirm();
+  const { confirm, dialog } = useConfirm();
+  // ACC-09: poner o quitar el PIN pide confirmar identidad si hace más de 10 min.
+  const { reauthSubmit, dialog: reauthDialog } = useReauth();
   const [state, formAction, isPending] = useActionState<EntryPinState, FormData>(updateEntryPin, null);
 
   useEffect(() => {
@@ -47,7 +50,7 @@ export default function EntryPinCard({ restaurantId, hasPin }: {
       </p>
 
       {editing ? (
-        <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+        <form action={formAction} onSubmit={reauthSubmit()} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <input type="hidden" name="restaurantId" value={restaurantId} />
           <div style={{ flex: 1 }}>
             <label style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 6, display: 'block' }}>
@@ -78,11 +81,11 @@ export default function EntryPinCard({ restaurantId, hasPin }: {
           {hasPin && (
             <form
               action={formAction}
-              onSubmit={confirmSubmit({
+              onSubmit={reauthSubmit(() => confirm({
                 title: '¿Quitar el PIN?',
                 description: 'Se entrará directo desde Mi cuenta, sin pedir clave.',
                 confirmLabel: 'Quitar PIN',
-              })}
+              }))}
             >
               <input type="hidden" name="restaurantId" value={restaurantId} />
               <input type="hidden" name="remove" value="true" />
@@ -97,6 +100,7 @@ export default function EntryPinCard({ restaurantId, hasPin }: {
       )}
       </Card>
       {dialog}
+      {reauthDialog}
     </Section>
   );
 }

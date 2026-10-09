@@ -1,3 +1,4 @@
+import { debeRecordarCandado } from '@/lib/device-lock-reminder';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
@@ -234,6 +235,25 @@ export default async function AdminHomePage() {
     sinFoto = count ?? 0;
   }
 
+  /* ACC-06: el candado de aparatos nace apagado y la lista se llena sola con
+     cada PIN correcto; pasada una semana se le recuerda al DUEÑO que ya lo
+     puede encender (lib/device-lock-reminder.ts). Una consulta, solo para él. */
+  let recordarCandado = 0;
+  if (restaurantId && profile.role === 'RESTAURANT_OWNER' && !needsOnboarding
+      && (restaurant as { pin_requires_trusted_device?: boolean } | null)?.pin_requires_trusted_device !== true) {
+    const { data: primero, count } = await createServiceClient()
+      .from('restaurant_devices')
+      .select('created_at', { count: 'exact' })
+      .eq('restaurant_id', restaurantId)
+      .order('created_at', { ascending: true })
+      .limit(1);
+    if (debeRecordarCandado({
+      candadoEncendido: false,
+      aparatos: count ?? 0,
+      primerAparatoEn: (primero?.[0]?.created_at as string | undefined) ?? null,
+    })) recordarCandado = count ?? 0;
+  }
+
   const fmt = (n: number) => (resolved ? formatPrice(n, resolved.config) : fmtMoney(n));
   const brandName = restaurant?.name ?? 'tu restaurante';
 
@@ -305,6 +325,14 @@ export default async function AdminHomePage() {
       title: sinFoto === 1 ? '1 platillo sin foto' : `${sinFoto} platillos sin foto`,
       desc: 'Con foto se piden más: en un menú digital la gente elige con los ojos.',
       action: 'Agregar fotos',
+    });
+  }
+  if (recordarCandado > 0) {
+    alerts.push({
+      key: 'candado-aparatos', href: panelHref(base, '/admin/personal'), level: 'aviso',
+      title: 'Ya puedes cerrar el PIN a tu local',
+      desc: `Reconocimos ${recordarCandado === 1 ? '1 aparato' : `${recordarCandado} aparatos`} de tu local. Enciende «El PIN solo funciona en estos aparatos» y nadie podrá probar el PIN de tu personal desde fuera.`,
+      action: 'Encender',
     });
   }
   alerts.sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]);

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
+import { getStaffSessionRaw } from '@/lib/supabase/server';
 import { DEMO_SLUG, authPathFor } from '@/lib/tenant';
 import { getBareLoginSlug, getResumeSession } from '@/lib/auth/resume';
 import { getAgentHubInfo } from '@/lib/print-agent';
@@ -13,14 +14,26 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ auth_error?: string }>;
 }) {
-  const slug = (await headers()).get('x-tenant-slug');
+  // Segundo factor (ACC-01): quien ya dio su contraseña o su Google pero
+  // debe el código de su app no tiene nada que hacer en un login — vuelve a
+  // esa pantalla (desde ahí puede salir y entrar con otra cuenta). Es por
+  // donde llega el Super Admin cuando /super lo rebota sin sesión.
+  if ((await getStaffSessionRaw()).paso !== 'listo') redirect('/admin/dos-pasos');
+
+  const cabeceras = await headers();
+  const slug = cabeceras.get('x-tenant-slug');
   const authError = (await searchParams).auth_error === '1';
+  // ¿Se está pintando como RESPUESTA de una acción (el propio login)? Next
+  // vuelve a pintar la página al escribirse las cookies de la sesión, y si
+  // aquí se redirigiera, esa redirección le ganaría al destino que devolvió
+  // login() — el dueño acababa en «Continuar como» en vez de en Mi cuenta.
+  const pintadaDeAccion = cabeceras.has('next-action');
 
   // Ver la misma comprobación en /admin/login/page.tsx: un aparato que ya
   // demostró ser de un restaurante (PIN, o autorizado a mano) vuelve a su
   // propia pantalla en vez de un login genérico, sin importar cuánto tiempo
   // haya pasado.
-  if (!slug && !authError) {
+  if (!slug && !authError && !pintadaDeAccion) {
     const deviceId = await readDeviceId();
     const restaurantIdConocido = deviceId ? await restaurantIdForDevice(deviceId) : null;
     const slugConocido = await getBareLoginSlug(restaurantIdConocido);

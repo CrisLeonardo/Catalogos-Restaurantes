@@ -8,6 +8,7 @@ import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modu
 import { PLANS, type PlanCode } from '@/lib/plans';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import { isSessionStale, SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
+import { CAMBIO_OBLIGATORIO, debeCambiarContrasena } from '@/lib/auth/password-change-rules';
 import { decideTenantAccess } from '@/lib/auth/tenant-guard';
 import { resolveEffectiveRole } from '@/lib/db/membership';
 import { adminUrl, authPathFor } from '@/lib/tenant';
@@ -54,6 +55,9 @@ export default async function WaiterLayout({ children }: { children: React.React
   if (isSessionStale(cookieStore.get(SESSION_SEEN_COOKIE)?.value, user.id)) {
     redirect(authPathFor('/admin/logout-operator', tenantSlug));
   }
+  // ACC-05: contraseña que eligió otro (el dueño, o Leogin en un rescate) →
+  // primero la cambia por una suya.
+  if (debeCambiarContrasena(user)) redirect(CAMBIO_OBLIGATORIO);
 
   const tenantData = tenantSlug ? await getRestaurantBySlug(tenantSlug) : null;
 

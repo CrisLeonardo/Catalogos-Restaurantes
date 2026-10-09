@@ -14,6 +14,7 @@
 import { useTransition } from 'react';
 import { Icon } from '@/components/icons';
 import { exportBackupXlsx } from '@/lib/actions/backup';
+import { useReauth } from '@/components/auth/reauth';
 import { Button } from '@/components/ui/button';
 import { List, ListRow, ListText } from '@/components/ui/list';
 import { Section, SectionNote } from '@/components/ui/section';
@@ -30,7 +31,13 @@ export default function RespaldoPanel({ restaurantId }: { restaurantId: string }
   const [pending, start] = useTransition();
   const toast = useToastManager();
 
-  function download() {
+  // ACC-09: el respaldo lleva TODO (clientes incluidos): se confirma identidad.
+  const { asegurar, dialog } = useReauth();
+
+  async function download() {
+    // Antes de la transición: mientras el diálogo esté abierto el botón no
+    // debe decir que ya se está generando.
+    if (!(await asegurar())) return;
     start(async () => {
       const res = await exportBackupXlsx(restaurantId);
       if (res.error || !res.xlsx) { toast.add({ title: res.error ?? 'No se pudo generar el respaldo.', type: 'error' }); return; }
@@ -84,6 +91,7 @@ export default function RespaldoPanel({ restaurantId }: { restaurantId: string }
         El archivo lleva datos personales de tus clientes: guárdalo con el mismo
         cuidado que cualquier otro documento sensible de tu negocio.
       </p>
+      {dialog}
     </div>
   );
 }

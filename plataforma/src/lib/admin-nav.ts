@@ -273,3 +273,41 @@ export function findGroup(groups: NavGroup[], pathname: string): NavGroup | null
   }
   return best?.group ?? null;
 }
+
+/* ── Qué sección exige cada pantalla (SEC-06) ──────────────────────────
+   Los permisos por sección solo escondían ENLACES: quien tecleaba la
+   dirección de una pantalla que no tiene (un mesero en /admin/finanzas)
+   entraba igual. El layout del panel pregunta aquí qué sección exige la
+   ruta y lo compara con `can()`.
+
+   Sale del MISMO menú (`buildNav` con todo encendido), no de una copia:
+   así la pantalla bloquea exactamente lo que el menú esconde, ni más ni
+   menos, y una pantalla nueva en el menú queda protegida sin tocar nada. */
+
+const TODO_ENCENDIDO: NavContext = {
+  role: 'RESTAURANT_OWNER', permissions: null,
+  ordersEnabled: true, analiticaEnabled: true, inventarioEnabled: true, ingredientesEnabled: true,
+  personalEnabled: true, finanzasEnabled: true, felActive: true, proveedoresActive: true,
+  loyaltyActive: true, reservacionesActive: true, listaEsperaActive: true, encuestasActive: true,
+  cuponesActive: true, dineInEnabled: true, deliveryEnabled: true, whatsappReady: true,
+  planActual: 'PREMIUM', showStaff: true, preview: true,
+};
+
+let rutasConSeccion: { href: string; key: string }[] | null = null;
+
+/**
+ * La sección que exige una ruta INTERNA del panel (`/admin/...`), o null si
+ * no exige ninguna (Hoy, la portada de Ajustes, Ayuda, pantallas fuera del
+ * menú). Gana la coincidencia más larga: `/admin/ajustes/salon` (mesas) le
+ * gana a cualquier prefijo más corto.
+ */
+export function seccionDeRuta(pathname: string): string | null {
+  rutasConSeccion ??= buildNav(TODO_ENCENDIDO).flatMap((g) => g.items.map((i) => ({ href: i.href, key: i.key })));
+  let mejor: { key: string; len: number } | null = null;
+  for (const r of rutasConSeccion) {
+    if (isActivePath(pathname, r.href) && (!mejor || r.href.length > mejor.len)) {
+      mejor = { key: r.key, len: r.href.length };
+    }
+  }
+  return mejor?.key ?? null;
+}

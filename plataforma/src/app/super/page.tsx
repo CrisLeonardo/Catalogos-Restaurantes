@@ -7,6 +7,9 @@ import { PageHeader, StatCard, PlanChip, StatusChip, ActivityChart, EmptyState, 
 import { getAllRestaurants, getGlobalMetrics, getPlatformDailySeries } from '@/lib/db/super-admin';
 import { getBillingDashboard, isOnTrial, trialDaysLeft, planLabel, type BillingRow } from '@/lib/db/billing';
 import { fmtMoney } from '@/lib/money';
+import { getClientHealth } from '@/lib/db/client-health';
+import { alertasDeSalud } from '@/lib/client-health';
+import SuperPushToggle from '@/components/super/super-push-toggle';
 
 export const metadata = { title: 'Inicio — Super Admin' };
 export const dynamic = 'force-dynamic';
@@ -71,16 +74,24 @@ function buildAlerts(rows: BillingRow[]): Alert[] {
 }
 
 export default async function SuperHomePage() {
-  const [{ rows, stats }, metrics, series, restaurants] = await Promise.all([
+  const [{ rows, stats }, metrics, series, restaurants, salud] = await Promise.all([
     getBillingDashboard(),
     getGlobalMetrics(),
     getPlatformDailySeries(),
     getAllRestaurants(),
+    getClientHealth(),
   ]);
 
   const visits30 = rows.reduce((s, r) => s + r.visits30, 0);
   const orders30 = rows.reduce((s, r) => s + r.orders30, 0);
-  const alerts = buildAlerts(rows);
+  /* Cobro + salud de los clientes (MON-03): lo que cuesta dinero ahora
+     (PC caída en servicio, comandas sin imprimir) va primero; luego lo que
+     avisa de que un cliente se está yendo o se trabó en el alta. */
+  const orden = { danger: 0, warn: 1, info: 2 } as const;
+  const alerts: Alert[] = [
+    ...alertasDeSalud(salud.restaurantes, salud.cuentas),
+    ...buildAlerts(rows),
+  ].sort((a, b) => orden[a.tone] - orden[b.tone]);
   const recent = restaurants.slice(0, 5);
   const top = [...rows].sort((a, b) => b.orders30 - a.orders30 || b.visits30 - a.visits30).slice(0, 5);
   const trials = rows.filter((r) => isOnTrial(r.config)).length;
@@ -134,46 +145,27 @@ export default async function SuperHomePage() {
             </span>
             <div>
               <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>Todo en orden</div>
-              <div className="t-mute" style={{ fontSize: 12, marginTop: 2 }}>Sin pagos vencidos, pruebas por vencer ni restaurantes sin cobro configurado.</div>
+              <div className="t-mute" style={{ fontSize: 12, marginTop: 2 }}>
+                {salud.faltaMigracion
+                  ? 'Sin avisos de cobro. Los de salud de los clientes aparecen al aplicar la migración 138.'
+                  : 'Sin pagos vencidos, PCs caídas, restaurantes sin vender ni altas a medias.'}
+              </div>
             </div>
           </Card>
         ) : (
           <Card style={{ overflow: 'hidden' }}>
-            {alerts.slice(0, 6).map((a, i) => (
-              <div
-                key={a.key}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 13, padding: '13px 16px',
-                  borderTop: i > 0 ? '1px solid var(--adm-border, var(--u-hair))' : 'none',
-                }}
-              >
-                <span
-                  style={{
-                    width: 34, height: 34, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
-                    background: `color-mix(in srgb, var(--c-${a.tone === 'info' ? 'ok' : a.tone === 'warn' ? 'warn' : 'danger'}) 13%, transparent)`,
-                    color: a.tone === 'info' ? 'var(--adm-info, #7dd3fc)' : a.tone === 'warn' ? 'var(--c-warn)' : 'var(--c-danger)',
-                  }}
-                >
-                  <Icon name={a.icon} size={17} />
-                </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {/* En dos renglones si hace falta: cortado a «Azúcar Negra
-                      tiene pagos …» no se sabía qué pasaba (SUP-10). */}
-                  <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--u-text)', lineHeight: 1.3 }}>{a.title}</div>
-                  <div className="t-mute" style={{ fontSize: 12, marginTop: 2, lineHeight: 1.4 }}>{a.body}</div>
-                </div>
-                <Button variant="outline" size="sm" render={<Link href={a.href} />}>{a.cta}</Button>
-              </div>
-            ))}
+            {alerts.slice(0, 6).map((a, i) => <AlertRow key={a.key} a={a} first={i === 0} />)}
             {alerts.length > 6 && (
-              <div style={{ padding: '10px 16px', borderTop: '1px solid var(--adm-border, var(--u-hair))', textAlign: 'center' }}>
-                <Link href="/super/finanzas" style={{ fontSize: 12, color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
-                  Ver {alerts.length - 6} más en Finanzas →
-                </Link>
-              </div>
+              <details style={{ borderTop: '1px solid var(--adm-border, var(--u-hair))' }}>
+                <summary style={{ padding: '10px 16px', textAlign: 'center', cursor: 'pointer', fontSize: 12, color: 'var(--brand-accent-ink)', fontWeight: 600, listStyle: 'none' }}>
+                  Ver {alerts.length - 6} más
+                </summary>
+                {alerts.slice(6).map((a) => <AlertRow key={a.key} a={a} first={false} />)}
+              </details>
             )}
           </Card>
         )}
+        <SuperPushToggle />
       </section>
 
       {/* Actividad + listas. Columnas de 420 px mínimo: con 300 cabían tres y
@@ -298,6 +290,34 @@ function SectionTitle({ icon, title, count }: { icon: string; title: string; cou
       {count != null && count > 0 && (
         <Badge variant="danger" style={{ fontSize: 11 }}>{count}</Badge>
       )}
+    </div>
+  );
+}
+
+function AlertRow({ a, first }: { a: Alert; first: boolean }) {
+  return (
+    <div
+      style={{
+        display: 'flex', alignItems: 'center', gap: 13, padding: '13px 16px',
+        borderTop: first ? 'none' : '1px solid var(--adm-border, var(--u-hair))',
+      }}
+    >
+      <span
+        style={{
+          width: 34, height: 34, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'grid', placeItems: 'center',
+          background: `color-mix(in srgb, var(--c-${a.tone === 'info' ? 'ok' : a.tone === 'warn' ? 'warn' : 'danger'}) 13%, transparent)`,
+          color: a.tone === 'info' ? 'var(--adm-info, #7dd3fc)' : a.tone === 'warn' ? 'var(--c-warn)' : 'var(--c-danger)',
+        }}
+      >
+        <Icon name={a.icon} size={17} />
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {/* En dos renglones si hace falta: cortado a «Azúcar Negra
+            tiene pagos …» no se sabía qué pasaba (SUP-10). */}
+        <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--u-text)', lineHeight: 1.3 }}>{a.title}</div>
+        <div className="t-mute" style={{ fontSize: 12, marginTop: 2, lineHeight: 1.4 }}>{a.body}</div>
+      </div>
+      <Button variant="outline" size="sm" render={<Link href={a.href} />}>{a.cta}</Button>
     </div>
   );
 }

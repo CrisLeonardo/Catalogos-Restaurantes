@@ -539,6 +539,8 @@ export async function createRestaurantUser(
     password,
     email_confirm: true,
     user_metadata: { full_name: fullName },
+    // ACC-05: la elige Leogin y viaja por WhatsApp → se cambia al entrar.
+    app_metadata: { debe_cambiar_contrasena: true },
   });
 
   if (createErr || !created?.user) {
@@ -615,6 +617,11 @@ export async function resetRestaurantUserPassword(
 
   if (password.length < 8)
     return { error: 'La contraseña debe tener al menos 8 caracteres.' };
+  // ACC-04: sin confirmar de dónde vino la petición, no (también aquí, no
+  // solo en la pantalla).
+  if (formData.get('identidadConfirmada') !== 'on') {
+    return { error: 'Primero confirma que la petición vino del número registrado del local.' };
+  }
 
   // Verificar que el usuario pertenece a ESTE restaurante y no es super admin.
   const { data: prof } = await db
@@ -643,7 +650,8 @@ export async function resetRestaurantUserPassword(
   }
   if (!pertenece) return { error: 'No autorizado.' };
 
-  const { error } = await db.auth.admin.updateUserById(userId, { password });
+  // ACC-05: repuesta por Leogin (y mandada por WhatsApp) → se cambia al entrar.
+  const { error } = await db.auth.admin.updateUserById(userId, { password, app_metadata: { debe_cambiar_contrasena: true } });
   if (error) return { error: error.message };
 
   // La contraseña no se registra. Solo que se cambió, a quién y cuándo.

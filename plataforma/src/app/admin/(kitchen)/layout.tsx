@@ -8,6 +8,7 @@ import type { ModulesMap } from '@/lib/modules';
 import { adminUrl, authPathFor } from '@/lib/tenant';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import { isSessionStale, SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
+import { CAMBIO_OBLIGATORIO, debeCambiarContrasena } from '@/lib/auth/password-change-rules';
 import { decideTenantAccess } from '@/lib/auth/tenant-guard';
 import { resolveEffectiveRole } from '@/lib/db/membership';
 import AdminShell from '@/components/admin/shell';
@@ -65,6 +66,9 @@ export default async function KitchenLayout({ children }: { children: React.Reac
   if (isSessionStale(cookieStore.get(SESSION_SEEN_COOKIE)?.value, user.id)) {
     redirect(authPathFor('/admin/logout-operator', tenantSlug));
   }
+  // ACC-05: contraseña que eligió otro (el dueño, o Leogin en un rescate) →
+  // primero la cambia por una suya.
+  if (debeCambiarContrasena(user)) redirect(CAMBIO_OBLIGATORIO);
 
   const tenant = tenantSlug ? await getRestaurantBySlug(tenantSlug) : null;
   const own = profile.restaurant_id

@@ -1,4 +1,6 @@
 'use server';
+import { identidadReciente } from '@/lib/auth/reauth';
+import { reauthRequerida } from '@/lib/auth/reauth-policy';
 
 /* ============================================================
    PERSONAL — gestión de staff por el dueño (Fase D)
@@ -270,6 +272,9 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
     // que confirmar — sin esto la cuenta se quedaría esperando un enlace que
     // nadie va a recibir nunca.
     email, password, email_confirm: true, user_metadata: { full_name: fullName },
+    // ACC-05: la contraseña la eligió el dueño; el administrador la cambia por
+    // una suya al primer ingreso. Las cuentas de PIN no tienen contraseña.
+    ...(byUser ? { app_metadata: { debe_cambiar_contrasena: true } } : {}),
   });
   if (createErr || !created?.user) {
     const m = createErr?.message?.toLowerCase() ?? '';
@@ -413,11 +418,16 @@ export async function resetStaffPassword(prevState: StaffState, formData: FormDa
 
   const userId = (formData.get('userId') as string)?.trim();
   if (!userId || !(await assertStaffOfRestaurant(ctx, userId))) return { error: 'No autorizado.' };
+  // ACC-09: delicado → «confirma que eres tú» si hace más de 10 min.
+  if (!(await identidadReciente())) return reauthRequerida();
 
   const password = (formData.get('password') as string) ?? '';
   if (password.length < 8) return { error: 'La contraseña debe tener al menos 8 caracteres.' };
 
-  const { error } = await ctx.db.auth.admin.updateUserById(userId, { password });
+  // ACC-05: la nueva también la elige el dueño → se cambia al entrar.
+  const { error } = await ctx.db.auth.admin.updateUserById(userId, {
+    password, app_metadata: { debe_cambiar_contrasena: true },
+  });
   if (error) return { error: 'No se pudo cambiar la contraseña. Inténtalo de nuevo.' };
 
   // Queda en la bitácora del dueño: cambiar la credencial de otra persona no
@@ -438,6 +448,8 @@ export async function removeStaff(_prevState: StaffState, formData: FormData): P
   if (!ctx) return { error: 'No autorizado.' };
   const userId = (formData.get('userId') as string)?.trim();
   if (!userId || !(await assertStaffOfRestaurant(ctx, userId))) return { error: 'No autorizado.' };
+  // ACC-09: delicado → «confirma que eres tú» si hace más de 10 min.
+  if (!(await identidadReciente())) return reauthRequerida();
 
   /* El perfil cae en cascada. Antes no se miraba el resultado: si borrar
      fallaba —pasaba con quien había anulado algún pedido, porque

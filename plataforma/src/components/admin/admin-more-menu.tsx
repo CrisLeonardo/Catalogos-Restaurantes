@@ -122,6 +122,12 @@ export default function AdminMoreMenu({
           </DropdownMenuItem>
         )}
 
+        {!isOperatorSession && (
+          <DropdownMenuItem render={<a href="/mi-cuenta/seguridad" />}>
+            <Icon name="key" size={16} /> Mi contraseña
+          </DropdownMenuItem>
+        )}
+
         <DropdownMenuSeparator />
 
         {/* Cerrar sesión: `render` con el <button> del formulario para que

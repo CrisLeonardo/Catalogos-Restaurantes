@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { canActOnRestaurant } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
 import { canActOnGroupBranch } from '@/lib/db/admin';
+import { puedeEnSeccion, SIN_SECCION } from '@/lib/auth/seccion';
 import type { ReservationStatus } from '@/lib/db/reservaciones';
 import { seatTable } from '@/lib/actions/table-sessions';
 import { faltaLaColumna } from '@/lib/db/migracion-ausente';
@@ -29,6 +30,11 @@ async function getAuthorizedRestaurantId(restaurantId: string): Promise<{ ok: tr
   const allowed = ['RESTAURANT_OWNER', 'RESTAURANT_STAFF', 'RESTAURANT_WAITER'];
   if (!isSuper && !allowed.includes(profile.role)) return { ok: false, error: 'Sin permisos.' };
   if (!isSuper && !(await canActOnRestaurant(profile.restaurant_id, restaurantId))) return { ok: false, error: 'No autorizado.' };
+  // SEC-06: la sección Reservaciones — o el salón, que es quien sienta a la
+  // gente que llega con reserva (Mesas, Tomar pedidos).
+  if (!isSuper && !(await puedeEnSeccion(restaurantId, 'reservaciones', 'mesas', 'mesero'))) {
+    return { ok: false, error: SIN_SECCION };
+  }
 
   return { ok: true, restaurantId };
 }

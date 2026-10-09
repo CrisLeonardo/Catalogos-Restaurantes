@@ -79,6 +79,9 @@ jobs:
       - name: Auditoría de funciones security definer — audit-security-definer.mjs
         run: node scripts/audit-security-definer.mjs
 
+      - name: Candados de RLS (migraciones 136 y 137) — audit-rls-candados.mjs
+        run: node scripts/audit-rls-candados.mjs
+
       - name: Instalar Chromium de Playwright
         run: npx playwright install --with-deps chromium
 

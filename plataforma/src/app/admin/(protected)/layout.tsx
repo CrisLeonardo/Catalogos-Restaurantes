@@ -12,12 +12,15 @@ import VerifyEmailBanner from '@/components/admin/verify-email-banner';
 import MainPcBanner from '@/components/admin/main-pc-banner';
 import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
 import SessionHeartbeat from '@/components/admin/session-heartbeat';
-import { isMeseroOnly } from '@/lib/permissions';
+import { can, isMeseroOnly } from '@/lib/permissions';
+import { seccionDeRuta } from '@/lib/admin-nav';
+import { internalPanelPath } from '@/lib/panel-links';
 import { isModuleActive } from '@/lib/modules';
 import { withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
 import { adminUrl, authPathFor } from '@/lib/tenant';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import { isSessionStale, SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
+import { CAMBIO_OBLIGATORIO, debeCambiarContrasena } from '@/lib/auth/password-change-rules';
 import { decideTenantAccess } from '@/lib/auth/tenant-guard';
 import { getMyMemberships } from '@/lib/db/membership';
 import { emailEnabled } from '@/lib/email';
@@ -45,6 +48,9 @@ export default async function AdminProtectedLayout({
 
   const { data: { user } } = await getStaffUser();
   if (!user) redirect(authPathFor('/admin/login', tenantSlug));
+  // ACC-05: contraseña que eligió otro (el dueño, o Leogin en un rescate) →
+  // primero la cambia por una suya.
+  if (debeCambiarContrasena(user)) redirect(CAMBIO_OBLIGATORIO);
 
   // ctx (perfil/permite) y tenantData (datos del restaurante del subdominio)
   // son consultas independientes — tenantSlug sale de headers, no de ctx.
@@ -98,6 +104,19 @@ export default async function AdminProtectedLayout({
     adminUrlFor: adminUrl,
   });
   if (!access.allow) redirect(access.redirectTo);
+
+  // ── Candado de SECCIÓN (SEC-06) ────────────────────────────────────
+  // Los permisos por sección solo escondían enlaces: un mesero que tecleaba
+  // /panel/<slug>/finanzas entraba igual. La sección que exige la ruta sale
+  // del mismo menú (seccionDeRuta), así se bloquea justo lo que el menú
+  // esconde. 'personal' no es delegable: la decide el rol, como en el menú.
+  // Sin sección (Hoy, portada de Ajustes, Ayuda) no hay nada que comprobar.
+  const seccion = seccionDeRuta(internalPanelPath(headersList.get('x-pathname')));
+  const puedePersonal = ctx.memberRole === 'MANAGER'
+    || profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN';
+  if (seccion && (seccion === 'personal' ? !puedePersonal : !can(profile.role, profile.permissions, seccion))) {
+    redirect(await panelLink('/admin'));
+  }
 
   let restaurantName = 'Panel admin';
   let currentRestaurant: Restaurant | null = ctx.restaurant;

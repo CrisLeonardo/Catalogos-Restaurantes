@@ -1,7 +1,10 @@
 import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
+import { AuthError, type UserResponse } from "@supabase/supabase-js";
 import { cookies, headers } from "next/headers";
 import { DINER_COOKIE_NAME, cookieDomainForHost, defaultStorageKey, isCodeVerifierCookie, sessionCookieNames } from "@/lib/supabase/cookies";
+import { aalDelToken, pasoSegundoFactor, type Aal } from "@/lib/auth/segundo-factor-policy";
+import { autenticadoEnMs } from "@/lib/auth/reauth-policy";
 
 export { DINER_COOKIE_NAME };
 
@@ -110,24 +113,74 @@ export async function createClient() {
  * poder pedir nada más. Mismo resultado, mismo nivel de verificación: solo
  * se deja de repetir la pregunta dentro de la misma petición.
  */
-export const getStaffUser = cache(async () => {
+/**
+ * La sesión del personal tal como la valida Supabase, SIN mirar el segundo
+ * factor, y el nivel (`aal`) de su token. Solo para quien tiene que atender a
+ * una sesión que aún debe el código: la pantalla /admin/dos-pasos, el login y
+ * el callback de Google. Todo lo demás usa `getStaffUser()`.
+ */
+export const getStaffSessionRaw = cache(async () => {
   const supabase = await createClient();
-  const first = await supabase.auth.getUser();
+  let res = await supabase.auth.getUser();
   /* Un fallo de RED (tiempo agotado, Auth que no contesta, un 5xx) no es «no
      hay sesión», pero el layout lo trataba igual y mandaba al login a quien
      tenía la sesión viva («Continuar como…»), de vez en cuando y sobre todo
      con el servidor cargado (auditoría 2026-10-02, N-10). Se reintenta UNA
      vez; «sin sesión» de verdad (sin cookie, token inválido) se devuelve
      tal cual. */
-  const err = first.error as (Error & { status?: number }) | null;
+  const err = res.error as (Error & { status?: number }) | null;
   const transitorio = !!err && (
     err.name === 'AuthRetryableFetchError' || err.status === 0 || (err.status ?? 0) >= 500
   );
   if (transitorio) {
     await new Promise((r) => setTimeout(r, 150));
-    return supabase.auth.getUser();
+    res = await supabase.auth.getUser();
   }
-  return first;
+
+  /* El nivel sale del MISMO cliente que acaba de validar el token con
+     Supabase Auth: getSession() aquí devuelve la sesión que getUser() ya
+     cargó y comprobó, sin otra ida y vuelta ni otro refresco. */
+  let aal: Aal = null;
+  // Cuándo demostró esta sesión ser quien es (ACC-09, lib/auth/reauth.ts).
+  let autenticadoEn: number | null = null;
+  if (res.data.user) {
+    const { data } = await supabase.auth.getSession();
+    aal = aalDelToken(data.session?.access_token);
+    autenticadoEn = autenticadoEnMs(data.session?.access_token);
+  }
+  return {
+    res,
+    aal,
+    autenticadoEn,
+    paso: res.data.user ? pasoSegundoFactor(res.data.user, aal) : ('listo' as const),
+  };
+});
+
+/**
+ * `auth.getUser()` del PERSONAL, UNA vez por petición.
+ *
+ * Cada `getUser()` es una ida y vuelta a Supabase Auth (valida el token en
+ * el servidor, no lo lee de la cookie). Y un solo render del panel lo
+ * preguntaba hasta cuatro veces, en cadena: el layout, getAdminContext,
+ * getMyMemberships y myOrganizationId — cada uno con su propio cliente.
+ * Con Render en Oregón y la base en Virginia son ~70 ms cada una antes de
+ * poder pedir nada más. Mismo resultado, mismo nivel de verificación: solo
+ * se deja de repetir la pregunta dentro de la misma petición.
+ *
+ * SEGUNDO FACTOR (PLAN_ACCESO_Y_MONITOREO, ACC-01): una sesión que todavía
+ * debe el código de su app autenticadora —el Super Admin recién entrado con
+ * su contraseña o con Google— aquí cuenta como «sin sesión». Es a propósito
+ * el ÚNICO sitio: las ~80 pantallas y acciones que deciden algo con
+ * `role === 'SUPER_ADMIN'` (y varias le dan el cliente de servicio) pasan
+ * todas por esta función, así que ninguna puede olvidarse de comprobarlo.
+ * La base de datos lo exige por su lado (migración 137).
+ */
+export const getStaffUser = cache(async (): Promise<UserResponse> => {
+  const { res, paso } = await getStaffSessionRaw();
+  if (paso !== 'listo') {
+    return { data: { user: null }, error: new AuthError('Falta el segundo factor', 401) };
+  }
+  return res;
 });
 
 /** Sesión del COMENSAL (menú público: cuenta Google, lealtad, mis pedidos). */

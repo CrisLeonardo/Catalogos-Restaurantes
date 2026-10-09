@@ -16,6 +16,8 @@ import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { getMyMembership, getMyMemberships, canBill } from '@/lib/db/membership';
 import { isSyntheticStaffEmail } from '@/lib/staff-email';
 import { checkEntryGate, unlockWithEntryPin, setEntryPin } from '@/lib/auth/entry-pin';
+import { identidadReciente } from '@/lib/auth/reauth';
+import { reauthRequerida } from '@/lib/auth/reauth-policy';
 import { isValidPin, PIN_LENGTH } from '@/lib/staff-pin-crypto';
 import { logPanelAccess } from '@/lib/auth/access-log';
 import { adminUrl } from '@/lib/tenant';
@@ -143,6 +145,8 @@ export async function updateEntryPin(prevState: EntryPinState, formData: FormDat
   // El candado protege el negocio entero, así que lo pone quien responde por
   // él. Un gerente no puede ponerle a su jefe un PIN que su jefe no conoce.
   if (!membership || !canBill(membership.role)) return { error: 'Solo el dueño puede cambiar esto.' };
+  // ACC-09: delicado → «confirma que eres tú» si hace más de 10 min.
+  if (!(await identidadReciente())) return reauthRequerida();
 
   const pin = ((formData.get('pin') as string) ?? '').trim();
   const remove = formData.get('remove') === 'true';

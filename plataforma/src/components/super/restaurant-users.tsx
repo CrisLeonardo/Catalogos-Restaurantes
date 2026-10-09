@@ -48,10 +48,13 @@ export default function RestaurantUsers({
   restaurantId,
   slug,
   users,
+  whatsapp = null,
 }: {
   restaurantId: string;
   slug: string;
   users: RestaurantUser[];
+  /** WhatsApp registrado del local, para el protocolo de rescate (ACC-04). */
+  whatsapp?: string | null;
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -59,7 +62,7 @@ export default function RestaurantUsers({
       {users.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {users.map((u) => (
-            <UserRow key={u.id} user={u} restaurantId={restaurantId} />
+            <UserRow key={u.id} user={u} restaurantId={restaurantId} whatsapp={whatsapp} />
           ))}
         </div>
       )}
@@ -97,9 +100,11 @@ function RoleBadge({ role }: { role: RestaurantUser['role'] }) {
 function UserRow({
   user,
   restaurantId,
+  whatsapp,
 }: {
   user: RestaurantUser;
   restaurantId: string;
+  whatsapp: string | null;
 }) {
   const [showReset, setShowReset] = useState(false);
 
@@ -179,7 +184,7 @@ function UserRow({
       </div>
 
       {showReset && (
-        <ResetPasswordForm userId={user.id} restaurantId={restaurantId} />
+        <ResetPasswordForm userId={user.id} restaurantId={restaurantId} whatsapp={whatsapp} />
       )}
     </Glass>
   );
@@ -188,9 +193,11 @@ function UserRow({
 function ResetPasswordForm({
   userId,
   restaurantId,
+  whatsapp,
 }: {
   userId: string;
   restaurantId: string;
+  whatsapp: string | null;
 }) {
   const [state, formAction, isPending] = useActionState(
     resetRestaurantUserPassword,
@@ -212,6 +219,15 @@ function ResetPasswordForm({
     >
       <input type="hidden" name="userId" value={userId} />
       <input type="hidden" name="restaurantId" value={restaurantId} />
+      {/* ACC-04: mismo protocolo que la ficha de la cuenta. */}
+      <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12, color: 'var(--u-text-2)', lineHeight: 1.5, cursor: 'pointer' }}>
+        <input type="checkbox" name="identidadConfirmada" required style={{ marginTop: 3 }} />
+        <span>
+          Confirmé que la petición vino del WhatsApp registrado del local
+          {whatsapp ? <> (<strong className="t-mono">{whatsapp}</strong>)</> : ' (no tiene ninguno: confírmalo por otra vía)'}.
+          Si llegó de otro número, devuelve la llamada al registrado.
+        </span>
+      </label>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <input
           name="password"

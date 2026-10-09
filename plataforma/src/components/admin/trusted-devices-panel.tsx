@@ -14,6 +14,7 @@ import { trustCurrentDevice, forgetDevice, setTrustedDevicePolicy, type DeviceSt
 import type { TrustedDevice } from '@/lib/auth/trusted-device';
 import { haceTiempo } from '@/lib/dates';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useReauth } from '@/components/auth/reauth';
 
 const timeAgo = (iso: string): string => haceTiempo(iso);
 
@@ -25,6 +26,8 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
   const [thisDeviceId, setThisDeviceId] = useState<string | null>(null);
   const [thisDeviceLabel, setThisDeviceLabel] = useState('Este dispositivo');
   const { confirmSubmit, dialog } = useConfirm();
+  // ACC-09: APAGAR el candado pide confirmar identidad (encenderlo no).
+  const { reauthSubmit, dialog: reauthDialog } = useReauth();
 
   const [trustState, trustAction, trusting] = useActionState<DeviceState, FormData>(trustCurrentDevice, null);
   const [policyState, policyAction, savingPolicy] = useActionState<DeviceState, FormData>(setTrustedDevicePolicy, null);
@@ -142,7 +145,7 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
       )}
 
       {/* El candado */}
-      <form action={policyAction} style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 13 }}>
+      <form action={policyAction} onSubmit={requiresTrusted ? reauthSubmit() : undefined} style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 13 }}>
         <input type="hidden" name="restaurantId" value={restaurantId} />
         <input type="hidden" name="enabled" value={requiresTrusted ? 'false' : 'true'} />
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -171,6 +174,7 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
       {error && <div style={{ fontSize: 12, color: 'var(--c-danger)' }}>{error}</div>}
       </Card>
       {dialog}
+      {reauthDialog}
     </Section>
   );
 }

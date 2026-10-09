@@ -6,13 +6,17 @@ import { exportCustomersXlsx, getCustomersPdfData } from '@/lib/actions/customer
 import { createDoc, drawPdfHeader, brandedAutoTable, finalizePdf } from '@/lib/documents/pdf';
 import { formatDocMoney, longDate } from '@/lib/documents/format';
 import ExportMenu from '@/components/admin/export-menu';
+import { useReauth } from '@/components/auth/reauth';
 
 export default function ClientesExportButton({ restaurantId }: { restaurantId: string }) {
   const [pendingXlsx, startXlsx] = useTransition();
   const [pendingPdf, startPdf] = useTransition();
   const toast = useToastManager();
+  // ACC-09: la lista de clientes es dato personal de terceros → confirmar identidad.
+  const { asegurar, dialog } = useReauth();
 
-  function downloadXlsx() {
+  async function downloadXlsx() {
+    if (!(await asegurar())) return;
     startXlsx(async () => {
       const res = await exportCustomersXlsx(restaurantId);
       if (res.error || !res.xlsx) { toast.add({ title: res.error ?? 'No se pudo exportar.', type: 'error' }); return; }
@@ -30,7 +34,8 @@ export default function ClientesExportButton({ restaurantId }: { restaurantId: s
     });
   }
 
-  function downloadPdf() {
+  async function downloadPdf() {
+    if (!(await asegurar())) return;
     startPdf(async () => {
       const res = await getCustomersPdfData(restaurantId);
       if ('error' in res) { toast.add({ title: res.error, type: 'error' }); return; }
@@ -70,10 +75,13 @@ export default function ClientesExportButton({ restaurantId }: { restaurantId: s
   }
 
   return (
-    <ExportMenu
-      onExcel={downloadXlsx}
-      onPdf={downloadPdf}
-      busy={pendingXlsx ? 'excel' : pendingPdf ? 'pdf' : null}
-    />
+    <>
+      <ExportMenu
+        onExcel={downloadXlsx}
+        onPdf={downloadPdf}
+        busy={pendingXlsx ? 'excel' : pendingPdf ? 'pdf' : null}
+      />
+      {dialog}
+    </>
   );
 }

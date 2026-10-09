@@ -35,18 +35,23 @@ export type RescueAccount = {
   verificado: boolean;
 };
 
+/** WhatsApp registrado en cada local de la cuenta (ACC-04). */
+export type ContactoRegistrado = { local: string; whatsapp: string | null };
+
 export default function AccountRescue({
   cuenta,
   correoDisponible,
+  contactos = [],
 }: {
   cuenta: RescueAccount;
   correoDisponible: boolean;
+  contactos?: ContactoRegistrado[];
 }) {
   const conGoogle = cuenta.providers.includes('google');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <ResetPasswordCard cuenta={cuenta} conGoogle={conGoogle} />
+      <ResetPasswordCard cuenta={cuenta} conGoogle={conGoogle} contactos={contactos} />
       <RecoveryLinkCard cuenta={cuenta} correoDisponible={correoDisponible} />
       <ChangeEmailCard cuenta={cuenta} />
       {/* Solo cuando hay algo que dar por bueno: una tarjeta que dice «ya
@@ -58,7 +63,9 @@ export default function AccountRescue({
 
 /* ── Reponer la contraseña ──────────────────────────────────── */
 
-function ResetPasswordCard({ cuenta, conGoogle }: { cuenta: RescueAccount; conGoogle: boolean }) {
+function ResetPasswordCard({
+  cuenta, conGoogle, contactos,
+}: { cuenta: RescueAccount; conGoogle: boolean; contactos: ContactoRegistrado[] }) {
   const [state, action, pending] = useActionState(resetAccountPassword, vacio);
   const [password, setPassword] = useState('');
 
@@ -76,8 +83,38 @@ function ResetPasswordCard({ cuenta, conGoogle }: { cuenta: RescueAccount; conGo
         </Aviso>
       )}
 
+      {/* ACC-04: el rescate por WhatsApp es la puerta más fácil de suplantar
+          («soy el dueño, perdí mi clave»). El número contra el que se
+          contrasta, a la vista, y la confirmación, obligatoria. */}
+      <Aviso tono="warn">
+        <strong>Antes de reponerla, confirma quién te la pide.</strong> Solo si el mensaje llegó
+        desde el WhatsApp registrado del local
+        {contactos.some((c) => c.whatsapp) ? ':' : '.'}
+        {contactos.some((c) => c.whatsapp) && (
+          <span style={{ display: 'block', margin: '6px 0' }}>
+            {contactos.filter((c) => c.whatsapp).map((c) => (
+              <span key={c.local} style={{ display: 'block' }}>
+                {c.local}: <strong className="t-mono">{c.whatsapp}</strong>
+              </span>
+            ))}
+          </span>
+        )}
+        {contactos.length > 0 && !contactos.some((c) => c.whatsapp) && (
+          <> Ninguno de sus locales tiene WhatsApp registrado: confírmalo por otra vía antes de seguir.</>
+        )}
+        {contactos.length === 0 && (
+          <> Esta cuenta no tiene locales ni número registrado: pídele que te escriba desde el correo de la cuenta.</>
+        )}
+        {' '}Si llegó de otro número, devuélvele la llamada al registrado. Nunca a un número nuevo,
+        aunque la historia suene convincente.
+      </Aviso>
+
       <form action={action} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <input type="hidden" name="userId" value={cuenta.id} />
+        <label style={{ flex: '1 1 100%', display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, color: 'var(--u-text-2)', cursor: 'pointer' }}>
+          <input type="checkbox" name="identidadConfirmada" required style={{ marginTop: 3 }} />
+          Confirmé que la petición vino del número o correo registrado.
+        </label>
         <div style={{ flex: '1 1 240px', minWidth: 0 }}>
           <label htmlFor="rescue-pass" style={labelStyle}>Contraseña nueva</label>
           <input

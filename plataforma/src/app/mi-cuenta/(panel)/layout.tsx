@@ -1,8 +1,11 @@
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
+import { CAMBIO_OBLIGATORIO, debeCambiarContrasena } from '@/lib/auth/password-change-rules';
 import { getStaffUser } from '@/lib/supabase/server';
 import { getMyGroupScope } from '@/lib/db/group';
 import LeoginLogo from '@/components/leogin-logo';
+import { Icon } from '@/components/icons';
+import { isSyntheticStaffEmail } from '@/lib/staff-email';
 import { logout } from '@/lib/actions/auth';
 import { isSessionStale, SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
 import SessionHeartbeat from '@/components/admin/session-heartbeat';
@@ -43,6 +46,12 @@ export default async function MiCuentaPanelLayout({ children }: { children: Reac
   if (isSessionStale(cookieStore.get(SESSION_SEEN_COOKIE)?.value, user.id)) {
     redirect('/admin/logout-operator');
   }
+  // ACC-05: contraseña que eligió otro → a cambiarla, desde cualquier pestaña
+  // de Mi cuenta salvo la de Seguridad, que es donde se cambia.
+  if (debeCambiarContrasena(user)
+      && !((await headers()).get('x-pathname') ?? '').startsWith('/mi-cuenta/seguridad')) {
+    redirect(CAMBIO_OBLIGATORIO);
+  }
 
   const scope = await getMyGroupScope();
 
@@ -64,9 +73,23 @@ export default async function MiCuentaPanelLayout({ children }: { children: Reac
       >
         <LeoginLogo size={24} />
         <span style={{ flex: 1 }} />
-        <span style={{ fontSize: 12, color: 'var(--u-text-3)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {user.email}
-        </span>
+        {/* La cuenta de la persona: lleva a Seguridad (cambiar contraseña,
+            ACC-03). Un correo interno de usuario del restaurante no se
+            enseña tal cual: no es de nadie y confunde. */}
+        <a
+          href="/mi-cuenta/seguridad"
+          className="press"
+          aria-label={`${isSyntheticStaffEmail(user.email) ? 'Mi contraseña' : user.email} — seguridad de tu cuenta`}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none',
+            fontSize: 12, color: 'var(--u-text-3)', maxWidth: 240, minWidth: 0,
+          }}
+        >
+          <Icon name="key" size={14} style={{ flexShrink: 0 }} />
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {isSyntheticStaffEmail(user.email) ? 'Mi contraseña' : user.email}
+          </span>
+        </a>
         <form action={logout}>
           <button
             type="submit"

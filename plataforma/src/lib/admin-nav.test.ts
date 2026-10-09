@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildNav, type NavContext } from './admin-nav';
+import { buildNav, seccionDeRuta, type NavContext } from './admin-nav';
+import { can } from './permissions';
 
 /* ── Contexto ─────────────────────────────────────────────────────
    El grupo "Ajustes" del menú tiene `index: true`: NO dibuja fila de
@@ -89,3 +90,47 @@ describe('el grupo Ajustes siempre lleva a su portada', () => {
     expect(grupos.find((g) => g.key === 'negocio')!.href).toBe('/admin/metricas');
   });
 });
+
+describe('seccionDeRuta (SEC-06)', () => {
+  it('cada pantalla del menú exige su llave', () => {
+    expect(seccionDeRuta('/admin/finanzas')).toBe('finanzas');
+    expect(seccionDeRuta('/admin/caja')).toBe('finanzas');
+    expect(seccionDeRuta('/admin/menu')).toBe('catalogo');
+    expect(seccionDeRuta('/admin/categorias')).toBe('categorias');
+    expect(seccionDeRuta('/admin/ajustes/salon')).toBe('mesas');
+    expect(seccionDeRuta('/admin/ajustes/restaurante')).toBe('ajustes');
+    expect(seccionDeRuta('/admin/personalizacion')).toBe('personalizar');
+  });
+
+  it('las subpantallas heredan la de su pantalla', () => {
+    expect(seccionDeRuta('/admin/menu/productos/new')).toBe('catalogo');
+    expect(seccionDeRuta('/admin/clientes/123')).toBe('clientes');
+  });
+
+  it('Hoy, la portada de Ajustes y lo que no está en el menú no exigen nada', () => {
+    expect(seccionDeRuta('/admin')).toBeNull();
+    expect(seccionDeRuta('/admin/ajustes')).toBeNull();
+    expect(seccionDeRuta('/admin/sin-internet')).toBeNull();
+  });
+
+  it('un prefijo parecido no cuenta (/admin/menuX no es /admin/menu)', () => {
+    expect(seccionDeRuta('/admin/menuX')).toBeNull();
+  });
+
+  it('coincide con lo que el menú esconde: un mesero no tiene Finanzas', () => {
+    const nav = buildNav({ ...todoApagadoMenosPedidos(), role: 'RESTAURANT_STAFF', permissions: ['pedidos'] });
+    const visibles = nav.flatMap((g) => g.items.map((i) => i.href));
+    expect(visibles).not.toContain('/admin/finanzas');
+    expect(can('RESTAURANT_STAFF', ['pedidos'], seccionDeRuta('/admin/finanzas')!)).toBe(false);
+    expect(can('RESTAURANT_STAFF', ['pedidos'], seccionDeRuta('/admin/pedidos')!)).toBe(true);
+  });
+});
+
+function todoApagadoMenosPedidos(): NavContext {
+  return {
+    ordersEnabled: true, analiticaEnabled: true, inventarioEnabled: true, ingredientesEnabled: true,
+    personalEnabled: true, finanzasEnabled: true, felActive: false, proveedoresActive: false,
+    loyaltyActive: false, reservacionesActive: false, listaEsperaActive: false, encuestasActive: false,
+    cuponesActive: false, dineInEnabled: true, planActual: 'PREMIUM', showStaff: false, preview: false,
+  };
+}

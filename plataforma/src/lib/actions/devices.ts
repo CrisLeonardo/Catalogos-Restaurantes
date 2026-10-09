@@ -1,4 +1,6 @@
 'use server';
+import { identidadReciente } from '@/lib/auth/reauth';
+import { reauthRequerida } from '@/lib/auth/reauth-policy';
 
 /* ============================================================
    DISPOSITIVOS DE CONFIANZA — acciones del dueño (migración 112)
@@ -87,6 +89,9 @@ export async function setTrustedDevicePolicy(prevState: DeviceState, formData: F
   if (!ctx) return { error: 'No autorizado.' };
 
   const enabled = formData.get('enabled') === 'on' || formData.get('enabled') === 'true';
+  // ACC-09: APAGAR el candado abre el PIN a internet → «confirma que eres tú».
+  // Encenderlo es lo seguro y no se le pone traba.
+  if (!enabled && !(await identidadReciente())) return reauthRequerida();
 
   if (enabled) {
     const { count } = await ctx.db

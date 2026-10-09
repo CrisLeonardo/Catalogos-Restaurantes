@@ -10,6 +10,7 @@ import LogList from '@/components/super/log-list';
 import { getAccountById, localesQueSeQuedanSinDueño } from '@/lib/db/accounts';
 import { listSuperAdminLog } from '@/lib/db/super-admin-log';
 import { emailEnabled } from '@/lib/email';
+import { createServiceClient } from '@/lib/supabase/service';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Cuenta — Super Admin' };
@@ -46,6 +47,16 @@ export default async function CuentaPage({ params }: { params: Promise<{ id: str
 
   const c = detalle.cuenta;
   const nombre = c.fullName?.trim() || (c.email ?? '').split('@')[0] || 'Sin nombre';
+
+  // ACC-04: los números registrados de sus locales, para contrastar con el
+  // que pide el rescate. Una consulta, solo de los suyos.
+  const contactos = c.locales.length
+    ? ((await createServiceClient()
+        .from('restaurants')
+        .select('name, whatsapp_number')
+        .in('id', c.locales.map((l) => l.restaurantId))).data ?? [])
+        .map((r) => ({ local: r.name as string, whatsapp: (r.whatsapp_number as string | null) ?? null }))
+    : [];
   const conGoogle = c.providers.includes('google');
 
   return (
@@ -149,6 +160,7 @@ export default async function CuentaPage({ params }: { params: Promise<{ id: str
             verificado: c.verificado,
           }}
           correoDisponible={emailEnabled()}
+          contactos={contactos}
         />
       </section>
 

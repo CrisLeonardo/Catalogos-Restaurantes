@@ -1,4 +1,6 @@
 'use server';
+import { identidadReciente } from '@/lib/auth/reauth';
+import { reauthRequerida } from '@/lib/auth/reauth-policy';
 
 /* ============================================================
    RESPALDO COMPLETO — exportación self-service de un restaurante
@@ -74,6 +76,8 @@ export async function exportBackupXlsx(
 ): Promise<{ xlsx?: string; filename?: string; error?: string }> {
   const auth = await authRestaurant(restaurantId);
   if ('error' in auth) return auth;
+  // ACC-09: delicado → «confirma que eres tú» si hace más de 10 min.
+  if (!(await identidadReciente())) return reauthRequerida();
 
   const db = createServiceClient();
   const [{ data: rest }, { categories, products }, includeLoyalty] = await Promise.all([

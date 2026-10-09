@@ -689,7 +689,14 @@ export default function AdminShell({
             <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {roleLabel}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--u-text-3)' }}>{preview ? 'Vista previa' : 'Sesión activa'}</div>
+            {/* Con PIN no hay contraseña que cambiar (la lleva el dueño). */}
+            {preview || isOperatorSession ? (
+              <div style={{ fontSize: 11, color: 'var(--u-text-3)' }}>{preview ? 'Vista previa' : 'Sesión activa'}</div>
+            ) : (
+              <a href="/mi-cuenta/seguridad" style={{ fontSize: 11, color: 'var(--u-text-3)', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                Mi contraseña
+              </a>
+            )}
           </div>
           {!preview && <LogoutButton isOperatorSession={isOperatorSession} />}
         </div>

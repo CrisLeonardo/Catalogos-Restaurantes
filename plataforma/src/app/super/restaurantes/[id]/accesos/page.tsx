@@ -34,7 +34,13 @@ export default async function FichaAccesosPage({
         propia cuenta de Leogin; desde aquí puedes darle acceso, cambiárselo o quitárselo.
         La cuenta en sí —su contraseña, su correo— se administra en <strong>Cuentas</strong>.
       </p>
-      <RestaurantUsers key={row.id} restaurantId={row.id} slug={row.slug} users={users} />
+      <RestaurantUsers
+        key={row.id}
+        restaurantId={row.id}
+        slug={row.slug}
+        users={users}
+        whatsapp={((row as { whatsapp_number?: string | null }).whatsapp_number) ?? null}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '@/components/icons';
 import { isStaleBuildError, recoverFromStaleBuild } from '@/lib/stale-build';
+import { useReportarError } from '@/lib/observability/report-client-error';
 
 export default function GlobalError({
   error,
@@ -11,6 +12,8 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // MON-01: que Leogin se entere, no solo quien lo está viendo.
+  useReportarError(error);
   // Pestaña abierta desde antes de un despliegue: el bundle que está
   // corriendo pide archivos que ya no existen. Se recarga sola en vez de
   // dejar al usuario en un callejón sin salida (ver lib/stale-build.ts).

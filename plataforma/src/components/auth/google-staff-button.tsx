@@ -19,6 +19,8 @@ import GoogleG from '@/components/auth/google-g';
  * `intent`:
  *  · 'login'  → si la cuenta no tiene restaurante, el callback la manda a crear uno.
  *  · 'signup' → viene del wizard de registro; vuelve siempre a /registro.
+ *  · 'reauth' → ya estaba dentro y solo confirma que es ella antes de algo
+ *    delicado (ACC-09); vuelve a `next`, la misma pantalla.
  */
 export default function GoogleStaffButton({
   intent = 'login',
@@ -26,9 +28,9 @@ export default function GoogleStaffButton({
   next,
   onBeforeRedirect,
 }: {
-  intent?: 'login' | 'signup';
+  intent?: 'login' | 'signup' | 'reauth';
   label?: string;
-  /** Ruta relativa a la que volver tras el callback (solo se respeta en signup). */
+  /** Ruta relativa a la que volver tras el callback (se respeta en signup y reauth). */
   next?: string;
   /** Última oportunidad de guardar estado local antes de salir de la página. */
   onBeforeRedirect?: () => void;

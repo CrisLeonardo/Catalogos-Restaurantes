@@ -137,8 +137,14 @@ export async function resetAccountPassword(
   const { sesion, cuenta } = ctx;
 
   if (password.length < 8) return { error: 'La contraseña debe tener al menos 8 caracteres.' };
+  // ACC-04: la casilla se comprueba también aquí — en la pantalla sola, una
+  // petición hecha a mano se la saltaría.
+  if (formData.get('identidadConfirmada') !== 'on') {
+    return { error: 'Primero confirma que la petición vino del número o correo registrado.' };
+  }
 
-  const { error } = await sesion.db.auth.admin.updateUserById(userId, { password });
+  // ACC-05: repuesta por Leogin (y mandada por WhatsApp) → se cambia al entrar.
+  const { error } = await sesion.db.auth.admin.updateUserById(userId, { password, app_metadata: { debe_cambiar_contrasena: true } });
   if (error) return { error: error.message };
 
   // La contraseña NO se registra, ni entera ni a trozos: la bitácora se
@@ -147,6 +153,7 @@ export async function resetAccountPassword(
     action: 'cuenta.contrasena',
     targetUserId: userId,
     targetLabel: cuenta.email,
+    meta: { identidad_confirmada: true },
   });
   refrescar(userId);
   return { ok: 'Contraseña cambiada. Dísela por un canal en el que confíes y pídele que la cambie al entrar.' };

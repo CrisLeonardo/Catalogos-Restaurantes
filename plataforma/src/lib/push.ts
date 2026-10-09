@@ -123,3 +123,46 @@ export async function sendPushToRestaurant(
     await db.from('push_subscriptions').delete().in('id', expiredIds);
   }
 }
+
+/**
+ * Envía un aviso a los celulares del SUPER ADMIN que lo pidieron
+ * (`super_push_subscriptions`, migración 138) — MON-04. Mismo envío que
+ * `sendPushToRestaurant`, otra lista: esas suscripciones no son de ningún
+ * restaurante. Devuelve a cuántos aparatos salió.
+ */
+export async function sendPushToSuperAdmins(payload: PushPayload): Promise<number> {
+  if (!vapidConfigured) return 0;
+
+  const db = createServiceClient();
+  const { data: subs } = await db.from('super_push_subscriptions').select('id, endpoint, p256dh, auth');
+  if (!subs || subs.length === 0) return 0;
+
+  const body = JSON.stringify({
+    ...payload,
+    url: payload.url?.startsWith('/') ? `${stableRootUrl()}${payload.url}` : payload.url,
+  });
+  const expiredIds: string[] = [];
+  let enviados = 0;
+
+  await Promise.allSettled(
+    subs.map(async (sub) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint as string, keys: { p256dh: sub.p256dh as string, auth: sub.auth as string } },
+          body,
+        );
+        enviados++;
+      } catch (err: unknown) {
+        if (err && typeof err === 'object' && 'statusCode' in err) {
+          const code = (err as { statusCode: number }).statusCode;
+          if (code === 410 || code === 404) expiredIds.push(sub.id as string);
+        }
+      }
+    }),
+  );
+
+  if (expiredIds.length > 0) {
+    await db.from('super_push_subscriptions').delete().in('id', expiredIds);
+  }
+  return enviados;
+}

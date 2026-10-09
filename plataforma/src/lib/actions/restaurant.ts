@@ -12,6 +12,7 @@ import type { ThemeConfig, ThemeContent, OrderType } from '@/lib/theme/defaults'
 import { extractVisualConfig, type TemplateConfig } from '@/lib/theme/templates';
 import { ESTANDAR_MAX_ORDER_TYPES } from '@/lib/plans';
 import { panelLink } from '@/lib/panel-links-server';
+import { puedeEnSeccion, SIN_SECCION } from '@/lib/auth/seccion';
 
 export type RestaurantState = { error: string } | null;
 
@@ -30,7 +31,11 @@ function normalizeWhatsApp(raw: string | null): { value: string | null } | { err
   };
 }
 
-async function resolveContext(formData: FormData) {
+/**
+ * `secciones`: la llave de la pantalla desde la que se llama (SEC-06). Con
+ * pertenecer al restaurante no basta: un mesero no cambia el horario.
+ */
+async function resolveContext(formData: FormData, ...secciones: string[]) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -53,6 +58,9 @@ async function resolveContext(formData: FormData) {
 
   if (!restaurantId) return null;
 
+  // SEC-06: además de pertenecer, la SECCIÓN de la pantalla que llama.
+  if (!isSuperAdmin && secciones.length && !(await puedeEnSeccion(restaurantId, ...secciones))) return null;
+
   // `isSuperAdmin` se mantiene estricto (controla el redirect al panel /super);
   // el dueño de grupo usa el cliente elevado pero sigue el flujo de /admin.
   const db = (isSuperAdmin || isGroupOwner) ? createServiceClient() : supabase;
@@ -63,7 +71,7 @@ export async function updateRestaurantInfo(
   prevState: RestaurantState,
   formData: FormData,
 ): Promise<RestaurantState> {
-  const ctx = await resolveContext(formData);
+  const ctx = await resolveContext(formData, 'perfil');
   if (!ctx) return { error: 'No autorizado.' };
 
   const name = (formData.get('name') as string)?.trim();
@@ -107,7 +115,7 @@ export async function updateRestaurantTheme(
   prevState: RestaurantState,
   formData: FormData,
 ): Promise<RestaurantState> {
-  const ctx = await resolveContext(formData);
+  const ctx = await resolveContext(formData, 'personalizar');
   if (!ctx) return { error: 'No autorizado.' };
 
   const logoUrl = (formData.get('logo_url') as string) || null;
@@ -241,7 +249,7 @@ export async function updateDeliveryZones(
   prevState: ZonesState,
   formData: FormData,
 ): Promise<ZonesState> {
-  const ctx = await resolveContext(formData);
+  const ctx = await resolveContext(formData, 'ajustes');
   if (!ctx) return { error: 'No autorizado.' };
 
   // Desde la migración 104 las zonas viven en su propia tabla y traen tarifa.
@@ -328,7 +336,7 @@ export async function updateRestaurantLocation(
   prevState: SaveState,
   formData: FormData,
 ): Promise<SaveState> {
-  const ctx = await resolveContext(formData);
+  const ctx = await resolveContext(formData, 'ajustes');
   if (!ctx) return { error: 'No autorizado.' };
 
   const latRaw   = (formData.get('location_lat')       as string)?.trim();
@@ -375,7 +383,7 @@ export async function updateRestaurantOps(
   prevState: SaveState,
   formData: FormData,
 ): Promise<SaveState> {
-  const ctx = await resolveContext(formData);
+  const ctx = await resolveContext(formData, 'ajustes');
   if (!ctx) return { error: 'No autorizado.' };
 
   const parsed = parseHours(formData.get('hours') as string | null);
@@ -421,7 +429,7 @@ const SUPPORTED_MENU_LANGUAGES = ['en'];
  * comensal.
  */
 export async function updateMenuLanguages(formData: FormData): Promise<void> {
-  const ctx = await resolveContext(formData);
+  const ctx = await resolveContext(formData, 'ajustes');
   if (!ctx) return;
 
   const requested = (formData.get('menu_languages') as string | null)
@@ -470,6 +478,10 @@ export async function saveOrdersAndCurrency(input: {
     || (await canActOnGroupBranch(input.restaurantId));
   if (!allowed) {
     return { error: 'No autorizado.' };
+  }
+  // SEC-06: se guarda desde Ajustes › Pedidos y cobro y desde Ajustes › Salón.
+  if (!isSuperAdmin && !(await puedeEnSeccion(input.restaurantId, 'ajustes', 'mesas'))) {
+    return { error: SIN_SECCION };
   }
 
   const db = createServiceClient();
@@ -545,6 +557,10 @@ export async function updateOwnOrderTypes(
     || (await canActOnGroupBranch(restaurantId));
   if (!allowed) {
     return { error: 'No autorizado para este restaurante.' };
+  }
+  // SEC-06: los modos de pedido se cambian en Funciones (solo quien la tiene).
+  if (!isSuperAdmin && !(await puedeEnSeccion(restaurantId, 'modulos'))) {
+    return { error: SIN_SECCION };
   }
   // Mínimo un tipo de pedido activo
   if (orderTypes.length === 0) return { error: 'Debe haber al menos un modo de pedido activo.' };
@@ -659,6 +675,10 @@ export async function saveAdminRestaurantTheme(input: {
   if (!isSuperAdmin && !(await canActOnRestaurant(profile.restaurant_id, input.restaurantId))) {
     return { error: 'No autorizado.' };
   }
+  // SEC-06: el diseño del menú es de Personalizar.
+  if (!isSuperAdmin && !(await puedeEnSeccion(input.restaurantId, 'personalizar'))) {
+    return { error: SIN_SECCION };
+  }
 
   const db = createServiceClient();
   const { restaurantId, config, content, customCss } = input;
@@ -755,6 +775,8 @@ async function resolveOwnerThemeContext(restaurantId: string) {
 
   const isSuperAdmin = profile.role === 'SUPER_ADMIN';
   if (!isSuperAdmin && !(await canActOnRestaurant(profile.restaurant_id, restaurantId))) return null;
+  // SEC-06: las plantillas propias son de Personalizar.
+  if (!isSuperAdmin && !(await puedeEnSeccion(restaurantId, 'personalizar'))) return null;
 
   return createServiceClient();
 }

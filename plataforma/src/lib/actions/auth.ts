@@ -10,6 +10,7 @@ import { resolveStaffDestination } from '@/lib/auth/destination';
 import { logPanelAccess } from '@/lib/auth/access-log';
 import { writeSessionActivity } from '@/lib/auth/session-activity';
 import { authPathFor } from '@/lib/tenant';
+import { aalDelToken, pasoSegundoFactor } from '@/lib/auth/segundo-factor-policy';
 
 /**
  * `url` = entra aquí con una navegación de DOCUMENTO desde el cliente
@@ -97,6 +98,14 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
   });
 
   if (error) return { error: 'Usuario o contraseña incorrectos.' };
+
+  // Segundo factor (ACC-01): el Super Admin no ve nada —ni su propio perfil,
+  // migración 137— hasta escribir el código de su app. Se le manda a esa
+  // pantalla antes de leer nada más; la contraseña sola no abre el panel.
+  if (pasoSegundoFactor(signInData.user, aalDelToken(signInData.session?.access_token)) !== 'listo') {
+    await writeSessionActivity(signInData.user.id);
+    return { url: '/admin/dos-pasos' };
+  }
 
   // Redirigir según rol
   const { data: profile } = await supabase

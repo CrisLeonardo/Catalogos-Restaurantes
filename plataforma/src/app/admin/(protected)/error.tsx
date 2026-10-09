@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Icon } from '@/components/icons';
 import { isStaleBuildError, recoverFromStaleBuild } from '@/lib/stale-build';
 import { friendlyError } from '@/lib/friendly-error';
+import { useReportarError } from '@/lib/observability/report-client-error';
 
 export default function AdminError({
   error,
@@ -12,6 +13,8 @@ export default function AdminError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // MON-01: que Leogin se entere, no solo quien lo está viendo.
+  useReportarError(error);
   // El panel se queda abierto días en la PC del restaurante, así que es el
   // sitio donde más probable es que un despliegue lo pille con el bundle
   // viejo. Ver lib/stale-build.ts.
