@@ -129,7 +129,7 @@ git push -u origin main
 | Campo | Valor |
 |-------|-------|
 | **Name** | `menuvivo` (será `menuvivo.onrender.com`) |
-| **Region** | Oregon (US West) — o la más cercana |
+| **Region** | Virginia (US East) — la misma que Supabase; con Oregón cada consulta cruza el país |
 | **Branch** | `main` |
 | **Root Directory** | **`plataforma`** ← ¡clave! la app está en esa subcarpeta |
 | **Runtime** | Node |
@@ -138,6 +138,8 @@ git push -u origin main
 | **Instance Type** | **Free** |
 
 > La versión de Node la toma sola del archivo `plataforma/.node-version` (Node 22).
+
+> **Auto-deploy:** está activo (Settings → Build & Deploy → Auto-Deploy), así que cada fusión a `main` se despliega sola. En octubre de 2026 un deploy no se detectó y hubo que usar **Manual Deploy**. Si vuelve a pasar: comprueba en GitHub (Settings → Webhooks) que el webhook de Render sigue entregando, que Auto-Deploy no esté en «After CI checks pass» con el CI aún corriendo, y deja constancia con la etiqueta `prod-AAAA-MM-DD` del commit que quedó en producción.
 > Render asigna el puerto por la variable `PORT`; `next start` la respeta automáticamente.
 
 ## 3.2 Variables de entorno
