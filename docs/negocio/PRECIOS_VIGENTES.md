@@ -1,6 +1,6 @@
 # Precios vigentes — Leogin
 
-**Precios de lanzamiento 2026 — oficiales desde 2026-08-17.** Referencia rápida de un vistazo antes de una demo o visita. Esto **no** es la fuente de verdad de código — esa es [`plataforma/src/lib/plans.ts`](plataforma/src/lib/plans.ts), y a nivel de base de datos manda `platform_settings` (ver migración `111_precios_lanzamiento.sql`). Si algún día no coinciden, gana la base de datos y hay que actualizar este archivo.
+**Precios de lanzamiento 2026 — oficiales desde 2026-08-17.** Referencia rápida de un vistazo antes de una demo o visita. Esto **no** es la fuente de verdad de código — esa es [`plataforma/src/lib/plans.ts`](../../plataforma/src/lib/plans.ts), y a nivel de base de datos manda `platform_settings` (ver migración `111_precios_lanzamiento.sql`). Si algún día no coinciden, gana la base de datos y hay que actualizar este archivo.
 
 ## Planes
 

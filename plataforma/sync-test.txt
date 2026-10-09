@@ -1,1 +1,0 @@
-// Leftover test file from a sync diagnostic - safe to delete.

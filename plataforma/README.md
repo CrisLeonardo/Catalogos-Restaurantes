@@ -3,10 +3,10 @@
 App **Next.js 16** (App Router, TypeScript, Tailwind v4) + **Supabase**.
 Multi-tenant por subdominios. Diseño *liquid glass*.
 
-> Documentación de estrategia y fases en la carpeta superior:
-> `PLAN_MAESTRO.md`, `IMPLEMENTACIONES.md`, `ERRORES.md`.
+> Documentación de estrategia, fases y registros: [`../docs/`](../docs/README.md)
+> (planes, registros, auditorías, negocio). Documentos técnicos de la plataforma: [`docs/`](docs/).
 >
-> **Guías prácticas (carpeta superior):**
+> **Guías prácticas ([`../docs/guias/`](../docs/guias/)):**
 > - `GUIA_ENTORNO_LOCAL.md` — cómo desarrollar en local (con Supabase + Docker).
 > - `GUIA_DESPLIEGUE.md` — cómo subir a Supabase (nube) + Render paso a paso.
 
@@ -32,12 +32,12 @@ npm run dev
 cd plataforma
 npm install
 npx supabase start                    # levanta Supabase en Docker + aplica migraciones
-# crea .env.local con las claves que imprime `supabase start` (ver GUIA_ENTORNO_LOCAL.md)
+# crea .env.local con las claves que imprime `supabase start` (ver docs/guias/GUIA_ENTORNO_LOCAL.md)
 node scripts/crear-super-admin.mjs admin@local.test Admin12345
 npm run dev
 ```
 
-Detalle completo y troubleshooting en **`../GUIA_ENTORNO_LOCAL.md`**.
+Detalle completo y troubleshooting en **[`../docs/guias/GUIA_ENTORNO_LOCAL.md`](../docs/guias/GUIA_ENTORNO_LOCAL.md)**.
 
 Para probar **subdominios en local**, abre `http://mi-restaurante.localhost:3000` (Chrome
 resuelve `*.localhost` sin configuración extra). El **proxy** (`src/proxy.ts`) detecta el slug

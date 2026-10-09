@@ -38,7 +38,7 @@ Basado en verificación directa contra el código actual (2026-08-03). No incluy
 
 ## Auditoría de velocidad e imágenes 2026-09-25 — abiertos
 
-Detalle y mediciones en [`AUDITORIA_2026-09-25.md`](AUDITORIA_2026-09-25.md). Lo corregido en código está allí; aquí solo lo que queda.
+Detalle y mediciones en [`AUDITORIA_2026-09-25.md`](../auditorias/AUDITORIA_2026-09-25.md). Lo corregido en código está allí; aquí solo lo que queda.
 
 - [ ] **Render en Oregón, Supabase en Virginia (I-1).** ~70 ms por consulta. Crear el servicio en Virginia (Render no cambia región de uno existente), mover DNS/dominios, borrar el viejo, actualizar `render.yaml`. Es lo que más velocidad da.
 - [ ] **Confirmar el plan de Render (I-2).** `render.yaml` dice `free` (0,1 CPU, se duerme).
