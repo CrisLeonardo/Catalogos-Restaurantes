@@ -61,9 +61,9 @@ modo sin internet. **No está listo para vender todavía** por cuatro bloques:
 | PROD-15 | Tarjetas de regalo: existen en la base, no en pantalla | P2 |
 | SEG-01 | ✅ ~~🧪 Next.js 16.2.7 con vulnerabilidad **crítica** (saltarse el proxy)~~ → 16.3.8 | **P0** |
 | SEG-02 | ✅ ~~🧪 `sharp` con vulnerabilidades altas y procesa fotos subidas~~ → 0.35.5 | **P0** |
-| SEG-03 | La CI no corre las pruebas unitarias ni el `build` | P1 |
+| SEG-03 | ✅ ~~La CI no corre las pruebas unitarias ni el `build`~~ | P1 |
 | SEG-04 | El E2E no cubre el embudo de venta (registro → primer pedido) | P1 |
-| SEG-05 | Sin Dependabot ni `npm audit` automático | P1 |
+| SEG-05 | ✅ ~~Sin Dependabot ni `npm audit` automático~~ | P1 |
 | SEG-06 | `/api/qr` abierto y sin límite | P2 |
 | SEG-07 | Hashes de PIN de 4 cifras viven en la PC del local | P2 |
 | INF-01 | 🙋 Render en plan gratuito | **P0** |
@@ -344,12 +344,16 @@ avisos (`postcss` de Next, `uuid` vía `exceljs`, `source-map-js`) se van con
 > `scripts/audit-dependencias.mjs`) y `uuid` vía `exceljs` (moderada; su
 > arreglo es bajar `exceljs` a 3.4, que es peor).
 
-### SEG-03 · La CI no corre las pruebas unitarias ni el build — P1
+### SEG-03 · La CI no corre las pruebas unitarias ni el build — P1 · ✅ Hecho 2026-10-10
 
 `.github/workflows/ci.yml` corre tipos, lint, aislamiento, auditorías de RLS y
 el E2E, pero **no `npm test`** (947 pruebas que hoy pasan, 🧪) **ni
 `npm run build`**. Un error de build se descubre cuando Render falla al
 desplegar. Añadir los dos pasos.
+
+> **Hecho 2026-10-10:** la CI corre `npm test` y `npm run build` después
+> del lint (el build con variables de mentira, no necesita la base). El
+> límite del trabajo sube de 25 a 35 minutos.
 
 ### SEG-04 · El E2E no cubre el embudo de venta — P1
 
@@ -358,11 +362,19 @@ día con una prueba: **registrarse → crear restaurante → subir foto → crea
 platillo → pedir desde el menú → aparece en el panel → cobrar → cerrar caja**.
 Es el recorrido que hace cada cliente que pagas por adquirir.
 
-### SEG-05 · Sin Dependabot — P1
+### SEG-05 · Sin Dependabot — P1 · ✅ Hecho 2026-10-10
 
 No hay `.github/dependabot.yml`. Configurarlo (semanal, npm de `plataforma/`,
 `agente-impresion/`, `leogin-desktop/` y las GitHub Actions) y añadir
 `npm audit --omit=dev --audit-level=high` a la CI.
+
+> **Hecho 2026-10-10:** `.github/dependabot.yml` semanal (lunes 06:00,
+> hora de Guatemala) para npm de `plataforma/`, `agente-impresion/` y
+> `leogin-desktop/` y para las GitHub Actions; menores y parches en un PR
+> agrupado por carpeta. La CI corre `scripts/audit-dependencias.mjs`: es
+> `npm audit --omit=dev --audit-level=high` con las excepciones sin arreglo
+> escritas con motivo y fecha de revisión (hoy solo `node-forge`, hasta el
+> 2027-01-10); un aviso nuevo o una excepción vencida ponen la CI en rojo.
 
 ### SEG-06 · `/api/qr` abierto — P2
 
@@ -626,3 +638,7 @@ inactividad, PIN de 4 cifras con bloqueo, confirmación antes de borrar.
 - **2026-10-09** — Auditoría hecha. 947 pruebas unitarias en verde. PROD-01
   reproducido contra la base local (subida rechazada por RLS); `npm audit`:
   1 crítica, 8 altas, 4 moderadas en dependencias de producción.
+- **2026-10-10** — SEG-01, SEG-02, SEG-03 y SEG-05 hechos (rama
+  `fix/seguridad-dependencias`). `npm audit --omit=dev`: 0 críticas,
+  2 altas (`node-forge` y `acme-client`, el mismo aviso sin arreglo,
+  tolerado con motivo), 2 moderadas.

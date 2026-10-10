@@ -1,0 +1,69 @@
+# Dependabot (SEG-05 de docs/auditorias/AUDITORIA_SALIDA_PRODUCCION_2026-10-09.md).
+#
+# Antes nadie avisaba de una dependencia vulnerable: Next.js llegó a la
+# auditoría con una vulnerabilidad crítica y sharp con varias altas sin que
+# nada lo señalara. Ahora Dependabot revisa cada semana y abre PR propios
+# (rama `dependabot/...`), que pasan por la misma CI que cualquier otro.
+#
+# Las versiones menores y de parche se agrupan en UN PR por carpeta para no
+# llenar la lista; las mayores llegan sueltas porque cada una se revisa
+# aparte (notas de versión, cambios incompatibles). Los avisos de
+# seguridad abren su PR en cuanto se publican, sin esperar al lunes.
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /plataforma
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Guatemala
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      menores:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /agente-impresion
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Guatemala
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps-agente)"
+    groups:
+      menores:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /leogin-desktop
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Guatemala
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps-desktop)"
+    groups:
+      menores:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Guatemala
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      acciones:
+        patterns: ["*"]
