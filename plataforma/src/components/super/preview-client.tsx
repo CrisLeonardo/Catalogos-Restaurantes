@@ -13,7 +13,7 @@
    cómo va quedando en otra pantalla.
    ============================================================ */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import MenuShell from '@/components/menu-shell';
 import ThemeBackground from '@/components/theme-background';
 import { buildThemeVars, buildFontsHref, sanitizeCustomCss } from '@/lib/theme/resolve';
@@ -42,6 +42,24 @@ function hideStaticBackground() {
   }
 }
 
+/** Lo que la página real le pasa a MenuShell además del tema y el catálogo y que
+ *  cambia lo que se VE: el botón de WhatsApp de la portada, la pestaña de
+ *  Fidelidad, «Llamar al mesero», el selector de idioma… Sin esto la vista
+ *  previa enseñaba un menú más pelado que el que el comensal abre. */
+export type MenuShellExtras = Pick<
+  ComponentProps<typeof MenuShell>,
+  | 'timezone'
+  | 'llamadaMeseroEnabled'
+  | 'loyaltyOn'
+  | 'rewardsCatalog'
+  | 'googleAuthEnabled'
+  | 'whatsappNumber'
+  | 'restaurantLat'
+  | 'restaurantLng'
+  | 'deliveryRadiusKm'
+  | 'menuLanguages'
+>;
+
 type CatItem = Pick<Category, 'id' | 'name' | 'icon'>;
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'>;
 
@@ -67,6 +85,8 @@ interface Props {
   sampleData?: boolean;
   /** Ediciones cerradas de la Vitrina (migración 141). */
   archivo?: EdicionArchivada[];
+  /** Ver MenuShellExtras. Vacío en el modo creación (aún no hay restaurante). */
+  menuExtras?: MenuShellExtras;
 }
 
 export default function PreviewClient({
@@ -79,6 +99,7 @@ export default function PreviewClient({
   ordersEnabled,
   sampleData = false,
   archivo = [],
+  menuExtras,
 }: Props) {
   const [state, setState] = useState<ThemePreviewState>({
     config: initialConfig,
@@ -197,6 +218,7 @@ export default function PreviewClient({
         restaurantId={`preview-${previewId}`}
         ordersEnabled={ordersEnabled}
         archivo={archivo}
+        {...menuExtras}
       />
 
       {/* CSS propio del restaurante: ÚLTIMO → gana sobre las vars del tema. */}
