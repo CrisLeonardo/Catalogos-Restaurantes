@@ -31,16 +31,24 @@ export default async function AdminPersonalizacionPage() {
   if (!restaurantId) redirect('/admin/login');
 
   const db = createServiceClient();
-  const [{ data: themeRow }, { data: ownerTemplates }] = await Promise.all([
+  const [{ data: themeRow }, { data: ownerTemplates }, { data: restaurant }] = await Promise.all([
     db.from('restaurant_themes').select('*').eq('restaurant_id', restaurantId).single(),
     db
       .from('restaurant_theme_templates')
       .select('*')
       .eq('restaurant_id', restaurantId)
       .order('created_at', { ascending: false }),
+    db.from('restaurants').select('slug, name, tagline').eq('id', restaurantId).single(),
   ]);
 
-  const resolved = resolveTheme((themeRow as ThemeRow) ?? null);
+  // Igual que el menú real (lib/db/restaurants.ts) y que la ficha del Super
+  // Admin: con el slug y el nombre/lema del restaurante como semilla. Sin ellos
+  // el editor arrancaba con «Tu Restaurante» y, como es el editor quien le manda
+  // su estado a la vista previa, esta enseñaba un nombre que el menú no tiene.
+  const resolved = resolveTheme((themeRow as ThemeRow) ?? null, restaurant?.slug ?? undefined, {
+    brandName: restaurant?.name ?? undefined,
+    tagline: restaurant?.tagline ?? null,
+  });
 
   return (
     <div className="anim-fade-up">
