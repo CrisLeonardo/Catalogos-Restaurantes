@@ -44,7 +44,7 @@ modo sin internet. **No está listo para vender todavía** por cuatro bloques:
 
 | ID | Hallazgo | Prioridad |
 |---|---|---|
-| PROD-01 | 🧪 Dueño registrado solo no puede subir fotos ni logo | **P0** |
+| PROD-01 | ✅ 🧪 Dueño registrado solo no puede subir fotos ni logo | **P0** |
 | PROD-02 | Caja: mesas y pedidos sin cobrar cuentan como efectivo esperado | **P0** |
 | PROD-03 | Caja: el segundo turno del día espera el efectivo de todo el día | **P0** |
 | PROD-04 | Caja: después de medianoche el «día» es otro | **P0** para bares, P1 resto |
@@ -122,6 +122,17 @@ dueño en su segundo restaurante.
 carpeta si la persona es miembro activo del restaurante con la sección
 «Catálogo» o «Diseño» (`leogin_puede()` de la 140), además del caso de
 siempre. Añadir este caso a `test-aislamiento.mjs` y al E2E (SEG-04).
+
+> ✅ **Hecho (2026-10-10).** Migración `142_fotos_por_membresia.sql`: las
+> tres reglas de escritura usan `leogin_puede_subir_foto(name)` = carpeta
+> del perfil «de casa» **o** `leogin_puede(<restaurante>, 'catalogo',
+> 'personalizar')`; un nombre que no empiece por uuid da «no», no error.
+> Probado contra la base local antes (dueño solo con membresía → rechazo
+> RLS) y después (entra), y con `INSERT` directo como `authenticated`.
+> `test-aislamiento.mjs` suma 7 casos: dueño de casa, dueño registrado
+> solo, miembro con Catálogo, y los rechazos cruzados (miembro de **otro**
+> restaurante, dueño en carpeta ajena, miembro solo con Pedidos). Falta el
+> paso del E2E (SEG-04). Independiente del código: se aplica cuando sea.
 
 ### PROD-02 · Caja: lo que no se ha cobrado cuenta como efectivo — **P0**
 
@@ -598,3 +609,5 @@ inactividad, PIN de 4 cifras con bloqueo, confirmación antes de borrar.
 - **2026-10-09** — Auditoría hecha. 947 pruebas unitarias en verde. PROD-01
   reproducido contra la base local (subida rechazada por RLS); `npm audit`:
   1 crítica, 8 altas, 4 moderadas en dependencias de producción.
+- **2026-10-10** — PROD-01 hecho: migración 142 (fotos por membresía y
+  sección), probada contra la base local y añadida a `test-aislamiento.mjs`.

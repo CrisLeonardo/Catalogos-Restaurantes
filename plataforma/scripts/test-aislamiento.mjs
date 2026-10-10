@@ -52,7 +52,7 @@ const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, p
 const SUFFIX = Math.random().toString(36).slice(2, 8);
 const PASS = 'TestIso12345';
 let okN = 0, failN = 0;
-const created = { users: [], restaurants: [] };
+const created = { users: [], restaurants: [], objects: [] };
 
 function check(name, ok, detail = '') {
   if (ok) { okN++; console.log(`  ✓ ${name}`); }
@@ -94,7 +94,49 @@ async function makeTenant(tag) {
   return { id: r.id, email, categoryId: cat.id, prodActive: prodActive.id, prodHidden: prodHidden.id, orderId: ord.id, customerId: cust.id, invoiceId: inv.id, ownerId: u.user.id, voidId: voidRow.id, giftCardId: giftCard.id, tipDistId: tipDist.id };
 }
 
+/**
+ * Persona que entra al restaurante SOLO por `restaurant_members`, con el
+ * perfil sin restaurante «de casa» (`profiles.restaurant_id` null): así nace
+ * el dueño que se registra solo (signup.ts + mi-cuenta.ts) y así queda quien
+ * administra su segundo local. Devuelve un cliente con su sesión iniciada.
+ */
+async function makeMember(restaurantId, tag, role, permissions = null) {
+  const email = `miembro-${tag}-${SUFFIX}@test.local`;
+  const { data: u, error: uErr } = await admin.auth.admin.createUser({ email, password: PASS, email_confirm: true });
+  if (uErr) throw new Error(`crear miembro ${tag}: ${uErr.message}`);
+  created.users.push(u.user.id);
+  const profileRole = role === 'OWNER' ? 'RESTAURANT_OWNER' : role === 'WAITER' ? 'RESTAURANT_WAITER' : 'RESTAURANT_STAFF';
+  const { error: pErr } = await admin.from('profiles').upsert({ id: u.user.id, restaurant_id: null, role: profileRole, full_name: `Miembro ${tag}` });
+  if (pErr) throw new Error(`perfil miembro ${tag}: ${pErr.message}`);
+  const { error: mErr } = await admin.from('restaurant_members').insert({ user_id: u.user.id, restaurant_id: restaurantId, role, permissions, status: 'active' });
+  if (mErr) throw new Error(`membresía ${tag}: ${mErr.message}`);
+  const client = createClient(url, anonKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  const { error: signErr } = await client.auth.signInWithPassword({ email, password: PASS });
+  if (signErr) throw new Error(`login miembro ${tag}: ${signErr.message}`);
+  return client;
+}
+
+// PNG de 1×1: el bucket solo acepta imágenes.
+const PNG_1PX = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
+
+/**
+ * Intenta subir una foto a `<restaurante>/products/…`. `ok` dice si las
+ * reglas (RLS) la DEJARON PASAR, que es lo que se prueba aquí: un rechazo de
+ * seguridad es `ok: false`; cualquier otro fallo del almacenamiento después
+ * de pasar RLS (p. ej. el 42P10 de algunas versiones locales de storage-api,
+ * que falla incluso con la clave de servicio) cuenta como «pasó» y se avisa.
+ */
+async function subeFoto(client, restaurantId, tag) {
+  const path = `${restaurantId}/products/test-iso-${tag}-${SUFFIX}.png`;
+  const { error } = await client.storage.from('restaurant-assets').upload(path, PNG_1PX, { contentType: 'image/png' });
+  if (!error) { created.objects.push(path); return { ok: true, error: '' }; }
+  const rechazo = /row-level security|unauthorized|403/i.test(`${error.message} ${error.statusCode ?? ''}`);
+  if (!rechazo) console.log(`  · (${tag}: RLS la dejó pasar; el almacenamiento falló después: ${error.message})`);
+  return { ok: !rechazo, error: error.message };
+}
+
 async function cleanup() {
+  if (created.objects.length) { try { await admin.storage.from('restaurant-assets').remove(created.objects); } catch {} }
   for (const id of created.users) { try { await admin.auth.admin.deleteUser(id); } catch {} }
   for (const id of created.restaurants) { try { await admin.from('restaurants').delete().eq('id', id); } catch {} }
 }
@@ -178,6 +220,40 @@ async function main() {
   {
     const { data } = await admin.from('products').select('name').eq('id', B.prodActive).single();
     check('El producto de B sigue intacto en la BD', !!data?.name?.includes('Activo'), `name="${data?.name}"`);
+  }
+
+  console.log('\n── Fotos del menú (bucket restaurant-assets, PROD-01 · migración 142) ──');
+  {
+    const r = await subeFoto(asA, A.id, 'dueno-a');
+    check('El dueño A (perfil de casa) sube una foto a su carpeta', r.ok, r.error);
+  }
+  {
+    const r = await subeFoto(asA, B.id, 'dueno-a-en-b');
+    check('El dueño A NO puede subir fotos a la carpeta de B', !r.ok, 'la subida pasó (¡mal!)');
+  }
+  {
+    // El que se registra solo: perfil sin restaurante + membresía de dueño.
+    const nuevo = await makeMember(A.id, 'dueno-nuevo', 'OWNER');
+    const r = await subeFoto(nuevo, A.id, 'dueno-nuevo');
+    check('El dueño registrado solo (solo membresía) sube una foto a su restaurante', r.ok, r.error);
+    const cruz = await subeFoto(nuevo, B.id, 'dueno-nuevo-en-b');
+    check('El dueño registrado solo NO puede subir fotos a otro restaurante', !cruz.ok, 'la subida pasó (¡mal!)');
+    await nuevo.auth.signOut();
+  }
+  {
+    // Miembro de B (con Catálogo) intentando la carpeta de A.
+    const deB = await makeMember(B.id, 'catalogo-b', 'STAFF', ['catalogo']);
+    const propia = await subeFoto(deB, B.id, 'catalogo-b');
+    check('Un miembro con «Catálogo» sube fotos a su restaurante', propia.ok, propia.error);
+    const r = await subeFoto(deB, A.id, 'catalogo-b-en-a');
+    check('Un miembro de OTRO restaurante NO puede subir fotos a A', !r.ok, 'la subida pasó (¡mal!)');
+    await deB.auth.signOut();
+  }
+  {
+    const soloPedidos = await makeMember(A.id, 'pedidos-a', 'STAFF', ['pedidos']);
+    const r = await subeFoto(soloPedidos, A.id, 'pedidos-a');
+    check('Un miembro solo con «Pedidos» NO puede subir fotos', !r.ok, 'la subida pasó (¡mal!)');
+    await soloPedidos.auth.signOut();
   }
 
   await asA.auth.signOut();
