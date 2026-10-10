@@ -50,6 +50,13 @@ export type CardStyle =
   | 'carrusel'  // fila horizontal desplazable por categoría
   | 'pieza';    // una pieza por pantalla: foto grande, nombre de cartel (Vitrina)
 
+/** La Vitrina se reconoce por su forma de platillo: con «pieza» el menú se
+    arma como tienda (barra arriba con la bolsa, sin barra de navegación
+    abajo, carta sin buscador ni píldoras). Ver components/menu/vitrina-bar.tsx. */
+export function isVitrina(config: { cardStyle?: CardStyle }): boolean {
+  return config.cardStyle === 'pieza';
+}
+
 /** Ambición del lienzo: cuánto quiere crecer el menú cuando hay pantalla de
     sobra. NO es un ancho fijo — en un teléfono los tres valen lo mismo y de
     tablet para arriba cada uno crece hasta su tope. El ancho en píxeles vive

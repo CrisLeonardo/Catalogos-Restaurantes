@@ -17,6 +17,7 @@ Rama `feat/estructura-vitrina`.
 - [x] **Cinta de anuncios** (`components/menu/cinta.tsx`, `content.vitrina.ticker`): se pinta en cualquier estructura si tiene texto.
 - [x] **Modo lanzamiento** (`launchMode`, `launchEndsAt`, `content.vitrina.*`): título de la edición, cuenta regresiva y piezas numeradas Nº 01 / NN sobre toda la carta.
 - [x] **«Quedan pocas»** (`showStockLeft`, `stockLeftBelow`): el servidor solo manda el número de los productos con inventario bajo el umbral (`withStockLeft` en `lib/db/menu.ts`); con el aviso apagado, el inventario no sale del servidor.
+- [x] **Fiel a la maqueta** (pedido del dueño el mismo día): en la Vitrina la barra de navegación de abajo se reemplaza por una **barra fija arriba** (marca + menú «···» con pedidos/puntos/cuenta/idioma + «Bolsa · N») y una **bolsa oscura** abajo (`components/menu/vitrina-bar.tsx`); la carta va sin «El menú», buscador ni píldoras, con rótulos «CATEGORÍA · N productos» o una sola alineación en lanzamiento; precio «Q45» con la moneda volada, botón de tinta y «− n +»; portada a 82 svh con botón en píldora; pie de página.
 - [x] Controles en el editor del dueño (pestaña Menú → «Cinta y lanzamientos») y en el del Super Admin.
 
 ## Fase 2 · Lo que necesita datos nuevos (migración 141) ⏳

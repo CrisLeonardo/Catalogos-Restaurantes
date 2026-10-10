@@ -1546,7 +1546,7 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
 }
 .m-pieza-name { margin: var(--m-sp-1) 0 0; text-wrap: balance; overflow-wrap: anywhere; }
 .m-pieza[data-unavailable="1"] .m-pieza-name { color: var(--u-text-3); }
-.m-pieza-desc { margin: 0; font-size: var(--m-fs-md); line-height: 1.5; max-width: 42ch; }
+.m-pieza-desc { margin: 0; font-size: var(--m-fs-md); line-height: 1.5; max-width: 42ch; color: var(--u-text-3); }
 .m-pieza-left {
   font-family: var(--ui-font-mono);
   font-size: var(--m-fs-sm);
@@ -1562,20 +1562,65 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
 }
 .m-pieza-buy .ct-price { line-height: 1; }
 .m-pieza-cta {
-  flex: 0 1 220px;
-  min-height: 52px;
+  flex: 1 1 0;
+  max-width: 220px;
+  height: 52px;
   padding: 0 var(--m-sp-4);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--m-sp-2);
   border-radius: var(--m-r-pill);
+  border: 2px solid var(--u-text);
+  background: var(--u-text);
+  color: var(--brand-bg);
+  font-family: var(--ui-font-sans);
   font-size: var(--m-fs-sm);
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
   cursor: pointer;
+}
+.m-pieza-cta:active { transform: scale(0.97); }
+.m-pieza-step {
+  flex: 1 1 0;
+  max-width: 220px;
+  height: 52px;
+  padding: 0 5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 2px solid var(--u-text);
+  border-radius: var(--m-r-pill);
+}
+.m-pieza-step button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--u-text);
+  color: var(--brand-bg);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.m-pieza-step b { font-family: var(--ui-font-mono); font-size: 16px; color: var(--u-text); }
+
+/* Precio de cartel: «Q45» con la moneda pequeña arriba. */
+.m-precio {
+  font-family: var(--font-poster);
+  font-size: calc(40px * var(--t-price-size, 1));
+  line-height: 1;
+  color: var(--u-text);
+  white-space: nowrap;
+}
+.m-precio[data-muted="1"] { color: var(--u-text-3); }
+.m-precio-sym {
+  font-family: var(--ui-font-mono);
+  font-size: 12px;
+  vertical-align: top;
+  margin-right: 2px;
 }
 .m-pieza-cta[data-off="1"] {
   background: transparent;
@@ -1663,6 +1708,193 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
   font-size: var(--m-fs-sm);
 }
 
+/* ── Armazón de la Vitrina (components/menu/vitrina-bar.tsx) ──────
+   Barra fija arriba con la marca y la bolsa; abajo, la bolsa como píldora
+   de tinta. Medidas de la maqueta aprobada (docs/diseno/vitrina). */
+.m-vt {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  max-width: 100vw;
+  z-index: 50;
+  padding-top: env(safe-area-inset-top, 0px);
+  background: color-mix(in srgb, var(--brand-bg) 92%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.m-vt-in {
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--m-sp-3);
+}
+.m-vt-brand { display: flex; flex-direction: column; min-width: 0; }
+.m-vt-name {
+  font-family: var(--font-poster);
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--u-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.m-vt-sub {
+  margin-top: 3px;
+  font-family: var(--ui-font-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--u-text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.m-vt-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.m-vt-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: var(--u-text);
+  cursor: pointer;
+}
+.m-vt-menu { position: relative; }
+.m-vt-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 190px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--m-r-md);
+  background: var(--brand-bg);
+  border: 1px solid var(--u-hair-2);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
+}
+.m-vt-pop button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--m-r-sm);
+  background: transparent;
+  color: var(--u-text);
+  font-size: var(--m-fs-md);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.m-vt-pop button:hover { background: var(--surface-2); }
+.m-vt-bag {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: var(--m-r-pill);
+  border: 1.5px solid var(--u-text);
+  background: transparent;
+  color: var(--u-text);
+  font-family: var(--ui-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.m-vbag-wrap {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  max-width: 100vw;
+  z-index: 40;
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+  pointer-events: none;
+}
+.m-vbag {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 448px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--m-sp-3);
+  padding: 8px 8px 8px 20px;
+  border-radius: var(--m-r-pill);
+  background: var(--u-text);
+  color: var(--brand-bg);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+.m-vbag-info { display: flex; flex-direction: column; font-family: var(--ui-font-mono); font-size: 12px; line-height: 1.35; white-space: nowrap; }
+.m-vbag-info b { font-size: 15px; }
+.m-vbag-cta {
+  height: 46px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--m-r-pill);
+  background: var(--brand-accent);
+  color: var(--brand-on-accent);
+  font-family: var(--ui-font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+/* «La alineación» (lanzamiento): un rótulo para toda la edición. */
+.m-lineup {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--m-sp-3);
+  padding: 36px 0 8px;
+  border-bottom: 1.5px solid var(--u-text);
+}
+.m-lineup h2 { margin: 0; font-size: 44px; line-height: 0.9; }
+.m-lineup span {
+  font-family: var(--ui-font-mono);
+  font-size: var(--m-fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--u-text-3);
+  padding-bottom: 4px;
+}
+.m-vfoot {
+  display: flex;
+  flex-direction: column;
+  padding: 40px 0 120px;
+  font-family: var(--ui-font-mono);
+  font-size: var(--m-fs-xs);
+  line-height: 1.8;
+  color: var(--u-text-3);
+}
+/* Portada: la altura de la maqueta (no una pantalla entera) y el botón en
+   píldora a la medida de su texto. */
+.menu-hero.is-vitrina { min-height: min(82svh, 720px); }
+.m-vitrina-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border: 0;
+  border-radius: var(--m-r-pill);
+  background: var(--brand-accent);
+  color: var(--brand-on-accent);
+  font-family: var(--ui-font-sans);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
 /* ── Cinta de anuncios ────────────────────────────────────────
    Corre de derecha a izquierda a todo el ancho de la ventana. El texto va
    duplicado (dos mitades iguales) y se desplaza media pista: así el bucle
@@ -1697,8 +1929,17 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
   border-bottom: 1px solid var(--u-hair);
 }
 .m-sec[data-poster="1"] {
-  border-bottom: 2px solid var(--u-text);
-  padding-top: var(--m-sp-5);
+  align-items: flex-end;
+  border-bottom: 1.5px solid var(--u-text);
+  padding-top: 36px;
+}
+.m-sec[data-poster="1"] .m-sec-count {
+  font-family: var(--ui-font-mono);
+  font-size: var(--m-fs-xs);
+  color: var(--u-text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding-bottom: 4px;
 }
 .m-sec-btn {
   display: flex;

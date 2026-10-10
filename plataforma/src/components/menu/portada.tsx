@@ -369,11 +369,11 @@ export default function Portada({ isOpen = true, fallbackImage = null }: {
             <p className="m-vitrina-sub" style={{ ...subT.vars }}>{subtitle}</p>
           )}
           {launch && config.launchEndsAt && <CuentaRegresiva endsAt={config.launchEndsAt} />}
-          <div style={{ width: '100%', maxWidth: 300, marginTop: 2 }}>
-            <PrimaryButton size="lg" full iconRight="arrowDown" onClick={scrollToMenu} elementKey="portadaCta">
-              {content.portada.cta}
-            </PrimaryButton>
-          </div>
+          {/* Píldora de acento a la medida de su texto, como en la maqueta: el
+              botón ancho de las otras portadas aquí competía con el titular. */}
+          <button type="button" className="press m-vitrina-cta" onClick={scrollToMenu}>
+            {content.portada.cta} <span aria-hidden>↓</span>
+          </button>
         </div>
       </section>
     );

@@ -11,6 +11,7 @@ import ActiveOrderChip from '@/components/active-order-chip';
 import WaiterCallButton from '@/components/menu/waiter-call-button';
 import RewardsSection from '@/components/menu/rewards-section';
 import BottomNav, { type NavTab } from '@/components/menu/bottom-nav';
+import { VitrinaBag, VitrinaTopBar } from '@/components/menu/vitrina-bar';
 import OverlayBackground from '@/components/menu/overlay-background';
 import { useCart } from '@/lib/cart-context';
 import { getScannedTable, watchScannedTable, isStandaloneLaunch } from '@/lib/table-session';
@@ -18,6 +19,7 @@ import { isKioskMode } from '@/lib/kiosk';
 import { getMyAccount } from '@/lib/actions/loyalty';
 import { hasAnyHours, isOpenNow, type WeeklyHours } from '@/lib/hours';
 import { useThemeConfig } from '@/lib/theme/context';
+import { isVitrina } from '@/lib/theme/defaults';
 import { sugerirAcompanantes } from '@/lib/menu-pairings';
 import type { Sugerencia } from '@/components/menu/pairings';
 import type { Category, Product } from '@/types';
@@ -168,6 +170,8 @@ export default function MenuClient({
      lo que ya hay en el carrito; en el carrito, contra lo que lleva. */
   const config = useThemeConfig();
   const pairingsOn = ordersEnabled && config.suggestPairings !== false;
+  // Vitrina: barra arriba con la bolsa, y abajo solo la bolsa (ver vitrina-bar.tsx).
+  const vitrina = isVitrina(config);
   const enCarrito = useMemo(() => items.map((i) => i.productId), [items]);
   const sheetPairings = useMemo(
     () => (pairingsOn && selected ? acompanantesPara([selected.id, ...enCarrito], products, categories, timezone) : []),
@@ -233,7 +237,20 @@ export default function MenuClient({
         />
       )}
 
-      {ordersEnabled && <CartBar onOpen={() => setCartOpen(true)} />}
+      {vitrina && (
+        <VitrinaTopBar
+          ordersEnabled={ordersEnabled}
+          loyaltyOn={loyaltyOn && !!restaurantId}
+          kiosk={kiosk}
+          onCart={() => { closeOverlays(); setCartOpen(true); }}
+          onPedidos={openPedidos}
+          onPuntos={openRewards}
+          onCuenta={openAccount}
+        />
+      )}
+      {ordersEnabled && (vitrina
+        ? !selected && !cartOpen && <VitrinaBag onOpen={() => setCartOpen(true)} />
+        : <CartBar onOpen={() => setCartOpen(true)} />)}
       {ordersEnabled && cartOpen && <CartPanel sugerencias={cartPairings} onClose={() => setCartOpen(false)} />}
       {ordersEnabled && restaurantId && !selected && !cartOpen && !kiosk && (
         <ActiveOrderChip restaurantId={restaurantId} />
@@ -246,7 +263,7 @@ export default function MenuClient({
       {/* Barra de navegación inferior — se oculta cuando hay un sheet de producto
           o carrito abierto, y en KIOSKO (cuenta/fidelidad/pedidos son datos
           personales que no deben quedar a la vista en un aparato compartido). */}
-      {ordersEnabled && !selected && !cartOpen && !kiosk && (
+      {ordersEnabled && !vitrina && !selected && !cartOpen && !kiosk && (
         <BottomNav
           active={activeTab}
           ordersEnabled={ordersEnabled}

@@ -25,7 +25,9 @@ import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { MenuSurface, Price, Tag, ctaClass } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { roleSize } from '@/lib/theme/resolve';
-import { LAYOUT_MIN_COL, type CardStyle, type LayoutWidth } from '@/lib/theme/defaults';
+import { LAYOUT_MIN_COL, isVitrina, type CardStyle, type LayoutWidth } from '@/lib/theme/defaults';
+import { PrecioCartel } from '@/components/menu/vitrina-bar';
+import { useCart } from '@/lib/cart-context';
 import { MOSAIC_MAX_TILE, canvasComposition, mosaicColumns, mosaicLayoutColumns, textColumns } from '@/lib/theme/canvas';
 import { useScreenTier } from '@/lib/theme/use-screen-tier';
 import { isOpenNow, nextOpenLabel, hasAnyHours, todayWindowLabel, type WeeklyHours } from '@/lib/hours';
@@ -258,8 +260,12 @@ export default function Catalog({
      entera escondería casi todo tras un deslizamiento lateral, así que en la
      vista "Todo" se agrupa por categoría — una fila por categoría, que es
      justo el patrón de las apps de delivery. */
+  const vitrina = isVitrina(config);
+  /* Vitrina en lanzamiento: la edición es UNA colección («La alineación»),
+     así que no se parte en secciones aunque el dueño use categorías. */
+  const alineacion = vitrina && config.launchMode && !searching;
   const groupByCategory =
-    !searching && (
+    !searching && !alineacion && (
       nav === 'secciones' || nav === 'acordeon' ||
       (nav === 'chips' && card === 'carrusel' && activeCat === null)
     );
@@ -270,6 +276,17 @@ export default function Catalog({
   const groups: Group[] = useMemo(() => {
     if (searching) {
       return [{ key: '_search', cat: null, items: searched, locked: false }];
+    }
+
+    if (alineacion) {
+      // En el orden de la carta (categoría por categoría), sin lo que está
+      // fuera de horario.
+      const orden = new Map(categories.map((c, i) => [c.id, i]));
+      const items = searched
+        .filter((p) => !(p.category_id != null && catAvail.get(p.category_id) === false))
+        .slice()
+        .sort((a, b) => (orden.get(a.category_id ?? '') ?? 999) - (orden.get(b.category_id ?? '') ?? 999));
+      return [{ key: '_alineacion', cat: null, items, locked: false }];
     }
 
     if (groupByCategory) {
@@ -303,7 +320,7 @@ export default function Catalog({
       items,
       locked: activeCat !== null && catAvail.get(activeCat) === false,
     }];
-  }, [searching, searched, groupByCategory, categories, catAvail, activeCat, nav]);
+  }, [searching, searched, groupByCategory, alineacion, categories, catAvail, activeCat, nav]);
 
   // Menús programados que ahora están fuera de horario. Solo se listan aparte
   // en chips/portadas; en secciones/acordeón ya salen (marcados) dentro de la carta.
@@ -422,6 +439,16 @@ export default function Catalog({
 
   return (
     <div ref={rootRef}>
+      {/* Vitrina: ni «El menú», ni buscador, ni píldoras. La carta empieza con
+          su primer rótulo de cartel (o con «La alineación» en lanzamiento);
+          el cambio de idioma vive en la barra de arriba. */}
+      {vitrina && alineacion && (
+        <div className="m-lineup">
+          <h2 className="t-poster">{content.catalog.heading}</h2>
+          <span>{totalItems} {totalItems === 1 ? content.cart.itemsOne : content.cart.itemsMany}</span>
+        </div>
+      )}
+      {!vitrina && (<>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
         <div style={{ minWidth: 0 }}>
@@ -519,6 +546,8 @@ export default function Catalog({
         </div>
       )}
 
+      </>)}
+
       {/* Volver del menú de una categoría al selector de portadas. */}
       {nav === 'portadas' && activeCat !== null && !searching && (
         <button
@@ -574,7 +603,7 @@ export default function Catalog({
           )}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: nav === 'acordeon' ? 8 : width === 'revista' ? 44 : width === 'ancho' ? 34 : 26, marginTop: groupByCategory ? 16 : 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: vitrina ? 0 : nav === 'acordeon' ? 8 : width === 'revista' ? 44 : width === 'ancho' ? 34 : 26, marginTop: groupByCategory && !vitrina ? 16 : 0 }}>
           {groups.map((g) => {
             const headed = groupByCategory && g.cat !== null;
             const collapsed = nav === 'acordeon' && openCatId !== g.key;
@@ -598,6 +627,7 @@ export default function Catalog({
                     open={!collapsed}
                     width={width}
                     poster={card === 'pieza'}
+                    countLabel={card === 'pieza' ? `${g.items.length} ${g.items.length === 1 ? content.cart.itemsOne : content.cart.itemsMany}` : undefined}
                     onToggle={() => setOpenCat(collapsed ? g.key : null)}
                   />
                 )}
@@ -952,13 +982,15 @@ function CategoryChip({ label, icon, active, unavailable = false, onClick }: { l
 /** Encabezado de sección. En acordeón es el botón que pliega y despliega; en
     secciones es un título con un filete que separa la carta a la vista. */
 function SectionHeader({
-  label, icon, count, locked, collapsible, open, width = 'movil', poster = false, onToggle,
+  label, icon, count, locked, collapsible, open, width = 'movil', poster = false, countLabel, onToggle,
 }: {
   label: string; icon?: string; count: number; locked: boolean;
   collapsible: boolean; open: boolean; width?: LayoutWidth;
   /** Vitrina: el rótulo de la sección es un cartel, a la escala de las piezas
       de debajo. A 20 px se perdía entre fotos de pantalla entera. */
   poster?: boolean;
+  /** Texto del contador («3 productos») en lugar del número solo. */
+  countLabel?: string;
   onToggle: () => void;
 }) {
   const t = useText('poster', 'catalogSection');
@@ -972,7 +1004,7 @@ function SectionHeader({
         {label}
       </span>
       {locked && <Icon name="clock" size={14} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />}
-      <span className="t-mono m-sec-count">{count}</span>
+      <span className="t-mono m-sec-count">{countLabel ?? count}</span>
       {collapsible && (
         <Icon
           name="chevronDown"
@@ -1392,6 +1424,12 @@ function PiezaTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAd
   const unavail = forceUnavailable || soldOut;
   const left = unavail ? null : stockLeftOf(p, config);
   const two = (n: number) => String(n).padStart(2, '0');
+  const { items, updateQuantity } = useCart();
+  /* El «− n +» de la maqueta solo cuando el producto no tiene opciones: con
+     opciones cada combinación es una línea distinta del carrito y «−» no
+     sabría cuál quitar. Ahí el botón dice cuántas llevas y agrega otra. */
+  const sinOpciones = !(Array.isArray(p.options) && p.options.some((g) => g.choices?.length > 0));
+  const linea = sinOpciones ? items.find((i) => i.productId === p.id) : undefined;
   return (
     <article className="m-pieza" data-unavailable={unavail ? '1' : undefined}>
       <button type="button" className="m-pieza-art" onClick={() => onOpen(p)} aria-label={`Ver ${name}`}>
@@ -1425,14 +1463,20 @@ function PiezaTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAd
         </div>
       )}
       <div className="m-pieza-buy">
-        <Price amount={displayPrice(p)} size={36} muted={unavail} />
+        <PrecioCartel amount={displayPrice(p)} muted={unavail} />
         {ordersEnabled && (
           soldOut ? (
             <span className="m-pieza-cta" data-off="1">{content.product.soldOut}</span>
+          ) : !unavail && linea ? (
+            <div className="m-pieza-step" role="group" aria-label={`${name}: ${linea.quantity} en tu pedido`}>
+              <button type="button" className="press" onClick={() => updateQuantity(linea.lineId, linea.quantity - 1)} aria-label={`Quitar un ${name}`}>−</button>
+              <b>{linea.quantity}</b>
+              <button type="button" className="press" onClick={(e) => onAdd(p, e.currentTarget)} aria-label={`Agregar otro ${name}`}>+</button>
+            </div>
           ) : !unavail && (
             <button
               type="button"
-              className={`press m-pieza-cta ct-button ${ctaClass(config.ctaStyle)}`}
+              className="press m-pieza-cta ct-button"
               onClick={(e) => onAdd(p, e.currentTarget)}
               aria-label={qty > 0 ? `Agregar otro ${name} (llevas ${qty})` : `Agregar ${name} a tu pedido`}
             >
