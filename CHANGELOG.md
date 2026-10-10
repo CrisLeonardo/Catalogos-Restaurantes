@@ -6,6 +6,8 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+## v0.11.0 — 2026-10-09 · Estructura Vitrina y lanzamientos
+`5388e2f` · migración 141
 - Orden de la carpeta: documentación en `docs/` por tipo, archivos de prueba fuera del repositorio.
 - Flujo de git: ramas + Pull Request, plantilla de commit, hooks `pre-push` y `commit-msg`, `.mailmap`.
 - Estructura de menú **Vitrina** (8.ª) para comercios que venden con la vista: pieza grande por producto, portada de cartel y paletas Cereza, Cacao y Pistache. Opcionales en cualquier estructura: cinta de anuncios, modo lanzamiento con cuenta regresiva y aviso «quedan pocas». Plan: [`PLAN_VITRINA_2026-10-09`](docs/planes/PLAN_VITRINA_2026-10-09.md).
