@@ -52,7 +52,7 @@ modo sin internet. **No está listo para vender todavía** por cuatro bloques:
 | PROD-06 | Borrar un corte de caja: sin firma, sin motivo, sin bitácora | P1 |
 | PROD-07 | ✅ Cobrar mesa: dos cobros a la vez o una ronda nueva al cobrar | P1 |
 | PROD-08 | ✅ Cambio de estado usa el restaurante «de casa» del perfil | P1 |
-| PROD-09 | Cancelación del comensal puede pisar la confirmación de cocina | P1 |
+| PROD-09 | ✅ Cancelación del comensal puede pisar la confirmación de cocina | P1 |
 | PROD-10 | Bitácora no registra precios, borrados, cupones, gastos ni cortes | P1 |
 | PROD-11 | Anular no devuelve puntos ni el uso del cupón | P2 |
 | PROD-12 | Borrado definitivo de platillos y categorías, sin papelera | P2 |
@@ -267,6 +267,21 @@ impresa. Además repone stock antes de saber si la cancelación entra.
 
 **Qué hacer.** `update … where status = 'NEW'` y reponer stock solo si cambió
 una fila (o hacerlo todo en un RPC como `void_order`).
+
+> ✅ **Hecho (2026-10-10), por la vía del RPC.** Exigir `NEW` en el update
+> desde la app no alcanza: `restock_order` no repone nada de un pedido ya en
+> `CANCEL`, así que el stock tiene que volver antes y en la misma
+> transacción. Migración `143_cancelacion_del_comensal_atomica.sql`:
+> `cancel_public_order(pedido, restaurante)` bloquea la fila, comprueba
+> `NEW`, repone y cancela; devuelve false si cocina llegó antes. Probado
+> contra la base local (cancela y repone una vez; segunda llamada y pedido
+> en `PREP` no tocan nada). `cancelPublicOrder` la usa y, si la función aún
+> no existe (`PGRST202`), sigue el camino de antes. Se puede aplicar antes o
+> después del despliegue; hasta que corra, la carrera sigue abierta.
+>
+> Queda aparte: `updateOrderStatus` deja pasar un pedido de `CANCEL` a
+> `PREP` (su condición es solo «distinto del estado nuevo»); es la misma
+> familia que PROD-14.
 
 ### PROD-10 · Bitácora incompleta para el antifraude — P1
 
@@ -630,3 +645,5 @@ inactividad, PIN de 4 cifras con bloqueo, confirmación antes de borrar.
   del pedido en comanda, puntos, FEL y bitácora.
 - **2026-10-10** — PROD-07 hecho: cobrar mesa cierra solo lo leído y
   registra el pago una vez.
+- **2026-10-10** — PROD-09 hecho: migración 143, la cancelación del
+  comensal es atómica.

@@ -200,3 +200,38 @@ describe('freeTable cierra solo lo que leyó y cobra una vez (PROD-07)', () => {
     expect(metodos.map((c) => filtro(c, 'eq', 'id'))).toEqual(['o-1']);
   });
 });
+
+describe('cancelPublicOrder no pisa la confirmación de cocina (PROD-09)', () => {
+  function montar(rpc: { data?: unknown; error?: unknown }) {
+    h.sesion = dobleDeSupabase(() => undefined);
+    h.servicio = dobleDeSupabase((c) => {
+      if (c.tabla === 'orders' && c.op === 'select') return { data: { id: 'o-1', status: 'NEW', restaurant_id: RID } };
+      if (c.tabla === 'cancel_public_order') return rpc;
+    });
+  }
+  const rpcs = () => h.servicio.consultas.filter((c) => c.op === 'rpc').map((c) => c.tabla);
+  const updates = () => h.servicio.consultas.filter((c) => c.tabla === 'orders' && c.op === 'update');
+
+  it('cancela y repone de una vez, en la base (migración 143)', async () => {
+    montar({ data: true });
+    expect(await cancelPublicOrder(TOKEN, RID)).toEqual({ success: true });
+    expect(rpcs()).toEqual(['cancel_public_order']);
+    expect(h.servicio.consultas.find((c) => c.op === 'rpc')!.valores).toEqual({ p_order_id: 'o-1', p_restaurant_id: RID });
+    expect(updates()).toHaveLength(0);
+  });
+
+  it('si cocina aceptó en ese segundo: no cancela ni repone stock', async () => {
+    montar({ data: false });
+    const res = await cancelPublicOrder(TOKEN, RID);
+    expect(res.error).toMatch(/confirmado/);
+    expect(rpcs()).not.toContain('restock_order');
+    expect(updates()).toHaveLength(0);
+  });
+
+  it('sin la 143 en la base vuelve al camino de antes', async () => {
+    montar({ error: { code: 'PGRST202', message: 'Could not find the function' } });
+    expect(await cancelPublicOrder(TOKEN, RID)).toEqual({ success: true });
+    expect(rpcs()).toEqual(['cancel_public_order', 'restock_order']);
+    expect(updates()).toHaveLength(1);
+  });
+});

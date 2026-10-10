@@ -35,7 +35,7 @@ import { repartirPagos, metodoDominante, type PagoEntrada } from '@/lib/table-pa
 import { hayColumnaMesa, direccionDeMesa } from '@/lib/db/mesa-columna';
 import { assertTableAccess } from '@/lib/auth/table-access';
 import { cerrarTurnoDeMesa, hayPagosDeMesa } from '@/lib/db/table-sessions';
-import { faltaLaColumna, faltaLaTabla } from '@/lib/db/migracion-ausente';
+import { faltaLaColumna, faltaLaFuncion, faltaLaTabla } from '@/lib/db/migracion-ausente';
 
 /**
  * «Los pedidos de la mesa N», como par columna/valor.
@@ -2664,10 +2664,26 @@ export async function cancelPublicOrder(
   if (!order || order.restaurant_id !== restaurantId)
     return { error: 'Pedido no encontrado.' };
 
-  if (order.status !== 'NEW')
-    return { error: 'Solo puedes cancelar un pedido que aún no ha sido confirmado por el restaurante.' };
+  const yaConfirmado = 'Solo puedes cancelar un pedido que aún no ha sido confirmado por el restaurante.';
+  if (order.status !== 'NEW') return { error: yaConfirmado };
 
-  // Devolver stock antes de marcar CANCEL (idempotente en BD).
+  /* Comprobar NEW, reponer stock y cancelar, de una vez y con la fila
+     bloqueada (migración 143, PROD-09). Hacerlo en tres pasos desde aquí
+     dejaba un hueco: si cocina aceptaba entre la lectura y el update, el
+     pedido quedaba cancelado con la comanda ya impresa. Y no basta con
+     exigir NEW en el update: `restock_order` no repone nada de un pedido
+     ya cancelado, así que el stock tiene que volver antes, en la misma
+     transacción. */
+  const { data: cancelado, error: errRpc } = await db.rpc('cancel_public_order', {
+    p_order_id: order.id,
+    p_restaurant_id: restaurantId,
+  });
+  if (!faltaLaFuncion(errRpc)) {
+    if (errRpc) return { error: errRpc.message };
+    return cancelado ? { success: true } : { error: yaConfirmado };
+  }
+
+  // Sin la 143 todavía en esta base: el camino de antes.
   await db.rpc('restock_order', { p_order_id: order.id });
 
   const { error } = await db
