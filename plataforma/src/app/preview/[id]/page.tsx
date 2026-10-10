@@ -6,6 +6,9 @@ import { getRestaurantFullById } from '@/lib/db/super-admin';
 import { getMenuData, withStockLeft } from '@/lib/db/menu';
 import { getArchivoVitrinaCached } from '@/lib/db/vitrina';
 import { getMyMembership } from '@/lib/db/membership';
+import { getPublicLoyaltyCached, type PublicReward } from '@/lib/db/loyalty';
+import { isModuleActive } from '@/lib/modules';
+import { isGoogleAuthEnabled } from '@/lib/auth-config';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import { DEMO_CATEGORIES, DEMO_PRODUCTS } from '@/lib/demo-menu';
 import PreviewClient from '@/components/super/preview-client';
@@ -124,6 +127,18 @@ export default async function PreviewPage({
   const [menu, archivo] = await Promise.all([getMenuData(row.id), getArchivoVitrinaCached(row.id)]);
   const hasMenu = menu.products.length > 0;
 
+  /* Lo mismo que le llega al menú real (src/app/page.tsx): WhatsApp, módulos,
+     fidelidad e idiomas cambian la portada y la barra de navegación, y el
+     dueño tiene que ver el diseño que va a abrir el comensal. */
+  const mod = row.modules as Record<string, boolean> | null;
+  const modSettings = row.module_settings ?? null;
+  const loyaltyOn = isModuleActive(mod, modSettings, 'loyalty');
+  let rewardsCatalog: PublicReward[] | null = null;
+  if (loyaltyOn) {
+    const { settings, rewards } = await getPublicLoyaltyCached(row.id);
+    if (settings.rewards_enabled) rewardsCatalog = rewards;
+  }
+
   return (
     <PreviewClient
       previewId={row.id}
@@ -137,6 +152,18 @@ export default async function PreviewPage({
       ordersEnabled={row.modules?.orders === true}
       sampleData={!hasMenu}
       archivo={archivo}
+      menuExtras={{
+        timezone: row.timezone || 'America/Guatemala',
+        llamadaMeseroEnabled: isModuleActive(mod, modSettings, 'llamada_mesero'),
+        loyaltyOn,
+        rewardsCatalog,
+        googleAuthEnabled: isGoogleAuthEnabled(),
+        whatsappNumber: row.orders_whatsapp || row.whatsapp_number || null,
+        restaurantLat: row.location_lat,
+        restaurantLng: row.location_lng,
+        deliveryRadiusKm: row.delivery_radius_km,
+        menuLanguages: row.menu_languages ?? [],
+      }}
     />
   );
 }

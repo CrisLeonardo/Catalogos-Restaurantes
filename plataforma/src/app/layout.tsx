@@ -24,7 +24,7 @@ import {
   buildFontsHref,
   type ResolvedTheme,
 } from '@/lib/theme/resolve';
-import { DEMO_SLUG } from '@/lib/tenant';
+import { DEMO_SLUG, isPlatformSurface } from '@/lib/tenant';
 
 /**
  * Fuente de INTERFAZ. Es la única que renderiza texto en TODAS las superficies
@@ -213,7 +213,7 @@ export default async function RootLayout({
    * Los menús de los tenants NO cambian: en cuanto hay slug manda
    * config.scheme, que es lo que el restaurante eligió en su tema.
    */
-  const isPlatform = !slug;
+  const isPlatform = isPlatformSurface(slug, headersList.get('x-pathname'));
   const scheme = resolved?.config.scheme ?? (isPlatform ? 'light' : 'dark');
 
   // Analítica sin cookies, solo en la web de Leogin (WEB-01, lib/analytics.ts).

@@ -153,6 +153,26 @@ export function getTenantSlug(host: string | null | undefined): string | null {
 }
 
 /**
+ * ¿La página pertenece al SITIO PÚBLICO DE LEOGIN (landing, planes, login…)
+ * y no al menú de un restaurante? Decide si el layout raíz pone
+ * `html[data-platform]`, la paleta clara de Leogin.
+ *
+ * "Sin slug" no basta: `/preview/*` —el iframe del editor de personalización—
+ * pinta el MENÚ de un restaurante pero se abre en el dominio raíz, o sea sin
+ * slug. Si se tomaba por plataforma, `html[data-platform]` (1,1,0) le ganaba a
+ * las variables del tema, que van en `:root` (0,1,0): la vista previa salía con
+ * el coral y los grises de Leogin en vez de los colores del restaurante.
+ */
+export function isPlatformSurface(
+  slug: string | null | undefined,
+  pathname: string | null | undefined,
+): boolean {
+  if (slug) return false;
+  const ruta = pathname ?? "";
+  return ruta !== "/preview" && !ruta.startsWith("/preview/");
+}
+
+/**
  * Devuelve true cuando el host es el subdominio admin del tenant.
  * Patrón: SLUG-admin.leogin.online  (un solo nivel, cubierto por *.leogin.online)
  * Ejemplos: mi-restaurante-admin.leogin.online → true
