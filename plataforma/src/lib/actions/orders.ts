@@ -1182,20 +1182,32 @@ export async function freeTable(
     delivered_at: new Date().toISOString(),
   };
 
-  /* Se cierran de una vez los que comparten método —que es el caso normal,
-     y sigue siendo UN update— y aparte los que no. */
-  const { data: cerrados, error } = await db
-    .from('orders')
-    .update(cierre)
-    .eq('restaurant_id', restaurantId)
-    .eq(colMesa, valMesa)
-    .eq('order_type', 'DINE_IN')
-    .not('status', 'in', '("DELIVERED","CANCEL")')
-    .select('id');
+  /* Se cierran SOLO los pedidos que se leyeron arriba, y solo si siguen
+     abiertos (PROD-07, auditoría de salida a producción). Antes se cerraba
+     «todo lo abierto en la mesa en este momento»: una ronda que el mesero
+     mandaba justo mientras caja cobraba quedaba cerrada sin pago, y dos
+     aparatos cobrando a la vez registraban el pago dos veces. Lo que
+     devuelve el `update` es lo que ESTA llamada cerró de verdad, y solo
+     de eso se escribe el método y el detalle del pago. */
+  let ids: string[] = [];
+  if (ordenes.length > 0) {
+    const { data: cerrados, error } = await db
+      .from('orders')
+      .update(cierre)
+      .eq('restaurant_id', restaurantId)
+      .in('id', ordenes.map((o) => o.id))
+      .not('status', 'in', '("DELIVERED","CANCEL")')
+      .select('id');
 
-  if (error) return { error: error.message };
+    if (error) return { error: error.message };
+    ids = (cerrados ?? []).map((r) => r.id as string);
+    // Otro aparato cobró la mesa entre la lectura y el cierre.
+    if (ids.length === 0) return { error: 'Esta mesa ya se cobró.' };
+  }
+  const cerradosAqui = new Set(ids);
 
   for (const [orderId, metodo] of metodoDe) {
+    if (!cerradosAqui.has(orderId)) continue;
     await db
       .from('orders')
       .update({ payment_method: metodo, cash_amount: recibidoDe.get(orderId) ?? null })
@@ -1205,8 +1217,9 @@ export async function freeTable(
   /* Y el detalle, fila por fila. Si la 129 todavía no corrió aquí, el
      cobro NO se cae: la mesa se cierra igual con su método dominante,
      que es exactamente lo que hacía antes de esta migración. */
-  if (filas.length > 0 && (await hayPagosDeMesa())) {
-    await db.from('order_payments').insert(filas.map((f) => ({
+  const filasCerradas = filas.filter((f) => cerradosAqui.has(f.orderId));
+  if (filasCerradas.length > 0 && (await hayPagosDeMesa())) {
+    await db.from('order_payments').insert(filasCerradas.map((f) => ({
       restaurant_id: restaurantId,
       order_id: f.orderId,
       method: f.method,
@@ -1231,7 +1244,6 @@ export async function freeTable(
 
   // Una factura por pedido cerrado. En `after` para no dejar al mesero
   // esperando al certificador con la mesa ocupada en pantalla.
-  const ids = (cerrados ?? []).map((r) => r.id as string);
   if (ids.length > 0) {
     after(async () => {
       for (const id of ids) await emitirFacturaAutomatica(restaurantId, id);

@@ -50,7 +50,7 @@ modo sin internet. **No está listo para vender todavía** por cuatro bloques:
 | PROD-04 | Caja: después de medianoche el «día» es otro | **P0** para bares, P1 resto |
 | PROD-05 | No hay forma de corregir un cobro (método o mesa equivocada) | **P0** |
 | PROD-06 | Borrar un corte de caja: sin firma, sin motivo, sin bitácora | P1 |
-| PROD-07 | Cobrar mesa: dos cobros a la vez o una ronda nueva al cobrar | P1 |
+| PROD-07 | ✅ Cobrar mesa: dos cobros a la vez o una ronda nueva al cobrar | P1 |
 | PROD-08 | ✅ Cambio de estado usa el restaurante «de casa» del perfil | P1 |
 | PROD-09 | Cancelación del comensal puede pisar la confirmación de cocina | P1 |
 | PROD-10 | Bitácora no registra precios, borrados, cupones, gastos ni cortes | P1 |
@@ -222,6 +222,14 @@ que leyó. Y dos cobros simultáneos leen la misma lista.
 **Qué hacer.** Cerrar con `.in('id', idsLeídos)` y registrar pagos solo de
 las filas que esta llamada cerró de verdad (las que devuelve el `update`); si
 no cerró ninguna, «Esta mesa ya se cobró».
+
+> ✅ **Hecho (2026-10-10).** `freeTable` cierra con `.in('id', idsLeídos)`
+> y conserva la condición «sigue abierto»; método, efectivo recibido y
+> `order_payments` se escriben solo para los ids que devolvió su `update`.
+> Si leyó pedidos y no cerró ninguno, devuelve «Esta mesa ya se cobró.» sin
+> tocar pagos ni el turno (el panel lo enseña como aviso). Liberar una mesa
+> sin pedidos abiertos sigue funcionando igual. Pruebas en
+> `orders-carreras.test.ts` (fallan con el código anterior).
 
 ### PROD-08 · El cambio de estado usa el restaurante «de casa» — P1
 
@@ -620,3 +628,5 @@ inactividad, PIN de 4 cifras con bloqueo, confirmación antes de borrar.
   sección), probada contra la base local y añadida a `test-aislamiento.mjs`.
 - **2026-10-10** — PROD-08 hecho: `updateOrderStatus` usa el restaurante
   del pedido en comanda, puntos, FEL y bitácora.
+- **2026-10-10** — PROD-07 hecho: cobrar mesa cierra solo lo leído y
+  registra el pago una vez.

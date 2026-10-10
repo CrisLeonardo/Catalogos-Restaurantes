@@ -159,3 +159,44 @@ describe('updateOrderStatus usa el restaurante del pedido (PROD-08)', () => {
     expect(logActivity).not.toHaveBeenCalled();
   });
 });
+
+describe('freeTable cierra solo lo que leyó y cobra una vez (PROD-07)', () => {
+  /** Mesa con dos pedidos abiertos al leer; `cierra` = lo que devuelve el update. */
+  function montar(cierra: string[]) {
+    h.sesion = dobleDeSupabase(() => undefined);
+    h.servicio = dobleDeSupabase((c) => {
+      if (c.tabla !== 'orders') return;
+      if (c.op === 'select') return { data: [{ id: 'o-1', total: 60 }, { id: 'o-2', total: 40 }] };
+      if (c.op === 'update' && (c.valores as { status?: string }).status === 'DELIVERED') {
+        return { data: cierra.map((id) => ({ id })) };
+      }
+    });
+  }
+  const cierre = () => h.servicio.consultas.find((c) => c.op === 'update' && (c.valores as { status?: string }).status === 'DELIVERED')!;
+  const pagos = () => h.servicio.consultas.filter((c) => c.tabla === 'order_payments' && c.op === 'insert');
+
+  it('el cierre va por los ids leídos: una ronda que llega mientras se cobra queda abierta', async () => {
+    montar(['o-1', 'o-2']);
+    expect(await freeTable(RID, 4, { method: 'CASH' })).toEqual({});
+    expect(filtro(cierre(), 'in', 'id')).toEqual(['o-1', 'o-2']);
+    const filas = pagos()[0].valores as { order_id: string; amount: number }[];
+    expect(filas.map((f) => f.order_id).sort()).toEqual(['o-1', 'o-2']);
+    expect(filas.reduce((s, f) => s + f.amount, 0)).toBe(100);
+  });
+
+  it('si otro aparato ya la cobró: «Esta mesa ya se cobró» y ningún pago', async () => {
+    montar([]);
+    expect(await freeTable(RID, 4, { method: 'CASH' })).toEqual({ error: 'Esta mesa ya se cobró.' });
+    expect(pagos()).toHaveLength(0);
+    expect(cerrarTurnoDeMesa).not.toHaveBeenCalled();
+  });
+
+  it('solo registra el pago de las filas que esta llamada cerró', async () => {
+    montar(['o-1']);
+    expect(await freeTable(RID, 4, { method: 'CARD' })).toEqual({});
+    const filas = pagos()[0].valores as { order_id: string }[];
+    expect(filas.map((f) => f.order_id)).toEqual(['o-1']);
+    const metodos = h.servicio.consultas.filter((c) => c.op === 'update' && 'payment_method' in (c.valores as object));
+    expect(metodos.map((c) => filtro(c, 'eq', 'id'))).toEqual(['o-1']);
+  });
+});
