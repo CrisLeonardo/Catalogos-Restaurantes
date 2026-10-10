@@ -59,8 +59,8 @@ modo sin internet. **No está listo para vender todavía** por cuatro bloques:
 | PROD-13 | Límite de usos del cupón no atómico; canje de puntos ignora errores | P2 |
 | PROD-14 | El servidor deja retroceder un pedido ya entregado | P2 |
 | PROD-15 | Tarjetas de regalo: existen en la base, no en pantalla | P2 |
-| SEG-01 | 🧪 Next.js 16.2.7 con vulnerabilidad **crítica** (saltarse el proxy) | **P0** |
-| SEG-02 | 🧪 `sharp` con vulnerabilidades altas y procesa fotos subidas | **P0** |
+| SEG-01 | ✅ ~~🧪 Next.js 16.2.7 con vulnerabilidad **crítica** (saltarse el proxy)~~ → 16.3.8 | **P0** |
+| SEG-02 | ✅ ~~🧪 `sharp` con vulnerabilidades altas y procesa fotos subidas~~ → 0.35.5 | **P0** |
 | SEG-03 | La CI no corre las pruebas unitarias ni el `build` | P1 |
 | SEG-04 | El E2E no cubre el embudo de venta (registro → primer pedido) | P1 |
 | SEG-05 | Sin Dependabot ni `npm audit` automático | P1 |
@@ -297,7 +297,7 @@ venden bien en temporada) o quitarlas de la oferta para no prometerlas.
 
 ## B. Seguridad, dependencias y pruebas
 
-### SEG-01 · 🧪 Next.js con vulnerabilidad crítica — **P0**
+### SEG-01 · 🧪 Next.js con vulnerabilidad crítica — **P0** · ✅ Hecho 2026-10-10
 
 `npm audit` sobre las dependencias de producción: **1 crítica, 8 altas**.
 La crítica es de `next@16.2.7` (rango afectado ≤ 16.3.7), e incluye
@@ -308,13 +308,41 @@ proxy de este sistema decide el restaurante y **borra las cabeceras internas**
 última 16.x parcheada, `rm -rf .next`, correr typecheck, pruebas, E2E y un
 barrido visual.
 
-### SEG-02 · 🧪 `sharp` vulnerable — **P0**
+> **Hecho 2026-10-10** (rama `fix/seguridad-dependencias`): `next` y
+> `eslint-config-next` a **16.3.8**, la última de la 16.3 y la primera sin
+> ningún aviso de `npm audit` (la 16.4.0 tenía tres días; Dependabot la
+> propondrá aparte). Las notas de 16.3.0–16.3.8 no traen cambios
+> incompatibles para el proxy, las server actions, `after()` ni los
+> `redirects()` de `next.config.ts`; lo único visible es que `next dev`
+> reescribe el bloque de `plataforma/AGENTS.md`. Verificado: tipos, lint,
+> 947 pruebas, `build` (también sin `.env.local`, como en la CI), E2E (2/2)
+> y barrido en el navegador: menú público por subdominio, login del dueño,
+> Hoy, Tomar pedidos (mesa abierta con la carta) y Caja, sin errores en
+> consola ni en el servidor. Una cabecera `x-tenant-slug` enviada por el
+> cliente sigue sin efecto (el proxy la borra) y la redirección de
+> `/admin/impresion` a `/admin/mi-pc` sigue en 307.
+
+### SEG-02 · 🧪 `sharp` vulnerable — **P0** · ✅ Hecho 2026-10-10
 
 `sharp ≤ 0.35.5-rc.1`: fallos de libvips, libheif y librsvg. La ruta `/img`
 procesa con `sharp` **fotos que suben los restaurantes**, o sea, entrada de
 terceros. Subir a `sharp@0.35.5` (cambio mayor: revisar `/img`). Los demás
 avisos (`postcss` de Next, `uuid` vía `exceljs`, `source-map-js`) se van con
 `npm audit fix` y con SEG-01.
+
+> **Hecho 2026-10-10:** `sharp` a **0.35.5**. De sus cambios incompatibles
+> (Node ≥ 20.9, quitar `failOnError`, `paletteBitDepth`, `format.jp2k`,
+> `limitInputChannels` = 5) ninguno toca `/img`, que solo usa `failOn`,
+> `limitInputPixels`, `metadata()`, `rotate`, `resize`, `webp` y
+> `toBuffer`; `src/lib/asset-image.ts` no usa `sharp`. Probado `/img` con
+> JPG, PNG y WebP reales: se reducen a 640/1080 y salen en WebP; un WebP que
+> ya cabe se sirve tal cual; ancho fuera de lista y foto inexistente dan 404.
+> Con `npm audit fix` (sin `--force`) se fueron `axios`, `postcss`,
+> `source-map-js`, `brace-expansion`, `nanoid` y `dompurify`. **Quedan** en
+> producción: `node-forge` (alta, **sin versión arreglada**; llega por
+> `acme-client` y el código no pasa por la parte vulnerable, ver
+> `scripts/audit-dependencias.mjs`) y `uuid` vía `exceljs` (moderada; su
+> arreglo es bajar `exceljs` a 3.4, que es peor).
 
 ### SEG-03 · La CI no corre las pruebas unitarias ni el build — P1
 
