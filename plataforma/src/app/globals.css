@@ -1895,6 +1895,125 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
   cursor: pointer;
 }
 
+/* ── Vitrina · Fase 2: edición, archivo y próximo drop ──────── */
+.m-vitrina-ghost {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 18px;
+  border: 1.5px solid #fff;
+  border-radius: var(--m-r-pill);
+  color: #fff;
+  background: transparent;
+  font-family: var(--ui-font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.m-sheet-closed {
+  flex: 1;
+  padding: 14px 16px;
+  border-radius: var(--m-r-pill);
+  border: 1.5px solid var(--u-hair-2);
+  color: var(--u-text-2);
+  font-weight: 700;
+  text-align: center;
+}
+/* «Quedan 9 de 30 ▬▬▬── 70 %» */
+.m-pieza-stock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--ui-font-mono);
+  font-size: var(--m-fs-xs);
+  color: var(--brand-accent-ink);
+}
+.m-pieza-bar { flex: 1; height: 4px; border-radius: 4px; background: var(--u-hair); overflow: hidden; }
+.m-pieza-bar i { display: block; height: 100%; background: var(--brand-accent); }
+.m-varch { padding-top: 44px; }
+.m-varch-title { margin: 0; font-size: 44px; line-height: 0.9; }
+.m-varch-sub { margin: 6px 0 16px; color: var(--u-text-3); font-size: var(--m-fs-md); }
+.m-varch-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  margin-inline: calc(-1 * var(--menu-pad));
+  padding-inline: var(--menu-pad);
+  padding-bottom: 8px;
+}
+.m-varch-row figure { margin: 0; flex: 0 0 62%; max-width: 260px; scroll-snap-align: start; }
+.m-varch-ph {
+  position: relative;
+  aspect-ratio: 1;
+  max-width: 100%;
+  border-radius: var(--m-r-md);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.m-varch-ph img { filter: grayscale(1); }
+.m-varch-ph[data-agotada="1"]::after {
+  content: 'AGOTADO';
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 4px 7px;
+  font-family: var(--ui-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  background: var(--u-text);
+  color: var(--brand-bg);
+}
+.m-varch-row figcaption {
+  margin-top: 8px;
+  font-family: var(--ui-font-mono);
+  font-size: var(--m-fs-xs);
+  line-height: 1.5;
+  color: var(--u-text-3);
+}
+.m-varch-row figcaption b {
+  display: block;
+  font-family: var(--font-poster);
+  font-weight: 400;
+  font-size: 20px;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--u-text);
+}
+.m-vnext {
+  position: relative;
+  margin-top: 40px;
+  aspect-ratio: 4 / 3;
+  max-width: 100%;
+  border-radius: var(--m-r-md);
+  overflow: hidden;
+  background: #1a1a1a;
+  color: #fff;
+}
+.m-vnext-bg { position: absolute; inset: 0; }
+.m-vnext-bg img { filter: blur(14px) brightness(0.6); transform: scale(1.15); }
+.m-vnext-in {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px;
+  text-align: center;
+}
+.m-vnext-title { font-family: var(--font-poster); font-size: clamp(48px, 16vw, 72px); line-height: 0.9; text-transform: uppercase; }
+.m-vnext-date {
+  margin-bottom: 10px;
+  font-family: var(--ui-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
 /* ── Cinta de anuncios ────────────────────────────────────────
    Corre de derecha a izquierda a todo el ancho de la ventana. El texto va
    duplicado (dos mitades iguales) y se desplaza media pista: así el bucle

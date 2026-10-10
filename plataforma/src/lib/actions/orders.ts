@@ -12,6 +12,7 @@ import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { sendPushToRestaurant } from '@/lib/push';
 import { resolveTheme, computeTip, type ThemeRow } from '@/lib/theme/resolve';
 import type { ThemeConfig } from '@/lib/theme/defaults';
+import { edicionPermitePedir, estadoEdicion, motivoSinPedidos } from '@/lib/vitrina/edicion';
 import { isOpenNow, type WeeklyHours, type HourExceptions } from '@/lib/hours';
 import { resolveCoupon } from '@/lib/db/cupones';
 import { getDeliveryZones, zoneFeeFrom, type DeliveryZone } from '@/lib/db/zones';
@@ -405,6 +406,18 @@ export async function createOrder(
     )
   ) {
     return { error: 'El restaurante está cerrado en este momento.' };
+  }
+
+  // Vitrina en modo lanzamiento: fuera de la edición (aún no abre o ya
+  // cerró) el cliente no puede pedir, aunque tenga la página abierta desde
+  // antes. Solo aquí, en el pedido del CLIENTE: mesero, caja y hub siguen
+  // registrando lo que el negocio decida (lib/vitrina/edicion.ts).
+  {
+    const tema = resolveTheme((themeRow as ThemeRow) ?? null);
+    const edicion = estadoEdicion(tema.config, Date.now());
+    if (!edicionPermitePedir(edicion)) {
+      return { error: motivoSinPedidos(edicion, tema.content.vitrina.launchClosed, (restaurant.timezone as string) || 'America/Guatemala') };
+    }
   }
 
   // Cobertura de delivery: si el restaurante configuró zonas, el pedido a

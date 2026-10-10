@@ -38,7 +38,7 @@ export const OWNER_BASIC_KEYS = [
   'showSearch', 'showCategoryIcons', 'productArt', 'showTags', 'featuredFavorites',
   'suggestPairings',
   // Cinta y lanzamientos (pestaña Menú)
-  'showStockLeft', 'stockLeftBelow', 'launchMode', 'launchEndsAt',
+  'showStockLeft', 'stockLeftBelow', 'launchMode', 'launchOpensAt', 'launchEndsAt',
 ] as const satisfies readonly Key[];
 
 /** Los remates: fondo, vidrio, forma y familias tipográficas. Un restaurante

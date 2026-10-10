@@ -18,6 +18,7 @@ import MenuShell from '@/components/menu-shell';
 import ThemeBackground from '@/components/theme-background';
 import { buildThemeVars, buildFontsHref, sanitizeCustomCss } from '@/lib/theme/resolve';
 import type { ThemeConfig, ThemeContent } from '@/lib/theme/defaults';
+import type { EdicionArchivada } from '@/lib/db/vitrina';
 import type { Category, Product } from '@/types';
 
 /** Neutraliza el tema estático que layout.tsx renderiza server-side (fondo,
@@ -64,6 +65,8 @@ interface Props {
   ordersEnabled: boolean;
   /** true cuando el restaurante aún no tiene productos y se muestra el menú de ejemplo. */
   sampleData?: boolean;
+  /** Ediciones cerradas de la Vitrina (migración 141). */
+  archivo?: EdicionArchivada[];
 }
 
 export default function PreviewClient({
@@ -75,6 +78,7 @@ export default function PreviewClient({
   products,
   ordersEnabled,
   sampleData = false,
+  archivo = [],
 }: Props) {
   const [state, setState] = useState<ThemePreviewState>({
     config: initialConfig,
@@ -192,6 +196,7 @@ export default function PreviewClient({
         products={products}
         restaurantId={`preview-${previewId}`}
         ordersEnabled={ordersEnabled}
+        archivo={archivo}
       />
 
       {/* CSS propio del restaurante: ÚLTIMO → gana sobre las vars del tema. */}

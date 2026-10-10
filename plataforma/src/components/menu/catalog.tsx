@@ -27,6 +27,8 @@ import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { roleSize } from '@/lib/theme/resolve';
 import { LAYOUT_MIN_COL, isVitrina, type CardStyle, type LayoutWidth } from '@/lib/theme/defaults';
 import { PrecioCartel } from '@/components/menu/vitrina-bar';
+import { useEdicion } from '@/lib/vitrina/use-edicion';
+import { edicionPermitePedir, fechaCorta } from '@/lib/vitrina/edicion';
 import { useCart } from '@/lib/cart-context';
 import { MOSAIC_MAX_TILE, canvasComposition, mosaicColumns, mosaicLayoutColumns, textColumns } from '@/lib/theme/canvas';
 import { useScreenTier } from '@/lib/theme/use-screen-tier';
@@ -45,6 +47,9 @@ type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'descr
   /** Unidades que quedan, solo si el dueño encendió «Quedan pocas» y son
       pocas (lo pega `withStockLeft` en el servidor; ver lib/db/menu.ts). */
   stock_left?: number | null;
+  /** En lanzamiento: las que había al abrir la edición (quedan + vendidas),
+      para «Quedan 9 de 30» con su barra. */
+  stock_total?: number | null;
 };
 
 /** Las unidades que quedan, si hay que avisarlas. La vista previa del editor
@@ -1430,6 +1435,12 @@ function PiezaTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAd
      sabría cuál quitar. Ahí el botón dice cuántas llevas y agrega otra. */
   const sinOpciones = !(Array.isArray(p.options) && p.options.some((g) => g.choices?.length > 0));
   const linea = sinOpciones ? items.find((i) => i.productId === p.id) : undefined;
+  // Fuera de la edición (aún no abre o ya cerró) no se agrega: el servidor
+  // rechazaría el pedido igual (createOrder).
+  const edicionVitrina = useEdicion();
+  const fueraDeEdicion = !edicionPermitePedir(edicionVitrina);
+  const total = left !== null && p.stock_total && p.stock_total >= left ? p.stock_total : null;
+  const vendido = total ? Math.round(((total - left!) / total) * 100) : 0;
   return (
     <article className="m-pieza" data-unavailable={unavail ? '1' : undefined}>
       <button type="button" className="m-pieza-art" onClick={() => onOpen(p)} aria-label={`Ver ${name}`}>
@@ -1457,7 +1468,13 @@ function PiezaTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAd
       </h3>
       {description && <p className="ct-product-desc m-pieza-desc">{description}</p>}
       <DietaryBadges keys={p.dietary_tags} size={15} />
-      {left !== null && (
+      {left !== null && total !== null ? (
+        <div className="m-pieza-stock" role="status">
+          <span>Quedan {left} de {total}</span>
+          <span className="m-pieza-bar" aria-hidden><i style={{ width: `${vendido}%` }} /></span>
+          <span>{vendido}%</span>
+        </div>
+      ) : left !== null && (
         <div className="m-pieza-left" role="status">
           {left === 1 ? '¡Queda la última!' : `¡Solo quedan ${left}!`}
         </div>
@@ -1467,6 +1484,10 @@ function PiezaTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAd
         {ordersEnabled && (
           soldOut ? (
             <span className="m-pieza-cta" data-off="1">{content.product.soldOut}</span>
+          ) : fueraDeEdicion ? (
+            <span className="m-pieza-cta" data-off="1">
+              {edicionVitrina.estado === 'proxima' && edicionVitrina.abre !== null ? `Abre ${fechaCorta(edicionVitrina.abre)}` : 'Edición cerrada'}
+            </span>
           ) : !unavail && linea ? (
             <div className="m-pieza-step" role="group" aria-label={`${name}: ${linea.quantity} en tu pedido`}>
               <button type="button" className="press" onClick={() => updateQuantity(linea.lineId, linea.quantity - 1)} aria-label={`Quitar un ${name}`}>−</button>

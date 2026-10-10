@@ -9,6 +9,8 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { Icon } from '@/components/icons';
 import { PrimaryButton } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
+import { useEdicion } from '@/lib/vitrina/use-edicion';
+import { enlaceAvisame, fechaCorta } from '@/lib/vitrina/edicion';
 
 /* El botón de la portada BAJA a la carta; no navega a ninguna parte. Su flecha
    apuntaba a la derecha, que es el gesto de "siguiente pantalla". En un hero
@@ -122,8 +124,9 @@ function heroSize(vw: number, min: number, max: number, svh: number): string {
 }
 
 /* ── Cuenta regresiva del lanzamiento ─────────────────────────
-   La hora de cierre se guarda sin zona ('2026-10-18T18:00') y se lee en la
-   hora del aparato del comensal, que en la práctica es la del restaurante.
+   Cuenta hacia el cierre (edición abierta) o hacia la apertura (próxima).
+   Al llegar a cero no hace nada por su cuenta: `useEdicion` cambia el estado
+   en ese instante y la portada pasa a la pantalla siguiente.
    En el servidor no se pinta ningún número: el reloj del servidor y el del
    teléfono no coinciden al segundo y la hidratación protestaría. */
 function partesRestantes(ms: number): Array<[string, string]> {
@@ -135,25 +138,16 @@ function partesRestantes(ms: number): Array<[string, string]> {
   return [[two(d), 'días'], [two(h), 'hrs'], [two(m), 'min'], [two(s % 60), 'seg']];
 }
 
-function CuentaRegresiva({ endsAt }: { endsAt: string }) {
-  const content = useThemeContent();
-  const end = new Date(endsAt).getTime();
+function CuentaRegresiva({ hasta, etiqueta }: { hasta: number; etiqueta: string }) {
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
     setNow(Date.now());
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
-  if (Number.isNaN(end)) return null;
-
-  if (now !== null && now >= end) {
-    return (
-      <div className="m-vitrina-closed" role="status">{content.vitrina.launchClosed}</div>
-    );
-  }
-  const partes = now === null ? partesRestantes(0).map(([, l]) => ['--', l] as [string, string]) : partesRestantes(end - now);
+  const partes = now === null ? partesRestantes(0).map(([, l]) => ['--', l] as [string, string]) : partesRestantes(hasta - now);
   return (
-    <div className="m-vitrina-count" role="timer" aria-label="Tiempo para que cierre esta edición">
+    <div className="m-vitrina-count" role="timer" aria-label={etiqueta}>
       {partes.map(([n, l]) => (
         <div key={l}><b>{n}</b><span>{l}</span></div>
       ))}
@@ -174,16 +168,19 @@ function tamañoCartel(texto: string): number {
   return Math.min(26, 90 / (larga * 0.5));
 }
 
-export default function Portada({ isOpen = true, fallbackImage = null }: {
+export default function Portada({ isOpen = true, fallbackImage = null, whatsappNumber = null }: {
   isOpen?: boolean;
   /** Foto para la portada Vitrina si el dueño no subió imagen de fondo: la de
       un producto de su carta (la elige MenuShell). */
   fallbackImage?: string | null;
+  /** Para «Avísame por WhatsApp» (Vitrina, edición próxima o cerrada). */
+  whatsappNumber?: string | null;
 }) {
   const config = useThemeConfig();
   const content = useThemeContent();
   const titleT = useText('heading', 'portadaTitle');
   const subT = useText('serif', 'portadaSubtitle');
+  const edicion = useEdicion();
   if (config.portadaVariant === 'none') return null;
 
   const title = content.portada.title || config.brandName;
@@ -325,8 +322,12 @@ export default function Portada({ isOpen = true, fallbackImage = null }: {
     const cartel = (launch ? content.vitrina.launchTitle : '') || title;
     const palabras = cartel.trim().split(/\s+/);
     const remate = palabras.length > 1 ? palabras.pop()! : null;
+    const proxima = edicion.estado === 'proxima';
+    const cerrada = edicion.estado === 'cerrada';
+    // Próxima: avisa de ESTA edición. Cerrada: de la siguiente que anunció el dueño.
+    const avisame = enlaceAvisame(whatsappNumber, proxima ? content.vitrina.launchTitle : content.vitrina.nextTitle);
     const kicker = launch
-      ? content.vitrina.launchKicker
+      ? (proxima && edicion.abre !== null ? `Muy pronto · abre el ${fechaCorta(edicion.abre)}` : content.vitrina.launchKicker)
       : config.portadaShowBadge
         ? [isOpen ? content.portada.badgeOpen : content.portada.badgeClosed, config.zone].filter(Boolean).join(' · ')
         : '';
@@ -368,12 +369,25 @@ export default function Portada({ isOpen = true, fallbackImage = null }: {
           {subtitle && (
             <p className="m-vitrina-sub" style={{ ...subT.vars }}>{subtitle}</p>
           )}
-          {launch && config.launchEndsAt && <CuentaRegresiva endsAt={config.launchEndsAt} />}
+          {edicion.estado === 'abierta' && edicion.cierra !== null && (
+            <CuentaRegresiva hasta={edicion.cierra} etiqueta="Tiempo para que cierre esta edición" />
+          )}
+          {proxima && edicion.abre !== null && (
+            <CuentaRegresiva hasta={edicion.abre} etiqueta="Tiempo para que abra esta edición" />
+          )}
+          {cerrada && <div className="m-vitrina-closed" role="status">{content.vitrina.launchClosed}</div>}
           {/* Píldora de acento a la medida de su texto, como en la maqueta: el
               botón ancho de las otras portadas aquí competía con el titular. */}
-          <button type="button" className="press m-vitrina-cta" onClick={scrollToMenu}>
-            {content.portada.cta} <span aria-hidden>↓</span>
-          </button>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            <button type="button" className="press m-vitrina-cta" onClick={scrollToMenu}>
+              {content.portada.cta} <span aria-hidden>↓</span>
+            </button>
+            {(proxima || cerrada) && avisame && (
+              <a className="press m-vitrina-ghost" href={avisame} target="_blank" rel="noopener noreferrer">
+                Avísame por WhatsApp
+              </a>
+            )}
+          </div>
         </div>
       </section>
     );
