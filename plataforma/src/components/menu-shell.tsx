@@ -6,13 +6,16 @@ import { CartProvider } from '@/lib/cart-context';
 import { ThemeProvider } from '@/lib/theme/context';
 import { LocaleProvider } from '@/lib/locale/context';
 import Portada from '@/components/menu/portada';
+import Cinta from '@/components/menu/cinta';
+import { esDestacado } from '@/lib/menu-pairings';
 import MenuClient from '@/components/menu-client';
 import VisitTracker from '@/components/visit-tracker';
 import InstallBanner from '@/components/install-banner';
 import OfflineSupport from '@/components/offline-support';
 import { Icon } from '@/components/icons';
 import type { MenuReward } from '@/components/menu/rewards-section';
-import { type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
+import { isVitrina, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
+import { VITRINA_TOP_H } from '@/components/menu/vitrina-bar';
 import type { WeeklyHours } from '@/lib/hours';
 import type { Category, Product } from '@/types';
 
@@ -84,6 +87,18 @@ export default function MenuShell({ config, content, categories, products, resta
     [config, initialMesa],
   );
 
+  /* La portada Vitrina vende con una foto. Si el dueño no subió imagen de
+     fondo, se usa la de un producto de su carta: primero uno marcado como
+     favorito/destacado (la misma regla que la carta), si no el primero con foto. */
+  const vitrinaFoto = useMemo(() => {
+    if (cfg.portadaVariant !== 'vitrina' || cfg.backgroundImage) return null;
+    const conFoto = products.filter((p) => p.image_url);
+    const fav = conFoto.find((p) => esDestacado(p.tags));
+    return (fav ?? conFoto[0])?.image_url ?? null;
+  }, [cfg.portadaVariant, cfg.backgroundImage, products]);
+
+  const vitrina = isVitrina(cfg);
+
   return (
     <ThemeProvider config={cfg} content={content}>
       <LocaleProvider restaurantId={restaurantId} extraLanguages={menuLanguages}>
@@ -97,9 +112,15 @@ export default function MenuShell({ config, content, categories, products, resta
             no este componente: así es correcto ya en el primer pintado. */}
         <main
           className="themed-type menu-canvas"
-          style={{ paddingBottom: `calc(${ordersEnabled ? '80px' : '64px'} + env(safe-area-inset-bottom, 0px))` }}
+          style={{
+            // Vitrina: la barra de arriba es fija, así que el contenido arranca
+            // debajo de ella; y abajo ya no hay barra de navegación que reservar.
+            paddingTop: vitrina ? `calc(${VITRINA_TOP_H}px + env(safe-area-inset-top, 0px))` : undefined,
+            paddingBottom: `calc(${vitrina ? '24px' : ordersEnabled ? '80px' : '64px'} + env(safe-area-inset-bottom, 0px))`,
+          }}
         >
-          <Portada isOpen={isOpen} />
+          <Cinta />
+          <Portada isOpen={isOpen} fallbackImage={vitrinaFoto} />
           <div id="menu" style={{ scrollMarginTop: 16, paddingTop: 12 }}>
             {!isOpen && (
               <div
@@ -128,6 +149,13 @@ export default function MenuShell({ config, content, categories, products, resta
             )}
             <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} timezone={timezone} llamadaMeseroEnabled={llamadaMeseroEnabled} initialMesa={initialMesa} loyaltyOn={loyaltyOn} rewardsCatalog={rewardsCatalog} googleAuthEnabled={googleAuthEnabled} whatsappNumber={whatsappNumber} restaurantLat={restaurantLat} restaurantLng={restaurantLng} deliveryRadiusKm={deliveryRadiusKm} />
           </div>
+          {vitrina && (
+            <footer className="m-vfoot">
+              <span>{cfg.brandName}</span>
+              {[cfg.tagline, cfg.zone].filter(Boolean).length > 0 && <span>{[cfg.tagline, cfg.zone].filter(Boolean).join(' · ')}</span>}
+              <span>Hecho con Leogin</span>
+            </footer>
+          )}
         </main>
         <InstallBanner brandName={cfg.brandName} />
       </CartProvider>

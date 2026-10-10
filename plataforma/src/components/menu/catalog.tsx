@@ -11,7 +11,7 @@
          'portadas'   se elige categoría en tarjetas grandes y se entra
 
      · config.cardStyle → qué forma tiene cada platillo
-         'tarjeta' | 'fila' | 'texto' | 'mosaico' | 'carrusel'
+         'tarjeta' | 'fila' | 'texto' | 'mosaico' | 'carrusel' | 'pieza'
 
    Antes solo existía `catalogView` ('grid' | 'list'), así que las 16
    plantillas compartían un único esqueleto y se sentían primas entre sí:
@@ -25,7 +25,9 @@ import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { MenuSurface, Price, Tag, ctaClass } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { roleSize } from '@/lib/theme/resolve';
-import { LAYOUT_MIN_COL, type CardStyle, type LayoutWidth } from '@/lib/theme/defaults';
+import { LAYOUT_MIN_COL, isVitrina, type CardStyle, type LayoutWidth } from '@/lib/theme/defaults';
+import { PrecioCartel } from '@/components/menu/vitrina-bar';
+import { useCart } from '@/lib/cart-context';
 import { MOSAIC_MAX_TILE, canvasComposition, mosaicColumns, mosaicLayoutColumns, textColumns } from '@/lib/theme/canvas';
 import { useScreenTier } from '@/lib/theme/use-screen-tier';
 import { isOpenNow, nextOpenLabel, hasAnyHours, todayWindowLabel, type WeeklyHours } from '@/lib/hours';
@@ -40,7 +42,19 @@ type CatItem = Pick<Category, 'id' | 'name' | 'icon' | 'name_en'> & { availabili
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'> & {
   is_available?: boolean | null;
   unavailable_at?: string | null;
+  /** Unidades que quedan, solo si el dueño encendió «Quedan pocas» y son
+      pocas (lo pega `withStockLeft` en el servidor; ver lib/db/menu.ts). */
+  stock_left?: number | null;
 };
+
+/** Las unidades que quedan, si hay que avisarlas. La vista previa del editor
+    recibe todas las existencias bajas, así que el umbral se vuelve a mirar
+    aquí con la config viva. */
+function stockLeftOf(p: ProdItem, config: { showStockLeft: boolean; stockLeftBelow: number }): number | null {
+  const left = p.stock_left;
+  if (!config.showStockLeft || left == null || left <= 0 || left > config.stockLeftBelow) return null;
+  return left;
+}
 
 /** Precio base + suma de todos los priceDelta de grupos tipo combo (incluidos por defecto).
     Si un componente tiene variantes, se suma también la primera (es la que
@@ -246,8 +260,12 @@ export default function Catalog({
      entera escondería casi todo tras un deslizamiento lateral, así que en la
      vista "Todo" se agrupa por categoría — una fila por categoría, que es
      justo el patrón de las apps de delivery. */
+  const vitrina = isVitrina(config);
+  /* Vitrina en lanzamiento: la edición es UNA colección («La alineación»),
+     así que no se parte en secciones aunque el dueño use categorías. */
+  const alineacion = vitrina && config.launchMode && !searching;
   const groupByCategory =
-    !searching && (
+    !searching && !alineacion && (
       nav === 'secciones' || nav === 'acordeon' ||
       (nav === 'chips' && card === 'carrusel' && activeCat === null)
     );
@@ -258,6 +276,17 @@ export default function Catalog({
   const groups: Group[] = useMemo(() => {
     if (searching) {
       return [{ key: '_search', cat: null, items: searched, locked: false }];
+    }
+
+    if (alineacion) {
+      // En el orden de la carta (categoría por categoría), sin lo que está
+      // fuera de horario.
+      const orden = new Map(categories.map((c, i) => [c.id, i]));
+      const items = searched
+        .filter((p) => !(p.category_id != null && catAvail.get(p.category_id) === false))
+        .slice()
+        .sort((a, b) => (orden.get(a.category_id ?? '') ?? 999) - (orden.get(b.category_id ?? '') ?? 999));
+      return [{ key: '_alineacion', cat: null, items, locked: false }];
     }
 
     if (groupByCategory) {
@@ -291,7 +320,7 @@ export default function Catalog({
       items,
       locked: activeCat !== null && catAvail.get(activeCat) === false,
     }];
-  }, [searching, searched, groupByCategory, categories, catAvail, activeCat, nav]);
+  }, [searching, searched, groupByCategory, alineacion, categories, catAvail, activeCat, nav]);
 
   // Menús programados que ahora están fuera de horario. Solo se listan aparte
   // en chips/portadas; en secciones/acordeón ya salen (marcados) dentro de la carta.
@@ -394,12 +423,32 @@ export default function Catalog({
 
   const totalItems = groups.reduce((n, g) => n + g.items.length, 0);
 
+  /* Número de edición (modo lanzamiento): cuenta la carta entera a la vista,
+     no cada sección. Un drop es UNA colección —Nº 01 a Nº 06— aunque el dueño
+     la tenga repartida en «Chocolate» y «Del horno». */
+  const edition = useMemo(() => {
+    if (!config.launchMode || card !== 'pieza') return null;
+    const pos = new Map<string, number>();
+    for (const g of groups) for (const p of g.items) if (!pos.has(p.id)) pos.set(p.id, pos.size + 1);
+    return { pos, total: pos.size };
+  }, [config.launchMode, card, groups]);
+
   const itemsProps = {
-    card, width, featuredIds, catIcon, ordersEnabled, qtyOf, onAdd, onOpen,
+    card, width, featuredIds, catIcon, ordersEnabled, qtyOf, onAdd, onOpen, edition,
   };
 
   return (
     <div ref={rootRef}>
+      {/* Vitrina: ni «El menú», ni buscador, ni píldoras. La carta empieza con
+          su primer rótulo de cartel (o con «La alineación» en lanzamiento);
+          el cambio de idioma vive en la barra de arriba. */}
+      {vitrina && alineacion && (
+        <div className="m-lineup">
+          <h2 className="t-poster">{content.catalog.heading}</h2>
+          <span>{totalItems} {totalItems === 1 ? content.cart.itemsOne : content.cart.itemsMany}</span>
+        </div>
+      )}
+      {!vitrina && (<>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
         <div style={{ minWidth: 0 }}>
@@ -497,6 +546,8 @@ export default function Catalog({
         </div>
       )}
 
+      </>)}
+
       {/* Volver del menú de una categoría al selector de portadas. */}
       {nav === 'portadas' && activeCat !== null && !searching && (
         <button
@@ -552,7 +603,7 @@ export default function Catalog({
           )}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: nav === 'acordeon' ? 8 : width === 'revista' ? 44 : width === 'ancho' ? 34 : 26, marginTop: groupByCategory ? 16 : 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: vitrina ? 0 : nav === 'acordeon' ? 8 : width === 'revista' ? 44 : width === 'ancho' ? 34 : 26, marginTop: groupByCategory && !vitrina ? 16 : 0 }}>
           {groups.map((g) => {
             const headed = groupByCategory && g.cat !== null;
             const collapsed = nav === 'acordeon' && openCatId !== g.key;
@@ -575,6 +626,8 @@ export default function Catalog({
                     collapsible={nav === 'acordeon'}
                     open={!collapsed}
                     width={width}
+                    poster={card === 'pieza'}
+                    countLabel={card === 'pieza' ? `${g.items.length} ${g.items.length === 1 ? content.cart.itemsOne : content.cart.itemsMany}` : undefined}
                     onToggle={() => setOpenCat(collapsed ? g.key : null)}
                   />
                 )}
@@ -649,9 +702,11 @@ interface ItemsProps {
   qtyOf: (id: string) => number;
   onAdd: (p: ProdItem, el: HTMLElement) => void;
   onOpen: (p: ProdItem) => void;
+  /** Posición de cada pieza en la edición (modo lanzamiento). */
+  edition: { pos: Map<string, number>; total: number } | null;
 }
 
-function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled, qtyOf, onAdd, onOpen }: ItemsProps) {
+function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled, qtyOf, onAdd, onOpen, edition }: ItemsProps) {
   const config = useThemeConfig();
   const anim = config.animations;
 
@@ -704,7 +759,7 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
    * altos estimados los cortes de columna saldrían donde no toca. Tampoco en
    * los destacados: son pocos, van arriba del todo y se ven desde el principio.
    */
-  const fadeLazy = (i: number, shape: 'tarjeta' | 'fila') => ({
+  const fadeLazy = (i: number, shape: 'tarjeta' | 'fila' | 'pieza') => ({
     ...fade(i),
     className: `${fade(i).className} menu-card-lazy`.trim(),
     'data-shape': shape,
@@ -724,6 +779,29 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
             <TextRow {...common(p)} />
           </div>
         ))}
+      </div>
+    );
+  }
+
+  if (card === 'pieza') {
+    /* Vitrina: una pieza por pantalla en el teléfono. En lienzo ancho se
+       reparten dos o tres, pero cada una sigue siendo un cartel: el ancho
+       mínimo es el de un teléfono, no el de una tarjeta. */
+    return (
+      <div
+        style={{
+          display: 'grid', columnGap: 32, marginTop: 'var(--m-sp-2)',
+          gridTemplateColumns: wide ? 'repeat(auto-fill, minmax(340px, 1fr))' : '1fr',
+        }}
+      >
+        {items.map((p, i) => {
+          const attrs = fadeLazy(i, 'pieza');
+          return (
+            <div key={p.id} {...attrs}>
+              <PiezaTile {...common(p)} edition={edition ? { n: edition.pos.get(p.id) ?? i + 1, total: edition.total } : null} />
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -904,15 +982,21 @@ function CategoryChip({ label, icon, active, unavailable = false, onClick }: { l
 /** Encabezado de sección. En acordeón es el botón que pliega y despliega; en
     secciones es un título con un filete que separa la carta a la vista. */
 function SectionHeader({
-  label, icon, count, locked, collapsible, open, width = 'movil', onToggle,
+  label, icon, count, locked, collapsible, open, width = 'movil', poster = false, countLabel, onToggle,
 }: {
   label: string; icon?: string; count: number; locked: boolean;
-  collapsible: boolean; open: boolean; width?: LayoutWidth; onToggle: () => void;
+  collapsible: boolean; open: boolean; width?: LayoutWidth;
+  /** Vitrina: el rótulo de la sección es un cartel, a la escala de las piezas
+      de debajo. A 20 px se perdía entre fotos de pantalla entera. */
+  poster?: boolean;
+  /** Texto del contador («3 productos») en lugar del número solo. */
+  countLabel?: string;
+  onToggle: () => void;
 }) {
   const t = useText('poster', 'catalogSection');
   // El rótulo de sección manda sobre una página ancha: a 20 px se perdía entre
   // cuatro columnas de fotos y la carta dejaba de leerse por bloques.
-  const size = collapsible ? 20 : width === 'revista' ? 30 : width === 'ancho' ? 25 : 20;
+  const size = collapsible ? 20 : poster ? (width === 'movil' ? 42 : 54) : width === 'revista' ? 30 : width === 'ancho' ? 25 : 20;
   const inner = (
     <>
       {icon && <Icon name={icon} size={collapsible ? 17 : Math.round(size * 0.82)} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />}
@@ -920,7 +1004,7 @@ function SectionHeader({
         {label}
       </span>
       {locked && <Icon name="clock" size={14} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />}
-      <span className="t-mono m-sec-count">{count}</span>
+      <span className="t-mono m-sec-count">{countLabel ?? count}</span>
       {collapsible && (
         <Icon
           name="chevronDown"
@@ -943,7 +1027,7 @@ function SectionHeader({
     );
   }
   return (
-    <div className="m-sec">
+    <div className="m-sec" data-poster={poster ? '1' : undefined}>
       {inner}
     </div>
   );
@@ -1155,6 +1239,19 @@ function DietaryBadges({ keys, size = 13 }: { keys: string[] | null | undefined;
   );
 }
 
+function stockLeftLabel(left: number): string {
+  return left === 1 ? 'Queda 1' : `Quedan ${left}`;
+}
+
+/** «Quedan 3» sobre la foto de la tarjeta, abajo a la izquierda (la esquina de
+    arriba ya es de las etiquetas del dueño). */
+function StockLeftBadge({ p, hidden }: { p: ProdItem; hidden: boolean }) {
+  const config = useThemeConfig();
+  const left = hidden ? null : stockLeftOf(p, config);
+  if (left === null) return null;
+  return <span className="m-left-badge">{stockLeftLabel(left)}</span>;
+}
+
 interface TileProps {
   p: ProdItem;
   icon: string;
@@ -1178,6 +1275,7 @@ function ProductTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, on
             {p.tags.slice(0, 2).map((t) => <Tag key={t} label={t} small />)}
           </div>
         )}
+        <StockLeftBadge p={p} hidden={unavail} />
         {unavail && (
           <div className="m-art-corner"><span className="m-badge">No disponible</span></div>
         )}
@@ -1217,6 +1315,7 @@ function MosaicTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
         {config.showTags && p.tags?.[0] && !unavail && (
           <div className="m-art-corner"><Tag label={p.tags[0]} small /></div>
         )}
+        <StockLeftBadge p={p} hidden={unavail} />
         {unavail && (
           <div className="m-art-corner"><span className="m-badge">No disponible</span></div>
         )}
@@ -1305,6 +1404,95 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, w
   );
 }
 
+/* Pieza de Vitrina: el producto a toda la columna, foto 4:5, el nombre como
+   cartel y el precio grande junto a un botón que se ve desde lejos. Es la
+   forma de las marcas que venden con la pura vista (postres de autor,
+   ediciones limitadas): aquí la foto no acompaña al platillo, ES el platillo.
+
+   Agotado no se esconde ni se tacha: se sella. En una vitrina lo agotado
+   también vende —dice «esto vuela»—, así que la foto queda en gris con el
+   sello encima en vez de desaparecer de la carta. */
+const PIEZA_ART_SIZES = '(max-width: 520px) 100vw, 480px';
+
+function PiezaTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpen, edition }: TileProps & { edition: { n: number; total: number } | null }) {
+  const config = useThemeConfig();
+  const content = useThemeContent();
+  const name = useLocalized(p.name, p.name_en);
+  const description = useLocalized(p.description ?? '', p.description_en);
+  // Agotado de verdad (sello) ≠ fuera de horario (la sección entera espera).
+  const soldOut = isUnavailable(p);
+  const unavail = forceUnavailable || soldOut;
+  const left = unavail ? null : stockLeftOf(p, config);
+  const two = (n: number) => String(n).padStart(2, '0');
+  const { items, updateQuantity } = useCart();
+  /* El «− n +» de la maqueta solo cuando el producto no tiene opciones: con
+     opciones cada combinación es una línea distinta del carrito y «−» no
+     sabría cuál quitar. Ahí el botón dice cuántas llevas y agrega otra. */
+  const sinOpciones = !(Array.isArray(p.options) && p.options.some((g) => g.choices?.length > 0));
+  const linea = sinOpciones ? items.find((i) => i.productId === p.id) : undefined;
+  return (
+    <article className="m-pieza" data-unavailable={unavail ? '1' : undefined}>
+      <button type="button" className="m-pieza-art" onClick={() => onOpen(p)} aria-label={`Ver ${name}`}>
+        <ProductArt p={p} icon={icon} scale={1.5} sizes={PIEZA_ART_SIZES} />
+        {/* En lanzamiento cada pieza lleva su número de edición: es lo que
+            convierte una lista de productos en una colección. */}
+        {edition && (
+          <span className="m-pieza-num">Nº {two(edition.n)} / {two(edition.total)}</span>
+        )}
+        {config.showTags && !unavail && p.tags?.[0] && (
+          <span className="m-pieza-flag ct-tag">{p.tags[0]}</span>
+        )}
+        {soldOut && (
+          <span className="m-pieza-stamp" aria-hidden><span>{content.product.soldOut}</span></span>
+        )}
+        {!soldOut && forceUnavailable && (
+          <span className="m-art-corner"><span className="m-badge">No disponible ahora</span></span>
+        )}
+      </button>
+      <h3
+        className="ct-product-name m-pieza-name"
+        style={{ fontSize: `calc(clamp(40px, 12.5vw, 58px) * ${roleSize(config, 'productName')})` }}
+      >
+        {name}
+      </h3>
+      {description && <p className="ct-product-desc m-pieza-desc">{description}</p>}
+      <DietaryBadges keys={p.dietary_tags} size={15} />
+      {left !== null && (
+        <div className="m-pieza-left" role="status">
+          {left === 1 ? '¡Queda la última!' : `¡Solo quedan ${left}!`}
+        </div>
+      )}
+      <div className="m-pieza-buy">
+        <PrecioCartel amount={displayPrice(p)} muted={unavail} />
+        {ordersEnabled && (
+          soldOut ? (
+            <span className="m-pieza-cta" data-off="1">{content.product.soldOut}</span>
+          ) : !unavail && linea ? (
+            <div className="m-pieza-step" role="group" aria-label={`${name}: ${linea.quantity} en tu pedido`}>
+              <button type="button" className="press" onClick={() => updateQuantity(linea.lineId, linea.quantity - 1)} aria-label={`Quitar un ${name}`}>−</button>
+              <b>{linea.quantity}</b>
+              <button type="button" className="press" onClick={(e) => onAdd(p, e.currentTarget)} aria-label={`Agregar otro ${name}`}>+</button>
+            </div>
+          ) : !unavail && (
+            <button
+              type="button"
+              className="press m-pieza-cta ct-button"
+              onClick={(e) => onAdd(p, e.currentTarget)}
+              aria-label={qty > 0 ? `Agregar otro ${name} (llevas ${qty})` : `Agregar ${name} a tu pedido`}
+            >
+              {qty > 0 ? (
+                <><Icon name="check" size={15} strokeWidth={3} /> {qty} · Otro</>
+              ) : (
+                <><Icon name="plus" size={16} strokeWidth={2.6} /> {content.product.add}</>
+              )}
+            </button>
+          )
+        )}
+      </div>
+    </article>
+  );
+}
+
 function ProductRow({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpen }: TileProps) {
   const config = useThemeConfig();
   const name = useLocalized(p.name, p.name_en);
@@ -1320,6 +1508,9 @@ function ProductRow({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
           <div className={`ct-product-name m-name ${unavail ? 'm-strike' : ''}`}>{name}</div>
           {unavail && <span className="m-badge m-badge-quiet">No disponible</span>}
           {config.showTags && !unavail && p.tags?.[0] && <Tag label={p.tags[0]} small />}
+          {!unavail && stockLeftOf(p, config) !== null && (
+            <span className="m-left-badge" data-inline="1">{stockLeftLabel(stockLeftOf(p, config)!)}</span>
+          )}
         </div>
         {description && <div className="line-clamp-2 ct-product-desc m-desc">{description}</div>}
         <DietaryBadges keys={p.dietary_tags} size={12} />

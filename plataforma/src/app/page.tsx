@@ -6,7 +6,7 @@ import LeoginLanding from '@/components/landing';
 import BranchSelector from '@/components/branch-selector';
 import { getRestaurantBySlugCached } from '@/lib/db/restaurants';
 import { getGroupBranches } from '@/lib/db/org-public';
-import { getMenuDataCached } from '@/lib/db/menu';
+import { getMenuDataCached, withStockLeft } from '@/lib/db/menu';
 import { resolveTheme } from '@/lib/theme/resolve';
 import { isOpenNow, nextOpenLabel } from '@/lib/hours';
 import { isModuleActive } from '@/lib/modules';
@@ -200,7 +200,7 @@ export default async function Home({
       config={data.resolved.config}
       content={data.resolved.content}
       categories={menu.categories}
-      products={menu.products}
+      products={withStockLeft(menu.products, menu.stockLeft, data.resolved.config)}
       restaurantId={data.restaurant.id}
       ordersEnabled={ordersEnabled}
       isOpen={isOpen}

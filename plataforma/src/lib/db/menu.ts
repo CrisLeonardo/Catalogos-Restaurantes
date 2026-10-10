@@ -8,7 +8,19 @@ import { isOutOfStock } from '@/lib/product-availability';
 export type MenuData = {
   categories: Category[];
   products: Product[];
+  /**
+   * Existencias que quedan, SOLO de los productos con inventario y pocas
+   * unidades (≤ STOCK_LEFT_CAP). Viaja aparte de `products` a propósito: quien
+   * pasa `products` al navegador (checkout, landing…) no se lleva el
+   * inventario sin darse cuenta. Lo pega al producto `withStockLeft`, y solo
+   * si el dueño encendió «Quedan pocas».
+   */
+  stockLeft: Record<string, number>;
 };
+
+/** Tope de lo que se guarda en `stockLeft`: el máximo que el editor deja
+    elegir como umbral de «Quedan pocas». */
+export const STOCK_LEFT_CAP = 50;
 
 // Columnas que el menú PÚBLICO necesita. Excluye datos de negocio sensibles
 // (cost/margen) e inventario (stock, track_stock, low_stock_threshold): RLS
@@ -42,6 +54,39 @@ function toPublicProducts(rows: Record<string, unknown>[] | null): Product[] {
   });
 }
 
+/** Las existencias bajas de cada producto con inventario (ver MenuData.stockLeft). */
+function toStockLeft(rows: Record<string, unknown>[] | null): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const row of rows ?? []) {
+    const stock = row.stock as number | null;
+    if (row.track_stock === true && typeof stock === 'number' && stock > 0 && stock <= STOCK_LEFT_CAP) {
+      out[row.id as string] = stock;
+    }
+  }
+  return out;
+}
+
+/**
+ * Pega a cada producto las unidades que le quedan (`stock_left`), solo si el
+ * dueño encendió «Quedan pocas» y solo por debajo de su umbral. Sin eso
+ * devuelve los productos tal cual: el inventario no sale del servidor.
+ *
+ * `all` es para la vista previa del editor: ahí el dueño mueve el umbral en
+ * vivo, así que se manda todo lo bajo y el catálogo filtra con la config.
+ */
+export function withStockLeft<T extends { id: string }>(
+  products: T[],
+  stockLeft: Record<string, number> | undefined,
+  config: { showStockLeft: boolean; stockLeftBelow: number },
+  all = false,
+): Array<T & { stock_left?: number }> {
+  if (!all && !config.showStockLeft) return products;
+  return products.map((p) => {
+    const left = stockLeft?.[p.id];
+    return left !== undefined && (all || left <= config.stockLeftBelow) ? { ...p, stock_left: left } : p;
+  });
+}
+
 /**
  * Carga categorías y productos activos de un restaurante en una sola request.
  * Cached por request para evitar queries duplicadas.
@@ -67,6 +112,7 @@ export const getMenuData = cache(
     return {
       categories: (categories as Category[]) ?? [],
       products: toPublicProducts(products as Record<string, unknown>[] | null),
+      stockLeft: toStockLeft(products as Record<string, unknown>[] | null),
     };
   }
 );
@@ -102,9 +148,12 @@ export function getMenuDataCached(restaurantId: string): Promise<MenuData> {
       return {
         categories: (categories as Category[]) ?? [],
         products: toPublicProducts(products as Record<string, unknown>[] | null),
+        stockLeft: toStockLeft(products as Record<string, unknown>[] | null),
       };
     },
-    ['public-menu-data', restaurantId],
+    // v2: la forma cambió (llegó `stockLeft`); una entrada vieja de la caché
+    // no lo traería.
+    ['public-menu-data-v2', restaurantId],
     { revalidate: 60, tags: [`menu:${restaurantId}`] },
   )();
 }
@@ -135,7 +184,7 @@ export function getMenuDataCached(restaurantId: string): Promise<MenuData> {
  * una acción que invalide. Es el mismo compromiso que ya tenía el menú
  * público.
  */
-export function getWaiterCatalogCached(restaurantId: string): Promise<MenuData> {
+export function getWaiterCatalogCached(restaurantId: string): Promise<Omit<MenuData, 'stockLeft'>> {
   return unstable_cache(
     async () => {
       const db = createServiceClient();

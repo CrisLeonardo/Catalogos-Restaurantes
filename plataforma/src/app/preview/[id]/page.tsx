@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantFullById } from '@/lib/db/super-admin';
-import { getMenuData } from '@/lib/db/menu';
+import { getMenuData, withStockLeft } from '@/lib/db/menu';
 import { getMyMembership } from '@/lib/db/membership';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import { DEMO_CATEGORIES, DEMO_PRODUCTS } from '@/lib/demo-menu';
@@ -130,7 +130,9 @@ export default async function PreviewPage({
       initialContent={resolved.content}
       initialCss={resolved.customCss}
       categories={hasMenu ? menu.categories : DEMO_CATEGORIES}
-      products={hasMenu ? menu.products : DEMO_PRODUCTS}
+      // Todas las existencias bajas: el dueño mueve el umbral de «Quedan
+      // pocas» en vivo y el catálogo filtra con la config que llega por el canal.
+      products={hasMenu ? withStockLeft(menu.products, menu.stockLeft, resolved.config, true) : DEMO_PRODUCTS}
       ordersEnabled={row.modules?.orders === true}
       sampleData={!hasMenu}
     />

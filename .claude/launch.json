@@ -26,6 +26,12 @@
       "port": 3000
     },
     {
+      "name": "maquetas-diseno",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "4321", "--directory", "docs/diseno"],
+      "port": 4321
+    },
+    {
       "name": "plataforma-prod-3600",
       "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
       "runtimeArgs": [

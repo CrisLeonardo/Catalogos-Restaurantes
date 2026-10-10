@@ -5,7 +5,7 @@
    ClientApp.jsx, adaptado a un hero web que hace scroll al menú. */
 
 import AssetImage from '@/components/asset-image';
-import type { CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { Icon } from '@/components/icons';
 import { PrimaryButton } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
@@ -121,7 +121,65 @@ function heroSize(vw: number, min: number, max: number, svh: number): string {
   return `clamp(${min}px, min(${vw}vw, ${svh}svh), ${max}px)`;
 }
 
-export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
+/* ── Cuenta regresiva del lanzamiento ─────────────────────────
+   La hora de cierre se guarda sin zona ('2026-10-18T18:00') y se lee en la
+   hora del aparato del comensal, que en la práctica es la del restaurante.
+   En el servidor no se pinta ningún número: el reloj del servidor y el del
+   teléfono no coinciden al segundo y la hidratación protestaría. */
+function partesRestantes(ms: number): Array<[string, string]> {
+  let s = Math.max(0, Math.floor(ms / 1000));
+  const d = Math.floor(s / 86400); s %= 86400;
+  const h = Math.floor(s / 3600); s %= 3600;
+  const m = Math.floor(s / 60);
+  const two = (n: number) => String(n).padStart(2, '0');
+  return [[two(d), 'días'], [two(h), 'hrs'], [two(m), 'min'], [two(s % 60), 'seg']];
+}
+
+function CuentaRegresiva({ endsAt }: { endsAt: string }) {
+  const content = useThemeContent();
+  const end = new Date(endsAt).getTime();
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  if (Number.isNaN(end)) return null;
+
+  if (now !== null && now >= end) {
+    return (
+      <div className="m-vitrina-closed" role="status">{content.vitrina.launchClosed}</div>
+    );
+  }
+  const partes = now === null ? partesRestantes(0).map(([, l]) => ['--', l] as [string, string]) : partesRestantes(end - now);
+  return (
+    <div className="m-vitrina-count" role="timer" aria-label="Tiempo para que cierre esta edición">
+      {partes.map(([n, l]) => (
+        <div key={l}><b>{n}</b><span>{l}</span></div>
+      ))}
+    </div>
+  );
+}
+
+/* El titular de la Vitrina va a tamaño de cartel y en ANCHO DEL LIENZO, no de
+   la ventana (`cqi`: la caja que lo contiene declara `container-type`). En
+   escritorio con la columna de móvil, 26vw daban 370 px de letra dentro de
+   una columna de 460.
+
+   Y se achica según la palabra más larga, porque en un cartel no se parte
+   una palabra: «DROP» llena la línea a 26cqi, pero «PASTELERÍA» a ese tamaño
+   se salía por el canto. Una letra condensada mide ~0,5 em de ancho. */
+function tamañoCartel(texto: string): number {
+  const larga = Math.max(1, ...texto.split(/\s+/).map((w) => w.length));
+  return Math.min(26, 90 / (larga * 0.5));
+}
+
+export default function Portada({ isOpen = true, fallbackImage = null }: {
+  isOpen?: boolean;
+  /** Foto para la portada Vitrina si el dueño no subió imagen de fondo: la de
+      un producto de su carta (la elige MenuShell). */
+  fallbackImage?: string | null;
+}) {
   const config = useThemeConfig();
   const content = useThemeContent();
   const titleT = useText('heading', 'portadaTitle');
@@ -251,6 +309,71 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
               {content.portada.cta}
             </PrimaryButton>
           </div>
+        </div>
+      </section>
+    );
+  }
+
+  /* ── Vitrina ──
+     La portada como anuncio de lanzamiento: foto a sangre, el nombre (o el
+     título de la edición) a tamaño de cartel con la última palabra en el
+     color de acento, y —en modo lanzamiento— la cuenta regresiva. Sin foto de
+     fondo usa la de un producto de la carta: esta estructura vende con la
+     imagen, y un degradado no vende nada. */
+  if (config.portadaVariant === 'vitrina') {
+    const launch = config.launchMode;
+    const cartel = (launch ? content.vitrina.launchTitle : '') || title;
+    const palabras = cartel.trim().split(/\s+/);
+    const remate = palabras.length > 1 ? palabras.pop()! : null;
+    const kicker = launch
+      ? content.vitrina.launchKicker
+      : config.portadaShowBadge
+        ? [isOpen ? content.portada.badgeOpen : content.portada.badgeClosed, config.zone].filter(Boolean).join(' · ')
+        : '';
+    const foto = config.backgroundImage || fallbackImage;
+    return (
+      <section
+        className="menu-bleed menu-hero menu-hero-bleed is-vitrina"
+        style={{
+          position: 'relative', display: 'flex', flexDirection: 'column',
+          justifyContent: 'flex-end', overflow: 'hidden', padding: '0 0 32px',
+        }}
+      >
+        <div aria-hidden style={{ position: 'absolute', inset: 0 }}>
+          {foto ? (
+            <AssetImage src={foto} alt="" fill loading="eager" fetchPriority="high" sizes="100vw" style={{ objectFit: 'cover' }} />
+          ) : (
+            <div
+              style={{
+                position: 'absolute', inset: 0,
+                background: 'radial-gradient(130% 80% at 50% 18%, color-mix(in srgb, var(--brand-accent) 55%, transparent), transparent 68%), linear-gradient(180deg, var(--brand-bg-2), var(--brand-bg))',
+              }}
+            />
+          )}
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.82), rgba(0,0,0,0.30) 48%, rgba(0,0,0,0.04) 100%)' }} />
+        </div>
+
+        <div className="menu-canvas" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 14, containerType: 'inline-size' }}>
+          {config.portadaShowLogo && config.logoUrl && (
+            <div className={anim ? 'anim-pop' : ''}><BrandMark size={56} cssSize="min(56px, 12svh)" /></div>
+          )}
+          {kicker && <div className="m-vitrina-kicker">{kicker}</div>}
+          <h1
+            className={`t-display m-vitrina-title ${anim ? 'anim-fade-up' : ''}`}
+            style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * clamp(52px, min(${tamañoCartel(cartel).toFixed(2)}cqi, 24svh), 190px))` }}
+          >
+            {palabras.join(' ')}
+            {remate && <><br /><em>{remate}</em></>}
+          </h1>
+          {subtitle && (
+            <p className="m-vitrina-sub" style={{ ...subT.vars }}>{subtitle}</p>
+          )}
+          {launch && config.launchEndsAt && <CuentaRegresiva endsAt={config.launchEndsAt} />}
+          {/* Píldora de acento a la medida de su texto, como en la maqueta: el
+              botón ancho de las otras portadas aquí competía con el titular. */}
+          <button type="button" className="press m-vitrina-cta" onClick={scrollToMenu}>
+            {content.portada.cta} <span aria-hidden>↓</span>
+          </button>
         </div>
       </section>
     );
