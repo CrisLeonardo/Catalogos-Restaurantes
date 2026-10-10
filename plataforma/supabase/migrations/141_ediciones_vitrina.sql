@@ -58,6 +58,25 @@ alter table public.drop_edition_items enable row level security;
 revoke all on public.drop_editions      from anon, authenticated;
 revoke all on public.drop_edition_items from anon, authenticated;
 
+-- Toda tabla con RLS lleva la regla restrictiva del segundo factor del
+-- Super Admin (migración 137; la exige scripts/audit-rls-candados.mjs).
+-- Aquí no hay políticas permisivas, así que no abre nada: solo deja la
+-- tabla al mismo nivel que las demás si mañana se le agrega una.
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['drop_editions', 'drop_edition_items'] loop
+    execute format('drop policy if exists %I on public.%I', 'super_admin_segundo_factor', t);
+    execute format(
+      'create policy %I on public.%I as restrictive for all to authenticated
+         using ((select public.leogin_sesion_con_segundo_factor()))
+         with check ((select public.leogin_sesion_con_segundo_factor()))',
+      'super_admin_segundo_factor', t);
+  end loop;
+end;
+$$;
+
 comment on table public.drop_editions is
   'Ediciones cerradas de la Vitrina (modo lanzamiento). La edición viva está en '
   'restaurant_themes; aquí queda la foto al cerrar. Solo service role.';
