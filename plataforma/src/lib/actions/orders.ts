@@ -1266,7 +1266,7 @@ export async function updateOrderStatus(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, restaurant_id')
+    .select('role')
     .eq('id', user.id)
     .single();
 
@@ -1307,26 +1307,23 @@ export async function updateOrderStatus(
   if (error) return { error: error.message };
 
   const changed = (changedRows?.length ?? 0) > 0;
+  /* El restaurante es SIEMPRE el del pedido, nunca `profile.restaurant_id`:
+     ese es el restaurante «de casa», null para quien se registró solo y
+     otro distinto para quien opera su segundo local o ayuda en otra
+     sucursal. Con él, la comanda, los puntos y la factura se buscaban en
+     el restaurante equivocado y se callaban, y la bitácora no se escribía
+     (PROD-08, auditoría de salida a producción). */
   const rowRestaurantId = (changedRows?.[0]?.restaurant_id as string | undefined) ?? null;
 
   // Al enviar a cocina (→PREP): encola la comanda al agente de impresión del
   // restaurante (funciona desde cualquier dispositivo, incl. móvil). Solo si la
   // fila REALMENTE cambió de estado en esta llamada. No-op si no hay agente
   // configurado; best-effort, no debe romper el cambio de estado.
-  if (status === 'PREP' && changed) {
-    // profile.restaurant_id es null para SUPER_ADMIN: resolver del pedido mismo.
-    let kitchenRid = (profile.restaurant_id as string | null) ?? rowRestaurantId;
-    if (!kitchenRid) {
-      const { data: orderRow } = await createServiceClient()
-        .from('orders').select('restaurant_id').eq('id', orderId).single();
-      kitchenRid = (orderRow?.restaurant_id as string) ?? null;
-    }
-    if (kitchenRid) {
-      try {
-        await enqueueKitchenForOrder(kitchenRid, orderId);
-      } catch {
-        /* impresión es best-effort */
-      }
+  if (status === 'PREP' && changed && rowRestaurantId) {
+    try {
+      await enqueueKitchenForOrder(rowRestaurantId, orderId);
+    } catch {
+      /* impresión es best-effort */
     }
   }
 
@@ -1334,19 +1331,11 @@ export async function updateOrderStatus(
   // inactivo o el pedido no tiene cliente). No debe romper el cambio de estado.
   // SERVED cuenta aquí porque freeTable() (cierre manual de mesa DINE_IN) bypasea
   // esta función y nunca llega a otorgar puntos vía DELIVERED.
-  if ((status === 'DELIVERED' || status === 'SERVED') && changed) {
-    let rid = (profile.restaurant_id as string | null) ?? rowRestaurantId;
-    if (!rid) {
-      const { data: orderRow } = await createServiceClient()
-        .from('orders').select('restaurant_id').eq('id', orderId).single();
-      rid = (orderRow?.restaurant_id as string) ?? null;
-    }
-    if (rid) {
-      try {
-        await awardLoyaltyForOrder(rid, orderId);
-      } catch {
-        /* best-effort */
-      }
+  if ((status === 'DELIVERED' || status === 'SERVED') && changed && rowRestaurantId) {
+    try {
+      await awardLoyaltyForOrder(rowRestaurantId, orderId);
+    } catch {
+      /* best-effort */
     }
   }
 
@@ -1359,9 +1348,8 @@ export async function updateOrderStatus(
   // No-op si el módulo está inactivo, si el dueño apagó la emisión
   // automática o si faltan datos fiscales. Nunca lanza: una venta ya
   // cobrada no se revierte porque el certificador tuviera un mal día.
-  if ((status === 'DELIVERED' || status === 'SERVED') && changed) {
-    const ridFel = (profile.restaurant_id as string | null) ?? rowRestaurantId;
-    if (ridFel) after(() => emitirFacturaAutomatica(ridFel, orderId));
+  if ((status === 'DELIVERED' || status === 'SERVED') && changed && rowRestaurantId) {
+    after(() => emitirFacturaAutomatica(rowRestaurantId, orderId));
   }
 
   // Aviso al comensal por WhatsApp (Fase 1A). Con `after` y no await: el
@@ -1374,9 +1362,9 @@ export async function updateOrderStatus(
     after(() => notifyOrderStatus(orderId, status));
   }
 
-  if (profile.restaurant_id && changed) {
+  if (changed && rowRestaurantId) {
     logActivity({
-      restaurantId: profile.restaurant_id,
+      restaurantId: rowRestaurantId,
       actorId: user.id,
       action: 'order_status',
       entity: status,

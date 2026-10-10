@@ -51,7 +51,7 @@ modo sin internet. **No está listo para vender todavía** por cuatro bloques:
 | PROD-05 | No hay forma de corregir un cobro (método o mesa equivocada) | **P0** |
 | PROD-06 | Borrar un corte de caja: sin firma, sin motivo, sin bitácora | P1 |
 | PROD-07 | Cobrar mesa: dos cobros a la vez o una ronda nueva al cobrar | P1 |
-| PROD-08 | Cambio de estado usa el restaurante «de casa» del perfil | P1 |
+| PROD-08 | ✅ Cambio de estado usa el restaurante «de casa» del perfil | P1 |
 | PROD-09 | Cancelación del comensal puede pisar la confirmación de cocina | P1 |
 | PROD-10 | Bitácora no registra precios, borrados, cupones, gastos ni cortes | P1 |
 | PROD-11 | Anular no devuelve puntos ni el uso del cupón | P2 |
@@ -242,6 +242,13 @@ escribir la bitácora, aunque ya tiene el restaurante real del pedido
 
 **Qué hacer.** Usar siempre `rowRestaurantId` (el del pedido). Una línea por
 sitio; añadir una prueba.
+
+> ✅ **Hecho (2026-10-10).** Comanda, puntos, FEL y bitácora usan
+> `rowRestaurantId` (lo devuelve el propio `update`, así que existe siempre
+> que hubo cambio); se quitaron los respaldos a `profile.restaurant_id` y la
+> consulta extra al pedido. Prueba: `src/lib/actions/orders-carreras.test.ts`
+> (dueño sin restaurante de casa y dueño en su segundo local; falla con el
+> código anterior).
 
 ### PROD-09 · Cancelación del comensal contra confirmación — P1
 
@@ -611,3 +618,5 @@ inactividad, PIN de 4 cifras con bloqueo, confirmación antes de borrar.
   1 crítica, 8 altas, 4 moderadas en dependencias de producción.
 - **2026-10-10** — PROD-01 hecho: migración 142 (fotos por membresía y
   sección), probada contra la base local y añadida a `test-aislamiento.mjs`.
+- **2026-10-10** — PROD-08 hecho: `updateOrderStatus` usa el restaurante
+  del pedido en comanda, puntos, FEL y bitácora.
