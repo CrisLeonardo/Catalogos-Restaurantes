@@ -40,7 +40,7 @@ grises al deslizar y la ficha del platillo abría con un hueco vacío. Arreglado
 | # | Hallazgo | Severidad | Estado |
 |---|----------|-----------|--------|
 | I-1 | Servidor en Oregón, base en Virginia: ~70 ms por consulta | **Crítico** | ⏳ **Acción tuya** |
-| I-2 | `render.yaml` dice plan `free` (0,1 CPU, se duerme) | **Alto** | ⏳ Confirmar |
+| I-2 | Plan de Render | — | ✅ Resuelto (Starter, 2026-10-10) |
 | IMG-1 | Cloudflare no guardaba ninguna foto (`DYNAMIC`) | **Alto** | ✅ Corregido |
 | IMG-2 | Cada despliegue borraba todas las fotos ya preparadas | **Alto** | ✅ Corregido |
 | IMG-3 | El navegador solo guardaba las fotos 4 h; Supabase, 1 h | **Medio** | ✅ Corregido |
@@ -102,12 +102,10 @@ De paso, desde Guatemala Virginia queda **más cerca** que Oregón (~50 ms contr
 5. Cuando todo responda, borrar el servicio de Oregón.
 6. Cambiar `region: oregon` → `region: virginia` en `render.yaml`.
 
-### I-2 — ¿Sigue en el plan gratuito? · **Alto**
+### I-2 — Plan de Render · ✅ Resuelto
 
-`render.yaml` dice `plan: free`: **0,1 CPU y 512 MB**, y se duerme a los 15 min
-sin tráfico (el primer cliente espera 30–50 s). Si producción sigue ahí, todo lo
-que usa CPU —pintar páginas, reducir fotos con sharp— va a cámara lenta en cuanto
-dos personas lo usan a la vez. Si ya pagas Starter o más, actualizar el archivo.
+Producción está en Starter y `render.yaml` ya lo dice (2026-10-10). Cerrado; no
+se vuelve a proponer.
 
 ### I-3 — Después del despliegue, comprobar Cloudflare
 
@@ -438,7 +436,7 @@ existe en producción, ver I-3) y el efecto real de la distancia Oregón–Virgi
 ## 8. Pendientes, en orden
 
 1. **Mover Render a Virginia** (I-1). Lo que más velocidad da de todo.
-2. **Confirmar el plan de Render** (I-2).
+2. ~~Confirmar el plan de Render (I-2)~~ — resuelto: Starter.
 3. Tras el despliegue: comprobar `cf-cache-status: HIT` en `/img` (I-3).
 4. Precarga de enlaces tras cada acción (P-5) — solo si I-1 no se hace.
 5. `getClaims()` en el proxy (I-4) — revisar primero las JWT Signing Keys.

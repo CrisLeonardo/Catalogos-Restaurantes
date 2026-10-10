@@ -135,7 +135,7 @@ git push -u origin main
 | **Runtime** | Node |
 | **Build Command** | `npm install && npm run build` |
 | **Start Command** | `npm run start` |
-| **Instance Type** | **Free** |
+| **Instance Type** | **Starter** |
 
 > La versión de Node la toma sola del archivo `plataforma/.node-version` (Node 22).
 
@@ -242,13 +242,16 @@ Ya en producción, todo se hace desde tu panel (sin tocar código ni base de dat
 
 ---
 
-# PARTE 6 — Notas del plan gratuito
+# PARTE 6 — Planes contratados
 
-| Tema | Qué pasa | Mitigación |
+Decidido por el dueño del proyecto: **no es un pendiente** y no se vuelve a
+proponer cambiarlos.
+
+| Servicio | Plan | Nota |
 |------|----------|-----------|
-| **Render Free "duerme"** tras 15 min sin tráfico | La 1ª visita tarda ~30-50s en despertar | Gratis: ping con **UptimeRobot** cada 5 min a tu URL. Cuando haya clientes, sube a **Starter ($7/mes)** |
-| **Supabase Free** | 500 MB BD, 1 GB Storage | Suficiente para varios restaurantes; subes de plan cuando crezca |
-| **Cloudflare Free** | DNS wildcard incluido | No necesitas pagar |
+| **Render** | **Starter** | No se duerme. Un timeout en producción es un error real, no el arranque en frío. |
+| **Supabase** | Gratis | Límites: 500 MB de base de datos y 1 GB de Storage. |
+| **Cloudflare** | Gratis | DNS wildcard incluido. |
 
 ---
 
