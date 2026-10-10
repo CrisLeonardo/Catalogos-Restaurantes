@@ -7,6 +7,9 @@ import BranchSelector from '@/components/branch-selector';
 import { getRestaurantBySlugCached } from '@/lib/db/restaurants';
 import { getGroupBranches } from '@/lib/db/org-public';
 import { getMenuDataCached, withStockLeft } from '@/lib/db/menu';
+import { getArchivoVitrinaCached, getVendidosDesdeCached, withStockTotal } from '@/lib/db/vitrina';
+import { isVitrina } from '@/lib/theme/defaults';
+import { estadoEdicion } from '@/lib/vitrina/edicion';
 import { resolveTheme } from '@/lib/theme/resolve';
 import { isOpenNow, nextOpenLabel } from '@/lib/hours';
 import { isModuleActive } from '@/lib/modules';
@@ -193,6 +196,18 @@ export default async function Home({
     products: menu.products,
   });
 
+  /* Vitrina en lanzamiento: el archivo de ediciones y, con la edición
+     abierta y «Quedan pocas» encendido, cuántas había al abrir (para «Quedan
+     9 de 30»). Solo de los productos que el aviso ya enseña. */
+  const cfg = data.resolved.config;
+  const lanzamiento = isVitrina(cfg) && cfg.launchMode;
+  const edicion = estadoEdicion(cfg, new Date().getTime());
+  let productos = withStockLeft(menu.products, menu.stockLeft, cfg);
+  if (lanzamiento && cfg.showStockLeft && edicion.estado === 'abierta' && edicion.abre !== null) {
+    productos = withStockTotal(productos, await getVendidosDesdeCached(data.restaurant.id, new Date(edicion.abre).toISOString()));
+  }
+  const archivo = lanzamiento ? await getArchivoVitrinaCached(data.restaurant.id) : [];
+
   return (
     <>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }} />
@@ -200,7 +215,7 @@ export default async function Home({
       config={data.resolved.config}
       content={data.resolved.content}
       categories={menu.categories}
-      products={withStockLeft(menu.products, menu.stockLeft, data.resolved.config)}
+      products={productos}
       restaurantId={data.restaurant.id}
       ordersEnabled={ordersEnabled}
       isOpen={isOpen}
@@ -216,6 +231,7 @@ export default async function Home({
       restaurantLng={data.restaurant.location_lng}
       deliveryRadiusKm={data.restaurant.delivery_radius_km}
       menuLanguages={data.restaurant.menu_languages ?? []}
+      archivo={archivo}
     />
     </>
   );

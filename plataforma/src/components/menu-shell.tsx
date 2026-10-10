@@ -16,6 +16,9 @@ import { Icon } from '@/components/icons';
 import type { MenuReward } from '@/components/menu/rewards-section';
 import { isVitrina, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
 import { VITRINA_TOP_H } from '@/components/menu/vitrina-bar';
+import VitrinaArchivo from '@/components/menu/vitrina-archivo';
+import { enlaceAvisame } from '@/lib/vitrina/edicion';
+import type { EdicionArchivada } from '@/lib/db/vitrina';
 import type { WeeklyHours } from '@/lib/hours';
 import type { Category, Product } from '@/types';
 
@@ -52,9 +55,11 @@ interface Props {
   deliveryRadiusKm?: number | null;
   /** Idiomas adicionales al español activos para el menú (migración 086). */
   menuLanguages?: string[];
+  /** Vitrina en lanzamiento: ediciones cerradas (migración 141). */
+  archivo?: EdicionArchivada[];
 }
 
-export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, timezone = 'America/Guatemala', initialMesa, llamadaMeseroEnabled = false, loyaltyOn = false, rewardsCatalog = null, googleAuthEnabled = false, whatsappNumber = null, restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null, menuLanguages = [] }: Props) {
+export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, timezone = 'America/Guatemala', initialMesa, llamadaMeseroEnabled = false, loyaltyOn = false, rewardsCatalog = null, googleAuthEnabled = false, whatsappNumber = null, restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null, menuLanguages = [], archivo = [] }: Props) {
   useEffect(() => {
     if (initialMesa && initialMesa > 0) {
       // "Añadir a inicio" guarda la URL con ?mesa= para siempre (ver
@@ -120,7 +125,7 @@ export default function MenuShell({ config, content, categories, products, resta
           }}
         >
           <Cinta />
-          <Portada isOpen={isOpen} fallbackImage={vitrinaFoto} />
+          <Portada isOpen={isOpen} fallbackImage={vitrinaFoto} whatsappNumber={whatsappNumber} />
           <div id="menu" style={{ scrollMarginTop: 16, paddingTop: 12 }}>
             {!isOpen && (
               <div
@@ -149,6 +154,13 @@ export default function MenuShell({ config, content, categories, products, resta
             )}
             <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} timezone={timezone} llamadaMeseroEnabled={llamadaMeseroEnabled} initialMesa={initialMesa} loyaltyOn={loyaltyOn} rewardsCatalog={rewardsCatalog} googleAuthEnabled={googleAuthEnabled} whatsappNumber={whatsappNumber} restaurantLat={restaurantLat} restaurantLng={restaurantLng} deliveryRadiusKm={deliveryRadiusKm} />
           </div>
+          {vitrina && cfg.launchMode && (
+            <VitrinaArchivo
+              archivo={archivo}
+              avisame={enlaceAvisame(whatsappNumber, content.vitrina.nextTitle)}
+              foto={cfg.backgroundImage || vitrinaFoto || products.find((p) => p.image_url)?.image_url || null}
+            />
+          )}
           {vitrina && (
             <footer className="m-vfoot">
               <span>{cfg.brandName}</span>

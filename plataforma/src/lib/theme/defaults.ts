@@ -271,8 +271,10 @@ export interface ThemeConfig {
   /** Lanzamiento ("drop"): la portada Vitrina muestra el título de la edición
       y una cuenta regresiva, y las piezas van numeradas (Nº 01 / 06). */
   launchMode: boolean;
-  /** Cierre del lanzamiento, ISO local sin zona ('2026-10-18T18:00'). Se
-      interpreta en la hora del aparato del comensal. null = sin cuenta. */
+  /** Apertura y cierre de la edición, instantes ISO con zona (el editor los
+      convierte desde la hora del aparato del dueño). Fuera de esa ventana el
+      servidor rechaza los pedidos del cliente (lib/vitrina/edicion.ts). */
+  launchOpensAt: string | null;
   launchEndsAt: string | null;
 
   /** «Acompáñalo con…»: en la ficha y en el carrito se ofrecen bebida,
@@ -482,6 +484,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   showStockLeft: false,
   stockLeftBelow: 10,
   launchMode: false,
+  launchOpensAt: null,
   launchEndsAt: null,
 
   orderTypes: ['dine_in', 'delivery', 'pickup'],
@@ -549,6 +552,8 @@ export interface ThemeContent {
     launchTitle: string;      // "DROP 007": la última palabra va en el color de acento
     launchKicker: string;     // "Edición limitada · 18 oct"
     launchClosed: string;     // lo que dice la cuenta cuando ya cerró
+    nextTitle: string;        // «Próximo drop»: nombre (vacío = no se anuncia)
+    nextDate: string;         // «Viernes 25 oct · 12:00», texto libre
   };
   catalog: {
     kicker: string;           // vacío = "{brandName} · {zone}"
@@ -667,6 +672,8 @@ export const DEFAULT_CONTENT: ThemeContent = {
     launchTitle: 'Drop 001',
     launchKicker: 'Edición limitada',
     launchClosed: 'Esta edición ya cerró',
+    nextTitle: '',
+    nextDate: '',
   },
   catalog: {
     kicker: '',

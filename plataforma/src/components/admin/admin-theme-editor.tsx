@@ -14,6 +14,7 @@ import PreviewPane, { useThemePreviewChannel } from '@/components/super/preview-
 import TemplateGallery from '@/components/admin/template-gallery';
 import OwnerTemplates from '@/components/admin/owner-templates';
 import { saveAdminRestaurantTheme, type RestaurantThemeTemplate } from '@/lib/actions/restaurant';
+import { cerrarYArchivarEdicion, listarEdiciones, quitarEdicion, type EdicionDelPanel } from '@/lib/actions/vitrina';
 import { fontsForRole, SHADOW_OPTIONS, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
 import { isLight } from '@/lib/theme/resolve';
 import { applyTemplateToConfig, structureOfConfig, type BuiltinTemplate } from '@/lib/theme/templates';
@@ -547,19 +548,42 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 <>
                   <TextCtl label="Nombre de la edición" value={content.vitrina.launchTitle} placeholder="Drop 007" onChange={(v) => setT('vitrina', 'launchTitle', v)} />
                   <TextCtl label="Línea de arriba" value={content.vitrina.launchKicker} placeholder="Edición limitada · 18 oct" onChange={(v) => setT('vitrina', 'launchKicker', v)} />
-                  <Row label="Cierra el" stacked>
+                  <Row label="Abre el" stacked>
                     <input
                       type="datetime-local"
-                      value={config.launchEndsAt ?? ''}
-                      onChange={(e) => setC('launchEndsAt', e.target.value || null)}
+                      value={aHoraLocal(config.launchOpensAt)}
+                      onChange={(e) => setC('launchOpensAt', aInstante(e.target.value))}
                       className="adm-field"
                     />
                   </Row>
-                  <TextCtl label="Texto cuando ya cerró" value={content.vitrina.launchClosed} onChange={(v) => setT('vitrina', 'launchClosed', v)} />
+                  <Row label="Cierra el" stacked>
+                    <input
+                      type="datetime-local"
+                      value={aHoraLocal(config.launchEndsAt)}
+                      onChange={(e) => setC('launchEndsAt', aInstante(e.target.value))}
+                      className="adm-field"
+                    />
+                  </Row>
                   <Note>
-                    La cuenta regresiva es un anuncio: al llegar a cero dice que la edición cerró, pero no
-                    apaga tus productos. Márcalos como agotados cuando se acaben.
+                    Antes de abrir, el menú enseña la edición con «Abre en…» y no deja pedir. Al cerrar ya
+                    no se aceptan pedidos en línea (en caja sí puedes cobrar) y la edición pasa sola al
+                    archivo en unos minutos. Deja una fecha vacía si no la necesitas.
                   </Note>
+                  <TextCtl label="Texto cuando ya cerró" value={content.vitrina.launchClosed} onChange={(v) => setT('vitrina', 'launchClosed', v)} />
+
+                  <TextCtl label="Próxima edición (opcional)" value={content.vitrina.nextTitle} placeholder="Drop 008" onChange={(v) => setT('vitrina', 'nextTitle', v)} />
+                  {content.vitrina.nextTitle.trim() && (
+                    <TextCtl label="Cuándo sale" value={content.vitrina.nextDate} placeholder="Viernes 25 oct · 12:00" onChange={(v) => setT('vitrina', 'nextDate', v)} />
+                  )}
+                  <Note>
+                    La próxima se anuncia al final del menú con «Avísame por WhatsApp»: el cliente te escribe
+                    con el mensaje listo y tú le avisas cuando salga.
+                  </Note>
+
+                  <EdicionesArchivadas
+                    restaurantId={restaurantId}
+                    onCerrada={(cierre) => setC('launchEndsAt', cierre)}
+                  />
                 </>
               )}
 
@@ -936,6 +960,95 @@ const optionStyle: React.CSSProperties = {
   background: 'var(--admin-content-bg-solid, #1a1a1a)',
   color: 'var(--u-text, #e5e5e5)',
 };
+
+/* Las fechas del lanzamiento se guardan como instante ISO (con zona), pero
+   el campo `datetime-local` habla en la hora del aparato del dueño, que es
+   la del restaurante. Estas dos traducen de ida y de vuelta. */
+function aHoraLocal(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const dos = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}T${dos(d.getHours())}:${dos(d.getMinutes())}`;
+}
+function aInstante(local: string): string | null {
+  if (!local) return null;
+  const d = new Date(local);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+/** Archivo de ediciones: lo que ya cerró, con lo vendido, y el botón para
+    cerrar la edición viva ahora mismo (migración 141). */
+function EdicionesArchivadas({ restaurantId, onCerrada }: { restaurantId: string; onCerrada: (cierre: string) => void }) {
+  const [ediciones, setEdiciones] = useState<EdicionDelPanel[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmar, setConfirmar] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  const cargar = () => {
+    listarEdiciones(restaurantId).then((r) => {
+      if (r.error) setError(r.error);
+      else setEdiciones(r.ediciones ?? []);
+    });
+  };
+  useEffect(cargar, [restaurantId]);
+
+  const cerrar = () => startTransition(async () => {
+    setError(null);
+    const r = await cerrarYArchivarEdicion(restaurantId);
+    setConfirmar(false);
+    if (r.error) { setError(r.error); return; }
+    if (r.closesAt) onCerrada(r.closesAt);
+    cargar();
+  });
+
+  const quitar = (id: string) => startTransition(async () => {
+    const r = await quitarEdicion(restaurantId, id);
+    if (r.error) setError(r.error);
+    cargar();
+  });
+
+  return (
+    <>
+      <Row label="Archivo de ediciones" hint="Lo que ya cerró. En el menú sale al final, en gris, con cuánto duró." stacked>
+        {ediciones === null && !error && <span className="text-[13px] text-adm-text-3">Cargando…</span>}
+        {ediciones?.length === 0 && <span className="text-[13px] text-adm-text-3">Todavía no hay ediciones cerradas.</span>}
+        {ediciones && ediciones.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {ediciones.map((e) => (
+              <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <strong>{e.title}</strong>
+                  <span className="text-adm-text-3"> · {new Date(e.closesAt).toLocaleDateString('es-GT', { day: 'numeric', month: 'short' })} · {e.vendidas} vendidas{e.soldOutAt ? ' · agotada' : ''}</span>
+                </span>
+                <button type="button" className="press adm-btn-ghost" disabled={pending} onClick={() => quitar(e.id)} style={{ fontSize: 12, padding: '6px 10px', borderRadius: 999, border: '1px solid var(--adm-border-2, var(--u-hair))', background: 'transparent', color: 'inherit', cursor: 'pointer' }}>
+                  Quitar
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {error && <span role="alert" className="text-[13px]" style={{ color: 'var(--c-danger, #dc2626)' }}>{error}</span>}
+      </Row>
+      <Row label="Cerrar la edición ahora" hint="Deja de aceptar pedidos en línea y la guarda en el archivo. No necesita «Guardar»." stacked>
+        {confirmar ? (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" className="press" disabled={pending} onClick={cerrar} style={{ padding: '9px 14px', borderRadius: 999, border: 0, background: 'var(--c-danger, #dc2626)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+              {pending ? 'Cerrando…' : 'Sí, cerrar y archivar'}
+            </button>
+            <button type="button" className="press" disabled={pending} onClick={() => setConfirmar(false)} style={{ padding: '9px 14px', borderRadius: 999, border: '1px solid var(--adm-border-2, var(--u-hair))', background: 'transparent', color: 'inherit', cursor: 'pointer' }}>
+              Cancelar
+            </button>
+          </div>
+        ) : (
+          <button type="button" className="press" onClick={() => setConfirmar(true)} style={{ alignSelf: 'flex-start', padding: '9px 14px', borderRadius: 999, border: '1px solid var(--adm-border-2, var(--u-hair))', background: 'transparent', color: 'inherit', fontWeight: 700, cursor: 'pointer' }}>
+            Cerrar y archivar ahora
+          </button>
+        )}
+      </Row>
+    </>
+  );
+}
 
 function TextCtl({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (

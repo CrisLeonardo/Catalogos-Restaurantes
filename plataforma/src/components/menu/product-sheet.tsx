@@ -13,6 +13,8 @@ import { Tag, QtyStepper, PrimaryButton, Price } from '@/components/menu/ui';
 import { useCart } from '@/lib/cart-context';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { formatPrice } from '@/lib/theme/resolve';
+import { useEdicion } from '@/lib/vitrina/use-edicion';
+import { edicionPermitePedir, fechaCorta } from '@/lib/vitrina/edicion';
 import { DIETARY_TAG_MAP } from '@/lib/dietary-tags';
 import { useLocale, useLocalized } from '@/lib/locale/context';
 import { Acompanantes, type Sugerencia } from '@/components/menu/pairings';
@@ -60,6 +62,8 @@ export default function ProductSheet({
 }) {
   const config = useThemeConfig();
   const content = useThemeContent();
+  // Vitrina en lanzamiento: fuera de la edición no se agrega (ver useEdicion).
+  const edicion = useEdicion();
   const titleT = useText('heading', 'productTitle');
   const { addItem } = useCart();
   const [qty, setQty] = useState(1);
@@ -399,7 +403,11 @@ export default function ProductSheet({
 
         {/* Acción */}
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 20 }}>
-          {ordersEnabled ? (
+          {ordersEnabled && !edicionPermitePedir(edicion) ? (
+            <div className="m-sheet-closed" role="status">
+              {edicion.estado === 'proxima' && edicion.abre !== null ? `Esta edición abre el ${fechaCorta(edicion.abre)}` : content.vitrina.launchClosed}
+            </div>
+          ) : ordersEnabled ? (
             <>
               <QtyStepper value={qty} size="lg" onMinus={() => setQty(Math.max(1, qty - 1))} onPlus={() => setQty(qty + 1)} />
               <PrimaryButton size="lg" full onClick={add} style={{ flex: 1, opacity: missingRequired ? 0.55 : 1 }}>

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantFullById } from '@/lib/db/super-admin';
 import { getMenuData, withStockLeft } from '@/lib/db/menu';
+import { getArchivoVitrinaCached } from '@/lib/db/vitrina';
 import { getMyMembership } from '@/lib/db/membership';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import { DEMO_CATEGORIES, DEMO_PRODUCTS } from '@/lib/demo-menu';
@@ -120,7 +121,7 @@ export default async function PreviewPage({
 
   /* Si el restaurante todavía no tiene productos, mostramos el menú de
      ejemplo para que la vista previa nunca se vea vacía mientras se diseña. */
-  const menu = await getMenuData(row.id);
+  const [menu, archivo] = await Promise.all([getMenuData(row.id), getArchivoVitrinaCached(row.id)]);
   const hasMenu = menu.products.length > 0;
 
   return (
@@ -135,6 +136,7 @@ export default async function PreviewPage({
       products={hasMenu ? withStockLeft(menu.products, menu.stockLeft, resolved.config, true) : DEMO_PRODUCTS}
       ordersEnabled={row.modules?.orders === true}
       sampleData={!hasMenu}
+      archivo={archivo}
     />
   );
 }
