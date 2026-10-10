@@ -27,7 +27,7 @@ Responde y escribe documentación en **español**.
 
 ## Migraciones SQL
 
-- En `plataforma/supabase/migrations/NNN_nombre.sql`, con número consecutivo (la última hoy es la 140).
+- En `plataforma/supabase/migrations/NNN_nombre.sql`, con número consecutivo (la última hoy es la 141).
 - **Una migración ya aplicada en producción no se edita nunca**; se crea otra.
 - Comprueba lo aplicado con `plataforma/supabase/verificar_migraciones.sql`. Un PR con migración debe decir en qué orden se aplica respecto al despliegue del código.
 
