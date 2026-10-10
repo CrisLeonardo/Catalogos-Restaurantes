@@ -54,7 +54,7 @@ modo sin internet. **No está listo para vender todavía** por cuatro bloques:
 | PROD-08 | ✅ Cambio de estado usa el restaurante «de casa» del perfil | P1 |
 | PROD-09 | ✅ Cancelación del comensal puede pisar la confirmación de cocina | P1 |
 | PROD-10 | Bitácora no registra precios, borrados, cupones, gastos ni cortes | P1 |
-| PROD-11 | Anular no devuelve puntos ni el uso del cupón | P2 |
+| PROD-11 | ✅ Anular no devuelve puntos ni el uso del cupón | P2 |
 | PROD-12 | Borrado definitivo de platillos y categorías, sin papelera | P2 |
 | PROD-13 | Límite de usos del cupón no atómico; canje de puntos ignora errores | P2 |
 | PROD-14 | El servidor deja retroceder un pedido ya entregado | P2 |
@@ -302,6 +302,17 @@ enseñarlas en la bitácora del panel con filtro por persona.
 (`increment_coupon_usage`). Un pedido anulado deja al cliente sin sus puntos.
 **Qué hacer:** movimiento inverso en `loyalty_transactions` y decremento del
 cupón en la misma transacción de la anulación.
+
+> ✅ **Hecho (2026-10-10).** Migración `144_anular_devuelve_puntos_y_cupon.sql`:
+> `leogin_devolver_canjes(pedido)` resta 1 al uso del cupón, crea un
+> movimiento `REFUND` por los puntos canjeados en el pedido (`REDEEM` y
+> `REDEEM_REWARD`), los vuelve al saldo y repone la existencia de la
+> recompensa. La llaman `void_order` y `cancel_public_order` dentro de su
+> transacción; la marca nueva `orders.canjes_devueltos_at` impide devolver
+> dos veces. Probado contra la base local (saldo 50→100, recompensa 1→2,
+> cupón 3→2; segunda llamada sin efecto; cancelación del comensal 2→1).
+> No quita los puntos **ganados** de un pedido servido y luego anulado, ni
+> descuenta el canje del límite por cliente de la recompensa.
 
 ### PROD-12 · Borrado definitivo, sin papelera — P2
 
@@ -647,3 +658,5 @@ inactividad, PIN de 4 cifras con bloqueo, confirmación antes de borrar.
   registra el pago una vez.
 - **2026-10-10** — PROD-09 hecho: migración 143, la cancelación del
   comensal es atómica.
+- **2026-10-10** — PROD-11 hecho: migración 144, anular o cancelar
+  devuelve los puntos canjeados y el uso del cupón.
