@@ -44,10 +44,10 @@ jobs:
         working-directory: leogin-desktop
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Node 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
@@ -79,7 +79,7 @@ jobs:
 
       - name: Subir artefactos del build (respaldo, por si falla la publicación)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: leogin-desktop-nsis
           path: |
