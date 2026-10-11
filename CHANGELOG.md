@@ -5,6 +5,7 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
 ## Sin publicar
+- Seguridad de dependencias (SEG-01/02/03/05 de la [auditoría de salida a producción](docs/auditorias/AUDITORIA_SALIDA_PRODUCCION_2026-10-09.md)): Next.js 16.2.7 → 16.3.8 (cierra la vulnerabilidad crítica de saltarse el proxy y las de ejecución remota), `sharp` 0.34 → 0.35.5 (fotos subidas en `/img`), `npm audit fix` para el resto. La CI ahora corre las pruebas unitarias, el `build` y un `npm audit` de producción; Dependabot revisa cada semana las dependencias de la plataforma, el agente, Leogin Desktop y las GitHub Actions.
 - Vista previa en vivo del editor de personalización fiel al menú real: ya no se pinta con los colores de Leogin (coral y grises claros) en lugar de los del restaurante; el editor arranca con el nombre y lema reales; y la vista previa muestra también el botón de WhatsApp, la pestaña de Fidelidad, «Llamar al mesero» y el selector de idioma.
 
 ## v0.11.0 — 2026-10-09 · Estructura Vitrina y lanzamientos

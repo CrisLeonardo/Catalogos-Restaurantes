@@ -35,7 +35,7 @@ permissions:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     defaults:
       run:
         working-directory: plataforma
@@ -58,6 +58,28 @@ jobs:
 
       - name: Lint (eslint)
         run: npm run lint
+
+      # SEG-05 (auditoría 2026-10-09): falla con un aviso alto o crítico en
+      # las dependencias de producción. Es `npm audit --omit=dev
+      # --audit-level=high` con las excepciones sin arreglo escritas, con
+      # motivo y fecha de revisión, en el propio script.
+      - name: npm audit --omit=dev (altas y críticas)
+        run: node scripts/audit-dependencias.mjs
+
+      # SEG-03: las pruebas unitarias no corrían en la CI.
+      - name: Pruebas unitarias (vitest)
+        run: npm test
+
+      # SEG-03: un error de build se descubría cuando Render fallaba al
+      # desplegar. Las variables son de mentira: el build solo necesita que
+      # existan; nada se conecta a ellas al compilar.
+      - name: Build (next build)
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-build-anon
+          SUPABASE_SERVICE_ROLE_KEY: ci-build-service-role
+          NEXT_PUBLIC_ROOT_DOMAIN: localhost:3000
 
       - name: CLI de Supabase
         uses: supabase/setup-cli@v1
