@@ -35,7 +35,7 @@ import { repartirPagos, metodoDominante, type PagoEntrada } from '@/lib/table-pa
 import { hayColumnaMesa, direccionDeMesa } from '@/lib/db/mesa-columna';
 import { assertTableAccess } from '@/lib/auth/table-access';
 import { cerrarTurnoDeMesa, hayPagosDeMesa } from '@/lib/db/table-sessions';
-import { faltaLaColumna, faltaLaTabla } from '@/lib/db/migracion-ausente';
+import { faltaLaColumna, faltaLaFuncion, faltaLaTabla } from '@/lib/db/migracion-ausente';
 
 /**
  * «Los pedidos de la mesa N», como par columna/valor.
@@ -1182,20 +1182,32 @@ export async function freeTable(
     delivered_at: new Date().toISOString(),
   };
 
-  /* Se cierran de una vez los que comparten método —que es el caso normal,
-     y sigue siendo UN update— y aparte los que no. */
-  const { data: cerrados, error } = await db
-    .from('orders')
-    .update(cierre)
-    .eq('restaurant_id', restaurantId)
-    .eq(colMesa, valMesa)
-    .eq('order_type', 'DINE_IN')
-    .not('status', 'in', '("DELIVERED","CANCEL")')
-    .select('id');
+  /* Se cierran SOLO los pedidos que se leyeron arriba, y solo si siguen
+     abiertos (PROD-07, auditoría de salida a producción). Antes se cerraba
+     «todo lo abierto en la mesa en este momento»: una ronda que el mesero
+     mandaba justo mientras caja cobraba quedaba cerrada sin pago, y dos
+     aparatos cobrando a la vez registraban el pago dos veces. Lo que
+     devuelve el `update` es lo que ESTA llamada cerró de verdad, y solo
+     de eso se escribe el método y el detalle del pago. */
+  let ids: string[] = [];
+  if (ordenes.length > 0) {
+    const { data: cerrados, error } = await db
+      .from('orders')
+      .update(cierre)
+      .eq('restaurant_id', restaurantId)
+      .in('id', ordenes.map((o) => o.id))
+      .not('status', 'in', '("DELIVERED","CANCEL")')
+      .select('id');
 
-  if (error) return { error: error.message };
+    if (error) return { error: error.message };
+    ids = (cerrados ?? []).map((r) => r.id as string);
+    // Otro aparato cobró la mesa entre la lectura y el cierre.
+    if (ids.length === 0) return { error: 'Esta mesa ya se cobró.' };
+  }
+  const cerradosAqui = new Set(ids);
 
   for (const [orderId, metodo] of metodoDe) {
+    if (!cerradosAqui.has(orderId)) continue;
     await db
       .from('orders')
       .update({ payment_method: metodo, cash_amount: recibidoDe.get(orderId) ?? null })
@@ -1205,8 +1217,9 @@ export async function freeTable(
   /* Y el detalle, fila por fila. Si la 129 todavía no corrió aquí, el
      cobro NO se cae: la mesa se cierra igual con su método dominante,
      que es exactamente lo que hacía antes de esta migración. */
-  if (filas.length > 0 && (await hayPagosDeMesa())) {
-    await db.from('order_payments').insert(filas.map((f) => ({
+  const filasCerradas = filas.filter((f) => cerradosAqui.has(f.orderId));
+  if (filasCerradas.length > 0 && (await hayPagosDeMesa())) {
+    await db.from('order_payments').insert(filasCerradas.map((f) => ({
       restaurant_id: restaurantId,
       order_id: f.orderId,
       method: f.method,
@@ -1231,7 +1244,6 @@ export async function freeTable(
 
   // Una factura por pedido cerrado. En `after` para no dejar al mesero
   // esperando al certificador con la mesa ocupada en pantalla.
-  const ids = (cerrados ?? []).map((r) => r.id as string);
   if (ids.length > 0) {
     after(async () => {
       for (const id of ids) await emitirFacturaAutomatica(restaurantId, id);
@@ -1266,7 +1278,7 @@ export async function updateOrderStatus(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, restaurant_id')
+    .select('role')
     .eq('id', user.id)
     .single();
 
@@ -1307,26 +1319,23 @@ export async function updateOrderStatus(
   if (error) return { error: error.message };
 
   const changed = (changedRows?.length ?? 0) > 0;
+  /* El restaurante es SIEMPRE el del pedido, nunca `profile.restaurant_id`:
+     ese es el restaurante «de casa», null para quien se registró solo y
+     otro distinto para quien opera su segundo local o ayuda en otra
+     sucursal. Con él, la comanda, los puntos y la factura se buscaban en
+     el restaurante equivocado y se callaban, y la bitácora no se escribía
+     (PROD-08, auditoría de salida a producción). */
   const rowRestaurantId = (changedRows?.[0]?.restaurant_id as string | undefined) ?? null;
 
   // Al enviar a cocina (→PREP): encola la comanda al agente de impresión del
   // restaurante (funciona desde cualquier dispositivo, incl. móvil). Solo si la
   // fila REALMENTE cambió de estado en esta llamada. No-op si no hay agente
   // configurado; best-effort, no debe romper el cambio de estado.
-  if (status === 'PREP' && changed) {
-    // profile.restaurant_id es null para SUPER_ADMIN: resolver del pedido mismo.
-    let kitchenRid = (profile.restaurant_id as string | null) ?? rowRestaurantId;
-    if (!kitchenRid) {
-      const { data: orderRow } = await createServiceClient()
-        .from('orders').select('restaurant_id').eq('id', orderId).single();
-      kitchenRid = (orderRow?.restaurant_id as string) ?? null;
-    }
-    if (kitchenRid) {
-      try {
-        await enqueueKitchenForOrder(kitchenRid, orderId);
-      } catch {
-        /* impresión es best-effort */
-      }
+  if (status === 'PREP' && changed && rowRestaurantId) {
+    try {
+      await enqueueKitchenForOrder(rowRestaurantId, orderId);
+    } catch {
+      /* impresión es best-effort */
     }
   }
 
@@ -1334,19 +1343,11 @@ export async function updateOrderStatus(
   // inactivo o el pedido no tiene cliente). No debe romper el cambio de estado.
   // SERVED cuenta aquí porque freeTable() (cierre manual de mesa DINE_IN) bypasea
   // esta función y nunca llega a otorgar puntos vía DELIVERED.
-  if ((status === 'DELIVERED' || status === 'SERVED') && changed) {
-    let rid = (profile.restaurant_id as string | null) ?? rowRestaurantId;
-    if (!rid) {
-      const { data: orderRow } = await createServiceClient()
-        .from('orders').select('restaurant_id').eq('id', orderId).single();
-      rid = (orderRow?.restaurant_id as string) ?? null;
-    }
-    if (rid) {
-      try {
-        await awardLoyaltyForOrder(rid, orderId);
-      } catch {
-        /* best-effort */
-      }
+  if ((status === 'DELIVERED' || status === 'SERVED') && changed && rowRestaurantId) {
+    try {
+      await awardLoyaltyForOrder(rowRestaurantId, orderId);
+    } catch {
+      /* best-effort */
     }
   }
 
@@ -1359,9 +1360,8 @@ export async function updateOrderStatus(
   // No-op si el módulo está inactivo, si el dueño apagó la emisión
   // automática o si faltan datos fiscales. Nunca lanza: una venta ya
   // cobrada no se revierte porque el certificador tuviera un mal día.
-  if ((status === 'DELIVERED' || status === 'SERVED') && changed) {
-    const ridFel = (profile.restaurant_id as string | null) ?? rowRestaurantId;
-    if (ridFel) after(() => emitirFacturaAutomatica(ridFel, orderId));
+  if ((status === 'DELIVERED' || status === 'SERVED') && changed && rowRestaurantId) {
+    after(() => emitirFacturaAutomatica(rowRestaurantId, orderId));
   }
 
   // Aviso al comensal por WhatsApp (Fase 1A). Con `after` y no await: el
@@ -1374,9 +1374,9 @@ export async function updateOrderStatus(
     after(() => notifyOrderStatus(orderId, status));
   }
 
-  if (profile.restaurant_id && changed) {
+  if (changed && rowRestaurantId) {
     logActivity({
-      restaurantId: profile.restaurant_id,
+      restaurantId: rowRestaurantId,
       actorId: user.id,
       action: 'order_status',
       entity: status,
@@ -2664,10 +2664,26 @@ export async function cancelPublicOrder(
   if (!order || order.restaurant_id !== restaurantId)
     return { error: 'Pedido no encontrado.' };
 
-  if (order.status !== 'NEW')
-    return { error: 'Solo puedes cancelar un pedido que aún no ha sido confirmado por el restaurante.' };
+  const yaConfirmado = 'Solo puedes cancelar un pedido que aún no ha sido confirmado por el restaurante.';
+  if (order.status !== 'NEW') return { error: yaConfirmado };
 
-  // Devolver stock antes de marcar CANCEL (idempotente en BD).
+  /* Comprobar NEW, reponer stock y cancelar, de una vez y con la fila
+     bloqueada (migración 143, PROD-09). Hacerlo en tres pasos desde aquí
+     dejaba un hueco: si cocina aceptaba entre la lectura y el update, el
+     pedido quedaba cancelado con la comanda ya impresa. Y no basta con
+     exigir NEW en el update: `restock_order` no repone nada de un pedido
+     ya cancelado, así que el stock tiene que volver antes, en la misma
+     transacción. */
+  const { data: cancelado, error: errRpc } = await db.rpc('cancel_public_order', {
+    p_order_id: order.id,
+    p_restaurant_id: restaurantId,
+  });
+  if (!faltaLaFuncion(errRpc)) {
+    if (errRpc) return { error: errRpc.message };
+    return cancelado ? { success: true } : { error: yaConfirmado };
+  }
+
+  // Sin la 143 todavía en esta base: el camino de antes.
   await db.rpc('restock_order', { p_order_id: order.id });
 
   const { error } = await db

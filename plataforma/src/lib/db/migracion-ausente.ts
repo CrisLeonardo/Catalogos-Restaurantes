@@ -50,6 +50,13 @@ export function faltaLaColumna(error: ErrorDeSupabase | null | undefined): boole
   return code === '42703' || code === 'PGRST204';
 }
 
+/** La FUNCIÓN (RPC) no existe todavía en esta base. PostgREST contesta
+ *  PGRST202 cuando no la encuentra en su caché; `42883` es el de Postgres. */
+export function faltaLaFuncion(error: ErrorDeSupabase | null | undefined): boolean {
+  const code = error?.code;
+  return code === 'PGRST202' || code === '42883';
+}
+
 /** Cualquiera de las dos: la migración no ha llegado a esta base. */
 export function faltaLaMigracion(error: ErrorDeSupabase | null | undefined): boolean {
   return faltaLaTabla(error) || faltaLaColumna(error);

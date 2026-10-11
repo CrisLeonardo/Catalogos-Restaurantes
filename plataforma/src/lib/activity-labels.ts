@@ -43,6 +43,16 @@ const num = (v: unknown): number | null => {
 
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
 
+/** Importe de una opción: «+Q5.00», «−Q2.00», «Q0.00». */
+const signo = (n: number) => (n > 0 ? `+${fmtMoney(n)}` : n < 0 ? `−${fmtMoney(-n)}` : fmtMoney(0));
+
+/** «10 % de descuento» / «Q20.00 de descuento»; vacío si no se sabe. */
+function descuentoDeCupon(tipo: unknown, valor: unknown): string {
+  const v = num(valor);
+  if (v == null) return '';
+  return tipo === 'PERCENT' ? `${v} % de descuento` : `${fmtMoney(v)} de descuento`;
+}
+
 /** «order_void» → «Order void»: lo último que se dice si no hay traducción. */
 export function humanizarClave(clave: string): string {
   const t = clave.replace(/[_-]+/g, ' ').trim();
@@ -121,6 +131,55 @@ function queHizo(r: ActivityLike): string {
     }
     case 'promo':
       return `cambió la promoción «${e}»`;
+    /* ── Antifraude (PROD-10): precios, borrados, cupones, gastos,
+       pausa y horario. Siempre con el importe, que es lo que se
+       pregunta cuando algo no cuadra. */
+    case 'precio': {
+      const partes: string[] = [];
+      const base = m.precio as { antes?: unknown; despues?: unknown } | null | undefined;
+      if (base && num(base.antes) != null && num(base.despues) != null) {
+        partes.push(`${fmtMoney(num(base.antes)!)} → ${fmtMoney(num(base.despues)!)}`);
+      }
+      const opciones = Array.isArray(m.opciones) ? (m.opciones as { que?: unknown; antes?: unknown; despues?: unknown }[]) : [];
+      for (const o of opciones.slice(0, 2)) {
+        const a = num(o.antes);
+        const d = num(o.despues);
+        if (a == null || d == null) continue;
+        partes.push(`${String(o.que ?? 'una opción')}: ${signo(a)} → ${signo(d)}`);
+      }
+      if (opciones.length > 2) partes.push(`y ${plural(opciones.length - 2, 'opción más', 'opciones más')}`);
+      return `cambió el precio de «${e}»${partes.length ? ` (${partes.join('; ')})` : ''}`;
+    }
+    case 'platillo_borrado': {
+      const precio = num(m.precio);
+      return `borró el platillo «${e}»${precio != null ? ` de ${fmtMoney(precio)}` : ''}`;
+    }
+    case 'categoria_borrada':
+      return `borró la categoría «${e}»`;
+    case 'cupon': {
+      const cuanto = descuentoDeCupon(m.tipo, m.valor);
+      switch (m.evento) {
+        case 'creado': return `creó el cupón ${e}${cuanto ? ` (${cuanto})` : ''}`;
+        case 'borrado': return `borró el cupón ${e}${cuanto ? ` (${cuanto})` : ''}`;
+        case 'activado': return `activó el cupón ${e}`;
+        case 'desactivado': return `desactivó el cupón ${e}`;
+        default: {
+          const antes = m.antes as { tipo?: unknown; valor?: unknown } | null | undefined;
+          const antesTxt = antes ? descuentoDeCupon(antes.tipo, antes.valor) : '';
+          if (antesTxt && cuanto && antesTxt !== cuanto) return `editó el cupón ${e} (${antesTxt} → ${cuanto})`;
+          return `editó el cupón ${e}${cuanto ? ` (${cuanto})` : ''}`;
+        }
+      }
+    }
+    case 'gasto': {
+      const monto = num(m.monto);
+      const verbo = m.evento === 'borrado' ? 'borró' : 'anotó';
+      return `${verbo} un gasto de caja${monto != null ? ` de ${fmtMoney(monto)}` : ''}${e ? ` — «${e}»` : ''}`;
+    }
+    case 'pausa_pedidos':
+      return m.pausado ? 'pausó los pedidos en línea' : 'reanudó los pedidos en línea';
+    case 'horario':
+      return 'cambió el horario del restaurante';
     default:
       return humanizarClave(r.action).toLowerCase() + (e && !esUuid(e) ? ` — ${e}` : '');
   }

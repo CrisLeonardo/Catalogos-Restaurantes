@@ -44,17 +44,17 @@ modo sin internet. **No está listo para vender todavía** por cuatro bloques:
 
 | ID | Hallazgo | Prioridad |
 |---|---|---|
-| PROD-01 | 🧪 Dueño registrado solo no puede subir fotos ni logo | **P0** |
+| PROD-01 | ✅ 🧪 Dueño registrado solo no puede subir fotos ni logo | **P0** |
 | PROD-02 | Caja: mesas y pedidos sin cobrar cuentan como efectivo esperado | **P0** |
 | PROD-03 | Caja: el segundo turno del día espera el efectivo de todo el día | **P0** |
 | PROD-04 | Caja: después de medianoche el «día» es otro | **P0** para bares, P1 resto |
 | PROD-05 | No hay forma de corregir un cobro (método o mesa equivocada) | **P0** |
 | PROD-06 | Borrar un corte de caja: sin firma, sin motivo, sin bitácora | P1 |
-| PROD-07 | Cobrar mesa: dos cobros a la vez o una ronda nueva al cobrar | P1 |
-| PROD-08 | Cambio de estado usa el restaurante «de casa» del perfil | P1 |
-| PROD-09 | Cancelación del comensal puede pisar la confirmación de cocina | P1 |
-| PROD-10 | Bitácora no registra precios, borrados, cupones, gastos ni cortes | P1 |
-| PROD-11 | Anular no devuelve puntos ni el uso del cupón | P2 |
+| PROD-07 | ✅ Cobrar mesa: dos cobros a la vez o una ronda nueva al cobrar | P1 |
+| PROD-08 | ✅ Cambio de estado usa el restaurante «de casa» del perfil | P1 |
+| PROD-09 | ✅ Cancelación del comensal puede pisar la confirmación de cocina | P1 |
+| PROD-10 | ✅ Bitácora no registra precios, borrados, cupones, gastos ni cortes | P1 |
+| PROD-11 | ✅ Anular no devuelve puntos ni el uso del cupón | P2 |
 | PROD-12 | Borrado definitivo de platillos y categorías, sin papelera | P2 |
 | PROD-13 | Límite de usos del cupón no atómico; canje de puntos ignora errores | P2 |
 | PROD-14 | El servidor deja retroceder un pedido ya entregado | P2 |
@@ -122,6 +122,17 @@ dueño en su segundo restaurante.
 carpeta si la persona es miembro activo del restaurante con la sección
 «Catálogo» o «Diseño» (`leogin_puede()` de la 140), además del caso de
 siempre. Añadir este caso a `test-aislamiento.mjs` y al E2E (SEG-04).
+
+> ✅ **Hecho (2026-10-10).** Migración `142_fotos_por_membresia.sql`: las
+> tres reglas de escritura usan `leogin_puede_subir_foto(name)` = carpeta
+> del perfil «de casa» **o** `leogin_puede(<restaurante>, 'catalogo',
+> 'personalizar')`; un nombre que no empiece por uuid da «no», no error.
+> Probado contra la base local antes (dueño solo con membresía → rechazo
+> RLS) y después (entra), y con `INSERT` directo como `authenticated`.
+> `test-aislamiento.mjs` suma 7 casos: dueño de casa, dueño registrado
+> solo, miembro con Catálogo, y los rechazos cruzados (miembro de **otro**
+> restaurante, dueño en carpeta ajena, miembro solo con Pedidos). Falta el
+> paso del E2E (SEG-04). Independiente del código: se aplica cuando sea.
 
 ### PROD-02 · Caja: lo que no se ha cobrado cuenta como efectivo — **P0**
 
@@ -212,6 +223,14 @@ que leyó. Y dos cobros simultáneos leen la misma lista.
 las filas que esta llamada cerró de verdad (las que devuelve el `update`); si
 no cerró ninguna, «Esta mesa ya se cobró».
 
+> ✅ **Hecho (2026-10-10).** `freeTable` cierra con `.in('id', idsLeídos)`
+> y conserva la condición «sigue abierto»; método, efectivo recibido y
+> `order_payments` se escriben solo para los ids que devolvió su `update`.
+> Si leyó pedidos y no cerró ninguno, devuelve «Esta mesa ya se cobró.» sin
+> tocar pagos ni el turno (el panel lo enseña como aviso). Liberar una mesa
+> sin pedidos abiertos sigue funcionando igual. Pruebas en
+> `orders-carreras.test.ts` (fallan con el código anterior).
+
 ### PROD-08 · El cambio de estado usa el restaurante «de casa» — P1
 
 **Qué pasa.** `updateOrderStatus` (`orders.ts:1318, 1338, 1363, 1377`) toma
@@ -232,6 +251,13 @@ escribir la bitácora, aunque ya tiene el restaurante real del pedido
 **Qué hacer.** Usar siempre `rowRestaurantId` (el del pedido). Una línea por
 sitio; añadir una prueba.
 
+> ✅ **Hecho (2026-10-10).** Comanda, puntos, FEL y bitácora usan
+> `rowRestaurantId` (lo devuelve el propio `update`, así que existe siempre
+> que hubo cambio); se quitaron los respaldos a `profile.restaurant_id` y la
+> consulta extra al pedido. Prueba: `src/lib/actions/orders-carreras.test.ts`
+> (dueño sin restaurante de casa y dueño en su segundo local; falla con el
+> código anterior).
+
 ### PROD-09 · Cancelación del comensal contra confirmación — P1
 
 **Qué pasa.** `cancelPublicOrder` (`orders.ts:2649`) comprueba que el pedido
@@ -241,6 +267,21 @@ impresa. Además repone stock antes de saber si la cancelación entra.
 
 **Qué hacer.** `update … where status = 'NEW'` y reponer stock solo si cambió
 una fila (o hacerlo todo en un RPC como `void_order`).
+
+> ✅ **Hecho (2026-10-10), por la vía del RPC.** Exigir `NEW` en el update
+> desde la app no alcanza: `restock_order` no repone nada de un pedido ya en
+> `CANCEL`, así que el stock tiene que volver antes y en la misma
+> transacción. Migración `143_cancelacion_del_comensal_atomica.sql`:
+> `cancel_public_order(pedido, restaurante)` bloquea la fila, comprueba
+> `NEW`, repone y cancela; devuelve false si cocina llegó antes. Probado
+> contra la base local (cancela y repone una vez; segunda llamada y pedido
+> en `PREP` no tocan nada). `cancelPublicOrder` la usa y, si la función aún
+> no existe (`PGRST202`), sigue el camino de antes. Se puede aplicar antes o
+> después del despliegue; hasta que corra, la carrera sigue abierta.
+>
+> Queda aparte: `updateOrderStatus` deja pasar un pedido de `CANCEL` a
+> `PREP` (su condición es solo «distinto del estado nuevo»); es la misma
+> familia que PROD-14.
 
 ### PROD-10 · Bitácora incompleta para el antifraude — P1
 
@@ -254,6 +295,29 @@ bajó el precio?», «¿quién borró eso?».
 **Qué hacer.** Registrar esas acciones con antes/después del importe y
 enseñarlas en la bitácora del panel con filtro por persona.
 
+> ✅ **Hecho (2026-10-11), salvo cierres y borrado de cortes** (los lleva la
+> sesión de caja con PROD-06). Quedan en `activity_log`, siempre con el
+> restaurante del recurso y quién lo hizo:
+> - `precio`: precio del platillo y de cada opción o variante de combo,
+>   antes → después (`lib/activity-diff.ts`; guardar sin tocar importes no
+>   anota nada);
+> - `platillo_borrado` (con su precio) y `categoria_borrada`;
+> - `cupon`: creado, editado (descuento antes → después), activado,
+>   desactivado y borrado, con el % o el monto;
+> - `gasto`: alta y borrado de gastos de caja, con el monto;
+> - `pausa_pedidos` y `horario` (con el horario antes y después; se compara
+>   sin depender del orden de claves del `jsonb`).
+>
+> Se leen como frases en Personal › Actividad reciente
+> (`lib/activity-labels.ts`, con pruebas), que ahora carga 100 filas y tiene
+> filtro por persona. Probado en el panel contra la base local: cambio de
+> precio (25 → 22), pausa y reanudación, y cupón creado → desactivado →
+> borrado quedan anotados y se leen como frases; el filtro deja solo a esa
+> persona. Para los borrados de platillo y categoría se comprobó en SQL,
+> como el dueño bajo RLS, que el `delete … returning` devuelve la fila que
+> se anota. Gastos de caja: mismo patrón, cubiertos por las pruebas de
+> frases (no se probaron en pantalla).
+
 ### PROD-11 · Anular no devuelve puntos ni el cupón — P2
 
 `void_order` y `restock_order` devuelven stock, pero no los puntos canjeados
@@ -261,6 +325,17 @@ enseñarlas en la bitácora del panel con filtro por persona.
 (`increment_coupon_usage`). Un pedido anulado deja al cliente sin sus puntos.
 **Qué hacer:** movimiento inverso en `loyalty_transactions` y decremento del
 cupón en la misma transacción de la anulación.
+
+> ✅ **Hecho (2026-10-10).** Migración `144_anular_devuelve_puntos_y_cupon.sql`:
+> `leogin_devolver_canjes(pedido)` resta 1 al uso del cupón, crea un
+> movimiento `REFUND` por los puntos canjeados en el pedido (`REDEEM` y
+> `REDEEM_REWARD`), los vuelve al saldo y repone la existencia de la
+> recompensa. La llaman `void_order` y `cancel_public_order` dentro de su
+> transacción; la marca nueva `orders.canjes_devueltos_at` impide devolver
+> dos veces. Probado contra la base local (saldo 50→100, recompensa 1→2,
+> cupón 3→2; segunda llamada sin efecto; cancelación del comensal 2→1).
+> No quita los puntos **ganados** de un pedido servido y luego anulado, ni
+> descuenta el canje del límite por cliente de la recompensa.
 
 ### PROD-12 · Borrado definitivo, sin papelera — P2
 
@@ -638,7 +713,20 @@ inactividad, PIN de 4 cifras con bloqueo, confirmación antes de borrar.
 - **2026-10-09** — Auditoría hecha. 947 pruebas unitarias en verde. PROD-01
   reproducido contra la base local (subida rechazada por RLS); `npm audit`:
   1 crítica, 8 altas, 4 moderadas en dependencias de producción.
+- **2026-10-10** — PROD-01 hecho: migración 142 (fotos por membresía y
+  sección), probada contra la base local y añadida a `test-aislamiento.mjs`.
+- **2026-10-10** — PROD-08 hecho: `updateOrderStatus` usa el restaurante
+  del pedido en comanda, puntos, FEL y bitácora.
+- **2026-10-10** — PROD-07 hecho: cobrar mesa cierra solo lo leído y
+  registra el pago una vez.
+- **2026-10-10** — PROD-09 hecho: migración 143, la cancelación del
+  comensal es atómica.
+- **2026-10-10** — PROD-11 hecho: migración 144, anular o cancelar
+  devuelve los puntos canjeados y el uso del cupón.
 - **2026-10-10** — SEG-01, SEG-02, SEG-03 y SEG-05 hechos (rama
   `fix/seguridad-dependencias`). `npm audit --omit=dev`: 0 críticas,
   2 altas (`node-forge` y `acme-client`, el mismo aviso sin arreglo,
   tolerado con motivo), 2 moderadas.
+- **2026-10-11** — PROD-10 hecho (menos cierres y borrado de cortes, que
+  van con PROD-06): bitácora de precios, borrados, cupones, gastos, pausa y
+  horario, con filtro por persona.

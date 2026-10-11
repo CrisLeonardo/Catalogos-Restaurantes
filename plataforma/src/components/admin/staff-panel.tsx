@@ -8,6 +8,7 @@
 import { useActionState, useEffect, useState } from 'react';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
+import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Section } from '@/components/ui/section';
@@ -80,7 +81,14 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
   /* La bitácora entera eran ~40 filas: 4.600 px de pantalla en el teléfono
      antes de llegar a los accesos (auditoría 2026-10-02, AJU-12). */
   const [verTodaActividad, setVerTodaActividad] = useState(false);
-  const actividadVisible = verTodaActividad ? activity : activity.slice(0, ACTIVIDAD_VISIBLE);
+  /* «¿Quién bajó el precio?» se contesta mirando a una persona (PROD-10):
+     filtro por quien lo hizo, con los nombres que salen en la bitácora. */
+  const [actor, setActor] = useState('');
+  const actores = [...new Map(
+    activity.filter((r) => r.actor_id).map((r) => [r.actor_id as string, r.actor_name || 'Sin nombre']),
+  )].sort((a, b) => a[1].localeCompare(b[1], 'es'));
+  const actividadFiltrada = actor ? activity.filter((r) => r.actor_id === actor) : activity;
+  const actividadVisible = verTodaActividad ? actividadFiltrada : actividadFiltrada.slice(0, ACTIVIDAD_VISIBLE);
 
   function describePerms(m: StaffMember): string {
     if (m.permissions == null) return 'Acceso total';
@@ -154,8 +162,20 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
       </Section>
 
       {/* Bitácora */}
-      <Section title="Actividad reciente">
-        {activity.length === 0 ? (
+      <Section
+        title="Actividad reciente"
+        aside={actores.length > 1 ? (
+          <div style={{ width: 130 }}>
+            <Select
+              aria-label="Filtrar la actividad por persona"
+              options={[{ value: '', label: 'Todos' }, ...actores.map(([id, nombre]) => ({ value: id, label: nombre }))]}
+              value={actor}
+              onValueChange={(v) => { setActor(v); setVerTodaActividad(false); }}
+            />
+          </div>
+        ) : undefined}
+      >
+        {actividadFiltrada.length === 0 ? (
           <Card className="p-4.5" style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin actividad registrada todavía.</Card>
         ) : (
           <List>
@@ -165,13 +185,13 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
                 <span className="shrink-0 text-[11px] text-adm-text-4">{timeAgo(r.created_at)}</span>
               </ListRow>
             ))}
-            {activity.length > ACTIVIDAD_VISIBLE && (
+            {actividadFiltrada.length > ACTIVIDAD_VISIBLE && (
               <ListButton
                 onClick={() => setVerTodaActividad((v) => !v)}
                 className="gap-2 text-[13px] font-semibold"
                 style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}
               >
-                {verTodaActividad ? 'Ver menos' : `Ver toda la actividad (${activity.length})`}
+                {verTodaActividad ? 'Ver menos' : `Ver toda la actividad (${actividadFiltrada.length})`}
               </ListButton>
             )}
           </List>

@@ -19,6 +19,8 @@ import type { Category, Product, ProductOptionGroup } from '@/types';
 import { panelLink } from '@/lib/panel-links-server';
 import { registrarEvento } from '@/lib/analytics-server';
 import { EVENTOS } from '@/lib/analytics';
+import { logActivity } from '@/lib/activity';
+import { cambiosDePrecio, hayCambioDePrecio } from '@/lib/activity-diff';
 
 export type ProductState = { error: string } | null;
 
@@ -54,7 +56,7 @@ async function resolveContext(formData: FormData) {
   if (!restaurantId) return null;
 
   const db = elevated ? createServiceClient() : supabase;
-  return { db, restaurantId, role: profile.role };
+  return { db, restaurantId, role: profile.role, userId: user.id };
 }
 
 /**
@@ -241,6 +243,14 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
   const options = parseOptions(formData.get('options') as string | null);
   if (options && 'error' in options) return options;
 
+  // El precio de antes, para la bitácora (PROD-10): «¿quién bajó el precio?».
+  const { data: previo } = await ctx.db
+    .from('products')
+    .select('price, options')
+    .eq('id', id)
+    .eq('restaurant_id', ctx.restaurantId)
+    .maybeSingle();
+
   const newAvailable = formData.get('is_available') === 'true';
   const { error } = await ctx.db
     .from('products')
@@ -267,6 +277,22 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
 
   if (error) return { error: error.message };
 
+  if (previo) {
+    const cambios = cambiosDePrecio(
+      { price: previo.price, options: previo.options as ProductOptionGroup[] | null },
+      { price: parseFloat(priceRaw), options },
+    );
+    if (hayCambioDePrecio(cambios)) {
+      await logActivity({
+        restaurantId: ctx.restaurantId,
+        actorId: ctx.userId,
+        action: 'precio',
+        entity: name,
+        meta: { productId: id, ...cambios },
+      });
+    }
+  }
+
   revalidatePath('/admin/menu');
   updateTag(`menu:${ctx.restaurantId}`);
   redirect(await panelLink('/admin/menu'));
@@ -278,11 +304,24 @@ export async function deleteProduct(formData: FormData) {
 
   const id = formData.get('id') as string;
 
-  await ctx.db
+  const { data: borrados } = await ctx.db
     .from('products')
     .delete()
     .eq('id', id)
-    .eq('restaurant_id', ctx.restaurantId);
+    .eq('restaurant_id', ctx.restaurantId)
+    .select('name, price');
+
+  // Borrado definitivo: que quede quién y qué (PROD-10).
+  const borrado = borrados?.[0];
+  if (borrado) {
+    await logActivity({
+      restaurantId: ctx.restaurantId,
+      actorId: ctx.userId,
+      action: 'platillo_borrado',
+      entity: borrado.name as string,
+      meta: { productId: id, precio: Number(borrado.price) },
+    });
+  }
 
   revalidatePath('/admin/menu');
   updateTag(`menu:${ctx.restaurantId}`);
