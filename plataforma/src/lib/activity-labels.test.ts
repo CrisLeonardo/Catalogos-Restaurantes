@@ -47,3 +47,35 @@ describe('describirActividad', () => {
     expect(describirActividad(fila('cierre_de_caja', null))).toBe('Cierre de caja');
   });
 });
+
+describe('describirActividad · antifraude (PROD-10)', () => {
+  it('precios, borrados, cupones, gastos, pausa y horario, con el importe', () => {
+    expect(describirActividad(fila('precio', 'Pepián', { precio: { antes: 50, despues: 40 }, opciones: [] }, 'Ana')))
+      .toBe('Ana cambió el precio de «Pepián» (Q50.00 → Q40.00)');
+    expect(describirActividad(fila('precio', 'Pizza', { precio: null, opciones: [{ que: 'Tamaño › Grande', antes: 5, despues: -2 }] })))
+      .toBe('Cambió el precio de «Pizza» (Tamaño › Grande: +Q5.00 → −Q2.00)');
+    expect(describirActividad(fila('platillo_borrado', 'Pepián', { precio: 50 })))
+      .toBe('Borró el platillo «Pepián» de Q50.00');
+    expect(describirActividad(fila('categoria_borrada', 'Postres'))).toBe('Borró la categoría «Postres»');
+    expect(describirActividad(fila('cupon', 'AMIGO', { evento: 'creado', tipo: 'PERCENT', valor: 100 }, 'Luis')))
+      .toBe('Luis creó el cupón AMIGO (100 % de descuento)');
+    expect(describirActividad(fila('cupon', 'VERANO', { evento: 'editado', tipo: 'FIXED', valor: 30, antes: { tipo: 'FIXED', valor: 10 } })))
+      .toBe('Editó el cupón VERANO (Q10.00 de descuento → Q30.00 de descuento)');
+    expect(describirActividad(fila('cupon', 'VERANO', { evento: 'desactivado' }))).toBe('Desactivó el cupón VERANO');
+    expect(describirActividad(fila('cupon', 'VERANO', { evento: 'borrado', tipo: 'PERCENT', valor: 10 })))
+      .toBe('Borró el cupón VERANO (10 % de descuento)');
+    expect(describirActividad(fila('gasto', 'Mercado', { evento: 'alta', monto: 85.5 })))
+      .toBe('Anotó un gasto de caja de Q85.50 — «Mercado»');
+    expect(describirActividad(fila('gasto', 'Mercado', { evento: 'borrado', monto: 85.5 })))
+      .toBe('Borró un gasto de caja de Q85.50 — «Mercado»');
+    expect(describirActividad(fila('pausa_pedidos', null, { pausado: true }))).toBe('Pausó los pedidos en línea');
+    expect(describirActividad(fila('pausa_pedidos', null, { pausado: false }))).toBe('Reanudó los pedidos en línea');
+    expect(describirActividad(fila('horario', null, {}))).toBe('Cambió el horario del restaurante');
+  });
+
+  it('más de dos opciones se resumen', () => {
+    const opciones = ['A', 'B', 'C', 'D'].map((x) => ({ que: x, antes: 1, despues: 2 }));
+    expect(describirActividad(fila('precio', 'Combo', { precio: null, opciones })))
+      .toBe('Cambió el precio de «Combo» (A: +Q1.00 → +Q2.00; B: +Q1.00 → +Q2.00; y 2 opciones más)');
+  });
+});

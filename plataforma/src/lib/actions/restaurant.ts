@@ -5,6 +5,8 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId, canActOnGroupBranch } from '@/lib/db/admin';
 import { canActOnRestaurant, resolveOwnRestaurantId } from '@/lib/db/membership';
 import { logChannelChanges } from '@/lib/db/channel-history';
+import { logActivity } from '@/lib/activity';
+import { mismoJson } from '@/lib/activity-diff';
 import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { HourInterval, WeeklyHours, HourExceptions } from '@/lib/hours';
@@ -64,7 +66,7 @@ async function resolveContext(formData: FormData, ...secciones: string[]) {
   // `isSuperAdmin` se mantiene estricto (controla el redirect al panel /super);
   // el dueño de grupo usa el cliente elevado pero sigue el flujo de /admin.
   const db = (isSuperAdmin || isGroupOwner) ? createServiceClient() : supabase;
-  return { db, restaurantId, isSuperAdmin };
+  return { db, restaurantId, isSuperAdmin, userId: user.id };
 }
 
 export async function updateRestaurantInfo(
@@ -399,18 +401,50 @@ export async function updateRestaurantOps(
     return { error: 'Zona horaria inválida.' };
   }
 
+  // Lo de antes, para anotar en la bitácora solo lo que de verdad cambió
+  // (PROD-10): pausar los pedidos o mover el horario cambia lo que se vende.
+  const { data: previo } = await ctx.db
+    .from('restaurants')
+    .select('hours, hour_exceptions, timezone, orders_paused')
+    .eq('id', ctx.restaurantId)
+    .maybeSingle();
+
+  const ordersPaused = formData.get('orders_paused') === 'true';
   const { error } = await ctx.db
     .from('restaurants')
     .update({
       hours: parsed.hours,
       hour_exceptions: parsedExceptions.exceptions,
       timezone,
-      orders_paused: formData.get('orders_paused') === 'true',
+      orders_paused: ordersPaused,
       pause_message: (formData.get('pause_message') as string)?.trim() || null,
     })
     .eq('id', ctx.restaurantId);
 
   if (error) return { error: error.message };
+
+  if (previo) {
+    if (Boolean(previo.orders_paused) !== ordersPaused) {
+      await logActivity({
+        restaurantId: ctx.restaurantId, actorId: ctx.userId,
+        action: 'pausa_pedidos', meta: { pausado: ordersPaused },
+      });
+    }
+    const horarioIgual = mismoJson(
+      [previo.hours, previo.hour_exceptions, previo.timezone],
+      [parsed.hours, parsedExceptions.exceptions, timezone],
+    );
+    if (!horarioIgual) {
+      await logActivity({
+        restaurantId: ctx.restaurantId, actorId: ctx.userId,
+        action: 'horario',
+        meta: {
+          antes: { hours: previo.hours ?? null, hour_exceptions: previo.hour_exceptions ?? null, timezone: previo.timezone ?? null },
+          despues: { hours: parsed.hours ?? null, hour_exceptions: parsedExceptions.exceptions ?? null, timezone },
+        },
+      });
+    }
+  }
 
   revalidatePath('/admin/ajustes/restaurante');
   revalidatePath('/');

@@ -30,6 +30,7 @@ import {
 } from '@/lib/documents/excel';
 import { formatDateRangeLabel, formatDocMoney, longDate } from '@/lib/documents/format';
 import { labelOf } from '@/lib/payment-method';
+import { logActivity } from '@/lib/activity';
 import type { DocumentBranding } from '@/lib/documents/types';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
@@ -678,6 +679,12 @@ export async function addCashExpense(input: {
     return { error: error.message };
   }
 
+  // El dinero que sale del cajón, con quién lo sacó (PROD-10).
+  await logActivity({
+    restaurantId: input.restaurantId, actorId: ctx.userId,
+    action: 'gasto', entity: concept, meta: { evento: 'alta', monto: amount },
+  });
+
   revalidatePath('/admin/caja');
   revalidatePath('/admin/finanzas');
   return { ok: true };
@@ -694,14 +701,23 @@ export async function deleteCashExpense(
 
   // Un gasto ya atado a un corte cerrado no se toca: cambiaría un cuadre
   // que alguien ya firmó.
-  const { error } = await ctx.db
+  const { data: borrados, error } = await ctx.db
     .from('cash_expenses')
     .delete()
     .eq('id', id)
     .eq('restaurant_id', restaurantId)
-    .is('cash_count_id', null);
+    .is('cash_count_id', null)
+    .select('concept, amount');
 
   if (error) return { error: error.message };
+
+  const borrado = borrados?.[0];
+  if (borrado) {
+    await logActivity({
+      restaurantId, actorId: ctx.userId,
+      action: 'gasto', entity: borrado.concept as string, meta: { evento: 'borrado', monto: Number(borrado.amount) },
+    });
+  }
 
   revalidatePath('/admin/caja');
   return { ok: true };

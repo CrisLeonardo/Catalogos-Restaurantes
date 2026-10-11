@@ -53,7 +53,7 @@ modo sin internet. **No está listo para vender todavía** por cuatro bloques:
 | PROD-07 | ✅ Cobrar mesa: dos cobros a la vez o una ronda nueva al cobrar | P1 |
 | PROD-08 | ✅ Cambio de estado usa el restaurante «de casa» del perfil | P1 |
 | PROD-09 | ✅ Cancelación del comensal puede pisar la confirmación de cocina | P1 |
-| PROD-10 | Bitácora no registra precios, borrados, cupones, gastos ni cortes | P1 |
+| PROD-10 | ✅ Bitácora no registra precios, borrados, cupones, gastos ni cortes | P1 |
 | PROD-11 | ✅ Anular no devuelve puntos ni el uso del cupón | P2 |
 | PROD-12 | Borrado definitivo de platillos y categorías, sin papelera | P2 |
 | PROD-13 | Límite de usos del cupón no atómico; canje de puntos ignora errores | P2 |
@@ -294,6 +294,29 @@ bajó el precio?», «¿quién borró eso?».
 
 **Qué hacer.** Registrar esas acciones con antes/después del importe y
 enseñarlas en la bitácora del panel con filtro por persona.
+
+> ✅ **Hecho (2026-10-11), salvo cierres y borrado de cortes** (los lleva la
+> sesión de caja con PROD-06). Quedan en `activity_log`, siempre con el
+> restaurante del recurso y quién lo hizo:
+> - `precio`: precio del platillo y de cada opción o variante de combo,
+>   antes → después (`lib/activity-diff.ts`; guardar sin tocar importes no
+>   anota nada);
+> - `platillo_borrado` (con su precio) y `categoria_borrada`;
+> - `cupon`: creado, editado (descuento antes → después), activado,
+>   desactivado y borrado, con el % o el monto;
+> - `gasto`: alta y borrado de gastos de caja, con el monto;
+> - `pausa_pedidos` y `horario` (con el horario antes y después; se compara
+>   sin depender del orden de claves del `jsonb`).
+>
+> Se leen como frases en Personal › Actividad reciente
+> (`lib/activity-labels.ts`, con pruebas), que ahora carga 100 filas y tiene
+> filtro por persona. Probado en el panel contra la base local: cambio de
+> precio (25 → 22), pausa y reanudación, y cupón creado → desactivado →
+> borrado quedan anotados y se leen como frases; el filtro deja solo a esa
+> persona. Para los borrados de platillo y categoría se comprobó en SQL,
+> como el dueño bajo RLS, que el `delete … returning` devuelve la fila que
+> se anota. Gastos de caja: mismo patrón, cubiertos por las pruebas de
+> frases (no se probaron en pantalla).
 
 ### PROD-11 · Anular no devuelve puntos ni el cupón — P2
 
@@ -660,3 +683,6 @@ inactividad, PIN de 4 cifras con bloqueo, confirmación antes de borrar.
   comensal es atómica.
 - **2026-10-10** — PROD-11 hecho: migración 144, anular o cancelar
   devuelve los puntos canjeados y el uso del cupón.
+- **2026-10-11** — PROD-10 hecho (menos cierres y borrado de cortes, que
+  van con PROD-06): bitácora de precios, borrados, cupones, gastos, pausa y
+  horario, con filtro por persona.

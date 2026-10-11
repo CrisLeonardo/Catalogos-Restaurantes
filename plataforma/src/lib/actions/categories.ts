@@ -7,6 +7,7 @@ import { resolveOwnRestaurantId } from '@/lib/db/membership';
 import { can } from '@/lib/permissions';
 import { revalidatePath, updateTag } from 'next/cache';
 import type { DayKey, WeeklyHours } from '@/lib/hours';
+import { logActivity } from '@/lib/activity';
 
 async function resolveContext(formData: FormData) {
   const supabase = await createClient();
@@ -40,7 +41,7 @@ async function resolveContext(formData: FormData) {
   if (!restaurantId) return null;
 
   const db = elevated ? createServiceClient() : supabase;
-  return { db, restaurantId, role: profile.role };
+  return { db, restaurantId, role: profile.role, userId: user.id };
 }
 
 function revalidateAll(restaurantId: string) {
@@ -221,11 +222,23 @@ export async function deleteCategoryModal(formData: FormData) {
 
   const id = formData.get('id') as string;
 
-  await ctx.db
+  const { data: borradas } = await ctx.db
     .from('categories')
     .delete()
     .eq('id', id)
-    .eq('restaurant_id', ctx.restaurantId);
+    .eq('restaurant_id', ctx.restaurantId)
+    .select('name');
+
+  // Borrado definitivo: que quede quién y qué (PROD-10).
+  if (borradas?.[0]) {
+    await logActivity({
+      restaurantId: ctx.restaurantId,
+      actorId: ctx.userId,
+      action: 'categoria_borrada',
+      entity: borradas[0].name as string,
+      meta: { categoryId: id },
+    });
+  }
 
   revalidateAll(ctx.restaurantId);
 }

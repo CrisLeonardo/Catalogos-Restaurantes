@@ -44,7 +44,7 @@ export default async function AdminPersonalPage() {
   const db = createServiceClient();
   const [staff, activity, accessLog, devices, invitations, { data: restaurant }, { data: themeRow }] = await Promise.all([
     listStaff(restaurantId),
-    getActivityLog(restaurantId, 30),
+    getActivityLog(restaurantId, 100),
     getPanelAccessLog(restaurantId, 20),
     listTrustedDevices(restaurantId),
     listPendingInvitations(restaurantId),

@@ -8,6 +8,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { canActOnGroupBranch } from '@/lib/db/admin';
 import { resolveCoupon, type DiscountType } from '@/lib/db/cupones';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { logActivity } from '@/lib/activity';
 
 export type CouponResult = { error?: string; ok?: boolean };
 
@@ -63,7 +64,19 @@ async function getAuthorized(restaurantId: string) {
     return { ok: false as const, error: 'No autorizado.' };
   }
 
-  return { ok: true as const };
+  return { ok: true as const, userId: user.id };
+}
+
+/* Bitácora antifraude (PROD-10): un cupón del 100 % para un amigo es
+   exactamente lo que el dueño quiere poder ver después, con el importe. */
+function anotarCupon(
+  restaurantId: string,
+  userId: string,
+  code: string,
+  evento: 'creado' | 'editado' | 'borrado' | 'activado' | 'desactivado',
+  extra: Record<string, unknown> = {},
+) {
+  return logActivity({ restaurantId, actorId: userId, action: 'cupon', entity: code, meta: { evento, ...extra } });
 }
 
 export async function createCoupon(
@@ -106,6 +119,10 @@ export async function createCoupon(
     return { error: error.message };
   }
 
+  await anotarCupon(restaurantId, auth.userId, code, 'creado', {
+    tipo: data.discount_type, valor: data.discount_value, maxUsos: data.max_uses || null,
+  });
+
   revalidatePath('/admin/cupones');
   return { ok: true };
 }
@@ -134,6 +151,12 @@ export async function updateCoupon(
   if (data.discount_type === 'PERCENT' && data.discount_value > 100) return { error: 'El porcentaje no puede superar 100%.' };
 
   const db = createServiceClient();
+  const { data: previo } = await db
+    .from('coupons')
+    .select('discount_type, discount_value')
+    .eq('id', couponId)
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
   const { error } = await db.from('coupons').update({
     code,
     description: data.description?.trim() || null,
@@ -149,6 +172,14 @@ export async function updateCoupon(
     return { error: error.message };
   }
 
+  if (previo) {
+    await anotarCupon(restaurantId, auth.userId, code, 'editado', {
+      tipo: data.discount_type,
+      valor: data.discount_value,
+      antes: { tipo: previo.discount_type, valor: Number(previo.discount_value) },
+    });
+  }
+
   revalidatePath('/admin/cupones');
   return { ok: true };
 }
@@ -162,12 +193,16 @@ export async function toggleCoupon(
   if (!auth.ok) return { error: auth.error };
 
   const db = createServiceClient();
-  const { error } = await db
+  const { data: cambiados, error } = await db
     .from('coupons')
     .update({ is_active: isActive })
     .eq('id', couponId)
-    .eq('restaurant_id', restaurantId);
+    .eq('restaurant_id', restaurantId)
+    .select('code');
   if (error) return { error: error.message };
+  if (cambiados?.[0]) {
+    await anotarCupon(restaurantId, auth.userId, cambiados[0].code as string, isActive ? 'activado' : 'desactivado');
+  }
 
   revalidatePath('/admin/cupones');
   return { ok: true };
@@ -181,12 +216,19 @@ export async function deleteCoupon(
   if (!auth.ok) return { error: auth.error };
 
   const db = createServiceClient();
-  const { error } = await db
+  const { data: borrados, error } = await db
     .from('coupons')
     .delete()
     .eq('id', couponId)
-    .eq('restaurant_id', restaurantId);
+    .eq('restaurant_id', restaurantId)
+    .select('code, discount_type, discount_value, uses');
   if (error) return { error: error.message };
+  const borrado = borrados?.[0];
+  if (borrado) {
+    await anotarCupon(restaurantId, auth.userId, borrado.code as string, 'borrado', {
+      tipo: borrado.discount_type, valor: Number(borrado.discount_value), usos: borrado.uses,
+    });
+  }
 
   revalidatePath('/admin/cupones');
   return { ok: true };
