@@ -41,7 +41,7 @@ Basado en verificación directa contra el código actual (2026-08-03). No incluy
 Detalle y mediciones en [`AUDITORIA_2026-09-25.md`](../auditorias/AUDITORIA_2026-09-25.md). Lo corregido en código está allí; aquí solo lo que queda.
 
 - [ ] **Render en Oregón, Supabase en Virginia (I-1).** ~70 ms por consulta. Crear el servicio en Virginia (Render no cambia región de uno existente), mover DNS/dominios, borrar el viejo, actualizar `render.yaml`. Es lo que más velocidad da.
-- [ ] **Confirmar el plan de Render (I-2).** `render.yaml` dice `free` (0,1 CPU, se duerme).
+- [x] **Plan de Render (I-2).** Resuelto 2026-10-10: producción está en Starter; `render.yaml` actualizado. No se vuelve a proponer cambiar de plan.
 - [ ] **Tras desplegar: `cf-cache-status: HIT` en `/img/…` (I-3).**
 - [x] **CSS del panel dentro del menú (M-4).** Hecho 2026-09-26: reglas del personal en `src/app/admin.css` (importado por `app/admin/layout.tsx` y `app/super/layout.tsx`); el menú baja 96,6 KB en vez de ~178. Verificado sin cambios de cascada en 224 capturas (copia de `.press` en su sitio).
 - [x] **`createOrder` en fila (M-5).** Hecho 2026-09-26: lecturas en `Promise.all` (~10 → 4 viajes). Antes y después comparados en 9 escenarios contra la base local: mismos importes, ítems y errores.

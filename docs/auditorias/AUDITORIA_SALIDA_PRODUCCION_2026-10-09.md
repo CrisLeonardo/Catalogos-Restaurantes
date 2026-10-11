@@ -28,8 +28,8 @@ modo sin internet. **No está listo para vender todavía** por cuatro bloques:
    el que entra un cliente que compra.
 2. **La caja no cuadra en casos normales** (PROD-02/03/04): mesas abiertas,
    dos turnos el mismo día y bares que cierran después de medianoche.
-3. **Infraestructura gratuita y sin respaldos** (INF-01/02) y una
-   vulnerabilidad **crítica** de Next.js (SEG-01).
+3. **Una vulnerabilidad crítica de Next.js** (SEG-01) y `sharp` vulnerable
+   procesando fotos subidas (SEG-02).
 4. **Lo legal y fiscal de Leogin como negocio** (LEG-01/02/03): sin empresa
    inscrita ni FEL propio no se puede cobrar legalmente la mensualidad.
 
@@ -66,8 +66,6 @@ modo sin internet. **No está listo para vender todavía** por cuatro bloques:
 | SEG-05 | ✅ ~~Sin Dependabot ni `npm audit` automático~~ | P1 |
 | SEG-06 | `/api/qr` abierto y sin límite | P2 |
 | SEG-07 | Hashes de PIN de 4 cifras viven en la PC del local | P2 |
-| INF-01 | 🙋 Render en plan gratuito | **P0** |
-| INF-02 | 🙋 Supabase gratuito: sin respaldos diarios | **P0** |
 | INF-03 | 🙋 Migraciones pendientes en producción (136→141) | **P0** |
 | INF-04 | 🙋 Activar Sentry, monitor externo y avisos (código listo) | **P0** |
 | INF-05 | 🙋 Resend: sin él no existe «olvidé mi contraseña» | **P0** |
@@ -471,21 +469,9 @@ firma de código (INF-06).
 
 ## C. Infraestructura y operación
 
-### INF-01 · 🙋 Render en plan gratuito — **P0**
-
-`plataforma/render.yaml` dice `plan: free`: se duerme a los 15 min sin
-tráfico (la primera persona que escanea el QR espera 30-60 s y muchos se
-van), 0,1 CPU para `sharp` y para todo el panel. Pasar a un plan pagado
-antes del primer cliente; medir memoria con tráfico real para decidir entre
-Starter y Standard.
-
-### INF-02 · 🙋 Supabase sin respaldos — **P0**
-
-Plan gratuito = sin respaldos diarios descargables y sin recuperación a un
-punto en el tiempo. Un `delete` equivocado en el SQL Editor (donde hoy se
-corren las migraciones a mano) no tiene vuelta atrás. Opciones: plan Pro
-(respaldos diarios), o como mínimo un `pg_dump` diario cifrado desde GitHub
-Actions a un almacenamiento aparte. Lo mismo para las fotos del bucket.
+> Los planes de los servidores (Render Starter, Supabase y Cloudflare
+> gratis) son decisión tomada y **no son pendientes**: no se proponen cambios
+> de plan (2026-10-10). Por eso no hay INF-01 ni INF-02.
 
 ### INF-03 · 🙋 Migraciones pendientes en producción — **P0**
 
@@ -493,7 +479,7 @@ Según los planes vigentes: 136, 139 y 140 (ya), 137 y 138 (después de
 desplegar) y 141 (Vitrina). Correr primero
 `plataforma/supabase/verificar_migraciones.sql` y seguir el orden de
 [`PLAN_ACCESO_Y_MONITOREO`](../planes/PLAN_ACCESO_Y_MONITOREO_2026-10-08.md).
-**La 142 de PROD-01 irá aquí también.**
+**La migración de PROD-01 irá aquí también.**
 
 ### INF-04 · 🙋 Encender la vigilancia — **P0**
 
@@ -702,7 +688,7 @@ inactividad, PIN de 4 cifras con bloqueo, confirmación antes de borrar.
 1. **Esta semana (código):** SEG-01 y SEG-02 (actualizar), PROD-01 (mig 142),
    PROD-08 (una línea por sitio), PROD-07 y PROD-09 (candados de carrera),
    SEG-03 (CI). Todo pequeño y de alto impacto.
-2. **Esta semana (tú):** INF-01, INF-02, INF-03, INF-04, INF-05.
+2. **Esta semana (tú):** INF-03, INF-04, INF-05.
 3. **Antes del primer cliente de pago:** FUN-01 + PROD-02/04 (caja), PROD-05
    (corregir cobros), LEG-01/02/03, SEG-04 (E2E del embudo).
 4. **Primeras semanas:** PROD-06, PROD-10, FUN-02…FUN-07, LEG-04…06, INF-06…08.
@@ -710,6 +696,8 @@ inactividad, PIN de 4 cifras con bloqueo, confirmación antes de borrar.
 
 ## Bitácora
 
+- **2026-10-10** — Quitados INF-01 e INF-02 (planes de servidores): ya
+  resuelto por el dueño, no se vuelve a proponer. `render.yaml` → `starter`.
 - **2026-10-09** — Auditoría hecha. 947 pruebas unitarias en verde. PROD-01
   reproducido contra la base local (subida rechazada por RLS); `npm audit`:
   1 crítica, 8 altas, 4 moderadas en dependencias de producción.

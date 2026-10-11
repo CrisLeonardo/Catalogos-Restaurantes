@@ -2,7 +2,7 @@ services:
   - type: web
     name: menuvivo
     runtime: node
-    plan: free
+    plan: starter
     region: virginia   # junto a Supabase (Virginia); Oregón sumaba latencia a cada consulta
     autoDeploy: true   # cada fusión a main se despliega. Si Render no lo detecta: Manual Deploy y revisar el webhook de GitHub (ver docs/guias/GUIA_DESPLIEGUE.md)
     buildCommand: npm install && npm run build

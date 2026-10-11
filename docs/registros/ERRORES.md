@@ -32,7 +32,7 @@ Estos NO son errores ya cometidos en este proyecto, sino trampas conocidas que v
 
 - **El middleware corre en Edge runtime:** no usar APIs de Node ni librerías pesadas ahí. Solo extraer subdominio y resolver tenant de forma ligera.
 - **Precios congelados en `order_items`.** Guardar `price_snapshot` al crear el pedido. Recalcular desde `products` después es un error (el precio pudo cambiar).
-- **Render free "duerme" tras 15 min.** No es un bug: mitigar con UptimeRobot o subir a Starter. No perseguir falsos "errores de timeout" por esto.
+- **Render está en Starter (no se duerme).** Un timeout en producción es un error real: investigarlo, no atribuirlo al arranque en frío.
 - **Fijar versión de Node** (`.node-version` o `engines` en package.json) para builds consistentes en Render.
 - **No usar `localStorage` para el token de sesión sensible** sin necesidad; preferir las cookies httpOnly que maneja Supabase Auth con `@supabase/ssr`.
 
