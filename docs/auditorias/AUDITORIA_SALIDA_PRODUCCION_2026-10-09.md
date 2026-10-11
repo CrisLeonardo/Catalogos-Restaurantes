@@ -59,11 +59,11 @@ modo sin internet. **No está listo para vender todavía** por cuatro bloques:
 | PROD-13 | Límite de usos del cupón no atómico; canje de puntos ignora errores | P2 |
 | PROD-14 | El servidor deja retroceder un pedido ya entregado | P2 |
 | PROD-15 | Tarjetas de regalo: existen en la base, no en pantalla | P2 |
-| SEG-01 | 🧪 Next.js 16.2.7 con vulnerabilidad **crítica** (saltarse el proxy) | **P0** |
-| SEG-02 | 🧪 `sharp` con vulnerabilidades altas y procesa fotos subidas | **P0** |
-| SEG-03 | La CI no corre las pruebas unitarias ni el `build` | P1 |
+| SEG-01 | ✅ ~~🧪 Next.js 16.2.7 con vulnerabilidad **crítica** (saltarse el proxy)~~ → 16.3.8 | **P0** |
+| SEG-02 | ✅ ~~🧪 `sharp` con vulnerabilidades altas y procesa fotos subidas~~ → 0.35.5 | **P0** |
+| SEG-03 | ✅ ~~La CI no corre las pruebas unitarias ni el `build`~~ | P1 |
 | SEG-04 | El E2E no cubre el embudo de venta (registro → primer pedido) | P1 |
-| SEG-05 | Sin Dependabot ni `npm audit` automático | P1 |
+| SEG-05 | ✅ ~~Sin Dependabot ni `npm audit` automático~~ | P1 |
 | SEG-06 | `/api/qr` abierto y sin límite | P2 |
 | SEG-07 | Hashes de PIN de 4 cifras viven en la PC del local | P2 |
 | INF-01 | 🙋 Render en plan gratuito | **P0** |
@@ -372,7 +372,7 @@ venden bien en temporada) o quitarlas de la oferta para no prometerlas.
 
 ## B. Seguridad, dependencias y pruebas
 
-### SEG-01 · 🧪 Next.js con vulnerabilidad crítica — **P0**
+### SEG-01 · 🧪 Next.js con vulnerabilidad crítica — **P0** · ✅ Hecho 2026-10-10
 
 `npm audit` sobre las dependencias de producción: **1 crítica, 8 altas**.
 La crítica es de `next@16.2.7` (rango afectado ≤ 16.3.7), e incluye
@@ -383,7 +383,21 @@ proxy de este sistema decide el restaurante y **borra las cabeceras internas**
 última 16.x parcheada, `rm -rf .next`, correr typecheck, pruebas, E2E y un
 barrido visual.
 
-### SEG-02 · 🧪 `sharp` vulnerable — **P0**
+> **Hecho 2026-10-10** (rama `fix/seguridad-dependencias`): `next` y
+> `eslint-config-next` a **16.3.8**, la última de la 16.3 y la primera sin
+> ningún aviso de `npm audit` (la 16.4.0 tenía tres días; Dependabot la
+> propondrá aparte). Las notas de 16.3.0–16.3.8 no traen cambios
+> incompatibles para el proxy, las server actions, `after()` ni los
+> `redirects()` de `next.config.ts`; lo único visible es que `next dev`
+> reescribe el bloque de `plataforma/AGENTS.md`. Verificado: tipos, lint,
+> 947 pruebas, `build` (también sin `.env.local`, como en la CI), E2E (2/2)
+> y barrido en el navegador: menú público por subdominio, login del dueño,
+> Hoy, Tomar pedidos (mesa abierta con la carta) y Caja, sin errores en
+> consola ni en el servidor. Una cabecera `x-tenant-slug` enviada por el
+> cliente sigue sin efecto (el proxy la borra) y la redirección de
+> `/admin/impresion` a `/admin/mi-pc` sigue en 307.
+
+### SEG-02 · 🧪 `sharp` vulnerable — **P0** · ✅ Hecho 2026-10-10
 
 `sharp ≤ 0.35.5-rc.1`: fallos de libvips, libheif y librsvg. La ruta `/img`
 procesa con `sharp` **fotos que suben los restaurantes**, o sea, entrada de
@@ -391,12 +405,30 @@ terceros. Subir a `sharp@0.35.5` (cambio mayor: revisar `/img`). Los demás
 avisos (`postcss` de Next, `uuid` vía `exceljs`, `source-map-js`) se van con
 `npm audit fix` y con SEG-01.
 
-### SEG-03 · La CI no corre las pruebas unitarias ni el build — P1
+> **Hecho 2026-10-10:** `sharp` a **0.35.5**. De sus cambios incompatibles
+> (Node ≥ 20.9, quitar `failOnError`, `paletteBitDepth`, `format.jp2k`,
+> `limitInputChannels` = 5) ninguno toca `/img`, que solo usa `failOn`,
+> `limitInputPixels`, `metadata()`, `rotate`, `resize`, `webp` y
+> `toBuffer`; `src/lib/asset-image.ts` no usa `sharp`. Probado `/img` con
+> JPG, PNG y WebP reales: se reducen a 640/1080 y salen en WebP; un WebP que
+> ya cabe se sirve tal cual; ancho fuera de lista y foto inexistente dan 404.
+> Con `npm audit fix` (sin `--force`) se fueron `axios`, `postcss`,
+> `source-map-js`, `brace-expansion`, `nanoid` y `dompurify`. **Quedan** en
+> producción: `node-forge` (alta, **sin versión arreglada**; llega por
+> `acme-client` y el código no pasa por la parte vulnerable, ver
+> `scripts/audit-dependencias.mjs`) y `uuid` vía `exceljs` (moderada; su
+> arreglo es bajar `exceljs` a 3.4, que es peor).
+
+### SEG-03 · La CI no corre las pruebas unitarias ni el build — P1 · ✅ Hecho 2026-10-10
 
 `.github/workflows/ci.yml` corre tipos, lint, aislamiento, auditorías de RLS y
 el E2E, pero **no `npm test`** (947 pruebas que hoy pasan, 🧪) **ni
 `npm run build`**. Un error de build se descubre cuando Render falla al
 desplegar. Añadir los dos pasos.
+
+> **Hecho 2026-10-10:** la CI corre `npm test` y `npm run build` después
+> del lint (el build con variables de mentira, no necesita la base). El
+> límite del trabajo sube de 25 a 35 minutos.
 
 ### SEG-04 · El E2E no cubre el embudo de venta — P1
 
@@ -405,11 +437,19 @@ día con una prueba: **registrarse → crear restaurante → subir foto → crea
 platillo → pedir desde el menú → aparece en el panel → cobrar → cerrar caja**.
 Es el recorrido que hace cada cliente que pagas por adquirir.
 
-### SEG-05 · Sin Dependabot — P1
+### SEG-05 · Sin Dependabot — P1 · ✅ Hecho 2026-10-10
 
 No hay `.github/dependabot.yml`. Configurarlo (semanal, npm de `plataforma/`,
 `agente-impresion/`, `leogin-desktop/` y las GitHub Actions) y añadir
 `npm audit --omit=dev --audit-level=high` a la CI.
+
+> **Hecho 2026-10-10:** `.github/dependabot.yml` semanal (lunes 06:00,
+> hora de Guatemala) para npm de `plataforma/`, `agente-impresion/` y
+> `leogin-desktop/` y para las GitHub Actions; menores y parches en un PR
+> agrupado por carpeta. La CI corre `scripts/audit-dependencias.mjs`: es
+> `npm audit --omit=dev --audit-level=high` con las excepciones sin arreglo
+> escritas con motivo y fecha de revisión (hoy solo `node-forge`, hasta el
+> 2027-01-10); un aviso nuevo o una excepción vencida ponen la CI en rojo.
 
 ### SEG-06 · `/api/qr` abierto — P2
 
@@ -683,6 +723,10 @@ inactividad, PIN de 4 cifras con bloqueo, confirmación antes de borrar.
   comensal es atómica.
 - **2026-10-10** — PROD-11 hecho: migración 144, anular o cancelar
   devuelve los puntos canjeados y el uso del cupón.
+- **2026-10-10** — SEG-01, SEG-02, SEG-03 y SEG-05 hechos (rama
+  `fix/seguridad-dependencias`). `npm audit --omit=dev`: 0 críticas,
+  2 altas (`node-forge` y `acme-client`, el mismo aviso sin arreglo,
+  tolerado con motivo), 2 moderadas.
 - **2026-10-11** — PROD-10 hecho (menos cierres y borrado de cortes, que
   van con PROD-06): bitácora de precios, borrados, cupones, gastos, pausa y
   horario, con filtro por persona.
