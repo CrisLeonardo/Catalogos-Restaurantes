@@ -6,9 +6,18 @@
 # (rama `dependabot/...`), que pasan por la misma CI que cualquier otro.
 #
 # Las versiones menores y de parche se agrupan en UN PR por carpeta para no
-# llenar la lista; las mayores llegan sueltas porque cada una se revisa
-# aparte (notas de versión, cambios incompatibles). Los avisos de
-# seguridad abren su PR en cuanto se publican, sin esperar al lunes.
+# llenar la lista; las mayores NUNCA entran en ese grupo (`update-types`
+# solo minor/patch, también en las acciones) y llegan sueltas porque cada
+# una se revisa aparte (notas de versión, cambios incompatibles). Los
+# avisos de seguridad abren su PR en cuanto se publican, sin esperar al lunes.
+#
+# Mayores ignoradas hasta decidir migrarlas a propósito (2026-10-11): zod 4,
+# TypeScript 7, vitest 5 y @types/node por encima del Node que corre en
+# producción. Traen cambios incompatibles y Dependabot abría un PR por cada
+# una cada semana. El `ignore` solo cubre `version-update:semver-major`: las
+# menores y los parches de esos paquetes siguen llegando, y los avisos de
+# seguridad no se ven afectados. Para migrar una, quita su línea aquí y haz
+# la migración en su propia rama.
 
 version: 2
 updates:
@@ -25,6 +34,15 @@ updates:
     groups:
       menores:
         update-types: [minor, patch]
+    ignore:
+      - dependency-name: zod
+        update-types: ["version-update:semver-major"]
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      - dependency-name: vitest
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /agente-impresion
@@ -39,6 +57,11 @@ updates:
     groups:
       menores:
         update-types: [minor, patch]
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /leogin-desktop
@@ -67,3 +90,4 @@ updates:
     groups:
       acciones:
         patterns: ["*"]
+        update-types: [minor, patch]
