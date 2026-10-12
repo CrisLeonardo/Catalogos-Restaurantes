@@ -15,8 +15,8 @@
     "test": "node scripts/check-routing.ts"
   },
   "devDependencies": {
-    "@types/node": "^26.1.0",
-    "esbuild": "^0.24.0",
+    "@types/node": "^26.6.4",
+    "esbuild": "^0.28.2",
     "postject": "^1.0.0-alpha.6",
     "typescript": "^6.0.3"
   },
