@@ -1708,6 +1708,109 @@
 @media (min-width: 768px) {
   .caja-foot { position: static; margin: 0; padding: 0; border-top: none; border-radius: 0; background: none; }}
 
+/* ── Turnos de caja y cobros corregibles (migración 145) ─────────
+   Superficies sólidas como el resto del panel: el dinero no se lee
+   sobre vidrio. */
+.caja-tarjeta {
+  display: flex; flex-direction: column; gap: 10px; padding: 16px;
+  border-radius: var(--radius-lg); border: 1px solid var(--u-hair);
+  background: var(--adm-card); box-shadow: var(--adm-shadow-xs);
+}
+.caja-abrir { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 14px 20px;
+  border-color: color-mix(in srgb, var(--brand-accent) 38%, var(--u-hair)); }
+.caja-aviso {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 14px; border-radius: var(--radius-lg); font-size: 13px;
+  border: 1px solid var(--u-hair); background: var(--adm-card);
+}
+.caja-aviso-ok {
+  display: flex; gap: 8px; padding: 10px 14px; border-radius: var(--radius-lg);
+  font-size: 13px; font-weight: 500; color: var(--c-ok);
+  border: 1px solid var(--c-ok-line); background: var(--c-ok-bg);
+}
+.caja-boton-suave {
+  display: inline-flex; align-items: center; gap: 8px; padding: 0 14px;
+  border-radius: var(--radius-md); border: 1px solid var(--u-hair-2); background: var(--adm-card);
+  color: var(--u-text-2); font-size: 13px; font-weight: 500; cursor: pointer;
+}
+.caja-boton-suave:disabled { opacity: 0.6; cursor: default; }
+.caja-cta {
+  display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%;
+  height: 54px; border-radius: var(--radius-lg); border: none; cursor: pointer;
+  font-size: 16px; font-weight: 600;
+}
+.caja-cta:disabled { opacity: 0.6; cursor: not-allowed; }
+.caja-campo-label {
+  display: block; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: var(--u-text-3);
+}
+.caja-opcion {
+  display: inline-flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px;
+  min-height: 44px; padding: 8px 13px; border-radius: var(--radius-md); cursor: pointer; text-align: left;
+  border: 1px solid var(--u-hair-2); background: var(--adm-card); color: var(--u-text-2);
+}
+.caja-opcion[data-on="1"] {
+  border: 1.5px solid var(--brand-accent); color: var(--brand-accent-ink);
+  background: color-mix(in srgb, var(--brand-accent) 9%, var(--adm-card));
+}
+.caja-opcion:disabled { opacity: 0.45; cursor: default; }
+.caja-opcion-fila { flex-direction: row; align-items: center; font-size: 13px; font-weight: 600; }
+.caja-opcion-grande { flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px; width: 100%; padding: 11px 14px; min-height: 56px; color: var(--u-text); }
+.caja-opcion-linea { flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; width: 100%; color: var(--u-text); }
+.caja-paso-btn {
+  width: 36px; height: 36px; border-radius: var(--radius-md); cursor: pointer; font-size: 18px;
+  border: 1px solid var(--u-hair-2); background: var(--adm-card); color: var(--u-text);
+}
+.caja-efecto {
+  display: flex; gap: 9px; padding: 10px 12px; border-radius: var(--radius-md);
+  font-size: 13px; line-height: 1.45; color: var(--u-text-2);
+  border: 1px solid var(--u-hair); background: var(--adm-bg-2, var(--adm-card));
+}
+
+/* La lista de cobros: hora · qué · cuánto · Corregir. */
+.caja-cobros { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.caja-cobro {
+  display: grid; grid-template-columns: 52px minmax(0, 1fr) auto auto; align-items: center; gap: 12px;
+  min-height: 56px; padding: 8px 0; border-top: 1px solid var(--u-hair);
+}
+.caja-cobro:first-child { border-top: none; }
+.caja-cobro-hora { font-size: 13px; color: var(--u-text-3); }
+.caja-cobro-que { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.caja-cobro-nombre { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 14px; font-weight: 600; color: var(--u-text); }
+.caja-cobro-detalle { font-size: 12px; color: var(--u-text-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.caja-cobro-monto { font-size: 14px; font-weight: 600; color: var(--u-text); }
+.caja-cobro-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px;
+  border-radius: var(--radius-md); border: 1px solid var(--u-hair-2); background: var(--adm-card);
+  color: var(--u-text-2); font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.caja-cobro-btn:hover { background: var(--adm-card-hover); color: var(--u-text); }
+.caja-cobro-btn:disabled { opacity: 0.55; cursor: default; }
+.caja-marca {
+  display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: var(--radius-full);
+  font-size: 11px; font-weight: 600; color: var(--u-text-3);
+  border: 1px solid var(--u-hair-2); background: var(--adm-card);
+}
+.caja-marca-aviso { color: var(--c-warn); border-color: color-mix(in srgb, var(--c-warn) 40%, var(--u-hair)); }
+.caja-link {
+  align-self: flex-start; background: none; border: none; padding: 4px 0; cursor: pointer;
+  font-size: 12px; color: var(--u-text-3); text-decoration: underline; text-underline-offset: 3px;
+}
+.caja-buscar { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--u-hair); max-width: 420px; }
+@media (max-width: 767px) {
+  .caja-cobro { grid-template-columns: 44px minmax(0, 1fr) auto; row-gap: 6px; }
+  .caja-cobro-btn { grid-column: 2 / -1; justify-self: start; }
+  .caja-cobro-monto { text-align: right; }}
+
+/* Historial: un bloque por día de negocio, el día = suma de turnos. */
+.caja-dia { display: flex; flex-direction: column; }
+.caja-dia + .caja-dia { margin-top: 6px; }
+.caja-dia-cabeza {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  padding: 12px 0 4px; font-size: 12px; border-bottom: 1px solid var(--u-hair);
+}
+.caja-corte { padding: 12px 0; border-bottom: 1px solid var(--u-hair); }
+.caja-corte[data-void="1"] { opacity: 0.72; }
+
 /* ── El buscador de platillos ──────────────────────────────────
    Vive debajo de la comanda, en la pantalla de la mesa. Es la pieza
    que borra el «paso 2 de 3»: se escribe, sale la lista en línea, se

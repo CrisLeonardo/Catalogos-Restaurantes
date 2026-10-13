@@ -1,28 +1,23 @@
-'use server';
+﻿'use server';
 
 /* ============================================================
-   FINANZAS — Corte de caja + export de reportes (Fase A)
+   FINANZAS — Turnos de caja + export de reportes
    ------------------------------------------------------------
-   · getCashSummary:       efectivo esperado HOY (por método de pago).
-   · closeCaja:            cierra el turno (efectivo + gastos + propinas).
+   · getCashSummary:       lo cobrado en el turno abierto, por método.
+   · getCajaState:         todo lo que la pantalla de Caja necesita.
+   · abrirTurno / closeCaja: abrir y cerrar el turno (migración 145).
    · getCashHistory:       últimos cortes del restaurante.
-   · deleteCashCount:      elimina un corte si tiene menos de 24 h.
+   · anularCorte:          anula el último corte con motivo y firma.
    · exportSalesReportXlsx: reporte de ventas del rango a .xlsx.
    · getSalesReportData:   datos del reporte para PDF en el cliente.
    Todo pasa por service role tras validar el rol del usuario.
    ============================================================ */
 
-import { createClient } from '@/lib/supabase/server';
-import { createServiceClient } from '@/lib/supabase/service';
-import { canActOnGroupBranch } from '@/lib/db/admin';
-import { resolveEffectiveRole } from '@/lib/db/membership';
-import { can } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
-import { localDateKey } from '@/lib/hours';
 import { getSalesReport } from '@/lib/db/reports';
 import type { SalesReport, Split } from '@/lib/db/reports';
 import { DENOM_FIELDS } from '@/lib/finanzas-constants';
-import { faltaLaColumna, faltaLaMigracion } from '@/lib/db/migracion-ausente';
+import { faltaLaMigracion } from '@/lib/db/migracion-ausente';
 import { resolveRestaurantBranding } from '@/lib/documents/branding';
 import {
   createBrandedWorkbook, addBrandedHeader, styleTableHeaderRow, freezeHeaderRow,
@@ -32,70 +27,32 @@ import { formatDateRangeLabel, formatDocMoney, longDate } from '@/lib/documents/
 import { labelOf } from '@/lib/payment-method';
 import { logActivity } from '@/lib/activity';
 import type { DocumentBranding } from '@/lib/documents/types';
+import { esperadoEnCajon, type CuadreDelPeriodo } from '@/lib/caja/libro';
+import {
+  leerTurno, hayPendientes,
+  type CobroDelTurno, type Pendientes, type LecturaDelTurno,
+} from '@/lib/caja/turno-servidor';
+import type { Aprobador } from '@/lib/void-approval';
+import { listarAprobadores } from '@/lib/auth/firma-encargado';
+import { authRestaurant, firmar, type CajaCtx as Ctx, type FirmaInput } from '@/lib/caja/acceso';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
-/**
- * Valida que el usuario autenticado pueda operar ESTE restaurante.
- * Devuelve el client service-role + la zona horaria, o null si no autorizado.
- */
-async function authRestaurant(restaurantId: string): Promise<{
-  db: ReturnType<typeof createServiceClient>;
-  tz: string;
-  slug: string;
-  userId: string;
-  cashierName: string | null;
-} | null> {
-  if (!UUID_RE.test(restaurantId)) return null;
+/* Quién puede tocar la caja de ESTE restaurante: `lib/caja/acceso.ts`
+   (lo comparten las correcciones de cobro, y aquí todo lo exportado sería
+   una acción). */
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, restaurant_id, permissions, full_name')
-    .eq('id', user.id)
-    .single();
-
-  // Qué es esta persona EN ESTE restaurante. El perfil solo sabe de uno —y
-  // desde el modelo de membresías el dueño lo tiene en null— así que
-  // preguntárselo a él dejaba fuera al dueño de su propio negocio.
-  const efectivo = await resolveEffectiveRole(
-    { role: profile?.role ?? null, permissions: (profile?.permissions as string[] | null) ?? null },
-    restaurantId,
-  );
-
-  const belongs =
-    profile?.role === 'SUPER_ADMIN' ||
-    efectivo.isMember ||
-    (['RESTAURANT_OWNER', 'RESTAURANT_STAFF'].includes(profile?.role ?? '') &&
-      profile?.restaurant_id === restaurantId) ||
-    (await canActOnGroupBranch(restaurantId));
-  if (!belongs) return null;
-  if (!can(efectivo.role, efectivo.permissions, 'finanzas')) return null;
-
-  const db = createServiceClient();
-  const { data: r } = await db
-    .from('restaurants')
-    .select('timezone, slug')
-    .eq('id', restaurantId)
-    .single();
-
-  return {
-    db,
-    tz: (r?.timezone as string) || 'America/Guatemala',
-    slug: (r?.slug as string) || 'restaurante',
-    userId: user.id,
-    cashierName: (profile?.full_name as string) || null,
-  };
-}
+const lectura = (ctx: Ctx, restaurantId: string) =>
+  leerTurno(ctx.db, { restaurantId, timezone: ctx.tz, corteMin: ctx.corte });
 
 export interface CashSummary {
+  /** Día de negocio del turno (con la hora de corte del local). */
   date: string;
+  /** Efectivo NETO cobrado en el turno: lo que tiene que haber entrado al cajón. */
   expectedCash: number;
   byMethod: Record<string, number>;
   orders: number;
+  /** Todo lo cobrado en el turno, cualquier método (sin devoluciones). */
   totalSales: number;
 }
 
@@ -105,104 +62,27 @@ const EMPTY_SUMMARY = (date: string): CashSummary => ({
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-/**
- * Lo cobrado de estos pedidos, por método (migración 129).
- *
- * Devuelve `null` si la tabla todavía no existe en este entorno: el
- * arqueo sigue funcionando con `orders.payment_method`, que es lo que
- * hacía antes. Un informe no puede caerse por una migración pendiente.
- */
-async function pagosDelDia(
-  db: ReturnType<typeof createServiceClient>,
-  restaurantId: string,
-  orderIds: string[],
-): Promise<{ porPedido: Map<string, Map<string, number>> } | null> {
-  const { data, error } = await db
-    .from('order_payments')
-    .select('order_id, method, amount')
-    .eq('restaurant_id', restaurantId)
-    .in('order_id', orderIds.slice(0, 1000));
-
-  if (error) return null;
-
-  const porPedido = new Map<string, Map<string, number>>();
-  for (const row of data ?? []) {
-    const id = row.order_id as string;
-    const metodo = ((row.method as string) || 'CASH').toUpperCase();
-    const suyo = porPedido.get(id) ?? new Map<string, number>();
-    suyo.set(metodo, round2((suyo.get(metodo) ?? 0) + Number(row.amount ?? 0)));
-    porPedido.set(id, suyo);
-  }
-  return { porPedido };
+function resumen(l: LecturaDelTurno): CashSummary {
+  return {
+    date: l.dia,
+    expectedCash: l.cuadre.efectivo,
+    byMethod: l.cuadre.porMetodo,
+    orders: l.cuadre.pedidos,
+    totalSales: l.cuadre.cobrado,
+  };
 }
 
-/** Resumen de caja de HOY (zona horaria del restaurante). */
+/**
+ * Lo COBRADO en el turno abierto (FUN-01, PROD-02, PROD-03).
+ *
+ * Ya no es «lo vendido hoy»: es el dinero que entró desde el cierre
+ * anterior —nunca antes del inicio del día de negocio—, sacado del libro de
+ * cobros (`lib/caja/libro.ts`). Una mesa todavía comiendo no está aquí.
+ */
 export async function getCashSummary(restaurantId: string): Promise<CashSummary> {
   const ctx = await authRestaurant(restaurantId);
-  const todayGuess = new Date().toISOString().slice(0, 10);
-  if (!ctx) return EMPTY_SUMMARY(todayGuess);
-
-  const { db, tz } = ctx;
-  const todayKey = localDateKey(new Date(), tz);
-
-  const since = new Date();
-  since.setUTCDate(since.getUTCDate() - 1);
-
-  const { data } = await db
-    .from('orders')
-    .select('id, created_at, payment_method, total')
-    .eq('restaurant_id', restaurantId)
-    .neq('status', 'CANCEL')
-    .gte('created_at', since.toISOString())
-    .limit(5000);
-
-  const byMethod: Record<string, number> = {};
-  let orders = 0, totalSales = 0;
-  /* Los pedidos de hoy, para poder preguntar por SUS pagos sin traerse el
-     histórico entero del local. */
-  const deHoy: string[] = [];
-  for (const o of data ?? []) {
-    if (localDateKey(new Date(o.created_at as string), tz) !== todayKey) continue;
-    const pm = ((o.payment_method as string) || 'CASH').toUpperCase();
-    byMethod[pm] = (byMethod[pm] ?? 0) + Number(o.total);
-    totalSales += Number(o.total);
-    orders += 1;
-    deHoy.push(o.id as string);
-  }
-
-  /* EL REPARTO DE VERDAD, cuando lo hay (migración 129, M-11).
-     ------------------------------------------------------------
-     Arriba se agrupa por `orders.payment_method`, que es UNA palabra por
-     pedido: una mesa que pagó Q250 en efectivo y Q150 con tarjeta caía
-     entera en un bucket, y la caja salía larga o corta cada noche que
-     alguien partiera el pago. Donde hay filas en `order_payments` mandan
-     ellas, porque son el dinero que de verdad entró.
-
-     Los pedidos SIN filas —los de antes de la 129, y los canales
-     externos— se quedan con su columna: mezclar las dos fuentes por
-     pedido y no a medias es lo que hace que el total siga cuadrando. */
-  const pagos = deHoy.length > 0 ? await pagosDelDia(db, restaurantId, deHoy) : null;
-  if (pagos && pagos.porPedido.size > 0) {
-    /* SOLO los de hoy. La consulta trae 24 h para no depender de la zona
-       horaria al filtrar en SQL, y el primer bucle ya descartó los de
-       ayer: recorrer aquí `data` entero restaría el total de un pedido
-       que nunca se sumó, y el bucket saldría en negativo. */
-    const hoy = new Set(deHoy);
-    for (const o of data ?? []) {
-      const id = o.id as string;
-      if (!hoy.has(id)) continue;
-      const suyos = pagos.porPedido.get(id);
-      if (!suyos) continue;
-      const pm = ((o.payment_method as string) || 'CASH').toUpperCase();
-      byMethod[pm] = round2((byMethod[pm] ?? 0) - Number(o.total));
-      if (byMethod[pm] === 0) delete byMethod[pm];
-      for (const [metodo, monto] of suyos) {
-        byMethod[metodo] = round2((byMethod[metodo] ?? 0) + monto);
-      }
-    }
-  }
-
-  return { date: todayKey, expectedCash: byMethod.CASH ?? 0, byMethod, orders, totalSales };
+  if (!ctx) return EMPTY_SUMMARY(new Date().toISOString().slice(0, 10));
+  return resumen(await lectura(ctx, restaurantId));
 }
 
 export type CashCount = {
@@ -219,6 +99,15 @@ export type CashCount = {
   notes: string | null;
   created_at: string;
   created_by: string | null;
+  /** Desde la 145. */
+  status?: 'CLOSED' | 'VOID' | string;
+  expenses_total?: number | null;
+  opened_at?: string | null;
+  opened_by_name?: string | null;
+  period_start?: string | null;
+  closed_at?: string | null;
+  void_reason?: string | null;
+  voided_at?: string | null;
 };
 
 export async function getCashHistory(
@@ -227,61 +116,137 @@ export async function getCashHistory(
 ): Promise<CashCount[]> {
   const ctx = await authRestaurant(restaurantId);
   if (!ctx) return [];
-  const cols = 'id, business_date, opening_float, expected_cash, counted_cash, difference, by_method, denomination_breakdown, shift_label, cashier_name, notes, created_at, created_by';
-  const pedir = (soloCerrados: boolean) => {
-    const q = ctx.db
-      .from('cash_counts')
-      .select(cols)
-      .eq('restaurant_id', restaurantId)
-      .order('created_at', { ascending: false })
-      .limit(Math.min(Math.max(limit, 1), 200));
-    /* El cierre a medias (`status = 'DRAFT'`, migración 123) NO es un corte:
-       si se colara aquí, «Cortes recientes» enseñaría como cerrado un turno
-       que todavía se está contando —y el export de arqueos lo daría por
-       bueno—. Donde la migración no ha corrido no existen borradores, así
-       que la consulta de siempre vale tal cual. */
-    return soloCerrados ? q.neq('status', 'DRAFT') : q;
-  };
+  const base = 'id, business_date, opening_float, expected_cash, counted_cash, difference, by_method, denomination_breakdown, shift_label, cashier_name, notes, created_at, created_by';
+  const nuevas = ', status, expenses_total, opened_at, opened_by_name, period_start, closed_at, void_reason, voided_at';
+  const tope = Math.min(Math.max(limit, 1), 200);
 
-  const cerrados = await pedir(true);
-  const { error } = cerrados;
-  const data = faltaLaColumna(error)
-    ? (await pedir(false)).data
-    : cerrados.data;
-  return (data ?? []) as CashCount[];
+  /* Un turno abierto NO es un corte: si se colara aquí, «Cortes recientes»
+     enseñaría como cerrado un turno que todavía se está contando —y el
+     export de arqueos lo daría por bueno—. Los anulados sí salen: es lo que
+     hace visible un «cerré con faltante, lo anulé y cerré cuadrado». */
+  const nuevo = await ctx.db
+    .from('cash_counts')
+    .select(base + nuevas)
+    .eq('restaurant_id', restaurantId)
+    .in('status', ['CLOSED', 'VOID'])
+    .order('created_at', { ascending: false })
+    .limit(tope);
+  if (!nuevo.error) return (nuevo.data ?? []) as unknown as CashCount[];
+
+  // Sin la 145 (o sin la 123): la consulta de siempre.
+  const viejo = await ctx.db
+    .from('cash_counts')
+    .select(base)
+    .eq('restaurant_id', restaurantId)
+    .order('created_at', { ascending: false })
+    .limit(tope);
+  return (viejo.data ?? []) as unknown as CashCount[];
 }
 
-/** Elimina un corte de caja siempre que tenga menos de 24 horas. */
-export async function deleteCashCount(
-  id: string,
-  restaurantId: string,
-): Promise<{ ok: true } | { error: string }> {
-  if (!UUID_RE.test(id) || !UUID_RE.test(restaurantId)) {
-    return { error: 'Parámetros inválidos.' };
-  }
+/* ── Anular un corte (PROD-06) ──────────────────────────────────
+   Un corte ya no se borra. `deleteCashCount` lo hacía de verdad, a
+   cualquiera con acceso a Caja, sin motivo ni firma ni bitácora: un cajero
+   cerraba con faltante, lo borraba y volvía a cerrar «cuadrado». Ahora:
+
+     · solo el ÚLTIMO corte, de las últimas 24 h, y si después no se abrió
+       otro turno (el dinero de ese cajón ya habría cambiado de manos);
+     · con motivo y la firma de un encargado (el PIN de las anulaciones);
+     · el corte queda en el historial como anulado, con quién y por qué, y
+       el turno vuelve a abrirse con el mismo fondo para contarlo de nuevo.
+   ──────────────────────────────────────────────────────────────── */
+
+/** Quién puede firmar una corrección de caja desde esta sesión. */
+export async function getCajaApproval(restaurantId: string): Promise<{ selfApproves: boolean; approvers: Aprobador[] }> {
+  const ctx = await authRestaurant(restaurantId);
+  if (!ctx) return { selfApproves: false, approvers: [] };
+  if (ctx.firmaSola) return { selfApproves: true, approvers: [] };
+  return { selfApproves: false, approvers: await listarAprobadores(ctx.db, restaurantId) };
+}
+
+export async function anularCorte(input: FirmaInput & {
+  restaurantId: string;
+  id: string;
+  reason: string;
+}): Promise<{ ok?: true; error?: string }> {
+  const { restaurantId, id } = input;
+  if (!UUID_RE.test(id) || !UUID_RE.test(restaurantId)) return { error: 'Parámetros inválidos.' };
+  const motivo = (input.reason ?? '').trim();
+  if (motivo.length < 3) return { error: 'Escribe por qué se anula el corte.' };
+  if (motivo.length > 200) return { error: 'El motivo es demasiado largo.' };
 
   const ctx = await authRestaurant(restaurantId);
   if (!ctx) return { error: 'No autorizado.' };
 
-  const { data: record, error: fetchErr } = await ctx.db
+  const { data: corte, error: errCorte } = await ctx.db
     .from('cash_counts')
-    .select('id, created_at')
+    .select('id, status, created_at, closed_at, opened_at, opened_by, opened_by_name, opening_float, shift_label, counted_cash, difference')
     .eq('id', id)
     .eq('restaurant_id', restaurantId)
-    .single();
+    .maybeSingle();
+  if (errCorte && faltaLaMigracion(errCorte)) return { error: 'Falta la migración 145 para poder anular cortes.' };
+  if (!corte || corte.status !== 'CLOSED') return { error: 'Ese corte no existe o ya está anulado.' };
 
-  if (fetchErr || !record) return { error: 'Corte no encontrado.' };
-
-  const ageMs = Date.now() - new Date(record.created_at as string).getTime();
-  if (ageMs > 24 * 60 * 60 * 1000) {
-    return { error: 'Solo puedes eliminar cortes de las últimas 24 horas.' };
+  const cerradoEn = new Date((corte.closed_at as string | null) ?? (corte.created_at as string));
+  if (Date.now() - cerradoEn.getTime() > 24 * 60 * 60 * 1000) {
+    return { error: 'Solo se puede anular un corte de las últimas 24 horas.' };
   }
 
-  const { error } = await ctx.db.from('cash_counts').delete().eq('id', id);
+  const l = await lectura(ctx, restaurantId);
+  if (l.ultimoCierre?.id !== id) return { error: 'Solo se puede anular el último corte.' };
+  if (l.abierto) {
+    return { error: 'Ya se abrió otro turno después de este corte. Ciérralo o descártalo antes de anular.' };
+  }
+
+  const firma = await firmar(ctx, restaurantId, input);
+  if ('error' in firma) return firma;
+
+  const { data: anulado, error } = await ctx.db
+    .from('cash_counts')
+    .update({
+      status: 'VOID',
+      void_reason: motivo,
+      voided_at: new Date().toISOString(),
+      voided_by: ctx.userId,
+      void_approved_by: firma.id,
+    })
+    .eq('id', id)
+    .eq('status', 'CLOSED')
+    .select('id');
   if (error) return { error: error.message };
+  if (!anulado || anulado.length === 0) return { error: 'Ese corte ya se había anulado.' };
+
+  // Los gastos vuelven al turno: siguen habiendo salido del cajón.
+  await ctx.db.from('cash_expenses').update({ cash_count_id: null }).eq('cash_count_id', id);
+
+  // Y el turno se reabre con su mismo fondo, para contarlo de nuevo.
+  await ctx.db.from('cash_counts').insert({
+    restaurant_id: restaurantId,
+    business_date: l.dia,
+    status: 'OPEN',
+    opened_at: corte.opened_at ?? null,
+    opened_by: corte.opened_by ?? null,
+    opened_by_name: corte.opened_by_name ?? null,
+    opening_float: Number(corte.opening_float ?? 0),
+    shift_label: corte.shift_label ?? null,
+    created_by: ctx.userId,
+  });
+
+  await logActivity({
+    restaurantId,
+    actorId: ctx.userId,
+    action: 'corte_anulado',
+    entity: motivo,
+    meta: {
+      corteId: id,
+      contado: Number(corte.counted_cash ?? 0),
+      diferencia: Number(corte.difference ?? 0),
+      firmante: firma.id,
+      firmadoPorOtro: firma.id !== ctx.userId,
+    },
+  });
 
   revalidatePath('/admin/finanzas');
-  revalidatePath('/admin/caja'); // el historial de cortes vive en Caja
+  revalidatePath('/admin/caja');
   return { ok: true };
 }
 
@@ -295,7 +260,7 @@ export async function getSalesReportData(
   const ctx = await authRestaurant(restaurantId);
   if (!ctx) return { error: 'No autorizado.' };
   const [report, branding] = await Promise.all([
-    getSalesReport(restaurantId, from, to, ctx.tz),
+    getSalesReport(restaurantId, from, to, ctx.tz, ctx.corte),
     resolveRestaurantBranding(restaurantId),
   ]);
   return { report, branding };
@@ -310,7 +275,7 @@ export async function exportSalesReportXlsx(
   if (!ctx) return { error: 'No autorizado.' };
 
   const [report, branding] = await Promise.all([
-    getSalesReport(restaurantId, from, to, ctx.tz),
+    getSalesReport(restaurantId, from, to, ctx.tz, ctx.corte),
     resolveRestaurantBranding(restaurantId),
   ]);
 
@@ -333,6 +298,7 @@ export async function exportSalesReportXlsx(
   moneyRow('Ingreso de productos', report.productRevenue);
   moneyRow('Envíos', report.deliveryRevenue);
   moneyRow('Propinas', report.tips);
+  if (report.refunds > 0) moneyRow('Devoluciones (dinero devuelto)', -report.refunds);
   moneyRow('Costo', report.cost);
   moneyRow('Utilidad', report.profit);
   if (report.marginPct != null) {
@@ -455,25 +421,22 @@ export async function exportCashHistoryXlsx(
 }
 
 /* ════════════════════════════════════════════════════════════
-   NEGOCIO › CAJA — cerrar el día en tres pasos
+   NEGOCIO › CAJA — el turno, de la apertura al cierre
    ------------------------------------------------------------
-   El arqueo vivía al final del scroll de Finanzas, como un formulario
-   largo de once casillas con el cuadre hasta abajo. Cerrar caja es
-   tarea de TODAS LAS NOCHES, no un apéndice de un reporte.
+   Desde la migración 145 el cierre es el de un TURNO, no el del día:
 
-   Aquí vive lo que necesita su propia pestaña:
-
+     0. Abrir — quién y con cuánto fondo. Opcional: se puede cerrar sin
+                haber abierto, como antes, y el fondo se escribe al cerrar.
      1. Efectivo — contar, con el cuadre recalculándose a cada tecla.
-     2. Gastos   — lo que salió de la caja durante el turno. Sin esto
-                   el arqueo nunca cuadraba: ese dinero ya no estaba
-                   en el cajón y nada lo explicaba.
-     3. Propinas — cuánto entró y cómo se reparte entre quienes
-                   atendieron.
+     2. Gastos   — lo que salió de la caja durante el turno.
+     3. Propinas — las de lo cobrado en el turno, por quien atendió.
 
-   Y algo que el formulario de antes no permitía: dejarlo a medias.
-   `status = 'DRAFT'` guarda el cierre en curso para retomarlo, con un
-   índice único que garantiza UN solo borrador por restaurante — dos
-   borradores abiertos son dos cuadres que se contradicen.
+   El cuadre cubre lo COBRADO desde el cierre anterior (`lib/caja/libro.ts`),
+   así que dos turnos el mismo día cuadran cada uno lo suyo, y el día es
+   la suma de sus turnos.
+
+   «Guardar y seguir después» guarda el conteo en el mismo turno abierto:
+   el índice único de la 145 garantiza UN turno abierto por restaurante.
    ════════════════════════════════════════════════════════════ */
 
 export interface CajaExpense {
@@ -491,12 +454,12 @@ export interface TipShare {
   /** profile.id de quien atendió; null = el bote común / sin asignar. */
   profileId: string | null;
   name: string;
-  /** Mesas distintas que atendió hoy — la referencia para repartir. */
+  /** Mesas distintas que atendió en el turno — la referencia para repartir. */
   tables: number;
   amount: number;
 }
 
-/** El cierre a medias que se dejó guardado. */
+/** El cierre a medias que se dejó guardado en el turno abierto. */
 export interface CajaDraft {
   id: string;
   counts: Record<string, number>;
@@ -507,142 +470,164 @@ export interface CajaDraft {
   savedAt: string;
 }
 
+/** El turno abierto, tal como lo enseña la pantalla. */
+export interface CajaShift {
+  id: string;
+  /** null = el turno nació al guardar un conteo, sin abrirlo antes. */
+  openedAt: string | null;
+  openedByName: string | null;
+  openingFloat: number;
+  shiftLabel: string | null;
+}
+
 export interface CajaState {
   date: string;
+  /** Desde cuándo cuenta el cuadre (ISO). */
+  periodStart: string;
+  /** El último cierre, para decir «desde el cierre de Ana a las 15:00». */
+  lastClose: { at: string; cashierName: string | null; shiftLabel: string | null } | null;
+  shift: CajaShift | null;
   summary: CashSummary;
+  /** Devoluciones y mesas liberadas sin cobrar del turno. */
+  refunds: number;
+  /** De las devoluciones, las que salieron del cajón en efectivo. */
+  refundsCash: number;
+  releasedUnpaid: CuadreDelPeriodo['liberadasSinCobrar'];
+  payments: CobroDelTurno[];
+  pending: Pendientes;
   expenses: CajaExpense[];
   expensesTotal: number;
-  /** Propinas del día, ya sugeridas por mesero según lo que atendió. */
+  /** Propinas del turno, ya sugeridas por mesero según lo que atendió. */
   tips: TipShare[];
   tipsTotal: number;
   draft: CajaDraft | null;
-  /** La migración 123 no ha corrido: la pestaña funciona, sin gastos. */
+  /** Hora de corte del día (minutos), para enseñarla. */
+  dayCutoff: number;
+  /** Quien mira puede firmar sola las correcciones. */
+  selfApproves: boolean;
+  /** La migración 145 no ha corrido: sin turnos ni correcciones. */
   needsMigration: boolean;
 }
 
 const EMPTY_CAJA = (date: string): CajaState => ({
   date,
+  periodStart: new Date().toISOString(),
+  lastClose: null,
+  shift: null,
   summary: EMPTY_SUMMARY(date),
+  refunds: 0,
+  refundsCash: 0,
+  releasedUnpaid: { pedidos: 0, total: 0 },
+  payments: [],
+  pending: { mesas: [], domicilios: [], paraLlevar: [], total: 0 },
   expenses: [],
   expensesTotal: 0,
   tips: [],
   tipsTotal: 0,
   draft: null,
+  dayCutoff: 0,
+  selfApproves: false,
   needsMigration: false,
 });
 
-/** Una columna que la migración 123 todavía no creó en este entorno. */
-function faltaMigracion(error: { code?: string } | null): boolean {
-  return faltaLaMigracion(error);
+function estadoDeCaja(ctx: Ctx, l: LecturaDelTurno): CajaState {
+  const t = l.abierto;
+  return {
+    date: l.dia,
+    periodStart: l.desde,
+    lastClose: l.ultimoCierre
+      ? { at: l.ultimoCierre.closedAt, cashierName: l.ultimoCierre.cashierName, shiftLabel: l.ultimoCierre.shiftLabel }
+      : null,
+    shift: t ? { id: t.id, openedAt: t.openedAt, openedByName: t.openedByName, openingFloat: t.openingFloat, shiftLabel: t.shiftLabel } : null,
+    summary: resumen(l),
+    refunds: l.cuadre.devoluciones,
+    refundsCash: l.cuadre.devolucionesEfectivo,
+    releasedUnpaid: l.cuadre.liberadasSinCobrar,
+    payments: l.cobros,
+    pending: l.pendientes,
+    expenses: l.gastos,
+    expensesTotal: l.gastosTotal,
+    tips: l.propinas,
+    tipsTotal: l.propinasTotal,
+    draft: t?.draft
+      ? {
+          id: t.id,
+          counts: t.draft.counts,
+          openingFloat: t.openingFloat,
+          shiftLabel: t.shiftLabel,
+          notes: t.draft.notes,
+          tips: (t.draft.tips as TipShare[] | null) ?? null,
+          savedAt: t.draft.savedAt,
+        }
+      : null,
+    dayCutoff: ctx.corte,
+    selfApproves: ctx.firmaSola,
+    needsMigration: l.sinMigracion,
+  };
 }
 
-/**
- * Todo lo que la pestaña Caja necesita para pintarse, en un viaje.
- *
- * Degrada sin romperse: si la migración 123 no ha corrido, los gastos y
- * el borrador simplemente no existen y el paso 1 sigue funcionando
- * exactamente como el arqueo de siempre.
- */
+/** Todo lo que la pestaña Caja necesita para pintarse, en un viaje. */
 export async function getCajaState(restaurantId: string): Promise<CajaState> {
-  const hoyGuess = new Date().toISOString().slice(0, 10);
   const ctx = await authRestaurant(restaurantId);
-  if (!ctx) return EMPTY_CAJA(hoyGuess);
+  if (!ctx) return EMPTY_CAJA(new Date().toISOString().slice(0, 10));
+  return estadoDeCaja(ctx, await lectura(ctx, restaurantId));
+}
 
-  const { db, tz } = ctx;
-  const summary = await getCashSummary(restaurantId);
-  let needsMigration = false;
+const SIN_145 = 'Falta la migración 145 en esta base para poder abrir y cerrar turnos.';
 
-  /* ── Gastos del día, todavía sin atar a ningún corte ── */
-  let expenses: CajaExpense[] = [];
-  {
-    const { data, error } = await db
-      .from('cash_expenses')
-      .select('id, concept, amount, paid_by, receipt_url, notes, created_at')
-      .eq('restaurant_id', restaurantId)
-      .eq('business_date', summary.date)
-      .is('cash_count_id', null)
-      .order('created_at', { ascending: true });
-    if (error) needsMigration = needsMigration || faltaMigracion(error);
-    else expenses = (data ?? []).map((r) => ({ ...r, amount: Number(r.amount) })) as CajaExpense[];
+/** Abre el turno: quién, a qué hora y con cuánto fondo (FUN-01). */
+export async function abrirTurno(input: {
+  restaurantId: string;
+  openingFloat: number;
+  shiftLabel?: string | null;
+}): Promise<{ ok?: true; error?: string }> {
+  const ctx = await authRestaurant(input.restaurantId);
+  if (!ctx) return { error: 'No autorizado.' };
+
+  const fondo = Math.round((Number(input.openingFloat) || 0) * 100) / 100;
+  if (fondo < 0 || fondo > 1_000_000) return { error: 'Ese fondo no parece válido.' };
+
+  const l = await lectura(ctx, input.restaurantId);
+  if (l.sinMigracion) return { error: SIN_145 };
+
+  const ahora = new Date().toISOString();
+  const etiqueta = (input.shiftLabel ?? '').trim().slice(0, 40) || null;
+
+  /* Si ya hay un turno —por ejemplo uno que nació al guardar un conteo sin
+     abrir—, abrirlo es ponerle quién y fondo, no crear otro. */
+  if (l.abierto) {
+    if (l.abierto.openedAt) return { error: 'Ya hay un turno abierto.' };
+    const { error } = await ctx.db.from('cash_counts').update({
+      opened_at: ahora, opened_by: ctx.userId, opened_by_name: ctx.cashierName,
+      opening_float: fondo, shift_label: etiqueta ?? l.abierto.shiftLabel,
+    }).eq('id', l.abierto.id);
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await ctx.db.from('cash_counts').insert({
+      restaurant_id: input.restaurantId,
+      business_date: l.dia,
+      status: 'OPEN',
+      opened_at: ahora,
+      opened_by: ctx.userId,
+      opened_by_name: ctx.cashierName,
+      opening_float: fondo,
+      shift_label: etiqueta,
+      created_by: ctx.userId,
+    });
+    // El índice único: otro aparato lo abrió un segundo antes.
+    if (error) return { error: error.code === '23505' ? 'Ya hay un turno abierto.' : error.message };
   }
 
-  /* ── El cierre que quedó a medias ── */
-  let draft: CajaDraft | null = null;
-  {
-    const { data, error } = await db
-      .from('cash_counts')
-      .select('id, denomination_breakdown, opening_float, shift_label, notes, tips_distribution, created_at')
-      .eq('restaurant_id', restaurantId)
-      .eq('status', 'DRAFT')
-      .maybeSingle();
-    if (error) needsMigration = needsMigration || faltaMigracion(error);
-    else if (data) {
-      draft = {
-        id: data.id as string,
-        counts: (data.denomination_breakdown as Record<string, number> | null) ?? {},
-        openingFloat: Number(data.opening_float ?? 0),
-        shiftLabel: (data.shift_label as string | null) ?? null,
-        notes: (data.notes as string | null) ?? null,
-        tips: (data.tips_distribution as TipShare[] | null) ?? null,
-        savedAt: data.created_at as string,
-      };
-    }
-  }
+  await logActivity({
+    restaurantId: input.restaurantId,
+    actorId: ctx.userId,
+    action: 'turno_abierto',
+    entity: etiqueta,
+    meta: { fondo },
+  });
 
-  /* ── Propinas del turno, por quien atendió ──────────────────
-     El reparto SUGERIDO es proporcional a lo que cada quien atendió;
-     el paso 3 deja cambiarlo a mano o partirlo por partes iguales.  */
-  const desde = new Date();
-  desde.setUTCDate(desde.getUTCDate() - 1);
-  const { data: conPropina } = await db
-    .from('orders')
-    .select('created_at, tip, address, waiter_id, waiter:profiles!orders_waiter_id_fkey(full_name)')
-    .eq('restaurant_id', restaurantId)
-    .neq('status', 'CANCEL')
-    .gt('tip', 0)
-    .gte('created_at', desde.toISOString())
-    .limit(3000);
-
-  const porMesero = new Map<string, { name: string; tables: Set<string>; amount: number }>();
-  let tipsTotal = 0;
-  for (const row of (conPropina ?? []) as unknown as {
-    created_at: string; tip: number | string; address: string | null;
-    waiter_id: string | null; waiter?: { full_name: string | null } | null;
-  }[]) {
-    if (localDateKey(new Date(row.created_at), tz) !== summary.date) continue;
-    const monto = Number(row.tip) || 0;
-    if (monto <= 0) continue;
-    tipsTotal += monto;
-    const key = row.waiter_id ?? '__casa__';
-    const prev = porMesero.get(key) ?? {
-      name: row.waiter?.full_name ?? (row.waiter_id ? 'Mesero' : 'Sin mesero (pedidos en línea)'),
-      tables: new Set<string>(),
-      amount: 0,
-    };
-    prev.amount += monto;
-    if (row.address) prev.tables.add(row.address);
-    porMesero.set(key, prev);
-  }
-
-  const tips: TipShare[] = [...porMesero.entries()]
-    .map(([key, v]) => ({
-      profileId: key === '__casa__' ? null : key,
-      name: v.name,
-      tables: v.tables.size,
-      amount: Math.round(v.amount * 100) / 100,
-    }))
-    .sort((a, b) => b.amount - a.amount);
-
-  return {
-    date: summary.date,
-    summary,
-    expenses,
-    expensesTotal: Math.round(expenses.reduce((s, e) => s + e.amount, 0) * 100) / 100,
-    tips,
-    tipsTotal: Math.round(tipsTotal * 100) / 100,
-    draft,
-    needsMigration,
-  };
+  revalidatePath('/admin/caja');
+  return { ok: true };
 }
 
 /** Anota un gasto pagado con dinero de la caja. */
@@ -663,10 +648,12 @@ export async function addCashExpense(input: {
   if (!(amount > 0)) return { error: 'El monto tiene que ser mayor que cero.' };
   if (amount > 1_000_000) return { error: 'Ese monto no parece un gasto de caja.' };
 
-  const summary = await getCashSummary(input.restaurantId);
+  // El día del gasto es el día de NEGOCIO: el hielo que se compró a la
+  // 1:00 es de la noche del viernes, no del sábado.
+  const l = await lectura(ctx, input.restaurantId);
   const { error } = await ctx.db.from('cash_expenses').insert({
     restaurant_id: input.restaurantId,
-    business_date: summary.date,
+    business_date: l.dia,
     concept,
     amount,
     paid_by: (input.paidBy ?? '').trim() || ctx.cashierName,
@@ -675,7 +662,7 @@ export async function addCashExpense(input: {
   });
 
   if (error) {
-    if (faltaMigracion(error)) return { error: 'Falta la migración 123 para poder anotar gastos de caja.' };
+    if (faltaLaMigracion(error)) return { error: 'Falta la migración 123 para poder anotar gastos de caja.' };
     return { error: error.message };
   }
 
@@ -728,6 +715,7 @@ export interface CajaPayload {
   restaurantId: string;
   /** Denominación → cuántos hay. */
   counts: Record<string, number>;
+  /** Solo cuenta si el turno no se abrió: el abierto ya trae su fondo. */
   openingFloat: number;
   shiftLabel?: string | null;
   notes?: string | null;
@@ -736,7 +724,7 @@ export interface CajaPayload {
 }
 
 /** Lee el payload y calcula el cuadre desde el SERVIDOR, nunca del cliente. */
-async function cuadre(ctx: NonNullable<Awaited<ReturnType<typeof authRestaurant>>>, input: CajaPayload) {
+async function cuadre(ctx: Ctx, input: CajaPayload) {
   const breakdown: Record<string, number> = {};
   let centavos = 0;
   for (const { field, centavos: c } of DENOM_FIELDS) {
@@ -745,87 +733,83 @@ async function cuadre(ctx: NonNullable<Awaited<ReturnType<typeof authRestaurant>
     centavos += n * c;
   }
   const counted = Math.round(centavos) / 100;
-  const opening = Math.max(0, Math.round((Number(input.openingFloat) || 0) * 100) / 100);
 
-  const summary = await getCashSummary(input.restaurantId);
+  const l = await lectura(ctx, input.restaurantId);
+  /* El fondo de un turno abierto es el que se escribió AL ABRIR: dejar que
+     el cierre lo cambie sería la forma más fácil de «cuadrar» un faltante. */
+  const opening = l.abierto?.openedAt
+    ? l.abierto.openingFloat
+    : Math.max(0, Math.round((Number(input.openingFloat) || 0) * 100) / 100);
 
-  const { data: gastos } = await ctx.db
-    .from('cash_expenses')
-    .select('amount')
-    .eq('restaurant_id', input.restaurantId)
-    .eq('business_date', summary.date)
-    .is('cash_count_id', null);
-  const expensesTotal = Math.round(
-    ((gastos ?? []) as { amount: number | string }[]).reduce((s, g) => s + Number(g.amount), 0) * 100,
-  ) / 100;
+  /* En el cajón tiene que haber: lo que se abrió + el efectivo neto que
+     entró en el turno − lo que salió pagando cosas. */
+  const esperadoEnCaja = esperadoEnCajon(opening, l.cuadre.efectivo, l.gastosTotal);
+  const difference = round2(counted - esperadoEnCaja);
 
-  /* En el cajón tiene que haber: lo que se abrió + lo que entró en
-     efectivo − lo que salió pagando cosas. Sin restar los gastos, un
-     arqueo honesto salía siempre «faltando» justo lo del mercado. */
-  const esperadoEnCaja = Math.round((opening + summary.expectedCash - expensesTotal) * 100) / 100;
-  const difference = Math.round((counted - esperadoEnCaja) * 100) / 100;
-
-  return { breakdown, counted, opening, summary, expensesTotal, esperadoEnCaja, difference };
+  return { breakdown, counted, opening, l, summary: resumen(l), expensesTotal: l.gastosTotal, esperadoEnCaja, difference };
 }
 
 /**
  * «Guardar y seguir después». El cierre puede dejarse a medias: es de
- * noche, entra un cliente, y el conteo no se puede perder por eso.
+ * noche, entra un cliente, y el conteo no se puede perder por eso. Se
+ * guarda en el turno abierto; si no había, nace uno sin apertura.
  */
 export async function saveCajaDraft(input: CajaPayload): Promise<{ ok?: true; error?: string }> {
   const ctx = await authRestaurant(input.restaurantId);
   if (!ctx) return { error: 'No autorizado.' };
 
   const c = await cuadre(ctx, input);
+  if (c.l.sinMigracion) return { error: SIN_145 };
 
   const fila = {
-    restaurant_id:          input.restaurantId,
-    business_date:          c.summary.date,
-    status:                 'DRAFT',
-    opening_float:          c.opening,
     expected_cash:          c.summary.expectedCash,
     counted_cash:           c.counted,
     difference:             c.difference,
     expenses_total:         c.expensesTotal,
     by_method:              c.summary.byMethod,
     denomination_breakdown: c.breakdown,
-    shift_label:            (input.shiftLabel ?? '').trim() || null,
+    opening_float:          c.opening,
+    shift_label:            (input.shiftLabel ?? '').trim() || c.l.abierto?.shiftLabel || null,
     cashier_name:           ctx.cashierName,
     notes:                  (input.notes ?? '').trim() || null,
     tips_distribution:      input.tips ?? null,
-    tips_total:             (input.tips ?? []).reduce((s, t) => s + (Number(t.amount) || 0), 0),
-    created_by:             ctx.userId,
+    tips_total:             round2((input.tips ?? []).reduce((s, t) => s + (Number(t.amount) || 0), 0)),
+    draft_saved_at:         new Date().toISOString(),
   };
 
-  const { data: existente } = await ctx.db
-    .from('cash_counts')
-    .select('id')
-    .eq('restaurant_id', input.restaurantId)
-    .eq('status', 'DRAFT')
-    .maybeSingle();
+  const { error } = c.l.abierto
+    ? await ctx.db.from('cash_counts').update({ ...fila, status: 'OPEN' }).eq('id', c.l.abierto.id)
+    : await ctx.db.from('cash_counts').insert({
+        ...fila,
+        restaurant_id: input.restaurantId,
+        business_date: c.l.dia,
+        status: 'OPEN',
+        created_by: ctx.userId,
+      });
 
-  const { error } = existente
-    ? await ctx.db.from('cash_counts').update(fila).eq('id', existente.id as string)
-    : await ctx.db.from('cash_counts').insert(fila);
-
-  if (error) {
-    if (faltaMigracion(error)) return { error: 'Falta la migración 123 para poder guardar el cierre a medias.' };
-    return { error: error.message };
-  }
+  if (error) return { error: error.message };
 
   revalidatePath('/admin/caja');
   return { ok: true };
 }
 
-/** Descarta el cierre a medias y empieza de cero. */
+/**
+ * Descarta el conteo guardado y empieza de cero. El TURNO no se borra si se
+ * abrió de verdad: lo que se descarta es el conteo, no quién abrió ni el
+ * fondo. Un turno que solo existía por el conteo guardado sí se va.
+ */
 export async function discardCajaDraft(restaurantId: string): Promise<{ ok?: true; error?: string }> {
   const ctx = await authRestaurant(restaurantId);
   if (!ctx) return { error: 'No autorizado.' };
-  const { error } = await ctx.db
-    .from('cash_counts')
-    .delete()
-    .eq('restaurant_id', restaurantId)
-    .eq('status', 'DRAFT');
+  const l = await lectura(ctx, restaurantId);
+  if (!l.abierto) return { ok: true };
+
+  const { error } = l.abierto.openedAt
+    ? await ctx.db.from('cash_counts').update({
+        denomination_breakdown: null, counted_cash: 0, difference: 0, notes: null,
+        tips_distribution: null, tips_total: 0, draft_saved_at: null,
+      }).eq('id', l.abierto.id)
+    : await ctx.db.from('cash_counts').delete().eq('id', l.abierto.id).in('status', ['OPEN', 'DRAFT']);
   if (error) return { error: error.message };
   revalidatePath('/admin/caja');
   return { ok: true };
@@ -841,68 +825,102 @@ export interface CajaCloseResult {
   expensesTotal: number;
   tipsTotal: number;
   difference: number;
+  refunds: number;
+  refundsCash: number;
+  periodStart: string;
+  closedAt: string;
+  openedByName: string | null;
+  /** Lo que quedó sin cobrar y pasa al turno siguiente. */
+  pendingTotal: number;
 }
 
 /**
- * Cierra el turno: escribe el corte definitivo, ata los gastos del día a
- * ese corte y borra el borrador.
+ * Cierra el turno: escribe el corte definitivo, ata los gastos del periodo
+ * a ese corte y fija desde cuándo hasta cuándo contó.
  *
- * Los gastos se atan (`cash_count_id`) en vez de copiarse: así el corte
- * de mañana no vuelve a contar lo del mercado de hoy, y el detalle sigue
- * disponible por si alguien pregunta qué fueron esos Q412.
+ * Si queda algo sin cobrar (mesas abiertas, domicilios en camino, para
+ * llevar sin entregar), la primera llamada NO cierra: devuelve la lista
+ * para que la pantalla pregunte. No entra en este cuadre —no se ha
+ * cobrado— y contará en el turno en que se cobre (PROD-02).
  */
-export async function closeCaja(input: CajaPayload): Promise<{ result?: CajaCloseResult; error?: string }> {
+export async function closeCaja(
+  input: CajaPayload & { confirmPending?: boolean },
+): Promise<{ result?: CajaCloseResult; pending?: Pendientes; error?: string }> {
   const ctx = await authRestaurant(input.restaurantId);
   if (!ctx) return { error: 'No autorizado.' };
 
   const c = await cuadre(ctx, input);
-  if (c.counted <= 0) return { error: 'Cuenta el efectivo antes de cerrar el turno.' };
+  if (c.l.sinMigracion) return { error: SIN_145 };
+  if (c.counted <= 0 && c.esperadoEnCaja > 0) return { error: 'Cuenta el efectivo antes de cerrar el turno.' };
+  if (hayPendientes(c.l.pendientes) && !input.confirmPending) return { pending: c.l.pendientes };
 
   const tips = input.tips ?? null;
-  const tipsTotal = Math.round((tips ?? []).reduce((s, t) => s + (Number(t.amount) || 0), 0) * 100) / 100;
+  const tipsTotal = round2((tips ?? []).reduce((s, t) => s + (Number(t.amount) || 0), 0));
+  const cerradoEn = c.l.hasta;
 
   const fila: Record<string, unknown> = {
-    restaurant_id:          input.restaurantId,
-    business_date:          c.summary.date,
+    business_date:          c.l.dia,
     opening_float:          c.opening,
     expected_cash:          c.summary.expectedCash,
     counted_cash:           c.counted,
     difference:             c.difference,
     by_method:              c.summary.byMethod,
     denomination_breakdown: c.breakdown,
-    shift_label:            (input.shiftLabel ?? '').trim() || null,
+    shift_label:            (input.shiftLabel ?? '').trim() || c.l.abierto?.shiftLabel || null,
     cashier_name:           ctx.cashierName,
     notes:                  (input.notes ?? '').trim() || null,
-    created_by:             ctx.userId,
     status:                 'CLOSED',
     expenses_total:         c.expensesTotal,
     tips_total:             tipsTotal,
     tips_distribution:      tips,
+    period_start:           c.l.desde,
+    closed_at:              cerradoEn,
+    draft_saved_at:         null,
   };
 
-  let insert = await ctx.db.from('cash_counts').insert(fila).select('id').single();
-  if (insert.error && faltaMigracion(insert.error)) {
-    // Sin la migración 123 el corte se guarda igual, con las columnas de
-    // siempre: cerrar caja nunca debe quedar bloqueado por una mejora.
-    for (const k of ['status', 'expenses_total', 'tips_total', 'tips_distribution']) delete fila[k];
-    insert = await ctx.db.from('cash_counts').insert(fila).select('id').single();
+  let id: string;
+  if (c.l.abierto) {
+    /* Solo si sigue abierto: dos aparatos cerrando a la vez no pueden
+       escribir dos cortes del mismo turno. */
+    const { data, error } = await ctx.db
+      .from('cash_counts')
+      .update(fila)
+      .eq('id', c.l.abierto.id)
+      .in('status', ['OPEN', 'DRAFT'])
+      .select('id');
+    if (error) return { error: error.message };
+    if (!data || data.length === 0) return { error: 'Este turno ya se cerró desde otro aparato.' };
+    id = data[0].id as string;
+  } else {
+    const { data, error } = await ctx.db
+      .from('cash_counts')
+      .insert({ ...fila, restaurant_id: input.restaurantId, created_by: ctx.userId })
+      .select('id')
+      .single();
+    if (error || !data) return { error: error?.message ?? 'No se pudo cerrar la caja.' };
+    id = data.id as string;
   }
-  if (insert.error || !insert.data) return { error: insert.error?.message ?? 'No se pudo cerrar la caja.' };
 
-  const id = insert.data.id as string;
+  // Los gastos que se contaron, y solo esos: uno anotado un segundo después
+  // ya es del turno siguiente.
+  const gastos = c.l.gastos.map((g) => g.id);
+  if (gastos.length > 0) {
+    await ctx.db.from('cash_expenses').update({ cash_count_id: id }).in('id', gastos).is('cash_count_id', null);
+  }
 
-  await ctx.db
-    .from('cash_expenses')
-    .update({ cash_count_id: id })
-    .eq('restaurant_id', input.restaurantId)
-    .eq('business_date', c.summary.date)
-    .is('cash_count_id', null);
-
-  await ctx.db
-    .from('cash_counts')
-    .delete()
-    .eq('restaurant_id', input.restaurantId)
-    .eq('status', 'DRAFT');
+  await logActivity({
+    restaurantId: input.restaurantId,
+    actorId: ctx.userId,
+    action: 'turno_cerrado',
+    entity: (fila.shift_label as string | null) ?? null,
+    meta: {
+      corteId: id,
+      esperado: c.esperadoEnCaja,
+      contado: c.counted,
+      diferencia: c.difference,
+      pendientes: c.l.pendientes.total,
+    },
+  });
 
   revalidatePath('/admin/caja');
   revalidatePath('/admin/finanzas');
@@ -910,13 +928,19 @@ export async function closeCaja(input: CajaPayload): Promise<{ result?: CajaClos
   return {
     result: {
       id,
-      date: c.summary.date,
+      date: c.l.dia,
       counted: c.counted,
       expected: c.summary.expectedCash,
       opening: c.opening,
       expensesTotal: c.expensesTotal,
       tipsTotal,
       difference: c.difference,
+      refunds: c.l.cuadre.devoluciones,
+      refundsCash: c.l.cuadre.devolucionesEfectivo,
+      periodStart: c.l.desde,
+      closedAt: cerradoEn,
+      openedByName: c.l.abierto?.openedByName ?? null,
+      pendingTotal: c.l.pendientes.total,
     },
   };
 }

@@ -180,6 +180,32 @@ function queHizo(r: ActivityLike): string {
       return m.pausado ? 'pausó los pedidos en línea' : 'reanudó los pedidos en línea';
     case 'horario':
       return 'cambió el horario del restaurante';
+    /* Caja (migración 145). */
+    case 'turno_abierto': {
+      const fondo = num(m.fondo);
+      return `abrió el turno de caja${fondo != null ? ` con ${fmtMoney(fondo)} de fondo` : ''}`;
+    }
+    case 'turno_cerrado': {
+      const dif = num(m.diferencia);
+      const cuadre = dif == null ? '' : Math.abs(dif) < 0.005 ? ' (cuadrada)'
+        : dif > 0 ? ` (sobraron ${fmtMoney(dif)})` : ` (faltaron ${fmtMoney(-dif)})`;
+      return `cerró el turno de caja${cuadre}`;
+    }
+    case 'corte_anulado':
+      return `anuló un corte de caja${e ? ` — «${e}»` : ''}`;
+    case 'cobro_metodo_corregido': {
+      const motivo = typeof m.motivo === 'string' && m.motivo ? ` («${m.motivo}»)` : '';
+      return `corrigió cómo se pagó el pedido ${e}${motivo}`;
+    }
+    case 'mesa_reabierta': {
+      const motivo = typeof m.motivo === 'string' && m.motivo ? ` («${m.motivo}»)` : '';
+      return `reabrió la mesa ${e}, cobrada por error${motivo}`;
+    }
+    case 'devolucion': {
+      const monto = num(m.monto);
+      const motivo = typeof m.motivo === 'string' && m.motivo ? ` («${m.motivo}»)` : '';
+      return `devolvió ${monto != null ? fmtMoney(monto) : 'dinero'} del pedido ${e}${motivo}`;
+    }
     default:
       return humanizarClave(r.action).toLowerCase() + (e && !esUuid(e) ? ` — ${e}` : '');
   }

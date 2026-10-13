@@ -26,17 +26,18 @@ import { panelLink } from '@/lib/panel-links-server';
 
 export const metadata = { title: 'Caja – Panel admin' };
 
-/** "Martes 1 de septiembre", en la zona del restaurante. Se arma en el
-    servidor a propósito: hacerlo en el cliente da un HTML distinto al
-    del servidor en cuanto los dos no están en el mismo huso. */
-function fechaLarga(timezone: string): string {
+/** "Martes 1 de septiembre" del DÍA DE NEGOCIO del turno (migración 145):
+    a la 1:00 un bar sigue cerrando el viernes. Se arma en el servidor a
+    propósito: hacerlo en el cliente da un HTML distinto al del servidor en
+    cuanto los dos no están en el mismo huso. */
+function fechaLarga(dia: string): string {
   try {
     const s = new Intl.DateTimeFormat('es-GT', {
-      weekday: 'long', day: 'numeric', month: 'long', timeZone: timezone,
-    }).format(new Date());
+      weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC',
+    }).format(new Date(`${dia}T12:00:00Z`));
     return s.charAt(0).toUpperCase() + s.slice(1);
   } catch {
-    return new Date().toISOString().slice(0, 10);
+    return dia;
   }
 }
 
@@ -89,14 +90,21 @@ export default async function AdminCajaPage() {
       <CashClose
         restaurantId={restaurantId}
         state={state}
-        dateLabel={fechaLarga(timezone)}
+        dateLabel={fechaLarga(state.date)}
         cashierName={ctx.profile.full_name ?? 'Caja'}
         restaurantName={restaurantName}
+        timezone={timezone}
       />
 
       {/* Los cierres anteriores viven aquí, no en Finanzas: quien abre esta
           pantalla es quien se pregunta "¿cómo cerró ayer?". */}
-      <CashHistoryPanel history={history} restaurantId={restaurantId} />
+      <CashHistoryPanel
+        history={history}
+        restaurantId={restaurantId}
+        timezone={timezone}
+        selfApproves={state.selfApproves}
+        shiftOpen={!!state.shift}
+      />
     </div>
   );
 }
