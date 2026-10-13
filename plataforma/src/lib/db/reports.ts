@@ -1,4 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/service';
+import { corteDelRestaurante } from '@/lib/db/dia-negocio';
+import { labelOf } from '@/lib/payment-method';
 
 /* ============================================================
    REPORTES FINANCIEROS — Fase A (Admin Pro)
@@ -46,6 +48,11 @@ export interface SalesReport {
   /** Ingreso de productos que SÍ tienen costo (base del margen). */
   costedRevenue: number;
   avgTicket: number;
+  /** Devuelto a clientes en el rango, por la fecha en que salió el dinero
+      (migración 145). No se resta de `revenue`: la venta no se borra. */
+  refunds: number;
+  /** Pedidos con alguna devolución en el rango. */
+  refundOrders: number;
   series: DayRevenue[];
   byChannel: Split[];
   byPayment: Split[];
@@ -62,7 +69,7 @@ const CHANNEL_LABEL: Record<string, string> = {
 
 const EMPTY = (from: string, to: string): SalesReport => ({
   from, to, orders: 0, revenue: 0, productRevenue: 0, deliveryRevenue: 0, tips: 0,
-  cost: 0, profit: 0, marginPct: null, costedRevenue: 0, avgTicket: 0,
+  cost: 0, profit: 0, marginPct: null, costedRevenue: 0, avgTicket: 0, refunds: 0, refundOrders: 0,
   series: [], byChannel: [], byPayment: [], byZone: [], topByRevenue: [], topByProfit: [],
 });
 
@@ -78,6 +85,9 @@ export interface RawSalesReport {
   tips: number;
   cost: number;
   costedRevenue: number;
+  /** Desde la 145. */
+  refunds?: number;
+  refundOrders?: number;
   series: RawDay[];
   byChannel: RawSplit[];
   byPayment: RawSplit[];
@@ -142,11 +152,13 @@ export function buildSalesReport(from: string, to: string, d: RawSalesReport): S
     cost, profit, costedRevenue,
     marginPct: costedRevenue > 0 ? (profit / costedRevenue) * 100 : null,
     avgTicket: orders > 0 ? revenue / orders : 0,
+    refunds: Number(d.refunds ?? 0),
+    refundOrders: Number(d.refundOrders ?? 0),
     series: (d.series ?? []).map((r) => ({
       date: r.date, label: dayLabel(r.date), revenue: Number(r.revenue), orders: Number(r.orders),
     })),
     byChannel: mapSplit(d.byChannel, (key) => CHANNEL_LABEL[key] ?? key),
-    byPayment: mapSplit(d.byPayment, (key) => (key === 'CASH' ? 'Efectivo' : key)),
+    byPayment: mapSplit(d.byPayment, (key) => labelOf(key)),
     byZone: mapSplit(d.byZone, (key) => key),
     topByRevenue: mapProducts(d.topByRevenue),
     topByProfit: mapProducts(d.topByProfit),
@@ -154,14 +166,17 @@ export function buildSalesReport(from: string, to: string, d: RawSalesReport): S
 }
 
 /**
- * Reporte de ventas entre dos fechas locales (YYYY-MM-DD) del restaurante.
- * Excluye pedidos cancelados. Los cortes de día usan la zona horaria del local.
+ * Reporte de ventas entre dos días de negocio (YYYY-MM-DD) del restaurante.
+ * Excluye pedidos cancelados. Los días se cortan en la zona horaria del
+ * local y a SU hora de corte (migración 145): la venta de la 1:30 es del
+ * día anterior, igual que en la caja.
  */
 export async function getSalesReport(
   restaurantId: string,
   from: string,
   to: string,
   timezone: string = 'America/Guatemala',
+  corteMin?: number,
 ): Promise<SalesReport> {
   if (!/^[0-9a-f-]{36}$/i.test(restaurantId)) return EMPTY(from, to);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
@@ -169,12 +184,23 @@ export async function getSalesReport(
   }
 
   const db = createServiceClient();
-  const { data, error } = await db.rpc('leogin_sales_report', {
+  const corte = corteMin ?? (await corteDelRestaurante(restaurantId));
+  let { data, error } = await db.rpc('leogin_sales_report', {
     p_restaurant_id: restaurantId,
     p_from: from,
     p_to: to,
     p_timezone: safeTimezone(timezone),
+    p_cutoff_minutes: corte,
   });
+  // Sin la 145 la función todavía no sabe del corte: la de siempre.
+  if (error && (error.code === 'PGRST202' || error.code === '42883')) {
+    ({ data, error } = await db.rpc('leogin_sales_report', {
+      p_restaurant_id: restaurantId,
+      p_from: from,
+      p_to: to,
+      p_timezone: safeTimezone(timezone),
+    }));
+  }
 
   if (error || !data) return EMPTY(from, to);
 

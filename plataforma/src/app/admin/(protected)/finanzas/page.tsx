@@ -12,6 +12,8 @@ import { Section } from '@/components/ui/section';
 import { Stat, StatGroup } from '@/components/ui/stat';
 import { EmptyState } from '@/components/ui/empty-state';
 import { panelLink } from '@/lib/panel-links-server';
+import { diaDeNegocio } from '@/lib/caja/dia';
+import { corteDelRestaurante } from '@/lib/db/dia-negocio';
 
 export const metadata = { title: 'Finanzas – Panel admin' };
 
@@ -32,9 +34,10 @@ export const metadata = { title: 'Finanzas – Panel admin' };
 
 const money = (n: number) => fmtMoney(n);
 
-function todayInTz(tz: string): string {
-  try { return new Date().toLocaleDateString('en-CA', { timeZone: tz }); }
-  catch { return new Date().toISOString().slice(0, 10); }
+/* «Hoy» es el día de NEGOCIO (migración 145): a la 1:30 el rango por
+   omisión sigue siendo el de la noche que todavía no termina. */
+async function todayInTz(tz: string, restaurantId: string): Promise<string> {
+  return diaDeNegocio(new Date(), tz, await corteDelRestaurante(restaurantId));
 }
 function shiftYmd(ymd: string, days: number): string {
   const d = new Date(`${ymd}T12:00:00Z`);
@@ -83,7 +86,7 @@ export default async function AdminFinanzasPage({
     );
   }
 
-  const today = todayInTz(timezone);
+  const today = await todayInTz(timezone, restaurantId);
   const sp = await searchParams;
   const to = isYmd(sp.to) ? sp.to : today;
   const from = isYmd(sp.from) ? sp.from : shiftYmd(to, -29);
@@ -112,6 +115,16 @@ export default async function AdminFinanzasPage({
           <Stat label={report.tips > 0 ? 'Propinas (incluidas en el ingreso)' : 'Propinas'} value={money(report.tips)} />
         </StatGroup>
       </Section>
+
+      {/* La venta no se borra al devolver (migración 145): el dinero que
+          salió se cuenta aparte, el día en que salió. */}
+      {report.refunds > 0 && (
+        <Card className="p-3.5" style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+          Se devolvieron <strong>{money(report.refunds)}</strong> a clientes en{' '}
+          {report.refundOrders === 1 ? 'un pedido' : `${report.refundOrders} pedidos`} durante este rango.
+          El ingreso no los resta: la venta sigue registrada y el dinero salió el día de la devolución.
+        </Card>
+      )}
 
       {report.marginPct == null && report.orders > 0 && (
         <Card className="p-3.5" style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>

@@ -10,6 +10,8 @@ import { Section } from '@/components/ui/section';
 import { Stat, StatGroup } from '@/components/ui/stat';
 import { EmptyState } from '@/components/ui/empty-state';
 import { panelLink } from '@/lib/panel-links-server';
+import { diaDeNegocio } from '@/lib/caja/dia';
+import { corteDelRestaurante } from '@/lib/db/dia-negocio';
 
 export const metadata = { title: 'Analítica – Panel admin' };
 
@@ -22,9 +24,10 @@ export const metadata = { title: 'Analítica – Panel admin' };
 const WEEKDAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 
-function todayInTz(tz: string): string {
-  try { return new Date().toLocaleDateString('en-CA', { timeZone: tz }); }
-  catch { return new Date().toISOString().slice(0, 10); }
+/* «Hoy» es el día de NEGOCIO (migración 145): a la 1:30 el rango por
+   omisión sigue siendo el de la noche que todavía no termina. */
+async function todayInTz(tz: string, restaurantId: string): Promise<string> {
+  return diaDeNegocio(new Date(), tz, await corteDelRestaurante(restaurantId));
 }
 function shiftYmd(ymd: string, days: number): string {
   const d = new Date(`${ymd}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + days);
@@ -73,7 +76,7 @@ export default async function AdminAnaliticaPage({
     );
   }
 
-  const today = todayInTz(timezone);
+  const today = await todayInTz(timezone, restaurantId);
   const sp = await searchParams;
   const to = isYmd(sp.to) ? sp.to : today;
   const from = isYmd(sp.from) ? sp.from : shiftYmd(to, -29);
