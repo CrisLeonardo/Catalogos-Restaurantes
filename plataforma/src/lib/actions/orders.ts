@@ -19,7 +19,7 @@ import { getDeliveryZones, zoneFeeFrom, type DeliveryZone } from '@/lib/db/zones
 import { logActivity } from '@/lib/activity';
 import { can } from '@/lib/permissions';
 import { necesitaAprobacion, puedeAprobar, type Aprobador } from '@/lib/void-approval';
-import { isValidPin, verifyPin, PIN_LOCK_AFTER_ATTEMPTS, PIN_LOCK_MS } from '@/lib/staff-pin-crypto';
+import { listarAprobadores, verificarAprobador } from '@/lib/auth/firma-encargado';
 import { enqueueKitchenForOrder, enqueueReceiptForOrder, enqueueSplitBillTicket } from '@/lib/print-agent';
 import {
   buildBillLines, computeSplit, UNASSIGNED_ID,
@@ -1459,98 +1459,10 @@ export async function getVoidApproval(orderId: string): Promise<VoidApproval> {
   return { required, selfApproves, approvers: await listarAprobadores(db, restaurantId) };
 }
 
-/**
- * A quién se le puede pasar la tablet para que firme.
- *
- * Solo quien tiene PIN puesto: es la lista de quien puede autorizar AHORA,
- * no la de quien podría en teoría. Y solo nombre y cargo, los mismos datos
- * que ya enseña la pantalla de entrar con PIN.
- *
- * Vive aparte desde M-10 porque la comparten dos firmas distintas —anular
- * un plato ya cocinado y descontar de una cuenta—: si cada una armara su
- * lista, una podría quedarse sin el candado del PIN al cambiar la otra.
- */
-async function listarAprobadores(
-  db: ReturnType<typeof createServiceClient>,
-  restaurantId: string,
-): Promise<Aprobador[]> {
-  const { data: pins } = await db
-    .from('staff_pins').select('profile_id').eq('restaurant_id', restaurantId);
-  const conPin = new Set((pins ?? []).map((p) => p.profile_id as string));
-  if (conPin.size === 0) return [];
-
-  const { data: perfiles } = await db
-    .from('profiles')
-    .select('id, full_name, role, permissions')
-    .eq('restaurant_id', restaurantId);
-
-  return (perfiles ?? [])
-    .filter((p) => conPin.has(p.id as string))
-    .filter((p) => puedeAprobar(p.role as string | null, p.permissions as string[] | null))
-    .map((p) => ({
-      id: p.id as string,
-      name: (p.full_name as string | null)?.trim() || 'Sin nombre',
-      role: p.role === 'RESTAURANT_OWNER' ? 'Dueño' : 'Encargado',
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-}
-
-/**
- * Comprueba el PIN del encargado y devuelve su id para `approved_by`.
- *
- * Vuelve a verificar que quien firma SIGUE pudiendo firmar y sigue siendo
- * de este restaurante: el diálogo pudo haberse quedado abierto desde antes
- * de que el dueño le cambiara los permisos.
- */
-async function verificarAprobador(
-  db: ReturnType<typeof createServiceClient>,
-  restaurantId: string,
-  approverId: string,
-  pin: string,
-): Promise<{ id: string } | { error: string }> {
-  if (!isValidPin(pin)) return { error: 'El PIN son 4 dígitos.' };
-
-  // El mismo techo que el login por PIN: sin esto, el diálogo de anulación
-  // sería un oráculo cómodo para probar los 10 000 PIN de un encargado.
-  const ip = clientIp(await headers());
-  if (!(await rateLimit(`void-pin:${ip}`, 20, 5 * 60_000)) ||
-      !(await rateLimit(`void-pin:${restaurantId}:${approverId}`, 8, 5 * 60_000))) {
-    return { error: 'Demasiados intentos. Espera unos minutos.' };
-  }
-
-  const { data: perfil } = await db
-    .from('profiles').select('id, role, permissions, restaurant_id').eq('id', approverId).maybeSingle();
-  if (!perfil || perfil.restaurant_id !== restaurantId) return { error: 'PIN incorrecto.' };
-  if (!puedeAprobar(perfil.role as string | null, perfil.permissions as string[] | null)) {
-    return { error: 'Esa persona ya no puede autorizar anulaciones.' };
-  }
-
-  const { data: row } = await db
-    .from('staff_pins')
-    .select('pin_hash, pin_salt, failed_attempts, locked_until')
-    .eq('profile_id', approverId).eq('restaurant_id', restaurantId)
-    .maybeSingle();
-  if (!row) return { error: 'PIN incorrecto.' };
-  if (row.locked_until && new Date(row.locked_until as string) > new Date()) {
-    return { error: 'Demasiados intentos fallidos. Espera unos minutos.' };
-  }
-
-  const ok = await verifyPin(pin, row.pin_salt as string, row.pin_hash as string);
-  if (!ok) {
-    // El MISMO contador que el login: cinco fallos aquí también dejan el PIN
-    // bloqueado un rato. Si no, esta pantalla sería la puerta de atrás.
-    const intentos = (row.failed_attempts as number) + 1;
-    const bloqueado = intentos >= PIN_LOCK_AFTER_ATTEMPTS;
-    await db.from('staff_pins').update({
-      failed_attempts: bloqueado ? 0 : intentos,
-      locked_until: bloqueado ? new Date(Date.now() + PIN_LOCK_MS).toISOString() : null,
-    }).eq('profile_id', approverId);
-    return { error: bloqueado ? 'Demasiados intentos fallidos. Espera unos minutos.' : 'PIN incorrecto.' };
-  }
-
-  await db.from('staff_pins').update({ failed_attempts: 0, locked_until: null }).eq('profile_id', approverId);
-  return { id: approverId };
-}
+/* `listarAprobadores` y `verificarAprobador` se mudaron a
+   `lib/auth/firma-encargado.ts`: desde la migración 145 también firman las
+   correcciones de caja, y este archivo es `'use server'` — exportarlas desde
+   aquí las publicaría como acciones. */
 
 /**
  * Anula un pedido completo o N unidades de un ítem, con motivo obligatorio.
