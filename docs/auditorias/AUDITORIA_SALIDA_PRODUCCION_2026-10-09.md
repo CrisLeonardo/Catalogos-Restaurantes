@@ -45,11 +45,11 @@ modo sin internet. **No está listo para vender todavía** por cuatro bloques:
 | ID | Hallazgo | Prioridad |
 |---|---|---|
 | PROD-01 | ✅ 🧪 Dueño registrado solo no puede subir fotos ni logo | **P0** |
-| PROD-02 | Caja: mesas y pedidos sin cobrar cuentan como efectivo esperado | **P0** |
-| PROD-03 | Caja: el segundo turno del día espera el efectivo de todo el día | **P0** |
-| PROD-04 | Caja: después de medianoche el «día» es otro | **P0** para bares, P1 resto |
-| PROD-05 | No hay forma de corregir un cobro (método o mesa equivocada) | **P0** |
-| PROD-06 | Borrar un corte de caja: sin firma, sin motivo, sin bitácora | P1 |
+| PROD-02 | ✅ Caja: mesas y pedidos sin cobrar cuentan como efectivo esperado | **P0** |
+| PROD-03 | ✅ Caja: el segundo turno del día espera el efectivo de todo el día | **P0** |
+| PROD-04 | ✅ Caja: después de medianoche el «día» es otro | **P0** para bares, P1 resto |
+| PROD-05 | ✅ No hay forma de corregir un cobro (método o mesa equivocada) | **P0** |
+| PROD-06 | ✅ Borrar un corte de caja: sin firma, sin motivo, sin bitácora | P1 |
 | PROD-07 | ✅ Cobrar mesa: dos cobros a la vez o una ronda nueva al cobrar | P1 |
 | PROD-08 | ✅ Cambio de estado usa el restaurante «de casa» del perfil | P1 |
 | PROD-09 | ✅ Cancelación del comensal puede pisar la confirmación de cocina | P1 |
@@ -79,7 +79,7 @@ modo sin internet. **No está listo para vender todavía** por cuatro bloques:
 | LEG-04 | Contacto legal es un Gmail personal | P1 |
 | LEG-05 | Ticket sin FEL no dice «no es factura» | P1 |
 | LEG-06 | FEL apagado: los restaurantes formales lo van a pedir | P1 |
-| FUN-01 | Turnos de caja con apertura y cierre propios | **P0** (resuelve PROD-03) |
+| FUN-01 | ✅ Turnos de caja con apertura y cierre propios | **P0** (resuelve PROD-03) |
 | FUN-02 | Pantalla siempre encendida en cocina y pedidos | P1 |
 | FUN-03 | Pedido sin confirmar: aviso al comensal y al local | P1 |
 | FUN-04 | Tiempo estimado al aceptar el pedido | P1 |
@@ -150,6 +150,14 @@ desconfía de él o del sistema.
 listar «Quedan 2 mesas abiertas y 1 domicilio sin liquidar» con opción de
 cobrarlas o dejarlas para el siguiente turno.
 
+> ✅ **Hecho (2026-10-13), rama `feat/caja-turnos`, migración 145.** El cuadre
+> lee un libro de cobros (`lib/caja/libro.ts`): las filas de `order_payments`
+> en la hora en que entró el dinero y, para domicilios y para recoger del menú
+> en línea sin filas, su total al entregarse. Una mesa abierta, un pedido en
+> cocina o un domicilio en camino no cuentan; una mesa liberada sin cobrar se
+> enseña aparte. Antes de cerrar, «Queda 1 mesa abierta · Mesa 6 Q80» con
+> «Volver a cobrarla» o «Cerrar el turno igual» (verificado en el navegador).
+
 ### PROD-03 · Caja: el segundo turno espera el efectivo de todo el día — **P0**
 
 **Qué pasa.** El cierre no resta lo que ya cerraron turnos anteriores del
@@ -162,6 +170,10 @@ segundo cierre un faltante igual a lo que entregó el primero.
 **Qué hacer.** Ver FUN-01: el corte cubre desde el cierre anterior (o la
 apertura del turno), no desde medianoche.
 
+> ✅ **Hecho (2026-10-13)** con FUN-01: el cuadre cubre lo cobrado desde el
+> cierre anterior. Verificado: dos turnos el mismo día, cada uno cuadrado
+> (Q820 y Q300), y el historial suma el día («2 turnos · Contado Q1,120 · +Q0»).
+
 ### PROD-04 · Caja: después de medianoche el día es otro — **P0 para bares**
 
 **Qué pasa.** El día de caja es la fecha de calendario en la zona del local
@@ -172,6 +184,12 @@ mismo pasa con los gastos (`business_date`) y el reparto de propinas.
 **Qué hacer.** «Hora de corte del día» por restaurante (por omisión 05:00):
 todo lo anterior a esa hora pertenece al día anterior. Usarla también en
 reportes, Hoy y analítica, para que todos digan lo mismo.
+
+> ✅ **Hecho (2026-10-13).** `restaurants.day_cutoff_minutes` (05:00 por
+> omisión, decisión del dueño; se cambia en Ajustes › Horarios) y
+> `lib/caja/dia.ts`. La usan caja, gastos, propinas, Hoy, Pedidos, Mesas,
+> métricas, analítica y `leogin_sales_report`. Verificado: un cierre a la 1:28
+> queda en el día anterior y no cuenta el cobro de las 4:00 a. m. del día previo.
 
 ### PROD-05 · No hay forma de corregir un cobro — **P0**
 
@@ -193,6 +211,18 @@ anulaciones) y bitácora:
 3. **Devolución** (total o de una línea) sobre un pedido cobrado: queda como
    movimiento negativo en caja y en reportes, nunca borrando la venta.
 
+> ✅ **Hecho (2026-10-13).** «Cobros de este turno» en Caja, con una sola
+> puerta («Corregir») y tres salidas, todas con motivo, firma de encargado (el
+> PIN de las anulaciones; el dueño firma solo) y `logActivity`:
+> 1. **Cambiar el método** (`corregirMetodoDePago`): −X en el método viejo y +X
+>    en el nuevo; solo cobros del turno abierto. Verificado: Efectivo→Tarjeta
+>    deja el cuadre en el fondo y la caja cuadra.
+> 2. **Reabrir una mesa** (`reabrirMesaCobrada`) mientras su turno siga abierto:
+>    los pedidos vuelven a «servido», el cobro de cierre se compensa y la mesa
+>    vuelve al salón. No se puede encima de otra cuenta ni con factura emitida.
+> 3. **Devolver** todo o una línea (`devolverCobro`), hasta 3 días: fila
+>    negativa, la venta no se borra; el reporte de ventas la enseña aparte.
+
 ### PROD-06 · Borrar un corte de caja sin firma ni rastro — P1
 
 **Qué pasa.** `deleteCashCount` (`finanzas.ts:254`) borra **de verdad** un
@@ -204,6 +234,13 @@ cerrar «cuadrado» con otra apertura. El dueño nunca lo ve.
 
 **Qué hacer.** No borrar: marcar el corte como **anulado** con motivo, quién
 y firma; el historial enseña los dos. Solo dueño o encargado.
+
+> ✅ **Hecho (2026-10-13).** `deleteCashCount` ya no existe. `anularCorte`
+> anula solo el último corte, de las últimas 24 h y sin otro turno abierto
+> después, con motivo y firma; queda tachado en el historial y el turno se
+> reabre con su mismo fondo para contarlo de nuevo. Apertura, cierre y
+> anulación quedan en la bitácora (`turno_abierto`, `turno_cerrado`,
+> `corte_anulado`), lo que faltaba de PROD-10.
 
 ### PROD-07 · Cobrar mesa: carreras — P1
 
@@ -293,8 +330,8 @@ bajó el precio?», «¿quién borró eso?».
 **Qué hacer.** Registrar esas acciones con antes/después del importe y
 enseñarlas en la bitácora del panel con filtro por persona.
 
-> ✅ **Hecho (2026-10-11), salvo cierres y borrado de cortes** (los lleva la
-> sesión de caja con PROD-06). Quedan en `activity_log`, siempre con el
+> ✅ **Hecho (2026-10-11); cierres y anulación de cortes, el 2026-10-13** con
+> PROD-06. Quedan en `activity_log`, siempre con el
 > restaurante del recurso y quién lo hizo:
 > - `precio`: precio del platillo y de cada opción o variante de combo,
 >   antes → después (`lib/activity-diff.ts`; guardar sin tocar importes no
@@ -587,6 +624,12 @@ Abrir turno (quién, con cuánto fondo), cerrar turno (cuadre de **lo cobrado
 en ese turno**), varios turnos por día, y el reporte del día como suma de
 turnos. Resuelve PROD-03 y, con la «hora de corte», PROD-04. Es lo primero
 que pregunta un dueño en la demo de la caja.
+
+> ✅ **Hecho (2026-10-13).** `cash_counts` es el turno (`OPEN` → `CLOSED`, o
+> `VOID`): abrir con quién y fondo (el cierre no puede cambiar ese fondo),
+> guardar el conteo a medias en el mismo turno, cerrar con el cuadre del
+> periodo, varios turnos por día y el día como suma. Se puede cerrar sin haber
+> abierto, como antes. Plan: `docs/planes/PLAN_CAJA_TURNOS_2026-10-09.md`.
 
 ### FUN-02 · Pantalla siempre encendida — P1
 
