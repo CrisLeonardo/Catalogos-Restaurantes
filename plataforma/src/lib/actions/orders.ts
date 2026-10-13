@@ -1219,14 +1219,22 @@ export async function freeTable(
      que es exactamente lo que hacía antes de esta migración. */
   const filasCerradas = filas.filter((f) => cerradosAqui.has(f.orderId));
   if (filasCerradas.length > 0 && (await hayPagosDeMesa())) {
-    await db.from('order_payments').insert(filasCerradas.map((f) => ({
+    const pagosDeCierre = filasCerradas.map((f) => ({
       restaurant_id: restaurantId,
       order_id: f.orderId,
       method: f.method,
       amount: f.amount,
       cash_received: f.cashReceived,
       taken_by: acceso.actor.userId,
-    })));
+      /* El cobro que CIERRA la mesa, distinto de los cobros por partes: es
+         el que se compensa si la mesa se reabre por error (migración 145). */
+      kind: 'TABLE_CLOSE',
+    }));
+    const { error: errPagos } = await db.from('order_payments').insert(pagosDeCierre);
+    // Sin la 145 la columna no existe: el cobro se escribe como antes.
+    if (errPagos && faltaLaColumna(errPagos)) {
+      await db.from('order_payments').insert(pagosDeCierre.map(({ kind: _kind, ...resto }) => resto));
+    }
   }
 
   /* El reparto era de la gente que se acaba de ir: heredarlo a los
