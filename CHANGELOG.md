@@ -5,6 +5,9 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
 ## Sin publicar
+
+## v0.12.0 — 2026-10-13 · Auditoría de salida a producción
+PR #10-#25 · migraciones 142-144 (pendientes en producción, en ese orden)
 - [Auditoría de salida a producción](docs/auditorias/AUDITORIA_SALIDA_PRODUCCION_2026-10-09.md): qué falta para vender (errores del sistema, errores humanos, seguridad, legal y fiscal, funciones). Los planes de servidores quedan como decisión cerrada (Render Starter en `render.yaml`).
 - Arreglos de la auditoría (migraciones 142-144): el dueño registrado solo ya puede subir fotos y logo (142); cobrar una mesa cierra solo lo que leyó y registra el pago una vez; la cancelación del comensal es atómica y ya no pisa la confirmación de cocina (143); anular o cancelar devuelve los puntos canjeados y el uso del cupón (144); el cambio de estado usa el restaurante del pedido para comanda, puntos, FEL y bitácora; la bitácora anota precios, borrados, cupones, gastos, pausa y horario, con filtro por persona.
 - Dependencias al día: grupo de menores de la plataforma (Next.js 16.4.0, React 19.3, `@supabase/ssr` 0.12.7, entre otras), del agente de impresión y de Leogin Desktop, y las GitHub Actions. Dependabot ya no propone versiones mayores de zod, TypeScript, vitest ni `@types/node` (se migrarán a propósito).

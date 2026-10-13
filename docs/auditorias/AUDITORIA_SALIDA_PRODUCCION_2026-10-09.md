@@ -696,11 +696,11 @@ inactividad, PIN de 4 cifras con bloqueo, confirmación antes de borrar.
 
 ## Bitácora
 
-- **2026-10-10** — Quitados INF-01 e INF-02 (planes de servidores): ya
-  resuelto por el dueño, no se vuelve a proponer. `render.yaml` → `starter`.
 - **2026-10-09** — Auditoría hecha. 947 pruebas unitarias en verde. PROD-01
   reproducido contra la base local (subida rechazada por RLS); `npm audit`:
   1 crítica, 8 altas, 4 moderadas en dependencias de producción.
+- **2026-10-10** — Quitados INF-01 e INF-02 (planes de servidores): ya
+  resuelto por el dueño, no se vuelve a proponer. `render.yaml` → `starter`.
 - **2026-10-10** — PROD-01 hecho: migración 142 (fotos por membresía y
   sección), probada contra la base local y añadida a `test-aislamiento.mjs`.
 - **2026-10-10** — PROD-08 hecho: `updateOrderStatus` usa el restaurante
@@ -718,3 +718,4 @@ inactividad, PIN de 4 cifras con bloqueo, confirmación antes de borrar.
 - **2026-10-11** — PROD-10 hecho (menos cierres y borrado de cortes, que
   van con PROD-06): bitácora de precios, borrados, cupones, gastos, pausa y
   horario, con filtro por persona.
+- **2026-10-13** — Cerrado como **v0.12.0**: auditoría, seguridad, PROD-01 y 07-11, dependencias. Abiertos: PROD-02…06 y FUN-01 (caja por turnos, en curso), LEG-*, el resto de P1/P2. Migraciones 142-144 pendientes en producción.

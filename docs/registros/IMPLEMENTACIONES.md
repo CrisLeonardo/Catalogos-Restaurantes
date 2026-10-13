@@ -836,6 +836,39 @@ Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 
 ---
 
+## Sesión — 2026-10-09 a 2026-10-13 — Auditoría de salida a producción (v0.12.0)
+
+**Objetivo:** revisar todo el sistema y decir qué falta para salir a producción y venderse (errores del sistema, errores humanos, seguridad, legal y fiscal, funciones), y arreglar lo urgente.
+
+**Realizado:**
+- **Auditoría** ([`AUDITORIA_SALIDA_PRODUCCION_2026-10-09.md`](../auditorias/AUDITORIA_SALIDA_PRODUCCION_2026-10-09.md), PR #11): ~50 hallazgos por prioridad (P0/P1/P2), con matriz de errores humanos y orden sugerido. Lo más grave se reprodujo contra la base local.
+- **Seguridad** (PR #12): Next.js 16.2.7 → 16.3.8 (vulnerabilidad crítica de saltarse el proxy) y `sharp` 0.35.5 (procesa fotos subidas). La CI corre ahora las pruebas unitarias, el `build` y `npm audit`; Dependabot semanal.
+- **Errores del sistema** (PR #13, migraciones 142-144):
+  - PROD-01: el dueño registrado solo no podía subir fotos ni logo (las reglas de `storage.objects` usaban solo `profiles.restaurant_id`, que el registro deja en null). Mig 142.
+  - PROD-07: cobrar mesa cierra solo lo leído y registra el pago una vez (cobro doble y ronda cerrada sin pago).
+  - PROD-08: el cambio de estado usa el restaurante del pedido (comanda, puntos, FEL y bitácora).
+  - PROD-09: la cancelación del comensal es atómica y no pisa la confirmación de cocina. Mig 143.
+  - PROD-10: la bitácora anota precios, borrados, cupones, gastos, pausa y horario, con filtro por persona.
+  - PROD-11: anular o cancelar devuelve puntos canjeados y uso del cupón. Mig 144.
+- **Dependencias** (PR #14, #15, #16, #18, #23, #25): menores de la plataforma (Next 16.4, React 19.3, `@supabase/ssr` 0.12.7), del agente, de Leogin Desktop y de las GitHub Actions. #18 se probó en el navegador (login, PIN, segundo factor, pedido de punta a punta) y #16 compilando el agente. Las mayores de zod, TypeScript, vitest y `@types/node` se cerraron (#17, #19-#22) y Dependabot ya no las propone.
+- **Planes de servidores** como decisión cerrada: `render.yaml` → `starter`; ya no se proponen cambios de plan (guía de despliegue, checklist, auditorías).
+- 965 pruebas unitarias, aislamiento 28/28, auditorías de RLS en 0; CI de `main` en verde tras cada fusión.
+
+**Decisiones clave:**
+- Fusionar a `main` despliega solo en Render: las actualizaciones que la CI no prueba de verdad (sesión y cookies, agente) se verificaron a mano antes de fusionar.
+- Las versiones mayores de librerías se migran a propósito, no por Dependabot.
+- Trampa: en este repo `gh pr merge --auto` fusiona al instante (no hay checks obligatorios); esperar la CI antes de fusionar.
+
+**Pendiente:**
+1. 🙋 Correr en producción las migraciones **142 → 143 → 144** (independientes del despliegue).
+2. Caja por turnos, día operativo y corregir cobros (FUN-01, PROD-02…06): en curso en la rama `feat/caja-turnos`, esperando decisiones del dueño.
+3. 🙋 Legal y fiscal (LEG-01…03): inscripción en la SAT, FEL de la mensualidad, términos y privacidad.
+4. Encontrado de paso: `uncaughtException` (ECONNRESET) cuando faltan fotos de la vitrina; contraste de la barra «Ver carrito».
+
+**Próximo paso:** terminar la caja por turnos; después, los P1 del orden sugerido de la auditoría.
+
+---
+
 <!-- PLANTILLA PARA NUEVAS SESIONES (copiar y rellenar)
 
 ## Sesión N — AAAA-MM-DD — Título
