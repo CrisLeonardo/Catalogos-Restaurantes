@@ -1,23 +1,41 @@
 'use client';
 
+/* Cortes recientes — el historial de turnos de caja.
+
+   Desde la migración 145:
+     · se agrupan por DÍA DE NEGOCIO y el día es la suma de sus turnos;
+     · un corte no se borra: el último se puede ANULAR con motivo y firma,
+       queda tachado a la vista y el turno vuelve a abrirse para contarlo
+       de nuevo (PROD-06). */
+
 import { useState, useTransition } from 'react';
-import { deleteCashCount, type CashCount } from '@/lib/actions/finanzas';
+import { useRouter } from 'next/navigation';
+import { anularCorte, type CashCount } from '@/lib/actions/finanzas';
 import { DENOM_FIELDS } from '@/lib/finanzas-constants';
 import CashHistoryExportButton from '@/components/admin/cash-history-export-button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/icons';
+import { useFirmaEncargado } from '@/components/admin/caja/firma-encargado';
 import { fmtMoney } from '@/lib/money';
 
 const money = (n: number) => fmtMoney(n);
 
-function formatDate(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString('es-GT', { weekday: 'short', day: 'numeric', month: 'short' });
+/** "Vie 9 oct" de un día de negocio YYYY-MM-DD. */
+function formatDay(dia: string) {
+  const s = new Date(`${dia}T12:00:00Z`).toLocaleDateString('es-GT', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' });
+function formatTime(iso: string | null | undefined, tz: string) {
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: tz }); }
+  catch { return iso.slice(11, 16); }
 }
 function isWithin24h(iso: string) {
   return Date.now() - new Date(iso).getTime() < 24 * 60 * 60 * 1000;
 }
+const cerradoEn = (c: CashCount) => c.closed_at ?? c.created_at;
+const anulado = (c: CashCount) => c.status === 'VOID';
 
 function DenomBreakdown({ breakdown }: { breakdown: Record<string, number> }) {
   const entries = DENOM_FIELDS
@@ -62,157 +80,173 @@ function DenomBreakdown({ breakdown }: { breakdown: Record<string, number> }) {
 }
 
 function CashCountCard({
-  entry, restaurantId,
-}: { entry: CashCount; restaurantId: string }) {
+  entry, timezone, canVoid, onVoid,
+}: { entry: CashCount; timezone: string; canVoid: boolean; onVoid: () => void }) {
   const [expanded, setExpanded] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
 
   const diff = Number(entry.difference);
-  const diffColor = Math.abs(diff) < 0.005 ? 'var(--c-ok)' : 'var(--c-danger)';
-  const diffLabel = Math.abs(diff) < 0.005 ? 'Cuadrada' : diff > 0 ? 'Sobrante' : 'Faltante';
-  const canDelete = isWithin24h(entry.created_at);
+  const esAnulado = anulado(entry);
+  const diffColor = esAnulado ? 'var(--u-text-4)' : Math.abs(diff) < 0.005 ? 'var(--c-ok)' : 'var(--c-danger)';
+  const diffLabel = esAnulado ? 'Anulado' : Math.abs(diff) < 0.005 ? 'Cuadrada' : diff > 0 ? 'Sobrante' : 'Faltante';
   const hasBreakdown = !!entry.denomination_breakdown;
-
-  const handleDelete = () => {
-    startTransition(async () => {
-      const result = await deleteCashCount(entry.id, restaurantId);
-      if ('error' in result) {
-        setDeleteError(result.error);
-        setConfirmDelete(false);
-      }
-    });
-  };
+  /* El periodo que cubrió: «14:02 – 22:40». Los cortes de antes de la 145
+     solo saben cuándo se cerraron. */
+  const periodo = entry.period_start
+    ? `${formatTime(entry.opened_at ?? entry.period_start, timezone)} – ${formatTime(cerradoEn(entry), timezone)}`
+    : formatTime(cerradoEn(entry), timezone);
 
   return (
-    <div style={{ padding: '12px 0', borderBottom: '1px solid var(--u-hair)' }}>
-      {/* Fila principal: fecha + turno + diferencia */}
+    <div className="caja-corte" data-void={esAnulado ? '1' : '0'}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 600 }}>
-              {formatDate(entry.created_at)} · {formatTime(entry.created_at)}
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+            <span className="t-mono" style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 600, textDecoration: esAnulado ? 'line-through' : 'none' }}>
+              {periodo}
             </span>
-            {entry.shift_label && (
-              <span style={{
-                fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--radius-full)',
-                background: 'color-mix(in srgb, var(--u-text) 7%, transparent)', color: 'var(--u-text-3)',
-                letterSpacing: '0.04em',
-              }}>
-                {entry.shift_label}
-              </span>
-            )}
+            {entry.shift_label && <span className="caja-marca">{entry.shift_label}</span>}
           </div>
-          {entry.cashier_name && (
-            <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>
-              {entry.cashier_name}
+          {(entry.cashier_name || entry.opened_by_name) && (
+            <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>
+              {entry.opened_by_name && entry.opened_by_name !== entry.cashier_name
+                ? `Abrió ${entry.opened_by_name.split(' ')[0]} · cerró ${entry.cashier_name?.split(' ')[0] ?? '—'}`
+                : entry.cashier_name}
             </div>
           )}
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 14, color: diffColor }}>
+          <div className="t-mono" style={{ fontWeight: 700, fontSize: 14, color: diffColor, textDecoration: esAnulado ? 'line-through' : 'none' }}>
             {diff >= 0 ? '+' : ''}{money(diff)}
           </div>
-          <div style={{ fontSize: 11, color: diffColor, opacity: 0.8 }}>{diffLabel}</div>
+          <div style={{ fontSize: 11, color: diffColor, opacity: 0.85 }}>{diffLabel}</div>
         </div>
       </div>
 
-      {/* Fila de montos */}
-      <div style={{ display: 'flex', gap: 12, marginTop: 5, fontSize: 11, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)' }}>
+      <div className="t-mono" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 5, fontSize: 11, color: 'var(--u-text-4)' }}>
         <span>Esp. {money(Number(entry.expected_cash))}</span>
-        <span>·</span>
+        <span aria-hidden>·</span>
         <span>Cont. {money(Number(entry.counted_cash))}</span>
-        {Number(entry.opening_float) > 0 && (
-          <>
-            <span>·</span>
-            <span>Fondo {money(Number(entry.opening_float))}</span>
-          </>
-        )}
+        {Number(entry.opening_float) > 0 && (<><span aria-hidden>·</span><span>Fondo {money(Number(entry.opening_float))}</span></>)}
+        {Number(entry.expenses_total ?? 0) > 0 && (<><span aria-hidden>·</span><span>Gastos {money(Number(entry.expenses_total))}</span></>)}
       </div>
 
+      {esAnulado && entry.void_reason && (
+        <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 5 }}>
+          Anulado {formatTime(entry.voided_at, timezone)}: «{entry.void_reason}»
+        </div>
+      )}
       {entry.notes && (
         <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 4, fontStyle: 'italic' }}>
           &quot;{entry.notes}&quot;
         </div>
       )}
 
-      {/* Desglose de denominaciones */}
       {expanded && hasBreakdown && (
         <DenomBreakdown breakdown={entry.denomination_breakdown as Record<string, number>} />
       )}
 
-      {/* Acciones */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
-        {hasBreakdown && (
-          <button
-            type="button"
-            onClick={() => setExpanded(v => !v)}
-            style={{
-              background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-              fontSize: 11, color: 'var(--u-text-4)', textDecoration: 'underline',
-            }}
-          >
-            {expanded ? 'Ocultar desglose' : 'Ver desglose'}
-          </button>
-        )}
-        <div style={{ flex: 1 }} />
-        {canDelete && !confirmDelete && (
-          <button
-            type="button"
-            onClick={() => { setConfirmDelete(true); setDeleteError(null); }}
-            style={{
-              background: 'none', border: '1px solid var(--c-danger-line)', padding: '3px 9px',
-              borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 11, color: 'var(--c-danger)',
-              display: 'flex', alignItems: 'center', gap: 4,
-            }}
-          >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-              <path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-            </svg>
-            Eliminar
-          </button>
-        )}
-        {canDelete && confirmDelete && (
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: 'var(--u-text-3)' }}>¿Confirmar?</span>
-            <button
-              type="button" disabled={isPending}
-              onClick={handleDelete}
-              style={{
-                background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)',
-                padding: '3px 10px', borderRadius: 'var(--radius-sm)', cursor: isPending ? 'not-allowed' : 'pointer',
-                fontSize: 11, color: 'var(--c-danger)', fontWeight: 600,
-              }}
-            >
-              {isPending ? '…' : 'Sí, eliminar'}
+      {(hasBreakdown || canVoid) && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
+          {hasBreakdown && (
+            <button type="button" onClick={() => setExpanded((v) => !v)} className="caja-link">
+              {expanded ? 'Ocultar desglose' : 'Ver desglose'}
             </button>
-            <button
-              type="button"
-              onClick={() => setConfirmDelete(false)}
-              style={{
-                background: 'none', border: '1px solid var(--u-hair)', padding: '3px 9px',
-                borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 11, color: 'var(--u-text-3)',
-              }}
-            >
-              Cancelar
+          )}
+          <div style={{ flex: 1 }} />
+          {canVoid && (
+            <button type="button" onClick={onVoid} className="press caja-cobro-btn"
+              aria-label={`Anular el corte de las ${formatTime(cerradoEn(entry), timezone)}`}>
+              Anular
             </button>
-          </div>
-        )}
-      </div>
-      {deleteError && (
-        <div style={{ fontSize: 11, color: 'var(--c-danger)', marginTop: 4 }}>{deleteError}</div>
+          )}
+        </div>
       )}
     </div>
   );
 }
 
-export default function CashHistoryPanel({
-  history, restaurantId,
-}: { history: CashCount[]; restaurantId: string }) {
+/* Anular el último corte (PROD-06): motivo y firma, y el turno vuelve a
+   abrirse con su mismo fondo para contarlo otra vez. Nada se borra. */
+function AnularCorte({ entry, restaurantId, timezone, selfApproves, onClose }: {
+  entry: CashCount; restaurantId: string; timezone: string; selfApproves: boolean; onClose: () => void;
+}) {
+  const [motivo, setMotivo] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const firma = useFirmaEncargado(restaurantId, selfApproves);
+  const router = useRouter();
+  const listo = motivo.trim().length >= 3 && firma.valor.lista && !firma.valor.bloqueada;
+
   return (
-    <div className="glass" style={{ borderRadius: 'var(--radius-lg)', padding: 18, display: 'flex', flexDirection: 'column', gap: 0 }}>
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Anular el corte de las {formatTime(cerradoEn(entry), timezone)}</DialogTitle>
+          <DialogDescription>
+            El corte queda en el historial como anulado, con el motivo y quién lo autorizó. El turno vuelve a
+            abrirse con el mismo fondo ({money(Number(entry.opening_float))}) para contarlo de nuevo.
+          </DialogDescription>
+        </DialogHeader>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label htmlFor="corte-motivo" className="caja-campo-label">Motivo</label>
+            <textarea id="corte-motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={2} maxLength={200}
+              placeholder="Ej. se contó mal un fajo de Q100" className="adm-field" style={{ resize: 'none' }} />
+          </div>
+          {firma.bloque}
+          {error && (
+            <div className="note note-danger">
+              <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+              <span>{error}</span>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button variant="destructive" disabled={!listo || pending} onClick={() => start(async () => {
+            const res = await anularCorte({
+              restaurantId, id: entry.id, reason: motivo.trim(),
+              approverId: firma.valor.approverId, approverPin: firma.valor.approverPin,
+            });
+            if (res.error) { setError(res.error); firma.limpiarPin(); return; }
+            router.refresh();
+            onClose();
+          })}>
+            {pending ? 'Anulando…' : 'Anular y volver a contar'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Los cortes por día de negocio, del más reciente al más viejo. */
+function porDia(history: CashCount[]): { dia: string; cortes: CashCount[] }[] {
+  const out: { dia: string; cortes: CashCount[] }[] = [];
+  for (const c of history) {
+    const ultimo = out[out.length - 1];
+    if (ultimo && ultimo.dia === c.business_date) ultimo.cortes.push(c);
+    else out.push({ dia: c.business_date, cortes: [c] });
+  }
+  return out;
+}
+
+export default function CashHistoryPanel({
+  history, restaurantId, timezone = 'America/Guatemala', selfApproves = false, shiftOpen = false,
+}: {
+  history: CashCount[];
+  restaurantId: string;
+  timezone?: string;
+  selfApproves?: boolean;
+  /** Hay un turno abierto: el último corte ya no se puede anular. */
+  shiftOpen?: boolean;
+}) {
+  const [anulando, setAnulando] = useState<CashCount | null>(null);
+  // Solo el último corte vivo, de las últimas 24 h y sin otro turno encima.
+  const ultimoVivo = history.find((c) => !anulado(c));
+  const anulable = ultimoVivo && !shiftOpen && isWithin24h(cerradoEn(ultimoVivo)) ? ultimoVivo.id : null;
+
+  return (
+    <div className="caja-tarjeta" style={{ gap: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, gap: 8, flexWrap: 'wrap' }}>
         <div className="adm-label adm-label-caps" style={{ color: 'var(--u-text-3)' }}>Cortes recientes</div>
         {history.length > 0 && <CashHistoryExportButton restaurantId={restaurantId} />}
@@ -222,9 +256,39 @@ export default function CashHistoryPanel({
           Aún no hay arqueos guardados.
         </div>
       ) : (
-        history.map(c => (
-          <CashCountCard key={c.id} entry={c} restaurantId={restaurantId} />
-        ))
+        porDia(history).map(({ dia, cortes }) => {
+          /* El día es la suma de sus turnos (FUN-01). Los anulados no suman. */
+          const vivos = cortes.filter((c) => !anulado(c));
+          const diaDiff = Math.round(vivos.reduce((s, c) => s + Number(c.difference), 0) * 100) / 100;
+          const diaContado = vivos.reduce((s, c) => s + Number(c.counted_cash), 0);
+          return (
+            <div key={dia} className="caja-dia">
+              <div className="caja-dia-cabeza">
+                <span style={{ fontWeight: 700, color: 'var(--u-text)' }}>{formatDay(dia)}</span>
+                <span style={{ color: 'var(--u-text-4)' }}>
+                  {vivos.length} {vivos.length === 1 ? 'turno' : 'turnos'}
+                </span>
+                <span style={{ flex: 1 }} />
+                {vivos.length > 1 && (
+                  <span className="t-mono" style={{ color: 'var(--u-text-3)' }}>
+                    Contado {money(diaContado)} ·{' '}
+                    <span style={{ color: Math.abs(diaDiff) < 0.005 ? 'var(--c-ok)' : 'var(--c-danger)', fontWeight: 700 }}>
+                      {diaDiff >= 0 ? '+' : ''}{money(diaDiff)}
+                    </span>
+                  </span>
+                )}
+              </div>
+              {cortes.map((c) => (
+                <CashCountCard key={c.id} entry={c} timezone={timezone}
+                  canVoid={c.id === anulable} onVoid={() => setAnulando(c)} />
+              ))}
+            </div>
+          );
+        })
+      )}
+      {anulando && (
+        <AnularCorte entry={anulando} restaurantId={restaurantId} timezone={timezone}
+          selfApproves={selfApproves} onClose={() => setAnulando(null)} />
       )}
     </div>
   );

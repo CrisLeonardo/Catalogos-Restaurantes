@@ -44,6 +44,8 @@ export interface Restaurant {
   contact_email: string | null;
   // Operación (migración 009)
   timezone: string;
+  /** Minutos tras la medianoche en que empieza el día de caja (migración 145). */
+  day_cutoff_minutes?: number;
   hours: WeeklyHours | null;
   /** Excepciones puntuales por fecha (feriados) — migración 083. */
   hour_exceptions: HourExceptions | null;

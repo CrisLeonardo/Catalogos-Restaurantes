@@ -28,14 +28,20 @@
    ============================================================ */
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 
 import { Icon } from '@/components/icons';
 import { DENOM_FIELDS } from '@/lib/finanzas-constants';
 import {
-  addCashExpense, deleteCashExpense, saveCajaDraft, discardCajaDraft, closeCaja,
+  addCashExpense, deleteCashExpense, saveCajaDraft, discardCajaDraft, closeCaja, abrirTurno,
   type CajaState, type TipShare, type CajaCloseResult,
 } from '@/lib/actions/finanzas';
+import type { Pendientes } from '@/lib/caja/turno-servidor';
+import { corteAHora } from '@/lib/caja/dia';
 import { fmtMoney } from '@/lib/money';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import CobrosDelTurno from './cobros-del-turno';
 
 const BILLETES = DENOM_FIELDS.filter((d) => d.kind === 'B');
 const MONEDAS = DENOM_FIELDS.filter((d) => d.kind === 'M');
@@ -46,8 +52,18 @@ const MONEDAS = DENOM_FIELDS.filter((d) => d.kind === 'M');
 const money = (n: number) => fmtMoney(n);
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
-/** En qué paso va el cierre. El dato vive en la nube (el borrador); el
-    cursor es de este aparato: retomar en la tablet donde lo dejaste no
+/** "22:40" en la zona del restaurante. */
+function hora(iso: string | null | undefined, tz: string): string {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: tz });
+  } catch {
+    return iso.slice(11, 16);
+  }
+}
+
+/** En qué paso va el cierre. El dato vive en la nube (el turno abierto);
+    el cursor es de este aparato: retomar en la tablet donde lo dejaste no
     obliga a que el teléfono del dueño abra en el mismo sitio. */
 type Paso = 1 | 2 | 3;
 const PASO_KEY = 'leogin:caja-paso';
@@ -59,9 +75,15 @@ interface Props {
   dateLabel: string;
   cashierName: string;
   restaurantName: string;
+  timezone: string;
 }
 
-export default function CashClose({ restaurantId, state, dateLabel, cashierName, restaurantName }: Props) {
+export default function CashClose({ restaurantId, state, dateLabel, cashierName, restaurantName, timezone }: Props) {
+  /* Las acciones revalidan la ruta, pero el panel vive detrás de un
+     subdominio reescrito y la página no siempre se repinta sola: se pide
+     de nuevo a mano después de cada cambio de dinero. */
+  const router = useRouter();
+  const refrescar = useCallback(() => router.refresh(), [router]);
 
   const [paso, setPaso] = useState<Paso>(1);
   useEffect(() => {
@@ -75,11 +97,18 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
     try { localStorage.setItem(PASO_KEY, String(p)); } catch { /* no-op */ }
   }, []);
 
+  /* El turno abierto de verdad trae su fondo: el cierre no lo cambia. */
+  const abierto = !!state.shift?.openedAt;
+
   /* ── El conteo ────────────────────────────────────────────── */
   const [counts, setCounts] = useState<Record<string, number>>(state.draft?.counts ?? {});
-  const [opening, setOpening] = useState<string>(String(state.draft?.openingFloat ?? 0));
-  const [shift, setShift] = useState(state.draft?.shiftLabel ?? '');
+  const [opening, setOpening] = useState<string>(String(state.shift?.openingFloat ?? state.draft?.openingFloat ?? 0));
+  const [shift, setShift] = useState(state.shift?.shiftLabel ?? state.draft?.shiftLabel ?? '');
   const [notes, setNotes] = useState(state.draft?.notes ?? '');
+  useEffect(() => {
+    // Al abrir el turno desde otro aparato, el fondo es el suyo.
+    if (abierto) setOpening(String(state.shift?.openingFloat ?? 0));
+  }, [abierto, state.shift?.openingFloat]);
 
   /* ── El reparto de propinas ───────────────────────────────── */
   const [tips, setTips] = useState<TipShare[]>(state.draft?.tips ?? state.tips);
@@ -92,6 +121,8 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
   const [aviso, setAviso] = useState<{ text: string; bad: boolean } | null>(null);
   const [guardando, startSave] = useTransition();
   const [cerrado, setCerrado] = useState<CajaCloseResult | null>(null);
+  /** El cierre se detuvo porque queda algo sin cobrar. */
+  const [porConfirmar, setPorConfirmar] = useState<Pendientes | null>(null);
 
   useEffect(() => {
     if (!aviso) return;
@@ -112,6 +143,13 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
   const diferencia = r2(contado - esperadoEnCaja);
   const cuadra = Math.abs(diferencia) < 0.005;
   const hayConteo = centavos > 0;
+  const puedeCerrar = hayConteo || esperadoEnCaja <= 0;
+
+  /* Desde cuándo cuenta: «desde el cierre de Ana a las 15:00» o «desde
+     las 05:00», que es lo que el cajero necesita para creerse el número. */
+  const desde = state.lastClose && new Date(state.lastClose.at) >= new Date(state.periodStart)
+    ? `desde el cierre de las ${hora(state.lastClose.at, timezone)}${state.lastClose.cashierName ? ` (${state.lastClose.cashierName.split(' ')[0]})` : ''}`
+    : `desde las ${hora(state.periodStart, timezone)}`;
 
   const setCount = (field: string, val: string) => {
     const n = Math.max(0, parseInt(val, 10) || 0);
@@ -131,15 +169,19 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
     startSave(async () => {
       const res = await saveCajaDraft(payload());
       if (res.error) { setAviso({ text: res.error, bad: true }); return; }
-      setAviso({ text: 'Cierre guardado. Puedes retomarlo cuando quieras.', bad: false });
+      setAviso({ text: 'Conteo guardado en el turno. Puedes retomarlo cuando quieras.', bad: false });
+      refrescar();
     });
   }
 
-  function cerrarTurno() {
+  function cerrarTurno(confirmPending = false) {
     startSave(async () => {
-      const res = await closeCaja(payload());
+      const res = await closeCaja({ ...payload(), confirmPending });
+      if (res.pending) { setPorConfirmar(res.pending); return; }
       if (res.error || !res.result) { setAviso({ text: res.error ?? 'No se pudo cerrar la caja.', bad: true }); return; }
+      setPorConfirmar(null);
       setCerrado(res.result);
+      refrescar();
       try { localStorage.removeItem(PASO_KEY); } catch { /* no-op */ }
     });
   }
@@ -153,6 +195,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
         shift={shift}
         cashierName={cashierName}
         restaurantName={restaurantName}
+        timezone={timezone}
         tips={tips}
         onOtro={() => {
           setCerrado(null);
@@ -171,11 +214,10 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
       {/* ── Contexto: qué día, qué turno, quién ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <div className="t-display" style={{ fontSize: 18, lineHeight: 1.15 }}>Cierre del día</div>
-          {/* La fecha, el turno y quién cierra, en una línea — como en el
-              lienzo. El turno se escribe AQUÍ y no en una tarjeta aparte:
-              es parte de decir de qué cierre estamos hablando, no un paso
-              más que hacer. */}
+          <div className="t-display" style={{ fontSize: 18, lineHeight: 1.15 }}>Cierre del turno</div>
+          {/* La fecha, el turno y quién lo abrió, en una línea. El turno se
+              escribe AQUÍ y no en una tarjeta aparte: es parte de decir de
+              qué cierre estamos hablando, no un paso más que hacer. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 13, color: 'var(--u-text-3)', marginTop: 2 }}>
             <span>{dateLabel}</span>
             <span aria-hidden className="caja-sep-turno">·</span>
@@ -188,79 +230,74 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
               value={shift}
               onChange={(e) => setShift(e.target.value)}
               placeholder="turno (opcional)"
-              size={Math.max(6, shift.length + 1)}
+              size={Math.max(16, shift.length + 1)}
             />
             <datalist id="caja-turnos">
               <option value="turno mañana" />
               <option value="turno tarde" />
               <option value="turno noche" />
-              <option value="apertura" />
-              <option value="cierre" />
             </datalist>
             <span aria-hidden>·</span>
-            <span>{cashierName}</span>
+            <span>
+              {abierto
+                ? `abierto ${hora(state.shift?.openedAt, timezone)} por ${state.shift?.openedByName?.split(' ')[0] ?? 'caja'}`
+                : cashierName}
+            </span>
           </div>
         </div>
         <button
           type="button"
           onClick={guardarBorrador}
-          disabled={guardando}
-          className="press"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8, height: 38, padding: '0 14px',
-            borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'none',
-            color: 'var(--u-text-2)', fontSize: 13, fontWeight: 500,
-            cursor: guardando ? 'default' : 'pointer', opacity: guardando ? 0.6 : 1,
-          }}
+          disabled={guardando || state.needsMigration}
+          className="press caja-boton-suave"
+          style={{ height: 38 }}
         >
           {guardando ? 'Guardando…' : 'Guardar y seguir después'}
         </button>
       </div>
 
+      {state.needsMigration && (
+        <div className="note note-danger">
+          <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span>
+            Esta base de datos todavía no tiene la migración 145: no se pueden abrir ni cerrar turnos.
+            Hay que aplicarla antes de usar la caja.
+          </span>
+        </div>
+      )}
+
+      {!abierto && !state.needsMigration && (
+        <AbrirTurno
+          restaurantId={restaurantId}
+          shift={shift}
+          cobradoEnEfectivo={ventasEfectivo}
+          desde={desde}
+          onAviso={(a) => { setAviso(a); if (!a.bad) refrescar(); }}
+        />
+      )}
+
       {state.draft && (
-        <div
-          style={{
-            display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-            padding: '10px 14px', borderRadius: 'var(--radius-lg)', fontSize: 13,
-            border: '1px solid color-mix(in srgb, var(--c-warn) 32%, transparent)',
-            background: 'color-mix(in srgb, var(--c-warn) 9%, transparent)',
-          }}
-        >
+        <div className="caja-aviso">
           <Icon name="alertCircle" size={16} style={{ color: 'var(--c-warn)', flexShrink: 0 }} />
           <span style={{ flex: 1, minWidth: 180, color: 'var(--u-text-2)' }}>
-            Retomaste un cierre que quedó a medias.
+            Retomaste un conteo guardado a las {hora(state.draft.savedAt, timezone)}.
           </span>
           <button
             type="button"
             onClick={() => startSave(async () => {
               const res = await discardCajaDraft(restaurantId);
               if (res.error) { setAviso({ text: res.error, bad: true }); return; }
-              setCounts({}); setOpening('0'); setShift(''); setNotes('');
+              setCounts({}); setNotes('');
+              if (!abierto) { setOpening('0'); setShift(''); }
               irA(1);
+              refrescar();
             })}
-            className="press"
-            style={{
-              height: 32, padding: '0 13px', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
-              border: '1px solid var(--u-hair-2)', background: 'none',
-              color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600,
-            }}
+            className="press caja-boton-suave"
+            style={{ height: 32, fontWeight: 600 }}
           >
             Empezar de cero
           </button>
         </div>
-      )}
-
-      {state.needsMigration && (
-        <p
-          style={{
-            margin: 0, padding: '10px 14px', borderRadius: 'var(--radius-lg)', fontSize: 12, lineHeight: 1.5,
-            color: 'var(--u-text-2)', border: '1px solid var(--u-hair)',
-            background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-          }}
-        >
-          Los gastos de caja y el guardado a medias necesitan la migración 123 en esta base de datos.
-          Mientras tanto puedes contar el efectivo y cerrar el turno igual que siempre.
-        </p>
       )}
 
       {/* ── Los tres pasos ── */}
@@ -271,16 +308,9 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
       </div>
 
       {aviso && (
-        <div
-          role="status"
-          style={{
-            padding: '10px 14px', borderRadius: 'var(--radius-lg)', fontSize: 13, fontWeight: 500,
-            color: aviso.bad ? 'var(--c-danger)' : 'var(--u-text-2)',
-            border: `1px solid ${aviso.bad ? 'var(--c-danger-line)' : 'var(--u-hair)'}`,
-            background: aviso.bad ? 'var(--c-danger-bg)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-          }}
-        >
-          {aviso.text}
+        <div role="status" className={aviso.bad ? 'note note-danger' : 'caja-aviso-ok'}>
+          {aviso.bad && <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} />}
+          <span>{aviso.text}</span>
         </div>
       )}
 
@@ -292,6 +322,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
               setCount={setCount}
               opening={opening}
               setOpening={setOpening}
+              fondoFijo={abierto ? { quien: state.shift?.openedByName ?? null, cuando: hora(state.shift?.openedAt, timezone) } : null}
             />
           )}
           {paso === 2 && (
@@ -299,6 +330,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
               restaurantId={restaurantId}
               state={state}
               onAviso={setAviso}
+              onCambio={refrescar}
             />
           )}
           {paso === 3 && (
@@ -317,6 +349,8 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
         <div className="caja-side">
           <TarjetaCuadre
             ventasEfectivo={ventasEfectivo}
+            devoluciones={state.refundsCash}
+            desde={desde}
             gastos={gastos}
             opening={openNum}
             contado={contado}
@@ -325,6 +359,8 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
             hayConteo={hayConteo}
           />
 
+          <TarjetaPendientes pending={state.pending} liberadas={state.releasedUnpaid} />
+
           <TarjetaGastos state={state} onAnotar={() => irA(2)} />
 
           <div className="caja-foot">
@@ -332,12 +368,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
               <button
                 type="button"
                 onClick={() => irA(paso === 1 ? 2 : 3)}
-                className="press btn-accent"
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-                  height: 54, borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer',
-                  fontSize: 16, fontWeight: 600, width: '100%',
-                }}
+                className="press btn-accent caja-cta"
               >
                 {paso === 1 ? 'Siguiente: gastos' : 'Siguiente: propinas'}
                 <Icon name="arrowRight" size={19} strokeWidth={2} />
@@ -345,21 +376,14 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
             ) : (
               <button
                 type="button"
-                onClick={cerrarTurno}
-                disabled={guardando || !hayConteo}
-                className="press btn-accent"
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-                  height: 54, borderRadius: 'var(--radius-lg)', border: 'none', width: '100%',
-                  fontSize: 16, fontWeight: 600,
-                  cursor: guardando || !hayConteo ? 'not-allowed' : 'pointer',
-                  opacity: guardando || !hayConteo ? 0.6 : 1,
-                }}
+                onClick={() => cerrarTurno(false)}
+                disabled={guardando || !puedeCerrar || state.needsMigration}
+                className="press btn-accent caja-cta"
               >
                 {guardando ? 'Cerrando…' : 'Cerrar el turno'}
               </button>
             )}
-            {!hayConteo && paso === 3 && (
+            {!puedeCerrar && paso === 3 && (
               <p style={{ margin: 0, fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.45 }}>
                 Falta contar el efectivo del paso 1 para poder cerrar.
               </p>
@@ -367,7 +391,167 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
           </div>
         </div>
       </div>
+
+      <CobrosDelTurno
+        restaurantId={restaurantId}
+        cobros={state.payments}
+        timezone={timezone}
+        selfApproves={state.selfApproves}
+        onAviso={(a) => { setAviso(a); if (!a.bad) refrescar(); }}
+      />
+
+      <p style={{ margin: 0, fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
+        El día de caja empieza a las {corteAHora(state.dayCutoff)}: lo cobrado antes de esa hora cuenta para el día anterior.
+        Se cambia en Ajustes › Horarios.
+      </p>
+
+      {porConfirmar && (
+        <ConfirmarPendientes
+          pending={porConfirmar}
+          enviando={guardando}
+          onCancelar={() => setPorConfirmar(null)}
+          onCerrar={() => cerrarTurno(true)}
+        />
+      )}
     </div>
+  );
+}
+
+/* ── Abrir el turno ───────────────────────────────────────────── */
+function AbrirTurno({ restaurantId, shift, cobradoEnEfectivo, desde, onAviso }: {
+  restaurantId: string;
+  shift: string;
+  cobradoEnEfectivo: number;
+  desde: string;
+  onAviso: (a: { text: string; bad: boolean }) => void;
+}) {
+  const [fondo, setFondo] = useState('');
+  const [abriendo, start] = useTransition();
+  return (
+    <div className="caja-tarjeta caja-abrir">
+      <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)' }}>El turno no se ha abierto</div>
+        <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+          Ábrelo con el fondo que hay en el cajón: queda escrito quién lo abrió y con cuánto, y el cierre
+          ya no lo puede cambiar.
+          {cobradoEnEfectivo > 0 && ` Ya van ${money(cobradoEnEfectivo)} cobrados en efectivo ${desde}.`}
+        </p>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <label htmlFor="caja-abrir-fondo" className="caja-campo-label" style={{ margin: 0 }}>Fondo inicial</label>
+          <input
+            id="caja-abrir-fondo"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            value={fondo}
+            placeholder="0.00"
+            onChange={(e) => setFondo(e.target.value)}
+            className="adm-field adm-field-mono"
+            style={{ width: 130, height: 44, textAlign: 'right', fontSize: 18, fontWeight: 600 }}
+          />
+        </div>
+        <button
+          type="button"
+          className="press btn-accent"
+          disabled={abriendo}
+          onClick={() => start(async () => {
+            const res = await abrirTurno({ restaurantId, openingFloat: parseFloat(fondo) || 0, shiftLabel: shift });
+            if (res.error) { onAviso({ text: res.error, bad: true }); return; }
+            onAviso({ text: 'Turno abierto.', bad: false });
+          })}
+          style={{ height: 44, padding: '0 18px', borderRadius: 'var(--radius-md)', border: 'none', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+        >
+          {abriendo ? 'Abriendo…' : 'Abrir turno'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Lo que queda sin cobrar ──────────────────────────────────── */
+function TarjetaPendientes({ pending, liberadas }: {
+  pending: Pendientes;
+  liberadas: CajaState['releasedUnpaid'];
+}) {
+  const n = pending.mesas.length + pending.domicilios.length + pending.paraLlevar.length;
+  if (n === 0 && liberadas.pedidos === 0) return null;
+  return (
+    <div className="caja-tarjeta" style={{ gap: 8 }}>
+      {n > 0 && (
+        <>
+          <div className="adm-label adm-label-caps" style={{ color: 'var(--u-text-3)' }}>Sin cobrar todavía</div>
+          <ListaPendientes pending={pending} />
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.45 }}>
+            No cuentan en este cuadre: entran en el turno en que se cobren.
+          </p>
+        </>
+      )}
+      {liberadas.pedidos > 0 && (
+        <p style={{ margin: 0, fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.45, borderTop: n > 0 ? '1px solid var(--u-hair)' : 'none', paddingTop: n > 0 ? 8 : 0 }}>
+          {liberadas.pedidos === 1 ? 'Una mesa se liberó' : `${liberadas.pedidos} pedidos de mesa se liberaron`} sin cobrar
+          ({money(liberadas.total)}). No se espera ese dinero en el cajón.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ListaPendientes({ pending }: { pending: Pendientes }) {
+  const filas: { k: string; nombre: string; monto: number }[] = [
+    ...pending.mesas.map((m) => ({ k: `m${m.tableNumber}`, nombre: m.label, monto: m.porCobrar })),
+    ...pending.domicilios.map((d) => ({ k: d.orderId, nombre: `Domicilio ${d.orderNumber.slice(-5)}`, monto: d.total })),
+    ...pending.paraLlevar.map((d) => ({ k: d.orderId, nombre: `Para llevar ${d.orderNumber.slice(-5)}`, monto: d.total })),
+  ];
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+      {filas.slice(0, 6).map((f) => (
+        <div key={f.k} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, fontSize: 13 }}>
+          <span style={{ color: 'var(--u-text-2)' }}>{f.nombre}</span>
+          <span className="t-mono" style={{ fontWeight: 600, color: 'var(--u-text)' }}>{money(f.monto)}</span>
+        </div>
+      ))}
+      {filas.length > 6 && (
+        <span style={{ fontSize: 12, color: 'var(--u-text-4)' }}>y {filas.length - 6} más</span>
+      )}
+    </div>
+  );
+}
+
+/** «Quedan 2 mesas abiertas y 1 domicilio sin liquidar». */
+function resumenPendientes(p: Pendientes): string {
+  const partes: string[] = [];
+  if (p.mesas.length) partes.push(p.mesas.length === 1 ? '1 mesa abierta' : `${p.mesas.length} mesas abiertas`);
+  if (p.domicilios.length) partes.push(p.domicilios.length === 1 ? '1 domicilio sin liquidar' : `${p.domicilios.length} domicilios sin liquidar`);
+  if (p.paraLlevar.length) partes.push(p.paraLlevar.length === 1 ? '1 pedido para llevar sin cobrar' : `${p.paraLlevar.length} pedidos para llevar sin cobrar`);
+  if (partes.length <= 1) return `Queda ${partes[0] ?? ''}`;
+  return `Quedan ${partes.slice(0, -1).join(', ')} y ${partes[partes.length - 1]}`;
+}
+
+function ConfirmarPendientes({ pending, enviando, onCancelar, onCerrar }: {
+  pending: Pendientes; enviando: boolean; onCancelar: () => void; onCerrar: () => void;
+}) {
+  const una = pending.mesas.length + pending.domicilios.length + pending.paraLlevar.length === 1;
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onCancelar(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{resumenPendientes(pending)}</DialogTitle>
+          <DialogDescription>
+            {una
+              ? `Son ${money(pending.total)}. No entra en este cuadre porque no se ha cobrado: se cuenta en el turno en que se cobre. Si ya pagaron, cóbrala antes de cerrar.`
+              : `Suman ${money(pending.total)}. No entran en este cuadre porque no se han cobrado: se cuentan en el turno en que se cobren. Si ya pagaron, cóbralas antes de cerrar.`}
+          </DialogDescription>
+        </DialogHeader>
+        <ListaPendientes pending={pending} />
+        <DialogFooter>
+          <Button variant="secondary" onClick={onCancelar}>{una ? 'Volver a cobrarla' : 'Volver a cobrarlas'}</Button>
+          <Button onClick={onCerrar} disabled={enviando}>{enviando ? 'Cerrando…' : 'Cerrar el turno igual'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -420,11 +604,13 @@ function PasoChip({ n, titulo, detalle, on, hecho, onClick, ultimo }: {
 }
 
 /* ── Paso 1 · contar ──────────────────────────────────────────── */
-function PasoEfectivo({ counts, setCount, opening, setOpening }: {
+function PasoEfectivo({ counts, setCount, opening, setOpening, fondoFijo }: {
   counts: Record<string, number>;
   setCount: (field: string, val: string) => void;
   opening: string;
   setOpening: (v: string) => void;
+  /** El turno se abrió con fondo: se enseña, no se edita. */
+  fondoFijo: { quien: string | null; cuando: string } | null;
 }) {
   return (
     <>
@@ -447,27 +633,41 @@ function PasoEfectivo({ counts, setCount, opening, setOpening }: {
             <Denom key={d.field} field={d.field} label={d.label} centavos={d.centavos} qty={counts[d.field] || 0} onChange={setCount} />
           ))}
 
-          <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label htmlFor="caja-fondo" style={{ fontSize: 12, color: 'var(--u-text-3)' }}>
-              Fondo con el que abriste
-            </label>
-            <input
-              id="caja-fondo"
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="0.01"
-              value={opening}
-              onChange={(e) => setOpening(e.target.value)}
-              aria-describedby="caja-fondo-ayuda"
-              className="adm-field adm-field-mono"
-              style={{ height: 44, padding: '0 12px', textAlign: 'right', fontSize: 18, fontWeight: 600 }}
-            />
-            {/* Sin esta línea nadie sabe si el fondo suma o resta al cuadre. */}
-            <p id="caja-fondo-ayuda" style={{ margin: 0, fontSize: 11, lineHeight: 1.4, color: 'var(--u-text-4)' }}>
-              Se descuenta del total contado para saber si cuadra.
-            </p>
-          </div>
+          {fondoFijo ? (
+            <div style={{ marginTop: 6, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, paddingTop: 10, borderTop: '1px solid var(--u-hair)' }}>
+              <span style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.4 }}>
+                Fondo al abrir
+                <span style={{ display: 'block', color: 'var(--u-text-4)' }}>
+                  {[fondoFijo.quien?.split(' ')[0], fondoFijo.cuando].filter(Boolean).join(' · ')}
+                </span>
+              </span>
+              <span className="t-mono" style={{ fontSize: 18, fontWeight: 600, color: 'var(--u-text)' }}>
+                {money(parseFloat(opening) || 0)}
+              </span>
+            </div>
+          ) : (
+            <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label htmlFor="caja-fondo" style={{ fontSize: 12, color: 'var(--u-text-3)' }}>
+                Fondo con el que abriste
+              </label>
+              <input
+                id="caja-fondo"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                value={opening}
+                onChange={(e) => setOpening(e.target.value)}
+                aria-describedby="caja-fondo-ayuda"
+                className="adm-field adm-field-mono"
+                style={{ height: 44, padding: '0 12px', textAlign: 'right', fontSize: 18, fontWeight: 600 }}
+              />
+              {/* Sin esta línea nadie sabe si el fondo suma o resta al cuadre. */}
+              <p id="caja-fondo-ayuda" style={{ margin: 0, fontSize: 11, lineHeight: 1.4, color: 'var(--u-text-4)' }}>
+                Se descuenta del total contado para saber si cuadra.
+              </p>
+            </div>
+          )}
         </Tarjeta>
       </div>
     </>
@@ -514,10 +714,11 @@ function Denom({ field, label, centavos, qty, onChange }: {
 }
 
 /* ── Paso 2 · gastos ──────────────────────────────────────────── */
-function PasoGastos({ restaurantId, state, onAviso }: {
+function PasoGastos({ restaurantId, state, onAviso, onCambio }: {
   restaurantId: string;
   state: CajaState;
   onAviso: (a: { text: string; bad: boolean }) => void;
+  onCambio: () => void;
 }) {
   const [concept, setConcept] = useState('');
   const [amount, setAmount] = useState('');
@@ -533,6 +734,7 @@ function PasoGastos({ restaurantId, state, onAviso }: {
       });
       if (res.error) { onAviso({ text: res.error, bad: true }); return; }
       setConcept(''); setAmount(''); setPaidBy('');
+      onCambio();
       conceptRef.current?.focus();
     });
   }
@@ -573,6 +775,7 @@ function PasoGastos({ restaurantId, state, onAviso }: {
               onClick={() => start(async () => {
                 const res = await deleteCashExpense(restaurantId, g.id);
                 if (res.error) { onAviso({ text: res.error, bad: true }); return; }
+                onCambio();
               })}
               disabled={pending}
               aria-label={`Quitar el gasto ${g.concept}`}
@@ -756,13 +959,18 @@ function PasoPropinas({ tips, setTips, total, notes, setNotes }: {
 }
 
 /* ── La tarjeta del cuadre ────────────────────────────────────── */
-function TarjetaCuadre({ ventasEfectivo, gastos, opening, contado, diferencia, cuadra, hayConteo }: {
-  ventasEfectivo: number; gastos: number; opening: number; contado: number;
+function TarjetaCuadre({ ventasEfectivo, devoluciones, desde, gastos, opening, contado, diferencia, cuadra, hayConteo }: {
+  ventasEfectivo: number; devoluciones: number; desde: string; gastos: number; opening: number; contado: number;
   diferencia: number; cuadra: boolean; hayConteo: boolean;
 }) {
   return (
     <div style={tarjeta}>
-      <Linea label="Ventas en efectivo" value={money(ventasEfectivo)} />
+      {/* Lo COBRADO, no lo vendido: una mesa todavía comiendo no está aquí. */}
+      <div>
+        <Linea label="Cobrado en efectivo" value={money(r2(ventasEfectivo + devoluciones))} />
+        <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>{desde}</div>
+      </div>
+      {devoluciones > 0 && <Linea label="Devuelto a clientes" value={`−${money(devoluciones)}`} />}
       {gastos > 0 && <Linea label="Gastos pagados de caja" value={`−${money(gastos)}`} />}
       <Linea label="Fondo inicial" value={money(opening)} />
       <div style={{ height: 1, background: 'var(--u-hair)' }} />
@@ -838,25 +1046,28 @@ function TarjetaGastos({ state, onAnotar }: { state: CajaState; onAnotar: () => 
 }
 
 /* ── El turno cerrado ─────────────────────────────────────────── */
-function CierreHecho({ result, dateLabel, shift, cashierName, restaurantName, tips, onOtro }: {
+function CierreHecho({ result, dateLabel, shift, cashierName, restaurantName, timezone, tips, onOtro }: {
   result: CajaCloseResult;
   dateLabel: string;
   shift: string;
   cashierName: string;
   restaurantName: string;
+  timezone: string;
   tips: TipShare[];
   onOtro: () => void;
 }) {
   const cuadra = Math.abs(result.difference) < 0.005;
+  const periodo = `de ${hora(result.periodStart, timezone)} a ${hora(result.closedAt, timezone)}`;
 
   /* El resumen por WhatsApp es cómo se manda de verdad un cierre a un
      dueño que no está en el local: texto plano, sin adjuntos y sin
      pedirle que entre a ninguna parte. */
   const texto = [
     `Cierre de caja · ${restaurantName}`,
-    `${dateLabel}${shift.trim() ? ` · ${shift.trim()}` : ''} · ${cashierName}`,
+    `${dateLabel}${shift.trim() ? ` · ${shift.trim()}` : ''} · ${periodo} · ${cashierName}`,
     '',
-    `Ventas en efectivo: ${money(result.expected)}`,
+    `Cobrado en efectivo: ${money(r2(result.expected + result.refundsCash))}`,
+    result.refundsCash > 0 ? `Devuelto a clientes: −${money(result.refundsCash)}` : null,
     `Gastos de caja: −${money(result.expensesTotal)}`,
     `Fondo inicial: ${money(result.opening)}`,
     `Total contado: ${money(result.counted)}`,
@@ -865,6 +1076,8 @@ function CierreHecho({ result, dateLabel, shift, cashierName, restaurantName, ti
       : `Faltan ${money(Math.abs(result.difference))}`,
     result.tipsTotal > 0 ? '' : null,
     result.tipsTotal > 0 ? `Propinas: ${money(result.tipsTotal)}` : null,
+    result.pendingTotal > 0 ? '' : null,
+    result.pendingTotal > 0 ? `Quedó sin cobrar: ${money(result.pendingTotal)} (entra en el turno en que se cobre)` : null,
     ...tips.filter((t) => t.amount > 0).map((t) => `· ${t.name}: ${money(t.amount)}`),
   ].filter((l) => l !== null).join('\n');
 
@@ -873,12 +1086,13 @@ function CierreHecho({ result, dateLabel, shift, cashierName, restaurantName, ti
       <div>
         <div className="t-display" style={{ fontSize: 22, lineHeight: 1.15 }}>Turno cerrado</div>
         <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 3 }}>
-          {[dateLabel, shift.trim() || null, cashierName].filter(Boolean).join(' · ')}
+          {[dateLabel, shift.trim() || null, periodo, cashierName].filter(Boolean).join(' · ')}
         </div>
       </div>
 
       <div style={tarjeta} id="caja-resumen">
-        <Linea label="Ventas en efectivo" value={money(result.expected)} />
+        <Linea label="Cobrado en efectivo" value={money(r2(result.expected + result.refundsCash))} />
+        {result.refundsCash > 0 && <Linea label="Devuelto a clientes" value={`−${money(result.refundsCash)}`} />}
         {result.expensesTotal > 0 && <Linea label="Gastos pagados de caja" value={`−${money(result.expensesTotal)}`} />}
         <Linea label="Fondo inicial" value={money(result.opening)} />
         <div style={{ height: 1, background: 'var(--u-hair)' }} />
@@ -898,6 +1112,11 @@ function CierreHecho({ result, dateLabel, shift, cashierName, restaurantName, ti
           <span>{cuadra ? 'Caja cuadrada' : result.difference > 0 ? 'Sobran' : 'Faltan'}</span>
           <span className="t-mono">{cuadra ? `+${money(0)}` : money(Math.abs(result.difference))}</span>
         </div>
+        {result.pendingTotal > 0 && (
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.45 }}>
+            Quedó sin cobrar {money(result.pendingTotal)}: entra en el turno en que se cobre.
+          </p>
+        )}
         {result.tipsTotal > 0 && (
           <>
             <div className="adm-label" style={{ color: 'var(--u-text-3)', marginTop: 4 }}>Propinas repartidas</div>
@@ -927,7 +1146,7 @@ function CierreHecho({ result, dateLabel, shift, cashierName, restaurantName, ti
           <Icon name="whatsapp" size={15} />
           Enviar por WhatsApp
         </a>
-        <BotonSuave onClick={onOtro}>Empezar otro cierre</BotonSuave>
+        <BotonSuave onClick={onOtro}>Abrir el siguiente turno</BotonSuave>
       </div>
     </div>
   );

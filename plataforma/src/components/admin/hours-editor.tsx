@@ -18,6 +18,7 @@ import type { Restaurant } from '@/types';
 import { FIELD_LABEL } from '@/components/admin/field-label';
 import SaveBar from '@/components/admin/save-bar';
 import { useFormDirty } from '@/lib/use-form-dirty';
+import { corteAHora, CORTE_POR_OMISION } from '@/lib/caja/dia';
 
 const TIMEZONES = [
   'America/Guatemala',
@@ -432,6 +433,31 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
           value={timezone}
           onValueChange={setTimezone}
         />
+      </Card>
+
+      {/* ── Cuándo termina el día de caja (migración 145) ──
+          Un bar que cierra a la 1:30 no cierra «el sábado»: con esta hora,
+          lo cobrado de madrugada cuenta para la noche anterior en la caja,
+          los gastos, las propinas, Hoy y los reportes. */}
+      <Card className="p-4">
+        <label htmlFor="day_cutoff" style={labelStyle}>El día de caja termina a las</label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <input
+            id="day_cutoff"
+            name="day_cutoff"
+            type="time"
+            min="00:00"
+            max="12:00"
+            step={900}
+            defaultValue={corteAHora(restaurant.day_cutoff_minutes ?? CORTE_POR_OMISION)}
+            className="adm-field adm-field-mono"
+            style={{ width: 132, height: 42 }}
+          />
+          <p style={{ margin: 0, flex: '1 1 240px', fontSize: 12, lineHeight: 1.5, color: 'var(--u-text-3)' }}>
+            Lo que se cobre antes de esa hora cuenta para el día anterior. Si cierras después de medianoche,
+            pon una hora en la que ya no haya nadie, como las 05:00.
+          </p>
+        </div>
       </Card>
 
 

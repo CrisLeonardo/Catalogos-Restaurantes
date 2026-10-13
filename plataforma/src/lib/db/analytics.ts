@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/service';
-import { localDateKey } from '@/lib/hours';
+import { diaDeNegocio } from '@/lib/caja/dia';
+import { corteDelRestaurante } from '@/lib/db/dia-negocio';
 
 /* ============================================================
    ANALÍTICA AVANZADA — Fase B (Admin Pro)
@@ -96,9 +97,11 @@ export async function getAnalytics(
 
   const rows = (orderData ?? []) as Row[];
 
-  // Filtrar al rango local exacto.
+  // Filtrar al rango exacto de días de NEGOCIO (migración 143): el pedido
+  // de la 1:30 es del día anterior, igual que en la caja y en el reporte.
+  const corte = await corteDelRestaurante(restaurantId);
   const fromKey = from, toKey = to;
-  const inRange = (d: Date) => { const k = localDateKey(d, timezone); return k >= fromKey && k <= toKey; };
+  const inRange = (d: Date) => { const k = diaDeNegocio(d, timezone, corte); return k >= fromKey && k <= toKey; };
 
   const heatMap = new Map<string, number>();   // "day-hour" → count
   const weekdayCount = new Array(7).fill(0);
@@ -119,7 +122,7 @@ export async function getAnalytics(
     if (isCancel) cancelled += 1;
 
     // Heatmap + día de semana (sobre TODOS los pedidos del rango).
-    const key = localDateKey(created, timezone);
+    const key = diaDeNegocio(created, timezone, corte);
     const wd = new Date(`${key}T12:00:00Z`).getUTCDay();
     const hr = localHour(created, timezone);
     weekdayCount[wd] += 1;

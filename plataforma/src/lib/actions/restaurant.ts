@@ -15,6 +15,8 @@ import { extractVisualConfig, type TemplateConfig } from '@/lib/theme/templates'
 import { ESTANDAR_MAX_ORDER_TYPES } from '@/lib/plans';
 import { panelLink } from '@/lib/panel-links-server';
 import { puedeEnSeccion, SIN_SECCION } from '@/lib/auth/seccion';
+import { horaACorte } from '@/lib/caja/dia';
+import { faltaLaColumna } from '@/lib/db/migracion-ausente';
 
 export type RestaurantState = { error: string } | null;
 
@@ -409,19 +411,34 @@ export async function updateRestaurantOps(
     .eq('id', ctx.restaurantId)
     .maybeSingle();
 
+  /* La hora en que termina el día de caja (migración 145). Hasta el
+     mediodía: un «día» que empieza más tarde ya no es un día. */
+  const corteTexto = (formData.get('day_cutoff') as string | null)?.trim();
+  let corte: number | undefined;
+  if (corteTexto) {
+    const c = horaACorte(corteTexto);
+    if (c == null) return { error: 'La hora de cierre del día tiene que estar entre las 00:00 y las 12:00.' };
+    corte = c;
+  }
+
   const ordersPaused = formData.get('orders_paused') === 'true';
-  const { error } = await ctx.db
-    .from('restaurants')
-    .update({
-      hours: parsed.hours,
-      hour_exceptions: parsedExceptions.exceptions,
-      timezone,
-      orders_paused: ordersPaused,
-      pause_message: (formData.get('pause_message') as string)?.trim() || null,
-    })
-    .eq('id', ctx.restaurantId);
+  const cambios: Record<string, unknown> = {
+    hours: parsed.hours,
+    hour_exceptions: parsedExceptions.exceptions,
+    timezone,
+    orders_paused: ordersPaused,
+    pause_message: (formData.get('pause_message') as string)?.trim() || null,
+    ...(corte != null ? { day_cutoff_minutes: corte } : {}),
+  };
+  let { error } = await ctx.db.from('restaurants').update(cambios).eq('id', ctx.restaurantId);
+  // Sin la 145 la columna no existe: se guarda el horario igual.
+  if (error && faltaLaColumna(error) && 'day_cutoff_minutes' in cambios) {
+    delete cambios.day_cutoff_minutes;
+    ({ error } = await ctx.db.from('restaurants').update(cambios).eq('id', ctx.restaurantId));
+  }
 
   if (error) return { error: error.message };
+  revalidatePath('/admin/caja');
 
   if (previo) {
     if (Boolean(previo.orders_paused) !== ordersPaused) {

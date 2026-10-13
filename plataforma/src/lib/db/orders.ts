@@ -1,7 +1,8 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { faltaLaColumna } from '@/lib/db/migracion-ausente';
 import { hayColumnaMesa, mesaDeFila, direccionDeMesa } from '@/lib/db/mesa-columna';
-import { localDateKey } from '@/lib/hours';
+import { diaDeNegocio, inicioDelDia, minutosDelDia, sumarDias as sumarDiasKey } from '@/lib/caja/dia';
+import { corteDelRestaurante } from '@/lib/db/dia-negocio';
 import type { Order, OrderItem, OrderStatus, OrderVoid } from '@/types';
 
 export type OrderWithItems = Order & {
@@ -87,9 +88,12 @@ export async function getPanelOrders(
       .limit(150),
   ]);
 
-  const todayKey = localDateKey(new Date(), timezone);
+  // «Hoy» es el día de NEGOCIO (migración 145): a la 1:30 un bar sigue
+  // viendo lo que cerró antes de medianoche.
+  const corte = await corteDelRestaurante(restaurantId);
+  const todayKey = diaDeNegocio(new Date(), timezone, corte);
   const closedToday = mapOrderRows(closedRes.data)
-    .filter((o) => localDateKey(new Date(orderClosedAt(o)), timezone) === todayKey)
+    .filter((o) => diaDeNegocio(new Date(orderClosedAt(o)), timezone, corte) === todayKey)
     .sort((a, b) => orderClosedAt(b).localeCompare(orderClosedAt(a)));
 
   return { active: mapOrderRows(activeRes.data), closedToday };
@@ -433,12 +437,13 @@ export async function getTableTurnsToday(restaurantId: string, timezone: string)
     .gte('delivered_at', desde.toISOString())
     .limit(2000);
 
-  const hoy = localDateKey(new Date(), timezone);
+  const corte = await corteDelRestaurante(restaurantId);
+  const hoy = diaDeNegocio(new Date(), timezone, corte);
   const cierres = new Set<string>();
   type FilaCierre = { address: string | null; table_number?: number | null; delivered_at: string | null };
   for (const row of (data ?? []) as unknown as FilaCierre[]) {
     if (!row.delivered_at) continue;
-    if (localDateKey(new Date(row.delivered_at), timezone) !== hoy) continue;
+    if (diaDeNegocio(new Date(row.delivered_at), timezone, corte) !== hoy) continue;
     const n = mesaDeFila(row);
     if (n == null) continue;
     // Minuto de cierre: una mesa liberada de golpe cuenta una sola vez
@@ -503,14 +508,15 @@ export async function getOrderStats(
 
   const rawOrders = data ?? [];
   const now = new Date();
-  const todayKey = localDateKey(now, timezone);
+  const corte = await corteDelRestaurante(restaurantId);
+  const todayKey = diaDeNegocio(now, timezone, corte);
 
   // Total por día local (clave YYYY-MM-DD en la zona del restaurante).
   const byDay = new Map<string, number>();
   const todayIds: string[] = [];
   let todaySales = 0;
   for (const o of rawOrders) {
-    const key = localDateKey(new Date(o.created_at as string), timezone);
+    const key = diaDeNegocio(new Date(o.created_at as string), timezone, corte);
     byDay.set(key, (byDay.get(key) ?? 0) + Number(o.total));
     if (key === todayKey) {
       todayIds.push(o.id as string);
@@ -522,9 +528,9 @@ export async function getOrderStats(
   const series: DaySale[] = [];
   let totalLast14 = 0;
   for (let i = 13; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i);
-    const key = localDateKey(d, timezone);
+    // Mediodía del día de negocio: el nombre del día no depende del corte.
+    const key = sumarDiasKey(todayKey, -i);
+    const d = new Date(`${key}T18:00:00Z`);
     const dayTotal = byDay.get(key) ?? 0;
     totalLast14 += dayTotal;
     let label: string;
@@ -581,36 +587,9 @@ export async function getOrderStats(
    no cinco semanas de pedidos para tirar el 80 %.
    ============================================================ */
 
-/** Minutos transcurridos del día local en la zona del restaurante. */
-function localMinutesOfDay(date: Date, timezone: string): number {
-  try {
-    const hhmm = date.toLocaleTimeString('en-GB', {
-      timeZone: timezone, hour12: false, hour: '2-digit', minute: '2-digit',
-    });
-    const [h, m] = hhmm.split(':').map(Number);
-    return h * 60 + m;
-  } catch {
-    return date.getHours() * 60 + date.getMinutes();
-  }
-}
-
-/**
- * Instante UTC en que empieza un día local ("YYYY-MM-DD") de una zona.
- *
- * Se deduce del desfase que esa zona tenía en ese momento en vez de
- * codificarlo: Guatemala no cambia de hora, pero el panel ya se vende fuera
- * y una constante -6 sería una bomba de tiempo.
- */
-function zonedDayStart(dateKey: string, timezone: string): Date {
-  const guess = new Date(`${dateKey}T00:00:00Z`);
-  try {
-    const asLocal = new Date(guess.toLocaleString('en-US', { timeZone: timezone }));
-    const asUtc = new Date(guess.toLocaleString('en-US', { timeZone: 'UTC' }));
-    return new Date(guess.getTime() + (asUtc.getTime() - asLocal.getTime()));
-  } catch {
-    return guess;
-  }
-}
+/* Los minutos del día y el inicio de un día viven en `lib/caja/dia.ts`
+   desde la migración 145: con la hora de corte, «el día» de esta
+   comparación tiene que ser el mismo que el de la caja. */
 
 export interface DayPace {
   /** Cuántos días iguales se pudieron promediar (0 = no hay con qué comparar). */
@@ -626,15 +605,16 @@ export async function getDayPace(
   timezone: string = 'America/Guatemala',
 ): Promise<DayPace | null> {
   const now = new Date();
-  const cutoffMinutes = localMinutesOfDay(now, timezone);
+  const corte = await corteDelRestaurante(restaurantId);
+  // Minutos desde que empezó el día de NEGOCIO, no desde medianoche.
+  const cutoffMinutes = minutosDelDia(now, timezone, corte);
+  const hoy = diaDeNegocio(now, timezone, corte);
 
   // Los cuatro días iguales anteriores, con sus bordes exactos en UTC.
   const ventanas: { key: string; from: Date; to: Date }[] = [];
   for (let semanas = 1; semanas <= 4; semanas++) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - semanas * 7);
-    const key = localDateKey(d, timezone);
-    const from = zonedDayStart(key, timezone);
+    const key = sumarDiasKey(hoy, -semanas * 7);
+    const from = inicioDelDia(key, timezone, corte);
     const to = new Date(from.getTime() + 24 * 60 * 60 * 1000);
     ventanas.push({ key, from, to });
   }
@@ -656,10 +636,10 @@ export async function getDayPace(
   const fullDay = new Map<string, number>();
   for (const o of data) {
     const at = new Date(o.created_at as string);
-    const key = localDateKey(at, timezone);
+    const key = diaDeNegocio(at, timezone, corte);
     const monto = Number(o.total);
     fullDay.set(key, (fullDay.get(key) ?? 0) + monto);
-    if (localMinutesOfDay(at, timezone) <= cutoffMinutes) {
+    if (minutosDelDia(at, timezone, corte) <= cutoffMinutes) {
       soFar.set(key, (soFar.get(key) ?? 0) + monto);
     }
   }

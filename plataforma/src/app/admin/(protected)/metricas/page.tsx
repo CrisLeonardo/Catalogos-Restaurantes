@@ -15,7 +15,8 @@ import { ChartReadout } from '@/components/ui/chart-readout';
 import Link from '@/components/admin/panel-link';
 import { fmtMoney } from '@/lib/money';
 import { diaSemana } from '@/lib/dates';
-import { localDateKey } from '@/lib/hours';
+import { diaDeNegocio } from '@/lib/caja/dia';
+import { corteDelRestaurante } from '@/lib/db/dia-negocio';
 import { PERIODOS, esPeriodo, rangoDePeriodo, comparacion, serieCompleta, type Periodo } from '@/lib/periodo';
 
 export const metadata = { title: 'Negocio – Panel admin' };
@@ -73,7 +74,7 @@ export default async function AdminNegocioPage({
   const sp = await searchParams;
   const periodo: Periodo = esPeriodo(sp.periodo) ? sp.periodo : 'semana';
   const dias = PERIODOS[periodo];
-  const hoy = localDateKey(new Date(), timezone);
+  const hoy = diaDeNegocio(new Date(), timezone, await corteDelRestaurante(restaurantId));
   const { from, to, prevFrom, prevTo } = rangoDePeriodo(hoy, dias);
 
   const [actual, anterior, visitas, visitasAntes, visits] = await Promise.all([
