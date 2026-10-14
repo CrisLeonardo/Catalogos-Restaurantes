@@ -1,5 +1,5 @@
 import { PLANS, type PlanCode } from '@/lib/plans';
-import { can } from '@/lib/permissions';
+import { can, isMeseroOnly } from '@/lib/permissions';
 
 /* ============================================================
    EL MENÚ DEL PANEL — modelo único (rediseño 2026-08-21, Fase 3)
@@ -231,18 +231,23 @@ export function buildNav(ctx: NavContext): NavGroup[] {
     },
   ];
 
+  /* 'hoy' es la portada: la ve cualquiera que pueda entrar al panel. El
+     "mesero puro" NO puede —el layout del panel lo devuelve a Tomar pedidos—,
+     así que para él «Hoy» era un botón que rebotaba al mismo sitio que
+     «Pedidos» (auditoría de navegación 2026-10-14). */
+  const veHoy = !isMeseroOnly(ctx.role, ctx.permissions);
+
   // 'personal' NO es delegable (no está en ADMIN_SECTIONS a propósito: así un
   // gerente no puede darse permisos a sí mismo repartiéndola), su llave es el
-  // ROL y ya se aplicó arriba. 'hoy' es la portada: la ve cualquiera que pueda
-  // entrar al panel.
+  // ROL y ya se aplicó arriba.
   const allowed = (key: string) =>
-    key === 'personal' || key === 'hoy' || can(ctx.role ?? 'RESTAURANT_OWNER', ctx.permissions ?? null, key);
+    key === 'personal' || (key === 'hoy' ? veHoy : can(ctx.role ?? 'RESTAURANT_OWNER', ctx.permissions ?? null, key));
 
   return groups
     .map((g) => ({ ...g, items: g.items.filter((it) => allowed(it.key)) }))
     // Un grupo sin pestañas visibles no se enseña. 'hoy' es la excepción: no
-    // tiene pestañas por diseño.
-    .filter((g) => g.key === 'hoy' || g.items.length > 0)
+    // tiene pestañas por diseño, y depende solo de quién mira.
+    .filter((g) => (g.key === 'hoy' ? allowed('hoy') : g.items.length > 0))
     // El grupo lleva a su primera pestaña disponible: si el plan de alguien no
     // incluye "En vivo", tocar "Pedidos" tiene que llevarlo a algo que sí ve.
     .map((g) => (g.items.length > 0 && !g.index ? { ...g, href: g.items[0].href } : g));
@@ -272,6 +277,38 @@ export function findGroup(groups: NavGroup[], pathname: string): NavGroup | null
     }
   }
   return best?.group ?? null;
+}
+
+/* ── La barra de destinos del teléfono ──────────────────────────────
+   Con el menú de un dueño la cuenta es fácil: seis destinos y el botón de
+   tomar pedido entre Menú y Clientes. Con un rol estrecho no, y ahí se
+   rompía (auditoría de navegación 2026-10-14): el botón se colgaba DETRÁS
+   del grupo «Menú», y quien no lo tiene —un mesero, un cajero con Tomar
+   pedidos— se quedaba sin botón y sin ningún destino marcado en esa
+   pantalla. Esto decide la barra a partir de los grupos ya filtrados. */
+
+/** «Tomar pedidos»: es pestaña de Pedidos y, en el teléfono, el botón central. */
+export const RUTA_TOMAR_PEDIDO = '/admin/mesero';
+
+export interface BarraDestinos {
+  /** Hay botón central de tomar pedido. */
+  conBoton: boolean;
+  /** Índice del grupo tras el cual va el botón (-1 sin botón). */
+  botonTras: number;
+  /** Sitios DISTINTOS a los que lleva la barra (el botón cuenta si va a otro). */
+  destinos: number;
+}
+
+export function barraDestinos(groups: NavGroup[], preview = false): BarraDestinos {
+  const conBoton = !preview && groups
+    .some((g) => g.items.some((it) => it.href === RUTA_TOMAR_PEDIDO && !it.locked));
+  /* Tras «Menú» si existe: con los seis destinos del dueño deja tres a cada
+     lado. Si no, en el centro de lo que haya. */
+  const menu = groups.findIndex((g) => g.key === 'menu');
+  const botonTras = !conBoton ? -1 : menu >= 0 ? menu : Math.max(0, Math.ceil(groups.length / 2) - 1);
+  const sitios = new Set(groups.map((g) => g.href));
+  if (conBoton) sitios.add(RUTA_TOMAR_PEDIDO);
+  return { conBoton, botonTras, destinos: sitios.size };
 }
 
 /* ── Qué sección exige cada pantalla (SEC-06) ──────────────────────────

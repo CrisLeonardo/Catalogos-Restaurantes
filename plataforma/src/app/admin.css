@@ -566,6 +566,17 @@
     font-weight: 600;
   }
   .admin-navlink[data-active="1"] .nav-label { font-weight: 600; }
+  /* En Tomar pedidos marca el botón central, no «Pedidos»: un solo sitio
+     encendido. Se cede AQUÍ y no en el marcado porque en la barra lateral
+     no hay botón y «Pedidos» tiene que seguir diciendo dónde estás. */
+  .admin-navlink[data-active="1"][data-cede="1"] { color: var(--u-text-3); font-weight: 500; }
+  .admin-navlink[data-active="1"][data-cede="1"] .nav-label { font-weight: 500; }
+
+  /* Barra con un solo sitio (el mesero puro): no se pinta, y todo lo que
+     reservaba su hueco —contenido, barra del carrito, avisos— baja al canto.
+     Mismo truco que `.admin-kiosk`. Ver `sinBarra` en shell.tsx. */
+  .admin-shell[data-sin-barra] { --adm-nav-h: 0px; }
+  .admin-shell[data-sin-barra] .admin-nav { display: none; }
   /* El aro de "ya te oí" sale por encima del icono en vez de empujar el
      texto: en columna reservaba 17 px de alto en CADA destino. */
   .admin-navlink-pending { position: absolute; top: 3px; right: 8px; }

@@ -25,7 +25,7 @@ import AdminInstallPrompt from '@/components/admin/install-prompt';
 import LoginWelcomeToast from '@/components/admin/login-welcome-toast';
 import { ToastProvider, Toaster } from '@/components/ui/toast';
 import { isMeseroOnly } from '@/lib/permissions';
-import { buildNav, findGroup, type NavGroup } from '@/lib/admin-nav';
+import { buildNav, findGroup, barraDestinos, type NavGroup } from '@/lib/admin-nav';
 import SectionTabs from '@/components/admin/section-tabs';
 import CommandSearch from '@/components/admin/command-search';
 import AdminMoreMenu from '@/components/admin/admin-more-menu';
@@ -304,8 +304,16 @@ export default function AdminShell({
      360 px la ranura del botón se estrecha para dejarles sitio, ver
      globals.css. */
 
-  const conBoton = !preview && groups
-    .some((g) => g.items.some((it) => it.href === '/admin/mesero' && !it.locked));
+  const barra = barraDestinos(groups, preview);
+  const conBoton = barra.conBoton;
+
+  /* Una barra con un solo sitio no es navegación. Le pasaba al mesero puro:
+     «Pedidos» y el botón llevaban los dos a Tomar pedidos (y antes «Hoy»
+     también, rebotado por el layout). Su panel es UNA pantalla, así que en
+     el teléfono la barra se va y le devuelve esos 56 px al salón; lo que
+     queda de cuenta (cambiar de usuario, sonido, ayuda) sigue en la barra
+     de arriba. Ver `[data-sin-barra]` en admin.css. */
+  const sinBarra = barra.destinos < 2;
 
   /* "Aquí estás", no "aquí no estoy". El botón se APARTABA en
      `/admin/mesero` y `/admin/caja` —`visibility: hidden`— y lo que se veía
@@ -367,18 +375,6 @@ export default function AdminShell({
     '/admin/modulos': 'Funciones',
     '/admin/respaldo': 'Copia de datos',
   };
-  /* Estando en una pestaña, el título de arriba dice el GRUPO ("Menú") y la
-     pestaña activa dice la pantalla ("Platillos"): antes ambos decían lo
-     mismo, dos veces, a diez píxeles de distancia. En una pantalla más honda
-     —editar un platillo, por ejemplo— no hay pestaña que la nombre, así que
-     ahí el título vuelve a ser el de la pantalla. */
-  const onTab = !!activeGroup && activeGroup.items.some((it) => pathname === it.href);
-  const title = pathname === '/admin'
-    ? 'Hoy'
-    : onTab && activeGroup && !activeGroup.index
-    ? activeGroup.label
-    : Object.entries(TITLES).find(([p]) => pathname.startsWith(p))?.[1] ?? 'Panel';
-
   const HELP_SECTIONS: Record<string, string> = {
     '/admin/menu':             'catalogo',
     '/admin/categorias':       'categorias',
@@ -414,6 +410,21 @@ export default function AdminShell({
      entera de armazón que no dice nada. */
   const showTabs = !!activeGroup && !backToIndex && !activeGroup.index && activeGroup.items.length >= 2;
   const showSubbar = backToIndex || showTabs;
+
+  /* Estando en una pestaña, el título de arriba dice el GRUPO ("Menú") y la
+     pestaña activa dice la pantalla ("Platillos"): antes ambos decían lo
+     mismo, dos veces, a diez píxeles de distancia. En una pantalla más honda
+     —editar un platillo, por ejemplo— no hay pestaña que la nombre, así que
+     ahí el título vuelve a ser el de la pantalla.
+     Lo mismo cuando la fila de pestañas NO se pinta (un grupo con una sola
+     pestaña visible): el mesero leía «Pedidos» encima de Tomar pedidos y
+     ninguna pestaña decía en qué pantalla estaba. */
+  const onTab = showTabs && activeGroup.items.some((it) => pathname === it.href);
+  const title = pathname === '/admin'
+    ? 'Hoy'
+    : onTab
+    ? activeGroup.label
+    : Object.entries(TITLES).find(([p]) => pathname.startsWith(p))?.[1] ?? 'Panel';
 
   const isLive    = pathname.startsWith('/admin/pedidos');
   const isKitchen = pathname.startsWith('/admin/cocina');
@@ -526,10 +537,14 @@ export default function AdminShell({
   /** Un destino de la barra lateral. Seis en total, sin candados: lo que el
    *  plan no incluye se enseña dentro de su sección, no aquí. */
   function renderGroup(g: NavGroup) {
-    /* Un solo sitio marcado en la barra. En `/admin/mesero` el grupo activo
-       es "Pedidos" (ahí vive esa pantalla), pero quien marca es el botón
-       central: dejar los dos en acento decía "estás en dos sitios". */
-    const active = activeGroup?.key === g.key && !(conBoton && enTomarPedido && g.key === 'pedidos');
+    const active = activeGroup?.key === g.key;
+    /* Un solo sitio marcado en la barra del TELÉFONO. En `/admin/mesero` el
+       grupo activo es "Pedidos" (ahí vive esa pantalla), pero allí quien
+       marca es el botón central: dejar los dos en acento decía "estás en dos
+       sitios". Lo cede solo por CSS y solo donde el botón existe (≤820 px):
+       antes se quitaba aquí, en el marcado, y en la barra lateral —donde no
+       hay botón— Tomar pedidos se quedaba sin ningún destino marcado. */
+    const cede = active && conBoton && enTomarPedido && g.key === 'pedidos';
     if (preview) {
       return (
         <div key={g.key} className="admin-navlink" data-active={active ? '1' : '0'} data-tour-step={g.key} style={{ cursor: 'default' }}>
@@ -539,7 +554,7 @@ export default function AdminShell({
       );
     }
     return (
-      <Link key={g.key} href={enlace(g.href)} className="admin-navlink press" data-active={active ? '1' : '0'} data-tour-step={g.key}>
+      <Link key={g.key} href={enlace(g.href)} className="admin-navlink press" data-active={active ? '1' : '0'} data-cede={cede ? '1' : undefined} data-tour-step={g.key}>
         <Icon name={g.icon} size={18} />
         <span className="nav-label">{g.label}</span>
         <NavPending />
@@ -550,7 +565,8 @@ export default function AdminShell({
   /** El botón central. Su ranura vive DENTRO de la barra, entre Menú y
    *  Clientes — así queda 3 destinos a cada lado (Hoy/Pedidos/Menú y
    *  Clientes/Negocio/Ajustes) y el botón cae en el centro real de los
-   *  siete huecos, no solo entre los dos primeros. */
+   *  siete huecos, no solo entre los dos primeros. Sin «Menú» (un rol
+   *  estrecho) va al centro de lo que haya: ver `barraDestinos`. */
   function renderTomarPedido() {
     return (
       <Link
@@ -583,7 +599,7 @@ export default function AdminShell({
 
   return (
     <ToastProvider>
-    <div className="admin-shell">
+    <div className="admin-shell" data-sin-barra={sinBarra ? '1' : undefined}>
       <OfflineSupport />
       <aside className="admin-sidebar">
         {(() => {
@@ -633,8 +649,8 @@ export default function AdminShell({
             misma lista se convierte en la barra inferior fija (ver globals.css).
             Ya no hay secciones plegables: con seis ítems no hay nada que plegar. */}
         <nav className="admin-nav" data-tour-step="nav">
-          {groups.map((g) => (
-            conBoton && g.key === 'menu'
+          {groups.map((g, i) => (
+            i === barra.botonTras
               ? [renderGroup(g), renderTomarPedido()]
               : renderGroup(g)
           ))}
@@ -772,7 +788,10 @@ export default function AdminShell({
       </div>
       {avisosFlotantes}
       {!preview && <CommandSearch groups={groups} />}
-      <WelcomeTour restaurantName={restaurantName} preview={preview} />
+      {/* El tour enseña los seis destinos de la barra. Sin barra (el mesero
+          puro) no hay nada que señalar: eran cinco pasos sobre Menú y
+          Ajustes, pantallas que esa persona no puede abrir. */}
+      {!sinBarra && <WelcomeTour restaurantName={restaurantName} preview={preview} />}
       {!preview && <LoginWelcomeToast restaurantName={restaurantName} userName={userName} roleLabel={roleLabel} />}
       {/* Tours guiados del centro de ayuda ("Ver en mi panel") — el host vive
           aquí para sobrevivir a las navegaciones entre páginas del panel. */}
