@@ -13,7 +13,8 @@ import RewardsSection from '@/components/menu/rewards-section';
 import BottomNav, { type NavTab } from '@/components/menu/bottom-nav';
 import { VitrinaBag, VitrinaTopBar } from '@/components/menu/vitrina-bar';
 import OverlayBackground from '@/components/menu/overlay-background';
-import { useCart } from '@/lib/cart-context';
+import { useHojaEnHistorial, leerHojaGuardada, olvidarHojaGuardada } from '@/components/menu/use-hoja-en-historial';
+import { useCart, carritoGuardadoTieneAlgo } from '@/lib/cart-context';
 import { getScannedTable, watchScannedTable, isStandaloneLaunch } from '@/lib/table-session';
 import { isKioskMode } from '@/lib/kiosk';
 import { getMyAccount } from '@/lib/actions/loyalty';
@@ -200,6 +201,52 @@ export default function MenuClient({
   function openAccount()  { setRewardsOpen(false); setPedidosOpen(false); setAccountOpen(true); }
   function openPedidos()  { setRewardsOpen(false); setAccountOpen(false); setPedidosOpen(true); }
   function closeOverlays() { setRewardsOpen(false); setAccountOpen(false); setPedidosOpen(false); }
+
+  /* «Atrás» y Esc cierran la hoja en vez de sacar del menú (ver
+     use-hoja-en-historial.ts). El nombre va de la capa de ARRIBA hacia
+     abajo, en el mismo orden en que se pintan: el aviso de Google, las
+     pantallas completas (z 70), el carrito y la ficha del platillo. */
+  const hoja = googleIntroOpen ? 'google'
+    : pedidosOpen ? 'pedidos'
+    : accountOpen ? 'cuenta'
+    : rewardsOpen ? 'puntos'
+    : cartOpen ? 'carrito'
+    : selected ? `platillo:${selected.id}`
+    : null;
+  useHojaEnHistorial({
+    hoja,
+    cerrarTodo: () => {
+      closeOverlays(); setCartOpen(false); setSelected(null); setGoogleIntroOpen(false);
+    },
+    cerrarArriba: () => {
+      if (googleIntroOpen) setGoogleIntroOpen(false);
+      else if (pedidosOpen || accountOpen || rewardsOpen) closeOverlays();
+      else if (cartOpen) setCartOpen(false);
+      else setSelected(null);
+    },
+  });
+
+  /* Volver a la carta desde una página que salió de una hoja —el pago desde
+     el carrito, el seguimiento desde Mis pedidos— o recargar con una abierta:
+     la entrada del historial dice cuál era y se reabre, que es donde la
+     persona espera aterrizar. Lo que ya no se puede reabrir (un platillo que
+     se agotó, el aviso de Google) solo se olvida. */
+  useEffect(() => {
+    const guardada = leerHojaGuardada();
+    if (!guardada) return;
+    const enKiosko = isKioskMode();
+    const producto = guardada.startsWith('platillo:')
+      ? products.find((p) => p.id === guardada.slice('platillo:'.length))
+      : undefined;
+    if (guardada === 'carrito' && ordersEnabled && restaurantId && carritoGuardadoTieneAlgo(restaurantId)) setCartOpen(true);
+    else if (guardada === 'pedidos' && ordersEnabled && restaurantId && !enKiosko) setPedidosOpen(true);
+    else if (guardada === 'cuenta' && restaurantId && !enKiosko) setAccountOpen(true);
+    else if (guardada === 'puntos' && loyaltyOn && restaurantId && !enKiosko) setRewardsOpen(true);
+    else if (producto) setSelected(producto);
+    else olvidarHojaGuardada();
+    // Solo al montar: después, la fuente de verdad es el estado de React.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
