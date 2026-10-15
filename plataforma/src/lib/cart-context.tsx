@@ -57,6 +57,24 @@ function migrate(stored: unknown): CartItem[] {
     }));
 }
 
+const cartKey = (restaurantId: string) => `cart-${restaurantId}`;
+
+/**
+ * ¿Quedó algo en el carrito guardado de este restaurante? Lee el almacén
+ * directamente, sin esperar a que el proveedor se rehidrate: el menú lo
+ * pregunta al montar para decidir si reabre el carrito al volver del pago, y
+ * a esa altura `items` todavía es []. Tras pedir, el carrito se vacía y
+ * reabrirlo solo enseñaría «tu carrito está vacío».
+ */
+export function carritoGuardadoTieneAlgo(restaurantId: string): boolean {
+  try {
+    const stored = JSON.parse(localStorage.getItem(cartKey(restaurantId)) ?? '[]');
+    return Array.isArray(stored) && stored.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 export function CartProvider({
   children,
   restaurantId,
@@ -64,7 +82,7 @@ export function CartProvider({
   children: React.ReactNode;
   restaurantId: string;
 }) {
-  const key = `cart-${restaurantId}`;
+  const key = cartKey(restaurantId);
   const [items, setItems] = useState<CartItem[]>([]);
 
   // Rehidratar desde localStorage una sola vez al montar.

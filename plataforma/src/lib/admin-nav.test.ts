@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildNav, seccionDeRuta, type NavContext } from './admin-nav';
+import { buildNav, barraDestinos, seccionDeRuta, type NavContext } from './admin-nav';
 import { can } from './permissions';
 
 /* ── Contexto ─────────────────────────────────────────────────────
@@ -123,6 +123,56 @@ describe('seccionDeRuta (SEC-06)', () => {
     expect(visibles).not.toContain('/admin/finanzas');
     expect(can('RESTAURANT_STAFF', ['pedidos'], seccionDeRuta('/admin/finanzas')!)).toBe(false);
     expect(can('RESTAURANT_STAFF', ['pedidos'], seccionDeRuta('/admin/pedidos')!)).toBe(true);
+  });
+});
+
+/* ── La barra del teléfono con roles estrechos (auditoría 2026-10-14) ──
+   El mesero puro veía «Hoy» (que el layout rebotaba a Tomar pedidos) y
+   «Pedidos» (que ya era Tomar pedidos), sin botón central —se colgaba tras
+   «Menú», que él no tiene— y sin ningún destino marcado. */
+describe('barraDestinos', () => {
+  const MESERO: NavContext = { ...CTX_DUEÑO, role: 'RESTAURANT_STAFF', permissions: ['mesero'], showStaff: false };
+
+  it('el mesero puro no ve «Hoy»: el panel lo devolvería a Tomar pedidos', () => {
+    expect(buildNav(MESERO).map((g) => g.key)).toEqual(['pedidos']);
+    expect(buildNav({ ...MESERO, role: 'RESTAURANT_WAITER', permissions: null }).map((g) => g.key)).toEqual(['pedidos']);
+  });
+
+  it('el mesero puro tiene un solo sitio: no hay barra que pintar', () => {
+    expect(barraDestinos(buildNav(MESERO)).destinos).toBe(1);
+  });
+
+  it('quien sí entra al panel sigue viendo «Hoy»', () => {
+    const conPedidos = buildNav({ ...MESERO, permissions: ['mesero', 'pedidos'] });
+    expect(conPedidos[0].key).toBe('hoy');
+    expect(buildNav(CTX_DUEÑO)[0].key).toBe('hoy');
+  });
+
+  it('con los seis destinos del dueño el botón va tras «Menú»', () => {
+    const grupos = buildNav(CTX_DUEÑO);
+    const barra = barraDestinos(grupos);
+    expect(barra.conBoton).toBe(true);
+    expect(grupos[barra.botonTras].key).toBe('menu');
+    expect(barra.destinos).toBe(7);
+  });
+
+  it('sin «Menú» el botón no desaparece: va al centro de lo que haya', () => {
+    const grupos = buildNav({ ...MESERO, permissions: ['mesero', 'pedidos'] });
+    expect(grupos.map((g) => g.key)).toEqual(['hoy', 'pedidos']);
+    const barra = barraDestinos(grupos);
+    expect(barra.conBoton).toBe(true);
+    expect(barra.botonTras).toBe(0);
+    expect(barra.destinos).toBe(3);
+  });
+
+  it('sin Tomar pedidos en el plan no hay botón', () => {
+    const barra = barraDestinos(buildNav({ ...CTX_DUEÑO, planActual: 'ESTANDAR' }));
+    expect(barra.conBoton).toBe(false);
+    expect(barra.botonTras).toBe(-1);
+  });
+
+  it('en la vista previa del súper admin no hay botón', () => {
+    expect(barraDestinos(buildNav({ ...CTX_DUEÑO, preview: true }), true).conBoton).toBe(false);
   });
 });
 
