@@ -25,6 +25,23 @@ export const DINER_COOKIE_NAME = "sb-leogin-diner-v2";
  */
 export const LEGACY_DINER_COOKIE_PATTERN = /^sb-leogin-diner(\.\d+)?$/;
 
+/**
+ * Cookie de la CUENTA LEOGIN del comensal: la sesión de `/billetera`, en el
+ * dominio raíz (PLAN_BILLETERA_COMENSAL_2026-10-25, BIL-01).
+ *
+ * Tiene nombre propio por dos motivos:
+ *  · No puede ser `DINER_COOKIE_NAME`: en el dominio raíz ya viven cookies
+ *    del comensal con ese nombre atadas a `/m/<id>/` (link estable). Una con
+ *    `path=/` y el mismo nombre se mandaría junto a ellas en cada `/m/<id>/`
+ *    y sería otra "cookie fantasma".
+ *  · Ser una sesión distinta es justo lo que se quiere: tener la cuenta
+ *    iniciada NO abre sesión en ningún restaurante. Eso solo lo hace el
+ *    puente (`/billetera/puente` → `/auth/puente`), con permiso del comensal.
+ *
+ * Host-only, como la del comensal.
+ */
+export const WALLET_COOKIE_NAME = "sb-leogin-cuenta";
+
 /* ============================================================
    LEER LA COOKIE DE SESIÓN SIN CREERLE DE MÁS
    ------------------------------------------------------------
@@ -75,12 +92,15 @@ export function isCodeVerifierCookie(name: string): boolean {
 
 /**
  * ¿Es la cookie de sesión del PERSONAL (o uno de sus trozos)?
- * Deja fuera la del comensal —las dos empiezan por `sb-`— y el verificador.
+ * Deja fuera la del comensal y la de la cuenta Leogin —todas empiezan por
+ * `sb-`— y el verificador. Sin esa exclusión, el proxy tomaría la sesión de
+ * la billetera por una fantasma del personal y la expiraría.
  */
 export function isStaffSessionCookie(name: string): boolean {
   return (
     name.startsWith("sb-") &&
     !name.startsWith(DINER_COOKIE_NAME) &&
+    !name.startsWith(WALLET_COOKIE_NAME) &&
     !LEGACY_DINER_COOKIE_PATTERN.test(name) &&
     !isCodeVerifierCookie(name)
   );
@@ -144,7 +164,17 @@ export function sessionCookieNames(storageKey: string, presentNames: readonly st
  * acceso del panel empezado aquí mismo.
  */
 export function isStaffCodeVerifierCookie(name: string): boolean {
-  return isCodeVerifierCookie(name) && name.startsWith("sb-") && !name.startsWith(DINER_COOKIE_NAME);
+  return (
+    isCodeVerifierCookie(name) &&
+    name.startsWith("sb-") &&
+    !name.startsWith(DINER_COOKIE_NAME) &&
+    !name.startsWith(WALLET_COOKIE_NAME)
+  );
+}
+
+/** El verificador PKCE de un login a la cuenta Leogin (la billetera). */
+export function isWalletCodeVerifierCookie(name: string): boolean {
+  return isCodeVerifierCookie(name) && name.startsWith(WALLET_COOKIE_NAME);
 }
 
 /**
