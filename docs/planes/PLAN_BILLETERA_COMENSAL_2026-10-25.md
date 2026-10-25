@@ -25,12 +25,14 @@
 
 ---
 
-## Fase 0 · Decisiones del dueño (sin código)
+## Fase 0 · Decisiones del dueño (sin código) ✅
 
-- [ ] **BIL-00a · Ruta de la billetera.** Propuesta: `distleogin.com/billetera` (con «Mis restaurantes» como título visible). Alternativa: `/cuenta`.
-- [ ] **BIL-00b · Qué comparte el comensal al unirse a un restaurante.** Propuesta: nombre, teléfono si lo dio y correo de Google. Nunca sus alergias ni sus otros restaurantes.
-- [ ] **BIL-00c · Dueño que también es comensal con el mismo Google.** Propuesta: se permite. La billetera usa su propia cookie, así que no se mezcla con la sesión del panel (`account-classification.ts` sigue mandando en el panel).
-- [ ] **BIL-00d · Interruptor por restaurante.** Propuesta: «Aparecer en la billetera Leogin» encendido por defecto en todos los planes, incluido BASICO (es lo que hace crecer la red).
+Aprobadas por el dueño el 2026-10-25, tal como se propusieron.
+
+- [x] **BIL-00a · Ruta de la billetera.** `distleogin.com/billetera`, con «Mis restaurantes» como título visible.
+- [x] **BIL-00b · Qué comparte el comensal al unirse a un restaurante.** Nombre, teléfono si lo dio y correo de Google. Nunca sus alergias ni sus otros restaurantes.
+- [x] **BIL-00c · Dueño que también es comensal con el mismo Google.** Se permite. La billetera usa su propia cookie, así que no se mezcla con la sesión del panel (`account-classification.ts` sigue mandando en el panel).
+- [x] **BIL-00d · Interruptor por restaurante.** «Aparecer en la billetera Leogin» encendido por defecto en todos los planes, incluido BASICO (es lo que hace crecer la red).
 
 ## Fase 1 · Cuenta Leogin y entrada con un toque (migración 146)
 
