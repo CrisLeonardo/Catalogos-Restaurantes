@@ -26,6 +26,47 @@ export const DINER_COOKIE_NAME = "sb-leogin-diner-v2";
 export const LEGACY_DINER_COOKIE_PATTERN = /^sb-leogin-diner(\.\d+)?$/;
 
 /* ============================================================
+   LA COOKIE DEL COMENSAL BAJO EL LINK ESTABLE (`/m/<ref>`)
+   ------------------------------------------------------------
+   En el dominio raíz todos los restaurantes comparten host, así que la
+   cookie del comensal se ata a la ruta de SU link: `/m/<ref>`.
+
+   SIN barra final. Hasta el 2026-10-25 (BIL-03) se escribía con
+   `Path=/m/<ref>/`, y Next hace 308 de `/m/<ref>/` a `/m/<ref>` (quita la
+   barra): el navegador no manda una cookie de ruta `/m/<ref>/` a
+   `/m/<ref>`, así que en la PORTADA del QR general la sesión no existía
+   —ni la de Google ni la del puente de la billetera—; solo en `/m/<ref>/4`
+   y demás subpáginas. Sin barra no se cuela a `/m/<ref>otro` (RFC 6265
+   §5.1.4: tras el prefijo tiene que venir una `/`).
+
+   La vieja la retira el proxy (bloque "MUDANZA DE LA COOKIE DEL COMENSAL"
+   en proxy.ts): con las dos vivas, en `/m/<ref>/…` llegarían dos cookies con
+   el mismo nombre — otra cookie fantasma.
+   ============================================================ */
+
+export function dinerStableCookiePath(ref: string): string {
+  return `/m/${ref}`;
+}
+
+/** La ruta de antes de BIL-03; solo para borrar la cookie que quedó ahí. */
+export function legacyDinerStableCookiePath(ref: string): string {
+  return `/m/${ref}/`;
+}
+
+/**
+ * Marca de "este navegador ya pasó su sesión a la ruta nueva" en este link.
+ * Hace falta porque en `/m/<ref>/…` llegan las cookies de las dos rutas y la
+ * cabecera `Cookie` no dice de cuál es cada una: sin la marca, el proxy
+ * tendría que reescribir la sesión entera en CADA petición, por si acaso.
+ */
+export const DINER_PATH_MARKER_COOKIE = "leogin-diner-ruta";
+
+/** Los nombres de la sesión del comensal presentes (clave + trozos `.N`). */
+export function dinerSessionCookieNames(presentNames: readonly string[]): string[] {
+  return sessionCookieNames(DINER_COOKIE_NAME, presentNames);
+}
+
+/* ============================================================
    LEER LA COOKIE DE SESIÓN SIN CREERLE DE MÁS
    ------------------------------------------------------------
    Todo lo de abajo existe por un mismo problema: el navegador puede tener
