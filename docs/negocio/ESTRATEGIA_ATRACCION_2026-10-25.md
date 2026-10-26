@@ -384,6 +384,8 @@ El diseño, las expresiones, las variantes y la voz están en [`docs/diseno/marc
 ## 6. Qué cambia en cada lado
 
 ### 6.1 Web (distleogin.com)
+**Hecho (2026-10-26):** titular «Tu restaurante, bajo control.» y, al lado, una tarjeta con el gancho («¿Sabes cuánto dinero se te fue hoy?») que abre la intro de 51 s en una ventana: horizontal en computadora, vertical en el celular, con sonido. La intro se sirve en la ruta `/intro` con el nonce de la CSP; GSAP, el sonido (Opus) y la imagen de la tarjeta viven en `plataforma/public/intro/`. Se regenera con `node docs/diseno/intro-animada/publicar-en-web.mjs` cada vez que cambie `intro.html`. Lo de abajo queda como propuesta:
+
 - **Portada:** la intro animada en bucle corto (6 a 8 s, sin sonido) más un botón *«Míralo en 1 minuto»* para la versión completa. Es animación en código, no video pesado: carga al instante con datos móviles.
 - **Cinco pantallas, no quince:** dolor → cómo funciona (3 pasos animados) → vecinos que ya lo usan → precio (Gratis) → botón. La lista completa de herramientas se abre aparte.
 - **En computadora:** QR grande de *«Míralo en tu celular»*.
@@ -549,7 +551,7 @@ El dueño preguntó si el video podía ser más dinámico o si ya estaba en su p
 | Fase | Qué | Código |
 |---|---|---|
 | **A** | Mensajes nuevos en el guion de venta y la intro como video para el WhatsApp de seguimiento | Ninguno: se usa ya |
-| **B** | Portada nueva de la web con la intro animada y los mensajes de §4 | Solo la web pública |
+| **B** ✅ | Portada nueva de la web con la intro animada y los mensajes de §4. **Hecha el 2026-10-26** (rama `feat/portada-bajo-control`): titular «Tu restaurante, bajo control.», tarjeta con el gancho que abre la intro de 51 s y el menú de ejemplo movido a «Dos lados, un sistema» | Solo la web pública |
 | **C** | Momentos pico: primer pedido, pedido enviado, cierre de caja y «el ding» | Panel y menú |
 | **D** | Leo en las pantallas vacías, la bienvenida y la billetera | Panel y billetera |
 | **E** | Ganchos con datos: resumen del día, «Comparte tu plato del día», «Tu año con Leogin» y premio por pedir por QR | Requiere decidir qué se mide |

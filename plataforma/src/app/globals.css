@@ -2912,6 +2912,60 @@ html[data-platform] .asphalt::after { display: none; }
    es SU menú. Ver components/landing-proof.tsx. Las letras van chicas a
    propósito: es un teléfono dibujado a escala, como las miniaturas de
    plantillas (T-21 las deja fuera). */
+/* ── Intro animada de la portada (components/landing-intro.tsx) ──
+   Tarjeta con el gancho como imagen fija; la intro (ruta /intro) se abre en
+   un <dialog> solo al tocar «play». Los colores del botón son los del logo
+   (brasa → mango), no el acento de la web: es un momento de marca. */
+.lp-intro {
+  position: relative; display: block; width: 100%; max-width: 620px; margin: 0 auto;
+  padding: 0; border: 0; border-radius: 22px; overflow: hidden; cursor: pointer;
+  aspect-ratio: 16 / 9; background: #121214; box-shadow: var(--lp-shadow-lg);
+}
+.lp-intro::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, transparent 55%, rgba(18, 18, 20, 0.55));
+}
+.lp-intro-img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.lp-intro:hover .lp-intro-img { transform: scale(1.03); }
+.lp-intro-play {
+  position: absolute; left: 50%; top: 50%; z-index: 1;
+  width: 76px; height: 76px; margin: -38px 0 0 -38px; border-radius: 50%;
+  display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg, #E8534A, #F5A030);
+  box-shadow: 0 14px 34px rgba(232, 83, 74, 0.45);
+  transition: transform 0.18s ease-out;
+}
+.lp-intro:hover .lp-intro-play { transform: scale(1.07); }
+.lp-intro-chip {
+  position: absolute; left: 14px; bottom: 14px; z-index: 1;
+  font: 600 13.5px/1 var(--font-sans), system-ui, sans-serif; color: #fff;
+  background: rgba(18, 18, 20, 0.72); padding: 9px 12px; border-radius: 999px;
+}
+.lp-intro:focus-visible { outline: 3px solid var(--brand-accent); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .lp-intro-img, .lp-intro-play { transition: none; }
+}
+.lp-intro-dialog {
+  padding: 0; border: 0; border-radius: 18px; overflow: hidden; background: #121214;
+  width: min(94vw, 1280px); max-width: none; max-height: none;
+}
+.lp-intro-dialog::backdrop { background: rgba(10, 10, 12, 0.82); }
+html:has(.lp-intro-dialog[open]) { overflow: hidden; }
+/* Escenario 16:9 más la barra de controles de la intro (~64 px) */
+.lp-intro-frame { display: block; width: 100%; height: calc(min(94vw, 1280px) * 0.5625 + 64px); max-height: calc(100dvh - 40px); border: 0; }
+.lp-intro-close {
+  position: absolute; z-index: 2; top: 10px; left: 12px;
+  width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+  color: #fff; background: rgba(12, 12, 14, 0.72); border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.lp-intro-close:focus-visible { outline: 2px solid #F5A030; outline-offset: 2px; }
+/* En el teléfono la intro va en vertical y ocupa toda la pantalla */
+@media (max-aspect-ratio: 4/5) {
+  .lp-intro-dialog { width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+  .lp-intro-frame { height: 100dvh; max-height: none; }
+  .lp-intro-close { top: max(10px, env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); }
+}
+
 .lp-ph { position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 0; }
 .lp-ph-halo {
   position: absolute; inset: 0; pointer-events: none;

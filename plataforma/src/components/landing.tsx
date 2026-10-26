@@ -8,6 +8,7 @@ import { PLANS, PLAN_POINTS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceQ, type Pl
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { getLandingProof } from '@/lib/db/landing';
 import { LandingPhone, Testimonials } from '@/components/landing-proof';
+import { LandingIntro } from '@/components/landing-intro';
 
 /* Cifras de la tira de confianza. Solo hechos verificables del producto —
    nada de "+200 restaurantes" ni promedios inventados.
@@ -161,14 +162,16 @@ export default async function LeoginLanding() {
                 El sistema completo para tu restaurante
               </span>
 
+              {/* La promesa de marca (docs/negocio/ESTRATEGIA_ATRACCION_2026-10-25.md §4):
+                  habla del dueño y de su control, no de la lista de funciones. */}
               <h1 className="lp-h1">
-                Todo tu restaurante,{' '}
-                <span style={{ color: 'var(--brand-accent-ink)' }}>en un solo sistema</span>.
+                Tu restaurante,{' '}
+                <span style={{ color: 'var(--brand-accent-ink)' }}>bajo control</span>.
               </h1>
 
               <p className="lp-lead" style={{ marginTop: 22, maxWidth: 560 }}>
-                Menú digital con QR, pedidos en línea, pantalla de cocina, panel de mesero,
-                inventario y corte de caja. Una mensualidad fija y cero comisión sobre lo que vendes.
+                Pedidos, cocina, caja e inventario en tu celular, aunque no estés.
+                Una mensualidad fija y cero comisión sobre lo que vendes.
               </p>
 
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 30 }}>
@@ -201,7 +204,7 @@ export default async function LeoginLanding() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <LandingPhone showcase={proof.showcase} />
+              <LandingIntro />
             </div>
           </div>
         </section>
@@ -387,6 +390,10 @@ export default async function LeoginLanding() {
             title="Enamora a tus clientes y controla tu negocio"
             center
           />
+          {/* El menú real de un cliente (o el de ejemplo): es lo que ve el comensal. */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 34 }}>
+            <LandingPhone showcase={proof.showcase} />
+          </div>
           <div className="lp-split" style={{ marginTop: 34, alignItems: 'start' }}>
             <div>
               <div className="lp-eyebrow" style={{ marginBottom: 16, display: 'block' }}>Para tus clientes</div>

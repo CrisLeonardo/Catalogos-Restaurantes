@@ -26,9 +26,9 @@ export async function generateMetadata(): Promise<Metadata> {
   if (!slug) {
     const root = process.env.NEXT_PUBLIC_ROOT_DOMAIN?.split(',')[0]?.trim();
     const base = root && !root.includes('localhost') ? `https://${root}` : undefined;
-    const title = 'Leogin — Menús digitales para restaurantes';
+    const title = 'Leogin — Tu restaurante, bajo control';
     const description =
-      'Convierte el menú de tu restaurante en una experiencia web rápida y espectacular, con panel de administración y pedidos en línea.';
+      'Menú digital con QR, pedidos, cocina, caja e inventario en tu celular, aunque no estés. Gratis para empezar y sin comisión sobre lo que vendes.';
     return {
       title,
       description,
