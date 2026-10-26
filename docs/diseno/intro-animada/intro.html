@@ -407,7 +407,9 @@ body.render .overlay { display: none; }
 .stage.v #qrCard .qr { width: 208px; height: 208px; }
 
 /* Cámara virtual y destellos */
-#shake, #cam, #punch, #zoom { position: absolute; inset: 0; }
+#edit, #shake, #cam, #punch, #zoom { position: absolute; inset: 0; }
+/* En la versión de 15 s solo sale un paso: sin número */
+.stage.c15 .cs .num { display: none; }
 #flash { position: absolute; inset: 0; background: #FFF6E8; pointer-events: none; z-index: 20; }
 .hl { position: relative; z-index: 0; white-space: nowrap; }
 #under { position: absolute; left: -6px; right: -6px; bottom: 8px; height: 24px; background: #E8534A; opacity: 0.45; border-radius: 6px; z-index: -1; }
@@ -460,6 +462,11 @@ body.render .overlay { display: none; }
       <div><h1>Intro Leogin</h1><p>Prototipo · del caos al orden · 51 s</p></div>
     </div>
     <div class="tools">
+      <div class="seg" role="group" aria-label="Versión" id="vers">
+        <button type="button" data-cut="full" aria-pressed="true">Completa</button>
+        <button type="button" data-cut="r30" aria-pressed="false">Reels 30 s</button>
+        <button type="button" data-cut="s15" aria-pressed="false">Estado 15 s</button>
+      </div>
       <div class="seg" role="group" aria-label="Formato">
         <button type="button" id="fH" aria-pressed="true">16:9 web</button>
         <button type="button" id="fV" aria-pressed="false">9:16 WhatsApp</button>
@@ -473,7 +480,7 @@ body.render .overlay { display: none; }
 
   <div class="screen-wrap" id="wrap">
     <div class="stage h" id="stage">
-      <div id="shake"><div id="cam"><div id="punch"><div id="zoom">
+      <div id="edit"><div id="shake"><div id="cam"><div id="punch"><div id="zoom">
 
       <!-- ═══ El antes: caos cuadro por cuadro ═══ -->
       <div class="layer" id="L1">
@@ -659,7 +666,7 @@ body.render .overlay { display: none; }
       </div>
       </div>
       <div class="cap-hand" id="cap2">…y el pedido de la <b>Mesa 4</b> se perdió.<small>Q85 que ya eran tuyos.</small></div>
-      </div></div></div>
+      </div></div></div></div>
       <div id="flash"></div>
     </div>
 
@@ -953,7 +960,8 @@ body.render .overlay { display: none; }
   /* ── Estado inicial ────────────────────────────────────── */
   const V = () => fmt === 'v';
   function initStates() {
-    gsap.set(['#shake', '#cam', '#punch', '#zoom'], { x: 0, y: 0, scale: 1 });
+    gsap.set(['#edit', '#shake', '#cam', '#punch', '#zoom'], { x: 0, y: 0, scale: 1 });
+    gsap.set('#edit', { filter: 'blur(0px)' });
     gsap.set('#cam', { filter: 'blur(0px)' });
     gsap.set('#flash', { autoAlpha: 0 });
     gsap.set('#L1', { autoAlpha: 1, '--sat': 1, '--bri': 1 });
@@ -1163,7 +1171,6 @@ body.render .overlay { display: none; }
       at(t, 'ping');
     });
     at(0, 'ring'); at(1.1, 'ring'); at(2.2, 'ring'); at(3.3, 'ring');
-    at(0, 'tension');
     at(2.2, 'shout');
     push(0, 5.4, 1.03);
 
@@ -1183,7 +1190,6 @@ body.render .overlay { display: none; }
     at(6.1, 'sad');
     tl.to('#cap2 small', { autoAlpha: 1, duration: 0.3, ease: 'steps(3)' }, 6.7);
     tl.to('#zoom', { scale: 1, duration: 0.3, ease: 'power3.inOut' }, 7.7);
-    at(7.55, 'rise');
 
     /* 3 · Llega Leo y todo se ordena (8–12 s) */
     const cx = W / 2, cy = H / 2 - 80;
@@ -1561,13 +1567,14 @@ body.render .overlay { display: none; }
   /* ── Banda sonora: todo sintetizado, sin archivos ──────── */
   // Música de marimba (el instrumento de Guatemala) a 120 pulsos por minuto.
   // Entra justo cuando Leo aterriza; antes solo hay tensión.
-  const SR = 44100, DROP = 8.45, BAR = 2;
+  const SR = 44100, BAR = 2;
   const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
-  function renderSoundtrack(rate = SR) {
+  // plan: duración, efectos [segundo, nombre] y dónde caen el golpe, la calma y el acorde final
+  function renderSoundtrack(rate, plan) {
     const C = window.OfflineAudioContext || window.webkitOfflineAudioContext;
     if (!C) return Promise.resolve(null);
-    const ctx = new C(2, Math.ceil(rate * DUR), rate);
+    const ctx = new C(2, Math.ceil(rate * plan.dur), rate);
     let seed = 7;
     const rand = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
     const nb = ctx.createBuffer(1, rate * 2, rate);
@@ -1582,6 +1589,7 @@ body.render .overlay { display: none; }
     const lim = ctx.createDynamicsCompressor();
     lim.threshold.value = -2; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.1;
     comp.connect(outG).connect(lim).connect(ctx.destination);
+    outG.gain.setValueAtTime(1.7, Math.max(0, plan.dur - 0.5)); outG.gain.linearRampToValueAtTime(0.0001, plan.dur);
     const rev = ctx.createConvolver(); rev.buffer = ir;
     const revG = ctx.createGain(); revG.gain.value = 0.2; rev.connect(revG).connect(comp);
     const bus = (g, send) => { const n = ctx.createGain(); n.gain.value = g; n.connect(comp); const s = ctx.createGain(); s.gain.value = send; n.connect(s).connect(rev); return n; };
@@ -1608,20 +1616,19 @@ body.render .overlay { display: none; }
       ping: (t) => tone(sfxB, 1400, t, 0.12, 'triangle', 0.07),
       ring: (t) => { for (let i = 0; i < 8; i++) tone(sfxB, i % 2 ? 1180 : 940, t + i * 0.085, 0.075, 'square', 0.05); },
       shout: (t) => noise(sfxB, t, 0.35, 0.08, 500, 300, 2),
-      tension: () => {
-        // Zumbido que sube y un reloj que se acelera: la angustia del caos
+      tension: (e) => {
+        // Zumbido que sube y un reloj que se acelera: la angustia del caos (hasta el congelado)
         const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), a = ctx.createGain();
-        o.type = 'sawtooth'; o.frequency.setValueAtTime(55, 0); o.frequency.linearRampToValueAtTime(98, 5.4);
-        f.type = 'lowpass'; f.frequency.setValueAtTime(220, 0); f.frequency.exponentialRampToValueAtTime(1500, 5.35);
-        a.gain.setValueAtTime(0.0001, 0); a.gain.exponentialRampToValueAtTime(0.07, 5.3); a.gain.linearRampToValueAtTime(0.0001, 5.42);
-        o.connect(f).connect(a).connect(sfxB); o.start(0); o.stop(5.5);
-        for (let t = 0, step = 0.42; t < 5.3; t += step, step = Math.max(0.13, step * 0.9)) noise(sfxB, t, 0.025, 0.1, 3200, null, 3, 'bandpass', 0.003);
+        o.type = 'sawtooth'; o.frequency.setValueAtTime(55, 0); o.frequency.linearRampToValueAtTime(98, e);
+        f.type = 'lowpass'; f.frequency.setValueAtTime(220, 0); f.frequency.exponentialRampToValueAtTime(1500, e - 0.05);
+        a.gain.setValueAtTime(0.0001, 0); a.gain.exponentialRampToValueAtTime(0.07, e - 0.1); a.gain.linearRampToValueAtTime(0.0001, e + 0.02);
+        o.connect(f).connect(a).connect(sfxB); o.start(0); o.stop(e + 0.1);
+        for (let t = 0, step = 0.42; t < e - 0.1; t += step, step = Math.max(0.13, step * 0.9)) noise(sfxB, t, 0.025, 0.1, 3200, null, 3, 'bandpass', 0.003);
       },
       freeze: (t) => { tone(sfxB, 220, t, 0.45, 'sine', 0.2, 70); noise(sfxB, t, 0.12, 0.1, 300); },
       heart: (t) => { tone(sfxB, 62, t, 0.16, 'sine', 0.55, 45, 0.004); tone(sfxB, 58, t + 0.12, 0.14, 'sine', 0.35, 42, 0.004); },
       sad: (t) => { tone(sfxB, 392, t, 0.45, 'triangle', 0.06, 370); tone(sfxB, 311, t + 0.35, 0.8, 'triangle', 0.06, 294); },
       fall: (t) => noise(sfxB, t, 0.4, 0.06, 1800, 400),
-      rise: (t) => noise(sfxB, t, DROP - t, 0.2, 300, 6500, 1.2, 'bandpass', DROP - t - 0.02),
       drop: (t) => { tone(sfxB, 150, t, 0.4, 'sine', 0.8, 40, 0.003); tone(sfxB, 55, t, 0.9, 'sine', 0.3, 45); noise(sfxB, t, 1.5, 0.1, 5000, null, 0.7, 'highpass', 0.005); },
       whoosh: (t) => noise(sfxB, t, 0.45, 0.12, 350, 2800, 1.2),
       swoosh: (t) => noise(sfxB, t, 0.3, 0.09, 900, 2600, 1.4),
@@ -1645,7 +1652,10 @@ body.render .overlay { display: none; }
       zzz: (t) => { tone(sfxB, 520, t, 0.45, 'triangle', 0.035, 390); tone(sfxB, 440, t + 0.45, 0.5, 'triangle', 0.03, 330); },
       chord: (t) => [261.63, 329.63, 392, 587.33, 783.99].forEach((f) => tone(sfxB, f, t, 2.4, 'triangle', 0.045)),
     };
-    events.forEach(([t, n]) => fx[n] && fx[n](t));
+    plan.events.forEach(([t, n]) => fx[n] && fx[n](t));
+    fx.tension(plan.tensionEnd);
+    // Subida que desemboca en el golpe de Leo
+    noise(sfxB, plan.drop - 0.9, 0.9, 0.2, 300, 6500, 1.2, 'bandpass', 0.88);
 
     // Marimba: la fundamental y los parciales agudos que le dan su «tok» de madera
     const mar = (t, m, v = 0.2, pan = 0) => {
@@ -1689,19 +1699,29 @@ body.render .overlay { display: none; }
         else { trem(t0 + x, n.tr, n.d, 0.12 * g); x += n.d; }
       });
     };
-    // A · El ritmo de Leogin (8.45–38.45 s)
-    for (let i = 0; i < 15; i++) playBar(DROP + i * BAR, i);
-    trem(DROP + 15 * BAR, [79, 83], 1.0, 0.11);
-    // B · Tu noche: solo marimba suave, sin batería (39.5–44 s)
-    trem(39.5, [77, 81], 1.85, 0.08); bass(39.5, 41, 1.6, 0.16);
-    trem(41.4, [76, 79], 1.55, 0.06); bass(41.4, 36, 1.6, 0.14);
-    mar(43.0, 72, 0.08); mar(43.25, 76, 0.08); mar(43.5, 79, 0.09);
-    noise(musB, 43.3, 0.7, 0.1, 400, 5000, 1, 'bandpass', 0.65);
-    // C · Firma: vuelve el ritmo y cierra con un acorde grande (44–51 s)
-    playBar(44.0, 0); kick(46.0); clap(45.5); bass(46.0, 43, 0.3, 0.2);
-    kick(46.35, 0.6); noise(musB, 46.35, 1.6, 0.08, 5000, null, 0.7, 'highpass', 0.005);
-    trem(46.35, [72, 76, 79, 84], 2.6, 0.12); bass(46.35, 36, 2.5, 0.26);
-    trem(49.0, [76, 84], 1.6, 0.05);
+    // Compases enteros desde el golpe; lo que sobra se llena con trémolo
+    const groove = (from, to) => {
+      let i = 0;
+      for (; from + (i + 1) * BAR <= to + 0.01; i++) playBar(from + i * BAR, i);
+      const rest = to - (from + i * BAR);
+      if (rest > 0.3) trem(from + i * BAR, [79, 83], rest - 0.05, 0.11);
+    };
+    // A · El ritmo de Leogin
+    groove(plan.drop, (plan.calm ? plan.calm[0] : plan.finalStart ?? plan.chord) - 0.05);
+    // B · Tu noche: solo marimba suave, sin batería
+    if (plan.calm) {
+      const [a, b] = plan.calm, h = (b - a) / 2;
+      trem(a, [77, 81], h - 0.05, 0.08); bass(a, 41, h - 0.2, 0.16);
+      trem(a + h, [76, 79], h - 0.45, 0.06); bass(a + h, 36, h - 0.2, 0.14);
+      mar(b - 1.0, 72, 0.08); mar(b - 0.75, 76, 0.08); mar(b - 0.5, 79, 0.09);
+      noise(musB, b - 0.7, 0.7, 0.1, 400, 5000, 1, 'bandpass', 0.65);
+    }
+    // C · Firma: vuelve el ritmo y cierra con un acorde grande
+    if (plan.finalStart != null) groove(plan.finalStart, plan.chord);
+    const c = plan.chord;
+    kick(c, 0.6); noise(musB, c, 1.6, 0.08, 5000, null, 0.7, 'highpass', 0.005);
+    trem(c, [72, 76, 79, 84], 2.6, 0.12); bass(c, 36, 2.5, 0.26);
+    if (plan.dur - (c + 2.65) > 0.4) trem(c + 2.65, [76, 84], Math.min(1.6, plan.dur - c - 2.7), 0.05);
     return ctx.startRendering();
   }
 
@@ -1718,20 +1738,80 @@ body.render .overlay { display: none; }
     return new Uint8Array(dv.buffer);
   }
 
-  // Reproducción en vivo de la banda sonora, sincronizada con la línea de tiempo
-  let ac = null, soundBuf = null, soundOn = false, src = null, preparing = null;
+  /* ── Versiones cortas: lista de edición sobre la misma animación ── */
+  // Cada tramo: [desde, hasta, velocidad, «corte» = salto seco sin barrido].
+  // Los cortes caen en el pulso de la música (cada 0.5 s desde el golpe de Leo).
+  const CUTS = {
+    full: null,
+    r30: { label: '30 s', segs: [[0, 7.2], [7.85, 10.95], [12.0, 15.0], [20.85, 23.35], [24.85, 28.75, 1.3], [29.5, 33.4, 1.3], [39.5, 43.4, 1.3], [44.0, 49.2]] },
+    s15: { label: '15 s', segs: [[0, 2.8], [5.35, 7.3, 1, 'corte'], [7.95, 10.95], [27.25, 29.35, 1.05], [44.0, 49.25]] },
+  };
+  let cutName = 'full', master = null;
+  const driver = () => master || tl;
+  const curDur = () => (master ? master.duration() : DUR);
+  // Segundo de la versión completa → segundo de la versión corta (null si quedó fuera)
+  function mapTime(t, segs) {
+    let T = 0;
+    for (const [a, b, sp = 1] of segs) { if (t >= a && t < b) return T + (t - a) / sp; T += (b - a) / sp; }
+    return null;
+  }
+  function segEnd(t, segs) {
+    let T = 0;
+    for (const [a, b, sp = 1] of segs) { T += (b - a) / sp; if (t >= a && t < b) return T; }
+    return null;
+  }
+  function planFor(name) {
+    if (!CUTS[name]) return { dur: DUR, events, drop: 8.45, calm: [39.5, 44.0], finalStart: 44.0, chord: 46.35, tensionEnd: 5.4 };
+    const segs = CUTS[name].segs;
+    const evs = [];
+    events.forEach(([t, n]) => { const m = mapTime(t, segs); if (m !== null) evs.push([m, n]); });
+    let T = 0;
+    segs.forEach(([a, b, sp = 1, kind], i) => { if (i > 0 && kind !== 'corte') evs.push([T - 0.12, 'swish']); T += (b - a) / sp; });
+    const calmA = mapTime(39.5, segs);
+    return {
+      dur: T, events: evs, drop: mapTime(8.45, segs), tensionEnd: mapTime(5.4, segs) ?? 5.4,
+      calm: calmA !== null ? [calmA, segEnd(39.5, segs)] : null,
+      finalStart: calmA !== null ? mapTime(44.0, segs) : null,
+      chord: mapTime(46.35, segs),
+    };
+  }
+  function buildCut(name) {
+    if (master) { master.kill(); master = null; }
+    gsap.set('#edit', { x: 0, filter: 'blur(0px)' });
+    cutName = CUTS[name] ? name : 'full';
+    stage.classList.toggle('c15', cutName === 's15');
+    if (cutName === 'full') return;
+    master = gsap.timeline({ paused: true, onComplete: ended });
+    let T = 0;
+    CUTS[cutName].segs.forEach(([a, b, sp = 1, kind], i) => {
+      const d = (b - a) / sp;
+      if (i > 0 && kind !== 'corte') {
+        // Barrido que esconde el salto entre tramos
+        master.to('#edit', { x: -120, filter: 'blur(12px)', duration: 0.12, ease: 'power2.in' }, T - 0.12);
+        master.set('#edit', { x: 120 }, T);
+        master.to('#edit', { x: 0, filter: 'blur(0px)', duration: 0.24, ease: 'power3.out' }, T);
+      }
+      master.add(tl.tweenFromTo(a, b, { duration: d, ease: 'none', immediateRender: false }), T);
+      T += d;
+    });
+  }
+
+  // Reproducción en vivo de la banda sonora de la versión que se ve
+  let ac = null, soundOn = false, src = null;
+  const soundBufs = {}, preparing = {};
   function stopAudio() { if (src) { try { src.stop(); } catch (e) { /* ya se detuvo */ } src.disconnect(); src = null; } }
   function startAudio(t) {
     stopAudio();
-    if (!soundOn || !soundBuf || !ac || renderMode) return;
-    src = ac.createBufferSource(); src.buffer = soundBuf; src.connect(ac.destination);
-    src.start(0, Math.min(Math.max(0, t), DUR - 0.05));
+    const buf = soundBufs[cutName];
+    if (!soundOn || !buf || !ac || renderMode) return;
+    src = ac.createBufferSource(); src.buffer = buf; src.connect(ac.destination);
+    src.start(0, Math.min(Math.max(0, t), buf.duration - 0.05));
   }
-  function prepareSound() {
-    if (soundBuf) return Promise.resolve(soundBuf);
+  function prepareSound(name = cutName) {
+    if (soundBufs[name]) return Promise.resolve(soundBufs[name]);
     // Para escuchar en la página basta una calidad menor: se prepara más rápido
-    if (!preparing) preparing = renderSoundtrack(32000).then((b) => { soundBuf = b; return b; }).catch(() => null);
-    return preparing;
+    if (!preparing[name]) preparing[name] = renderSoundtrack(32000, planFor(name)).then((b) => { soundBufs[name] = b; return b; }).catch(() => null);
+    return preparing[name];
   }
 
   /* ── Reproductor ───────────────────────────────────────── */
@@ -1749,21 +1829,22 @@ body.render .overlay { display: none; }
   function updateUI(t) {
     if (renderMode) return;
     if (document.activeElement !== scrub) scrub.value = t.toFixed(2);
-    scrub.style.setProperty('--p', `${((+scrub.value / DUR) * 100).toFixed(2)}%`);
-    timeEl.textContent = `${fmtT(t)} / ${fmtT(DUR)}`;
+    scrub.style.setProperty('--p', `${((+scrub.value / curDur()) * 100).toFixed(2)}%`);
+    timeEl.textContent = `${fmtT(t)} / ${fmtT(curDur())}`;
     let idx = 0; chapters.forEach(([ct], i) => { if (t >= ct) idx = i; });
     chBtns.forEach((b, i) => b.classList.toggle('on', i === idx && started));
   }
   function play(fromStart) {
+    const d = driver();
     started = true; overlay.hidden = true;
-    if (fromStart || tl.time() >= DUR - 0.05) tl.seek(0);
-    tl.play(); setPlayIcon(true);
-    startAudio(tl.time());
+    if (fromStart || d.time() >= curDur() - 0.05) d.seek(0);
+    d.play(); setPlayIcon(true);
+    startAudio(d.time());
   }
-  function pause() { tl.pause(); setPlayIcon(false); stopAudio(); }
+  function pause() { driver().pause(); setPlayIcon(false); stopAudio(); }
   function seekTo(t, keepPlaying) {
-    tl.seek(t); render(tl.time());
-    if (keepPlaying) startAudio(tl.time()); else stopAudio();
+    driver().seek(t); render(tl.time());
+    if (keepPlaying) startAudio(driver().time()); else stopAudio();
   }
   function ended() {
     setPlayIcon(false); stopAudio();
@@ -1771,19 +1852,20 @@ body.render .overlay { display: none; }
     $('#ovSub').textContent = 'Pide. Cocina. Cobra.';
     overlay.hidden = false;
   }
-  overlay.addEventListener('click', () => play(!started || tl.time() >= DUR - 0.05));
-  pp.addEventListener('click', () => { if (!started) return play(true); tl.isActive() ? pause() : play(false); });
+  overlay.addEventListener('click', () => play(!started || driver().time() >= curDur() - 0.05));
+  pp.addEventListener('click', () => { if (!started) return play(true); driver().isActive() ? pause() : play(false); });
   $('#rs').addEventListener('click', () => { play(true); });
   scrub.addEventListener('input', () => {
     if (!started) { started = true; overlay.hidden = true; }
-    tl.pause(); setPlayIcon(false); seekTo(+scrub.value, false);
+    driver().pause(); setPlayIcon(false); seekTo(+scrub.value, false);
   });
-  chBtns.forEach((b) => b.addEventListener('click', () => { started = true; overlay.hidden = true; seekTo(+b.dataset.t, true); tl.play(); setPlayIcon(true); }));
+  chBtns.forEach((b) => b.addEventListener('click', () => { started = true; overlay.hidden = true; seekTo(+b.dataset.t, true); driver().play(); setPlayIcon(true); }));
   document.addEventListener('keydown', (e) => {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON')) return;
-    if (e.code === 'Space') { e.preventDefault(); tl.isActive() ? pause() : play(false); }
-    if (e.code === 'ArrowRight') seekTo(Math.min(DUR, tl.time() + 2), tl.isActive());
-    if (e.code === 'ArrowLeft') seekTo(Math.max(0, tl.time() - 2), tl.isActive());
+    const d = driver();
+    if (e.code === 'Space') { e.preventDefault(); d.isActive() ? pause() : play(false); }
+    if (e.code === 'ArrowRight') seekTo(Math.min(curDur(), d.time() + 2), d.isActive());
+    if (e.code === 'ArrowLeft') seekTo(Math.max(0, d.time() - 2), d.isActive());
   });
   $('#snd').addEventListener('click', () => {
     if (!ac) { const C = window.AudioContext || window.webkitAudioContext; if (C) ac = new C(); }
@@ -1793,17 +1875,35 @@ body.render .overlay { display: none; }
     $('#snd').setAttribute('aria-pressed', String(soundOn));
     $('#sndWave').setAttribute('opacity', soundOn ? '1' : '.25');
     if (!soundOn) { $('#sndTxt').textContent = 'Sonido apagado'; stopAudio(); return; }
-    $('#sndTxt').textContent = soundBuf ? 'Sonido encendido' : 'Preparando sonido…';
+    $('#sndTxt').textContent = soundBufs[cutName] ? 'Sonido encendido' : 'Preparando sonido…';
     prepareSound().then((b) => {
       $('#sndTxt').textContent = b ? 'Sonido encendido' : 'Sin sonido en este navegador';
-      if (soundOn && tl.isActive()) startAudio(tl.time());
+      if (soundOn && driver().isActive()) startAudio(driver().time());
     });
   });
 
+  function setCut(name) {
+    if (name === cutName) return;
+    pause();
+    buildCut(name);
+    $$('#vers button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cut === cutName)));
+    scrub.max = String(curDur());
+    $('#chapters').hidden = cutName !== 'full';
+    const t0 = cutName === 'full' ? POSTER : 0;
+    driver().seek(t0); render(tl.time()); updateUI(t0);
+    started = false; overlay.hidden = false;
+    $('#ovTitle').textContent = cutName === 'full' ? 'Ver la intro' : `Ver la versión de ${CUTS[cutName].label}`;
+    $('#ovSub').textContent = { full: '51 segundos · mejor con sonido', r30: '30 segundos · Reels y TikTok', s15: '15 segundos · estado de WhatsApp' }[cutName];
+    if (soundOn) prepareSound().then(() => { $('#sndTxt').textContent = 'Sonido encendido'; });
+  }
+  $$('#vers button').forEach((b) => b.addEventListener('click', () => setCut(b.dataset.cut)));
+
   function setFormat(f) {
     if (f === fmt && tl) return;
-    const t = tl ? tl.time() : POSTER;
-    const wasPlaying = tl ? tl.isActive() : false;
+    const d0 = tl ? driver() : null;
+    const t = d0 ? d0.time() : POSTER;
+    const wasPlaying = d0 ? d0.isActive() : false;
+    if (master) { master.kill(); master = null; }
     if (tl) tl.kill();
     fmt = f;
     stage.classList.toggle('v', f === 'v');
@@ -1814,8 +1914,9 @@ body.render .overlay { display: none; }
     lastFrame = -1; cache.clear();
     layout();
     build();
-    tl.seek(t); render(t);
-    if (wasPlaying) tl.play();
+    buildCut(cutName);
+    driver().seek(t); render(tl.time());
+    if (wasPlaying) driver().play();
   }
   $('#fH').addEventListener('click', () => setFormat('h'));
   $('#fV').addEventListener('click', () => setFormat('v'));
@@ -1832,7 +1933,7 @@ body.render .overlay { display: none; }
   }
   window.addEventListener('resize', layout);
 
-  gsap.ticker.add(() => { if (!tl) return; const t = tl.time(); if (tl.isActive()) render(t); updateUI(t); });
+  gsap.ticker.add(() => { if (!tl) return; const d = driver(); if (d.isActive()) render(tl.time()); updateUI(d.time()); });
 
   // Arranque: cuadro de portada detrás del botón de reproducir
   const fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
@@ -1840,32 +1941,34 @@ body.render .overlay { display: none; }
   build();
   tl.seek(POSTER); render(POSTER); updateUI(POSTER);
   fontsReady.then(() => {
-    const t = tl.time(); layout(); setFormatRebuild(t);
+    const t = driver().time(); layout(); setFormatRebuild(t);
     // La banda sonora se prepara sola en segundo plano: al tocar «Sonido» ya está lista
     setTimeout(() => { if (!renderMode) prepareSound(); }, 1200);
   });
   function setFormatRebuild(t) {
     // Las medidas del texto cambian al cargar las fuentes: se rehace la línea de tiempo.
-    const wasPlaying = tl.isActive();
+    const wasPlaying = driver().isActive();
+    if (master) { master.kill(); master = null; }
     tl.kill(); gsap.set($$('*', stage), { clearProps: CLEAR }); lastFrame = -1; cache.clear();
-    build(); tl.seek(t); render(t);
-    if (wasPlaying) tl.play();
+    build(); buildCut(cutName); driver().seek(t); render(tl.time());
+    if (wasPlaying) driver().play();
   }
 
   // API para grabar el video y el sonido (docs/diseno/intro-animada/grabar-video.mjs)
   window.__intro = {
-    duration: DUR,
+    get duration() { return curDur(); },
     ready: fontsReady,
-    renderMode(f) {
+    renderMode(f, cut) {
       renderMode = true; soundOn = false; stopAudio();
       document.body.classList.add('render');
       if (f && f !== fmt) setFormat(f);
       layout(); setFormatRebuild(0);
-      return { width: stageW(), height: stageH() };
+      buildCut(cut || 'full'); driver().seek(0); render(tl.time());
+      return { width: stageW(), height: stageH(), duration: curDur() };
     },
-    seek(t) { tl.seek(t, true); render(t); },
+    seek(t) { driver().seek(t, true); render(tl.time()); },
     async soundtrackWav() {
-      const b = await renderSoundtrack(SR);
+      const b = await renderSoundtrack(SR, planFor(cutName));
       if (!b) return null;
       const bytes = wavBytes(b);
       let s = '';

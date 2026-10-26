@@ -9,6 +9,7 @@
 //   node docs/diseno/intro-animada/grabar-video.mjs --formato v     → 9:16 (WhatsApp, TikTok)
 //   node docs/diseno/intro-animada/grabar-video.mjs --fotos 5,20,36 → solo fotos PNG de esos segundos
 //   node docs/diseno/intro-animada/grabar-video.mjs --solo-sonido   → solo la banda sonora (WAV)
+//   node docs/diseno/intro-animada/grabar-video.mjs --corte 30      → versión de 30 s (Reels, TikTok); --corte 15 → estado de WhatsApp
 //   opciones: --fps 30 --salida <archivo.webm> --carpeta <dir>
 //
 // El ffmpeg de Playwright solo escribe video WebM (VP9), sin audio. Si hay un
@@ -33,10 +34,12 @@ const formato = opt('formato', 'h') === 'v' ? 'v' : 'h';
 const fps = Number(opt('fps', 30));
 const fotos = opt('fotos', null);
 const soloSonido = args.includes('--solo-sonido');
+const corte = { 30: 'r30', 15: 's15' }[opt('corte', '')] || 'full';
+const sufijo = { full: '', r30: '-30s', s15: '-15s' }[corte];
 const carpeta = path.resolve(opt('carpeta', path.join(os.tmpdir(), 'leogin-intro')));
-const nombre = `intro-leogin-${formato === 'v' ? '9x16' : '16x9'}`;
+const nombre = `intro-leogin-${formato === 'v' ? '9x16' : '16x9'}${sufijo}`;
 const salida = path.resolve(opt('salida', path.join(carpeta, `${nombre}.webm`)));
-const sonido = path.join(carpeta, 'intro-leogin-sonido.wav');
+const sonido = path.join(carpeta, `intro-leogin-sonido${sufijo}.wav`);
 fs.mkdirSync(carpeta, { recursive: true });
 
 function buscarFfmpeg() {
@@ -66,7 +69,7 @@ const pagina = await navegador.newPage({ viewport: tam, deviceScaleFactor: 1 });
 await pagina.goto(pathToFileURL(envuelto).href, { waitUntil: 'networkidle' });
 await pagina.waitForFunction(() => window.__intro && window.gsap);
 await pagina.evaluate(() => window.__intro.ready);
-await pagina.evaluate((f) => window.__intro.renderMode(f), formato);
+await pagina.evaluate(([f, c]) => window.__intro.renderMode(f, c), [formato, corte]);
 const duracion = await pagina.evaluate(() => window.__intro.duration);
 
 const cuadro = async (t) => {
