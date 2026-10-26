@@ -422,6 +422,10 @@ export default function OrderCard({
 
   return (
     <div
+      // Cae con un rebote al llegar y, si es nuevo, se ilumina un instante
+      // (`.adm-pedido` en admin.css).
+      className="adm-pedido"
+      data-estado={order.status}
       style={{
         borderRadius: 'var(--radius-lg)',
         /* La misma ficha que el resto del panel (T-12): el gris al 4 % del

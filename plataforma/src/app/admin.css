@@ -3138,3 +3138,72 @@ html[data-admin-area] .glass-solid {
   .landing-admin { grid-template-columns: minmax(0, 720px) 300px; }
   .landing-admin-aside { position: sticky; top: 88px; }
 }
+
+/* ============================================================
+   PANEL VIVO (docs/planes/PLAN_EXPERIENCIA_VIVA_2026-10-26.md §6)
+   ------------------------------------------------------------
+   En el panel el movimiento no adorna: DICE QUÉ CAMBIÓ. Todo es corto
+   (≤ 360 ms, menos de 150 en lo que toca la operación), solo transform y
+   opacity salvo el destello del pedido nuevo, y nada se mueve con
+   «reducir movimiento».
+   ============================================================ */
+@keyframes adm-entra   { from { opacity: 0; transform: translate3d(0, 8px, 0); } }
+@keyframes adm-fila    { from { opacity: 0; transform: translate3d(0, 6px, 0); } }
+@keyframes adm-rueda   { from { transform: translate3d(0, 0, 0); } }
+@keyframes adm-llega   { 0% { opacity: 0; transform: translate3d(0, -10px, 0) scale(0.97); } 70% { opacity: 1; transform: translate3d(0, 1px, 0) scale(1.005); } 100% { opacity: 1; transform: none; } }
+@keyframes adm-destello { 0% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-accent) 55%, transparent); } 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand-accent) 0%, transparent); } }
+@keyframes adm-sello   { 0% { transform: scale(0.94); } 55% { transform: scale(1.025); } 100% { transform: none; } }
+@keyframes adm-traza   { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
+@keyframes adm-barra   { to { box-shadow: 0 12px 26px -20px rgba(0, 0, 0, 0.5); } }
+
+/* La cifra que rueda (components/ui/rodillo.tsx). Todas las piezas miden
+   una línea, así que dígitos y signos quedan alineados sin depender de la
+   línea base de una caja con overflow. */
+.rodillo-cifra { line-height: 1.2; white-space: nowrap; }
+.rodillo-cifra > span { display: inline-block; height: 1.2em; vertical-align: top; }
+.rodillo-col { overflow: hidden; }
+.rodillo-tira { display: block; transform: translate3d(0, calc(var(--d) * -1.2em), 0); }
+.rodillo-tira > span { display: block; height: 1.2em; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Cada pantalla nueva entra (la de antes se fue al navegar). No se repite
+     al guardar ni al refrescar: solo cuando React arma la página de cero. */
+  .admin-content > * { animation: adm-entra 200ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+  /* Las primeras filas de una lista entran en cascada: ocho como mucho,
+     200 ms en total. */
+  [data-slot="list"] > :nth-child(-n + 8) { animation: adm-fila 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  [data-slot="list"] > :nth-child(2) { animation-delay: 25ms; }
+  [data-slot="list"] > :nth-child(3) { animation-delay: 50ms; }
+  [data-slot="list"] > :nth-child(4) { animation-delay: 75ms; }
+  [data-slot="list"] > :nth-child(5) { animation-delay: 100ms; }
+  [data-slot="list"] > :nth-child(6) { animation-delay: 125ms; }
+  [data-slot="list"] > :nth-child(7) { animation-delay: 150ms; }
+  [data-slot="list"] > :nth-child(8) { animation-delay: 175ms; }
+
+  /* Las cifras ruedan hasta su valor al abrir; si cambian en vivo, el dígito
+     que cambió rueda hasta el nuevo. */
+  .rodillo-tira {
+    animation: adm-rueda 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--k, 0) * 45ms);
+    transition: transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* El pedido que llega cae con un rebote suave; si es nuevo, además se
+     ilumina un instante con el acento. Al pasar de columna (a cocina, a
+     listos) vuelve a caer: así se ve que se movió. */
+  .adm-pedido { animation: adm-llega 340ms cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+  .adm-pedido[data-estado="NEW"] { animation: adm-llega 340ms cubic-bezier(0.2, 0.9, 0.3, 1) both, adm-destello 1400ms ease-out 200ms 1; }
+
+  /* «Caja cuadrada»: el aviso se estampa y la palomita se dibuja sola. */
+  .adm-cuadra { animation: adm-sello 380ms cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+  .adm-cuadra path { stroke-dasharray: 24; animation: adm-traza 420ms ease-out 120ms both; }
+}
+
+/* La barra de título se asienta con sombra al bajar: dice «el contenido va
+   por debajo». Atada al deslizar; sin soporte, la barra queda como siempre. */
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .admin-topbar { animation: adm-barra linear both; animation-timeline: scroll(root); animation-range: 0px 96px; }
+  }
+}

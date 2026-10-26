@@ -1,6 +1,7 @@
 import * as React from 'react';
 
 import { cn } from '@/lib/utils';
+import { Rodillo } from '@/components/ui/rodillo';
 
 /* ============================================================
    NÚMEROS — la fila de cifras del panel (Fase 2)
@@ -92,7 +93,8 @@ function Stat({
         className="t-mono mt-1.5 truncate text-[22px] leading-tight font-semibold text-adm-text md:text-[length:var(--stat-fs,28px)]"
         style={tone ? { color: TONE_COLOR[tone] } : undefined}
       >
-        {value}
+        {/* Rueda hasta su valor como una caja registradora (ui/rodillo.tsx). */}
+        {typeof value === 'string' ? <Rodillo texto={value} /> : value}
       </div>
       {/* Hasta dos renglones: la comparación de Negocio › Resumen
           («↑ 46 % vs. los 7 días anteriores») no cabía en una cifra de media

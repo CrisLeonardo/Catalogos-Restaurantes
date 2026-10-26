@@ -994,7 +994,19 @@ function TarjetaCuadre({ ventasEfectivo, devoluciones, desde, gastos, opening, c
             color: cuadra ? 'var(--c-ok)' : 'var(--brand-accent-ink)',
           }}
         >
-          <span>{cuadra ? 'Caja cuadrada' : diferencia > 0 ? 'Sobran' : 'Faltan'}</span>
+          {/* Al cuadrar, el aviso se estampa y la palomita se dibuja sola
+              (`.adm-cuadra` en admin.css). La `key` hace que vuelva a pasar
+              cada vez que llega a cuadrar, no en cada tecla. */}
+          {cuadra ? (
+            <span key="cuadra" className="adm-cuadra" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden>
+                <path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Caja cuadrada
+            </span>
+          ) : (
+            <span key="no">{diferencia > 0 ? 'Sobran' : 'Faltan'}</span>
+          )}
           <span className="t-mono">
             {cuadra ? `+${money(0)}` : money(Math.abs(diferencia))}
           </span>
