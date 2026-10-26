@@ -8,7 +8,7 @@ No es un plan de código. Cuando el dueño apruebe una parte, esa parte se convi
 
 ## Resumen en 30 segundos
 
-1. **Hay que vender lo que el dueño siente, no las funciones.** El dueño no compra un «sistema». Compra «que no se me pierda un pedido», «que la caja cuadre» y «que mi restaurante se vea de primera». La web de hoy habla del sistema. Debería hablar del dolor.
+1. **Hay que vender lo que el dueño siente, no las funciones.** El dueño no compra un «sistema». Compra control: «que no se me pierda un pedido», «que la caja cuadre», «saber cuánto gano» y «que mi restaurante se vea de primera». La web de hoy habla del sistema. Debería hablar del dolor. **Promesa decidida (2026-10-26): «Tu restaurante, bajo control.»**
 2. **El «sí o sí» se construye con tres cosas:** algo gratis que ya es suyo desde el primer día (el menú), un premio que vuelve todos los días (el resumen del día) y una red que crece sola (la billetera del comensal).
 3. **«Porque se ve más bonito» es una razón válida.** Lo bonito se percibe como más fácil y de más calidad (efecto estético-usabilidad). Un menú precioso hace que la comida parezca mejor y que el precio duela menos. Hay que decirlo sin pena.
 4. **Lo visual tiene dos idiomas:** el *antes* (caos, papel, cuadro por cuadro tipo stop-motion) y el *con Leogin* (fluido y en orden). El contraste entre los dos ya cuenta la historia, sin texto.
@@ -128,7 +128,7 @@ Un gancho de verdad funciona aunque nadie explique nada. Lo de abajo está orden
 | R2 | **QR de mesa bonito, impreso con su marca** | «Se ve de cadena grande» | Estética, presencia diaria | Ver `PLAN_TARJETAS_NFC_QR.md` |
 | R3 | **El resumen del día** por notificación al cerrar: ventas, plato estrella, récords. En Básico: visitas y plato más visto | «Quiero ver cómo me fue» (todas las noches) | Recompensa variable, pérdida | Nuevo |
 | R4 | **«Comparte tu plato del día»**: imagen lista para Instagram o el estado de WhatsApp, con su marca y una «L» chiquita | «Me resuelve las redes» | Reciprocidad, y cada imagen compartida hace publicidad | Nuevo |
-| R5 | **Nadie te roba en la caja sin que lo sepas**: anulaciones con motivo y PIN, corte por turno | «Por fin tengo control» | Pérdida | Ya existe; falta contarlo así |
+| R5 | **Cuentas claras, amistades largas**: anulaciones con motivo y PIN de quien autoriza, caja por turnos, inventario con alertas y costo por plato. Se cuenta sin acusar al personal: lo anotado también protege al empleado honrado | «Por fin tengo control» | Pérdida, necesidad de control | Ya existe; ahora es el paso 4 de la intro |
 | R6 | **Tus clientes te llevan en el bolsillo** (billetera) | «Si no estoy, mis clientes no me ven» | Efecto red | En construcción |
 | R7 | **«Tu año con Leogin»**: resumen anual para compartir (pedidos, plato estrella, mejor día), estilo Spotify Wrapped | Orgullo | Pico-final, viralidad | Nuevo |
 
@@ -185,12 +185,13 @@ Esto no es superficial. Es efecto halo (§2.4): un menú bonito sube el precio q
 | Seguridad RLS, nube | Nadie más ve tus datos |
 | Onboarding | Te ayudamos a arrancar |
 
-### La frase de marca (propuestas)
-1. **«Pide. Cocina. Cobra.»** Tres verbos, ritmo de tres, describe el sistema completo. *(Recomendada.)*
-2. «Que ningún pedido se te escape.» Más emocional, pero solo habla de una parte.
-3. «Menos papelitos, más pedidos.» Simpática y muy local; buena para redes.
+### La frase de marca (decidida el 2026-10-26)
 
-La recomendación es usar **1** como firma, **2** como titular de la web y **3** en redes y en el QR.
+**Promesa: «Tu restaurante, bajo control.»** El dueño señaló que en su zona el dolor más grande es no tener control: dinero que se va sin saber por dónde, inventario que se acaba sin aviso, caja que no cuadra. Esta frase lo cubre todo, habla del dueño y promete tranquilidad, no funciones.
+
+- **«Pide. Cocina. Cobra.»** pasa a explicar **cómo** se logra ese control (en la intro va debajo de la promesa, más chica).
+- «Que ningún pedido se te escape.» queda como mensaje de apoyo para anuncios sobre pedidos.
+- «Menos papelitos, más pedidos.» sigue sirviendo para redes y el QR.
 
 ### Banco de frases cortas
 
@@ -204,8 +205,8 @@ La recomendación es usar **1** como firma, **2** como titular de la web y **3**
 
 | | Hoy | Propuesta |
 |---|---|---|
-| Titular | Todo tu restaurante, en un solo sistema. | **Que ningún pedido se te escape.** |
-| Bajada | Menú digital con QR, pedidos en línea, pantalla de cocina, panel de mesero, inventario y corte de caja. Una mensualidad fija y cero comisión sobre lo que vendes. | Menú con QR, pedidos y caja. **Gratis para empezar.** |
+| Titular | Todo tu restaurante, en un solo sistema. | **Tu restaurante, bajo control.** |
+| Bajada | Menú digital con QR, pedidos en línea, pantalla de cocina, panel de mesero, inventario y corte de caja. Una mensualidad fija y cero comisión sobre lo que vendes. | Pedidos, cocina, caja e inventario en tu celular. **Te armamos tu menú hoy, gratis.** |
 | Imagen | Maqueta del panel | La intro animada: el caos se ordena solo |
 | Botones | Crear mi restaurante gratis · Ver demo en vivo | **Crear mi menú gratis** · Míralo en tu celular (QR) |
 
@@ -422,20 +423,22 @@ Cada corrida deja el video WebM (sin audio) y la banda sonora `intro-leogin-soni
 ### Concepto: «Del caos al orden»
 Dos idiomas visuales: el antes cuadro por cuadro, como papel recortado, y el después fluido. No hace falta voz para entenderlo.
 
-### Guion actual (51 s, versión del 2026-10-26)
+### Guion actual: versión «control» (51 s, 2026-10-26)
 
 | Tiempo | Imagen | Texto en pantalla |
 |---|---|---|
-| 0 – 5.4 s | Desde el primer cuadro: teléfono sonando, chat con mensajes, comandas que aparecen cuadro por cuadro, la cámara tiembla y se acerca | «¿Cuántos pedidos se te **perdieron** hoy?» |
-| 5.4 – 8 s | Todo se congela y se apaga; la cámara se clava en la comanda de la Mesa 4, que se cae; latido | «…y el pedido de la **Mesa 4** se perdió. Q85 que ya eran tuyos.» |
-| 8 – 12 s | Leo cae, el golpe barre el papel y entra la luz cálida; despierta sorprendido, mira a cámara y saluda | «Respira. Esto es Leogin.» |
+| 0 – 5.4 s | Desde el primer cuadro: teléfono sonando, chat lleno, comandas, «¡se acabó el pollo!», «¿quién anuló esto?», la caja que no cuadra; la cámara tiembla | «¿Sabes cuánto dinero **se te fue** hoy?» |
+| 5.4 – 8 s | Todo se congela; la cámara se clava en la comanda de la Mesa 4, que se cae; latido. Una libreta suma las fugas | «La cuenta de hoy (ejemplo): pedido perdido Q85 · la caja no cuadró Q120 · pollo que nadie anotó Q90 → **Hoy se te fueron Q295.** Al mes, unos Q8,850.» |
+| 8 – 12 s | Leo cae, el golpe barre el papel y entra la luz; despierta, mira a cámara y saluda | «Respira. Esto es Leogin.» |
 | 12 – 17.5 s | Escanea el QR, se abre el menú | «1 · **Escanea.**» |
 | 17.5 – 23.5 s | Pide; golpe y destello al enviar; Leo atrapa la comanda | «2 · Pide desde la **mesa.**» |
 | 23.5 – 29.5 s | «Ding» en cocina, comanda impresa, *Listo* | «3 · La cocina lo ve **al instante.**» + «Esta vez, la **Mesa 4** sí comió.» |
-| 29.5 – 35.5 s | Los números suben; récord con golpe, destello y confeti | «4 · La caja cuadra **sola.**» |
+| 29.5 – 35.5 s | El celular del dueño: ventas del día y cinco avisos que van llegando (caja del turno cuadró, anulación con motivo y PIN, quedan 2 kg de pollo, ganancia del pepián, pedidos guardados sin internet); «Todo en orden» y Leo celebra | «4 · Todo, **bajo control.** Desde tu celular, aunque no estés.» |
 | 35.5 – 39.5 s | Billetera: el sello se estampa | «Y tus clientes **vuelven.**» |
-| 39.5 – 44 s | Leo voltea el letrero a CERRADO, apaga la luz, se despide y se duerme | «9:00 p. m. La caja cuadró. **Tú, ya en tu casa.**» |
-| 44 – 51 s | Leo guiña y se vuelve el logo | «Pide. Cocina. Cobra.» · «Te armamos tu menú hoy, gratis.» · QR |
+| 39.5 – 44 s | Leo voltea el letrero a CERRADO, apaga la luz y se duerme | «9:00 p. m. La caja cuadró. El inventario, al día. **Tú, ya en tu casa.**» |
+| 44 – 51 s | Leo guiña y se vuelve el logo | «**Tu restaurante, bajo control.**» · Pide. Cocina. Cobra. · «Te armamos tu menú hoy, gratis.» · QR |
+
+Los montos de la libreta son un **ejemplo** y así lo dice en pantalla: sirven para que el dueño haga su propia cuenta, no son una estadística.
 
 **Formatos:** horizontal 16:9 (web) y vertical 9:16 (WhatsApp, TikTok, Reels). El vertical es el más importante para este mercado.
 
@@ -447,37 +450,37 @@ Los cortes no son videos aparte: son **listas de edición** sobre la misma anima
 
 | Tiempo | Tramo de la completa | Qué cuenta |
 |---|---|---|
-| 0 – 7.2 s | 0 – 7.2 s | Gancho, caos y la Mesa 4 que se pierde |
-| 7.2 – 10.3 s | 7.85 – 10.95 s | Leo cae, despierta y se presenta |
-| 10.3 – 13.3 s | 12 – 15 s | 1 · Escanea: QR y el menú se abre |
-| 13.3 – 15.8 s | 20.85 – 23.35 s | 2 · Pide: *Enviar*, pedido enviado, Leo atrapa la comanda |
-| 15.8 – 18.8 s | 24.85 – 28.75 s, a 1.3× | 3 · Cocina: «ding», *Listo* y «Esta vez, la Mesa 4 sí comió» |
-| 18.8 – 21.8 s | 29.5 – 33.4 s, a 1.3× | 4 · Caja: los números suben y el récord |
-| 21.8 – 24.8 s | 39.5 – 43.4 s, a 1.3× | Tu noche: CERRADO, luz apagada, Leo se duerme |
-| 24.8 – 30 s | 44 – 49.2 s | Guiño, logo y «Te armamos tu menú hoy, gratis» |
+| 0 – 7.6 s | 0 – 7.6 s | Gancho, caos y la cuenta de lo que se fue |
+| 7.6 – 10.7 s | 7.85 – 10.95 s | Leo cae, despierta y se presenta |
+| 10.7 – 13.7 s | 12 – 15 s | 1 · Escanea |
+| 13.7 – 16.2 s | 20.85 – 23.35 s | 2 · Pide: *Enviar* y Leo atrapa la comanda |
+| 16.2 – 18.7 s | 24.85 – 28.75 s, a 1.56× | 3 · Cocina y «Esta vez, la Mesa 4 sí comió» |
+| 18.7 – 22.7 s | 29.5 – 34.7 s, a 1.3× | 4 · Todo, bajo control (el paso más largo del corte) |
+| 22.7 – 25.2 s | 39.5 – 43.4 s, a 1.56× | Tu noche |
+| 25.2 – 30 s | 44 – 48.8 s | Guiño, logo, la promesa y el regalo |
 
-Fuera quedan el llenado del carrito, el desplazamiento del menú y la billetera (no hay tiempo para un segundo beneficio).
+Fuera quedan el llenado del carrito, el desplazamiento del menú y la billetera.
 
-**Estado de WhatsApp · 15 s.** Solo la historia completa de la Mesa 4, que es lo que se entiende en un vistazo:
+**Estado de WhatsApp · 15 s.** La historia mínima: se te va el dinero, llega Leo, todo bajo control.
 
 | Tiempo | Tramo de la completa | Qué cuenta |
 |---|---|---|
-| 0 – 2.8 s | 0 – 2.8 s | La pregunta y el caos |
-| 2.8 – 4.75 s | 5.35 – 7.3 s (salto seco, sin barrido) | Se congela y se pierde la Mesa 4 |
+| 0 – 2.5 s | 0 – 2.5 s | La pregunta y el caos |
+| 2.5 – 4.75 s | 5.35 – 7.6 s (salto seco, sin barrido) | Se congela y la libreta suma Q295 |
 | 4.75 – 7.75 s | 7.95 – 10.95 s | Llega Leo |
-| 7.75 – 9.75 s | 27.25 – 29.35 s | *Listo* y «Esta vez, la Mesa 4 sí comió» (sin el número del paso) |
-| 9.75 – 15 s | 44 – 49.25 s | Guiño, logo y el regalo |
+| 7.75 – 9.75 s | 31.6 – 34.6 s, a 1.5× | Los avisos de control y «Todo en orden» (sin el número del paso) |
+| 9.75 – 15 s | 44 – 49.25 s | Guiño, logo, la promesa y el regalo |
 
 **Por qué así:**
 - **Mismo gancho en los tres.** Lo que decide si alguien sigue mirando son los primeros 3 segundos; eso no se recorta nunca.
-- **La pregunta abierta se cierra siempre.** Aun en 15 s, la Mesa 4 se pierde y luego sí come: es la historia más corta que tiene principio, problema y final.
+- **El problema y la solución siempre se tocan.** Aun en 15 s, la libreta dice cuánto se fue y el celular muestra que ya todo está en orden: principio, problema y final.
 - **Menos es más en redes.** Un video corto se ve completo más veces, y el final con el regalo es lo que lleva a la acción.
 - **Para grabarlos:** `node docs/diseno/intro-animada/grabar-video.mjs --corte 30 --formato v` (o `--corte 15`). Cada uno deja su WebM y su WAV (`intro-leogin-sonido-30s.wav`, `-15s.wav`).
 
 ### Voz (opcional)
 La mejor voz es la del dueño de Leogin, con su acento: la confianza local vale más que una voz de locutor. Guion de voz para la versión de 51 s (entra sobre la música):
 
-> «¿Cuántos pedidos se te perdieron hoy? … Respira. Con Leogin, tu cliente escanea, pide desde la mesa, la cocina lo ve al instante y la caja cuadra sola. Y a las nueve, tú ya en tu casa. Te armamos tu menú hoy, gratis. Leogin: pide, cocina, cobra.»
+> «¿Sabes cuánto dinero se te fue hoy? … Respira. Con Leogin, tu cliente escanea y pide desde la mesa, la cocina lo ve al instante y tú lo controlas todo desde tu celular: la caja, el inventario y lo que ganas en cada plato. Y a las nueve, tú ya en tu casa. Leogin: tu restaurante, bajo control. Te armamos tu menú hoy, gratis.»
 
 ### Qué se puede hacer desde aquí y qué no
 - **Sí:** animación en código (movimiento de marca, personaje 2D, efecto stop-motion simulado, cámara virtual, tipografía cinética), música y efectos sintetizados (la marimba también es código), y grabar todo como video y WAV.
@@ -557,8 +560,8 @@ Cada fase, cuando se apruebe, se vuelve un `PLAN_*.md` en `docs/planes/`.
 
 ## Decisiones pendientes del dueño
 
-- [ ] ¿Frase de marca? (Recomendada: «Pide. Cocina. Cobra.»)
-- [ ] ¿Titular de la portada? (Recomendado: «Que ningún pedido se te escape.»)
+- [x] Frase de marca: **«Tu restaurante, bajo control.»** (2026-10-26). «Pide. Cocina. Cobra.» explica el cómo.
+- [x] Titular de la portada: «Tu restaurante, bajo control.» (2026-10-26), para cuando se haga la Fase B.
 - [x] ¿Mascota Leo? Sí: al dueño le encantó la idea y pidió que se viera menos simple (2026-10-26). Hecho: Leo v2.
 - [ ] ¿Leo v2 con moño de mesero? (Recomendado frente a gorro de chef o sin accesorio.)
 - [ ] ¿Nombres de la paleta (Brasa, Mango, Carbón, Masa, Albahaca) y la nueva Terracota oscura?
