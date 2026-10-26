@@ -119,7 +119,7 @@ body.render .overlay { display: none; }
 
 .cap-hand { position: absolute; font-family: var(--f-marker); color: var(--tinta); font-size: 76px; line-height: 1.05; transform: rotate(-2deg); z-index: 5; max-width: 1000px; }
 .stage.v .cap-hand { font-size: 70px; max-width: 900px; }
-#cap1 { left: 110px; top: 64px; }
+#cap1 { left: 110px; top: 96px; }
 .stage.v #cap1 { left: 80px; top: 96px; }
 #cap2 { left: 110px; top: 836px; background: #F4E9A8; padding: 18px 34px 22px; box-shadow: 0 10px 24px rgba(60, 40, 20, 0.25); font-size: 64px; }
 #cap2 small { display: block; font-family: var(--f-hand); font-weight: 700; font-size: 46px; color: #B2321F; margin-top: 6px; }
@@ -398,12 +398,47 @@ body.render .overlay { display: none; }
 #tag { display: flex; gap: 34px; margin-top: 54px; font: 600 70px/1 var(--f-display); letter-spacing: -0.025em; }
 .stage.v #tag { font-size: 66px; gap: 26px; margin-top: 60px; }
 #tag span b { color: var(--brasa); }
-#cta { margin-top: 44px; font: 500 36px var(--f-ui); color: #ABA39A; }
-#cta b { color: var(--ink); font-weight: 700; }
+#cta { margin-top: 46px; display: flex; flex-direction: column; align-items: center; gap: 10px; font: 500 32px var(--f-ui); color: #ABA39A; text-align: center; }
+#cta b { font: 700 46px/1.1 var(--f-display); letter-spacing: -0.02em; color: var(--ink); }
+.stage.v #cta b { font-size: 44px; max-width: 900px; }
 #qrCard { position: absolute; right: 120px; bottom: 110px; width: 196px; background: #FFFFFF; border-radius: 22px; padding: 16px 16px 12px; text-align: center; color: #1C1C1E; font: 700 17px var(--f-ui); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45); }
 #qrCard .qr { width: 164px; height: 164px; margin-bottom: 8px; }
 .stage.v #qrCard { position: static; margin-top: 70px; width: 240px; }
 .stage.v #qrCard .qr { width: 208px; height: 208px; }
+
+/* Cámara virtual y destellos */
+#shake, #cam, #punch, #zoom { position: absolute; inset: 0; }
+#flash { position: absolute; inset: 0; background: #FFF6E8; pointer-events: none; z-index: 20; }
+.hl { position: relative; z-index: 0; white-space: nowrap; }
+#under { position: absolute; left: -6px; right: -6px; bottom: 8px; height: 24px; background: #E8534A; opacity: 0.45; border-radius: 6px; z-index: -1; }
+
+/* Tipografía cinética */
+.cs h2 .w, #cap3 .w { display: inline-block; }
+.w.g { background: linear-gradient(120deg, var(--brasa), var(--mango)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.cs em { font-style: normal; }
+.cs .clock { display: flex; align-items: center; gap: 14px; font: 500 40px var(--f-mono); color: var(--mango); margin-bottom: 22px; }
+.cs .clock svg { width: 40px; height: 40px; }
+.cs .payoff { display: inline-flex; align-items: center; gap: 12px; margin-top: 22px; font: 600 32px/1.2 var(--f-ui); color: var(--ink); background: rgba(47, 158, 107, 0.16); border: 1px solid rgba(47, 158, 107, 0.45); padding: 12px 20px; border-radius: 18px; align-self: flex-start; max-width: 100%; }
+.cs .payoff svg { width: 32px; height: 32px; flex: none; }
+.cs .payoff b { color: #6FD3A2; }
+
+/* Tu noche */
+#dusk { position: absolute; inset: 0; z-index: 1; background: radial-gradient(1200px 800px at 60% 45%, rgba(5, 5, 8, 0.35), rgba(5, 5, 8, 0.78)); }
+#doorScene { width: 940px; height: 920px; z-index: 1; }
+#lampGlow { position: absolute; left: 115px; top: -40px; width: 560px; height: 560px; border-radius: 50%; background: radial-gradient(circle, rgba(245, 160, 48, 0.42), rgba(245, 160, 48, 0.1) 45%, transparent 70%); }
+#lamp { position: absolute; left: 335px; top: 30px; width: 120px; height: 110px; }
+#doorEl { position: absolute; left: 230px; top: 170px; width: 330px; height: 620px; border-radius: 26px 26px 8px 8px; background: linear-gradient(180deg, #6B4630, #4A2F20); border: 10px solid #2E1E15; box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5); }
+#doorWin { position: absolute; left: 30px; top: 30px; width: 250px; height: 170px; border-radius: 16px; background: linear-gradient(180deg, #FFE0A6, #F5B25A); box-shadow: 0 0 40px rgba(245, 178, 90, 0.55); }
+#doorEl .panel { position: absolute; left: 30px; width: 250px; height: 150px; border-radius: 12px; border: 4px solid rgba(0, 0, 0, 0.18); }
+#doorEl .p1 { top: 250px; }
+#doorEl .p2 { top: 420px; }
+#doorEl .knob { position: absolute; right: 26px; top: 330px; width: 22px; height: 22px; border-radius: 50%; background: #E9C46A; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4); }
+#signCord { position: absolute; left: 285px; top: 250px; width: 220px; height: 70px; }
+#sign { position: absolute; left: 285px; top: 312px; width: 220px; height: 96px; transform-style: preserve-3d; }
+#sign .face { position: absolute; inset: 0; border-radius: 16px; display: grid; place-items: center; font: 800 30px var(--f-display); letter-spacing: 0.02em; backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4); }
+#sign .front { background: #23855A; color: #FFFFFF; }
+#sign .back { background: #1C1C1E; color: var(--mango); border: 3px solid var(--mango); transform: rotateY(180deg); }
+.stage.v #chat { top: 340px; }
 
 @media (prefers-reduced-motion: reduce) {
   .overlay:hover .play-big { transform: none; }
@@ -422,7 +457,7 @@ body.render .overlay { display: none; }
   <div class="top">
     <div class="brand">
       <svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="hg" x1="27" y1="19" x2="72" y2="81" gradientUnits="userSpaceOnUse"><stop stop-color="#E8534A"/><stop offset="1" stop-color="#F5A030"/></linearGradient></defs><rect width="100" height="100" rx="22" fill="#1C1C1E"/><path d="M27 19h18v44h27v18H27Z" fill="url(#hg)"/></svg>
-      <div><h1>Intro Leogin</h1><p>Prototipo · del caos al orden · 62 s</p></div>
+      <div><h1>Intro Leogin</h1><p>Prototipo · del caos al orden · 51 s</p></div>
     </div>
     <div class="tools">
       <div class="seg" role="group" aria-label="Formato">
@@ -438,11 +473,12 @@ body.render .overlay { display: none; }
 
   <div class="screen-wrap" id="wrap">
     <div class="stage h" id="stage">
+      <div id="shake"><div id="cam"><div id="punch"><div id="zoom">
 
       <!-- ═══ El antes: caos cuadro por cuadro ═══ -->
       <div class="layer" id="L1">
         <div class="grain"></div>
-        <div class="cap-hand" id="cap1">Así es un día normal…</div>
+        <div class="cap-hand" id="cap1">¿Cuántos pedidos se te <span class="hl">perdieron<i id="under"></i></span> hoy?</div>
 
         <div class="it" id="tk2"><div class="sm boil"><div class="ticket"><b>Para llevar</b><span>3 tostadas ???</span><span>Tel 5?2?-18…</span><span>¿a qué hora?</span></div></div></div>
         <div class="it" id="tk3"><div class="sm boil"><div class="ticket"><b>Mesa 2</b><span>2 cafés</span><span>1 rellenito</span><span>¿ya pagó?</span></div></div></div>
@@ -478,16 +514,17 @@ body.render .overlay { display: none; }
         <div class="it" id="calc"><div class="sm boil"><div class="note-pad"><b>Caja de hoy</b>Q 1,240.00<br><s>Q 1,310.50</s><br>Q 1,2?? ??<br><span class="bad">no cuadra</span></div></div></div>
         <div class="it" id="tk6"><div class="sm boil"><div class="ticket"><span class="big">?</span><span>¿de quién es esto?</span></div></div></div>
 
-        <div class="cap-hand" id="cap2">…y un pedido se perdió.<small>Q85 que ya eran tuyos.</small></div>
       </div>
 
       <!-- ═══ El mundo Leogin ═══ -->
       <div class="layer" id="L2">
-        <div class="cs" id="cs1"><div class="num grad">1</div><h2>Escanea.</h2><p>Sin descargar nada.</p></div>
-        <div class="cs" id="cs2"><div class="num grad">2</div><h2>Pide desde la mesa.</h2><p>Sin esperar al mesero.</p></div>
-        <div class="cs" id="cs3"><div class="num grad">3</div><h2>La cocina lo ve al instante.</h2><p>Clarito. Sin letra fea.</p></div>
-        <div class="cs" id="cs4"><div class="num grad">4</div><h2>La caja cuadra sola.</h2><p>Tus números, sin hojas de cálculo.</p></div>
-        <div class="cs" id="cs5"><h2>Y tus clientes vuelven.</h2><p>Sus puntos de todos sus restaurantes, en un solo lugar.</p></div>
+        <div id="dusk"></div>
+        <div class="cs" id="cs1"><div class="num grad">1</div><h2><em>Escanea.</em></h2><p>Sin descargar nada.</p></div>
+        <div class="cs" id="cs2"><div class="num grad">2</div><h2>Pide desde la <em>mesa.</em></h2><p>Sin esperar al mesero.</p></div>
+        <div class="cs" id="cs3"><div class="num grad">3</div><h2>La cocina lo ve <em>al instante.</em></h2><p>Clarito. Sin letra fea.</p><p class="payoff" id="payoff"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#2F9E6B"/><path d="M7 12.5l3.2 3.2L17 9" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Esta vez, la <b>Mesa 4</b> sí comió.</span></p></div>
+        <div class="cs" id="cs4"><div class="num grad">4</div><h2>La caja cuadra <em>sola.</em></h2><p>Tus números, sin hojas de cálculo.</p></div>
+        <div class="cs" id="cs5"><h2>Y tus clientes <em>vuelven.</em></h2><p>Sus puntos de todos sus restaurantes, en un solo lugar.</p></div>
+        <div class="cs" id="cs6"><div class="clock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>9:00 p. m.</div><h2>La caja cuadró. <em>Tú, ya en tu casa.</em></h2><p>Menos correr. Más vender.</p></div>
 
         <div class="vbox" id="vbox">
           <!-- Rótulo de mesa con QR -->
@@ -595,6 +632,15 @@ body.render .overlay { display: none; }
             <div id="badge"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.8l2.4 5 5.5.7-4 3.8 1 5.4L10 14.1l-4.9 2.6 1-5.4-4-3.8 5.5-.7z" fill="#fff"/></svg>Récord del mes</div>
           </div>
 
+          <!-- Tu noche: se cierra el restaurante -->
+          <div id="doorScene">
+            <div id="lampGlow"></div>
+            <svg id="lamp" viewBox="0 0 120 110" aria-hidden="true"><path d="M60 0V30" stroke="#3A3A40" stroke-width="4"/><path d="M26 64 L44 30 H76 L94 64 Z" fill="#2E2E33"/><circle id="lampBulb" cx="60" cy="72" r="14" fill="#FFE2A8"/></svg>
+            <div id="doorEl"><div id="doorWin"></div><span class="panel p1"></span><span class="panel p2"></span><span class="knob"></span></div>
+            <svg id="signCord" viewBox="0 0 220 70" aria-hidden="true"><path d="M110 6 L30 66 M110 6 L190 66" stroke="#C9B79C" stroke-width="3"/><circle cx="110" cy="6" r="6" fill="#C9B79C"/></svg>
+            <div id="sign"><div class="face front">ABIERTO</div><div class="face back">CERRADO</div></div>
+          </div>
+
           <div class="leo-wrap" id="leoBox"></div>
           <div id="flyTk"><svg viewBox="0 0 64 56" width="64" height="56" aria-hidden="true"><path d="M2 2h60v46l-7.5 4-7.5-4-7.5 4-7.5-4-7.5 4-7.5-4-7.5 4L2 48z" fill="#FFFDF6"/><rect x="9" y="11" width="32" height="5.5" rx="2.7" fill="#2B2622"/><rect x="9" y="22" width="44" height="4.4" rx="2.2" fill="#9C958C"/><rect x="9" y="31" width="26" height="4.4" rx="2.2" fill="#9C958C"/></svg></div>
           <div id="confetti"></div>
@@ -608,15 +654,19 @@ body.render .overlay { display: none; }
       <div id="final">
         <div class="lockup"><div id="iconSlot"></div><div id="wm">Leogin</div></div>
         <div id="tag"><span>Pide<b>.</b></span><span>Cocina<b>.</b></span><span>Cobra<b>.</b></span></div>
-        <div id="cta">Gratis para empezar · <b>distleogin.com</b></div>
+        <div id="cta"><b>Te armamos tu menú hoy, gratis.</b><span>distleogin.com</span></div>
         <div id="qrCard"><div class="qr"></div>Escanéame</div>
       </div>
+      </div>
+      <div class="cap-hand" id="cap2">…y el pedido de la <b>Mesa 4</b> se perdió.<small>Q85 que ya eran tuyos.</small></div>
+      </div></div></div>
+      <div id="flash"></div>
     </div>
 
     <button type="button" class="overlay" id="overlay" aria-label="Reproducir la intro">
       <span class="play-big"><svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="#fff"/></svg></span>
       <strong id="ovTitle">Ver la intro</strong>
-      <span class="sub" id="ovSub">1 minuto · con o sin sonido</span>
+      <span class="sub" id="ovSub">51 segundos · mejor con sonido</span>
     </button>
   </div>
 
@@ -627,11 +677,11 @@ body.render .overlay { display: none; }
     <button type="button" class="icon-btn" id="rs" aria-label="Volver al inicio">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg>
     </button>
-    <div class="bar"><input type="range" id="scrub" min="0" max="62" step="0.01" value="0" aria-label="Posición de la intro"></div>
-    <span class="time" id="time">0:00 / 1:02</span>
+    <div class="bar"><input type="range" id="scrub" min="0" max="51" step="0.01" value="0" aria-label="Posición de la intro"></div>
+    <span class="time" id="time">0:00 / 0:51</span>
   </div>
   <div class="chapters" id="chapters"></div>
-  <p class="note">Todo está hecho con código: no es un video pesado, así que en la web carga al instante y se ve nítido en cualquier pantalla. <b>El antes va cuadro por cuadro, como stop-motion; el después, fluido.</b> El QR del final es real y abre distleogin.com.</p>
+  <p class="note">Todo está hecho con código: no es un video pesado, así que en la web carga al instante y se ve nítido en cualquier pantalla. <b>El antes va cuadro por cuadro, como stop-motion; el después, fluido.</b> El QR del final es real y abre distleogin.com. <b>Con sonido:</b> banda sonora de marimba hecha también con código.</p>
 </div>
 
 <!-- Filtros e ilustraciones -->
@@ -680,10 +730,10 @@ body.render .overlay { display: none; }
   'use strict';
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-  const DUR = 62;
+  const DUR = 51;
   // Solo lo que anima GSAP: los colores y medidas escritos en el HTML se quedan.
   const CLEAR = 'transform,opacity,visibility,clipPath,borderColor,strokeDashoffset,strokeDasharray';
-  const POSTER = 32.35;
+  const POSTER = 10.8;
   const stage = $('#stage');
   const wrap = $('#wrap');
   let fmt = 'h';
@@ -786,9 +836,9 @@ body.render .overlay { display: none; }
         <path class="leo-mouthCalm" d="M32.8 39.8q5.2 4.4 10.4 0" stroke="${lip}" stroke-width="2.1" fill="none" stroke-linecap="round"${vis(mouth === 'calm')}/>
       </g>
       <g class="leo-extra">
-        <path d="M57.4 13.5c-2.1 3.3-3 5.1-3 6.6a3 3 0 0 0 6 0c0-1.5-.9-3.3-3-6.6Z" fill="#8FD3FF"${vis(extra === 'sweat')}/>
-        <g fill="#F5A030" font-family="Unbounded, 'Arial Black', sans-serif" font-weight="800"${vis(extra === 'zzz')}><text x="55" y="12" font-size="8">z</text><text x="62" y="5" font-size="6">z</text><text x="67.5" y="0" font-size="4.5">z</text></g>
-        <g${vis(extra === 'sparkles')}><path d="M10 18l1.3 3.7L15 23l-3.7 1.3L10 28l-1.3-3.7L5 23l3.7-1.3Z" fill="#F5A030"/><path d="M60 4l1 2.8 2.8 1-2.8 1-1 2.8-1-2.8-2.8-1 2.8-1Z" fill="#fff"/><path d="M88 30l1.2 3.4 3.4 1.2-3.4 1.2-1.2 3.4-1.2-3.4-3.4-1.2 3.4-1.2Z" fill="#F5A030"/></g>
+        <path class="leo-sweat" d="M57.4 13.5c-2.1 3.3-3 5.1-3 6.6a3 3 0 0 0 6 0c0-1.5-.9-3.3-3-6.6Z" fill="#8FD3FF"${vis(extra === 'sweat')}/>
+        <g class="leo-zzz" fill="#F5A030" font-family="Unbounded, 'Arial Black', sans-serif" font-weight="800"${vis(extra === 'zzz')}><text x="55" y="12" font-size="8">z</text><text x="62" y="5" font-size="6">z</text><text x="67.5" y="0" font-size="4.5">z</text></g>
+        <g class="leo-sparkles"${vis(extra === 'sparkles')}><path d="M10 18l1.3 3.7L15 23l-3.7 1.3L10 28l-1.3-3.7L5 23l3.7-1.3Z" fill="#F5A030"/><path d="M60 4l1 2.8 2.8 1-2.8 1-1 2.8-1-2.8-2.8-1 2.8-1Z" fill="#fff"/><path d="M88 30l1.2 3.4 3.4 1.2-3.4 1.2-1.2 3.4-1.2-3.4-3.4-1.2 3.4-1.2Z" fill="#F5A030"/></g>
       </g>
     </g>
   </svg>`;
@@ -802,6 +852,7 @@ body.render .overlay { display: none; }
       closed: q('.leo-closed'), brows: qa('.leo-browL, .leo-browR'), arm: q('.leo-arm'),
       tray: q('.leo-tray'), ticket: q('.leo-ticket'), body: q('.leo-body'), logo: q('.leo-logo'),
       bg: q('.leo-bg'), shadow: q('.leo-shadow'), shine: q('.leo-shine'), deco: qa('.leo-bow, .leo-cheeks, .leo-feet'),
+      calm: q('.leo-mouthCalm'), zzz: q('.leo-zzz'),
     };
   }
   $('#leoMain').innerHTML = leoV2({ tray: true, ticket: true });
@@ -880,13 +931,40 @@ body.render .overlay { display: none; }
   const clamp01 = (x) => Math.max(0, Math.min(1, x));
   const easeOut = (x) => 1 - Math.pow(1 - x, 3);
 
+  /* ── Palabras sueltas para la tipografía cinética ──────── */
+  function splitWords(root) {
+    const walk = (node, grad) => {
+      Array.from(node.childNodes).forEach((n) => {
+        if (n.nodeType === 3) {
+          const frag = document.createDocumentFragment();
+          n.textContent.split(/(\s+)/).forEach((p) => {
+            if (!p) return;
+            if (/^\s+$/.test(p)) { frag.appendChild(document.createTextNode(p)); return; }
+            const w = document.createElement('span'); w.className = grad ? 'w g' : 'w'; w.textContent = p; frag.appendChild(w);
+          });
+          n.replaceWith(frag);
+        } else if (n.nodeType === 1) walk(n, grad || n.tagName === 'EM' || n.classList.contains('grad'));
+      });
+    };
+    walk(root, false);
+  }
+  $$('.cs h2, #cap3 .c2').forEach(splitWords);
+
   /* ── Estado inicial ────────────────────────────────────── */
   const V = () => fmt === 'v';
   function initStates() {
+    gsap.set(['#shake', '#cam', '#punch', '#zoom'], { x: 0, y: 0, scale: 1 });
+    gsap.set('#cam', { filter: 'blur(0px)' });
+    gsap.set('#flash', { autoAlpha: 0 });
     gsap.set('#L1', { autoAlpha: 1, '--sat': 1, '--bri': 1 });
     gsap.set('#L1 .it', { autoAlpha: 0, scale: 0.4, x: 0, y: 0, rotation: 0 });
-    gsap.set(['#cap1', '#cap2', '#cap2 small'], { autoAlpha: 0 });
+    // El caos ya está en marcha en el primer cuadro (nada de pantalla vacía)
+    gsap.set(['#chat', '#tel'], { autoAlpha: 1, scale: 1 });
     gsap.set('.sk-msgs p', { autoAlpha: 0, scale: 0.6 });
+    gsap.set('.sk-msgs p:nth-child(-n+2)', { autoAlpha: 1, scale: 1 });
+    gsap.set('#cap1', { autoAlpha: 1, scale: 1.16, transformOrigin: '0% 50%' });
+    gsap.set('#under', { scaleX: 0, transformOrigin: '0% 50%' });
+    gsap.set(['#cap2', '#cap2 small'], { autoAlpha: 0 });
     gsap.set('#L2', { clipPath: `circle(0px at ${stageW() / 2}px ${stageH() / 2 - 80}px)` });
 
     [LM, LB].forEach((L) => {
@@ -901,7 +979,7 @@ body.render .overlay { display: none; }
       gsap.set([L.body, L.shine], { autoAlpha: 1 });
       gsap.set(L.shadow, { autoAlpha: 0.35, scale: 1, transformOrigin: '50% 50%' });
       gsap.set(L.eyeR, { scaleY: 1, autoAlpha: 1, transformOrigin: '50% 50%' });
-      gsap.set([L.mouthO, L.closed, ...L.happy], { autoAlpha: 0 });
+      gsap.set([L.mouthO, L.closed, L.calm, L.zzz, ...L.happy], { autoAlpha: 0 });
       gsap.set(L.brows, { x: 0, y: 0, rotation: 0 });
       gsap.set(L.arm, { rotation: 0, svgOrigin: '24.5 50' });
       gsap.set(L.deco, { autoAlpha: 1 });
@@ -911,12 +989,16 @@ body.render .overlay { display: none; }
     gsap.set(LM.closed, { autoAlpha: 1 });
     gsap.set(LM.smile, { autoAlpha: 0 });
     gsap.set(LM.shadow, { autoAlpha: 0 });
-    gsap.set('#leoBox', { autoAlpha: 0, x: 690, y: 1300 });
+    gsap.set('#leoBox', { autoAlpha: 0, x: 690, y: 1300, scale: 1 });
     gsap.set('#ring', { autoAlpha: 0, scale: 0 });
-    gsap.set('#cap3 > *', { autoAlpha: 0, y: 30 });
+    gsap.set('#cap3 .c1', { autoAlpha: 0, y: 30 });
+    gsap.set('#cap3 .c2', { autoAlpha: 1 });
+    gsap.set('#cap3 .w', { autoAlpha: 0, y: 60 });
 
     gsap.set('.cs', { autoAlpha: 0 });
-    gsap.set('.cs > *', { autoAlpha: 0, y: 40 });
+    gsap.set('.cs .num', { autoAlpha: 0, scale: 1.8, rotation: -10, transformOrigin: '0% 80%' });
+    gsap.set('.cs h2 .w', { autoAlpha: 0, y: 70 });
+    gsap.set(['.cs p', '.cs .clock'], { autoAlpha: 0, y: 20 });
     gsap.set('#tent', { autoAlpha: 0, x: -340, rotation: -8 });
     gsap.set('#phone', { autoAlpha: 0, x: 150, y: 950, rotation: -6 });
     gsap.set('.scr', { autoAlpha: 0, yPercent: 0, scale: 1 });
@@ -944,12 +1026,11 @@ body.render .overlay { display: none; }
     gsap.set('.w-anim', { autoAlpha: 0, y: 26 });
     gsap.set('#stamp', { autoAlpha: 0, y: -150, scaleY: 1, transformOrigin: '50% 100%' });
     gsap.set('#slot8', { autoAlpha: 0, scale: 0.4 });
-    gsap.set('#wBar i', { width: '70%' });
     gsap.set('#wLeft', { scale: 1 });
 
     gsap.set('#kds', { autoAlpha: 0, y: 70, scale: 0.96 });
     gsap.set('#printer', { autoAlpha: 0, y: 90 });
-    gsap.set('#paperClip', { autoAlpha: 1 });
+    gsap.set('#paperClip', { autoAlpha: 1, y: 0 });
     gsap.set('#paper', { yPercent: 100 });
     gsap.set('.pr-body', { x: 0 });
     gsap.set('#kNew', { autoAlpha: 0, x: 12, y: 110, scale: 0.85 });
@@ -959,6 +1040,7 @@ body.render .overlay { display: none; }
     gsap.set('#kOk', { scale: 0 });
     gsap.set(['#kRing1', '#kRing2'], { autoAlpha: 0, x: 12, y: 110, scale: 1 });
     gsap.set('#flyTk', { autoAlpha: 0, x: 0, y: 0, scale: 1, rotation: 0 });
+    gsap.set('#payoff', { autoAlpha: 0, y: 20 });
 
     gsap.set('#dash', { autoAlpha: 0, y: 90, scale: 0.97 });
     gsap.set('.d-anim', { autoAlpha: 0, y: 22 });
@@ -967,6 +1049,12 @@ body.render .overlay { display: none; }
     gsap.set('#dChip', { autoAlpha: 0, scale: 0.8 });
     gsap.set('#badge', { autoAlpha: 0, scale: 0.5 });
     gsap.set('#confetti i', { autoAlpha: 0, x: 0, y: 0, rotation: 0 });
+
+    gsap.set('#doorScene', { autoAlpha: 0, y: 40 });
+    gsap.set('#lampGlow', { autoAlpha: 1 });
+    gsap.set(['#doorWin', '#lampBulb'], { autoAlpha: 1 });
+    gsap.set('#sign', { rotationY: 0, transformPerspective: 900 });
+    gsap.set('#dusk', { autoAlpha: 0 });
 
     gsap.set('#wm', { clipPath: 'inset(0% 100% 0% 0%)', x: -24 });
     gsap.set('#tag span', { autoAlpha: 0, y: 26 });
@@ -978,20 +1066,43 @@ body.render .overlay { display: none; }
   function stageW() { return fmt === 'v' ? 1080 : 1920; }
   function stageH() { return fmt === 'v' ? 1920 : 1080; }
 
+  // Sonidos de la línea de tiempo: [segundo, nombre]. Con ellos y la música se
+  // arma la banda sonora completa (renderSoundtrack).
+  let events = [];
+
   function build() {
     initStates();
     const W = stageW(), H = stageH(), v = V();
     tl = gsap.timeline({ paused: true, onComplete: ended });
-    const at = (t, name) => tl.call(() => sfx(name), null, t);
+    events = [];
+    const at = (t, name) => events.push([t, name]);
 
+    /* Recursos de edición: cámara, golpes, destellos y barridos */
+    const push = (t0, t1, to = 1.035) => tl.fromTo('#cam', { scale: 1 }, { scale: to, duration: t1 - t0, ease: 'none', immediateRender: false }, t0);
+    const punch = (t, s = 1.05) => {
+      tl.to('#punch', { scale: s, duration: 0.07, ease: 'power2.out' }, t);
+      tl.to('#punch', { scale: 1, duration: 0.5, ease: 'power3.out' }, t + 0.07);
+    };
+    const flash = (t, a = 0.2) => {
+      tl.set('#flash', { autoAlpha: a }, t);
+      tl.to('#flash', { autoAlpha: 0, duration: 0.3, ease: 'power2.out' }, t + 0.01);
+    };
+    // Barrido rápido entre pasos: el corte queda escondido en el desenfoque
+    const whip = (t) => {
+      tl.to('#cam', { x: -120, filter: 'blur(12px)', duration: 0.12, ease: 'power2.in' }, t - 0.12);
+      tl.set('#cam', { x: 120 }, t);
+      tl.to('#cam', { x: 0, filter: 'blur(0px)', duration: 0.24, ease: 'power3.out' }, t);
+      at(t - 0.12, 'swish');
+    };
+    // Rótulos con tipografía cinética: el número golpea y las palabras saltan
     const showCap = (sel, t) => {
       tl.set(sel, { autoAlpha: 1 }, t);
-      tl.to(`${sel} > *`, { autoAlpha: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'power3.out' }, t);
+      if ($(`${sel} .num`)) tl.to(`${sel} .num`, { autoAlpha: 1, scale: 1, rotation: 0, duration: 0.45, ease: 'back.out(2.4)' }, t);
+      if ($(`${sel} .clock`)) tl.to(`${sel} .clock`, { autoAlpha: 1, y: 0, duration: 0.4, ease: 'power3.out' }, t);
+      tl.to(`${sel} h2 .w`, { autoAlpha: 1, y: 0, duration: 0.42, stagger: 0.055, ease: 'back.out(1.8)' }, t + 0.08);
+      tl.to(`${sel} > p:not(.payoff)`, { autoAlpha: 1, y: 0, duration: 0.4, ease: 'power3.out' }, t + 0.38);
     };
-    const hideCap = (sel, t) => {
-      tl.to(`${sel} > *`, { autoAlpha: 0, y: -30, duration: 0.35, stagger: 0.05, ease: 'power2.in' }, t);
-      tl.set(sel, { autoAlpha: 0 }, t + 0.55);
-    };
+    const hideCap = (sel, t) => tl.set(sel, { autoAlpha: 0 }, t);
     // Dedo del comensal (coordenadas de la pantalla del teléfono)
     const tap = (x, y, t) => {
       tl.set('#touch', { x: x - 25, y: y - 25, scale: 1.4, autoAlpha: 0 }, t);
@@ -1035,281 +1146,348 @@ body.render .overlay { display: none; }
       tl.to(L.all, { scaleY: 1, scaleX: 1, duration: 0.45, ease: 'elastic.out(1,.45)' }, t + 0.18 + d);
     };
     const blink = (L, t) => tl.to(L.eyes, { scaleY: 0.1, duration: 0.07, yoyo: true, repeat: 1, ease: 'power1.inOut' }, t);
+    const happy = (L, t0, t1) => {
+      tl.set(L.eyes, { autoAlpha: 0 }, t0); tl.set(L.happy, { autoAlpha: 1 }, t0);
+      if (t1) { tl.set(L.happy, { autoAlpha: 0 }, t1); tl.set(L.eyes, { autoAlpha: 1 }, t1); }
+    };
 
-    /* 1 · El caos (0–8 s): todo entra cuadro por cuadro */
-    tl.to('#cap1', { autoAlpha: 1, duration: 0.3, ease: 'steps(3)' }, 0.2);
-    [['#tk2', 0.6], ['#tk3', 1.1], ['#chat', 1.5], ['#tk4', 2.0], ['#tel', 2.5], ['#tk5', 3.0], ['#shout', 4.2], ['#tk1', 4.8], ['#calc', 5.4], ['#tk6', 5.9]]
-      .forEach(([s, t]) => { tl.to(s, { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'steps(3)' }, t); at(t, 'paper'); });
-    $$('.sk-msgs p').forEach((p, i) => { const t = 1.9 + i * 0.62; tl.to(p, { autoAlpha: 1, scale: 1, duration: 0.2, ease: 'steps(2)' }, t); at(t, 'ping'); });
-    at(2.6, 'ring'); at(3.7, 'ring'); at(4.8, 'ring');
-    at(4.3, 'shout');
+    /* 1 · Gancho (0–5.4 s): una pregunta que duele, con el caos ya encima */
+    tl.to('#cap1', { scale: 1, duration: 0.2, ease: 'steps(2)' }, 0);
+    tl.to('#under', { scaleX: 1, duration: 0.4, ease: 'steps(4)' }, 1.1);
+    [['#tk2', 0.15], ['#tk3', 0.3], ['#tk4', 0.45], ['#tk5', 0.6], ['#tk1', 1.5], ['#shout', 2.1], ['#calc', 2.7], ['#tk6', 3.2]]
+      .forEach(([s, t]) => { tl.to(s, { autoAlpha: 1, scale: 1, duration: 0.24, ease: 'steps(3)' }, t); at(t, 'paper'); });
+    $$('.sk-msgs p').forEach((p, i) => {
+      if (i < 2) return;
+      const t = 0.5 + (i - 2) * 0.45;
+      tl.to(p, { autoAlpha: 1, scale: 1, duration: 0.2, ease: 'steps(2)' }, t);
+      at(t, 'ping');
+    });
+    at(0, 'ring'); at(1.1, 'ring'); at(2.2, 'ring'); at(3.3, 'ring');
+    at(0, 'tension');
+    at(2.2, 'shout');
+    push(0, 5.4, 1.03);
 
-    /* 2 · Se pierde un pedido (8–12 s) */
-    at(8, 'freeze');
-    tl.to('#L1', { '--sat': 0.12, '--bri': 0.8, duration: 0.2, ease: 'steps(2)' }, 8);
-    tl.to('#cap1', { autoAlpha: 0, duration: 0.2, ease: 'steps(2)' }, 8);
-    tl.to('#tk1', { scale: 1.12, duration: 0.3, ease: 'steps(3)' }, 8.3);
-    tl.to('#tk1', { y: v ? 1250 : 900, rotation: 48, duration: 1.8, ease: 'steps(14)' }, 8.7);
-    at(9.9, 'fall');
-    tl.to('#cap2', { autoAlpha: 1, duration: 0.3, ease: 'steps(3)' }, 9.1);
-    tl.to('#cap2 small', { autoAlpha: 1, duration: 0.3, ease: 'steps(3)' }, 10.0);
+    /* 2 · La Mesa 4 se queda sin comer (5.4–8 s) */
+    const tk1 = $('#tk1');
+    gsap.set('#zoom', { transformOrigin: `${tk1.offsetLeft + tk1.offsetWidth / 2}px ${tk1.offsetTop + tk1.offsetHeight / 2}px` });
+    at(5.4, 'freeze');
+    tl.to('#L1', { '--sat': 0.12, '--bri': 0.8, duration: 0.2, ease: 'steps(2)' }, 5.4);
+    tl.to('#cap1', { autoAlpha: 0, duration: 0.15, ease: 'steps(2)' }, 5.4);
+    tl.to('#cam', { scale: 1, duration: 0.3, ease: 'power3.out' }, 5.45);
+    tl.to('#zoom', { scale: 1.55, duration: 0.4, ease: 'expo.out' }, 5.45);
+    tl.to('#tk1', { scale: 1.12, duration: 0.3, ease: 'steps(3)' }, 5.5);
+    at(5.65, 'heart'); at(5.95, 'heart');
+    tl.to('#tk1', { y: v ? 1250 : 900, rotation: 48, duration: 1.4, ease: 'steps(12)' }, 5.95);
+    at(6.6, 'fall');
+    tl.to('#cap2', { autoAlpha: 1, duration: 0.3, ease: 'steps(3)' }, 6.05);
+    at(6.1, 'sad');
+    tl.to('#cap2 small', { autoAlpha: 1, duration: 0.3, ease: 'steps(3)' }, 6.7);
+    tl.to('#zoom', { scale: 1, duration: 0.3, ease: 'power3.inOut' }, 7.7);
+    at(7.55, 'rise');
 
-    /* 3 · Llega Leo y todo se ordena (12–17 s) */
+    /* 3 · Llega Leo y todo se ordena (8–12 s) */
     const cx = W / 2, cy = H / 2 - 80;
-    tl.set('#leoMain', { autoAlpha: 1 }, 11.9);
-    tl.to('#leoMain', { y: 0, duration: 0.45, ease: 'power3.in' }, 12.0);
-    tl.to(LM.shadow, { autoAlpha: 0.35, duration: 0.15 }, 12.32);
-    at(12.45, 'thump');
-    tl.to(LM.all, { scaleY: 0.62, scaleX: 1.25, duration: 0.08, ease: 'power1.out' }, 12.45);
-    tl.to(LM.all, { scaleY: 1, scaleX: 1, duration: 0.8, ease: 'elastic.out(1,.38)' }, 12.53);
-    tl.set('#ring', { autoAlpha: 1 }, 12.45);
-    tl.to('#ring', { scale: 7.5, autoAlpha: 0, duration: 0.85, ease: 'power2.out' }, 12.46);
+    tl.set('#leoMain', { autoAlpha: 1 }, 7.9);
+    tl.to('#leoMain', { y: 0, duration: 0.45, ease: 'power3.in' }, 8.0);
+    tl.to(LM.shadow, { autoAlpha: 0.35, duration: 0.15 }, 8.32);
+    at(8.45, 'drop');
+    tl.to(LM.all, { scaleY: 0.62, scaleX: 1.25, duration: 0.08, ease: 'power1.out' }, 8.45);
+    tl.to(LM.all, { scaleY: 1, scaleX: 1, duration: 0.8, ease: 'elastic.out(1,.38)' }, 8.53);
+    punch(8.45, 1.06);
+    flash(8.45, 0.16);
+    tl.set('#ring', { autoAlpha: 1 }, 8.45);
+    tl.to('#ring', { scale: 7.5, autoAlpha: 0, duration: 0.85, ease: 'power2.out' }, 8.46);
     $$('#L1 .it, #cap2').forEach((el, i) => {
       const ex = el.offsetLeft + el.offsetWidth / 2 - cx, ey = el.offsetTop + el.offsetHeight / 2 - cy;
       const len = Math.hypot(ex, ey) || 1;
-      tl.to(el, { x: `+=${(ex / len) * 1500}`, y: `+=${(ey / len) * 1500}`, rotation: `+=${(i % 2 ? 1 : -1) * 70}`, autoAlpha: 0, duration: 0.75, ease: 'power2.in' }, 12.47);
+      tl.to(el, { x: `+=${(ex / len) * 1500}`, y: `+=${(ey / len) * 1500}`, rotation: `+=${(i % 2 ? 1 : -1) * 70}`, autoAlpha: 0, duration: 0.75, ease: 'power2.in' }, 8.47);
     });
-    tl.to('#L2', { clipPath: `circle(1350px at ${cx}px ${cy}px)`, duration: 0.95, ease: 'power2.inOut' }, 12.5);
-    at(12.5, 'whoosh');
-    tl.set('#L1', { autoAlpha: 0 }, 13.5);
+    tl.to('#L2', { clipPath: `circle(1350px at ${cx}px ${cy}px)`, duration: 0.9, ease: 'power2.inOut' }, 8.5);
+    tl.set('#L1', { autoAlpha: 0 }, 9.45);
+    push(8.5, 11.88, 1.04);
     // Despierta sorprendido…
-    tl.set(LM.closed, { autoAlpha: 0 }, 13.3);
-    tl.set(LM.eyes, { autoAlpha: 1, scaleY: 0.1 }, 13.3);
-    tl.to(LM.eyes, { scaleY: 1, duration: 0.2, ease: 'back.out(3)' }, 13.3);
-    tl.to(LM.brows, { y: -2.6, duration: 0.15 }, 13.3);
-    tl.set(LM.mouthO, { autoAlpha: 1 }, 13.3);
-    at(13.3, 'blink');
-    tl.set(LM.mouthO, { autoAlpha: 0 }, 13.85);
-    tl.set(LM.smile, { autoAlpha: 1 }, 13.85);
-    tl.to(LM.brows, { y: 0, duration: 0.25 }, 13.9);
-    tl.to(LM.pupils, { x: -1.2, duration: 0.2 }, 13.6);
-    tl.to(LM.pupils, { x: 1.2, duration: 0.25 }, 14.0);
-    tl.to(LM.pupils, { x: 0, duration: 0.2 }, 14.45);
-    // …y saluda
-    tl.to(LM.arm, { rotation: 100, duration: 0.25, ease: 'back.out(2)' }, 14.5);
-    tl.to(LM.arm, { keyframes: [{ rotation: 76, duration: 0.14 }, { rotation: 104, duration: 0.14 }, { rotation: 76, duration: 0.14 }, { rotation: 100, duration: 0.14 }] }, 14.75);
-    tl.to(LM.brows, { y: -1.8, duration: 0.15 }, 14.55);
-    tl.to(LM.brows, { y: 0, duration: 0.2 }, 15.4);
-    tl.to(LM.arm, { rotation: 0, duration: 0.3, ease: 'power2.inOut' }, 15.4);
-    blink(LM, 15.9);
-    tl.to('#cap3 .c1', { autoAlpha: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 13.7);
-    tl.to('#cap3 .c2', { autoAlpha: 1, y: 0, duration: 0.7, ease: 'power3.out' }, 14.4);
-    tl.to('#cap3 > *', { autoAlpha: 0, y: -24, duration: 0.4, ease: 'power2.in', stagger: 0.05 }, 16.25);
-    tl.to(LM.all, { scaleY: 0.8, scaleX: 1.12, duration: 0.12 }, 16.35);
-    tl.to(LM.all, { scaleY: 1.1, scaleX: 0.94, duration: 0.12 }, 16.47);
-    tl.to(LM.shadow, { autoAlpha: 0, duration: 0.2 }, 16.5);
-    tl.to('#leoMain', { x: W * 0.72, y: -H * 0.3, rotation: 24, duration: 0.6, ease: 'power2.in' }, 16.5);
-    tl.to(LM.all, { scaleY: 1, scaleX: 1, duration: 0.2 }, 16.6);
-    tl.set('#leoMain', { autoAlpha: 0 }, 17.15);
-    at(16.5, 'whoosh');
+    tl.set(LM.closed, { autoAlpha: 0 }, 9.2);
+    tl.set(LM.eyes, { autoAlpha: 1, scaleY: 0.1 }, 9.2);
+    tl.to(LM.eyes, { scaleY: 1, duration: 0.2, ease: 'back.out(3)' }, 9.2);
+    tl.to(LM.brows, { y: -2.6, duration: 0.15 }, 9.2);
+    tl.set(LM.mouthO, { autoAlpha: 1 }, 9.2);
+    at(9.2, 'blink');
+    tl.set(LM.mouthO, { autoAlpha: 0 }, 9.7);
+    tl.set(LM.smile, { autoAlpha: 1 }, 9.7);
+    tl.to(LM.brows, { y: 0, duration: 0.25 }, 9.75);
+    tl.to(LM.pupils, { x: -1.2, duration: 0.18 }, 9.45);
+    tl.to(LM.pupils, { x: 1.2, duration: 0.2 }, 9.8);
+    // …mira a cámara y saluda
+    tl.to(LM.pupils, { x: 0, y: 0, duration: 0.18 }, 10.15);
+    tl.to(LM.all, { scale: 1.06, duration: 0.25, ease: 'power2.out' }, 10.2);
+    tl.to(LM.all, { scale: 1, duration: 0.35, ease: 'power2.inOut' }, 11.05);
+    tl.to(LM.arm, { rotation: 100, duration: 0.22, ease: 'back.out(2)' }, 10.35);
+    tl.to(LM.arm, { keyframes: [{ rotation: 76, duration: 0.13 }, { rotation: 104, duration: 0.13 }, { rotation: 76, duration: 0.13 }, { rotation: 100, duration: 0.13 }] }, 10.57);
+    tl.to(LM.brows, { y: -1.8, duration: 0.15 }, 10.4);
+    tl.to(LM.brows, { y: 0, duration: 0.2 }, 11.1);
+    tl.to(LM.arm, { rotation: 0, duration: 0.25, ease: 'power2.inOut' }, 11.1);
+    at(10.4, 'hola');
+    tl.to('#cap3 .c1', { autoAlpha: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 9.55);
+    tl.to('#cap3 .w', { autoAlpha: 1, y: 0, duration: 0.45, stagger: 0.08, ease: 'back.out(2)' }, 10.1);
+    // Se va de un salto; el barrido esconde el corte
+    tl.to(LM.all, { scaleY: 0.8, scaleX: 1.12, duration: 0.1 }, 11.45);
+    tl.to(LM.all, { scaleY: 1.12, scaleX: 0.92, duration: 0.1 }, 11.55);
+    tl.to('#leoMain', { y: -160, duration: 0.3, ease: 'power2.out' }, 11.6);
+    hideCap('#cap3', 12.0);
+    tl.set('#leoMain', { autoAlpha: 0 }, 12.0);
+    tl.set(LM.all, { scaleX: 1, scaleY: 1 }, 12.0);
+    whip(12.0);
 
-    /* 4 · Escanea (17–26 s) */
-    showCap('#cs1', 17.0);
-    tl.to('#tent', { autoAlpha: 1, x: 0, rotation: -4, duration: 0.8, ease: 'power3.out' }, 17.1);
-    tl.to('#phone', { autoAlpha: 1, y: 0, rotation: -3, duration: 0.9, ease: 'power3.out' }, 17.3);
-    tl.to('#vf', { autoAlpha: 1, scale: 1, duration: 0.35, ease: 'back.out(2)' }, 18.15);
-    tl.to('#scanline', { autoAlpha: 1, duration: 0.1 }, 18.35);
-    tl.to('#scanline', { y: 100, duration: 0.5, ease: 'sine.inOut' }, 18.4);
-    tl.to('#scanline', { y: -100, duration: 0.5, ease: 'sine.inOut' }, 18.9);
-    tl.to('#scanline', { autoAlpha: 0, duration: 0.15 }, 19.4);
-    tl.to('#vf i', { borderColor: '#F5A030', duration: 0.15 }, 19.45);
-    tl.to('#pill', { autoAlpha: 1, y: 0, duration: 0.4, ease: 'back.out(1.6)' }, 19.55);
-    at(19.55, 'pop');
-    tap(300, 608, 20.0);
-    tl.to('#scrMenu', { autoAlpha: 1, yPercent: 0, duration: 0.55, ease: 'power3.out' }, 20.35);
-    tl.set('#scrCam', { autoAlpha: 0 }, 20.95);
-    at(20.35, 'swoosh');
-    tl.to('#tent', { x: -440, autoAlpha: 0, duration: 0.6, ease: 'power2.in' }, 20.3);
-    tl.to('#phone', { x: 0, rotation: 0, duration: 0.8, ease: 'power3.inOut' }, 20.3);
-    tl.to('#mCover', { scale: 1, duration: 1.2, ease: 'power2.out' }, 20.4);
-    tl.to('.m-anim', { autoAlpha: 1, y: 0, duration: 0.5, stagger: 0.07, ease: 'power3.out' }, 20.6);
-    drag(176, 640, 176, 390, 22.2, 1.4);
-    tl.to('#mList', { y: -250, duration: 1.4, ease: 'power2.inOut' }, 22.2);
-    drag(176, 390, 176, 640, 24.2, 1.3);
-    tl.to('#mList', { y: 0, duration: 1.3, ease: 'power2.inOut' }, 24.2);
+    /* 4 · Escanea (12–17.5 s) */
+    showCap('#cs1', 12.05);
+    push(12.2, 17.38);
+    tl.to('#tent', { autoAlpha: 1, x: 0, rotation: -4, duration: 0.6, ease: 'power3.out' }, 12.05);
+    tl.to('#phone', { autoAlpha: 1, y: 0, rotation: -3, duration: 0.7, ease: 'power3.out' }, 12.15);
+    tl.to('#vf', { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'back.out(2)' }, 12.7);
+    tl.to('#scanline', { autoAlpha: 1, duration: 0.1 }, 12.85);
+    tl.to('#scanline', { y: 100, duration: 0.45, ease: 'sine.inOut' }, 12.9);
+    tl.to('#scanline', { y: -100, duration: 0.4, ease: 'sine.inOut' }, 13.35);
+    tl.to('#scanline', { autoAlpha: 0, duration: 0.12 }, 13.75);
+    tl.to('#vf i', { borderColor: '#F5A030', duration: 0.12 }, 13.75);
+    tl.to('#pill', { autoAlpha: 1, y: 0, duration: 0.35, ease: 'back.out(1.6)' }, 13.85);
+    at(13.85, 'pop');
+    tap(300, 608, 14.2);
+    tl.to('#scrMenu', { autoAlpha: 1, yPercent: 0, duration: 0.5, ease: 'power3.out' }, 14.55);
+    tl.set('#scrCam', { autoAlpha: 0 }, 15.1);
+    at(14.55, 'swoosh');
+    tl.to('#tent', { x: -440, autoAlpha: 0, duration: 0.5, ease: 'power2.in' }, 14.5);
+    tl.to('#phone', { x: 0, rotation: 0, duration: 0.7, ease: 'power3.inOut' }, 14.5);
+    tl.to('#mCover', { scale: 1, duration: 1.1, ease: 'power2.out' }, 14.6);
+    tl.to('.m-anim', { autoAlpha: 1, y: 0, duration: 0.45, stagger: 0.05, ease: 'power3.out' }, 14.75);
+    drag(176, 640, 176, 390, 15.8, 0.85);
+    tl.to('#mList', { y: -250, duration: 0.85, ease: 'power2.inOut' }, 15.8);
+    drag(176, 390, 176, 640, 16.75, 0.6);
+    tl.to('#mList', { y: 0, duration: 0.6, ease: 'power2.inOut' }, 16.75);
 
-    /* 5 · Pide desde la mesa (26–34 s) */
-    hideCap('#cs1', 25.9);
-    showCap('#cs2', 26.25);
-    tap(311, 341, 26.6);
-    fly(311, 341, 60, 707, 26.85);
-    tl.to('#cart', { autoAlpha: 1, y: 0, duration: 0.45, ease: 'back.out(1.6)' }, 27.25);
-    drag(176, 600, 176, 470, 27.95, 0.6);
-    tl.to('#mList', { y: -130, duration: 0.6, ease: 'power2.inOut' }, 27.95);
-    tap(311, 553, 28.75); fly(311, 553, 46, 707, 29.0); bump(29.45);
-    tap(311, 553, 29.4); fly(311, 553, 46, 707, 29.62); bump(30.07);
-    tl.to('#cartA', { autoAlpha: 0, y: -16, duration: 0.2 }, 30.35);
-    tl.to('#cartB', { autoAlpha: 1, y: 0, duration: 0.25 }, 30.45);
-    tl.to('#cart', { backgroundColor: '#E9A23B', color: '#1E1A16', duration: 0.25 }, 30.4);
-    tap(177, 707, 30.7);
-    tl.to('#cart', { scale: 0.95, duration: 0.08, yoyo: true, repeat: 1 }, 30.9);
-    at(31.1, 'success');
-    tl.to('#scrSent', { autoAlpha: 1, scale: 1, duration: 0.4, ease: 'power3.out' }, 31.1);
-    tl.to('#sentCheck', { scale: 1, duration: 0.55, ease: 'back.out(2.2)' }, 31.2);
-    tl.to('#sentPath', { strokeDashoffset: 0, duration: 0.35, ease: 'power2.out' }, 31.4);
-    tl.to('.s-anim', { autoAlpha: 1, y: 0, duration: 0.4, stagger: 0.12, ease: 'power3.out' }, 31.45);
+    /* 5 · Pide desde la mesa (17.5–23.5 s) */
+    whip(17.5);
+    hideCap('#cs1', 17.5);
+    showCap('#cs2', 17.55);
+    push(17.6, 23.38);
+    tap(311, 341, 17.75);
+    fly(311, 341, 60, 707, 18.0);
+    tl.to('#cart', { autoAlpha: 1, y: 0, duration: 0.4, ease: 'back.out(1.6)' }, 18.3);
+    drag(176, 600, 176, 470, 18.9, 0.45);
+    tl.to('#mList', { y: -130, duration: 0.45, ease: 'power2.inOut' }, 18.9);
+    tap(311, 553, 19.45); fly(311, 553, 46, 707, 19.68); bump(20.13);
+    tap(311, 553, 20.1); fly(311, 553, 46, 707, 20.33); bump(20.78);
+    tl.to('#cartA', { autoAlpha: 0, y: -16, duration: 0.18 }, 20.95);
+    tl.to('#cartB', { autoAlpha: 1, y: 0, duration: 0.22 }, 21.03);
+    tl.to('#cart', { backgroundColor: '#E9A23B', color: '#1E1A16', duration: 0.22 }, 21.0);
+    tap(177, 707, 21.2);
+    tl.to('#cart', { scale: 0.95, duration: 0.08, yoyo: true, repeat: 1 }, 21.4);
+    // El pico: pedido enviado
+    at(21.6, 'success');
+    punch(21.6);
+    flash(21.6, 0.18);
+    tl.to('#scrSent', { autoAlpha: 1, scale: 1, duration: 0.35, ease: 'power3.out' }, 21.6);
+    tl.to('#sentCheck', { scale: 1, duration: 0.5, ease: 'back.out(2.2)' }, 21.68);
+    tl.to('#sentPath', { strokeDashoffset: 0, duration: 0.3, ease: 'power2.out' }, 21.88);
+    tl.to('.s-anim', { autoAlpha: 1, y: 0, duration: 0.35, stagger: 0.1, ease: 'power3.out' }, 21.92);
     // Leo sale desde abajo con la bandeja vacía
-    tl.set('#leoBox', { x: 700, y: 1300, autoAlpha: 1 }, 31.0);
-    tl.set(LB.tray, { autoAlpha: 1 }, 31.0);
-    tl.to('#leoBox', { y: 560, duration: 0.55, ease: 'back.out(1.3)' }, 31.05);
-    tl.to(LB.pupils, { x: -1.3, y: -0.6, duration: 0.2 }, 31.7);
+    tl.set('#leoBox', { x: 700, y: 1300, autoAlpha: 1 }, 21.5);
+    tl.set(LB.tray, { autoAlpha: 1 }, 21.5);
+    tl.to('#leoBox', { y: 560, duration: 0.5, ease: 'back.out(1.3)' }, 21.55);
+    tl.to(LB.pupils, { x: -1.3, y: -0.6, duration: 0.18 }, 22.05);
     // La comanda vuela del teléfono a la bandeja
     const trayX = 700 + 167, trayY = 560 + 83;
-    tl.set('#flyTk', { x: 470 - 32, y: 210 - 28, scale: 0.9, rotation: -8, autoAlpha: 0 }, 32.0);
-    tl.to('#flyTk', { autoAlpha: 1, duration: 0.1 }, 32.0);
-    tl.to('#flyTk', { x: trayX - 32, rotation: 8, duration: 0.6, ease: 'power1.inOut' }, 32.0);
-    tl.to('#flyTk', { keyframes: [{ y: 110, duration: 0.28, ease: 'power2.out' }, { y: trayY - 28, duration: 0.32, ease: 'power2.in' }] }, 32.0);
-    tl.to('#flyTk', { scale: 0.58, duration: 0.6, ease: 'power1.in' }, 32.0);
-    tl.to(LB.pupils, { x: 1.2, y: -0.4, duration: 0.3 }, 32.2);
-    at(32.0, 'whoosh');
-    tl.set('#flyTk', { autoAlpha: 0 }, 32.6);
-    tl.set(LB.ticket, { autoAlpha: 1 }, 32.6);
-    tl.to(LB.tray, { y: 2, duration: 0.08, yoyo: true, repeat: 1 }, 32.6);
-    at(32.6, 'catch');
-    tl.to(LB.pupils, { x: 0, y: 0, duration: 0.2 }, 32.85);
-    tl.set(LB.eyes, { autoAlpha: 0 }, 32.62);
-    tl.set(LB.happy, { autoAlpha: 1 }, 32.62);
-    tl.to(LB.brows, { y: -2.4, duration: 0.12 }, 32.62);
-    tl.set(LB.happy, { autoAlpha: 0 }, 33.0);
-    tl.set(LB.eyes, { autoAlpha: 1 }, 33.0);
-    tl.to(LB.brows, { y: 0, duration: 0.2 }, 33.0);
-    hop(LB, '#leoBox', 700, 560, 1180, 560, 33.05, 0.55, 40);
-    tl.to('#phone', { y: 1300, rotation: 6, duration: 0.6, ease: 'power3.in' }, 33.55);
-    tl.set('#phone', { autoAlpha: 0 }, 34.2);
-    hideCap('#cs2', 33.6);
+    tl.set('#flyTk', { x: 470 - 32, y: 210 - 28, scale: 0.9, rotation: -8, autoAlpha: 0 }, 22.3);
+    tl.to('#flyTk', { autoAlpha: 1, duration: 0.08 }, 22.3);
+    tl.to('#flyTk', { x: trayX - 32, rotation: 8, duration: 0.55, ease: 'power1.inOut' }, 22.3);
+    tl.to('#flyTk', { keyframes: [{ y: 110, duration: 0.25, ease: 'power2.out' }, { y: trayY - 28, duration: 0.3, ease: 'power2.in' }] }, 22.3);
+    tl.to('#flyTk', { scale: 0.58, duration: 0.55, ease: 'power1.in' }, 22.3);
+    tl.to(LB.pupils, { x: 1.2, y: -0.4, duration: 0.25 }, 22.45);
+    at(22.3, 'whoosh');
+    tl.set('#flyTk', { autoAlpha: 0 }, 22.85);
+    tl.set(LB.ticket, { autoAlpha: 1 }, 22.85);
+    tl.to(LB.tray, { y: 2, duration: 0.08, yoyo: true, repeat: 1 }, 22.85);
+    at(22.85, 'catch');
+    happy(LB, 22.87, 23.2);
+    tl.to(LB.brows, { y: -2.4, duration: 0.12 }, 22.87);
+    tl.to(LB.brows, { y: 0, duration: 0.15 }, 23.2);
+    tl.to(LB.pupils, { x: 0, y: 0, duration: 0.15 }, 23.0);
+    hop(LB, '#leoBox', 700, 560, 1180, 560, 23.05, 0.4, 40);
+    whip(23.5);
+    tl.set('#phone', { autoAlpha: 0 }, 23.5);
+    hideCap('#cs2', 23.5);
 
-    /* 6 · La cocina lo ve al instante (34–42 s) */
-    showCap('#cs3', 34.0);
-    tl.to('#kds', { autoAlpha: 1, y: 0, scale: 1, duration: 0.7, ease: 'power3.out' }, 34.0);
-    tl.to('#printer', { autoAlpha: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 34.3);
-    tl.set('#leoBox', { x: 10, y: 1300, autoAlpha: 1 }, 34.6);
-    tl.to('#leoBox', { y: 650, duration: 0.55, ease: 'back.out(1.3)' }, 34.65);
-    tl.to(LB.pupils, { x: -0.8, y: -1, duration: 0.25 }, 35.2);
+    /* 6 · La cocina lo ve al instante (23.5–29.5 s) */
+    showCap('#cs3', 23.55);
+    push(23.6, 29.38);
+    tl.to('#kds', { autoAlpha: 1, y: 0, scale: 1, duration: 0.55, ease: 'power3.out' }, 23.55);
+    tl.to('#printer', { autoAlpha: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 23.7);
+    tl.set('#leoBox', { x: 10, y: 1300, autoAlpha: 1 }, 23.8);
+    tl.to('#leoBox', { y: 650, duration: 0.5, ease: 'back.out(1.3)' }, 23.85);
+    tl.to(LB.pupils, { x: -0.8, y: -1, duration: 0.2 }, 24.3);
     const lx = 10 + 167, ly = 650 + 83;
     const kx = 20 + 14 + 12 + 138, ky = 40 + 14 + 110 + 59;
-    tl.set(LB.ticket, { autoAlpha: 0 }, 35.6);
-    tl.set('#flyTk', { x: lx - 32, y: ly - 28, scale: 0.58, rotation: 6, autoAlpha: 1 }, 35.6);
-    tl.to('#flyTk', { x: kx - 32, y: ky - 28, scale: 1.6, rotation: 0, duration: 0.5, ease: 'power2.inOut' }, 35.6);
-    tl.to('#flyTk', { autoAlpha: 0, duration: 0.14 }, 36.0);
-    tl.to(LB.pupils, { x: 1, y: -1.2, duration: 0.25 }, 35.7);
-    tl.to('#kNew', { autoAlpha: 1, scale: 1, duration: 0.45, ease: 'back.out(1.8)' }, 36.05);
-    at(36.1, 'ding');
-    tl.to('#kRing1', { autoAlpha: 1, duration: 0.01 }, 36.1);
-    tl.to('#kRing1', { scale: 1.35, autoAlpha: 0, duration: 0.8, ease: 'power2.out' }, 36.11);
-    tl.to('#kRing2', { autoAlpha: 1, duration: 0.01 }, 36.3);
-    tl.to('#kRing2', { scale: 1.35, autoAlpha: 0, duration: 0.8, ease: 'power2.out' }, 36.31);
-    at(36.4, 'printer');
-    tl.to('#paper', { yPercent: 0, duration: 1.1, ease: 'steps(10)' }, 36.4);
-    tl.to('.pr-body', { x: 1.6, duration: 0.05, repeat: 21, yoyo: true, ease: 'none' }, 36.4);
-    tl.to(LB.pupils, { x: 1.5, y: 0.4, duration: 0.3 }, 36.8);
+    tl.set(LB.ticket, { autoAlpha: 0 }, 24.6);
+    tl.set('#flyTk', { x: lx - 32, y: ly - 28, scale: 0.58, rotation: 6, autoAlpha: 1 }, 24.6);
+    tl.to('#flyTk', { x: kx - 32, y: ky - 28, scale: 1.6, rotation: 0, duration: 0.42, ease: 'power2.inOut' }, 24.6);
+    tl.to('#flyTk', { autoAlpha: 0, duration: 0.12 }, 24.92);
+    tl.to(LB.pupils, { x: 1, y: -1.2, duration: 0.2 }, 24.7);
+    tl.to('#kNew', { autoAlpha: 1, scale: 1, duration: 0.42, ease: 'back.out(1.8)' }, 25.0);
+    // El «ding» de Leogin
+    at(25.05, 'ding');
+    punch(25.05, 1.04);
+    flash(25.05, 0.12);
+    tl.to('#kRing1', { autoAlpha: 1, duration: 0.01 }, 25.05);
+    tl.to('#kRing1', { scale: 1.35, autoAlpha: 0, duration: 0.75, ease: 'power2.out' }, 25.06);
+    tl.to('#kRing2', { autoAlpha: 1, duration: 0.01 }, 25.25);
+    tl.to('#kRing2', { scale: 1.35, autoAlpha: 0, duration: 0.75, ease: 'power2.out' }, 25.26);
+    at(25.3, 'printer');
+    tl.to('#paper', { yPercent: 0, duration: 1.0, ease: 'steps(10)' }, 25.3);
+    tl.to('.pr-body', { x: 1.6, duration: 0.05, repeat: 19, yoyo: true, ease: 'none' }, 25.3);
+    tl.to(LB.pupils, { x: 1.5, y: 0.4, duration: 0.25 }, 25.6);
     // a preparación…
-    tl.to('#kNew', { x: 298, duration: 0.55, ease: 'power3.inOut' }, 37.6);
-    tl.to('#kP1', { y: 238, duration: 0.55, ease: 'power3.inOut' }, 37.6);
-    tl.to('#kP2', { y: 366, duration: 0.55, ease: 'power3.inOut' }, 37.6);
-    tl.to(LB.pupils, { x: 1.2, y: -1.2, duration: 0.3 }, 37.6);
-    // …y listo
-    tl.to('#kNew', { x: 584, duration: 0.55, ease: 'power3.inOut' }, 39.6);
-    tl.to('#kL1', { y: 238, duration: 0.55, ease: 'power3.inOut' }, 39.6);
-    tl.to('#kOk', { scale: 1, duration: 0.45, ease: 'back.out(2.6)' }, 40.15);
-    at(40.15, 'ready');
-    tl.to(LB.pupils, { x: 1.6, y: -1.2, duration: 0.3 }, 39.7);
-    tl.to(LB.arm, { rotation: 125, duration: 0.25, ease: 'back.out(2)' }, 40.25);
-    tl.set(LB.eyes, { autoAlpha: 0 }, 40.3);
-    tl.set(LB.happy, { autoAlpha: 1 }, 40.3);
-    hop(LB, '#leoBox', 10, 650, 10, 650, 40.5, 0.45, 34);
-    tl.to(LB.arm, { rotation: 0, duration: 0.25 }, 41.15);
-    tl.set(LB.happy, { autoAlpha: 0 }, 41.2);
-    tl.set(LB.eyes, { autoAlpha: 1 }, 41.2);
-    tl.to(['#kds', '#printer', '#paperClip'], { autoAlpha: 0, y: '+=50', duration: 0.5, ease: 'power2.in' }, 41.4);
-    tl.to('#leoBox', { autoAlpha: 0, duration: 0.4 }, 41.4);
-    hideCap('#cs3', 41.5);
+    tl.to('#kNew', { x: 298, duration: 0.5, ease: 'power3.inOut' }, 26.2);
+    tl.to('#kP1', { y: 238, duration: 0.5, ease: 'power3.inOut' }, 26.2);
+    tl.to('#kP2', { y: 366, duration: 0.5, ease: 'power3.inOut' }, 26.2);
+    tl.to(LB.pupils, { x: 1.2, y: -1.2, duration: 0.25 }, 26.2);
+    // …y listo: se cierra la historia de la Mesa 4
+    tl.to('#kNew', { x: 584, duration: 0.5, ease: 'power3.inOut' }, 27.4);
+    tl.to('#kL1', { y: 238, duration: 0.5, ease: 'power3.inOut' }, 27.4);
+    tl.to('#kOk', { scale: 1, duration: 0.42, ease: 'back.out(2.6)' }, 27.95);
+    at(27.95, 'ready');
+    tl.to(LB.pupils, { x: 1.6, y: -1.2, duration: 0.25 }, 27.45);
+    tl.to('#payoff', { autoAlpha: 1, y: 0, duration: 0.4, ease: 'back.out(2)' }, 28.1);
+    tl.to(LB.arm, { rotation: 125, duration: 0.22, ease: 'back.out(2)' }, 28.05);
+    happy(LB, 28.1, 29.0);
+    hop(LB, '#leoBox', 10, 650, 10, 650, 28.3, 0.42, 34);
+    tl.to(LB.arm, { rotation: 0, duration: 0.22 }, 28.95);
 
-    /* 7 · La caja cuadra sola (42–50 s) */
-    showCap('#cs4', 42.0);
-    tl.to('#dash', { autoAlpha: 1, y: 0, scale: 1, duration: 0.7, ease: 'power3.out' }, 42.1);
-    tl.to('.d-anim', { autoAlpha: 1, y: 0, duration: 0.45, stagger: 0.08, ease: 'power3.out' }, 42.45);
-    at(42.6, 'count');
-    tl.to('.bar', { scaleY: 1, duration: 0.7, stagger: 0.06, ease: 'power3.out' }, 43.2);
-    tl.to('#peak', { autoAlpha: 1, y: 0, duration: 0.35, ease: 'back.out(2)' }, 44.75);
-    tl.to('#dChip', { autoAlpha: 1, scale: 1, duration: 0.4, ease: 'back.out(2)' }, 45.25);
-    at(45.25, 'pop');
-    tl.set(LB.tray, { autoAlpha: 0 }, 45.5);
-    tl.set(LB.pupils, { x: 0, y: 0 }, 45.5);
-    tl.set('#leoBox', { x: 670, y: v ? -1100 : -480, autoAlpha: 1, scale: 1 }, 45.55);
-    tl.to('#leoBox', { y: -24, duration: 0.42, ease: 'power3.in' }, 45.6);
-    tl.to(LB.all, { scaleY: 0.7, scaleX: 1.18, duration: 0.08 }, 46.02);
-    tl.to(LB.all, { scaleY: 1, scaleX: 1, duration: 0.5, ease: 'elastic.out(1,.4)' }, 46.1);
-    at(46.02, 'thump');
-    tl.to('#badge', { autoAlpha: 1, scale: 1, duration: 0.5, ease: 'back.out(2.4)' }, 46.35);
-    at(46.35, 'celebrate');
-    tl.to(LB.all, { keyframes: [{ y: -14, scaleY: 1.08, scaleX: 0.95, duration: 0.25, ease: 'power2.out' }, { y: 0, scaleY: 1, scaleX: 1, duration: 0.25, ease: 'power2.in' }] }, 46.45);
-    tl.set(LB.eyes, { autoAlpha: 0 }, 46.4);
-    tl.set(LB.happy, { autoAlpha: 1 }, 46.4);
-    tl.to(LB.arm, { rotation: 125, duration: 0.2, ease: 'back.out(2)' }, 46.4);
-    tl.to(LB.brows, { y: -2.4, duration: 0.15 }, 46.4);
+    /* 7 · La caja cuadra sola (29.5–35.5 s) */
+    whip(29.5);
+    tl.set(['#kds', '#printer', '#paperClip', '#leoBox', '#flyTk'], { autoAlpha: 0 }, 29.5);
+    hideCap('#cs3', 29.5);
+    showCap('#cs4', 29.55);
+    push(29.6, 35.38);
+    tl.to('#dash', { autoAlpha: 1, y: 0, scale: 1, duration: 0.55, ease: 'power3.out' }, 29.55);
+    tl.to('.d-anim', { autoAlpha: 1, y: 0, duration: 0.4, stagger: 0.07, ease: 'power3.out' }, 29.8);
+    at(29.95, 'count');
+    tl.to('.bar', { scaleY: 1, duration: 0.6, stagger: 0.05, ease: 'power3.out' }, 30.3);
+    tl.to('#peak', { autoAlpha: 1, y: 0, duration: 0.3, ease: 'back.out(2)' }, 31.3);
+    tl.to('#dChip', { autoAlpha: 1, scale: 1, duration: 0.35, ease: 'back.out(2)' }, 31.6);
+    at(31.6, 'pop');
+    tl.set(LB.tray, { autoAlpha: 0 }, 31.7);
+    tl.set(LB.pupils, { x: 0, y: 0 }, 31.7);
+    tl.set('#leoBox', { x: 670, y: v ? -1100 : -480, autoAlpha: 1, scale: 1 }, 31.75);
+    tl.to('#leoBox', { y: -24, duration: 0.4, ease: 'power3.in' }, 31.8);
+    tl.to(LB.all, { scaleY: 0.7, scaleX: 1.18, duration: 0.08 }, 32.2);
+    tl.to(LB.all, { scaleY: 1, scaleX: 1, duration: 0.45, ease: 'elastic.out(1,.4)' }, 32.28);
+    at(32.2, 'thump');
+    // El récord: golpe, destello y confeti
+    tl.to('#badge', { autoAlpha: 1, scale: 1, duration: 0.45, ease: 'back.out(2.4)' }, 32.45);
+    at(32.45, 'celebrate');
+    punch(32.45);
+    flash(32.45, 0.16);
+    happy(LB, 32.5);
+    tl.to(LB.arm, { rotation: 125, duration: 0.2, ease: 'back.out(2)' }, 32.5);
+    tl.to(LB.brows, { y: -2.4, duration: 0.15 }, 32.5);
+    tl.to(LB.all, { keyframes: [{ y: -14, scaleY: 1.08, scaleX: 0.95, duration: 0.24, ease: 'power2.out' }, { y: 0, scaleY: 1, scaleX: 1, duration: 0.24, ease: 'power2.in' }] }, 32.55);
     const ox = 40 + 860 - 250 - 110, oy = 170 + 34 + 22;
     $$('#confetti i').forEach((p, i) => {
       const a = rnd(i, 3, 7) * Math.PI * 2, sp = 140 + rnd(i, 5, 1) * 260;
       const dx = Math.cos(a) * sp, up = 120 + rnd(i, 9, 2) * 200;
-      tl.set(p, { x: ox, y: oy, autoAlpha: 1, rotation: 0 }, 46.4);
-      tl.to(p, { x: ox + dx * 0.6, duration: 0.45, ease: 'power2.out' }, 46.4);
-      tl.to(p, { y: oy - up, rotation: rnd(i, 1, 1) * 360, duration: 0.45, ease: 'power2.out' }, 46.4);
-      tl.to(p, { x: ox + dx, y: oy - up + 420 + rnd(i, 2, 2) * 200, rotation: 720 * rnd(i, 4, 4), autoAlpha: 0, duration: 1.1, ease: 'power1.in' }, 46.85);
+      tl.set(p, { x: ox, y: oy, autoAlpha: 1, rotation: 0 }, 32.5);
+      tl.to(p, { x: ox + dx * 0.6, duration: 0.45, ease: 'power2.out' }, 32.5);
+      tl.to(p, { y: oy - up, rotation: rnd(i, 1, 1) * 360, duration: 0.45, ease: 'power2.out' }, 32.5);
+      tl.to(p, { x: ox + dx, y: oy - up + 420 + rnd(i, 2, 2) * 200, rotation: 720 * rnd(i, 4, 4), autoAlpha: 0, duration: 1.1, ease: 'power1.in' }, 32.95);
     });
-    tl.to(['#dash', '#leoBox'], { autoAlpha: 0, scale: 0.96, duration: 0.5, ease: 'power2.in' }, 49.2);
-    hideCap('#cs4', 49.35);
 
-    /* 8 · Y tus clientes vuelven (50–55 s) */
-    showCap('#cs5', 50.0);
-    tl.set(['#scrCam', '#scrMenu', '#scrSent'], { autoAlpha: 0 }, 49.9);
-    tl.set('#scrWallet', { autoAlpha: 1 }, 49.9);
-    tl.set('#phone', { x: 640, y: 0, rotation: 10, autoAlpha: 0 }, 49.9);
-    tl.to('#phone', { x: 0, rotation: 0, autoAlpha: 1, duration: 0.8, ease: 'power3.out' }, 50.0);
-    tl.to('.w-anim', { autoAlpha: 1, y: 0, duration: 0.45, stagger: 0.1, ease: 'power3.out' }, 50.45);
-    tl.to('#stamp', { autoAlpha: 1, y: 0, duration: 0.32, ease: 'power2.in' }, 51.3);
-    tl.to('#stamp', { scaleY: 0.84, duration: 0.07 }, 51.62);
-    at(51.62, 'stamp');
-    tl.to('#slot8', { autoAlpha: 1, scale: 1, duration: 0.35, ease: 'back.out(3)' }, 51.66);
-    tl.to('#stamp', { scaleY: 1, y: -150, autoAlpha: 0, duration: 0.45, ease: 'power2.out' }, 51.72);
-    tl.to('#wBar i', { width: '80%', duration: 0.5, ease: 'power2.out' }, 51.72);
-    tl.to('#wLeft', { scale: 1.08, duration: 0.15, yoyo: true, repeat: 1 }, 52.1);
-    tl.to('#phone', { autoAlpha: 0, y: 70, duration: 0.5, ease: 'power2.in' }, 54.3);
-    hideCap('#cs5', 54.35);
+    /* 8 · Y tus clientes vuelven (35.5–39.5 s) */
+    whip(35.5);
+    tl.set(['#dash', '#leoBox'], { autoAlpha: 0 }, 35.5);
+    hideCap('#cs4', 35.5);
+    showCap('#cs5', 35.55);
+    push(35.6, 39.38);
+    tl.set(['#scrCam', '#scrMenu', '#scrSent'], { autoAlpha: 0 }, 35.45);
+    tl.set('#scrWallet', { autoAlpha: 1 }, 35.45);
+    tl.set('#phone', { x: 640, y: 0, rotation: 10, autoAlpha: 0 }, 35.45);
+    tl.to('#phone', { x: 0, rotation: 0, autoAlpha: 1, duration: 0.6, ease: 'power3.out' }, 35.55);
+    tl.to('.w-anim', { autoAlpha: 1, y: 0, duration: 0.4, stagger: 0.08, ease: 'power3.out' }, 35.9);
+    tl.to('#stamp', { autoAlpha: 1, y: 0, duration: 0.3, ease: 'power2.in' }, 36.5);
+    tl.to('#stamp', { scaleY: 0.84, duration: 0.07 }, 36.8);
+    at(36.8, 'stamp');
+    tl.to('#slot8', { autoAlpha: 1, scale: 1, duration: 0.35, ease: 'back.out(3)' }, 36.84);
+    tl.to('#stamp', { scaleY: 1, y: -150, autoAlpha: 0, duration: 0.4, ease: 'power2.out' }, 36.9);
+    tl.to('#wBar i', { width: '80%', duration: 0.45, ease: 'power2.out' }, 36.9);
+    tl.to('#wLeft', { scale: 1.08, duration: 0.15, yoyo: true, repeat: 1 }, 37.2);
 
-    /* 9 · Firma (55–62 s): Leo se vuelve el logo */
-    tl.set(LM.all, { scaleX: 1, scaleY: 1, y: 0 }, 54.9);
-    tl.set('#leoMain', { x: 0, y: v ? 1300 : 900, rotation: 0, scale: 1, autoAlpha: 1 }, 54.9);
-    tl.set(LM.shadow, { autoAlpha: 0.35 }, 54.9);
-    tl.to('#leoMain', { y: 0, duration: 0.6, ease: 'back.out(1.25)' }, 55.0);
-    at(55.0, 'whoosh');
-    // Guiño
-    tl.to(LM.eyeR, { scaleY: 0.1, duration: 0.08 }, 55.75);
-    tl.set(LM.eyeR, { autoAlpha: 0 }, 55.83);
-    tl.set(LM.happyR, { autoAlpha: 1 }, 55.83);
-    tl.to(LM.brows, { y: -1.6, duration: 0.15 }, 55.75);
-    at(55.75, 'blink');
-    tl.set(LM.happyR, { autoAlpha: 0 }, 56.3);
-    tl.set(LM.eyeR, { autoAlpha: 1, scaleY: 1 }, 56.3);
-    tl.to(LM.brows, { y: 0, duration: 0.2 }, 56.3);
-    tl.to(LM.all, { rotation: -10, duration: 0.25, ease: 'power2.inOut' }, 56.0);
-    tl.to(LM.all, { rotation: 0, duration: 0.3, ease: 'power2.inOut' }, 56.25);
+    /* 9 · Tu noche (39.5–44 s): el beneficio que el dueño sí siente */
+    whip(39.5);
+    tl.set('#phone', { autoAlpha: 0 }, 39.5);
+    hideCap('#cs5', 39.5);
+    showCap('#cs6', 39.55);
+    push(39.6, 43.88, 1.03);
+    tl.to('#doorScene', { autoAlpha: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 39.55);
+    tl.set(LB.happy, { autoAlpha: 0 }, 39.7);
+    tl.set(LB.eyes, { autoAlpha: 1 }, 39.7);
+    tl.set(LB.arm, { rotation: 0 }, 39.7);
+    tl.set(LB.brows, { y: 0 }, 39.7);
+    tl.set('#leoBox', { x: 590, y: 1300, autoAlpha: 1, scale: 1 }, 39.75);
+    tl.to('#leoBox', { y: 596, duration: 0.5, ease: 'back.out(1.3)' }, 39.8);
+    tl.to(LB.pupils, { x: -1.4, y: 0, duration: 0.2 }, 40.3);
+    tl.to(LB.arm, { rotation: 125, duration: 0.2, ease: 'back.out(2)' }, 40.5);
+    tl.to('#sign', { rotationY: 180, duration: 0.5, ease: 'back.out(1.4)' }, 40.65);
+    at(40.65, 'flip');
+    tl.to(LB.arm, { rotation: 0, duration: 0.2 }, 41.05);
+    // Se apaga la luz
+    tl.to(['#lampGlow', '#doorWin', '#lampBulb'], { autoAlpha: 0.15, duration: 0.3, ease: 'power2.out' }, 41.4);
+    tl.to('#dusk', { autoAlpha: 1, duration: 0.45, ease: 'power2.out' }, 41.4);
+    at(41.4, 'click');
+    tl.to(LB.pupils, { x: 0, y: 0, duration: 0.2 }, 41.6);
+    tl.to(LB.arm, { keyframes: [{ rotation: 100, duration: 0.18 }, { rotation: 76, duration: 0.13 }, { rotation: 104, duration: 0.13 }, { rotation: 76, duration: 0.13 }, { rotation: 0, duration: 0.2 }] }, 41.75);
+    tl.set([LB.eyes, LB.smile], { autoAlpha: 0 }, 42.65);
+    tl.set([LB.closed, LB.calm], { autoAlpha: 1 }, 42.65);
+    tl.to(LB.zzz, { autoAlpha: 1, duration: 0.4 }, 42.85);
+    at(42.85, 'zzz');
+
+    /* 10 · Firma (44–51 s): Leo guiña y se vuelve el logo */
+    whip(44.0);
+    tl.set(['#doorScene', '#leoBox', '#dusk'], { autoAlpha: 0 }, 44.0);
+    hideCap('#cs6', 44.0);
+    tl.set(LM.all, { scaleX: 1, scaleY: 1, scale: 1, y: 0, rotation: 0 }, 43.9);
+    tl.set('#leoMain', { x: 0, y: v ? 1300 : 900, rotation: 0, scale: 1, autoAlpha: 1 }, 43.95);
+    tl.set(LM.shadow, { autoAlpha: 0.35 }, 43.95);
+    tl.to('#leoMain', { y: 0, duration: 0.5, ease: 'back.out(1.25)' }, 44.05);
+    at(44.05, 'whoosh');
+    // Guiño a cámara
+    tl.to(LM.pupils, { x: 0, y: 0, duration: 0.15 }, 44.5);
+    tl.to(LM.eyeR, { scaleY: 0.1, duration: 0.08 }, 44.75);
+    tl.set(LM.eyeR, { autoAlpha: 0 }, 44.83);
+    tl.set(LM.happyR, { autoAlpha: 1 }, 44.83);
+    tl.to(LM.brows, { y: -1.6, duration: 0.15 }, 44.75);
+    at(44.75, 'blink');
+    tl.set(LM.happyR, { autoAlpha: 0 }, 45.3);
+    tl.set(LM.eyeR, { autoAlpha: 1, scaleY: 1 }, 45.3);
+    tl.to(LM.brows, { y: 0, duration: 0.2 }, 45.3);
+    tl.to(LM.all, { rotation: -10, duration: 0.22, ease: 'power2.inOut' }, 44.95);
+    tl.to(LM.all, { rotation: 0, duration: 0.28, ease: 'power2.inOut' }, 45.17);
     const slot = slotDelta();
-    tl.to('#leoMain', { x: slot.dx, y: slot.dy, scale: 220 / 360, duration: 0.75, ease: 'power3.inOut' }, 56.6);
-    tl.to(LM.shadow, { autoAlpha: 0, duration: 0.3 }, 56.6);
-    at(56.6, 'swoosh');
-    tl.to(LM.bg, { scale: 1, duration: 0.55, ease: 'back.out(1.5)' }, 56.95);
-    tl.to(LM.eyes, { scaleY: 0.1, duration: 0.12 }, 57.25);
-    tl.to([LM.eyes, LM.smile, LM.shine, LM.arm, ...LM.brows, ...LM.deco], { autoAlpha: 0, duration: 0.2 }, 57.37);
-    tl.to(LM.all, { scale: 1.08, duration: 0.12, ease: 'power2.out' }, 57.37);
-    tl.to(LM.all, { scale: 1, duration: 0.35, ease: 'back.out(2)' }, 57.49);
-    tl.to(LM.logo, { autoAlpha: 1, duration: 0.2 }, 57.37);
-    tl.to(LM.body, { autoAlpha: 0, duration: 0.2 }, 57.37);
-    tl.to('#wm', { clipPath: 'inset(0% 0% 0% 0%)', x: 0, duration: 0.75, ease: 'power3.out' }, 57.4);
-    at(57.4, 'chord');
-    tl.to('#tag span', { autoAlpha: 1, y: 0, duration: 0.42, stagger: 0.38, ease: 'back.out(2)' }, 58.05);
-    at(58.05, 'pop'); at(58.43, 'pop'); at(58.81, 'pop');
-    tl.to('#cta', { autoAlpha: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 59.35);
-    tl.to('#qrCard', { autoAlpha: 1, scale: 1, duration: 0.5, ease: 'back.out(1.8)' }, 59.65);
+    tl.to('#leoMain', { x: slot.dx, y: slot.dy, scale: 220 / 360, duration: 0.7, ease: 'power3.inOut' }, 45.6);
+    tl.to(LM.shadow, { autoAlpha: 0, duration: 0.3 }, 45.6);
+    at(45.6, 'swoosh');
+    tl.to(LM.bg, { scale: 1, duration: 0.5, ease: 'back.out(1.5)' }, 45.9);
+    tl.to(LM.eyes, { scaleY: 0.1, duration: 0.12 }, 46.2);
+    tl.to([LM.eyes, LM.smile, LM.shine, LM.arm, ...LM.brows, ...LM.deco], { autoAlpha: 0, duration: 0.2 }, 46.32);
+    tl.to(LM.logo, { autoAlpha: 1, duration: 0.2 }, 46.32);
+    tl.to(LM.body, { autoAlpha: 0, duration: 0.2 }, 46.32);
+    tl.to(LM.all, { scale: 1.08, duration: 0.12, ease: 'power2.out' }, 46.32);
+    tl.to(LM.all, { scale: 1, duration: 0.35, ease: 'back.out(2)' }, 46.44);
+    punch(46.35, 1.03);
+    tl.to('#wm', { clipPath: 'inset(0% 0% 0% 0%)', x: 0, duration: 0.7, ease: 'power3.out' }, 46.35);
+    at(46.35, 'chord');
+    tl.to('#tag span', { autoAlpha: 1, y: 0, duration: 0.4, stagger: 0.35, ease: 'back.out(2)' }, 46.95);
+    at(46.95, 'pop'); at(47.3, 'pop'); at(47.65, 'pop');
+    tl.to('#cta', { autoAlpha: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 48.2);
+    tl.to('#qrCard', { autoAlpha: 1, scale: 1, duration: 0.5, ease: 'back.out(1.8)' }, 48.5);
+    push(44.1, 51, 1.02);
     tl.to({}, { duration: 0.01 }, DUR - 0.01);
   }
 
@@ -1325,6 +1503,7 @@ body.render .overlay { display: none; }
   /* ── Lo que depende del tiempo cuadro a cuadro ─────────── */
   const smEls = $$('#L1 .sm');
   const turb = $('#boilT');
+  const shakeEl = $('#shake');
   const cache = new Map();
   const setText = (id, v) => { if (cache.get(id) !== v) { cache.set(id, v); $(id).textContent = v; } };
   const setAttr = (id, a, v) => { const k = id + a; if (cache.get(k) !== v) { cache.set(k, v); $(id).setAttribute(a, v); } };
@@ -1333,106 +1512,231 @@ body.render .overlay { display: none; }
   let lastFrame = -1;
 
   function render(t) {
-    // Stop-motion: 10 cuadros por segundo, temblor que crece y se congela a los 8 s
-    const tt = Math.min(t, 7.95);
+    // Stop-motion: 10 cuadros por segundo; el temblor crece y se congela a los 5.4 s
+    const tt = Math.min(t, 5.35);
     const frame = Math.floor(tt * 10);
     if (frame !== lastFrame) {
       lastFrame = frame;
-      const amp = 1.6 + tt * 0.5;
+      const amp = 1.8 + tt * 0.9;
       smEls.forEach((el, i) => {
         let k = amp * (+(el.dataset.amp || 1));
-        if (el.dataset.ring && tt > 2.5 && tt < 5.6) k *= 3.4;
+        if (el.dataset.ring && tt < 3.8) k *= 3.4;
         el.style.setProperty('--jx', ((rnd(frame, i, 1) - 0.5) * 2 * k).toFixed(2) + 'px');
         el.style.setProperty('--jy', ((rnd(frame, i, 2) - 0.5) * 2 * k).toFixed(2) + 'px');
         el.style.setProperty('--jr', ((rnd(frame, i, 3) - 0.5) * 0.7 * k).toFixed(2) + 'deg');
       });
       turb.setAttribute('seed', String((frame % 6) + 1));
     }
-    setText('#skBadge', String(12 + Math.floor(clamp01((t - 1.5) / 6) * 25)));
-
-    $('#sbar').classList.toggle('dark', t >= 31.1);
+    // Cámara en mano durante el caos
+    const sa = t < 5.4 ? 2 + tt * 1.4 : 0;
+    const sk = sa ? `translate(${((rnd(frame, 99, 1) - 0.5) * 2 * sa).toFixed(1)}px, ${((rnd(frame, 99, 2) - 0.5) * 2 * sa).toFixed(1)}px)` : 'none';
+    if (cache.get('shake') !== sk) { cache.set('shake', sk); shakeEl.style.transform = sk; }
+    setText('#skBadge', String(12 + Math.floor(clamp01(t / 5) * 25)));
+    $('#sbar').classList.toggle('dark', t >= 21.6);
 
     // Carrito
-    if (t < 29.45) { setText('#cartN', '1'); setText('#cartTxt', 'producto'); setText('#cartTot', 'Q45'); }
-    else if (t < 30.07) { setText('#cartN', '2'); setText('#cartTxt', 'productos'); setText('#cartTot', 'Q60'); }
+    if (t < 20.13) { setText('#cartN', '1'); setText('#cartTxt', 'producto'); setText('#cartTot', 'Q45'); }
+    else if (t < 20.78) { setText('#cartN', '2'); setText('#cartTxt', 'productos'); setText('#cartTot', 'Q60'); }
     else { setText('#cartN', '3'); setText('#cartTxt', 'productos'); setText('#cartTot', 'Q75'); }
 
     // Cocina
-    const add = Math.round(clamp01((t - 36.1) / (40.15 - 36.1)) * 395);
+    const add = Math.round(clamp01((t - 25.05) / (27.95 - 25.05)) * 395);
     setText('#tN', mmss(5 + add)); setText('#tP1', mmss(250 + add)); setText('#tP2', mmss(362 + add));
-    const st = t < 37.6 ? 'nuevo' : t < 40.1 ? 'prep' : 'listo';
+    const st = t < 26.2 ? 'nuevo' : t < 27.9 ? 'prep' : 'listo';
     setAttr('#kNew', 'data-st', st);
     setText('#kChip', st === 'nuevo' ? 'Nuevo' : st === 'prep' ? 'En preparación' : 'Listo');
-    setText('#cN', String(t >= 36.05 && t < 37.6 ? 1 : 0));
-    setText('#cP', String(t >= 37.6 && t < 39.6 ? 3 : 2));
-    setText('#cL', String(t >= 39.6 ? 2 : 1));
-    setText('#enCurso', `${t >= 36.05 && t < 39.6 ? 5 : 4} en curso`);
+    setText('#cN', String(t >= 25.0 && t < 26.2 ? 1 : 0));
+    setText('#cP', String(t >= 26.2 && t < 27.4 ? 3 : 2));
+    setText('#cL', String(t >= 27.4 ? 2 : 1));
+    setText('#enCurso', `${t >= 25.0 && t < 27.4 ? 5 : 4} en curso`);
 
     // Resumen del día
-    setText('#dBig', money(3422.8 * easeOut(clamp01((t - 42.6) / 1.8))));
-    setText('#dPed', String(Math.round(86 * easeOut(clamp01((t - 42.8) / 1.6)))));
+    setText('#dBig', money(3422.8 * easeOut(clamp01((t - 29.95) / 1.8))));
+    setText('#dPed', String(Math.round(86 * easeOut(clamp01((t - 30.1) / 1.6)))));
 
     // Billetera
-    setText('#wLeft', t < 51.66 ? 'Te faltan 3 para tu postre' : 'Te faltan 2 para tu postre');
+    setText('#wLeft', t < 36.84 ? 'Te faltan 3 para tu postre' : 'Te faltan 2 para tu postre');
   }
 
-  /* ── Sonido sintetizado (sin archivos) ─────────────────── */
-  let ac = null, master = null, soundOn = false;
-  function ensureAudio() {
-    if (ac) return;
-    const C = window.AudioContext || window.webkitAudioContext;
-    if (!C) return;
-    ac = new C(); master = ac.createGain(); master.gain.value = 0.55; master.connect(ac.destination);
-  }
-  function tone(f, t0, d, type = 'sine', g = 0.2, f2 = null) {
-    const o = ac.createOscillator(), a = ac.createGain();
-    o.type = type; o.frequency.setValueAtTime(f, t0);
-    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + d);
-    a.gain.setValueAtTime(0.0001, t0); a.gain.exponentialRampToValueAtTime(g, t0 + 0.01); a.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
-    o.connect(a).connect(master); o.start(t0); o.stop(t0 + d + 0.05);
-  }
-  function noise(t0, d, g = 0.15, fA = 800, fB = null, q = 0.8) {
-    const len = Math.max(1, Math.floor(ac.sampleRate * d));
-    const b = ac.createBuffer(1, len, ac.sampleRate); const ch = b.getChannelData(0);
-    for (let i = 0; i < len; i++) ch[i] = Math.random() * 2 - 1;
-    const s = ac.createBufferSource(); s.buffer = b;
-    const flt = ac.createBiquadFilter(); flt.type = 'bandpass'; flt.Q.value = q; flt.frequency.setValueAtTime(fA, t0);
-    if (fB) flt.frequency.exponentialRampToValueAtTime(fB, t0 + d);
-    const a = ac.createGain(); a.gain.setValueAtTime(0.0001, t0); a.gain.exponentialRampToValueAtTime(g, t0 + d * 0.3); a.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
-    s.connect(flt).connect(a).connect(master); s.start(t0); s.stop(t0 + d + 0.05);
-  }
-  function sfx(name) {
-    if (!soundOn || !ac || renderMode) return;
-    const t = ac.currentTime + 0.01;
-    switch (name) {
-      case 'paper': noise(t, 0.09, 0.12, 2400); break;
-      case 'ping': tone(1400, t, 0.12, 'triangle', 0.08); break;
-      case 'ring': for (let i = 0; i < 6; i++) { tone(i % 2 ? 1180 : 940, t + i * 0.09, 0.08, 'square', 0.035); } break;
-      case 'shout': noise(t, 0.3, 0.08, 500, 300, 2); break;
-      case 'freeze': tone(220, t, 0.5, 'sine', 0.22, 70); noise(t, 0.12, 0.1, 300); break;
-      case 'fall': noise(t, 0.4, 0.07, 1800, 400); break;
-      case 'thump': tone(170, t, 0.28, 'sine', 0.45, 48); break;
-      case 'whoosh': noise(t, 0.5, 0.14, 350, 2800, 1.2); break;
-      case 'swoosh': noise(t, 0.3, 0.1, 900, 2600, 1.4); break;
-      case 'blink': tone(900, t, 0.06, 'sine', 0.06, 1300); break;
-      case 'tap': noise(t, 0.03, 0.12, 3200, null, 2); break;
-      case 'pop': tone(520, t, 0.1, 'sine', 0.16, 1180); break;
-      case 'catch': tone(660, t, 0.12, 'triangle', 0.12, 990); break;
-      case 'success': [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, t + i * 0.07, 0.5, 'triangle', 0.1)); break;
+  /* ── Banda sonora: todo sintetizado, sin archivos ──────── */
+  // Música de marimba (el instrumento de Guatemala) a 120 pulsos por minuto.
+  // Entra justo cuando Leo aterriza; antes solo hay tensión.
+  const SR = 44100, DROP = 8.45, BAR = 2;
+  const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+
+  function renderSoundtrack(rate = SR) {
+    const C = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!C) return Promise.resolve(null);
+    const ctx = new C(2, Math.ceil(rate * DUR), rate);
+    let seed = 7;
+    const rand = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+    const nb = ctx.createBuffer(1, rate * 2, rate);
+    nb.getChannelData(0).forEach((_, i, d) => { d[i] = rand() * 2 - 1; });
+    const ir = ctx.createBuffer(2, Math.floor(rate * 1.3), rate);
+    for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] = (rand() * 2 - 1) * Math.pow(1 - i / d.length, 3); }
+
+    // Mezcla: compresor suave, ganancia y un limitador para que nada sature
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.ratio.value = 4; comp.attack.value = 0.004; comp.release.value = 0.2;
+    const outG = ctx.createGain(); outG.gain.value = 1.7;
+    const lim = ctx.createDynamicsCompressor();
+    lim.threshold.value = -2; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.1;
+    comp.connect(outG).connect(lim).connect(ctx.destination);
+    const rev = ctx.createConvolver(); rev.buffer = ir;
+    const revG = ctx.createGain(); revG.gain.value = 0.2; rev.connect(revG).connect(comp);
+    const bus = (g, send) => { const n = ctx.createGain(); n.gain.value = g; n.connect(comp); const s = ctx.createGain(); s.gain.value = send; n.connect(s).connect(rev); return n; };
+    const sfxB = bus(0.75, 0.25), musB = bus(0.5, 0.45);
+
+    const tone = (dest, f, t0, d, type = 'sine', g = 0.2, f2 = null, att = 0.006) => {
+      const o = ctx.createOscillator(), a = ctx.createGain();
+      o.type = type; o.frequency.setValueAtTime(f, t0);
+      if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + d);
+      a.gain.setValueAtTime(0.0001, t0); a.gain.exponentialRampToValueAtTime(g, t0 + att); a.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+      o.connect(a).connect(dest); o.start(t0); o.stop(t0 + d + 0.05);
+    };
+    const noise = (dest, t0, d, g = 0.15, fA = 800, fB = null, q = 0.8, type = 'bandpass', att = null) => {
+      const s = ctx.createBufferSource(); s.buffer = nb;
+      const flt = ctx.createBiquadFilter(); flt.type = type; flt.Q.value = q; flt.frequency.setValueAtTime(fA, t0);
+      if (fB) flt.frequency.exponentialRampToValueAtTime(fB, t0 + d);
+      const a = ctx.createGain(); a.gain.setValueAtTime(0.0001, t0); a.gain.exponentialRampToValueAtTime(g, t0 + (att ?? d * 0.3)); a.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+      s.connect(flt).connect(a).connect(dest); s.start(t0, rand() * 1.5); s.stop(t0 + d + 0.05);
+    };
+
+    // Efectos de la línea de tiempo
+    const fx = {
+      paper: (t) => noise(sfxB, t, 0.09, 0.12, 2400),
+      ping: (t) => tone(sfxB, 1400, t, 0.12, 'triangle', 0.07),
+      ring: (t) => { for (let i = 0; i < 8; i++) tone(sfxB, i % 2 ? 1180 : 940, t + i * 0.085, 0.075, 'square', 0.05); },
+      shout: (t) => noise(sfxB, t, 0.35, 0.08, 500, 300, 2),
+      tension: () => {
+        // Zumbido que sube y un reloj que se acelera: la angustia del caos
+        const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), a = ctx.createGain();
+        o.type = 'sawtooth'; o.frequency.setValueAtTime(55, 0); o.frequency.linearRampToValueAtTime(98, 5.4);
+        f.type = 'lowpass'; f.frequency.setValueAtTime(220, 0); f.frequency.exponentialRampToValueAtTime(1500, 5.35);
+        a.gain.setValueAtTime(0.0001, 0); a.gain.exponentialRampToValueAtTime(0.07, 5.3); a.gain.linearRampToValueAtTime(0.0001, 5.42);
+        o.connect(f).connect(a).connect(sfxB); o.start(0); o.stop(5.5);
+        for (let t = 0, step = 0.42; t < 5.3; t += step, step = Math.max(0.13, step * 0.9)) noise(sfxB, t, 0.025, 0.1, 3200, null, 3, 'bandpass', 0.003);
+      },
+      freeze: (t) => { tone(sfxB, 220, t, 0.45, 'sine', 0.2, 70); noise(sfxB, t, 0.12, 0.1, 300); },
+      heart: (t) => { tone(sfxB, 62, t, 0.16, 'sine', 0.55, 45, 0.004); tone(sfxB, 58, t + 0.12, 0.14, 'sine', 0.35, 42, 0.004); },
+      sad: (t) => { tone(sfxB, 392, t, 0.45, 'triangle', 0.06, 370); tone(sfxB, 311, t + 0.35, 0.8, 'triangle', 0.06, 294); },
+      fall: (t) => noise(sfxB, t, 0.4, 0.06, 1800, 400),
+      rise: (t) => noise(sfxB, t, DROP - t, 0.2, 300, 6500, 1.2, 'bandpass', DROP - t - 0.02),
+      drop: (t) => { tone(sfxB, 150, t, 0.4, 'sine', 0.8, 40, 0.003); tone(sfxB, 55, t, 0.9, 'sine', 0.3, 45); noise(sfxB, t, 1.5, 0.1, 5000, null, 0.7, 'highpass', 0.005); },
+      whoosh: (t) => noise(sfxB, t, 0.45, 0.12, 350, 2800, 1.2),
+      swoosh: (t) => noise(sfxB, t, 0.3, 0.09, 900, 2600, 1.4),
+      swish: (t) => noise(sfxB, t, 0.2, 0.13, 2600, 700, 1.1, 'bandpass', 0.06),
+      blink: (t) => tone(sfxB, 900, t, 0.06, 'sine', 0.06, 1300),
+      hola: (t) => { tone(sfxB, 660, t, 0.14, 'triangle', 0.07, 760); tone(sfxB, 880, t + 0.13, 0.2, 'triangle', 0.07, 990); },
+      tap: (t) => noise(sfxB, t, 0.03, 0.12, 3200, null, 2),
+      pop: (t) => tone(sfxB, 520, t, 0.1, 'sine', 0.15, 1180),
+      catch: (t) => tone(sfxB, 660, t, 0.12, 'triangle', 0.11, 990),
+      success: (t) => [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(sfxB, f, t + i * 0.06, 0.5, 'triangle', 0.09)),
       // El «ding» de Leogin: dos notas que suben, alegre y nunca de alarma
-      case 'ding': tone(1046.5, t, 1.1, 'sine', 0.22); tone(2093, t, 0.6, 'sine', 0.05); tone(1568, t + 0.14, 1.3, 'sine', 0.22); tone(3136, t + 0.14, 0.6, 'sine', 0.04); break;
-      case 'printer': for (let i = 0; i < 10; i++) { noise(t + i * 0.11, 0.08, 0.05, 1400 + (i % 3) * 300, null, 3); } break;
-      case 'ready': tone(783.99, t, 0.35, 'sine', 0.14); tone(1174.66, t + 0.09, 0.55, 'sine', 0.14); break;
-      case 'count': for (let i = 0; i < 14; i++) tone(1800 + i * 40, t + i * 0.11, 0.03, 'square', 0.025); break;
-      case 'celebrate': [659.25, 830.61, 987.77, 1318.5].forEach((f, i) => tone(f, t + i * 0.06, 0.8, 'triangle', 0.09)); noise(t, 0.35, 0.05, 4000); break;
-      case 'stamp': tone(120, t, 0.18, 'sine', 0.4, 60); noise(t, 0.08, 0.15, 900); break;
-      case 'chord': [261.63, 329.63, 392, 587.33, 783.99].forEach((f) => tone(f, t, 2.4, 'triangle', 0.06)); break;
-    }
+      ding: (t) => { tone(sfxB, 1046.5, t, 1.1, 'sine', 0.24); tone(sfxB, 2093, t, 0.6, 'sine', 0.05); tone(sfxB, 1568, t + 0.14, 1.3, 'sine', 0.24); tone(sfxB, 3136, t + 0.14, 0.6, 'sine', 0.04); },
+      printer: (t) => { for (let i = 0; i < 10; i++) noise(sfxB, t + i * 0.1, 0.07, 0.05, 1400 + (i % 3) * 300, null, 3); },
+      ready: (t) => { tone(sfxB, 783.99, t, 0.35, 'sine', 0.13); tone(sfxB, 1174.66, t + 0.09, 0.55, 'sine', 0.13); },
+      count: (t) => { for (let i = 0; i < 14; i++) tone(sfxB, 1800 + i * 40, t + i * 0.11, 0.03, 'square', 0.022); },
+      thump: (t) => tone(sfxB, 170, t, 0.28, 'sine', 0.4, 48, 0.003),
+      celebrate: (t) => { [659.25, 830.61, 987.77, 1318.5].forEach((f, i) => tone(sfxB, f, t + i * 0.06, 0.8, 'triangle', 0.08)); noise(sfxB, t, 0.35, 0.05, 4000); },
+      stamp: (t) => { tone(sfxB, 120, t, 0.18, 'sine', 0.4, 60, 0.003); noise(sfxB, t, 0.08, 0.15, 900); },
+      flip: (t) => { noise(sfxB, t, 0.03, 0.12, 2500, null, 2, 'bandpass', 0.004); noise(sfxB, t + 0.09, 0.03, 0.1, 2200, null, 2, 'bandpass', 0.004); tone(sfxB, 660, t + 0.05, 0.12, 'triangle', 0.05, 880); },
+      click: (t) => { noise(sfxB, t, 0.02, 0.15, 4000, null, 2, 'bandpass', 0.002); tone(sfxB, 1200, t, 0.03, 'square', 0.03); },
+      zzz: (t) => { tone(sfxB, 520, t, 0.45, 'triangle', 0.035, 390); tone(sfxB, 440, t + 0.45, 0.5, 'triangle', 0.03, 330); },
+      chord: (t) => [261.63, 329.63, 392, 587.33, 783.99].forEach((f) => tone(sfxB, f, t, 2.4, 'triangle', 0.045)),
+    };
+    events.forEach(([t, n]) => fx[n] && fx[n](t));
+
+    // Marimba: la fundamental y los parciales agudos que le dan su «tok» de madera
+    const mar = (t, m, v = 0.2, pan = 0) => {
+      const p = ctx.createStereoPanner(); p.pan.value = pan; p.connect(musB);
+      const f = mtof(m);
+      tone(p, f, t, Math.max(0.35, 1.3 - (m - 60) * 0.03), 'sine', v, null, 0.003);
+      tone(p, f * 3.97, t, 0.12, 'sine', v * 0.22, null, 0.002);
+      tone(p, f * 9.2, t, 0.035, 'sine', v * 0.07, null, 0.001);
+    };
+    // Trémolo: la nota repetida rápido, como toca la marimba chapina
+    const trem = (t, ms, d, v = 0.13) => {
+      for (let x = 0, k = 0; x < d; x += 0.07, k++) ms.forEach((m, j) => mar(t + x + j * 0.012, m, v * (k % 2 ? 0.72 : 1) * (1 - 0.35 * x / d), j % 2 ? 0.25 : -0.25));
+    };
+    const kick = (t, g = 0.5) => tone(musB, 140, t, 0.3, 'sine', g, 42, 0.003);
+    const clap = (t, g = 0.11) => { noise(musB, t, 0.12, g, 1700, null, 1.4, 'bandpass', 0.004); noise(musB, t + 0.012, 0.1, g * 0.7, 1500, null, 1.2, 'bandpass', 0.004); };
+    const shaker = (t, g = 0.03) => noise(musB, t, 0.05, g, 7500, null, 0.9, 'highpass', 0.01);
+    const bass = (t, m, d = 0.42, g = 0.26) => { tone(musB, mtof(m), t, d, 'sine', g, null, 0.008); tone(musB, mtof(m) * 2, t, d * 0.6, 'triangle', g * 0.12, null, 0.008); };
+    // Ocho compases en Do mayor: Do, Sol, La menor, Fa…
+    const bars = [
+      [[36, 43], [76, 79, 84, 79, 76, 79, 81, 79]],
+      [[43, 50], [74, 79, 83, 79, 74, 79, 81, 83]],
+      [[45, 52], [72, 76, 81, 76, 72, 76, 79, 81]],
+      [[41, 48], [72, 77, 81, 77, { tr: [84], d: 1 }]],
+      [[36, 43], [76, 79, 84, 86, 88, 86, 84, 79]],
+      [[43, 50], [79, 83, 86, 83, 79, 81, 83, 86]],
+      [[41, 48], [77, 81, 84, 81, 77, 81, 84, 86]],
+      [[36, 43], [{ tr: [84, 88], d: 2 }]],
+    ];
+    const playBar = (t0, i, opts = {}) => {
+      const [[root, fifth], mel] = bars[i % bars.length];
+      const g = opts.soft ? 0.5 : 1;
+      if (!opts.noDrums) {
+        kick(t0); kick(t0 + 1); kick(t0 + 1.75, 0.3);
+        clap(t0 + 0.5); clap(t0 + 1.5);
+        for (let k = 0; k < 8; k++) shaker(t0 + k * 0.25, k % 2 ? 0.035 : 0.02);
+      }
+      bass(t0, root, 0.42, 0.26 * g); bass(t0 + 1, fifth, 0.42, 0.22 * g); bass(t0 + 1.5, root, 0.3, 0.16 * g);
+      let x = 0;
+      mel.forEach((n) => {
+        if (typeof n === 'number') { mar(t0 + x, n, 0.19 * g, ((n % 5) - 2) * 0.12); x += 0.25; }
+        else { trem(t0 + x, n.tr, n.d, 0.12 * g); x += n.d; }
+      });
+    };
+    // A · El ritmo de Leogin (8.45–38.45 s)
+    for (let i = 0; i < 15; i++) playBar(DROP + i * BAR, i);
+    trem(DROP + 15 * BAR, [79, 83], 1.0, 0.11);
+    // B · Tu noche: solo marimba suave, sin batería (39.5–44 s)
+    trem(39.5, [77, 81], 1.85, 0.08); bass(39.5, 41, 1.6, 0.16);
+    trem(41.4, [76, 79], 1.55, 0.06); bass(41.4, 36, 1.6, 0.14);
+    mar(43.0, 72, 0.08); mar(43.25, 76, 0.08); mar(43.5, 79, 0.09);
+    noise(musB, 43.3, 0.7, 0.1, 400, 5000, 1, 'bandpass', 0.65);
+    // C · Firma: vuelve el ritmo y cierra con un acorde grande (44–51 s)
+    playBar(44.0, 0); kick(46.0); clap(45.5); bass(46.0, 43, 0.3, 0.2);
+    kick(46.35, 0.6); noise(musB, 46.35, 1.6, 0.08, 5000, null, 0.7, 'highpass', 0.005);
+    trem(46.35, [72, 76, 79, 84], 2.6, 0.12); bass(46.35, 36, 2.5, 0.26);
+    trem(49.0, [76, 84], 1.6, 0.05);
+    return ctx.startRendering();
+  }
+
+  function wavBytes(buf) {
+    const ch = buf.numberOfChannels, len = buf.length;
+    const dv = new DataView(new ArrayBuffer(44 + len * ch * 2));
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, 'RIFF'); dv.setUint32(4, 36 + len * ch * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+    dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, ch, true); dv.setUint32(24, buf.sampleRate, true);
+    dv.setUint32(28, buf.sampleRate * ch * 2, true); dv.setUint16(32, ch * 2, true); dv.setUint16(34, 16, true); w(36, 'data'); dv.setUint32(40, len * ch * 2, true);
+    const data = []; for (let c = 0; c < ch; c++) data.push(buf.getChannelData(c));
+    let o = 44;
+    for (let i = 0; i < len; i++) for (let c = 0; c < ch; c++) { const s = Math.max(-1, Math.min(1, data[c][i])); dv.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true); o += 2; }
+    return new Uint8Array(dv.buffer);
+  }
+
+  // Reproducción en vivo de la banda sonora, sincronizada con la línea de tiempo
+  let ac = null, soundBuf = null, soundOn = false, src = null, preparing = null;
+  function stopAudio() { if (src) { try { src.stop(); } catch (e) { /* ya se detuvo */ } src.disconnect(); src = null; } }
+  function startAudio(t) {
+    stopAudio();
+    if (!soundOn || !soundBuf || !ac || renderMode) return;
+    src = ac.createBufferSource(); src.buffer = soundBuf; src.connect(ac.destination);
+    src.start(0, Math.min(Math.max(0, t), DUR - 0.05));
+  }
+  function prepareSound() {
+    if (soundBuf) return Promise.resolve(soundBuf);
+    // Para escuchar en la página basta una calidad menor: se prepara más rápido
+    if (!preparing) preparing = renderSoundtrack(32000).then((b) => { soundBuf = b; return b; }).catch(() => null);
+    return preparing;
   }
 
   /* ── Reproductor ───────────────────────────────────────── */
   const scrub = $('#scrub'), timeEl = $('#time'), pp = $('#pp'), overlay = $('#overlay');
-  const chapters = [[0, 'El caos'], [12, 'Leo llega'], [17, 'Escanea'], [26, 'Pide'], [34, 'Cocina'], [42, 'Caja'], [50, 'Vuelven'], [55, 'Firma']];
+  const chapters = [[0, 'El gancho'], [8, 'Leo llega'], [12, 'Escanea'], [17.5, 'Pide'], [23.5, 'Cocina'], [29.5, 'Caja'], [35.5, 'Vuelven'], [39.5, 'Tu noche'], [44, 'Firma']];
   $('#chapters').innerHTML = chapters.map(([t, l]) => `<button type="button" data-t="${t}">${l}</button>`).join('');
   const chBtns = $$('#chapters button');
   const fmtT = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -1454,10 +1758,15 @@ body.render .overlay { display: none; }
     started = true; overlay.hidden = true;
     if (fromStart || tl.time() >= DUR - 0.05) tl.seek(0);
     tl.play(); setPlayIcon(true);
+    startAudio(tl.time());
   }
-  function pause() { tl.pause(); setPlayIcon(false); }
+  function pause() { tl.pause(); setPlayIcon(false); stopAudio(); }
+  function seekTo(t, keepPlaying) {
+    tl.seek(t); render(tl.time());
+    if (keepPlaying) startAudio(tl.time()); else stopAudio();
+  }
   function ended() {
-    setPlayIcon(false);
+    setPlayIcon(false); stopAudio();
     $('#ovTitle').textContent = 'Ver otra vez';
     $('#ovSub').textContent = 'Pide. Cocina. Cobra.';
     overlay.hidden = false;
@@ -1467,22 +1776,28 @@ body.render .overlay { display: none; }
   $('#rs').addEventListener('click', () => { play(true); });
   scrub.addEventListener('input', () => {
     if (!started) { started = true; overlay.hidden = true; }
-    tl.pause(); setPlayIcon(false); tl.seek(+scrub.value); render(tl.time());
+    tl.pause(); setPlayIcon(false); seekTo(+scrub.value, false);
   });
-  chBtns.forEach((b) => b.addEventListener('click', () => { started = true; overlay.hidden = true; tl.seek(+b.dataset.t); render(tl.time()); tl.play(); setPlayIcon(true); }));
+  chBtns.forEach((b) => b.addEventListener('click', () => { started = true; overlay.hidden = true; seekTo(+b.dataset.t, true); tl.play(); setPlayIcon(true); }));
   document.addEventListener('keydown', (e) => {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON')) return;
     if (e.code === 'Space') { e.preventDefault(); tl.isActive() ? pause() : play(false); }
-    if (e.code === 'ArrowRight') { tl.seek(Math.min(DUR, tl.time() + 2)); render(tl.time()); }
-    if (e.code === 'ArrowLeft') { tl.seek(Math.max(0, tl.time() - 2)); render(tl.time()); }
+    if (e.code === 'ArrowRight') seekTo(Math.min(DUR, tl.time() + 2), tl.isActive());
+    if (e.code === 'ArrowLeft') seekTo(Math.max(0, tl.time() - 2), tl.isActive());
   });
   $('#snd').addEventListener('click', () => {
-    ensureAudio();
-    if (ac && ac.state === 'suspended') ac.resume();
-    soundOn = !soundOn && !!ac;
+    if (!ac) { const C = window.AudioContext || window.webkitAudioContext; if (C) ac = new C(); }
+    if (!ac) return;
+    if (ac.state === 'suspended') ac.resume();
+    soundOn = !soundOn;
     $('#snd').setAttribute('aria-pressed', String(soundOn));
-    $('#sndTxt').textContent = soundOn ? 'Sonido encendido' : 'Sonido apagado';
     $('#sndWave').setAttribute('opacity', soundOn ? '1' : '.25');
+    if (!soundOn) { $('#sndTxt').textContent = 'Sonido apagado'; stopAudio(); return; }
+    $('#sndTxt').textContent = soundBuf ? 'Sonido encendido' : 'Preparando sonido…';
+    prepareSound().then((b) => {
+      $('#sndTxt').textContent = b ? 'Sonido encendido' : 'Sin sonido en este navegador';
+      if (soundOn && tl.isActive()) startAudio(tl.time());
+    });
   });
 
   function setFormat(f) {
@@ -1524,7 +1839,11 @@ body.render .overlay { display: none; }
   layout();
   build();
   tl.seek(POSTER); render(POSTER); updateUI(POSTER);
-  fontsReady.then(() => { const t = tl.time(); layout(); setFormatRebuild(t); });
+  fontsReady.then(() => {
+    const t = tl.time(); layout(); setFormatRebuild(t);
+    // La banda sonora se prepara sola en segundo plano: al tocar «Sonido» ya está lista
+    setTimeout(() => { if (!renderMode) prepareSound(); }, 1200);
+  });
   function setFormatRebuild(t) {
     // Las medidas del texto cambian al cargar las fuentes: se rehace la línea de tiempo.
     const wasPlaying = tl.isActive();
@@ -1533,18 +1852,26 @@ body.render .overlay { display: none; }
     if (wasPlaying) tl.play();
   }
 
-  // API para grabar el video cuadro por cuadro (docs/diseno/intro-animada/grabar-video.mjs)
+  // API para grabar el video y el sonido (docs/diseno/intro-animada/grabar-video.mjs)
   window.__intro = {
     duration: DUR,
     ready: fontsReady,
     renderMode(f) {
-      renderMode = true; soundOn = false;
+      renderMode = true; soundOn = false; stopAudio();
       document.body.classList.add('render');
       if (f && f !== fmt) setFormat(f);
       layout(); setFormatRebuild(0);
       return { width: stageW(), height: stageH() };
     },
     seek(t) { tl.seek(t, true); render(t); },
+    async soundtrackWav() {
+      const b = await renderSoundtrack(SR);
+      if (!b) return null;
+      const bytes = wavBytes(b);
+      let s = '';
+      for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+      return btoa(s);
+    },
   };
 })();
 </script>
