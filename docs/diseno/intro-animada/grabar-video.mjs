@@ -70,20 +70,25 @@ if (fotos) {
   }
 } else {
   const ff = spawn(buscarFfmpeg(), [
-    '-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', '-',
+    '-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', 'pipe:0',
     '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '24', '-row-mt', '1', '-deadline', 'good', '-cpu-used', '3',
     '-pix_fmt', 'yuv420p', salida,
   ], { stdio: ['pipe', 'inherit', 'inherit'] });
+  // Si ffmpeg se cae, se avisa en vez de seguir pintando cuadros para nadie.
+  let ffSalio = null;
+  const fin = new Promise((r) => ff.on('close', (c) => { ffSalio = c; r(c); }));
   const total = Math.round(duracion * fps);
   const inicio = Date.now();
   for (let i = 0; i <= total; i++) {
+    if (ffSalio !== null) throw new Error(`ffmpeg se detuvo (código ${ffSalio}) en el cuadro ${i}`);
     await cuadro(i / fps);
     const jpg = await pagina.screenshot({ type: 'jpeg', quality: 94 });
     if (!ff.stdin.write(jpg)) await new Promise((r) => ff.stdin.once('drain', r));
     if (i % (fps * 5) === 0) console.log(`cuadro ${i}/${total} · ${Math.round((Date.now() - inicio) / 1000)} s`);
   }
   ff.stdin.end();
-  await new Promise((r, e) => ff.on('close', (c) => (c === 0 ? r() : e(new Error(`ffmpeg terminó con ${c}`)))));
+  const codigo = await fin;
+  if (codigo !== 0) throw new Error(`ffmpeg terminó con ${codigo}`);
   console.log(`Listo: ${salida}`);
 }
 await navegador.close();
