@@ -1,0 +1,1434 @@
+<title>Intro Leogin</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Geist+Mono:wght@500&family=Geist:wght@400;500;600;700&family=Permanent+Marker&family=Unbounded:wght@500;600;700;800&display=swap">
+<style>
+/* Concepto: «del caos al orden». El antes va cuadro por cuadro sobre papel
+   kraft (stop-motion); el mundo Leogin es fluido, sobre carbón con luz cálida.
+   El escenario es fijo (1920×1080 o 1080×1920) y se escala, como un video. */
+:root {
+  color-scheme: dark;
+  /* Paleta de marca (docs/negocio/ESTRATEGIA_ATRACCION_2026-10-25.md §5.1) */
+  --brasa: #E8534A;
+  --mango: #F5A030;
+  --carbon: #1C1C1E;
+  --noche: #121214;
+  --masa: #FBF6EE;
+  --albahaca: #2F9E6B;
+  /* El antes */
+  --kraft: #E7DAC0;
+  --tinta: #2B2622;
+  --papel: #FFFDF6;
+  /* Página del reproductor */
+  --page: #0C0C0E;
+  --ink: #F2EEE8;
+  --muted: #9C958C;
+  --line: rgba(242, 238, 232, 0.12);
+  --f-display: 'Unbounded', 'Arial Black', system-ui, sans-serif;
+  --f-ui: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-mono: 'Geist Mono', ui-monospace, Consolas, monospace;
+  --f-hand: 'Caveat', 'Comic Sans MS', cursive;
+  --f-marker: 'Permanent Marker', 'Comic Sans MS', cursive;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--f-ui);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 18px 28px;
+  box-sizing: border-box;
+}
+
+/* ── Reproductor ─────────────────────────────────────────── */
+.player { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand svg { width: 30px; height: 30px; flex: none; }
+.brand h1 { font-family: var(--f-display); font-weight: 700; font-size: 17px; letter-spacing: -0.01em; margin: 0; }
+.brand p { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button, .btn {
+  font: 600 13px/1 var(--f-ui); color: var(--ink); background: transparent; border: 0;
+  padding: 9px 14px; border-radius: 999px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--page); }
+.btn { border: 1px solid var(--line); display: inline-flex; align-items: center; gap: 8px; }
+.btn:hover, .seg button:hover { background: rgba(242, 238, 232, 0.08); }
+.seg button[aria-pressed="true"]:hover { background: var(--ink); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--mango); outline-offset: 2px; }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.screen-wrap { position: relative; margin: 0 auto; border-radius: 14px; overflow: hidden; background: var(--noche); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45); max-width: 100%; }
+.overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  background: rgba(10, 10, 12, 0.5); border: 0; color: var(--ink); cursor: pointer; font: inherit; width: 100%;
+}
+.overlay .play-big {
+  width: clamp(54px, 9vw, 92px); height: clamp(54px, 9vw, 92px); border-radius: 50%; display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--brasa), var(--mango)); box-shadow: 0 16px 40px rgba(232, 83, 74, 0.45);
+  transition: transform 0.18s ease-out;
+}
+.overlay:hover .play-big { transform: scale(1.06); }
+.overlay strong { font-family: var(--f-display); font-size: 18px; font-weight: 700; }
+.overlay span.sub { font-size: 13px; color: #d8d2c9; }
+
+.controls { display: flex; align-items: center; gap: 12px; }
+.icon-btn { width: 40px; height: 40px; flex: none; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--ink); display: grid; place-items: center; cursor: pointer; }
+.icon-btn:hover { background: rgba(242, 238, 232, 0.08); }
+.bar { position: relative; flex: 1; min-width: 0; }
+#scrub { -webkit-appearance: none; appearance: none; width: 100%; height: 24px; background: transparent; margin: 0; cursor: pointer; --p: 0%; }
+#scrub::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--brasa), var(--mango)) 0 0 / var(--p) 100% no-repeat, rgba(242, 238, 232, 0.16); }
+#scrub::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -5px; border-radius: 50%; background: var(--ink); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); }
+#scrub::-moz-range-track { height: 6px; border-radius: 3px; background: rgba(242, 238, 232, 0.16); }
+#scrub::-moz-range-progress { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--brasa), var(--mango)); }
+#scrub::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 50%; background: var(--ink); }
+.time { font: 500 12.5px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+.chapters { display: flex; flex-wrap: wrap; gap: 6px; }
+.chapters button { font: 500 12px/1 var(--f-ui); color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 7px 11px; cursor: pointer; }
+.chapters button.on { color: var(--ink); border-color: rgba(245, 160, 48, 0.6); background: rgba(245, 160, 48, 0.1); }
+.note { font-size: 13px; color: var(--muted); line-height: 1.55; max-width: 70ch; margin: 2px 0 0; }
+.note b { color: var(--ink); font-weight: 600; }
+
+/* Modo grabación: solo el escenario, a escala 1 */
+body.render { padding: 0; background: var(--noche); overflow: hidden; }
+body.render .player { max-width: none; margin: 0; gap: 0; }
+body.render .player > :not(.screen-wrap) { display: none; }
+body.render .screen-wrap { border-radius: 0; box-shadow: none; margin: 0; }
+body.render .overlay { display: none; }
+
+/* ── Escenario ───────────────────────────────────────────── */
+.stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; transform-origin: 0 0; background: var(--noche); font-family: var(--f-ui); color: var(--ink); }
+.stage.v { width: 1080px; height: 1920px; }
+.stage * { box-sizing: border-box; }
+.layer { position: absolute; inset: 0; }
+
+/* El antes: papel kraft con grano */
+#L1 { --sat: 1; --bri: 1; background:
+  radial-gradient(420px 300px at 18% 78%, rgba(150, 105, 50, 0.16), transparent 70%),
+  radial-gradient(520px 380px at 84% 20%, rgba(150, 105, 50, 0.12), transparent 70%),
+  var(--kraft); z-index: 1; }
+#L1 .grain { position: absolute; inset: 0; opacity: 0.55; mix-blend-mode: multiply; pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .36 0 0 0 0 .27 0 0 0 0 .17 0 0 0 .5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+.it { position: absolute; filter: saturate(var(--sat)) brightness(var(--bri)) drop-shadow(0 14px 16px rgba(70, 45, 20, 0.22)); }
+.sm { transform: translate(var(--jx, 0px), var(--jy, 0px)) rotate(var(--jr, 0deg)); }
+.boil { filter: url(#boil); }
+
+.cap-hand { position: absolute; font-family: var(--f-marker); color: var(--tinta); font-size: 76px; line-height: 1.05; transform: rotate(-2deg); z-index: 5; max-width: 1000px; }
+.stage.v .cap-hand { font-size: 70px; max-width: 900px; }
+#cap1 { left: 110px; top: 64px; }
+.stage.v #cap1 { left: 80px; top: 96px; }
+#cap2 { left: 110px; top: 836px; background: #F4E9A8; padding: 18px 34px 22px; box-shadow: 0 10px 24px rgba(60, 40, 20, 0.25); font-size: 64px; }
+#cap2 small { display: block; font-family: var(--f-hand); font-weight: 700; font-size: 46px; color: #B2321F; margin-top: 6px; }
+.stage.v #cap2 { left: 60px; top: 1600px; font-size: 60px; }
+
+.ticket { background: var(--papel); color: var(--tinta); font-family: var(--f-hand); font-size: 36px; line-height: 1.08; padding: 22px 24px 34px; display: flex; flex-direction: column;
+  clip-path: polygon(0 0, 100% 0, 100% 94%, 93% 100%, 86% 95%, 79% 100%, 72% 95%, 65% 100%, 58% 95%, 51% 100%, 44% 95%, 37% 100%, 30% 95%, 23% 100%, 16% 95%, 9% 100%, 0 95%);
+  background-image: repeating-linear-gradient(transparent 0 38px, rgba(43, 38, 34, 0.08) 38px 39px); }
+.ticket b { font-weight: 700; font-size: 42px; border-bottom: 3px solid var(--tinta); align-self: flex-start; margin-bottom: 8px; }
+.ticket s { text-decoration-thickness: 3px; }
+.ticket .q { font-style: normal; font-weight: 700; color: #B2321F; border: 3px solid #B2321F; border-radius: 50%; padding: 2px 14px; align-self: flex-end; margin-top: 6px; transform: rotate(-6deg); }
+.ticket .stain { position: absolute; width: 90px; height: 90px; border-radius: 50%; border: 7px solid rgba(120, 72, 30, 0.18); right: 10px; bottom: 30px; }
+#tk1 { width: 290px; left: 770px; top: 330px; z-index: 4; --sat: 1; --bri: 1; }
+#tk1 .ticket { transform: rotate(4deg); }
+#tk2 { width: 270px; left: 150px; top: 290px; }
+#tk2 .ticket { transform: rotate(-8deg); }
+#tk3 { width: 250px; left: 1530px; top: 150px; }
+#tk3 .ticket { transform: rotate(10deg); }
+#tk4 { width: 300px; left: 170px; top: 650px; }
+#tk4 .ticket { transform: rotate(6deg); }
+#tk5 { width: 250px; left: 1030px; top: 690px; }
+#tk5 .ticket { transform: rotate(-12deg); }
+#tk6 { width: 230px; left: 1660px; top: 480px; }
+#tk6 .ticket { transform: rotate(14deg); align-items: center; }
+#tk6 .big { font-family: var(--f-marker); font-size: 120px; line-height: 1; color: #B2321F; }
+.stage.v #tk1 { left: 380px; top: 860px; }
+.stage.v #tk2 { left: 60px; top: 360px; }
+.stage.v #tk3 { left: 70px; top: 760px; }
+.stage.v #tk4 { left: 60px; top: 1290px; }
+.stage.v #tk5 { left: 740px; top: 1120px; }
+.stage.v #tk6 { left: 800px; top: 1560px; }
+
+.sk-phone { width: 300px; height: 540px; border: 7px solid var(--tinta); border-radius: 40px; background: #FFFFFF; color: var(--tinta); padding: 16px 14px; position: relative; transform: rotate(7deg); }
+.sk-top { display: flex; align-items: center; gap: 10px; font: 700 22px var(--f-hand); border-bottom: 3px solid var(--tinta); padding: 4px 4px 10px; }
+.sk-top i { width: 30px; height: 30px; border-radius: 50%; border: 3px solid var(--tinta); background: #D9EFD0; }
+.sk-msgs { display: flex; flex-direction: column; gap: 9px; padding-top: 12px; }
+.sk-msgs p { margin: 0; font: 600 26px/1.05 var(--f-hand); padding: 8px 12px; border: 3px solid var(--tinta); border-radius: 16px; max-width: 92%; }
+.sk-msgs .in { background: #FFFFFF; align-self: flex-start; border-bottom-left-radius: 4px; }
+.sk-msgs .out { background: #D7F2C6; align-self: flex-end; border-bottom-right-radius: 4px; }
+.sk-badge { position: absolute; right: -22px; top: -22px; min-width: 64px; height: 64px; border-radius: 32px; background: #D8362A; color: #FFFFFF; border: 5px solid var(--tinta); display: grid; place-items: center; font: 700 32px var(--f-marker); padding: 0 8px; }
+#chat { left: 1150px; top: 100px; }
+.stage.v #chat { left: 700px; top: 290px; }
+
+#tel { width: 270px; left: 440px; top: 300px; }
+.stage.v #tel { left: 380px; top: 470px; }
+#tel .rrring { position: absolute; left: 150px; top: -46px; font: 400 44px var(--f-marker); color: #B2321F; transform: rotate(10deg); white-space: nowrap; }
+
+#shout { width: 500px; left: 1340px; top: 650px; }
+.stage.v #shout { left: 300px; top: 1250px; }
+#shout .txt { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; font: 400 42px/1.05 var(--f-marker); color: var(--tinta); padding: 0 70px; }
+
+#calc { width: 300px; left: 580px; top: 700px; }
+.stage.v #calc { left: 560px; top: 1440px; }
+.note-pad { background: #FFFFFF; padding: 20px 22px 24px; font: 600 34px/1.2 var(--f-hand); color: var(--tinta); transform: rotate(-5deg);
+  background-image: linear-gradient(90deg, transparent 38px, rgba(210, 60, 50, 0.4) 38px 40px, transparent 40px), repeating-linear-gradient(transparent 0 40px, rgba(70, 110, 190, 0.22) 40px 41px); padding-left: 52px; }
+.note-pad b { display: block; font-size: 38px; }
+.note-pad .bad { color: #B2321F; font-family: var(--f-marker); font-size: 34px; }
+
+/* El mundo Leogin */
+#L2 { z-index: 2; background:
+  radial-gradient(1100px 760px at 50% 38%, rgba(232, 83, 74, 0.13), transparent 62%),
+  radial-gradient(900px 700px at 85% 95%, rgba(245, 160, 48, 0.08), transparent 60%),
+  var(--noche); }
+.ring { position: absolute; width: 220px; height: 220px; border-radius: 50%; border: 8px solid var(--mango); z-index: 3; }
+.leo-wrap { position: absolute; left: 0; top: 0; }
+.leo-wrap svg { display: block; width: 100%; height: 100%; overflow: visible; }
+#leoMain { width: 360px; height: 360px; z-index: 4; left: 780px; top: 280px; }
+.stage.v #leoMain { left: 360px; top: 700px; }
+#ring { left: 850px; top: 350px; }
+.stage.v #ring { left: 430px; top: 770px; }
+
+#cap3 { position: absolute; left: 0; right: 0; top: 690px; z-index: 5; text-align: center; }
+.stage.v #cap3 { top: 1130px; }
+#cap3 .c1 { font: 600 60px/1.1 var(--f-display); color: #B5AEA4; }
+#cap3 .c2 { font: 700 104px/1.05 var(--f-display); color: var(--ink); letter-spacing: -0.02em; margin-top: 10px; }
+.stage.v #cap3 .c2 { font-size: 86px; }
+.grad { background: linear-gradient(120deg, var(--brasa), var(--mango)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* Rótulos de cada paso */
+.cs { position: absolute; left: 150px; top: 0; width: 700px; height: 1080px; display: flex; flex-direction: column; justify-content: center; z-index: 2; }
+.stage.v .cs { left: 90px; top: 150px; width: 900px; height: 600px; }
+.cs .num { font: 800 230px/0.82 var(--f-display); letter-spacing: -0.04em; margin-bottom: 26px; }
+.stage.v .cs .num { font-size: 170px; margin-bottom: 18px; }
+.cs h2 { font: 700 92px/1.0 var(--f-display); letter-spacing: -0.025em; margin: 0; color: var(--ink); text-wrap: balance; }
+.stage.v .cs h2 { font-size: 84px; }
+.cs p { font: 500 38px/1.3 var(--f-ui); color: #ABA39A; margin: 26px 0 0; max-width: 620px; text-wrap: balance; }
+.stage.v .cs p { max-width: 860px; font-size: 38px; }
+
+.vbox { position: absolute; left: 900px; top: 80px; width: 940px; height: 920px; z-index: 3; }
+.stage.v .vbox { left: 70px; top: 780px; }
+.vbox > * { position: absolute; left: 0; top: 0; }
+
+/* Mesa con QR */
+#tent { left: 40px; top: 300px; width: 250px; z-index: 1; }
+.tent-card { background: #FFFFFF; border-radius: 18px; overflow: hidden; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45); transform: perspective(900px) rotateY(16deg); }
+.tent-top { background: #1F4D3A; color: #F6EFE3; padding: 16px 18px; font: 700 24px var(--f-display); letter-spacing: -0.01em; }
+.tent-top small { display: block; font: 500 13px var(--f-ui); opacity: 0.8; margin-top: 3px; }
+.tent-mid { padding: 18px 26px 12px; text-align: center; color: #1E1A16; }
+.tent-mid .qr { width: 170px; height: 170px; margin: 0 auto; }
+.tent-mid p { margin: 10px 0 0; font: 700 20px var(--f-ui); }
+.tent-bot { display: flex; justify-content: space-between; align-items: center; padding: 10px 18px 16px; font: 600 15px var(--f-ui); color: #6E6A66; }
+.tent-bot b { color: #1E1A16; font-size: 18px; }
+
+/* Teléfono */
+#phone { left: 280px; top: 70px; width: 380px; height: 780px; z-index: 3; }
+.phone { width: 100%; height: 100%; border-radius: 60px; background: #0A0A0C; padding: 13px; box-shadow: 0 0 0 2px #2E2E33, 0 0 0 4px #0A0A0C, 0 50px 90px rgba(0, 0, 0, 0.55); position: relative; }
+.screen { width: 100%; height: 100%; border-radius: 47px; overflow: hidden; position: relative; background: #FFFFFF; color: #1E1A16; }
+.island { position: absolute; top: 12px; left: 50%; width: 112px; height: 32px; margin-left: -56px; border-radius: 20px; background: #000; z-index: 30; }
+.sbar { position: absolute; top: 0; left: 0; right: 0; height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 6px 30px 0 34px; font: 600 15px var(--f-ui); z-index: 25; color: #FFFFFF; }
+.sbar svg { height: 12px; width: auto; display: block; }
+.sbar .ic { display: flex; gap: 6px; align-items: center; }
+.sbar.dark { color: #1E1A16; }
+.scr { position: absolute; inset: 0; }
+
+#scrCam { background: #0E0E10; }
+.cam-bg { position: absolute; inset: 0; background: radial-gradient(260px 200px at 50% 40%, #3A3A3E, #121214 70%); }
+.cam-tent { position: absolute; left: 52px; top: 150px; width: 250px; height: 380px; border-radius: 22px; background: #E9E6E0; filter: blur(7px); }
+.cam-tent::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 70px; border-radius: 22px 22px 0 0; background: #1F4D3A; }
+.cam-hint { position: absolute; top: 76px; left: 0; right: 0; text-align: center; font: 600 15px var(--f-ui); color: #FFFFFF; opacity: 0.9; }
+.cam-qr { position: absolute; left: 82px; top: 205px; width: 190px; height: 190px; background: #FFFFFF; border-radius: 12px; padding: 12px; }
+#vf { position: absolute; left: 62px; top: 185px; width: 230px; height: 230px; }
+#vf i { position: absolute; width: 46px; height: 46px; border: 0 solid #FFFFFF; }
+#vf i:nth-child(1) { left: 0; top: 0; border-left-width: 6px; border-top-width: 6px; border-top-left-radius: 18px; }
+#vf i:nth-child(2) { right: 0; top: 0; border-right-width: 6px; border-top-width: 6px; border-top-right-radius: 18px; }
+#vf i:nth-child(3) { left: 0; bottom: 0; border-left-width: 6px; border-bottom-width: 6px; border-bottom-left-radius: 18px; }
+#vf i:nth-child(4) { right: 0; bottom: 0; border-right-width: 6px; border-bottom-width: 6px; border-bottom-right-radius: 18px; }
+#scanline { position: absolute; left: 72px; top: 296px; width: 210px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, transparent, var(--mango), transparent); box-shadow: 0 0 24px var(--mango); }
+#pill { position: absolute; left: 18px; right: 18px; top: 578px; height: 60px; border-radius: 30px; background: #FFFFFF; color: #1E1A16; display: flex; align-items: center; gap: 2px; padding: 0 8px 0 18px; font: 500 14px var(--f-ui); white-space: nowrap; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4); }
+#pill b { font-weight: 700; }
+#pill span { color: #6E6A66; }
+#pill em { margin-left: auto; font-style: normal; font-weight: 700; background: #1F4D3A; color: #F6EFE3; padding: 12px 18px; border-radius: 22px; }
+
+/* Menú de «La Ceiba» (la marca del restaurante, no la de Leogin) */
+#scrMenu { background: #F6EFE3; }
+#mCover { position: absolute; left: 0; right: 0; top: 0; height: 206px; background: linear-gradient(160deg, #1F4D3A, #2F6E52); overflow: hidden; transform-origin: 50% 0; }
+#mCover .leaf { position: absolute; border-radius: 50%; background: rgba(246, 239, 227, 0.07); }
+.m-head { position: absolute; left: 20px; right: 18px; top: 112px; display: flex; align-items: center; gap: 14px; color: #F6EFE3; }
+.m-logo { width: 62px; height: 62px; border-radius: 50%; background: #F6EFE3; color: #1F4D3A; display: grid; place-items: center; font: 800 21px var(--f-display); flex: none; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25); }
+.m-head h3 { margin: 0; font: 700 27px/1 var(--f-display); letter-spacing: -0.02em; }
+.m-head p { margin: 7px 0 0; font: 500 14px var(--f-ui); opacity: 0.85; display: flex; align-items: center; gap: 6px; }
+.m-head p i { width: 8px; height: 8px; border-radius: 50%; background: #7BD88F; }
+.m-mesa { position: absolute; right: 18px; top: 62px; background: #E9A23B; color: #1E1A16; font: 700 13px var(--f-ui); padding: 7px 12px; border-radius: 14px; }
+.m-chips { position: absolute; left: 16px; top: 220px; display: flex; gap: 8px; white-space: nowrap; }
+.m-chips span { font: 600 14px var(--f-ui); padding: 9px 14px; border-radius: 18px; background: #FFFFFF; color: #4A443E; }
+.m-chips span.on { background: #1F4D3A; color: #F6EFE3; }
+.m-list-clip { position: absolute; left: 0; right: 0; top: 268px; bottom: 0; overflow: hidden; }
+#mList { position: absolute; left: 14px; right: 14px; top: 0; display: flex; flex-direction: column; gap: 10px; }
+.card { height: 104px; border-radius: 22px; background: #FFFFFF; display: flex; align-items: center; gap: 14px; padding: 0 12px 0 10px; position: relative; box-shadow: 0 2px 8px rgba(60, 40, 20, 0.05); }
+.card .ph { width: 82px; height: 82px; border-radius: 18px; background: #F2E6D2; flex: none; display: grid; place-items: center; }
+.card .ph svg { width: 76px; height: 76px; }
+.card .tx { flex: 1; min-width: 0; }
+.card h4 { margin: 0; font: 700 16.5px/1.15 var(--f-ui); color: #1E1A16; }
+.card p { margin: 4px 0 0; font: 500 12.5px/1.25 var(--f-ui); color: #7A736B; }
+.card .pr { margin-top: 6px; font: 700 15px var(--f-ui); color: #1F4D3A; }
+.card .add { position: absolute; right: 12px; bottom: 12px; width: 34px; height: 34px; border-radius: 50%; background: #E9A23B; color: #1E1A16; display: grid; place-items: center; font: 700 22px/1 var(--f-ui); }
+#cart { position: absolute; left: 14px; right: 14px; top: 676px; height: 62px; border-radius: 22px; background: #1F4D3A; color: #F6EFE3; z-index: 10; overflow: hidden; box-shadow: 0 14px 30px rgba(31, 77, 58, 0.35); }
+#cart > div { position: absolute; inset: 0; display: flex; align-items: center; gap: 12px; padding: 0 18px; font: 700 16px var(--f-ui); }
+#cartN { min-width: 30px; height: 30px; border-radius: 15px; background: #E9A23B; color: #1E1A16; display: grid; place-items: center; font-size: 15px; padding: 0 6px; }
+#cartA .tot { margin-left: auto; }
+#cartB { justify-content: center; font-size: 18px; }
+#flyDot { position: absolute; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; background: #E9A23B; z-index: 20; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); }
+#touch { position: absolute; left: 0; top: 0; width: 50px; height: 50px; border-radius: 50%; background: rgba(255, 255, 255, 0.55); border: 3px solid rgba(255, 255, 255, 0.95); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); z-index: 40; }
+#ripple { position: absolute; left: 0; top: 0; width: 50px; height: 50px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.9); z-index: 39; }
+
+#scrSent { background: #F6EFE3; display: flex; flex-direction: column; align-items: center; padding: 140px 28px 0; text-align: center; }
+#sentCheck { width: 132px; height: 132px; border-radius: 50%; background: var(--albahaca); display: grid; place-items: center; box-shadow: 0 18px 40px rgba(47, 158, 107, 0.35); }
+#sentCheck svg { width: 70px; height: 70px; }
+#scrSent h3 { margin: 30px 0 0; font: 700 30px/1.1 var(--f-display); letter-spacing: -0.02em; }
+#scrSent .s1 { margin: 10px 0 0; font: 500 16px var(--f-ui); color: #6E6A66; }
+.track { margin-top: 34px; width: 100%; display: flex; justify-content: space-between; position: relative; }
+.track::before { content: ""; position: absolute; left: 30px; right: 30px; top: 11px; height: 4px; border-radius: 2px; background: #E2D7C5; }
+.track div { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; font: 600 13px var(--f-ui); color: #8A8279; width: 90px; }
+.track i { width: 26px; height: 26px; border-radius: 50%; background: #E2D7C5; border: 4px solid #F6EFE3; }
+.track .done i { background: var(--albahaca); }
+.track .now i { background: #E9A23B; box-shadow: 0 0 0 6px rgba(233, 162, 59, 0.25); }
+.track .done, .track .now { color: #1E1A16; }
+.pts { margin-top: 34px; display: inline-flex; align-items: center; gap: 10px; background: #1F4D3A; color: #F6EFE3; padding: 12px 18px; border-radius: 18px; font: 700 16px var(--f-ui); }
+.pts b { background: #E9A23B; color: #1E1A16; border-radius: 10px; padding: 4px 9px; }
+
+/* Billetera del comensal (casa de Leogin) */
+#scrWallet { background: var(--masa); padding: 64px 16px 0; }
+.w-head { display: flex; align-items: center; gap: 12px; padding: 0 6px; }
+.w-head svg { width: 32px; height: 42px; flex: none; }
+.w-head h3 { margin: 0; font: 700 23px/1.05 var(--f-display); letter-spacing: -0.02em; color: #1C1C1E; }
+.w-head p { margin: 4px 0 0; font: 500 13px var(--f-ui); color: #7A736B; }
+.wcard { border-radius: 26px; padding: 18px; margin-top: 16px; position: relative; }
+.wcard.ceiba { background: #1F4D3A; color: #F6EFE3; }
+.wcard .wt { display: flex; align-items: center; gap: 10px; font: 700 18px var(--f-ui); }
+.wcard .wt i { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font: 800 12px var(--f-display); font-style: normal; background: #F6EFE3; color: #1F4D3A; }
+.wcard .wt small { margin-left: auto; font: 600 12px var(--f-ui); opacity: 0.8; }
+.stamps { display: grid; grid-template-columns: repeat(5, 44px); gap: 12px; margin-top: 16px; position: relative; }
+.stamps span { width: 44px; height: 44px; border-radius: 50%; border: 2.5px dashed rgba(246, 239, 227, 0.45); display: grid; place-items: center; }
+.stamps span.f { border: 0; background: #E9A23B; }
+.stamps span.f svg, #slot8 svg { width: 22px; height: 22px; }
+#slot8 { position: absolute; left: 112px; top: 56px; width: 44px; height: 44px; border-radius: 50%; background: #E9A23B; display: grid; place-items: center; }
+#stamp { position: absolute; left: 96px; top: -14px; width: 76px; height: 96px; z-index: 5; }
+.wleft { margin-top: 16px; font: 700 15px var(--f-ui); display: flex; align-items: center; justify-content: space-between; }
+#wLeft { display: inline-block; transform-origin: 0 50%; }
+#wBar { height: 8px; border-radius: 4px; background: rgba(246, 239, 227, 0.2); margin-top: 10px; overflow: hidden; }
+#wBar i { display: block; height: 100%; width: 70%; border-radius: 4px; background: #E9A23B; }
+.wmini { display: flex; align-items: center; gap: 12px; background: #FFFFFF; color: #1E1A16; border-radius: 22px; padding: 16px; margin-top: 12px; font: 700 16px var(--f-ui); box-shadow: 0 2px 8px rgba(60, 40, 20, 0.06); }
+.wmini i { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font: 800 12px var(--f-display); font-style: normal; color: #FFFFFF; flex: none; }
+.wmini small { display: block; font: 500 13px var(--f-ui); color: #7A736B; margin-top: 3px; }
+.wmini .r { margin-left: auto; font: 700 14px var(--f-ui); color: #1C1C1E; background: #F2EADC; padding: 7px 11px; border-radius: 12px; }
+
+/* Pantalla de cocina */
+#kds { left: 20px; top: 40px; width: 900px; z-index: 1; }
+.mon { width: 900px; height: 540px; border-radius: 22px; background: #0B0B0D; padding: 14px; box-shadow: 0 0 0 2px #2A2A2F, 0 40px 80px rgba(0, 0, 0, 0.5); }
+.mon-scr { width: 100%; height: 100%; border-radius: 12px; background: #17171A; position: relative; overflow: hidden; color: #EDEAE4; }
+.mon-head { position: absolute; left: 0; right: 0; top: 0; height: 56px; display: flex; align-items: center; gap: 14px; padding: 0 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font: 600 15px var(--f-ui); color: #A9A49C; }
+.mon-head b { font: 700 20px var(--f-display); color: #EDEAE4; letter-spacing: -0.01em; }
+.mon-head .clock { margin-left: auto; font-family: var(--f-mono); color: #EDEAE4; }
+.col-h { position: absolute; top: 70px; width: 276px; display: flex; align-items: center; gap: 9px; font: 700 15px var(--f-ui); color: #CFCAC2; }
+.col-h i { width: 10px; height: 10px; border-radius: 50%; }
+.col-h em { font-style: normal; margin-left: auto; color: #8E8A84; font-family: var(--f-mono); font-weight: 500; }
+.kc { position: absolute; left: 0; top: 0; width: 276px; height: 118px; border-radius: 14px; background: #232327; padding: 14px 16px; border: 2px solid transparent; }
+.kc .r1 { display: flex; align-items: center; gap: 8px; }
+.kc .r1 b { font: 700 18px var(--f-ui); }
+.kc .r1 small { font: 500 13px var(--f-ui); color: #8E8A84; }
+.kc .chip { margin-left: auto; font: 700 11.5px var(--f-ui); padding: 5px 9px; border-radius: 10px; background: rgba(255, 255, 255, 0.08); color: #CFCAC2; }
+.kc ul { list-style: none; margin: 9px 0 0; padding: 0; font: 500 14.5px/1.45 var(--f-ui); color: #DAD5CD; }
+.kc .r3 { position: absolute; left: 16px; right: 16px; bottom: 10px; display: flex; justify-content: space-between; font: 500 12.5px var(--f-ui); color: #8E8A84; }
+.kc .r3 .tm { font-family: var(--f-mono); color: #CFCAC2; }
+#kNew { z-index: 3; }
+#kNew[data-st="nuevo"] { border-color: var(--mango); box-shadow: 0 0 0 4px rgba(245, 160, 48, 0.16), 0 12px 30px rgba(0, 0, 0, 0.35); }
+#kNew[data-st="nuevo"] .chip { background: var(--mango); color: #1C1C1E; }
+#kNew[data-st="prep"] { border-color: rgba(255, 255, 255, 0.22); }
+#kNew[data-st="prep"] .chip { background: #EDEAE4; color: #1C1C1E; }
+#kNew[data-st="listo"] { border-color: var(--albahaca); box-shadow: 0 0 0 4px rgba(47, 158, 107, 0.2); }
+#kNew[data-st="listo"] .chip { background: var(--albahaca); color: #FFFFFF; }
+.kc .ok { position: absolute; right: -12px; top: -12px; width: 38px; height: 38px; border-radius: 50%; background: var(--albahaca); display: grid; place-items: center; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35); }
+.kc .ok svg { width: 20px; height: 20px; }
+.kring { position: absolute; left: 0; top: 0; width: 276px; height: 118px; border-radius: 16px; border: 3px solid var(--mango); z-index: 2; }
+.mon-neck { width: 90px; height: 54px; margin: 0 auto; background: linear-gradient(#1D1D21, #141417); }
+.mon-base { width: 280px; height: 16px; margin: 0 auto; border-radius: 10px; background: #1D1D21; }
+
+#printer { left: 600px; top: 712px; width: 300px; z-index: 3; }
+.pr-body { width: 300px; height: 150px; border-radius: 24px; background: linear-gradient(#2D2D32, #1E1E22); box-shadow: 0 24px 50px rgba(0, 0, 0, 0.45); position: relative; }
+.pr-body::before { content: ""; position: absolute; left: 40px; right: 40px; top: 18px; height: 12px; border-radius: 6px; background: #0B0B0D; }
+.pr-body .led { position: absolute; right: 26px; bottom: 24px; width: 12px; height: 12px; border-radius: 50%; background: var(--albahaca); box-shadow: 0 0 10px var(--albahaca); }
+.pr-body .lbl { position: absolute; left: 26px; bottom: 20px; font: 600 14px var(--f-ui); color: #8E8A84; }
+#paperClip { left: 650px; top: 476px; width: 200px; height: 260px; overflow: hidden; z-index: 2; }
+#paper { width: 200px; height: 260px; background: #FFFFFF; color: #1E1A16; padding: 16px 16px 0; font: 500 14px/1.5 var(--f-mono); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3); }
+#paper b { display: block; text-align: center; font: 800 16px var(--f-display); letter-spacing: 0.02em; margin-bottom: 6px; }
+#paper hr { border: 0; border-top: 2px dashed #C9C2B8; margin: 8px 0; }
+
+/* Resumen del día */
+#dash { left: 40px; top: 130px; width: 860px; height: 720px; border-radius: 30px; background: #FFFFFF; color: #17161A; padding: 38px 42px; z-index: 1; box-shadow: 0 40px 90px rgba(0, 0, 0, 0.5); }
+.d-top { display: flex; align-items: center; gap: 12px; font: 600 24px var(--f-ui); }
+.d-top span { font: 600 15px var(--f-ui); color: #6E6A66; background: #F2EEE8; padding: 7px 12px; border-radius: 12px; }
+#dBig { font: 700 104px/1 var(--f-display); letter-spacing: -0.035em; margin-top: 22px; font-variant-numeric: tabular-nums; }
+#dChip { display: inline-flex; margin-top: 16px; font: 700 18px var(--f-ui); color: #1F7A50; background: #E3F4EA; padding: 9px 16px; border-radius: 14px; }
+.d-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 26px; }
+.d-stats div { background: #F7F4EF; border-radius: 18px; padding: 16px 18px; }
+.d-stats b { display: block; font: 700 32px/1.1 var(--f-display); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.d-stats small { font: 500 15px var(--f-ui); color: #6E6A66; }
+.d-chart { position: relative; height: 230px; margin-top: 30px; display: flex; align-items: flex-end; gap: 22px; padding-bottom: 28px; }
+.d-chart .bar { width: 44px; border-radius: 10px 10px 4px 4px; background: #ECE5DA; position: relative; transform-origin: 50% 100%; }
+.d-chart .bar.pk { background: linear-gradient(180deg, var(--mango), var(--brasa)); }
+.d-chart .bar u { position: absolute; left: 50%; bottom: -28px; transform: translateX(-50%); text-decoration: none; font: 500 13px var(--f-ui); color: #8A847D; white-space: nowrap; }
+#peak { position: absolute; left: 280px; top: -34px; font: 700 15px var(--f-ui); color: #17161A; background: #FFF1DD; padding: 7px 12px; border-radius: 12px; white-space: nowrap; }
+#badge { position: absolute; right: 250px; top: 34px; display: inline-flex; align-items: center; gap: 8px; font: 700 17px var(--f-ui); color: #FFFFFF; background: linear-gradient(120deg, var(--brasa), var(--mango)); padding: 10px 16px; border-radius: 16px; box-shadow: 0 10px 24px rgba(232, 83, 74, 0.35); }
+#badge svg { width: 20px; height: 20px; }
+#leoBox { width: 220px; height: 220px; z-index: 6; }
+#flyTk { width: 64px; height: 56px; z-index: 7; }
+#confetti { width: 0; height: 0; z-index: 8; }
+#confetti i { position: absolute; left: 0; top: 0; width: 14px; height: 9px; border-radius: 2px; }
+
+/* Firma final */
+#final { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-bottom: 70px; }
+.lockup { display: flex; align-items: center; gap: 46px; }
+.stage.v .lockup { flex-direction: column; gap: 34px; }
+#iconSlot { width: 220px; height: 220px; flex: none; }
+#wm { font: 800 176px/1 var(--f-display); letter-spacing: -0.045em; color: var(--ink); }
+.stage.v #wm { font-size: 160px; }
+#tag { display: flex; gap: 34px; margin-top: 54px; font: 600 70px/1 var(--f-display); letter-spacing: -0.025em; }
+.stage.v #tag { font-size: 66px; gap: 26px; margin-top: 60px; }
+#tag span b { color: var(--brasa); }
+#cta { margin-top: 44px; font: 500 36px var(--f-ui); color: #ABA39A; }
+#cta b { color: var(--ink); font-weight: 700; }
+#qrCard { position: absolute; right: 120px; bottom: 110px; width: 196px; background: #FFFFFF; border-radius: 22px; padding: 16px 16px 12px; text-align: center; color: #1C1C1E; font: 700 17px var(--f-ui); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45); }
+#qrCard .qr { width: 164px; height: 164px; margin-bottom: 8px; }
+.stage.v #qrCard { position: static; margin-top: 70px; width: 240px; }
+.stage.v #qrCard .qr { width: 208px; height: 208px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay:hover .play-big { transform: none; }
+}
+.overlay .play-big svg { width: 40%; height: 40%; }
+@media (max-width: 640px) {
+  .brand p { display: none; }
+  .overlay { gap: 8px; }
+  .overlay strong { font-size: 15px; }
+  .overlay span.sub { display: none; }
+  .note { font-size: 12.5px; }
+}
+</style>
+
+<div class="player">
+  <div class="top">
+    <div class="brand">
+      <svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="hg" x1="27" y1="19" x2="72" y2="81" gradientUnits="userSpaceOnUse"><stop stop-color="#E8534A"/><stop offset="1" stop-color="#F5A030"/></linearGradient></defs><rect width="100" height="100" rx="22" fill="#1C1C1E"/><path d="M27 19h18v44h27v18H27Z" fill="url(#hg)"/></svg>
+      <div><h1>Intro Leogin</h1><p>Prototipo · del caos al orden · 62 s</p></div>
+    </div>
+    <div class="tools">
+      <div class="seg" role="group" aria-label="Formato">
+        <button type="button" id="fH" aria-pressed="true">16:9 web</button>
+        <button type="button" id="fV" aria-pressed="false">9:16 WhatsApp</button>
+      </div>
+      <button type="button" class="btn" id="snd" aria-pressed="false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path id="sndWave" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" opacity=".25"/></svg>
+        <span id="sndTxt">Sonido apagado</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="screen-wrap" id="wrap">
+    <div class="stage h" id="stage">
+
+      <!-- ═══ El antes: caos cuadro por cuadro ═══ -->
+      <div class="layer" id="L1">
+        <div class="grain"></div>
+        <div class="cap-hand" id="cap1">Así es un día normal…</div>
+
+        <div class="it" id="tk2"><div class="sm boil"><div class="ticket"><b>Para llevar</b><span>3 tostadas ???</span><span>Tel 5?2?-18…</span><span>¿a qué hora?</span></div></div></div>
+        <div class="it" id="tk3"><div class="sm boil"><div class="ticket"><b>Mesa 2</b><span>2 cafés</span><span>1 rellenito</span><span>¿ya pagó?</span></div></div></div>
+        <div class="it" id="chat"><div class="sm boil" data-amp="1.3"><div class="sk-phone">
+          <div class="sk-top"><i></i>Pedidos</div>
+          <div class="sk-msgs">
+            <p class="in">Hola, ¿hay pepián hoy?</p>
+            <p class="in">¿Ya viene mi pedido?</p>
+            <p class="out">¿Me repite la dirección?</p>
+            <p class="in">Mándeme el menú porfa</p>
+            <p class="in">¿Siguen abiertos?</p>
+            <p class="in">¿¿Hola??</p>
+          </div>
+          <span class="sk-badge" id="skBadge">12</span>
+        </div></div></div>
+        <div class="it" id="tk4"><div class="sm boil"><div class="ticket"><b>Domicilio</b><span>Zona 3, la casa verde (creo)</span><span>cobrar Q1??</span></div></div></div>
+        <div class="it" id="tel"><div class="sm boil" data-ring="1">
+          <svg viewBox="0 0 270 200" width="270" height="200" aria-hidden="true">
+            <path d="M40 112 Q40 92 66 90 L204 90 Q230 92 230 112 L246 184 Q248 196 234 196 L36 196 Q22 196 24 184 Z" fill="#D8362A" stroke="#2B2622" stroke-width="7" stroke-linejoin="round"/>
+            <circle cx="135" cy="146" r="30" fill="#FFFDF6" stroke="#2B2622" stroke-width="6"/>
+            <circle cx="135" cy="146" r="9" fill="#2B2622"/>
+            <path d="M30 70 Q32 34 135 34 Q238 34 240 70 L240 78 Q240 88 226 88 L196 88 Q186 88 186 78 L186 66 L84 66 L84 78 Q84 88 74 88 L44 88 Q30 88 30 78 Z" fill="#D8362A" stroke="#2B2622" stroke-width="7" stroke-linejoin="round"/>
+            <path d="M8 40 L22 52 M2 76 L20 76 M262 40 L248 52 M268 76 L250 76" stroke="#2B2622" stroke-width="6" stroke-linecap="round"/>
+          </svg>
+          <span class="rrring">¡RIIING!</span>
+        </div></div>
+        <div class="it" id="tk5"><div class="sm boil"><div class="ticket"><b>Mesa 7</b><span><s>2</s> 3 pupusas</span><span>¡¡sin curtido!!</span></div></div></div>
+        <div class="it" id="shout"><div class="sm boil" data-amp="1.4">
+          <svg viewBox="0 0 500 300" width="500" height="300" aria-hidden="true"><polygon id="burst" fill="#FFFDF6" stroke="#2B2622" stroke-width="7" stroke-linejoin="round" points=""/></svg>
+          <div class="txt">¡¿DOS O TRES PUPUSAS?!</div>
+        </div></div>
+        <div class="it" id="tk1"><div class="sm boil"><div class="ticket"><span class="stain"></span><b>Mesa 4</b><span>2 pupusas revueltas</span><span><s>1 pepián</s> 2 pepián</span><span>1 horchata ¿grande?</span><em class="q">Q85</em></div></div></div>
+        <div class="it" id="calc"><div class="sm boil"><div class="note-pad"><b>Caja de hoy</b>Q 1,240.00<br><s>Q 1,310.50</s><br>Q 1,2?? ??<br><span class="bad">no cuadra</span></div></div></div>
+        <div class="it" id="tk6"><div class="sm boil"><div class="ticket"><span class="big">?</span><span>¿de quién es esto?</span></div></div></div>
+
+        <div class="cap-hand" id="cap2">…y un pedido se perdió.<small>Q85 que ya eran tuyos.</small></div>
+      </div>
+
+      <!-- ═══ El mundo Leogin ═══ -->
+      <div class="layer" id="L2">
+        <div class="cs" id="cs1"><div class="num grad">1</div><h2>Escanea.</h2><p>Sin descargar nada.</p></div>
+        <div class="cs" id="cs2"><div class="num grad">2</div><h2>Pide desde la mesa.</h2><p>Sin esperar al mesero.</p></div>
+        <div class="cs" id="cs3"><div class="num grad">3</div><h2>La cocina lo ve al instante.</h2><p>Clarito. Sin letra fea.</p></div>
+        <div class="cs" id="cs4"><div class="num grad">4</div><h2>La caja cuadra sola.</h2><p>Tus números, sin hojas de cálculo.</p></div>
+        <div class="cs" id="cs5"><h2>Y tus clientes vuelven.</h2><p>Sus puntos de todos sus restaurantes, en un solo lugar.</p></div>
+
+        <div class="vbox" id="vbox">
+          <!-- Rótulo de mesa con QR -->
+          <div id="tent"><div class="tent-card">
+            <div class="tent-top">La Ceiba<small>Cocina chapina</small></div>
+            <div class="tent-mid"><div class="qr"></div><p>Escanea y pide</p></div>
+            <div class="tent-bot"><b>Mesa 4</b><span>con Leogin</span></div>
+          </div></div>
+
+          <!-- Teléfono del comensal -->
+          <div id="phone"><div class="phone"><div class="screen">
+            <div class="island"></div>
+            <div class="sbar" id="sbar"><span>13:05</span><span class="ic">
+              <svg viewBox="0 0 18 12" aria-hidden="true"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="1" fill="currentColor"/><rect x="10" y="2.5" width="3" height="9.5" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg>
+              <svg viewBox="0 0 26 12" aria-hidden="true"><rect x="0.5" y="0.5" width="22" height="11" rx="3" fill="none" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="24" y="4" width="1.6" height="4" rx=".8" fill="currentColor" opacity=".5"/></svg>
+            </span></div>
+
+            <div class="scr" id="scrCam">
+              <div class="cam-bg"></div>
+              <div class="cam-tent"></div>
+              <div class="cam-hint">Apunta al código</div>
+              <div class="cam-qr"><div class="qr"></div></div>
+              <div id="vf"><i></i><i></i><i></i><i></i></div>
+              <div id="scanline"></div>
+              <div id="pill"><b>distleogin.com</b><span>/m/la-ceiba</span><em>Abrir</em></div>
+            </div>
+
+            <div class="scr" id="scrMenu">
+              <div id="mCover">
+                <span class="leaf" style="width:220px;height:220px;left:-60px;top:-90px"></span>
+                <span class="leaf" style="width:160px;height:160px;left:210px;top:-50px"></span>
+                <span class="leaf" style="width:120px;height:120px;left:120px;top:120px"></span>
+              </div>
+              <span class="m-mesa">Mesa 4</span>
+              <div class="m-head m-anim"><div class="m-logo">LC</div><div><h3>La Ceiba</h3><p><i></i>Cocina chapina · Abierto</p></div></div>
+              <div class="m-chips m-anim"><span class="on">Platos fuertes</span><span>Antojitos</span><span>Bebidas</span><span>Postres</span></div>
+              <div class="m-list-clip"><div id="mList">
+                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-pepian"/></svg></div><div class="tx"><h4>Pepián de pollo</h4><p>Recado de la casa, arroz y tortillas</p><div class="pr">Q45</div></div><span class="add">+</span></div>
+                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-pupusa"/></svg></div><div class="tx"><h4>Pupusas revueltas</h4><p>Tres, con curtido y salsa</p><div class="pr">Q24</div></div><span class="add">+</span></div>
+                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-tostada"/></svg></div><div class="tx"><h4>Tostadas de guacamol</h4><p>Tres, con queso seco</p><div class="pr">Q22</div></div><span class="add">+</span></div>
+                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-horchata"/></svg></div><div class="tx"><h4>Horchata</h4><p>De arroz y canela, bien fría</p><div class="pr">Q15</div></div><span class="add">+</span></div>
+                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-rellenito"/></svg></div><div class="tx"><h4>Rellenitos</h4><p>De plátano con frijol y azúcar</p><div class="pr">Q18</div></div><span class="add">+</span></div>
+              </div></div>
+              <div id="cart">
+                <div id="cartA"><span id="cartN">1</span><span id="cartTxt">producto</span><span class="tot" id="cartTot">Q45</span></div>
+                <div id="cartB">Enviar a cocina →</div>
+              </div>
+              <span id="flyDot"></span>
+            </div>
+
+            <div class="scr" id="scrSent">
+              <div id="sentCheck"><svg viewBox="0 0 70 70"><path id="sentPath" d="M18 37 L30 49 L53 23" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <h3 class="s-anim">¡Pedido enviado!</h3>
+              <p class="s1 s-anim">Mesa 4 · La cocina ya lo tiene</p>
+              <div class="track s-anim"><div class="done"><i></i>Recibido</div><div class="now"><i></i>En cocina</div><div><i></i>Listo</div></div>
+              <div class="pts s-anim">Ganaste <b>+7 puntos</b></div>
+            </div>
+
+            <div class="scr" id="scrWallet">
+              <div class="w-head w-anim"><span id="leoMini"></span><div><h3>Mis restaurantes</h3><p>3 restaurantes · 1 premio cerca</p></div></div>
+              <div class="wcard ceiba w-anim">
+                <div class="wt"><i>LC</i>La Ceiba<small>Postre gratis a los 10</small></div>
+                <div class="stamps" id="stamps"></div>
+                <div class="wleft"><span id="wLeft">Te faltan 3 para tu postre</span></div>
+                <div id="wBar"><i></i></div>
+              </div>
+              <div class="wmini w-anim"><i style="background:#5A3A28">CA</i><div>Café Altura<small>Visitaste hace 3 días</small></div><span class="r">120 pts</span></div>
+              <div class="wmini w-anim"><i style="background:#B4561C">PL</i><div>Pupusería Lupita<small>Lo de siempre: 6 revueltas</small></div><span class="r">4/8</span></div>
+            </div>
+
+            <div id="ripple"></div>
+            <div id="touch"></div>
+          </div></div></div>
+
+          <!-- Cocina -->
+          <div id="kds">
+            <div class="mon"><div class="mon-scr" id="monScr">
+              <div class="mon-head"><b>Cocina</b><span id="enCurso">4 en curso</span><span class="clock">13:05</span></div>
+              <div class="col-h" style="left:12px"><i style="background:var(--mango)"></i>Nuevos<em id="cN">0</em></div>
+              <div class="col-h" style="left:298px"><i style="background:#EDEAE4"></i>En preparación<em id="cP">2</em></div>
+              <div class="col-h" style="left:584px"><i style="background:var(--albahaca)"></i>Listos<em id="cL">1</em></div>
+              <div class="kc" id="kP1"><div class="r1"><b>Mesa 2</b><small>#129</small><span class="chip">En preparación</span></div><ul><li>2 × Pupusas revueltas</li><li>1 × Café</li></ul><div class="r3"><span>Comer aquí</span><span class="tm" id="tP1">04:10</span></div></div>
+              <div class="kc" id="kP2"><div class="r1"><b>Llevar</b><small>#130</small><span class="chip">En preparación</span></div><ul><li>3 × Tostadas</li><li>1 × Horchata</li></ul><div class="r3"><span>Para llevar</span><span class="tm" id="tP2">06:02</span></div></div>
+              <div class="kc" id="kL1"><div class="r1"><b>Mesa 7</b><small>#128</small><span class="chip" style="background:var(--albahaca);color:#fff">Listo</span></div><ul><li>1 × Rellenitos</li><li>2 × Café</li></ul><div class="r3"><span>Comer aquí</span><span class="tm">09:41</span></div></div>
+              <div class="kring" id="kRing1"></div>
+              <div class="kring" id="kRing2"></div>
+              <div class="kc" id="kNew" data-st="nuevo"><div class="r1"><b>Mesa 4</b><small>#132</small><span class="chip" id="kChip">Nuevo</span></div><ul><li>1 × Pepián de pollo</li><li>2 × Horchata</li></ul><div class="r3"><span>Comer aquí</span><span class="tm" id="tN">00:05</span></div><span class="ok" id="kOk"><svg viewBox="0 0 20 20"><path d="M5 10.5 L8.6 14 L15 6.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+            </div></div>
+            <div class="mon-neck"></div><div class="mon-base"></div>
+          </div>
+          <div id="paperClip"><div id="paper"><b>LA CEIBA</b>Mesa 4 · #132<br>13:05 · Comer aquí<hr>1  Pepián de pollo<br>2  Horchata<hr>Sin cebolla en el pepián</div></div>
+          <div id="printer"><div class="pr-body"><span class="lbl">Comandas</span><span class="led"></span></div></div>
+
+          <!-- Resumen del día -->
+          <div id="dash">
+            <div class="d-top d-anim">Resumen de hoy <span>martes</span></div>
+            <div id="dBig" class="d-anim">Q0.00</div>
+            <div id="dChip">+18 % que el martes pasado</div>
+            <div class="d-stats">
+              <div class="d-anim"><b id="dPed">0</b><small>pedidos</small></div>
+              <div class="d-anim"><b>Q39.80</b><small>ticket promedio</small></div>
+              <div class="d-anim"><b>Pepián</b><small>plato estrella</small></div>
+            </div>
+            <div class="d-chart" id="chart"><span id="peak">Hora pico · 13 h</span></div>
+            <div id="badge"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.8l2.4 5 5.5.7-4 3.8 1 5.4L10 14.1l-4.9 2.6 1-5.4-4-3.8 5.5-.7z" fill="#fff"/></svg>Récord del mes</div>
+          </div>
+
+          <div class="leo-wrap" id="leoBox"></div>
+          <div id="flyTk"><svg viewBox="0 0 64 56" width="64" height="56" aria-hidden="true"><path d="M2 2h60v46l-7.5 4-7.5-4-7.5 4-7.5-4-7.5 4-7.5-4-7.5 4L2 48z" fill="#FFFDF6"/><rect x="9" y="11" width="32" height="5.5" rx="2.7" fill="#2B2622"/><rect x="9" y="22" width="44" height="4.4" rx="2.2" fill="#9C958C"/><rect x="9" y="31" width="26" height="4.4" rx="2.2" fill="#9C958C"/></svg></div>
+          <div id="confetti"></div>
+        </div>
+      </div>
+
+      <div class="ring" id="ring"></div>
+      <div class="leo-wrap" id="leoMain"></div>
+      <div id="cap3"><div class="c1">Respira.</div><div class="c2">Esto es <span class="grad">Leogin</span>.</div></div>
+
+      <div id="final">
+        <div class="lockup"><div id="iconSlot"></div><div id="wm">Leogin</div></div>
+        <div id="tag"><span>Pide<b>.</b></span><span>Cocina<b>.</b></span><span>Cobra<b>.</b></span></div>
+        <div id="cta">Gratis para empezar · <b>distleogin.com</b></div>
+        <div id="qrCard"><div class="qr"></div>Escanéame</div>
+      </div>
+    </div>
+
+    <button type="button" class="overlay" id="overlay" aria-label="Reproducir la intro">
+      <span class="play-big"><svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="#fff"/></svg></span>
+      <strong id="ovTitle">Ver la intro</strong>
+      <span class="sub" id="ovSub">1 minuto · con o sin sonido</span>
+    </button>
+  </div>
+
+  <div class="controls">
+    <button type="button" class="icon-btn" id="pp" aria-label="Reproducir">
+      <svg id="ppIco" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>
+    </button>
+    <button type="button" class="icon-btn" id="rs" aria-label="Volver al inicio">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg>
+    </button>
+    <div class="bar"><input type="range" id="scrub" min="0" max="62" step="0.01" value="0" aria-label="Posición de la intro"></div>
+    <span class="time" id="time">0:00 / 1:02</span>
+  </div>
+  <div class="chapters" id="chapters"></div>
+  <p class="note">Todo está hecho con código: no es un video pesado, así que en la web carga al instante y se ve nítido en cualquier pantalla. <b>El antes va cuadro por cuadro, como stop-motion; el después, fluido.</b> El QR del final es real y abre distleogin.com.</p>
+</div>
+
+<!-- Filtros e ilustraciones -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="boil" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence id="boilT" type="fractalNoise" baseFrequency="0.028" numOctaves="2" seed="1" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <symbol id="f-pepian" viewBox="0 0 80 80">
+      <circle cx="40" cy="40" r="35" fill="#FBF7F0"/><circle cx="40" cy="40" r="28" fill="#7E3219"/><circle cx="40" cy="40" r="25" fill="#A5462A"/>
+      <ellipse cx="33" cy="35" rx="9" ry="6.5" fill="#EAC9A0" transform="rotate(-20 33 35)"/><ellipse cx="47" cy="46" rx="7.5" ry="5.5" fill="#E0B98B"/>
+      <rect x="41" y="26" width="8" height="6" rx="2" fill="#E9A23B"/><rect x="28" y="46" width="7" height="6" rx="2" fill="#A6C463"/>
+      <circle cx="53" cy="33" r="2" fill="#3E7D3A"/><circle cx="36" cy="53" r="1.8" fill="#3E7D3A"/><circle cx="45" cy="38" r="1.5" fill="#3E7D3A"/><circle cx="26" cy="40" r="1.5" fill="#3E7D3A"/>
+    </symbol>
+    <symbol id="f-pupusa" viewBox="0 0 80 80">
+      <circle cx="40" cy="40" r="35" fill="#FBF7F0"/>
+      <circle cx="32" cy="35" r="17" fill="#E5B56A"/><circle cx="27" cy="31" r="2.6" fill="#B87A3A"/><circle cx="37" cy="40" r="2.2" fill="#B87A3A"/><circle cx="34" cy="27" r="1.6" fill="#B87A3A"/>
+      <circle cx="49" cy="48" r="15" fill="#DCA75B"/><circle cx="46" cy="45" r="2.2" fill="#B87A3A"/><circle cx="53" cy="52" r="1.8" fill="#B87A3A"/>
+      <path d="M50 22 l14 6 M52 27 l12 2 M47 26 l10 10" stroke="#9CC45A" stroke-width="3" stroke-linecap="round"/><path d="M55 20 l8 12 M48 30 l14 -2" stroke="#E8823A" stroke-width="2.4" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="f-tostada" viewBox="0 0 80 80">
+      <circle cx="40" cy="40" r="35" fill="#FBF7F0"/><circle cx="40" cy="40" r="25" fill="#E3A548"/><circle cx="40" cy="40" r="18" fill="#7EA644"/>
+      <circle cx="35" cy="36" r="2.4" fill="#F4F0E6"/><circle cx="45" cy="44" r="2.2" fill="#F4F0E6"/><circle cx="43" cy="33" r="1.8" fill="#F4F0E6"/><circle cx="34" cy="46" r="1.8" fill="#F4F0E6"/>
+      <circle cx="40" cy="40" r="5" fill="none" stroke="#F4E9F2" stroke-width="2"/><circle cx="48" cy="38" r="1.6" fill="#C2402F"/><circle cx="31" cy="41" r="1.6" fill="#C2402F"/>
+    </symbol>
+    <symbol id="f-horchata" viewBox="0 0 80 80">
+      <circle cx="40" cy="40" r="27" fill="#E8E3D9"/><circle cx="40" cy="40" r="23" fill="#F3E8D3"/>
+      <rect x="27" y="30" width="11" height="11" rx="3" fill="#FFFFFF" opacity=".8" transform="rotate(14 32 35)"/><rect x="41" y="40" width="10" height="10" rx="3" fill="#FFFFFF" opacity=".75" transform="rotate(-12 46 45)"/>
+      <circle cx="46" cy="31" r="1.4" fill="#B07A47"/><circle cx="33" cy="47" r="1.3" fill="#B07A47"/><circle cx="50" cy="52" r="1.2" fill="#B07A47"/>
+      <path d="M40 40 L66 16" stroke="#E8534A" stroke-width="5" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="f-rellenito" viewBox="0 0 80 80">
+      <circle cx="40" cy="40" r="35" fill="#FBF7F0"/>
+      <ellipse cx="30" cy="34" rx="12" ry="9" fill="#B9692C"/><ellipse cx="50" cy="36" rx="11" ry="8.5" fill="#A95E27"/><ellipse cx="40" cy="52" rx="12" ry="8.5" fill="#B4652A"/>
+      <g fill="#FFFFFF" opacity=".85"><circle cx="27" cy="31" r="1.2"/><circle cx="33" cy="36" r="1"/><circle cx="48" cy="33" r="1.1"/><circle cx="53" cy="38" r="1"/><circle cx="37" cy="50" r="1.1"/><circle cx="44" cy="54" r="1"/></g>
+    </symbol>
+    <symbol id="l-mark" viewBox="0 0 100 100"><path d="M27 19h18v44h27v18H27Z" fill="#1F4D3A"/></symbol>
+  </defs>
+</svg>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const DUR = 62;
+  // Solo lo que anima GSAP: los colores y medidas escritos en el HTML se quedan.
+  const CLEAR = 'transform,opacity,visibility,clipPath,borderColor,strokeDashoffset,strokeDasharray';
+  const POSTER = 32.35;
+  const stage = $('#stage');
+  const wrap = $('#wrap');
+  let fmt = 'h';
+  let tl = null;
+  let renderMode = false;
+
+  /* ── Leo: la «L» del logo con ojos y bandeja ───────────── */
+  let leoN = 0;
+  function leoSVG() {
+    const id = 'lg' + (leoN++);
+    return `<svg viewBox="0 0 100 100" aria-hidden="true">
+      <defs><linearGradient id="${id}" x1="27" y1="19" x2="72" y2="81" gradientUnits="userSpaceOnUse"><stop stop-color="#E8534A"/><stop offset="1" stop-color="#F5A030"/></linearGradient></defs>
+      <rect class="leo-bg" width="100" height="100" rx="22" fill="#1C1C1E"/>
+      <ellipse class="leo-shadow" cx="49.5" cy="83.5" rx="25" ry="3.2" fill="#000" opacity=".35"/>
+      <g class="leo-all">
+        <g class="leo-tray">
+          <rect x="68" y="53" width="2.6" height="10.5" rx="1.3" fill="#F5A030"/>
+          <rect x="56.5" y="50.4" width="25.5" height="3.3" rx="1.65" fill="#EDE6DA"/>
+          <g class="leo-ticket">
+            <path d="M61 37h17v12.4l-2.1 1-2.1-1-2.1 1-2.1-1-2.1 1-2.1-1-2.1 1-2.3-1Z" fill="#FFFDF6"/>
+            <rect x="63" y="40" width="9" height="1.7" rx=".85" fill="#2B2622"/>
+            <rect x="63" y="43.4" width="12" height="1.3" rx=".65" fill="#9C958C"/>
+            <rect x="63" y="46.1" width="7" height="1.3" rx=".65" fill="#9C958C"/>
+          </g>
+        </g>
+        <path class="leo-body" d="M33 19h6a6 6 0 0 1 6 6v38h21a6 6 0 0 1 6 6v6a6 6 0 0 1-6 6H33a6 6 0 0 1-6-6V25a6 6 0 0 1 6-6Z" fill="url(#${id})"/>
+        <path class="leo-logo" d="M27 19h18v44h27v18H27Z" fill="url(#${id})" opacity="0"/>
+        <rect class="leo-shine" x="30.2" y="23" width="2.6" height="26" rx="1.3" fill="#fff" opacity=".22"/>
+        <g class="leo-face">
+          <g class="leo-eyes">
+            <ellipse cx="32.6" cy="32" rx="3.3" ry="4.1" fill="#fff"/>
+            <ellipse cx="40.1" cy="32" rx="3.3" ry="4.1" fill="#fff"/>
+            <g class="leo-pupils"><circle cx="33.1" cy="32.6" r="1.85" fill="#1C1C1E"/><circle cx="40.6" cy="32.6" r="1.85" fill="#1C1C1E"/></g>
+          </g>
+          <path class="leo-smile" d="M32.8 40.2q3.6 3.4 7.2 0" stroke="#1C1C1E" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+        </g>
+      </g>
+    </svg>`;
+  }
+  function leoParts(host) {
+    const q = (c) => host.querySelector(c);
+    return {
+      all: q('.leo-all'), eyes: q('.leo-eyes'), pupils: q('.leo-pupils'), smile: q('.leo-smile'),
+      tray: q('.leo-tray'), ticket: q('.leo-ticket'), body: q('.leo-body'), logo: q('.leo-logo'),
+      bg: q('.leo-bg'), shadow: q('.leo-shadow'), shine: q('.leo-shine'),
+    };
+  }
+  $('#leoMain').innerHTML = leoSVG();
+  $('#leoBox').innerHTML = leoSVG();
+  const LM = leoParts($('#leoMain'));
+  const LB = leoParts($('#leoBox'));
+  // Leo mini (estático) en la billetera
+  $('#leoMini').innerHTML = leoSVG().replace('viewBox="0 0 100 100"', 'viewBox="24 15 52 70"').replace('class="leo-bg"', 'class="leo-bg" opacity="0"').replace('class="leo-tray"', 'class="leo-tray" opacity="0"').replace('class="leo-shadow"', 'class="leo-shadow" opacity="0"');
+
+  /* ── QR real a distleogin.com ──────────────────────────── */
+  function qrPath() {
+    let n, dark;
+    try {
+      const qr = qrcode(0, 'M');
+      qr.addData('https://distleogin.com');
+      qr.make();
+      n = qr.getModuleCount();
+      dark = (r, c) => qr.isDark(r, c);
+    } catch (e) {
+      // Sin la librería: patrón de muestra (no escaneable).
+      n = 25;
+      const finder = (r, c) => {
+        const inF = (r0, c0) => r >= r0 && r < r0 + 7 && c >= c0 && c < c0 + 7;
+        const ring = (r0, c0) => { const a = r - r0, b = c - c0; return a === 0 || a === 6 || b === 0 || b === 6 || (a >= 2 && a <= 4 && b >= 2 && b <= 4); };
+        if (inF(0, 0)) return ring(0, 0); if (inF(0, n - 7)) return ring(0, n - 7); if (inF(n - 7, 0)) return ring(n - 7, 0);
+        return null;
+      };
+      dark = (r, c) => { const f = finder(r, c); return f !== null ? f : ((r * 7 + c * 13 + r * c) % 5) < 2; };
+    }
+    let d = '';
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (dark(r, c)) d += `M${c} ${r}h1v1h-1z`;
+    return `<svg viewBox="-1 -1 ${n + 2} ${n + 2}" width="100%" height="100%" shape-rendering="crispEdges" aria-label="Código QR de distleogin.com"><rect x="-1" y="-1" width="${n + 2}" height="${n + 2}" fill="#fff"/><path d="${d}" fill="#1C1C1E"/></svg>`;
+  }
+  const qrSvg = qrPath();
+  $$('.qr').forEach((el) => { el.innerHTML = qrSvg; });
+
+  /* ── Piezas que se arman por código ─────────────────────── */
+  // Globo del grito: estrella irregular
+  (() => {
+    const pts = []; const N = 22;
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * Math.PI * 2; const r = i % 2 ? 0.8 : 1;
+      const wob = 1 + ((i * 37) % 7 - 3) * 0.018;
+      pts.push(`${(250 + Math.cos(a) * 236 * r * wob).toFixed(1)},${(150 + Math.sin(a) * 140 * r * wob).toFixed(1)}`);
+    }
+    $('#burst').setAttribute('points', pts.join(' '));
+  })();
+  // Sellos de la tarjeta de lealtad (7 de 10; el 8.º se estampa)
+  (() => {
+    const mark = '<svg viewBox="0 0 100 100"><use href="#l-mark"/></svg>';
+    let h = '';
+    for (let i = 0; i < 10; i++) h += i < 7 ? `<span class="f">${mark}</span>` : '<span></span>';
+    h += `<div id="slot8">${mark}</div>`;
+    h += `<svg id="stamp" viewBox="0 0 76 96" aria-hidden="true"><rect x="27" y="0" width="22" height="34" rx="11" fill="#5A3A28"/><rect x="18" y="30" width="40" height="14" rx="5" fill="#3D2A1E"/><rect x="6" y="44" width="64" height="40" rx="10" fill="#E9A23B"/><rect x="10" y="80" width="56" height="10" rx="4" fill="#1F4D3A"/></svg>`;
+    $('#stamps').innerHTML = h;
+  })();
+  // Barras de ventas por hora (8 a 19 h)
+  (() => {
+    const hs = [14, 20, 32, 55, 80, 100, 86, 48, 36, 52, 66, 42];
+    $('#chart').insertAdjacentHTML('beforeend', hs.map((v, i) => `<span class="bar${i === 5 ? ' pk' : ''}" style="height:${Math.round(v * 1.9)}px">${i % 2 === 0 ? `<u>${8 + i} h</u>` : ''}</span>`).join(''));
+  })();
+  // Confeti
+  (() => {
+    const cols = ['#E8534A', '#F5A030', '#2F9E6B', '#FBF6EE', '#F7C873'];
+    let h = '';
+    for (let i = 0; i < 46; i++) h += `<i style="background:${cols[i % cols.length]}"></i>`;
+    $('#confetti').innerHTML = h;
+  })();
+
+  /* ── Azar determinista (mismo cuadro = misma imagen) ───── */
+  function rnd(a, b, c) {
+    let n = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
+    n = (n ^ (n >>> 13)) * 1274126177 | 0;
+    return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
+  }
+  const clamp01 = (x) => Math.max(0, Math.min(1, x));
+  const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+
+  /* ── Estado inicial ────────────────────────────────────── */
+  const V = () => fmt === 'v';
+  function initStates() {
+    gsap.set('#L1', { autoAlpha: 1, '--sat': 1, '--bri': 1 });
+    gsap.set('#L1 .it', { autoAlpha: 0, scale: 0.4, x: 0, y: 0, rotation: 0 });
+    gsap.set(['#cap1', '#cap2', '#cap2 small'], { autoAlpha: 0 });
+    gsap.set('.sk-msgs p', { autoAlpha: 0, scale: 0.6 });
+    gsap.set('#L2', { clipPath: `circle(0px at ${stageW() / 2}px ${stageH() / 2 - 80}px)` });
+
+    [LM, LB].forEach((L) => {
+      gsap.set(L.all, { x: 0, y: 0, scale: 1, rotation: 0, transformOrigin: '50% 100%' });
+      gsap.set(L.eyes, { scaleY: 1, autoAlpha: 1, transformOrigin: '50% 50%' });
+      gsap.set(L.pupils, { x: 0, y: 0 });
+      gsap.set(L.smile, { autoAlpha: 1, scale: 1, transformOrigin: '50% 50%' });
+      gsap.set(L.tray, { autoAlpha: 0, y: 0 });
+      gsap.set(L.ticket, { autoAlpha: 0 });
+      gsap.set(L.bg, { scale: 0, transformOrigin: '50% 50%' });
+      gsap.set(L.logo, { autoAlpha: 0 });
+      gsap.set([L.body, L.shine], { autoAlpha: 1 });
+      gsap.set(L.shadow, { autoAlpha: 0.35, scale: 1, transformOrigin: '50% 50%' });
+    });
+    gsap.set('#leoMain', { autoAlpha: 0, x: 0, y: -1300, scale: 1, rotation: 0 });
+    gsap.set(LM.eyes, { scaleY: 0.1 });
+    gsap.set(LM.smile, { autoAlpha: 0 });
+    gsap.set(LM.shadow, { autoAlpha: 0 });
+    gsap.set('#leoBox', { autoAlpha: 0, x: 690, y: 1300 });
+    gsap.set('#ring', { autoAlpha: 0, scale: 0 });
+    gsap.set('#cap3 > *', { autoAlpha: 0, y: 30 });
+
+    gsap.set('.cs', { autoAlpha: 0 });
+    gsap.set('.cs > *', { autoAlpha: 0, y: 40 });
+    gsap.set('#tent', { autoAlpha: 0, x: -340, rotation: -8 });
+    gsap.set('#phone', { autoAlpha: 0, x: 150, y: 950, rotation: -6 });
+    gsap.set('.scr', { autoAlpha: 0, yPercent: 0, scale: 1 });
+    gsap.set('#scrCam', { autoAlpha: 1 });
+    gsap.set('#vf', { autoAlpha: 0, scale: 1.25 });
+    gsap.set('#vf i', { borderColor: '#FFFFFF' });
+    gsap.set('#scanline', { autoAlpha: 0, y: -100 });
+    gsap.set('#pill', { autoAlpha: 0, y: 40 });
+    gsap.set('#scrMenu', { yPercent: 100 });
+    gsap.set('#mCover', { scale: 1.12 });
+    gsap.set('.m-anim', { autoAlpha: 0, y: 26 });
+    gsap.set('#mList', { y: 0 });
+    gsap.set('#cart', { autoAlpha: 0, y: 90, backgroundColor: '#1F4D3A', color: '#F6EFE3', scale: 1 });
+    gsap.set('#wBar i', { width: '70%' });
+    gsap.set('#cartA', { autoAlpha: 1, y: 0 });
+    gsap.set('#cartB', { autoAlpha: 0, y: 16 });
+    gsap.set('#cartN', { scale: 1 });
+    gsap.set('#flyDot', { autoAlpha: 0, x: 0, y: 0, scale: 1 });
+    gsap.set('#touch', { autoAlpha: 0, x: 0, y: 0, scale: 1 });
+    gsap.set('#ripple', { autoAlpha: 0, scale: 0.3 });
+    gsap.set('#scrSent', { scale: 0.94 });
+    gsap.set('#sentCheck', { scale: 0 });
+    gsap.set('#sentPath', { strokeDasharray: 60, strokeDashoffset: 60 });
+    gsap.set('.s-anim', { autoAlpha: 0, y: 20 });
+    gsap.set('.w-anim', { autoAlpha: 0, y: 26 });
+    gsap.set('#stamp', { autoAlpha: 0, y: -150, scaleY: 1, transformOrigin: '50% 100%' });
+    gsap.set('#slot8', { autoAlpha: 0, scale: 0.4 });
+    gsap.set('#wBar i', { width: '70%' });
+    gsap.set('#wLeft', { scale: 1 });
+
+    gsap.set('#kds', { autoAlpha: 0, y: 70, scale: 0.96 });
+    gsap.set('#printer', { autoAlpha: 0, y: 90 });
+    gsap.set('#paperClip', { autoAlpha: 1 });
+    gsap.set('#paper', { yPercent: 100 });
+    gsap.set('.pr-body', { x: 0 });
+    gsap.set('#kNew', { autoAlpha: 0, x: 12, y: 110, scale: 0.85 });
+    gsap.set('#kP1', { x: 298, y: 110 });
+    gsap.set('#kP2', { x: 298, y: 238 });
+    gsap.set('#kL1', { x: 584, y: 110 });
+    gsap.set('#kOk', { scale: 0 });
+    gsap.set(['#kRing1', '#kRing2'], { autoAlpha: 0, x: 12, y: 110, scale: 1 });
+    gsap.set('#flyTk', { autoAlpha: 0, x: 0, y: 0, scale: 1, rotation: 0 });
+
+    gsap.set('#dash', { autoAlpha: 0, y: 90, scale: 0.97 });
+    gsap.set('.d-anim', { autoAlpha: 0, y: 22 });
+    gsap.set('.bar', { scaleY: 0 });
+    gsap.set('#peak', { autoAlpha: 0, y: 12 });
+    gsap.set('#dChip', { autoAlpha: 0, scale: 0.8 });
+    gsap.set('#badge', { autoAlpha: 0, scale: 0.5 });
+    gsap.set('#confetti i', { autoAlpha: 0, x: 0, y: 0, rotation: 0 });
+
+    gsap.set('#wm', { clipPath: 'inset(0% 100% 0% 0%)', x: -24 });
+    gsap.set('#tag span', { autoAlpha: 0, y: 26 });
+    gsap.set('#cta', { autoAlpha: 0, y: 18 });
+    gsap.set('#qrCard', { autoAlpha: 0, scale: 0.85 });
+  }
+
+  /* ── Línea de tiempo ───────────────────────────────────── */
+  function stageW() { return fmt === 'v' ? 1080 : 1920; }
+  function stageH() { return fmt === 'v' ? 1920 : 1080; }
+
+  function build() {
+    initStates();
+    const W = stageW(), H = stageH(), v = V();
+    tl = gsap.timeline({ paused: true, onComplete: ended });
+    const at = (t, name) => tl.call(() => sfx(name), null, t);
+
+    const showCap = (sel, t) => {
+      tl.set(sel, { autoAlpha: 1 }, t);
+      tl.to(`${sel} > *`, { autoAlpha: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'power3.out' }, t);
+    };
+    const hideCap = (sel, t) => {
+      tl.to(`${sel} > *`, { autoAlpha: 0, y: -30, duration: 0.35, stagger: 0.05, ease: 'power2.in' }, t);
+      tl.set(sel, { autoAlpha: 0 }, t + 0.55);
+    };
+    // Dedo del comensal (coordenadas de la pantalla del teléfono)
+    const tap = (x, y, t) => {
+      tl.set('#touch', { x: x - 25, y: y - 25, scale: 1.4, autoAlpha: 0 }, t);
+      tl.to('#touch', { autoAlpha: 0.95, scale: 1, duration: 0.18, ease: 'power2.out' }, t);
+      tl.to('#touch', { scale: 0.8, duration: 0.08 }, t + 0.2);
+      tl.set('#ripple', { x: x - 25, y: y - 25, scale: 0.3, autoAlpha: 0.9 }, t + 0.22);
+      tl.to('#ripple', { scale: 2.3, autoAlpha: 0, duration: 0.45, ease: 'power2.out' }, t + 0.22);
+      tl.to('#touch', { scale: 1, duration: 0.12 }, t + 0.28);
+      tl.to('#touch', { autoAlpha: 0, duration: 0.2 }, t + 0.42);
+      at(t + 0.2, 'tap');
+    };
+    const drag = (x1, y1, x2, y2, t, d) => {
+      tl.set('#touch', { x: x1 - 25, y: y1 - 25, scale: 1, autoAlpha: 0 }, t - 0.2);
+      tl.to('#touch', { autoAlpha: 0.95, duration: 0.15 }, t - 0.2);
+      tl.to('#touch', { x: x2 - 25, y: y2 - 25, duration: d, ease: 'power2.inOut' }, t);
+      tl.to('#touch', { autoAlpha: 0, duration: 0.2 }, t + d);
+    };
+    // Punto que vuela del «+» al carrito
+    const fly = (x1, y1, x2, y2, t) => {
+      tl.set('#flyDot', { x: x1 - 11, y: y1 - 11, autoAlpha: 1, scale: 1 }, t);
+      tl.to('#flyDot', { x: x2 - 11, duration: 0.45, ease: 'power1.inOut' }, t);
+      tl.to('#flyDot', { keyframes: [{ y: Math.min(y1, y2) - 90, duration: 0.2, ease: 'power2.out' }, { y: y2 - 11, duration: 0.25, ease: 'power2.in' }] }, t);
+      tl.to('#flyDot', { scale: 0.4, autoAlpha: 0, duration: 0.12 }, t + 0.42);
+      at(t + 0.45, 'pop');
+    };
+    const bump = (t) => {
+      tl.to('#cartN', { scale: 1.45, duration: 0.1, ease: 'power2.out' }, t);
+      tl.to('#cartN', { scale: 1, duration: 0.45, ease: 'elastic.out(1,.4)' }, t + 0.1);
+    };
+    // Salto de Leo (h = altura en unidades del dibujo)
+    const hop = (L, wrapSel, x0, y0, x1, y1, t, d, h = 46) => {
+      tl.set(wrapSel, { x: x0, y: y0, autoAlpha: 1 }, t);
+      tl.to(L.all, { scaleY: 0.8, scaleX: 1.12, duration: 0.1 }, t);
+      tl.to(L.all, { scaleY: 1.08, scaleX: 0.94, duration: 0.1 }, t + 0.1);
+      tl.to(wrapSel, { x: x1, y: y1, duration: d, ease: 'power1.inOut' }, t + 0.1);
+      tl.to(L.all, { y: -h, duration: d / 2, ease: 'power2.out' }, t + 0.1);
+      tl.to(L.all, { y: 0, duration: d / 2, ease: 'power2.in' }, t + 0.1 + d / 2);
+      tl.to(L.shadow, { scale: 0.55, duration: d / 2, ease: 'power2.out' }, t + 0.1);
+      tl.to(L.shadow, { scale: 1, duration: d / 2, ease: 'power2.in' }, t + 0.1 + d / 2);
+      tl.to(L.all, { scaleY: 0.8, scaleX: 1.14, duration: 0.08 }, t + 0.1 + d);
+      tl.to(L.all, { scaleY: 1, scaleX: 1, duration: 0.45, ease: 'elastic.out(1,.45)' }, t + 0.18 + d);
+    };
+    const blink = (L, t) => tl.to(L.eyes, { scaleY: 0.1, duration: 0.07, yoyo: true, repeat: 1, ease: 'power1.inOut' }, t);
+
+    /* 1 · El caos (0–8 s): todo entra cuadro por cuadro */
+    tl.to('#cap1', { autoAlpha: 1, duration: 0.3, ease: 'steps(3)' }, 0.2);
+    [['#tk2', 0.6], ['#tk3', 1.1], ['#chat', 1.5], ['#tk4', 2.0], ['#tel', 2.5], ['#tk5', 3.0], ['#shout', 4.2], ['#tk1', 4.8], ['#calc', 5.4], ['#tk6', 5.9]]
+      .forEach(([s, t]) => { tl.to(s, { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'steps(3)' }, t); at(t, 'paper'); });
+    $$('.sk-msgs p').forEach((p, i) => { const t = 1.9 + i * 0.62; tl.to(p, { autoAlpha: 1, scale: 1, duration: 0.2, ease: 'steps(2)' }, t); at(t, 'ping'); });
+    at(2.6, 'ring'); at(3.7, 'ring'); at(4.8, 'ring');
+    at(4.3, 'shout');
+
+    /* 2 · Se pierde un pedido (8–12 s) */
+    at(8, 'freeze');
+    tl.to('#L1', { '--sat': 0.12, '--bri': 0.8, duration: 0.2, ease: 'steps(2)' }, 8);
+    tl.to('#cap1', { autoAlpha: 0, duration: 0.2, ease: 'steps(2)' }, 8);
+    tl.to('#tk1', { scale: 1.12, duration: 0.3, ease: 'steps(3)' }, 8.3);
+    tl.to('#tk1', { y: v ? 1250 : 900, rotation: 48, duration: 1.8, ease: 'steps(14)' }, 8.7);
+    at(9.9, 'fall');
+    tl.to('#cap2', { autoAlpha: 1, duration: 0.3, ease: 'steps(3)' }, 9.1);
+    tl.to('#cap2 small', { autoAlpha: 1, duration: 0.3, ease: 'steps(3)' }, 10.0);
+
+    /* 3 · Llega Leo y todo se ordena (12–17 s) */
+    const cx = W / 2, cy = H / 2 - 80;
+    tl.set('#leoMain', { autoAlpha: 1 }, 11.9);
+    tl.to('#leoMain', { y: 0, duration: 0.45, ease: 'power3.in' }, 12.0);
+    tl.to(LM.shadow, { autoAlpha: 0.35, duration: 0.15 }, 12.32);
+    at(12.45, 'thump');
+    tl.to(LM.all, { scaleY: 0.62, scaleX: 1.25, duration: 0.08, ease: 'power1.out' }, 12.45);
+    tl.to(LM.all, { scaleY: 1, scaleX: 1, duration: 0.8, ease: 'elastic.out(1,.38)' }, 12.53);
+    tl.set('#ring', { autoAlpha: 1 }, 12.45);
+    tl.to('#ring', { scale: 7.5, autoAlpha: 0, duration: 0.85, ease: 'power2.out' }, 12.46);
+    $$('#L1 .it, #cap2').forEach((el, i) => {
+      const ex = el.offsetLeft + el.offsetWidth / 2 - cx, ey = el.offsetTop + el.offsetHeight / 2 - cy;
+      const len = Math.hypot(ex, ey) || 1;
+      tl.to(el, { x: `+=${(ex / len) * 1500}`, y: `+=${(ey / len) * 1500}`, rotation: `+=${(i % 2 ? 1 : -1) * 70}`, autoAlpha: 0, duration: 0.75, ease: 'power2.in' }, 12.47);
+    });
+    tl.to('#L2', { clipPath: `circle(1350px at ${cx}px ${cy}px)`, duration: 0.95, ease: 'power2.inOut' }, 12.5);
+    at(12.5, 'whoosh');
+    tl.set('#L1', { autoAlpha: 0 }, 13.5);
+    tl.to(LM.eyes, { scaleY: 1, duration: 0.16, ease: 'power2.out' }, 13.3);
+    at(13.3, 'blink');
+    tl.to(LM.smile, { autoAlpha: 1, duration: 0.25 }, 13.5);
+    tl.to(LM.pupils, { x: -1.2, duration: 0.2 }, 13.6);
+    tl.to(LM.pupils, { x: 1.2, duration: 0.25 }, 14.0);
+    tl.to(LM.pupils, { x: 0, duration: 0.2 }, 14.45);
+    blink(LM, 14.9);
+    tl.to('#cap3 .c1', { autoAlpha: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 13.7);
+    tl.to('#cap3 .c2', { autoAlpha: 1, y: 0, duration: 0.7, ease: 'power3.out' }, 14.4);
+    tl.to('#cap3 > *', { autoAlpha: 0, y: -24, duration: 0.4, ease: 'power2.in', stagger: 0.05 }, 16.25);
+    tl.to(LM.all, { scaleY: 0.8, scaleX: 1.12, duration: 0.12 }, 16.35);
+    tl.to(LM.all, { scaleY: 1.1, scaleX: 0.94, duration: 0.12 }, 16.47);
+    tl.to(LM.shadow, { autoAlpha: 0, duration: 0.2 }, 16.5);
+    tl.to('#leoMain', { x: W * 0.72, y: -H * 0.3, rotation: 24, duration: 0.6, ease: 'power2.in' }, 16.5);
+    tl.to(LM.all, { scaleY: 1, scaleX: 1, duration: 0.2 }, 16.6);
+    tl.set('#leoMain', { autoAlpha: 0 }, 17.15);
+    at(16.5, 'whoosh');
+
+    /* 4 · Escanea (17–26 s) */
+    showCap('#cs1', 17.0);
+    tl.to('#tent', { autoAlpha: 1, x: 0, rotation: -4, duration: 0.8, ease: 'power3.out' }, 17.1);
+    tl.to('#phone', { autoAlpha: 1, y: 0, rotation: -3, duration: 0.9, ease: 'power3.out' }, 17.3);
+    tl.to('#vf', { autoAlpha: 1, scale: 1, duration: 0.35, ease: 'back.out(2)' }, 18.15);
+    tl.to('#scanline', { autoAlpha: 1, duration: 0.1 }, 18.35);
+    tl.to('#scanline', { y: 100, duration: 0.5, ease: 'sine.inOut' }, 18.4);
+    tl.to('#scanline', { y: -100, duration: 0.5, ease: 'sine.inOut' }, 18.9);
+    tl.to('#scanline', { autoAlpha: 0, duration: 0.15 }, 19.4);
+    tl.to('#vf i', { borderColor: '#F5A030', duration: 0.15 }, 19.45);
+    tl.to('#pill', { autoAlpha: 1, y: 0, duration: 0.4, ease: 'back.out(1.6)' }, 19.55);
+    at(19.55, 'pop');
+    tap(300, 608, 20.0);
+    tl.to('#scrMenu', { autoAlpha: 1, yPercent: 0, duration: 0.55, ease: 'power3.out' }, 20.35);
+    tl.set('#scrCam', { autoAlpha: 0 }, 20.95);
+    at(20.35, 'swoosh');
+    tl.to('#tent', { x: -440, autoAlpha: 0, duration: 0.6, ease: 'power2.in' }, 20.3);
+    tl.to('#phone', { x: 0, rotation: 0, duration: 0.8, ease: 'power3.inOut' }, 20.3);
+    tl.to('#mCover', { scale: 1, duration: 1.2, ease: 'power2.out' }, 20.4);
+    tl.to('.m-anim', { autoAlpha: 1, y: 0, duration: 0.5, stagger: 0.07, ease: 'power3.out' }, 20.6);
+    drag(176, 640, 176, 390, 22.2, 1.4);
+    tl.to('#mList', { y: -250, duration: 1.4, ease: 'power2.inOut' }, 22.2);
+    drag(176, 390, 176, 640, 24.2, 1.3);
+    tl.to('#mList', { y: 0, duration: 1.3, ease: 'power2.inOut' }, 24.2);
+
+    /* 5 · Pide desde la mesa (26–34 s) */
+    hideCap('#cs1', 25.9);
+    showCap('#cs2', 26.25);
+    tap(311, 341, 26.6);
+    fly(311, 341, 60, 707, 26.85);
+    tl.to('#cart', { autoAlpha: 1, y: 0, duration: 0.45, ease: 'back.out(1.6)' }, 27.25);
+    drag(176, 600, 176, 470, 27.95, 0.6);
+    tl.to('#mList', { y: -130, duration: 0.6, ease: 'power2.inOut' }, 27.95);
+    tap(311, 553, 28.75); fly(311, 553, 46, 707, 29.0); bump(29.45);
+    tap(311, 553, 29.4); fly(311, 553, 46, 707, 29.62); bump(30.07);
+    tl.to('#cartA', { autoAlpha: 0, y: -16, duration: 0.2 }, 30.35);
+    tl.to('#cartB', { autoAlpha: 1, y: 0, duration: 0.25 }, 30.45);
+    tl.to('#cart', { backgroundColor: '#E9A23B', color: '#1E1A16', duration: 0.25 }, 30.4);
+    tap(177, 707, 30.7);
+    tl.to('#cart', { scale: 0.95, duration: 0.08, yoyo: true, repeat: 1 }, 30.9);
+    at(31.1, 'success');
+    tl.to('#scrSent', { autoAlpha: 1, scale: 1, duration: 0.4, ease: 'power3.out' }, 31.1);
+    tl.to('#sentCheck', { scale: 1, duration: 0.55, ease: 'back.out(2.2)' }, 31.2);
+    tl.to('#sentPath', { strokeDashoffset: 0, duration: 0.35, ease: 'power2.out' }, 31.4);
+    tl.to('.s-anim', { autoAlpha: 1, y: 0, duration: 0.4, stagger: 0.12, ease: 'power3.out' }, 31.45);
+    // Leo sale desde abajo con la bandeja vacía
+    tl.set('#leoBox', { x: 700, y: 1300, autoAlpha: 1 }, 31.0);
+    tl.set(LB.tray, { autoAlpha: 1 }, 31.0);
+    tl.to('#leoBox', { y: 560, duration: 0.55, ease: 'back.out(1.3)' }, 31.05);
+    tl.to(LB.pupils, { x: -1.3, y: -0.6, duration: 0.2 }, 31.7);
+    // La comanda vuela del teléfono a la bandeja
+    const trayX = 700 + 152, trayY = 560 + 96;
+    tl.set('#flyTk', { x: 470 - 32, y: 210 - 28, scale: 0.9, rotation: -8, autoAlpha: 0 }, 32.0);
+    tl.to('#flyTk', { autoAlpha: 1, duration: 0.1 }, 32.0);
+    tl.to('#flyTk', { x: trayX - 32, rotation: 8, duration: 0.6, ease: 'power1.inOut' }, 32.0);
+    tl.to('#flyTk', { keyframes: [{ y: 110, duration: 0.28, ease: 'power2.out' }, { y: trayY - 28, duration: 0.32, ease: 'power2.in' }] }, 32.0);
+    tl.to('#flyTk', { scale: 0.58, duration: 0.6, ease: 'power1.in' }, 32.0);
+    tl.to(LB.pupils, { x: 1.2, y: -0.4, duration: 0.3 }, 32.2);
+    at(32.0, 'whoosh');
+    tl.set('#flyTk', { autoAlpha: 0 }, 32.6);
+    tl.set(LB.ticket, { autoAlpha: 1 }, 32.6);
+    tl.to(LB.tray, { y: 2, duration: 0.08, yoyo: true, repeat: 1 }, 32.6);
+    at(32.6, 'catch');
+    tl.to(LB.pupils, { x: 0, y: 0, duration: 0.2 }, 32.85);
+    hop(LB, '#leoBox', 700, 560, 1180, 560, 33.05, 0.55, 40);
+    tl.to('#phone', { y: 1300, rotation: 6, duration: 0.6, ease: 'power3.in' }, 33.55);
+    tl.set('#phone', { autoAlpha: 0 }, 34.2);
+    hideCap('#cs2', 33.6);
+
+    /* 6 · La cocina lo ve al instante (34–42 s) */
+    showCap('#cs3', 34.0);
+    tl.to('#kds', { autoAlpha: 1, y: 0, scale: 1, duration: 0.7, ease: 'power3.out' }, 34.0);
+    tl.to('#printer', { autoAlpha: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 34.3);
+    tl.set('#leoBox', { x: 10, y: 1300, autoAlpha: 1 }, 34.6);
+    tl.to('#leoBox', { y: 650, duration: 0.55, ease: 'back.out(1.3)' }, 34.65);
+    tl.to(LB.pupils, { x: -0.8, y: -1, duration: 0.25 }, 35.2);
+    const lx = 10 + 152, ly = 650 + 96;
+    const kx = 20 + 14 + 12 + 138, ky = 40 + 14 + 110 + 59;
+    tl.set(LB.ticket, { autoAlpha: 0 }, 35.6);
+    tl.set('#flyTk', { x: lx - 32, y: ly - 28, scale: 0.58, rotation: 6, autoAlpha: 1 }, 35.6);
+    tl.to('#flyTk', { x: kx - 32, y: ky - 28, scale: 1.6, rotation: 0, duration: 0.5, ease: 'power2.inOut' }, 35.6);
+    tl.to('#flyTk', { autoAlpha: 0, duration: 0.14 }, 36.0);
+    tl.to(LB.pupils, { x: 1, y: -1.2, duration: 0.25 }, 35.7);
+    tl.to('#kNew', { autoAlpha: 1, scale: 1, duration: 0.45, ease: 'back.out(1.8)' }, 36.05);
+    at(36.1, 'ding');
+    tl.to('#kRing1', { autoAlpha: 1, duration: 0.01 }, 36.1);
+    tl.to('#kRing1', { scale: 1.35, autoAlpha: 0, duration: 0.8, ease: 'power2.out' }, 36.11);
+    tl.to('#kRing2', { autoAlpha: 1, duration: 0.01 }, 36.3);
+    tl.to('#kRing2', { scale: 1.35, autoAlpha: 0, duration: 0.8, ease: 'power2.out' }, 36.31);
+    at(36.4, 'printer');
+    tl.to('#paper', { yPercent: 0, duration: 1.1, ease: 'steps(10)' }, 36.4);
+    tl.to('.pr-body', { x: 1.6, duration: 0.05, repeat: 21, yoyo: true, ease: 'none' }, 36.4);
+    tl.to(LB.pupils, { x: 1.5, y: 0.4, duration: 0.3 }, 36.8);
+    // a preparación…
+    tl.to('#kNew', { x: 298, duration: 0.55, ease: 'power3.inOut' }, 37.6);
+    tl.to('#kP1', { y: 238, duration: 0.55, ease: 'power3.inOut' }, 37.6);
+    tl.to('#kP2', { y: 366, duration: 0.55, ease: 'power3.inOut' }, 37.6);
+    tl.to(LB.pupils, { x: 1.2, y: -1.2, duration: 0.3 }, 37.6);
+    // …y listo
+    tl.to('#kNew', { x: 584, duration: 0.55, ease: 'power3.inOut' }, 39.6);
+    tl.to('#kL1', { y: 238, duration: 0.55, ease: 'power3.inOut' }, 39.6);
+    tl.to('#kOk', { scale: 1, duration: 0.45, ease: 'back.out(2.6)' }, 40.15);
+    at(40.15, 'ready');
+    tl.to(LB.pupils, { x: 1.6, y: -1.2, duration: 0.3 }, 39.7);
+    hop(LB, '#leoBox', 10, 650, 10, 650, 40.5, 0.45, 34);
+    tl.to(['#kds', '#printer', '#paperClip'], { autoAlpha: 0, y: '+=50', duration: 0.5, ease: 'power2.in' }, 41.4);
+    tl.to('#leoBox', { autoAlpha: 0, duration: 0.4 }, 41.4);
+    hideCap('#cs3', 41.5);
+
+    /* 7 · La caja cuadra sola (42–50 s) */
+    showCap('#cs4', 42.0);
+    tl.to('#dash', { autoAlpha: 1, y: 0, scale: 1, duration: 0.7, ease: 'power3.out' }, 42.1);
+    tl.to('.d-anim', { autoAlpha: 1, y: 0, duration: 0.45, stagger: 0.08, ease: 'power3.out' }, 42.45);
+    at(42.6, 'count');
+    tl.to('.bar', { scaleY: 1, duration: 0.7, stagger: 0.06, ease: 'power3.out' }, 43.2);
+    tl.to('#peak', { autoAlpha: 1, y: 0, duration: 0.35, ease: 'back.out(2)' }, 44.75);
+    tl.to('#dChip', { autoAlpha: 1, scale: 1, duration: 0.4, ease: 'back.out(2)' }, 45.25);
+    at(45.25, 'pop');
+    tl.set(LB.tray, { autoAlpha: 0 }, 45.5);
+    tl.set(LB.pupils, { x: 0, y: 0 }, 45.5);
+    tl.set('#leoBox', { x: 670, y: v ? -1100 : -480, autoAlpha: 1, scale: 1 }, 45.55);
+    tl.to('#leoBox', { y: -48, duration: 0.42, ease: 'power3.in' }, 45.6);
+    tl.to(LB.all, { scaleY: 0.7, scaleX: 1.18, duration: 0.08 }, 46.02);
+    tl.to(LB.all, { scaleY: 1, scaleX: 1, duration: 0.5, ease: 'elastic.out(1,.4)' }, 46.1);
+    at(46.02, 'thump');
+    tl.to('#badge', { autoAlpha: 1, scale: 1, duration: 0.5, ease: 'back.out(2.4)' }, 46.35);
+    at(46.35, 'celebrate');
+    tl.to(LB.all, { keyframes: [{ y: -20, scaleY: 1.08, scaleX: 0.95, duration: 0.25, ease: 'power2.out' }, { y: 0, scaleY: 1, scaleX: 1, duration: 0.25, ease: 'power2.in' }] }, 46.45);
+    tl.to(LB.smile, { scale: 1.25, duration: 0.2 }, 46.45);
+    tl.to(LB.pupils, { y: -1.1, duration: 0.2 }, 46.45);
+    const ox = 40 + 860 - 250 - 110, oy = 130 + 34 + 22;
+    $$('#confetti i').forEach((p, i) => {
+      const a = rnd(i, 3, 7) * Math.PI * 2, sp = 140 + rnd(i, 5, 1) * 260;
+      const dx = Math.cos(a) * sp, up = 120 + rnd(i, 9, 2) * 200;
+      tl.set(p, { x: ox, y: oy, autoAlpha: 1, rotation: 0 }, 46.4);
+      tl.to(p, { x: ox + dx * 0.6, duration: 0.45, ease: 'power2.out' }, 46.4);
+      tl.to(p, { y: oy - up, rotation: rnd(i, 1, 1) * 360, duration: 0.45, ease: 'power2.out' }, 46.4);
+      tl.to(p, { x: ox + dx, y: oy - up + 420 + rnd(i, 2, 2) * 200, rotation: 720 * rnd(i, 4, 4), autoAlpha: 0, duration: 1.1, ease: 'power1.in' }, 46.85);
+    });
+    tl.to(['#dash', '#leoBox'], { autoAlpha: 0, scale: 0.96, duration: 0.5, ease: 'power2.in' }, 49.2);
+    hideCap('#cs4', 49.35);
+
+    /* 8 · Y tus clientes vuelven (50–55 s) */
+    showCap('#cs5', 50.0);
+    tl.set(['#scrCam', '#scrMenu', '#scrSent'], { autoAlpha: 0 }, 49.9);
+    tl.set('#scrWallet', { autoAlpha: 1 }, 49.9);
+    tl.set('#phone', { x: 640, y: 0, rotation: 10, autoAlpha: 0 }, 49.9);
+    tl.to('#phone', { x: 0, rotation: 0, autoAlpha: 1, duration: 0.8, ease: 'power3.out' }, 50.0);
+    tl.to('.w-anim', { autoAlpha: 1, y: 0, duration: 0.45, stagger: 0.1, ease: 'power3.out' }, 50.45);
+    tl.to('#stamp', { autoAlpha: 1, y: 0, duration: 0.32, ease: 'power2.in' }, 51.3);
+    tl.to('#stamp', { scaleY: 0.84, duration: 0.07 }, 51.62);
+    at(51.62, 'stamp');
+    tl.to('#slot8', { autoAlpha: 1, scale: 1, duration: 0.35, ease: 'back.out(3)' }, 51.66);
+    tl.to('#stamp', { scaleY: 1, y: -150, autoAlpha: 0, duration: 0.45, ease: 'power2.out' }, 51.72);
+    tl.to('#wBar i', { width: '80%', duration: 0.5, ease: 'power2.out' }, 51.72);
+    tl.to('#wLeft', { scale: 1.08, duration: 0.15, yoyo: true, repeat: 1 }, 52.1);
+    tl.to('#phone', { autoAlpha: 0, y: 70, duration: 0.5, ease: 'power2.in' }, 54.3);
+    hideCap('#cs5', 54.35);
+
+    /* 9 · Firma (55–62 s): Leo se vuelve el logo */
+    tl.set(LM.all, { scaleX: 1, scaleY: 1, y: 0 }, 54.9);
+    tl.set('#leoMain', { x: 0, y: v ? 1300 : 900, rotation: 0, scale: 1, autoAlpha: 1 }, 54.9);
+    tl.set(LM.shadow, { autoAlpha: 0.35 }, 54.9);
+    tl.to('#leoMain', { y: 0, duration: 0.6, ease: 'back.out(1.25)' }, 55.0);
+    at(55.0, 'whoosh');
+    blink(LM, 55.7);
+    tl.to(LM.all, { rotation: -10, duration: 0.25, ease: 'power2.inOut' }, 56.0);
+    tl.to(LM.all, { rotation: 0, duration: 0.3, ease: 'power2.inOut' }, 56.25);
+    const slot = slotDelta();
+    tl.to('#leoMain', { x: slot.dx, y: slot.dy, scale: 220 / 360, duration: 0.75, ease: 'power3.inOut' }, 56.6);
+    tl.to(LM.shadow, { autoAlpha: 0, duration: 0.3 }, 56.6);
+    at(56.6, 'swoosh');
+    tl.to(LM.bg, { scale: 1, duration: 0.55, ease: 'back.out(1.5)' }, 56.95);
+    tl.to(LM.eyes, { scaleY: 0.1, duration: 0.12 }, 57.25);
+    tl.to([LM.eyes, LM.smile, LM.shine], { autoAlpha: 0, duration: 0.2 }, 57.37);
+    tl.to(LM.logo, { autoAlpha: 1, duration: 0.2 }, 57.37);
+    tl.to(LM.body, { autoAlpha: 0, duration: 0.2 }, 57.37);
+    tl.to('#wm', { clipPath: 'inset(0% 0% 0% 0%)', x: 0, duration: 0.75, ease: 'power3.out' }, 57.4);
+    at(57.4, 'chord');
+    tl.to('#tag span', { autoAlpha: 1, y: 0, duration: 0.42, stagger: 0.38, ease: 'back.out(2)' }, 58.05);
+    at(58.05, 'pop'); at(58.43, 'pop'); at(58.81, 'pop');
+    tl.to('#cta', { autoAlpha: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 59.35);
+    tl.to('#qrCard', { autoAlpha: 1, scale: 1, duration: 0.5, ease: 'back.out(1.8)' }, 59.65);
+    tl.to({}, { duration: 0.01 }, DUR - 0.01);
+  }
+
+  // Distancia del centro de Leo al hueco del ícono en la firma
+  function slotDelta() {
+    const s = $('#iconSlot');
+    let x = 0, y = 0, el = s;
+    while (el && el !== stage) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; }
+    const cxL = stageW() / 2, cyL = stageH() / 2 - 80;
+    return { dx: x + s.offsetWidth / 2 - cxL, dy: y + s.offsetHeight / 2 - cyL };
+  }
+
+  /* ── Lo que depende del tiempo cuadro a cuadro ─────────── */
+  const smEls = $$('#L1 .sm');
+  const turb = $('#boilT');
+  const cache = new Map();
+  const setText = (id, v) => { if (cache.get(id) !== v) { cache.set(id, v); $(id).textContent = v; } };
+  const setAttr = (id, a, v) => { const k = id + a; if (cache.get(k) !== v) { cache.set(k, v); $(id).setAttribute(a, v); } };
+  const mmss = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  const money = (n) => 'Q' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  let lastFrame = -1;
+
+  function render(t) {
+    // Stop-motion: 10 cuadros por segundo, temblor que crece y se congela a los 8 s
+    const tt = Math.min(t, 7.95);
+    const frame = Math.floor(tt * 10);
+    if (frame !== lastFrame) {
+      lastFrame = frame;
+      const amp = 1.6 + tt * 0.5;
+      smEls.forEach((el, i) => {
+        let k = amp * (+(el.dataset.amp || 1));
+        if (el.dataset.ring && tt > 2.5 && tt < 5.6) k *= 3.4;
+        el.style.setProperty('--jx', ((rnd(frame, i, 1) - 0.5) * 2 * k).toFixed(2) + 'px');
+        el.style.setProperty('--jy', ((rnd(frame, i, 2) - 0.5) * 2 * k).toFixed(2) + 'px');
+        el.style.setProperty('--jr', ((rnd(frame, i, 3) - 0.5) * 0.7 * k).toFixed(2) + 'deg');
+      });
+      turb.setAttribute('seed', String((frame % 6) + 1));
+    }
+    setText('#skBadge', String(12 + Math.floor(clamp01((t - 1.5) / 6) * 25)));
+
+    $('#sbar').classList.toggle('dark', t >= 31.1);
+
+    // Carrito
+    if (t < 29.45) { setText('#cartN', '1'); setText('#cartTxt', 'producto'); setText('#cartTot', 'Q45'); }
+    else if (t < 30.07) { setText('#cartN', '2'); setText('#cartTxt', 'productos'); setText('#cartTot', 'Q60'); }
+    else { setText('#cartN', '3'); setText('#cartTxt', 'productos'); setText('#cartTot', 'Q75'); }
+
+    // Cocina
+    const add = Math.round(clamp01((t - 36.1) / (40.15 - 36.1)) * 395);
+    setText('#tN', mmss(5 + add)); setText('#tP1', mmss(250 + add)); setText('#tP2', mmss(362 + add));
+    const st = t < 37.6 ? 'nuevo' : t < 40.1 ? 'prep' : 'listo';
+    setAttr('#kNew', 'data-st', st);
+    setText('#kChip', st === 'nuevo' ? 'Nuevo' : st === 'prep' ? 'En preparación' : 'Listo');
+    setText('#cN', String(t >= 36.05 && t < 37.6 ? 1 : 0));
+    setText('#cP', String(t >= 37.6 && t < 39.6 ? 3 : 2));
+    setText('#cL', String(t >= 39.6 ? 2 : 1));
+    setText('#enCurso', `${t >= 36.05 && t < 39.6 ? 5 : 4} en curso`);
+
+    // Resumen del día
+    setText('#dBig', money(3422.8 * easeOut(clamp01((t - 42.6) / 1.8))));
+    setText('#dPed', String(Math.round(86 * easeOut(clamp01((t - 42.8) / 1.6)))));
+
+    // Billetera
+    setText('#wLeft', t < 51.66 ? 'Te faltan 3 para tu postre' : 'Te faltan 2 para tu postre');
+  }
+
+  /* ── Sonido sintetizado (sin archivos) ─────────────────── */
+  let ac = null, master = null, soundOn = false;
+  function ensureAudio() {
+    if (ac) return;
+    const C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return;
+    ac = new C(); master = ac.createGain(); master.gain.value = 0.55; master.connect(ac.destination);
+  }
+  function tone(f, t0, d, type = 'sine', g = 0.2, f2 = null) {
+    const o = ac.createOscillator(), a = ac.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t0);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + d);
+    a.gain.setValueAtTime(0.0001, t0); a.gain.exponentialRampToValueAtTime(g, t0 + 0.01); a.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    o.connect(a).connect(master); o.start(t0); o.stop(t0 + d + 0.05);
+  }
+  function noise(t0, d, g = 0.15, fA = 800, fB = null, q = 0.8) {
+    const len = Math.max(1, Math.floor(ac.sampleRate * d));
+    const b = ac.createBuffer(1, len, ac.sampleRate); const ch = b.getChannelData(0);
+    for (let i = 0; i < len; i++) ch[i] = Math.random() * 2 - 1;
+    const s = ac.createBufferSource(); s.buffer = b;
+    const flt = ac.createBiquadFilter(); flt.type = 'bandpass'; flt.Q.value = q; flt.frequency.setValueAtTime(fA, t0);
+    if (fB) flt.frequency.exponentialRampToValueAtTime(fB, t0 + d);
+    const a = ac.createGain(); a.gain.setValueAtTime(0.0001, t0); a.gain.exponentialRampToValueAtTime(g, t0 + d * 0.3); a.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    s.connect(flt).connect(a).connect(master); s.start(t0); s.stop(t0 + d + 0.05);
+  }
+  function sfx(name) {
+    if (!soundOn || !ac || renderMode) return;
+    const t = ac.currentTime + 0.01;
+    switch (name) {
+      case 'paper': noise(t, 0.09, 0.12, 2400); break;
+      case 'ping': tone(1400, t, 0.12, 'triangle', 0.08); break;
+      case 'ring': for (let i = 0; i < 6; i++) { tone(i % 2 ? 1180 : 940, t + i * 0.09, 0.08, 'square', 0.035); } break;
+      case 'shout': noise(t, 0.3, 0.08, 500, 300, 2); break;
+      case 'freeze': tone(220, t, 0.5, 'sine', 0.22, 70); noise(t, 0.12, 0.1, 300); break;
+      case 'fall': noise(t, 0.4, 0.07, 1800, 400); break;
+      case 'thump': tone(170, t, 0.28, 'sine', 0.45, 48); break;
+      case 'whoosh': noise(t, 0.5, 0.14, 350, 2800, 1.2); break;
+      case 'swoosh': noise(t, 0.3, 0.1, 900, 2600, 1.4); break;
+      case 'blink': tone(900, t, 0.06, 'sine', 0.06, 1300); break;
+      case 'tap': noise(t, 0.03, 0.12, 3200, null, 2); break;
+      case 'pop': tone(520, t, 0.1, 'sine', 0.16, 1180); break;
+      case 'catch': tone(660, t, 0.12, 'triangle', 0.12, 990); break;
+      case 'success': [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, t + i * 0.07, 0.5, 'triangle', 0.1)); break;
+      // El «ding» de Leogin: dos notas que suben, alegre y nunca de alarma
+      case 'ding': tone(1046.5, t, 1.1, 'sine', 0.22); tone(2093, t, 0.6, 'sine', 0.05); tone(1568, t + 0.14, 1.3, 'sine', 0.22); tone(3136, t + 0.14, 0.6, 'sine', 0.04); break;
+      case 'printer': for (let i = 0; i < 10; i++) { noise(t + i * 0.11, 0.08, 0.05, 1400 + (i % 3) * 300, null, 3); } break;
+      case 'ready': tone(783.99, t, 0.35, 'sine', 0.14); tone(1174.66, t + 0.09, 0.55, 'sine', 0.14); break;
+      case 'count': for (let i = 0; i < 14; i++) tone(1800 + i * 40, t + i * 0.11, 0.03, 'square', 0.025); break;
+      case 'celebrate': [659.25, 830.61, 987.77, 1318.5].forEach((f, i) => tone(f, t + i * 0.06, 0.8, 'triangle', 0.09)); noise(t, 0.35, 0.05, 4000); break;
+      case 'stamp': tone(120, t, 0.18, 'sine', 0.4, 60); noise(t, 0.08, 0.15, 900); break;
+      case 'chord': [261.63, 329.63, 392, 587.33, 783.99].forEach((f) => tone(f, t, 2.4, 'triangle', 0.06)); break;
+    }
+  }
+
+  /* ── Reproductor ───────────────────────────────────────── */
+  const scrub = $('#scrub'), timeEl = $('#time'), pp = $('#pp'), overlay = $('#overlay');
+  const chapters = [[0, 'El caos'], [12, 'Leo llega'], [17, 'Escanea'], [26, 'Pide'], [34, 'Cocina'], [42, 'Caja'], [50, 'Vuelven'], [55, 'Firma']];
+  $('#chapters').innerHTML = chapters.map(([t, l]) => `<button type="button" data-t="${t}">${l}</button>`).join('');
+  const chBtns = $$('#chapters button');
+  const fmtT = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  let started = false;
+
+  function setPlayIcon(playing) {
+    $('#ppIco').innerHTML = playing ? '<path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/>' : '<path d="M8 5.5v13l11-6.5z" fill="currentColor"/>';
+    pp.setAttribute('aria-label', playing ? 'Pausar' : 'Reproducir');
+  }
+  function updateUI(t) {
+    if (renderMode) return;
+    if (document.activeElement !== scrub) scrub.value = t.toFixed(2);
+    scrub.style.setProperty('--p', `${((+scrub.value / DUR) * 100).toFixed(2)}%`);
+    timeEl.textContent = `${fmtT(t)} / ${fmtT(DUR)}`;
+    let idx = 0; chapters.forEach(([ct], i) => { if (t >= ct) idx = i; });
+    chBtns.forEach((b, i) => b.classList.toggle('on', i === idx && started));
+  }
+  function play(fromStart) {
+    started = true; overlay.hidden = true;
+    if (fromStart || tl.time() >= DUR - 0.05) tl.seek(0);
+    tl.play(); setPlayIcon(true);
+  }
+  function pause() { tl.pause(); setPlayIcon(false); }
+  function ended() {
+    setPlayIcon(false);
+    $('#ovTitle').textContent = 'Ver otra vez';
+    $('#ovSub').textContent = 'Pide. Cocina. Cobra.';
+    overlay.hidden = false;
+  }
+  overlay.addEventListener('click', () => play(!started || tl.time() >= DUR - 0.05));
+  pp.addEventListener('click', () => { if (!started) return play(true); tl.isActive() ? pause() : play(false); });
+  $('#rs').addEventListener('click', () => { play(true); });
+  scrub.addEventListener('input', () => {
+    if (!started) { started = true; overlay.hidden = true; }
+    tl.pause(); setPlayIcon(false); tl.seek(+scrub.value); render(tl.time());
+  });
+  chBtns.forEach((b) => b.addEventListener('click', () => { started = true; overlay.hidden = true; tl.seek(+b.dataset.t); render(tl.time()); tl.play(); setPlayIcon(true); }));
+  document.addEventListener('keydown', (e) => {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON')) return;
+    if (e.code === 'Space') { e.preventDefault(); tl.isActive() ? pause() : play(false); }
+    if (e.code === 'ArrowRight') { tl.seek(Math.min(DUR, tl.time() + 2)); render(tl.time()); }
+    if (e.code === 'ArrowLeft') { tl.seek(Math.max(0, tl.time() - 2)); render(tl.time()); }
+  });
+  $('#snd').addEventListener('click', () => {
+    ensureAudio();
+    if (ac && ac.state === 'suspended') ac.resume();
+    soundOn = !soundOn && !!ac;
+    $('#snd').setAttribute('aria-pressed', String(soundOn));
+    $('#sndTxt').textContent = soundOn ? 'Sonido encendido' : 'Sonido apagado';
+    $('#sndWave').setAttribute('opacity', soundOn ? '1' : '.25');
+  });
+
+  function setFormat(f) {
+    if (f === fmt && tl) return;
+    const t = tl ? tl.time() : POSTER;
+    const wasPlaying = tl ? tl.isActive() : false;
+    if (tl) tl.kill();
+    fmt = f;
+    stage.classList.toggle('v', f === 'v');
+    stage.classList.toggle('h', f !== 'v');
+    $('#fH').setAttribute('aria-pressed', String(f !== 'v'));
+    $('#fV').setAttribute('aria-pressed', String(f === 'v'));
+    gsap.set($$('*', stage), { clearProps: CLEAR });
+    lastFrame = -1; cache.clear();
+    layout();
+    build();
+    tl.seek(t); render(t);
+    if (wasPlaying) tl.play();
+  }
+  $('#fH').addEventListener('click', () => setFormat('h'));
+  $('#fV').addEventListener('click', () => setFormat('v'));
+
+  function layout() {
+    const W = stageW(), H = stageH();
+    if (renderMode) { wrap.style.width = W + 'px'; wrap.style.height = H + 'px'; stage.style.transform = 'none'; return; }
+    const availW = wrap.parentElement.clientWidth;
+    const availH = Math.max(320, window.innerHeight - 230);
+    const s = Math.min(availW / W, availH / H);
+    wrap.style.width = Math.floor(W * s) + 'px';
+    wrap.style.height = Math.floor(H * s) + 'px';
+    stage.style.transform = `scale(${s})`;
+  }
+  window.addEventListener('resize', layout);
+
+  gsap.ticker.add(() => { if (!tl) return; const t = tl.time(); if (tl.isActive()) render(t); updateUI(t); });
+
+  // Arranque: cuadro de portada detrás del botón de reproducir
+  const fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+  layout();
+  build();
+  tl.seek(POSTER); render(POSTER); updateUI(POSTER);
+  fontsReady.then(() => { const t = tl.time(); layout(); setFormatRebuild(t); });
+  function setFormatRebuild(t) {
+    // Las medidas del texto cambian al cargar las fuentes: se rehace la línea de tiempo.
+    const wasPlaying = tl.isActive();
+    tl.kill(); gsap.set($$('*', stage), { clearProps: CLEAR }); lastFrame = -1; cache.clear();
+    build(); tl.seek(t); render(t);
+    if (wasPlaying) tl.play();
+  }
+
+  // API para grabar el video cuadro por cuadro (docs/diseno/intro-animada/grabar-video.mjs)
+  window.__intro = {
+    duration: DUR,
+    ready: fontsReady,
+    renderMode(f) {
+      renderMode = true; soundOn = false;
+      document.body.classList.add('render');
+      if (f && f !== fmt) setFormat(f);
+      layout(); setFormatRebuild(0);
+      return { width: stageW(), height: stageH() };
+    },
+    seek(t) { tl.seek(t, true); render(t); },
+  };
+})();
+</script>
