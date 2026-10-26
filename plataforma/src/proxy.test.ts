@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
 /* ============================================================
@@ -556,5 +556,110 @@ describe('el subdominio viejo del panel redirige al origen único', () => {
     );
 
     expect(res.status).not.toBe(308);
+  });
+});
+
+/* ============================================================
+   LA COOKIE DEL COMENSAL BAJO EL LINK ESTABLE (BIL-03)
+   ------------------------------------------------------------
+   Se escribía con `Path=/m/<ref>/`, y Next hace 308 de `/m/<ref>/` a
+   `/m/<ref>`: en la portada del QR general la sesión del comensal no
+   llegaba. Ahora va en `/m/<ref>`, y el proxy muda la vieja la primera vez
+   que la ve (solo llega en las subpáginas) sin dejar una fantasma.
+   ============================================================ */
+
+describe('la cookie del comensal bajo el link estable', () => {
+  const DINER = 'sb-leogin-diner-v2';
+  const MARCA = 'leogin-diner-ruta';
+
+  beforeEach(() => {
+    h.behaviour = async () => ({ error: null });
+    vi.stubGlobal('fetch', async () => Response.json([{ slug: 'azucar-negra', status: 'active' }]));
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const estable = (path: string, cookie = '') =>
+    new NextRequest(`https://distleogin.com${path}`, { headers: cookie ? { cookie } : {} });
+  const delComensal = (res: Response) => setCookies(res).filter((c) => c.startsWith(DINER) || c.startsWith(MARCA));
+
+  it('el token rotado se escribe en /m/<ref>, sin barra final', async () => {
+    h.behaviour = async (opts) => {
+      const o = opts as unknown as { cookieOptions?: { name?: string } };
+      if (o.cookieOptions?.name === DINER) {
+        opts.cookies.setAll([{ name: DINER, value: 'TOKEN-NUEVO', options: { path: '/' } }]);
+      }
+      return { error: null };
+    };
+    const res = await proxy(estable('/m/azucar-negra', `${DINER}=TOKEN-VIEJO`));
+
+    expect(delComensal(res)).toEqual([expect.stringMatching(/^sb-leogin-diner-v2=TOKEN-NUEVO; Path=\/m\/azucar-negra(;|$)/)]);
+  });
+
+  it('en la portada no hay nada que mudar: la vieja ni siquiera llega ahí', async () => {
+    const res = await proxy(estable('/m/azucar-negra', `${DINER}=SESION`));
+
+    expect(delComensal(res)).toEqual([]);
+    expect(cookiesQueVeElRender(res)).toContain(`${DINER}=SESION`);
+  });
+
+  it('en una subpágina, sin la marca, muda la sesión a /m/<ref> y borra la de /m/<ref>/', async () => {
+    const res = await proxy(estable('/m/azucar-negra/4', `${DINER}.0=TROZO0; ${DINER}.1=TROZO1`));
+    const escritas = delComensal(res);
+
+    for (const [name, value] of [[`${DINER}.0`, 'TROZO0'], [`${DINER}.1`, 'TROZO1']]) {
+      expect(escritas).toContainEqual(expect.stringMatching(new RegExp(`^${name.replace('.', '\.')}=; Path=/m/azucar-negra/; Max-Age=0`)));
+      expect(escritas).toContainEqual(expect.stringMatching(new RegExp(`^${name.replace('.', '\.')}=${value}; Path=/m/azucar-negra;`)));
+    }
+    expect(escritas).toContainEqual(expect.stringMatching(/^leogin-diner-ruta=1; Path=\/m\/azucar-negra;/));
+    // El render de esta misma petición sigue viendo la sesión.
+    expect(cookiesQueVeElRender(res)).toContain(`${DINER}.0=TROZO0`);
+  });
+
+  it('con la marca no reescribe nada: la mudanza es una sola vez', async () => {
+    const res = await proxy(estable('/m/azucar-negra/4', `${DINER}=SESION; ${MARCA}=1`));
+    expect(delComensal(res)).toEqual([]);
+  });
+
+  it('si el refresco rotó el token, se muda el token NUEVO, no el que llegó', async () => {
+    h.behaviour = async (opts) => {
+      const o = opts as unknown as { cookieOptions?: { name?: string } };
+      if (o.cookieOptions?.name === DINER) {
+        opts.cookies.setAll([{ name: DINER, value: 'TOKEN-NUEVO', options: { path: '/' } }]);
+      }
+      return { error: null };
+    };
+    const res = await proxy(estable('/m/azucar-negra/checkout', `${DINER}=TOKEN-VIEJO`));
+    const escritas = delComensal(res);
+
+    expect(escritas.filter((c) => c.includes('TOKEN-VIEJO'))).toEqual([]);
+    expect(escritas).toContainEqual(expect.stringMatching(/^sb-leogin-diner-v2=TOKEN-NUEVO; Path=\/m\/azucar-negra(;|$)/));
+    expect(escritas).toContainEqual(expect.stringMatching(/^sb-leogin-diner-v2=; Path=\/m\/azucar-negra\/; Max-Age=0/));
+  });
+
+  it('con las dos rutas a la vez (fantasma) borra la vieja y no arma una sesión mezclada', async () => {
+    let vioSesion = false;
+    h.behaviour = async (opts) => {
+      const o = opts as unknown as { cookieOptions?: { name?: string } };
+      if (o.cookieOptions?.name === DINER) {
+        vioSesion = opts.cookies.getAll().some(({ name }) => name.startsWith(DINER));
+      }
+      return { error: null };
+    };
+    // El navegador manda primero la de ruta más larga: la vieja.
+    const res = await proxy(estable('/m/azucar-negra/4', `${DINER}=VIEJA; ${DINER}=NUEVA; ${MARCA}=1`));
+    const escritas = delComensal(res);
+
+    expect(escritas).toContainEqual(expect.stringMatching(/^sb-leogin-diner-v2=; Path=\/m\/azucar-negra\/; Max-Age=0/));
+    // La buena (la de /m/<ref>) no se toca.
+    expect(escritas.filter((c) => /Path=\/m\/azucar-negra(;|$)/.test(c) && c.startsWith(`${DINER}=`))).toEqual([]);
+    expect(vioSesion).toBe(false);
+    expect(cookiesQueVeElRender(res) ?? '').not.toContain(DINER);
+  });
+
+  it('sin sesión del comensal no escribe nada (ni la marca)', async () => {
+    const res = await proxy(estable('/m/azucar-negra/4', 'tema=oscuro'));
+    expect(delComensal(res)).toEqual([]);
   });
 });

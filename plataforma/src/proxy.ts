@@ -14,13 +14,17 @@ import {
   LEGACY_DINER_COOKIE_PATTERN,
   WALLET_COOKIE_NAME,
   cookieDomainForHost,
+  DINER_PATH_MARKER_COOKIE,
   defaultStorageKey,
+  dinerSessionCookieNames,
+  dinerStableCookiePath,
   duplicateCookieNames,
   isCodeVerifierCookie,
   isDeadSessionCode,
   isStaffCodeVerifierCookie,
   isWalletCodeVerifierCookie,
   isStaffSessionCookie,
+  legacyDinerStableCookiePath,
   sessionCookieNames,
 } from "@/lib/supabase/cookies";
 import { analiticaConfig } from "@/lib/analytics";
@@ -483,6 +487,15 @@ export async function proxy(request: NextRequest) {
       : [];
     const hasGhostStaffCookie = ghostStaffCookies.length > 0;
     let staffSessionIsDead = false;
+    // Cookie fantasma del COMENSAL bajo el link estable: la de `/m/<ref>/`
+    // (antes de BIL-03) junto a la de `/m/<ref>`. Solo pueden llegar juntas
+    // en las subpáginas, que son las únicas que casan con las dos rutas. Ver
+    // "MUDANZA DE LA COOKIE DEL COMENSAL", más abajo.
+    const enSubpaginaEstable = !!stableId && pathname.startsWith(legacyDinerStableCookiePath(stableId));
+    const ghostDinerCookies = enSubpaginaEstable
+      ? dinerSessionCookieNames(duplicateCookieNames(requestHeaders.get("cookie")))
+      : [];
+    const hasGhostDinerCookie = ghostDinerCookies.length > 0;
 
     const refreshSession = async (cookieName?: string) => {
       // Solo la sesión del PERSONAL comparte dominio entre subdominios; la del
@@ -493,11 +506,19 @@ export async function proxy(request: NextRequest) {
       // un restaurante quedaría visible en /m/<otro-id>/ del mismo host (algo
       // que el diseño host-only de esta cookie específicamente quiere evitar,
       // ver lib/supabase/cookies.ts).
-      const cookiePath = cookieName === DINER_COOKIE_NAME && stableId ? `/m/${stableId}/` : undefined;
+      // Sin barra final: ver `dinerStableCookiePath`.
+      const cookiePath = cookieName === DINER_COOKIE_NAME && stableId ? dinerStableCookiePath(stableId) : undefined;
       const supabase = createServerClient(supabaseUrl, anonKey, {
         ...(cookieName ? { cookieOptions: { name: cookieName } } : {}),
         cookies: {
           getAll() {
+            // Con la fantasma del comensal de por medio, cada trozo sale de
+            // una generación distinta: mejor ninguna sesión que una mezclada.
+            // Es una sola petición; la siguiente ya llega limpia.
+            if (cookieName === DINER_COOKIE_NAME && hasGhostDinerCookie) {
+              const mezcladas = new Set(dinerSessionCookieNames(request.cookies.getAll().map(({ name }) => name)));
+              return request.cookies.getAll().filter(({ name }) => !mezcladas.has(name));
+            }
             return request.cookies.getAll();
           },
           setAll(cookiesToSet) {
@@ -630,6 +651,54 @@ export async function proxy(request: NextRequest) {
       const secure = proto === "https" ? "; Secure" : "";
       for (const name of staffCookieNames) {
         rawSetCookies.push(`${name}=; Path=/; Max-Age=0; SameSite=Lax${secure}`);
+      }
+    }
+
+    // MUDANZA DE LA COOKIE DEL COMENSAL: `/m/<ref>/` → `/m/<ref>`.
+    //
+    // La vieja solo llega en las subpáginas (`/m/<ref>/4`, `/m/<ref>/checkout`),
+    // y ahí llega igual que la nueva: la cabecera `Cookie` no dice la ruta.
+    // Así que la primera vez que pasa por aquí un navegador con sesión, sin la
+    // marca de mudanza, se da por vieja: se borra en `/m/<ref>/` y su valor se
+    // vuelve a escribir en `/m/<ref>`. Si en realidad ya era la nueva, el
+    // borrado no toca nada y la reescritura deja lo mismo. Nadie pierde la
+    // sesión, y desde entonces la marca evita repetirlo en cada petición.
+    //
+    // Con las dos a la vez (fantasma) no se sabe qué trozo es de cuál: no se
+    // muda nada, solo se borra la vieja — la nueva es la que se escribió
+    // después. Esa petición se sirve sin sesión (ver getAll, arriba).
+    //
+    // El borrado va por `rawSetCookies`: misma clave que la cookie buena,
+    // otra ruta, y `response.cookies` solo admite una por nombre.
+    if (stableId && enSubpaginaEstable && !isAdminArea) {
+      const yaMudada = request.cookies.has(DINER_PATH_MARKER_COOKIE);
+      const deLaSesion = dinerSessionCookieNames(request.cookies.getAll().map(({ name }) => name));
+      if (deLaSesion.length > 0 && (hasGhostDinerCookie || !yaMudada)) {
+        const proto = request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
+        const secure = proto === "https" ? "; Secure" : "";
+        const rutaVieja = legacyDinerStableCookiePath(stableId);
+        const rutaNueva = dinerStableCookiePath(stableId);
+        // Las mismas opciones con que @supabase/ssr escribe la sesión.
+        const comoSupabase = { path: rutaNueva, sameSite: "lax", httpOnly: false, maxAge: 400 * 24 * 60 * 60 };
+        const nombres = new Set([...deLaSesion, ...ghostDinerCookies]);
+        for (const name of nombres) {
+          rawSetCookies.push(`${name}=; Path=${rutaVieja}; Max-Age=0; SameSite=Lax${secure}`);
+          // Tampoco el render debe armar la sesión con trozos mezclados.
+          if (hasGhostDinerCookie) {
+            request.cookies.delete(name);
+            continue;
+          }
+          // Lo que el refresco ya escribió (token rotado o sesión soltada)
+          // manda sobre el valor que llegó.
+          if (pendingCookies.some((c) => c.name === name)) continue;
+          const value = request.cookies.get(name)?.value;
+          if (value) pendingCookies.push({ name, value, options: comoSupabase });
+        }
+        pendingCookies.push({
+          name: DINER_PATH_MARKER_COOKIE,
+          value: "1",
+          options: { ...comoSupabase, httpOnly: true },
+        });
       }
     }
 

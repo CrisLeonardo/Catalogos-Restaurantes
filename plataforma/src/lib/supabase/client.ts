@@ -72,14 +72,16 @@ function createWithCookieName(cookieName?: string) {
   // Solo el PERSONAL (sin cookieName) comparte dominio; el COMENSAL es host-only.
   const domain = cookieName ? undefined : dominioDeCookie();
   // Bajo el link estable de mesa (dominio raíz), la cookie del COMENSAL debe
-  // quedar atada a `/m/<restaurantId>/` — si no, la sesión de invitado de un
-  // restaurante se vería en /m/<otro-id>/ del mismo host (ver proxy.ts, que
-  // hace lo mismo del lado servidor para esta misma cookie).
+  // quedar atada a `/m/<ref>` — si no, la sesión de invitado de un
+  // restaurante se vería en /m/<otro-ref> del mismo host (ver proxy.ts, que
+  // hace lo mismo del lado servidor para esta misma cookie). Sin barra
+  // final: ver `dinerStableCookiePath`. Solo la del comensal, no la de la
+  // cuenta Leogin.
   const stablePrefix = cookieName === DINER_COOKIE_NAME ? getStableLinkPrefix() : null;
   const baseOptions = domain
     ? { domain, path: "/", sameSite: "lax" as const }
     : stablePrefix
-      ? { path: `${stablePrefix}/` }
+      ? { path: stablePrefix }
       : {};
   const cookieOptions = {
     ...baseOptions,

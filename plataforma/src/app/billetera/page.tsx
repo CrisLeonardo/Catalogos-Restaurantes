@@ -74,11 +74,9 @@ export default async function BilleteraPage({
           <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {restaurantes.map((r) => (
               <li key={r.id}>
-                {/* Por el SUBDOMINIO del restaurante. El link estable (`/m/<slug>`,
-                    mismo origen, BIL-03) todavía no sirve: la cookie del comensal
-                    va atada a `/m/<slug>/` y Next quita esa barra final, así que
-                    en la portada del menú la sesión no se ve. Ver el plan. */}
-                <RestauranteFila nombre={r.nombre} logoUrl={r.logoUrl} href={urlDelPuente(r.slug, 'sub', '/')} />
+                {/* Por el link estable (`/m/<slug>`): mismo origen que la
+                    billetera, así la PWA instalada no salta al navegador (BIL-03). */}
+                <RestauranteFila nombre={r.nombre} logoUrl={r.logoUrl} href={urlDelPuente(r.slug, 'm', '/')} />
               </li>
             ))}
           </ul>

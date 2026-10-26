@@ -2,7 +2,7 @@ import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { AuthError, type UserResponse } from "@supabase/supabase-js";
 import { cookies, headers } from "next/headers";
-import { DINER_COOKIE_NAME, WALLET_COOKIE_NAME, cookieDomainForHost, defaultStorageKey, isCodeVerifierCookie, sessionCookieNames } from "@/lib/supabase/cookies";
+import { DINER_COOKIE_NAME, WALLET_COOKIE_NAME, cookieDomainForHost, defaultStorageKey, dinerStableCookiePath, isCodeVerifierCookie, sessionCookieNames } from "@/lib/supabase/cookies";
 import { aalDelToken, pasoSegundoFactor, type Aal } from "@/lib/auth/segundo-factor-policy";
 import { autenticadoEnMs } from "@/lib/auth/reauth-policy";
 
@@ -47,14 +47,14 @@ async function createWithCookieName(cookieName?: string, ocultarSesionPrevia = f
         process.env.NEXT_PUBLIC_ROOT_DOMAIN,
       );
   // Bajo el link estable de mesa (dominio raíz, ver proxy.ts §1b), la cookie
-  // del COMENSAL necesita quedar atada a `/m/<restaurantId>/` — si no, la
-  // sesión de invitado de un restaurante (p.ej. tras el login de Google en
-  // /auth/callback) se filtraría a /m/<otro-id>/ del mismo host. Mismo ajuste
-  // que ya hacen proxy.ts y lib/supabase/client.ts para esta misma cookie.
-  // Solo la del comensal: la de la cuenta Leogin vive en `/billetera`, nunca
-  // bajo un `/m/<id>/`.
+  // del COMENSAL necesita quedar atada a `/m/<ref>` — si no, la sesión de
+  // invitado de un restaurante (p.ej. tras el login de Google en
+  // /auth/callback) se filtraría a /m/<otro-ref> del mismo host. Mismo ajuste
+  // que ya hacen proxy.ts y lib/supabase/client.ts para esta misma cookie;
+  // sin barra final, ver `dinerStableCookiePath`. Solo la del comensal: la de
+  // la cuenta Leogin vive en `/billetera`, nunca bajo un `/m/<ref>`.
   const stableId = cookieName === DINER_COOKIE_NAME ? cabeceras.get("x-tenant-stable-id") : null;
-  const path = stableId ? `/m/${stableId}/` : undefined;
+  const path = stableId ? dinerStableCookiePath(stableId) : undefined;
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

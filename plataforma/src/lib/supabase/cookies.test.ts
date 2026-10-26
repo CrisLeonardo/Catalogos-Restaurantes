@@ -8,6 +8,9 @@ import {
   isStaffSessionCookie,
   isWalletCodeVerifierCookie,
   cookieDomainForHost,
+  dinerSessionCookieNames,
+  dinerStableCookiePath,
+  legacyDinerStableCookiePath,
   WALLET_COOKIE_NAME,
 } from './cookies';
 
@@ -154,5 +157,41 @@ describe('cookieDomainForHost', () => {
   it('sin configuración, host-only', () => {
     expect(cookieDomainForHost('distleogin.com', '')).toBeUndefined();
     expect(cookieDomainForHost(null, ROOTS)).toBeUndefined();
+  });
+});
+
+describe('ruta de la cookie del comensal bajo el link estable', () => {
+  /** RFC 6265 §5.1.4: ¿el navegador manda una cookie de ruta `cookiePath` a `requestPath`? */
+  const casa = (cookiePath: string, requestPath: string) =>
+    requestPath === cookiePath ||
+    (requestPath.startsWith(cookiePath) &&
+      (cookiePath.endsWith('/') || requestPath[cookiePath.length] === '/'));
+
+  it('la portada del QR general recibe la sesión (la ruta vieja no)', () => {
+    // Next hace 308 de /m/<ref>/ a /m/<ref>: la portada es SIN barra.
+    expect(casa(dinerStableCookiePath('azucar-negra'), '/m/azucar-negra')).toBe(true);
+    expect(casa(legacyDinerStableCookiePath('azucar-negra'), '/m/azucar-negra')).toBe(false);
+  });
+
+  it('las subpáginas también, y ahí llegan las dos rutas', () => {
+    expect(casa(dinerStableCookiePath('azucar-negra'), '/m/azucar-negra/4')).toBe(true);
+    expect(casa(legacyDinerStableCookiePath('azucar-negra'), '/m/azucar-negra/4')).toBe(true);
+  });
+
+  it('no se cuela a otro restaurante cuyo ref empieza igual', () => {
+    expect(casa(dinerStableCookiePath('azucar'), '/m/azucar-negra')).toBe(false);
+    expect(casa(dinerStableCookiePath('azucar'), '/m/azucar-negra/4')).toBe(false);
+  });
+
+  it('dinerSessionCookieNames: clave y trozos, sin verificador ni cookies ajenas', () => {
+    expect(
+      dinerSessionCookieNames([
+        DINER_COOKIE_NAME,
+        `${DINER_COOKIE_NAME}.0`,
+        `${DINER_COOKIE_NAME}-code-verifier`,
+        'sb-abc-auth-token',
+        'tema',
+      ]),
+    ).toEqual([DINER_COOKIE_NAME, `${DINER_COOKIE_NAME}.0`]);
   });
 });
