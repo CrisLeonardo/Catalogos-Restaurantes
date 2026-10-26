@@ -215,4 +215,4 @@ La marca es la del restaurante: aquí no aparece Leo ni el naranja de Leogin. To
 
 - [x] Fase 1 — web viva y Rincón 502 en la demo y el video (2026-10-26, rama `feat/portada-bajo-control`, PR #39). Pendiente de la fase: que el dueño mire la web en su celular y diga si el ritmo de «del caos al control» se siente bien.
 - [x] Fase 2 — menú en línea y panel (2026-10-26, rama `feat/experiencia-viva-menu-panel`). Pendiente de la fase: ver en un pedido real cómo cae la tarjeta nueva en Pedidos (en local no había pedidos de hoy) y si el rodillo de las cifras se siente bien en el teléfono del dueño.
-- [ ] Fase 3 — fuera Azúcar Negra
+- [x] Fase 3 — fuera Azúcar Negra (2026-10-26, PR #41, rama `chore/demo-rincon502`, sale de `main`). Base local: Rincón 502 creado y sembrado; Azúcar Negra y sus 5 usuarios de prueba borrados con respaldo previo. Los registros históricos no se reescriben. En producción, retirarlo lo hace el dueño desde Super › Restaurantes.
