@@ -6,6 +6,7 @@ import { Icon } from '@/components/icons';
 import { getLocalProfile, saveLocalProfile, type LocalCustomerProfile } from '@/lib/customer-local';
 import { getMyAccount, linkMyAccountByPhone } from '@/lib/actions/loyalty';
 import GoogleSignInButton from '@/components/menu/google-signin';
+import LeoginCuentaLink from '@/components/menu/leogin-cuenta-link';
 import OverlayBackground from '@/components/menu/overlay-background';
 import type { MyAccount } from '@/lib/actions/loyalty';
 
@@ -379,6 +380,8 @@ export default function AccountSheet({
                     : 'Guarda tus datos y encuentra tus pedidos en cualquier dispositivo.'}
                 </p>
                 <GoogleSignInButton full returnTab="cuenta" />
+                {/* La misma cuenta para todos los restaurantes Leogin (billetera). */}
+                <LeoginCuentaLink restaurantId={restaurantId} />
               </>
             )}
           </div>

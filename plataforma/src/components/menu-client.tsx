@@ -129,13 +129,16 @@ export default function MenuClient({
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('openTab');
-    const hadAuthError = params.get('auth_error') === '1';
+    // `puente_error=1`: lo mismo, pero desde el puente de la cuenta Leogin
+    // (app/auth/puente/route.ts) — código vencido o ya usado.
+    const hadAuthError = params.get('auth_error') === '1' || params.get('puente_error') === '1';
     if (tab === 'cuenta') setAccountOpen(true);
     else if (tab === 'fidelidad') setRewardsOpen(true);
     if (hadAuthError) setAuthError(true);
     if (!tab && !hadAuthError) return;
     params.delete('openTab');
     params.delete('auth_error');
+    params.delete('puente_error');
     const qs = params.toString();
     window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
   }, []);
