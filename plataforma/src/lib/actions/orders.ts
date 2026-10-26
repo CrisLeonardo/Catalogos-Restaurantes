@@ -262,7 +262,7 @@ export async function createOrder(
 ): Promise<CreateOrderResult> {
   const parsed = createOrderSchema.safeParse(rawInput);
   if (!parsed.success) {
-    const first = parsed.error.errors[0];
+    const first = parsed.error.issues[0];
     return { error: first?.message ?? 'Datos del pedido inválidos.' };
   }
 
@@ -670,7 +670,7 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
      siquiera conoce ese campo. */
   const parsed = waiterOrderSchema.safeParse(rawInput);
   if (!parsed.success) {
-    const first = parsed.error.errors[0];
+    const first = parsed.error.issues[0];
     return { error: first?.message ?? 'Datos del pedido inválidos.' };
   }
 

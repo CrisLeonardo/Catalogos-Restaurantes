@@ -50,13 +50,13 @@ describe('la frontera entre el público y el mesero', () => {
   it('…y sigue sin poder mandarse un pedido de verdad vacío', () => {
     const r = waiterOrderSchema.safeParse({ ...MESA, items: [], openItems: [] });
     expect(r.success).toBe(false);
-    if (!r.success) expect(r.error.errors[0].message).toBe('El carrito está vacío');
+    if (!r.success) expect(r.error.issues[0].message).toBe('El carrito está vacío');
   });
 
   it('el público sigue necesitando al menos una línea de la carta', () => {
     const r = createOrderSchema.safeParse({ ...MESA, items: [] });
     expect(r.success).toBe(false);
-    if (!r.success) expect(r.error.errors[0].message).toBe('El carrito está vacío');
+    if (!r.success) expect(r.error.issues[0].message).toBe('El carrito está vacío');
   });
 });
 

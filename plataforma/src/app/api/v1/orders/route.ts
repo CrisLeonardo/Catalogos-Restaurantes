@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
 
   const parsed = externalOrderSchema.safeParse(body);
   if (!parsed.success) {
-    const first = parsed.error.errors[0];
+    const first = parsed.error.issues[0];
     return NextResponse.json(
       {
         error: 'invalid_request',
