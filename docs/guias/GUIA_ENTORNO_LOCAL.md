@@ -23,7 +23,7 @@ Tu plataforma son **dos piezas** que corren juntas:
 
 La app sabe a qué Supabase conectarse por el archivo **`.env.local`** (en local) o por las **variables de entorno** (en Render). Solo cambias esas 3 claves y la misma app apunta a una base u otra.
 
-> **Por eso antes "se sentía que no funcionaba":** sin `.env.local` con claves de Supabase, la app solo muestra la **demo** de un restaurante (Café Demo) y los paneles `/admin` y `/super` te mandan a la portada. No es que falte código: faltaba conectar la base de datos. Eso ya está resuelto en local.
+> **Por eso antes "se sentía que no funcionaba":** sin `.env.local` con claves de Supabase, la app solo muestra la **demo** de un restaurante (Rincón 502) y los paneles `/admin` y `/super` te mandan a la portada. No es que falte código: faltaba conectar la base de datos. Eso ya está resuelto en local.
 
 ---
 
@@ -65,9 +65,23 @@ Ya hice todo esto por ti (no tienes que repetirlo, solo entenderlo):
 | Rol | Email | Contraseña | Entra en |
 |-----|-------|-----------|----------|
 | **Super Admin** (tú) | `admin@local.test` | `Admin12345` | http://localhost:3000/login → `/super` |
-| **Dueño** (restaurante demo) | `dueno@azucarnegra.test` | `Dueno12345` | http://localhost:3000/login → `/admin` |
+| **Dueño** de Rincón 502 (restaurante de ejemplo) | `dueno@rincon502.test` | `Dueno12345` | http://localhost:3000/login → `/admin` |
 
 > Estas credenciales **solo existen en tu Supabase local**. No sirven en producción.
+
+### Rincón 502, el restaurante de ejemplo
+
+Rincón 502 es el único restaurante de ejemplo de Leogin: el de la demo, el del video y el de las pruebas (antes era Azúcar Negra, que ya no existe). Si tu base local no lo tiene, o la reiniciaste:
+
+1. Abre http://localhost:3000/registro y crea la cuenta con `dueno@rincon502.test` / `Dueno12345`.
+2. En «Crear restaurante» llámalo **Rincón 502** y en «Dirección de tu menú» escribe **`rincon502`** (sin guion).
+3. Siembra su carta, cupones y ~110 pedidos (desde `plataforma/`):
+
+   ```bash
+   docker exec -i supabase_db_plataforma psql -U postgres -d postgres < supabase/seed_demo_rincon502.sql
+   ```
+
+   Es idempotente: correrlo otra vez no duplica nada. Las fechas de los pedidos quedan relativas al día en que lo corres.
 
 ### Entrar sin escribir la contraseña
 
@@ -168,8 +182,8 @@ Con Supabase local encendido, abre **http://localhost:54323** — es el "panel d
 Cada restaurante vive en su subdominio. En local Chrome resuelve `*.localhost` automáticamente:
 
 - **http://localhost:3000** → portada **demo** (sin restaurante real).
-- **http://cafe-demo.localhost:3000** → el menú **real** del restaurante `cafe-demo` leído de la base.
-- **http://cafe-demo.localhost:3000/login** → ahí entraría el dueño de ese restaurante.
+- **http://rincon502.localhost:3000** → el menú **real** de Rincón 502 leído de la base.
+- **http://rincon502.localhost:3000/login** → ahí entra su dueño.
 
 Si creas otro restaurante con slug `tacos-pepe`, lo verás en `http://tacos-pepe.localhost:3000`.
 
