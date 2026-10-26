@@ -96,6 +96,16 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--mango); out
 /* Modo grabación: solo el escenario, a escala 1 */
 body.render { padding: 0; background: var(--noche); overflow: hidden; }
 body.render .player { max-width: none; margin: 0; gap: 0; }
+
+/* Modo web (?modo=web): la intro dentro de la portada de distleogin.com.
+   Solo el escenario y la barra de controles, con el botón de sonido. */
+body.web { padding: 0; background: var(--noche); }
+body.web .player { max-width: none; margin: 0; gap: 0; }
+body.web .top, body.web .chapters, body.web .note { display: none; }
+body.web .controls .btn { flex: none; padding: 9px 12px; }
+@media (max-width: 560px) { body.web #sndTxt { display: none; } }
+body.web .screen-wrap { border-radius: 0; box-shadow: none; }
+body.web .controls { padding-block: 8px; padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); }
 body.render .player > :not(.screen-wrap) { display: none; }
 body.render .screen-wrap { border-radius: 0; box-shadow: none; margin: 0; }
 body.render .overlay { display: none; }
@@ -768,6 +778,12 @@ body.render .overlay { display: none; }
   let fmt = 'h';
   let tl = null;
   let renderMode = false;
+  // Modo web (?modo=web): la portada de distleogin.com abre la intro en un iframe
+  const params = new URLSearchParams(location.search);
+  const WEB = params.get('modo') === 'web';
+  if (WEB) document.body.classList.add('web');
+  // En la web el botón de sonido va en la barra de controles: flotando, tapaba el gancho
+  if (WEB) document.querySelector('.controls').appendChild(document.querySelector('#snd'));
 
   /* Leo v2: la «L» del logo como personaje. Mismo marco 0–100 que el ícono,
      para que al final pueda volverse el logo. Todas las piezas existen siempre;
@@ -1761,6 +1777,12 @@ body.render .overlay { display: none; }
     return ctx.startRendering();
   }
 
+  function toBase64(bytes) {
+    let s = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(s);
+  }
+
   function wavBytes(buf) {
     const ch = buf.numberOfChannels, len = buf.length;
     const dv = new DataView(new ArrayBuffer(44 + len * ch * 2));
@@ -1835,15 +1857,43 @@ body.render .overlay { display: none; }
   // Reproducción en vivo de la banda sonora de la versión que se ve
   let ac = null, soundOn = false, src = null;
   const soundBufs = {}, preparing = {};
-  function stopAudio() { if (src) { try { src.stop(); } catch (e) { /* ya se detuvo */ } src.disconnect(); src = null; } }
+  // En la web el sonido viene de un archivo ya grabado: suena al instante, sin
+  // sintetizarlo. Si el navegador no reproduce ese formato, se sintetiza como
+  // en la página de prueba.
+  let audioEl = null;
+  if (window.__INTRO_SONIDO__) {
+    const a = new Audio();
+    if (a.canPlayType('audio/webm; codecs=opus')) { a.src = window.__INTRO_SONIDO__; a.preload = 'auto'; audioEl = a; }
+  }
+  const usaArchivo = () => !!audioEl && cutName === 'full';
+  function stopAudio() {
+    if (audioEl) audioEl.pause();
+    if (src) { try { src.stop(); } catch (e) { /* ya se detuvo */ } src.disconnect(); src = null; }
+  }
   function startAudio(t) {
     stopAudio();
+    if (!soundOn || renderMode) return;
+    if (usaArchivo()) {
+      audioEl.currentTime = Math.min(Math.max(0, t), DUR - 0.05);
+      const p = audioEl.play();
+      // Si el navegador no deja sonar sin un toque, queda apagado y el botón lo dice
+      if (p && p.catch) p.catch(() => { soundOn = false; setSoundUI(); });
+      return;
+    }
     const buf = soundBufs[cutName];
-    if (!soundOn || !buf || !ac || renderMode) return;
+    if (!buf || !ac) return;
     src = ac.createBufferSource(); src.buffer = buf; src.connect(ac.destination);
     src.start(0, Math.min(Math.max(0, t), buf.duration - 0.05));
   }
+  function setSoundUI(msg) {
+    $('#snd').setAttribute('aria-pressed', String(soundOn));
+    $('#sndWave').setAttribute('opacity', soundOn ? '1' : '.25');
+    $('#sndTxt').textContent = msg || (soundOn ? 'Sonido encendido' : 'Sonido apagado');
+    // En pantallas angostas el texto se oculta: el nombre del botón lo lleva aria-label
+    $('#snd').setAttribute('aria-label', $('#sndTxt').textContent);
+  }
   function prepareSound(name = cutName) {
+    if (usaArchivo()) return Promise.resolve(true);
     if (soundBufs[name]) return Promise.resolve(soundBufs[name]);
     // Para escuchar en la página basta una calidad menor: se prepara más rápido
     if (!preparing[name]) preparing[name] = renderSoundtrack(32000, planFor(name)).then((b) => { soundBufs[name] = b; return b; }).catch(() => null);
@@ -1904,16 +1954,16 @@ body.render .overlay { display: none; }
     if (e.code === 'ArrowLeft') seekTo(Math.max(0, d.time() - 2), d.isActive());
   });
   $('#snd').addEventListener('click', () => {
-    if (!ac) { const C = window.AudioContext || window.webkitAudioContext; if (C) ac = new C(); }
-    if (!ac) return;
-    if (ac.state === 'suspended') ac.resume();
     soundOn = !soundOn;
-    $('#snd').setAttribute('aria-pressed', String(soundOn));
-    $('#sndWave').setAttribute('opacity', soundOn ? '1' : '.25');
-    if (!soundOn) { $('#sndTxt').textContent = 'Sonido apagado'; stopAudio(); return; }
-    $('#sndTxt').textContent = soundBufs[cutName] ? 'Sonido encendido' : 'Preparando sonido…';
+    if (!soundOn) { setSoundUI(); stopAudio(); return; }
+    if (usaArchivo()) { setSoundUI(); if (driver().isActive()) startAudio(driver().time()); return; }
+    if (!ac) { const C = window.AudioContext || window.webkitAudioContext; if (C) ac = new C(); }
+    if (!ac) { soundOn = false; setSoundUI('Sin sonido en este navegador'); return; }
+    if (ac.state === 'suspended') ac.resume();
+    setSoundUI(soundBufs[cutName] ? 'Sonido encendido' : 'Preparando sonido…');
     prepareSound().then((b) => {
-      $('#sndTxt').textContent = b ? 'Sonido encendido' : 'Sin sonido en este navegador';
+      if (!b) soundOn = false;
+      setSoundUI(b ? 'Sonido encendido' : 'Sin sonido en este navegador');
       if (soundOn && driver().isActive()) startAudio(driver().time());
     });
   });
@@ -1961,7 +2011,7 @@ body.render .overlay { display: none; }
     const W = stageW(), H = stageH();
     if (renderMode) { wrap.style.width = W + 'px'; wrap.style.height = H + 'px'; stage.style.transform = 'none'; return; }
     const availW = wrap.parentElement.clientWidth;
-    const availH = Math.max(320, window.innerHeight - 230);
+    const availH = Math.max(WEB ? 200 : 320, window.innerHeight - (WEB ? 64 : 230));
     const s = Math.min(availW / W, availH / H);
     wrap.style.width = Math.floor(W * s) + 'px';
     wrap.style.height = Math.floor(H * s) + 'px';
@@ -1978,9 +2028,18 @@ body.render .overlay { display: none; }
   tl.seek(POSTER); render(POSTER); updateUI(POSTER);
   fontsReady.then(() => {
     const t = driver().time(); layout(); setFormatRebuild(t);
+    if (WEB) { webStart(); return; }
     // La banda sonora se prepara sola en segundo plano: al tocar «Sonido» ya está lista
     setTimeout(() => { if (!renderMode) prepareSound(); }, 1200);
   });
+  // En la portada: el formato que pida (o el que mejor llene la pantalla), con
+  // sonido si el navegador lo deja, y arranca sola si se lo piden
+  function webStart() {
+    const f = params.get('formato') || (window.innerHeight > window.innerWidth ? 'v' : 'h');
+    if ((f === 'v' ? 'v' : 'h') !== fmt) setFormat(f === 'v' ? 'v' : 'h');
+    if (params.get('sonido') === '1' && usaArchivo()) { soundOn = true; setSoundUI(); }
+    if (params.get('auto') === '1') play(true);
+  }
   function setFormatRebuild(t) {
     // Las medidas del texto cambian al cargar las fuentes: se rehace la línea de tiempo.
     const wasPlaying = driver().isActive();
@@ -2005,11 +2064,26 @@ body.render .overlay { display: none; }
     seek(t) { driver().seek(t, true); render(tl.time()); },
     async soundtrackWav() {
       const b = await renderSoundtrack(SR, planFor(cutName));
-      if (!b) return null;
-      const bytes = wavBytes(b);
-      let s = '';
-      for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
-      return btoa(s);
+      return b ? toBase64(wavBytes(b)) : null;
+    },
+    // La banda sonora completa comprimida (Opus en WebM), para servirla en la
+    // web: se reproduce en tiempo real y se graba (docs/diseno/intro-animada/publicar-en-web.mjs).
+    async soundtrackWebm(kbps = 96) {
+      const b = await renderSoundtrack(48000, planFor('full'));
+      if (!b || !window.MediaRecorder) return null;
+      const ctx = new AudioContext({ sampleRate: 48000 });
+      await ctx.resume();
+      const dest = ctx.createMediaStreamDestination();
+      const s = ctx.createBufferSource(); s.buffer = b; s.connect(dest);
+      const rec = new MediaRecorder(dest.stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: kbps * 1000 });
+      const chunks = [];
+      rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+      const done = new Promise((r) => { rec.onstop = r; });
+      s.onended = () => setTimeout(() => rec.stop(), 150);
+      rec.start(); s.start();
+      await done;
+      await ctx.close();
+      return toBase64(new Uint8Array(await new Blob(chunks, { type: 'audio/webm' }).arrayBuffer()));
     },
   };
 })();
