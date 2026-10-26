@@ -24,14 +24,14 @@
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "leaflet": "^1.9.4",
-    "next": "16.4.0",
+    "next": "16.4.3",
     "qrcode": "^1.5.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "sharp": "^0.35.5",
     "tailwind-merge": "^3.7.0",
     "web-push": "^3.6.7",
-    "zod": "^3.24.0"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",
@@ -43,7 +43,7 @@
     "@types/react-dom": "^19",
     "@types/web-push": "^3.6.4",
     "eslint": "^9",
-    "eslint-config-next": "16.4.0",
+    "eslint-config-next": "16.4.3",
     "pg": "^8.23.1",
     "playwright": "^1.61.1",
     "tailwindcss": "^4",

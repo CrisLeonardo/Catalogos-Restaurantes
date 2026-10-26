@@ -27,7 +27,7 @@ export const TESTIMONIAL_NAME_MAX = 60;
 /** Platillos que caben en el teléfono de la portada sin apretarse. */
 export const SHOWCASE_ITEMS = 4;
 
-const UUID = z.string().uuid();
+const UUID = z.string().guid();
 
 export const testimonialSchema = z.object({
   restaurantId: UUID,
