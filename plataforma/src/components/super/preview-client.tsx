@@ -87,6 +87,11 @@ interface Props {
   archivo?: EdicionArchivada[];
   /** Ver MenuShellExtras. Vacío en el modo creación (aún no hay restaurante). */
   menuExtras?: MenuShellExtras;
+  /** Estado que manda la página que contiene la vista previa (la vitrina de
+      diseños de la portada). Cada vez que cambia, reemplaza al actual. */
+  estado?: ThemePreviewState;
+  /** Ver `muestra` en MenuShell. */
+  muestra?: boolean;
 }
 
 export default function PreviewClient({
@@ -100,12 +105,16 @@ export default function PreviewClient({
   sampleData = false,
   archivo = [],
   menuExtras,
+  estado,
+  muestra = false,
 }: Props) {
   const [state, setState] = useState<ThemePreviewState>({
     config: initialConfig,
     content: initialContent,
     customCss: initialCss,
   });
+
+  useEffect(() => { if (estado) setState(estado); }, [estado]);
 
   /* Al montar: ocultar el ThemeBackground estático de layout.tsx para que
      el dinámico (actualizado por BroadcastChannel) sea el único visible. */
@@ -218,6 +227,7 @@ export default function PreviewClient({
         restaurantId={`preview-${previewId}`}
         ordersEnabled={ordersEnabled}
         archivo={archivo}
+        muestra={muestra}
         {...menuExtras}
       />
 
