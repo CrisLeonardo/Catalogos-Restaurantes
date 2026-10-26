@@ -1,7 +1,7 @@
+import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { conEvento, EVENTOS } from '@/lib/analytics';
-import { LeoginMark } from '@/components/leogin-logo';
 import { SiteHeader, SiteFooter, SectionHead, contactHref } from '@/components/site-chrome';
 import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
 import { PLANS, PLAN_POINTS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceQ, type PlanPricing } from '@/lib/plans';
@@ -9,6 +9,10 @@ import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { getLandingProof } from '@/lib/db/landing';
 import { LandingPhone, Testimonials } from '@/components/landing-proof';
 import { LandingIntro } from '@/components/landing-intro';
+import { LandingDisenos } from '@/components/landing-disenos';
+import { Leo } from '@/components/leo';
+import { BUILTIN_TEMPLATES } from '@/lib/theme/templates';
+import { disenosDeLaPortada } from '@/lib/landing-disenos';
 
 /* Cifras de la tira de confianza. Solo hechos verificables del producto —
    nada de "+200 restaurantes" ni promedios inventados.
@@ -64,6 +68,13 @@ const CAPABILITIES: {
   { icon: 'leaf',     label: 'Alérgenos y dietas',    body: 'Marca vegano, sin gluten y los 14 alérgenos.' },
   { icon: 'receipt',  label: 'Factura electrónica',   body: 'Certificación FEL de la SAT desde el mismo cobro.', soon: true },
 ];
+
+const DISENOS = disenosDeLaPortada();
+
+/** Escalón de una entrada al deslizar (ver [data-fx] en globals.css). */
+const fx = (i: number) => ({ '--fx-i': i }) as CSSProperties;
+/** Orden de una palabra del titular. */
+const palabra = (i: number) => ({ '--i': i }) as CSSProperties;
 
 const steps = (trialDays: number) => [
   { n: '1', title: 'Crea tu cuenta',       body: `Te registras y tu restaurante queda en línea al instante. Sin tarjeta y con ${trialDays} días de prueba en los planes con pedidos.` },
@@ -147,13 +158,14 @@ export default async function LeoginLanding() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData(pricing)) }}
       />
 
+      <div className="lp-avance" aria-hidden />
       <SiteHeader home />
 
       <main className="anim-fade-up">
         {/* ── Portada ───────────────────────────────────────── */}
         <section className="lp-shell" style={{ paddingTop: 'clamp(44px, 7vw, 84px)' }}>
           <div className="lp-hero-grid">
-            <div>
+            <div className="lp-hero-copy">
               <span
                 className="lp-chip"
                 style={{ marginBottom: 22, background: 'color-mix(in srgb, var(--brand-accent) 10%, #fff)', borderColor: 'color-mix(in srgb, var(--brand-accent) 24%, transparent)', color: 'var(--brand-accent-ink)', fontWeight: 600 }}
@@ -165,8 +177,13 @@ export default async function LeoginLanding() {
               {/* La promesa de marca (docs/negocio/ESTRATEGIA_ATRACCION_2026-10-25.md §4):
                   habla del dueño y de su control, no de la lista de funciones. */}
               <h1 className="lp-h1">
-                Tu restaurante,{' '}
-                <span style={{ color: 'var(--brand-accent-ink)' }}>bajo control</span>.
+                <span className="lp-w" style={palabra(0)}>Tu</span>{' '}
+                <span className="lp-w" style={palabra(1)}>restaurante,</span>{' '}
+                <span className="lp-subraya" style={{ color: 'var(--brand-accent-ink)' }}>
+                  <span className="lp-w" style={palabra(2)}>bajo</span>{' '}
+                  <span className="lp-w" style={palabra(3)}>control</span>
+                </span>
+                <span className="lp-w" style={palabra(4)}>.</span>
               </h1>
 
               <p className="lp-lead" style={{ marginTop: 22, maxWidth: 560 }}>
@@ -203,8 +220,10 @@ export default async function LeoginLanding() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <LandingIntro />
+            <div className="lp-hero-media" style={{ display: 'flex', justifyContent: 'center' }}>
+              <div className="lp-hero-tarjeta" style={{ width: '100%' }}>
+                <LandingIntro />
+              </div>
             </div>
           </div>
         </section>
@@ -215,8 +234,8 @@ export default async function LeoginLanding() {
             className="lp-card"
             style={{ padding: 'clamp(20px, 3vw, 30px)', display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))' }}
           >
-            {PROOF.map((p) => (
-              <div key={p.label}>
+            {PROOF.map((p, i) => (
+              <div key={p.label} data-fx="crecer" style={fx(i)}>
                 <div
                   className="t-mono"
                   style={{ fontSize: 'clamp(26px, 3.4vw, 34px)', fontWeight: 800, color: 'var(--brand-accent-ink)', letterSpacing: '-0.03em', lineHeight: 1 }}
@@ -237,61 +256,41 @@ export default async function LeoginLanding() {
           </section>
         )}
 
-        {/* ── El cambio: antes / con Leogin ─────────────────── */}
-        <section id="producto" className="lp-shell lp-section">
-          <SectionHead
-            eyebrow="El cambio"
-            title="Deja de trabajar para tu sistema"
-            lead="La mayoría de restaurantes en Guatemala siguen entre un PDF, un cuaderno y un chat de WhatsApp. Leogin junta todo eso en un solo lugar."
-          />
-          <div className="lp-split" style={{ marginTop: 34, alignItems: 'stretch' }}>
-            <div className="lp-card-quiet" style={{ padding: '26px 24px' }}>
-              <div className="lp-eyebrow" style={{ color: 'var(--u-text-4)' }}>Como está hoy</div>
-              <h3 className="lp-h3" style={{ marginTop: 12, fontSize: 19 }}>Todo suelto y a mano</h3>
-              <ul style={{ listStyle: 'none', margin: '16px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 11 }}>
-                {[
-                  'Un PDF que tarda en abrir y se ve mal en el celular',
-                  'Los pedidos llegan por WhatsApp y se copian a mano',
-                  'La comanda se grita a la cocina y a veces se pierde',
-                  'El corte de caja sale en un cuaderno, sin costos ni margen',
-                  'Cambiar un precio significa rehacer el menú completo',
-                ].map((t) => (
-                  <li key={t} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, lineHeight: 1.5, color: 'var(--u-text-3)' }}>
-                    <Icon name="x" size={15} style={{ color: 'var(--c-danger)', flexShrink: 0, marginTop: 3 }} />
-                    {t}
-                  </li>
-                ))}
-              </ul>
+        {/* ── Del caos al control (la pieza central) ─────────────
+            La escena se queda fija mientras bajas y tu dedo ordena la noche:
+            cada papelito vuela a su lugar y se vuelve su pantalla de Leogin.
+            Es la misma historia del video. Sin soporte de animaciones
+            atadas al deslizar se ven los tres pasos y el panel ya ordenado. */}
+        <section id="producto" className="lp-cc lp-section" aria-labelledby="cc-titulo">
+          <div className="lp-shell lp-cc-escena">
+            <div className="lp-cc-pasos">
+              <div className="lp-cc-paso" data-p="1">
+                <div className="lp-eyebrow">Una noche normal</div>
+                <h2 id="cc-titulo" className="lp-h2">Pedidos por WhatsApp, comandas a gritos y la caja en un cuaderno.</h2>
+                <p className="lp-lead">Así trabaja la mayoría: todo suelto y a mano. Y lo que no se anota, se pierde.</p>
+                <span className="lp-cc-pista" aria-hidden>
+                  <Icon name="arrowDown" size={15} /> Desliza y míralo ordenarse
+                </span>
+              </div>
+              <div className="lp-cc-paso" data-p="2">
+                <div className="lp-eyebrow">Entra Leogin</div>
+                <h2 className="lp-h2">Cada cosa cae en su lugar.</h2>
+                <p className="lp-lead">El pedido entra solo y suena. La cocina lo ve en su pantalla. Cada cobro queda registrado.</p>
+              </div>
+              <div className="lp-cc-paso" data-p="3">
+                <div className="lp-eyebrow">Tú, bajo control</div>
+                <h2 className="lp-h2">Al cerrar, sabes cuánto vendiste y cuánto ganaste.</h2>
+                <p className="lp-lead">Desde tu celular, aunque no estés en el local. Sin cuadernos y sin sorpresas.</p>
+              </div>
             </div>
-
-            <div
-              className="lp-card"
-              style={{ padding: '26px 24px', borderColor: 'color-mix(in srgb, var(--brand-accent) 40%, transparent)', boxShadow: 'var(--lp-shadow-md)' }}
-            >
-              <div className="lp-eyebrow">Con Leogin</div>
-              <h3 className="lp-h3" style={{ marginTop: 12, fontSize: 19 }}>Un solo hilo, de la mesa a la caja</h3>
-              <ul style={{ listStyle: 'none', margin: '16px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 11 }}>
-                {[
-                  'Un menú web que abre al toque, con fotos que dan hambre',
-                  'El pedido entra solo y suena en tu panel al instante',
-                  'La cocina lo ve en su pantalla y la comanda se imprime sola',
-                  'Al cerrar tienes ventas, costos, margen y corte de caja',
-                  'Editas precios y fotos desde el celular, cuando quieras',
-                ].map((t) => (
-                  <li key={t} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, lineHeight: 1.5, color: 'var(--u-text-2)' }}>
-                    <Icon name="check" size={15} strokeWidth={2.6} style={{ color: 'var(--c-ok)', flexShrink: 0, marginTop: 3 }} />
-                    {t}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <CaosControl />
           </div>
         </section>
 
         {/* ── Centro de control ─────────────────────────────── */}
         <section className="lp-shell lp-section">
           <div className="lp-split">
-            <div className="lp-split-media" style={{ display: 'flex', justifyContent: 'center' }}>
+            <div className="lp-split-media" data-fx="enderezar" style={{ display: 'flex', justifyContent: 'center' }}>
               <PanelMockup />
             </div>
             <div>
@@ -317,6 +316,20 @@ export default async function LeoginLanding() {
                 ))}
               </ul>
             </div>
+          </div>
+        </section>
+
+        {/* ── Tu menú, a tu manera (vitrina de diseños) ─────────
+            El menú de verdad de Rincón 502 en las ocho estructuras; el que
+            visita le pone su nombre y se lleva el estilo al registro. */}
+        <section id="disenos" className="lp-shell lp-section">
+          <SectionHead
+            eyebrow="Tu menú, a tu manera"
+            title="Una carta, ocho maneras de recorrerla"
+            lead="Este es el menú de Rincón 502, nuestro restaurante de ejemplo, funcionando de verdad. Ponle tu nombre y desliza: cada estructura cambia cómo se recorre la carta, y cada paleta, cómo se siente."
+          />
+          <div style={{ marginTop: 30 }}>
+            <LandingDisenos disenos={DISENOS} combinaciones={BUILTIN_TEMPLATES.length} />
           </div>
         </section>
 
@@ -357,11 +370,12 @@ export default async function LeoginLanding() {
             center
           />
           <div className="lp-bento" style={{ marginTop: 34 }}>
-            {CAPABILITIES.map((c) => (
+            {CAPABILITIES.map((c, i) => (
               <div
                 key={c.label}
                 className={`lp-card lp-card-lift ${c.wide ? 'lp-bento-wide' : ''}`}
-                style={{ padding: '18px 18px 20px', borderRadius: 18 }}
+                data-fx=""
+                style={{ padding: '18px 18px 20px', borderRadius: 18, ...fx(i % 3) }}
               >
                 <span className="lp-icon"><Icon name={c.icon} size={19} /></span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
@@ -398,13 +412,13 @@ export default async function LeoginLanding() {
             <div>
               <div className="lp-eyebrow" style={{ marginBottom: 16, display: 'block' }}>Para tus clientes</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {FOR_DINER.map((f) => <FeatureRow key={f.title} {...f} />)}
+                {FOR_DINER.map((f, i) => <FeatureRow key={f.title} {...f} lado="izq" i={i} />)}
               </div>
             </div>
             <div>
               <div className="lp-eyebrow" style={{ marginBottom: 16, display: 'block' }}>Para ti, el dueño</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {FOR_OWNER.map((f) => <FeatureRow key={f.title} {...f} />)}
+                {FOR_OWNER.map((f, i) => <FeatureRow key={f.title} {...f} lado="der" i={i} />)}
               </div>
             </div>
           </div>
@@ -419,8 +433,8 @@ export default async function LeoginLanding() {
             center
           />
           <div className="lp-steps" style={{ marginTop: 34 }}>
-            {steps(pricing.trialDays).map((s) => (
-              <div key={s.n} className="lp-card" style={{ padding: '26px 22px' }}>
+            {steps(pricing.trialDays).map((s, i) => (
+              <div key={s.n} className="lp-card" data-fx="" style={{ padding: '26px 22px', ...fx(i) }}>
                 <span className="lp-step-n">{s.n}</span>
                 <h3 className="lp-h3" style={{ marginTop: 16 }}>{s.title}</h3>
                 <p className="lp-body" style={{ fontSize: 13.5, marginTop: 8 }}>{s.body}</p>
@@ -438,11 +452,13 @@ export default async function LeoginLanding() {
             center
           />
           <div className="lp-cols-3" style={{ marginTop: 34, alignItems: 'stretch' }}>
-            {landingPlans(pricing).map((p) => (
+            {landingPlans(pricing).map((p, i) => (
               <div
                 key={p.code}
                 className="lp-card"
+                data-fx=""
                 style={{
+                  ...fx(i),
                   padding: '28px 24px',
                   display: 'flex', flexDirection: 'column',
                   ...(p.accent
@@ -526,55 +542,55 @@ export default async function LeoginLanding() {
           </div>
         </section>
 
-        {/* ── Cierre ────────────────────────────────────────── */}
-        <section className="lp-shell lp-section" style={{ paddingBottom: 'clamp(72px, 9vw, 112px)' }}>
-          <div
-            style={{
-              position: 'relative', overflow: 'hidden', borderRadius: 28,
-              padding: 'clamp(40px, 6vw, 64px) clamp(24px, 4vw, 48px)',
-              textAlign: 'center',
-              background: 'linear-gradient(150deg, #1f1e23 0%, #17161a 55%, #241a16 100%)',
-              boxShadow: 'var(--lp-shadow-lg)',
-            }}
-          >
+        {/* ── Cierre: Leo asoma por el borde y saluda ───────────
+            El final es lo que más se recuerda (pico y final): Leo, la
+            promesa y el botón. */}
+        <section className="lp-shell lp-section lp-cierre" style={{ paddingBottom: 'clamp(72px, 9vw, 112px)', paddingTop: 56 }}>
+          <div style={{ position: 'relative' }}>
+            <div className="lp-cierre-leo">
+              <Leo id="leo-cierre" />
+            </div>
+            <div className="lp-cierre-globo" aria-hidden>¡Te lo armamos hoy!</div>
             <div
-              aria-hidden
+              className="lp-cierre-banda"
               style={{
-                position: 'absolute', inset: 'auto -10% -55%', height: 320,
-                background: 'radial-gradient(55% 75% at 50% 100%, color-mix(in srgb, var(--brand-accent) 46%, transparent), transparent 70%)',
-                pointerEvents: 'none',
+                overflow: 'hidden', borderRadius: 28,
+                padding: 'clamp(40px, 6vw, 64px) clamp(24px, 4vw, 48px)',
+                textAlign: 'center',
+                background: 'linear-gradient(150deg, #1f1e23 0%, #17161a 55%, #241a16 100%)',
+                boxShadow: 'var(--lp-shadow-lg)',
               }}
-            />
-            <div style={{ position: 'relative' }}>
-              {/* Centrada: el logo es un bloque y el `text-align` de la banda
-                  no lo movía, así que quedaba suelto arriba a la izquierda
-                  (auditoría 2026-10-02, WEB-09). */}
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <LeoginMark size={44} />
-              </div>
-              <h2
-                className="lp-h2"
-                style={{ color: '#F5F3EF', marginTop: 22 }}
-              >
-                Moderniza tu restaurante hoy
-              </h2>
-              <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(245,243,239,0.72)', maxWidth: 520, margin: '14px auto 0' }}>
-                Crea tu restaurante en minutos y pruébalo sin pagar nada. ¿Prefieres que te
-                acompañemos en la configuración? Escríbenos por WhatsApp y lo vemos juntos.
-              </p>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 30 }}>
-                <Link href="/registro" {...conEvento('lp-btn lp-btn-lg lp-btn-primary', EVENTOS.clicCrear, 'cierre')}>
-                  Crear mi restaurante gratis
-                </Link>
-                <a
-                  href={ctaHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="lp-btn lp-btn-lg"
-                  style={{ background: 'rgba(245,243,239,0.10)', color: '#F5F3EF', borderColor: 'rgba(245,243,239,0.22)' }}
-                >
-                  <Icon name="whatsapp" size={17} /> Hablar con ventas
-                </a>
+            >
+              <div
+                aria-hidden
+                style={{
+                  position: 'absolute', inset: 'auto -10% -55%', height: 320,
+                  background: 'radial-gradient(55% 75% at 50% 100%, color-mix(in srgb, var(--brand-accent) 46%, transparent), transparent 70%)',
+                  pointerEvents: 'none',
+                }}
+              />
+              <div style={{ position: 'relative' }}>
+                <h2 className="lp-h2" style={{ color: '#F5F3EF' }}>
+                  Ponlo bajo control hoy
+                </h2>
+                <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(245,243,239,0.72)', maxWidth: 520, margin: '14px auto 0' }}>
+                  Crea tu restaurante en minutos y pruébalo sin pagar nada. ¿Prefieres que te
+                  acompañemos en la configuración? Escríbenos por WhatsApp y lo armamos juntos.
+                </p>
+                <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 30 }}>
+                  <Link href="/registro" {...conEvento('lp-btn lp-btn-lg lp-btn-primary', EVENTOS.clicCrear, 'cierre')}>
+                    Crear mi restaurante gratis
+                  </Link>
+                  <a
+                    href={ctaHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="lp-btn lp-btn-lg"
+                    style={{ background: 'rgba(245,243,239,0.10)', color: '#F5F3EF', borderColor: 'rgba(245,243,239,0.22)' }}
+                  >
+                    <Icon name="whatsapp" size={17} /> Hablar con ventas
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -589,9 +605,9 @@ export default async function LeoginLanding() {
 
 
 /* ── Fila de característica con ícono ─────────────────────────── */
-function FeatureRow({ icon, title, body }: { icon: string; title: string; body: string }) {
+function FeatureRow({ icon, title, body, lado, i }: { icon: string; title: string; body: string; lado: 'izq' | 'der'; i: number }) {
   return (
-    <div className="lp-card lp-card-lift" style={{ padding: '18px 18px', display: 'flex', gap: 14, alignItems: 'flex-start', borderRadius: 18 }}>
+    <div className="lp-card lp-card-lift" data-fx={lado} style={{ padding: '18px 18px', display: 'flex', gap: 14, alignItems: 'flex-start', borderRadius: 18, ...fx(i % 2) }}>
       <span className="lp-icon"><Icon name={icon} size={19} /></span>
       <div>
         <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', letterSpacing: '-0.01em' }}>{title}</h3>
@@ -663,10 +679,10 @@ function PanelMockup() {
               <span style={{ marginLeft: 'auto', fontSize: 9.5, color: 'rgba(23,22,26,0.64)' }}>hace 12 s</span>
             </div>
             <div style={{ fontSize: 10.5, color: 'rgba(23,22,26,0.7)', marginTop: 8, lineHeight: 1.6 }}>
-              2× Tacos al pastor · 1× Burrito de res<br />1× Agua de horchata
+              2× Rincón Clásica · 1× Papas con Queso<br />1× Malteada de fresa
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 11 }}>
-              <span className="t-mono" style={{ fontSize: 13, fontWeight: 800, color: 'var(--brand-accent-ink)' }}>Q142</span>
+              <span className="t-mono" style={{ fontSize: 13, fontWeight: 800, color: 'var(--brand-accent-ink)' }}>Q167</span>
               <span style={{ marginLeft: 'auto', fontSize: 9.5, fontWeight: 700, color: '#fff', background: 'var(--brand-accent)', padding: '6px 12px', borderRadius: 99 }}>Aceptar</span>
               <span style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(23,22,26,0.72)', border: '1px solid rgba(23,22,26,0.16)', padding: '6px 12px', borderRadius: 99 }}>Imprimir</span>
             </div>
@@ -731,6 +747,109 @@ function OfflineCard() {
         Nada se pierde y nada se duplica: cada pedido lleva su propio identificador, así que al
         volver la conexión sube una sola vez.
       </p>
+    </div>
+  );
+}
+
+/* ── Del caos al control: la escena ────────────────────────────
+   Seis cosas de una noche mala (el chat enojado, la comanda arrugada, las
+   llamadas perdidas, el cuaderno, el post-it y el PDF) y su pantalla de
+   Leogin. Cada una vive en su lugar FINAL del panel; el caos es un
+   desplazamiento que el deslizar deshace (--cx, --cy, --cr en globals.css).
+   Para quien usa lector de pantalla la escena es una imagen con su
+   descripción: el texto de los pasos ya cuenta la historia. */
+function CaosControl() {
+  const visto = <span className="lp-cc-visto" aria-hidden><Icon name="check" size={13} strokeWidth={3} /></span>;
+  const piezas: { c: string; caos: ReactNode; orden: ReactNode }[] = [
+    {
+      c: 'chat',
+      caos: <><small>Cliente · WhatsApp · 9:47 p. m.</small>¿Ya viene mi pedido? Llevo 40 minutos esperando…</>,
+      orden: (
+        <>
+          <header>Mesa 4 · #128<span className="lp-cc-chip">NUEVO</span></header>
+          <strong>2× Rincón Clásica</strong>
+          <p>1× Malteada de fresa</p>
+          <footer className="t-mono">Q132</footer>
+        </>
+      ),
+    },
+    {
+      c: 'comanda',
+      caos: <span className="lp-cc-mano"><small>Comanda</small><span className="lp-cc-tachado">2 hamb.</span> 2 clásicas s/ cebolla<br /><span className="lp-cc-rojo">¿mesa 4 o 6?</span></span>,
+      orden: (
+        <>
+          <header>Cocina<span className="lp-cc-chip" data-t="warn">EN COCINA</span></header>
+          <strong>2× Rincón Clásica</strong>
+          <p>Sin cebolla · Mesa 4</p>
+          <footer className="t-mono"><Icon name="clock" size={12} /> 08:41</footer>
+        </>
+      ),
+    },
+    {
+      c: 'llamadas',
+      caos: <><small>Teléfono</small><span className="lp-cc-rojo">3 llamadas perdidas</span><br />«¿Ya está lo de para llevar?»</>,
+      orden: (
+        <>
+          <header>Para llevar · #129<span className="lp-cc-chip" data-t="ok">LISTO</span></header>
+          <strong>Doble Bacon + Papas</strong>
+          <p>Le avisamos al cliente que ya puede pasar.</p>
+        </>
+      ),
+    },
+    {
+      c: 'cuaderno',
+      caos: <span className="lp-cc-mano">Q85 + Q120 + Q90 = ¿?<br />¿y lo de la tarjeta?</span>,
+      orden: (
+        <>
+          <header>Corte de caja<span className="lp-cc-chip" data-t="ok">CUADRA</span></header>
+          <span className="lp-cc-grande">Q1,240</span>
+          <p>Efectivo Q640 · Tarjeta Q600</p>
+        </>
+      ),
+    },
+    {
+      c: 'postit',
+      caos: <span className="lp-cc-mano">¡Se acabó el queso!</span>,
+      orden: (
+        <>
+          <header>Inventario<span className="lp-cc-chip" data-t="warn">BAJO</span></header>
+          <strong>Queso cheddar: 2 kg</strong>
+          <p>Alcanza para hoy. Pídelo mañana temprano.</p>
+        </>
+      ),
+    },
+    {
+      c: 'pdf',
+      caos: <><small>Archivo</small>menu_final_v3.pdf<br />12 MB · precios del año pasado</>,
+      orden: (
+        <>
+          <header>Menú con QR<span className="lp-cc-chip" data-t="ink">EN VIVO</span></header>
+          <strong>Doble Bacon, ahora Q68</strong>
+          <p>Lo cambiaste desde el celular y ya lo ven tus clientes.</p>
+        </>
+      ),
+    },
+  ];
+  return (
+    <div
+      className="lp-cc-lienzo"
+      role="img"
+      aria-label="El panel de Leogin con todo en orden: el pedido de la Mesa 4, la comanda en la pantalla de cocina, un pedido para llevar listo, el corte de caja que cuadra, el aviso de inventario y el menú con QR."
+    >
+      <div className="lp-cc-ruido" />
+      <div className="lp-cc-cabecera">
+        <b>Hoy</b>
+        <span>Q1,240 · 32 pedidos</span>
+        <em>Todo bajo control</em>
+      </div>
+      {piezas.map((p, i) => (
+        <div key={p.c} className="lp-cc-obj" data-o={i + 1} style={{ '--o': i } as CSSProperties}>
+          <div className="lp-cc-tiembla">
+            <div className="lp-cc-caos" data-c={p.c}>{p.caos}</div>
+          </div>
+          <div className="lp-cc-orden">{p.orden}{visto}</div>
+        </div>
+      ))}
     </div>
   );
 }

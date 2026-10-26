@@ -157,10 +157,12 @@ export function SectionHead({
 }) {
   return (
     <div style={center ? { textAlign: 'center', maxWidth: 620, margin: '0 auto' } : undefined}>
-      <div className="lp-eyebrow">{eyebrow}</div>
-      <h2 className="lp-h2" style={{ marginTop: 14 }}>{title}</h2>
+      {/* Entra al deslizar: primero el título, después el texto (ver
+          «Entradas al deslizar» en globals.css). */}
+      <div className="lp-eyebrow" data-fx="">{eyebrow}</div>
+      <h2 className="lp-h2" data-fx="" style={{ marginTop: 14, '--fx-i': 1 } as React.CSSProperties}>{title}</h2>
       {lead && (
-        <p className="lp-lead" style={{ marginTop: 14, fontSize: 16, ...(center ? {} : { maxWidth: 620 }) }}>
+        <p className="lp-lead" data-fx="" style={{ marginTop: 14, fontSize: 16, '--fx-i': 2, ...(center ? {} : { maxWidth: 620 }) } as React.CSSProperties}>
           {lead}
         </p>
       )}
