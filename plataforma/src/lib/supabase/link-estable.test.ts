@@ -34,7 +34,7 @@ vi.mock('next/headers', () => ({
     getAll: () => [],
     set: (name: string, _value: string, options: Record<string, unknown>) => h.escritas.push({ name, options }),
   }),
-  headers: async () => new Headers({ host: 'distleogin.com', 'x-tenant-stable-id': 'azucar-negra' }),
+  headers: async () => new Headers({ host: 'distleogin.com', 'x-tenant-stable-id': 'rincon502' }),
 }));
 
 beforeAll(() => {
@@ -52,7 +52,7 @@ describe('servidor: createDinerClient bajo /m/<ref>', () => {
     ]);
 
     expect(h.escritas).toEqual([
-      { name: 'sb-leogin-diner-v2', options: { path: '/m/azucar-negra', maxAge: 100 } },
+      { name: 'sb-leogin-diner-v2', options: { path: '/m/rincon502', maxAge: 100 } },
     ]);
   });
 });
@@ -61,11 +61,11 @@ describe('navegador: createDinerClient bajo /m/<ref>', () => {
   it('en una subpágina también usa /m/<ref>, no /m/<ref>/', async () => {
     const definir = (nombre: string, valor: unknown) =>
       Object.defineProperty(globalThis, nombre, { value: valor, configurable: true, writable: true });
-    definir('window', { location: { hostname: 'distleogin.com', pathname: '/m/azucar-negra/4' } });
+    definir('window', { location: { hostname: 'distleogin.com', pathname: '/m/rincon502/4' } });
 
     const { createDinerClient } = await import('./client');
     createDinerClient();
 
-    expect(h.navegador.at(-1)).toMatchObject({ path: '/m/azucar-negra', name: 'sb-leogin-diner-v2' });
+    expect(h.navegador.at(-1)).toMatchObject({ path: '/m/rincon502', name: 'sb-leogin-diner-v2' });
   });
 });

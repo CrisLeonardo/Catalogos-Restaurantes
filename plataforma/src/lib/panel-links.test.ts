@@ -10,8 +10,8 @@ import { panelBaseFrom, internalPanelPath, panelHref } from './panel-links';
 
 describe('panelBaseFrom', () => {
   it('saca el prefijo cuando el navegador ya está en el origen único', () => {
-    expect(panelBaseFrom('/panel/azucar-negra')).toBe('/panel/azucar-negra');
-    expect(panelBaseFrom('/panel/azucar-negra/menu/productos/1')).toBe('/panel/azucar-negra');
+    expect(panelBaseFrom('/panel/rincon502')).toBe('/panel/rincon502');
+    expect(panelBaseFrom('/panel/rincon502/menu/productos/1')).toBe('/panel/rincon502');
   });
 
   it('en el subdominio de hoy no hay prefijo: cadena vacía', () => {
@@ -25,16 +25,16 @@ describe('panelBaseFrom', () => {
   });
 
   it('no se come un slug parecido: /paneles no es /panel', () => {
-    expect(panelBaseFrom('/paneles/azucar-negra')).toBe('');
+    expect(panelBaseFrom('/paneles/rincon502')).toBe('');
   });
 });
 
 describe('internalPanelPath', () => {
   it('traduce lo que ve el navegador a la ruta que renderiza Next', () => {
-    expect(internalPanelPath('/panel/azucar-negra')).toBe('/admin');
-    expect(internalPanelPath('/panel/azucar-negra/')).toBe('/admin');
-    expect(internalPanelPath('/panel/azucar-negra/menu')).toBe('/admin/menu');
-    expect(internalPanelPath('/panel/azucar-negra/menu/productos/1')).toBe('/admin/menu/productos/1');
+    expect(internalPanelPath('/panel/rincon502')).toBe('/admin');
+    expect(internalPanelPath('/panel/rincon502/')).toBe('/admin');
+    expect(internalPanelPath('/panel/rincon502/menu')).toBe('/admin/menu');
+    expect(internalPanelPath('/panel/rincon502/menu/productos/1')).toBe('/admin/menu/productos/1');
   });
 
   it('en el subdominio devuelve la misma ruta: la lógica de pestañas no se entera', () => {
@@ -44,12 +44,12 @@ describe('internalPanelPath', () => {
 });
 
 describe('panelHref', () => {
-  const base = '/panel/azucar-negra';
+  const base = '/panel/rincon502';
 
   it('prefija las secciones del panel', () => {
-    expect(panelHref(base, '/admin')).toBe('/panel/azucar-negra');
-    expect(panelHref(base, '/admin/menu')).toBe('/panel/azucar-negra/menu');
-    expect(panelHref(base, '/admin/menu/productos/new')).toBe('/panel/azucar-negra/menu/productos/new');
+    expect(panelHref(base, '/admin')).toBe('/panel/rincon502');
+    expect(panelHref(base, '/admin/menu')).toBe('/panel/rincon502/menu');
+    expect(panelHref(base, '/admin/menu/productos/new')).toBe('/panel/rincon502/menu/productos/new');
   });
 
   it('sin base (el subdominio de hoy) NO toca nada — es lo que hace segura esta fase', () => {
@@ -72,7 +72,7 @@ describe('panelHref', () => {
     expect(panelHref(base, '/mi-cuenta')).toBe('/mi-cuenta');
     expect(panelHref(base, '/mi-cuenta/nuevo')).toBe('/mi-cuenta/nuevo');
     expect(panelHref(base, '/preview/abc')).toBe('/preview/abc');
-    expect(panelHref(base, 'https://azucar-negra.distleogin.com')).toBe('https://azucar-negra.distleogin.com');
+    expect(panelHref(base, 'https://rincon502.distleogin.com')).toBe('https://rincon502.distleogin.com');
   });
 
   it('no confunde /administracion con /admin/', () => {
@@ -80,6 +80,6 @@ describe('panelHref', () => {
   });
 
   it('conserva la query', () => {
-    expect(panelHref(base, '/admin/menu?nueva=1')).toBe('/panel/azucar-negra/menu?nueva=1');
+    expect(panelHref(base, '/admin/menu?nueva=1')).toBe('/panel/rincon502/menu?nueva=1');
   });
 });

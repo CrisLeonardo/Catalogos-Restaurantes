@@ -22,7 +22,7 @@ const OUT = 'scripts/fel/muestras';
 const settings: FelSettings = {
   restaurant_id: 'r1', provider: 'INFILE', ambiente: 'PRUEBAS',
   nit_emisor: '36029785', nombre_emisor: 'Restaurante Ejemplo, S.A.',
-  nombre_comercial: 'Azúcar Negra', correo_emisor: 'facturacion@ejemplo.gt',
+  nombre_comercial: 'Rincón 502', correo_emisor: 'facturacion@ejemplo.gt',
   direccion: '5a avenida 10-50 zona 1', codigo_postal: '01001',
   municipio: 'Guatemala', departamento: 'Guatemala', pais: 'GT',
   codigo_establecimiento: '1',

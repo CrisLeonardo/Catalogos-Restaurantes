@@ -169,18 +169,18 @@ describe('ruta de la cookie del comensal bajo el link estable', () => {
 
   it('la portada del QR general recibe la sesión (la ruta vieja no)', () => {
     // Next hace 308 de /m/<ref>/ a /m/<ref>: la portada es SIN barra.
-    expect(casa(dinerStableCookiePath('azucar-negra'), '/m/azucar-negra')).toBe(true);
-    expect(casa(legacyDinerStableCookiePath('azucar-negra'), '/m/azucar-negra')).toBe(false);
+    expect(casa(dinerStableCookiePath('rincon502'), '/m/rincon502')).toBe(true);
+    expect(casa(legacyDinerStableCookiePath('rincon502'), '/m/rincon502')).toBe(false);
   });
 
   it('las subpáginas también, y ahí llegan las dos rutas', () => {
-    expect(casa(dinerStableCookiePath('azucar-negra'), '/m/azucar-negra/4')).toBe(true);
-    expect(casa(legacyDinerStableCookiePath('azucar-negra'), '/m/azucar-negra/4')).toBe(true);
+    expect(casa(dinerStableCookiePath('rincon502'), '/m/rincon502/4')).toBe(true);
+    expect(casa(legacyDinerStableCookiePath('rincon502'), '/m/rincon502/4')).toBe(true);
   });
 
   it('no se cuela a otro restaurante cuyo ref empieza igual', () => {
-    expect(casa(dinerStableCookiePath('azucar'), '/m/azucar-negra')).toBe(false);
-    expect(casa(dinerStableCookiePath('azucar'), '/m/azucar-negra/4')).toBe(false);
+    expect(casa(dinerStableCookiePath('rincon'), '/m/rincon502')).toBe(false);
+    expect(casa(dinerStableCookiePath('rincon'), '/m/rincon502/4')).toBe(false);
   });
 
   it('dinerSessionCookieNames: clave y trozos, sin verificador ni cookies ajenas', () => {

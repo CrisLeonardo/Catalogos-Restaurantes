@@ -64,7 +64,7 @@ describe('armarEnvelope', () => {
 describe('rutaSegura', () => {
   it('quita la consulta y los segmentos que parecen tokens', () => {
     expect(rutaSegura('/pedido/8f3a9c1d2e4b5a6f7c8d?x=1')).toBe('/pedido/:id');
-    expect(rutaSegura('/panel/azucar-negra/menu#arriba')).toBe('/panel/azucar-negra/menu');
+    expect(rutaSegura('/panel/rincon502/menu#arriba')).toBe('/panel/rincon502/menu');
     expect(rutaSegura('/m/15fe3b20-262e-4404-80ae-4ea58d40ae0a/4')).toBe('/m/:id/4');
   });
 

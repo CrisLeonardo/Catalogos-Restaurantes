@@ -9,7 +9,7 @@ describe('isPlatformSurface', () => {
   });
 
   it('con slug es el menú de un restaurante', () => {
-    expect(isPlatformSurface('azucar-negra', '/')).toBe(false);
+    expect(isPlatformSurface('rincon502', '/')).toBe(false);
   });
 
   it('la vista previa del editor pinta un menú aunque no lleve slug', () => {
@@ -30,9 +30,9 @@ describe('authPathFor', () => {
   });
 
   it('con slug, la prefija con el panel del restaurante', () => {
-    expect(authPathFor('/admin/login', 'azucar-negra')).toBe('/panel/azucar-negra/login');
-    expect(authPathFor('/admin/logout-operator', 'azucar-negra')).toBe(
-      '/panel/azucar-negra/logout-operator',
+    expect(authPathFor('/admin/login', 'rincon502')).toBe('/panel/rincon502/login');
+    expect(authPathFor('/admin/logout-operator', 'rincon502')).toBe(
+      '/panel/rincon502/logout-operator',
     );
   });
 });

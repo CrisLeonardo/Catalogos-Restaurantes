@@ -244,7 +244,7 @@ export async function proxy(request: NextRequest) {
   // cabecera sin enterarse.
   //
   // ⚠️ HOY NADIE ENLAZA AQUÍ TODAVÍA, y es a propósito. Verificado el
-  // 2026-09-02 con el panel abierto en `/panel/azucar-negra`: la pantalla se
+  // 2026-09-02 con el panel abierto en `/panel/rincon502`: la pantalla se
   // pinta bien, pero 20 de sus 21 enlaces apuntan a `/admin/…` — que en el
   // dominio raíz no lleva restaurante y cae en "Restaurante no encontrado".
   // Hasta que esos 46 destinos de navegación lleven el prefijo, `adminUrl()`

@@ -10,7 +10,7 @@ type LD = {
 const ld = (input: Parameters<typeof restaurantJsonLd>[0]) => restaurantJsonLd(input) as unknown as LD;
 
 const base = {
-  name: 'Azúcar Negra',
+  name: 'Rincón 502',
   hours: { '1': [['08:00', '21:00']], '6': [['09:00', '01:00']] } as const,
   currency: 'GTQ',
   categories: [{ id: 'c1', name: 'Bagels' }, { id: 'c2', name: 'Vacía' }],

@@ -63,16 +63,16 @@ check(`ticketTime devuelve la hora local (${gtTime})`, gtTime.includes('8:30') |
 check('NO devuelve la hora de UTC (2:30)', !gtTime.startsWith('02:3') && !gtTime.startsWith('2:3'), gtTime);
 
 console.log('\n2. La comanda de cocina lleva esa misma hora');
-const kitchen = text(buildKitchenEscPos(order, 'Azúcar Negra', { format: GT }));
+const kitchen = text(buildKitchenEscPos(order, 'Rincón 502', { format: GT }));
 check('la comanda contiene la hora local', kitchen.includes(gtTime), kitchen.slice(0, 80));
 check('la comanda NO contiene la hora UTC', !kitchen.includes(ticketTime(createdAt, { timezone: 'UTC', locale: 'es-GT' })));
 
 console.log('\n3. El recibo de caja también');
-const receipt = text(buildReceiptEscPos(order, currency, 'Azúcar Negra', GT));
+const receipt = text(buildReceiptEscPos(order, currency, 'Rincón 502', GT));
 check('el recibo contiene la hora local', receipt.includes(gtTime), receipt.slice(0, 90));
 
 console.log('\n4. Una reimpresión sale marcada como copia');
-const copy = text(buildKitchenEscPos(order, 'Azúcar Negra', { format: GT, reprint: true }));
+const copy = text(buildKitchenEscPos(order, 'Rincón 502', { format: GT, reprint: true }));
 check('la copia avisa "NO COCINAR"', copy.includes('NO COCINAR'));
 check('la comanda normal NO lleva ese aviso', !kitchen.includes('NO COCINAR'));
 

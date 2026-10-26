@@ -14,7 +14,7 @@ const AHORA = Date.parse('2026-09-08T12:00:00Z');
 
 const CATALOGO: Record<string, LocalBasico> = {
   'r-1': { name: 'El Rincón', slug: 'rincon', plan: 'ESTANDAR', status: 'active' },
-  'r-2': { name: 'Azúcar Negra', slug: 'azucar-negra', plan: 'PREMIUM', status: 'active' },
+  'r-2': { name: 'Rincón 502', slug: 'rincon502', plan: 'PREMIUM', status: 'active' },
 };
 const buscarLocal = (id: string) => CATALOGO[id];
 
@@ -67,7 +67,8 @@ describe('pertenecer a un local son dos cosas', () => {
 
   it('junta los dos caminos cuando son locales distintos', () => {
     const r = armarCuenta(cuenta({ restaurant_id: 'r-2' }), [membresia('r-1')], buscarLocal, AHORA);
-    expect(r.locales.map((l) => l.name)).toEqual(['Azúcar Negra', 'El Rincón']);
+    // En orden alfabético, como los enseña Mi cuenta.
+    expect(r.locales.map((l) => l.name)).toEqual(['El Rincón', 'Rincón 502']);
   });
 
   it('ignora un `restaurant_id` que apunta a un restaurante que ya no existe', () => {

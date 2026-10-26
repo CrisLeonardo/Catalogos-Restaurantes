@@ -36,7 +36,7 @@ export default function MiCuentaClient({
           {groupName ?? 'Mi cuenta'}
         </div>
         {/* Sin nombre en el perfil, `accountName` es el correo, y «Hola,
-            dueno@azucarnegra.test» en letra de portada no se cortaba: la página
+            dueno@rincon502.test» en letra de portada no se cortaba: la página
             entera medía 430 px en un teléfono de 390 (auditoría 2026-10-02,
             MIC-02). Se saluda con lo de antes de la arroba y, por si acaso, la
             palabra puede partirse. */}

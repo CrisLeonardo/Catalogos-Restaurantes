@@ -1425,9 +1425,9 @@ mod pruebas_panel {
 
     #[test]
     fn origen_unico_el_panel_es_una_ruta_del_dominio_central() {
-        assert!(es_panel("https://distleogin.com/panel/azucar-negra"));
-        assert!(es_panel("https://distleogin.com/panel/azucar-negra/menu"));
-        assert!(es_panel("https://distleogin.com/panel/azucar-negra/menu/productos/1"));
+        assert!(es_panel("https://distleogin.com/panel/rincon502"));
+        assert!(es_panel("https://distleogin.com/panel/rincon502/menu"));
+        assert!(es_panel("https://distleogin.com/panel/rincon502/menu/productos/1"));
     }
 
     #[test]
@@ -1443,16 +1443,18 @@ mod pruebas_panel {
     #[test]
     fn el_subdominio_anterior_se_sigue_reconociendo() {
         // Llega por el 308 de la web y por PCs vinculadas antes de la migración.
-        assert!(es_panel("https://azucar-negra-admin.distleogin.com/"));
-        assert!(es_panel("https://azucar-negra-admin.distleogin.com/menu"));
+        assert!(es_panel("https://rincon502-admin.distleogin.com/"));
+        assert!(es_panel("https://rincon502-admin.distleogin.com/menu"));
+        // Con guiones en la dirección del restaurante, también.
+        assert!(es_panel("https://tacos-dona-tere-admin.distleogin.com/pedidos"));
         // Y el dominio anterior a distleogin.com.
-        assert!(es_panel("https://azucar-negra-admin.leogin.online/pedidos"));
+        assert!(es_panel("https://rincon502-admin.leogin.online/pedidos"));
     }
 
     #[test]
     fn el_montaje_por_ruta_sigue_valiendo() {
-        assert!(es_panel("https://azucar-negra.distleogin.com/admin"));
-        assert!(es_panel("https://azucar-negra.distleogin.com/admin/caja"));
+        assert!(es_panel("https://rincon502.distleogin.com/admin"));
+        assert!(es_panel("https://rincon502.distleogin.com/admin/caja"));
     }
 
     #[test]

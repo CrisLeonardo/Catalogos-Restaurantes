@@ -312,7 +312,7 @@ function AlertRow({ a, first }: { a: Alert; first: boolean }) {
         <Icon name={a.icon} size={17} />
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        {/* En dos renglones si hace falta: cortado a «Azúcar Negra
+        {/* En dos renglones si hace falta: cortado a «Rincón 502
             tiene pagos …» no se sabía qué pasaba (SUP-10). */}
         <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--u-text)', lineHeight: 1.3 }}>{a.title}</div>
         <div className="t-mute" style={{ fontSize: 12, marginTop: 2, lineHeight: 1.4 }}>{a.body}</div>

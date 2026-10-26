@@ -143,12 +143,12 @@ describe('applyTemplateToConfig', () => {
   it('conserva identidad y operación, y resetea lo visual anterior', () => {
     const prev = {
       ...DEFAULT_CONFIG,
-      brandName: 'Azúcar Negra', logoUrl: 'https://x/logo.png', currencySymbol: '$',
+      brandName: 'Rincón 502', logoUrl: 'https://x/logo.png', currencySymbol: '$',
       // Personalización visual previa que la plantilla nueva NO define:
       grain: true, watermark: true,
     };
     const next = applyTemplateToConfig(prev, findTemplate('kiosco')!);
-    expect(next.brandName).toBe('Azúcar Negra');
+    expect(next.brandName).toBe('Rincón 502');
     expect(next.logoUrl).toBe('https://x/logo.png');
     expect(next.currencySymbol).toBe('$');
     expect(next.grain).toBe(DEFAULT_CONFIG.grain);

@@ -68,7 +68,7 @@ Sin esta variable el botón no se muestra (el flujo por teléfono sigue intacto)
 
 - La sesión del comensal es **por restaurante**: cookie propia
   (`sb-leogin-diner-v2`, host-only) en el subdominio donde inició sesión.
-  Entrar con Google en `azucar-negra.leogin.online` NO te deja logueado en
+  Entrar con Google en `rincon502.leogin.online` NO te deja logueado en
   `garden-cup.leogin.online` — cada restaurante pide su propio "Continuar con
   Google". (Antes la cookie era de dominio `.leogin.online` y la sesión se
   compartía en toda la plataforma; el proxy expira esas cookies v1 solas.)
