@@ -7,7 +7,7 @@ import { LEOGIN_PWA_ICONS } from '@/lib/pwa-leogin-icons';
 /**
  * Manifest PWA dinámico:
  *  - En el subdominio de un restaurante → usa el nombre del restaurante
- *    (el comensal instala "Café Demo", no "Leogin").
+ *    (el comensal instala "Rincón 502", no "Leogin").
  *  - En la demo o el dominio raíz → "Leogin" (la plataforma).
  */
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
@@ -28,7 +28,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   let logoUrl: string | null = null;
   let pwaIconUrl: string | null = null;
   if (slug === DEMO_SLUG) {
-    name = 'Café Demo';
+    name = 'Rincón 502';
     leoginFallback = false;
   } else if (slug) {
     leoginFallback = false;

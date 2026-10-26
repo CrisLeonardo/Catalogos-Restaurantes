@@ -25,6 +25,7 @@ import {
   type ResolvedTheme,
 } from '@/lib/theme/resolve';
 import { DEMO_SLUG, isPlatformSurface } from '@/lib/tenant';
+import { DEMO_THEME } from '@/lib/demo-menu';
 
 /**
  * Fuente de INTERFAZ. Es la única que renderiza texto en TODAS las superficies
@@ -146,7 +147,7 @@ export async function generateViewport(): Promise<Viewport> {
   // claro, igual que el panel. Ver el bloque html[data-platform] de globals.css.
   let themeColor = slug ? '#0b0b0c' : '#f4f4f6';
   if (slug === DEMO_SLUG) {
-    themeColor = resolveTheme({ brand_name: 'Café Demo' }, DEMO_SLUG).config.colorBg;
+    themeColor = resolveTheme(DEMO_THEME, DEMO_SLUG).config.colorBg;
   } else if (slug) {
     const data = await getRestaurantBySlugCached(slug);
     if (data) themeColor = data.resolved.config.colorBg;
@@ -191,7 +192,7 @@ export default async function RootLayout({
   // (landing, login) no tienen slug → usan los defaults de globals.css.
   let resolved: ResolvedTheme | null = null;
   if (slug === DEMO_SLUG) {
-    resolved = resolveTheme({ brand_name: 'Café Demo' }, DEMO_SLUG);
+    resolved = resolveTheme(DEMO_THEME, DEMO_SLUG);
   } else if (slug) {
     const data = await getRestaurantBySlugCached(slug);
     resolved = data?.resolved ?? resolveTheme(null, slug);
