@@ -364,7 +364,7 @@ export default function NuevoRestaurante({
           Es solo el punto de partida — todo se cambia luego en «Personalizar».
         </p>
         {desdeVitrina && (
-          <Glass variant="quiet" style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 12.5, color: 'var(--u-text-3)' }}>
+          <Glass variant="quiet" style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--u-text-3)' }}>
             <Icon name="sparkle" size={16} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0 }} />
             <span>Te dejamos puesto el que elegiste en la portada: <strong style={{ color: 'var(--u-text)' }}>{styleSummary}</strong>.</span>
           </Glass>
