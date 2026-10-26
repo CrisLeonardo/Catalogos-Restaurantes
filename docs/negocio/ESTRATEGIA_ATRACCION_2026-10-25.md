@@ -429,18 +429,20 @@ Dos idiomas visuales: el antes cuadro por cuadro, como papel recortado, y el des
 
 | Tiempo | Imagen | Texto en pantalla |
 |---|---|---|
-| 0 – 5.4 s | Desde el primer cuadro: teléfono sonando, chat lleno, comandas, «¡se acabó el pollo!», «¿quién anuló esto?», la caja que no cuadra; la cámara tiembla | «¿Sabes cuánto dinero **se te fue** hoy?» |
-| 5.4 – 8 s | Todo se congela; la cámara se clava en la comanda de la Mesa 4, que se cae; latido. Una libreta suma las fugas | «La cuenta de hoy (ejemplo): pedido perdido Q85 · la caja no cuadró Q120 · pollo que nadie anotó Q90 → **Hoy se te fueron Q295.** Al mes, unos Q8,850.» |
+| 0 – 5.4 s | Desde el primer cuadro: teléfono sonando, chat lleno, comandas, «¡se acabó el queso!», «¿quién anuló esto?», la caja que no cuadra; la cámara tiembla | «¿Sabes cuánto dinero **se te fue** hoy?» |
+| 5.4 – 8 s | Todo se congela; la cámara se clava en la comanda de la Mesa 4, que se cae; latido. Una libreta suma las fugas | «La cuenta de hoy (ejemplo): pedido perdido Q85 · la caja no cuadró Q120 · queso que nadie anotó Q90 → **Hoy se te fueron Q295.** Al mes, unos Q8,850.» |
 | 8 – 12 s | Leo cae, el golpe barre el papel y entra la luz; despierta, mira a cámara y saluda | «Respira. Esto es Leogin.» |
 | 12 – 17.5 s | Escanea el QR, se abre el menú | «1 · **Escanea.**» |
 | 17.5 – 23.5 s | Pide; golpe y destello al enviar; Leo atrapa la comanda | «2 · Pide desde la **mesa.**» |
 | 23.5 – 29.5 s | «Ding» en cocina, comanda impresa, *Listo* | «3 · La cocina lo ve **al instante.**» + «Esta vez, la **Mesa 4** sí comió.» |
-| 29.5 – 35.5 s | El celular del dueño: ventas del día y cinco avisos que van llegando (caja del turno cuadró, anulación con motivo y PIN, quedan 2 kg de pollo, ganancia del pepián, pedidos guardados sin internet); «Todo en orden» y Leo celebra | «4 · Todo, **bajo control.** Desde tu celular, aunque no estés.» |
+| 29.5 – 35.5 s | El celular del dueño: ventas del día y cinco avisos que van llegando (caja del turno cuadró, anulación con motivo y PIN, quedan 2 kg de queso cheddar, ganancia de la Doble Bacon, pedidos guardados sin internet); «Todo en orden» y Leo celebra | «4 · Todo, **bajo control.** Desde tu celular, aunque no estés.» |
 | 35.5 – 39.5 s | Billetera: el sello se estampa | «Y tus clientes **vuelven.**» |
 | 39.5 – 44 s | Leo voltea el letrero a CERRADO, apaga la luz y se duerme | «9:00 p. m. La caja cuadró. El inventario, al día. **Tú, ya en tu casa.**» |
 | 44 – 51 s | Leo guiña y se vuelve el logo | «**Tu restaurante, bajo control.**» · Pide. Cocina. Cobra. · «Te armamos tu menú hoy, gratis.» · QR |
 
 Los montos de la libreta son un **ejemplo** y así lo dice en pantalla: sirven para que el dueño haga su propia cuenta, no son una estadística.
+
+**El restaurante del video es Rincón 502** (desde el 2026-10-26; antes era «La Ceiba», de cocina chapina): el mismo de la demo en vivo y de la web, con su carta de hamburguesas y pizzas, su menú oscuro con coral y las mismas ilustraciones de los platillos. Ver [`PLAN_EXPERIENCIA_VIVA_2026-10-26.md`](../planes/PLAN_EXPERIENCIA_VIVA_2026-10-26.md) §7.
 
 **Formatos:** horizontal 16:9 (web) y vertical 9:16 (WhatsApp, TikTok, Reels). El vertical es el más importante para este mercado.
 

@@ -213,6 +213,6 @@ La marca es la del restaurante: aquí no aparece Leo ni el naranja de Leogin. To
 
 ## Estado
 
-- [ ] Fase 1 — web viva y Rincón 502 en la demo y el video
+- [x] Fase 1 — web viva y Rincón 502 en la demo y el video (2026-10-26, rama `feat/portada-bajo-control`, PR #39). Pendiente de la fase: que el dueño mire la web en su celular y diga si el ritmo de «del caos al control» se siente bien.
 - [ ] Fase 2 — menú en línea y panel
 - [ ] Fase 3 — fuera Azúcar Negra

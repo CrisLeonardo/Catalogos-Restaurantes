@@ -230,7 +230,7 @@ body.render .overlay { display: none; }
 /* Mesa con QR */
 #tent { left: 40px; top: 300px; width: 250px; z-index: 1; }
 .tent-card { background: #FFFFFF; border-radius: 18px; overflow: hidden; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45); transform: perspective(900px) rotateY(16deg); }
-.tent-top { background: #1F4D3A; color: #F6EFE3; padding: 16px 18px; font: 700 24px var(--f-display); letter-spacing: -0.01em; }
+.tent-top { background: #161512; color: #F7F3EF; padding: 16px 18px; font: 700 24px var(--f-display); letter-spacing: -0.01em; }
 .tent-top small { display: block; font: 500 13px var(--f-ui); opacity: 0.8; margin-top: 3px; }
 .tent-mid { padding: 18px 26px 12px; text-align: center; color: #1E1A16; }
 .tent-mid .qr { width: 170px; height: 170px; margin: 0 auto; }
@@ -252,7 +252,7 @@ body.render .overlay { display: none; }
 #scrCam { background: #0E0E10; }
 .cam-bg { position: absolute; inset: 0; background: radial-gradient(260px 200px at 50% 40%, #3A3A3E, #121214 70%); }
 .cam-tent { position: absolute; left: 52px; top: 150px; width: 250px; height: 380px; border-radius: 22px; background: #E9E6E0; filter: blur(7px); }
-.cam-tent::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 70px; border-radius: 22px 22px 0 0; background: #1F4D3A; }
+.cam-tent::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 70px; border-radius: 22px 22px 0 0; background: #161512; }
 .cam-hint { position: absolute; top: 76px; left: 0; right: 0; text-align: center; font: 600 15px var(--f-ui); color: #FFFFFF; opacity: 0.9; }
 .cam-qr { position: absolute; left: 82px; top: 205px; width: 190px; height: 190px; background: #FFFFFF; border-radius: 12px; padding: 12px; }
 #vf { position: absolute; left: 62px; top: 185px; width: 230px; height: 230px; }
@@ -265,54 +265,55 @@ body.render .overlay { display: none; }
 #pill { position: absolute; left: 18px; right: 18px; top: 578px; height: 60px; border-radius: 30px; background: #FFFFFF; color: #1E1A16; display: flex; align-items: center; gap: 2px; padding: 0 8px 0 18px; font: 500 14px var(--f-ui); white-space: nowrap; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4); }
 #pill b { font-weight: 700; }
 #pill span { color: #6E6A66; }
-#pill em { margin-left: auto; font-style: normal; font-weight: 700; background: #1F4D3A; color: #F6EFE3; padding: 12px 18px; border-radius: 22px; }
+#pill em { margin-left: auto; font-style: normal; font-weight: 700; background: #E4572E; color: #FFFFFF; padding: 12px 18px; border-radius: 22px; }
 
-/* Menú de «La Ceiba» (la marca del restaurante, no la de Leogin) */
-#scrMenu { background: #F6EFE3; }
-#mCover { position: absolute; left: 0; right: 0; top: 0; height: 206px; background: linear-gradient(160deg, #1F4D3A, #2F6E52); overflow: hidden; transform-origin: 50% 0; }
-#mCover .leaf { position: absolute; border-radius: 50%; background: rgba(246, 239, 227, 0.07); }
-.m-head { position: absolute; left: 20px; right: 18px; top: 112px; display: flex; align-items: center; gap: 14px; color: #F6EFE3; }
-.m-logo { width: 62px; height: 62px; border-radius: 50%; background: #F6EFE3; color: #1F4D3A; display: grid; place-items: center; font: 800 21px var(--f-display); flex: none; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25); }
+/* Menú de Rincón 502 (la marca del restaurante, no la de Leogin): oscuro
+   con coral, como su menú de verdad en demo.distleogin.com. */
+#scrMenu { background: #161512; color: #F7F3EF; }
+#mCover { position: absolute; left: 0; right: 0; top: 0; height: 206px; background: linear-gradient(160deg, #3A1B12, #E4572E); overflow: hidden; transform-origin: 50% 0; }
+#mCover .leaf { position: absolute; border-radius: 50%; background: rgba(247, 243, 239, 0.08); }
+.m-head { position: absolute; left: 20px; right: 18px; top: 112px; display: flex; align-items: center; gap: 14px; color: #F7F3EF; }
+.m-logo { width: 62px; height: 62px; border-radius: 50%; background: #F7F3EF; color: #161512; display: grid; place-items: center; font: 800 24px var(--f-display); flex: none; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3); }
 .m-head h3 { margin: 0; font: 700 27px/1 var(--f-display); letter-spacing: -0.02em; }
-.m-head p { margin: 7px 0 0; font: 500 14px var(--f-ui); opacity: 0.85; display: flex; align-items: center; gap: 6px; }
+.m-head p { margin: 7px 0 0; font: 500 14px var(--f-ui); opacity: 0.88; display: flex; align-items: center; gap: 6px; }
 .m-head p i { width: 8px; height: 8px; border-radius: 50%; background: #7BD88F; }
-.m-mesa { position: absolute; right: 18px; top: 62px; background: #E9A23B; color: #1E1A16; font: 700 13px var(--f-ui); padding: 7px 12px; border-radius: 14px; }
+.m-mesa { position: absolute; right: 18px; top: 62px; background: #161512; color: #F7F3EF; font: 700 13px var(--f-ui); padding: 7px 12px; border-radius: 14px; }
 .m-chips { position: absolute; left: 16px; top: 220px; display: flex; gap: 8px; white-space: nowrap; }
-.m-chips span { font: 600 14px var(--f-ui); padding: 9px 14px; border-radius: 18px; background: #FFFFFF; color: #4A443E; }
-.m-chips span.on { background: #1F4D3A; color: #F6EFE3; }
+.m-chips span { font: 600 14px var(--f-ui); padding: 9px 14px; border-radius: 18px; background: #26221E; color: #CFC7BD; }
+.m-chips span.on { background: #E4572E; color: #FFFFFF; }
 .m-list-clip { position: absolute; left: 0; right: 0; top: 268px; bottom: 0; overflow: hidden; }
 #mList { position: absolute; left: 14px; right: 14px; top: 0; display: flex; flex-direction: column; gap: 10px; }
-.card { height: 104px; border-radius: 22px; background: #FFFFFF; display: flex; align-items: center; gap: 14px; padding: 0 12px 0 10px; position: relative; box-shadow: 0 2px 8px rgba(60, 40, 20, 0.05); }
-.card .ph { width: 82px; height: 82px; border-radius: 18px; background: #F2E6D2; flex: none; display: grid; place-items: center; }
-.card .ph svg { width: 76px; height: 76px; }
+.card { height: 104px; border-radius: 22px; background: #221F1B; display: flex; align-items: center; gap: 14px; padding: 0 12px 0 10px; position: relative; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+.card .ph { width: 82px; height: 82px; border-radius: 18px; background: #2A2622; flex: none; overflow: hidden; }
+.card .ph svg { width: 82px; height: 82px; display: block; }
 .card .tx { flex: 1; min-width: 0; }
-.card h4 { margin: 0; font: 700 16.5px/1.15 var(--f-ui); color: #1E1A16; }
-.card p { margin: 4px 0 0; font: 500 12.5px/1.25 var(--f-ui); color: #7A736B; }
-.card .pr { margin-top: 6px; font: 700 15px var(--f-ui); color: #1F4D3A; }
-.card .add { position: absolute; right: 12px; bottom: 12px; width: 34px; height: 34px; border-radius: 50%; background: #E9A23B; color: #1E1A16; display: grid; place-items: center; font: 700 22px/1 var(--f-ui); }
-#cart { position: absolute; left: 14px; right: 14px; top: 676px; height: 62px; border-radius: 22px; background: #1F4D3A; color: #F6EFE3; z-index: 10; overflow: hidden; box-shadow: 0 14px 30px rgba(31, 77, 58, 0.35); }
+.card h4 { margin: 0; font: 700 16.5px/1.15 var(--f-ui); color: #F7F3EF; }
+.card p { margin: 4px 0 0; font: 500 12.5px/1.25 var(--f-ui); color: #A39B92; }
+.card .pr { margin-top: 6px; font: 700 15px var(--f-ui); color: #F2704C; }
+.card .add { position: absolute; right: 12px; bottom: 12px; width: 34px; height: 34px; border-radius: 50%; background: #E4572E; color: #FFFFFF; display: grid; place-items: center; font: 700 22px/1 var(--f-ui); }
+#cart { position: absolute; left: 14px; right: 14px; top: 676px; height: 62px; border-radius: 22px; background: #F7F3EF; color: #161512; z-index: 10; overflow: hidden; box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45); }
 #cart > div { position: absolute; inset: 0; display: flex; align-items: center; gap: 12px; padding: 0 18px; font: 700 16px var(--f-ui); }
-#cartN { min-width: 30px; height: 30px; border-radius: 15px; background: #E9A23B; color: #1E1A16; display: grid; place-items: center; font-size: 15px; padding: 0 6px; }
+#cartN { min-width: 30px; height: 30px; border-radius: 15px; background: #E4572E; color: #FFFFFF; display: grid; place-items: center; font-size: 15px; padding: 0 6px; }
 #cartA .tot { margin-left: auto; }
 #cartB { justify-content: center; font-size: 18px; }
-#flyDot { position: absolute; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; background: #E9A23B; z-index: 20; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); }
+#flyDot { position: absolute; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; background: #E4572E; z-index: 20; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); }
 #touch { position: absolute; left: 0; top: 0; width: 50px; height: 50px; border-radius: 50%; background: rgba(255, 255, 255, 0.55); border: 3px solid rgba(255, 255, 255, 0.95); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); z-index: 40; }
 #ripple { position: absolute; left: 0; top: 0; width: 50px; height: 50px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.9); z-index: 39; }
 
-#scrSent { background: #F6EFE3; display: flex; flex-direction: column; align-items: center; padding: 140px 28px 0; text-align: center; }
+#scrSent { background: #161512; color: #F7F3EF; display: flex; flex-direction: column; align-items: center; padding: 140px 28px 0; text-align: center; }
 #sentCheck { width: 132px; height: 132px; border-radius: 50%; background: var(--albahaca); display: grid; place-items: center; box-shadow: 0 18px 40px rgba(47, 158, 107, 0.35); }
 #sentCheck svg { width: 70px; height: 70px; }
 #scrSent h3 { margin: 30px 0 0; font: 700 30px/1.1 var(--f-display); letter-spacing: -0.02em; }
-#scrSent .s1 { margin: 10px 0 0; font: 500 16px var(--f-ui); color: #6E6A66; }
+#scrSent .s1 { margin: 10px 0 0; font: 500 16px var(--f-ui); color: #A39B92; }
 .track { margin-top: 34px; width: 100%; display: flex; justify-content: space-between; position: relative; }
-.track::before { content: ""; position: absolute; left: 30px; right: 30px; top: 11px; height: 4px; border-radius: 2px; background: #E2D7C5; }
+.track::before { content: ""; position: absolute; left: 30px; right: 30px; top: 11px; height: 4px; border-radius: 2px; background: #3A342E; }
 .track div { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; font: 600 13px var(--f-ui); color: #8A8279; width: 90px; }
-.track i { width: 26px; height: 26px; border-radius: 50%; background: #E2D7C5; border: 4px solid #F6EFE3; }
+.track i { width: 26px; height: 26px; border-radius: 50%; background: #3A342E; border: 4px solid #161512; }
 .track .done i { background: var(--albahaca); }
-.track .now i { background: #E9A23B; box-shadow: 0 0 0 6px rgba(233, 162, 59, 0.25); }
-.track .done, .track .now { color: #1E1A16; }
-.pts { margin-top: 34px; display: inline-flex; align-items: center; gap: 10px; background: #1F4D3A; color: #F6EFE3; padding: 12px 18px; border-radius: 18px; font: 700 16px var(--f-ui); }
-.pts b { background: #E9A23B; color: #1E1A16; border-radius: 10px; padding: 4px 9px; }
+.track .now i { background: #E4572E; box-shadow: 0 0 0 6px rgba(228, 87, 46, 0.25); }
+.track .done, .track .now { color: #F7F3EF; }
+.pts { margin-top: 34px; display: inline-flex; align-items: center; gap: 10px; background: #F7F3EF; color: #161512; padding: 12px 18px; border-radius: 18px; font: 700 16px var(--f-ui); }
+.pts b { background: #E4572E; color: #FFFFFF; border-radius: 10px; padding: 4px 9px; }
 
 /* Billetera del comensal (casa de Leogin) */
 #scrWallet { background: var(--masa); padding: 64px 16px 0; }
@@ -321,20 +322,20 @@ body.render .overlay { display: none; }
 .w-head h3 { margin: 0; font: 700 23px/1.05 var(--f-display); letter-spacing: -0.02em; color: #1C1C1E; }
 .w-head p { margin: 4px 0 0; font: 500 13px var(--f-ui); color: #7A736B; }
 .wcard { border-radius: 26px; padding: 18px; margin-top: 16px; position: relative; }
-.wcard.ceiba { background: #1F4D3A; color: #F6EFE3; }
+.wcard.rincon { background: #161512; color: #F7F3EF; }
 .wcard .wt { display: flex; align-items: center; gap: 10px; font: 700 18px var(--f-ui); }
-.wcard .wt i { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font: 800 12px var(--f-display); font-style: normal; background: #F6EFE3; color: #1F4D3A; }
+.wcard .wt i { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font: 800 12px var(--f-display); font-style: normal; background: #E4572E; color: #FFFFFF; }
 .wcard .wt small { margin-left: auto; font: 600 12px var(--f-ui); opacity: 0.8; }
 .stamps { display: grid; grid-template-columns: repeat(5, 44px); gap: 12px; margin-top: 16px; position: relative; }
-.stamps span { width: 44px; height: 44px; border-radius: 50%; border: 2.5px dashed rgba(246, 239, 227, 0.45); display: grid; place-items: center; }
-.stamps span.f { border: 0; background: #E9A23B; }
+.stamps span { width: 44px; height: 44px; border-radius: 50%; border: 2.5px dashed rgba(247, 243, 239, 0.45); display: grid; place-items: center; }
+.stamps span.f { border: 0; background: #E4572E; }
 .stamps span.f svg, #slot8 svg { width: 22px; height: 22px; }
-#slot8 { position: absolute; left: 112px; top: 56px; width: 44px; height: 44px; border-radius: 50%; background: #E9A23B; display: grid; place-items: center; }
+#slot8 { position: absolute; left: 112px; top: 56px; width: 44px; height: 44px; border-radius: 50%; background: #E4572E; display: grid; place-items: center; }
 #stamp { position: absolute; left: 96px; top: -14px; width: 76px; height: 96px; z-index: 5; }
 .wleft { margin-top: 16px; font: 700 15px var(--f-ui); display: flex; align-items: center; justify-content: space-between; }
 #wLeft { display: inline-block; transform-origin: 0 50%; }
-#wBar { height: 8px; border-radius: 4px; background: rgba(246, 239, 227, 0.2); margin-top: 10px; overflow: hidden; }
-#wBar i { display: block; height: 100%; width: 70%; border-radius: 4px; background: #E9A23B; }
+#wBar { height: 8px; border-radius: 4px; background: rgba(247, 243, 239, 0.2); margin-top: 10px; overflow: hidden; }
+#wBar i { display: block; height: 100%; width: 70%; border-radius: 4px; background: #E4572E; }
 .wmini { display: flex; align-items: center; gap: 12px; background: #FFFFFF; color: #1E1A16; border-radius: 22px; padding: 16px; margin-top: 12px; font: 700 16px var(--f-ui); box-shadow: 0 2px 8px rgba(60, 40, 20, 0.06); }
 .wmini i { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font: 800 12px var(--f-display); font-style: normal; color: #FFFFFF; flex: none; }
 .wmini small { display: block; font: 500 13px var(--f-ui); color: #7A736B; margin-top: 3px; }
@@ -513,12 +514,12 @@ body.render .overlay { display: none; }
         <div class="grain"></div>
         <div class="cap-hand" id="cap1">¿Sabes cuánto dinero <span class="hl">se te fue<i id="under"></i></span> hoy?</div>
 
-        <div class="it" id="tk2"><div class="sm boil"><div class="ticket"><b>Para llevar</b><span>3 tostadas ???</span><span>Tel 5?2?-18…</span><span>¿a qué hora?</span></div></div></div>
-        <div class="it" id="tk3"><div class="sm boil"><div class="ticket"><b>Mesa 2</b><span>2 cafés</span><span>1 rellenito</span><span>¿ya pagó?</span></div></div></div>
+        <div class="it" id="tk2"><div class="sm boil"><div class="ticket"><b>Para llevar</b><span>2 pizzas ???</span><span>Tel 5?2?-18…</span><span>¿a qué hora?</span></div></div></div>
+        <div class="it" id="tk3"><div class="sm boil"><div class="ticket"><b>Mesa 2</b><span>2 malteadas</span><span>1 volcán</span><span>¿ya pagó?</span></div></div></div>
         <div class="it" id="chat"><div class="sm boil" data-amp="1.3"><div class="sk-phone">
           <div class="sk-top"><i></i>Pedidos</div>
           <div class="sk-msgs">
-            <p class="in">Hola, ¿hay pepián hoy?</p>
+            <p class="in">Hola, ¿hay Doble Bacon hoy?</p>
             <p class="in">¿Ya viene mi pedido?</p>
             <p class="out">¿Me repite la dirección?</p>
             <p class="in">Mándeme el menú porfa</p>
@@ -527,7 +528,7 @@ body.render .overlay { display: none; }
           </div>
           <span class="sk-badge" id="skBadge">12</span>
         </div></div></div>
-        <div class="it" id="tk4"><div class="sm boil"><div class="ticket"><b>Cocina</b><span>¡¡se acabó el pollo!!</span><span>¿quién lo anotó?</span></div></div></div>
+        <div class="it" id="tk4"><div class="sm boil"><div class="ticket"><b>Cocina</b><span>¡¡se acabó el queso!!</span><span>¿quién lo anotó?</span></div></div></div>
         <div class="it" id="tel"><div class="sm boil" data-ring="1">
           <svg viewBox="0 0 270 200" width="270" height="200" aria-hidden="true">
             <path d="M40 112 Q40 92 66 90 L204 90 Q230 92 230 112 L246 184 Q248 196 234 196 L36 196 Q22 196 24 184 Z" fill="#D8362A" stroke="#2B2622" stroke-width="7" stroke-linejoin="round"/>
@@ -538,12 +539,12 @@ body.render .overlay { display: none; }
           </svg>
           <span class="rrring">¡RIIING!</span>
         </div></div>
-        <div class="it" id="tk5"><div class="sm boil"><div class="ticket"><b>Mesa 7</b><span><s>2</s> 3 pupusas</span><span>¡¡sin curtido!!</span></div></div></div>
+        <div class="it" id="tk5"><div class="sm boil"><div class="ticket"><b>Mesa 7</b><span><s>2</s> 3 clásicas</span><span>¡¡sin cebolla!!</span></div></div></div>
         <div class="it" id="shout"><div class="sm boil" data-amp="1.4">
           <svg viewBox="0 0 500 300" width="500" height="300" aria-hidden="true"><polygon id="burst" fill="#FFFDF6" stroke="#2B2622" stroke-width="7" stroke-linejoin="round" points=""/></svg>
-          <div class="txt">¡¿DOS O TRES PUPUSAS?!</div>
+          <div class="txt">¡¿DOS O TRES CLÁSICAS?!</div>
         </div></div>
-        <div class="it" id="tk1"><div class="sm boil"><div class="ticket"><span class="stain"></span><b>Mesa 4</b><span>2 pupusas revueltas</span><span><s>1 pepián</s> 2 pepián</span><span>1 horchata ¿grande?</span><em class="q">Q85</em></div></div></div>
+        <div class="it" id="tk1"><div class="sm boil"><div class="ticket"><span class="stain"></span><b>Mesa 4</b><span>2 Rincón Clásica</span><span><s>1 Doble</s> 2 Doble Bacon</span><span>1 malteada ¿grande?</span><em class="q">Q85</em></div></div></div>
         <div class="it" id="calc"><div class="sm boil"><div class="note-pad"><b>Caja de hoy</b>Q 1,240.00<br><s>Q 1,310.50</s><br>Q 1,2?? ??<br><span class="bad">no cuadra</span></div></div></div>
         <div class="it" id="tk6"><div class="sm boil"><div class="ticket"><span class="big">?</span><span>¿quién anuló esto?</span></div></div></div>
 
@@ -562,7 +563,7 @@ body.render .overlay { display: none; }
         <div class="vbox" id="vbox">
           <!-- Rótulo de mesa con QR -->
           <div id="tent"><div class="tent-card">
-            <div class="tent-top">La Ceiba<small>Cocina chapina</small></div>
+            <div class="tent-top">Rincón 502<small>Hamburguesas, pizzas y pastas</small></div>
             <div class="tent-mid"><div class="qr"></div><p>Escanea y pide</p></div>
             <div class="tent-bot"><b>Mesa 4</b><span>con Leogin</span></div>
           </div></div>
@@ -582,7 +583,7 @@ body.render .overlay { display: none; }
               <div class="cam-qr"><div class="qr"></div></div>
               <div id="vf"><i></i><i></i><i></i><i></i></div>
               <div id="scanline"></div>
-              <div id="pill"><b>distleogin.com</b><span>/m/la-ceiba</span><em>Abrir</em></div>
+              <div id="pill"><b>rincon502</b><span>.distleogin.com</span><em>Abrir</em></div>
             </div>
 
             <div class="scr" id="scrMenu">
@@ -592,17 +593,17 @@ body.render .overlay { display: none; }
                 <span class="leaf" style="width:120px;height:120px;left:120px;top:120px"></span>
               </div>
               <span class="m-mesa">Mesa 4</span>
-              <div class="m-head m-anim"><div class="m-logo">LC</div><div><h3>La Ceiba</h3><p><i></i>Cocina chapina · Abierto</p></div></div>
-              <div class="m-chips m-anim"><span class="on">Platos fuertes</span><span>Antojitos</span><span>Bebidas</span><span>Postres</span></div>
+              <div class="m-head m-anim"><div class="m-logo">R</div><div><h3>Rincón 502</h3><p><i></i>Hamburguesas y pizzas · Abierto</p></div></div>
+              <div class="m-chips m-anim"><span class="on">Hamburguesas</span><span>Entradas</span><span>Pizzas</span><span>Bebidas</span></div>
               <div class="m-list-clip"><div id="mList">
-                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-pepian"/></svg></div><div class="tx"><h4>Pepián de pollo</h4><p>Recado de la casa, arroz y tortillas</p><div class="pr">Q45</div></div><span class="add">+</span></div>
-                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-pupusa"/></svg></div><div class="tx"><h4>Pupusas revueltas</h4><p>Tres, con curtido y salsa</p><div class="pr">Q24</div></div><span class="add">+</span></div>
-                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-tostada"/></svg></div><div class="tx"><h4>Tostadas de guacamol</h4><p>Tres, con queso seco</p><div class="pr">Q22</div></div><span class="add">+</span></div>
-                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-horchata"/></svg></div><div class="tx"><h4>Horchata</h4><p>De arroz y canela, bien fría</p><div class="pr">Q15</div></div><span class="add">+</span></div>
-                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-rellenito"/></svg></div><div class="tx"><h4>Rellenitos</h4><p>De plátano con frijol y azúcar</p><div class="pr">Q18</div></div><span class="add">+</span></div>
+                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-doble"/></svg></div><div class="tx"><h4>Doble Bacon</h4><p>Doble carne, doble queso y tocino</p><div class="pr">Q68</div></div><span class="add">+</span></div>
+                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-clasica"/></svg></div><div class="tx"><h4>Rincón Clásica</h4><p>Cheddar, lechuga, tomate. Con papas</p><div class="pr">Q52</div></div><span class="add">+</span></div>
+                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-papas"/></svg></div><div class="tx"><h4>Papas con Queso</h4><p>Con tocino y cebollín</p><div class="pr">Q35</div></div><span class="add">+</span></div>
+                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-malteada"/></svg></div><div class="tx"><h4>Malteada</h4><p>Fresa, vainilla o chocolate</p><div class="pr">Q28</div></div><span class="add">+</span></div>
+                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-pepperoni"/></svg></div><div class="tx"><h4>Pizza Pepperoni</h4><p>Mediana, con mucha mozzarella</p><div class="pr">Q85</div></div><span class="add">+</span></div>
               </div></div>
               <div id="cart">
-                <div id="cartA"><span id="cartN">1</span><span id="cartTxt">producto</span><span class="tot" id="cartTot">Q45</span></div>
+                <div id="cartA"><span id="cartN">1</span><span id="cartTxt">producto</span><span class="tot" id="cartTot">Q68</span></div>
                 <div id="cartB">Enviar a cocina →</div>
               </div>
               <span id="flyDot"></span>
@@ -618,10 +619,10 @@ body.render .overlay { display: none; }
 
             <div class="scr" id="scrWallet">
               <div class="w-head w-anim"><span id="leoMini"></span><div><h3>Mis restaurantes</h3><p>3 restaurantes · 1 premio cerca</p></div></div>
-              <div class="wcard ceiba w-anim">
-                <div class="wt"><i>LC</i>La Ceiba<small>Postre gratis a los 10</small></div>
+              <div class="wcard rincon w-anim">
+                <div class="wt"><i>R</i>Rincón 502<small>Malteada gratis a los 10</small></div>
                 <div class="stamps" id="stamps"></div>
-                <div class="wleft"><span id="wLeft">Te faltan 3 para tu postre</span></div>
+                <div class="wleft"><span id="wLeft">Te faltan 3 para tu malteada</span></div>
                 <div id="wBar"><i></i></div>
               </div>
               <div class="wmini w-anim"><i style="background:#5A3A28">CA</i><div>Café Altura<small>Visitaste hace 3 días</small></div><span class="r">120 pts</span></div>
@@ -629,12 +630,12 @@ body.render .overlay { display: none; }
             </div>
 
             <div class="scr" id="scrControl">
-              <div class="c-head"><small>Hoy · La Ceiba</small><div id="cBig">Q0.00</div><span class="c-chip">+18 % que el martes pasado</span></div>
+              <div class="c-head"><small>Hoy · Rincón 502</small><div id="cBig">Q0.00</div><span class="c-chip">+18 % que el martes pasado</span></div>
               <div class="c-list">
                 <div class="c-card"><i class="ok"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></i><div><b>Caja del turno de Ana</b><small>Cuadró al centavo</small></div><em>Q2,140</em></div>
                 <div class="c-card"><i class="warn"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2.5h10v15l-2.5-1.5L10 17.5 7.5 16 5 17.5z"/><path d="M8 7.5l4 4M12 7.5l-4 4"/></svg></i><div><b>Anulación · Mesa 2</b><small>«Se fue el cliente» · autorizó Carlos con su PIN</small></div></div>
-                <div class="c-card"><i class="alert"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3l7 4v6l-7 4-7-4V7z"/><path d="M10 8v3.5M10 14v.2"/></svg></i><div><b>Quedan 2 kg de pollo</b><small>Alcanza para hoy; pide para mañana</small></div></div>
-                <div class="c-card"><i class="gain"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5V4a1 1 0 0 1 1-1h6.5L17 9.5 10.5 16z"/><circle cx="7" cy="7" r="1.3"/></svg></i><div><b>Pepián de pollo</b><small>Te cuesta Q18 · lo vendes en Q45</small></div><em class="up">+Q27</em></div>
+                <div class="c-card"><i class="alert"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3l7 4v6l-7 4-7-4V7z"/><path d="M10 8v3.5M10 14v.2"/></svg></i><div><b>Quedan 2 kg de queso cheddar</b><small>Alcanza para hoy; pide para mañana</small></div></div>
+                <div class="c-card"><i class="gain"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5V4a1 1 0 0 1 1-1h6.5L17 9.5 10.5 16z"/><circle cx="7" cy="7" r="1.3"/></svg></i><div><b>Doble Bacon</b><small>Te cuesta Q29 · la vendes en Q68</small></div><em class="up">+Q39</em></div>
                 <div class="c-card"><i class="net"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2.5 7.5a11 11 0 0 1 15 0M5 10.5a7.5 7.5 0 0 1 10 0M7.5 13.5a3.5 3.5 0 0 1 5 0"/><circle cx="10" cy="16" r=".9" fill="currentColor"/><path d="M3 3l14 14"/></svg></i><div><b>Se fue el internet</b><small>3 pedidos guardados y subidos solos</small></div></div>
               </div>
               <div id="cOk"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Todo en orden</div>
@@ -651,16 +652,16 @@ body.render .overlay { display: none; }
               <div class="col-h" style="left:12px"><i style="background:var(--mango)"></i>Nuevos<em id="cN">0</em></div>
               <div class="col-h" style="left:298px"><i style="background:#EDEAE4"></i>En preparación<em id="cP">2</em></div>
               <div class="col-h" style="left:584px"><i style="background:var(--albahaca)"></i>Listos<em id="cL">1</em></div>
-              <div class="kc" id="kP1"><div class="r1"><b>Mesa 2</b><small>#129</small><span class="chip">En preparación</span></div><ul><li>2 × Pupusas revueltas</li><li>1 × Café</li></ul><div class="r3"><span>Comer aquí</span><span class="tm" id="tP1">04:10</span></div></div>
-              <div class="kc" id="kP2"><div class="r1"><b>Llevar</b><small>#130</small><span class="chip">En preparación</span></div><ul><li>3 × Tostadas</li><li>1 × Horchata</li></ul><div class="r3"><span>Para llevar</span><span class="tm" id="tP2">06:02</span></div></div>
-              <div class="kc" id="kL1"><div class="r1"><b>Mesa 7</b><small>#128</small><span class="chip" style="background:var(--albahaca);color:#fff">Listo</span></div><ul><li>1 × Rellenitos</li><li>2 × Café</li></ul><div class="r3"><span>Comer aquí</span><span class="tm">09:41</span></div></div>
+              <div class="kc" id="kP1"><div class="r1"><b>Mesa 2</b><small>#129</small><span class="chip">En preparación</span></div><ul><li>2 × Rincón Clásica</li><li>1 × Limonada</li></ul><div class="r3"><span>Comer aquí</span><span class="tm" id="tP1">04:10</span></div></div>
+              <div class="kc" id="kP2"><div class="r1"><b>Llevar</b><small>#130</small><span class="chip">En preparación</span></div><ul><li>2 × Pepperoni</li><li>1 × Papas con Queso</li></ul><div class="r3"><span>Para llevar</span><span class="tm" id="tP2">06:02</span></div></div>
+              <div class="kc" id="kL1"><div class="r1"><b>Mesa 7</b><small>#128</small><span class="chip" style="background:var(--albahaca);color:#fff">Listo</span></div><ul><li>1 × Volcán</li><li>2 × Malteada</li></ul><div class="r3"><span>Comer aquí</span><span class="tm">09:41</span></div></div>
               <div class="kring" id="kRing1"></div>
               <div class="kring" id="kRing2"></div>
-              <div class="kc" id="kNew" data-st="nuevo"><div class="r1"><b>Mesa 4</b><small>#132</small><span class="chip" id="kChip">Nuevo</span></div><ul><li>1 × Pepián de pollo</li><li>2 × Horchata</li></ul><div class="r3"><span>Comer aquí</span><span class="tm" id="tN">00:05</span></div><span class="ok" id="kOk"><svg viewBox="0 0 20 20"><path d="M5 10.5 L8.6 14 L15 6.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+              <div class="kc" id="kNew" data-st="nuevo"><div class="r1"><b>Mesa 4</b><small>#132</small><span class="chip" id="kChip">Nuevo</span></div><ul><li>1 × Doble Bacon</li><li>2 × Malteada</li></ul><div class="r3"><span>Comer aquí</span><span class="tm" id="tN">00:05</span></div><span class="ok" id="kOk"><svg viewBox="0 0 20 20"><path d="M5 10.5 L8.6 14 L15 6.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
             </div></div>
             <div class="mon-neck"></div><div class="mon-base"></div>
           </div>
-          <div id="paperClip"><div id="paper"><b>LA CEIBA</b>Mesa 4 · #132<br>13:05 · Comer aquí<hr>1  Pepián de pollo<br>2  Horchata<hr>Sin cebolla en el pepián</div></div>
+          <div id="paperClip"><div id="paper"><b>RINCÓN 502</b>Mesa 4 · #132<br>13:05 · Comer aquí<hr>1  Doble Bacon<br>2  Malteada<hr>Doble Bacon sin cebolla</div></div>
           <div id="printer"><div class="pr-body"><span class="lbl">Comandas</span><span class="led"></span></div></div>
 
           <!-- Tu noche: se cierra el restaurante -->
@@ -694,7 +695,7 @@ body.render .overlay { display: none; }
         <div class="t-ej">La cuenta de hoy (ejemplo)</div>
         <div class="tr" id="tr1"><span>Pedido perdido, Mesa 4</span><b>Q85</b></div>
         <div class="tr" id="tr2"><span>La caja no cuadró</span><b>Q120</b></div>
-        <div class="tr" id="tr3"><span>Pollo que nadie anotó</span><b>Q90</b></div>
+        <div class="tr" id="tr3"><span>Queso que nadie anotó</span><b>Q90</b></div>
         <div class="tr tot" id="trTot"><span>Hoy se te fueron</span><b>Q295</b></div>
         <small id="trMes">Al mes, unos Q8,850.</small>
       </div>
@@ -730,35 +731,12 @@ body.render .overlay { display: none; }
       <feTurbulence id="boilT" type="fractalNoise" baseFrequency="0.028" numOctaves="2" seed="1" result="n"/>
       <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
-    <symbol id="f-pepian" viewBox="0 0 80 80">
-      <circle cx="40" cy="40" r="35" fill="#FBF7F0"/><circle cx="40" cy="40" r="28" fill="#7E3219"/><circle cx="40" cy="40" r="25" fill="#A5462A"/>
-      <ellipse cx="33" cy="35" rx="9" ry="6.5" fill="#EAC9A0" transform="rotate(-20 33 35)"/><ellipse cx="47" cy="46" rx="7.5" ry="5.5" fill="#E0B98B"/>
-      <rect x="41" y="26" width="8" height="6" rx="2" fill="#E9A23B"/><rect x="28" y="46" width="7" height="6" rx="2" fill="#A6C463"/>
-      <circle cx="53" cy="33" r="2" fill="#3E7D3A"/><circle cx="36" cy="53" r="1.8" fill="#3E7D3A"/><circle cx="45" cy="38" r="1.5" fill="#3E7D3A"/><circle cx="26" cy="40" r="1.5" fill="#3E7D3A"/>
-    </symbol>
-    <symbol id="f-pupusa" viewBox="0 0 80 80">
-      <circle cx="40" cy="40" r="35" fill="#FBF7F0"/>
-      <circle cx="32" cy="35" r="17" fill="#E5B56A"/><circle cx="27" cy="31" r="2.6" fill="#B87A3A"/><circle cx="37" cy="40" r="2.2" fill="#B87A3A"/><circle cx="34" cy="27" r="1.6" fill="#B87A3A"/>
-      <circle cx="49" cy="48" r="15" fill="#DCA75B"/><circle cx="46" cy="45" r="2.2" fill="#B87A3A"/><circle cx="53" cy="52" r="1.8" fill="#B87A3A"/>
-      <path d="M50 22 l14 6 M52 27 l12 2 M47 26 l10 10" stroke="#9CC45A" stroke-width="3" stroke-linecap="round"/><path d="M55 20 l8 12 M48 30 l14 -2" stroke="#E8823A" stroke-width="2.4" stroke-linecap="round"/>
-    </symbol>
-    <symbol id="f-tostada" viewBox="0 0 80 80">
-      <circle cx="40" cy="40" r="35" fill="#FBF7F0"/><circle cx="40" cy="40" r="25" fill="#E3A548"/><circle cx="40" cy="40" r="18" fill="#7EA644"/>
-      <circle cx="35" cy="36" r="2.4" fill="#F4F0E6"/><circle cx="45" cy="44" r="2.2" fill="#F4F0E6"/><circle cx="43" cy="33" r="1.8" fill="#F4F0E6"/><circle cx="34" cy="46" r="1.8" fill="#F4F0E6"/>
-      <circle cx="40" cy="40" r="5" fill="none" stroke="#F4E9F2" stroke-width="2"/><circle cx="48" cy="38" r="1.6" fill="#C2402F"/><circle cx="31" cy="41" r="1.6" fill="#C2402F"/>
-    </symbol>
-    <symbol id="f-horchata" viewBox="0 0 80 80">
-      <circle cx="40" cy="40" r="27" fill="#E8E3D9"/><circle cx="40" cy="40" r="23" fill="#F3E8D3"/>
-      <rect x="27" y="30" width="11" height="11" rx="3" fill="#FFFFFF" opacity=".8" transform="rotate(14 32 35)"/><rect x="41" y="40" width="10" height="10" rx="3" fill="#FFFFFF" opacity=".75" transform="rotate(-12 46 45)"/>
-      <circle cx="46" cy="31" r="1.4" fill="#B07A47"/><circle cx="33" cy="47" r="1.3" fill="#B07A47"/><circle cx="50" cy="52" r="1.2" fill="#B07A47"/>
-      <path d="M40 40 L66 16" stroke="#E8534A" stroke-width="5" stroke-linecap="round"/>
-    </symbol>
-    <symbol id="f-rellenito" viewBox="0 0 80 80">
-      <circle cx="40" cy="40" r="35" fill="#FBF7F0"/>
-      <ellipse cx="30" cy="34" rx="12" ry="9" fill="#B9692C"/><ellipse cx="50" cy="36" rx="11" ry="8.5" fill="#A95E27"/><ellipse cx="40" cy="52" rx="12" ry="8.5" fill="#B4652A"/>
-      <g fill="#FFFFFF" opacity=".85"><circle cx="27" cy="31" r="1.2"/><circle cx="33" cy="36" r="1"/><circle cx="48" cy="33" r="1.1"/><circle cx="53" cy="38" r="1"/><circle cx="37" cy="50" r="1.1"/><circle cx="44" cy="54" r="1"/></g>
-    </symbol>
-    <symbol id="l-mark" viewBox="0 0 100 100"><path d="M27 19h18v44h27v18H27Z" fill="#1F4D3A"/></symbol>
+    <symbol id="f-doble" viewBox="0 0 80 80"><image href="data:image/webp;base64,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" width="80" height="80"/></symbol>
+    <symbol id="f-clasica" viewBox="0 0 80 80"><image href="data:image/webp;base64,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" width="80" height="80"/></symbol>
+    <symbol id="f-papas" viewBox="0 0 80 80"><image href="data:image/webp;base64,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" width="80" height="80"/></symbol>
+    <symbol id="f-malteada" viewBox="0 0 80 80"><image href="data:image/webp;base64,UklGRjQFAABXRUJQVlA4ICgFAADQHgCdASqoAKgAPpVKoUwlpKMiIfSZwLASiWVu/Hv8I+OIOc7gDeW952r2Ov2OVljaXH5js8Df5LAuORRqeN++W/MiQ9WXBnvgq0RunS0FducU5ili7KWFD2ID5bh+E/WHTAoakARIpOCpGPE9GYTVSR2G2TQTTKARg6eeJAQLKBgrG95VNv1i8/QQJgU7aCySZZORT7+6dmJGPgaDyDN+XyrbRtttowFVYCKR9PztL5NHs6TLYgZYBn8nzJOG+9Vjh7gu1+7PkAGxfLNlOgKYM8IxzRMMkhctT3buIYfKT5jKCMhCdEpQVkyTNE+Ab4MGeTK12+CnF0hUih4GTQAA/vVnfuOVljmrSV28NCI46sMvu066BUqbGSJbg5QeUVGpJpJgeYw8qCH1+otCauVS/ZmVnf5dLnqnyHH1PovTdtqvQ1LW1EwER4QcFIS3e7i9Waf6zNY8iHlZIkIVYOTnRwYUU4+n7THdG8DfR9AaMQmVTe78R8ln/oHL2y3qm35OCMKDonZ/yaR1QdgBNaFhSzwTyfnXmbVdjyeWegmCc/xCA7MWwZLaVG7YYLlTG1yr+s8xGnVAjwv76SXtdJXI+rnDH0C8Td56bRR+6Mo3oK94r7y4BsLm8VouXFngj2O5FdzyNwzndg6pW1D+pvJUfpe1Z2Uu6sU6eTGfHpzm1UtR7hGw3eWYJmfgDPwRfHK95QHk2g8z9GJm9BEPY7n/kvAb2sMNKuUAdYZPXL6xofFvtS1ILZmZiMtXUYlvfT8x5uts69+S9PUs6A/GqBN2LbKdyRIb/NXb0Kbb6eqhURwoXS1V2y+VIt8nc+SAva2n5dGJhaBvFoIyEDXxvGGNDuVDLiQsYN4z7XAMpm/T8cCDhfdwnFtD6QTTv9LGbaPXl3VSTwf0c0O0AnmcB786AjRY0blY3TqXuVFTfzHMRLLZEYgkLmamFnHYr/z3XhPA+D9L51B86gJkD7zaVFueDx6ixp8FCCaFBcG+uR/6nTwfRo2Jz4XNchdPI0HwzGcsydZ0RPVQ/2rVYgk5EF3T9fhuKN/kjMj1yY/YGrNdWHyBy2Z05rbP/T7fkPPZ327OWITGIcnjOvqd0p05m5eeqd8RoFbsuSZcNkjDvhWbkLiRPh/0yvZnWHWMNQ46A3ePoCt+PqiRkykKS0+os4uFNeVOGY374Ia7/Pm8xSH/d6C7EKF5tNBruLmzAup85p1g1TJLi8g68xjPxcazXKTxHU/b3Bzq+sJDbf7CcvUrv4dPlRXtuwJc5GTYdECbr2a9T6jsCHnvUESK6HlWblUh6UalNCuVy26MjK0p1iUQNA14MfZ3wkiTy7f0MVMVudpfYBp7zSywRavyKZregcyFt17PU37CiBLYFaYIlDoRfJ01MSV5srsNeeK/WeE9V/hXgfQ0fjPDOPqHjXWQ2WtGksJdG5IXpIs7KG1yRUYuLQ306FfI5+lE7BTq+5uE/WULgCKKwL5OzOmMxD9QKimlL39+JosIpxe4jbIHMsdbCRExgLqhGWx3mXGMEVkmzp2l30OOErAO8ytXcsYS7wF8JFawvQeS+3ui6oBjcfGpDSSPoMySD1Ugx2d974jA1/MRsF6UBBT6fx5ktUc+pl5RGjdgYRpXO/2HjBEJdLI5B5aG8UY2RESj5tJJEuqZ/JIzKmJeVsLcYngh5Ms3otEt602fDJMjeoo29Fd7Tga3NhSRQpwdIUXC9z27RGX+bRiJIH51oD+8nhyYPZA8sth3ooy2eBTcAAA=" width="80" height="80"/></symbol>
+    <symbol id="f-pepperoni" viewBox="0 0 80 80"><image href="data:image/webp;base64,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" width="80" height="80"/></symbol>
+    <symbol id="l-mark" viewBox="0 0 100 100"><path d="M27 19h18v44h27v18H27Z" fill="#FFFFFF"/></symbol>
   </defs>
 </svg>
 
@@ -951,7 +929,7 @@ body.render .overlay { display: none; }
     let h = '';
     for (let i = 0; i < 10; i++) h += i < 7 ? `<span class="f">${mark}</span>` : '<span></span>';
     h += `<div id="slot8">${mark}</div>`;
-    h += `<svg id="stamp" viewBox="0 0 76 96" aria-hidden="true"><rect x="27" y="0" width="22" height="34" rx="11" fill="#5A3A28"/><rect x="18" y="30" width="40" height="14" rx="5" fill="#3D2A1E"/><rect x="6" y="44" width="64" height="40" rx="10" fill="#E9A23B"/><rect x="10" y="80" width="56" height="10" rx="4" fill="#1F4D3A"/></svg>`;
+    h += `<svg id="stamp" viewBox="0 0 76 96" aria-hidden="true"><rect x="27" y="0" width="22" height="34" rx="11" fill="#5A3A28"/><rect x="18" y="30" width="40" height="14" rx="5" fill="#3D2A1E"/><rect x="6" y="44" width="64" height="40" rx="10" fill="#E4572E"/><rect x="10" y="80" width="56" height="10" rx="4" fill="#B4492A"/></svg>`;
     $('#stamps').innerHTML = h;
   })();
   // Confeti
@@ -1053,7 +1031,7 @@ body.render .overlay { display: none; }
     gsap.set('#mCover', { scale: 1.12 });
     gsap.set('.m-anim', { autoAlpha: 0, y: 26 });
     gsap.set('#mList', { y: 0 });
-    gsap.set('#cart', { autoAlpha: 0, y: 90, backgroundColor: '#1F4D3A', color: '#F6EFE3', scale: 1 });
+    gsap.set('#cart', { autoAlpha: 0, y: 90, backgroundColor: '#F7F3EF', color: '#161512', scale: 1 });
     gsap.set('#wBar i', { width: '70%' });
     gsap.set('#cartA', { autoAlpha: 1, y: 0 });
     gsap.set('#cartB', { autoAlpha: 0, y: 16 });
@@ -1320,7 +1298,7 @@ body.render .overlay { display: none; }
     tap(311, 553, 20.1); fly(311, 553, 46, 707, 20.33); bump(20.78);
     tl.to('#cartA', { autoAlpha: 0, y: -16, duration: 0.18 }, 20.95);
     tl.to('#cartB', { autoAlpha: 1, y: 0, duration: 0.22 }, 21.03);
-    tl.to('#cart', { backgroundColor: '#E9A23B', color: '#1E1A16', duration: 0.22 }, 21.0);
+    tl.to('#cart', { backgroundColor: '#E4572E', color: '#FFFFFF', duration: 0.22 }, 21.0);
     tap(177, 707, 21.2);
     tl.to('#cart', { scale: 0.95, duration: 0.08, yoyo: true, repeat: 1 }, 21.4);
     // El pico: pedido enviado
@@ -1586,12 +1564,12 @@ body.render .overlay { display: none; }
     const sk = sa ? `translate(${((rnd(frame, 99, 1) - 0.5) * 2 * sa).toFixed(1)}px, ${((rnd(frame, 99, 2) - 0.5) * 2 * sa).toFixed(1)}px)` : 'none';
     if (cache.get('shake') !== sk) { cache.set('shake', sk); shakeEl.style.transform = sk; }
     setText('#skBadge', String(12 + Math.floor(clamp01(t / 5) * 25)));
-    $('#sbar').classList.toggle('dark', t >= 21.6);
+    $('#sbar').classList.toggle('dark', t >= 29.45);
 
     // Carrito
-    if (t < 20.13) { setText('#cartN', '1'); setText('#cartTxt', 'producto'); setText('#cartTot', 'Q45'); }
-    else if (t < 20.78) { setText('#cartN', '2'); setText('#cartTxt', 'productos'); setText('#cartTot', 'Q60'); }
-    else { setText('#cartN', '3'); setText('#cartTxt', 'productos'); setText('#cartTot', 'Q75'); }
+    if (t < 20.13) { setText('#cartN', '1'); setText('#cartTxt', 'producto'); setText('#cartTot', 'Q68'); }
+    else if (t < 20.78) { setText('#cartN', '2'); setText('#cartTxt', 'productos'); setText('#cartTot', 'Q96'); }
+    else { setText('#cartN', '3'); setText('#cartTxt', 'productos'); setText('#cartTot', 'Q124'); }
 
     // Cocina
     const add = Math.round(clamp01((t - 25.05) / (27.95 - 25.05)) * 395);
@@ -1608,7 +1586,7 @@ body.render .overlay { display: none; }
     setText('#cBig', money(3422.8 * easeOut(clamp01((t - 29.9) / 1.5))));
 
     // Billetera
-    setText('#wLeft', t < 36.84 ? 'Te faltan 3 para tu postre' : 'Te faltan 2 para tu postre');
+    setText('#wLeft', t < 36.84 ? 'Te faltan 3 para tu malteada' : 'Te faltan 2 para tu malteada');
   }
 
   /* ── Banda sonora: todo sintetizado, sin archivos ──────── */
