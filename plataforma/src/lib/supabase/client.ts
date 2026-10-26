@@ -1,5 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
-import { DINER_COOKIE_NAME, cookieDomainForHost } from "@/lib/supabase/cookies";
+import { DINER_COOKIE_NAME, WALLET_COOKIE_NAME, cookieDomainForHost } from "@/lib/supabase/cookies";
 import { getStableLinkPrefix } from "@/lib/tenant-client";
 
 /**
@@ -75,8 +75,9 @@ function createWithCookieName(cookieName?: string) {
   // quedar atada a `/m/<ref>` — si no, la sesión de invitado de un
   // restaurante se vería en /m/<otro-ref> del mismo host (ver proxy.ts, que
   // hace lo mismo del lado servidor para esta misma cookie). Sin barra
-  // final: ver `dinerStableCookiePath`.
-  const stablePrefix = cookieName ? getStableLinkPrefix() : null;
+  // final: ver `dinerStableCookiePath`. Solo la del comensal, no la de la
+  // cuenta Leogin.
+  const stablePrefix = cookieName === DINER_COOKIE_NAME ? getStableLinkPrefix() : null;
   const baseOptions = domain
     ? { domain, path: "/", sameSite: "lax" as const }
     : stablePrefix
@@ -104,4 +105,9 @@ export function createClient() {
 /** Sesión del COMENSAL (menú público: login Google, lealtad, cerrar sesión). */
 export function createDinerClient() {
   return createWithCookieName(DINER_COOKIE_NAME);
+}
+
+/** Sesión de la CUENTA LEOGIN (`/billetera`): login con Google y cerrar sesión. */
+export function createWalletClient() {
+  return createWithCookieName(WALLET_COOKIE_NAME);
 }

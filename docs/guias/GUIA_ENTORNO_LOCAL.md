@@ -79,6 +79,13 @@ un tirón, sin pasar por el formulario:
 | El panel del dueño | http://localhost:3000/api/dev-login |
 | Directo a una pantalla | http://localhost:3000/api/dev-login?next=/admin/caja |
 | Otro usuario | http://localhost:3000/api/dev-login?email=admin@local.test&next=/super |
+| La cuenta Leogin de un comensal (billetera) | http://localhost:3000/api/dev-login?cuenta=1&email=comensal@billetera.test |
+
+El comensal de prueba `comensal@billetera.test` («Ana Comensal», sin contraseña)
+no viene en la semilla: créalo una vez con
+`auth.admin.createUser({ email, email_confirm: true })` desde el cliente de
+servicio. En local no hay Google, así que es la forma de probar `/billetera` y
+el puente de sesión (PLAN_BILLETERA_COMENSAL_2026-10-25).
 
 Abre una sesión **real** de Supabase por el mismo camino que el login por PIN
 (`generateLink` + `verifyOtp`): no hay contraseñas de por medio en ningún

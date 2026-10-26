@@ -1,5 +1,5 @@
 -- ============================================================
---  ¿Qué migraciones tiene ESTA base? (091 → 141)
+--  ¿Qué migraciones tiene ESTA base? (091 → 146; 142-145 aún sin huella aquí)
 --
 --  Solo LEE: no cambia nada. Pégalo en Supabase → SQL Editor → Run.
 --  Cada fila mira una huella que deja su migración (una tabla, una
@@ -122,7 +122,11 @@ huellas(n, que, ok, cuando) as (values
      'YA, sin esperar el despliegue'),
   ('141', 'archivo de ediciones de la Vitrina (drop_editions)',
      to_regclass('public.drop_editions') is not null,
-     'antes o después del despliegue')
+     'antes o después del despliegue'),
+  ('146', 'cuenta Leogin: puente de sesión (cuenta_puentes)',
+     to_regclass('public.cuenta_puentes') is not null
+     and to_regclass('public.cuenta_restaurantes') is not null,
+     'ANTES de desplegar')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

@@ -4,11 +4,14 @@ import {
   duplicateCookieNames,
   isCodeVerifierCookie,
   isDeadSessionCode,
+  isStaffCodeVerifierCookie,
   isStaffSessionCookie,
+  isWalletCodeVerifierCookie,
   cookieDomainForHost,
   dinerSessionCookieNames,
   dinerStableCookiePath,
   legacyDinerStableCookiePath,
+  WALLET_COOKIE_NAME,
 } from './cookies';
 
 describe('duplicateCookieNames', () => {
@@ -58,6 +61,13 @@ describe('isStaffSessionCookie', () => {
     expect(isStaffSessionCookie('sb-leogin-diner.0')).toBe(false); // v1 troceada
   });
 
+  it('deja fuera la de la cuenta Leogin (billetera)', () => {
+    // Si contara como del personal, el bloque de la cookie fantasma del
+    // proxy la expiraría cada vez que la sesión del panel saliera muerta.
+    expect(isStaffSessionCookie(WALLET_COOKIE_NAME)).toBe(false);
+    expect(isStaffSessionCookie(`${WALLET_COOKIE_NAME}.0`)).toBe(false);
+  });
+
   it('deja fuera el verificador PKCE', () => {
     // Es la pieza que hace falta para terminar un login con Google: si el
     // proxy la borra a mitad del viaje, el callback no puede canjear el code.
@@ -78,6 +88,23 @@ describe('isCodeVerifierCookie', () => {
 
   it('no confunde la sesión con el verificador', () => {
     expect(isCodeVerifierCookie('sb-abcdef-auth-token')).toBe(false);
+  });
+});
+
+describe('verificador PKCE de cada sesión', () => {
+  it('el de la billetera no se toma por un login del personal', () => {
+    // Si se tomara, un `code` de la billetera que cae en la portada se
+    // mandaría al callback del PANEL (proxy.ts §1c).
+    const billetera = `${WALLET_COOKIE_NAME}-code-verifier`;
+    expect(isStaffCodeVerifierCookie(billetera)).toBe(false);
+    expect(isWalletCodeVerifierCookie(billetera)).toBe(true);
+  });
+
+  it('el del personal y el del comensal no son de la billetera', () => {
+    expect(isStaffCodeVerifierCookie('sb-abcdef-auth-token-code-verifier')).toBe(true);
+    expect(isWalletCodeVerifierCookie('sb-abcdef-auth-token-code-verifier')).toBe(false);
+    expect(isWalletCodeVerifierCookie(`${DINER_COOKIE_NAME}-code-verifier`)).toBe(false);
+    expect(isWalletCodeVerifierCookie(WALLET_COOKIE_NAME)).toBe(false);
   });
 });
 

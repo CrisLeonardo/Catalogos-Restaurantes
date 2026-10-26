@@ -12,6 +12,7 @@ import {
 import {
   DINER_COOKIE_NAME,
   LEGACY_DINER_COOKIE_PATTERN,
+  WALLET_COOKIE_NAME,
   cookieDomainForHost,
   DINER_PATH_MARKER_COOKIE,
   defaultStorageKey,
@@ -21,6 +22,7 @@ import {
   isCodeVerifierCookie,
   isDeadSessionCode,
   isStaffCodeVerifierCookie,
+  isWalletCodeVerifierCookie,
   isStaffSessionCookie,
   legacyDinerStableCookiePath,
   sessionCookieNames,
@@ -156,6 +158,17 @@ export async function proxy(request: NextRequest) {
       const fwdProto = request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
       return NextResponse.redirect(
         new URL(`/admin/auth/google/callback${request.nextUrl.search}`, `${fwdProto}://${fwdHost}`),
+      );
+    }
+    // Lo mismo para la cuenta Leogin (/billetera): su verificador tiene
+    // nombre propio, así que este `code` es de un acceso a la billetera
+    // empezado aquí. Va DESPUÉS del personal: si hubiera los dos, el panel
+    // manda, como hasta ahora.
+    if (verificadores.some(isWalletCodeVerifierCookie)) {
+      const fwdHost = request.headers.get("x-forwarded-host") ?? host ?? request.nextUrl.host;
+      const fwdProto = request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
+      return NextResponse.redirect(
+        new URL(`/billetera/auth/callback${request.nextUrl.search}`, `${fwdProto}://${fwdHost}`),
       );
     }
   }
@@ -494,7 +507,7 @@ export async function proxy(request: NextRequest) {
       // que el diseño host-only de esta cookie específicamente quiere evitar,
       // ver lib/supabase/cookies.ts).
       // Sin barra final: ver `dinerStableCookiePath`.
-      const cookiePath = cookieName && stableId ? dinerStableCookiePath(stableId) : undefined;
+      const cookiePath = cookieName === DINER_COOKIE_NAME && stableId ? dinerStableCookiePath(stableId) : undefined;
       const supabase = createServerClient(supabaseUrl, anonKey, {
         ...(cookieName ? { cookieOptions: { name: cookieName } } : {}),
         cookies: {
@@ -604,9 +617,12 @@ export async function proxy(request: NextRequest) {
     // cadena, el menú público pagaba las dos antes de empezar a renderizar.
     // `pendingCookies` se acumula igual — el push es síncrono y JS no
     // intercala dentro de él.
+    // La cuenta Leogin (billetera) solo se usa en /billetera del dominio raíz.
+    const isWalletArea = !slug && (pathname === "/billetera" || pathname.startsWith("/billetera/"));
     await Promise.all([
       refreshSession(), // personal
       ...(isAdminArea ? [] : [refreshSession(DINER_COOKIE_NAME)]), // comensal (menú público)
+      ...(isWalletArea ? [refreshSession(WALLET_COOKIE_NAME)] : []), // cuenta Leogin
     ]);
 
     // Cookie fantasma del PERSONAL: expira la copia HOST-ONLY (misma clave,

@@ -2,11 +2,11 @@ import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { AuthError, type UserResponse } from "@supabase/supabase-js";
 import { cookies, headers } from "next/headers";
-import { DINER_COOKIE_NAME, cookieDomainForHost, defaultStorageKey, dinerStableCookiePath, isCodeVerifierCookie, sessionCookieNames } from "@/lib/supabase/cookies";
+import { DINER_COOKIE_NAME, WALLET_COOKIE_NAME, cookieDomainForHost, defaultStorageKey, dinerStableCookiePath, isCodeVerifierCookie, sessionCookieNames } from "@/lib/supabase/cookies";
 import { aalDelToken, pasoSegundoFactor, type Aal } from "@/lib/auth/segundo-factor-policy";
 import { autenticadoEnMs } from "@/lib/auth/reauth-policy";
 
-export { DINER_COOKIE_NAME };
+export { DINER_COOKIE_NAME, WALLET_COOKIE_NAME };
 
 /**
  * Clientes Supabase para el SERVIDOR (Server Components, Route Handlers,
@@ -51,8 +51,9 @@ async function createWithCookieName(cookieName?: string, ocultarSesionPrevia = f
   // invitado de un restaurante (p.ej. tras el login de Google en
   // /auth/callback) se filtraría a /m/<otro-ref> del mismo host. Mismo ajuste
   // que ya hacen proxy.ts y lib/supabase/client.ts para esta misma cookie;
-  // sin barra final, ver `dinerStableCookiePath`.
-  const stableId = cookieName ? cabeceras.get("x-tenant-stable-id") : null;
+  // sin barra final, ver `dinerStableCookiePath`. Solo la del comensal: la de
+  // la cuenta Leogin vive en `/billetera`, nunca bajo un `/m/<ref>`.
+  const stableId = cookieName === DINER_COOKIE_NAME ? cabeceras.get("x-tenant-stable-id") : null;
   const path = stableId ? dinerStableCookiePath(stableId) : undefined;
 
   return createServerClient(
@@ -188,6 +189,21 @@ export const getStaffUser = cache(async (): Promise<UserResponse> => {
 export async function createDinerClient() {
   return createWithCookieName(DINER_COOKIE_NAME);
 }
+
+/**
+ * Sesión de la CUENTA LEOGIN del comensal (`/billetera`, dominio raíz).
+ * No es la sesión de ningún restaurante: ver WALLET_COOKIE_NAME.
+ */
+export async function createWalletClient() {
+  return createWithCookieName(WALLET_COOKIE_NAME);
+}
+
+/** El usuario de la cuenta Leogin, validado con Supabase Auth, una vez por petición. */
+export const getWalletUser = cache(async () => {
+  const supabase = await createWalletClient();
+  const { data } = await supabase.auth.getUser();
+  return data.user;
+});
 
 /**
  * Cliente SOLO para canjear el código de un login con Google.

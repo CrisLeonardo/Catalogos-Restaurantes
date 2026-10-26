@@ -29,11 +29,13 @@
      /api/dev-login                       → dueño de prueba, a /admin
      /api/dev-login?email=otro@test       → otro usuario
      /api/dev-login?next=/admin/caja      → a dónde ir después
+     /api/dev-login?cuenta=1&email=x@test → sesión de la CUENTA LEOGIN
+                                            (billetera), a /billetera
    ============================================================ */
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createWalletClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 
@@ -90,8 +92,11 @@ export async function GET(request: NextRequest) {
 
   // Solo rutas relativas del mismo origen: sin esto la ruta sería una
   // redirección abierta con sesión recién creada encima.
-  const rawNext = params.get('next') || '/admin';
-  const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/admin';
+  // `cuenta=1`: la sesión de la billetera (cookie propia), no la del panel.
+  const cuenta = params.get('cuenta') === '1';
+  const inicio = cuenta ? '/billetera' : '/admin';
+  const rawNext = params.get('next') || inicio;
+  const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : inicio;
 
   const db = createServiceClient();
 
@@ -110,7 +115,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(`No se pudo generar el enlace: ${error?.message ?? 'sin token'}`, { status: 500 });
   }
 
-  const supabase = await createClient();
+  const supabase = cuenta ? await createWalletClient() : await createClient();
   const { error: otpErr } = await supabase.auth.verifyOtp({
     token_hash: data.properties.hashed_token,
     type: 'magiclink',

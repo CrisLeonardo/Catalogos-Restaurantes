@@ -53,7 +53,7 @@ async function syncOne(db: Db, agent: AgentIdentity, rawOrder: unknown): Promise
     return {
       clientId: typeof rawClientId === 'string' ? rawClientId : null,
       ok: false,
-      error: parsed.error.errors[0]?.message ?? 'Datos inválidos.',
+      error: parsed.error.issues[0]?.message ?? 'Datos inválidos.',
     };
   }
   const { restaurantId, items, customer, paymentMethod, cashAmount, tipAccepted, clientId, waiterId } = parsed.data;

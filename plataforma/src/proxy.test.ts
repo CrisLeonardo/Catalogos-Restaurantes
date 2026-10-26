@@ -203,6 +203,62 @@ describe('Supabase devuelve el code a la portada', () => {
     );
     expect(res.headers.get('location')).toBeNull();
   });
+
+  it('el verificador de la BILLETERA lo reenvia a su propio callback, no al del panel', async () => {
+    const res = await proxy(
+      new NextRequest(PORTADA, {
+        headers: { cookie: 'sb-leogin-cuenta-code-verifier=CUENTA', 'x-forwarded-proto': 'https' },
+      }),
+    );
+    expect(res.headers.get('location')).toBe(
+      'https://distleogin.com/billetera/auth/callback?code=abc123&intent=signup',
+    );
+  });
+
+  it('con los dos verificadores manda el panel, como hasta ahora', async () => {
+    const res = await proxy(
+      new NextRequest(PORTADA, {
+        headers: {
+          cookie: `sb-leogin-cuenta-code-verifier=CUENTA; ${STAFF}-code-verifier=VERIFICADOR`,
+          'x-forwarded-proto': 'https',
+        },
+      }),
+    );
+    expect(res.headers.get('location')).toContain('/admin/auth/google/callback');
+  });
+});
+
+describe('la sesión de la cuenta Leogin (billetera)', () => {
+  const WALLET = 'sb-leogin-cuenta';
+
+  it('no se toma por una cookie del personal: una sesión muerta del panel no la borra', async () => {
+    // Muerta SOLO la del personal (el cliente sin nombre de cookie propio).
+    h.behaviour = async (opts) => {
+      const nombre = (opts as { cookieOptions?: { name?: string } }).cookieOptions?.name;
+      return nombre ? { error: null } : sesionMuerta(opts);
+    };
+    const res = await proxy(
+      new NextRequest('https://distleogin.com/billetera', { headers: { cookie: `${STAFF}=MUERTO; ${WALLET}=CUENTA` } }),
+    );
+    expect(setCookies(res).some((c) => c.startsWith(`${WALLET}=;`))).toBe(false);
+    expect(cookiesQueVeElRender(res)).toContain(`${WALLET}=CUENTA`);
+  });
+
+  it('se refresca en /billetera, con su nombre y sin dominio ancho', async () => {
+    h.behaviour = async (opts) => {
+      const nombres = opts.cookies.getAll().map(({ name }) => name);
+      if (nombres.includes(WALLET)) {
+        opts.cookies.setAll([{ name: WALLET, value: 'CUENTA-NUEVA', options: { path: '/' } }]);
+      }
+      return { error: null };
+    };
+    const res = await proxy(
+      new NextRequest('https://distleogin.com/billetera/puente?r=demo', { headers: { cookie: `${WALLET}=CUENTA` } }),
+    );
+    const escrita = setCookies(res).find((c) => c.startsWith(`${WALLET}=CUENTA-NUEVA`));
+    expect(escrita).toBeDefined();
+    expect(escrita).not.toMatch(/domain=/i);
+  });
 });
 
 describe('el verificador PKCE de un login con Google en vuelo', () => {
