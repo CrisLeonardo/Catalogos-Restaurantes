@@ -439,6 +439,41 @@ Dos idiomas visuales: el antes cuadro por cuadro, como papel recortado, y el des
 
 **Formatos:** horizontal 16:9 (web) y vertical 9:16 (WhatsApp, TikTok, Reels). El vertical es el más importante para este mercado.
 
+### Cortes para redes: 30 s y 15 s (2026-10-26)
+
+Los cortes no son videos aparte: son **listas de edición** sobre la misma animación (en `intro.html`, `CUTS`). Cada una toma tramos de la versión completa, acelera algunos y esconde los saltos con un barrido. Si se cambia algo de la animación, los tres cortes lo heredan. La música se compone para cada duración y **los cortes caen en el pulso** (cada medio segundo desde el golpe de Leo), así que el ritmo nunca se rompe.
+
+**Reels y TikTok · 30 s.** Se queda todo lo que vende y se quita lo que es «demo»:
+
+| Tiempo | Tramo de la completa | Qué cuenta |
+|---|---|---|
+| 0 – 7.2 s | 0 – 7.2 s | Gancho, caos y la Mesa 4 que se pierde |
+| 7.2 – 10.3 s | 7.85 – 10.95 s | Leo cae, despierta y se presenta |
+| 10.3 – 13.3 s | 12 – 15 s | 1 · Escanea: QR y el menú se abre |
+| 13.3 – 15.8 s | 20.85 – 23.35 s | 2 · Pide: *Enviar*, pedido enviado, Leo atrapa la comanda |
+| 15.8 – 18.8 s | 24.85 – 28.75 s, a 1.3× | 3 · Cocina: «ding», *Listo* y «Esta vez, la Mesa 4 sí comió» |
+| 18.8 – 21.8 s | 29.5 – 33.4 s, a 1.3× | 4 · Caja: los números suben y el récord |
+| 21.8 – 24.8 s | 39.5 – 43.4 s, a 1.3× | Tu noche: CERRADO, luz apagada, Leo se duerme |
+| 24.8 – 30 s | 44 – 49.2 s | Guiño, logo y «Te armamos tu menú hoy, gratis» |
+
+Fuera quedan el llenado del carrito, el desplazamiento del menú y la billetera (no hay tiempo para un segundo beneficio).
+
+**Estado de WhatsApp · 15 s.** Solo la historia completa de la Mesa 4, que es lo que se entiende en un vistazo:
+
+| Tiempo | Tramo de la completa | Qué cuenta |
+|---|---|---|
+| 0 – 2.8 s | 0 – 2.8 s | La pregunta y el caos |
+| 2.8 – 4.75 s | 5.35 – 7.3 s (salto seco, sin barrido) | Se congela y se pierde la Mesa 4 |
+| 4.75 – 7.75 s | 7.95 – 10.95 s | Llega Leo |
+| 7.75 – 9.75 s | 27.25 – 29.35 s | *Listo* y «Esta vez, la Mesa 4 sí comió» (sin el número del paso) |
+| 9.75 – 15 s | 44 – 49.25 s | Guiño, logo y el regalo |
+
+**Por qué así:**
+- **Mismo gancho en los tres.** Lo que decide si alguien sigue mirando son los primeros 3 segundos; eso no se recorta nunca.
+- **La pregunta abierta se cierra siempre.** Aun en 15 s, la Mesa 4 se pierde y luego sí come: es la historia más corta que tiene principio, problema y final.
+- **Menos es más en redes.** Un video corto se ve completo más veces, y el final con el regalo es lo que lleva a la acción.
+- **Para grabarlos:** `node docs/diseno/intro-animada/grabar-video.mjs --corte 30 --formato v` (o `--corte 15`). Cada uno deja su WebM y su WAV (`intro-leogin-sonido-30s.wav`, `-15s.wav`).
+
 ### Voz (opcional)
 La mejor voz es la del dueño de Leogin, con su acento: la confianza local vale más que una voz de locutor. Guion de voz para la versión de 51 s (entra sobre la música):
 
@@ -486,7 +521,7 @@ El dueño preguntó si el video podía ser más dinámico o si ya estaba en su p
 
 **Lo que queda pendiente:**
 
-- **V4 · Cortes para redes:** 30 s (Reels, TikTok) y 15 s (estado de WhatsApp), con el mismo gancho. En redes, menos duración casi siempre retiene más.
+- ~~**V4 · Cortes para redes**~~: hechos el 2026-10-26 (ver «Cortes para redes» arriba).
 - **V5 · Voz:** la del dueño de Leogin, sobre la música, en Clipchamp.
 - **V6 · Prueba social:** en cuanto haya un restaurante real, 3 s con su nombre y su zona.
 - **Medirlo:** subir dos versiones del gancho como estado de WhatsApp o anuncio y quedarse con la que retenga más a los 3 segundos.
@@ -528,6 +563,7 @@ Cada fase, cuando se apruebe, se vuelve un `PLAN_*.md` en `docs/planes/`.
 - [ ] ¿Leo v2 con moño de mesero? (Recomendado frente a gorro de chef o sin accesorio.)
 - [ ] ¿Nombres de la paleta (Brasa, Mango, Carbón, Masa, Albahaca) y la nueva Terracota oscura?
 - [x] Mejoras del video V1, V2 y V3: aplicadas el 2026-10-26, junto con cámara virtual, tipografía cinética, la historia de la Mesa 4 y banda sonora de marimba.
-- [ ] ¿Cortes de 30 y 15 s para redes (V4)? ¿Voz propia (V5)?
+- [x] Cortes de 30 y 15 s para redes (V4): hechos el 2026-10-26.
+- [ ] ¿Voz propia sobre la música (V5)?
 - [ ] ¿Voz en el video: la propia o ninguna?
 - [ ] ¿Qué fase arranca primero? (Recomendada: A, porque no toca código y ayuda a vender esta semana.)
