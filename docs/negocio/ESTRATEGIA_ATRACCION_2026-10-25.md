@@ -12,7 +12,8 @@ No es un plan de código. Cuando el dueño apruebe una parte, esa parte se convi
 2. **El «sí o sí» se construye con tres cosas:** algo gratis que ya es suyo desde el primer día (el menú), un premio que vuelve todos los días (el resumen del día) y una red que crece sola (la billetera del comensal).
 3. **«Porque se ve más bonito» es una razón válida.** Lo bonito se percibe como más fácil y de más calidad (efecto estético-usabilidad). Un menú precioso hace que la comida parezca mejor y que el precio duela menos. Hay que decirlo sin pena.
 4. **Lo visual tiene dos idiomas:** el *antes* (caos, papel, cuadro por cuadro tipo stop-motion) y el *con Leogin* (fluido y en orden). El contraste entre los dos ya cuenta la historia, sin texto.
-5. **Mascota sí, pero con correa:** la «L» del logo cobra vida y lleva la bandeja. Vive en los espacios de Leogin (web, panel, billetera, redes) y **nunca** dentro del menú del restaurante, porque ahí la estrella es el restaurante.
+5. **Mascota sí, pero con correa:** Leo, la «L» del logo con ojos grandes, cejas, moño de mesero y la bandeja. Vive en los espacios de Leogin (web, panel, billetera, redes) y **nunca** dentro del menú del restaurante, porque ahí la estrella es el restaurante.
+6. **El naranja es el color correcto** (análisis en §5.1), con tres condiciones: carbón como ancla de confianza, poco y donde importa, y reglas de contraste y de estados.
 
 ---
 
@@ -214,26 +215,100 @@ La de hoy habla del sistema (funciones). La propuesta habla del dueño (su dolor
 
 ## 5. Sistema visual
 
-### 5.1 Color
+### 5.1 Color: ¿son los correctos para Leogin? (análisis a fondo, 2026-10-26)
 
-Sobre la psicología del color hay que ser honestos: los colores no tienen efectos mágicos. Lo que sí funciona es (a) el **contraste**, que dirige la mirada; (b) la **constancia**, porque el mismo color en el mismo papel crea memoria; y (c) las **asociaciones de la categoría**: en comida, los tonos cálidos se asocian con apetito y energía, y por eso casi todas las marcas de comida los usan.
+**Veredicto: sí. El naranja coral es el color correcto para Leogin.** No por moda, sino porque es el que mejor junta lo que la marca tiene que transmitir. Pero solo funciona con tres condiciones; sin ellas, el naranja se vuelve «barato» o «comida rápida»:
 
-Leogin ya tiene la paleta correcta: el degradado coral → naranja del logo. Propuesta de nombres (fáciles de recordar y que suenan a comida):
+1. **Carbón como ancla de confianza.** El naranja solo atrae; el carbón le da seriedad. Juntos se leen «premium», como el ícono de la app.
+2. **Poco y donde importa** (regla 60 · 30 · 10).
+3. **Reglas de contraste y de estados** (abajo, con números reales).
 
-| Nombre | Color | Papel |
+La hoja visual con la paleta, el contraste y la prueba de daltonismo está en [`docs/diseno/marca/leo-y-color.html`](../diseno/marca/leo-y-color.html) (página privada: <https://claude.ai/artifact/DFH8bToV8GETyCchubjqRk>).
+
+#### Lo que dice la evidencia, y lo que no
+
+- **Mito:** «el naranja da hambre» o «el azul da confianza» siempre y en todos lados. Los efectos del color dependen del contexto (Elliot y Maier, 2014). No hay un color mágico.
+- **Lo que sí está sólido:**
+  - **El encaje con la categoría importa más que el color en sí.** La gente juzga si un color «queda» con lo que se vende, y eso pesa más que el color solo (Grossman y Wisenblit, 1999). Bottomley y Doyle (2006) vieron que los productos funcionales piden colores funcionales (como el azul) y los sensoriales y sociales piden colores cálidos (como el rojo). **Leogin vende las dos cosas:** comida (sensorial, social) y control del dinero (funcional). Por eso necesita naranja **y** carbón, no uno solo.
+  - **El color cambia la personalidad percibida de la marca.** El tono, la saturación y la claridad mueven la percepción entre «emocionante», «competente» y «sofisticada» (Labrecque y Milne, 2012). Saturado y cálido se lee emocionante y cercano; oscuro se lee sofisticado y serio. Leogin quiere las dos lecturas, cada una en su lugar.
+  - **La saturación activa más que el tono.** En emociones, pesan más el brillo (agrado) y la saturación (activación) que el tono en sí (Valdez y Mehrabian, 1994). Brasa y Mango son muy saturados: perfectos para el botón y la celebración, malos para pintar pantallas enteras porque cansan.
+  - **Lo distinto se recuerda** (efecto aislamiento o de Von Restorff). Un solo botón naranja en una pantalla neutra se ve y se toca. Si todo es naranja, nada destaca.
+  - **La constancia crea memoria** (exposición repetida). El mismo degradado en el ícono, el QR, la intro y la billetera termina siendo «Leogin» sin texto.
+
+#### Qué tiene que sentir cada público
+
+| Público | Emoción buscada | Colores que la logran |
 |---|---|---|
-| **Brasa** | `#E8534A` | Acción y apetito. Botón principal, la «L». |
-| **Mango** | `#F5A030` | Calidez y alegría. Final del degradado, celebraciones. |
-| **Carbón** | `#1C1C1E` | Seriedad y confianza. Fondo del logo, textos grandes. |
-| **Masa** | `#FBF6EE` | Lienzo cálido. Fondos de la web y de la billetera. |
-| **Albahaca** | `#2F9E6B` | Listo, todo bien. Estados de éxito. |
-| **Terracota** | `#C2542F` | El acento con contraste suficiente para texto sobre claro (ya es el de la web). |
+| Dueño | Confianza y control; orgullo en los logros | Carbón, blanco, Albahaca para «todo cuadra». Degradado solo en logros (primer pedido, récord). |
+| Personal | Calma bajo presión | Neutros. Color solo para el estado de cada pedido, siempre con ícono y palabra. |
+| Comensal | Antojo y alegría | Cálidos y fotos grandes, con los colores **del restaurante**. Leogin solo pone su «L» chiquita. |
 
-**Reglas por superficie:**
-- **Web:** masa y carbón de base. El degradado brasa → mango solo en el logo, el botón principal y los momentos de celebración. Si todo es naranja, nada destaca.
-- **Panel:** neutros cálidos y **superficies sólidas** (decisión ya tomada, PR #6: nada de tarjetas translúcidas). El color se reserva para el estado: albahaca = listo, mango = esperando, brasa = urgente. El rojo nunca de adorno: si todo parece alarma, nada lo es.
-- **Comensal:** manda la paleta del restaurante (sus 22 paletas y 8 estructuras). Leogin solo aparece en la marca chiquita del pie.
-- **Nunca** texto pequeño en degradado: se lee mal.
+#### Cada color, uno por uno
+
+| Color | Lo bueno | El riesgo | Veredicto |
+|---|---|---|---|
+| **Brasa** `#E8534A` (coral) | Energía, apetito, calidez, urgencia amable. Más cercano que un rojo puro. | Se confunde con error; texto blanco encima solo da 3.6 : 1. | Se queda: acción principal, la «L», logros. Nunca para errores ni texto pequeño. |
+| **Mango** `#F5A030` | Alegría, sol, maíz, sociabilidad. | Si domina, se ve infantil o barato. Texto blanco encima: 2.1 : 1. | Se queda: celebraciones y «en espera», siempre con texto carbón (8.1 : 1). |
+| **Carbón** `#1C1C1E` | Seriedad, control, premium. Es lo que hace que el naranja se vea profesional. | Si se abusa, se ve frío o «tecnológico». | Co-protagonista: ícono, textos grandes, pantalla de cocina. |
+| **Masa** `#FBF6EE` | Calidez, hogar, tortilla; menos frío que el blanco puro. | Mal usado, se ve sucio o genérico. | Fondo de la web y de la billetera. El panel sigue en neutros (decisión ya tomada). |
+| **Albahaca** `#2F9E6B` | «Listo», «el dinero cuadra», crecimiento. | Se confunde con Brasa en daltonismo; texto blanco encima: 3.4 : 1. | Se queda, con su versión oscura `#23855A` (4.6 : 1) cuando lleva texto blanco. |
+| **Terracota oscura** `#B4492A` (nuevo) | Acento legible sobre claro: 5.0 : 1 sobre Masa, 5.3 : 1 sobre blanco. | — | Para texto de acento sobre fondos claros. El Terracota actual `#C2542F` da 4.2 : 1 sobre Masa (no alcanza para texto normal). |
+
+**¿Falta algún color? ¿Azul para la confianza?** No. El azul haría a Leogin «otra app de banco o de tecnología» y enfría la conexión con la comida. La confianza no sale del azul: sale del carbón, de la claridad y de que todo se vea igual siempre.
+
+#### La historia que se puede contar: son los colores de la cocina chapina
+
+| Color | Viene de |
+|---|---|
+| Brasa | El achiote y el comal encendido |
+| Mango | El maíz y la fruta madura |
+| Carbón | El comal y el frijol negro |
+| Masa | La tortilla recién hecha |
+| Albahaca | Las hierbas: chipilín, cilantro |
+| Terracota oscura | El barro de las ollas |
+
+Esto convierte una decisión de diseño en un argumento de venta: *«Leogin se ve así porque se ve como tu comida.»*
+
+#### Cuánto de cada uno (60 · 30 · 10)
+
+| Superficie | Base | Apoyo | Acento |
+|---|---|---|---|
+| Web | Masa o blanco, 60 % | Carbón, 30 % | Brasa y Mango, 10 % |
+| Panel | Neutros claros, 70 % | Carbón y grises, 25 % | Brasa, 5 % (solo el botón principal) |
+| Billetera (casa de Leo) | Masa, 55 % | Carbón, 25 % | Brasa y Mango, 20 % |
+| Menú del comensal | Lo decide el restaurante | — | La «L» chiquita del pie |
+
+#### Contraste: lo que sirve para texto (WCAG)
+
+Para texto normal hace falta 4.5 : 1 y para texto grande (24 px, o 19 px en negrita), 3 : 1.
+
+| Combinación | Contraste | Uso |
+|---|---|---|
+| Blanco sobre Brasa | 3.6 : 1 | Solo texto grande (botones grandes, titulares) |
+| Blanco sobre Mango | 2.1 : 1 | Nunca para texto |
+| Carbón sobre Mango | 8.1 : 1 | Cualquier texto |
+| Brasa sobre Carbón | 4.7 : 1 | Cualquier texto |
+| Mango sobre Carbón | 8.1 : 1 | Cualquier texto |
+| Brasa sobre Masa | 3.4 : 1 | Solo texto grande |
+| Terracota oscura sobre Masa | 5.0 : 1 | Cualquier texto |
+| Blanco sobre Albahaca | 3.4 : 1 | Solo texto grande |
+| Blanco sobre Albahaca oscura | 4.6 : 1 | Cualquier texto |
+
+La web ya oscurece el acento para texto con `--brand-accent-ink`; la regla es mantenerlo así. En el prototipo de la intro, la etiqueta «Listo» de la cocina usa blanco sobre Albahaca: al pasarlo al panel real va en `#23855A`.
+
+#### Daltonismo
+
+Cerca de 1 de cada 12 hombres distingue mal el rojo del verde. En la pantalla de cocina, «urgente» (Brasa) y «listo» (Albahaca) se ven casi iguales para ellos. **Regla:** todo estado lleva color + ícono + palabra. La hoja visual tiene la simulación.
+
+#### La categoría
+
+Casi toda la comida tira a cálido: Toast (el sistema para restaurantes más grande de EE. UU.) es naranja; Rappi, DoorDash y PedidosYa van de naranja a rojo; Glovo es amarillo. Eso **confirma** que el naranja pone a Leogin en la categoría correcta sin explicar nada. Por lo mismo, el color solo no lo distingue: lo que es solo de Leogin es **el degradado brasa → mango sobre carbón, y Leo**.
+
+#### Los tres riesgos del naranja y cómo evitarlos
+
+1. **Verse «barato» o de comida rápida.** Pasa cuando rojo, naranja y amarillo saturados llenan superficies grandes. *Evitarlo:* fondos neutros y naranja junto a carbón.
+2. **Confundirse con alarma.** *Evitarlo:* los errores van en un rojo distinto y más oscuro (`#C62828`), siempre con ícono y texto. Brasa nunca es error.
+3. **Cansar en el panel.** *Evitarlo:* en el panel, el naranja solo va en el botón principal y la marca (≈ 5 %).
 
 ### 5.2 Movimiento
 
@@ -277,23 +352,31 @@ Sí se puede hacer, y tiene un uso muy claro: **contar el antes.** El caos de ho
 - **Pedido enviado** (comensal): un «pop» suave más una vibración corta en Android.
 - Siempre respetar el silencio del aparato y los ajustes de sonido que ya existen («un dueño por sonido»).
 
-### 5.5 Mascota: veredicto
+### 5.5 Mascota: Leo v2 (2026-10-26)
 
 | A favor | En contra |
 |---|---|
 | Se recuerda mucho más que un logo (Duolingo, Michelin, Mailchimp) | A un dueño serio le puede parecer infantil |
 | Le pone cara amable a los errores y a las pantallas vacías | En el menú le roba protagonismo al restaurante |
-| Da contenido infinito para TikTok y los estados de WhatsApp, que es donde está el público en Guatemala | Una mascota mal hecha es peor que ninguna |
+| Da contenido para TikTok y los estados de WhatsApp | Una mascota mal hecha es peor que ninguna |
 
-**Veredicto: sí, con reglas.** La propuesta es **Leo, la «L» que atiende**: la misma «L» del logo, con dos ojos, y su pie se vuelve el brazo que lleva la bandeja. No es un personaje nuevo que haya que explicar: **el logo es la mascota.**
+**Veredicto: sí, con reglas.** El dueño aprobó la idea de Leo y pidió que se viera menos simple. La v1 era el logo con ojos. La **v2** toma lo que hace funcionar a mascotas como Duo de Duolingo, sin copiarla:
 
-**Dónde aparece:** la web, el registro y la bienvenida, las pantallas vacías del panel, las celebraciones (primer pedido, récords), la billetera del comensal, las redes y el material impreso.
+- **Ojos grandes con brillo, cabeza redonda, brazo y pies cortos.** Es el «esquema infantil» de Konrad Lorenz: esos rasgos disparan la respuesta de «qué tierno» y, con ella, atención y simpatía automáticas.
+- **Cejas y boca expresivas.** Las caras se detectan antes que cualquier otra cosa, y las emociones se contagian: cuando Leo celebra un récord, el dueño lo siente suyo.
+- **Moño de mesero** (recomendado frente a gorro de chef o nada): dice «servicio» y se entiende aun en 32 px.
+- **Volumen** (luz arriba, sombra abajo) para que se sienta como un objeto, no como un dibujo plano.
+- **Sigue siendo la «L».** Cabeza ancha y punta recta para que se lea como letra y no como bota. Al final del video se vuelve el logo.
 
-**Dónde NUNCA aparece:** dentro del menú del restaurante (solo la «L» chiquita del pie), en momentos de presión (el mesero tomando un pedido) y en errores que cuestan dinero, como un cobro fallido. Ahí se habla en serio.
+**Ocho expresiones, cada una con su momento:** contento (inicio), ¡hola! (registro), ¡récord! (primer pedido, mejor día), ¿eh? (página no encontrada), orgulloso (resumen del día), sin internet (suda, pero guarda todo), cerrado (duerme) y guiño (redes y sorpresas).
 
-**Sus estados:** atendiendo (con la bandeja), celebrando, durmiendo (restaurante cerrado), sudando (sin internet) y aliviado (ya se subió todo), confundido (página no encontrada), señalando (guía de bienvenida).
+**Personalidad y voz:** servicial, orgulloso de su restaurante, un poco dramático cuando algo sale mal. Frases cortas, de tú, con humor chapín y sin burlarse nunca del dueño. Ejemplos: *«Todavía no hay pedidos. Yo aquí, listo con la bandeja.»*, *«Se fue el internet… tranquilo, yo guardo todo y lo subo solito.»*
 
-En la intro animada ya hay una primera versión de Leo, hecha en código. Para el diseño final del personaje conviene iterar varias versiones antes de fijarlo.
+**Dónde aparece:** la web, el registro y la bienvenida, las pantallas vacías del panel, las celebraciones, la billetera del comensal, las redes y el material impreso.
+
+**Dónde NUNCA aparece:** dentro del menú del restaurante (solo la «L» chiquita del pie), en momentos de presión (el mesero tomando un pedido) y en errores que cuestan dinero, como un cobro fallido.
+
+El diseño, las expresiones, las variantes y la voz están en [`docs/diseno/marca/leo-y-color.html`](../diseno/marca/leo-y-color.html). Leo v2 está hecho en código (SVG), así que se puede animar y cambiar de expresión en la web y en el panel sin archivos pesados. Antes de imprimirlo o de pasarlo a la app conviene una última pasada de ilustración.
 
 ---
 
@@ -367,6 +450,34 @@ La mejor voz es la del dueño de Leogin, con su acento: la confianza local vale 
 - **No:** grabar video real, voz humana o música con licencia, ni stop-motion con objetos físicos. Eso último sí se puede combinar: si alguien toma fotos cuadro por cuadro de comandas reales sobre una mesa, se montan con la animación.
 - **Música:** de una biblioteca libre (la de YouTube o la de CapCut), agregada en el editor.
 
+### ¿El video atrapa clientes? Análisis psicológico (2026-10-26)
+
+**Veredicto honesto:** atrapa a quien ya lo está mirando, sobre todo a un dueño que vive ese caos. Para atrapar a quien va pasando en TikTok o en los estados de WhatsApp le falta un gancho más rápido y ser más corto.
+
+| # | Principio | Cómo está | Por qué |
+|---|---|---|---|
+| 1 | Gancho en los primeros 3 s | **Débil** | Arranca con papel casi vacío y un texto. En redes, la decisión de seguir viendo se toma en 1 a 3 segundos. |
+| 2 | «Ese soy yo» (identificación) | Fuerte | Papelitos, chats sin contestar, «¿dos o tres pupusas?»: el dueño se reconoce. |
+| 3 | Dolor concreto (aversión a la pérdida) | Fuerte | «Q85 que ya eran tuyos» pone la pérdida en quetzales. |
+| 4 | Alivio por contraste | Fuerte | Del cuadro por cuadro al movimiento fluido, del papel apagado a la luz cálida. El cuerpo siente el alivio antes de leerlo. |
+| 5 | Personaje con emoción | Fuerte con Leo v2 | Se sorprende, saluda, se alegra al atrapar la comanda, celebra y guiña. |
+| 6 | Claridad del «cómo» | Fuerte | Cuatro pasos numerados, un verbo cada uno. |
+| 7 | Duración y ritmo | **Mejorable** | 62 s está bien para la web y el seguimiento. En redes es largo, y del segundo 17 al 34 parece demo de producto, que es donde más gente se va. |
+| 8 | El dueño como protagonista | **Falta** | Se ve al sistema ganando, no al dueño. Falta el beneficio emocional: tiempo, tranquilidad, llegar temprano a casa. |
+| 9 | Prueba social | **Falta** | Todavía no hay restaurantes reales que mostrar. |
+| 10 | Llamado a la acción | Bueno | Gratis + QR real + dominio. Mejoraría con regalo e inmediatez. |
+| 11 | Sonido | Mejorable | En redes casi todo se ve sin sonido, y el texto grande ya lo resuelve. En el WhatsApp de seguimiento, una voz conocida sube mucho la confianza. |
+| 12 | Final memorable (pico-final) | Bueno | Leo guiña y se vuelve el logo: el último recuerdo es la marca con cara. |
+
+**Propuestas para el dueño (no aplicadas todavía):**
+
+- **V1 · Gancho nuevo de 3 s.** Abrir ya con el teléfono sonando, 37 mensajes y la pregunta en grande: *«¿Cuántos pedidos se te perdieron hoy?»*.
+- **V2 · Escena del dueño (4 s, antes de la firma).** *«9:00 p. m. La caja cuadró. Tú, ya en tu casa.»* Leo apaga la luz del restaurante y se despide. Es el beneficio emocional que falta.
+- **V3 · Llamado con regalo.** *«Te armamos tu menú hoy, gratis.»* (reciprocidad e inmediatez) en lugar de solo «Gratis para empezar».
+- **V4 · Cortes para redes.** 30 s (Reels, TikTok) y 15 s (estado de WhatsApp), con el mismo arranque.
+- **V5 · Voz y música.** La voz del dueño de Leogin, con su acento, y música libre, en Clipchamp.
+- **V6 · Prueba social.** En cuanto haya un restaurante real, 3 s con su nombre y su zona.
+
 ---
 
 ## 8. Cómo saber si funciona
@@ -400,7 +511,9 @@ Cada fase, cuando se apruebe, se vuelve un `PLAN_*.md` en `docs/planes/`.
 
 - [ ] ¿Frase de marca? (Recomendada: «Pide. Cocina. Cobra.»)
 - [ ] ¿Titular de la portada? (Recomendado: «Que ningún pedido se te escape.»)
-- [ ] ¿Mascota Leo, sí o no? ¿Con ese nombre?
-- [ ] ¿Nombres de la paleta (Brasa, Mango, Carbón, Masa, Albahaca)?
+- [x] ¿Mascota Leo? Sí: al dueño le encantó la idea y pidió que se viera menos simple (2026-10-26). Hecho: Leo v2.
+- [ ] ¿Leo v2 con moño de mesero? (Recomendado frente a gorro de chef o sin accesorio.)
+- [ ] ¿Nombres de la paleta (Brasa, Mango, Carbón, Masa, Albahaca) y la nueva Terracota oscura?
+- [ ] ¿Qué mejoras del video se aplican (V1 a V6)? (Recomendadas primero: V1, V2 y V3.)
 - [ ] ¿Voz en el video: la propia o ninguna?
 - [ ] ¿Qué fase arranca primero? (Recomendada: A, porque no toca código y ayuda a vender esta semana.)
