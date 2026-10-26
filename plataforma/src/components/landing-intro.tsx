@@ -44,7 +44,7 @@ export function LandingIntro() {
         <span className="lp-intro-play" aria-hidden>
           <svg viewBox="0 0 24 24" width="30" height="30"><path d="M8 5.5v13l11-6.5z" fill="currentColor" /></svg>
         </span>
-        <span className="lp-intro-chip">Mira cómo funciona · 51 s</span>
+        <span className="lp-intro-chip">Mira cómo funciona · 54 s</span>
       </button>
 
       {/* Un clic fuera del video (en el fondo oscuro) también cierra. */}

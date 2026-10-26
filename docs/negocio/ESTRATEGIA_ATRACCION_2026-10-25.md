@@ -384,7 +384,7 @@ El diseño, las expresiones, las variantes y la voz están en [`docs/diseno/marc
 ## 6. Qué cambia en cada lado
 
 ### 6.1 Web (distleogin.com)
-**Hecho (2026-10-26):** titular «Tu restaurante, bajo control.» y, al lado, una tarjeta con el gancho («¿Sabes cuánto dinero se te fue hoy?») que abre la intro de 51 s en una ventana: horizontal en computadora, vertical en el celular, con sonido. La intro se sirve en la ruta `/intro` con el nonce de la CSP; GSAP, el sonido (Opus) y la imagen de la tarjeta viven en `plataforma/public/intro/`. Se regenera con `node docs/diseno/intro-animada/publicar-en-web.mjs` cada vez que cambie `intro.html`. Lo de abajo queda como propuesta:
+**Hecho (2026-10-26):** titular «Tu restaurante, bajo control.» y, al lado, una tarjeta con el gancho («¿Sabes cuánto dinero se te fue hoy?») que abre la intro de 54 s en una ventana: horizontal en computadora, vertical en el celular, con sonido. La intro se sirve en la ruta `/intro` con el nonce de la CSP; GSAP, el sonido (Opus) y la imagen de la tarjeta viven en `plataforma/public/intro/`. Se regenera con `node docs/diseno/intro-animada/publicar-en-web.mjs` cada vez que cambie `intro.html`. Lo de abajo queda como propuesta:
 
 - **Portada:** la intro animada en bucle corto (6 a 8 s, sin sonido) más un botón *«Míralo en 1 minuto»* para la versión completa. Es animación en código, no video pesado: carga al instante con datos móviles.
 - **Cinco pantallas, no quince:** dolor → cómo funciona (3 pasos animados) → vecinos que ya lo usan → precio (Gratis) → botón. La lista completa de herramientas se abre aparte.
@@ -425,22 +425,28 @@ Cada corrida deja el video WebM (sin audio) y la banda sonora `intro-leogin-soni
 ### Concepto: «Del caos al orden»
 Dos idiomas visuales: el antes cuadro por cuadro, como papel recortado, y el después fluido. No hace falta voz para entenderlo.
 
-### Guion actual: versión «control» (51 s, 2026-10-26)
+### Guion actual: versión «Las tres fugas» (54 s, 2026-10-26)
+
+**Por qué cambió.** En la versión anterior («control», 51 s) el cuerpo enseñaba el camino del comensal: escanea, pide desde la mesa, la cocina lo ve. El dueño notó que «Pide desde la mesa» era lo más flojo, porque cualquier menú QR lo hace. Ahora el cuerpo **cierra, una por una, las tres fugas que abre el gancho**, y la libreta de la cuenta de hoy se queda en pantalla tachándolas: Q295 → Q210 → Q90 → Q0. Después vienen lo que solo Leogin junta (cliente en vivo, sin internet, domicilio, lealtad) y la noche en la que ya no se fue nada. Solo sale lo que ya funciona: la impresión por estación (sin publicar), la factura electrónica FEL (apagada) y los porcentajes de comisión de la competencia se quedan fuera.
 
 | Tiempo | Imagen | Texto en pantalla |
 |---|---|---|
 | 0 – 5.4 s | Desde el primer cuadro: teléfono sonando, chat lleno, comandas, «¡se acabó el queso!», «¿quién anuló esto?», la caja que no cuadra; la cámara tiembla | «¿Sabes cuánto dinero **se te fue** hoy?» |
 | 5.4 – 8 s | Todo se congela; la cámara se clava en la comanda de la Mesa 4, que se cae; latido. Una libreta suma las fugas | «La cuenta de hoy (ejemplo): pedido perdido Q85 · la caja no cuadró Q120 · queso que nadie anotó Q90 → **Hoy se te fueron Q295.** Al mes, unos Q8,850.» |
 | 8 – 12 s | Leo cae, el golpe barre el papel y entra la luz; despierta, mira a cámara y saluda | «Respira. Esto es Leogin.» |
-| 12 – 17.5 s | Escanea el QR, se abre el menú | «1 · **Escanea.**» |
-| 17.5 – 23.5 s | Pide; golpe y destello al enviar; Leo atrapa la comanda | «2 · Pide desde la **mesa.**» |
-| 23.5 – 29.5 s | «Ding» en cocina, comanda impresa, *Listo* | «3 · La cocina lo ve **al instante.**» + «Esta vez, la **Mesa 4** sí comió.» |
-| 29.5 – 35.5 s | El celular del dueño: ventas del día y cinco avisos que van llegando (caja del turno cuadró, anulación con motivo y PIN, quedan 2 kg de queso cheddar, ganancia de la Doble Bacon, pedidos guardados sin internet); «Todo en orden» y Leo celebra | «4 · Todo, **bajo control.** Desde tu celular, aunque no estés.» |
-| 35.5 – 39.5 s | Billetera: el sello se estampa | «Y tus clientes **vuelven.**» |
-| 39.5 – 44 s | Leo voltea el letrero a CERRADO, apaga la luz y se duerme | «9:00 p. m. La caja cuadró. El inventario, al día. **Tú, ya en tu casa.**» |
-| 44 – 51 s | Leo guiña y se vuelve el logo | «**Tu restaurante, bajo control.**» · Pide. Cocina. Cobra. · «Te armamos tu menú hoy, gratis.» · QR |
+| 12 – 17.5 s | Mesa (QR), WhatsApp, teléfono, mesero y domicilio caen en una sola lista; un solo «ding» y las comandas salen impresas. En la libreta se tacha Q85 | «Fuga 1 · Pedidos perdidos» · «Ningún pedido se **pierde.**» + «Esta vez, la **Mesa 4** sí comió.» |
+| 17.5 – 21 s | El celular del cliente: Recibido → En cocina → ¡Listo!; le llega el aviso y la burbuja «¿Ya viene mi pedido?» se tacha | «Para tu cliente» · «Ve su pedido **en vivo.**» |
+| 21 – 26.5 s | La caja: anular la Mesa 2 pide motivo y el PIN del encargado; el corte del turno da diferencia Q0.00, se estampa «Caja cuadrada» y Leo celebra. Se tacha Q120 | «Fuga 2 · La caja» · «La caja **cuadra.**» |
+| 26.5 – 32 s | Se vende una Doble Bacon: la hamburguesa se desarma y cada ingrediente baja su renglón del inventario; «Queso: quedan 2 kg · pide hoy» y «+Q39 te deja cada plato». Se tacha Q90 y la cuenta queda en Q0 | «Fuga 3 · El inventario» · «Cada venta descuenta **lo que gastaste.**» |
+| 32 – 35.5 s | Se va el internet: la caja sigue guardando pedidos e imprime la comanda; vuelve la señal y todo sube solo | «Si se va el internet» · «Tú **sigues vendiendo.**» |
+| 35.5 – 40 s | El cliente marca su casa en el mapa, el envío de su zona (Q15) se suma solo y el repartidor sale por la ruta | «A domicilio» · «El domicilio, **sin enredos.**» · «…y el envío se cobra solo. Y sin comisión.» |
+| 40 – 43 s | Billetera: el sello se estampa | «Y tus clientes **vuelven.**» |
+| 43 – 47 s | La libreta llega a Q0 y suelta confeti; Leo voltea el letrero a CERRADO, apaga la luz y se duerme | «9:00 p. m.» · «Hoy no se te fue **nada.**» · «La caja cuadró, el inventario está al día y tú, ya en tu casa.» |
+| 47 – 54 s | Leo guiña y se vuelve el logo | «**Tu restaurante, bajo control.**» · Pide. Cocina. Cobra. · «Te armamos tu menú hoy, gratis.» · QR |
 
 Los montos de la libreta son un **ejemplo** y así lo dice en pantalla: sirven para que el dueño haga su propia cuenta, no son una estadística.
+
+**El mesero no es el villano:** en la fuga 1 su tablet es uno de los cinco canales que llegan a la lista, igual que el QR o el WhatsApp.
 
 **El restaurante del video es Rincón 502** (desde el 2026-10-26; antes era «La Ceiba», de cocina chapina): el mismo de la demo en vivo y de la web, con su carta de hamburguesas y pizzas, su menú oscuro con coral y las mismas ilustraciones de los platillos. Ver [`PLAN_EXPERIENCIA_VIVA_2026-10-26.md`](../planes/PLAN_EXPERIENCIA_VIVA_2026-10-26.md) §7.
 
@@ -450,41 +456,42 @@ Los montos de la libreta son un **ejemplo** y así lo dice en pantalla: sirven p
 
 Los cortes no son videos aparte: son **listas de edición** sobre la misma animación (en `intro.html`, `CUTS`). Cada una toma tramos de la versión completa, acelera algunos y esconde los saltos con un barrido. Si se cambia algo de la animación, los tres cortes lo heredan. La música se compone para cada duración y **los cortes caen en el pulso** (cada medio segundo desde el golpe de Leo), así que el ritmo nunca se rompe.
 
-**Reels y TikTok · 30 s.** Se queda todo lo que vende y se quita lo que es «demo»:
+**Reels y TikTok · 30 s (30.2 s).** Las tres fugas, el domicilio y la noche; se quita lo que no cierra una fuga:
 
 | Tiempo | Tramo de la completa | Qué cuenta |
 |---|---|---|
 | 0 – 7.6 s | 0 – 7.6 s | Gancho, caos y la cuenta de lo que se fue |
 | 7.6 – 10.7 s | 7.85 – 10.95 s | Leo cae, despierta y se presenta |
-| 10.7 – 13.7 s | 12 – 15 s | 1 · Escanea |
-| 13.7 – 16.2 s | 20.85 – 23.35 s | 2 · Pide: *Enviar* y Leo atrapa la comanda |
-| 16.2 – 18.7 s | 24.85 – 28.75 s, a 1.56× | 3 · Cocina y «Esta vez, la Mesa 4 sí comió» |
-| 18.7 – 22.7 s | 29.5 – 34.7 s, a 1.3× | 4 · Todo, bajo control (el paso más largo del corte) |
-| 22.7 – 25.2 s | 39.5 – 43.4 s, a 1.56× | Tu noche |
-| 25.2 – 30 s | 44 – 48.8 s | Guiño, logo, la promesa y el regalo |
+| 10.7 – 14.2 s | 12 – 16.9 s, a 1.4× | Fuga 1: todo cae en una sola lista y se tacha Q85 |
+| 14.2 – 17.7 s | 21 – 25.95 s, a 1.4× | Fuga 2: anular con PIN, «Caja cuadrada» y se tacha Q120 |
+| 17.7 – 21 s | 26.5 – 31.05 s, a 1.4× | Fuga 3: el inventario baja solo, se tacha Q90 y la cuenta queda en Q0 |
+| 21 – 23.6 s | 35.5 – 39.6 s, a 1.6× | El domicilio: el mapa, el envío que se cobra solo y el repartidor que llega |
+| 23.6 – 25.8 s | 43 – 46.6 s, a 1.6× | Tu noche: Q0 con confeti, CERRADO y Leo se duerme |
+| 25.8 – 30.2 s | 47 – 51.4 s | Guiño, logo, la promesa y el regalo |
 
-Fuera quedan el llenado del carrito, el desplazamiento del menú y la billetera.
+Fuera quedan el pedido en vivo del cliente, «sin internet» y la billetera.
 
-**Estado de WhatsApp · 15 s.** La historia mínima: se te va el dinero, llega Leo, todo bajo control.
+**Estado de WhatsApp · 15 s (14.9 s).** La historia mínima: se te va el dinero, llega Leo, se tachan las tres fugas y la cuenta queda en Q0.
 
 | Tiempo | Tramo de la completa | Qué cuenta |
 |---|---|---|
 | 0 – 2.5 s | 0 – 2.5 s | La pregunta y el caos |
 | 2.5 – 4.75 s | 5.35 – 7.6 s (salto seco, sin barrido) | Se congela y la libreta suma Q295 |
 | 4.75 – 7.75 s | 7.95 – 10.95 s | Llega Leo |
-| 7.75 – 9.75 s | 31.6 – 34.6 s, a 1.5× | Los avisos de control y «Todo en orden» (sin el número del paso) |
-| 9.75 – 15 s | 44 – 49.25 s | Guiño, logo, la promesa y el regalo |
+| 7.75 – 10.15 s | 15.95 – 16.75 s · 25.35 – 26.15 s · 30.35 – 31.15 s | Las tres fugas se tachan una tras otra: la lista, la caja cuadrada y la ganancia por plato |
+| 10.15 – 10.95 s | 43.4 – 44.2 s | La cuenta en Q0 con confeti |
+| 10.95 – 14.9 s | 47 – 51.35 s, a 1.1× | Guiño, logo, la promesa y el regalo con el QR |
 
 **Por qué así:**
 - **Mismo gancho en los tres.** Lo que decide si alguien sigue mirando son los primeros 3 segundos; eso no se recorta nunca.
-- **El problema y la solución siempre se tocan.** Aun en 15 s, la libreta dice cuánto se fue y el celular muestra que ya todo está en orden: principio, problema y final.
+- **El problema y la solución siempre se tocan.** Aun en 15 s, la libreta dice cuánto se fue y la misma libreta termina en Q0: principio, problema y final con un solo objeto.
 - **Menos es más en redes.** Un video corto se ve completo más veces, y el final con el regalo es lo que lleva a la acción.
 - **Para grabarlos:** `node docs/diseno/intro-animada/grabar-video.mjs --corte 30 --formato v` (o `--corte 15`). Cada uno deja su WebM y su WAV (`intro-leogin-sonido-30s.wav`, `-15s.wav`).
 
 ### Voz (opcional)
-La mejor voz es la del dueño de Leogin, con su acento: la confianza local vale más que una voz de locutor. Guion de voz para la versión de 51 s (entra sobre la música):
+La mejor voz es la del dueño de Leogin, con su acento: la confianza local vale más que una voz de locutor. Guion de voz para la versión de 54 s (entra sobre la música):
 
-> «¿Sabes cuánto dinero se te fue hoy? … Respira. Con Leogin, tu cliente escanea y pide desde la mesa, la cocina lo ve al instante y tú lo controlas todo desde tu celular: la caja, el inventario y lo que ganas en cada plato. Y a las nueve, tú ya en tu casa. Leogin: tu restaurante, bajo control. Te armamos tu menú hoy, gratis.»
+> «¿Sabes cuánto dinero se te fue hoy? … Respira. Con Leogin ningún pedido se pierde: mesa, WhatsApp, teléfono o domicilio, todo cae en una sola lista. La caja cuadra. Y cada venta descuenta del inventario lo que gastaste. Aunque se vaya el internet, sigues vendiendo. Y a las nueve, hoy no se te fue nada. Leogin: tu restaurante, bajo control. Te armamos tu menú hoy, gratis.»
 
 ### Qué se puede hacer desde aquí y qué no
 - **Sí:** animación en código (movimiento de marca, personaje 2D, efecto stop-motion simulado, cámara virtual, tipografía cinética), música y efectos sintetizados (la marimba también es código), y grabar todo como video y WAV.
@@ -515,12 +522,12 @@ El dueño preguntó si el video podía ser más dinámico o si ya estaba en su p
 
 1. **El gancho decide todo.** En redes, la gente decide en uno a tres segundos si sigue mirando. Un gancho que funciona combina movimiento desde el cuadro 0, texto grande y una pregunta que toca una pérdida propia. → *«¿Cuántos pedidos se te perdieron hoy?»* con el teléfono ya sonando, y la palabra «perdieron» subrayada en rojo.
 2. **Romper el patrón cada pocos segundos.** El cerebro deja de atender lo que no cambia (habituación) y vuelve a atender ante cualquier novedad (reflejo de orientación). → Cámara virtual: temblor de cámara en mano en el caos, acercamientos lentos en cada escena, golpes de cámara en los momentos pico y barridos con desenfoque entre pasos. Hay un cambio visible cada 1 a 3 segundos.
-3. **Dejar una pregunta abierta** (vacío de curiosidad, Loewenstein, 1994; efecto Zeigarnik). Lo que queda sin cerrar mantiene la mirada hasta que se cierra. → La Mesa 4: su pedido se pierde en el segundo 6 y se cierra en el 28 con *«Esta vez, la Mesa 4 sí comió.»*
+3. **Dejar una pregunta abierta** (vacío de curiosidad, Loewenstein, 1994; efecto Zeigarnik). Lo que queda sin cerrar mantiene la mirada hasta que se cierra. → La Mesa 4: su pedido se pierde en el segundo 6 y se cierra en el 16 con *«Esta vez, la Mesa 4 sí comió.»* Y la libreta de Q295 queda abierta en una esquina hasta llegar a Q0 (versión «Las tres fugas»).
 4. **Ritmo musical.** Los cortes que caen al compás se sienten más fluidos y con más energía, y la música sube la activación y el recuerdo. → Banda sonora a 120 pulsos por minuto: el caos no tiene ritmo, solo zumbido y reloj; el ritmo entra en el golpe de Leo y los cambios de paso caen en el pulso.
 5. **Sonido con identidad.** La marimba es Guatemala en un segundo: lo familiar se siente cercano y confiable (exposición repetida e identidad cultural). Y el «ding» de dos notas queda como logo sonoro. → La música es de marimba, con trémolo como la marimba chapina.
 6. **Arco emocional: problema, agitación, solución y transformación.** El congelado con latido agita el dolor, Leo lo resuelve y «Tu noche» muestra la transformación que el dueño sí siente: tiempo y tranquilidad.
 7. **Mirada a cámara.** Unos ojos que nos miran capturan la atención más que cualquier otro estímulo. → Leo mira a cámara al presentarse y guiña al final.
-8. **Picos marcados** (regla del pico y el final). → Pedido enviado, «ding», récord y logo llevan golpe de cámara, destello y sonido. El final cierra con un regalo concreto.
+8. **Picos marcados** (regla del pico y el final). → El «ding» de la lista, el «¡Listo!» del cliente, el sello de «Caja cuadrada», cada fuga tachada, la cuenta en Q0 y el logo llevan golpe de cámara, destello o confeti, y sonido. El final cierra con un regalo concreto.
 9. **Llamado con reciprocidad, inmediatez y concreción.** → *«Te armamos tu menú hoy, gratis.»*
 10. **Dinámico no es caótico** (fluidez de procesamiento). Lo que se entiende sin esfuerzo se siente más confiable. Por eso el caos se queda solo en el «antes»: el «después» tiene ritmo, pero cada pantalla dice una sola cosa. Para un dueño que va a confiarle su caja, el sistema tiene que verse en control.
 
@@ -553,7 +560,7 @@ El dueño preguntó si el video podía ser más dinámico o si ya estaba en su p
 | Fase | Qué | Código |
 |---|---|---|
 | **A** | Mensajes nuevos en el guion de venta y la intro como video para el WhatsApp de seguimiento | Ninguno: se usa ya |
-| **B** ✅ | Portada nueva de la web con la intro animada y los mensajes de §4. **Hecha el 2026-10-26** (rama `feat/portada-bajo-control`): titular «Tu restaurante, bajo control.», tarjeta con el gancho que abre la intro de 51 s y el menú de ejemplo movido a «Dos lados, un sistema» | Solo la web pública |
+| **B** ✅ | Portada nueva de la web con la intro animada y los mensajes de §4. **Hecha el 2026-10-26** (rama `feat/portada-bajo-control`): titular «Tu restaurante, bajo control.», tarjeta con el gancho que abre la intro de 54 s y el menú de ejemplo movido a «Dos lados, un sistema» | Solo la web pública |
 | **C** | Momentos pico: primer pedido, pedido enviado, cierre de caja y «el ding» | Panel y menú |
 | **D** | Leo en las pantallas vacías, la bienvenida y la billetera | Panel y billetera |
 | **E** | Ganchos con datos: resumen del día, «Comparte tu plato del día», «Tu año con Leogin» y premio por pedir por QR | Requiere decidir qué se mide |
