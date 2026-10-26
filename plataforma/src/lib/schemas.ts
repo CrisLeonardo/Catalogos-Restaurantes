@@ -9,7 +9,7 @@ export const orderItemOptionSchema = z.object({
 });
 
 export const orderItemSchema = z.object({
-  productId: z.string().uuid('ID de producto inválido'),
+  productId: z.string().guid('ID de producto inválido'),
   name: z.string().min(1).max(200),
   price: z.number().positive().max(100_000),
   quantity: z.number().int().positive().max(99),
@@ -70,7 +70,7 @@ export function isValidGuatemalaPhone(raw: string): boolean {
 
 export const customerSchema = z.object({
   name: z
-    .string({ required_error: 'El nombre es requerido' })
+    .string({ error: (iss) => (iss.input === undefined ? 'El nombre es requerido' : undefined) })
     .min(1, 'El nombre es requerido')
     .max(100, 'Nombre demasiado largo')
     .transform((v) => v.trim()),
@@ -111,7 +111,7 @@ export const customerSchema = z.object({
    mesero no pudiera tener su propia versión. */
 const createOrderBase = z
   .object({
-    restaurantId: z.string().uuid('ID de restaurante inválido'),
+    restaurantId: z.string().guid('ID de restaurante inválido'),
     items: z
       .array(orderItemSchema)
       .max(50, 'Demasiados ítems')
@@ -122,7 +122,7 @@ const createOrderBase = z
      * descuenta los puntos de forma autoritativa. Van como ítems con precio 0.
      */
     rewardLines: z
-      .array(z.object({ rewardId: z.string().uuid() }))
+      .array(z.object({ rewardId: z.string().guid() }))
       .max(10, 'Demasiadas recompensas')
       .default([]),
     customer: customerSchema,
@@ -140,13 +140,13 @@ const createOrderBase = z
      * mismo pedido). Ver migración 061 — evita duplicar el pedido si la
      * cola offline reintenta un envío cuya respuesta se perdió.
      */
-    clientId: z.string().uuid().optional(),
+    clientId: z.string().guid().optional(),
     /**
      * Mesero que tomó el pedido — solo relevante para el camino del hub
      * offline (offline-orders/route.ts): createWaiterOrder() ya resuelve el
      * mesero de la sesión real y lo ignora si viene en el payload.
      */
-    waiterId: z.string().uuid().optional(),
+    waiterId: z.string().guid().optional(),
   });
 
 /** A dónde va el pedido. Vale igual para el público y para el mesero. */
