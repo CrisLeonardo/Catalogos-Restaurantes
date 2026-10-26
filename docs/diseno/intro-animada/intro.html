@@ -214,29 +214,18 @@ body.render .overlay { display: none; }
 .grad { background: linear-gradient(120deg, var(--brasa), var(--mango)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
 /* Rótulos de cada paso */
-.cs { position: absolute; left: 150px; top: 0; width: 700px; height: 1080px; display: flex; flex-direction: column; justify-content: center; z-index: 2; }
-.stage.v .cs { left: 90px; top: 150px; width: 900px; height: 600px; }
-.cs .num { font: 800 230px/0.82 var(--f-display); letter-spacing: -0.04em; margin-bottom: 26px; }
-.stage.v .cs .num { font-size: 170px; margin-bottom: 18px; }
+.cs { position: absolute; left: 150px; top: 0; width: 700px; height: 860px; display: flex; flex-direction: column; justify-content: center; z-index: 2; }
+.stage.v .cs { left: 90px; top: 120px; width: 900px; height: 560px; }
+.cs .ey { font: 700 30px/1.2 var(--f-ui); letter-spacing: 0.06em; text-transform: uppercase; color: var(--mango); margin-bottom: 22px; }
+.stage.v .cs .ey { margin-bottom: 16px; }
 .cs h2 { font: 700 92px/1.0 var(--f-display); letter-spacing: -0.025em; margin: 0; color: var(--ink); text-wrap: balance; }
 .stage.v .cs h2 { font-size: 84px; }
 .cs p { font: 500 38px/1.3 var(--f-ui); color: #ABA39A; margin: 26px 0 0; max-width: 620px; text-wrap: balance; }
 .stage.v .cs p { max-width: 860px; font-size: 38px; }
 
 .vbox { position: absolute; left: 900px; top: 80px; width: 940px; height: 920px; z-index: 3; }
-.stage.v .vbox { left: 70px; top: 780px; }
+.stage.v .vbox { left: 70px; top: 720px; }
 .vbox > * { position: absolute; left: 0; top: 0; }
-
-/* Mesa con QR */
-#tent { left: 40px; top: 300px; width: 250px; z-index: 1; }
-.tent-card { background: #FFFFFF; border-radius: 18px; overflow: hidden; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45); transform: perspective(900px) rotateY(16deg); }
-.tent-top { background: #161512; color: #F7F3EF; padding: 16px 18px; font: 700 24px var(--f-display); letter-spacing: -0.01em; }
-.tent-top small { display: block; font: 500 13px var(--f-ui); opacity: 0.8; margin-top: 3px; }
-.tent-mid { padding: 18px 26px 12px; text-align: center; color: #1E1A16; }
-.tent-mid .qr { width: 170px; height: 170px; margin: 0 auto; }
-.tent-mid p { margin: 10px 0 0; font: 700 20px var(--f-ui); }
-.tent-bot { display: flex; justify-content: space-between; align-items: center; padding: 10px 18px 16px; font: 600 15px var(--f-ui); color: #6E6A66; }
-.tent-bot b { color: #1E1A16; font-size: 18px; }
 
 /* Teléfono */
 #phone { left: 280px; top: 70px; width: 380px; height: 780px; z-index: 3; }
@@ -248,63 +237,21 @@ body.render .overlay { display: none; }
 .sbar .ic { display: flex; gap: 6px; align-items: center; }
 .sbar.dark { color: #1E1A16; }
 .scr { position: absolute; inset: 0; }
-
-#scrCam { background: #0E0E10; }
-.cam-bg { position: absolute; inset: 0; background: radial-gradient(260px 200px at 50% 40%, #3A3A3E, #121214 70%); }
-.cam-tent { position: absolute; left: 52px; top: 150px; width: 250px; height: 380px; border-radius: 22px; background: #E9E6E0; filter: blur(7px); }
-.cam-tent::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 70px; border-radius: 22px 22px 0 0; background: #161512; }
-.cam-hint { position: absolute; top: 76px; left: 0; right: 0; text-align: center; font: 600 15px var(--f-ui); color: #FFFFFF; opacity: 0.9; }
-.cam-qr { position: absolute; left: 82px; top: 205px; width: 190px; height: 190px; background: #FFFFFF; border-radius: 12px; padding: 12px; }
-#vf { position: absolute; left: 62px; top: 185px; width: 230px; height: 230px; }
-#vf i { position: absolute; width: 46px; height: 46px; border: 0 solid #FFFFFF; }
-#vf i:nth-child(1) { left: 0; top: 0; border-left-width: 6px; border-top-width: 6px; border-top-left-radius: 18px; }
-#vf i:nth-child(2) { right: 0; top: 0; border-right-width: 6px; border-top-width: 6px; border-top-right-radius: 18px; }
-#vf i:nth-child(3) { left: 0; bottom: 0; border-left-width: 6px; border-bottom-width: 6px; border-bottom-left-radius: 18px; }
-#vf i:nth-child(4) { right: 0; bottom: 0; border-right-width: 6px; border-bottom-width: 6px; border-bottom-right-radius: 18px; }
-#scanline { position: absolute; left: 72px; top: 296px; width: 210px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, transparent, var(--mango), transparent); box-shadow: 0 0 24px var(--mango); }
-#pill { position: absolute; left: 18px; right: 18px; top: 578px; height: 60px; border-radius: 30px; background: #FFFFFF; color: #1E1A16; display: flex; align-items: center; gap: 2px; padding: 0 8px 0 18px; font: 500 14px var(--f-ui); white-space: nowrap; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4); }
-#pill b { font-weight: 700; }
-#pill span { color: #6E6A66; }
-#pill em { margin-left: auto; font-style: normal; font-weight: 700; background: #E4572E; color: #FFFFFF; padding: 12px 18px; border-radius: 22px; }
-
-/* Menú de Rincón 502 (la marca del restaurante, no la de Leogin): oscuro
-   con coral, como su menú de verdad en demo.distleogin.com. */
-#scrMenu { background: #161512; color: #F7F3EF; }
-#mCover { position: absolute; left: 0; right: 0; top: 0; height: 206px; background: linear-gradient(160deg, #3A1B12, #E4572E); overflow: hidden; transform-origin: 50% 0; }
-#mCover .leaf { position: absolute; border-radius: 50%; background: rgba(247, 243, 239, 0.08); }
-.m-head { position: absolute; left: 20px; right: 18px; top: 112px; display: flex; align-items: center; gap: 14px; color: #F7F3EF; }
-.m-logo { width: 62px; height: 62px; border-radius: 50%; background: #F7F3EF; color: #161512; display: grid; place-items: center; font: 800 24px var(--f-display); flex: none; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3); }
-.m-head h3 { margin: 0; font: 700 27px/1 var(--f-display); letter-spacing: -0.02em; }
-.m-head p { margin: 7px 0 0; font: 500 14px var(--f-ui); opacity: 0.88; display: flex; align-items: center; gap: 6px; }
-.m-head p i { width: 8px; height: 8px; border-radius: 50%; background: #7BD88F; }
-.m-mesa { position: absolute; right: 18px; top: 62px; background: #161512; color: #F7F3EF; font: 700 13px var(--f-ui); padding: 7px 12px; border-radius: 14px; }
-.m-chips { position: absolute; left: 16px; top: 220px; display: flex; gap: 8px; white-space: nowrap; }
-.m-chips span { font: 600 14px var(--f-ui); padding: 9px 14px; border-radius: 18px; background: #26221E; color: #CFC7BD; }
-.m-chips span.on { background: #E4572E; color: #FFFFFF; }
-.m-list-clip { position: absolute; left: 0; right: 0; top: 268px; bottom: 0; overflow: hidden; }
-#mList { position: absolute; left: 14px; right: 14px; top: 0; display: flex; flex-direction: column; gap: 10px; }
-.card { height: 104px; border-radius: 22px; background: #221F1B; display: flex; align-items: center; gap: 14px; padding: 0 12px 0 10px; position: relative; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
-.card .ph { width: 82px; height: 82px; border-radius: 18px; background: #2A2622; flex: none; overflow: hidden; }
-.card .ph svg { width: 82px; height: 82px; display: block; }
-.card .tx { flex: 1; min-width: 0; }
-.card h4 { margin: 0; font: 700 16.5px/1.15 var(--f-ui); color: #F7F3EF; }
-.card p { margin: 4px 0 0; font: 500 12.5px/1.25 var(--f-ui); color: #A39B92; }
-.card .pr { margin-top: 6px; font: 700 15px var(--f-ui); color: #F2704C; }
-.card .add { position: absolute; right: 12px; bottom: 12px; width: 34px; height: 34px; border-radius: 50%; background: #E4572E; color: #FFFFFF; display: grid; place-items: center; font: 700 22px/1 var(--f-ui); }
-#cart { position: absolute; left: 14px; right: 14px; top: 676px; height: 62px; border-radius: 22px; background: #F7F3EF; color: #161512; z-index: 10; overflow: hidden; box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45); }
-#cart > div { position: absolute; inset: 0; display: flex; align-items: center; gap: 12px; padding: 0 18px; font: 700 16px var(--f-ui); }
-#cartN { min-width: 30px; height: 30px; border-radius: 15px; background: #E4572E; color: #FFFFFF; display: grid; place-items: center; font-size: 15px; padding: 0 6px; }
-#cartA .tot { margin-left: auto; }
-#cartB { justify-content: center; font-size: 18px; }
-#flyDot { position: absolute; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; background: #E4572E; z-index: 20; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); }
 #touch { position: absolute; left: 0; top: 0; width: 50px; height: 50px; border-radius: 50%; background: rgba(255, 255, 255, 0.55); border: 3px solid rgba(255, 255, 255, 0.95); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); z-index: 40; }
 #ripple { position: absolute; left: 0; top: 0; width: 50px; height: 50px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.9); z-index: 39; }
+.mini-logo { width: 44px; height: 44px; border-radius: 50%; background: #E4572E; color: #FFFFFF; display: grid; place-items: center; font: 800 18px var(--f-display); flex: none; }
 
-#scrSent { background: #161512; color: #F7F3EF; display: flex; flex-direction: column; align-items: center; padding: 140px 28px 0; text-align: center; }
-#sentCheck { width: 132px; height: 132px; border-radius: 50%; background: var(--albahaca); display: grid; place-items: center; box-shadow: 0 18px 40px rgba(47, 158, 107, 0.35); }
+/* El cliente ve su pedido en vivo (para llevar, de Rincón 502) */
+#scrSent { background: #161512; color: #F7F3EF; padding: 70px 22px 0; text-align: center; }
+.tk-head { display: flex; align-items: center; gap: 12px; text-align: left; }
+.tk-head b { display: block; font: 700 19px var(--f-display); letter-spacing: -0.01em; }
+.tk-head small { display: block; font: 500 13px var(--f-ui); color: #A39B92; margin-top: 3px; }
+.tk-st { position: relative; width: 132px; height: 132px; margin: 44px auto 0; }
+#tkWait { position: absolute; inset: 0; border-radius: 50%; border: 10px solid #3A342E; border-top-color: #F5A030; border-right-color: #F5A030; }
+#sentCheck { position: absolute; inset: 0; border-radius: 50%; background: var(--albahaca); display: grid; place-items: center; box-shadow: 0 18px 40px rgba(47, 158, 107, 0.35); }
 #sentCheck svg { width: 70px; height: 70px; }
-#scrSent h3 { margin: 30px 0 0; font: 700 30px/1.1 var(--f-display); letter-spacing: -0.02em; }
-#scrSent .s1 { margin: 10px 0 0; font: 500 16px var(--f-ui); color: #A39B92; }
+#tkTitle { margin: 26px 0 0; font: 700 32px/1.1 var(--f-display); letter-spacing: -0.02em; }
+#tkSub { margin: 8px 0 0; font: 500 16px var(--f-ui); color: #A39B92; }
 .track { margin-top: 34px; width: 100%; display: flex; justify-content: space-between; position: relative; }
 .track::before { content: ""; position: absolute; left: 30px; right: 30px; top: 11px; height: 4px; border-radius: 2px; background: #3A342E; }
 .track div { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; font: 600 13px var(--f-ui); color: #8A8279; width: 90px; }
@@ -312,8 +259,67 @@ body.render .overlay { display: none; }
 .track .done i { background: var(--albahaca); }
 .track .now i { background: #E4572E; box-shadow: 0 0 0 6px rgba(228, 87, 46, 0.25); }
 .track .done, .track .now { color: #F7F3EF; }
-.pts { margin-top: 34px; display: inline-flex; align-items: center; gap: 10px; background: #F7F3EF; color: #161512; padding: 12px 18px; border-radius: 18px; font: 700 16px var(--f-ui); }
-.pts b { background: #E4572E; color: #FFFFFF; border-radius: 10px; padding: 4px 9px; }
+.tk-items { margin-top: 30px; display: flex; align-items: center; gap: 12px; background: #221F1B; border-radius: 18px; padding: 10px 14px 10px 10px; text-align: left; }
+.tk-items svg { width: 64px; height: 64px; border-radius: 14px; flex: none; display: block; }
+.tk-items b { display: block; font: 700 16px var(--f-ui); }
+.tk-items small { display: block; font: 500 13px var(--f-ui); color: #A39B92; margin-top: 2px; }
+.tk-items em { margin-left: auto; font-style: normal; font: 700 16px var(--f-mono); }
+#notiBan { position: absolute; left: 12px; right: 12px; top: 56px; z-index: 26; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 22px; background: #F7F3EF; color: #161512; text-align: left; box-shadow: 0 16px 34px rgba(0, 0, 0, 0.5); }
+#notiBan b { display: block; font: 700 15px var(--f-ui); }
+#notiBan small { display: block; font: 500 14px var(--f-ui); color: #4A4540; margin-top: 2px; }
+#yaViene { left: -10px; top: 190px; width: 272px; z-index: 4; }
+.yv { position: relative; background: #FFFFFF; border: 4px solid var(--tinta); border-radius: 24px 24px 24px 6px; padding: 14px 18px; font: 600 36px/1.05 var(--f-hand); color: var(--tinta); transform: rotate(-6deg); box-shadow: 0 14px 26px rgba(0, 0, 0, 0.35); }
+.yv-x { position: absolute; left: 10px; right: 10px; top: 50%; height: 6px; border-radius: 3px; background: #D8362A; }
+
+/* La caja cuadra: el celular de quien cierra el turno */
+#scrCaja { background: #F4F4F6; color: #17161A; padding: 64px 16px 0; }
+.cj-head small { display: block; font: 600 14px var(--f-ui); color: #6E6A66; }
+.cj-head b { display: block; font: 700 30px/1.1 var(--f-display); letter-spacing: -0.02em; margin-top: 2px; }
+.cj-card { position: absolute; left: 16px; right: 16px; background: #FFFFFF; border-radius: 20px; padding: 16px; box-shadow: 0 2px 10px rgba(23, 22, 26, 0.07); }
+#cjAnular { top: 142px; }
+#cjCorte { top: 458px; }
+.cj-t { display: flex; justify-content: space-between; align-items: center; }
+.cj-t b { font: 700 18px var(--f-ui); }
+.cj-t em { font-style: normal; font: 700 18px var(--f-mono); color: #A12A20; }
+.cj-l { margin-top: 14px; font: 700 12px var(--f-ui); color: #8A8279; letter-spacing: 0.06em; text-transform: uppercase; }
+.cj-chip { display: inline-flex; margin-top: 6px; font: 600 15px var(--f-ui); padding: 8px 12px; border-radius: 12px; background: #FFF1EC; border: 2px solid #E4572E; }
+.cj-pin { display: flex; gap: 12px; margin-top: 8px; }
+.cj-pin i { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #C9C2B8; display: grid; place-items: center; }
+.cj-pin i b { width: 14px; height: 14px; border-radius: 50%; background: #17161A; display: block; }
+.cj-ok { margin-top: 14px; font: 700 14px var(--f-ui); color: #1F7A50; background: #E3F4EA; padding: 9px 12px; border-radius: 12px; }
+.cj-r { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; font: 500 15px var(--f-ui); color: #4A4540; }
+.cj-r b { font: 700 16px var(--f-mono); color: #17161A; }
+.cj-dif b { color: #1F7A50; }
+#cjSello { position: absolute; left: 44px; right: 44px; top: 618px; height: 100px; border: 6px solid #1F7A50; border-radius: 16px; color: #1F7A50; display: grid; place-items: center; text-align: center; font: 800 28px/1.05 var(--f-display); letter-spacing: 0.04em; background: rgba(227, 244, 234, 0.94); z-index: 3; }
+
+/* El domicilio, sin enredos */
+#scrMapa { background: #FFFFFF; }
+.mp-map { position: absolute; left: 0; right: 0; top: 54px; height: 430px; overflow: hidden; background: #EAE3D6; }
+.mp-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#mpZona { position: absolute; left: 90px; top: 300px; width: 540px; height: 540px; margin: -270px 0 0 -270px; border-radius: 50%; border: 3px dashed #E4572E; background: rgba(228, 87, 46, 0.07); }
+.mp-zl { position: absolute; left: 128px; top: 70px; font: 700 12px var(--f-ui); color: #B4492A; background: #FFFFFF; padding: 5px 9px; border-radius: 9px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12); white-space: nowrap; }
+.mp-pin { position: absolute; width: 44px; height: 44px; margin: -54px 0 0 -22px; border-radius: 50%; display: grid; place-items: center; color: #FFFFFF; font: 800 17px var(--f-display); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3); }
+.mp-pin::after { content: ""; position: absolute; left: 50%; bottom: -14px; margin-left: -8px; border: 8px solid transparent; }
+#mpR { left: 90px; top: 300px; background: #161512; }
+#mpR::after { border-top-color: #161512; }
+#mpH { left: 270px; top: 110px; background: #E4572E; }
+#mpH::after { border-top-color: #E4572E; }
+#mpH svg { width: 22px; height: 22px; }
+#mpMoto { position: absolute; left: 0; top: 0; width: 42px; height: 42px; border-radius: 50%; background: #4C7DF0; display: grid; place-items: center; color: #FFFFFF; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3); z-index: 2; }
+#mpMoto svg { width: 24px; height: 24px; }
+.mp-sheet { position: absolute; left: 0; right: 0; top: 432px; bottom: 0; background: #FFFFFF; border-radius: 24px 24px 0 0; padding: 18px 16px 0; box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.1); color: #17161A; }
+.mp-sheet > b { display: block; font: 700 20px var(--f-display); letter-spacing: -0.01em; }
+.mp-r1 { display: flex; align-items: center; gap: 10px; margin-top: 12px; font: 600 15px var(--f-ui); }
+.mp-r1 > svg { width: 44px; height: 44px; border-radius: 12px; flex: none; display: block; }
+.mp-r1 > i { width: 44px; height: 44px; border-radius: 12px; background: #4C7DF0; color: #FFFFFF; display: grid; place-items: center; flex: none; }
+.mp-r1 > i svg { width: 24px; height: 24px; }
+.mp-r1 em { margin-left: auto; font-style: normal; font: 700 16px var(--f-mono); }
+#mpEnvio { background: #FFF1EC; border-radius: 14px; padding: 6px 10px 6px 6px; }
+.mp-tot { display: flex; justify-content: space-between; align-items: baseline; margin-top: 12px; padding-top: 10px; border-top: 1px solid #EDEAE4; font: 700 17px var(--f-ui); }
+.mp-tot b { font: 700 19px var(--f-mono); }
+#mpEstado { margin-top: 12px; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: #161512; color: #F7F3EF; font: 700 15px var(--f-ui); }
+.mp-dot { width: 10px; height: 10px; border-radius: 50%; background: #6FD3A2; flex: none; }
+#mpEta { margin-left: auto; font-style: normal; font: 700 15px var(--f-mono); color: #F5A030; }
 
 /* Billetera del comensal (casa de Leogin) */
 #scrWallet { background: var(--masa); padding: 64px 16px 0; }
@@ -323,9 +329,9 @@ body.render .overlay { display: none; }
 .w-head p { margin: 4px 0 0; font: 500 13px var(--f-ui); color: #7A736B; }
 .wcard { border-radius: 26px; padding: 18px; margin-top: 16px; position: relative; }
 .wcard.rincon { background: #161512; color: #F7F3EF; }
-.wcard .wt { display: flex; align-items: center; gap: 10px; font: 700 18px var(--f-ui); }
+.wcard .wt { display: flex; align-items: center; gap: 10px; font: 700 18px var(--f-ui); white-space: nowrap; }
 .wcard .wt i { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font: 800 12px var(--f-display); font-style: normal; background: #E4572E; color: #FFFFFF; }
-.wcard .wt small { margin-left: auto; font: 600 12px var(--f-ui); opacity: 0.8; }
+.wcard .wt small { margin-left: auto; font: 600 11px var(--f-ui); opacity: 0.8; }
 .stamps { display: grid; grid-template-columns: repeat(5, 44px); gap: 12px; margin-top: 16px; position: relative; }
 .stamps span { width: 44px; height: 44px; border-radius: 50%; border: 2.5px dashed rgba(247, 243, 239, 0.45); display: grid; place-items: center; }
 .stamps span.f { border: 0; background: #E4572E; }
@@ -341,65 +347,89 @@ body.render .overlay { display: none; }
 .wmini small { display: block; font: 500 13px var(--f-ui); color: #7A736B; margin-top: 3px; }
 .wmini .r { margin-left: auto; font: 700 14px var(--f-ui); color: #1C1C1E; background: #F2EADC; padding: 7px 11px; border-radius: 12px; }
 
-/* Control del dueño, en el celular */
-#scrControl { background: #F4F4F6; padding: 62px 14px 0; }
-.c-head small { font: 600 14px var(--f-ui); color: #6E6A66; }
-#cBig { font: 700 40px/1.05 var(--f-display); letter-spacing: -0.03em; color: #17161A; margin-top: 4px; font-variant-numeric: tabular-nums; }
-.c-chip { display: inline-flex; margin-top: 8px; font: 700 13px var(--f-ui); color: #1F7A50; background: #E3F4EA; padding: 5px 10px; border-radius: 10px; }
-.c-list { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
-.c-card { display: flex; align-items: center; gap: 11px; background: #FFFFFF; border-radius: 16px; padding: 11px 11px; box-shadow: 0 2px 8px rgba(23, 22, 26, 0.06); }
-.c-card i { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; flex: none; }
-.c-card i svg { width: 20px; height: 20px; }
-.c-card i.ok { background: #E3F4EA; color: #1F7A50; }
-.c-card i.warn { background: #FFF1DD; color: #8A4B08; }
-.c-card i.alert { background: #FDE4E2; color: #A12A20; }
-.c-card i.gain { background: #F2EEE8; color: #17161A; }
-.c-card i.net { background: #E8EEF8; color: #2D4E86; }
-.c-card > div { flex: 1; min-width: 0; }
-.c-card b { display: block; font: 700 16px/1.2 var(--f-ui); color: #17161A; }
-.c-card small { display: block; font: 500 13px/1.3 var(--f-ui); color: #6E6A66; margin-top: 2px; }
-.c-card em { font-style: normal; font: 700 15px var(--f-ui); color: #17161A; }
-.c-card em.up { color: #1F7A50; }
-#cOk { position: absolute; left: 14px; right: 14px; bottom: 18px; height: 52px; border-radius: 16px; background: #23855A; color: #FFFFFF; display: flex; align-items: center; justify-content: center; gap: 8px; font: 700 17px var(--f-ui); box-shadow: 0 12px 26px rgba(35, 133, 90, 0.35); }
-#cOk svg { width: 20px; height: 20px; }
+/* Fuga 1: venga de donde venga, todo cae en una sola lista */
+#fuentes { left: 10px; top: 40px; width: 260px; height: 860px; z-index: 4; }
+.fu { position: absolute; left: 0; display: flex; align-items: center; gap: 14px; }
+#fu1 { top: 0; } #fu2 { top: 168px; } #fu3 { top: 336px; } #fu4 { top: 504px; } #fu5 { top: 672px; }
+.fu > i { width: 96px; height: 96px; border-radius: 28px; display: grid; place-items: center; flex: none; box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45); }
+.fu > i svg { width: 50px; height: 50px; }
+.fu span { font: 700 24px/1.1 var(--f-ui); color: var(--ink); white-space: nowrap; }
+[data-c="qr"] > i { background: #FFFFFF; color: #1C1C1E; }
+[data-c="wa"] > i { background: #25D366; color: #FFFFFF; }
+[data-c="tel"] > i { background: #E8534A; color: #FFFFFF; }
+[data-c="mes"] > i { background: #F5A030; color: #1C1C1E; }
+[data-c="dom"] > i { background: #4C7DF0; color: #FFFFFF; }
+#lista { left: 300px; top: 60px; width: 620px; height: 700px; z-index: 3; border-radius: 26px; background: #17171A; box-shadow: 0 0 0 2px #2A2A2F, 0 40px 80px rgba(0, 0, 0, 0.5); }
+#liRing { position: absolute; inset: -8px; border-radius: 32px; border: 4px solid var(--mango); }
+.li-head { position: absolute; left: 24px; right: 24px; top: 22px; display: flex; align-items: center; gap: 14px; }
+.li-head b { font: 700 26px var(--f-display); color: #EDEAE4; letter-spacing: -0.01em; }
+#liN { font: 600 17px var(--f-ui); color: #A9A49C; }
+.li-live { margin-left: auto; font-style: normal; font: 700 14px var(--f-ui); color: #6FD3A2; background: rgba(47, 158, 107, 0.15); padding: 6px 11px; border-radius: 10px; }
+.ro { position: absolute; left: 20px; width: 580px; height: 104px; border-radius: 18px; background: #232327; display: flex; align-items: center; gap: 14px; padding: 0 16px; }
+#ro1 { top: 86px; } #ro2 { top: 206px; } #ro3 { top: 326px; } #ro4 { top: 446px; } #ro5 { top: 566px; }
+.ro > i { width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center; flex: none; }
+.ro > i svg { width: 28px; height: 28px; }
+.ro > div { flex: 1; min-width: 0; }
+.ro b { display: block; font: 700 20px var(--f-ui); color: #EDEAE4; }
+.ro small { display: block; font: 500 15px var(--f-ui); color: #A9A49C; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ro em { font-style: normal; font: 700 19px var(--f-mono); color: #EDEAE4; }
+.ro-st { font: 700 13px var(--f-ui); padding: 6px 10px; border-radius: 10px; background: var(--mango); color: #1C1C1E; white-space: nowrap; min-width: 74px; text-align: center; }
+.ro-st[data-st="ok"] { background: var(--albahaca); color: #FFFFFF; }
 
-/* Pantalla de cocina */
-#kds { left: 20px; top: 40px; width: 900px; z-index: 1; }
-.mon { width: 900px; height: 540px; border-radius: 22px; background: #0B0B0D; padding: 14px; box-shadow: 0 0 0 2px #2A2A2F, 0 40px 80px rgba(0, 0, 0, 0.5); }
-.mon-scr { width: 100%; height: 100%; border-radius: 12px; background: #17171A; position: relative; overflow: hidden; color: #EDEAE4; }
-.mon-head { position: absolute; left: 0; right: 0; top: 0; height: 56px; display: flex; align-items: center; gap: 14px; padding: 0 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font: 600 15px var(--f-ui); color: #A9A49C; }
-.mon-head b { font: 700 20px var(--f-display); color: #EDEAE4; letter-spacing: -0.01em; }
-.mon-head .clock { margin-left: auto; font-family: var(--f-mono); color: #EDEAE4; }
-.col-h { position: absolute; top: 70px; width: 276px; display: flex; align-items: center; gap: 9px; font: 700 15px var(--f-ui); color: #CFCAC2; }
-.col-h i { width: 10px; height: 10px; border-radius: 50%; }
-.col-h em { font-style: normal; margin-left: auto; color: #8E8A84; font-family: var(--f-mono); font-weight: 500; }
-.kc { position: absolute; left: 0; top: 0; width: 276px; height: 118px; border-radius: 14px; background: #232327; padding: 14px 16px; border: 2px solid transparent; }
-.kc .r1 { display: flex; align-items: center; gap: 8px; }
-.kc .r1 b { font: 700 18px var(--f-ui); }
-.kc .r1 small { font: 500 13px var(--f-ui); color: #8E8A84; }
-.kc .chip { margin-left: auto; font: 700 11.5px var(--f-ui); padding: 5px 9px; border-radius: 10px; background: rgba(255, 255, 255, 0.08); color: #CFCAC2; }
-.kc ul { list-style: none; margin: 9px 0 0; padding: 0; font: 500 14.5px/1.45 var(--f-ui); color: #DAD5CD; }
-.kc .r3 { position: absolute; left: 16px; right: 16px; bottom: 10px; display: flex; justify-content: space-between; font: 500 12.5px var(--f-ui); color: #8E8A84; }
-.kc .r3 .tm { font-family: var(--f-mono); color: #CFCAC2; }
-#kNew { z-index: 3; }
-#kNew[data-st="nuevo"] { border-color: var(--mango); box-shadow: 0 0 0 4px rgba(245, 160, 48, 0.16), 0 12px 30px rgba(0, 0, 0, 0.35); }
-#kNew[data-st="nuevo"] .chip { background: var(--mango); color: #1C1C1E; }
-#kNew[data-st="prep"] { border-color: rgba(255, 255, 255, 0.22); }
-#kNew[data-st="prep"] .chip { background: #EDEAE4; color: #1C1C1E; }
-#kNew[data-st="listo"] { border-color: var(--albahaca); box-shadow: 0 0 0 4px rgba(47, 158, 107, 0.2); }
-#kNew[data-st="listo"] .chip { background: var(--albahaca); color: #FFFFFF; }
-.kc .ok { position: absolute; right: -12px; top: -12px; width: 38px; height: 38px; border-radius: 50%; background: var(--albahaca); display: grid; place-items: center; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35); }
-.kc .ok svg { width: 20px; height: 20px; }
-.kring { position: absolute; left: 0; top: 0; width: 276px; height: 118px; border-radius: 16px; border: 3px solid var(--mango); z-index: 2; }
-.mon-neck { width: 90px; height: 54px; margin: 0 auto; background: linear-gradient(#1D1D21, #141417); }
-.mon-base { width: 280px; height: 16px; margin: 0 auto; border-radius: 10px; background: #1D1D21; }
+/* Fuga 3: la hamburguesa se desarma y cada ingrediente se descuenta */
+#burger { left: 0; top: 160px; width: 470px; height: 600px; z-index: 3; }
+.bg-l { position: absolute; left: 20px; width: 340px; display: block; overflow: visible; }
+#bgTop { top: 150px; } #bgBacon { top: 262px; } #bgCheese { top: 280px; } #bgPatty { top: 300px; } #bgCheese2 { top: 344px; } #bgPatty2 { top: 362px; } #bgBot { top: 404px; }
+.bg-tag { position: absolute; left: 300px; font: 700 20px var(--f-ui); color: #1C1C1E; background: var(--mango); padding: 8px 14px; border-radius: 14px; white-space: nowrap; box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35); }
+#tgPan { top: 50px; } #tgTocino { top: 170px; } #tgQueso { top: 234px; } #tgCarne { top: 300px; }
+#inv { left: 480px; top: 130px; width: 440px; z-index: 2; background: #FFFFFF; color: #17161A; border-radius: 24px; padding: 20px 22px 22px; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45); }
+.iv-t b { display: block; font: 700 24px var(--f-display); letter-spacing: -0.01em; }
+.iv-t small { display: block; font: 500 14px var(--f-ui); color: #6E6A66; margin-top: 2px; }
+.iv-r { margin-top: 16px; }
+.iv-r > div:first-child { display: flex; justify-content: space-between; font: 600 16px var(--f-ui); }
+.iv-r em { font-style: normal; font: 700 15px var(--f-mono); color: #4A4540; }
+.iv-bar { height: 10px; border-radius: 5px; background: #EDEAE4; margin-top: 7px; overflow: hidden; }
+.iv-bar i { display: block; height: 100%; border-radius: 5px; background: var(--albahaca); }
+#ivQueso[data-bajo="1"] .iv-bar i { background: #D8362A; }
+#ivQueso[data-bajo="1"] em { color: #A12A20; }
+#ivAlert { margin-top: 16px; font: 700 15px var(--f-ui); color: #A12A20; background: #FDE4E2; padding: 10px 12px; border-radius: 12px; }
+#gan { left: 480px; top: 588px; width: 440px; z-index: 2; background: #16201B; color: #EDEAE4; border: 2px solid rgba(47, 158, 107, 0.45); border-radius: 24px; padding: 18px 22px 20px; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45); }
+.gn-h { display: flex; align-items: center; gap: 12px; }
+.gn-h svg { width: 52px; height: 52px; border-radius: 14px; flex: none; }
+.gn-h b { font: 700 22px var(--f-display); letter-spacing: -0.01em; }
+.gn-r { display: flex; justify-content: space-between; margin-top: 10px; font: 500 16px var(--f-ui); color: #BDB6AC; }
+.gn-r b { font: 700 17px var(--f-mono); color: #EDEAE4; }
+.gn-big { margin-top: 10px; display: flex; align-items: baseline; gap: 10px; }
+.gn-big b { font: 800 46px/1 var(--f-display); color: #6FD3A2; letter-spacing: -0.02em; }
+.gn-big span { font: 600 17px var(--f-ui); color: #BDB6AC; }
 
-#printer { left: 600px; top: 712px; width: 300px; z-index: 3; }
+/* Sin internet: la PC de la caja sigue y luego sube todo */
+#pc { left: 30px; top: 70px; width: 640px; z-index: 2; }
+.pc-mon { width: 640px; height: 420px; border-radius: 20px; background: #0B0B0D; padding: 12px; box-shadow: 0 0 0 2px #2A2A2F, 0 40px 80px rgba(0, 0, 0, 0.5); }
+.pc-scr { position: relative; width: 100%; height: 100%; border-radius: 10px; background: #F4F4F6; overflow: hidden; color: #17161A; }
+.pc-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: #FFFFFF; border-bottom: 1px solid rgba(23, 22, 26, 0.08); }
+.pc-head b { font: 700 20px var(--f-display); letter-spacing: -0.01em; }
+#pcEstado { font: 700 14px var(--f-ui); padding: 7px 12px; border-radius: 12px; background: #E3F4EA; color: #1F7A50; }
+#pcEstado[data-st="off"] { background: #FFF1DD; color: #8A4B08; }
+.pc-row { position: absolute; left: 20px; right: 20px; height: 74px; border-radius: 14px; background: #FFFFFF; display: flex; align-items: center; gap: 14px; padding: 0 16px; box-shadow: 0 2px 8px rgba(23, 22, 26, 0.06); }
+#pcR1 { top: 86px; } #pcR2 { top: 172px; } #pcR3 { top: 258px; }
+.pc-row b { display: block; font: 700 17px var(--f-ui); }
+.pc-row small { display: block; font: 500 14px var(--f-ui); color: #6E6A66; margin-top: 2px; }
+.pc-up { margin-left: auto; display: flex; align-items: center; gap: 6px; font: 700 13px var(--f-ui); color: #8A8279; white-space: nowrap; }
+.pc-up svg { width: 22px; height: 22px; }
+.pc-up[data-st="ok"] { color: #1F7A50; }
+.pc-neck { width: 90px; height: 46px; margin: 0 auto; background: linear-gradient(#1D1D21, #141417); }
+.pc-base { width: 260px; height: 14px; margin: 0 auto; border-radius: 10px; background: #1D1D21; }
+#wifi { left: 720px; top: 80px; width: 200px; height: 200px; z-index: 2; color: #6FD3A2; }
+#wifi[data-st="off"] { color: #6E6A66; }
+#wifi svg { width: 100%; height: 100%; display: block; }
+#wifiX { stroke: #D8362A; }
+#printer { left: 640px; top: 640px; width: 300px; z-index: 3; }
+#paperClip { left: 690px; top: 404px; width: 200px; height: 260px; overflow: hidden; z-index: 2; }
 .pr-body { width: 300px; height: 150px; border-radius: 24px; background: linear-gradient(#2D2D32, #1E1E22); box-shadow: 0 24px 50px rgba(0, 0, 0, 0.45); position: relative; }
 .pr-body::before { content: ""; position: absolute; left: 40px; right: 40px; top: 18px; height: 12px; border-radius: 6px; background: #0B0B0D; }
 .pr-body .led { position: absolute; right: 26px; bottom: 24px; width: 12px; height: 12px; border-radius: 50%; background: var(--albahaca); box-shadow: 0 0 10px var(--albahaca); }
 .pr-body .lbl { position: absolute; left: 26px; bottom: 20px; font: 600 14px var(--f-ui); color: #8E8A84; }
-#paperClip { left: 650px; top: 476px; width: 200px; height: 260px; overflow: hidden; z-index: 2; }
 #paper { width: 200px; height: 260px; background: #FFFFFF; color: #1E1A16; padding: 16px 16px 0; font: 500 14px/1.5 var(--f-mono); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3); }
 #paper b { display: block; text-align: center; font: 800 16px var(--f-display); letter-spacing: 0.02em; margin-bottom: 6px; }
 #paper hr { border: 0; border-top: 2px dashed #C9C2B8; margin: 8px 0; }
@@ -433,8 +463,6 @@ body.render .overlay { display: none; }
 
 /* Cámara virtual y destellos */
 #edit, #shake, #cam, #punch, #zoom { position: absolute; inset: 0; }
-/* En la versión de 15 s solo sale un paso: sin número */
-.stage.c15 .cs .num { display: none; }
 #flash { position: absolute; inset: 0; background: #FFF6E8; pointer-events: none; z-index: 20; }
 .hl { position: relative; z-index: 0; white-space: nowrap; }
 #under { position: absolute; left: -6px; right: -6px; bottom: 8px; height: 24px; background: #E8534A; opacity: 0.45; border-radius: 6px; z-index: -1; }
@@ -443,8 +471,27 @@ body.render .overlay { display: none; }
 .cs h2 .w, #cap3 .w { display: inline-block; }
 .w.g { background: linear-gradient(120deg, var(--brasa), var(--mango)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .cs em { font-style: normal; }
-#cs6 h2 { font-size: 72px; }
-.stage.v #cs6 h2 { font-size: 64px; }
+#cs4 h2 { font-size: 80px; }
+.stage.v #cs4 h2 { font-size: 76px; }
+
+/* La cuenta de hoy: la libreta del gancho, que se tacha fuga por fuga */
+#marcador { position: absolute; left: 150px; top: 872px; width: 700px; z-index: 4; background: #F4E9A8; color: var(--tinta); padding: 12px 26px 16px; box-shadow: 0 16px 34px rgba(0, 0, 0, 0.35); }
+.stage.v #marcador { left: 90px; top: 1690px; width: 900px; padding: 10px 24px 12px; }
+.stage.v .mk-t { font-size: 23px; }
+.stage.v .mk-it b { font-size: 38px; }
+.stage.v .mk-tot b { font-size: 50px; }
+.mk-t { font: 700 26px var(--f-hand); color: #8A6A2A; }
+.mk-row { display: flex; align-items: flex-end; gap: 50px; margin-top: 2px; }
+.mk-it { position: relative; display: flex; flex-direction: column; }
+.mk-it span { font: 600 25px/1.1 var(--f-hand); }
+.mk-it b { position: relative; font: 400 42px/1 var(--f-marker); color: #B2321F; align-self: flex-start; }
+.mk-x { position: absolute; left: -6px; right: -6px; top: 48%; height: 5px; border-radius: 3px; background: var(--tinta); }
+.mk-ok { position: absolute; left: calc(100% + 8px); top: 50%; margin-top: -20px; width: 40px; height: 40px; border-radius: 50%; background: var(--albahaca); display: grid; place-items: center; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25); }
+.mk-ok svg { width: 24px; height: 24px; }
+.mk-tot { margin-left: auto; text-align: right; border-left: 4px solid var(--tinta); padding-left: 18px; }
+.mk-tot span { display: block; font: 600 25px var(--f-hand); }
+.mk-tot b { display: inline-block; font: 400 56px/1 var(--f-marker); color: #B2321F; }
+#marcador[data-cero="1"] .mk-tot b { color: #1F7A50; }
 .cs .clock { display: flex; align-items: center; gap: 14px; font: 500 40px var(--f-mono); color: var(--mango); margin-bottom: 22px; }
 .cs .clock svg { width: 40px; height: 40px; }
 .cs .payoff { display: inline-flex; align-items: center; gap: 12px; margin-top: 22px; font: 600 32px/1.2 var(--f-ui); color: var(--ink); background: rgba(47, 158, 107, 0.16); border: 1px solid rgba(47, 158, 107, 0.45); padding: 12px 20px; border-radius: 18px; align-self: flex-start; max-width: 100%; }
@@ -486,7 +533,7 @@ body.render .overlay { display: none; }
   <div class="top">
     <div class="brand">
       <svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="hg" x1="27" y1="19" x2="72" y2="81" gradientUnits="userSpaceOnUse"><stop stop-color="#E8534A"/><stop offset="1" stop-color="#F5A030"/></linearGradient></defs><rect width="100" height="100" rx="22" fill="#1C1C1E"/><path d="M27 19h18v44h27v18H27Z" fill="url(#hg)"/></svg>
-      <div><h1>Intro Leogin</h1><p>Prototipo · del caos al orden · 51 s</p></div>
+      <div><h1>Intro Leogin</h1><p>Prototipo · las tres fugas · 54 s</p></div>
     </div>
     <div class="tools">
       <div class="seg" role="group" aria-label="Versión" id="vers">
@@ -553,22 +600,49 @@ body.render .overlay { display: none; }
       <!-- ═══ El mundo Leogin ═══ -->
       <div class="layer" id="L2">
         <div id="dusk"></div>
-        <div class="cs" id="cs1"><div class="num grad">1</div><h2><em>Escanea.</em></h2><p>Sin descargar nada.</p></div>
-        <div class="cs" id="cs2"><div class="num grad">2</div><h2>Pide desde la <em>mesa.</em></h2><p>Sin esperar al mesero.</p></div>
-        <div class="cs" id="cs3"><div class="num grad">3</div><h2>La cocina lo ve <em>al instante.</em></h2><p>Clarito. Sin letra fea.</p><p class="payoff" id="payoff"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#2F9E6B"/><path d="M7 12.5l3.2 3.2L17 9" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Esta vez, la <b>Mesa 4</b> sí comió.</span></p></div>
-        <div class="cs" id="cs4"><div class="num grad">4</div><h2>Todo, <em>bajo control.</em></h2><p>Desde tu celular, aunque no estés.</p></div>
-        <div class="cs" id="cs5"><h2>Y tus clientes <em>vuelven.</em></h2><p>Sus puntos de todos sus restaurantes, en un solo lugar.</p></div>
-        <div class="cs" id="cs6"><div class="clock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>9:00 p. m.</div><h2>La caja cuadró. El inventario, al día. <em>Tú, ya en tu casa.</em></h2><p>Menos correr. Más vender.</p></div>
+        <div class="cs" id="cs1"><div class="ey">Fuga 1 · Pedidos perdidos</div><h2>Ningún pedido se <em>pierde.</em></h2><p>Mesa, WhatsApp, teléfono, mesero o domicilio: todo cae en una sola lista.</p><p class="payoff" id="payoff"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#2F9E6B"/><path d="M7 12.5l3.2 3.2L17 9" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Esta vez, la <b>Mesa 4</b> sí comió.</span></p></div>
+        <div class="cs" id="cs2"><div class="ey">Para tu cliente</div><h2>Ve su pedido <em>en vivo.</em></h2><p>Y ya nadie te escribe «¿ya viene mi pedido?».</p></div>
+        <div class="cs" id="cs3"><div class="ey">Fuga 2 · La caja</div><h2>La caja <em>cuadra.</em></h2><p>Anular pide motivo y PIN, y cada turno cierra con su corte. Cuentas claras, amistades largas.</p></div>
+        <div class="cs" id="cs4"><div class="ey">Fuga 3 · El inventario</div><h2>Cada venta descuenta <em>lo que gastaste.</em></h2><p>Te avisa antes de que algo se acabe y te dice cuánto te deja cada plato.</p></div>
+        <div class="cs" id="cs5"><div class="ey">Si se va el internet</div><h2>Tú <em>sigues vendiendo.</em></h2><p>La caja guarda e imprime. Cuando vuelve la señal, todo sube solo.</p></div>
+        <div class="cs" id="cs6"><div class="ey">A domicilio</div><h2>El domicilio, <em>sin enredos.</em></h2><p>Tu cliente marca su casa en el mapa y el envío se cobra solo. Y sin comisión.</p></div>
+        <div class="cs" id="cs7"><h2>Y tus clientes <em>vuelven.</em></h2><p>Sus puntos de todos sus restaurantes, en un solo lugar.</p></div>
+        <div class="cs" id="cs8"><div class="clock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>9:00 p. m.</div><h2>Hoy no se te fue <em>nada.</em></h2><p>La caja cuadró, el inventario está al día y tú, ya en tu casa.</p></div>
+
+        <!-- La cuenta de hoy: la del gancho, que se tacha fuga por fuga -->
+        <div id="marcador" data-cero="0">
+          <div class="mk-t">La cuenta de hoy</div>
+          <div class="mk-row">
+            <div class="mk-it" id="mk1"><span>Pedido perdido</span><b>Q85<i class="mk-x"></i><i class="mk-ok"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></i></b></div>
+            <div class="mk-it" id="mk2"><span>La caja</span><b>Q120<i class="mk-x"></i><i class="mk-ok"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></i></b></div>
+            <div class="mk-it" id="mk3"><span>Inventario</span><b>Q90<i class="mk-x"></i><i class="mk-ok"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></i></b></div>
+            <div class="mk-tot"><span id="mkLbl">Se te van</span><b id="mkTot">Q295</b></div>
+          </div>
+        </div>
 
         <div class="vbox" id="vbox">
-          <!-- Rótulo de mesa con QR -->
-          <div id="tent"><div class="tent-card">
-            <div class="tent-top">Rincón 502<small>Hamburguesas, pizzas y pastas</small></div>
-            <div class="tent-mid"><div class="qr"></div><p>Escanea y pide</p></div>
-            <div class="tent-bot"><b>Mesa 4</b><span>con Leogin</span></div>
-          </div></div>
+          <!-- Fuga 1: venga de donde venga, una sola lista -->
+          <div id="fuentes">
+            <div class="fu" id="fu1" data-c="qr"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1"/><rect x="14" y="3.5" width="6.5" height="6.5" rx="1"/><rect x="3.5" y="14" width="6.5" height="6.5" rx="1"/><path d="M14 14h3v3h-3zM18 18h2.5v2.5H18zM14 20.5h2M20.5 14v2" stroke-linecap="round"/></svg></i><span>QR de mesa</span></div>
+            <div class="fu" id="fu2" data-c="wa"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-4.2A8 8 0 1 1 20 11.5z"/><path d="M9 9.5c.3 2 2.2 4 4.5 4.8" stroke-linecap="round"/></svg></i><span>WhatsApp</span></div>
+            <div class="fu" id="fu3" data-c="tel"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h3.5l1.8 4.6-2.4 1.6a11.5 11.5 0 0 0 5.9 5.9l1.6-2.4L21 14.5V18a3 3 0 0 1-3 3A15 15 0 0 1 3 6a3 3 0 0 1 3-3z"/></svg></i><span>Teléfono</span></div>
+            <div class="fu" id="fu4" data-c="mes"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="2.5" width="16" height="19" rx="2.5"/><path d="M10 18h4M8 7h8M8 11h5"/></svg></i><span>Mesero</span></div>
+            <div class="fu" id="fu5" data-c="dom"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M9 17h5l3-6h-4l-2-4H8"/><path d="M14 7h3"/></svg></i><span>Domicilio</span></div>
+          </div>
+          <div id="lista">
+            <div id="liRing"></div>
+            <div class="li-head"><b>Pedidos de hoy</b><span id="liN">0 nuevos</span><em class="li-live">● En vivo</em></div>
+            <div class="ro" id="ro1" data-c="qr"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1"/><rect x="14" y="3.5" width="6.5" height="6.5" rx="1"/><rect x="3.5" y="14" width="6.5" height="6.5" rx="1"/><path d="M14 14h3v3h-3zM18 18h2.5v2.5H18zM14 20.5h2M20.5 14v2" stroke-linecap="round"/></svg></i><div><b>Mesa 4</b><small>Por QR · 2 Rincón Clásica</small></div><em>Q104</em><span class="ro-st" data-st="nuevo">Nuevo</span></div>
+            <div class="ro" id="ro2" data-c="wa"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-4.2A8 8 0 1 1 20 11.5z"/><path d="M9 9.5c.3 2 2.2 4 4.5 4.8" stroke-linecap="round"/></svg></i><div><b>Para llevar · Ana</b><small>WhatsApp · 1 Pepperoni</small></div><em>Q85</em><span class="ro-st" data-st="nuevo">Nuevo</span></div>
+            <div class="ro" id="ro3" data-c="tel"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h3.5l1.8 4.6-2.4 1.6a11.5 11.5 0 0 0 5.9 5.9l1.6-2.4L21 14.5V18a3 3 0 0 1-3 3A15 15 0 0 1 3 6a3 3 0 0 1 3-3z"/></svg></i><div><b>Para llevar · Don Luis</b><small>Lo anotó la caja · 2 Malteadas</small></div><em>Q56</em><span class="ro-st" data-st="nuevo">Nuevo</span></div>
+            <div class="ro" id="ro4" data-c="mes"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="2.5" width="16" height="19" rx="2.5"/><path d="M10 18h4M8 7h8M8 11h5"/></svg></i><div><b>Mesa 7 · Carlos</b><small>Tablet del mesero · 3 Clásicas</small></div><em>Q156</em><span class="ro-st" data-st="nuevo">Nuevo</span></div>
+            <div class="ro" id="ro5" data-c="dom"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M9 17h5l3-6h-4l-2-4H8"/><path d="M14 7h3"/></svg></i><div><b>Domicilio · Zona 2</b><small>Doble Bacon + envío</small></div><em>Q83</em><span class="ro-st" data-st="nuevo">Nuevo</span></div>
+          </div>
 
-          <!-- Teléfono del comensal -->
+          <!-- El «¿ya viene mi pedido?» del caos, que esta vez nadie escribe -->
+          <div id="yaViene"><div class="yv">¿Ya viene mi pedido?<i class="yv-x"></i></div></div>
+
+          <!-- El celular: del cliente, de la caja y del domicilio -->
           <div id="phone"><div class="phone"><div class="screen">
             <div class="island"></div>
             <div class="sbar" id="sbar"><span>13:05</span><span class="ic">
@@ -576,45 +650,58 @@ body.render .overlay { display: none; }
               <svg viewBox="0 0 26 12" aria-hidden="true"><rect x="0.5" y="0.5" width="22" height="11" rx="3" fill="none" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="24" y="4" width="1.6" height="4" rx=".8" fill="currentColor" opacity=".5"/></svg>
             </span></div>
 
-            <div class="scr" id="scrCam">
-              <div class="cam-bg"></div>
-              <div class="cam-tent"></div>
-              <div class="cam-hint">Apunta al código</div>
-              <div class="cam-qr"><div class="qr"></div></div>
-              <div id="vf"><i></i><i></i><i></i><i></i></div>
-              <div id="scanline"></div>
-              <div id="pill"><b>rincon502</b><span>.distleogin.com</span><em>Abrir</em></div>
-            </div>
-
-            <div class="scr" id="scrMenu">
-              <div id="mCover">
-                <span class="leaf" style="width:220px;height:220px;left:-60px;top:-90px"></span>
-                <span class="leaf" style="width:160px;height:160px;left:210px;top:-50px"></span>
-                <span class="leaf" style="width:120px;height:120px;left:120px;top:120px"></span>
-              </div>
-              <span class="m-mesa">Mesa 4</span>
-              <div class="m-head m-anim"><div class="m-logo">R</div><div><h3>Rincón 502</h3><p><i></i>Hamburguesas y pizzas · Abierto</p></div></div>
-              <div class="m-chips m-anim"><span class="on">Hamburguesas</span><span>Entradas</span><span>Pizzas</span><span>Bebidas</span></div>
-              <div class="m-list-clip"><div id="mList">
-                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-doble"/></svg></div><div class="tx"><h4>Doble Bacon</h4><p>Doble carne, doble queso y tocino</p><div class="pr">Q68</div></div><span class="add">+</span></div>
-                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-clasica"/></svg></div><div class="tx"><h4>Rincón Clásica</h4><p>Cheddar, lechuga, tomate. Con papas</p><div class="pr">Q52</div></div><span class="add">+</span></div>
-                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-papas"/></svg></div><div class="tx"><h4>Papas con Queso</h4><p>Con tocino y cebollín</p><div class="pr">Q35</div></div><span class="add">+</span></div>
-                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-malteada"/></svg></div><div class="tx"><h4>Malteada</h4><p>Fresa, vainilla o chocolate</p><div class="pr">Q28</div></div><span class="add">+</span></div>
-                <div class="card m-anim"><div class="ph"><svg viewBox="0 0 80 80"><use href="#f-pepperoni"/></svg></div><div class="tx"><h4>Pizza Pepperoni</h4><p>Mediana, con mucha mozzarella</p><div class="pr">Q85</div></div><span class="add">+</span></div>
-              </div></div>
-              <div id="cart">
-                <div id="cartA"><span id="cartN">1</span><span id="cartTxt">producto</span><span class="tot" id="cartTot">Q68</span></div>
-                <div id="cartB">Enviar a cocina →</div>
-              </div>
-              <span id="flyDot"></span>
-            </div>
-
             <div class="scr" id="scrSent">
-              <div id="sentCheck"><svg viewBox="0 0 70 70"><path id="sentPath" d="M18 37 L30 49 L53 23" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-              <h3 class="s-anim">¡Pedido enviado!</h3>
-              <p class="s1 s-anim">Mesa 4 · La cocina ya lo tiene</p>
-              <div class="track s-anim"><div class="done"><i></i>Recibido</div><div class="now"><i></i>En cocina</div><div><i></i>Listo</div></div>
-              <div class="pts s-anim">Ganaste <b>+7 puntos</b></div>
+              <div class="tk-head s-anim"><span class="mini-logo">R</span><div><b>Rincón 502</b><small>Tu pedido #133 · Para llevar</small></div></div>
+              <div class="tk-st s-anim"><div id="tkWait"></div><div id="sentCheck"><svg viewBox="0 0 70 70"><path id="sentPath" d="M18 37 L30 49 L53 23" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+              <h3 class="s-anim" id="tkTitle">Recibido</h3>
+              <p class="s-anim" id="tkSub">Rincón 502 ya lo tiene</p>
+              <div class="track s-anim"><div id="tkS1"><i></i>Recibido</div><div id="tkS2"><i></i>En cocina</div><div id="tkS3"><i></i>Listo</div></div>
+              <div class="tk-items s-anim"><svg viewBox="0 0 80 80"><use href="#f-pepperoni"/></svg><div><b>1 × Pepperoni</b><small>Mediana · para llevar</small></div><em>Q85</em></div>
+              <div id="notiBan"><span class="mini-logo">R</span><div><b>Rincón 502</b><small>¡Tu pedido está listo! Pasa por él.</small></div></div>
+            </div>
+
+            <div class="scr" id="scrCaja">
+              <div class="cj-head"><small>Caja · Turno de Ana</small><b>Hoy</b></div>
+              <div class="cj-card" id="cjAnular">
+                <div class="cj-t"><b>Anular · Mesa 2</b><em>Q45</em></div>
+                <div class="cj-l">Motivo</div>
+                <div class="cj-chip" id="cjMotivo">Se fue el cliente</div>
+                <div class="cj-l">PIN del encargado</div>
+                <div class="cj-pin"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div>
+                <div class="cj-ok" id="cjAut">✓ Autorizó Carlos · queda anotado</div>
+              </div>
+              <div class="cj-card" id="cjCorte">
+                <div class="cj-t"><b>Corte del turno</b></div>
+                <div class="cj-r"><span>Esperado en caja</span><b>Q1,240.00</b></div>
+                <div class="cj-r"><span>Contaste</span><b id="cjCont">Q0.00</b></div>
+                <div class="cj-r cj-dif"><span>Diferencia</span><b id="cjDif">—</b></div>
+              </div>
+              <div id="cjSello">CAJA<br>CUADRADA</div>
+            </div>
+
+            <div class="scr" id="scrMapa">
+              <div class="mp-map">
+                <svg class="mp-svg" viewBox="0 0 354 430" preserveAspectRatio="none" aria-hidden="true">
+                  <rect width="354" height="430" fill="#EAE3D6"/>
+                  <rect x="232" y="232" width="110" height="82" rx="12" fill="#CFE3C0"/>
+                  <path d="M-10 384 C 80 352, 160 414, 364 362" stroke="#BFD8EE" stroke-width="16" fill="none"/>
+                  <g stroke="#FFFFFF" stroke-width="16" stroke-linecap="round" fill="none"><path d="M0 200H354"/><path d="M140 110H354"/><path d="M90 160V430"/><path d="M200 40V260"/><path d="M20 60H200"/><path d="M300 0V200"/></g>
+                  <path id="mpRuta" d="M90 300V200H200V110H256" stroke="#E4572E" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                  <text x="16" y="30" font-family="Geist, system-ui, sans-serif" font-size="13" font-weight="600" fill="#8A8279">El Progreso</text>
+                </svg>
+                <div id="mpZona"></div>
+                <span class="mp-zl">Zona 2 · envío Q15</span>
+                <div class="mp-pin" id="mpR">R</div>
+                <div class="mp-pin" id="mpH"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/></svg></div>
+                <div id="mpMoto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M9 17h5l3-6h-4l-2-4H8"/><path d="M14 7h3"/></svg></div>
+              </div>
+              <div class="mp-sheet">
+                <b>Entrega a domicilio</b>
+                <div class="mp-r1"><svg viewBox="0 0 80 80"><use href="#f-doble"/></svg><span>Doble Bacon</span><em>Q68</em></div>
+                <div class="mp-r1" id="mpEnvio"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M9 17h5l3-6h-4l-2-4H8"/><path d="M14 7h3"/></svg></i><span>Envío · Zona 2</span><em>Q15</em></div>
+                <div class="mp-tot"><span>Total</span><b id="mpTot">Q68</b></div>
+                <div id="mpEstado"><i class="mp-dot"></i><span id="mpTxt">Confirmar pedido</span><em id="mpEta"></em></div>
+              </div>
             </div>
 
             <div class="scr" id="scrWallet">
@@ -629,39 +716,51 @@ body.render .overlay { display: none; }
               <div class="wmini w-anim"><i style="background:#B4561C">PL</i><div>Pupusería Lupita<small>Lo de siempre: 6 revueltas</small></div><span class="r">4/8</span></div>
             </div>
 
-            <div class="scr" id="scrControl">
-              <div class="c-head"><small>Hoy · Rincón 502</small><div id="cBig">Q0.00</div><span class="c-chip">+18 % que el martes pasado</span></div>
-              <div class="c-list">
-                <div class="c-card"><i class="ok"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></i><div><b>Caja del turno de Ana</b><small>Cuadró al centavo</small></div><em>Q2,140</em></div>
-                <div class="c-card"><i class="warn"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2.5h10v15l-2.5-1.5L10 17.5 7.5 16 5 17.5z"/><path d="M8 7.5l4 4M12 7.5l-4 4"/></svg></i><div><b>Anulación · Mesa 2</b><small>«Se fue el cliente» · autorizó Carlos con su PIN</small></div></div>
-                <div class="c-card"><i class="alert"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3l7 4v6l-7 4-7-4V7z"/><path d="M10 8v3.5M10 14v.2"/></svg></i><div><b>Quedan 2 kg de queso cheddar</b><small>Alcanza para hoy; pide para mañana</small></div></div>
-                <div class="c-card"><i class="gain"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5V4a1 1 0 0 1 1-1h6.5L17 9.5 10.5 16z"/><circle cx="7" cy="7" r="1.3"/></svg></i><div><b>Doble Bacon</b><small>Te cuesta Q29 · la vendes en Q68</small></div><em class="up">+Q39</em></div>
-                <div class="c-card"><i class="net"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2.5 7.5a11 11 0 0 1 15 0M5 10.5a7.5 7.5 0 0 1 10 0M7.5 13.5a3.5 3.5 0 0 1 5 0"/><circle cx="10" cy="16" r=".9" fill="currentColor"/><path d="M3 3l14 14"/></svg></i><div><b>Se fue el internet</b><small>3 pedidos guardados y subidos solos</small></div></div>
-              </div>
-              <div id="cOk"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Todo en orden</div>
-            </div>
-
             <div id="ripple"></div>
             <div id="touch"></div>
           </div></div></div>
 
-          <!-- Cocina -->
-          <div id="kds">
-            <div class="mon"><div class="mon-scr" id="monScr">
-              <div class="mon-head"><b>Cocina</b><span id="enCurso">4 en curso</span><span class="clock">13:05</span></div>
-              <div class="col-h" style="left:12px"><i style="background:var(--mango)"></i>Nuevos<em id="cN">0</em></div>
-              <div class="col-h" style="left:298px"><i style="background:#EDEAE4"></i>En preparación<em id="cP">2</em></div>
-              <div class="col-h" style="left:584px"><i style="background:var(--albahaca)"></i>Listos<em id="cL">1</em></div>
-              <div class="kc" id="kP1"><div class="r1"><b>Mesa 2</b><small>#129</small><span class="chip">En preparación</span></div><ul><li>2 × Rincón Clásica</li><li>1 × Limonada</li></ul><div class="r3"><span>Comer aquí</span><span class="tm" id="tP1">04:10</span></div></div>
-              <div class="kc" id="kP2"><div class="r1"><b>Llevar</b><small>#130</small><span class="chip">En preparación</span></div><ul><li>2 × Pepperoni</li><li>1 × Papas con Queso</li></ul><div class="r3"><span>Para llevar</span><span class="tm" id="tP2">06:02</span></div></div>
-              <div class="kc" id="kL1"><div class="r1"><b>Mesa 7</b><small>#128</small><span class="chip" style="background:var(--albahaca);color:#fff">Listo</span></div><ul><li>1 × Volcán</li><li>2 × Malteada</li></ul><div class="r3"><span>Comer aquí</span><span class="tm">09:41</span></div></div>
-              <div class="kring" id="kRing1"></div>
-              <div class="kring" id="kRing2"></div>
-              <div class="kc" id="kNew" data-st="nuevo"><div class="r1"><b>Mesa 4</b><small>#132</small><span class="chip" id="kChip">Nuevo</span></div><ul><li>1 × Doble Bacon</li><li>2 × Malteada</li></ul><div class="r3"><span>Comer aquí</span><span class="tm" id="tN">00:05</span></div><span class="ok" id="kOk"><svg viewBox="0 0 20 20"><path d="M5 10.5 L8.6 14 L15 6.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
-            </div></div>
-            <div class="mon-neck"></div><div class="mon-base"></div>
+          <!-- Fuga 3: la hamburguesa se desarma y cada ingrediente se descuenta -->
+          <div id="burger">
+            <svg class="bg-l" id="bgBot" viewBox="0 0 340 64" width="340" height="64"><defs><linearGradient id="bgPanB" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#E2A35C"/><stop offset="1" stop-color="#A8622A"/></linearGradient></defs><path d="M4 6 L336 6 Q344 54 290 62 L50 62 Q-4 54 4 6Z" fill="url(#bgPanB)"/><rect x="4" y="6" width="332" height="14" fill="#F1D3A1"/></svg>
+            <svg class="bg-l" id="bgPatty2" viewBox="0 0 340 56" width="340" height="56"><path d="M10 8 Q170 -8 330 8 Q344 28 330 48 Q170 60 10 48 Q-4 28 10 8Z" fill="#4A2817"/><path d="M60 22l18 2M140 30l20-1M220 20l16 3M100 40l14 1M260 38l18-2" stroke="#2A150B" stroke-width="4" stroke-linecap="round"/><path d="M50 12 Q170 2 290 12" stroke="#fff" stroke-width="5" opacity=".15" fill="none" stroke-linecap="round"/></svg>
+            <svg class="bg-l" id="bgCheese2" viewBox="0 0 340 44" width="340" height="44"><path d="M0 4 L340 0 L326 22 L292 22 L276 42 L258 22 L178 24 L160 44 L140 24 L56 22 L40 40 L22 22 L4 24Z" fill="#FFC94A"/><path d="M20 8 L130 6" stroke="#FFE7A0" stroke-width="4" stroke-linecap="round"/></svg>
+            <svg class="bg-l" id="bgPatty" viewBox="0 0 340 56" width="340" height="56"><path d="M10 8 Q170 -8 330 8 Q344 28 330 48 Q170 60 10 48 Q-4 28 10 8Z" fill="#4A2817"/><path d="M60 22l18 2M140 30l20-1M220 20l16 3M100 40l14 1M260 38l18-2" stroke="#2A150B" stroke-width="4" stroke-linecap="round"/><path d="M50 12 Q170 2 290 12" stroke="#fff" stroke-width="5" opacity=".15" fill="none" stroke-linecap="round"/></svg>
+            <svg class="bg-l" id="bgCheese" viewBox="0 0 340 44" width="340" height="44"><path d="M0 4 L340 0 L326 22 L292 22 L276 42 L258 22 L178 24 L160 44 L140 24 L56 22 L40 40 L22 22 L4 24Z" fill="#FFC94A"/><path d="M20 8 L130 6" stroke="#FFE7A0" stroke-width="4" stroke-linecap="round"/></svg>
+            <svg class="bg-l" id="bgBacon" viewBox="0 0 340 34" width="340" height="34"><path d="M0 14 q28 -14 56 0 t56 0 t56 0 t56 0 t56 0 t56 0 v14 q-28 14 -56 0 t-56 0 t-56 0 t-56 0 t-56 0 t-56 0Z" fill="#A8432A"/><path d="M4 16 q28 -10 56 0 t56 0 t56 0 t56 0 t56 0 t52 0" stroke="#F2C7A2" stroke-width="5" fill="none"/></svg>
+            <svg class="bg-l" id="bgTop" viewBox="0 0 340 130" width="340" height="130"><defs><linearGradient id="bgPanA" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#E6A052"/><stop offset="1" stop-color="#B76A2A"/></linearGradient></defs><path d="M8 118 Q-6 8 170 4 Q346 8 332 118 Q170 132 8 118Z" fill="url(#bgPanA)"/><path d="M60 52 Q100 20 160 16" stroke="#fff" stroke-width="14" stroke-linecap="round" fill="none" opacity=".35"/><ellipse cx="110" cy="40" rx="7" ry="3.6" fill="#FBECC8" transform="rotate(-20 110 40)"/><ellipse cx="150" cy="30" rx="7" ry="3.6" fill="#FBECC8" transform="rotate(10 150 30)"/><ellipse cx="190" cy="38" rx="7" ry="3.6" fill="#FBECC8" transform="rotate(25 190 38)"/><ellipse cx="230" cy="50" rx="7" ry="3.6" fill="#FBECC8" transform="rotate(-15 230 50)"/><ellipse cx="130" cy="64" rx="7" ry="3.6" fill="#FBECC8" transform="rotate(15 130 64)"/><ellipse cx="175" cy="58" rx="7" ry="3.6" fill="#FBECC8" transform="rotate(-30 175 58)"/><ellipse cx="215" cy="70" rx="7" ry="3.6" fill="#FBECC8" transform="rotate(20 215 70)"/><ellipse cx="95" cy="70" rx="7" ry="3.6" fill="#FBECC8" transform="rotate(30 95 70)"/><ellipse cx="250" cy="78" rx="7" ry="3.6" fill="#FBECC8" transform="rotate(-10 250 78)"/><ellipse cx="145" cy="88" rx="7" ry="3.6" fill="#FBECC8" transform="rotate(5 145 88)"/><ellipse cx="195" cy="92" rx="7" ry="3.6" fill="#FBECC8" transform="rotate(-25 195 92)"/><ellipse cx="70" cy="92" rx="7" ry="3.6" fill="#FBECC8" transform="rotate(10 70 92)"/><ellipse cx="265" cy="100" rx="7" ry="3.6" fill="#FBECC8" transform="rotate(20 265 100)"/></svg>
+            <span class="bg-tag" id="tgPan">−1 pan</span>
+            <span class="bg-tag" id="tgTocino">−3 tocino</span>
+            <span class="bg-tag" id="tgQueso">−2 queso</span>
+            <span class="bg-tag" id="tgCarne">−300 g carne</span>
           </div>
-          <div id="paperClip"><div id="paper"><b>RINCÓN 502</b>Mesa 4 · #132<br>13:05 · Comer aquí<hr>1  Doble Bacon<br>2  Malteada<hr>Doble Bacon sin cebolla</div></div>
+          <div id="inv">
+            <div class="iv-t"><b>Inventario</b><small>Se descuenta solo con cada venta</small></div>
+            <div class="iv-r" id="ivPan"><div><span>Pan brioche</span><em>38</em></div><div class="iv-bar"><i></i></div></div>
+            <div class="iv-r" id="ivTocino"><div><span>Tocino</span><em>1.2 kg</em></div><div class="iv-bar"><i></i></div></div>
+            <div class="iv-r" id="ivQueso" data-bajo="0"><div><span>Queso cheddar</span><em id="ivQuesoQ">2.4 kg</em></div><div class="iv-bar"><i></i></div></div>
+            <div class="iv-r" id="ivCarne"><div><span>Carne de res</span><em>6.4 kg</em></div><div class="iv-bar"><i></i></div></div>
+            <div id="ivAlert">Queso: quedan 2 kg · pide hoy</div>
+          </div>
+          <div id="gan">
+            <div class="gn-h"><svg viewBox="0 0 80 80"><use href="#f-doble"/></svg><b>Doble Bacon</b></div>
+            <div class="gn-r"><span>Te cuesta</span><b>Q29</b></div>
+            <div class="gn-r"><span>La vendes en</span><b>Q68</b></div>
+            <div class="gn-big"><b>+Q39</b><span>te deja cada plato</span></div>
+          </div>
+
+          <!-- Sin internet: la PC de la caja sigue y luego sube todo -->
+          <div id="pc">
+            <div class="pc-mon"><div class="pc-scr">
+              <div class="pc-head"><b>Caja · Rincón 502</b><span id="pcEstado" data-st="on">● En línea</span></div>
+              <div class="pc-row" id="pcR1"><div><b>#133 · Mesa 2</b><small>2 Rincón Clásica · 1 Limonada</small></div><span class="pc-up" data-st="wait"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h10a4 4 0 0 0 .6-8A6 6 0 0 0 6 9.5 4.3 4.3 0 0 0 7 18z"/><path d="M9.5 13.5l2 2 3.5-3.5"/></svg><span>En la PC</span></span></div>
+              <div class="pc-row" id="pcR2"><div><b>#134 · Para llevar</b><small>1 Pepperoni · 2 Malteadas</small></div><span class="pc-up" data-st="wait"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h10a4 4 0 0 0 .6-8A6 6 0 0 0 6 9.5 4.3 4.3 0 0 0 7 18z"/><path d="M9.5 13.5l2 2 3.5-3.5"/></svg><span>En la PC</span></span></div>
+              <div class="pc-row" id="pcR3"><div><b>#135 · Mesa 6</b><small>1 Fettuccine · 1 Lasaña</small></div><span class="pc-up" data-st="wait"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h10a4 4 0 0 0 .6-8A6 6 0 0 0 6 9.5 4.3 4.3 0 0 0 7 18z"/><path d="M9.5 13.5l2 2 3.5-3.5"/></svg><span>En la PC</span></span></div>
+            </div></div>
+            <div class="pc-neck"></div><div class="pc-base"></div>
+          </div>
+          <div id="wifi" data-st="on"><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" aria-hidden="true"><path d="M12 40a54 54 0 0 1 76 0"/><path d="M26 54a34 34 0 0 1 48 0"/><path d="M40 68a14 14 0 0 1 20 0"/><circle cx="50" cy="80" r="5" fill="currentColor" stroke="none"/><path id="wifiX" d="M18 16L84 88" stroke-width="10"/></svg></div>
+          <div id="paperClip"><div id="paper"><b>RINCÓN 502</b>#134 · Para llevar<br>8:15 p. m.<hr>1  Pepperoni<br>2  Malteada<hr>Sin internet · guardado</div></div>
           <div id="printer"><div class="pr-body"><span class="lbl">Comandas</span><span class="led"></span></div></div>
 
           <!-- Tu noche: se cierra el restaurante -->
@@ -674,11 +773,9 @@ body.render .overlay { display: none; }
           </div>
 
           <div class="leo-wrap" id="leoBox"></div>
-          <div id="flyTk"><svg viewBox="0 0 64 56" width="64" height="56" aria-hidden="true"><path d="M2 2h60v46l-7.5 4-7.5-4-7.5 4-7.5-4-7.5 4-7.5-4-7.5 4L2 48z" fill="#FFFDF6"/><rect x="9" y="11" width="32" height="5.5" rx="2.7" fill="#2B2622"/><rect x="9" y="22" width="44" height="4.4" rx="2.2" fill="#9C958C"/><rect x="9" y="31" width="26" height="4.4" rx="2.2" fill="#9C958C"/></svg></div>
           <div id="confetti"></div>
         </div>
       </div>
-
       <div class="ring" id="ring"></div>
       <div class="leo-wrap" id="leoMain"></div>
       <div id="cap3"><div class="c1">Respira.</div><div class="c2">Esto es <span class="grad">Leogin</span>.</div></div>
@@ -706,7 +803,7 @@ body.render .overlay { display: none; }
     <button type="button" class="overlay" id="overlay" aria-label="Reproducir la intro">
       <span class="play-big"><svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="#fff"/></svg></span>
       <strong id="ovTitle">Ver la intro</strong>
-      <span class="sub" id="ovSub">51 segundos · mejor con sonido</span>
+      <span class="sub" id="ovSub">54 segundos · mejor con sonido</span>
     </button>
   </div>
 
@@ -717,8 +814,8 @@ body.render .overlay { display: none; }
     <button type="button" class="icon-btn" id="rs" aria-label="Volver al inicio">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg>
     </button>
-    <div class="bar"><input type="range" id="scrub" min="0" max="51" step="0.01" value="0" aria-label="Posición de la intro"></div>
-    <span class="time" id="time">0:00 / 0:51</span>
+    <div class="bar"><input type="range" id="scrub" min="0" max="54" step="0.01" value="0" aria-label="Posición de la intro"></div>
+    <span class="time" id="time">0:00 / 0:54</span>
   </div>
   <div class="chapters" id="chapters"></div>
   <p class="note">Todo está hecho con código: no es un video pesado, así que en la web carga al instante y se ve nítido en cualquier pantalla. <b>El antes va cuadro por cuadro, como stop-motion; el después, fluido.</b> El QR del final es real y abre distleogin.com. <b>Con sonido:</b> banda sonora de marimba hecha también con código.</p>
@@ -732,9 +829,6 @@ body.render .overlay { display: none; }
       <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
     <symbol id="f-doble" viewBox="0 0 80 80"><image href="data:image/webp;base64,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" width="80" height="80"/></symbol>
-    <symbol id="f-clasica" viewBox="0 0 80 80"><image href="data:image/webp;base64,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" width="80" height="80"/></symbol>
-    <symbol id="f-papas" viewBox="0 0 80 80"><image href="data:image/webp;base64,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" width="80" height="80"/></symbol>
-    <symbol id="f-malteada" viewBox="0 0 80 80"><image href="data:image/webp;base64,UklGRjQFAABXRUJQVlA4ICgFAADQHgCdASqoAKgAPpVKoUwlpKMiIfSZwLASiWVu/Hv8I+OIOc7gDeW952r2Ov2OVljaXH5js8Df5LAuORRqeN++W/MiQ9WXBnvgq0RunS0FducU5ili7KWFD2ID5bh+E/WHTAoakARIpOCpGPE9GYTVSR2G2TQTTKARg6eeJAQLKBgrG95VNv1i8/QQJgU7aCySZZORT7+6dmJGPgaDyDN+XyrbRtttowFVYCKR9PztL5NHs6TLYgZYBn8nzJOG+9Vjh7gu1+7PkAGxfLNlOgKYM8IxzRMMkhctT3buIYfKT5jKCMhCdEpQVkyTNE+Ab4MGeTK12+CnF0hUih4GTQAA/vVnfuOVljmrSV28NCI46sMvu066BUqbGSJbg5QeUVGpJpJgeYw8qCH1+otCauVS/ZmVnf5dLnqnyHH1PovTdtqvQ1LW1EwER4QcFIS3e7i9Waf6zNY8iHlZIkIVYOTnRwYUU4+n7THdG8DfR9AaMQmVTe78R8ln/oHL2y3qm35OCMKDonZ/yaR1QdgBNaFhSzwTyfnXmbVdjyeWegmCc/xCA7MWwZLaVG7YYLlTG1yr+s8xGnVAjwv76SXtdJXI+rnDH0C8Td56bRR+6Mo3oK94r7y4BsLm8VouXFngj2O5FdzyNwzndg6pW1D+pvJUfpe1Z2Uu6sU6eTGfHpzm1UtR7hGw3eWYJmfgDPwRfHK95QHk2g8z9GJm9BEPY7n/kvAb2sMNKuUAdYZPXL6xofFvtS1ILZmZiMtXUYlvfT8x5uts69+S9PUs6A/GqBN2LbKdyRIb/NXb0Kbb6eqhURwoXS1V2y+VIt8nc+SAva2n5dGJhaBvFoIyEDXxvGGNDuVDLiQsYN4z7XAMpm/T8cCDhfdwnFtD6QTTv9LGbaPXl3VSTwf0c0O0AnmcB786AjRY0blY3TqXuVFTfzHMRLLZEYgkLmamFnHYr/z3XhPA+D9L51B86gJkD7zaVFueDx6ixp8FCCaFBcG+uR/6nTwfRo2Jz4XNchdPI0HwzGcsydZ0RPVQ/2rVYgk5EF3T9fhuKN/kjMj1yY/YGrNdWHyBy2Z05rbP/T7fkPPZ327OWITGIcnjOvqd0p05m5eeqd8RoFbsuSZcNkjDvhWbkLiRPh/0yvZnWHWMNQ46A3ePoCt+PqiRkykKS0+os4uFNeVOGY374Ia7/Pm8xSH/d6C7EKF5tNBruLmzAup85p1g1TJLi8g68xjPxcazXKTxHU/b3Bzq+sJDbf7CcvUrv4dPlRXtuwJc5GTYdECbr2a9T6jsCHnvUESK6HlWblUh6UalNCuVy26MjK0p1iUQNA14MfZ3wkiTy7f0MVMVudpfYBp7zSywRavyKZregcyFt17PU37CiBLYFaYIlDoRfJ01MSV5srsNeeK/WeE9V/hXgfQ0fjPDOPqHjXWQ2WtGksJdG5IXpIs7KG1yRUYuLQ306FfI5+lE7BTq+5uE/WULgCKKwL5OzOmMxD9QKimlL39+JosIpxe4jbIHMsdbCRExgLqhGWx3mXGMEVkmzp2l30OOErAO8ytXcsYS7wF8JFawvQeS+3ui6oBjcfGpDSSPoMySD1Ugx2d974jA1/MRsF6UBBT6fx5ktUc+pl5RGjdgYRpXO/2HjBEJdLI5B5aG8UY2RESj5tJJEuqZ/JIzKmJeVsLcYngh5Ms3otEt602fDJMjeoo29Fd7Tga3NhSRQpwdIUXC9z27RGX+bRiJIH51oD+8nhyYPZA8sth3ooy2eBTcAAA=" width="80" height="80"/></symbol>
     <symbol id="f-pepperoni" viewBox="0 0 80 80"><image href="data:image/webp;base64,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" width="80" height="80"/></symbol>
     <symbol id="l-mark" viewBox="0 0 100 100"><path d="M27 19h18v44h27v18H27Z" fill="#FFFFFF"/></symbol>
   </defs>
@@ -747,7 +841,7 @@ body.render .overlay { display: none; }
   'use strict';
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-  const DUR = 51;
+  const DUR = 54;
   // Solo lo que anima GSAP: los colores y medidas escritos en el HTML se quedan.
   const CLEAR = 'transform,opacity,visibility,clipPath,borderColor,strokeDashoffset,strokeDasharray';
   const POSTER = 10.8;
@@ -1016,55 +1110,71 @@ body.render .overlay { display: none; }
     gsap.set('#cap3 .w', { autoAlpha: 0, y: 60 });
 
     gsap.set('.cs', { autoAlpha: 0 });
-    gsap.set('.cs .num', { autoAlpha: 0, scale: 1.8, rotation: -10, transformOrigin: '0% 80%' });
     gsap.set('.cs h2 .w', { autoAlpha: 0, y: 70 });
-    gsap.set(['.cs p', '.cs .clock'], { autoAlpha: 0, y: 20 });
-    gsap.set('#tent', { autoAlpha: 0, x: -340, rotation: -8 });
-    gsap.set('#phone', { autoAlpha: 0, x: 150, y: 950, rotation: -6 });
-    gsap.set('.scr', { autoAlpha: 0, yPercent: 0, scale: 1 });
-    gsap.set('#scrCam', { autoAlpha: 1 });
-    gsap.set('#vf', { autoAlpha: 0, scale: 1.25 });
-    gsap.set('#vf i', { borderColor: '#FFFFFF' });
-    gsap.set('#scanline', { autoAlpha: 0, y: -100 });
-    gsap.set('#pill', { autoAlpha: 0, y: 40 });
-    gsap.set('#scrMenu', { yPercent: 100 });
-    gsap.set('#mCover', { scale: 1.12 });
-    gsap.set('.m-anim', { autoAlpha: 0, y: 26 });
-    gsap.set('#mList', { y: 0 });
-    gsap.set('#cart', { autoAlpha: 0, y: 90, backgroundColor: '#F7F3EF', color: '#161512', scale: 1 });
-    gsap.set('#wBar i', { width: '70%' });
-    gsap.set('#cartA', { autoAlpha: 1, y: 0 });
-    gsap.set('#cartB', { autoAlpha: 0, y: 16 });
-    gsap.set('#cartN', { scale: 1 });
-    gsap.set('#flyDot', { autoAlpha: 0, x: 0, y: 0, scale: 1 });
+    gsap.set(['.cs p', '.cs .clock', '.cs .ey'], { autoAlpha: 0, y: 20 });
+
+    // La cuenta de hoy
+    gsap.set('#marcador', { autoAlpha: 0, y: 70, rotation: -1.2 });
+    gsap.set('.mk-x', { scaleX: 0, transformOrigin: '0% 50%' });
+    gsap.set('.mk-ok', { autoAlpha: 0, scale: 0.3 });
+    gsap.set('.mk-tot b', { scale: 1, transformOrigin: '100% 60%' });
+
+    // Fuga 1: los canales y la lista
+    gsap.set('.fu', { autoAlpha: 0, scale: 0.4, x: 0, y: 0, transformOrigin: '48px 48px' });
+    gsap.set('.fu span', { autoAlpha: 1 });
+    gsap.set('#lista', { autoAlpha: 0, y: 40 });
+    gsap.set('.ro', { autoAlpha: 0, x: 40, scale: 1 });
+    gsap.set('#liRing', { autoAlpha: 0, scale: 1 });
+
+    // El celular y sus pantallas
+    gsap.set('#phone', { autoAlpha: 0, x: 640, y: 0, rotation: 10, scale: 1.12, transformOrigin: '50% 0%' });
+    gsap.set('.scr', { autoAlpha: 0 });
     gsap.set('#touch', { autoAlpha: 0, x: 0, y: 0, scale: 1 });
     gsap.set('#ripple', { autoAlpha: 0, scale: 0.3 });
-    gsap.set('#scrSent', { scale: 0.94 });
+    gsap.set('#yaViene', { autoAlpha: 0, scale: 0.6, y: 0 });
+    gsap.set('.yv-x', { scaleX: 0, transformOrigin: '0% 50%' });
+    gsap.set('.s-anim', { autoAlpha: 0, y: 20 });
+    gsap.set('#tkWait', { autoAlpha: 1, rotation: 0 });
     gsap.set('#sentCheck', { scale: 0 });
     gsap.set('#sentPath', { strokeDasharray: 60, strokeDashoffset: 60 });
-    gsap.set('.s-anim', { autoAlpha: 0, y: 20 });
+    gsap.set('#notiBan', { autoAlpha: 0, y: -90 });
+    gsap.set('.cj-head', { autoAlpha: 0, y: 16 });
+    gsap.set(['#cjAnular', '#cjCorte'], { autoAlpha: 0, y: 30 });
+    gsap.set('#cjMotivo', { autoAlpha: 0, scale: 0.7, transformOrigin: '0% 50%' });
+    gsap.set('.cj-pin b', { scale: 0 });
+    gsap.set('#cjAut', { autoAlpha: 0, y: 10 });
+    gsap.set('#cjSello', { autoAlpha: 0, scale: 1.9, rotation: -7 });
+    gsap.set('#mpH', { autoAlpha: 0, y: -70 });
+    gsap.set('.mp-zl', { autoAlpha: 0 });
+    gsap.set('#mpZona', { autoAlpha: 0, scale: 0.6 });
+    gsap.set('#mpEnvio', { autoAlpha: 0, x: 40 });
+    gsap.set('#mpRuta', { strokeDasharray: 360, strokeDashoffset: 360 });
+    gsap.set('#mpMoto', { autoAlpha: 0, x: 90 - 21, y: 300 - 21, scale: 1 });
     gsap.set('.w-anim', { autoAlpha: 0, y: 26 });
     gsap.set('#stamp', { autoAlpha: 0, y: -150, scaleY: 1, transformOrigin: '50% 100%' });
     gsap.set('#slot8', { autoAlpha: 0, scale: 0.4 });
     gsap.set('#wLeft', { scale: 1 });
+    gsap.set('#wBar i', { width: '70%' });
 
-    gsap.set('#kds', { autoAlpha: 0, y: 70, scale: 0.96 });
+    // Fuga 3: la hamburguesa, el inventario y la ganancia
+    gsap.set('#burger', { autoAlpha: 0, scale: 0.85, transformOrigin: '40% 60%' });
+    gsap.set('.bg-l', { y: 0 });
+    gsap.set('.bg-tag', { autoAlpha: 0, x: -20, y: 0, scale: 1 });
+    gsap.set(['#inv', '#gan'], { autoAlpha: 0, y: 40 });
+    gsap.set('#ivAlert', { autoAlpha: 0, y: 10 });
+    [['#ivPan', 62], ['#ivTocino', 48], ['#ivQueso', 27], ['#ivCarne', 72]].forEach(([r, w]) => gsap.set(`${r} .iv-bar i`, { width: `${w}%` }));
+    gsap.set('.gn-big', { autoAlpha: 0, scale: 0.6, transformOrigin: '0% 60%' });
+
+    // Sin internet
+    gsap.set('#pc', { autoAlpha: 0, y: 40 });
+    gsap.set('.pc-row', { autoAlpha: 0, x: 30 });
+    gsap.set('#wifi', { autoAlpha: 0, scale: 0.7 });
+    gsap.set('#wifiX', { strokeDasharray: 96, strokeDashoffset: 96, autoAlpha: 0 });
     gsap.set('#printer', { autoAlpha: 0, y: 90 });
     gsap.set('#paperClip', { autoAlpha: 1, y: 0 });
     gsap.set('#paper', { yPercent: 100 });
     gsap.set('.pr-body', { x: 0 });
-    gsap.set('#kNew', { autoAlpha: 0, x: 12, y: 110, scale: 0.85 });
-    gsap.set('#kP1', { x: 298, y: 110 });
-    gsap.set('#kP2', { x: 298, y: 238 });
-    gsap.set('#kL1', { x: 584, y: 110 });
-    gsap.set('#kOk', { scale: 0 });
-    gsap.set(['#kRing1', '#kRing2'], { autoAlpha: 0, x: 12, y: 110, scale: 1 });
-    gsap.set('#flyTk', { autoAlpha: 0, x: 0, y: 0, scale: 1, rotation: 0 });
-    gsap.set('#payoff', { autoAlpha: 0, y: 20 });
 
-    gsap.set('.c-head', { autoAlpha: 0, y: 16 });
-    gsap.set('.c-card', { autoAlpha: 0, x: 60 });
-    gsap.set('#cOk', { autoAlpha: 0, y: 24, scale: 0.9 });
     gsap.set('#confetti i', { autoAlpha: 0, x: 0, y: 0, rotation: 0 });
 
     gsap.set('#doorScene', { autoAlpha: 0, y: 40 });
@@ -1115,7 +1225,7 @@ body.render .overlay { display: none; }
     // Rótulos con tipografía cinética: el número golpea y las palabras saltan
     const showCap = (sel, t) => {
       tl.set(sel, { autoAlpha: 1 }, t);
-      if ($(`${sel} .num`)) tl.to(`${sel} .num`, { autoAlpha: 1, scale: 1, rotation: 0, duration: 0.45, ease: 'back.out(2.4)' }, t);
+      if ($(`${sel} .ey`)) tl.to(`${sel} .ey`, { autoAlpha: 1, y: 0, duration: 0.4, ease: 'power3.out' }, t);
       if ($(`${sel} .clock`)) tl.to(`${sel} .clock`, { autoAlpha: 1, y: 0, duration: 0.4, ease: 'power3.out' }, t);
       tl.to(`${sel} h2 .w`, { autoAlpha: 1, y: 0, duration: 0.42, stagger: 0.055, ease: 'back.out(1.8)' }, t + 0.08);
       tl.to(`${sel} > p:not(.payoff)`, { autoAlpha: 1, y: 0, duration: 0.4, ease: 'power3.out' }, t + 0.38);
@@ -1131,24 +1241,6 @@ body.render .overlay { display: none; }
       tl.to('#touch', { scale: 1, duration: 0.12 }, t + 0.28);
       tl.to('#touch', { autoAlpha: 0, duration: 0.2 }, t + 0.42);
       at(t + 0.2, 'tap');
-    };
-    const drag = (x1, y1, x2, y2, t, d) => {
-      tl.set('#touch', { x: x1 - 25, y: y1 - 25, scale: 1, autoAlpha: 0 }, t - 0.2);
-      tl.to('#touch', { autoAlpha: 0.95, duration: 0.15 }, t - 0.2);
-      tl.to('#touch', { x: x2 - 25, y: y2 - 25, duration: d, ease: 'power2.inOut' }, t);
-      tl.to('#touch', { autoAlpha: 0, duration: 0.2 }, t + d);
-    };
-    // Punto que vuela del «+» al carrito
-    const fly = (x1, y1, x2, y2, t) => {
-      tl.set('#flyDot', { x: x1 - 11, y: y1 - 11, autoAlpha: 1, scale: 1 }, t);
-      tl.to('#flyDot', { x: x2 - 11, duration: 0.45, ease: 'power1.inOut' }, t);
-      tl.to('#flyDot', { keyframes: [{ y: Math.min(y1, y2) - 90, duration: 0.2, ease: 'power2.out' }, { y: y2 - 11, duration: 0.25, ease: 'power2.in' }] }, t);
-      tl.to('#flyDot', { scale: 0.4, autoAlpha: 0, duration: 0.12 }, t + 0.42);
-      at(t + 0.45, 'pop');
-    };
-    const bump = (t) => {
-      tl.to('#cartN', { scale: 1.45, duration: 0.1, ease: 'power2.out' }, t);
-      tl.to('#cartN', { scale: 1, duration: 0.45, ease: 'elastic.out(1,.4)' }, t + 0.1);
     };
     // Salto de Leo (h = altura en unidades del dibujo)
     const hop = (L, wrapSel, x0, y0, x1, y1, t, d, h = 46) => {
@@ -1258,268 +1350,302 @@ body.render .overlay { display: none; }
     tl.set(LM.all, { scaleX: 1, scaleY: 1 }, 12.0);
     whip(12.0);
 
-    /* 4 · Escanea (12–17.5 s) */
+    // El celular entra desde la derecha con la pantalla que toca
+    const phoneIn = (scr, t) => {
+      tl.set('.scr', { autoAlpha: 0 }, t - 0.05);
+      tl.set(scr, { autoAlpha: 1 }, t - 0.05);
+      tl.set('#phone', { x: 640, y: 0, rotation: 10, scale: 1.12, autoAlpha: 0 }, t - 0.05);
+      tl.to('#phone', { x: 0, rotation: 0, autoAlpha: 1, duration: 0.6, ease: 'power3.out' }, t);
+    };
+    // Una fuga tapada: se tacha en la cuenta de hoy y el total baja
+    const tick = (i, t) => {
+      tl.to(`#mk${i} .mk-x`, { scaleX: 1, duration: 0.24, ease: 'power2.out' }, t);
+      tl.to(`#mk${i} .mk-ok`, { autoAlpha: 1, scale: 1, duration: 0.4, ease: 'back.out(3)' }, t + 0.12);
+      tl.to('.mk-tot b', { scale: 1.25, duration: 0.1, yoyo: true, repeat: 1, ease: 'power2.out' }, t + 0.18);
+      tl.to('#marcador', { rotation: -2.8, duration: 0.08, yoyo: true, repeat: 1 }, t);
+      at(t, 'stamp'); at(t + 0.16, 'ready');
+    };
+
+    /* 4 · Fuga 1: ningún pedido se pierde (12–17.5 s) */
     showCap('#cs1', 12.05);
     push(12.2, 17.38);
-    tl.to('#tent', { autoAlpha: 1, x: 0, rotation: -4, duration: 0.6, ease: 'power3.out' }, 12.05);
-    tl.to('#phone', { autoAlpha: 1, y: 0, rotation: -3, duration: 0.7, ease: 'power3.out' }, 12.15);
-    tl.to('#vf', { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'back.out(2)' }, 12.7);
-    tl.to('#scanline', { autoAlpha: 1, duration: 0.1 }, 12.85);
-    tl.to('#scanline', { y: 100, duration: 0.45, ease: 'sine.inOut' }, 12.9);
-    tl.to('#scanline', { y: -100, duration: 0.4, ease: 'sine.inOut' }, 13.35);
-    tl.to('#scanline', { autoAlpha: 0, duration: 0.12 }, 13.75);
-    tl.to('#vf i', { borderColor: '#F5A030', duration: 0.12 }, 13.75);
-    tl.to('#pill', { autoAlpha: 1, y: 0, duration: 0.35, ease: 'back.out(1.6)' }, 13.85);
-    at(13.85, 'pop');
-    tap(300, 608, 14.2);
-    tl.to('#scrMenu', { autoAlpha: 1, yPercent: 0, duration: 0.5, ease: 'power3.out' }, 14.55);
-    tl.set('#scrCam', { autoAlpha: 0 }, 15.1);
-    at(14.55, 'swoosh');
-    tl.to('#tent', { x: -440, autoAlpha: 0, duration: 0.5, ease: 'power2.in' }, 14.5);
-    tl.to('#phone', { x: 0, rotation: 0, duration: 0.7, ease: 'power3.inOut' }, 14.5);
-    tl.to('#mCover', { scale: 1, duration: 1.1, ease: 'power2.out' }, 14.6);
-    tl.to('.m-anim', { autoAlpha: 1, y: 0, duration: 0.45, stagger: 0.05, ease: 'power3.out' }, 14.75);
-    drag(176, 640, 176, 390, 15.8, 0.85);
-    tl.to('#mList', { y: -250, duration: 0.85, ease: 'power2.inOut' }, 15.8);
-    drag(176, 390, 176, 640, 16.75, 0.6);
-    tl.to('#mList', { y: 0, duration: 0.6, ease: 'power2.inOut' }, 16.75);
+    tl.to('#lista', { autoAlpha: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 12.1);
+    tl.to('#marcador', { autoAlpha: 1, y: 0, duration: 0.3, ease: 'steps(3)' }, 12.3);
+    at(12.3, 'paper');
+    // Mesa, WhatsApp, teléfono, mesero y domicilio: cada uno vuela a su renglón
+    ['pop', 'ping', 'ring', 'tap', 'pop'].forEach((snd, i) => {
+      const t = 12.45 + i * 0.5, fu = `#fu${i + 1}`;
+      tl.to(fu, { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'back.out(2.2)' }, t);
+      at(t, snd);
+      tl.to(`${fu} span`, { autoAlpha: 0, duration: 0.12 }, t + 0.32);
+      tl.to(fu, { x: 305, y: 110 - 48 * i, scale: 0.56, duration: 0.42, ease: 'power2.inOut' }, t + 0.36);
+      tl.to(fu, { autoAlpha: 0, duration: 0.1 }, t + 0.74);
+      tl.to(`#ro${i + 1}`, { autoAlpha: 1, x: 0, duration: 0.36, ease: 'back.out(1.6)' }, t + 0.7);
+      at(t + 0.72, 'notif');
+    });
+    // Un solo «ding» para todo, y las comandas salen solas
+    at(15.3, 'ding');
+    punch(15.3, 1.03);
+    tl.set('#liRing', { autoAlpha: 1, scale: 1 }, 15.3);
+    tl.to('#liRing', { scale: 1.05, autoAlpha: 0, duration: 0.7, ease: 'power2.out' }, 15.31);
+    at(15.55, 'printer');
+    tick(1, 16.2);
+    tl.to('#payoff', { autoAlpha: 1, y: 0, duration: 0.4, ease: 'back.out(2)' }, 16.45);
+    tl.to('#ro1', { scale: 1.035, duration: 0.16, yoyo: true, repeat: 1, ease: 'power2.out' }, 16.45);
 
-    /* 5 · Pide desde la mesa (17.5–23.5 s) */
+    /* 5 · Tu cliente ve su pedido en vivo (17.5–21 s) */
     whip(17.5);
     hideCap('#cs1', 17.5);
+    tl.set('#lista', { autoAlpha: 0 }, 17.5);
     showCap('#cs2', 17.55);
-    push(17.6, 23.38);
-    tap(311, 341, 17.75);
-    fly(311, 341, 60, 707, 18.0);
-    tl.to('#cart', { autoAlpha: 1, y: 0, duration: 0.4, ease: 'back.out(1.6)' }, 18.3);
-    drag(176, 600, 176, 470, 18.9, 0.45);
-    tl.to('#mList', { y: -130, duration: 0.45, ease: 'power2.inOut' }, 18.9);
-    tap(311, 553, 19.45); fly(311, 553, 46, 707, 19.68); bump(20.13);
-    tap(311, 553, 20.1); fly(311, 553, 46, 707, 20.33); bump(20.78);
-    tl.to('#cartA', { autoAlpha: 0, y: -16, duration: 0.18 }, 20.95);
-    tl.to('#cartB', { autoAlpha: 1, y: 0, duration: 0.22 }, 21.03);
-    tl.to('#cart', { backgroundColor: '#E4572E', color: '#FFFFFF', duration: 0.22 }, 21.0);
-    tap(177, 707, 21.2);
-    tl.to('#cart', { scale: 0.95, duration: 0.08, yoyo: true, repeat: 1 }, 21.4);
-    // El pico: pedido enviado
-    at(21.6, 'success');
-    punch(21.6);
-    flash(21.6, 0.18);
-    tl.to('#scrSent', { autoAlpha: 1, scale: 1, duration: 0.35, ease: 'power3.out' }, 21.6);
-    tl.to('#sentCheck', { scale: 1, duration: 0.5, ease: 'back.out(2.2)' }, 21.68);
-    tl.to('#sentPath', { strokeDashoffset: 0, duration: 0.3, ease: 'power2.out' }, 21.88);
-    tl.to('.s-anim', { autoAlpha: 1, y: 0, duration: 0.35, stagger: 0.1, ease: 'power3.out' }, 21.92);
-    // Leo sale desde abajo con la bandeja vacía
-    tl.set('#leoBox', { x: 700, y: 1300, autoAlpha: 1 }, 21.5);
-    tl.set(LB.tray, { autoAlpha: 1 }, 21.5);
-    tl.to('#leoBox', { y: 560, duration: 0.5, ease: 'back.out(1.3)' }, 21.55);
-    tl.to(LB.pupils, { x: -1.3, y: -0.6, duration: 0.18 }, 22.05);
-    // La comanda vuela del teléfono a la bandeja
-    const trayX = 700 + 167, trayY = 560 + 83;
-    tl.set('#flyTk', { x: 470 - 32, y: 210 - 28, scale: 0.9, rotation: -8, autoAlpha: 0 }, 22.3);
-    tl.to('#flyTk', { autoAlpha: 1, duration: 0.08 }, 22.3);
-    tl.to('#flyTk', { x: trayX - 32, rotation: 8, duration: 0.55, ease: 'power1.inOut' }, 22.3);
-    tl.to('#flyTk', { keyframes: [{ y: 110, duration: 0.25, ease: 'power2.out' }, { y: trayY - 28, duration: 0.3, ease: 'power2.in' }] }, 22.3);
-    tl.to('#flyTk', { scale: 0.58, duration: 0.55, ease: 'power1.in' }, 22.3);
-    tl.to(LB.pupils, { x: 1.2, y: -0.4, duration: 0.25 }, 22.45);
-    at(22.3, 'whoosh');
-    tl.set('#flyTk', { autoAlpha: 0 }, 22.85);
-    tl.set(LB.ticket, { autoAlpha: 1 }, 22.85);
-    tl.to(LB.tray, { y: 2, duration: 0.08, yoyo: true, repeat: 1 }, 22.85);
-    at(22.85, 'catch');
-    happy(LB, 22.87, 23.2);
-    tl.to(LB.brows, { y: -2.4, duration: 0.12 }, 22.87);
-    tl.to(LB.brows, { y: 0, duration: 0.15 }, 23.2);
-    tl.to(LB.pupils, { x: 0, y: 0, duration: 0.15 }, 23.0);
-    hop(LB, '#leoBox', 700, 560, 1180, 560, 23.05, 0.4, 40);
-    whip(23.5);
-    tl.set('#phone', { autoAlpha: 0 }, 23.5);
-    hideCap('#cs2', 23.5);
+    push(17.6, 20.88);
+    phoneIn('#scrSent', 17.55);
+    tl.to('.s-anim', { autoAlpha: 1, y: 0, duration: 0.35, stagger: 0.06, ease: 'power3.out' }, 17.75);
+    tl.to('#tkWait', { rotation: 720, duration: 2.0, ease: 'none' }, 17.6);
+    tl.to('#yaViene', { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'back.out(2.2)' }, 17.95);
+    at(17.95, 'ping');
+    at(18.6, 'notif');
+    // ¡Listo!: le llega el aviso y el «¿ya viene?» se tacha
+    tl.set('#tkWait', { autoAlpha: 0 }, 19.6);
+    tl.to('#sentCheck', { scale: 1, duration: 0.45, ease: 'back.out(2.2)' }, 19.6);
+    tl.to('#sentPath', { strokeDashoffset: 0, duration: 0.3, ease: 'power2.out' }, 19.75);
+    tl.to('#notiBan', { autoAlpha: 1, y: 0, duration: 0.4, ease: 'back.out(1.6)' }, 19.7);
+    at(19.6, 'ready');
+    punch(19.6, 1.03);
+    tl.to('.yv-x', { scaleX: 1, duration: 0.25, ease: 'power2.out' }, 20.0);
+    at(20.0, 'tap');
+    tl.to('#yaViene', { autoAlpha: 0, y: 40, scale: 0.85, duration: 0.35, ease: 'power2.in' }, 20.45);
 
-    /* 6 · La cocina lo ve al instante (23.5–29.5 s) */
-    showCap('#cs3', 23.55);
-    push(23.6, 29.38);
-    tl.to('#kds', { autoAlpha: 1, y: 0, scale: 1, duration: 0.55, ease: 'power3.out' }, 23.55);
-    tl.to('#printer', { autoAlpha: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 23.7);
-    tl.set('#leoBox', { x: 10, y: 1300, autoAlpha: 1 }, 23.8);
-    tl.to('#leoBox', { y: 650, duration: 0.5, ease: 'back.out(1.3)' }, 23.85);
-    tl.to(LB.pupils, { x: -0.8, y: -1, duration: 0.2 }, 24.3);
-    const lx = 10 + 167, ly = 650 + 83;
-    const kx = 20 + 14 + 12 + 138, ky = 40 + 14 + 110 + 59;
-    tl.set(LB.ticket, { autoAlpha: 0 }, 24.6);
-    tl.set('#flyTk', { x: lx - 32, y: ly - 28, scale: 0.58, rotation: 6, autoAlpha: 1 }, 24.6);
-    tl.to('#flyTk', { x: kx - 32, y: ky - 28, scale: 1.6, rotation: 0, duration: 0.42, ease: 'power2.inOut' }, 24.6);
-    tl.to('#flyTk', { autoAlpha: 0, duration: 0.12 }, 24.92);
-    tl.to(LB.pupils, { x: 1, y: -1.2, duration: 0.2 }, 24.7);
-    tl.to('#kNew', { autoAlpha: 1, scale: 1, duration: 0.42, ease: 'back.out(1.8)' }, 25.0);
-    // El «ding» de Leogin
-    at(25.05, 'ding');
-    punch(25.05, 1.04);
-    flash(25.05, 0.12);
-    tl.to('#kRing1', { autoAlpha: 1, duration: 0.01 }, 25.05);
-    tl.to('#kRing1', { scale: 1.35, autoAlpha: 0, duration: 0.75, ease: 'power2.out' }, 25.06);
-    tl.to('#kRing2', { autoAlpha: 1, duration: 0.01 }, 25.25);
-    tl.to('#kRing2', { scale: 1.35, autoAlpha: 0, duration: 0.75, ease: 'power2.out' }, 25.26);
-    at(25.3, 'printer');
-    tl.to('#paper', { yPercent: 0, duration: 1.0, ease: 'steps(10)' }, 25.3);
-    tl.to('.pr-body', { x: 1.6, duration: 0.05, repeat: 19, yoyo: true, ease: 'none' }, 25.3);
-    tl.to(LB.pupils, { x: 1.5, y: 0.4, duration: 0.25 }, 25.6);
-    // a preparación…
-    tl.to('#kNew', { x: 298, duration: 0.5, ease: 'power3.inOut' }, 26.2);
-    tl.to('#kP1', { y: 238, duration: 0.5, ease: 'power3.inOut' }, 26.2);
-    tl.to('#kP2', { y: 366, duration: 0.5, ease: 'power3.inOut' }, 26.2);
-    tl.to(LB.pupils, { x: 1.2, y: -1.2, duration: 0.25 }, 26.2);
-    // …y listo: se cierra la historia de la Mesa 4
-    tl.to('#kNew', { x: 584, duration: 0.5, ease: 'power3.inOut' }, 27.4);
-    tl.to('#kL1', { y: 238, duration: 0.5, ease: 'power3.inOut' }, 27.4);
-    tl.to('#kOk', { scale: 1, duration: 0.42, ease: 'back.out(2.6)' }, 27.95);
-    at(27.95, 'ready');
-    tl.to(LB.pupils, { x: 1.6, y: -1.2, duration: 0.25 }, 27.45);
-    tl.to('#payoff', { autoAlpha: 1, y: 0, duration: 0.4, ease: 'back.out(2)' }, 28.1);
-    tl.to(LB.arm, { rotation: 125, duration: 0.22, ease: 'back.out(2)' }, 28.05);
-    happy(LB, 28.1, 29.0);
-    hop(LB, '#leoBox', 10, 650, 10, 650, 28.3, 0.42, 34);
-    tl.to(LB.arm, { rotation: 0, duration: 0.22 }, 28.95);
+    /* 6 · Fuga 2: la caja cuadra (21–26.5 s) */
+    whip(21.0);
+    hideCap('#cs2', 21.0);
+    showCap('#cs3', 21.05);
+    push(21.1, 26.38);
+    phoneIn('#scrCaja', 21.05);
+    tl.to('.cj-head', { autoAlpha: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 21.3);
+    tl.to('#cjAnular', { autoAlpha: 1, y: 0, duration: 0.45, ease: 'back.out(1.5)' }, 21.45);
+    // Anular pide motivo y el PIN del encargado
+    tap(120, 238, 21.75);
+    tl.to('#cjMotivo', { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'back.out(2.4)' }, 21.97);
+    $$('.cj-pin b').forEach((b, i) => { const t = 22.35 + i * 0.16; tl.to(b, { scale: 1, duration: 0.12, ease: 'back.out(3)' }, t); at(t, 'tap'); });
+    tl.to('#cjAut', { autoAlpha: 1, y: 0, duration: 0.35, ease: 'back.out(1.8)' }, 23.05);
+    at(23.05, 'notif');
+    // El corte del turno
+    tl.to('#cjCorte', { autoAlpha: 1, y: 0, duration: 0.45, ease: 'back.out(1.5)' }, 23.6);
+    at(23.9, 'count');
+    // Leo, al lado, revisando
+    tl.set([LB.lids, LB.smirk], { autoAlpha: 1 }, 23.7);
+    tl.set(LB.smile, { autoAlpha: 0 }, 23.7);
+    tl.set(LB.pupils, { x: -1.4, y: 0.4 }, 23.7);
+    tl.set('#leoBox', { x: 700, y: 1300, autoAlpha: 1, scale: 1 }, 23.75);
+    tl.to('#leoBox', { y: 600, duration: 0.5, ease: 'back.out(1.3)' }, 23.8);
+    // El sello: caja cuadrada
+    tl.to('#cjSello', { autoAlpha: 1, scale: 1, duration: 0.2, ease: 'power3.in' }, 25.0);
+    at(25.2, 'stamp');
+    punch(25.2, 1.05);
+    flash(25.2, 0.12);
+    tl.set([LB.lids, LB.smirk], { autoAlpha: 0 }, 25.2);
+    tl.set(LB.smile, { autoAlpha: 1 }, 25.2);
+    tl.set(LB.pupils, { x: 0, y: 0 }, 25.2);
+    happy(LB, 25.2, 26.3);
+    tl.to(LB.arm, { rotation: 125, duration: 0.2, ease: 'back.out(2)' }, 25.2);
+    hop(LB, '#leoBox', 700, 600, 700, 600, 25.3, 0.42, 34);
+    tl.to(LB.arm, { rotation: 0, duration: 0.2 }, 26.2);
+    tick(2, 25.6);
 
-    /* 7 · Todo, bajo control (29.5–35.5 s): lo que el dueño ve desde su celular */
-    whip(29.5);
-    tl.set(['#kds', '#printer', '#paperClip', '#leoBox', '#flyTk'], { autoAlpha: 0 }, 29.5);
-    hideCap('#cs3', 29.5);
-    showCap('#cs4', 29.55);
-    push(29.6, 35.38);
-    tl.set(['#scrCam', '#scrMenu', '#scrSent', '#scrWallet'], { autoAlpha: 0 }, 29.45);
-    tl.set('#scrControl', { autoAlpha: 1 }, 29.45);
-    tl.set('#phone', { x: 640, y: v ? -60 : 0, rotation: 10, scale: v ? 1.4 : 1.12, transformOrigin: '50% 0%', autoAlpha: 0 }, 29.45);
-    tl.to('#phone', { x: 0, rotation: 0, autoAlpha: 1, duration: 0.6, ease: 'power3.out' }, 29.55);
-    tl.to('.c-head', { autoAlpha: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 29.8);
-    at(29.9, 'count');
-    // Caja, anulaciones, inventario, ganancia y sin internet: una tarjeta tras otra
-    $$('.c-card').forEach((c, i) => {
-      const t = 30.3 + i * 0.7;
-      tl.to(c, { autoAlpha: 1, x: 0, duration: 0.4, ease: 'back.out(1.6)' }, t);
-      at(t, 'notif');
+    /* 7 · Fuga 3: cada venta descuenta lo que gastaste (26.5–32 s) */
+    whip(26.5);
+    hideCap('#cs3', 26.5);
+    tl.set(['#phone', '#leoBox'], { autoAlpha: 0 }, 26.5);
+    showCap('#cs4', 26.55);
+    push(26.6, 31.88);
+    tl.to('#burger', { autoAlpha: 1, scale: 1, duration: 0.5, ease: 'back.out(1.6)' }, 26.6);
+    at(26.6, 'pop');
+    tl.to('#inv', { autoAlpha: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 26.8);
+    // Se vende una Doble Bacon: se desarma en lo que lleva…
+    [['#bgTop', -120], ['#bgBacon', -80], ['#bgCheese', -40], ['#bgPatty', -8], ['#bgCheese2', 28], ['#bgPatty2', 58], ['#bgBot', 100]]
+      .forEach(([sel, dy]) => tl.to(sel, { y: dy, duration: 0.5, ease: 'back.out(1.4)' }, 27.4));
+    at(27.4, 'whoosh');
+    // …y cada ingrediente vuela a su renglón del inventario, que baja solo
+    [['#tgPan', 50, '#ivPan', 58], ['#tgTocino', 170, '#ivTocino', 42], ['#tgQueso', 234, '#ivQueso', 21], ['#tgCarne', 300, '#ivCarne', 64]]
+      .forEach(([tag, top, row, w], i) => {
+        tl.to(tag, { autoAlpha: 1, x: 0, duration: 0.25, ease: 'back.out(2)' }, 27.7 + i * 0.1);
+        const t = 28.2 + i * 0.18;
+        tl.to(tag, { x: 420, y: 232 + i * 53 - (160 + top + 20), scale: 0.6, duration: 0.42, ease: 'power2.inOut' }, t);
+        tl.to(tag, { autoAlpha: 0, duration: 0.1 }, t + 0.36);
+        tl.to(`${row} .iv-bar i`, { width: `${w}%`, duration: 0.4, ease: 'power2.out' }, t + 0.38);
+        at(t + 0.4, 'notif');
+      });
+    // El queso está bajo: avisa antes de que se acabe
+    tl.to('#ivAlert', { autoAlpha: 1, y: 0, duration: 0.35, ease: 'back.out(1.8)' }, 29.1);
+    at(29.1, 'ping');
+    // …y lo que te deja cada plato
+    tl.to('#gan', { autoAlpha: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 29.55);
+    tl.to('.gn-big', { autoAlpha: 1, scale: 1, duration: 0.4, ease: 'back.out(2.4)' }, 29.95);
+    at(29.95, 'success');
+    tick(3, 30.6);
+
+    /* 8 · Sin internet, sigues vendiendo (32–35.5 s) */
+    whip(32.0);
+    hideCap('#cs4', 32.0);
+    tl.set(['#burger', '#inv', '#gan'], { autoAlpha: 0 }, 32.0);
+    showCap('#cs5', 32.05);
+    push(32.1, 35.38);
+    tl.to('#pc', { autoAlpha: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 32.05);
+    tl.to('#wifi', { autoAlpha: 1, scale: 1, duration: 0.35, ease: 'back.out(2)' }, 32.15);
+    tl.to('#printer', { autoAlpha: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 32.2);
+    // Se va la señal…
+    tl.set('#wifiX', { autoAlpha: 1 }, 32.44);
+    tl.to('#wifiX', { strokeDashoffset: 0, duration: 0.25, ease: 'power2.out' }, 32.45);
+    at(32.45, 'click');
+    // …y la caja sigue: guarda los pedidos e imprime la comanda
+    ['#pcR1', '#pcR2', '#pcR3'].forEach((r, i) => { const t = 32.75 + i * 0.4; tl.to(r, { autoAlpha: 1, x: 0, duration: 0.3, ease: 'back.out(1.6)' }, t); at(t, 'notif'); });
+    at(33.0, 'printer');
+    tl.to('#paper', { yPercent: 0, duration: 1.0, ease: 'steps(10)' }, 33.0);
+    tl.to('.pr-body', { x: 1.6, duration: 0.05, repeat: 19, yoyo: true, ease: 'none' }, 33.0);
+    // Vuelve la señal y todo sube solo
+    tl.to('#wifiX', { strokeDashoffset: 96, duration: 0.2, ease: 'power2.in' }, 34.3);
+    tl.set('#wifiX', { autoAlpha: 0 }, 34.5);
+    tl.to('#wifi', { scale: 1.12, duration: 0.12, yoyo: true, repeat: 1 }, 34.3);
+    at(34.3, 'ready');
+    at(34.45, 'pop'); at(34.6, 'pop'); at(34.75, 'pop');
+
+    /* 9 · El domicilio, sin enredos (35.5–40 s) */
+    whip(35.5);
+    hideCap('#cs5', 35.5);
+    tl.set(['#pc', '#wifi', '#printer', '#paperClip'], { autoAlpha: 0 }, 35.5);
+    showCap('#cs6', 35.55);
+    push(35.6, 39.88);
+    phoneIn('#scrMapa', 35.55);
+    // Marca su casa en el mapa…
+    tap(270, 132, 35.95);
+    tl.to('#mpH', { autoAlpha: 1, y: 0, duration: 0.5, ease: 'bounce.out' }, 36.15);
+    at(36.2, 'pop');
+    // …y el envío se cobra solo según la zona
+    tl.to('#mpZona', { autoAlpha: 1, scale: 1, duration: 0.5, ease: 'power3.out' }, 36.35);
+    tl.to('.mp-zl', { autoAlpha: 1, duration: 0.25 }, 36.55);
+    tl.to('#mpEnvio', { autoAlpha: 1, x: 0, duration: 0.35, ease: 'back.out(1.6)' }, 36.5);
+    at(36.55, 'notif');
+    // Confirma y sale el repartidor por la ruta
+    tap(177, 684, 37.05);
+    at(37.6, 'notif');
+    tl.to('#mpRuta', { strokeDashoffset: 0, duration: 0.5, ease: 'power2.out' }, 37.65);
+    tl.to('#mpMoto', { autoAlpha: 1, duration: 0.15 }, 37.85);
+    let tm = 37.95, px = 90, py = 300;
+    [[90, 200], [200, 200], [200, 110], [252, 110]].forEach(([x, y]) => {
+      const d = Math.hypot(x - px, y - py) / 230;
+      tl.to('#mpMoto', { x: x - 21, y: y - 21, duration: d, ease: 'none' }, tm);
+      tm += d; px = x; py = y;
     });
-    // Leo, orgulloso, junto al celular
-    tl.set(LB.tray, { autoAlpha: 0 }, 32.5);
-    tl.set(LB.pupils, { x: -1.2, y: 0 }, 32.5);
-    tl.set(LB.smile, { autoAlpha: 0 }, 32.5);
-    tl.set([LB.lids, LB.smirk], { autoAlpha: 1 }, 32.5);
-    tl.set('#leoBox', { x: v ? 740 : 715, y: 1300, autoAlpha: 1, scale: 1 }, 32.55);
-    tl.to('#leoBox', { y: v ? 640 : 600, duration: 0.5, ease: 'back.out(1.3)' }, 32.6);
-    // El pico: todo en orden
-    tl.to('#cOk', { autoAlpha: 1, y: 0, scale: 1, duration: 0.45, ease: 'back.out(2.2)' }, 33.9);
-    at(33.9, 'celebrate');
-    punch(33.9);
-    flash(33.9, 0.14);
-    tl.set([LB.lids, LB.smirk], { autoAlpha: 0 }, 33.85);
-    tl.set(LB.smile, { autoAlpha: 1 }, 33.85);
-    happy(LB, 33.85);
-    tl.to(LB.arm, { rotation: 125, duration: 0.2, ease: 'back.out(2)' }, 33.85);
-    tl.to(LB.brows, { y: -2.4, duration: 0.15 }, 33.85);
-    tl.to(LB.all, { keyframes: [{ y: -14, scaleY: 1.08, scaleX: 0.95, duration: 0.24, ease: 'power2.out' }, { y: 0, scaleY: 1, scaleX: 1, duration: 0.24, ease: 'power2.in' }] }, 33.95);
-    // El confeti sale de Leo, para no tapar las tarjetas
-    const ox = v ? 850 : 825, oy = v ? 690 : 650;
+    tl.to('#mpMoto', { scale: 1.2, duration: 0.12, yoyo: true, repeat: 1 }, tm);
+    at(tm, 'ready');
+
+    /* 10 · Y tus clientes vuelven (40–43 s) */
+    whip(40.0);
+    hideCap('#cs6', 40.0);
+    showCap('#cs7', 40.05);
+    push(40.1, 42.88);
+    phoneIn('#scrWallet', 40.05);
+    tl.to('.w-anim', { autoAlpha: 1, y: 0, duration: 0.4, stagger: 0.08, ease: 'power3.out' }, 40.35);
+    tl.to('#stamp', { autoAlpha: 1, y: 0, duration: 0.3, ease: 'power2.in' }, 40.95);
+    tl.to('#stamp', { scaleY: 0.84, duration: 0.07 }, 41.25);
+    at(41.25, 'stamp');
+    tl.to('#slot8', { autoAlpha: 1, scale: 1, duration: 0.35, ease: 'back.out(3)' }, 41.29);
+    tl.to('#stamp', { scaleY: 1, y: -150, autoAlpha: 0, duration: 0.4, ease: 'power2.out' }, 41.35);
+    tl.to('#wBar i', { width: '80%', duration: 0.45, ease: 'power2.out' }, 41.35);
+    tl.to('#wLeft', { scale: 1.08, duration: 0.15, yoyo: true, repeat: 1 }, 41.65);
+
+    /* 11 · Tu noche: hoy no se te fue nada (43–47 s) */
+    whip(43.0);
+    tl.set('#phone', { autoAlpha: 0 }, 43.0);
+    hideCap('#cs7', 43.0);
+    showCap('#cs8', 43.05);
+    push(43.1, 46.88, 1.03);
+    tl.to('#doorScene', { autoAlpha: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 43.05);
+    // La cuenta de hoy llega a Q0: el pico
+    tl.to('.mk-tot b', { scale: 1.4, duration: 0.14, yoyo: true, repeat: 1, ease: 'power2.out' }, 43.6);
+    tl.to('#marcador', { rotation: -3, duration: 0.1, yoyo: true, repeat: 1 }, 43.6);
+    at(43.6, 'celebrate');
+    // El confeti sale del Q0
+    const posIn = (el) => { let x = 0, y = 0; while (el && el !== stage) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; } return { x, y }; };
+    const mkT = $('#mkTot'), vb = posIn($('#vbox')), mkP = posIn(mkT);
+    const ox = mkP.x - vb.x + mkT.offsetWidth / 2, oy = mkP.y - vb.y + mkT.offsetHeight / 2;
     $$('#confetti i').forEach((p, i) => {
       const a = rnd(i, 3, 7) * Math.PI * 2, sp = 140 + rnd(i, 5, 1) * 260;
       const dx = Math.cos(a) * sp, up = 160 + rnd(i, 9, 2) * 260;
-      tl.set(p, { x: ox, y: oy, autoAlpha: 1, rotation: 0 }, 33.95);
-      tl.to(p, { x: ox + dx * 0.6, duration: 0.45, ease: 'power2.out' }, 33.95);
-      tl.to(p, { y: oy - up, rotation: rnd(i, 1, 1) * 360, duration: 0.45, ease: 'power2.out' }, 33.95);
-      tl.to(p, { x: ox + dx, y: oy - up + 420 + rnd(i, 2, 2) * 200, rotation: 720 * rnd(i, 4, 4), autoAlpha: 0, duration: 1.1, ease: 'power1.in' }, 34.4);
+      tl.set(p, { x: ox, y: oy, autoAlpha: 1, rotation: 0 }, 43.65);
+      tl.to(p, { x: ox + dx * 0.6, duration: 0.45, ease: 'power2.out' }, 43.65);
+      tl.to(p, { y: oy - up, rotation: rnd(i, 1, 1) * 360, duration: 0.45, ease: 'power2.out' }, 43.65);
+      tl.to(p, { x: ox + dx, y: oy - up + 420 + rnd(i, 2, 2) * 200, rotation: 720 * rnd(i, 4, 4), autoAlpha: 0, duration: 1.1, ease: 'power1.in' }, 44.1);
     });
+    // Leo voltea el letrero, apaga la luz y se duerme
+    tl.set(LB.happy, { autoAlpha: 0 }, 43.2);
+    tl.set(LB.eyes, { autoAlpha: 1 }, 43.2);
+    tl.set(LB.arm, { rotation: 0 }, 43.2);
+    tl.set(LB.brows, { y: 0 }, 43.2);
+    tl.set([LB.lids, LB.smirk], { autoAlpha: 0 }, 43.2);
+    tl.set(LB.smile, { autoAlpha: 1 }, 43.2);
+    tl.set(LB.pupils, { x: 0, y: 0 }, 43.2);
+    tl.set('#leoBox', { x: 590, y: 1300, autoAlpha: 1, scale: 1 }, 43.25);
+    tl.to('#leoBox', { y: 596, duration: 0.5, ease: 'back.out(1.3)' }, 43.3);
+    tl.to(LB.pupils, { x: -1.4, y: 0, duration: 0.2 }, 43.8);
+    tl.to(LB.arm, { rotation: 125, duration: 0.2, ease: 'back.out(2)' }, 44.0);
+    tl.to('#sign', { rotationY: 180, duration: 0.5, ease: 'back.out(1.4)' }, 44.15);
+    at(44.15, 'flip');
+    tl.to(LB.arm, { rotation: 0, duration: 0.2 }, 44.55);
+    tl.to(['#lampGlow', '#doorWin', '#lampBulb'], { autoAlpha: 0.15, duration: 0.3, ease: 'power2.out' }, 44.9);
+    tl.to('#dusk', { autoAlpha: 1, duration: 0.45, ease: 'power2.out' }, 44.9);
+    at(44.9, 'click');
+    tl.to(LB.pupils, { x: 0, y: 0, duration: 0.2 }, 45.1);
+    tl.to(LB.arm, { keyframes: [{ rotation: 100, duration: 0.18 }, { rotation: 76, duration: 0.13 }, { rotation: 104, duration: 0.13 }, { rotation: 76, duration: 0.13 }, { rotation: 0, duration: 0.2 }] }, 45.25);
+    tl.set([LB.eyes, LB.smile], { autoAlpha: 0 }, 46.15);
+    tl.set([LB.closed, LB.calm], { autoAlpha: 1 }, 46.15);
+    tl.to(LB.zzz, { autoAlpha: 1, duration: 0.4 }, 46.35);
+    at(46.35, 'zzz');
 
-    /* 8 · Y tus clientes vuelven (35.5–39.5 s) */
-    whip(35.5);
-    tl.set('#leoBox', { autoAlpha: 0 }, 35.5);
-    hideCap('#cs4', 35.5);
-    showCap('#cs5', 35.55);
-    push(35.6, 39.38);
-    tl.set(['#scrCam', '#scrMenu', '#scrSent', '#scrControl'], { autoAlpha: 0 }, 35.45);
-    tl.set('#scrWallet', { autoAlpha: 1 }, 35.45);
-    tl.set('#phone', { x: 640, y: v ? -40 : 0, rotation: 10, scale: v ? 1.3 : 1, autoAlpha: 0 }, 35.45);
-    tl.to('#phone', { x: 0, rotation: 0, autoAlpha: 1, duration: 0.6, ease: 'power3.out' }, 35.55);
-    tl.to('.w-anim', { autoAlpha: 1, y: 0, duration: 0.4, stagger: 0.08, ease: 'power3.out' }, 35.9);
-    tl.to('#stamp', { autoAlpha: 1, y: 0, duration: 0.3, ease: 'power2.in' }, 36.5);
-    tl.to('#stamp', { scaleY: 0.84, duration: 0.07 }, 36.8);
-    at(36.8, 'stamp');
-    tl.to('#slot8', { autoAlpha: 1, scale: 1, duration: 0.35, ease: 'back.out(3)' }, 36.84);
-    tl.to('#stamp', { scaleY: 1, y: -150, autoAlpha: 0, duration: 0.4, ease: 'power2.out' }, 36.9);
-    tl.to('#wBar i', { width: '80%', duration: 0.45, ease: 'power2.out' }, 36.9);
-    tl.to('#wLeft', { scale: 1.08, duration: 0.15, yoyo: true, repeat: 1 }, 37.2);
-
-    /* 9 · Tu noche (39.5–44 s): el beneficio que el dueño sí siente */
-    whip(39.5);
-    tl.set('#phone', { autoAlpha: 0 }, 39.5);
-    hideCap('#cs5', 39.5);
-    showCap('#cs6', 39.55);
-    push(39.6, 43.88, 1.03);
-    tl.to('#doorScene', { autoAlpha: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 39.55);
-    tl.set(LB.happy, { autoAlpha: 0 }, 39.7);
-    tl.set(LB.eyes, { autoAlpha: 1 }, 39.7);
-    tl.set(LB.arm, { rotation: 0 }, 39.7);
-    tl.set(LB.brows, { y: 0 }, 39.7);
-    tl.set([LB.lids, LB.smirk], { autoAlpha: 0 }, 39.7);
-    tl.set(LB.smile, { autoAlpha: 1 }, 39.7);
-    tl.set('#leoBox', { x: 590, y: 1300, autoAlpha: 1, scale: 1 }, 39.75);
-    tl.to('#leoBox', { y: 596, duration: 0.5, ease: 'back.out(1.3)' }, 39.8);
-    tl.to(LB.pupils, { x: -1.4, y: 0, duration: 0.2 }, 40.3);
-    tl.to(LB.arm, { rotation: 125, duration: 0.2, ease: 'back.out(2)' }, 40.5);
-    tl.to('#sign', { rotationY: 180, duration: 0.5, ease: 'back.out(1.4)' }, 40.65);
-    at(40.65, 'flip');
-    tl.to(LB.arm, { rotation: 0, duration: 0.2 }, 41.05);
-    // Se apaga la luz
-    tl.to(['#lampGlow', '#doorWin', '#lampBulb'], { autoAlpha: 0.15, duration: 0.3, ease: 'power2.out' }, 41.4);
-    tl.to('#dusk', { autoAlpha: 1, duration: 0.45, ease: 'power2.out' }, 41.4);
-    at(41.4, 'click');
-    tl.to(LB.pupils, { x: 0, y: 0, duration: 0.2 }, 41.6);
-    tl.to(LB.arm, { keyframes: [{ rotation: 100, duration: 0.18 }, { rotation: 76, duration: 0.13 }, { rotation: 104, duration: 0.13 }, { rotation: 76, duration: 0.13 }, { rotation: 0, duration: 0.2 }] }, 41.75);
-    tl.set([LB.eyes, LB.smile], { autoAlpha: 0 }, 42.65);
-    tl.set([LB.closed, LB.calm], { autoAlpha: 1 }, 42.65);
-    tl.to(LB.zzz, { autoAlpha: 1, duration: 0.4 }, 42.85);
-    at(42.85, 'zzz');
-
-    /* 10 · Firma (44–51 s): Leo guiña y se vuelve el logo */
-    whip(44.0);
-    tl.set(['#doorScene', '#leoBox', '#dusk'], { autoAlpha: 0 }, 44.0);
-    hideCap('#cs6', 44.0);
-    tl.set(LM.all, { scaleX: 1, scaleY: 1, scale: 1, y: 0, rotation: 0 }, 43.9);
-    tl.set('#leoMain', { x: 0, y: v ? 1300 : 900, rotation: 0, scale: 1, autoAlpha: 1 }, 43.95);
-    tl.set(LM.shadow, { autoAlpha: 0.35 }, 43.95);
-    tl.to('#leoMain', { y: 0, duration: 0.5, ease: 'back.out(1.25)' }, 44.05);
-    at(44.05, 'whoosh');
+    /* 12 · Firma (47–54 s): Leo guiña y se vuelve el logo */
+    const F = 47.0;
+    whip(F);
+    tl.set(['#doorScene', '#leoBox', '#dusk', '#marcador'], { autoAlpha: 0 }, F);
+    hideCap('#cs8', F);
+    tl.set(LM.all, { scaleX: 1, scaleY: 1, scale: 1, y: 0, rotation: 0 }, F - 0.1);
+    tl.set('#leoMain', { x: 0, y: v ? 1300 : 900, rotation: 0, scale: 1, autoAlpha: 1 }, F - 0.05);
+    tl.set(LM.shadow, { autoAlpha: 0.35 }, F - 0.05);
+    tl.to('#leoMain', { y: 0, duration: 0.5, ease: 'back.out(1.25)' }, F + 0.05);
+    at(F + 0.05, 'whoosh');
     // Guiño a cámara
-    tl.to(LM.pupils, { x: 0, y: 0, duration: 0.15 }, 44.4);
-    tl.to(LM.eyeR, { scaleY: 0.1, duration: 0.08 }, 44.55);
-    tl.set(LM.eyeR, { autoAlpha: 0 }, 44.63);
-    tl.set(LM.happyR, { autoAlpha: 1 }, 44.63);
-    tl.to(LM.brows, { y: -1.6, duration: 0.15 }, 44.55);
-    at(44.55, 'blink');
-    tl.set(LM.happyR, { autoAlpha: 0 }, 45.05);
-    tl.set(LM.eyeR, { autoAlpha: 1, scaleY: 1 }, 45.05);
-    tl.to(LM.brows, { y: 0, duration: 0.2 }, 45.05);
-    tl.to(LM.all, { rotation: -10, duration: 0.2, ease: 'power2.inOut' }, 44.7);
-    tl.to(LM.all, { rotation: 0, duration: 0.25, ease: 'power2.inOut' }, 44.9);
+    tl.to(LM.pupils, { x: 0, y: 0, duration: 0.15 }, F + 0.4);
+    tl.to(LM.eyeR, { scaleY: 0.1, duration: 0.08 }, F + 0.55);
+    tl.set(LM.eyeR, { autoAlpha: 0 }, F + 0.63);
+    tl.set(LM.happyR, { autoAlpha: 1 }, F + 0.63);
+    tl.to(LM.brows, { y: -1.6, duration: 0.15 }, F + 0.55);
+    at(F + 0.55, 'blink');
+    tl.set(LM.happyR, { autoAlpha: 0 }, F + 1.05);
+    tl.set(LM.eyeR, { autoAlpha: 1, scaleY: 1 }, F + 1.05);
+    tl.to(LM.brows, { y: 0, duration: 0.2 }, F + 1.05);
+    tl.to(LM.all, { rotation: -10, duration: 0.2, ease: 'power2.inOut' }, F + 0.7);
+    tl.to(LM.all, { rotation: 0, duration: 0.25, ease: 'power2.inOut' }, F + 0.9);
     const slot = slotDelta();
-    tl.to('#leoMain', { x: slot.dx, y: slot.dy, scale: 220 / 360, duration: 0.65, ease: 'power3.inOut' }, 45.2);
-    tl.to(LM.shadow, { autoAlpha: 0, duration: 0.3 }, 45.2);
-    at(45.2, 'swoosh');
-    tl.to(LM.bg, { scale: 1, duration: 0.45, ease: 'back.out(1.5)' }, 45.45);
-    tl.to(LM.eyes, { scaleY: 0.1, duration: 0.12 }, 45.7);
-    tl.to([LM.eyes, LM.smile, LM.shine, LM.arm, ...LM.brows, ...LM.deco], { autoAlpha: 0, duration: 0.2 }, 45.82);
-    tl.to(LM.logo, { autoAlpha: 1, duration: 0.2 }, 45.82);
-    tl.to(LM.body, { autoAlpha: 0, duration: 0.2 }, 45.82);
-    tl.to(LM.all, { scale: 1.08, duration: 0.12, ease: 'power2.out' }, 45.82);
-    tl.to(LM.all, { scale: 1, duration: 0.35, ease: 'back.out(2)' }, 45.94);
-    punch(45.85, 1.03);
-    tl.to('#wm', { clipPath: 'inset(0% 0% 0% 0%)', x: 0, duration: 0.6, ease: 'power3.out' }, 45.85);
-    at(45.85, 'chord');
+    tl.to('#leoMain', { x: slot.dx, y: slot.dy, scale: 220 / 360, duration: 0.65, ease: 'power3.inOut' }, F + 1.2);
+    tl.to(LM.shadow, { autoAlpha: 0, duration: 0.3 }, F + 1.2);
+    at(F + 1.2, 'swoosh');
+    tl.to(LM.bg, { scale: 1, duration: 0.45, ease: 'back.out(1.5)' }, F + 1.45);
+    tl.to(LM.eyes, { scaleY: 0.1, duration: 0.12 }, F + 1.7);
+    tl.to([LM.eyes, LM.smile, LM.shine, LM.arm, ...LM.brows, ...LM.deco], { autoAlpha: 0, duration: 0.2 }, F + 1.82);
+    tl.to(LM.logo, { autoAlpha: 1, duration: 0.2 }, F + 1.82);
+    tl.to(LM.body, { autoAlpha: 0, duration: 0.2 }, F + 1.82);
+    tl.to(LM.all, { scale: 1.08, duration: 0.12, ease: 'power2.out' }, F + 1.82);
+    tl.to(LM.all, { scale: 1, duration: 0.35, ease: 'back.out(2)' }, F + 1.94);
+    punch(F + 1.85, 1.03);
+    tl.to('#wm', { clipPath: 'inset(0% 0% 0% 0%)', x: 0, duration: 0.6, ease: 'power3.out' }, F + 1.85);
+    at(F + 1.85, 'chord');
     // La promesa
-    tl.to('#promise .w', { autoAlpha: 1, y: 0, duration: 0.42, stagger: 0.07, ease: 'back.out(1.8)' }, 46.35);
-    tl.to('#tag span', { autoAlpha: 1, y: 0, duration: 0.3, stagger: 0.18, ease: 'back.out(2)' }, 46.95);
-    at(46.95, 'pop'); at(47.13, 'pop'); at(47.31, 'pop');
-    tl.to('#cta', { autoAlpha: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 47.55);
-    tl.to('#qrCard', { autoAlpha: 1, scale: 1, duration: 0.45, ease: 'back.out(1.8)' }, 47.85);
-    push(44.1, 51, 1.02);
+    tl.to('#promise .w', { autoAlpha: 1, y: 0, duration: 0.42, stagger: 0.07, ease: 'back.out(1.8)' }, F + 2.35);
+    tl.to('#tag span', { autoAlpha: 1, y: 0, duration: 0.3, stagger: 0.18, ease: 'back.out(2)' }, F + 2.95);
+    at(F + 2.95, 'pop'); at(F + 3.13, 'pop'); at(F + 3.31, 'pop');
+    tl.to('#cta', { autoAlpha: 1, y: 0, duration: 0.45, ease: 'power3.out' }, F + 3.55);
+    tl.to('#qrCard', { autoAlpha: 1, scale: 1, duration: 0.45, ease: 'back.out(1.8)' }, F + 3.85);
+    push(F + 0.1, DUR, 1.02);
     tl.to({}, { duration: 0.01 }, DUR - 0.01);
   }
 
@@ -1564,29 +1690,56 @@ body.render .overlay { display: none; }
     const sk = sa ? `translate(${((rnd(frame, 99, 1) - 0.5) * 2 * sa).toFixed(1)}px, ${((rnd(frame, 99, 2) - 0.5) * 2 * sa).toFixed(1)}px)` : 'none';
     if (cache.get('shake') !== sk) { cache.set('shake', sk); shakeEl.style.transform = sk; }
     setText('#skBadge', String(12 + Math.floor(clamp01(t / 5) * 25)));
-    $('#sbar').classList.toggle('dark', t >= 29.45);
+    // El celular: oscuro con el pedido del cliente; claro desde la caja
+    $('#sbar').classList.toggle('dark', t >= 21.0);
 
-    // Carrito
-    if (t < 20.13) { setText('#cartN', '1'); setText('#cartTxt', 'producto'); setText('#cartTot', 'Q68'); }
-    else if (t < 20.78) { setText('#cartN', '2'); setText('#cartTxt', 'productos'); setText('#cartTot', 'Q96'); }
-    else { setText('#cartN', '3'); setText('#cartTxt', 'productos'); setText('#cartTot', 'Q124'); }
+    // Fuga 1: cuántos van llegando y cuáles ya salieron impresos
+    let llegados = 0;
+    for (let i = 0; i < 5; i++) if (t >= 12.45 + i * 0.5 + 0.7) llegados++;
+    setText('#liN', `${llegados} ${llegados === 1 ? 'nuevo' : 'nuevos'}`);
+    for (let i = 0; i < 5; i++) {
+      const ok = t >= 15.55 + i * 0.14;
+      setAttr(`#ro${i + 1} .ro-st`, 'data-st', ok ? 'ok' : 'nuevo');
+      setText(`#ro${i + 1} .ro-st`, ok ? 'Impresa' : 'Nuevo');
+    }
 
-    // Cocina
-    const add = Math.round(clamp01((t - 25.05) / (27.95 - 25.05)) * 395);
-    setText('#tN', mmss(5 + add)); setText('#tP1', mmss(250 + add)); setText('#tP2', mmss(362 + add));
-    const st = t < 26.2 ? 'nuevo' : t < 27.9 ? 'prep' : 'listo';
-    setAttr('#kNew', 'data-st', st);
-    setText('#kChip', st === 'nuevo' ? 'Nuevo' : st === 'prep' ? 'En preparación' : 'Listo');
-    setText('#cN', String(t >= 25.0 && t < 26.2 ? 1 : 0));
-    setText('#cP', String(t >= 26.2 && t < 27.4 ? 3 : 2));
-    setText('#cL', String(t >= 27.4 ? 2 : 1));
-    setText('#enCurso', `${t >= 25.0 && t < 27.4 ? 5 : 4} en curso`);
+    // Tu cliente ve su pedido
+    const paso = t < 18.6 ? 0 : t < 19.6 ? 1 : 2;
+    setText('#tkTitle', ['Recibido', 'En cocina', '¡Listo!'][paso]);
+    setText('#tkSub', ['Rincón 502 ya lo tiene', 'Lo están preparando', 'Pasa por él cuando quieras'][paso]);
+    ['#tkS1', '#tkS2', '#tkS3'].forEach((sel, i) => setAttr(sel, 'class', i < paso || paso === 2 ? 'done' : i === paso ? 'now' : ''));
 
-    // Control: lo vendido hoy
-    setText('#cBig', money(3422.8 * easeOut(clamp01((t - 29.9) / 1.5))));
+    // La caja
+    setText('#cjCont', money(1240 * easeOut(clamp01((t - 23.9) / 1.0))));
+    setText('#cjDif', t < 24.95 ? '—' : 'Q0.00');
+
+    // El inventario
+    setAttr('#ivQueso', 'data-bajo', t >= 28.94 ? '1' : '0');
+    setText('#ivQuesoQ', t >= 28.94 ? '2 kg' : '2.4 kg');
+
+    // Sin internet
+    const sinRed = t >= 32.45 && t < 34.3;
+    setAttr('#pcEstado', 'data-st', sinRed ? 'off' : 'on');
+    setText('#pcEstado', sinRed ? '● Sin internet · sigue en la PC' : t >= 34.3 ? '● En línea · todo subió' : '● En línea');
+    setAttr('#wifi', 'data-st', sinRed ? 'off' : 'on');
+    for (let i = 0; i < 3; i++) {
+      const sube = t >= 34.45 + i * 0.15;
+      setAttr(`#pcR${i + 1} .pc-up`, 'data-st', sube ? 'ok' : 'wait');
+      setText(`#pcR${i + 1} .pc-up span`, sube ? 'Subido' : 'En la PC');
+    }
+
+    // El domicilio
+    setText('#mpTot', t < 36.55 ? 'Q68' : 'Q83');
+    setText('#mpTxt', t < 37.05 ? 'Confirmar pedido' : t < 37.6 ? 'Buscando repartidor…' : 'Luis va en camino');
+    setText('#mpEta', t < 37.6 ? '' : `${Math.max(2, Math.round(15 - clamp01((t - 37.9) / 1.6) * 13))} min`);
 
     // Billetera
-    setText('#wLeft', t < 36.84 ? 'Te faltan 3 para tu malteada' : 'Te faltan 2 para tu malteada');
+    setText('#wLeft', t < 41.29 ? 'Te faltan 3 para tu malteada' : 'Te faltan 2 para tu malteada');
+
+    // La cuenta de hoy: baja con cada fuga tapada
+    setText('#mkTot', t < 16.2 ? 'Q295' : t < 25.6 ? 'Q210' : t < 30.6 ? 'Q90' : 'Q0');
+    setText('#mkLbl', t < 43.6 ? 'Se te van' : 'Hoy se te fue');
+    setAttr('#marcador', 'data-cero', t >= 43.6 ? '1' : '0');
   }
 
   /* ── Banda sonora: todo sintetizado, sin archivos ──────── */
@@ -1779,8 +1932,10 @@ body.render .overlay { display: none; }
   // Los cortes caen en el pulso de la música (cada 0.5 s desde el golpe de Leo).
   const CUTS = {
     full: null,
-    r30: { label: '30 s', segs: [[0, 7.6], [7.85, 10.95], [12.0, 15.0], [20.85, 23.35], [24.85, 28.75, 1.56], [29.5, 34.7, 1.3], [39.5, 43.4, 1.56], [44.0, 48.8]] },
-    s15: { label: '15 s', segs: [[0, 2.5], [5.35, 7.6, 1, 'corte'], [7.95, 10.95], [31.6, 34.6, 1.5], [44.0, 49.25]] },
+    // 30 s: gancho, Leo, las tres fugas, el domicilio, el Q0 y la firma
+    r30: { label: '30 s', segs: [[0, 7.6], [7.85, 10.95], [12.0, 16.9, 1.4], [21.0, 25.95, 1.4], [26.5, 31.05, 1.4], [35.5, 39.6, 1.6], [43.0, 46.6, 1.6], [47.0, 51.4]] },
+    // 15 s: gancho, Leo, las tres fugas tachándose de golpe, el Q0 y la firma
+    s15: { label: '15 s', segs: [[0, 2.5], [5.35, 7.6, 1, 'corte'], [7.95, 10.95], [15.95, 16.75], [25.35, 26.15], [30.35, 31.15], [43.4, 44.2], [47.0, 51.35, 1.1]] },
   };
   let cutName = 'full', master = null;
   const driver = () => master || tl;
@@ -1797,18 +1952,18 @@ body.render .overlay { display: none; }
     return null;
   }
   function planFor(name) {
-    if (!CUTS[name]) return { dur: DUR, events, drop: 8.45, calm: [39.5, 44.0], finalStart: 44.0, chord: 45.85, tensionEnd: 5.4 };
+    if (!CUTS[name]) return { dur: DUR, events, drop: 8.45, calm: [43.0, 47.0], finalStart: 47.0, chord: 48.85, tensionEnd: 5.4 };
     const segs = CUTS[name].segs;
     const evs = [];
     events.forEach(([t, n]) => { const m = mapTime(t, segs); if (m !== null) evs.push([m, n]); });
     let T = 0;
     segs.forEach(([a, b, sp = 1, kind], i) => { if (i > 0 && kind !== 'corte') evs.push([T - 0.12, 'swish']); T += (b - a) / sp; });
-    const calmA = mapTime(39.5, segs);
+    const calmA = mapTime(43.0, segs);
     return {
       dur: T, events: evs, drop: mapTime(8.45, segs), tensionEnd: mapTime(5.4, segs) ?? 5.4,
-      calm: calmA !== null ? [calmA, segEnd(39.5, segs)] : null,
-      finalStart: calmA !== null ? mapTime(44.0, segs) : null,
-      chord: mapTime(45.85, segs),
+      calm: calmA !== null ? [calmA, segEnd(43.0, segs)] : null,
+      finalStart: calmA !== null ? mapTime(47.0, segs) : null,
+      chord: mapTime(48.85, segs),
     };
   }
   function buildCut(name) {
@@ -1880,7 +2035,7 @@ body.render .overlay { display: none; }
 
   /* ── Reproductor ───────────────────────────────────────── */
   const scrub = $('#scrub'), timeEl = $('#time'), pp = $('#pp'), overlay = $('#overlay');
-  const chapters = [[0, 'El gancho'], [8, 'Leo llega'], [12, 'Escanea'], [17.5, 'Pide'], [23.5, 'Cocina'], [29.5, 'Control'], [35.5, 'Vuelven'], [39.5, 'Tu noche'], [44, 'Firma']];
+  const chapters = [[0, 'El gancho'], [8, 'Leo llega'], [12, 'Pedidos'], [17.5, 'En vivo'], [21, 'Caja'], [26.5, 'Inventario'], [32, 'Sin internet'], [35.5, 'Domicilio'], [40, 'Vuelven'], [43, 'Tu noche'], [47, 'Firma']];
   $('#chapters').innerHTML = chapters.map(([t, l]) => `<button type="button" data-t="${t}">${l}</button>`).join('');
   const chBtns = $$('#chapters button');
   const fmtT = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -1957,7 +2112,7 @@ body.render .overlay { display: none; }
     driver().seek(t0); render(tl.time()); updateUI(t0);
     started = false; overlay.hidden = false;
     $('#ovTitle').textContent = cutName === 'full' ? 'Ver la intro' : `Ver la versión de ${CUTS[cutName].label}`;
-    $('#ovSub').textContent = { full: '51 segundos · mejor con sonido', r30: '30 segundos · Reels y TikTok', s15: '15 segundos · estado de WhatsApp' }[cutName];
+    $('#ovSub').textContent = { full: '54 segundos · mejor con sonido', r30: '30 segundos · Reels y TikTok', s15: '15 segundos · estado de WhatsApp' }[cutName];
     if (soundOn) prepareSound().then(() => { $('#sndTxt').textContent = 'Sonido encendido'; });
   }
   $$('#vers button').forEach((b) => b.addEventListener('click', () => setCut(b.dataset.cut)));
