@@ -121,9 +121,14 @@ body.render .overlay { display: none; }
 .stage.v .cap-hand { font-size: 70px; max-width: 900px; }
 #cap1 { left: 110px; top: 96px; }
 .stage.v #cap1 { left: 80px; top: 96px; }
-#cap2 { left: 110px; top: 836px; background: #F4E9A8; padding: 18px 34px 22px; box-shadow: 0 10px 24px rgba(60, 40, 20, 0.25); font-size: 64px; }
-#cap2 small { display: block; font-family: var(--f-hand); font-weight: 700; font-size: 46px; color: #B2321F; margin-top: 6px; }
-.stage.v #cap2 { left: 60px; top: 1600px; font-size: 60px; }
+#cap2 { left: 90px; top: 380px; width: 820px; background: #F4E9A8; padding: 22px 38px 26px; box-shadow: 0 16px 34px rgba(60, 40, 20, 0.3); }
+.stage.v #cap2 { left: 60px; top: 400px; width: 960px; }
+#cap2 .t-ej { font: 700 32px var(--f-hand); color: #8A6A2A; margin-bottom: 6px; }
+#cap2 .tr { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; font: 600 46px/1.2 var(--f-hand); color: var(--tinta); border-bottom: 2px dashed rgba(43, 38, 34, 0.25); }
+#cap2 .tr b { font: 400 44px var(--f-marker); color: #B2321F; }
+#cap2 .tr.tot { border-bottom: 0; border-top: 4px solid var(--tinta); margin-top: 8px; padding-top: 8px; font: 400 50px var(--f-marker); }
+#cap2 .tr.tot b { font-size: 64px; }
+#cap2 small { display: block; font: 700 46px var(--f-hand); color: #B2321F; margin-top: 2px; }
 
 .ticket { background: var(--papel); color: var(--tinta); font-family: var(--f-hand); font-size: 36px; line-height: 1.08; padding: 22px 24px 34px; display: flex; flex-direction: column;
   clip-path: polygon(0 0, 100% 0, 100% 94%, 93% 100%, 86% 95%, 79% 100%, 72% 95%, 65% 100%, 58% 95%, 51% 100%, 44% 95%, 37% 100%, 30% 95%, 23% 100%, 16% 95%, 9% 100%, 0 95%);
@@ -325,6 +330,28 @@ body.render .overlay { display: none; }
 .wmini small { display: block; font: 500 13px var(--f-ui); color: #7A736B; margin-top: 3px; }
 .wmini .r { margin-left: auto; font: 700 14px var(--f-ui); color: #1C1C1E; background: #F2EADC; padding: 7px 11px; border-radius: 12px; }
 
+/* Control del dueño, en el celular */
+#scrControl { background: #F4F4F6; padding: 62px 14px 0; }
+.c-head small { font: 600 14px var(--f-ui); color: #6E6A66; }
+#cBig { font: 700 40px/1.05 var(--f-display); letter-spacing: -0.03em; color: #17161A; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.c-chip { display: inline-flex; margin-top: 8px; font: 700 13px var(--f-ui); color: #1F7A50; background: #E3F4EA; padding: 5px 10px; border-radius: 10px; }
+.c-list { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.c-card { display: flex; align-items: center; gap: 11px; background: #FFFFFF; border-radius: 16px; padding: 11px 11px; box-shadow: 0 2px 8px rgba(23, 22, 26, 0.06); }
+.c-card i { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; flex: none; }
+.c-card i svg { width: 20px; height: 20px; }
+.c-card i.ok { background: #E3F4EA; color: #1F7A50; }
+.c-card i.warn { background: #FFF1DD; color: #8A4B08; }
+.c-card i.alert { background: #FDE4E2; color: #A12A20; }
+.c-card i.gain { background: #F2EEE8; color: #17161A; }
+.c-card i.net { background: #E8EEF8; color: #2D4E86; }
+.c-card > div { flex: 1; min-width: 0; }
+.c-card b { display: block; font: 700 16px/1.2 var(--f-ui); color: #17161A; }
+.c-card small { display: block; font: 500 13px/1.3 var(--f-ui); color: #6E6A66; margin-top: 2px; }
+.c-card em { font-style: normal; font: 700 15px var(--f-ui); color: #17161A; }
+.c-card em.up { color: #1F7A50; }
+#cOk { position: absolute; left: 14px; right: 14px; bottom: 18px; height: 52px; border-radius: 16px; background: #23855A; color: #FFFFFF; display: flex; align-items: center; justify-content: center; gap: 8px; font: 700 17px var(--f-ui); box-shadow: 0 12px 26px rgba(35, 133, 90, 0.35); }
+#cOk svg { width: 20px; height: 20px; }
+
 /* Pantalla de cocina */
 #kds { left: 20px; top: 40px; width: 900px; z-index: 1; }
 .mon { width: 900px; height: 540px; border-radius: 22px; background: #0B0B0D; padding: 14px; box-shadow: 0 0 0 2px #2A2A2F, 0 40px 80px rgba(0, 0, 0, 0.5); }
@@ -366,23 +393,6 @@ body.render .overlay { display: none; }
 #paper b { display: block; text-align: center; font: 800 16px var(--f-display); letter-spacing: 0.02em; margin-bottom: 6px; }
 #paper hr { border: 0; border-top: 2px dashed #C9C2B8; margin: 8px 0; }
 
-/* Resumen del día */
-#dash { left: 40px; top: 170px; width: 860px; height: 720px; border-radius: 30px; background: #FFFFFF; color: #17161A; padding: 38px 42px; z-index: 1; box-shadow: 0 40px 90px rgba(0, 0, 0, 0.5); }
-.d-top { display: flex; align-items: center; gap: 12px; font: 600 24px var(--f-ui); }
-.d-top span { font: 600 15px var(--f-ui); color: #6E6A66; background: #F2EEE8; padding: 7px 12px; border-radius: 12px; }
-#dBig { font: 700 104px/1 var(--f-display); letter-spacing: -0.035em; margin-top: 22px; font-variant-numeric: tabular-nums; }
-#dChip { display: inline-flex; margin-top: 16px; font: 700 18px var(--f-ui); color: #1F7A50; background: #E3F4EA; padding: 9px 16px; border-radius: 14px; }
-.d-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 26px; }
-.d-stats div { background: #F7F4EF; border-radius: 18px; padding: 16px 18px; }
-.d-stats b { display: block; font: 700 32px/1.1 var(--f-display); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.d-stats small { font: 500 15px var(--f-ui); color: #6E6A66; }
-.d-chart { position: relative; height: 230px; margin-top: 30px; display: flex; align-items: flex-end; gap: 22px; padding-bottom: 28px; }
-.d-chart .bar { width: 44px; border-radius: 10px 10px 4px 4px; background: #ECE5DA; position: relative; transform-origin: 50% 100%; }
-.d-chart .bar.pk { background: linear-gradient(180deg, var(--mango), var(--brasa)); }
-.d-chart .bar u { position: absolute; left: 50%; bottom: -28px; transform: translateX(-50%); text-decoration: none; font: 500 13px var(--f-ui); color: #8A847D; white-space: nowrap; }
-#peak { position: absolute; left: 280px; top: -34px; font: 700 15px var(--f-ui); color: #17161A; background: #FFF1DD; padding: 7px 12px; border-radius: 12px; white-space: nowrap; }
-#badge { position: absolute; right: 250px; top: 34px; display: inline-flex; align-items: center; gap: 8px; font: 700 17px var(--f-ui); color: #FFFFFF; background: linear-gradient(120deg, var(--brasa), var(--mango)); padding: 10px 16px; border-radius: 16px; box-shadow: 0 10px 24px rgba(232, 83, 74, 0.35); }
-#badge svg { width: 20px; height: 20px; }
 #leoBox { width: 220px; height: 220px; z-index: 6; }
 #flyTk { width: 64px; height: 56px; z-index: 7; }
 #confetti { width: 0; height: 0; z-index: 8; }
@@ -395,10 +405,14 @@ body.render .overlay { display: none; }
 #iconSlot { width: 220px; height: 220px; flex: none; }
 #wm { font: 800 176px/1 var(--f-display); letter-spacing: -0.045em; color: var(--ink); }
 .stage.v #wm { font-size: 160px; }
-#tag { display: flex; gap: 34px; margin-top: 54px; font: 600 70px/1 var(--f-display); letter-spacing: -0.025em; }
-.stage.v #tag { font-size: 66px; gap: 26px; margin-top: 60px; }
+#promise { margin-top: 44px; font: 700 66px/1.08 var(--f-display); letter-spacing: -0.03em; color: var(--ink); text-align: center; max-width: 1500px; }
+.stage.v #promise { font-size: 60px; max-width: 900px; margin-top: 50px; }
+#promise em { font-style: normal; }
+#promise .w { display: inline-block; }
+#tag { display: flex; gap: 22px; margin-top: 22px; font: 600 38px/1 var(--f-display); letter-spacing: -0.02em; color: #CFC8BE; }
+.stage.v #tag { font-size: 36px; gap: 18px; margin-top: 24px; }
 #tag span b { color: var(--brasa); }
-#cta { margin-top: 46px; display: flex; flex-direction: column; align-items: center; gap: 10px; font: 500 32px var(--f-ui); color: #ABA39A; text-align: center; }
+#cta { margin-top: 36px; display: flex; flex-direction: column; align-items: center; gap: 10px; font: 500 32px var(--f-ui); color: #ABA39A; text-align: center; }
 #cta b { font: 700 46px/1.1 var(--f-display); letter-spacing: -0.02em; color: var(--ink); }
 .stage.v #cta b { font-size: 44px; max-width: 900px; }
 #qrCard { position: absolute; right: 120px; bottom: 110px; width: 196px; background: #FFFFFF; border-radius: 22px; padding: 16px 16px 12px; text-align: center; color: #1C1C1E; font: 700 17px var(--f-ui); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45); }
@@ -418,6 +432,8 @@ body.render .overlay { display: none; }
 .cs h2 .w, #cap3 .w { display: inline-block; }
 .w.g { background: linear-gradient(120deg, var(--brasa), var(--mango)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .cs em { font-style: normal; }
+#cs6 h2 { font-size: 72px; }
+.stage.v #cs6 h2 { font-size: 64px; }
 .cs .clock { display: flex; align-items: center; gap: 14px; font: 500 40px var(--f-mono); color: var(--mango); margin-bottom: 22px; }
 .cs .clock svg { width: 40px; height: 40px; }
 .cs .payoff { display: inline-flex; align-items: center; gap: 12px; margin-top: 22px; font: 600 32px/1.2 var(--f-ui); color: var(--ink); background: rgba(47, 158, 107, 0.16); border: 1px solid rgba(47, 158, 107, 0.45); padding: 12px 20px; border-radius: 18px; align-self: flex-start; max-width: 100%; }
@@ -485,7 +501,7 @@ body.render .overlay { display: none; }
       <!-- ═══ El antes: caos cuadro por cuadro ═══ -->
       <div class="layer" id="L1">
         <div class="grain"></div>
-        <div class="cap-hand" id="cap1">¿Cuántos pedidos se te <span class="hl">perdieron<i id="under"></i></span> hoy?</div>
+        <div class="cap-hand" id="cap1">¿Sabes cuánto dinero <span class="hl">se te fue<i id="under"></i></span> hoy?</div>
 
         <div class="it" id="tk2"><div class="sm boil"><div class="ticket"><b>Para llevar</b><span>3 tostadas ???</span><span>Tel 5?2?-18…</span><span>¿a qué hora?</span></div></div></div>
         <div class="it" id="tk3"><div class="sm boil"><div class="ticket"><b>Mesa 2</b><span>2 cafés</span><span>1 rellenito</span><span>¿ya pagó?</span></div></div></div>
@@ -501,7 +517,7 @@ body.render .overlay { display: none; }
           </div>
           <span class="sk-badge" id="skBadge">12</span>
         </div></div></div>
-        <div class="it" id="tk4"><div class="sm boil"><div class="ticket"><b>Domicilio</b><span>Zona 3, la casa verde (creo)</span><span>cobrar Q1??</span></div></div></div>
+        <div class="it" id="tk4"><div class="sm boil"><div class="ticket"><b>Cocina</b><span>¡¡se acabó el pollo!!</span><span>¿quién lo anotó?</span></div></div></div>
         <div class="it" id="tel"><div class="sm boil" data-ring="1">
           <svg viewBox="0 0 270 200" width="270" height="200" aria-hidden="true">
             <path d="M40 112 Q40 92 66 90 L204 90 Q230 92 230 112 L246 184 Q248 196 234 196 L36 196 Q22 196 24 184 Z" fill="#D8362A" stroke="#2B2622" stroke-width="7" stroke-linejoin="round"/>
@@ -519,7 +535,7 @@ body.render .overlay { display: none; }
         </div></div>
         <div class="it" id="tk1"><div class="sm boil"><div class="ticket"><span class="stain"></span><b>Mesa 4</b><span>2 pupusas revueltas</span><span><s>1 pepián</s> 2 pepián</span><span>1 horchata ¿grande?</span><em class="q">Q85</em></div></div></div>
         <div class="it" id="calc"><div class="sm boil"><div class="note-pad"><b>Caja de hoy</b>Q 1,240.00<br><s>Q 1,310.50</s><br>Q 1,2?? ??<br><span class="bad">no cuadra</span></div></div></div>
-        <div class="it" id="tk6"><div class="sm boil"><div class="ticket"><span class="big">?</span><span>¿de quién es esto?</span></div></div></div>
+        <div class="it" id="tk6"><div class="sm boil"><div class="ticket"><span class="big">?</span><span>¿quién anuló esto?</span></div></div></div>
 
       </div>
 
@@ -529,9 +545,9 @@ body.render .overlay { display: none; }
         <div class="cs" id="cs1"><div class="num grad">1</div><h2><em>Escanea.</em></h2><p>Sin descargar nada.</p></div>
         <div class="cs" id="cs2"><div class="num grad">2</div><h2>Pide desde la <em>mesa.</em></h2><p>Sin esperar al mesero.</p></div>
         <div class="cs" id="cs3"><div class="num grad">3</div><h2>La cocina lo ve <em>al instante.</em></h2><p>Clarito. Sin letra fea.</p><p class="payoff" id="payoff"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#2F9E6B"/><path d="M7 12.5l3.2 3.2L17 9" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Esta vez, la <b>Mesa 4</b> sí comió.</span></p></div>
-        <div class="cs" id="cs4"><div class="num grad">4</div><h2>La caja cuadra <em>sola.</em></h2><p>Tus números, sin hojas de cálculo.</p></div>
+        <div class="cs" id="cs4"><div class="num grad">4</div><h2>Todo, <em>bajo control.</em></h2><p>Desde tu celular, aunque no estés.</p></div>
         <div class="cs" id="cs5"><h2>Y tus clientes <em>vuelven.</em></h2><p>Sus puntos de todos sus restaurantes, en un solo lugar.</p></div>
-        <div class="cs" id="cs6"><div class="clock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>9:00 p. m.</div><h2>La caja cuadró. <em>Tú, ya en tu casa.</em></h2><p>Menos correr. Más vender.</p></div>
+        <div class="cs" id="cs6"><div class="clock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>9:00 p. m.</div><h2>La caja cuadró. El inventario, al día. <em>Tú, ya en tu casa.</em></h2><p>Menos correr. Más vender.</p></div>
 
         <div class="vbox" id="vbox">
           <!-- Rótulo de mesa con QR -->
@@ -602,6 +618,18 @@ body.render .overlay { display: none; }
               <div class="wmini w-anim"><i style="background:#B4561C">PL</i><div>Pupusería Lupita<small>Lo de siempre: 6 revueltas</small></div><span class="r">4/8</span></div>
             </div>
 
+            <div class="scr" id="scrControl">
+              <div class="c-head"><small>Hoy · La Ceiba</small><div id="cBig">Q0.00</div><span class="c-chip">+18 % que el martes pasado</span></div>
+              <div class="c-list">
+                <div class="c-card"><i class="ok"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></i><div><b>Caja del turno de Ana</b><small>Cuadró al centavo</small></div><em>Q2,140</em></div>
+                <div class="c-card"><i class="warn"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2.5h10v15l-2.5-1.5L10 17.5 7.5 16 5 17.5z"/><path d="M8 7.5l4 4M12 7.5l-4 4"/></svg></i><div><b>Anulación · Mesa 2</b><small>«Se fue el cliente» · autorizó Carlos con su PIN</small></div></div>
+                <div class="c-card"><i class="alert"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3l7 4v6l-7 4-7-4V7z"/><path d="M10 8v3.5M10 14v.2"/></svg></i><div><b>Quedan 2 kg de pollo</b><small>Alcanza para hoy; pide para mañana</small></div></div>
+                <div class="c-card"><i class="gain"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5V4a1 1 0 0 1 1-1h6.5L17 9.5 10.5 16z"/><circle cx="7" cy="7" r="1.3"/></svg></i><div><b>Pepián de pollo</b><small>Te cuesta Q18 · lo vendes en Q45</small></div><em class="up">+Q27</em></div>
+                <div class="c-card"><i class="net"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2.5 7.5a11 11 0 0 1 15 0M5 10.5a7.5 7.5 0 0 1 10 0M7.5 13.5a3.5 3.5 0 0 1 5 0"/><circle cx="10" cy="16" r=".9" fill="currentColor"/><path d="M3 3l14 14"/></svg></i><div><b>Se fue el internet</b><small>3 pedidos guardados y subidos solos</small></div></div>
+              </div>
+              <div id="cOk"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Todo en orden</div>
+            </div>
+
             <div id="ripple"></div>
             <div id="touch"></div>
           </div></div></div>
@@ -625,20 +653,6 @@ body.render .overlay { display: none; }
           <div id="paperClip"><div id="paper"><b>LA CEIBA</b>Mesa 4 · #132<br>13:05 · Comer aquí<hr>1  Pepián de pollo<br>2  Horchata<hr>Sin cebolla en el pepián</div></div>
           <div id="printer"><div class="pr-body"><span class="lbl">Comandas</span><span class="led"></span></div></div>
 
-          <!-- Resumen del día -->
-          <div id="dash">
-            <div class="d-top d-anim">Resumen de hoy <span>martes</span></div>
-            <div id="dBig" class="d-anim">Q0.00</div>
-            <div id="dChip">+18 % que el martes pasado</div>
-            <div class="d-stats">
-              <div class="d-anim"><b id="dPed">0</b><small>pedidos</small></div>
-              <div class="d-anim"><b>Q39.80</b><small>ticket promedio</small></div>
-              <div class="d-anim"><b>Pepián</b><small>plato estrella</small></div>
-            </div>
-            <div class="d-chart" id="chart"><span id="peak">Hora pico · 13 h</span></div>
-            <div id="badge"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.8l2.4 5 5.5.7-4 3.8 1 5.4L10 14.1l-4.9 2.6 1-5.4-4-3.8 5.5-.7z" fill="#fff"/></svg>Récord del mes</div>
-          </div>
-
           <!-- Tu noche: se cierra el restaurante -->
           <div id="doorScene">
             <div id="lampGlow"></div>
@@ -660,12 +674,20 @@ body.render .overlay { display: none; }
 
       <div id="final">
         <div class="lockup"><div id="iconSlot"></div><div id="wm">Leogin</div></div>
+        <div id="promise">Tu restaurante, <em>bajo control.</em></div>
         <div id="tag"><span>Pide<b>.</b></span><span>Cocina<b>.</b></span><span>Cobra<b>.</b></span></div>
         <div id="cta"><b>Te armamos tu menú hoy, gratis.</b><span>distleogin.com</span></div>
         <div id="qrCard"><div class="qr"></div>Escanéame</div>
       </div>
       </div>
-      <div class="cap-hand" id="cap2">…y el pedido de la <b>Mesa 4</b> se perdió.<small>Q85 que ya eran tuyos.</small></div>
+      <div class="cap-hand" id="cap2">
+        <div class="t-ej">La cuenta de hoy (ejemplo)</div>
+        <div class="tr" id="tr1"><span>Pedido perdido, Mesa 4</span><b>Q85</b></div>
+        <div class="tr" id="tr2"><span>La caja no cuadró</span><b>Q120</b></div>
+        <div class="tr" id="tr3"><span>Pollo que nadie anotó</span><b>Q90</b></div>
+        <div class="tr tot" id="trTot"><span>Hoy se te fueron</span><b>Q295</b></div>
+        <small id="trMes">Al mes, unos Q8,850.</small>
+      </div>
       </div></div></div></div>
       <div id="flash"></div>
     </div>
@@ -859,7 +881,7 @@ body.render .overlay { display: none; }
       closed: q('.leo-closed'), brows: qa('.leo-browL, .leo-browR'), arm: q('.leo-arm'),
       tray: q('.leo-tray'), ticket: q('.leo-ticket'), body: q('.leo-body'), logo: q('.leo-logo'),
       bg: q('.leo-bg'), shadow: q('.leo-shadow'), shine: q('.leo-shine'), deco: qa('.leo-bow, .leo-cheeks, .leo-feet'),
-      calm: q('.leo-mouthCalm'), zzz: q('.leo-zzz'),
+      calm: q('.leo-mouthCalm'), zzz: q('.leo-zzz'), lids: q('.leo-lids'), smirk: q('.leo-mouthSmirk'),
     };
   }
   $('#leoMain').innerHTML = leoV2({ tray: true, ticket: true });
@@ -916,11 +938,6 @@ body.render .overlay { display: none; }
     h += `<svg id="stamp" viewBox="0 0 76 96" aria-hidden="true"><rect x="27" y="0" width="22" height="34" rx="11" fill="#5A3A28"/><rect x="18" y="30" width="40" height="14" rx="5" fill="#3D2A1E"/><rect x="6" y="44" width="64" height="40" rx="10" fill="#E9A23B"/><rect x="10" y="80" width="56" height="10" rx="4" fill="#1F4D3A"/></svg>`;
     $('#stamps').innerHTML = h;
   })();
-  // Barras de ventas por hora (8 a 19 h)
-  (() => {
-    const hs = [14, 20, 32, 55, 80, 100, 86, 48, 36, 52, 66, 42];
-    $('#chart').insertAdjacentHTML('beforeend', hs.map((v, i) => `<span class="bar${i === 5 ? ' pk' : ''}" style="height:${Math.round(v * 1.9)}px">${i % 2 === 0 ? `<u>${8 + i} h</u>` : ''}</span>`).join(''));
-  })();
   // Confeti
   (() => {
     const cols = ['#E8534A', '#F5A030', '#2F9E6B', '#FBF6EE', '#F7C873'];
@@ -955,7 +972,7 @@ body.render .overlay { display: none; }
     };
     walk(root, false);
   }
-  $$('.cs h2, #cap3 .c2').forEach(splitWords);
+  $$('.cs h2, #cap3 .c2, #promise').forEach(splitWords);
 
   /* ── Estado inicial ────────────────────────────────────── */
   const V = () => fmt === 'v';
@@ -972,7 +989,8 @@ body.render .overlay { display: none; }
     gsap.set('.sk-msgs p:nth-child(-n+2)', { autoAlpha: 1, scale: 1 });
     gsap.set('#cap1', { autoAlpha: 1, scale: 1.16, transformOrigin: '0% 50%' });
     gsap.set('#under', { scaleX: 0, transformOrigin: '0% 50%' });
-    gsap.set(['#cap2', '#cap2 small'], { autoAlpha: 0 });
+    gsap.set(['#cap2', '#cap2 .tr', '#trMes'], { autoAlpha: 0 });
+    gsap.set('#trTot', { scale: 1.25, transformOrigin: '0% 50%' });
     gsap.set('#L2', { clipPath: `circle(0px at ${stageW() / 2}px ${stageH() / 2 - 80}px)` });
 
     [LM, LB].forEach((L) => {
@@ -987,7 +1005,7 @@ body.render .overlay { display: none; }
       gsap.set([L.body, L.shine], { autoAlpha: 1 });
       gsap.set(L.shadow, { autoAlpha: 0.35, scale: 1, transformOrigin: '50% 50%' });
       gsap.set(L.eyeR, { scaleY: 1, autoAlpha: 1, transformOrigin: '50% 50%' });
-      gsap.set([L.mouthO, L.closed, L.calm, L.zzz, ...L.happy], { autoAlpha: 0 });
+      gsap.set([L.mouthO, L.closed, L.calm, L.zzz, L.lids, L.smirk, ...L.happy], { autoAlpha: 0 });
       gsap.set(L.brows, { x: 0, y: 0, rotation: 0 });
       gsap.set(L.arm, { rotation: 0, svgOrigin: '24.5 50' });
       gsap.set(L.deco, { autoAlpha: 1 });
@@ -1050,12 +1068,9 @@ body.render .overlay { display: none; }
     gsap.set('#flyTk', { autoAlpha: 0, x: 0, y: 0, scale: 1, rotation: 0 });
     gsap.set('#payoff', { autoAlpha: 0, y: 20 });
 
-    gsap.set('#dash', { autoAlpha: 0, y: 90, scale: 0.97 });
-    gsap.set('.d-anim', { autoAlpha: 0, y: 22 });
-    gsap.set('.bar', { scaleY: 0 });
-    gsap.set('#peak', { autoAlpha: 0, y: 12 });
-    gsap.set('#dChip', { autoAlpha: 0, scale: 0.8 });
-    gsap.set('#badge', { autoAlpha: 0, scale: 0.5 });
+    gsap.set('.c-head', { autoAlpha: 0, y: 16 });
+    gsap.set('.c-card', { autoAlpha: 0, x: 60 });
+    gsap.set('#cOk', { autoAlpha: 0, y: 24, scale: 0.9 });
     gsap.set('#confetti i', { autoAlpha: 0, x: 0, y: 0, rotation: 0 });
 
     gsap.set('#doorScene', { autoAlpha: 0, y: 40 });
@@ -1065,6 +1080,7 @@ body.render .overlay { display: none; }
     gsap.set('#dusk', { autoAlpha: 0 });
 
     gsap.set('#wm', { clipPath: 'inset(0% 100% 0% 0%)', x: -24 });
+    gsap.set('#promise .w', { autoAlpha: 0, y: 50 });
     gsap.set('#tag span', { autoAlpha: 0, y: 26 });
     gsap.set('#cta', { autoAlpha: 0, y: 18 });
     gsap.set('#qrCard', { autoAlpha: 0, scale: 0.85 });
@@ -1186,9 +1202,13 @@ body.render .overlay { display: none; }
     at(5.65, 'heart'); at(5.95, 'heart');
     tl.to('#tk1', { y: v ? 1250 : 900, rotation: 48, duration: 1.4, ease: 'steps(12)' }, 5.95);
     at(6.6, 'fall');
-    tl.to('#cap2', { autoAlpha: 1, duration: 0.3, ease: 'steps(3)' }, 6.05);
-    at(6.1, 'sad');
-    tl.to('#cap2 small', { autoAlpha: 1, duration: 0.3, ease: 'steps(3)' }, 6.7);
+    // La cuenta: cada fuga suma, y el total pega
+    tl.to('#cap2', { autoAlpha: 1, duration: 0.24, ease: 'steps(3)' }, 5.75);
+    ['#tr1', '#tr2', '#tr3'].forEach((r, i) => { tl.to(r, { autoAlpha: 1, duration: 0.16, ease: 'steps(2)' }, 5.95 + i * 0.25); at(5.95 + i * 0.25, 'loss'); });
+    tl.to('#trTot', { autoAlpha: 1, scale: 1, duration: 0.24, ease: 'steps(3)' }, 6.75);
+    at(6.75, 'sad');
+    punch(6.75, 1.03);
+    tl.to('#trMes', { autoAlpha: 1, duration: 0.2, ease: 'steps(2)' }, 7.1);
     tl.to('#zoom', { scale: 1, duration: 0.3, ease: 'power3.inOut' }, 7.7);
 
     /* 3 · Llega Leo y todo se ordena (8–12 s) */
@@ -1367,54 +1387,62 @@ body.render .overlay { display: none; }
     hop(LB, '#leoBox', 10, 650, 10, 650, 28.3, 0.42, 34);
     tl.to(LB.arm, { rotation: 0, duration: 0.22 }, 28.95);
 
-    /* 7 · La caja cuadra sola (29.5–35.5 s) */
+    /* 7 · Todo, bajo control (29.5–35.5 s): lo que el dueño ve desde su celular */
     whip(29.5);
     tl.set(['#kds', '#printer', '#paperClip', '#leoBox', '#flyTk'], { autoAlpha: 0 }, 29.5);
     hideCap('#cs3', 29.5);
     showCap('#cs4', 29.55);
     push(29.6, 35.38);
-    tl.to('#dash', { autoAlpha: 1, y: 0, scale: 1, duration: 0.55, ease: 'power3.out' }, 29.55);
-    tl.to('.d-anim', { autoAlpha: 1, y: 0, duration: 0.4, stagger: 0.07, ease: 'power3.out' }, 29.8);
-    at(29.95, 'count');
-    tl.to('.bar', { scaleY: 1, duration: 0.6, stagger: 0.05, ease: 'power3.out' }, 30.3);
-    tl.to('#peak', { autoAlpha: 1, y: 0, duration: 0.3, ease: 'back.out(2)' }, 31.3);
-    tl.to('#dChip', { autoAlpha: 1, scale: 1, duration: 0.35, ease: 'back.out(2)' }, 31.6);
-    at(31.6, 'pop');
-    tl.set(LB.tray, { autoAlpha: 0 }, 31.7);
-    tl.set(LB.pupils, { x: 0, y: 0 }, 31.7);
-    tl.set('#leoBox', { x: 670, y: v ? -1100 : -480, autoAlpha: 1, scale: 1 }, 31.75);
-    tl.to('#leoBox', { y: -24, duration: 0.4, ease: 'power3.in' }, 31.8);
-    tl.to(LB.all, { scaleY: 0.7, scaleX: 1.18, duration: 0.08 }, 32.2);
-    tl.to(LB.all, { scaleY: 1, scaleX: 1, duration: 0.45, ease: 'elastic.out(1,.4)' }, 32.28);
-    at(32.2, 'thump');
-    // El récord: golpe, destello y confeti
-    tl.to('#badge', { autoAlpha: 1, scale: 1, duration: 0.45, ease: 'back.out(2.4)' }, 32.45);
-    at(32.45, 'celebrate');
-    punch(32.45);
-    flash(32.45, 0.16);
-    happy(LB, 32.5);
-    tl.to(LB.arm, { rotation: 125, duration: 0.2, ease: 'back.out(2)' }, 32.5);
-    tl.to(LB.brows, { y: -2.4, duration: 0.15 }, 32.5);
-    tl.to(LB.all, { keyframes: [{ y: -14, scaleY: 1.08, scaleX: 0.95, duration: 0.24, ease: 'power2.out' }, { y: 0, scaleY: 1, scaleX: 1, duration: 0.24, ease: 'power2.in' }] }, 32.55);
-    const ox = 40 + 860 - 250 - 110, oy = 170 + 34 + 22;
+    tl.set(['#scrCam', '#scrMenu', '#scrSent', '#scrWallet'], { autoAlpha: 0 }, 29.45);
+    tl.set('#scrControl', { autoAlpha: 1 }, 29.45);
+    tl.set('#phone', { x: 640, y: v ? -60 : 0, rotation: 10, scale: v ? 1.4 : 1.12, transformOrigin: '50% 0%', autoAlpha: 0 }, 29.45);
+    tl.to('#phone', { x: 0, rotation: 0, autoAlpha: 1, duration: 0.6, ease: 'power3.out' }, 29.55);
+    tl.to('.c-head', { autoAlpha: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 29.8);
+    at(29.9, 'count');
+    // Caja, anulaciones, inventario, ganancia y sin internet: una tarjeta tras otra
+    $$('.c-card').forEach((c, i) => {
+      const t = 30.3 + i * 0.7;
+      tl.to(c, { autoAlpha: 1, x: 0, duration: 0.4, ease: 'back.out(1.6)' }, t);
+      at(t, 'notif');
+    });
+    // Leo, orgulloso, junto al celular
+    tl.set(LB.tray, { autoAlpha: 0 }, 32.5);
+    tl.set(LB.pupils, { x: -1.2, y: 0 }, 32.5);
+    tl.set(LB.smile, { autoAlpha: 0 }, 32.5);
+    tl.set([LB.lids, LB.smirk], { autoAlpha: 1 }, 32.5);
+    tl.set('#leoBox', { x: v ? 740 : 715, y: 1300, autoAlpha: 1, scale: 1 }, 32.55);
+    tl.to('#leoBox', { y: v ? 640 : 600, duration: 0.5, ease: 'back.out(1.3)' }, 32.6);
+    // El pico: todo en orden
+    tl.to('#cOk', { autoAlpha: 1, y: 0, scale: 1, duration: 0.45, ease: 'back.out(2.2)' }, 33.9);
+    at(33.9, 'celebrate');
+    punch(33.9);
+    flash(33.9, 0.14);
+    tl.set([LB.lids, LB.smirk], { autoAlpha: 0 }, 33.85);
+    tl.set(LB.smile, { autoAlpha: 1 }, 33.85);
+    happy(LB, 33.85);
+    tl.to(LB.arm, { rotation: 125, duration: 0.2, ease: 'back.out(2)' }, 33.85);
+    tl.to(LB.brows, { y: -2.4, duration: 0.15 }, 33.85);
+    tl.to(LB.all, { keyframes: [{ y: -14, scaleY: 1.08, scaleX: 0.95, duration: 0.24, ease: 'power2.out' }, { y: 0, scaleY: 1, scaleX: 1, duration: 0.24, ease: 'power2.in' }] }, 33.95);
+    // El confeti sale de Leo, para no tapar las tarjetas
+    const ox = v ? 850 : 825, oy = v ? 690 : 650;
     $$('#confetti i').forEach((p, i) => {
       const a = rnd(i, 3, 7) * Math.PI * 2, sp = 140 + rnd(i, 5, 1) * 260;
-      const dx = Math.cos(a) * sp, up = 120 + rnd(i, 9, 2) * 200;
-      tl.set(p, { x: ox, y: oy, autoAlpha: 1, rotation: 0 }, 32.5);
-      tl.to(p, { x: ox + dx * 0.6, duration: 0.45, ease: 'power2.out' }, 32.5);
-      tl.to(p, { y: oy - up, rotation: rnd(i, 1, 1) * 360, duration: 0.45, ease: 'power2.out' }, 32.5);
-      tl.to(p, { x: ox + dx, y: oy - up + 420 + rnd(i, 2, 2) * 200, rotation: 720 * rnd(i, 4, 4), autoAlpha: 0, duration: 1.1, ease: 'power1.in' }, 32.95);
+      const dx = Math.cos(a) * sp, up = 160 + rnd(i, 9, 2) * 260;
+      tl.set(p, { x: ox, y: oy, autoAlpha: 1, rotation: 0 }, 33.95);
+      tl.to(p, { x: ox + dx * 0.6, duration: 0.45, ease: 'power2.out' }, 33.95);
+      tl.to(p, { y: oy - up, rotation: rnd(i, 1, 1) * 360, duration: 0.45, ease: 'power2.out' }, 33.95);
+      tl.to(p, { x: ox + dx, y: oy - up + 420 + rnd(i, 2, 2) * 200, rotation: 720 * rnd(i, 4, 4), autoAlpha: 0, duration: 1.1, ease: 'power1.in' }, 34.4);
     });
 
     /* 8 · Y tus clientes vuelven (35.5–39.5 s) */
     whip(35.5);
-    tl.set(['#dash', '#leoBox'], { autoAlpha: 0 }, 35.5);
+    tl.set('#leoBox', { autoAlpha: 0 }, 35.5);
     hideCap('#cs4', 35.5);
     showCap('#cs5', 35.55);
     push(35.6, 39.38);
-    tl.set(['#scrCam', '#scrMenu', '#scrSent'], { autoAlpha: 0 }, 35.45);
+    tl.set(['#scrCam', '#scrMenu', '#scrSent', '#scrControl'], { autoAlpha: 0 }, 35.45);
     tl.set('#scrWallet', { autoAlpha: 1 }, 35.45);
-    tl.set('#phone', { x: 640, y: 0, rotation: 10, autoAlpha: 0 }, 35.45);
+    tl.set('#phone', { x: 640, y: v ? -40 : 0, rotation: 10, scale: v ? 1.3 : 1, autoAlpha: 0 }, 35.45);
     tl.to('#phone', { x: 0, rotation: 0, autoAlpha: 1, duration: 0.6, ease: 'power3.out' }, 35.55);
     tl.to('.w-anim', { autoAlpha: 1, y: 0, duration: 0.4, stagger: 0.08, ease: 'power3.out' }, 35.9);
     tl.to('#stamp', { autoAlpha: 1, y: 0, duration: 0.3, ease: 'power2.in' }, 36.5);
@@ -1436,6 +1464,8 @@ body.render .overlay { display: none; }
     tl.set(LB.eyes, { autoAlpha: 1 }, 39.7);
     tl.set(LB.arm, { rotation: 0 }, 39.7);
     tl.set(LB.brows, { y: 0 }, 39.7);
+    tl.set([LB.lids, LB.smirk], { autoAlpha: 0 }, 39.7);
+    tl.set(LB.smile, { autoAlpha: 1 }, 39.7);
     tl.set('#leoBox', { x: 590, y: 1300, autoAlpha: 1, scale: 1 }, 39.75);
     tl.to('#leoBox', { y: 596, duration: 0.5, ease: 'back.out(1.3)' }, 39.8);
     tl.to(LB.pupils, { x: -1.4, y: 0, duration: 0.2 }, 40.3);
@@ -1464,35 +1494,37 @@ body.render .overlay { display: none; }
     tl.to('#leoMain', { y: 0, duration: 0.5, ease: 'back.out(1.25)' }, 44.05);
     at(44.05, 'whoosh');
     // Guiño a cámara
-    tl.to(LM.pupils, { x: 0, y: 0, duration: 0.15 }, 44.5);
-    tl.to(LM.eyeR, { scaleY: 0.1, duration: 0.08 }, 44.75);
-    tl.set(LM.eyeR, { autoAlpha: 0 }, 44.83);
-    tl.set(LM.happyR, { autoAlpha: 1 }, 44.83);
-    tl.to(LM.brows, { y: -1.6, duration: 0.15 }, 44.75);
-    at(44.75, 'blink');
-    tl.set(LM.happyR, { autoAlpha: 0 }, 45.3);
-    tl.set(LM.eyeR, { autoAlpha: 1, scaleY: 1 }, 45.3);
-    tl.to(LM.brows, { y: 0, duration: 0.2 }, 45.3);
-    tl.to(LM.all, { rotation: -10, duration: 0.22, ease: 'power2.inOut' }, 44.95);
-    tl.to(LM.all, { rotation: 0, duration: 0.28, ease: 'power2.inOut' }, 45.17);
+    tl.to(LM.pupils, { x: 0, y: 0, duration: 0.15 }, 44.4);
+    tl.to(LM.eyeR, { scaleY: 0.1, duration: 0.08 }, 44.55);
+    tl.set(LM.eyeR, { autoAlpha: 0 }, 44.63);
+    tl.set(LM.happyR, { autoAlpha: 1 }, 44.63);
+    tl.to(LM.brows, { y: -1.6, duration: 0.15 }, 44.55);
+    at(44.55, 'blink');
+    tl.set(LM.happyR, { autoAlpha: 0 }, 45.05);
+    tl.set(LM.eyeR, { autoAlpha: 1, scaleY: 1 }, 45.05);
+    tl.to(LM.brows, { y: 0, duration: 0.2 }, 45.05);
+    tl.to(LM.all, { rotation: -10, duration: 0.2, ease: 'power2.inOut' }, 44.7);
+    tl.to(LM.all, { rotation: 0, duration: 0.25, ease: 'power2.inOut' }, 44.9);
     const slot = slotDelta();
-    tl.to('#leoMain', { x: slot.dx, y: slot.dy, scale: 220 / 360, duration: 0.7, ease: 'power3.inOut' }, 45.6);
-    tl.to(LM.shadow, { autoAlpha: 0, duration: 0.3 }, 45.6);
-    at(45.6, 'swoosh');
-    tl.to(LM.bg, { scale: 1, duration: 0.5, ease: 'back.out(1.5)' }, 45.9);
-    tl.to(LM.eyes, { scaleY: 0.1, duration: 0.12 }, 46.2);
-    tl.to([LM.eyes, LM.smile, LM.shine, LM.arm, ...LM.brows, ...LM.deco], { autoAlpha: 0, duration: 0.2 }, 46.32);
-    tl.to(LM.logo, { autoAlpha: 1, duration: 0.2 }, 46.32);
-    tl.to(LM.body, { autoAlpha: 0, duration: 0.2 }, 46.32);
-    tl.to(LM.all, { scale: 1.08, duration: 0.12, ease: 'power2.out' }, 46.32);
-    tl.to(LM.all, { scale: 1, duration: 0.35, ease: 'back.out(2)' }, 46.44);
-    punch(46.35, 1.03);
-    tl.to('#wm', { clipPath: 'inset(0% 0% 0% 0%)', x: 0, duration: 0.7, ease: 'power3.out' }, 46.35);
-    at(46.35, 'chord');
-    tl.to('#tag span', { autoAlpha: 1, y: 0, duration: 0.4, stagger: 0.35, ease: 'back.out(2)' }, 46.95);
-    at(46.95, 'pop'); at(47.3, 'pop'); at(47.65, 'pop');
-    tl.to('#cta', { autoAlpha: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 48.2);
-    tl.to('#qrCard', { autoAlpha: 1, scale: 1, duration: 0.5, ease: 'back.out(1.8)' }, 48.5);
+    tl.to('#leoMain', { x: slot.dx, y: slot.dy, scale: 220 / 360, duration: 0.65, ease: 'power3.inOut' }, 45.2);
+    tl.to(LM.shadow, { autoAlpha: 0, duration: 0.3 }, 45.2);
+    at(45.2, 'swoosh');
+    tl.to(LM.bg, { scale: 1, duration: 0.45, ease: 'back.out(1.5)' }, 45.45);
+    tl.to(LM.eyes, { scaleY: 0.1, duration: 0.12 }, 45.7);
+    tl.to([LM.eyes, LM.smile, LM.shine, LM.arm, ...LM.brows, ...LM.deco], { autoAlpha: 0, duration: 0.2 }, 45.82);
+    tl.to(LM.logo, { autoAlpha: 1, duration: 0.2 }, 45.82);
+    tl.to(LM.body, { autoAlpha: 0, duration: 0.2 }, 45.82);
+    tl.to(LM.all, { scale: 1.08, duration: 0.12, ease: 'power2.out' }, 45.82);
+    tl.to(LM.all, { scale: 1, duration: 0.35, ease: 'back.out(2)' }, 45.94);
+    punch(45.85, 1.03);
+    tl.to('#wm', { clipPath: 'inset(0% 0% 0% 0%)', x: 0, duration: 0.6, ease: 'power3.out' }, 45.85);
+    at(45.85, 'chord');
+    // La promesa
+    tl.to('#promise .w', { autoAlpha: 1, y: 0, duration: 0.42, stagger: 0.07, ease: 'back.out(1.8)' }, 46.35);
+    tl.to('#tag span', { autoAlpha: 1, y: 0, duration: 0.3, stagger: 0.18, ease: 'back.out(2)' }, 46.95);
+    at(46.95, 'pop'); at(47.13, 'pop'); at(47.31, 'pop');
+    tl.to('#cta', { autoAlpha: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 47.55);
+    tl.to('#qrCard', { autoAlpha: 1, scale: 1, duration: 0.45, ease: 'back.out(1.8)' }, 47.85);
     push(44.1, 51, 1.02);
     tl.to({}, { duration: 0.01 }, DUR - 0.01);
   }
@@ -1556,9 +1588,8 @@ body.render .overlay { display: none; }
     setText('#cL', String(t >= 27.4 ? 2 : 1));
     setText('#enCurso', `${t >= 25.0 && t < 27.4 ? 5 : 4} en curso`);
 
-    // Resumen del día
-    setText('#dBig', money(3422.8 * easeOut(clamp01((t - 29.95) / 1.8))));
-    setText('#dPed', String(Math.round(86 * easeOut(clamp01((t - 30.1) / 1.6)))));
+    // Control: lo vendido hoy
+    setText('#cBig', money(3422.8 * easeOut(clamp01((t - 29.9) / 1.5))));
 
     // Billetera
     setText('#wLeft', t < 36.84 ? 'Te faltan 3 para tu postre' : 'Te faltan 2 para tu postre');
@@ -1636,6 +1667,8 @@ body.render .overlay { display: none; }
       blink: (t) => tone(sfxB, 900, t, 0.06, 'sine', 0.06, 1300),
       hola: (t) => { tone(sfxB, 660, t, 0.14, 'triangle', 0.07, 760); tone(sfxB, 880, t + 0.13, 0.2, 'triangle', 0.07, 990); },
       tap: (t) => noise(sfxB, t, 0.03, 0.12, 3200, null, 2),
+      loss: (t) => tone(sfxB, 520, t, 0.25, 'triangle', 0.08, 330),
+      notif: (t) => { tone(sfxB, 880, t, 0.12, 'sine', 0.09); tone(sfxB, 1320, t + 0.07, 0.18, 'sine', 0.08); },
       pop: (t) => tone(sfxB, 520, t, 0.1, 'sine', 0.15, 1180),
       catch: (t) => tone(sfxB, 660, t, 0.12, 'triangle', 0.11, 990),
       success: (t) => [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(sfxB, f, t + i * 0.06, 0.5, 'triangle', 0.09)),
@@ -1704,7 +1737,10 @@ body.render .overlay { display: none; }
       let i = 0;
       for (; from + (i + 1) * BAR <= to + 0.01; i++) playBar(from + i * BAR, i);
       const rest = to - (from + i * BAR);
-      if (rest > 0.3) trem(from + i * BAR, [79, 83], rest - 0.05, 0.11);
+      if (rest > 0.3) {
+        trem(from + i * BAR, [79, 83], rest - 0.05, 0.11);
+        for (let k = 0; k < rest - 0.1; k += 0.5) kick(from + i * BAR + k, 0.35);
+      }
     };
     // A · El ritmo de Leogin
     groove(plan.drop, (plan.calm ? plan.calm[0] : plan.finalStart ?? plan.chord) - 0.05);
@@ -1743,8 +1779,8 @@ body.render .overlay { display: none; }
   // Los cortes caen en el pulso de la música (cada 0.5 s desde el golpe de Leo).
   const CUTS = {
     full: null,
-    r30: { label: '30 s', segs: [[0, 7.2], [7.85, 10.95], [12.0, 15.0], [20.85, 23.35], [24.85, 28.75, 1.3], [29.5, 33.4, 1.3], [39.5, 43.4, 1.3], [44.0, 49.2]] },
-    s15: { label: '15 s', segs: [[0, 2.8], [5.35, 7.3, 1, 'corte'], [7.95, 10.95], [27.25, 29.35, 1.05], [44.0, 49.25]] },
+    r30: { label: '30 s', segs: [[0, 7.6], [7.85, 10.95], [12.0, 15.0], [20.85, 23.35], [24.85, 28.75, 1.56], [29.5, 34.7, 1.3], [39.5, 43.4, 1.56], [44.0, 48.8]] },
+    s15: { label: '15 s', segs: [[0, 2.5], [5.35, 7.6, 1, 'corte'], [7.95, 10.95], [31.6, 34.6, 1.5], [44.0, 49.25]] },
   };
   let cutName = 'full', master = null;
   const driver = () => master || tl;
@@ -1761,7 +1797,7 @@ body.render .overlay { display: none; }
     return null;
   }
   function planFor(name) {
-    if (!CUTS[name]) return { dur: DUR, events, drop: 8.45, calm: [39.5, 44.0], finalStart: 44.0, chord: 46.35, tensionEnd: 5.4 };
+    if (!CUTS[name]) return { dur: DUR, events, drop: 8.45, calm: [39.5, 44.0], finalStart: 44.0, chord: 45.85, tensionEnd: 5.4 };
     const segs = CUTS[name].segs;
     const evs = [];
     events.forEach(([t, n]) => { const m = mapTime(t, segs); if (m !== null) evs.push([m, n]); });
@@ -1772,7 +1808,7 @@ body.render .overlay { display: none; }
       dur: T, events: evs, drop: mapTime(8.45, segs), tensionEnd: mapTime(5.4, segs) ?? 5.4,
       calm: calmA !== null ? [calmA, segEnd(39.5, segs)] : null,
       finalStart: calmA !== null ? mapTime(44.0, segs) : null,
-      chord: mapTime(46.35, segs),
+      chord: mapTime(45.85, segs),
     };
   }
   function buildCut(name) {
@@ -1816,7 +1852,7 @@ body.render .overlay { display: none; }
 
   /* ── Reproductor ───────────────────────────────────────── */
   const scrub = $('#scrub'), timeEl = $('#time'), pp = $('#pp'), overlay = $('#overlay');
-  const chapters = [[0, 'El gancho'], [8, 'Leo llega'], [12, 'Escanea'], [17.5, 'Pide'], [23.5, 'Cocina'], [29.5, 'Caja'], [35.5, 'Vuelven'], [39.5, 'Tu noche'], [44, 'Firma']];
+  const chapters = [[0, 'El gancho'], [8, 'Leo llega'], [12, 'Escanea'], [17.5, 'Pide'], [23.5, 'Cocina'], [29.5, 'Control'], [35.5, 'Vuelven'], [39.5, 'Tu noche'], [44, 'Firma']];
   $('#chapters').innerHTML = chapters.map(([t, l]) => `<button type="button" data-t="${t}">${l}</button>`).join('');
   const chBtns = $$('#chapters button');
   const fmtT = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
