@@ -609,7 +609,7 @@ export default function Catalog({
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: vitrina ? 0 : nav === 'acordeon' ? 8 : width === 'revista' ? 44 : width === 'ancho' ? 34 : 26, marginTop: groupByCategory && !vitrina ? 16 : 0 }}>
-          {groups.map((g) => {
+          {groups.map((g, gi) => {
             const headed = groupByCategory && g.cat !== null;
             const collapsed = nav === 'acordeon' && openCatId !== g.key;
             return (
@@ -641,7 +641,9 @@ export default function Catalog({
                     {g.locked && g.cat && (
                       <LockedNote cat={g.cat} timezone={timezone} now={now} localize={localize} />
                     )}
-                    <Items {...itemsProps} items={g.items} locked={g.locked} />
+                    {/* La primera sección ya se ve al abrir: entra con el reloj. En
+                        el acordeón, la que se abre también (está a la vista). */}
+                    <Items {...itemsProps} items={g.items} locked={g.locked} primera={gi === 0 || nav === 'acordeon'} />
                   </>
                 )}
               </section>
@@ -709,9 +711,14 @@ interface ItemsProps {
   onOpen: (p: ProdItem) => void;
   /** Posición de cada pieza en la edición (modo lanzamiento). */
   edition: { pos: Map<string, number>; total: number } | null;
+  /** ¿Es la sección que ya se ve al abrir? Ver `fade`. */
+  primera?: boolean;
 }
 
-function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled, qtyOf, onAdd, onOpen, edition }: ItemsProps) {
+/** Cuántas piezas de la primera sección entran con el reloj al abrir. */
+const ENTRAN_CON_RELOJ = 6;
+
+function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled, qtyOf, onAdd, onOpen, edition, primera = false }: ItemsProps) {
   const config = useThemeConfig();
   const anim = config.animations;
 
@@ -743,10 +750,17 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
     ? `repeat(auto-fill, minmax(${LAYOUT_MIN_COL[width]}px, 1fr))`
     : undefined;
 
-  const fade = (i: number) => ({
-    className: anim ? 'anim-fade-up' : '',
-    style: { animationDelay: anim ? `${Math.min(i, 8) * 35}ms` : undefined },
-  });
+  /* Cómo entra cada pieza (docs/planes/PLAN_EXPERIENCIA_VIVA_2026-10-26.md §5).
+     Las primeras de la sección que ya se ve al abrir entran con el reloj,
+     escalonadas. Las demás entran AL DESLIZAR, cada estructura a su manera
+     ([data-mfx] en globals.css): así bajar por la carta también se siente.
+     `col` escalona las que entran a la vez en la misma fila. Donde el
+     navegador no anima con el deslizar, simplemente están. */
+  const fade = (i: number, col = i % 2): { className: string; style: React.CSSProperties; 'data-mfx'?: string } => {
+    if (!anim) return { className: '', style: {} };
+    if (primera && i < ENTRAN_CON_RELOJ) return { className: 'anim-fade-up', style: { animationDelay: `${i * 35}ms` } };
+    return { className: '', style: { '--mfx-i': col } as React.CSSProperties, 'data-mfx': card };
+  };
 
   /**
    * Igual que fade(), más el marcado que deja al navegador SALTARSE el pintado
@@ -764,11 +778,10 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
    * altos estimados los cortes de columna saldrían donde no toca. Tampoco en
    * los destacados: son pocos, van arriba del todo y se ven desde el principio.
    */
-  const fadeLazy = (i: number, shape: 'tarjeta' | 'fila' | 'pieza') => ({
-    ...fade(i),
-    className: `${fade(i).className} menu-card-lazy`.trim(),
-    'data-shape': shape,
-  });
+  const fadeLazy = (i: number, shape: 'tarjeta' | 'fila' | 'pieza', col?: number) => {
+    const f = fade(i, col);
+    return { ...f, className: `${f.className} menu-card-lazy`.trim(), 'data-shape': shape };
+  };
 
   if (card === 'texto') {
     /* Carta impresa: sin una sola imagen. El contraste entre nombre y precio lo
@@ -813,9 +826,11 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
 
   if (card === 'carrusel') {
     const tileW = width === 'revista' ? 232 : width === 'ancho' ? 204 : 152;
+    const repisa = anim && !primera ? { 'data-mfx': 'carrusel' } : {};
     return (
       <div
         className="u-noscroll"
+        {...repisa}
         style={{
           display: 'flex', gap: 12, overflowX: 'auto', marginTop: 10,
           // El margen negativo deja que las piezas se deslicen hasta el borde
@@ -826,7 +841,7 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
         }}
       >
         {items.map((p, i) => (
-          <div key={p.id} {...fade(i)} style={{ ...fade(i).style, width: tileW, flexShrink: 0, scrollSnapAlign: 'start' }}>
+          <div key={p.id} className={primera && anim && i < ENTRAN_CON_RELOJ ? 'anim-fade-up' : undefined} style={{ animationDelay: primera && anim ? `${i * 35}ms` : undefined, width: tileW, flexShrink: 0, scrollSnapAlign: 'start' }}>
             <ProductTile {...common(p)} />
           </div>
         ))}
@@ -877,7 +892,7 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
           {columns.map((col, ci) => (
             <div key={ci} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {col.map(({ p, i }) => (
-                <div key={p.id} {...fadeLazy(i, 'tarjeta')}>
+                <div key={p.id} {...fadeLazy(i, 'tarjeta', ci)}>
                   <MosaicTile {...common(p)} />
                 </div>
               ))}
@@ -1089,6 +1104,18 @@ function CategoryCovers({
   const shown = categories.filter((c) => (counts.get(c.id) ?? 0) > 0);
   const cols = width === 'revista' ? 3 : width === 'ancho' ? 2 : 1;
 
+  /* La portada de cada sección es la foto de su primer platillo, como en las
+     apps de comida: con solo el ícono, el Kiosco elegía sección entre cuatro
+     dibujos iguales. Sin fotos (o con «solo patrón») queda el patrón. */
+  const foto = useMemo(() => {
+    const m = new Map<string, string>();
+    if (config.productArt === 'pattern') return m;
+    for (const p of products) {
+      if (p.category_id && p.image_url && !m.has(p.category_id)) m.set(p.category_id, p.image_url);
+    }
+    return m;
+  }, [products, config.productArt]);
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 'var(--m-sp-3)', marginTop: 'var(--m-sp-4)' }}>
       {shown.map((c, i) => {
@@ -1106,9 +1133,13 @@ function CategoryCovers({
             }}
           >
             <div className="m-tile-art" style={{ aspectRatio: cols === 1 ? '2.6' : '1.6' }}>
-              <div style={{ position: 'absolute', inset: 0, color: 'var(--u-text)' }}>
-                <BrandPattern icon={catIcon.get(c.id) ?? 'utensils'} seed={seedFromString(c.id)} iconScale={1.5} />
-              </div>
+              {foto.has(c.id) ? (
+                <AssetImage src={foto.get(c.id)!} alt="" fill style={{ objectFit: 'cover' }} sizes={cols === 1 ? '(max-width: 640px) 100vw, 640px' : '(max-width: 900px) 50vw, 420px'} />
+              ) : (
+                <div style={{ position: 'absolute', inset: 0, color: 'var(--u-text)' }}>
+                  <BrandPattern icon={catIcon.get(c.id) ?? 'utensils'} seed={seedFromString(c.id)} iconScale={1.5} />
+                </div>
+              )}
               <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0.18) 55%, rgba(0,0,0,0) 80%)' }} />
               <div style={{ position: 'absolute', left: 16, right: 16, bottom: 13, display: 'flex', alignItems: 'flex-end', gap: 10 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>

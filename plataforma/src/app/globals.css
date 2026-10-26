@@ -2557,6 +2557,61 @@ select.adm-field { cursor: pointer; }
   contain-intrinsic-height: auto 690px; /* foto 4:5 de una columna de móvil + nombre, precio y botón */
 }
 
+/* ── Menú vivo (docs/planes/PLAN_EXPERIENCIA_VIVA_2026-10-26.md §5) ──
+   Los platillos que no se ven al abrir entran AL DESLIZAR, cada estructura a
+   su manera (el atributo lo pone `fade` en components/menu/catalog.tsx solo si
+   el restaurante tiene las animaciones prendidas), y la portada se queda
+   atrás al bajar. Solo con soporte de animaciones atadas al deslizar y sin
+   «reducir movimiento»; sin eso, todo está quieto y completo. Solo transform
+   y opacity: es la ruta del dinero y tiene que ir fluida en un Android barato.
+   La marca es la del restaurante: aquí no hay nada de Leogin. */
+@keyframes m-sube    { from { opacity: 0; transform: translate3d(0, 30px, 0) scale(0.98); } }
+@keyframes m-tinta   { from { opacity: 0; transform: translate3d(0, 6px, 0); } }
+@keyframes m-aparece { from { opacity: 0; } }
+@keyframes m-asienta { from { opacity: 0; transform: scale(0.93); } }
+@keyframes m-desliza { from { opacity: 0; transform: translate3d(56px, 0, 0); } }
+@keyframes m-pieza   { from { opacity: 0.15; transform: translate3d(0, 64px, 0) scale(0.96); } }
+/* translate/scale sueltos y no `transform`: así no pisan lo que ya mueve cada
+   portada por dentro. */
+@keyframes m-portada-sale  { to { translate: 0 -6%; scale: 0.97; opacity: 0.3; } }
+@keyframes m-portada-fondo { to { translate: 0 18%; scale: 1.08; } }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-mfx] {
+      animation: m-sube linear both;
+      animation-timeline: view();
+      /* --mfx-i escalona las que entran a la vez en la misma fila. */
+      animation-range: entry calc(var(--mfx-i, 0) * 12%) entry calc(72% + var(--mfx-i, 0) * 12%);
+    }
+    /* Carta de autor y Pizarra: como tinta, sin moverse casi. */
+    [data-mfx="texto"]    { animation-name: m-tinta; }
+    /* Compacto: es la carta para ir rápido; solo aparece. */
+    [data-mfx="fila"]     { animation-name: m-aparece; animation-range: entry 0% entry 55%; }
+    /* Revista: cada pieza se asienta. */
+    [data-mfx="mosaico"]  { animation-name: m-asienta; }
+    /* Estantes: la repisa entera entra deslizándose. */
+    [data-mfx="carrusel"] { animation-name: m-desliza; animation-range: entry 0% entry 60%; }
+    /* Vitrina: una pieza por pantalla, que sube como un cartel. */
+    [data-mfx="pieza"]    { animation-name: m-pieza; animation-range: entry 0% cover 32%; }
+
+    /* La portada se va más rápido que su fondo: profundidad. */
+    [data-portada-viva] .menu-hero {
+      animation: m-portada-sale linear both; animation-timeline: view(); animation-range: exit 0% exit 100%;
+    }
+    [data-portada-viva] .menu-hero > [aria-hidden] {
+      animation: m-portada-fondo linear both; animation-timeline: view(); animation-range: exit 0% exit 100%;
+    }
+  }
+}
+
+/* El platillo que vuela al carrito al agregarlo (lib/volar-al-carrito.ts). */
+.m-vuelo {
+  position: fixed; z-index: 90; width: 46px; height: 46px; border-radius: 50%;
+  background: var(--brand-accent) center / cover no-repeat;
+  border: 2px solid #fff; box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: none; will-change: transform, opacity;
+}
+
 /* ============================================================
    SITIO PÚBLICO DE LEOGIN (distleogin.com) — TEMA CLARO
    ------------------------------------------------------------
