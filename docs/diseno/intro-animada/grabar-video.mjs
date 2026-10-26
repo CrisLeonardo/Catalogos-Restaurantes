@@ -1,4 +1,5 @@
-// Graba la intro (intro.html) como video WebM, cuadro por cuadro.
+// Graba la intro (intro.html) como video WebM, cuadro por cuadro, y su banda
+// sonora como WAV.
 //
 // Usa el Playwright y el ffmpeg que ya trae plataforma/ (no instala nada).
 // Cada cuadro se pinta con la línea de tiempo detenida en su segundo exacto,
@@ -7,12 +8,15 @@
 //   node docs/diseno/intro-animada/grabar-video.mjs                 → 16:9, 30 cps
 //   node docs/diseno/intro-animada/grabar-video.mjs --formato v     → 9:16 (WhatsApp, TikTok)
 //   node docs/diseno/intro-animada/grabar-video.mjs --fotos 5,20,36 → solo fotos PNG de esos segundos
+//   node docs/diseno/intro-animada/grabar-video.mjs --solo-sonido   → solo la banda sonora (WAV)
 //   opciones: --fps 30 --salida <archivo.webm> --carpeta <dir>
 //
-// El ffmpeg de Playwright solo escribe WebM (VP9). Para MP4 (WhatsApp) se
-// convierte después: Clipchamp (viene con Windows 11) abre el WebM y exporta MP4.
+// El ffmpeg de Playwright solo escribe video WebM (VP9), sin audio. Si hay un
+// ffmpeg completo en el PATH (con libx264 y aac), el script además arma un MP4
+// con sonido listo para WhatsApp. Si no, Clipchamp (viene con Windows 11) junta
+// el WebM y el WAV y exporta el MP4.
 import { createRequire } from 'node:module';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -28,8 +32,11 @@ const opt = (n, d) => { const i = args.indexOf(`--${n}`); return i >= 0 ? args[i
 const formato = opt('formato', 'h') === 'v' ? 'v' : 'h';
 const fps = Number(opt('fps', 30));
 const fotos = opt('fotos', null);
+const soloSonido = args.includes('--solo-sonido');
 const carpeta = path.resolve(opt('carpeta', path.join(os.tmpdir(), 'leogin-intro')));
-const salida = path.resolve(opt('salida', path.join(carpeta, `intro-leogin-${formato === 'v' ? '9x16' : '16x9'}.webm`)));
+const nombre = `intro-leogin-${formato === 'v' ? '9x16' : '16x9'}`;
+const salida = path.resolve(opt('salida', path.join(carpeta, `${nombre}.webm`)));
+const sonido = path.join(carpeta, 'intro-leogin-sonido.wav');
 fs.mkdirSync(carpeta, { recursive: true });
 
 function buscarFfmpeg() {
@@ -40,6 +47,12 @@ function buscarFfmpeg() {
     if (exe) return path.join(base, d, exe);
   }
   throw new Error('No encontré el ffmpeg de Playwright. Corre `npx playwright install ffmpeg` dentro de plataforma/.');
+}
+
+// ¿Hay un ffmpeg completo en el PATH, capaz de escribir MP4 con sonido?
+function ffmpegCompleto() {
+  const r = spawnSync('ffmpeg', ['-hide_banner', '-encoders'], { encoding: 'utf8' });
+  return r.status === 0 && /libx264/.test(r.stdout) && /\baac\b/.test(r.stdout) ? 'ffmpeg' : null;
 }
 
 // intro.html está escrito como contenido de Artifact (sin <!doctype>): se envuelve.
@@ -61,6 +74,14 @@ const cuadro = async (t) => {
   await pagina.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
 };
 
+async function grabarSonido() {
+  const b64 = await pagina.evaluate(() => window.__intro.soundtrackWav());
+  if (!b64) { console.log('Este navegador no pudo generar el sonido.'); return null; }
+  fs.writeFileSync(sonido, Buffer.from(b64, 'base64'));
+  console.log(`Sonido: ${sonido}`);
+  return sonido;
+}
+
 if (fotos) {
   for (const s of fotos.split(',').map(Number)) {
     await cuadro(s);
@@ -68,6 +89,8 @@ if (fotos) {
     await pagina.screenshot({ path: f });
     console.log(f);
   }
+} else if (soloSonido) {
+  await grabarSonido();
 } else {
   const ff = spawn(buscarFfmpeg(), [
     '-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', 'pipe:0',
@@ -89,6 +112,16 @@ if (fotos) {
   ff.stdin.end();
   const codigo = await fin;
   if (codigo !== 0) throw new Error(`ffmpeg terminó con ${codigo}`);
-  console.log(`Listo: ${salida}`);
+  console.log(`Video: ${salida}`);
+
+  const wav = await grabarSonido();
+  const completo = wav && ffmpegCompleto();
+  if (completo) {
+    const mp4 = path.join(carpeta, `${nombre}.mp4`);
+    const r = spawnSync(completo, ['-y', '-loglevel', 'error', '-i', salida, '-i', wav, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '20', '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', mp4], { stdio: 'inherit' });
+    console.log(r.status === 0 ? `MP4 con sonido: ${mp4}` : 'No se pudo armar el MP4.');
+  } else if (wav) {
+    console.log('Para el MP4 con sonido: abre el WebM y el WAV en Clipchamp (ambos desde el segundo 0) y exporta.');
+  }
 }
 await navegador.close();
