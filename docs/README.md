@@ -8,8 +8,8 @@
 | [`planes/`](planes/) | Un `PLAN_*` por funcionalidad grande, con sus fases y casillas. También listas de pendientes. | Durante la ejecución; al terminar se mueve a `archivo/` |
 | [`registros/`](registros/) | Documentos vivos de seguimiento: `IMPLEMENTACIONES`, `ERRORES`, `CHECKLIST_CORRECCIONES`, `MEJORAS_*`. | Siempre |
 | [`auditorias/`](auditorias/) | Auditorías vigentes (seguridad, velocidad, pulido). | Mientras tengan hallazgos abiertos |
-| [`negocio/`](negocio/) | Precios, ofertas, guion de demo, análisis de competencia, cotizador, seguimiento de prospectos. | Según el negocio |
-| [`diseno/`](diseno/) | Lienzos y maquetas de diseño (`.dc.html`) con sus scripts generadores. | Al rediseñar |
+| [`negocio/`](negocio/) | Precios, ofertas, guion de demo, análisis de competencia, cotizador, seguimiento de prospectos, estrategia de atracción. | Según el negocio |
+| [`diseno/`](diseno/) | Lienzos y maquetas de diseño (`.dc.html`) con sus scripts generadores; prototipos animados (`intro-animada/`). | Al rediseñar |
 | [`archivo/`](archivo/README.md) | Lo histórico: ya cumplió su propósito. Solo referencia. | Nunca |
 
 Documentos técnicos que viven pegados al código: [`../plataforma/docs/`](../plataforma/docs/) (offline, FEL, Google Auth, pagos, Leogin Desktop, estrategia instalable).
