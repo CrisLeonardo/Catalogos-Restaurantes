@@ -408,75 +408,88 @@ El diseño, las expresiones, las variantes y la voz están en [`docs/diseno/marc
 
 ## 7. La intro animada (el video)
 
-**Prototipo:** [`docs/diseno/intro-animada/intro.html`](../diseno/intro-animada/intro.html), publicado también como página privada en <https://claude.ai/artifact/2RKxg6ZbKPSn7ese84Xn8f> (para compartirla hay que darle acceso desde su menú «Compartir»). Tiene formato 16:9 y 9:16, sonido opcional y capítulos.
+**Prototipo:** [`docs/diseno/intro-animada/intro.html`](../diseno/intro-animada/intro.html), publicado también como página privada en <https://claude.ai/artifact/2RKxg6ZbKPSn7ese84Xn8f> (para compartirla hay que darle acceso desde su menú «Compartir»). Formato 16:9 y 9:16, capítulos y **banda sonora de marimba** que suena en la página al tocar «Sonido».
 
-**Grabarlo como video** (usa el Playwright y el ffmpeg que ya trae `plataforma/`; sale WebM en la carpeta temporal y al final imprime la ruta; con `--carpeta` se elige otra fuera del repo):
+**Grabarlo como video y sonido** (usa el Playwright y el ffmpeg que ya trae `plataforma/`; sale en la carpeta temporal y al final imprime las rutas; con `--carpeta` se elige otra fuera del repo):
 
 ```bash
 node docs/diseno/intro-animada/grabar-video.mjs --formato h
 node docs/diseno/intro-animada/grabar-video.mjs --formato v
 ```
 
-Para WhatsApp hace falta MP4: Clipchamp (viene con Windows 11) abre el WebM, permite agregar música o voz y exporta MP4.
+Cada corrida deja el video WebM (sin audio) y la banda sonora `intro-leogin-sonido.wav`, que empieza en el mismo segundo. El ffmpeg de Playwright no maneja audio. Si hay un `ffmpeg` completo en el PATH, el script arma además el **MP4 con sonido** para WhatsApp. Si no, en Clipchamp (viene con Windows 11) se ponen el WebM y el WAV en el segundo 0 y se exporta el MP4.
 
 ### Concepto: «Del caos al orden»
 Dos idiomas visuales: el antes cuadro por cuadro, como papel recortado, y el después fluido. No hace falta voz para entenderlo.
 
-### Guion (≈ 60 s)
+### Guion actual (51 s, versión del 2026-10-26)
 
 | Tiempo | Imagen | Texto en pantalla |
 |---|---|---|
-| 0 – 8 s | Caos stop-motion: comandas de papel, chats que se amontonan, letra ilegible, teléfono sonando | «Así es un día normal…» |
-| 8 – 12 s | Todo se congela. Una comanda cae al suelo y el color se apaga | «…y un pedido se perdió.» |
-| 12 – 17 s | Aparece la «L». Abre los ojos: es Leo. Barre los papeles y todo se vuelve fluido | «Respira. Esto es Leogin.» |
-| 17 – 26 s | Un celular escanea el QR y se abre un menú precioso | «1 · Escanea. Sin descargar nada.» |
-| 26 – 34 s | Toques, el carrito salta, *Enviar*: Leo se lleva el pedido en su bandeja | «2 · Pide desde la mesa.» |
-| 34 – 42 s | La pantalla de cocina hace «ding», sale la comanda impresa y se marca *Listo* | «3 · La cocina lo ve al instante.» |
-| 42 – 50 s | El resumen del día: los números suben y una barra de récord | «4 · La caja cuadra sola.» |
-| 50 – 55 s | La billetera del comensal: los sellos se estampan | «Y tus clientes vuelven.» |
-| 55 – 62 s | Logo y firma | «Pide. Cocina. Cobra.» · Gratis para empezar · distleogin.com |
-
-**Cortes derivados:** 15 s para el estado de WhatsApp (escenas 1, 3 y 9), 30 s para Reels y TikTok, y la versión completa para la web y para el WhatsApp de seguimiento.
+| 0 – 5.4 s | Desde el primer cuadro: teléfono sonando, chat con mensajes, comandas que aparecen cuadro por cuadro, la cámara tiembla y se acerca | «¿Cuántos pedidos se te **perdieron** hoy?» |
+| 5.4 – 8 s | Todo se congela y se apaga; la cámara se clava en la comanda de la Mesa 4, que se cae; latido | «…y el pedido de la **Mesa 4** se perdió. Q85 que ya eran tuyos.» |
+| 8 – 12 s | Leo cae, el golpe barre el papel y entra la luz cálida; despierta sorprendido, mira a cámara y saluda | «Respira. Esto es Leogin.» |
+| 12 – 17.5 s | Escanea el QR, se abre el menú | «1 · **Escanea.**» |
+| 17.5 – 23.5 s | Pide; golpe y destello al enviar; Leo atrapa la comanda | «2 · Pide desde la **mesa.**» |
+| 23.5 – 29.5 s | «Ding» en cocina, comanda impresa, *Listo* | «3 · La cocina lo ve **al instante.**» + «Esta vez, la **Mesa 4** sí comió.» |
+| 29.5 – 35.5 s | Los números suben; récord con golpe, destello y confeti | «4 · La caja cuadra **sola.**» |
+| 35.5 – 39.5 s | Billetera: el sello se estampa | «Y tus clientes **vuelven.**» |
+| 39.5 – 44 s | Leo voltea el letrero a CERRADO, apaga la luz, se despide y se duerme | «9:00 p. m. La caja cuadró. **Tú, ya en tu casa.**» |
+| 44 – 51 s | Leo guiña y se vuelve el logo | «Pide. Cocina. Cobra.» · «Te armamos tu menú hoy, gratis.» · QR |
 
 **Formatos:** horizontal 16:9 (web) y vertical 9:16 (WhatsApp, TikTok, Reels). El vertical es el más importante para este mercado.
 
 ### Voz (opcional)
-La mejor voz es la del dueño de Leogin, con su acento: la confianza local vale más que una voz de locutor. Guion de voz para la versión de 60 s:
+La mejor voz es la del dueño de Leogin, con su acento: la confianza local vale más que una voz de locutor. Guion de voz para la versión de 51 s (entra sobre la música):
 
-> «¿Papelitos, chats, gritos a la cocina? Y al final del día, un pedido que se perdió… Respira. Con Leogin, tu cliente escanea, pide desde la mesa, la cocina lo ve al instante y la caja cuadra sola. Pide, cocina, cobra. Empieza gratis hoy en distleogin.com.»
+> «¿Cuántos pedidos se te perdieron hoy? … Respira. Con Leogin, tu cliente escanea, pide desde la mesa, la cocina lo ve al instante y la caja cuadra sola. Y a las nueve, tú ya en tu casa. Te armamos tu menú hoy, gratis. Leogin: pide, cocina, cobra.»
 
 ### Qué se puede hacer desde aquí y qué no
-- **Sí:** animación en código (movimiento de marca, personaje 2D, efecto stop-motion simulado, textura de papel, líneas que tiemblan), sonidos de interfaz sintetizados en la web, y grabarla como video (WebM ya; MP4 para WhatsApp con `ffmpeg` instalado).
+- **Sí:** animación en código (movimiento de marca, personaje 2D, efecto stop-motion simulado, cámara virtual, tipografía cinética), música y efectos sintetizados (la marimba también es código), y grabar todo como video y WAV.
 - **No:** grabar video real, voz humana o música con licencia, ni stop-motion con objetos físicos. Eso último sí se puede combinar: si alguien toma fotos cuadro por cuadro de comandas reales sobre una mesa, se montan con la animación.
-- **Música:** de una biblioteca libre (la de YouTube o la de CapCut), agregada en el editor.
 
-### ¿El video atrapa clientes? Análisis psicológico (2026-10-26)
+### ¿El video atrapa clientes? Primera evaluación (2026-10-26)
 
-**Veredicto honesto:** atrapa a quien ya lo está mirando, sobre todo a un dueño que vive ese caos. Para atrapar a quien va pasando en TikTok o en los estados de WhatsApp le falta un gancho más rápido y ser más corto.
+La primera versión (62 s) atrapaba a quien ya la estaba mirando, sobre todo a un dueño que vive ese caos, pero no a quien va pasando en redes.
 
-| # | Principio | Cómo está | Por qué |
+| # | Principio | Versión 1 | Versión 2 (51 s) |
 |---|---|---|---|
-| 1 | Gancho en los primeros 3 s | **Débil** | Arranca con papel casi vacío y un texto. En redes, la decisión de seguir viendo se toma en 1 a 3 segundos. |
-| 2 | «Ese soy yo» (identificación) | Fuerte | Papelitos, chats sin contestar, «¿dos o tres pupusas?»: el dueño se reconoce. |
-| 3 | Dolor concreto (aversión a la pérdida) | Fuerte | «Q85 que ya eran tuyos» pone la pérdida en quetzales. |
-| 4 | Alivio por contraste | Fuerte | Del cuadro por cuadro al movimiento fluido, del papel apagado a la luz cálida. El cuerpo siente el alivio antes de leerlo. |
-| 5 | Personaje con emoción | Fuerte con Leo v2 | Se sorprende, saluda, se alegra al atrapar la comanda, celebra y guiña. |
-| 6 | Claridad del «cómo» | Fuerte | Cuatro pasos numerados, un verbo cada uno. |
-| 7 | Duración y ritmo | **Mejorable** | 62 s está bien para la web y el seguimiento. En redes es largo, y del segundo 17 al 34 parece demo de producto, que es donde más gente se va. |
-| 8 | El dueño como protagonista | **Falta** | Se ve al sistema ganando, no al dueño. Falta el beneficio emocional: tiempo, tranquilidad, llegar temprano a casa. |
-| 9 | Prueba social | **Falta** | Todavía no hay restaurantes reales que mostrar. |
-| 10 | Llamado a la acción | Bueno | Gratis + QR real + dominio. Mejoraría con regalo e inmediatez. |
-| 11 | Sonido | Mejorable | En redes casi todo se ve sin sonido, y el texto grande ya lo resuelve. En el WhatsApp de seguimiento, una voz conocida sube mucho la confianza. |
-| 12 | Final memorable (pico-final) | Bueno | Leo guiña y se vuelve el logo: el último recuerdo es la marca con cara. |
+| 1 | Gancho en los primeros 3 s | Débil: papel casi vacío | **Arreglado:** pregunta que duele y caos desde el cuadro 0 |
+| 2 | «Ese soy yo» (identificación) | Fuerte | Fuerte |
+| 3 | Dolor concreto (aversión a la pérdida) | Fuerte | Más fuerte: la cámara se clava en la Mesa 4 y suena un latido |
+| 4 | Alivio por contraste | Fuerte | Más fuerte: la música entra justo cuando Leo aterriza |
+| 5 | Personaje con emoción | Fuerte con Leo v2 | Además mira a cámara y guiña |
+| 6 | Claridad del «cómo» | Fuerte | Fuerte, con la palabra clave de cada paso resaltada |
+| 7 | Duración y ritmo | Mejorable: 62 s, parte media lenta | **Mejor:** 51 s, un cambio visual cada 1 a 3 s, barridos entre pasos |
+| 8 | El dueño como protagonista | Faltaba | **Arreglado:** «Tú, ya en tu casa» |
+| 9 | Prueba social | Falta | Falta (no hay clientes reales todavía) |
+| 10 | Llamado a la acción | Bueno | **Mejor:** «Te armamos tu menú hoy, gratis» |
+| 11 | Sonido | Solo efectos sueltos | **Banda sonora completa de marimba** |
+| 12 | Final memorable | Bueno | Bueno, con guiño y golpe de cámara |
 
-**Propuestas para el dueño (no aplicadas todavía):**
+### Más dinámico y más atrapante: psicología y marketing (2026-10-26)
 
-- **V1 · Gancho nuevo de 3 s.** Abrir ya con el teléfono sonando, 37 mensajes y la pregunta en grande: *«¿Cuántos pedidos se te perdieron hoy?»*.
-- **V2 · Escena del dueño (4 s, antes de la firma).** *«9:00 p. m. La caja cuadró. Tú, ya en tu casa.»* Leo apaga la luz del restaurante y se despide. Es el beneficio emocional que falta.
-- **V3 · Llamado con regalo.** *«Te armamos tu menú hoy, gratis.»* (reciprocidad e inmediatez) en lugar de solo «Gratis para empezar».
-- **V4 · Cortes para redes.** 30 s (Reels, TikTok) y 15 s (estado de WhatsApp), con el mismo arranque.
-- **V5 · Voz y música.** La voz del dueño de Leogin, con su acento, y música libre, en Clipchamp.
-- **V6 · Prueba social.** En cuanto haya un restaurante real, 3 s con su nombre y su zona.
+El dueño preguntó si el video podía ser más dinámico o si ya estaba en su punto. **Sí se podía, pero con método:** «más rápido» a secas cansa y baja la confianza. Lo que se aplicó, principio por principio:
+
+1. **El gancho decide todo.** En redes, la gente decide en uno a tres segundos si sigue mirando. Un gancho que funciona combina movimiento desde el cuadro 0, texto grande y una pregunta que toca una pérdida propia. → *«¿Cuántos pedidos se te perdieron hoy?»* con el teléfono ya sonando, y la palabra «perdieron» subrayada en rojo.
+2. **Romper el patrón cada pocos segundos.** El cerebro deja de atender lo que no cambia (habituación) y vuelve a atender ante cualquier novedad (reflejo de orientación). → Cámara virtual: temblor de cámara en mano en el caos, acercamientos lentos en cada escena, golpes de cámara en los momentos pico y barridos con desenfoque entre pasos. Hay un cambio visible cada 1 a 3 segundos.
+3. **Dejar una pregunta abierta** (vacío de curiosidad, Loewenstein, 1994; efecto Zeigarnik). Lo que queda sin cerrar mantiene la mirada hasta que se cierra. → La Mesa 4: su pedido se pierde en el segundo 6 y se cierra en el 28 con *«Esta vez, la Mesa 4 sí comió.»*
+4. **Ritmo musical.** Los cortes que caen al compás se sienten más fluidos y con más energía, y la música sube la activación y el recuerdo. → Banda sonora a 120 pulsos por minuto: el caos no tiene ritmo, solo zumbido y reloj; el ritmo entra en el golpe de Leo y los cambios de paso caen en el pulso.
+5. **Sonido con identidad.** La marimba es Guatemala en un segundo: lo familiar se siente cercano y confiable (exposición repetida e identidad cultural). Y el «ding» de dos notas queda como logo sonoro. → La música es de marimba, con trémolo como la marimba chapina.
+6. **Arco emocional: problema, agitación, solución y transformación.** El congelado con latido agita el dolor, Leo lo resuelve y «Tu noche» muestra la transformación que el dueño sí siente: tiempo y tranquilidad.
+7. **Mirada a cámara.** Unos ojos que nos miran capturan la atención más que cualquier otro estímulo. → Leo mira a cámara al presentarse y guiña al final.
+8. **Picos marcados** (regla del pico y el final). → Pedido enviado, «ding», récord y logo llevan golpe de cámara, destello y sonido. El final cierra con un regalo concreto.
+9. **Llamado con reciprocidad, inmediatez y concreción.** → *«Te armamos tu menú hoy, gratis.»*
+10. **Dinámico no es caótico** (fluidez de procesamiento). Lo que se entiende sin esfuerzo se siente más confiable. Por eso el caos se queda solo en el «antes»: el «después» tiene ritmo, pero cada pantalla dice una sola cosa. Para un dueño que va a confiarle su caja, el sistema tiene que verse en control.
+
+**¿Hasta dónde subir la intensidad?** Este es un buen punto para un público de dueños. Más cortes o más efectos harían que el «después» se sintiera tan agitado como el «antes», que es justo lo que se vende como resuelto.
+
+**Lo que queda pendiente:**
+
+- **V4 · Cortes para redes:** 30 s (Reels, TikTok) y 15 s (estado de WhatsApp), con el mismo gancho. En redes, menos duración casi siempre retiene más.
+- **V5 · Voz:** la del dueño de Leogin, sobre la música, en Clipchamp.
+- **V6 · Prueba social:** en cuanto haya un restaurante real, 3 s con su nombre y su zona.
+- **Medirlo:** subir dos versiones del gancho como estado de WhatsApp o anuncio y quedarse con la que retenga más a los 3 segundos.
 
 ---
 
@@ -514,6 +527,7 @@ Cada fase, cuando se apruebe, se vuelve un `PLAN_*.md` en `docs/planes/`.
 - [x] ¿Mascota Leo? Sí: al dueño le encantó la idea y pidió que se viera menos simple (2026-10-26). Hecho: Leo v2.
 - [ ] ¿Leo v2 con moño de mesero? (Recomendado frente a gorro de chef o sin accesorio.)
 - [ ] ¿Nombres de la paleta (Brasa, Mango, Carbón, Masa, Albahaca) y la nueva Terracota oscura?
-- [ ] ¿Qué mejoras del video se aplican (V1 a V6)? (Recomendadas primero: V1, V2 y V3.)
+- [x] Mejoras del video V1, V2 y V3: aplicadas el 2026-10-26, junto con cámara virtual, tipografía cinética, la historia de la Mesa 4 y banda sonora de marimba.
+- [ ] ¿Cortes de 30 y 15 s para redes (V4)? ¿Voz propia (V5)?
 - [ ] ¿Voz en el video: la propia o ninguna?
 - [ ] ¿Qué fase arranca primero? (Recomendada: A, porque no toca código y ayuda a vender esta semana.)
