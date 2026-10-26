@@ -558,6 +558,8 @@ El dueño preguntó si el video podía ser más dinámico o si ya estaba en su p
 
 Cada fase, cuando se apruebe, se vuelve un `PLAN_*.md` en `docs/planes/`.
 
+**2026-10-26:** el dueño pidió que navegar se sienta vivo en todo Leogin (web, menú y panel), que la gente descubra cuánto puede diseñar su menú y que Rincón 502 sea el único restaurante de ejemplo. Eso vive en [`PLAN_EXPERIENCIA_VIVA_2026-10-26.md`](../planes/PLAN_EXPERIENCIA_VIVA_2026-10-26.md).
+
 ---
 
 ## Decisiones pendientes del dueño
