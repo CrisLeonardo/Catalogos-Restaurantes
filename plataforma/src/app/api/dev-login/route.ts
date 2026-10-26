@@ -36,11 +36,13 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { createClient, createWalletClient } from '@/lib/supabase/server';
+import { adminUrl } from '@/lib/tenant';
+import { panelHref } from '@/lib/panel-links';
 
 export const runtime = 'nodejs';
 
 /** Correo por defecto: el dueño de prueba de GUIA_ENTORNO_LOCAL.md. */
-const POR_DEFECTO = process.env.DEV_LOGIN_EMAIL || 'dueno@azucarnegra.test';
+const POR_DEFECTO = process.env.DEV_LOGIN_EMAIL || 'dueno@rincon502.test';
 
 /** El Supabase configurado, ¿es el de esta máquina? */
 function supabaseEsLocal(): boolean {
@@ -81,6 +83,25 @@ async function cuentaExiste(
   return false;
 }
 
+/**
+ * El panel de la persona. Con el origen único vive en `/panel/<slug>`; un
+ * dueño del modelo nuevo (migración 113, como el de Rincón 502) no lleva
+ * restaurante en el perfil, así que `/admin` a secas no sabe de cuál es y lo
+ * mandaba al login. Es lo mismo que hace el login de verdad al entrar.
+ */
+async function panelDe(db: ReturnType<typeof createServiceClient>, userId: string): Promise<string | null> {
+  const { data: perfil } = await db.from('profiles').select('restaurant_id').eq('id', userId).maybeSingle();
+  let restaurantId: string | null = perfil?.restaurant_id ?? null;
+  if (!restaurantId) {
+    const { data: miembro } = await db
+      .from('restaurant_members').select('restaurant_id').eq('user_id', userId).limit(1).maybeSingle();
+    restaurantId = miembro?.restaurant_id ?? null;
+  }
+  if (!restaurantId) return null;
+  const { data: r } = await db.from('restaurants').select('slug').eq('id', restaurantId).maybeSingle();
+  return r?.slug ? adminUrl(r.slug) : null;
+}
+
 export async function GET(request: NextRequest) {
   if (process.env.DEV_LOGIN !== '1' || !supabaseEsLocal()) return NO_EXISTE();
 
@@ -96,7 +117,7 @@ export async function GET(request: NextRequest) {
   const cuenta = params.get('cuenta') === '1';
   const inicio = cuenta ? '/billetera' : '/admin';
   const rawNext = params.get('next') || inicio;
-  const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : inicio;
+  let next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : inicio;
 
   const db = createServiceClient();
 
@@ -116,11 +137,16 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = cuenta ? await createWalletClient() : await createClient();
-  const { error: otpErr } = await supabase.auth.verifyOtp({
+  const { data: sesion, error: otpErr } = await supabase.auth.verifyOtp({
     token_hash: data.properties.hashed_token,
     type: 'magiclink',
   });
   if (otpErr) return new NextResponse(`No se pudo abrir la sesión: ${otpErr.message}`, { status: 500 });
+
+  if (!cuenta && next.startsWith('/admin') && sesion.user) {
+    const base = await panelDe(db, sesion.user.id);
+    if (base) next = panelHref(base, next);
+  }
 
   console.warn(`[dev-login] sesión abierta como ${email} (solo desarrollo)`);
   return NextResponse.redirect(new URL(next, request.url));
