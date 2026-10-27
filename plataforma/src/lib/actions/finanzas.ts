@@ -35,6 +35,10 @@ import {
 import type { Aprobador } from '@/lib/void-approval';
 import { listarAprobadores } from '@/lib/auth/firma-encargado';
 import { authRestaurant, firmar, type CajaCtx as Ctx, type FirmaInput } from '@/lib/caja/acceso';
+import { getTuDia } from '@/lib/db/momentos';
+import type { RecordDelDia } from '@/lib/momentos';
+import { sendPushToRestaurant } from '@/lib/push';
+import { fmtMoney } from '@/lib/money';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
@@ -832,6 +836,9 @@ export interface CajaCloseResult {
   openedByName: string | null;
   /** Lo que quedó sin cobrar y pasa al turno siguiente. */
   pendingTotal: number;
+  /** Cómo va el día del turno (PLAN_MOMENTOS_PICO P5): lo vendido en TODO
+   *  el día, no solo en efectivo, y el récord si de verdad lo es. */
+  dia: { ventas: number; pedidos: number; record: RecordDelDia | null } | null;
 }
 
 /**
@@ -925,8 +932,28 @@ export async function closeCaja(
   revalidatePath('/admin/caja');
   revalidatePath('/admin/finanzas');
 
+  /* El final del día (estrategia §2.7, R3): cuánto se vendió y, si lo es,
+     el récord. Le llega al dueño como aviso aunque no esté en el local.
+     Nada de esto puede tumbar el cierre, que ya quedó escrito. */
+  let dia: CajaCloseResult['dia'] = null;
+  try {
+    const t = await getTuDia(input.restaurantId, ctx.tz, c.l.dia);
+    if (t) dia = { ventas: t.ventasHoy, pedidos: t.pedidosHoy, record: t.record };
+  } catch { /* sin resumen: el cierre sigue */ }
+  if (dia && dia.pedidos > 0) {
+    const cifra = `Vendiste ${fmtMoney(dia.ventas)} en ${dia.pedidos} ${dia.pedidos === 1 ? 'pedido' : 'pedidos'}`;
+    void sendPushToRestaurant(input.restaurantId, {
+      title: dia.record ? `🏆 ${dia.record.texto}` : 'Tu día, hasta este cierre',
+      body: `${cifra}. ${c.difference === 0 || Math.abs(c.difference) < 0.005 ? 'La caja cuadró.' : 'Revisa el cuadre de la caja.'}`,
+      tag: `resumen-${c.l.dia}`,
+      url: '/admin',
+      type: 'resumen_dia',
+    }).catch(() => { /* sin aviso */ });
+  }
+
   return {
     result: {
+      dia,
       id,
       date: c.l.dia,
       counted: c.counted,

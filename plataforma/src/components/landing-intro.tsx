@@ -8,10 +8,51 @@ import { useEffect, useRef, useState } from 'react';
  * La tarjeta muestra el gancho como imagen fija y la intro solo se carga al
  * tocar «play», dentro de una ventana: así no pesa en la primera carga de la
  * portada. En pantallas verticales se abre la versión 9:16, que llena el
- * teléfono. */
+ * teléfono.
+ *
+ * Encima de la imagen corre un bucle de 7.5 s sin sonido (el caos y la cuenta
+ * de lo que se fue, PLAN_MOMENTOS_PICO W3): movimiento desde el primer
+ * segundo. Se pide cuando la página ya cargó (o a los 2 s), no con «reducir
+ * movimiento» ni con ahorro de datos, y se pausa fuera de la pantalla. Si el
+ * navegador no lo sabe reproducir, se queda la imagen. */
 export function LandingIntro() {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [src, setSrc] = useState<string | null>(null);
+  const [enMovimiento, setEnMovimiento] = useState(false);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const ahorro = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches || ahorro) return;
+    let visible = true;
+    const io = new IntersectionObserver(([e]) => {
+      visible = e.isIntersecting;
+      if (!v.src) return;
+      if (visible) v.play().catch(() => {}); else v.pause();
+    });
+    io.observe(v);
+    const empezar = () => {
+      v.src = '/intro/bucle.webm';
+      if (visible) v.play().catch(() => {});
+    };
+    // Al terminar de cargar la página, o a los dos segundos si algo pesado
+    // (el iframe de la vitrina) la hace esperar: lo que pase primero.
+    let empezado = false;
+    const una = () => { if (!empezado) { empezado = true; empezar(); } };
+    const tope = setTimeout(una, 2000);
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const alCargar = () => { t = setTimeout(una, 400); };
+    if (document.readyState === 'complete') alCargar();
+    else window.addEventListener('load', alCargar, { once: true });
+    return () => {
+      io.disconnect();
+      clearTimeout(tope);
+      if (t) clearTimeout(t);
+      window.removeEventListener('load', alCargar);
+    };
+  }, []);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -23,6 +64,7 @@ export function LandingIntro() {
   }, []);
 
   const open = () => {
+    videoRef.current?.pause();
     const vertical = window.matchMedia('(max-aspect-ratio: 4/5)').matches;
     setSrc(`/intro?modo=web&auto=1&sonido=1&formato=${vertical ? 'v' : 'h'}`);
     dialogRef.current?.showModal();
@@ -40,6 +82,18 @@ export function LandingIntro() {
           sizes="(max-width: 900px) 92vw, 620px"
           priority
           className="lp-intro-img"
+        />
+        <video
+          ref={videoRef}
+          className="lp-intro-video"
+          data-on={enMovimiento ? '1' : '0'}
+          muted
+          loop
+          playsInline
+          preload="none"
+          aria-hidden
+          tabIndex={-1}
+          onPlaying={() => setEnMovimiento(true)}
         />
         <span className="lp-intro-play" aria-hidden>
           <svg viewBox="0 0 24 24" width="30" height="30"><path d="M8 5.5v13l11-6.5z" fill="currentColor" /></svg>

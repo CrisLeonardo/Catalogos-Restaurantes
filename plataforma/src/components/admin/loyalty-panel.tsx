@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import {
-  saveLoyaltySettings, adjustPoints, saveReward, deleteReward, toggleReward,
-  type LoyaltySettingsPatch, type RewardPatch,
+  saveLoyaltySettings, adjustPoints, saveReward, deleteReward, toggleReward, saveLealtadExtras,
+  type LoyaltySettingsPatch, type RewardPatch, type LealtadExtrasPatch,
 } from '@/lib/actions/loyalty';
-import type { LoyaltySettings, LoyaltyAccount, LoyaltySummary, RewardRow } from '@/lib/db/loyalty';
+import type { AjustesExtraLealtad, LoyaltySettings, LoyaltyAccount, LoyaltySummary, RewardRow } from '@/lib/db/loyalty';
 import { assetSrc } from '@/lib/asset-image';
 import { fmtMoney } from '@/lib/money';
 import { FIELD_LABEL } from '@/components/admin/field-label';
@@ -29,13 +29,14 @@ interface Props {
   hasSettings: boolean;
   rewards: RewardRow[];
   products: RewardProduct[];
+  extras: AjustesExtraLealtad;
 }
 
 const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 type Tab = 'miembros' | 'recompensas' | 'config';
 
-export default function LoyaltyPanel({ restaurantId, settings, accounts, customers, summary, hasSettings, rewards, products }: Props) {
+export default function LoyaltyPanel({ restaurantId, settings, accounts, customers, summary, hasSettings, rewards, products, extras }: Props) {
   const [tab, setTab] = useState<Tab>(hasSettings ? 'miembros' : 'config');
 
   return (
@@ -62,9 +63,76 @@ export default function LoyaltyPanel({ restaurantId, settings, accounts, custome
       <PageTabs tabs={[['miembros', 'Miembros'], ['recompensas', 'Recompensas'], ['config', 'Configuración']] as const} value={tab} onChange={setTab} />
 
       {tab === 'config' && <SettingsForm restaurantId={restaurantId} settings={settings} isNew={!hasSettings} />}
+      {tab === 'config' && hasSettings && <ExtrasForm restaurantId={restaurantId} extras={extras} />}
       {tab === 'miembros' && <MembersTab restaurantId={restaurantId} accounts={accounts} customers={customers} settings={settings} />}
       {tab === 'recompensas' && <RewardsTab restaurantId={restaurantId} rewards={rewards} products={products} />}
     </div>
+  );
+}
+
+/* Lo que engancha (PLAN_MOMENTOS_PICO M3 y M4): el doble de puntos en el
+   primer pedido y la sorpresa de la casa. Se guarda aparte de las tasas. */
+function ExtrasForm({ restaurantId, extras }: { restaurantId: string; extras: AjustesExtraLealtad }) {
+  const [p, setP] = useState<LealtadExtrasPatch>({
+    primer_pedido_doble: extras.primerPedidoDoble,
+    sorpresa_texto: extras.sorpresaTexto,
+    sorpresa_cada: extras.sorpresaCada ?? 20,
+  });
+  const [sorpresa, setSorpresa] = useState(!!extras.sorpresaTexto);
+  const [isPending, start] = useTransition();
+  const [msg, setMsg] = useState<{ text: string; bad: boolean } | null>(null);
+
+  function save() {
+    setMsg(null);
+    start(async () => {
+      const res = await saveLealtadExtras(restaurantId, { ...p, sorpresa_texto: sorpresa ? p.sorpresa_texto : null });
+      setMsg(res.error ? { text: res.error, bad: true } : { text: 'Guardado.', bad: false });
+    });
+  }
+
+  return (
+    <Card className="flex flex-col gap-3.5 p-4">
+      <div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)' }}>Lo que hace volver a tus clientes</div>
+        <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: '3px 0 0', lineHeight: 1.5 }}>
+          Dos detalles que el cliente ve al enviar su pedido desde su celular.
+        </p>
+      </div>
+
+      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--u-text-2)' }}>
+        <Switch checked={p.primer_pedido_doble} onCheckedChange={(v) => setP((s) => ({ ...s, primer_pedido_doble: v }))} />
+        <span>
+          <strong>Doble de puntos en el primer pedido.</strong> El primer pedido que un cliente hace desde su
+          celular, con su cuenta, suma el doble. Es la mejor razón para que pida por el QR.
+        </span>
+      </label>
+
+      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--u-text-2)' }}>
+        <Switch checked={sorpresa} onCheckedChange={setSorpresa} />
+        <span>
+          <strong>Sorpresa de la casa.</strong> De vez en cuando, al azar, un pedido se lleva un regalo. Le sale
+          al cliente al enviar su pedido y a tu personal en la tarjeta del pedido. Tú decides el regalo;
+          no se descuenta solo.
+        </span>
+      </label>
+      {sorpresa && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+          <div>
+            <label style={labelStyle}>La sorpresa</label>
+            <input className="adm-field" maxLength={80} placeholder="Hoy el postre va por la casa" value={p.sorpresa_texto ?? ''} onChange={(e) => setP((s) => ({ ...s, sorpresa_texto: e.target.value }))} />
+          </div>
+          <div>
+            <label style={labelStyle}>Sale en 1 de cada… pedidos</label>
+            <input className="adm-field" type="number" inputMode="numeric" min="2" max="500" step="1" value={p.sorpresa_cada ?? ''} onChange={(e) => setP((s) => ({ ...s, sorpresa_cada: parseInt(e.target.value, 10) || null }))} />
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <Button onClick={save} disabled={isPending}>{isPending ? 'Guardando…' : 'Guardar'}</Button>
+        {msg && <span role="status" style={{ fontSize: 13, color: msg.bad ? 'var(--c-danger)' : 'var(--c-ok)' }}>{msg.text}</span>}
+      </div>
+    </Card>
   );
 }
 

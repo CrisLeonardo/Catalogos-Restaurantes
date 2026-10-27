@@ -42,6 +42,9 @@ import { fmtMoney } from '@/lib/money';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import CobrosDelTurno from './cobros-del-turno';
+import { Leo } from '@/components/leo';
+import { Rodillo } from '@/components/ui/rodillo';
+import { Confeti } from '@/components/confeti';
 
 const BILLETES = DENOM_FIELDS.filter((d) => d.kind === 'B');
 const MONEDAS = DENOM_FIELDS.filter((d) => d.kind === 'M');
@@ -1077,6 +1080,9 @@ function CierreHecho({ result, dateLabel, shift, cashierName, restaurantName, ti
   const texto = [
     `Cierre de caja · ${restaurantName}`,
     `${dateLabel}${shift.trim() ? ` · ${shift.trim()}` : ''} · ${periodo} · ${cashierName}`,
+    result.dia && result.dia.pedidos > 0
+      ? `Hoy vendiste ${money(result.dia.ventas)} en ${result.dia.pedidos} ${result.dia.pedidos === 1 ? 'pedido' : 'pedidos'}${result.dia.record ? ` · ${result.dia.record.texto}` : ''}`
+      : null,
     '',
     `Cobrado en efectivo: ${money(r2(result.expected + result.refundsCash))}`,
     result.refundsCash > 0 ? `Devuelto a clientes: −${money(result.refundsCash)}` : null,
@@ -1101,6 +1107,29 @@ function CierreHecho({ result, dateLabel, shift, cashierName, restaurantName, ti
           {[dateLabel, shift.trim() || null, periodo, cashierName].filter(Boolean).join(' · ')}
         </div>
       </div>
+
+      {/* El final del día (PLAN_MOMENTOS_PICO P5): lo vendido en todo el día
+          sube solo y, si es récord de verdad, Leo celebra con confeti. */}
+      {result.dia && result.dia.pedidos > 0 && (
+        <div style={{ ...tarjeta, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            {result.dia.record && <Confeti piezas={28} alcance={0.7} />}
+            <Leo id="leo-cierre-caja" expresion={result.dia.record ? 'feliz' : 'saluda'} size={58} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Hoy vendiste</div>
+            <div className="t-mono" style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--u-text)' }}>
+              <Rodillo texto={money(result.dia.ventas)} />
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--u-text-2)', marginTop: 2 }}>
+              {result.dia.pedidos} {result.dia.pedidos === 1 ? 'pedido' : 'pedidos'}
+              {result.dia.record && (
+                <strong style={{ color: 'var(--brand-accent-ink, var(--brand-accent))' }}> · {result.dia.record.texto}</strong>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div style={tarjeta} id="caja-resumen">
         <Linea label="Cobrado en efectivo" value={money(r2(result.expected + result.refundsCash))} />

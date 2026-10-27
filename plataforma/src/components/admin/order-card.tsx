@@ -663,6 +663,14 @@ export default function OrderCard({
             <span>{order.notes}</span>
           </div>
         )}
+        {/* La sorpresa de la casa (PLAN_MOMENTOS_PICO M4): el cliente la ve
+            al enviar su pedido; aquí el personal sabe qué regalar. */}
+        {order.sorpresa && (
+          <div className="note note-ok" style={{ marginTop: 4 }}>
+            <Icon name="gift" size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span><strong>Sorpresa de la casa:</strong> {order.sorpresa}</span>
+          </div>
+        )}
       </div>
 
       {/* Mapa de entrega (solo DELIVERY con coordenadas) */}
