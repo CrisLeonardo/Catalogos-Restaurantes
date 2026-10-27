@@ -18,13 +18,19 @@
    error es un callejón sin salida y el único remedio es que el
    usuario sepa hacer Ctrl+Shift+R. Un dueño en plena hora de
    servicio no tiene por qué saber eso.
+
+   Mismo origen, otro síntoma: el bundle viejo manda una Server
+   Action (p. ej. «Iniciar sesión») cuyo id el servidor nuevo ya no
+   conoce → «Failed to find Server Action». Pasó en Leogin Desktop,
+   que es la web de producción dentro de una ventana y se queda
+   abierta días.
    ============================================================ */
 
 /** ¿El error es "mi bundle ya no existe en el servidor"? */
 export function isStaleBuildError(error: unknown): boolean {
   const err = error as { name?: string; message?: string } | null;
   const text = `${err?.name ?? ''} ${err?.message ?? ''}`;
-  return /chunkloaderror|failed to load chunk|loading chunk .* failed|dynamically imported module|importing a module script failed/i
+  return /chunkloaderror|failed to load chunk|loading chunk .* failed|dynamically imported module|importing a module script failed|failed to find server action|server action .* was not found/i
     .test(text);
 }
 
