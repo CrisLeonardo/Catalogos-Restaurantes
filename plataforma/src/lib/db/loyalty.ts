@@ -340,3 +340,118 @@ export async function getDinerLoyalty(restaurantId: string, authUserId: string |
     minRedeem,
   };
 }
+
+/* ── Premio del primer pedido y sorpresa de la casa (migración 147) ──────
+   PLAN_MOMENTOS_PICO M3 y M4. Se leen aparte de los ajustes de siempre:
+   si la 147 todavía no corrió, pedir estas columnas junto con las otras
+   tumbaría también la lectura de earn_rate y nadie sumaría puntos. */
+
+export interface AjustesExtraLealtad {
+  /** El primer pedido con cuenta, hecho por el comensal, suma el doble. */
+  primerPedidoDoble: boolean;
+  /** «Hoy el postre va por la casa». null = sorpresa apagada. */
+  sorpresaTexto: string | null;
+  /** Sale en uno de cada N pedidos. */
+  sorpresaCada: number | null;
+}
+
+const EXTRA_POR_OMISION: AjustesExtraLealtad = { primerPedidoDoble: true, sorpresaTexto: null, sorpresaCada: null };
+
+export async function leerAjustesExtraLealtad(restaurantId: string): Promise<AjustesExtraLealtad> {
+  const { data, error } = await createServiceClient()
+    .from('loyalty_settings')
+    .select('primer_pedido_doble, sorpresa_texto, sorpresa_cada')
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
+  if (error || !data) return EXTRA_POR_OMISION;
+  const d = data as { primer_pedido_doble?: boolean | null; sorpresa_texto?: string | null; sorpresa_cada?: number | null };
+  const texto = d.sorpresa_texto?.trim() || null;
+  const cada = Number(d.sorpresa_cada) || null;
+  return {
+    primerPedidoDoble: d.primer_pedido_doble !== false,
+    sorpresaTexto: texto && cada ? texto : null,
+    sorpresaCada: texto && cada ? cada : null,
+  };
+}
+
+export interface PuntosDelPedido {
+  /** Lo que suma el pedido, ya con el doble si aplica. */
+  puntos: number;
+  /** ¿Es el primer pedido del comensal hecho desde su celular y va doble? */
+  doble: boolean;
+  customerId: string | null;
+}
+
+/**
+ * Los puntos que da un pedido al entregarse. Una sola regla para acreditar
+ * (awardLoyaltyForOrder) y para avisarle al comensal cuánto va a sumar
+ * (la pantalla de «pedido enviado»):
+ *
+ * - Por línea: si el producto define sus propios puntos, esos × cantidad;
+ *   si no, earn_rate puntos por cada earn_amount gastados. Los canjes (Q0)
+ *   no dan puntos.
+ * - Doble (147) si el restaurante lo deja encendido, el pedido lo hizo el
+ *   comensal (sin mesero) y es el primero que le acredita puntos aquí.
+ *
+ * No mira si el módulo está activo ni si el cliente tiene cuenta: eso lo
+ * decide quien llama.
+ */
+export async function puntosDelPedido(restaurantId: string, orderId: string): Promise<PuntosDelPedido> {
+  const NADA: PuntosDelPedido = { puntos: 0, doble: false, customerId: null };
+  const db = createServiceClient();
+  const [{ data: settings }, { data: order }] = await Promise.all([
+    db.from('loyalty_settings').select('earn_rate, earn_amount').eq('restaurant_id', restaurantId).maybeSingle(),
+    db.from('orders').select('id, customer_id, waiter_id').eq('id', orderId).eq('restaurant_id', restaurantId).maybeSingle(),
+  ]);
+  if (!settings || !order) return NADA;
+  const customerId = (order.customer_id as string | null) ?? null;
+
+  const { data: items } = await db
+    .from('order_items')
+    .select('product_id, quantity, subtotal, is_reward')
+    .eq('order_id', orderId);
+  const productIds = [...new Set((items ?? [])
+    .filter((i) => i.product_id && !i.is_reward)
+    .map((i) => i.product_id as string))];
+  const { data: prods } = productIds.length
+    ? await db.from('products').select('id, loyalty_points').in('id', productIds)
+    : { data: [] as { id: string; loyalty_points: number | null }[] };
+  const porProducto = new Map<string, number | null>(
+    (prods ?? []).map((p) => [p.id as string, p.loyalty_points as number | null]),
+  );
+
+  const earnRate = Number(settings.earn_rate) || 0;
+  const earnAmount = Number(settings.earn_amount) || 10;
+  let puntos = 0;
+  for (const it of items ?? []) {
+    if (it.is_reward) continue;
+    const propios = it.product_id ? porProducto.get(it.product_id as string) : undefined;
+    if (propios !== null && propios !== undefined) {
+      puntos += Math.max(0, Math.floor(Number(propios))) * Number(it.quantity);
+    } else {
+      puntos += Math.floor(Number(it.subtotal) * earnRate / earnAmount);
+    }
+  }
+  puntos = Math.floor(puntos);
+  if (puntos <= 0) return { ...NADA, customerId };
+
+  let doble = false;
+  if (!order.waiter_id) {
+    const extra = await leerAjustesExtraLealtad(restaurantId);
+    if (extra.primerPedidoDoble) {
+      if (!customerId) {
+        doble = true;
+      } else {
+        const { count } = await db
+          .from('loyalty_transactions')
+          .select('id', { count: 'exact', head: true })
+          .eq('restaurant_id', restaurantId)
+          .eq('customer_id', customerId)
+          .eq('tipo', 'EARN')
+          .neq('order_id', orderId);
+        doble = (count ?? 0) === 0;
+      }
+    }
+  }
+  return { puntos: doble ? puntos * 2 : puntos, doble, customerId };
+}

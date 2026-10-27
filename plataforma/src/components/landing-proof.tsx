@@ -14,21 +14,22 @@ import type { Showcase, TestimonialView } from '@/lib/db/landing';
    Sin estado ni efectos: se pinta en el servidor.
    ============================================================ */
 
-/** El ejemplo de siempre, ahora con iconos y la pantalla llena. */
+/** Sin restaurante en vitrina: Rincón 502, el restaurante de ejemplo de
+    Leogin (el mismo de la demo y del video), con sus ilustraciones. */
 const EXAMPLE: Showcase = {
-  name: 'Tu Restaurante',
-  line: 'Cocina de la casa · Zona 1',
+  name: 'Rincón 502',
+  line: 'Hamburguesas, pizzas y pastas · El Progreso',
   logo: null,
   menuUrl: '',
-  colors: { bg: '#0b0b0c', text: '#F5F3EF', accent: '#d97757', onAccent: '#ffffff', scheme: 'dark' },
-  categories: ['Tacos', 'Burritos', 'Bebidas', 'Postres'],
+  colors: { bg: '#161512', text: '#F7F3EF', accent: '#E4572E', onAccent: '#ffffff', scheme: 'dark' },
+  categories: ['Hamburguesas', 'Entradas', 'Pizzas', 'Bebidas'],
   items: [
-    { id: 'e1', name: 'Tacos al pastor', description: 'Con piña, cilantro y cebolla', price: 'Q45', image: null, icon: 'flame' },
-    { id: 'e2', name: 'Burrito de res', description: 'Frijol, arroz, queso y pico', price: 'Q52', image: null, icon: 'croissant' },
-    { id: 'e3', name: 'Horchata fría', description: 'Casera, con canela', price: 'Q15', image: null, icon: 'coffee' },
-    { id: 'e4', name: 'Rellenitos', description: 'De plátano, con frijol y azúcar', price: 'Q18', image: null, icon: 'cookie' },
+    { id: 'e1', name: 'Rincón Clásica',  description: 'Carne de 150 g, cheddar y papas', price: 'Q52', image: '/demo/rincon502/rincon-clasica.webp',  icon: 'flame' },
+    { id: 'e2', name: 'Papas con Queso', description: 'Con tocino y cebollín',           price: 'Q35', image: '/demo/rincon502/papas-con-queso.webp', icon: 'flame' },
+    { id: 'e3', name: 'Pepperoni',       description: 'Mediana, con mucha mozzarella',  price: 'Q85', image: '/demo/rincon502/pizza-pepperoni.webp', icon: 'flame' },
+    { id: 'e4', name: 'Malteada',        description: 'Fresa, vainilla o chocolate',    price: 'Q28', image: '/demo/rincon502/malteada.webp',        icon: 'coffee' },
   ],
-  cart: { count: 2, total: 'Q97' },
+  cart: { count: 2, total: 'Q80' },
 };
 
 export function LandingPhone({ showcase }: { showcase: Showcase | null }) {

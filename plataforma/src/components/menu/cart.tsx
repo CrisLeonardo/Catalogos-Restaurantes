@@ -22,7 +22,9 @@ export function CartBar({ onOpen, cartIconHidden }: { onOpen: () => void; cartIc
   // Mismo tope que la barra inferior: fija + centrada no puede superar el ancho
   // de maqueta (ver el comentario largo en bottom-nav.tsx).
   return (
-    <div style={{ position: 'fixed', bottom: 68, left: 0, right: 0, maxWidth: '100vw', zIndex: 40, display: 'flex', justifyContent: 'center', padding: '0 16px 16px', pointerEvents: 'none' }}>
+    // data-carrito-destino: aquí cae el platillo que vuela al agregar y es lo
+    // que rebota (lib/volar-al-carrito.ts).
+    <div data-carrito-destino="" style={{ position: 'fixed', bottom: 68, left: 0, right: 0, maxWidth: '100vw', zIndex: 40, display: 'flex', justifyContent: 'center', padding: '0 16px 16px', pointerEvents: 'none' }}>
       <Glass
         interactive
         onClick={onOpen}

@@ -20,6 +20,7 @@ import { isKioskMode } from '@/lib/kiosk';
 import { getMyAccount } from '@/lib/actions/loyalty';
 import { hasAnyHours, isOpenNow, type WeeklyHours } from '@/lib/hours';
 import { useThemeConfig } from '@/lib/theme/context';
+import { volarAlCarrito } from '@/lib/volar-al-carrito';
 import { isVitrina } from '@/lib/theme/defaults';
 import { sugerirAcompanantes } from '@/lib/menu-pairings';
 import type { Sugerencia } from '@/components/menu/pairings';
@@ -192,9 +193,11 @@ export default function MenuClient({
   }, [categories]);
 
   function onAdd(product: ProdItem, sourceEl: HTMLElement) {
-    void sourceEl; // sin animación de vuelo (el icono del carrito ahora está en la barra inferior)
     if (hasOptions(product)) { setCartOpen(false); setSelected(product); return; }
     addItem({ productId: product.id, name: product.name, price: product.price, image_url: product.image_url });
+    // La foto vuela a la barra del carrito (ya no al ícono de arriba, que se
+    // mudó a la barra inferior) y el teléfono vibra corto.
+    if (config.animations) volarAlCarrito(sourceEl, product.image_url);
   }
 
   // Pestañas de navegación: la activa depende de qué panel está abierto.

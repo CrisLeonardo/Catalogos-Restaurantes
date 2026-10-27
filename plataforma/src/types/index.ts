@@ -282,6 +282,8 @@ export interface Order {
   synced_from_hub: boolean;
   /** Canal de entrada (migración 101); 'LEOGIN' = propio (QR, mesero, kiosko, hub). */
   source: OrderSource;
+  /** Sorpresa de la casa que le tocó (migración 147): '' = se sorteó y no tocó. */
+  sorpresa?: string | null;
   /* ── Reparto propio (migración 103) ── */
   /** Repartidor asignado; null = sin asignar o no es a domicilio. */
   driver_id: string | null;

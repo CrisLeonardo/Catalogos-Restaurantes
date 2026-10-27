@@ -146,7 +146,7 @@ export function VitrinaBag({ onOpen }: { onOpen: () => void }) {
   const monto = position === 'prefix' ? `${symbol}${format(total)}` : `${format(total)} ${symbol}`;
   return (
     <div className="m-vbag-wrap">
-      <div className="m-vbag anim-slide-up" role="status">
+      <div className="m-vbag anim-slide-up" role="status" data-carrito-destino="">
         <div className="m-vbag-info">
           <b>{count} {count === 1 ? content.cart.itemsOne : content.cart.itemsMany}</b>
           <span>{monto}</span>

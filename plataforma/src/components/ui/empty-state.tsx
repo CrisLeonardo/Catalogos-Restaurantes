@@ -7,6 +7,7 @@ import * as React from 'react';
 import Link from '@/components/admin/panel-link';
 
 import { Icon } from '@/components/icons';
+import { Leo } from '@/components/leo';
 import { cn } from '@/lib/utils';
 
 /* ============================================================
@@ -19,6 +20,11 @@ import { cn } from '@/lib/utils';
    esta pieza obliga a las tres cosas que hacen falta: qué falta,
    por qué vale la pena, y el botón para hacerlo. `action` no es
    opcional a propósito.
+
+   Leo la acompaña señalando el botón (estrategia §6.2, fase D): una caja
+   vacía con alguien que te dice «empieza aquí» se siente como el primer
+   paso, no como un error. Leo es de Leogin y esto solo se usa en el panel;
+   en el menú de un restaurante no aparece nunca.
    ============================================================ */
 
 /** La acción puede navegar (`href`) o abrir un editor en la misma pantalla
@@ -39,6 +45,14 @@ interface Props {
   className?: string;
 }
 
+/** Id estable para los degradados del SVG de Leo, sacado del título: dos
+ *  pantallas vacías en la misma página no comparten título. */
+function leoId(title: string): string {
+  let h = 0;
+  for (let i = 0; i < title.length; i++) h = (h * 31 + title.charCodeAt(i)) | 0;
+  return `leo-vacio-${(h >>> 0).toString(36)}`;
+}
+
 function EmptyState({ icon, title, desc, action, className }: Props) {
   const actionClass =
     'btn-accent press mt-2 inline-flex min-h-11 items-center gap-2 rounded-adm-md border-0 px-4 text-[13px] font-semibold no-underline';
@@ -50,11 +64,14 @@ function EmptyState({ icon, title, desc, action, className }: Props) {
         className
       )}
     >
-      {icon && (
-        <span className="mb-1 grid size-11 place-items-center rounded-adm-lg bg-adm-bg-2 text-adm-text-3">
-          <Icon name={icon} size={20} />
-        </span>
-      )}
+      <span className="relative mb-1 block size-[72px]">
+        <Leo id={leoId(title)} expresion="senala" className="block size-full" />
+        {icon && (
+          <span className="absolute -right-3 bottom-1 grid size-7 place-items-center rounded-full border border-adm-border bg-adm-card text-adm-text-3 shadow-adm-sm">
+            <Icon name={icon} size={14} />
+          </span>
+        )}
+      </span>
       <div className="text-[15px] font-semibold text-adm-text">{title}</div>
       <p className="max-w-[46ch] text-[13px] leading-snug text-adm-text-3">{desc}</p>
       {action.href ? (

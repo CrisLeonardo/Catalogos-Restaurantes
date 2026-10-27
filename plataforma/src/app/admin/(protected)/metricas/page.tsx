@@ -128,6 +128,15 @@ export default async function AdminNegocioPage({
         ))}
       </nav>
 
+      {/* «Tu año con Leogin» (PLAN_MOMENTOS_PICO P8): el resumen del año
+          para compartir. Solo si hay pedidos que contar. */}
+      {ordersEnabled && (
+        <Link href="/admin/tu-ano" className="tu-ano-enlace press">
+          <span><strong>Tu año con Leogin</strong> · lo vendido, tu plato estrella y tu mejor día</span>
+          <span aria-hidden>→</span>
+        </Link>
+      )}
+
       {/* 1 · Las cifras del periodo, cada una con su comparación. */}
       <Section
         title={periodo === 'semana' ? 'Esta semana' : 'Este mes'}

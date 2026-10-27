@@ -9,8 +9,9 @@ import { createDinerClient } from '@/lib/supabase/server';
 import { authorizeModuleAction } from '@/lib/module-auth';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { faltaLaColumna } from '@/lib/db/migracion-ausente';
 import {
-  getDinerLoyalty, resolveDinerAuthUserId, loyaltyTag,
+  getDinerLoyalty, resolveDinerAuthUserId, loyaltyTag, puntosDelPedido,
   type DinerLoyalty,
 } from '@/lib/db/loyalty';
 
@@ -47,6 +48,48 @@ export async function saveLoyaltySettings(restaurantId: string, patch: LoyaltySe
 
   revalidatePath('/admin/lealtad');
   updateTag(loyaltyTag(restaurantId)); // el menú público (getPublicLoyaltyCached)
+  return { ok: true };
+}
+
+/* ── Premio del primer pedido y sorpresa de la casa (migración 147) ─────
+   PLAN_MOMENTOS_PICO M3 y M4. Se guardan aparte de las tasas: si la 147
+   todavía no corrió, guardar las tasas tiene que seguir funcionando. Y es
+   un UPDATE, no un upsert: crear la fila aquí encendería el programa sin
+   que el dueño haya guardado sus tasas. */
+
+export interface LealtadExtrasPatch {
+  primer_pedido_doble: boolean;
+  /** null o vacío = sorpresa apagada. */
+  sorpresa_texto: string | null;
+  sorpresa_cada: number | null;
+}
+
+export async function saveLealtadExtras(restaurantId: string, patch: LealtadExtrasPatch): Promise<LoyaltyActionResult> {
+  const auth = await authorizeModuleAction(restaurantId, 'loyalty');
+  if ('error' in auth) return auth;
+
+  const texto = (patch.sorpresa_texto ?? '').trim() || null;
+  const cada = texto ? Math.floor(Number(patch.sorpresa_cada)) : null;
+  if (texto && texto.length > 80) return { error: 'La sorpresa es muy larga: 80 letras como mucho.' };
+  if (texto && (!cada || cada < 2 || cada > 500)) return { error: 'La sorpresa sale en 1 de cada 2 a 500 pedidos.' };
+
+  const db = createServiceClient();
+  const { data, error } = await db
+    .from('loyalty_settings')
+    .update({
+      primer_pedido_doble: patch.primer_pedido_doble !== false,
+      sorpresa_texto: texto,
+      sorpresa_cada: cada,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('restaurant_id', restaurantId)
+    .select('restaurant_id');
+  if (error) {
+    return { error: faltaLaColumna(error) ? 'Falta aplicar la migración 147 en la base de datos.' : error.message };
+  }
+  if (!data || data.length === 0) return { error: 'Primero guarda la configuración del programa.' };
+
+  revalidatePath('/admin/lealtad');
   return { ok: true };
 }
 
@@ -378,9 +421,6 @@ export async function awardLoyaltyForOrder(restaurantId: string, orderId: string
       .single();
     if (!rest || !isModuleActive(rest.modules as ModulesMap, rest.module_settings as ModuleSettings, 'loyalty')) return;
 
-    const { data: settings } = await db.from('loyalty_settings').select('earn_rate, earn_amount').eq('restaurant_id', restaurantId).maybeSingle();
-    if (!settings) return;
-
     const { data: order } = await db
       .from('orders')
       .select('id, customer_id')
@@ -401,37 +441,10 @@ export async function awardLoyaltyForOrder(restaurantId: string, orderId: string
       .eq('tipo', 'EARN');
     if ((count ?? 0) > 0) return;
 
-    // Puntos por línea: si el producto define sus propios puntos, esos × cantidad;
-    // si no, la regla general earn_rate (pts por cada earn_amount gastados) × subtotal
-    // de la línea / earn_amount. Los canjes (Q0) no otorgan puntos.
-    const { data: items } = await db
-      .from('order_items')
-      .select('product_id, quantity, subtotal, is_reward')
-      .eq('order_id', orderId);
-
-    const productIds = [...new Set((items ?? [])
-      .filter((i) => i.product_id && !i.is_reward)
-      .map((i) => i.product_id as string))];
-    const { data: prods } = productIds.length
-      ? await db.from('products').select('id, loyalty_points').in('id', productIds)
-      : { data: [] as { id: string; loyalty_points: number | null }[] };
-    const perProduct = new Map<string, number | null>(
-      (prods ?? []).map((p) => [p.id as string, p.loyalty_points as number | null]),
-    );
-
-    const earnRate = Number(settings.earn_rate) || 0;
-    const earnAmount = Number(settings.earn_amount) || 10;
-    let points = 0;
-    for (const it of items ?? []) {
-      if (it.is_reward) continue;
-      const per = it.product_id ? perProduct.get(it.product_id as string) : undefined;
-      if (per !== null && per !== undefined) {
-        points += Math.max(0, Math.floor(Number(per))) * Number(it.quantity);
-      } else {
-        points += Math.floor(Number(it.subtotal) * earnRate / earnAmount);
-      }
-    }
-    points = Math.floor(points);
+    // La regla de cuántos puntos da (y si va doble por ser el primer pedido
+    // desde el celular, migración 147) vive en lib/db/loyalty.ts: la misma
+    // que le avisa al comensal al enviar el pedido.
+    const { puntos: points, doble } = await puntosDelPedido(restaurantId, orderId);
     if (points <= 0) return;
 
     await db.rpc('leogin_loyalty_apply', {
@@ -440,7 +453,7 @@ export async function awardLoyaltyForOrder(restaurantId: string, orderId: string
       p_order_id: orderId,
       p_tipo: 'EARN',
       p_points: points,
-      p_note: 'Puntos por pedido',
+      p_note: doble ? 'Puntos por pedido (doble: primer pedido)' : 'Puntos por pedido',
     });
   } catch {
     /* best-effort: la lealtad no debe romper el flujo de pedidos */
