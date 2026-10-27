@@ -3690,3 +3690,19 @@ html[data-admin-area][data-scheme="light"] {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ── Confeti (components/confeti.tsx · PLAN_MOMENTOS_PICO) ──────────────
+   Cada pieza va de su centro a su destino y cae. Solo en logros de verdad. */
+.fiesta-confeti { position: absolute; left: 50%; top: 45%; width: 0; height: 0; pointer-events: none; }
+.fiesta-confeti i { position: absolute; left: 0; top: 0; display: block; opacity: 0; }
+@keyframes fiesta-sale {
+  0%   { opacity: 1; transform: translate3d(0, 0, 0) scale(0.4) rotate(0deg); }
+  55%  { opacity: 1; transform: translate3d(var(--x), var(--y), 0) scale(1) rotate(calc(var(--r) * 0.6)); }
+  100% { opacity: 0; transform: translate3d(var(--x), calc(var(--y) + 160px), 0) scale(1) rotate(var(--r)); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .fiesta-confeti i { animation: fiesta-sale 1500ms cubic-bezier(0.2, 0.7, 0.35, 1) var(--d, 0ms) both; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fiesta-confeti { display: none; }
+}

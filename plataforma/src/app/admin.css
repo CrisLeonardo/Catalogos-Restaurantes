@@ -3207,3 +3207,84 @@ html[data-admin-area] .glass-solid {
     .admin-topbar { animation: adm-barra linear both; animation-timeline: scroll(root); animation-range: 0px 96px; }
   }
 }
+
+/* ── Momentos pico (docs/planes/PLAN_MOMENTOS_PICO_2026-10-26.md) ──────
+   «Termina de armar»: la barra crece desde 0 al pintarse. */
+@media (prefers-reduced-motion: no-preference) {
+  .onb-barra { transition: transform 900ms cubic-bezier(0.16, 1, 0.3, 1) 150ms; }
+}
+
+/* El primer pedido (fiesta-primer-pedido.tsx): una tarjeta sólida sobre
+   un velo, Leo feliz y confeti que sale de detrás de él. */
+.fiesta-fondo {
+  position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 16px;
+  background: rgba(12, 11, 10, 0.62);
+}
+.fiesta-tarjeta {
+  width: 100%; max-width: 420px; display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 28px 22px 24px; border-radius: var(--adm-r-xl, 22px);
+  background: var(--adm-card, #fff); border: 1px solid var(--adm-border, rgba(0, 0, 0, 0.08));
+  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.55);
+}
+.fiesta-leo { position: relative; display: grid; place-items: center; }
+
+@keyframes fiesta-entra { from { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.96); } }
+@media (prefers-reduced-motion: no-preference) {
+  .fiesta-tarjeta { animation: fiesta-entra 360ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both; }
+  .hito-tarjeta { animation: fiesta-entra 320ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+}
+
+/* «Tu día» (tu-dia.tsx): piezas chicas bajo el resumen. */
+.tu-dia-chip {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 4px 12px;
+  border-radius: 999px; border: 1px solid var(--adm-border); background: var(--adm-card);
+  font-size: 13px; color: var(--u-text-2);
+}
+.tu-dia-chip strong { color: var(--u-text); font-weight: 600; }
+.tu-dia-record {
+  padding-left: 6px; font-weight: 700; color: var(--u-text);
+  border-color: color-mix(in srgb, var(--brand-accent) 45%, var(--adm-border));
+  background: color-mix(in srgb, var(--brand-accent) 9%, var(--adm-card));
+}
+
+/* Vista previa de la imagen para compartir (compartir-dialogo.tsx). */
+.compartir-vista {
+  width: 100%; max-width: 250px; aspect-ratio: 9 / 16; border-radius: 16px; overflow: hidden;
+  display: grid; place-items: center; background: var(--adm-bg-2, rgba(0, 0, 0, 0.06));
+  border: 1px solid var(--adm-border);
+}
+.compartir-vista img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.compartir-cargando {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--brand-accent) 25%, transparent); border-top-color: var(--brand-accent);
+  animation: compartir-gira 800ms linear infinite;
+}
+@keyframes compartir-gira { to { transform: rotate(360deg); } }
+
+/* «Tu año con Leogin» (tu-ano/page.tsx): la portada es de Leogin (carbón,
+   brasa y mango); las cifras, tarjetas del panel. */
+.tu-ano-portada {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 26px 24px; border-radius: var(--adm-r-xl, 22px);
+  background: linear-gradient(135deg, #1C1C1E 0%, #2B1A15 100%); color: #FBF6EE;
+}
+.tu-ano-ceja { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #F5A030; }
+.tu-ano-numero {
+  margin: 2px 0 0; font-family: var(--font-unbounded), var(--font-geist-sans), sans-serif; font-weight: 700;
+  font-size: clamp(56px, 12vw, 104px); line-height: 1; letter-spacing: -0.04em;
+  background: linear-gradient(100deg, #E8534A, #F5A030); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.tu-ano-cifras { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); }
+.tu-ano-cifra {
+  display: flex; flex-direction: column; gap: 4px; padding: 18px; min-width: 0;
+  border-radius: var(--adm-r-xl, 22px); border: 1px solid var(--adm-border); background: var(--adm-card);
+}
+.tu-ano-cifra strong { font-size: 24px; line-height: 1.2; color: var(--u-text); font-weight: 700; overflow-wrap: anywhere; }
+.tu-ano-etiqueta { font-size: 13px; color: var(--u-text-3); }
+.tu-ano-detalle { font-size: 12px; color: var(--u-text-3); }
+.tu-ano-enlace {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 10px 16px;
+  border-radius: var(--adm-r-lg, 16px); text-decoration: none; font-size: 13px; color: #FBF6EE;
+  background: linear-gradient(135deg, #1C1C1E 0%, #2B1A15 100%);
+}
+.tu-ano-enlace strong { color: #F5A030; }

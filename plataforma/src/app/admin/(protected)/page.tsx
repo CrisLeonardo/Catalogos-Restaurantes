@@ -26,6 +26,11 @@ import {
   agoLabel, HouseWidget, OnlineWidget, RatingsWidget, StockWidget,
 } from '@/components/admin/hoy-widgets';
 import { SalesTrendWidget, TopTodayWidget } from '@/components/admin/sales-widgets';
+import HitoTarjeta from '@/components/admin/momentos/hito-tarjeta';
+import { TuDiaTira } from '@/components/admin/momentos/tu-dia';
+import CompartirPlato from '@/components/admin/momentos/compartir-plato';
+import type { MarcaRestaurante, PlatoParaCompartir } from '@/lib/compartir/plato';
+import { getHitos, getTuDia } from '@/lib/db/momentos';
 import type { ResolvedTheme } from '@/lib/theme/resolve';
 import type { OrderStatus, Restaurant } from '@/types';
 import { mesaDeFila, direccionDeMesa } from '@/lib/mesa';
@@ -133,11 +138,15 @@ export default async function AdminHomePage() {
   const restaurantId = restaurant?.id ?? profile.restaurant_id ?? null;
   const allow = (key: string) => can(profile.role, profile.permissions, key);
 
-  const [stats, live] = await Promise.all([
+  /* Momentos pico (PLAN_MOMENTOS_PICO P4 y P6): el récord y la hora pico
+     de hoy, y el hito alcanzado. Van en paralelo con las cifras. */
+  const [stats, live, tuDia, hitos] = await Promise.all([
     ordersEnabled && restaurantId ? getOrderStats(restaurantId, timezone) : null,
     ordersEnabled && restaurantId && allow('pedidos')
       ? getActiveOrdersPreview(restaurantId, 4)
       : null,
+    ordersEnabled && restaurantId ? getTuDia(restaurantId, timezone) : null,
+    restaurantId ? getHitos(restaurantId) : null,
   ]);
 
   /* Visitas al menú. Se piden SIEMPRE y una sola vez: las usan el aviso del
@@ -191,12 +200,16 @@ export default async function AdminHomePage() {
       db.from('products').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
     ]);
     const hasLogo = !!resolved?.config.logoUrl;
+    /* Progreso dotado (estrategia §2.8): el primer paso ya viene hecho y la
+       guía arranca en 20 %, nunca en 0 %. «Comparte tu menú» cuenta como
+       hecho en cuanto alguien abrió el menú: es la señal de que ya salió. */
     onboardingSteps = [
+      { key: 'cuenta', label: 'Creaste tu cuenta', desc: 'Tu restaurante ya existe en Leogin', icon: 'user', href: panelHref(base, '/admin/perfil'), done: true },
       { key: 'marca', label: 'Personaliza tu marca', desc: 'Logo, colores y estilo', icon: 'sparkle', href: panelHref(base, '/admin/personalizacion'), done: hasLogo },
       { key: 'categoria', label: 'Crea una categoría', desc: 'Organiza tu menú', icon: 'tag', href: panelHref(base, '/admin/categorias'), done: (catCount ?? 0) > 0 },
       { key: 'platillo', label: 'Agrega tu primer platillo', desc: 'Suma un producto', icon: 'plus', href: panelHref(base, '/admin/menu/productos/new'), done: (prodCount ?? 0) > 0 },
-      { key: 'qr', label: 'Comparte tu menú', desc: 'Descarga tu código QR', icon: 'image', href: panelHref(base, '/admin/qr'), done: false },
-      { key: 'escritorio', label: 'Elige la PC del local', desc: 'Para que imprima sola y no te frene un corte de internet', icon: 'monitor', href: panelHref(base, '/admin/mi-pc'), done: false },
+      { key: 'qr', label: 'Comparte tu menú', desc: 'Descarga tu código QR', icon: 'image', href: panelHref(base, '/admin/qr'), done: (visitStats?.last30 ?? 0) > 0 },
+      { key: 'escritorio', label: 'Elige la PC del local', desc: 'Para que imprima sola y no te frene un corte de internet', icon: 'monitor', href: panelHref(base, '/admin/mi-pc'), done: false, optional: true },
     ];
   }
 
@@ -261,6 +274,37 @@ export default async function AdminHomePage() {
   // se reescribe de vuelta a "/admin/" en ese subdominio (ver proxy.ts §3),
   // así que "Ver mi menú" reabría el propio panel en vez del catálogo.
   const menuUrl = slug ? subdomainUrl(slug) : '/';
+
+  /* «Comparte tu plato del día» (PLAN_MOMENTOS_PICO P7): la foto y el
+     precio del plato estrella, buscados por su nombre. Si se renombró y ya
+     no coincide, la imagen sale con la inicial y sin precio. */
+  let platoEstrella: PlatoParaCompartir | null = null;
+  const estrella = stats?.topToday[0] ?? null;
+  if (estrella && restaurantId && allow('catalogo')) {
+    const { data: prod } = await createServiceClient()
+      .from('products')
+      .select('image_url, price')
+      .eq('restaurant_id', restaurantId)
+      .eq('name', estrella.name)
+      .limit(1)
+      .maybeSingle();
+    platoEstrella = {
+      nombre: estrella.name,
+      precio: prod?.price != null ? fmt(Number(prod.price)) : null,
+      imagen: (prod?.image_url as string | null | undefined) ?? null,
+    };
+  }
+  const marca: MarcaRestaurante | null = resolved
+    ? {
+        nombre: brandName,
+        fondo: resolved.config.colorBg,
+        texto: resolved.config.colorText,
+        acento: resolved.config.colorAccent,
+        sobreAcento: resolved.config.onAccent,
+        logo: resolved.config.logoUrl ?? null,
+        menu: menuUrl.replace(/^https?:\/\//, ''),
+      }
+    : null;
 
   // Fecha de hoy en la zona del restaurante, no en la del servidor.
   // eslint-disable-next-line react-hooks/purity
@@ -417,6 +461,12 @@ export default async function AdminHomePage() {
         <OnboardingChecklist restaurantId={restaurantId} firstName={(profile.full_name || '').trim().split(' ')[0]} steps={onboardingSteps} />
       )}
 
+      {/* Un hito alcanzado: 100 pedidos, el primer mes, un año (P6). Sin
+          pedidos en el plan, solo cuentan los del tiempo. */}
+      {hitos?.hito && restaurantId && (ordersEnabled || !hitos.hito.clave.startsWith('pedidos')) && (
+        <HitoTarjeta restaurantId={restaurantId} hito={hitos.hito} />
+      )}
+
       {/* 1 · Necesita tu atención — desaparece entero cuando no hay nada */}
       {alerts.length > 0 && (
         <Section title="Necesita tu atención">
@@ -448,6 +498,12 @@ export default async function AdminHomePage() {
             <Stat label="Pedidos" value={String(stats.todayOrders)} />
             <Stat label="Ticket promedio" value={fmt(stats.todayTicket)} />
           </StatGroup>
+          <TuDiaTira
+            estrella={stats.topToday[0] ?? null}
+            horaPico={tuDia?.horaPico ?? null}
+            record={tuDia?.record ?? null}
+            compartir={platoEstrella && marca ? <CompartirPlato marca={marca} plato={platoEstrella} /> : undefined}
+          />
         </Section>
       )}
 

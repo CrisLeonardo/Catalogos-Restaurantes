@@ -26,14 +26,14 @@
 
 | # | Qué | Por qué | Estado |
 |---|---|---|---|
-| P1 | **«Termina de armar tu restaurante»:** arranca en 20 % («Ya creaste tu cuenta»), Leo señala el paso que sigue y al 100 % hay fiesta | Progreso dotado (§2.8) | Pendiente |
+| P1 | **«Termina de armar tu restaurante»:** arranca en 20 % («Ya creaste tu cuenta»), Leo señala el paso que sigue y al 100 % hay fiesta | Progreso dotado (§2.8) | ✅ Hecho |
 | P2 | **Leo en las pantallas vacías** y en la bienvenida | §6.2, fase D | ✅ Hecho |
-| P3 | **El primer pedido es una fiesta:** pantalla especial cuando entra el pedido número 1 del restaurante | Pico (§2.7), fase C | Pendiente |
-| P4 | **Tu día:** en Hoy, plato estrella, hora pico y récord («tu mejor martes del mes»). En Básico, las visitas | Recompensa variable (§2.10), R3 | Pendiente |
-| P5 | **Cierre de caja:** los números suben solos; si es récord de verdad, confeti y el mensaje. Al cerrar el turno le llega al dueño el resumen del día como aviso | Pico y final (§2.7), firma «la caja cuadra» | Pendiente |
-| P6 | **Hitos:** 100 pedidos (y 500, 1,000…), primer mes con Leogin, mejor día. Una tarjeta en Hoy que se va al cerrarla | §6.2 | Pendiente |
-| P7 | **«Comparte tu plato del día»:** imagen vertical para el estado de WhatsApp o Instagram, con la marca del restaurante y una L chiquita | R4: reciprocidad y publicidad gratis | Pendiente |
-| P8 | **«Tu año con Leogin»:** resumen del año en curso (pedidos, ventas, plato estrella, mejor día) con imagen para compartir | R7: orgullo y viralidad | Pendiente |
+| P3 | **El primer pedido es una fiesta:** pantalla especial cuando entra el pedido número 1 del restaurante | Pico (§2.7), fase C | ✅ Hecho |
+| P4 | **Tu día:** en Hoy, plato estrella, hora pico y récord («tu mejor martes del mes»). En Básico, las visitas | Recompensa variable (§2.10), R3 | ✅ Hecho (las visitas de Básico ya las daba «Tu menú en línea») |
+| P5 | **Cierre de caja:** los números suben solos; si es récord de verdad, confeti y el mensaje. Al cerrar el turno le llega al dueño el resumen del día como aviso | Pico y final (§2.7), firma «la caja cuadra» | ✅ Hecho |
+| P6 | **Hitos:** 100 pedidos (y 500, 1,000…), primer mes con Leogin, mejor día. Una tarjeta en Hoy que se va al cerrarla | §6.2 | ✅ Hecho |
+| P7 | **«Comparte tu plato del día»:** imagen vertical para el estado de WhatsApp o Instagram, con la marca del restaurante y una L chiquita | R4: reciprocidad y publicidad gratis | ✅ Hecho |
+| P8 | **«Tu año con Leogin»:** resumen del año en curso (pedidos, ventas, plato estrella, mejor día) con imagen para compartir | R7: orgullo y viralidad | ✅ Hecho |
 
 «El ding» ya existe (do-mi-sol que sube, `lib/sounds.ts`) y no se cambia: el personal ya lo tiene aprendido.
 

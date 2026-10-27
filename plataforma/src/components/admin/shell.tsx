@@ -16,6 +16,7 @@ import LogoutButton from '@/components/admin/logout-button';
 import AdminNotifications from '@/components/admin/notifications';
 import WaiterCallsAlert from '@/components/admin/waiter-calls-alert';
 import NewOrdersAlert from '@/components/admin/new-orders-alert';
+import FiestaPrimerPedido from '@/components/admin/momentos/fiesta-primer-pedido';
 import OfflineSupport from '@/components/offline-support';
 import AdminThemeToggle from '@/components/admin/theme-toggle';
 import WelcomeTour from '@/components/admin/welcome-tour';
@@ -470,6 +471,11 @@ export default function AdminShell({
            encimarse dos chimes por el mismo pedido. Solo se mutea en cocina,
            que tiene su propio aviso (kitchen-display.tsx). */
         <NewOrdersAlert restaurantId={restaurantId} muteChime={isKitchen} showCards={!isLive && !isKitchen} />
+      )}
+      {/* El pedido número 1 del restaurante es una fiesta (PLAN_MOMENTOS_PICO
+          P3). En la pantalla de cocina no: ahí se trabaja. */}
+      {!preview && restaurantId && ordersEnabled && !isKitchen && (
+        <FiestaPrimerPedido restaurantId={restaurantId} restaurantName={restaurantName ?? 'tu restaurante'} />
       )}
       {!preview && restaurantId && llamadaMeseroActive && (
         /* OJO: a diferencia de AdminNotifications, ninguna pantalla
