@@ -857,11 +857,11 @@ body.render .overlay { display: none; }
   // En la web el botón de sonido va en la barra de controles: flotando, tapaba el gancho
   if (WEB) document.querySelector('.controls').appendChild(document.querySelector('#snd'));
 
-  /* Leo v2: la «L» del logo como personaje. Mismo marco 0–100 que el ícono,
+  /* Leo v3 (silueta S2, ojos E1; docs/diseno/marca): la «L» del logo como personaje. Mismo marco 0–100 que el ícono,
      para que al final pueda volverse el logo. Todas las piezas existen siempre;
      las opciones solo eligen cuáles se ven (así se pueden animar). */
   let leoN = 0;
-  function leoV2(o = {}) {
+  function leoV3(o = {}) {
     const id = 'lv' + (leoN++);
     const eyes = o.eyes || 'open';      // open | happy | closed | wink | half
     const brows = o.brows || 'neutral'; // neutral | up | worried | determined
@@ -872,28 +872,28 @@ body.render .overlay { display: none; }
     const px = o.px || 0, py = o.py || 0;
     const vis = (b) => (b ? '' : ' opacity="0"');
     const tf = (t) => (t ? ` transform="${t}"` : '');
-    const BODY = 'M36 9h4a13 13 0 0 1 13 13v32a5 5 0 0 0 5 5h18a7 7 0 0 1 7 7v12a7 7 0 0 1-7 7H33a10 10 0 0 1-10-10V22a13 13 0 0 1 13-13Z';
-    const MOUTH = 'M30.8 37.4Q38 39.3 45.2 37.4Q44.7 46.6 38 46.6Q31.3 46.6 30.8 37.4Z';
+    const BODY = 'M34 6h6a14 14 0 0 1 14 14v38a6 6 0 0 0 6 6h20a12 12 0 0 1 0 24H32a12 12 0 0 1-12-12V20A14 14 0 0 1 34 6Z';
+    const MOUTH = 'M28 38.4Q37.5 41.2 46.4 36.8Q45.6 47.8 37.6 47.8Q29.4 47.8 28 38.4Z';
+    const TEETH = 'M28.8 38.7Q37.5 41.2 46 37.4L45.6 41.2Q37.5 43.4 29.2 41.4Z';
     const browT = {
       neutral: ['', ''], up: ['translate(0 -2.6)', 'translate(0 -2.6)'],
-      worried: ['rotate(-15 31.2 13.8)', 'rotate(15 44.8 13.8)'],
-      determined: ['rotate(13 31.2 14.2)', 'rotate(-13 44.8 14.2)'],
+      worried: ['rotate(-15 27.7 15)', 'rotate(15 46.3 12.4)'],
+      determined: ['rotate(13 27.7 15)', 'rotate(-13 46.3 12.4)'],
     }[brows];
-    const armT = { down: '', wave: 'rotate(95 24.5 50)', up: 'rotate(125 24.5 50)', none: '' }[arm];
+    const armT = { down: '', wave: 'rotate(100 20.5 47)', up: 'rotate(125 20.5 47)', none: '' }[arm];
     const pup = px || py ? `translate(${px} ${py})` : '';
     const ink = '#1C1C1E', lip = '#4A1A12';
     return `<svg viewBox="${o.viewBox || '0 0 100 100'}" overflow="visible" aria-hidden="true">
     <defs>
-      <linearGradient id="${id}g" x1="23" y1="9" x2="83" y2="85" gradientUnits="userSpaceOnUse"><stop stop-color="#E8534A"/><stop offset="1" stop-color="#F5A030"/></linearGradient>
+      <linearGradient id="${id}g" x1="20" y1="6" x2="92" y2="88" gradientUnits="userSpaceOnUse"><stop stop-color="#E8534A"/><stop offset="1" stop-color="#F5A030"/></linearGradient>
       <clipPath id="${id}c"><path d="${BODY}"/></clipPath>
-      <clipPath id="${id}m"><path d="${MOUTH}"/></clipPath>
     </defs>
     <rect class="leo-bg" width="100" height="100" rx="22" fill="#1C1C1E"${vis(o.bg)}/>
-    <ellipse class="leo-shadow" cx="52" cy="89.6" rx="31" ry="2.8" fill="#000" opacity="${o.shadow === false ? 0 : 0.28}"/>
+    <ellipse class="leo-shadow" cx="56" cy="90.8" rx="36" ry="2.8" fill="#000" opacity="${o.shadow === false ? 0 : 0.28}"/>
     <g class="leo-all">
-      <g class="leo-feet"><ellipse cx="31" cy="86.4" rx="5.4" ry="3" fill="#B9402F"/><ellipse cx="45" cy="86.4" rx="5.4" ry="3" fill="#B9402F"/></g>
+      <g class="leo-feet"><ellipse cx="30" cy="87.2" rx="5.2" ry="3" fill="#B9402F"/><ellipse cx="44" cy="87.2" rx="5.2" ry="3" fill="#B9402F"/></g>
       <g class="leo-tray"${vis(o.tray)}>
-        <rect x="75" y="47.2" width="2.8" height="12.6" rx="1.4" fill="#F7B451"/>
+        <rect x="75" y="47.2" width="2.8" height="16.8" rx="1.4" fill="#F7B451"/>
         <rect x="62.4" y="44.4" width="28.4" height="3.8" rx="1.9" fill="#EEE8DE"/>
         <rect x="63.6" y="47.5" width="26" height="1.2" rx=".6" fill="#C9C0B2"/>
         <g class="leo-ticket"${vis(o.ticket)} transform="translate(.4 .8)">
@@ -905,56 +905,56 @@ body.render .overlay { display: none; }
       </g>
       <path class="leo-body" d="${BODY}" fill="url(#${id}g)"/>
       <g class="leo-shine" clip-path="url(#${id}c)">
-        <ellipse cx="28.5" cy="17" rx="9" ry="15" fill="#fff" opacity=".2"/>
-        <rect x="18" y="79.4" width="70" height="8" fill="#8F2A22" opacity=".22"/>
-        <rect x="49.5" y="6" width="6" height="50" fill="#8F2A22" opacity=".12"/>
+        <ellipse cx="27" cy="17" rx="7" ry="11" fill="#fff" opacity=".2"/>
+        <rect x="14" y="81" width="86" height="12" fill="#8F2A22" opacity=".22"/>
+        <rect x="48" y="4" width="7" height="56" fill="#8F2A22" opacity=".12"/>
       </g>
       <path class="leo-logo" d="M27 19h18v44h27v18H27Z" fill="url(#${id}g)" opacity="0"/>
       <g class="leo-arm"${vis(arm !== 'none')}${tf(armT)}>
-        <path d="M25 49.6C19 50.6 16.4 53.6 15.6 58.2" stroke="url(#${id}g)" stroke-width="6" fill="none" stroke-linecap="round"/>
-        <circle cx="15.4" cy="59" r="3.7" fill="url(#${id}g)"/>
+        <path d="M20.5 47Q14 49 12.2 56" stroke="url(#${id}g)" stroke-width="5.6" fill="none" stroke-linecap="round"/>
+        <circle cx="12" cy="57.6" r="4" fill="url(#${id}g)"/>
       </g>
       <g class="leo-bow"${vis(acc === 'bow')}>
-        <path d="M38 52.4L31.4 48.8Q29.8 48.1 29.8 49.8V55Q29.8 56.7 31.4 56ZM38 52.4L44.6 48.8Q46.2 48.1 46.2 49.8V55Q46.2 56.7 44.6 56Z" fill="${ink}"/>
-        <rect x="36" y="50.5" width="4" height="3.8" rx="1.3" fill="#3A3A40"/>
+        <path d="M37 56L27.6 51Q26.2 50.3 26.2 51.9V60.1Q26.2 61.7 27.6 61ZM37 56L46.4 51Q47.8 50.3 47.8 51.9V60.1Q47.8 61.7 46.4 61Z" fill="${ink}"/>
+        <rect x="34.8" y="52.6" width="4.4" height="6.8" rx="1.6" fill="#3A3A40"/>
       </g>
-      <g class="leo-chef" stroke="#D3CABB" stroke-width=".9"${vis(acc === 'chef')}>
+      <g class="leo-chef" stroke="#D3CABB" stroke-width=".9" transform="translate(-1 -3)"${vis(acc === 'chef')}>
         <circle cx="30" cy="1.5" r="6.4" fill="#fff"/><circle cx="38" cy="-1.5" r="7.4" fill="#fff"/><circle cx="46" cy="1.5" r="6.4" fill="#fff"/>
         <rect x="26" y="2" width="24" height="9.2" rx="2.5" fill="#fff"/><rect x="26" y="9" width="24" height="2.6" rx="1" fill="#E4DDD1"/>
       </g>
       <g class="leo-face">
-        <g class="leo-cheeks" fill="#FF8E8E" opacity=".5"><ellipse cx="26.4" cy="37.6" rx="2.6" ry="1.7"/><ellipse cx="49.8" cy="37.6" rx="2.4" ry="1.7"/></g>
+        <g class="leo-cheeks" fill="#FF8E8E" opacity=".5"><ellipse cx="24.6" cy="37.6" rx="2.8" ry="1.8"/><ellipse cx="50.4" cy="36" rx="2.8" ry="1.8"/></g>
         <g class="leo-eyes">
           <g class="leo-eye leo-eyeL"${vis(['open', 'wink', 'half'].includes(eyes))}>
-            <ellipse cx="31.2" cy="25" rx="6.8" ry="8.2" fill="#fff"/>
-            <g class="leo-pupil"${tf(pup)}><circle cx="32.2" cy="26.3" r="4" fill="${ink}"/><circle cx="33.7" cy="24.3" r="1.5" fill="#fff"/><circle cx="31" cy="28.2" r=".65" fill="#fff"/></g>
+            <ellipse cx="28.4" cy="27" rx="7" ry="9" fill="#fff"/>
+            <g class="leo-pupil"${tf(pup)}><circle cx="29.6" cy="28.4" r="4.3" fill="${ink}"/><circle cx="31" cy="26.2" r="1.6" fill="#fff"/></g>
           </g>
           <g class="leo-eye leo-eyeR"${vis(['open', 'half'].includes(eyes))}>
-            <ellipse cx="44.8" cy="25" rx="6.8" ry="8.2" fill="#fff"/>
-            <g class="leo-pupil"${tf(pup)}><circle cx="45.8" cy="26.3" r="4" fill="${ink}"/><circle cx="47.3" cy="24.3" r="1.5" fill="#fff"/><circle cx="44.6" cy="28.2" r=".65" fill="#fff"/></g>
+            <ellipse cx="45.6" cy="27" rx="7" ry="9" fill="#fff"/>
+            <g class="leo-pupil"${tf(pup)}><circle cx="46.8" cy="28.4" r="4.3" fill="${ink}"/><circle cx="48.2" cy="26.2" r="1.6" fill="#fff"/></g>
           </g>
         </g>
         <g class="leo-lids"${vis(eyes === 'half')}>
-          <path d="M24.1 26.4A7.1 8.6 0 0 1 38.3 26.4Z" fill="#D9493F"/><path d="M37.7 26.4A7.1 8.6 0 0 1 51.9 26.4Z" fill="#D9493F"/>
-          <path d="M24.6 26.4H37.8M38.2 26.4H51.4" stroke="${ink}" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M21.2 28.4A7.2 8.8 0 0 1 35.6 28.4Z" fill="#D9493F"/><path d="M38.4 28.4A7.2 8.8 0 0 1 52.8 28.4Z" fill="#D9493F"/>
+          <path d="M21.7 28.4H35.1M38.9 28.4H52.3" stroke="${ink}" stroke-width="1.4" stroke-linecap="round"/>
         </g>
-        <path class="leo-happyL" d="M26.6 28q4.6-6.6 9.2 0" stroke="${ink}" stroke-width="2.6" fill="none" stroke-linecap="round"${vis(eyes === 'happy')}/>
-        <path class="leo-happyR" d="M40.2 28q4.6-6.6 9.2 0" stroke="${ink}" stroke-width="2.6" fill="none" stroke-linecap="round"${vis(eyes === 'happy' || eyes === 'wink')}/>
-        <path class="leo-closed" d="M26.8 25.6q4.4 3.8 8.8 0M40.4 25.6q4.4 3.8 8.8 0" stroke="${ink}" stroke-width="2.4" fill="none" stroke-linecap="round"${vis(eyes === 'closed')}/>
-        <path class="leo-browL" d="M26.6 14.4q4.6-2.8 9.2-.8" stroke="${ink}" stroke-width="2.4" fill="none" stroke-linecap="round"${tf(browT[0])}/>
-        <path class="leo-browR" d="M40.2 13.6q4.6-2 9.2.8" stroke="${ink}" stroke-width="2.4" fill="none" stroke-linecap="round"${tf(browT[1])}/>
+        <path class="leo-happyL" d="M22.2 30q6.2-8.6 12.4 0" stroke="${ink}" stroke-width="3.2" fill="none" stroke-linecap="round"${vis(eyes === 'happy')}/>
+        <path class="leo-happyR" d="M39.8 30q6.2-8.6 12.4 0" stroke="${ink}" stroke-width="3.2" fill="none" stroke-linecap="round"${vis(eyes === 'happy' || eyes === 'wink')}/>
+        <path class="leo-closed" d="M22.2 27q6.2 4.8 12.4 0M39.8 27q6.2 4.8 12.4 0" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"${vis(eyes === 'closed')}/>
+        <path class="leo-browL" d="M22 15.5q5.6-3.2 11.4-.6" stroke="${ink}" stroke-width="3.4" fill="none" stroke-linecap="round"${tf(browT[0])}/>
+        <path class="leo-browR" d="M40.4 11.5q5.8-4.6 11.8 1.2" stroke="${ink}" stroke-width="3.4" fill="none" stroke-linecap="round"${tf(browT[1])}/>
         <g class="leo-mouth"${vis(mouth === 'smile')}>
           <path d="${MOUTH}" fill="${lip}"/>
-          <ellipse cx="38" cy="46" rx="4.4" ry="3" fill="#F07C6C" clip-path="url(#${id}m)"/>
+          <path d="${TEETH}" fill="#fff"/>
         </g>
-        <ellipse class="leo-mouthO" cx="38" cy="41.6" rx="2.9" ry="3.5" fill="${lip}"${vis(mouth === 'o')}/>
-        <path class="leo-mouthWavy" d="M32 41.8q1.5-1.6 3 0t3 0 3 0 3 0" stroke="${lip}" stroke-width="1.9" fill="none" stroke-linecap="round" stroke-linejoin="round"${vis(mouth === 'wavy')}/>
-        <path class="leo-mouthSmirk" d="M32.8 40.6q5.4 3.8 10.6-1.4" stroke="${lip}" stroke-width="2.1" fill="none" stroke-linecap="round"${vis(mouth === 'smirk')}/>
-        <path class="leo-mouthCalm" d="M32.8 39.8q5.2 4.4 10.4 0" stroke="${lip}" stroke-width="2.1" fill="none" stroke-linecap="round"${vis(mouth === 'calm')}/>
+        <ellipse class="leo-mouthO" cx="37.5" cy="41.6" rx="2.9" ry="3.5" fill="${lip}"${vis(mouth === 'o')}/>
+        <path class="leo-mouthWavy" d="M31.5 41.8q1.5-1.6 3 0t3 0 3 0 3 0" stroke="${lip}" stroke-width="1.9" fill="none" stroke-linecap="round" stroke-linejoin="round"${vis(mouth === 'wavy')}/>
+        <path class="leo-mouthSmirk" d="M32.3 40.6q5.4 3.8 10.6-1.4" stroke="${lip}" stroke-width="2.1" fill="none" stroke-linecap="round"${vis(mouth === 'smirk')}/>
+        <path class="leo-mouthCalm" d="M32.3 39.8q5.2 4.4 10.4 0" stroke="${lip}" stroke-width="2.1" fill="none" stroke-linecap="round"${vis(mouth === 'calm')}/>
       </g>
       <g class="leo-extra">
         <path class="leo-sweat" d="M57.4 13.5c-2.1 3.3-3 5.1-3 6.6a3 3 0 0 0 6 0c0-1.5-.9-3.3-3-6.6Z" fill="#8FD3FF"${vis(extra === 'sweat')}/>
-        <g class="leo-zzz" fill="#F5A030" font-family="Unbounded, 'Arial Black', sans-serif" font-weight="800"${vis(extra === 'zzz')}><text x="55" y="12" font-size="8">z</text><text x="62" y="5" font-size="6">z</text><text x="67.5" y="0" font-size="4.5">z</text></g>
+        <g class="leo-zzz" fill="#F5A030" font-family="Unbounded, 'Arial Black', sans-serif" font-weight="800"${vis(extra === 'zzz')}><text x="60" y="15" font-size="9">z</text><text x="67" y="8" font-size="7">z</text><text x="72" y="2" font-size="5">z</text></g>
         <g class="leo-sparkles"${vis(extra === 'sparkles')}><path d="M10 18l1.3 3.7L15 23l-3.7 1.3L10 28l-1.3-3.7L5 23l3.7-1.3Z" fill="#F5A030"/><path d="M60 4l1 2.8 2.8 1-2.8 1-1 2.8-1-2.8-2.8-1 2.8-1Z" fill="#fff"/><path d="M88 30l1.2 3.4 3.4 1.2-3.4 1.2-1.2 3.4-1.2-3.4-3.4-1.2 3.4-1.2Z" fill="#F5A030"/></g>
       </g>
     </g>
@@ -972,12 +972,12 @@ body.render .overlay { display: none; }
       calm: q('.leo-mouthCalm'), zzz: q('.leo-zzz'), lids: q('.leo-lids'), smirk: q('.leo-mouthSmirk'),
     };
   }
-  $('#leoMain').innerHTML = leoV2({ tray: true, ticket: true });
-  $('#leoBox').innerHTML = leoV2({ tray: true, ticket: true });
+  $('#leoMain').innerHTML = leoV3({ tray: true, ticket: true });
+  $('#leoBox').innerHTML = leoV3({ tray: true, ticket: true });
   const LM = leoParts($('#leoMain'));
   const LB = leoParts($('#leoBox'));
   // Leo mini (estático) en la billetera
-  $('#leoMini').innerHTML = leoV2({ arm: 'none', shadow: false, viewBox: '20 6 66 86' });
+  $('#leoMini').innerHTML = leoV3({ arm: 'none', shadow: false, viewBox: '17 4 76 88' });
 
   /* ── QR real a distleogin.com ──────────────────────────── */
   function qrPath() {
@@ -1104,6 +1104,8 @@ body.render .overlay { display: none; }
     gsap.set(LM.smile, { autoAlpha: 0 });
     gsap.set(LM.shadow, { autoAlpha: 0 });
     gsap.set('#leoBox', { autoAlpha: 0, x: 690, y: 1300, scale: 1 });
+    // El brazo gira desde el hombro (no desde el centro de su caja)
+    gsap.set([LM.arm, LB.arm], { svgOrigin: '20.5 47' });
     gsap.set('#ring', { autoAlpha: 0, scale: 0 });
     gsap.set('#cap3 .c1', { autoAlpha: 0, y: 30 });
     gsap.set('#cap3 .c2', { autoAlpha: 1 });
