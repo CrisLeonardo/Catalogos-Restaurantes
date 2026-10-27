@@ -220,8 +220,9 @@ La propuesta para que eso «se vea con medio vistazo»:
 |---|---|
 | EV-00, EV-16 | Arreglados en el PR #47 (`fix/membresia-mesero-cocina-y-carbon`). |
 | EV-10, EV-11, EV-14, EV-15, EV-17, EV-18 | Arreglados en el PR #48 (`fix/primera-impresion`). |
+| EV-01 | Hecho en el PR #49 (`feat/pidelo-tu-mismo`). |
 | EV-12 | Ya estaba hecho (D-7). |
-| EV-01 a EV-09, EV-13 | Pendientes. |
+| EV-02 a EV-09, EV-13 | Pendientes. |
 
 ## 6. Pendiente de esta auditoría
 
