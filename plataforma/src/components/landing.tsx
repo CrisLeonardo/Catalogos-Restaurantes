@@ -11,6 +11,8 @@ import { LandingPhone, Testimonials } from '@/components/landing-proof';
 import { LandingIntro } from '@/components/landing-intro';
 import { LandingDisenos } from '@/components/landing-disenos';
 import { Leo } from '@/components/leo';
+import { LandingDemo } from '@/components/landing-demo';
+import QRCode from 'qrcode';
 import { BUILTIN_TEMPLATES } from '@/lib/theme/templates';
 import { disenosDeLaPortada } from '@/lib/landing-disenos';
 
@@ -68,6 +70,10 @@ const CAPABILITIES: {
   { icon: 'leaf',     label: 'Alérgenos y dietas',    body: 'Marca vegano, sin gluten y los 14 alérgenos.' },
   { icon: 'receipt',  label: 'Factura electrónica',   body: 'Certificación FEL de la SAT desde el mismo cobro.', soon: true },
 ];
+
+/** Cuántas capacidades se ven sin abrir «Ver todo lo que incluye»: las dos
+ *  anchas y una fila de tres. */
+const A_LA_VISTA = 5;
 
 const DISENOS = disenosDeLaPortada();
 
@@ -149,6 +155,10 @@ function structuredData(pricing: PlanPricing) {
 export default async function LeoginLanding() {
   const [pricing, proof] = await Promise.all([getEffectivePlanPricing(), getLandingProof()]);
   const demoUrl = subdomainUrl(DEMO_SLUG);
+  // El QR de «Míralo en tu celular» (W1), dibujado aquí una vez.
+  const demoQr = await QRCode.toString(demoUrl, {
+    type: 'svg', errorCorrectionLevel: 'M', margin: 1, color: { dark: '#1C1C1E', light: '#FFFFFF' },
+  });
   const ctaHref = contactHref();
 
   return (
@@ -192,12 +202,11 @@ export default async function LeoginLanding() {
               </p>
 
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 30 }}>
+                {/* El sí chico primero (estrategia §2.14 y §4): el menú, no «el sistema». */}
                 <Link href="/registro" {...conEvento('lp-btn lp-btn-lg lp-btn-primary', EVENTOS.clicCrear, 'portada')}>
-                  Crear mi restaurante gratis
+                  Crear mi menú gratis
                 </Link>
-                <a href={demoUrl} className="lp-btn lp-btn-lg lp-btn-soft">
-                  <Icon name="grid" size={16} /> Ver demo en vivo
-                </a>
+                <LandingDemo href={demoUrl} qrSvg={demoQr} />
               </div>
 
               <p className="lp-body" style={{ fontSize: 13.5, marginTop: 18, color: 'var(--u-text-4)' }}>
@@ -369,8 +378,10 @@ export default async function LeoginLanding() {
             lead="Empiezas con el menú y activas lo demás cuando tu restaurante lo pida. Nada de migrar de plataforma a los seis meses."
             center
           />
+          {/* Ley de Hick (estrategia §2.6): a la vista, lo que define el
+              producto; la lista completa se abre aparte (W4). */}
           <div className="lp-bento" style={{ marginTop: 34 }}>
-            {CAPABILITIES.map((c, i) => (
+            {CAPABILITIES.slice(0, A_LA_VISTA).map((c, i) => (
               <div
                 key={c.label}
                 className={`lp-card lp-card-lift ${c.wide ? 'lp-bento-wide' : ''}`}
@@ -395,6 +406,33 @@ export default async function LeoginLanding() {
               </div>
             ))}
           </div>
+          <details className="lp-incluye">
+            <summary className="lp-btn lp-btn-soft">
+              Ver todo lo que incluye · {CAPABILITIES.length - A_LA_VISTA} herramientas más
+              <Icon name="chevronDown" size={16} />
+            </summary>
+            <div className="lp-bento" style={{ marginTop: 14 }}>
+              {CAPABILITIES.slice(A_LA_VISTA).map((c) => (
+                <div key={c.label} className="lp-card" style={{ padding: '18px 18px 20px', borderRadius: 18 }}>
+                  <span className="lp-icon"><Icon name={c.icon} size={19} /></span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
+                    <h3 style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--u-text)', letterSpacing: '-0.01em' }}>
+                      {c.label}
+                    </h3>
+                    {c.soon && (
+                      <span
+                        className="t-kicker"
+                        style={{ fontSize: 8.5, letterSpacing: '0.1em', padding: '3px 7px', borderRadius: 99, color: 'var(--u-text-3)', background: 'color-mix(in srgb, var(--u-text) 8%, transparent)' }}
+                      >
+                        Pronto
+                      </span>
+                    )}
+                  </div>
+                  <p className="lp-body" style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>{c.body}</p>
+                </div>
+              ))}
+            </div>
+          </details>
         </section>
 
         {/* ── Para quién ────────────────────────────────────── */}
@@ -579,7 +617,7 @@ export default async function LeoginLanding() {
                 </p>
                 <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 30 }}>
                   <Link href="/registro" {...conEvento('lp-btn lp-btn-lg lp-btn-primary', EVENTOS.clicCrear, 'cierre')}>
-                    Crear mi restaurante gratis
+                    Crear mi menú gratis
                   </Link>
                   <a
                     href={ctaHref}

@@ -3362,6 +3362,13 @@ html[data-platform] .asphalt::after { display: none; }
   background: linear-gradient(180deg, transparent 55%, rgba(18, 18, 20, 0.55));
 }
 .lp-intro-img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+/* El bucle sin sonido (landing-intro.tsx): aparece cuando de verdad ya corre. */
+.lp-intro-video {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none;
+  opacity: 0; transition: opacity 0.5s ease, transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.lp-intro-video[data-on="1"] { opacity: 1; }
+.lp-intro:hover .lp-intro-video { transform: scale(1.03); }
 .lp-intro:hover .lp-intro-img { transform: scale(1.03); }
 .lp-intro-play {
   position: absolute; left: 50%; top: 50%; z-index: 1;
@@ -3382,7 +3389,9 @@ html[data-platform] .asphalt::after { display: none; }
   .lp-intro-img, .lp-intro-play { transition: none; }
 }
 .lp-intro-dialog {
-  padding: 0; border: 0; border-radius: 18px; overflow: hidden; background: #121214;
+  /* margin: auto la centra: el `* { margin: 0 }` de la app se la quitaba y
+     la ventana salía pegada arriba a la izquierda. */
+  margin: auto; padding: 0; border: 0; border-radius: 18px; overflow: hidden; background: #121214;
   width: min(94vw, 1280px); max-width: none; max-height: none;
 }
 .lp-intro-dialog::backdrop { background: rgba(10, 10, 12, 0.82); }
@@ -3753,3 +3762,65 @@ html[data-admin-area][data-scheme="light"] {
   .pedido-meta i { animation: pedido-llena 900ms cubic-bezier(0.16, 1, 0.3, 1) 300ms both; }
   .pedido-sorpresa { animation: pedido-pop 460ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
 }
+
+/* «Míralo en tu celular» (landing-demo.tsx · PLAN_MOMENTOS_PICO W1): en una
+   computadora con ratón, el botón abre un QR; en lo táctil, el enlace. */
+.lp-demo-pc { display: none; }
+@media (hover: hover) and (pointer: fine) and (min-width: 900px) {
+  .lp-demo-movil { display: none; }
+  .lp-demo-pc { display: inline-flex; }
+}
+.lp-demo-dialog {
+  /* margin: auto la centra: el reinicio de estilos de la app se la quita. */
+  margin: auto; width: min(92vw, 380px); padding: 26px 24px 22px; border: 0; border-radius: 24px; text-align: center;
+  background: #fff; color: #17161a; box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.45);
+}
+.lp-demo-dialog::backdrop { background: rgba(10, 10, 12, 0.6); }
+.lp-demo-cerrar {
+  position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; display: grid; place-items: center;
+  border: 0; border-radius: 50%; background: transparent; color: #5c5a60; cursor: pointer;
+}
+.lp-demo-qr { width: 236px; height: 236px; margin: 18px auto 14px; padding: 10px; border-radius: 18px; border: 1px solid rgba(0, 0, 0, 0.08); }
+.lp-demo-qr svg { display: block; width: 100%; height: 100%; }
+.lp-demo-aqui { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: var(--brand-accent-ink); text-decoration: none; }
+
+/* «Ver todo lo que incluye» (W4): la lista completa, plegada. */
+.lp-incluye { margin-top: 18px; text-align: center; }
+.lp-incluye > summary { list-style: none; display: inline-flex; gap: 8px; cursor: pointer; }
+.lp-incluye > summary::-webkit-details-marker { display: none; }
+.lp-incluye > summary svg { transition: transform 0.2s ease; }
+.lp-incluye[open] > summary svg { transform: rotate(180deg); }
+.lp-incluye > .lp-bento { text-align: left; }
+
+/* «Así se ve TU restaurante» (components/signup/restaurante-listo.tsx · G1). */
+.listo-fondo {
+  position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 16px;
+  background: rgba(12, 11, 10, 0.62); overflow-y: auto;
+}
+.listo-tarjeta {
+  width: 100%; max-width: 440px; display: flex; flex-direction: column; align-items: center; gap: 18px;
+  padding: 22px 20px; border-radius: 26px; background: #fff; color: #17161a;
+  box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.5);
+}
+.listo-cabeza { display: flex; align-items: center; gap: 14px; width: 100%; }
+.listo-telefono {
+  width: 250px; height: min(500px, 58svh); border-radius: 34px; overflow: hidden;
+  border: 9px solid #1C1C1E; background: #1C1C1E; box-shadow: 0 24px 50px -24px rgba(0, 0, 0, 0.5);
+}
+.listo-telefono { position: relative; }
+/* El menú se dibuja a ancho de celular (375 px) y se encoge para caber:
+   así se ve como en el teléfono, sin cortar el nombre. 232 / 375 = 0.6187. */
+.listo-telefono iframe {
+  position: absolute; left: 0; top: 0; display: block; border: 0;
+  width: 375px; height: 161.6%; transform: scale(0.6187); transform-origin: 0 0;
+}
+.listo-entrar {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 48px;
+  border: 0; border-radius: 14px; cursor: pointer; font-size: 15px; font-weight: 700;
+  background: var(--brand-accent, #E8534A); color: var(--brand-on-accent, #fff);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .listo-tarjeta { animation: fiesta-entra-g 380ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both; }
+  .listo-telefono { animation: fiesta-entra-g 520ms cubic-bezier(0.2, 0.9, 0.3, 1.1) 140ms both; }
+}
+@keyframes fiesta-entra-g { from { opacity: 0; transform: translate3d(0, 16px, 0) scale(0.96); } }

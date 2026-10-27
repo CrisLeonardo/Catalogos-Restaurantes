@@ -561,11 +561,11 @@ El dueño preguntó si el video podía ser más dinámico o si ya estaba en su p
 |---|---|---|
 | **A** | Mensajes nuevos en el guion de venta y la intro como video para el WhatsApp de seguimiento | Ninguno: se usa ya |
 | **B** ✅ | Portada nueva de la web con la intro animada y los mensajes de §4. **Hecha el 2026-10-26** (rama `feat/portada-bajo-control`): titular «Tu restaurante, bajo control.», tarjeta con el gancho que abre la intro de 54 s y el menú de ejemplo movido a «Dos lados, un sistema» | Solo la web pública |
-| **C** | Momentos pico: primer pedido, pedido enviado, cierre de caja y «el ding» | Panel y menú |
-| **D** | Leo en las pantallas vacías, la bienvenida y la billetera | Panel y billetera |
-| **E** | Ganchos con datos: resumen del día, «Comparte tu plato del día», «Tu año con Leogin» y premio por pedir por QR | Requiere decidir qué se mide |
+| **C** ✅ | Momentos pico: primer pedido, pedido enviado, cierre de caja y «el ding». **Hecha el 2026-10-26** (rama `feat/momentos-pico`) | Panel y menú |
+| **D** ✅ | Leo en las pantallas vacías, la bienvenida y la billetera. **Hecha el 2026-10-26** | Panel y billetera |
+| **E** ✅ | Ganchos con datos: resumen del día, «Comparte tu plato del día», «Tu año con Leogin» y premio por pedir por QR. **Hecha el 2026-10-26** con los datos que ya se guardan; medir la web sigue esperando decisión (§8) | Panel, menú y web |
 
-Cada fase, cuando se apruebe, se vuelve un `PLAN_*.md` en `docs/planes/`.
+Cada fase, cuando se apruebe, se vuelve un `PLAN_*.md` en `docs/planes/`. Las fases C, D y E, junto con lo pendiente de la web (§6.1) y del menú (§6.3), viven en [`PLAN_MOMENTOS_PICO_2026-10-26.md`](../planes/PLAN_MOMENTOS_PICO_2026-10-26.md).
 
 **2026-10-26:** el dueño pidió que navegar se sienta vivo en todo Leogin (web, menú y panel), que la gente descubra cuánto puede diseñar su menú y que Rincón 502 sea el único restaurante de ejemplo. Eso vive en [`PLAN_EXPERIENCIA_VIVA_2026-10-26.md`](../planes/PLAN_EXPERIENCIA_VIVA_2026-10-26.md).
 

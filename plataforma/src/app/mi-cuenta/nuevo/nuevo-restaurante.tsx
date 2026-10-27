@@ -8,6 +8,7 @@ import TemplateGallery from '@/components/admin/template-gallery';
 import { findStructure, findTemplate } from '@/lib/theme/templates';
 import { borrarEleccionMuestra, leerEleccionMuestra } from '@/lib/muestra-mensajes';
 import { createAnotherRestaurant, type NewRestaurantState } from '@/lib/actions/mi-cuenta';
+import { RestauranteListo } from '@/components/signup/restaurante-listo';
 import { PLAN_POINTS, defaultPlanPricing, planPriceLabel, planPriceQ, type PlanPricing } from '@/lib/plans';
 import {
   ErrorBox, Field, Stepper, Summary, WizardNav, localSlugify,
@@ -109,10 +110,14 @@ export default function NuevoRestaurante({
   // `redirect()` del servidor: su panel es la raíz de otro host y esa raíz
   // solo es el panel si la petición pasa por el proxy. Mismo motivo —y mismo
   // bug— que al entrar desde Mi cuenta; ver `enterRestaurant`.
+  //
+  // Antes de entrar, «Así se ve TU restaurante» (PLAN_MOMENTOS_PICO G1): la
+  // navegación la hace su botón «Entrar a mi panel».
+  const [listo, setListo] = useState<string | null>(null);
   useEffect(() => {
     if (state && 'url' in state) {
       borrarEleccionMuestra();
-      window.location.assign(state.url);
+      setListo(state.url);
     }
   }, [state]);
   const actionError = state && 'error' in state ? state.error : null;
@@ -441,6 +446,8 @@ export default function NuevoRestaurante({
           Volver a Mi cuenta
         </Link>
       </p>
+
+      {listo && <RestauranteListo url={listo} estilo={templateId} nombre={name} />}
     </form>
   );
 }

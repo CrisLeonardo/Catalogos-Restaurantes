@@ -16,11 +16,11 @@
 
 | # | Qué | Por qué | Estado |
 |---|---|---|---|
-| W1 | **«Míralo en tu celular»:** en computadora, el botón secundario del inicio abre un QR grande hacia la demo en vivo. En el celular sigue siendo un enlace | El «ajá» pasa en su mano, no en la pantalla de otro (§2.2) | Pendiente |
-| W2 | Botón principal **«Crear mi menú gratis»** | El sí chico primero (§2.14, §4) | Pendiente |
-| W3 | **La tarjeta de la intro se mueve:** bucle de 7 s sin sonido; la imagen fija queda de póster. Sin bucle con «reducir movimiento» o ahorro de datos | Movimiento desde el primer segundo (§6.1) | Pendiente |
-| W4 | **«Ver todo lo que incluye»:** la lista completa de herramientas se abre aparte | Ley de Hick (§2.6) | Pendiente |
-| G1 | **Registro: «Así se ve TU restaurante»** al terminar de crear el restaurante con su estilo | Efecto IKEA y dotación (§2.3) | Pendiente |
+| W1 | **«Míralo en tu celular»:** en computadora, el botón secundario del inicio abre un QR grande hacia la demo en vivo. En el celular sigue siendo un enlace | El «ajá» pasa en su mano, no en la pantalla de otro (§2.2) | ✅ Hecho |
+| W2 | Botón principal **«Crear mi menú gratis»** | El sí chico primero (§2.14, §4) | ✅ Hecho |
+| W3 | **La tarjeta de la intro se mueve:** bucle de 7 s sin sonido; la imagen fija queda de póster. Sin bucle con «reducir movimiento» o ahorro de datos | Movimiento desde el primer segundo (§6.1) | ✅ Hecho |
+| W4 | **«Ver todo lo que incluye»:** la lista completa de herramientas se abre aparte | Ley de Hick (§2.6) | ✅ Hecho |
+| G1 | **Registro: «Así se ve TU restaurante»** al terminar de crear el restaurante con su estilo | Efecto IKEA y dotación (§2.3) | ✅ Hecho |
 
 ## Panel del restaurante
 
@@ -51,6 +51,17 @@
 | # | Qué | Estado |
 |---|---|---|
 | B1 | **Leo en la billetera:** bienvenida y lista vacía | ✅ Hecho |
+
+## Cómo quedó
+
+- **Leo** (`components/leo.tsx`) tiene cuatro expresiones: saluda, señala, feliz y duerme. Señala en la guía de primeros pasos y en las pantallas vacías del panel (`ui/empty-state.tsx`, todas a la vez), celebra en el primer pedido, los hitos, el récord y «Tu año», y saluda en la billetera.
+- **Lo que se celebra** sale de reglas puras con pruebas (`lib/momentos.ts`): sin historia suficiente no hay récord (7 días con venta para «el mejor del mes», 2 días iguales para «el mejor martes») y sin 3 pedidos no hay hora pico. Las cifras vienen del mismo reporte SQL que Métricas (`leogin_sales_report`), con la hora de corte del restaurante.
+- **El primer pedido** se pregunta al servidor cuando entra un pedido y al abrir el panel; cada aparato recuerda que ya lo vio. Se celebra hasta el tercer pedido y dos semanas después, por si el dueño no estaba mirando.
+- **Las imágenes para compartir** (plato del día y Tu año) se dibujan en el navegador, en 1080 × 1920: `next/og` no lee las fotos WebP y ahí ya están las letras de Leogin. Sin foto del platillo sale un plato dibujado.
+- **Los puntos** que se le anuncian al comensal salen de la misma regla que los acredita (`puntosDelPedido` en `lib/db/loyalty.ts`).
+- **La sorpresa** se sortea una sola vez por pedido en el servidor y queda escrita: recargar no vuelve a tirar los dados.
+- **El bucle de la tarjeta** (`public/intro/bucle.webm`, 327 KB) lo genera `docs/diseno/intro-animada/publicar-en-web.mjs` junto con la portada; ese script ahora normaliza los saltos de línea de `intro.html` (con `core.autocrlf` en Windows fallaba).
+- De paso: la ventana de la intro de la portada salía pegada arriba a la izquierda (el `* { margin: 0 }` de la app le quitaba el centrado); ahora va al centro.
 
 ## Base de datos
 
