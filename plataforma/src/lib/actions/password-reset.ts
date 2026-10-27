@@ -56,7 +56,7 @@ export async function requestPasswordReset(
   if (!(await rateLimit(`reset:${ip}`, 5, 15 * 60_000))) {
     return { error: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' };
   }
-  // Quien entra con el usuario de su restaurante (`carlos@azucar-negra`) NO
+  // Quien entra con el usuario de su restaurante (`carlos@rincon502`) NO
   // tiene buzón: su credencial se parece a un correo pero no lo es. Antes
   // caía en el regex de abajo y se llevaba un "escribe un correo válido" —
   // le decíamos que se había equivocado cuando lo había escrito perfecto, y

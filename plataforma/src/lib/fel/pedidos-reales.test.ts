@@ -36,7 +36,7 @@ interface OrdenExportada {
 
 const settings: FelSettings = {
   restaurant_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', provider: 'INFILE', ambiente: 'PRUEBAS',
-  nit_emisor: '36029785', nombre_emisor: 'Azucar Negra, S.A.', nombre_comercial: 'Azúcar Negra',
+  nit_emisor: '36029785', nombre_emisor: 'Rincón 502, S.A.', nombre_comercial: 'Rincón 502',
   correo_emisor: null, direccion: '5a avenida 10-50 zona 1', codigo_postal: '01001',
   municipio: 'Guatemala', departamento: 'Guatemala', pais: 'GT', codigo_establecimiento: '1',
   regimen_iva: 'GENERAL', regimen_isr: 'SIMPLIFICADO', agente_retencion_iva: false,

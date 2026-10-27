@@ -34,11 +34,11 @@ describe('publicOrigin', () => {
       publicOrigin(
         pedir('https://localhost:10000/x', {
           host: 'localhost:10000',
-          'x-forwarded-host': 'azucar-negra-demo-admin.distleogin.com',
+          'x-forwarded-host': 'rincon502-admin.distleogin.com',
           'x-forwarded-proto': 'https',
         }),
       ),
-    ).toBe('https://azucar-negra-demo-admin.distleogin.com');
+    ).toBe('https://rincon502-admin.distleogin.com');
   });
 
   it('con varios saltos se queda con el primero', () => {
@@ -65,12 +65,12 @@ describe('publicOrigin', () => {
   });
 
   it('el subdominio del tenant en local se conserva, y habla http', () => {
-    // `azucarnegra.localhost` NO es el host interno del contenedor: es donde
+    // `rincon502.localhost` NO es el host interno del contenedor: es donde
     // trabaja el desarrollador. Colapsarlo al dominio configurado (o servirlo
     // por https) rompería el entorno local de GUIA_ENTORNO_LOCAL.md.
-    expect(publicOrigin(pedir('http://azucarnegra.localhost:3000/x', {
-      host: 'azucarnegra.localhost:3000',
-    }))).toBe('http://azucarnegra.localhost:3000');
+    expect(publicOrigin(pedir('http://rincon502.localhost:3000/x', {
+      host: 'rincon502.localhost:3000',
+    }))).toBe('http://rincon502.localhost:3000');
   });
 
   it('nombre de servicio sin punto (red privada) → el dominio configurado', () => {

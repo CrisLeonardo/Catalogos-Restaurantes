@@ -32,7 +32,7 @@ function doc(over: Partial<DocumentoDte> = {}): DocumentoDte {
     emisor: {
       nit: '36029785',
       nombre: 'Restaurante Ejemplo, S.A.',
-      nombreComercial: 'Azúcar Negra',
+      nombreComercial: 'Rincón 502',
       codigoEstablecimiento: '1',
       afiliacionIva: afiliacionIvaXml(regimenIva),
       direccion,

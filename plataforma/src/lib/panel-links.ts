@@ -16,8 +16,8 @@
 
    Por qué medirlo desde el pathname y no desde una prop: `usePathname()` bajo
    un rewrite del proxy devuelve la ruta que ve el NAVEGADOR (comprobado el
-   2026-09-02: con el panel abierto en `/panel/azucar-negra`, la barra dice
-   `/panel/azucar-negra`), así que el slug ya viaja en el único sitio del que
+   2026-09-02: con el panel abierto en `/panel/rincon502`, la barra dice
+   `/panel/rincon502`), así que el slug ya viaja en el único sitio del que
    no se puede desincronizar.
    ============================================================ */
 
@@ -36,7 +36,7 @@ function esRutaSinRestaurante(ruta: string): boolean {
 
 /**
  * Prefijo del panel según la ruta del navegador.
- *   "/panel/azucar-negra/menu" → "/panel/azucar-negra"
+ *   "/panel/rincon502/menu" → "/panel/rincon502"
  *   "/admin/menu"              → ""   (subdominio: no hay prefijo que poner)
  */
 export function panelBaseFrom(pathname: string | null | undefined): string {
@@ -49,8 +49,8 @@ export function panelBaseFrom(pathname: string | null | undefined): string {
  * toda la lógica que ya compara contra `/admin/...` (pestaña activa, títulos,
  * modo kiosco) siga funcionando sin tocarla.
  *
- *   "/panel/azucar-negra/menu" → "/admin/menu"
- *   "/panel/azucar-negra"      → "/admin"
+ *   "/panel/rincon502/menu" → "/admin/menu"
+ *   "/panel/rincon502"      → "/admin"
  *   "/admin/menu"              → "/admin/menu"  (sin cambios)
  */
 export function internalPanelPath(pathname: string | null | undefined): string {
@@ -64,10 +64,10 @@ export function internalPanelPath(pathname: string | null | undefined): string {
 /**
  * El enlace que hay que pintar para una ruta interna del panel.
  *
- *   panelHref("/panel/azucar-negra", "/admin/menu")  → "/panel/azucar-negra/menu"
+ *   panelHref("/panel/rincon502", "/admin/menu")  → "/panel/rincon502/menu"
  *   panelHref("",                    "/admin/menu")  → "/admin/menu"
- *   panelHref("/panel/azucar-negra", "/admin/login") → "/admin/login"   (sin restaurante)
- *   panelHref("/panel/azucar-negra", "/mi-cuenta")   → "/mi-cuenta"     (de la persona)
+ *   panelHref("/panel/rincon502", "/admin/login") → "/admin/login"   (sin restaurante)
+ *   panelHref("/panel/rincon502", "/mi-cuenta")   → "/mi-cuenta"     (de la persona)
  *
  * Todo lo que no sea una ruta del panel pasa de largo: Mi cuenta, el menú
  * público, una URL absoluta a otro dominio.

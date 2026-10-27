@@ -382,7 +382,7 @@ describe('cookie fantasma del personal', () => {
    restaurante no se enteren del cambio de arquitectura.
 
    Verificado a mano el 2026-09-02 contra el entorno local (el panel se pinta
-   entero en `/panel/azucar-negra`); esto lo fija para que no se caiga solo.
+   entero en `/panel/rincon502`); esto lo fija para que no se caiga solo.
    ============================================================ */
 
 /** Destino del rewrite que pidió el proxy, o null si no reescribió. */
@@ -404,21 +404,21 @@ describe('el panel por ruta (origen único)', () => {
   const raiz = (path: string) => new NextRequest(`https://distleogin.com${path}`);
 
   it('/panel/<slug> → /admin, con el restaurante resuelto', async () => {
-    const res = await proxy(raiz('/panel/azucar-negra'));
+    const res = await proxy(raiz('/panel/rincon502'));
 
     expect(rewriteA(res)).toBe('/admin');
-    expect(tenantQueVeElRender(res)).toBe('azucar-negra');
+    expect(tenantQueVeElRender(res)).toBe('rincon502');
   });
 
   it('/panel/<slug>/<seccion> conserva la sección', async () => {
-    const res = await proxy(raiz('/panel/azucar-negra/menu/productos/new'));
+    const res = await proxy(raiz('/panel/rincon502/menu/productos/new'));
 
     expect(rewriteA(res)).toBe('/admin/menu/productos/new');
-    expect(tenantQueVeElRender(res)).toBe('azucar-negra');
+    expect(tenantQueVeElRender(res)).toBe('rincon502');
   });
 
   it('marca área de personal: el panel usa sus 2 temas fijos, no el del restaurante', async () => {
-    const res = await proxy(raiz('/panel/azucar-negra/caja'));
+    const res = await proxy(raiz('/panel/rincon502/caja'));
 
     expect(res.headers.get('x-middleware-request-x-admin-area')).toBe('1');
   });
@@ -442,12 +442,12 @@ describe('el panel por ruta (origen único)', () => {
     // cabecera interna se borra SIEMPRE antes de escribirla, así que lo único
     // que decide el tenant es `/panel/<slug>`.
     const res = await proxy(
-      new NextRequest('https://distleogin.com/panel/azucar-negra/caja', {
+      new NextRequest('https://distleogin.com/panel/rincon502/caja', {
         headers: { 'x-tenant-slug': 'otro-restaurante' },
       }),
     );
 
-    expect(tenantQueVeElRender(res)).toBe('azucar-negra');
+    expect(tenantQueVeElRender(res)).toBe('rincon502');
   });
 });
 
@@ -574,7 +574,7 @@ describe('la cookie del comensal bajo el link estable', () => {
 
   beforeEach(() => {
     h.behaviour = async () => ({ error: null });
-    vi.stubGlobal('fetch', async () => Response.json([{ slug: 'azucar-negra', status: 'active' }]));
+    vi.stubGlobal('fetch', async () => Response.json([{ slug: 'rincon502', status: 'active' }]));
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -592,33 +592,33 @@ describe('la cookie del comensal bajo el link estable', () => {
       }
       return { error: null };
     };
-    const res = await proxy(estable('/m/azucar-negra', `${DINER}=TOKEN-VIEJO`));
+    const res = await proxy(estable('/m/rincon502', `${DINER}=TOKEN-VIEJO`));
 
-    expect(delComensal(res)).toEqual([expect.stringMatching(/^sb-leogin-diner-v2=TOKEN-NUEVO; Path=\/m\/azucar-negra(;|$)/)]);
+    expect(delComensal(res)).toEqual([expect.stringMatching(/^sb-leogin-diner-v2=TOKEN-NUEVO; Path=\/m\/rincon502(;|$)/)]);
   });
 
   it('en la portada no hay nada que mudar: la vieja ni siquiera llega ahí', async () => {
-    const res = await proxy(estable('/m/azucar-negra', `${DINER}=SESION`));
+    const res = await proxy(estable('/m/rincon502', `${DINER}=SESION`));
 
     expect(delComensal(res)).toEqual([]);
     expect(cookiesQueVeElRender(res)).toContain(`${DINER}=SESION`);
   });
 
   it('en una subpágina, sin la marca, muda la sesión a /m/<ref> y borra la de /m/<ref>/', async () => {
-    const res = await proxy(estable('/m/azucar-negra/4', `${DINER}.0=TROZO0; ${DINER}.1=TROZO1`));
+    const res = await proxy(estable('/m/rincon502/4', `${DINER}.0=TROZO0; ${DINER}.1=TROZO1`));
     const escritas = delComensal(res);
 
     for (const [name, value] of [[`${DINER}.0`, 'TROZO0'], [`${DINER}.1`, 'TROZO1']]) {
-      expect(escritas).toContainEqual(expect.stringMatching(new RegExp(`^${name.replace('.', '\.')}=; Path=/m/azucar-negra/; Max-Age=0`)));
-      expect(escritas).toContainEqual(expect.stringMatching(new RegExp(`^${name.replace('.', '\.')}=${value}; Path=/m/azucar-negra;`)));
+      expect(escritas).toContainEqual(expect.stringMatching(new RegExp(`^${name.replace('.', '\.')}=; Path=/m/rincon502/; Max-Age=0`)));
+      expect(escritas).toContainEqual(expect.stringMatching(new RegExp(`^${name.replace('.', '\.')}=${value}; Path=/m/rincon502;`)));
     }
-    expect(escritas).toContainEqual(expect.stringMatching(/^leogin-diner-ruta=1; Path=\/m\/azucar-negra;/));
+    expect(escritas).toContainEqual(expect.stringMatching(/^leogin-diner-ruta=1; Path=\/m\/rincon502;/));
     // El render de esta misma petición sigue viendo la sesión.
     expect(cookiesQueVeElRender(res)).toContain(`${DINER}.0=TROZO0`);
   });
 
   it('con la marca no reescribe nada: la mudanza es una sola vez', async () => {
-    const res = await proxy(estable('/m/azucar-negra/4', `${DINER}=SESION; ${MARCA}=1`));
+    const res = await proxy(estable('/m/rincon502/4', `${DINER}=SESION; ${MARCA}=1`));
     expect(delComensal(res)).toEqual([]);
   });
 
@@ -630,12 +630,12 @@ describe('la cookie del comensal bajo el link estable', () => {
       }
       return { error: null };
     };
-    const res = await proxy(estable('/m/azucar-negra/checkout', `${DINER}=TOKEN-VIEJO`));
+    const res = await proxy(estable('/m/rincon502/checkout', `${DINER}=TOKEN-VIEJO`));
     const escritas = delComensal(res);
 
     expect(escritas.filter((c) => c.includes('TOKEN-VIEJO'))).toEqual([]);
-    expect(escritas).toContainEqual(expect.stringMatching(/^sb-leogin-diner-v2=TOKEN-NUEVO; Path=\/m\/azucar-negra(;|$)/));
-    expect(escritas).toContainEqual(expect.stringMatching(/^sb-leogin-diner-v2=; Path=\/m\/azucar-negra\/; Max-Age=0/));
+    expect(escritas).toContainEqual(expect.stringMatching(/^sb-leogin-diner-v2=TOKEN-NUEVO; Path=\/m\/rincon502(;|$)/));
+    expect(escritas).toContainEqual(expect.stringMatching(/^sb-leogin-diner-v2=; Path=\/m\/rincon502\/; Max-Age=0/));
   });
 
   it('con las dos rutas a la vez (fantasma) borra la vieja y no arma una sesión mezclada', async () => {
@@ -648,18 +648,18 @@ describe('la cookie del comensal bajo el link estable', () => {
       return { error: null };
     };
     // El navegador manda primero la de ruta más larga: la vieja.
-    const res = await proxy(estable('/m/azucar-negra/4', `${DINER}=VIEJA; ${DINER}=NUEVA; ${MARCA}=1`));
+    const res = await proxy(estable('/m/rincon502/4', `${DINER}=VIEJA; ${DINER}=NUEVA; ${MARCA}=1`));
     const escritas = delComensal(res);
 
-    expect(escritas).toContainEqual(expect.stringMatching(/^sb-leogin-diner-v2=; Path=\/m\/azucar-negra\/; Max-Age=0/));
+    expect(escritas).toContainEqual(expect.stringMatching(/^sb-leogin-diner-v2=; Path=\/m\/rincon502\/; Max-Age=0/));
     // La buena (la de /m/<ref>) no se toca.
-    expect(escritas.filter((c) => /Path=\/m\/azucar-negra(;|$)/.test(c) && c.startsWith(`${DINER}=`))).toEqual([]);
+    expect(escritas.filter((c) => /Path=\/m\/rincon502(;|$)/.test(c) && c.startsWith(`${DINER}=`))).toEqual([]);
     expect(vioSesion).toBe(false);
     expect(cookiesQueVeElRender(res) ?? '').not.toContain(DINER);
   });
 
   it('sin sesión del comensal no escribe nada (ni la marca)', async () => {
-    const res = await proxy(estable('/m/azucar-negra/4', 'tema=oscuro'));
+    const res = await proxy(estable('/m/rincon502/4', 'tema=oscuro'));
     expect(delComensal(res)).toEqual([]);
   });
 });

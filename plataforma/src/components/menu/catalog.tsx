@@ -369,8 +369,8 @@ export default function Catalog({
     sectionEls.current.get(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  /* Medido en un teléfono de 375×812: el hero decía «Azúcar Negra», y 12 px
-     más abajo este rótulo repetía «AZÚCAR NEGRA · EL MENÚ» — justo debajo de
+  /* Medido en un teléfono de 375×812: el hero decía «Rincón 502», y 12 px
+     más abajo este rótulo repetía «RINCÓN 502 · EL MENÚ» — justo debajo de
      un botón que acababa de decir «Ver el menú». Tres veces la misma palabra
      antes del primer platillo. Es la misma deuda que el panel saldó el 22-08
      al quitar los títulos que reescribían lo que ya decía la barra.

@@ -40,13 +40,13 @@ export type ResumeSession = {
  * la sesión de personal que YA está viva en este aparato, y solo si no hay,
  * el que el aparato tiene registrado por PIN.
  *
- * Reportado el 2026-10-08: entrar con azucarnegra, salir, entrar con
- * rincon502 y volver a abrir el ícono de Leogin llevaba a la grilla de PIN de
- * Azúcar Negra. La pista del aparato (`restaurant_devices`) solo se actualiza
+ * Reportado el 2026-10-08: entrar con el usuario de un restaurante, salir,
+ * entrar con el de otro y volver a abrir el ícono de Leogin llevaba a la
+ * grilla de PIN del primero. La pista del aparato (`restaurant_devices`) solo se actualiza
  * con un PIN correcto —nunca con un login de correo y contraseña—, así que
  * seguía apuntando al restaurante viejo aunque la sesión viva fuera de otro.
  * Y como en un aparato de confianza el "Continuar como" de un dueño se
- * esconde, la sesión viva de rincon502 ni siquiera se ofrecía.
+ * esconde, la sesión viva del segundo ni siquiera se ofrecía.
  */
 export async function getBareLoginSlug(deviceRestaurantId: string | null): Promise<string | null> {
   let restaurantId = deviceRestaurantId;

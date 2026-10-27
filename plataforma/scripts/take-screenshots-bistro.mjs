@@ -1,7 +1,7 @@
 /**
  * take-screenshots-bistro.mjs
  * Retoma TODAS las capturas del centro de ayuda usando Bistró La Plaza.
- * Elimina referencias a Azúcar Negra y descarta el tour de bienvenida en
+ * Así ninguna captura enseña el restaurante de pruebas, y descarta el tour de bienvenida en
  * cada navegación para que no aparezca en ninguna imagen.
  *
  * Uso: node scripts/take-screenshots-bistro.mjs

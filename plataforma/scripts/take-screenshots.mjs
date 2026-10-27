@@ -19,7 +19,7 @@ import fs from 'fs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SS_DIR = path.join(__dirname, '..', 'public', 'tutorial', 'screenshots');
 const BASE = 'http://127.0.0.1:3000';
-const EMAIL = 'dueno@azucarnegra.test';
+const EMAIL = 'dueno@rincon502.test';
 const PASS  = 'Dueno12345';
 
 const delay = ms => new Promise(r => setTimeout(r, ms));

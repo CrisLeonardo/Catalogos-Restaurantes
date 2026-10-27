@@ -44,6 +44,9 @@
 --  (orders/order_items, waitlist_entries, waiter_calls de v_rid) y
 --  vuelve a correr el script.
 --
+--  VERIFICADO EN LOCAL el 2026-10-26: con el restaurante creado por /registro
+--  y /mi-cuenta/nuevo, corre limpio y deja 38 platillos, 8 categorías,
+--  4 cupones y 110 pedidos. Lo de abajo es la nota original:
 --  SUPUESTOS NO VERIFICADOS CONTRA UNA BASE REAL (no hay credenciales
 --  de Supabase en el entorno donde se escribió este script — toda la
 --  verificación fue leyendo supabase/migrations/*.sql y src/lib/*

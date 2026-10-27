@@ -191,7 +191,7 @@ self.addEventListener('push', (event) => {
    además de en `/admin/...`. Dos cosas dependían de reconocerlo:
 
      · La pestaña ya abierta. El filtro miraba solo `/admin`, así que una
-       pestaña en `/panel/azucar-negra/pedidos` no contaba y CADA aviso
+       pestaña en `/panel/rincon502/pedidos` no contaba y CADA aviso
        abría una ventana nueva encima de la que ya estaba trabajando.
      · La ruta a la que se va. El servidor manda `/admin/pedidos` (no sabe
        por dónde entró esta persona); si la pestaña vive en `/panel/<slug>`,
