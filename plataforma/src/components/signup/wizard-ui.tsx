@@ -111,8 +111,13 @@ export function WizardNav({
           Atrás
         </button>
       )}
+      {/* Una `key` distinta para cada botón: sin ella React reutiliza el mismo
+          <button> y le cambia el `type` a «submit» en medio del clic de
+          «Continuar» del penúltimo paso, y el navegador envía el formulario
+          saltándose el resumen. */}
       {step < lastStep ? (
         <button
+          key="continuar"
           type="button"
           onClick={onNext}
           className="press btn-accent"
@@ -122,6 +127,7 @@ export function WizardNav({
         </button>
       ) : (
         <button
+          key="enviar"
           type="submit"
           disabled={blocked}
           className="press btn-accent"
