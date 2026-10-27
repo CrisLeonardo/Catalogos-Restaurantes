@@ -272,8 +272,28 @@ export const STYLE_PALETTES: StylePalette[] = [
     name: 'Carbón de Autor',
     desc: 'Oscuro, cálido y con acento terracota: el look insignia.',
     mode: 'Oscuro',
-    // = defaults visuales (colorBg #0b0b0c, acento #D97757)
-    config: {},
+    /* Colores explícitos. Antes era `config: {}` porque coincidía con los
+       valores por defecto, pero esos pasaron a tema claro (2026-08-24) y
+       aplicar «Carbón de Autor» dejaba el menú CLARO con la etiqueta
+       «Oscuro» (auditoría de experiencia 2026-10-27, EV-16). */
+    config: {
+      colorBg: '#0b0b0c', colorBg2: '#141416', colorText: '#F5F3EF',
+      colorAccent: '#D97757', onAccent: '#0b0b0c', scheme: 'dark',
+    },
+  },
+  {
+    id: 'lino-coral',
+    name: 'Lino & Coral',
+    desc: 'Blanco cálido y acento coral: claro, sereno y con el color de la casa.',
+    mode: 'Claro',
+    /* El arranque de todo restaurante nuevo: los valores claros por defecto
+       (2026-08-24), con nombre propio. Hasta 2026-10-27 se llegaba a ellos
+       eligiendo «Carbón de Autor», que decía «Oscuro». Explícitos por lo
+       mismo que Carbón: que no dependan de lo que valga el defecto mañana. */
+    config: {
+      colorBg: '#FAF8F5', colorBg2: '#F1ECE5', colorText: '#1A1613',
+      colorAccent: '#D97757', onAccent: '#0b0b0c', scheme: 'light',
+    },
   },
   {
     id: 'brasa-humo',

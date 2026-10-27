@@ -6,10 +6,10 @@ import {
 import { DEFAULT_CONFIG, DEFAULT_TYPOGRAPHY } from './defaults';
 
 describe('galería = estructura × paleta', () => {
-  it('cruza las 8 estructuras con las 25 paletas', () => {
+  it('cruza las 8 estructuras con las 26 paletas', () => {
     expect(MENU_STRUCTURES).toHaveLength(8);
-    expect(STYLE_PALETTES).toHaveLength(25);
-    expect(BUILTIN_TEMPLATES).toHaveLength(8 * 25);
+    expect(STYLE_PALETTES).toHaveLength(26);
+    expect(BUILTIN_TEMPLATES).toHaveLength(8 * 26);
     for (const s of MENU_STRUCTURES) {
       expect(templatesForStructure(s.id)).toHaveLength(STYLE_PALETTES.length);
     }
@@ -154,5 +154,32 @@ describe('applyTemplateToConfig', () => {
     expect(next.grain).toBe(DEFAULT_CONFIG.grain);
     expect(next.watermark).toBe(DEFAULT_CONFIG.watermark);
     expect(next.catalogNav).toBe('portadas');
+  });
+});
+
+/* La etiqueta del filtro tiene que decir lo que la plantilla PINTA. «Carbón de
+   Autor» era `config: {}` y heredaba los valores por defecto: cuando esos
+   pasaron a tema claro, la paleta «Oscuro» insignia salía clara
+   (auditoría de experiencia 2026-10-27, EV-16). */
+describe('Oscuro / Claro', () => {
+  it.each(BUILTIN_TEMPLATES.map((t) => [t.id, t] as const))(
+    '%s pinta el tono que anuncia',
+    (_id, t) => {
+      const aplicada = applyTemplateToConfig(DEFAULT_CONFIG, t);
+      expect(aplicada.scheme).toBe(t.mode === 'Oscuro' ? 'dark' : 'light');
+    },
+  );
+
+  it('ninguna paleta depende de los colores por defecto', () => {
+    for (const p of STYLE_PALETTES) {
+      expect(p.config.colorBg, p.id).toBeDefined();
+      expect(p.config.scheme, p.id).toBeDefined();
+    }
+  });
+
+  it('el alta arranca en claro con «Lino & Coral»', () => {
+    const t = findTemplate('lino-coral')!;
+    expect(t.structure).toBe('clasico');
+    expect(applyTemplateToConfig(DEFAULT_CONFIG, t).scheme).toBe('light');
   });
 });
