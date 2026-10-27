@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leo cara y sticker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@500&family=Geist:wght@400;500;600;700&family=Unbounded:wght@600;700;800&display=swap">
+<style>
+/* Tercera hoja de Leo (después de leo-v3-propuesta.html y leo-v3-variantes.html). Parte de la v3
+   aplicada (silueta S2, ojos E1) y responde a dos cosas: una cara con un rasgo propio en vez del
+   molde de mascota de app, y la bota que se lee en la silueta. Cierra con el estilo sticker y dónde
+   usarlo en el sistema. Nada de esto está aplicado en leo.tsx. */
+:root {
+  --bg: #FBF8F3; --surface: #FFFFFF; --ink: #1C1C1E; --muted: #6B655F;
+  --line: rgba(28, 28, 30, 0.1); --chip: #F3EEE6; --acc: #B4492A;
+  --f-display: 'Unbounded', 'Arial Black', system-ui, sans-serif;
+  --f-ui: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-mono: 'Geist Mono', ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121214; --surface: #1C1C1E; --ink: #F2EEE8; --muted: #A39C93;
+    --line: rgba(242, 238, 232, 0.12); --chip: #26262A; --acc: #F5A030; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121214; --surface: #1C1C1E; --ink: #F2EEE8; --muted: #A39C93;
+  --line: rgba(242, 238, 232, 0.12); --chip: #26262A; --acc: #F5A030; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.55 var(--f-ui); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--f-display); letter-spacing: -0.02em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(30px, 4.6vw, 52px); line-height: 1.05; font-weight: 800; letter-spacing: -0.035em; }
+h2 { font-size: clamp(24px, 3.2vw, 34px); line-height: 1.1; font-weight: 700; }
+h3 { font-size: 15px; line-height: 1.25; font-weight: 700; }
+p { margin: 0; }
+.lead { color: var(--muted); font-size: 17px; max-width: 66ch; margin-top: 12px; }
+.eyebrow { font: 600 12px var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--acc); }
+section { padding-block: clamp(40px, 5.5vw, 68px); border-top: 1px solid var(--line); }
+.head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 24px; }
+.top { background: #121214; color: #F2EEE8; padding-block: clamp(36px, 5vw, 60px); }
+.top .eyebrow { color: #F5A030; }
+.top p { color: #B5AEA4; font-size: 18px; margin-top: 14px; max-width: 60ch; }
+.top-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 24px 40px; }
+.top-fila > div:first-child { flex: 1 1 380px; }
+.cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; text-align: center; overflow: hidden; }
+.card .letra { font: 700 12px var(--f-mono); color: #fff; background: var(--acc); border-radius: 999px; padding: 3px 10px; align-self: flex-start; }
+:root[data-theme="dark"] .card .letra { color: #1C1C1E; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .card .letra { color: #1C1C1E; } }
+.card p { color: var(--muted); font-size: 13.5px; }
+.card .rasgo { font: 600 12.5px var(--f-ui); color: var(--ink); background: var(--chip); border-radius: 999px; padding: 4px 12px; }
+.card .piezas { font: 500 12px var(--f-mono); color: var(--muted); }
+.bloque { border-radius: 14px; padding: 10px 12px; width: 100%; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 10px 14px; overflow: hidden; }
+.bloque.claro { background: #FBF8F3; border: 1px solid rgba(28,28,30,.1); color: #1C1C1E; }
+.bloque.oscuro { background: #121214; color: #F2EEE8; }
+.bloque .rot { font: 500 11px var(--f-mono); opacity: .6; width: 100%; text-align: left; }
+.avatar { width: 44px; height: 44px; border-radius: 50%; background: #F3EEE6; overflow: hidden; display: grid; place-items: center; }
+.oscuro .avatar { background: #26262A; }
+.avatar svg { width: 44px; height: 44px; }
+.sil svg { color: #000; }
+.blur svg { filter: blur(2.2px); }
+.nota { background: var(--chip); border-radius: 18px; padding: 18px 20px; max-width: 76ch; }
+.nota b { font-weight: 700; }
+.nota ul, .nota ol { margin: 8px 0 0; padding-left: 20px; }
+.nota li + li { margin-top: 6px; }
+.dos { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start; }
+
+/* Sticker: el mismo borde blanco de leo-v3-propuesta.html, más un poco de giro. */
+.sticker svg { filter: drop-shadow(3px 0 0 #fff) drop-shadow(-3px 0 0 #fff) drop-shadow(0 3px 0 #fff) drop-shadow(0 -3px 0 #fff) drop-shadow(0 5px 9px rgba(0,0,0,.28)); }
+.sticker.chico svg { filter: drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff) drop-shadow(0 2px 4px rgba(0,0,0,.25)); }
+.g-izq { transform: rotate(-7deg); }
+.g-der { transform: rotate(6deg); }
+.pliego { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px 26px; padding: 28px 16px; border-radius: 22px; background: #E9E4DB; }
+.pieza { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.leyenda { font: 800 15px/1 var(--f-display); color: #1C1C1E; letter-spacing: -0.01em; text-shadow: 2px 0 #fff, -2px 0 #fff, 0 2px #fff, 0 -2px #fff, 1.5px 1.5px #fff, -1.5px -1.5px #fff, 1.5px -1.5px #fff, -1.5px 1.5px #fff, 0 4px 6px rgba(0,0,0,.2); margin-top: -10px; position: relative; }
+
+/* Maquetas de uso */
+.usos { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.uso { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.uso .letra { font: 700 12px var(--f-mono); color: #fff; background: var(--acc); border-radius: 999px; padding: 3px 10px; align-self: flex-start; }
+:root[data-theme="dark"] .uso .letra { color: #1C1C1E; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .uso .letra { color: #1C1C1E; } }
+.uso p { color: var(--muted); font-size: 14px; }
+.escena { border-radius: 16px; padding: 18px; min-height: 210px; display: grid; place-items: center; position: relative; overflow: hidden; }
+.escena.osc { background: #121214; color: #F2EEE8; }
+.escena.clr { background: #FBF8F3; color: #1C1C1E; border: 1px solid rgba(28,28,30,.1); }
+.logro { background: #1C1C1E; border: 1px solid rgba(242,238,232,.12); border-radius: 18px; padding: 18px 18px 16px; width: min(270px, 100%); position: relative; margin-top: 18px; }
+.logro .k { font: 600 11px var(--f-ui); letter-spacing: .12em; text-transform: uppercase; color: #F5A030; }
+.logro .t { font: 700 17px/1.2 var(--f-display); margin-top: 6px; max-width: 13ch; }
+.logro .s { color: #A39C93; font-size: 13px; margin-top: 6px; }
+.logro .sticker { position: absolute; top: -30px; right: -10px; }
+.carton { width: min(280px, 100%); border-radius: 18px; padding: 16px; background: linear-gradient(150deg, #2A2A2E, #121214); color: #F2EEE8; box-shadow: 0 12px 26px rgba(0,0,0,.22); }
+.carton .t { font: 700 14px var(--f-display); }
+.carton .s { font-size: 12.5px; color: #A39C93; margin-top: 2px; }
+.sellos { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 12px; }
+.sello { aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; }
+.sello.vacio { border: 1.5px dashed rgba(242,238,232,.28); font: 500 11px var(--f-mono); color: #A39C93; }
+.sello.premio { border: 1.5px dashed #F5A030; color: #F5A030; font: 700 10px var(--f-ui); text-align: center; line-height: 1.1; }
+.vacia { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.vacia .t { font: 700 16px var(--f-display); margin-top: 6px; }
+.vacia .s { color: #6B655F; font-size: 13px; max-width: 26ch; }
+.chat { width: min(280px, 100%); display: flex; flex-direction: column; gap: 8px; }
+.burbuja { align-self: flex-start; background: #FFFFFF; color: #1C1C1E; border-radius: 4px 14px 14px 14px; padding: 8px 12px; font-size: 13.5px; box-shadow: 0 1px 1px rgba(0,0,0,.08); }
+.chat .sticker { align-self: flex-end; }
+.escena.verde { background: #E7DFD3; }
+.no { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.no li { display: flex; gap: 10px; align-items: baseline; font-size: 14.5px; }
+.no li::before { content: "×"; font: 700 15px var(--f-ui); color: var(--acc); }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-fila">
+    <div>
+      <div class="eyebrow">Marca · tercera hoja de Leo</div>
+      <h1>Menos detalle, más carácter</h1>
+      <p>Cuatro caras con un rasgo propio, tres pies para que deje de leerse como una bota, y el estilo sticker con cuatro lugares donde usarlo. Cada pieza lleva una letra para que la respuesta sea corta: «C4 con P2 y U1, U2». Nada de esto está aplicado en la app.</p>
+    </div>
+    <div id="hero" class="sticker g-izq"></div>
+  </div>
+</header>
+
+<main>
+<section>
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Parte 1 · cara</div>
+      <h2>Una cara que diga «Leo» sin el cuerpo</h2>
+      <p class="lead">Todas usan los ojos E1 que elegiste. Cambian cejas, boca y cachetes. Debajo de cada una, a tamaño real (64, 40 y 28 px) y la prueba que importa: <b>solo la cabeza en un avatar</b>, como se vería en una foto de perfil o una notificación. Si ahí no se reconoce, la cara depende del cuerpo.</p>
+    </div>
+    <div class="cards" id="caras"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Parte 2 · silueta</div>
+      <h2>La bota está en la punta del pie</h2>
+      <p class="lead">Lo que hace que la S2 se lea como bota es la punta redonda: un medio círculo al final del pie es exactamente la punta de un zapato. Una L de letra termina recta. Abajo, la sombra negra en 24, 40 y 72 px y desenfocada.</p>
+    </div>
+    <div class="cards" id="pies"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Parte 3 · estilo sticker</div>
+      <h2>Leo como calcomanía</h2>
+      <p class="lead">Borde blanco grueso, sombra corta y un poco de giro. Funciona porque saca a Leo de la interfaz: no parece un botón ni un ícono, parece algo que alguien pegó ahí para celebrar. Es el mismo dibujo, así que no hay que mantener una segunda versión de la mascota.</p>
+    </div>
+    <div class="pliego" id="pliego"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Parte 4 · dónde usarlo</div>
+      <h2>Cuatro lugares para el sticker</h2>
+      <p class="lead">Todos están en espacios de Leogin (panel, billetera, canales propios). La regla de siempre sigue: <b>nunca dentro del menú de un restaurante</b>.</p>
+    </div>
+    <div class="usos">
+      <article class="uso">
+        <span class="letra">U1</span>
+        <div class="escena osc">
+          <div class="logro">
+            <div class="sticker chico g-der" id="u1"></div>
+            <div class="k">Logro</div>
+            <div class="t">¡Primer pedido desde el celular!</div>
+            <div class="s">Mesa 4 · Q 186.00 · hace 1 min</div>
+          </div>
+        </div>
+        <h3>Logros en el panel</h3>
+        <p>Primer pedido, récord del día, 100 pedidos. El sticker «se pega» sobre la tarjeta del logro con un rebote corto. Es el momento pico, así que pasa pocas veces y vale la pena.</p>
+      </article>
+      <article class="uso">
+        <span class="letra">U2</span>
+        <div class="escena clr">
+          <div class="carton">
+            <div class="t">Rincón 502</div>
+            <div class="s">7 de 10 visitas · la 10.ª lleva postre</div>
+            <div class="sellos" id="u2"></div>
+          </div>
+        </div>
+        <h3>Sellos de la billetera</h3>
+        <p>En la billetera del comensal, cada visita pega un Leo en el cartón. Es el uso con más futuro: la gente colecciona stickers sin que se lo pidan, y el cartón ya existe en papel en muchos restaurantes.</p>
+      </article>
+      <article class="uso">
+        <span class="letra">U3</span>
+        <div class="escena clr">
+          <div class="vacia">
+            <div class="sticker" id="u3"></div>
+            <div class="t">Todo tranquilo</div>
+            <div class="s">No hay pedidos pendientes. Te avisamos con un «ding» cuando entre uno.</div>
+          </div>
+        </div>
+        <h3>Pantallas vacías</h3>
+        <p>Cocina sin pedidos, caja sin movimientos, la guía de primeros pasos. Ya usan a Leo dormido o señalando; en sticker se separa del resto de la pantalla y no se confunde con un botón.</p>
+      </article>
+      <article class="uso">
+        <span class="letra">U4</span>
+        <div class="escena verde">
+          <div class="chat">
+            <div class="burbuja">¿Ya viene mi pedido?</div>
+            <div class="sticker chico g-der" id="u4"></div>
+          </div>
+        </div>
+        <h3>Paquete para WhatsApp</h3>
+        <p>Diez stickers para el soporte de Leogin, las redes y los comensales con billetera. Es lo que más lejos llevaría a Leo, pero va al final: un restaurante que lo mande a sus clientes estaría poniendo nuestra marca en su conversación, y eso choca con la regla.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="dos">
+      <div>
+        <div class="head">
+          <div class="eyebrow">Mi lectura</div>
+          <h2>Qué elegiría yo</h2>
+        </div>
+        <div class="nota">
+          <p><b>Mi voto: C4 con P2, y U1, U2 y U3 en ese orden.</b> Es una lectura a ojo sobre esta hoja, no una prueba con gente.</p>
+          <ul>
+            <li><b>C4 (ceja y media sonrisa):</b> la ceja alzada y la sonrisa de lado suben hacia el mismo lado y cuentan lo mismo: «ya lo tengo». Es el único rasgo de la hoja que también se ve en el avatar de 44 px. La C3 (bigote) es la más reconocible, pero lo vuelve un mesero de los de antes y le quita lo joven.</li>
+            <li><b>P2 (punta recta):</b> la sombra pasa de zapato a letra sin cambiar el tamaño ni dónde va la campana. La P3 es todavía más L, pero se ve tiesa.</li>
+            <li><b>Sticker:</b> U1 primero porque es un solo componente y sale en el momento que más se recuerda. U2 cuando se haga el cartón de sellos de la billetera. U3 es casi gratis: cambiar el estilo de los Leos que ya están. U4 hasta tener la cara definitiva y hablarlo.</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div class="head">
+          <div class="eyebrow">Antes de decidir</div>
+          <h2>La prueba de 10 segundos</h2>
+        </div>
+        <div class="nota">
+          <p>Con cinco dueños de restaurante y cinco comensales, sin explicarles nada:</p>
+          <ol>
+            <li>Les enseñas la cara elegida 10 segundos y la escondes.</li>
+            <li>Les pides que la dibujen como puedan. Cuenta qué rasgo sale en todos los dibujos: ese es el rasgo de Leo, sea o no el que pensamos.</li>
+            <li>Les enseñas solo la sombra negra y preguntas «¿qué es?». Si más de dos dicen «una bota» o «un calcetín», el pie todavía no está.</li>
+            <li>Les preguntas «¿cómo es este personaje?» en una palabra. Si dicen «gracioso» o «amable», vamos bien; si dicen «burlón», la ceja está muy alta.</li>
+          </ol>
+        </div>
+        <div class="head" style="margin-top: 28px">
+          <div class="eyebrow">Dónde no va</div>
+        </div>
+        <ul class="no">
+          <li>Dentro del menú de un restaurante.</li>
+          <li>En cobrar, cerrar caja o cualquier pantalla con prisa.</li>
+          <li>Junto a un error o un pago rechazado: un sticker sonriente ahí se lee como burla.</li>
+          <li>Más de una vez en la misma pantalla.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+(function () {
+  var C = {
+    g0: '#E8534A', g1: '#F5A030', plano: '#EE6B3F', pie: '#B9402F', sombra: '#8F2A22',
+    tinta: '#1C1C1E', labio: '#4A1A12', campana: '#F5C03A', campanaSombra: '#D49A1E', cachete: '#FF8E8E'
+  };
+  var uid = 0;
+
+  /* Cuerpo de la S2 (leo.tsx). fe = dónde termina el pie; er = radio de la punta (12 = medio círculo). */
+  function cuerpo(fe, er) {
+    return 'M34 6h6a14 14 0 0 1 14 14v38a6 6 0 0 0 6 6H' + (fe - er) + 'a' + er + ' ' + er + ' 0 0 1 ' + er + ' ' + er +
+      'V' + (88 - er) + 'a' + er + ' ' + er + ' 0 0 1 -' + er + ' ' + er + 'H32a12 12 0 0 1-12-12V20A14 14 0 0 1 34 6Z';
+  }
+
+  var CARAS = {
+    C0: { n: 'La actual (v3)', d: 'Cejas, ojos con brillo, sonrisa con dientes y cachetes.', r: 'Ninguno propio', p: 13 },
+    C1: { n: 'La ceja manda', d: 'Una ceja plana y la otra muy alzada; boca cerrada, sin cachetes.', r: 'La ceja alzada', p: 10 },
+    C2: { n: 'Sonrisa de lado', d: 'Las cejas de siempre y una sonrisa que sube hacia la derecha.', r: 'La media sonrisa', p: 10 },
+    C3: { n: 'Bigote de maître', d: 'Un bigote con rizos en lugar de la boca grande.', r: 'El bigote', p: 12 },
+    C4: { n: 'Ceja y media sonrisa', d: 'La ceja de C1 con la boca de C2: las dos suben al mismo lado.', r: 'La ceja + la sonrisa', p: 10 }
+  };
+
+  var PIES = {
+    P1: { n: 'La actual (S2)', d: 'Pie largo con punta redonda.', fe: 92, er: 12 },
+    P2: { n: 'Punta recta', d: 'Mismo largo; la punta termina en esquina suave, como una letra.', fe: 92, er: 5 },
+    P3: { n: 'Pie corto y recto', d: 'Diez unidades menos: más L, menos zapato.', fe: 82, er: 5 }
+  };
+
+  function brazo(d, x, y, fill) {
+    return '<path d="' + d + '" stroke="' + fill + '" stroke-width="5.6" fill="none" stroke-linecap="round"/><circle cx="' + x + '" cy="' + y + '" r="4" fill="' + fill + '"/>';
+  }
+
+  function campana(cx, mono) {
+    var bc = mono ? 'currentColor' : C.campana, bs = mono ? 'currentColor' : C.campanaSombra;
+    return '<rect x="' + (cx - 7.5) + '" y="61.6" width="15" height="3" rx="1.5" fill="' + bs + '"/>' +
+      '<path d="M' + (cx - 6.5) + ' 61.6a6.5 6.5 0 0 1 13 0Z" fill="' + bc + '"/>' +
+      (mono ? '' : '<path d="M' + (cx - 4.4) + ' 59.2a4.8 4.8 0 0 1 2.2-3.2" stroke="#fff" opacity=".6" stroke-width="1.4" fill="none" stroke-linecap="round"/>') +
+      '<circle cx="' + cx + '" cy="54.4" r="1.5" fill="' + bs + '"/>';
+  }
+
+  function destello(x, y, r) {
+    return 'M' + x + ' ' + (y - r) + 'Q' + x + ' ' + y + ' ' + (x + r) + ' ' + y + 'Q' + x + ' ' + y + ' ' + x + ' ' + (y + r) +
+      'Q' + x + ' ' + y + ' ' + (x - r) + ' ' + y + 'Q' + x + ' ' + y + ' ' + x + ' ' + (y - r) + 'Z';
+  }
+
+  function cara(k, ex, completo) {
+    var t = C.tinta, s = '';
+    // Moño
+    s += '<path d="M37 56L27.6 51Q26.2 50.3 26.2 51.9V60.1Q26.2 61.7 27.6 61ZM37 56L46.4 51Q47.8 50.3 47.8 51.9V60.1Q47.8 61.7 46.4 61Z" fill="' + t + '"/><rect x="34.8" y="52.6" width="4.4" height="6.8" rx="1.6" fill="#3A3A40"/>';
+    if (k === 'C0' && completo) {
+      s += '<g fill="' + C.cachete + '" opacity=".55"><ellipse cx="24.6" cy="37.6" rx="2.8" ry="1.8"/><ellipse cx="50.4" cy="36" rx="2.8" ry="1.8"/></g>';
+    }
+    // Ojos
+    if (ex === 'saluda' || ex === 'senala') {
+      var mv = ex === 'senala' ? ' transform="translate(1.4 -1.2)"' : '';
+      s += '<ellipse cx="28.4" cy="27" rx="7" ry="9" fill="#fff"/><ellipse cx="45.6" cy="27" rx="7" ry="9" fill="#fff"/>' +
+        '<g' + mv + '><circle cx="29.6" cy="28.4" r="4.3" fill="' + t + '"/><circle cx="46.8" cy="28.4" r="4.3" fill="' + t + '"/>' +
+        '<circle cx="31" cy="26.2" r="1.6" fill="#fff"/><circle cx="48.2" cy="26.2" r="1.6" fill="#fff"/></g>';
+    } else if (ex === 'feliz') {
+      s += '<path d="M22.2 30q6.2-8.6 12.4 0M39.8 30q6.2-8.6 12.4 0" stroke="' + t + '" stroke-width="3.2" fill="none" stroke-linecap="round"/>';
+    } else {
+      s += '<path d="M22.2 27q6.2 4.8 12.4 0M39.8 27q6.2 4.8 12.4 0" stroke="' + t + '" stroke-width="3" fill="none" stroke-linecap="round"/>';
+    }
+    // Cejas: C1 y C4 llevan la izquierda plana y la derecha muy alzada.
+    var baja = ex === 'duerme' ? ' transform="translate(0 3.4)"' : '';
+    if (k === 'C1' || k === 'C4') {
+      s += '<g' + baja + ' stroke="' + t + '" stroke-linecap="round" fill="none"><path d="M22.8 16.8h10" stroke-width="3.4"/><path d="M40 13q6-7.4 12.8 .4" stroke-width="3.9"/></g>';
+    } else {
+      s += '<g' + baja + ' stroke="' + t + '" stroke-width="3.4" fill="none" stroke-linecap="round"><path d="M22 15.5q5.6-3.2 11.4-.6"/><path d="M40.4 11.5q5.8-4.6 11.8 1.2"/></g>';
+    }
+    // Boca
+    if (ex === 'duerme') {
+      s += k === 'C3' ? bigote() : '<path d="M31 41q6 4.4 12 0" stroke="' + C.labio + '" stroke-width="2.6" fill="none" stroke-linecap="round"/>';
+    } else if (k === 'C0') {
+      s += '<path d="' + (ex === 'feliz' ? 'M26.6 37Q37.5 40.6 47.6 35.6Q46.6 49.4 37.4 49.4Q27.6 49.4 26.6 37Z' : 'M28 38.4Q37.5 41.2 46.4 36.8Q45.6 47.8 37.6 47.8Q29.4 47.8 28 38.4Z') + '" fill="' + C.labio + '"/>' +
+        '<path d="M28.8 38.7Q37.5 41.2 46 37.4L45.6 41.2Q37.5 43.4 29.2 41.4Z" fill="#fff"/>';
+    } else if (k === 'C1') {
+      s += ex === 'feliz'
+        ? '<path d="M28.6 38.6Q37.5 41.4 46 37.2Q45 46.6 37.4 46.6Q30 46.6 28.6 38.6Z" fill="' + C.labio + '"/>'
+        : '<path d="M29 39q8.6 7.2 17-1.4" stroke="' + t + '" stroke-width="3" fill="none" stroke-linecap="round"/>';
+    } else if (k === 'C2' || k === 'C4') {
+      s += '<path d="' + (ex === 'feliz' ? 'M28 40.6Q37.6 43.4 46.4 37.8Q46.2 48.6 38.4 48.6Q30.4 48.6 28 40.6Z' : 'M29.4 42.4Q37.4 44.6 45.8 38.8Q45.4 46.6 38.8 46.8Q32.4 47 29.4 42.4Z') + '" fill="' + C.labio + '"/>' +
+        '<path d="M46.6 37.4q2 .8 2 3" stroke="' + t + '" stroke-width="1.9" fill="none" stroke-linecap="round"/>';
+    } else {
+      s += bigote() + (ex === 'feliz'
+        ? '<path d="M32.4 43.4Q37 42.6 41.6 43.4Q41 48.4 37 48.4Q33 48.4 32.4 43.4Z" fill="' + C.labio + '"/>'
+        : '<path d="M32.8 44.6q4.2 2.8 8.4 0" stroke="' + C.labio + '" stroke-width="2.4" fill="none" stroke-linecap="round"/>');
+    }
+    return s;
+  }
+
+  function bigote() {
+    var m = 'M37 38.4c-2.4-3.2-7.4-4-10.4-1-1.2 1.2-3 1.4-4-.2.2 4.2 4.2 6.4 8.2 5.4 2.8-.6 5-2.4 6.2-4.2Z';
+    return '<path d="' + m + '" fill="' + C.tinta + '"/><path d="' + m + '" fill="' + C.tinta + '" transform="translate(74 0) scale(-1 1)"/>';
+  }
+
+  /* o: cara, expr, pie, nivel ('completo' | 'compacto'), mono (sombra negra), cabeza (solo la cabeza). */
+  function leo(o) {
+    var k = o.cara || 'C0', ex = o.expr || 'saluda', P = PIES[o.pie || 'P1'], id = 'lc' + (uid++);
+    var completo = (o.nivel || 'completo') === 'completo', mono = !!o.mono;
+    var d = cuerpo(P.fe, P.er), dx = P.fe - 92;
+    var fill = mono ? 'currentColor' : completo ? 'url(#' + id + 'g)' : C.plano;
+    var vb = o.cabeza ? '14 2 46 46' : '0 0 100 100';
+    var s = '<svg viewBox="' + vb + '" overflow="' + (o.cabeza ? 'hidden' : 'visible') + '" aria-hidden="true"><defs>' +
+      '<linearGradient id="' + id + 'g" x1="20" y1="6" x2="92" y2="88" gradientUnits="userSpaceOnUse"><stop stop-color="' + C.g0 + '"/><stop offset="1" stop-color="' + C.g1 + '"/></linearGradient>' +
+      '<clipPath id="' + id + 'c"><path d="' + d + '"/></clipPath></defs>';
+    if (!mono && !o.cabeza) s += '<ellipse cx="' + ((20 + P.fe) / 2) + '" cy="90.8" rx="' + ((P.fe - 20) / 2) + '" ry="2.8" fill="#000" opacity=".28"/>';
+    var pie = mono ? 'currentColor' : C.pie;
+    s += '<ellipse cx="30" cy="87.2" rx="5.2" ry="3" fill="' + pie + '"/><ellipse cx="44" cy="87.2" rx="5.2" ry="3" fill="' + pie + '"/>';
+    s += '<path d="' + d + '" fill="' + fill + '"/>';
+    if (!mono) {
+      s += '<g clip-path="url(#' + id + 'c)"><ellipse cx="27" cy="17" rx="7" ry="11" fill="#fff" opacity=".2"/>' +
+        '<rect x="14" y="81" width="86" height="12" fill="' + C.sombra + '" opacity=".22"/><rect x="48" y="4" width="7" height="56" fill="' + C.sombra + '" opacity=".12"/></g>';
+    }
+    if (completo) {
+      s += campana(80 + dx, mono);
+      s += ex === 'feliz' || ex === 'saluda' ? brazo('M20.5 47Q11 46.5 9.4 36', 9.2, 33.4, fill) : brazo('M20.5 47Q14 49 12.2 56', 12, 57.6, fill);
+      if (ex === 'senala') s += brazo('M53 46Q63 44 68 33', 68.8, 30.6, fill);
+      else if (ex === 'feliz') s += brazo('M53 46Q64 45 66 34', 66.4, 31.6, fill);
+      else s += brazo('M53 46Q' + (67 + dx * 0.6) + ' 40.5 ' + (78 + dx) + ' 49.6', 79.6 + dx, 51.6, fill);
+    }
+    if (!mono) s += cara(k, ex, completo);
+    if (!mono && completo && ex === 'feliz') {
+      s += '<g fill="' + C.g1 + '"><path d="' + destello(9, 16, 5) + '"/><path d="' + destello(64, 5, 4) + '"/><path d="' + destello(90, 36, 4.4) + '"/></g>';
+    }
+    if (!mono && completo && ex === 'duerme') {
+      s += '<g fill="' + C.g1 + '" font-family="Unbounded, Arial Black, sans-serif" font-weight="800"><text x="60" y="15" font-size="9">z</text><text x="67" y="8" font-size="7">z</text><text x="72" y="2" font-size="5">z</text></g>';
+    }
+    return s + '</svg>';
+  }
+
+  function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html) e.innerHTML = html; return e; }
+  function caja(html, size, cls) {
+    var d = el('div', cls || '', html), svg = d.firstChild;
+    svg.setAttribute('width', size); svg.setAttribute('height', size);
+    return d;
+  }
+  function pon(id, html, size) { var n = document.getElementById(id); n.innerHTML = html; n.firstChild.setAttribute('width', size); n.firstChild.setAttribute('height', size); }
+
+  pon('hero', leo({ cara: 'C4', pie: 'P2' }), 170);
+
+  /* Parte 1: caras */
+  var caras = document.getElementById('caras');
+  Object.keys(CARAS).forEach(function (k) {
+    var V = CARAS[k], c = el('div', 'card');
+    c.appendChild(el('span', 'letra', k));
+    c.appendChild(caja(leo({ cara: k }), 150));
+    c.appendChild(el('h3', '', V.n));
+    c.appendChild(el('p', '', V.d));
+    c.appendChild(el('span', 'rasgo', 'Rasgo: ' + V.r));
+    c.appendChild(el('span', 'piezas', V.p + ' piezas para dibujarlo de memoria'));
+    ['claro', 'oscuro'].forEach(function (f) {
+      var b = el('div', 'bloque ' + f);
+      b.appendChild(caja(leo({ cara: k }), 64));
+      b.appendChild(caja(leo({ cara: k, nivel: 'compacto' }), 40));
+      b.appendChild(caja(leo({ cara: k, nivel: 'compacto' }), 28));
+      var av = el('div', 'avatar', leo({ cara: k, nivel: 'compacto', cabeza: true }));
+      b.appendChild(av);
+      c.appendChild(b);
+    });
+    var ex = el('div', 'bloque claro');
+    ['senala', 'feliz', 'duerme'].forEach(function (e) { ex.appendChild(caja(leo({ cara: k, expr: e }), 58)); });
+    c.appendChild(ex);
+    caras.appendChild(c);
+  });
+
+  /* Parte 2: pies */
+  var pies = document.getElementById('pies');
+  Object.keys(PIES).forEach(function (k) {
+    var V = PIES[k], c = el('div', 'card');
+    c.appendChild(el('span', 'letra', k));
+    c.appendChild(caja(leo({ cara: 'C0', pie: k }), 150));
+    c.appendChild(el('h3', '', V.n));
+    c.appendChild(el('p', '', V.d));
+    var b = el('div', 'bloque claro');
+    [24, 40, 72].forEach(function (px) { b.appendChild(caja(leo({ pie: k, mono: true }), px, 'sil')); });
+    b.appendChild(caja(leo({ pie: k, mono: true }), 60, 'sil blur'));
+    c.appendChild(b);
+    pies.appendChild(c);
+  });
+
+  /* Parte 3: pliego de stickers con la cara y el pie de mi voto */
+  var pliego = document.getElementById('pliego');
+  [['saluda', '¡Hola!', 'g-izq'], ['senala', 'Por aquí', 'g-der'], ['feliz', '¡Récord!', 'g-izq'], ['duerme', 'Todo tranquilo', 'g-der'], ['feliz', '¡Gracias!', 'g-der'], ['saluda', '¡Ya va!', 'g-izq']].forEach(function (a) {
+    var p = el('div', 'pieza ' + a[2]);
+    p.appendChild(caja(leo({ cara: 'C4', pie: 'P2', expr: a[0] }), 116, 'sticker'));
+    p.appendChild(el('span', 'leyenda', a[1]));
+    pliego.appendChild(p);
+  });
+
+  /* Parte 4: maquetas */
+  pon('u1', leo({ cara: 'C4', pie: 'P2', expr: 'feliz' }), 82);
+  var sellos = document.getElementById('u2');
+  for (var i = 1; i <= 10; i++) {
+    var s;
+    if (i <= 7) {
+      s = el('div', 'sello sticker chico ' + (i % 2 ? 'g-izq' : 'g-der'), leo({ cara: 'C4', pie: 'P2', nivel: 'compacto', cabeza: true }));
+      s.firstChild.setAttribute('width', '100%'); s.firstChild.setAttribute('height', '100%');
+      s.firstChild.style.borderRadius = '50%'; s.firstChild.style.background = '#F3EEE6';
+    } else if (i === 10) {
+      s = el('div', 'sello premio', 'pos<br>tre');
+    } else {
+      s = el('div', 'sello vacio', String(i));
+    }
+    sellos.appendChild(s);
+  }
+  pon('u3', leo({ cara: 'C4', pie: 'P2', expr: 'duerme' }), 104);
+  var u4 = document.getElementById('u4');
+  u4.appendChild(caja(leo({ cara: 'C4', pie: 'P2', expr: 'saluda' }), 96));
+  u4.appendChild(el('span', 'leyenda', '¡Ya va!'));
+  u4.className += ' pieza';
+})();
+</script>
+</body>
+</html>
