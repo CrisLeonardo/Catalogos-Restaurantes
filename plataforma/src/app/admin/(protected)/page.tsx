@@ -38,6 +38,7 @@ import { mesaDeFila, direccionDeMesa } from '@/lib/mesa';
 import { panelBase } from '@/lib/panel-links-server';
 import { panelHref } from '@/lib/panel-links';
 import { fmtMoney } from '@/lib/money';
+import { ritmoDelDia } from '@/lib/ritmo-del-dia';
 
 export const metadata = { title: 'Hoy – Panel admin' };
 
@@ -386,10 +387,13 @@ export default async function AdminHomePage() {
      2026-10-02, HOY-03): lo que un día igual —mismo día de la semana, las
      cuatro semanas anteriores— llevaba A ESTA HORA (getDayPace). Con menos
      de dos días de referencia no se dice nada: uno solo es casualidad. */
+  /* Antes de la primera venta no se compara (EV-15): «↓ 100 %» a media
+     mañana regañaba por no haber abierto. La regla, en lib/ritmo-del-dia.ts. */
   const pace = widgets?.pace ?? null;
+  const ritmo = stats ? ritmoDelDia(stats.todaySales, pace) : null;
   let ventasVs: React.ReactNode = null;
-  if (stats && pace && pace.samples >= 2 && pace.typicalSoFar > 0) {
-    const delta = Math.round(((stats.todaySales - pace.typicalSoFar) / pace.typicalSoFar) * 100);
+  if (ritmo?.tipo === 'comparado') {
+    const delta = ritmo.delta;
     let dia = 'un día igual';
     try {
       dia = `un ${new Intl.DateTimeFormat('es-GT', { weekday: 'long', timeZone: timezone }).format(new Date(now))} normal`;
