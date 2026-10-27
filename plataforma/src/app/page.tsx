@@ -15,7 +15,7 @@ import { isOpenNow, nextOpenLabel } from '@/lib/hours';
 import { isModuleActive } from '@/lib/modules';
 import { DEMO_SLUG, rootDomainForUrls, isAdminSubdomain, isGroupSubdomain, subdomainUrl } from '@/lib/tenant';
 import { currencyCodeFor, jsonLdScript, restaurantJsonLd } from '@/lib/seo/restaurant-jsonld';
-import { DEMO_CATEGORIES, DEMO_PRODUCTS } from '@/lib/demo-menu';
+import { DEMO_CATEGORIES, DEMO_PRODUCTS, DEMO_THEME } from '@/lib/demo-menu';
 import { getPublicLoyaltyCached, type PublicReward } from '@/lib/db/loyalty';
 import { isGoogleAuthEnabled } from '@/lib/auth-config';
 
@@ -26,9 +26,9 @@ export async function generateMetadata(): Promise<Metadata> {
   if (!slug) {
     const root = process.env.NEXT_PUBLIC_ROOT_DOMAIN?.split(',')[0]?.trim();
     const base = root && !root.includes('localhost') ? `https://${root}` : undefined;
-    const title = 'Leogin — Menús digitales para restaurantes';
+    const title = 'Leogin — Tu restaurante, bajo control';
     const description =
-      'Convierte el menú de tu restaurante en una experiencia web rápida y espectacular, con panel de administración y pedidos en línea.';
+      'Menú digital con QR, pedidos, cocina, caja e inventario en tu celular, aunque no estés. Gratis para empezar y sin comisión sobre lo que vendes.';
     return {
       title,
       description,
@@ -52,7 +52,7 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 
   if (slug === DEMO_SLUG) {
-    return { title: 'Demo — Leogin', description: 'Así se ve un restaurante con Leogin.' };
+    return { title: 'Rincón 502 · Demo de Leogin', description: 'Así se ve un restaurante con Leogin: el menú de Rincón 502, nuestro restaurante de ejemplo.' };
   }
 
   const data = await getRestaurantBySlugCached(slug);
@@ -128,15 +128,9 @@ export default async function Home({
     return <LeoginLanding />;
   }
 
-  // Subdominio `demo` → menú de ejemplo (Café Demo, sin BD)
+  // Subdominio `demo` → menú de ejemplo (Rincón 502, sin BD)
   if (slug === DEMO_SLUG) {
-    const demo = resolveTheme(
-      {
-        brand_name: 'Café Demo',
-        config: { tagline: 'Sabor de barrio', zone: 'Zona 1', portadaVariant: 'spotlight' },
-      },
-      DEMO_SLUG,
-    );
+    const demo = resolveTheme(DEMO_THEME, DEMO_SLUG);
     return (
       <>
         <DemoBar />

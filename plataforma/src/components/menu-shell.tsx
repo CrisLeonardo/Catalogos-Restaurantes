@@ -57,9 +57,13 @@ interface Props {
   menuLanguages?: string[];
   /** Vitrina en lanzamiento: ediciones cerradas (migración 141). */
   archivo?: EdicionArchivada[];
+  /** Menú de muestra de la portada (/preview/muestra): sin service worker,
+      sin contar visitas y sin ofrecer instalarlo. Vive en el dominio de
+      Leogin, y su service worker se quedaría controlando la web comercial. */
+  muestra?: boolean;
 }
 
-export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, timezone = 'America/Guatemala', initialMesa, llamadaMeseroEnabled = false, loyaltyOn = false, rewardsCatalog = null, googleAuthEnabled = false, whatsappNumber = null, restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null, menuLanguages = [], archivo = [] }: Props) {
+export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, timezone = 'America/Guatemala', initialMesa, llamadaMeseroEnabled = false, loyaltyOn = false, rewardsCatalog = null, googleAuthEnabled = false, whatsappNumber = null, restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null, menuLanguages = [], archivo = [], muestra = false }: Props) {
   useEffect(() => {
     if (initialMesa && initialMesa > 0) {
       // "Añadir a inicio" guarda la URL con ?mesa= para siempre (ver
@@ -108,8 +112,8 @@ export default function MenuShell({ config, content, categories, products, resta
     <ThemeProvider config={cfg} content={content}>
       <LocaleProvider restaurantId={restaurantId} extraLanguages={menuLanguages}>
       <CartProvider restaurantId={restaurantId}>
-        <OfflineSupport />
-        <VisitTracker restaurantId={restaurantId} />
+        {!muestra && <OfflineSupport />}
+        {!muestra && <VisitTracker restaurantId={restaurantId} />}
         {/* El lienzo ya no es una columna de 460 px para todos: el menú se
             comparte por link y se abre en tablet y escritorio, donde esa
             columna dejaba dos franjas vacías a los lados. El ancho lo pone
@@ -169,7 +173,7 @@ export default function MenuShell({ config, content, categories, products, resta
             </footer>
           )}
         </main>
-        <InstallBanner brandName={cfg.brandName} />
+        {!muestra && <InstallBanner brandName={cfg.brandName} />}
       </CartProvider>
       </LocaleProvider>
     </ThemeProvider>

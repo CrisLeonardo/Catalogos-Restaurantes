@@ -6,6 +6,7 @@ import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import TemplateGallery from '@/components/admin/template-gallery';
 import { findStructure, findTemplate } from '@/lib/theme/templates';
+import { borrarEleccionMuestra, leerEleccionMuestra } from '@/lib/muestra-mensajes';
 import { createAnotherRestaurant, type NewRestaurantState } from '@/lib/actions/mi-cuenta';
 import { PLAN_POINTS, defaultPlanPricing, planPriceLabel, planPriceQ, type PlanPricing } from '@/lib/plans';
 import {
@@ -109,7 +110,10 @@ export default function NuevoRestaurante({
   // solo es el panel si la petición pasa por el proxy. Mismo motivo —y mismo
   // bug— que al entrar desde Mi cuenta; ver `enterRestaurant`.
   useEffect(() => {
-    if (state && 'url' in state) window.location.assign(state.url);
+    if (state && 'url' in state) {
+      borrarEleccionMuestra();
+      window.location.assign(state.url);
+    }
   }, [state]);
   const actionError = state && 'error' in state ? state.error : null;
 
@@ -124,6 +128,22 @@ export default function NuevoRestaurante({
   const [slugEdited, setSlugEdited] = useState(false);
   const [whatsapp, setWhatsapp] = useState('');
   const [stepError, setStepError] = useState<string | null>(null);
+
+  // Lo que eligió en la vitrina de diseños de la portada llega puesto: el
+  // estilo y, si lo escribió, el nombre. Ya decidió; preguntarle desde cero
+  // lo haría dudar (docs/planes/PLAN_EXPERIENCIA_VIVA_2026-10-26.md §1.6).
+  // En un efecto y no al iniciar el estado: localStorage no existe en el
+  // servidor y el primer pintado tiene que coincidir.
+  const [desdeVitrina, setDesdeVitrina] = useState(false);
+  useEffect(() => {
+    const eleccion = leerEleccionMuestra();
+    if (!eleccion) return;
+    if (findTemplate(eleccion.estilo)) {
+      setTemplateId(eleccion.estilo);
+      setDesdeVitrina(true);
+    }
+    if (eleccion.nombre.trim().length >= 2) setName((actual) => actual || eleccion.nombre.trim());
+  }, []);
 
   const effectiveSlug = slugEdited ? slug : localSlugify(name);
 
@@ -343,6 +363,12 @@ export default function NuevoRestaurante({
           dos decisiones distintas y cualquier color va en cualquier estructura.
           Es solo el punto de partida — todo se cambia luego en «Personalizar».
         </p>
+        {desdeVitrina && (
+          <Glass variant="quiet" style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--u-text-3)' }}>
+            <Icon name="sparkle" size={16} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0 }} />
+            <span>Te dejamos puesto el que elegiste en la portada: <strong style={{ color: 'var(--u-text)' }}>{styleSummary}</strong>.</span>
+          </Glass>
+        )}
         {/* La galería abre en la estructura de la plantilla que ya está elegida,
             no siempre en «Clásico»: abriendo siempre en la primera parecía que
             solo existían las de siempre y que el resto no estaba. */}

@@ -2907,11 +2907,440 @@ html[data-platform] .asphalt::after { display: none; }
 .lp-device-desk { width: 100%; max-width: 470px; border-radius: 18px; padding: 9px; }
 .lp-device-screen-desk { border-radius: 11px; overflow: hidden; }
 
+/* ============================================================
+   PORTADA VIVA (docs/planes/PLAN_EXPERIENCIA_VIVA_2026-10-26.md)
+   ------------------------------------------------------------
+   Lo que se mueve al deslizar va atado al deslizar (animation-timeline:
+   view()/scroll()): avanza si bajas y retrocede si subes, corre fuera del
+   hilo principal y no suma JavaScript. Reglas:
+   · solo transform y opacity;
+   · sin soporte o con «reducir movimiento», todo queda quieto y COMPLETO
+     (nada se esconde esperando una animación que no va a llegar);
+   · un protagonista por pantalla: lo demás solo aparece suave.
+   ============================================================ */
+
+/* ── Entradas al deslizar ────────────────────────────────── */
+@keyframes fx-subir     { from { opacity: 0; transform: translate3d(0, 36px, 0) scale(0.985); } }
+@keyframes fx-izq       { from { opacity: 0; transform: translate3d(-44px, 0, 0); } }
+@keyframes fx-der       { from { opacity: 0; transform: translate3d(44px, 0, 0); } }
+@keyframes fx-crecer    { from { opacity: 0; transform: scale(0.86); } }
+@keyframes fx-enderezar { from { opacity: 0.35; transform: perspective(1100px) rotateX(26deg) translate3d(0, 48px, 0) scale(0.93); } }
+@keyframes fx-avance    { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Barra de avance: solo existe donde puede moverse. */
+.lp-avance { display: none; }
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-fx] {
+      animation: fx-subir linear both;
+      animation-timeline: view();
+      /* --fx-i escalona hermanos que entran a la vez (una fila de tarjetas). */
+      animation-range: entry calc(var(--fx-i, 0) * 9%) entry calc(78% + var(--fx-i, 0) * 9%);
+    }
+    [data-fx="izq"] { animation-name: fx-izq; }
+    [data-fx="der"] { animation-name: fx-der; }
+    [data-fx="crecer"] { animation-name: fx-crecer; }
+    [data-fx="enderezar"] { animation-name: fx-enderezar; animation-range: entry 0% cover 42%; transform-origin: 50% 100%; }
+
+    .lp-avance {
+      display: block; position: fixed; inset: 0 0 auto; z-index: 70; height: 3px;
+      background: linear-gradient(90deg, #E8534A, #F5A030);
+      transform-origin: 0 50%; pointer-events: none;
+      animation: fx-avance linear both; animation-timeline: scroll(root);
+    }
+  }
+}
+
+/* ── Portada: el titular entra palabra por palabra ───────── */
+@keyframes lp-palabra { from { opacity: 0; transform: translate3d(0, 0.42em, 0) rotate(2.5deg); } }
+@keyframes lp-subraya { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes lp-asienta { from { opacity: 0; transform: perspective(1200px) rotateY(-16deg) rotateX(7deg) translate3d(0, 34px, 0) scale(0.94); } }
+@keyframes lp-hero-sube { to { transform: translate3d(0, -70px, 0); } }
+@keyframes lp-hero-atras { to { transform: translate3d(0, -18px, 0) scale(0.95); } }
+
+.lp-w { display: inline-block; }
+/* El titular se mide con su columna, no con la ventana: «Tu restaurante,»
+   cabe en una línea en cualquier ancho y «bajo control.» va en la segunda.
+   Con vw, entre 940 y 1280 px «Tu» quedaba solo en la primera. */
+.lp-hero-copy { container-type: inline-size; }
+.lp-hero-copy .lp-h1 { font-size: clamp(33px, 10cqi, 62px); }
+.lp-subraya { position: relative; display: inline-block; isolation: isolate; }
+.lp-subraya::after {
+  content: ""; position: absolute; z-index: -1; left: -0.04em; right: -0.04em; bottom: 0.04em; height: 0.2em;
+  border-radius: 99px; background: linear-gradient(90deg, #E8534A, #F5A030); opacity: 0.32;
+  transform-origin: 0 50%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .lp-h1 .lp-w { animation: lp-palabra 720ms var(--ease-entry) both; animation-delay: calc(140ms + var(--i, 0) * 95ms); }
+  .lp-subraya::after { animation: lp-subraya 900ms cubic-bezier(0.65, 0, 0.35, 1) 820ms both; }
+  .lp-hero-tarjeta { animation: lp-asienta 1100ms var(--ease-entry) 260ms both; }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    /* Al bajar, el texto se va más rápido que la tarjeta: profundidad. */
+    .lp-hero-copy { animation: lp-hero-sube linear both; animation-timeline: view(); animation-range: exit 0% exit 100%; }
+    .lp-hero-media { animation: lp-hero-atras linear both; animation-timeline: view(); animation-range: exit 0% exit 100%; }
+  }
+}
+
+/* ── Del caos al control ─────────────────────────────────── */
+/* Sin soporte de animaciones atadas al deslizar se ve lo de siempre: los
+   tres pasos uno tras otro y el panel ya ordenado. */
+.lp-cc { position: relative; }
+.lp-cc-escena {
+  display: grid; gap: clamp(28px, 5vw, 64px); align-items: center;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+}
+.lp-cc-pasos { display: grid; gap: 22px; }
+.lp-cc-paso .lp-h2 { margin-top: 12px; }
+.lp-cc-paso p { margin-top: 12px; max-width: 46ch; }
+.lp-cc-pista { display: none; }
+.lp-cc-lienzo {
+  --u: calc(100cqw / 400);
+  position: relative; container-type: inline-size;
+  width: min(100%, 460px); aspect-ratio: 2 / 3; margin: 0 auto;
+}
+.lp-cc-ruido { display: none; }
+.lp-cc-cabecera {
+  position: absolute; left: 0; right: 0; top: 0; height: 10.67%;
+  display: flex; align-items: center; gap: calc(var(--u) * 10);
+  padding: 0 calc(var(--u) * 14); border-radius: calc(var(--u) * 16);
+  background: #1C1C1E; color: #F5F3EF; box-shadow: var(--lp-shadow-md);
+}
+.lp-cc-cabecera b { font-family: var(--font-display); font-size: calc(var(--u) * 15); font-weight: 800; letter-spacing: -0.02em; }
+.lp-cc-cabecera span { font-size: calc(var(--u) * 11.5); opacity: 0.72; }
+.lp-cc-cabecera em {
+  margin-left: auto; font-style: normal; font-weight: 800; font-size: calc(var(--u) * 10.5);
+  padding: calc(var(--u) * 5) calc(var(--u) * 9); border-radius: 99px; background: #2F9E6B; color: #fff; white-space: nowrap;
+}
+.lp-cc-obj { position: absolute; width: 48%; height: 26.67%; }
+.lp-cc-obj[data-o="1"] { left: 0;   top: 13.33%; --cx: 40;   --cy: 160;  --cr: -11deg; }
+.lp-cc-obj[data-o="2"] { left: 52%; top: 13.33%; --cx: -36;  --cy: 290;  --cr: 9deg; }
+.lp-cc-obj[data-o="3"] { left: 0;   top: 43.33%; --cx: 150;  --cy: -150; --cr: 15deg; }
+.lp-cc-obj[data-o="4"] { left: 52%; top: 43.33%; --cx: -190; --cy: -60;  --cr: -7deg; }
+.lp-cc-obj[data-o="5"] { left: 0;   top: 73.33%; --cx: 110;  --cy: -330; --cr: -17deg; }
+.lp-cc-obj[data-o="6"] { left: 52%; top: 73.33%; --cx: -130; --cy: -230; --cr: 10deg; }
+.lp-cc-tiembla, .lp-cc-caos, .lp-cc-orden { position: absolute; inset: 0; }
+.lp-cc-caos { display: none; }
+
+/* Las tarjetas ya ordenadas: el panel de Leogin. */
+.lp-cc-orden {
+  display: flex; flex-direction: column; gap: calc(var(--u) * 5);
+  padding: calc(var(--u) * 13) calc(var(--u) * 14);
+  border-radius: calc(var(--u) * 16); background: #fff;
+  border: 1px solid var(--lp-line); box-shadow: var(--lp-shadow-md);
+  color: #17161a; overflow: hidden;
+}
+.lp-cc-orden header { display: flex; align-items: center; gap: calc(var(--u) * 6); font-size: calc(var(--u) * 11); font-weight: 700; color: rgba(23, 22, 26, 0.62); }
+.lp-cc-chip {
+  margin-left: auto; padding: calc(var(--u) * 3) calc(var(--u) * 7); border-radius: 99px;
+  font-size: calc(var(--u) * 9); font-weight: 800; letter-spacing: 0.05em; white-space: nowrap;
+  background: var(--chip-bg, rgba(232, 83, 74, 0.12)); color: var(--chip, #B4492A);
+}
+.lp-cc-chip[data-t="ok"]   { --chip-bg: rgba(47, 158, 107, 0.13); --chip: #1f7a50; }
+.lp-cc-chip[data-t="warn"] { --chip-bg: rgba(245, 160, 48, 0.18); --chip: #8a5300; }
+.lp-cc-chip[data-t="ink"]  { --chip-bg: #1C1C1E; --chip: #fff; }
+.lp-cc-orden strong { font-family: var(--font-display); font-size: calc(var(--u) * 14.5); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+.lp-cc-orden p { font-size: calc(var(--u) * 11.5); line-height: 1.35; color: rgba(23, 22, 26, 0.7); }
+.lp-cc-orden .lp-cc-grande { font-family: var(--ui-font-mono); font-size: calc(var(--u) * 24); font-weight: 800; letter-spacing: -0.03em; color: #17161a; }
+.lp-cc-orden footer { margin-top: auto; display: flex; align-items: center; gap: calc(var(--u) * 6); font-size: calc(var(--u) * 11); font-weight: 700; color: #B4492A; }
+.lp-cc-visto {
+  position: absolute; right: calc(var(--u) * 10); bottom: calc(var(--u) * 10);
+  width: calc(var(--u) * 22); height: calc(var(--u) * 22); border-radius: 50%;
+  display: grid; place-items: center; background: #2F9E6B; color: #fff;
+}
+
+/* El caos: cada cosa con su cara de noche mala. */
+.lp-cc-caos {
+  padding: calc(var(--u) * 12) calc(var(--u) * 13); border-radius: calc(var(--u) * 12);
+  font-size: calc(var(--u) * 12.5); line-height: 1.3; color: #2a2622;
+  box-shadow: 0 calc(var(--u) * 10) calc(var(--u) * 26) rgba(23, 22, 26, 0.22);
+}
+.lp-cc-caos small { display: block; font-size: calc(var(--u) * 9.5); font-weight: 700; opacity: 0.6; margin-bottom: calc(var(--u) * 4); }
+.lp-cc-mano { font-family: Georgia, 'Times New Roman', serif; font-style: italic; }
+.lp-cc-caos[data-c="chat"]     { background: #DCF8C6; border-radius: calc(var(--u) * 14) calc(var(--u) * 14) calc(var(--u) * 14) calc(var(--u) * 3); }
+.lp-cc-caos[data-c="comanda"]  { background: #FFF6DC; border-radius: calc(var(--u) * 3); background-image: repeating-linear-gradient(180deg, transparent 0 calc(var(--u) * 17), rgba(0, 0, 0, 0.07) calc(var(--u) * 17) calc(var(--u) * 18)); }
+.lp-cc-caos[data-c="llamadas"] { background: #fff; }
+.lp-cc-caos[data-c="cuaderno"] {
+  background: #fdfdf8; border-radius: calc(var(--u) * 4);
+  background-image:
+    linear-gradient(90deg, transparent calc(var(--u) * 22), rgba(220, 60, 60, 0.4) calc(var(--u) * 22) calc(var(--u) * 23), transparent calc(var(--u) * 23)),
+    repeating-linear-gradient(180deg, transparent 0 calc(var(--u) * 19), rgba(60, 110, 220, 0.22) calc(var(--u) * 19) calc(var(--u) * 20));
+  padding-left: calc(var(--u) * 30);
+}
+.lp-cc-caos[data-c="postit"] { background: #FFE36E; border-radius: calc(var(--u) * 2); font-size: calc(var(--u) * 15); }
+.lp-cc-caos[data-c="pdf"]    { background: #EDEBE7; color: #55504a; }
+.lp-cc-tachado { text-decoration: line-through; text-decoration-color: #c0392b; text-decoration-thickness: 2px; }
+.lp-cc-rojo { color: #c0392b; font-weight: 800; }
+
+@keyframes cc-tiembla {
+  0%   { transform: rotate(-1.4deg) translate(0, 0); }
+  25%  { transform: rotate(1.2deg) translate(1px, -1px); }
+  50%  { transform: rotate(-0.8deg) translate(-1px, 1px); }
+  75%  { transform: rotate(1.6deg) translate(0, 1px); }
+  100% { transform: rotate(-1.4deg) translate(0, 0); }
+}
+@keyframes cc-vuela {
+  0%, 16% { transform: translate3d(calc(var(--cx) * var(--u)), calc(var(--cy) * var(--u)), 0) rotate(var(--cr)) scale(1.04); }
+  50%, 100% { transform: none; }
+}
+@keyframes cc-sale   { 0%, 36% { opacity: 1; } 47%, 100% { opacity: 0; } }
+@keyframes cc-entra  { 0%, 38% { opacity: 0; } 49%, 100% { opacity: 1; } }
+@keyframes cc-cabeza { 0%, 58% { opacity: 0; transform: translate3d(0, -22px, 0) scale(0.96); } 72%, 100% { opacity: 1; transform: none; } }
+@keyframes cc-visto  { 0%, 72% { opacity: 0; transform: scale(0.3); } 80% { opacity: 1; transform: scale(1.18); } 86%, 100% { opacity: 1; transform: none; } }
+@keyframes cc-ruido  { 0%, 18% { opacity: 1; } 46%, 100% { opacity: 0; } }
+@keyframes cc-pista  { 0%, 6% { opacity: 1; } 14%, 100% { opacity: 0; } }
+@keyframes cc-paso1  { 0%, 26% { opacity: 1; transform: none; } 34%, 100% { opacity: 0; transform: translate3d(0, -18px, 0); } }
+@keyframes cc-paso2  { 0%, 32% { opacity: 0; transform: translate3d(0, 18px, 0); } 40%, 62% { opacity: 1; transform: none; } 70%, 100% { opacity: 0; transform: translate3d(0, -18px, 0); } }
+@keyframes cc-paso3  { 0%, 68% { opacity: 0; transform: translate3d(0, 18px, 0); } 76%, 100% { opacity: 1; transform: none; } }
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    /* Tres pantallas de recorrido; la escena se queda fija mientras tanto. */
+    .lp-cc { height: 320svh; view-timeline-name: --cc; }
+    .lp-cc-escena {
+      position: sticky; top: 62px; height: calc(100svh - 62px);
+      padding-block: clamp(14px, 3vh, 36px);
+    }
+    .lp-cc-pasos { position: relative; display: block; min-height: 15em; }
+    /* Sin el atajo `animation`: sin nombre, el compilador de CSS lo deja en
+       `animation: none` y se pierde el `both` (el paso volvía a verse al
+       terminar el recorrido). El nombre lo pone cada [data-p]. */
+    .lp-cc-paso {
+      position: absolute; inset: 0 0 auto;
+      animation-timing-function: linear; animation-fill-mode: both;
+      animation-timeline: --cc; animation-range: contain 0% contain 100%;
+    }
+    .lp-cc-paso[data-p="1"] { animation-name: cc-paso1; }
+    .lp-cc-paso[data-p="2"] { animation-name: cc-paso2; }
+    .lp-cc-paso[data-p="3"] { animation-name: cc-paso3; }
+    .lp-cc-pista {
+      display: inline-flex; align-items: center; gap: 8px; margin-top: 18px;
+      font-size: 13px; font-weight: 700; color: var(--brand-accent-ink);
+      animation: cc-pista linear both; animation-timeline: --cc; animation-range: contain 0% contain 100%;
+    }
+    .lp-cc-pista svg { animation: bob 1.4s ease-in-out infinite; }
+
+    .lp-cc-lienzo { width: min(100%, 460px, calc((100svh - 62px - 72px) * 0.6667)); }
+    .lp-cc-ruido {
+      display: block; position: absolute; inset: -6%; border-radius: 28px; pointer-events: none;
+      background: radial-gradient(60% 50% at 50% 45%, rgba(232, 83, 74, 0.16), transparent 70%);
+      animation: cc-ruido linear both; animation-timeline: --cc; animation-range: contain 0% contain 100%;
+    }
+    .lp-cc-obj { animation: cc-vuela linear both; animation-timeline: --cc; animation-range: contain 0% contain 100%; }
+    .lp-cc-caos { display: block; animation: cc-sale linear both; animation-timeline: --cc; animation-range: contain 0% contain 100%; }
+    /* El temblor va a 10 cuadros por segundo, como stop-motion: el antes se
+       siente torpe y el después, fluido (estrategia §5.3). */
+    .lp-cc-tiembla { animation: cc-tiembla 0.8s steps(4) infinite; }
+    .lp-cc-orden { animation: cc-entra linear both; animation-timeline: --cc; animation-range: contain 0% contain 100%; }
+    .lp-cc-cabecera { animation: cc-cabeza linear both; animation-timeline: --cc; animation-range: contain 0% contain 100%; }
+    .lp-cc-visto { animation: cc-visto linear both; animation-timeline: --cc; animation-range: contain calc(var(--o, 0) * 2%) contain 100%; }
+  }
+}
+@media (max-width: 940px) {
+  .lp-cc-escena { grid-template-columns: minmax(0, 1fr); }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) and (max-width: 940px) {
+    /* stretch: los pasos van en position:absolute y no le dan ancho a su
+       caja; centrados, la columna se encogía a nada. */
+    .lp-cc-escena { display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; gap: 14px; }
+    .lp-cc-pasos { min-height: 10em; }
+    .lp-cc-paso .lp-h2 { font-size: clamp(21px, 5.6vw, 28px); margin-top: 8px; }
+    .lp-cc-paso p { display: none; }
+    .lp-cc-pista { margin-top: 0; }
+    .lp-cc-lienzo { width: min(100%, calc((100svh - 62px - 15em) * 0.6667)); }
+  }
+}
+
+/* ── Tu menú, a tu manera (components/landing-disenos.tsx) ─ */
+.lp-dz {
+  --dz-alto: min(640px, calc(100svh - 210px));
+  display: grid; gap: clamp(28px, 5vw, 72px); align-items: start;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.lp-dz-lista { display: flex; flex-direction: column; gap: 14px; padding-bottom: 18vh; }
+.lp-dz-nombre {
+  display: grid; gap: 8px; padding: 16px 18px; border-radius: 18px;
+  background: var(--lp-card); border: 1px solid var(--lp-line-2); box-shadow: var(--lp-shadow-sm);
+}
+.lp-dz-nombre-label { font-size: 13px; font-weight: 700; color: var(--u-text-2); }
+.lp-dz-nombre-campo {
+  display: flex; align-items: center; gap: 10px; padding: 0 14px; min-height: 48px;
+  border-radius: 12px; border: 1px solid var(--lp-line-2); background: var(--lp-card-2); color: var(--u-text-3);
+}
+.lp-dz-nombre-campo:focus-within { border-color: var(--brand-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-accent) 18%, transparent); }
+.lp-dz-nombre input {
+  flex: 1; min-width: 0; border: 0; outline: 0; background: transparent;
+  font: inherit; font-size: 16px; font-weight: 650; color: var(--u-text);
+}
+.lp-dz-card {
+  position: relative; min-height: 46svh; padding: 26px 24px 24px;
+  display: flex; flex-direction: column; justify-content: center; gap: 10px;
+  border-radius: 22px; background: var(--lp-card); border: 1px solid var(--lp-line);
+  opacity: 0.5; transition: opacity 320ms var(--ease-out), border-color 320ms, box-shadow 320ms;
+}
+.lp-dz-card[data-on] { opacity: 1; border-color: color-mix(in srgb, var(--brand-accent) 45%, transparent); box-shadow: var(--lp-shadow-md); }
+.lp-dz-num { font-family: var(--ui-font-mono); font-size: 12px; font-weight: 700; color: var(--brand-accent-ink); letter-spacing: 0.08em; }
+.lp-dz-titulo { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 3.2vw, 36px); letter-spacing: -0.03em; line-height: 1.05; color: var(--u-text); }
+.lp-dz-hint { font-size: 14.5px; line-height: 1.55; color: var(--u-text-3); max-width: 52ch; }
+.lp-dz-paletas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.lp-dz-paleta {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 5px 13px 5px 6px;
+  border-radius: 99px; border: 1px solid var(--lp-line-2); background: var(--lp-card);
+  font-size: 12.5px; font-weight: 650; color: var(--u-text-2); cursor: pointer;
+  transition: border-color 150ms, background 150ms, transform 150ms;
+}
+.lp-dz-paleta:active { transform: scale(0.97); }
+.lp-dz-paleta[aria-pressed="true"] { border-color: var(--u-text); background: var(--u-text); color: var(--brand-bg); }
+.lp-dz-swatch {
+  position: relative; width: 28px; height: 28px; border-radius: 50%; border: 2px solid;
+  display: grid; place-items: center;
+}
+.lp-dz-swatch > span { width: 11px; height: 11px; border-radius: 50%; }
+.lp-dz-cuenta { font-size: 14px; line-height: 1.6; color: var(--u-text-3); padding: 4px 6px; }
+.lp-dz-cuenta strong { color: var(--u-text); }
+
+.lp-dz-escenario {
+  position: sticky; top: max(78px, calc(50svh - var(--dz-alto) / 2 - 40px));
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.lp-dz-telefono { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.lp-dz-marco { width: calc(var(--dz-alto) * 9 / 19 + 20px); }
+.lp-dz-pantalla { position: relative; background: #161512; }
+.lp-dz-frame {
+  position: absolute; left: 0; top: 0; border: 0; display: block;
+  transform: scale(var(--dz-k, 0.7)); transform-origin: 0 0;
+  pointer-events: none; background: #161512;
+}
+.lp-dz-pantalla[data-tocando] .lp-dz-frame { pointer-events: auto; }
+.lp-dz-pantalla[data-tocando] { box-shadow: 0 0 0 3px var(--brand-accent); }
+.lp-dz-cargando {
+  position: absolute; inset: 0; z-index: 1; display: grid; place-content: center; justify-items: center; gap: 10px;
+  color: #F7F3EF; font-family: var(--font-display); font-weight: 800; font-size: 15px;
+}
+.lp-dz-cargando-logo {
+  width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center;
+  background: #2a2724; font-size: 26px; animation: bob 1.6s ease-in-out infinite;
+}
+.lp-dz-estado {
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 99px;
+  font-size: 12.5px; font-weight: 650; color: var(--u-text-2);
+  background: var(--lp-card); border: 1px solid var(--lp-line-2); box-shadow: var(--lp-shadow-sm);
+}
+.lp-dz-estado-nombre { font-weight: 800; color: var(--u-text); }
+.lp-dz-acciones { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.lp-dz-nota { font-size: 12.5px; line-height: 1.5; color: var(--u-text-4); padding: 0 6px; }
+
+/* En el celular el teléfono va arriba, fijo, en una franja opaca; las
+   estructuras pasan por debajo y la que cruza la franja de lectura (justo
+   bajo el teléfono) es la que se pinta. */
+@media (max-width: 899px) {
+  .lp-dz { --dz-alto: min(48svh, 430px); display: flex; flex-direction: column; gap: 0; }
+  .lp-dz-escenario {
+    order: -1; z-index: 2; top: 62px; width: calc(100% + 2 * var(--lp-gutter)); margin-inline: calc(-1 * var(--lp-gutter));
+    padding: 10px var(--lp-gutter) 12px; gap: 8px;
+    background: var(--brand-bg); box-shadow: 0 14px 18px -16px rgba(23, 22, 26, 0.35);
+  }
+  .lp-dz-lista { padding-top: 12px; padding-bottom: 30svh; }
+  .lp-dz-card { min-height: 34svh; padding: 20px 18px; }
+  .lp-dz-titulo { font-size: 26px; }
+  .lp-dz-hint { font-size: 13.5px; }
+}
+
+/* ── Cierre: Leo asoma por el borde de la banda ──────────── */
+.lp-cierre { position: relative; }
+.lp-cierre-leo {
+  position: absolute; z-index: 0; left: 50%; top: 0; width: 132px; height: 132px;
+  margin-left: -66px; transform: translate3d(0, -58%, 0);
+}
+.lp-cierre-leo svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.lp-cierre-banda { position: relative; z-index: 1; }
+.lp-cierre-globo {
+  position: absolute; z-index: 2; left: calc(50% + 58px); top: -84px;
+  padding: 9px 14px; border-radius: 16px 16px 16px 4px; white-space: nowrap;
+  background: #fff; color: #17161a; font-size: 13.5px; font-weight: 800; box-shadow: var(--lp-shadow-md);
+}
+@keyframes leo-asoma { from { transform: translate3d(0, 10%, 0); } to { transform: translate3d(0, -58%, 0); } }
+@keyframes leo-globo { 0%, 55% { opacity: 0; transform: scale(0.6) translate3d(-12px, 8px, 0); } 75%, 100% { opacity: 1; transform: none; } }
+@keyframes leo-saluda { 0%, 100% { transform: rotate(95deg); } 50% { transform: rotate(128deg); } }
+@keyframes leo-parpadea { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.12); } }
+.leo-brazo { transform-box: view-box; transform-origin: 24.5px 50px; transform: rotate(95deg); }
+@media (prefers-reduced-motion: no-preference) {
+  .leo-brazo { animation: leo-saluda 1.5s ease-in-out infinite; }
+  .leo-ojos { transform-box: view-box; transform-origin: 38px 25px; animation: leo-parpadea 4.6s infinite; }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .lp-cierre-leo { animation: leo-asoma linear both; animation-timeline: view(); animation-range: entry 10% entry 70%; }
+    .lp-cierre-globo { animation: leo-globo linear both; animation-timeline: view(); animation-range: entry 0% cover 40%; transform-origin: 0 100%; }
+  }
+}
+@media (max-width: 560px) {
+  .lp-cierre-leo { width: 104px; height: 104px; margin-left: -52px; }
+  .lp-cierre-globo { left: calc(50% + 44px); top: -70px; font-size: 12.5px; }
+}
+
 /* ── Teléfono de la portada: menú real o ejemplo (WEB-03) ──
    Los colores salen del restaurante en vitrina (--ph-*), no del sitio:
    es SU menú. Ver components/landing-proof.tsx. Las letras van chicas a
    propósito: es un teléfono dibujado a escala, como las miniaturas de
    plantillas (T-21 las deja fuera). */
+/* ── Intro animada de la portada (components/landing-intro.tsx) ──
+   Tarjeta con el gancho como imagen fija; la intro (ruta /intro) se abre en
+   un <dialog> solo al tocar «play». Los colores del botón son los del logo
+   (brasa → mango), no el acento de la web: es un momento de marca. */
+.lp-intro {
+  position: relative; display: block; width: 100%; max-width: 620px; margin: 0 auto;
+  padding: 0; border: 0; border-radius: 22px; overflow: hidden; cursor: pointer;
+  aspect-ratio: 16 / 9; background: #121214; box-shadow: var(--lp-shadow-lg);
+}
+.lp-intro::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, transparent 55%, rgba(18, 18, 20, 0.55));
+}
+.lp-intro-img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.lp-intro:hover .lp-intro-img { transform: scale(1.03); }
+.lp-intro-play {
+  position: absolute; left: 50%; top: 50%; z-index: 1;
+  width: 76px; height: 76px; margin: -38px 0 0 -38px; border-radius: 50%;
+  display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg, #E8534A, #F5A030);
+  box-shadow: 0 14px 34px rgba(232, 83, 74, 0.45);
+  transition: transform 0.18s ease-out;
+}
+.lp-intro:hover .lp-intro-play { transform: scale(1.07); }
+.lp-intro-chip {
+  position: absolute; left: 14px; bottom: 14px; z-index: 1;
+  font: 600 13.5px/1 var(--font-sans), system-ui, sans-serif; color: #fff;
+  background: rgba(18, 18, 20, 0.72); padding: 9px 12px; border-radius: 999px;
+}
+.lp-intro:focus-visible { outline: 3px solid var(--brand-accent); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .lp-intro-img, .lp-intro-play { transition: none; }
+}
+.lp-intro-dialog {
+  padding: 0; border: 0; border-radius: 18px; overflow: hidden; background: #121214;
+  width: min(94vw, 1280px); max-width: none; max-height: none;
+}
+.lp-intro-dialog::backdrop { background: rgba(10, 10, 12, 0.82); }
+html:has(.lp-intro-dialog[open]) { overflow: hidden; }
+/* Escenario 16:9 más la barra de controles de la intro (~64 px) */
+.lp-intro-frame { display: block; width: 100%; height: calc(min(94vw, 1280px) * 0.5625 + 64px); max-height: calc(100dvh - 40px); border: 0; }
+.lp-intro-close {
+  position: absolute; z-index: 2; top: 10px; left: 12px;
+  width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+  color: #fff; background: rgba(12, 12, 14, 0.72); border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.lp-intro-close:focus-visible { outline: 2px solid #F5A030; outline-offset: 2px; }
+/* En el teléfono la intro va en vertical y ocupa toda la pantalla */
+@media (max-aspect-ratio: 4/5) {
+  .lp-intro-dialog { width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+  .lp-intro-frame { height: 100dvh; max-height: none; }
+  .lp-intro-close { top: max(10px, env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); }
+}
+
 .lp-ph { position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 0; }
 .lp-ph-halo {
   position: absolute; inset: 0; pointer-events: none;

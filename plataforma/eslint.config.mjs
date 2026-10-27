@@ -26,6 +26,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // GSAP minificado que sirve la intro de la portada (lo copia
+    // docs/diseno/intro-animada/publicar-en-web.mjs): es de un tercero.
+    "public/intro/gsap.min.js",
   ]),
 ]);
 
