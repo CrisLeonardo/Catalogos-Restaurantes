@@ -18,6 +18,8 @@ describe('isStaleBuildError', () => {
       'Loading chunk 493 failed.',
       'error loading dynamically imported module: https://leogin.online/_next/static/chunks/x.js',
       'Importing a module script failed.',
+      'Server Action "60e5113dde95f01fdbeb043ef32e5999e45a989410" was not found on the server. Read more: https://nextjs.org/docs/messages/failed-to-find-server-action',
+      'Failed to find Server Action "abc". This request might be from an older or newer deployment.',
     ];
     for (const message of casos) {
       expect(isStaleBuildError({ message }), message).toBe(true);
