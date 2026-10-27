@@ -3783,6 +3783,13 @@ html[data-admin-area][data-scheme="light"] {
 .lp-demo-qr { width: 236px; height: 236px; margin: 18px auto 14px; padding: 10px; border-radius: 18px; border: 1px solid rgba(0, 0, 0, 0.08); }
 .lp-demo-qr svg { display: block; width: 100%; height: 100%; }
 .lp-demo-aqui { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: var(--brand-accent-ink); text-decoration: none; }
+/* «Pídelo tú mismo» (EV-01): la misma ventana, a dos columnas — el QR y los
+   pasos a la izquierda, el panel que va a sonar a la derecha. Solo existe en
+   PC (ver .lp-demo-pc), así que no necesita versión de teléfono. */
+.lp-demo-dialog.lp-pidelo { width: min(94vw, 820px); padding: 30px 30px 26px; text-align: left; }
+.lp-pidelo-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 30px; align-items: center; }
+.lp-pidelo .lp-demo-qr { margin: 16px 0 12px; width: 212px; height: 212px; }
+.lp-pidelo-pasos { list-style: decimal; margin: 12px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; line-height: 1.45; color: #4a4750; }
 
 /* «Ver todo lo que incluye» (W4): la lista completa, plegada. */
 .lp-incluye { margin-top: 18px; text-align: center; }

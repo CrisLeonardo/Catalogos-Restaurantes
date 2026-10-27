@@ -12,7 +12,6 @@ import { LandingIntro } from '@/components/landing-intro';
 import { LandingDisenos } from '@/components/landing-disenos';
 import { Leo } from '@/components/leo';
 import { LandingDemo } from '@/components/landing-demo';
-import QRCode from 'qrcode';
 import { BUILTIN_TEMPLATES } from '@/lib/theme/templates';
 import { disenosDeLaPortada } from '@/lib/landing-disenos';
 
@@ -155,10 +154,8 @@ function structuredData(pricing: PlanPricing) {
 export default async function LeoginLanding() {
   const [pricing, proof] = await Promise.all([getEffectivePlanPricing(), getLandingProof()]);
   const demoUrl = subdomainUrl(DEMO_SLUG);
-  // El QR de «Míralo en tu celular» (W1), dibujado aquí una vez.
-  const demoQr = await QRCode.toString(demoUrl, {
-    type: 'svg', errorCorrectionLevel: 'M', margin: 1, color: { dark: '#1C1C1E', light: '#FFFFFF' },
-  });
+  // El QR de «Pídelo tú mismo» ya no se dibuja aquí: lleva la sala de cada
+  // visita y lo arma landing-demo.tsx al abrir la ventana (EV-01).
   const ctaHref = contactHref();
 
   return (
@@ -206,7 +203,7 @@ export default async function LeoginLanding() {
                 <Link href="/registro" {...conEvento('lp-btn lp-btn-lg lp-btn-primary', EVENTOS.clicCrear, 'portada')}>
                   Crear mi menú gratis
                 </Link>
-                <LandingDemo href={demoUrl} qrSvg={demoQr} />
+                <LandingDemo href={demoUrl} />
               </div>
 
               <p className="lp-body" style={{ fontSize: 13.5, marginTop: 18, color: 'var(--u-text-4)' }}>
