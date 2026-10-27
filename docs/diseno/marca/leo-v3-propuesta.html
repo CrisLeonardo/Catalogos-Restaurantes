@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leo v3 propuesta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@500&family=Geist:wght@400;500;600;700&family=Unbounded:wght@600;700;800&display=swap">
+<style>
+/* Propuesta de Leo v3. La v2 sigue siendo la que está en plataforma/src/components/leo.tsx;
+   esta hoja existe para comparar y decidir antes de tocar el componente. */
+:root {
+  --bg: #FBF8F3; --surface: #FFFFFF; --ink: #1C1C1E; --muted: #6B655F;
+  --line: rgba(28, 28, 30, 0.1); --chip: #F3EEE6; --acc: #B4492A; --good: #23855A; --bad: #C62828;
+  --f-display: 'Unbounded', 'Arial Black', system-ui, sans-serif;
+  --f-ui: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-mono: 'Geist Mono', ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121214; --surface: #1C1C1E; --ink: #F2EEE8; --muted: #A39C93;
+    --line: rgba(242, 238, 232, 0.12); --chip: #26262A; --acc: #F5A030; --good: #5BC596; --bad: #FF8A80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121214; --surface: #1C1C1E; --ink: #F2EEE8; --muted: #A39C93;
+  --line: rgba(242, 238, 232, 0.12); --chip: #26262A; --acc: #F5A030; --good: #5BC596; --bad: #FF8A80;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.55 var(--f-ui); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--f-display); letter-spacing: -0.02em; text-wrap: balance; margin: 0; }
+h2 { font-size: clamp(24px, 3.2vw, 34px); line-height: 1.1; font-weight: 700; }
+h3 { font-size: 17px; line-height: 1.25; font-weight: 700; }
+p { margin: 0; }
+.lead { color: var(--muted); font-size: 17px; max-width: 66ch; margin-top: 12px; }
+.eyebrow { font: 600 12px var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--acc); }
+section { padding-block: clamp(44px, 6vw, 76px); border-top: 1px solid var(--line); }
+.head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 26px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 22px; min-width: 0; }
+.grid { display: grid; gap: 16px; }
+.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 900px) { .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .g2, .g4 { grid-template-columns: 1fr; } }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.tag { font: 600 13px var(--f-ui); color: var(--muted); }
+.pill { display: inline-block; font: 700 11.5px var(--f-ui); letter-spacing: .04em; padding: 5px 9px; border-radius: 999px; background: var(--chip); color: var(--muted); }
+.pill.new { background: #E3F4EA; color: #1F6E49; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pill.new { background: #1B3A2B; color: #8FE0B6; } }
+
+/* Banda de Leo (siempre oscura) */
+.hero { background: radial-gradient(900px 520px at 72% 40%, rgba(232, 83, 74, 0.2), transparent 62%), #121214; color: #F2EEE8; }
+.hero .wrap { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 24px; align-items: center; padding-block: clamp(40px, 6vw, 72px); }
+.hero h1 { font-size: clamp(34px, 5.2vw, 60px); line-height: 1.04; font-weight: 800; letter-spacing: -0.035em; }
+.hero h1 span { background: linear-gradient(120deg, #E8534A, #F5A030); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero p { color: #B5AEA4; font-size: 18px; margin-top: 18px; max-width: 48ch; }
+.hero .eyebrow { color: #F5A030; }
+.hero .nota { margin-top: 22px; font-size: 14px; border-left: 3px solid #F5A030; padding-left: 12px; color: #D8D1C7; max-width: 52ch; }
+.hero-leo { width: min(400px, 100%); margin: 0 auto; aspect-ratio: 1; }
+.hero-leo svg { width: 100%; height: 100%; display: block; }
+@media (max-width: 760px) { .hero .wrap { grid-template-columns: 1fr; } .hero-leo { width: min(290px, 80%); } }
+
+/* Lista de cambios */
+.changes { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 28px; }
+@media (max-width: 700px) { .changes { grid-template-columns: 1fr; } }
+.changes li { display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start; }
+.changes b { display: block; font-weight: 700; }
+.changes span { color: var(--muted); font-size: 14.5px; }
+.changes .n { width: 30px; height: 30px; border-radius: 50%; background: var(--chip); display: grid; place-items: center; font: 700 12px var(--f-mono); color: var(--acc); }
+
+/* Pruebas */
+.panel { border-radius: 16px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.panel.claro { background: #FBF8F3; border: 1px solid rgba(28,28,30,.1); color: #1C1C1E; }
+.panel.oscuro { background: #121214; color: #F2EEE8; }
+.panel .row { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; justify-content: center; }
+.panel .tag { color: inherit; opacity: .7; }
+.sil svg { color: #000; }
+.oscuro .sil svg { color: #fff; }
+.blur svg { filter: blur(2.4px); }
+table.tam { width: 100%; border-collapse: collapse; }
+table.tam th, table.tam td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: center; vertical-align: middle; }
+table.tam th { font: 600 12px var(--f-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+table.tam td:first-child { text-align: left; font: 500 13px var(--f-mono); color: var(--muted); white-space: nowrap; }
+table.tam td.fondo-o { background: #121214; }
+.scroll { overflow-x: auto; }
+
+/* Usos */
+.sticker svg { filter: drop-shadow(3px 0 0 #fff) drop-shadow(-3px 0 0 #fff) drop-shadow(0 3px 0 #fff) drop-shadow(0 -3px 0 #fff) drop-shadow(0 4px 8px rgba(0,0,0,.28)); }
+.icono { width: 112px; height: 112px; border-radius: 28px; background: radial-gradient(circle at 70% 25%, #2a2a2e, #121214); display: grid; place-items: center; box-shadow: 0 14px 30px rgba(0,0,0,.25); }
+.pestana { display: flex; align-items: center; gap: 8px; background: #E9E4DB; color: #1C1C1E; padding: 8px 14px; border-radius: 10px 10px 0 0; font: 500 13px var(--f-ui); width: max-content; max-width: 100%; }
+.pestana svg { flex: none; }
+
+/* Pose firma */
+.demo-wrap { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 28px; align-items: center; }
+@media (max-width: 760px) { .demo-wrap { grid-template-columns: 1fr; } }
+.demo { background: #121214; border-radius: 28px; padding: 24px; position: relative; display: grid; place-items: center; }
+.demo svg { width: min(300px, 100%); height: auto; display: block; }
+.demo .globo { position: absolute; top: 18px; right: 22px; background: #F5A030; color: #1C1C1E; font: 800 15px var(--f-display); padding: 6px 12px; border-radius: 999px; opacity: 0; transform: translateY(6px) scale(.9); transition: opacity .15s, transform .15s; pointer-events: none; }
+.demo.ding .globo { opacity: 1; transform: none; }
+.btn { font: 700 15px var(--f-ui); background: linear-gradient(135deg, #E8534A, #F5A030); color: #1C1C1E; border: 0; border-radius: 999px; padding: 12px 22px; cursor: pointer; margin-top: 18px; }
+.btn:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.leo-hero svg .arm-l { transform-box: view-box; transform-origin: 20.5px 47px; animation: saluda 3.2s ease-in-out infinite; }
+@keyframes saluda { 0%, 55%, 100% { transform: rotate(0); } 62% { transform: rotate(-14deg); } 70% { transform: rotate(8deg); } 78% { transform: rotate(-12deg); } 86% { transform: rotate(0); } }
+.demo.ding .arm-r { animation: pulsa .5s ease-out; }
+.demo.ding .bell { transform-box: fill-box; transform-origin: 50% 100%; animation: tiembla .8s ease-out; }
+@keyframes pulsa { 20% { transform: translateY(2.6px); } 100% { transform: none; } }
+@keyframes tiembla { 15% { transform: rotate(-8deg); } 35% { transform: rotate(6deg); } 55% { transform: rotate(-3.5deg); } 75% { transform: rotate(1.6deg); } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .leo-hero svg *, .demo * { animation: none !important; } }
+
+.veredicto { background: #1C1C1E; color: #F2EEE8; border-radius: 28px; padding: clamp(24px, 4vw, 44px); }
+.veredicto h2 { font-size: clamp(22px, 2.8vw, 30px); }
+.veredicto p { color: #B5AEA4; margin-top: 12px; max-width: 66ch; }
+.veredicto ul { margin: 16px 0 0; padding-left: 20px; color: #D8D1C7; max-width: 66ch; }
+.veredicto li + li { margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">Marca · propuesta, aún sin aplicar</div>
+      <h1>Leo v3: <span>más silueta, menos molde</span></h1>
+      <p>Respuesta a seis dudas sobre la v2: la silueta de bota, la cara de molde, el tamaño pequeño, el degradado, el brazo único y la falta de un gesto propio.</p>
+      <p class="nota">Esta hoja es solo la propuesta. El componente real (<span class="mono">plataforma/src/components/leo.tsx</span>) sigue siendo la v2 hasta que se elija.</p>
+    </div>
+    <div class="hero-leo leo-hero" data-v="3" data-lvl="full" data-expr="saluda"></div>
+  </div>
+</header>
+
+<main>
+<section>
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Qué cambió</div>
+      <h2>Seis dudas, seis respuestas</h2>
+      <p class="lead">Cada cambio responde a una duda concreta sobre la v2. Cuáles funcionan de verdad lo dicen las pruebas de abajo, no esta lista.</p>
+    </div>
+    <ol class="changes">
+      <li><span class="n">1</span><div><b>Silueta de bota</b><span>Se conserva la L limpia de la v2 (cuerpo algo más ancho, pie más largo), se le dejan los piecitos para que se lea personaje, y el hueco de la L queda abierto: la campanita va en la punta del pie y el brazo la alcanza por arriba.</span></div></li>
+      <li><span class="n">2</span><div><b>Cara de molde</b><span>Ceja derecha siempre alzada, sonrisa chueca (más alta de un lado), dientes arriba en vez de lengua, y la mirada va hacia la campana. Se reconoce aunque se cambie el color.</span></div></li>
+      <li><span class="n">3</span><div><b>Se pierde en tamaño pequeño</b><span>Tres niveles de detalle: completo (64 px o más), compacto (28 a 63 px) y mínimo (menos de 28 px: la L y dos ojos). Cada nivel se dibuja para su tamaño, no se encoge el mismo dibujo.</span></div></li>
+      <li><span class="n">4</span><div><b>Degradado, sombras y brillos</b><span>Versión plana de tres tonos (cuerpo, sombra, luz) y versión de un solo color. El degradado brasa a mango se queda para el ícono grande y la intro, donde sí luce.</span></div></li>
+      <li><span class="n">5</span><div><b>Un brazo y moño perdido</b><span>Dos brazos (uno saluda, otro descansa en la campana) y moño más grande, a la altura del pecho, que además tapa la unión del cuerpo con el pie.</span></div></li>
+      <li><span class="n">6</span><div><b>Sin gesto propio</b><span>Pose firma: Leo toca la campanita. Es el «ding» de pedido nuevo hecho dibujo, así la mascota y el sonido de la marca cuentan lo mismo. Pruébala más abajo.</span></div></li>
+    </ol>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Prueba 1 · silueta</div>
+      <h2>¿Se reconoce solo con la sombra?</h2>
+      <p class="lead">Todo en un solo color, sin cara. Si no se distingue qué es, la forma sola no sostiene a la mascota. Primero la v2 actual y después la v3, cada una en cuatro tamaños (la v3 usa su nivel de detalle: brazo y campana solo desde 64 px) y desenfocada abajo, como entrecerrar los ojos.</p>
+    </div>
+    <div class="grid g2" id="sil"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Prueba 2 · tamaños reales</div>
+      <h2>De 16 a 128 px, sobre claro y sobre oscuro</h2>
+      <p class="lead">La v2 es el mismo dibujo encogido. La v3 cambia el nivel de detalle según el tamaño. Fíjate en 16, 24 y 32 px: ahí viven el favicon, las notificaciones y los avatares del panel.</p>
+    </div>
+    <div class="card scroll"><table class="tam" id="tam"></table></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Prueba 3 · plano y un color</div>
+      <h2>Sin degradado también funciona</h2>
+      <p class="lead">Lo que se imprime, se borda o se pone en una pantalla chica casi nunca lleva degradado. Aquí, la v3 plana y la de un solo color en los usos reales.</p>
+    </div>
+    <div class="grid g4">
+      <div class="panel claro"><div data-v="3" data-lvl="full" data-expr="saluda" data-size="120"></div><span class="tag">Plana sobre claro</span></div>
+      <div class="panel oscuro"><div data-v="3" data-lvl="full" data-expr="saluda" data-size="120"></div><span class="tag">Plana sobre oscuro</span></div>
+      <div class="panel claro"><div class="sticker" data-v="3" data-lvl="full" data-expr="feliz" data-size="120"></div><span class="tag">Sticker con borde blanco</span></div>
+      <div class="panel claro"><div style="color:#1C1C1E" data-v="3" data-lvl="full" data-expr="saluda" data-mono="1" data-size="120"></div><span class="tag">Un solo color (sello, bordado)</span></div>
+    </div>
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+        <div class="icono"><div data-v="3" data-lvl="compact" data-expr="saluda" data-size="78"></div></div>
+        <div><h3>Ícono de la app</h3><p class="tag" style="margin-top:6px">Nivel compacto sobre carbón. Sin campana ni brazo: lo que queda es la L con cara.</p></div>
+      </div>
+      <div class="card">
+        <div class="pestana"><span data-v="3" data-lvl="min" data-expr="saluda" data-size="16"></span><span>Leogin · Panel del restaurante</span></div>
+        <h3 style="margin-top:14px">Favicon de 16 px</h3>
+        <p class="tag" style="margin-top:6px">Nivel mínimo: la L y dos ojos. Si el favicon se reconoce, la mascota ya sirve en cualquier chico.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Gesto firma</div>
+      <h2>Leo toca la campanita</h2>
+      <p class="lead">Toca la campana. Suenan las dos notas que suben, el mismo «ding» alegre que la marca usa para un pedido nuevo.</p>
+    </div>
+    <div class="demo-wrap">
+      <div class="demo" id="demo"><span class="globo" aria-hidden="true">¡ding!</span><div id="demo-leo" data-v="3" data-lvl="full" data-expr="saluda"></div></div>
+      <div>
+        <h3>Por qué este gesto</h3>
+        <p class="lead" style="margin-top:8px">Mario salta, Pikachu suelta electricidad, Duo te regaña. Un gesto que solo hace él es lo que lo vuelve reconocible. Para Leo el gesto es el servicio: avisar que hay algo listo.</p>
+        <p class="lead">Además cierra el círculo: el hueco de la L, que antes era el punto débil de la silueta, ahora es el lugar donde está la campana.</p>
+        <button class="btn" type="button" id="btn-ding">Tocar la campanita</button>
+      </div>
+    </div>
+    <div class="grid g4" style="margin-top:28px">
+      <div class="card" style="text-align:center"><div data-v="3" data-lvl="full" data-expr="saluda" data-size="140"></div><h3 style="margin-top:8px">Saluda</h3><p class="tag">La web y la bienvenida</p></div>
+      <div class="card" style="text-align:center"><div data-v="3" data-lvl="full" data-expr="senala" data-size="140"></div><h3 style="margin-top:8px">Señala</h3><p class="tag">El paso que sigue</p></div>
+      <div class="card" style="text-align:center"><div data-v="3" data-lvl="full" data-expr="feliz" data-size="140"></div><h3 style="margin-top:8px">Feliz</h3><p class="tag">Primer pedido, récord</p></div>
+      <div class="card" style="text-align:center"><div data-v="3" data-lvl="full" data-expr="duerme" data-size="140"></div><h3 style="margin-top:8px">Duerme</h3><p class="tag">Nada que hacer ahora</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="veredicto">
+      <div class="eyebrow">Para decidir</div>
+      <h2>Qué resuelve esto y qué no</h2>
+      <p>La v3 arregla lo que se puede arreglar con código: forma, niveles de detalle, plano y gesto propio. Lo que sigue pendiente no depende de más SVG.</p>
+      <ul>
+        <li><b>Silueta:</b> la v2 sigue teniendo la L más pura. La v3 la iguala en los niveles chicos, pero a tamaño completo el brazo sobre el hueco y la campana la cargan. Si importa más la L limpia que el gesto, se puede adoptar de la v3 solo la cara, los niveles y el plano, y dejar la campana como accesorio de poses.</li>
+        <li><b>Nivel «Nintendo»:</b> el reconocimiento se gana con exposición y con la mano de un ilustrador. Esta propuesta es un mejor punto de partida para esa pasada, no un reemplazo.</li>
+        <li><b>Si se aprueba:</b> se actualiza <span class="mono">leo.tsx</span> (niveles y campana), se regenera el favicon y la intro, y se anota en la estrategia de atracción.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+(function () {
+  var C = { body: '#EE6B3F', shade: '#C9482E', ink: '#1C1C1E', lip: '#4A1A12', bell: '#F5C03A', bellShade: '#D49A1E' };
+  var BODY3 = 'M34 6h6a14 14 0 0 1 14 14v38a6 6 0 0 0 6 6h20a12 12 0 0 1 0 24H32a12 12 0 0 1-12-12V20A14 14 0 0 1 34 6Z';
+  var BODY2 = 'M36 9h4a13 13 0 0 1 13 13v32a5 5 0 0 0 5 5h18a7 7 0 0 1 7 7v12a7 7 0 0 1-7 7H33a10 10 0 0 1-10-10V22a13 13 0 0 1 13-13Z';
+  var BOCA2 = 'M30.8 37.4Q38 39.3 45.2 37.4Q44.7 46.6 38 46.6Q31.3 46.6 30.8 37.4Z';
+  var uid = 0;
+
+  function star(x, y, r) {
+    return '<path d="M' + x + ' ' + (y - r) + 'Q' + x + ' ' + y + ' ' + (x + r) + ' ' + y + 'Q' + x + ' ' + y + ' ' + x + ' ' + (y + r) + 'Q' + x + ' ' + y + ' ' + (x - r) + ' ' + y + 'Q' + x + ' ' + y + ' ' + x + ' ' + (y - r) + 'Z" fill="#F5A030"/>';
+  }
+
+  /* v3: lvl = full | compact | min. mono = un solo color (currentColor). sil = sin cara. */
+  function leo3(o) {
+    var lvl = o.lvl || 'full', expr = o.expr || 'saluda', mono = !!o.mono, sil = !!o.sil;
+    var id = 'l3' + (uid++);
+    var body = mono ? 'currentColor' : C.body;
+    var cut = 'var(--cut, #fff)';
+    var ink = mono ? cut : C.ink;
+    var lip = mono ? cut : C.lip;
+    var full = lvl === 'full', min = lvl === 'min';
+    var happy = expr === 'feliz', sleep = expr === 'duerme', point = expr === 'senala';
+    var s = '<svg viewBox="0 0 100 100" overflow="visible" aria-hidden="true"><defs><clipPath id="' + id + 'c"><path d="' + BODY3 + '"/></clipPath></defs>';
+
+    if (!mono && !min) s += '<ellipse cx="56" cy="90.8" rx="36" ry="2.6" fill="#000" opacity=".25"/>';
+    var pie = mono ? 'currentColor' : C.shade;
+    s += '<ellipse cx="30" cy="87.2" rx="5.2" ry="3" fill="' + pie + '"/><ellipse cx="44" cy="87.2" rx="5.2" ry="3" fill="' + pie + '"/>';
+    s += '<path d="' + BODY3 + '" fill="' + body + '"/>';
+    if (!mono && !min) {
+      s += '<g clip-path="url(#' + id + 'c)"><ellipse cx="27" cy="17" rx="7" ry="11" fill="#fff" opacity=".2"/>' +
+        '<rect x="14" y="81" width="86" height="12" fill="' + C.shade + '" opacity=".5"/>' +
+        '<rect x="48" y="4" width="7" height="56" fill="' + C.shade + '" opacity=".16"/></g>';
+    }
+
+    if (full) {
+      var bc = mono ? 'currentColor' : C.bell, bs = mono ? 'currentColor' : C.bellShade;
+      s += '<g class="bell"><rect x="72.5" y="61.6" width="15" height="3" rx="1.5" fill="' + bs + '"/>' +
+        '<path d="M73.5 61.6a6.5 6.5 0 0 1 13 0Z" fill="' + bc + '"/>';
+      if (!mono) s += '<path d="M75.6 59.2a4.8 4.8 0 0 1 2.2-3.2" stroke="#fff" opacity=".6" stroke-width="1.4" fill="none" stroke-linecap="round"/>';
+      s += '<circle cx="80" cy="54.4" r="1.5" fill="' + bs + '"/></g>';
+
+      var up = expr === 'saluda' || happy;
+      var lp = up ? ['M20.5 47Q11 46.5 9.4 36', 9.2, 33.4] : ['M20.5 47Q14 49 12.2 56', 12, 57.6];
+      var rp = point ? ['M53 46Q63 44 68 33', 68.8, 30.6] : happy ? ['M53 46Q64 45 66 34', 66.4, 31.6] : ['M53 46Q67 40.5 78 49.6', 79.6, 51.6];
+      var arm = function (cls, p) {
+        return '<g class="' + cls + '"><path d="' + p[0] + '" stroke="' + body + '" stroke-width="5.6" fill="none" stroke-linecap="round"/><circle cx="' + p[1] + '" cy="' + p[2] + '" r="4" fill="' + body + '"/></g>';
+      };
+      s += arm('arm-l', lp) + arm('arm-r', rp);
+    }
+
+    if (!sil) {
+      if (!min) {
+        s += '<path d="M37 56L27.6 51Q26.2 50.3 26.2 51.9V60.1Q26.2 61.7 27.6 61ZM37 56L46.4 51Q47.8 50.3 47.8 51.9V60.1Q47.8 61.7 46.4 61Z" fill="' + ink + '"/>' +
+          '<rect x="34.8" y="52.6" width="4.4" height="6.8" rx="1.6" fill="' + (mono ? body : '#3A3A40') + '"/>';
+      }
+      if (full && !mono) s += '<g fill="#FF8E8E" opacity=".55"><ellipse cx="24.6" cy="37.6" rx="2.8" ry="1.8"/><ellipse cx="50.4" cy="36" rx="2.8" ry="1.8"/></g>';
+
+      if (happy) {
+        s += '<path d="M22.2 30q6.2-8.6 12.4 0M39.8 30q6.2-8.6 12.4 0" stroke="' + ink + '" stroke-width="3.2" fill="none" stroke-linecap="round"/>';
+      } else if (sleep) {
+        s += '<path d="M22.2 27q6.2 4.8 12.4 0M39.8 27q6.2 4.8 12.4 0" stroke="' + ink + '" stroke-width="3" fill="none" stroke-linecap="round"/>';
+      } else {
+        var pr = min ? 5 : 4.3, dx = point ? 1.4 : 0, dy = point ? -1.2 : 0;
+        s += '<ellipse cx="28.4" cy="27" rx="7" ry="9" fill="#fff"/><ellipse cx="45.6" cy="27" rx="7" ry="9" fill="#fff"/>' +
+          '<circle cx="' + (29.6 + dx) + '" cy="' + (28.4 + dy) + '" r="' + pr + '" fill="' + (mono ? 'currentColor' : C.ink) + '"/>' +
+          '<circle cx="' + (46.8 + dx) + '" cy="' + (28.4 + dy) + '" r="' + pr + '" fill="' + (mono ? 'currentColor' : C.ink) + '"/>';
+        if (!min) s += '<circle cx="' + (31 + dx) + '" cy="' + (26.2 + dy) + '" r="1.6" fill="#fff"/><circle cx="' + (48.2 + dx) + '" cy="' + (26.2 + dy) + '" r="1.6" fill="#fff"/>';
+      }
+
+      if (!min) {
+        var by = sleep ? 3.4 : 0;
+        s += '<g transform="translate(0 ' + by + ')" stroke="' + ink + '" stroke-width="3.4" fill="none" stroke-linecap="round"><path d="M22 15.5q5.6-3.2 11.4-.6"/><path d="M40.4 11.5q5.8-4.6 11.8 1.2"/></g>';
+        if (!full) {
+          s += sleep ? '<path d="M31 41q6 3.4 12 0" stroke="' + ink + '" stroke-width="2.8" fill="none" stroke-linecap="round"/>'
+                     : '<path d="M29 39q8.6 7.2 17-1.4" stroke="' + ink + '" stroke-width="3" fill="none" stroke-linecap="round"/>';
+        } else if (sleep) {
+          s += '<path d="M31 41q6 4.4 12 0" stroke="' + lip + '" stroke-width="2.6" fill="none" stroke-linecap="round"/>';
+        } else {
+          var m = happy ? 'M26.6 37Q37.5 40.6 47.6 35.6Q46.6 49.4 37.4 49.4Q27.6 49.4 26.6 37Z' : 'M28 38.4Q37.5 41.2 46.4 36.8Q45.6 47.8 37.6 47.8Q29.4 47.8 28 38.4Z';
+          s += '<path d="' + m + '" fill="' + lip + '"/>' +
+            '<path d="M28.8 38.7Q37.5 41.2 46 37.4L45.6 41.2Q37.5 43.4 29.2 41.4Z" fill="' + (mono ? body : '#fff') + '"/>';
+        }
+      }
+    }
+
+    if (full && happy && !mono) s += '<g>' + star(9, 16, 5) + star(64, 5, 4) + star(90, 36, 4.4) + '</g>';
+    if (full && sleep && !mono) s += '<g fill="#F5A030" font-family="Unbounded, Arial Black, sans-serif" font-weight="800"><text x="60" y="15" font-size="9">z</text><text x="67" y="8" font-size="7">z</text><text x="72" y="2" font-size="5">z</text></g>';
+    return s + '</svg>';
+  }
+
+  /* v2 (la actual de leo.tsx, expresión «saluda»). sil = solo la forma. */
+  function leo2(o) {
+    var sil = !!(o && o.sil), id = 'l2' + (uid++), f = sil ? 'currentColor' : 'url(#' + id + 'g)';
+    var s = '<svg viewBox="0 0 100 100" overflow="visible" aria-hidden="true"><defs>' +
+      '<linearGradient id="' + id + 'g" x1="23" y1="9" x2="83" y2="85" gradientUnits="userSpaceOnUse"><stop stop-color="#E8534A"/><stop offset="1" stop-color="#F5A030"/></linearGradient>' +
+      '<clipPath id="' + id + 'c"><path d="' + BODY2 + '"/></clipPath><clipPath id="' + id + 'm"><path d="' + BOCA2 + '"/></clipPath></defs>';
+    if (!sil) s += '<ellipse cx="52" cy="89.6" rx="31" ry="2.8" fill="#000" opacity=".28"/>';
+    s += '<ellipse cx="31" cy="86.4" rx="5.4" ry="3" fill="' + (sil ? 'currentColor' : '#B9402F') + '"/><ellipse cx="45" cy="86.4" rx="5.4" ry="3" fill="' + (sil ? 'currentColor' : '#B9402F') + '"/>' +
+      '<path d="' + BODY2 + '" fill="' + f + '"/>';
+    if (!sil) {
+      s += '<g clip-path="url(#' + id + 'c)"><ellipse cx="28.5" cy="17" rx="9" ry="15" fill="#fff" opacity=".2"/><rect x="18" y="79.4" width="70" height="8" fill="#8F2A22" opacity=".22"/><rect x="49.5" y="6" width="6" height="50" fill="#8F2A22" opacity=".12"/></g>';
+    }
+    s += '<g transform="rotate(95 24.5 50)"><path d="M25 49.6C19 50.6 16.4 53.6 15.6 58.2" stroke="' + f + '" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="15.4" cy="59" r="3.7" fill="' + f + '"/></g>';
+    if (!sil) {
+      s += '<path d="M38 52.4L31.4 48.8Q29.8 48.1 29.8 49.8V55Q29.8 56.7 31.4 56ZM38 52.4L44.6 48.8Q46.2 48.1 46.2 49.8V55Q46.2 56.7 44.6 56Z" fill="#1C1C1E"/><rect x="36" y="50.5" width="4" height="3.8" rx="1.3" fill="#3A3A40"/>' +
+        '<g fill="#FF8E8E" opacity=".5"><ellipse cx="26.4" cy="37.6" rx="2.6" ry="1.7"/><ellipse cx="49.8" cy="37.6" rx="2.4" ry="1.7"/></g>' +
+        '<ellipse cx="31.2" cy="25" rx="6.8" ry="8.2" fill="#fff"/><ellipse cx="44.8" cy="25" rx="6.8" ry="8.2" fill="#fff"/>' +
+        '<circle cx="32.2" cy="26.3" r="4" fill="#1C1C1E"/><circle cx="33.7" cy="24.3" r="1.5" fill="#fff"/><circle cx="31" cy="28.2" r=".65" fill="#fff"/>' +
+        '<circle cx="45.8" cy="26.3" r="4" fill="#1C1C1E"/><circle cx="47.3" cy="24.3" r="1.5" fill="#fff"/><circle cx="44.6" cy="28.2" r=".65" fill="#fff"/>' +
+        '<g transform="translate(0 -2.6)" stroke="#1C1C1E" stroke-width="2.4" fill="none" stroke-linecap="round"><path d="M26.6 14.4q4.6-2.8 9.2-.8"/><path d="M40.2 13.6q4.6-2 9.2.8"/></g>' +
+        '<path d="' + BOCA2 + '" fill="#4A1A12"/><ellipse cx="38" cy="46" rx="4.4" ry="3" fill="#F07C6C" clip-path="url(#' + id + 'm)"/>';
+    }
+    return s + '</svg>';
+  }
+
+  function nivel(px) { return px >= 64 ? 'full' : px >= 28 ? 'compact' : 'min'; }
+  function mk(el) {
+    var d = el.dataset, size = d.size ? parseInt(d.size, 10) : 0;
+    var html = d.v === '2' ? leo2({ sil: !!d.sil }) : leo3({ lvl: d.lvl === 'auto' ? nivel(size) : d.lvl, expr: d.expr, mono: !!d.mono, sil: !!d.sil });
+    el.innerHTML = html;
+    var svg = el.firstChild;
+    if (size) { svg.setAttribute('width', size); svg.setAttribute('height', size); }
+  }
+
+  function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html) e.innerHTML = html; return e; }
+  function leoBox(v, size, extra) {
+    var d = el('div');
+    d.dataset.v = v; d.dataset.size = size; d.dataset.lvl = 'auto'; d.dataset.expr = 'saluda';
+    for (var k in extra) d.dataset[k] = extra[k];
+    return d;
+  }
+
+  /* Prueba 1: siluetas */
+  var sil = document.getElementById('sil');
+  [['2', 'v2 actual'], ['3', 'v3 propuesta']].forEach(function (p) {
+    ['claro', 'oscuro'].forEach(function (tema) {
+      var panel = el('div', 'panel ' + tema);
+      var row = el('div', 'row sil');
+      [16, 32, 64, 120].forEach(function (px) {
+        var b = leoBox(p[0], px, { sil: '1' }); if (p[0] === '3') { b.dataset.mono = '1'; } row.appendChild(b);
+      });
+      var blur = el('div', 'row sil blur');
+      var b2 = leoBox(p[0], 96, { sil: '1' }); if (p[0] === '3') { b2.dataset.lvl = 'full'; b2.dataset.mono = '1'; } blur.appendChild(b2);
+      panel.appendChild(row); panel.appendChild(blur);
+      panel.appendChild(el('span', 'tag', p[1] + ' · silueta ' + (tema === 'claro' ? 'sobre claro' : 'sobre oscuro')));
+      sil.appendChild(panel);
+    });
+  });
+
+  /* Prueba 2: tabla de tamaños */
+  var t = document.getElementById('tam');
+  t.innerHTML = '<thead><tr><th>Tamaño</th><th>v2 · claro</th><th>v2 · oscuro</th><th>v3 · claro</th><th>v3 · oscuro</th><th>Nivel v3</th></tr></thead>';
+  var tb = el('tbody');
+  [16, 24, 32, 48, 64, 128].forEach(function (px) {
+    var tr = el('tr');
+    tr.appendChild(el('td', '', px + ' px'));
+    [['2', false], ['2', true], ['3', false], ['3', true]].forEach(function (c) {
+      var td = el('td', c[1] ? 'fondo-o' : '');
+      var b = leoBox(c[0], px, {}); b.style.display = 'inline-block';
+      td.appendChild(b); tr.appendChild(td);
+    });
+    tr.appendChild(el('td', '', '<span class="pill new">' + { full: 'completo', compact: 'compacto', min: 'mínimo' }[nivel(px)] + '</span>'));
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+
+  document.querySelectorAll('[data-v]').forEach(mk);
+
+  /* Pose firma: la campana suena con dos notas que suben */
+  var demo = document.getElementById('demo'), btn = document.getElementById('btn-ding'), ctx = null, timer = null;
+  function ding() {
+    demo.classList.remove('ding'); void demo.offsetWidth; demo.classList.add('ding');
+    clearTimeout(timer); timer = setTimeout(function () { demo.classList.remove('ding'); }, 1400);
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      [784, 1175].forEach(function (hz, i) {
+        var o = ctx.createOscillator(), g = ctx.createGain(), at = ctx.currentTime + i * 0.14;
+        o.type = 'sine'; o.frequency.value = hz;
+        g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.28, at + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.9);
+        o.connect(g); g.connect(ctx.destination); o.start(at); o.stop(at + 0.95);
+      });
+    } catch (e) { /* sin audio: la animación basta */ }
+  }
+  btn.addEventListener('click', ding);
+  demo.addEventListener('click', ding);
+})();
+</script>
+</body>
+</html>
