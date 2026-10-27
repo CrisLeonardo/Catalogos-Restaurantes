@@ -46,10 +46,12 @@ export function CartBar({ onOpen, cartIconHidden }: { onOpen: () => void; cartIc
 }
 
 /* Panel del carrito (bottom-sheet). */
-export function CartPanel({ onClose, sugerencias = [] }: {
+export function CartPanel({ onClose, sugerencias = [], onPedirDemo }: {
   onClose: () => void;
   /** «Acompáñalo con…» con lo que todavía no lleva (CAT-13). */
   sugerencias?: Sugerencia[];
+  /** En la demo no hay checkout: el botón abre «Pídelo tú mismo». */
+  onPedirDemo?: () => void;
 }) {
   const { items, addItem, updateQuantity, removeItem, total, pointsToRedeem } = useCart();
   const content = useThemeContent();
@@ -163,7 +165,9 @@ export function CartPanel({ onClose, sugerencias = [] }: {
                 <span style={{ fontWeight: 700, fontSize: 'var(--m-fs-lg)', color: 'var(--u-text)' }}>{content.cart.total}</span>
                 <Price amount={total} size={22} />
               </div>
-              <PrimaryButton href={checkoutHref} onClick={onClose} size="lg" full iconRight="arrowRight">{content.cart.checkout}</PrimaryButton>
+              {onPedirDemo
+                ? <PrimaryButton onClick={onPedirDemo} size="lg" full iconRight="arrowRight">Enviar mi pedido de prueba</PrimaryButton>
+                : <PrimaryButton href={checkoutHref} onClick={onClose} size="lg" full iconRight="arrowRight">{content.cart.checkout}</PrimaryButton>}
             </div>
           </>
         )}

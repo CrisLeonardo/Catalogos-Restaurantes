@@ -140,7 +140,10 @@ export default async function Home({
           categories={DEMO_CATEGORIES}
           products={DEMO_PRODUCTS}
           restaurantId="demo"
-          ordersEnabled={false}
+          /* Con carrito: el pedido termina en «Pídelo tú mismo», que lo
+             enseña llegando al panel sin tocar la base (EV-01). Antes la
+             demo dejaba elegir término y extras y no tenía botón. */
+          ordersEnabled
         />
       </>
     );
