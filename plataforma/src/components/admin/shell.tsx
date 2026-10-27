@@ -94,6 +94,8 @@ interface Props {
   canManageStaff?: boolean;
   /** Esta cuenta administra más de un restaurante (migración 113). */
   hasMultipleRestaurants?: boolean;
+  /** La lista de primeros pasos está en Hoy: el tour no se abre solo encima. */
+  tourEnEspera?: boolean;
   /** Plan actual del restaurante — para mostrar badge en la barra lateral. */
   planActual?: string | null;
   /** "Comer en local" activo — da acceso a Mesas aunque el plan no incluya
@@ -123,7 +125,7 @@ export default function AdminShell({
   reservacionesActive = false, listaEsperaActive = false, encuestasActive = false, cuponesActive = false,
   llamadaMeseroActive = false,
   logoUrl, logoBg, zone, role, permissions, userName, canManageStaff, hasMultipleRestaurants = false,
-  planActual, dineInEnabled = false, deliveryEnabled = false, whatsappReady = false, preview = false,
+  tourEnEspera = false, planActual, dineInEnabled = false, deliveryEnabled = false, whatsappReady = false, preview = false,
   isOperatorSession = false, children,
 }: Props) {
   const realPathname = usePathname();
@@ -791,7 +793,7 @@ export default function AdminShell({
       {/* El tour enseña los seis destinos de la barra. Sin barra (el mesero
           puro) no hay nada que señalar: eran cinco pasos sobre Menú y
           Ajustes, pantallas que esa persona no puede abrir. */}
-      {!sinBarra && <WelcomeTour restaurantName={restaurantName} preview={preview} />}
+      {!sinBarra && <WelcomeTour restaurantName={restaurantName} preview={preview} enEspera={tourEnEspera} />}
       {!preview && <LoginWelcomeToast restaurantName={restaurantName} userName={userName} roleLabel={roleLabel} />}
       {/* Tours guiados del centro de ayuda ("Ver en mi panel") — el host vive
           aquí para sobrevivir a las navegaciones entre páginas del panel. */}

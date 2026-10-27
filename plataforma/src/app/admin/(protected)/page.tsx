@@ -38,6 +38,7 @@ import { mesaDeFila, direccionDeMesa } from '@/lib/mesa';
 import { panelBase } from '@/lib/panel-links-server';
 import { panelHref } from '@/lib/panel-links';
 import { fmtMoney } from '@/lib/money';
+import { ritmoDelDia } from '@/lib/ritmo-del-dia';
 
 export const metadata = { title: 'Hoy – Panel admin' };
 
@@ -208,7 +209,7 @@ export default async function AdminHomePage() {
       { key: 'cuenta', label: 'Creaste tu cuenta', desc: 'Tu restaurante ya existe en Leogin', icon: 'user', href: panelHref(base, '/admin/perfil'), done: true },
       { key: 'marca', label: 'Personaliza tu marca', desc: 'Logo, colores y estilo', icon: 'sparkle', href: panelHref(base, '/admin/personalizacion'), done: hasLogo },
       { key: 'categoria', label: 'Crea una categoría', desc: 'Organiza tu menú', icon: 'tag', href: panelHref(base, '/admin/categorias'), done: (catCount ?? 0) > 0 },
-      { key: 'platillo', label: 'Agrega tu primer platillo', desc: 'Suma un producto', icon: 'plus', href: panelHref(base, '/admin/menu/productos/new'), done: (prodCount ?? 0) > 0 },
+      { key: 'platillo', label: 'Agrega tu primer platillo', desc: 'Con foto, nombre y precio', icon: 'plus', href: panelHref(base, '/admin/menu/productos/new'), done: (prodCount ?? 0) > 0 },
       { key: 'qr', label: 'Comparte tu menú', desc: 'Descarga tu código QR', icon: 'image', href: panelHref(base, '/admin/qr'), done: (visitStats?.last30 ?? 0) > 0 },
       { key: 'escritorio', label: 'Elige la PC del local', desc: 'Para que imprima sola y no te frene un corte de internet', icon: 'monitor', href: panelHref(base, '/admin/mi-pc'), done: false, optional: true },
     ];
@@ -220,6 +221,11 @@ export default async function AdminHomePage() {
   // ninguna" y "la apagué yo" ya los cubre el aviso del layout
   // (components/admin/main-pc-banner.tsx) en todas las pantallas.
   let agentOffline = false;
+  /* «Tu local no tiene PC principal» era un aviso en TODAS las pantallas del
+     panel (EV-14): ahora es una fila de aquí, solo para quien decide la
+     infraestructura y solo con pedidos (sin pedidos no hay comandas que
+     imprimir). Durante los primeros pasos no sale: ahí ya es un paso. */
+  let pcState: 'missing' | 'off' | null = null;
   if (ordersEnabled && restaurantId && allow('impresion')) {
     const db = createServiceClient();
     const { data: agent } = await db
@@ -232,6 +238,11 @@ export default async function AdminHomePage() {
     // eslint-disable-next-line react-hooks/purity
     const stale = !!lastSeen && Date.now() - new Date(lastSeen).getTime() > 10 * 60_000;
     if (stale && (agent?.is_active as boolean | null) !== false) agentOffline = true;
+    const decide = profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN';
+    if (decide && !needsOnboarding) {
+      if (!agent) pcState = 'missing';
+      else if ((agent.is_active as boolean | null) === false) pcState = 'off';
+    }
   }
 
   /* Platillos a la vista sin foto (auditoría 2026-10-02, MEN-12). Sin foto
@@ -330,6 +341,16 @@ export default async function AdminHomePage() {
       action: 'Revisar',
     });
   }
+  if (pcState) {
+    alerts.push({
+      key: 'pc-principal', href: panelHref(base, '/admin/mi-pc'), level: 'info',
+      title: pcState === 'missing' ? 'Aún no eliges la PC del local' : 'La PC del local está apagada',
+      desc: pcState === 'missing'
+        ? 'Con ella las comandas se imprimen solas y un corte de internet no detiene el servicio.'
+        : 'Mientras siga apagada no se imprimen comandas solas ni hay respaldo si se cae el internet.',
+      action: pcState === 'missing' ? 'Elegirla' : 'Encenderla',
+    });
+  }
   if (onTrial && trialLeft <= 3) {
     alerts.push({
       key: 'trial', href: panelHref(base, '/admin/suscripcion'), level: 'urgente',
@@ -386,10 +407,13 @@ export default async function AdminHomePage() {
      2026-10-02, HOY-03): lo que un día igual —mismo día de la semana, las
      cuatro semanas anteriores— llevaba A ESTA HORA (getDayPace). Con menos
      de dos días de referencia no se dice nada: uno solo es casualidad. */
+  /* Antes de la primera venta no se compara (EV-15): «↓ 100 %» a media
+     mañana regañaba por no haber abierto. La regla, en lib/ritmo-del-dia.ts. */
   const pace = widgets?.pace ?? null;
+  const ritmo = stats ? ritmoDelDia(stats.todaySales, pace) : null;
   let ventasVs: React.ReactNode = null;
-  if (stats && pace && pace.samples >= 2 && pace.typicalSoFar > 0) {
-    const delta = Math.round(((stats.todaySales - pace.typicalSoFar) / pace.typicalSoFar) * 100);
+  if (ritmo?.tipo === 'comparado') {
+    const delta = ritmo.delta;
     let dia = 'un día igual';
     try {
       dia = `un ${new Intl.DateTimeFormat('es-GT', { weekday: 'long', timeZone: timezone }).format(new Date(now))} normal`;

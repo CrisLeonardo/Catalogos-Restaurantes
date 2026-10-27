@@ -3,6 +3,7 @@ import { Section } from '@/components/ui/section';
 import type { DaySale, DayPace, TopProduct } from '@/lib/db/orders';
 import { ChartReadout } from '@/components/ui/chart-readout';
 import { diaSemana } from '@/lib/dates';
+import { ritmoDelDia } from '@/lib/ritmo-del-dia';
 
 /* ============================================================
    VENTAS — las dos piezas que comparten Hoy y Pedidos
@@ -25,12 +26,6 @@ import { diaSemana } from '@/lib/dates';
    ============================================================ */
 
 type Money = (n: number) => string;
-
-/** Diferencia porcentual redondeada, o null si no hay con qué comparar. */
-function diffPercent(actual: number, referencia: number): number | null {
-  if (referencia <= 0) return null;
-  return Math.round(((actual - referencia) / referencia) * 100);
-}
 
 /** «lun 28 sept · Q1,234.00» (o «hoy · …») — lo que dice una barra al tocarla. */
 function dayTip(d: DaySale, money: Money): string {
@@ -68,7 +63,7 @@ export function SalesTrendWidget({
   title?: string;
 }) {
   const max = Math.max(...series.map((d) => d.total), 1);
-  const delta = pace ? diffPercent(todaySales, pace.typicalSoFar) : null;
+  const ritmo = ritmoDelDia(todaySales, pace);
 
   return (
     <Section title={title}>
@@ -124,23 +119,34 @@ export function SalesTrendWidget({
           </ChartReadout>
         </ListRow>
 
-        {pace && delta !== null && (
+        {/* Antes de la primera venta no se compara: «Vas 100 % abajo» a media
+            mañana regañaba por no haber abierto (EV-15, lib/ritmo-del-dia.ts).
+            En su lugar, la meta del día. */}
+        {ritmo?.tipo === 'esperando' && (
+          <ListRow className="py-2.5">
+            <div className="text-[13px] leading-snug text-adm-text-2">
+              Todavía no hay ventas hoy. Un día como hoy cierra en{' '}
+              <span className="t-mono">{money(ritmo.cierreTipico)}</span>.
+            </div>
+          </ListRow>
+        )}
+        {ritmo?.tipo === 'comparado' && (
           <ListRow className="py-2.5">
             <div className="text-[13px] leading-snug text-adm-text-2">
               Un día como hoy a esta hora va en{' '}
-              <span className="t-mono">{money(pace.typicalSoFar)}</span>.{' '}
-              {delta === 0 ? (
+              <span className="t-mono">{money(ritmo.tipicoAEstaHora)}</span>.{' '}
+              {ritmo.delta === 0 ? (
                 'Vas igual.'
               ) : (
                 <>
                   Vas{' '}
                   <span
                     className="t-mono"
-                    style={{ color: delta > 0 ? 'var(--c-ok)' : 'var(--c-warn)' }}
+                    style={{ color: ritmo.delta > 0 ? 'var(--c-ok)' : 'var(--c-warn)' }}
                   >
-                    {Math.abs(delta)}%
+                    {Math.abs(ritmo.delta)}%
                   </span>{' '}
-                  {delta > 0 ? 'arriba' : 'abajo'}.
+                  {ritmo.delta > 0 ? 'arriba' : 'abajo'}.
                 </>
               )}
             </div>

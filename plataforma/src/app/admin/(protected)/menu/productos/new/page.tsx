@@ -11,7 +11,7 @@ import { getIngredients } from '@/lib/db/recipes';
 import { can } from '@/lib/permissions';
 import ProductForm from '@/components/admin/product-form';
 
-export const metadata = { title: 'Nuevo producto – Panel admin' };
+export const metadata = { title: 'Nuevo platillo – Panel admin' };
 
 export default async function NewProductPage({
   searchParams,
@@ -69,7 +69,7 @@ export default async function NewProductPage({
             fontSize: 22,
           }}
         >
-          Nuevo producto
+          Nuevo platillo
         </h1>
       </div>
 

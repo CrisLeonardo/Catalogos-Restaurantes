@@ -15,7 +15,7 @@ import DeleteButton from '@/components/admin/delete-button';
 import { deleteProduct } from '@/lib/actions/products';
 import { withEffectiveAvailability } from '@/lib/product-availability';
 
-export const metadata = { title: 'Editar producto – Panel admin' };
+export const metadata = { title: 'Editar platillo – Panel admin' };
 
 export default async function EditProductPage({
   params,
