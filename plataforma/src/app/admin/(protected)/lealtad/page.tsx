@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { resolveModuleContext } from '@/lib/modules-server';
-import { getLoyaltySettings, getLoyaltyAccounts, getLoyaltySummary, getCustomersForLoyalty, loyaltySettingsExist, getRewards, getProductsForRewards } from '@/lib/db/loyalty';
+import { getLoyaltySettings, getLoyaltyAccounts, getLoyaltySummary, getCustomersForLoyalty, loyaltySettingsExist, getRewards, getProductsForRewards, leerAjustesExtraLealtad } from '@/lib/db/loyalty';
 import LoyaltyPanel from '@/components/admin/loyalty-panel';
 import { panelLink } from '@/lib/panel-links-server';
 
@@ -10,7 +10,7 @@ export default async function LealtadPage() {
   const mc = await resolveModuleContext('loyalty');
   if (!mc.ok) redirect(await panelLink('/admin/modulos'));
 
-  const [settings, accounts, summary, customers, hasSettings, rewards, products] = await Promise.all([
+  const [settings, accounts, summary, customers, hasSettings, rewards, products, extras] = await Promise.all([
     getLoyaltySettings(mc.restaurantId),
     getLoyaltyAccounts(mc.restaurantId),
     getLoyaltySummary(mc.restaurantId),
@@ -18,6 +18,7 @@ export default async function LealtadPage() {
     loyaltySettingsExist(mc.restaurantId),
     getRewards(mc.restaurantId),
     getProductsForRewards(mc.restaurantId),
+    leerAjustesExtraLealtad(mc.restaurantId),
   ]);
 
   return (
@@ -31,6 +32,7 @@ export default async function LealtadPage() {
         hasSettings={hasSettings}
         rewards={rewards}
         products={products}
+        extras={extras}
       />
     </div>
   );

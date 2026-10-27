@@ -1,16 +1,24 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { PrimaryButton } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { submitRating } from '@/lib/actions/encuestas';
+import { getFinalDelPedido, type FinalDelPedido } from '@/lib/actions/pedido-final';
+import { celebrarEnvio } from '@/lib/sonido-enviado';
 import type { CheckoutDone } from './checkout-model';
 
 /* La confirmación del pedido, con su encuesta. Vive aparte del formulario
    (REN-04): las estrellas cambian al pasar el dedo y antes eso volvía a
-   pintar el checkout entero. */
+   pintar el checkout entero.
+
+   Es el pico del comensal (PLAN_MOMENTOS_PICO M1 y M2): el pedido sale
+   volando hacia la cocina, la palomita se dibuja sola en verde, suena un
+   «pop» suave y, si el restaurante tiene lealtad, se le dice cuántos
+   puntos suma y cuánto le falta para su premio. Nada de Leo aquí: en el
+   menú la marca es la del restaurante. */
 export default function CheckoutSuccess({
   done, kiosk, encuestasActive, restaurantId, customerName, tp,
 }: {
@@ -27,6 +35,21 @@ export default function CheckoutSuccess({
   const confirmTitleT = useText('heading', 'confirmationTitle');
 
   const { orderNumber, trackToken } = done;
+
+  /* El pico: una sola vez al llegar a esta pantalla. */
+  useEffect(() => { celebrarEnvio(); }, []);
+
+  /* Los puntos y la sorpresa se piden aparte: la confirmación sale al
+     instante y esto llega un momento después. */
+  const [final, setFinal] = useState<FinalDelPedido | null>(null);
+  useEffect(() => {
+    if (!trackToken) return;
+    let vivo = true;
+    getFinalDelPedido(restaurantId, trackToken)
+      .then((f) => { if (vivo) setFinal(f); })
+      .catch(() => { /* sin puntos que mostrar */ });
+    return () => { vivo = false; };
+  }, [restaurantId, trackToken]);
   // Kiosko: sin WhatsApp ni seguimiento en el aparato compartido — solo el
   // número de pedido grande y el regreso al menú para el siguiente cliente.
   const waUrl = kiosk ? null : done.waUrl;
@@ -40,8 +63,12 @@ export default function CheckoutSuccess({
   return (
     <main className="anim-fade-up themed-type" style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
       <div style={{ textAlign: 'center', maxWidth: 360, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
-        <div className="anim-pop" style={{ width: 92, height: 92, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'var(--u-text)', color: 'var(--brand-bg)' }}>
-          <Icon name="check" size={46} strokeWidth={2.6} />
+        {/* «El pedido vuela» y «Listo» (estrategia §5.2, firmas 1 y 5). */}
+        <div className="pedido-enviado" aria-hidden>
+          <span className="pedido-vuela"><Icon name="receipt" size={30} /></span>
+          <span className="pedido-check">
+            <svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9" /></svg>
+          </span>
         </div>
         <div>
           <h2 className="t-display" style={{ ...confirmTitleT.vars, fontSize: 30 * confirmTitleT.size }}>{content.confirmation.title}</h2>
@@ -64,6 +91,9 @@ export default function CheckoutSuccess({
             />
           )}
         </div>
+        {final?.sorpresa && <Sorpresa texto={final.sorpresa} />}
+        {final?.lealtad && !kiosk && <PuntosDelPedido l={final.lealtad} cuentaHref={tp('/?openTab=cuenta')} />}
+
         {waUrl && (
           <div style={{ width: '100%' }}>
             <a href={waUrl} target="_blank" rel="noopener noreferrer" className="press"
@@ -76,9 +106,14 @@ export default function CheckoutSuccess({
           </div>
         )}
         {trackToken && !kiosk && (
-          <PrimaryButton href={tp(`/pedido/${trackToken}`)} full iconRight="arrowRight">
-            {content.confirmation.track}
-          </PrimaryButton>
+          <div style={{ width: '100%' }}>
+            <PrimaryButton href={tp(`/pedido/${trackToken}`)} full iconRight="arrowRight">
+              {content.confirmation.track}
+            </PrimaryButton>
+            <p className="t-mute" style={{ fontSize: 'var(--m-fs-xs)', margin: '7px 0 0', textAlign: 'center' }}>
+              Ahí te avisamos cuando esté listo.
+            </p>
+          </div>
         )}
         {kiosk && (
           <p style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)', lineHeight: 1.6, margin: 0 }}>
@@ -112,6 +147,71 @@ export default function CheckoutSuccess({
         )}
       </div>
     </main>
+  );
+}
+
+/* ── Los puntos de este pedido (M2) ───────────────────────── */
+
+function PuntosDelPedido({ l, cuentaHref }: { l: NonNullable<FinalDelPedido['lealtad']>; cuentaHref: string }) {
+  if (!l.conCuenta) {
+    // Aversión a la pérdida (§2.1), dicho sin regañar: es para la próxima.
+    return (
+      <div className="m-surface" style={{ borderRadius: 'var(--m-r-lg)', padding: 'var(--m-sp-4)', width: '100%', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ fontSize: 'var(--m-fs-md)', fontWeight: 700, color: 'var(--u-text)' }}>
+          Con tu cuenta, este pedido te daba {l.puntos} puntos{l.doble ? ' (doble por ser el primero)' : ''}.
+        </div>
+        <p style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
+          Entra con tu cuenta Leogin antes de tu próximo pedido y empieza a juntar para tus premios.
+        </p>
+        <Link href={cuentaHref} className="press" style={{ fontSize: 'var(--m-fs-sm)', fontWeight: 700, color: 'var(--brand-accent-ink, var(--brand-accent))', textDecoration: 'none', minHeight: 'var(--m-tap)', display: 'inline-flex', alignItems: 'center' }}>
+          Entrar con mi cuenta →
+        </Link>
+      </div>
+    );
+  }
+  const total = l.saldo !== null ? l.saldo + l.puntos : null;
+  const meta = l.siguiente;
+  const avance = meta && total !== null ? Math.min(1, total / meta.costo) : null;
+  return (
+    <div className="m-surface" style={{ borderRadius: 'var(--m-r-lg)', padding: 'var(--m-sp-4)', width: '100%', textAlign: 'left', display: 'flex', gap: 14, alignItems: 'center' }}>
+      {/* «El sello» (firma 4): el punto se estampa como un sello de goma. */}
+      <span className="pedido-sello" aria-hidden>+{l.puntos}</span>
+      <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ fontSize: 'var(--m-fs-md)', fontWeight: 700, color: 'var(--u-text)' }}>
+          Sumas {l.puntos} puntos{l.doble ? ', doble por tu primer pedido' : ''}
+        </div>
+        <div style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-3)' }}>
+          Se acreditan cuando te lo entreguen{total !== null ? ` · quedarás con ${total}` : ''}.
+        </div>
+        {l.alcanza ? (
+          <div style={{ fontSize: 'var(--m-fs-sm)', fontWeight: 700, color: 'var(--c-ok)' }}>¡Ya te alcanza para {l.alcanza}!</div>
+        ) : meta && avance !== null ? (
+          <>
+            <div className="pedido-meta" role="progressbar" aria-valuenow={Math.round(avance * 100)} aria-valuemin={0} aria-valuemax={100} aria-label={`Puntos para ${meta.titulo}`}>
+              <i style={{ transform: `scaleX(${avance})` }} />
+            </div>
+            <div style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)' }}>
+              Te faltan <strong>{meta.faltan}</strong> para {meta.titulo}
+            </div>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/* ── La sorpresa de la casa (M4) ─────────────────────────── */
+
+function Sorpresa({ texto }: { texto: string }) {
+  return (
+    <div className="pedido-sorpresa" role="status">
+      <Icon name="gift" size={26} />
+      <div style={{ textAlign: 'left' }}>
+        <div style={{ fontSize: 'var(--m-fs-xs)', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>¡Sorpresa de la casa!</div>
+        <div style={{ fontSize: 'var(--m-fs-md)', fontWeight: 700 }}>{texto}</div>
+        <div style={{ fontSize: 'var(--m-fs-xs)', opacity: 0.85 }}>Enséñale esta pantalla a quien te atienda.</div>
+      </div>
+    </div>
   );
 }
 

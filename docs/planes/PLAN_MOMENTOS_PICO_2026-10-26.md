@@ -41,10 +41,10 @@
 
 | # | Qué | Por qué | Estado |
 |---|---|---|---|
-| M1 | **Pedido enviado:** el pedido vuela, un «pop» suave y una vibración corta; la palomita se dibuja sola en verde | Pico del comensal (§2.7), firmas 1 y 5 | Pendiente |
-| M2 | **El final:** los puntos que suma con un sello y «te faltan N para…»; sin cuenta, lo que se pierde («con tu cuenta sumabas N puntos»); «te avisamos cuando esté listo» | Gradiente de la meta y aversión a la pérdida (§2.1, §2.9) | Pendiente |
-| M3 | **Premio por pedir desde el celular (C8):** doble de puntos en el primer pedido con cuenta. Encendido por defecto; se apaga en Lealtad | Lo que viene puesto (§2.15) | Pendiente |
-| M4 | **Sorpresa de la casa:** el restaurante escribe la sorpresa («Hoy el postre va por la casa») y cada cuántos pedidos sale; aparece en la confirmación y en la tarjeta del pedido. Apagada por defecto | Recompensa variable (§2.10) | Pendiente |
+| M1 | **Pedido enviado:** el pedido vuela, un «pop» suave y una vibración corta; la palomita se dibuja sola en verde | Pico del comensal (§2.7), firmas 1 y 5 | ✅ Hecho |
+| M2 | **El final:** los puntos que suma con un sello y «te faltan N para…»; sin cuenta, lo que se pierde («con tu cuenta sumabas N puntos»); «te avisamos cuando esté listo» | Gradiente de la meta y aversión a la pérdida (§2.1, §2.9) | ✅ Hecho |
+| M3 | **Premio por pedir desde el celular (C8):** doble de puntos en el primer pedido con cuenta. Encendido por defecto; se apaga en Lealtad | Lo que viene puesto (§2.15) | ✅ Hecho |
+| M4 | **Sorpresa de la casa:** el restaurante escribe la sorpresa («Hoy el postre va por la casa») y cada cuántos pedidos sale; aparece en la confirmación y en la tarjeta del pedido. Apagada por defecto | Recompensa variable (§2.10) | ✅ Hecho |
 
 ## Billetera
 

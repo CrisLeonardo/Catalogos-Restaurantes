@@ -126,6 +126,10 @@ huellas(n, que, ok, cuando) as (values
   ('146', 'cuenta Leogin: puente de sesión (cuenta_puentes)',
      to_regclass('public.cuenta_puentes') is not null
      and to_regclass('public.cuenta_restaurantes') is not null,
+     'ANTES de desplegar'),
+  ('147', 'lealtad: premio al primer pedido y sorpresa de la casa',
+     exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'orders' and column_name = 'sorpresa'),
      'ANTES de desplegar')
 )
 select n as migracion,
