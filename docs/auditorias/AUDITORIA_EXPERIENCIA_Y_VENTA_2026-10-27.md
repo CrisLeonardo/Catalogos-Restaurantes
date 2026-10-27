@@ -8,7 +8,7 @@
 |---|---|
 | Web pública (`distleogin.com`, `/registro`) | En producción, en el navegador, en teléfono (375 px) y en PC. |
 | Catálogo digital (`demo.distleogin.com`, Rincón 502) | En producción, en teléfono: portada, carta, ficha de un platillo. |
-| Panel del restaurante (43 pantallas) | **Solo en el código** (`lib/admin-nav.ts`, `shell.tsx`, Hoy, Ajustes, Personalizar, formulario de platillo, asistente de alta). Docker Desktop no arrancó (ver al final), así que **esta vez no se vio el panel en pantalla**. Lo que dice este documento sobre el panel es de estructura, textos y flujo, no de aspecto. |
+| Panel del restaurante (43 pantallas) | Primero en el código (`lib/admin-nav.ts`, `shell.tsx`, Hoy, Ajustes, Personalizar, formulario de platillo, asistente de alta). Después, **en pantalla**: compilación de producción local (`next build` + `next start`) con Supabase local y el dueño de Rincón 502, en teléfono (657 px) y en PC. Se recorrieron Hoy (con el tour), Pedidos, Menú, Negocio, Ajustes, Personalizar, Nuevo platillo, Tomar pedidos y Cocina. Lo que salió de esa pasada está en la sección 3 bis. |
 
 ---
 
@@ -22,6 +22,8 @@ Lo que separa a Leogin de un producto «estilo Nintendo» no está en ninguna pa
 - Un iPhone no te pregunta qué plan de iCloud quieres antes de enseñarte la pantalla de inicio.
 
 Hoy, un dueño de restaurante que llega a Leogin tiene que decidir **plan → modos de pedido → nombre → estilo (200 combinaciones)** antes de ver su menú, y después encuentra **6 grupos, 43 pantallas, 9 funciones activables y 3 estados posibles para cada una** (incluida, sin activar, bloqueada por plan). Cada pieza tiene sentido por separado; todas juntas son mucho.
+
+**Antes que nada, un error que no es de diseño:** en la pasada en pantalla, **«Tomar pedidos» sale en blanco para un dueño del modelo de membresías**, que es como entra todo el que se registra desde agosto, y Cocina lo manda al login (ver EV-00). Es justo el botón naranja del centro.
 
 **Y lo más importante para vender:** el momento que de verdad convence —*pido desde mi celular y suena en el panel*— **no se puede vivir en ningún lado sin crear cuenta**. La demo enseña la carta, pero no tiene botón para pedir.
 
@@ -138,6 +140,46 @@ Cada hallazgo dice **qué pasa**, **por qué importa** (psicología o venta) y *
 
 ---
 
+## 3 bis. Lo que salió al verlo en pantalla
+
+Se recorrió con el dueño de Rincón 502 en local. **Ojo con dos cosas de la base local que no son hallazgos:** el aviso «Estás administrando Rincón 502, uno de tus restaurantes» sale del grupo de prueba que quedó armado (restaurante «Prueba Fiesta», limpieza pendiente), y los pedidos y la llamada de mesa «de hace 21 h» vienen de la siembra de datos.
+
+### EV-00 · P0 (error) — «Tomar pedidos» en blanco y Cocina al login para dueños con membresía
+- **Qué pasa:** con el dueño de Rincón 502, `/panel/rincon502/mesero` pinta la barra y las pestañas, pero el contenido queda vacío (`<div class="admin-content"><!--$--><!--/$--></div>` ya desde el servidor). Y `/panel/rincon502/cocina` redirige a `/admin/login` con la sesión abierta.
+- **Causa (Tomar pedidos, confirmada):** `src/app/admin/(waiter)/mesero/page.tsx` saca el restaurante de `profiles.restaurant_id` y solo cae al subdominio si el rol es `SUPER_ADMIN`; si no hay `restaurant_id`, hace `return null`. Los dueños del modelo de membresías (migración 113, alta partida del 2026-08-20) **no tienen `restaurant_id` en el perfil**: en la base local, 30 de 32 dueños están así. Las demás pantallas del panel no fallan porque usan `getAdminContext()`, que sí resuelve la membresía.
+- **Cocina (reproducido, causa por confirmar):** `(kitchen)/layout.tsx` sí entiende membresías (`resolveEffectiveRole`), pero termina en `/admin/login`, lo que apunta a que se queda sin restaurante. Puede influir el grupo de prueba de la base local (`organization_id` puesto en el perfil); hay que repetirlo con un dueño limpio.
+- **Por qué importa:** «Tomar pedido» es el botón central de la barra del teléfono. Para un dueño nuevo, el primer toque al botón más grande del panel es una pantalla vacía.
+- **Qué haría:** resolver el restaurante con el mismo criterio que el resto del panel (`getAdminContext()` o `resolveOwnRestaurantId`) en `mesero/page.tsx`, y revisar Cocina con un dueño sin grupo. Antes, comprobar en producción cuántos dueños tienen `restaurant_id` vacío (`select count(*) from profiles where role = 'RESTAURANT_OWNER' and restaurant_id is null`). Es un arreglo aparte (`fix/`), no parte de esta auditoría.
+
+### EV-14 · P1 — Una avalancha al entrar
+- **Qué pasa:** al primer ingreso, en la misma pantalla y a la vez: el aviso «Tu local no tiene PC principal» (con icono de alerta), el tour de bienvenida de 5 pasos en una ventana encima, la lista «Termina de armar tu restaurante» con Leo, y el aviso flotante de mesa abajo. El aviso de la PC además **sale en todas las pantallas** (Hoy, Pedidos, Menú…) y en el teléfono ocupa casi una cuarta parte de la vista hasta que se toca «Ahora no».
+- **Por qué importa:** cuatro voces pidiendo atención al mismo tiempo no se leen: se cierran todas. Y presentar como problema («sin ella… un corte de internet detiene el servicio») algo que el día uno no hace falta —muchos locales pequeños solo usan el teléfono— enseña al dueño a ignorar los avisos justo antes de que llegue uno importante.
+- **Qué haría:** **una sola voz por vez.** El tour se va (la lista de primeros pasos ya enseña haciendo); la PC principal es un paso opcional de esa lista y solo pasa a aviso cuando hay señales de que la necesita (ya imprimen comandas, o ya hubo pedidos perdidos por internet); los avisos de sistema viven en «Necesita tu atención» de Hoy y no en todas las pantallas.
+
+### EV-15 · P1 — «↓ 100 % vs. un martes normal» antes de abrir
+- **Qué pasa:** a media mañana, con cero ventas, Hoy dice en color de alerta «↓ 100 % vs. un martes normal», y «Cómo va el día» remata «Vas 100 % abajo».
+- **Por qué importa:** es la primera frase con números que el dueño lee en el día, y lo regaña por no haber vendido antes de abrir. La comparación es buena idea (está en la sección 2); el momento no.
+- **Qué haría:** no comparar hasta que haya la primera venta del día o hasta que lo típico a esa hora sea una cifra que importe; mientras tanto, una frase neutra («Un martes normal arranca a las 12»). Y nunca en rojo un −100 %: cero no es «mal», es «todavía no».
+
+### EV-16 · P1 (error) — «Carbón de Autor», la paleta insignia, sale clara
+- **Qué pasa:** en Personalizar › Diseño, la miniatura de «Carbón de Autor» lleva la etiqueta «Oscuro» pero se dibuja clara. Su descripción dice «Oscuro, cálido y con acento terracota: el look insignia», y es la combinación que enseña la web.
+- **Causa (confirmada):** en `lib/theme/templates.ts` esa paleta es `config: {}` con el comentario «= defaults visuales (colorBg #0b0b0c…)». Pero los valores por defecto de `lib/theme/defaults.ts` pasaron a tema claro (`colorBg: '#FAF8F5'`, `scheme: 'light'`, commit 03db896). Como `applyTemplateToConfig` parte de esos valores por defecto, **aplicarla deja el menú claro**, no solo la miniatura. Es la única paleta oscura sin `colorBg` ni `scheme` propios.
+- **Qué haría:** darle sus colores explícitos (fondo, texto, acento y `scheme: 'dark'`), como las otras 12 oscuras. Es un arreglo chico y aparte.
+
+### EV-17 · P3 — «Platillo» y «producto» en la misma pantalla
+- La barra dice «Nuevo platillo» y el título de la página, «Nuevo producto»; la pestaña del navegador dice «Nuevo producto». Elegir una palabra («platillo») y usarla en todo el panel.
+
+### EV-18 · P3 — Las llamadas al mesero no vencen
+- Una llamada queda flotando sobre todas las pantallas hasta que alguien toca «Atendido», aunque sea de ayer («hace 21 h»). Las consultas solo filtran `resolved_at is null`. Proponer que una llamada se cierre sola al liberar la mesa o pasadas unas horas.
+
+### Lo que la pasada confirmó (sin cambios a lo dicho arriba)
+- **Ajustes** está limpio, ordenado por tema y con el estado a la derecha; es de las mejores pantallas del panel. Confirma EV-05: «Mi suscripción · Premium» y «Funciones · 7 activas» son filas separadas.
+- **Nuevo platillo** pone la foto primero en el teléfono, como debe ser.
+- **Hoy** apila 11 bloques en el teléfono (avisos, cabecera, primeros pasos, hito, atención, resumen, en curso, la casa, cómo va el día, clientes), muy lejos de los «tres bloques» del diseño original: los widgets fueron sumándose. Refuerza EV-14.
+- **La lista de primeros pasos** se ve tal cual la describe EV-04 (categoría antes que platillo, PC del local como paso).
+
+---
+
 ## 4. Lo «revolucionario»: dónde está y cómo enseñarlo
 
 Lo que hace distinto a Leogin no es una función (todas las tienen los demás de alguna forma), son **tres posturas**:
@@ -158,7 +200,10 @@ La propuesta para que eso «se vea con medio vistazo»:
 
 | Orden | Hallazgo | Tamaño | Por qué primero |
 |---|---|---|---|
+| 0 | EV-00 Tomar pedidos / Cocina con membresía | Chico | Es un error: el botón central del panel sale vacío. |
+| 0 | EV-16 «Carbón de Autor» claro | Chico | Es un error y es la paleta que enseña la web. |
 | 1 | EV-01 «Pídelo tú mismo» | Mediano | Vende, enseña y sirve de primeros pasos a la vez. |
+| 1 | EV-14 + EV-15 una voz por vez, sin −100 % | Chico | La primera impresión del panel. |
 | 2 | EV-02 + EV-03 prueba inversa y botón | Mediano (toca cobros: probar contra Postgres real) | Quita la fricción más cara y la promesa rota. |
 | 3 | EV-04 primeros pasos en tres | Chico | Reutiliza el pedido de prueba de EV-01. |
 | 4 | EV-09 + EV-10 + EV-11 portada | Chico | Solo textos y orden. |
@@ -167,10 +212,13 @@ La propuesta para que eso «se vea con medio vistazo»:
 | 7 | EV-07 «Hazlo por mí» | Grande | Requiere sacar paleta del logo. |
 | 8 | EV-08 «¿Para qué es este aparato?» | Mediano | Mucho ya existe (Modo servicio, Cocina). |
 | — | EV-13 | Verificación | Antes de prometer «con tus fotos se ve mejor». |
+| — | EV-17, EV-18 | Chico | Pulido. |
 
 ---
 
 ## 6. Pendiente de esta auditoría
 
-- **Pasada visual del panel.** Docker Desktop 4.84 falló al arrancar («initializing Inference manager: … dockerInference: The file cannot be accessed by the system»). Se renombró la carpeta `%LOCALAPPDATA%\Docker\run` a `run.viejo-20261027` (no se borró nada; Docker crea una nueva) y aun así el motor no respondió. Probablemente se arregla reiniciando Windows; después se puede borrar `run.viejo-20261027`. Con Docker arriba, falta recorrer en pantalla Hoy, Pedidos, Menú, Ajustes y Personalizar con Rincón 502 en teléfono y en PC, y confirmar o corregir lo dicho en EV-04 a EV-08.
+- **Pasada visual del panel: hecha** (sección 3 bis). Quedan sin ver en pantalla: Clientes, Caja de punta a punta, Mi suscripción con un plan menor (pestañas con candado) y la vista de un mesero o cajero con permisos recortados.
+- **Cocina con un dueño limpio** (EV-00): repetir sin el grupo de prueba de la base local.
+- **Docker:** al arrancar falló una vez por un archivo de socket viejo; se renombró `%LOCALAPPDATA%\Docker\run` a `run.viejo-20261027` (no se borró nada). Con Docker funcionando, esa carpeta se puede borrar.
 - **Medir antes de cambiar la portada.** La analítica de la web está apagada; sin ella EV-09 y EV-10 se deciden a criterio.
