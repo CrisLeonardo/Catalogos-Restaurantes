@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leo variantes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@500&family=Geist:wght@400;500;600;700&family=Unbounded:wght@600;700;800&display=swap">
+<style>
+/* Segunda hoja de la propuesta de Leo (ver leo-v3-propuesta.html): cinco siluetas y cinco pares de
+   ojos para elegir con la vista. Nada de esto está aplicado en leo.tsx. */
+:root {
+  --bg: #FBF8F3; --surface: #FFFFFF; --ink: #1C1C1E; --muted: #6B655F;
+  --line: rgba(28, 28, 30, 0.1); --chip: #F3EEE6; --acc: #B4492A;
+  --f-display: 'Unbounded', 'Arial Black', system-ui, sans-serif;
+  --f-ui: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-mono: 'Geist Mono', ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121214; --surface: #1C1C1E; --ink: #F2EEE8; --muted: #A39C93;
+    --line: rgba(242, 238, 232, 0.12); --chip: #26262A; --acc: #F5A030; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121214; --surface: #1C1C1E; --ink: #F2EEE8; --muted: #A39C93;
+  --line: rgba(242, 238, 232, 0.12); --chip: #26262A; --acc: #F5A030; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.55 var(--f-ui); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--f-display); letter-spacing: -0.02em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(30px, 4.6vw, 52px); line-height: 1.05; font-weight: 800; letter-spacing: -0.035em; }
+h2 { font-size: clamp(24px, 3.2vw, 34px); line-height: 1.1; font-weight: 700; }
+h3 { font-size: 16px; line-height: 1.25; font-weight: 700; }
+p { margin: 0; }
+.lead { color: var(--muted); font-size: 17px; max-width: 66ch; margin-top: 12px; }
+.eyebrow { font: 600 12px var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--acc); }
+section { padding-block: clamp(40px, 5.5vw, 68px); border-top: 1px solid var(--line); }
+.head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 24px; }
+.top { background: #121214; color: #F2EEE8; padding-block: clamp(36px, 5vw, 60px); }
+.top .eyebrow { color: #F5A030; }
+.top p { color: #B5AEA4; font-size: 18px; margin-top: 14px; max-width: 58ch; }
+.mono { font-family: var(--f-mono); }
+.cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; text-align: center; }
+.card .letra { font: 700 12px var(--f-mono); color: #fff; background: var(--acc); border-radius: 999px; padding: 3px 10px; align-self: flex-start; }
+:root[data-theme="dark"] .card .letra { color: #1C1C1E; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .card .letra { color: #1C1C1E; } }
+.card p { color: var(--muted); font-size: 13.5px; }
+.card h3 { font-size: 15px; }
+.fila { display: flex; align-items: flex-end; justify-content: center; gap: 14px; flex-wrap: wrap; }
+.bloque { border-radius: 14px; padding: 10px 12px; width: 100%; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 10px 14px; overflow: hidden; }
+.bloque.claro { background: #FBF8F3; border: 1px solid rgba(28,28,30,.1); color: #1C1C1E; }
+.bloque.oscuro { background: #121214; color: #F2EEE8; }
+.sil svg { color: #000; }
+.oscuro .sil svg, .sil.sobre-oscuro svg { color: #fff; }
+.blur svg { filter: blur(2.2px); }
+.nota { background: var(--chip); border-radius: 18px; padding: 18px 20px; max-width: 74ch; }
+.nota b { font-weight: 700; }
+.nota ul { margin: 8px 0 0; padding-left: 20px; }
+.nota li + li { margin-top: 4px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="eyebrow">Marca · segunda hoja de la propuesta</div>
+    <h1>Leo: elige con la vista</h1>
+    <p>Cinco siluetas y cinco pares de ojos. Cada uno lleva una letra para que la respuesta sea corta: «S3 con E2». Nada de esto está aplicado en la app.</p>
+  </div>
+</header>
+
+<main>
+<section>
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Parte 1 · silueta</div>
+      <h2>Cinco formas de ser una L</h2>
+      <p class="lead">Mismo color y misma cara; cambia el cuerpo y qué hace con los brazos. Debajo de cada una, la sombra negra en 24, 48 y 96 px y desenfocada, que es la prueba que de verdad importa.</p>
+    </div>
+    <div class="cards" id="sil"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Parte 2 · ojos</div>
+      <h2>Cinco maneras de mirar</h2>
+      <p class="lead">Sobre la misma forma (S1). Los ojos son lo primero que el ojo busca en un personaje, y los blancos con pupila son el molde de casi todas las mascotas de app. Mira cada par a 140, 32 y 20 px.</p>
+    </div>
+    <div class="cards" id="ojos"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Mi lectura</div>
+      <h2>Qué elegiría yo, y por qué</h2>
+    </div>
+    <div class="nota" id="lectura">
+      <p><b>Mi voto: S3 con E3.</b> Es una lectura a ojo sobre estas hojas, no una prueba con gente.</p>
+      <ul>
+        <li><b>S3 (campana en la mano):</b> la sombra sigue siendo una L, y el brazo con la campana en alto le da un rasgo que solo tiene Leo sin tapar el hueco. La S1 es la más limpia, pero no tiene nada propio; la S2 y la S4 son las que más se acercan a «una bota».</li>
+        <li><b>E3 (óvalo con dos brillos):</b> los ojos oscuros se leen a 20 px, donde los blancos con pupila se vuelven manchas, y ya no son el molde de siempre. La E4 tiene más carácter, pero puede leerse sarcástica, y Leo tiene que caer bien primero.</li>
+        <li><b>Lo que queda por probar:</b> enseñar S1, S3 y S5 a cinco dueños y cinco comensales con la pregunta «¿qué es?». Si alguien dice «una bota» o «un martillo», se vuelve a la S1.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+(function () {
+  var C = { body: '#EE6B3F', shade: '#C9482E', ink: '#1C1C1E', lip: '#4A1A12', bell: '#F5C03A', bellShade: '#D49A1E' };
+  var uid = 0;
+
+  /* Cuerpo en L: barra vertical x0..x1 desde top, pie de ft a fb que llega hasta fe. */
+  function bodyPath(b) {
+    var h = b.fb - b.ft, r = h / 2, bl = Math.min(r, 12), t = b.topR;
+    return 'M' + (b.x0 + t) + ' ' + b.top + 'H' + (b.x1 - t) + 'a' + t + ' ' + t + ' 0 0 1 ' + t + ' ' + t +
+      'V' + (b.ft - 6) + 'a6 6 0 0 0 6 6H' + (b.fe - r) + 'a' + r + ' ' + r + ' 0 0 1 0 ' + h +
+      'H' + (b.x0 + bl) + 'a' + bl + ' ' + bl + ' 0 0 1 -' + bl + ' -' + bl + 'V' + (b.top + t) + 'A' + t + ' ' + t + ' 0 0 1 ' + (b.x0 + t) + ' ' + b.top + 'Z';
+  }
+
+  var BODIES = {
+    S1: { n: 'L pura', d: 'La silueta más limpia: sin nada en el hueco.', b: { x0: 22, x1: 54, top: 6, topR: 14, ft: 64, fb: 88, fe: 86 },
+      l: ['M22.5 47Q13 46.5 11.4 36', 11.2, 33.4], r: ['M53.5 48Q60.5 51.5 61.5 58', 61.7, 59.6] },
+    S2: { n: 'Campana en la punta', d: 'La de la hoja anterior: el brazo cruza el hueco.', b: { x0: 20, x1: 54, top: 6, topR: 14, ft: 64, fb: 88, fe: 92 },
+      l: ['M20.5 47Q11 46.5 9.4 36', 9.2, 33.4], r: ['M53 46Q67 40.5 78 49.6', 79.6, 51.6], bell: [80, 61.6] },
+    S3: { n: 'Campana en la mano', d: 'Como el timbre de mostrador: la sostiene en alto.', b: { x0: 22, x1: 54, top: 6, topR: 14, ft: 64, fb: 88, fe: 86 },
+      l: ['M22.5 47Q15 49 13 56', 12.8, 57.6], r: ['M53.5 46Q64 45 66.4 35', 66.8, 33], bell: [66.8, 28.4] },
+    S4: { n: 'Chaparrito', d: 'Cabeza grande y cuerpo corto: más tierno, menos L.', b: { x0: 18, x1: 56, top: 18, topR: 18, ft: 66, fb: 88, fe: 84 },
+      l: ['M18.5 56Q9 55 7.4 45', 7.2, 42.6], r: ['M55.5 57Q62.5 60 63.5 66', 63.7, 67.6] },
+    S5: { n: 'Brazos arriba', d: 'La pose de celebración: dos brazos y el hueco libre.', b: { x0: 22, x1: 54, top: 6, topR: 14, ft: 64, fb: 88, fe: 86 },
+      l: ['M22.5 47Q12 45 10 33', 9.8, 30.4], r: ['M53.5 47Q64 45 66 33', 66.4, 30.4] }
+  };
+
+  var OJOS = {
+    E1: { n: 'Blanco con pupila', d: 'El molde de siempre (la v2 y la v3 actuales).' },
+    E2: { n: 'Ovalo oscuro', d: 'Sin blanco, un brillo: estilo Kirby o Mario.' },
+    E3: { n: 'Ovalo con dos brillos', d: 'Más húmedo y tierno; el brillo grande da vida.' },
+    E4: { n: 'Párpado a medias', d: 'Mirada confiada; acompaña la ceja alzada.' },
+    E5: { n: 'Puntos y cejas', d: 'Lo mínimo: dos puntos y cejas gruesas, como Mickey.' }
+  };
+
+  function bell(cx, base, mono) {
+    var bc = mono ? 'currentColor' : C.bell, bs = mono ? 'currentColor' : C.bellShade;
+    return '<rect x="' + (cx - 7.5) + '" y="' + base + '" width="15" height="3" rx="1.5" fill="' + bs + '"/>' +
+      '<path d="M' + (cx - 6.5) + ' ' + base + 'a6.5 6.5 0 0 1 13 0Z" fill="' + bc + '"/>' +
+      (mono ? '' : '<path d="M' + (cx - 4.4) + ' ' + (base - 2.4) + 'a4.8 4.8 0 0 1 2.2-3.2" stroke="#fff" opacity=".6" stroke-width="1.4" fill="none" stroke-linecap="round"/>') +
+      '<circle cx="' + cx + '" cy="' + (base - 7.2) + '" r="1.5" fill="' + bs + '"/>';
+  }
+
+  /* Cara dibujada para una barra de 34 de ancho centrada en 37 con la cabeza en y=6. */
+  function face(e, id) {
+    var ink = C.ink, s = '';
+    s += '<path d="M37 56L27.6 51Q26.2 50.3 26.2 51.9V60.1Q26.2 61.7 27.6 61ZM37 56L46.4 51Q47.8 50.3 47.8 51.9V60.1Q47.8 61.7 46.4 61Z" fill="' + ink + '"/><rect x="34.8" y="52.6" width="4.4" height="6.8" rx="1.6" fill="#3A3A40"/>';
+    s += '<g fill="#FF8E8E" opacity=".55"><ellipse cx="24.6" cy="37.6" rx="2.8" ry="1.8"/><ellipse cx="50.4" cy="36" rx="2.8" ry="1.8"/></g>';
+    if (e === 'E1') {
+      s += '<ellipse cx="28.4" cy="27" rx="7" ry="9" fill="#fff"/><ellipse cx="45.6" cy="27" rx="7" ry="9" fill="#fff"/>' +
+        '<circle cx="29.6" cy="28.4" r="4.3" fill="' + ink + '"/><circle cx="46.8" cy="28.4" r="4.3" fill="' + ink + '"/>' +
+        '<circle cx="31" cy="26.2" r="1.6" fill="#fff"/><circle cx="48.2" cy="26.2" r="1.6" fill="#fff"/>';
+    } else if (e === 'E2') {
+      s += '<ellipse cx="28.6" cy="27.5" rx="5.4" ry="8" fill="' + ink + '"/><ellipse cx="45.4" cy="27.5" rx="5.4" ry="8" fill="' + ink + '"/>' +
+        '<circle cx="30.2" cy="24" r="2" fill="#fff"/><circle cx="47" cy="24" r="2" fill="#fff"/>';
+    } else if (e === 'E3') {
+      s += '<ellipse cx="28.4" cy="27" rx="6" ry="8.6" fill="' + ink + '"/><ellipse cx="45.6" cy="27" rx="6" ry="8.6" fill="' + ink + '"/>' +
+        '<circle cx="30.4" cy="23.4" r="2.5" fill="#fff"/><circle cx="47.6" cy="23.4" r="2.5" fill="#fff"/>' +
+        '<circle cx="26.8" cy="31" r="1.1" fill="#fff"/><circle cx="44" cy="31" r="1.1" fill="#fff"/>';
+    } else if (e === 'E4') {
+      s += '<defs><clipPath id="' + id + 'a"><rect x="20" y="26" width="17" height="14"/></clipPath><clipPath id="' + id + 'b"><rect x="37" y="24" width="17" height="16"/></clipPath></defs>' +
+        '<g clip-path="url(#' + id + 'a)"><ellipse cx="28.4" cy="29" rx="7.4" ry="8.6" fill="#fff"/><circle cx="29.8" cy="30.4" r="4.2" fill="' + ink + '"/><circle cx="31.2" cy="28.4" r="1.4" fill="#fff"/></g>' +
+        '<g clip-path="url(#' + id + 'b)"><ellipse cx="45.6" cy="29" rx="7.4" ry="8.6" fill="#fff"/><circle cx="47" cy="29.4" r="4.2" fill="' + ink + '"/><circle cx="48.4" cy="27.4" r="1.4" fill="#fff"/></g>' +
+        '<path d="M21.2 26h14.4M38.4 24h14.4" stroke="' + ink + '" stroke-width="2.4" stroke-linecap="round"/>';
+    } else {
+      s += '<circle cx="28.4" cy="27.5" r="3" fill="' + ink + '"/><circle cx="45.6" cy="27.5" r="3" fill="' + ink + '"/>';
+    }
+    s += '<g stroke="' + ink + '" stroke-width="' + (e === 'E5' ? 4.2 : 3.4) + '" fill="none" stroke-linecap="round"><path d="M22 15.5q5.6-3.2 11.4-.6"/><path d="M40.4 11.5q5.8-4.6 11.8 1.2"/></g>';
+    s += '<path d="M28 38.4Q37.5 41.2 46.4 36.8Q45.6 47.8 37.6 47.8Q29.4 47.8 28 38.4Z" fill="' + C.lip + '"/><path d="M28.8 38.7Q37.5 41.2 46 37.4L45.6 41.2Q37.5 43.4 29.2 41.4Z" fill="#fff"/>';
+    return s;
+  }
+
+  /* o: cuerpo (S1..S5), ojos (E1..E5), mono y sil para la prueba de sombra. */
+  function leo(o) {
+    var V = BODIES[o.cuerpo || 'S1'], b = V.b, id = 'lv' + (uid++), mono = !!o.mono;
+    var col = mono ? 'currentColor' : C.body, pie = mono ? 'currentColor' : C.shade, d = bodyPath(b);
+    var s = '<svg viewBox="0 0 100 100" overflow="visible" aria-hidden="true"><defs><clipPath id="' + id + 'c"><path d="' + d + '"/></clipPath></defs>';
+    if (!mono) s += '<ellipse cx="' + ((b.x0 + b.fe) / 2) + '" cy="' + (b.fb + 2.8) + '" rx="' + ((b.fe - b.x0) / 2) + '" ry="2.6" fill="#000" opacity=".25"/>';
+    s += '<ellipse cx="' + (b.x0 + 8) + '" cy="' + (b.fb - 0.8) + '" rx="5.2" ry="3" fill="' + pie + '"/><ellipse cx="' + (b.x0 + 22) + '" cy="' + (b.fb - 0.8) + '" rx="5.2" ry="3" fill="' + pie + '"/>';
+    s += '<path d="' + d + '" fill="' + col + '"/>';
+    if (!mono) {
+      s += '<g clip-path="url(#' + id + 'c)"><ellipse cx="' + (b.x0 + 7) + '" cy="' + (b.top + 11) + '" rx="7" ry="11" fill="#fff" opacity=".2"/>' +
+        '<rect x="' + (b.x0 - 6) + '" y="' + (b.fb - 7) + '" width="120" height="12" fill="' + C.shade + '" opacity=".5"/>' +
+        '<rect x="' + (b.x1 - 6) + '" y="' + (b.top - 2) + '" width="7" height="' + (b.ft - b.top - 2) + '" fill="' + C.shade + '" opacity=".16"/></g>';
+    }
+    if (V.bell) s += bell(V.bell[0], V.bell[1], mono);
+    [V.l, V.r].forEach(function (a) {
+      s += '<path d="' + a[0] + '" stroke="' + col + '" stroke-width="5.6" fill="none" stroke-linecap="round"/><circle cx="' + a[1] + '" cy="' + a[2] + '" r="4" fill="' + col + '"/>';
+    });
+    if (!o.sil) {
+      var sc = (b.x1 - b.x0) / 34, cx = (b.x0 + b.x1) / 2;
+      s += '<g transform="translate(' + (cx - 37 * sc) + ' ' + (b.top - 6 * sc) + ') scale(' + sc + ')">' + face(o.ojos || 'E1', id) + '</g>';
+    }
+    return s + '</svg>';
+  }
+
+  function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html) e.innerHTML = html; return e; }
+  function caja(html, size, cls) {
+    var d = el('div', cls || '', html);
+    var svg = d.firstChild; svg.setAttribute('width', size); svg.setAttribute('height', size);
+    return d;
+  }
+
+  /* Parte 1: siluetas */
+  var sil = document.getElementById('sil');
+  Object.keys(BODIES).forEach(function (k) {
+    var V = BODIES[k], c = el('div', 'card');
+    c.appendChild(el('span', 'letra', k));
+    c.appendChild(caja(leo({ cuerpo: k }), 140));
+    c.appendChild(el('h3', '', V.n));
+    c.appendChild(el('p', '', V.d));
+    var claro = el('div', 'bloque claro');
+    [24, 40, 72].forEach(function (px) { claro.appendChild(caja(leo({ cuerpo: k, mono: true, sil: true }), px, 'sil')); });
+    claro.appendChild(caja(leo({ cuerpo: k, mono: true, sil: true }), 60, 'sil blur'));
+    c.appendChild(claro);
+    sil.appendChild(c);
+  });
+
+  /* Parte 2: ojos sobre S1 */
+  var ojos = document.getElementById('ojos');
+  Object.keys(OJOS).forEach(function (k) {
+    var O = OJOS[k], c = el('div', 'card');
+    c.appendChild(el('span', 'letra', k));
+    c.appendChild(caja(leo({ cuerpo: 'S1', ojos: k }), 140));
+    c.appendChild(el('h3', '', O.n));
+    c.appendChild(el('p', '', O.d));
+    var claro = el('div', 'bloque claro'), osc = el('div', 'bloque oscuro');
+    [32, 20].forEach(function (px) {
+      claro.appendChild(caja(leo({ cuerpo: 'S1', ojos: k }), px));
+      osc.appendChild(caja(leo({ cuerpo: 'S1', ojos: k }), px));
+    });
+    c.appendChild(claro); c.appendChild(osc);
+    ojos.appendChild(c);
+  });
+})();
+</script>
+</body>
+</html>
