@@ -140,9 +140,9 @@ La marca es la del restaurante: aquí no aparece Leo ni el naranja de Leogin. To
 |---|---|---|
 | **Portada con profundidad** | Al bajar, la foto o el fondo de la portada se queda atrás (parallax suave) y el nombre se achica hacia la barra | Sensación de app, no de página web |
 | **Los platillos entran al bajar** | Cada tarjeta aparece suave cuando entra a la pantalla. Cada estructura tiene su manera (ver la tabla de abajo) | Ritmo de lectura; el diseño también se siente, no solo se ve |
-| **Categorías que siguen** | La píldora activa se desliza a la categoría en la que vas | Orientación: «¿dónde estoy?» |
+| **Kiosco con fotos** | La portada de cada sección es la foto de su primer platillo (antes, el mismo dibujo en todas) | Se elige sección por antojo, como en las apps de comida |
 | **Agregar al carrito** | La miniatura del platillo vuela al carrito, el contador rebota y el teléfono vibra corto (Android) | «¿Pasó?» + recompensa: el pico del comensal |
-| **Hoja del producto** | Sube desde abajo con la foto que crece desde la tarjeta | Continuidad: «¿a dónde fue?» |
+| **Hoja del producto** | Sube desde abajo (ya lo hacía) | Continuidad: «¿a dónde fue?» |
 
 **Cada estructura se mueve distinto** (así el diseño es también una forma de moverse):
 
@@ -163,13 +163,13 @@ La marca es la del restaurante: aquí no aparece Leo ni el naranja de Leogin. To
 
 | Momento | Qué se ve | Por qué |
 |---|---|---|
-| **Título que se acomoda** | Al bajar, el título grande de cada sección se encoge y se sube a la barra, como en un iPhone | Navegar se siente de app; más espacio para el contenido |
-| **Cambio de sección** | La pantalla nueva entra con un fundido corto (220 ms) | Continuidad sin hacer esperar |
-| **Números que cuentan** | Ventas, pedidos y ticket promedio suben contando al abrir «Hoy» y Caja | «La caja cuadra», movimiento de firma |
+| **La barra se asienta** | Al bajar, la barra de título toma sombra: el contenido pasa por debajo | Navegar se siente de app. (El título grande que se encoge, como en un iPhone, cambiaría la maqueta de todas las pantallas: queda para cuando el dueño lo pida) |
+| **Cambio de sección** | La pantalla nueva entra con un fundido corto (200 ms); no se repite al guardar ni al refrescar | Continuidad sin hacer esperar |
+| **Números que ruedan** | Cada cifra del panel rueda hasta su valor como una caja registradora; si cambia en vivo, rueda el dígito que cambió. Solo CSS, sin parpadeo | «La caja cuadra», movimiento de firma |
 | **Lo nuevo entra** | Un pedido nuevo cae en su lista con un rebote suave y un destello del acento | Visibilidad del estado: «¿pasó?» |
 | **Listas** | La primera vez que se abre una lista, las filas entran en cascada (máximo 8 filas, 200 ms en total) | Ritmo sin hacer esperar |
-| **Celebraciones** | Solo en lo real: caja cuadrada al cerrar turno y récord del día | Refuerzo con medida; si se celebra todo, nada importa |
-| **Tomar pedidos** | Solo respuesta al toque (≤ 150 ms): el contador del ticket rebota | Ahí la velocidad le gana al encanto |
+| **Celebraciones** | Solo en lo real: cuando la caja cuadra, el aviso se estampa y la palomita se dibuja sola. (El «récord del día» necesita decidir contra qué se compara: pendiente) | Refuerzo con medida; si se celebra todo, nada importa |
+| **Tomar pedidos** | Nada nuevo: ya responde al toque y ahí la velocidad le gana al encanto | Rediseñado cinco veces; no se toca sin que el dueño lo pida |
 
 ---
 
@@ -214,5 +214,5 @@ La marca es la del restaurante: aquí no aparece Leo ni el naranja de Leogin. To
 ## Estado
 
 - [x] Fase 1 — web viva y Rincón 502 en la demo y el video (2026-10-26, rama `feat/portada-bajo-control`, PR #39). Pendiente de la fase: que el dueño mire la web en su celular y diga si el ritmo de «del caos al control» se siente bien.
-- [ ] Fase 2 — menú en línea y panel
-- [ ] Fase 3 — fuera Azúcar Negra
+- [x] Fase 2 — menú en línea y panel (2026-10-26, rama `feat/experiencia-viva-menu-panel`). Pendiente de la fase: ver en un pedido real cómo cae la tarjeta nueva en Pedidos (en local no había pedidos de hoy) y si el rodillo de las cifras se siente bien en el teléfono del dueño.
+- [x] Fase 3 — fuera Azúcar Negra (2026-10-26, PR #41, rama `chore/demo-rincon502`, sale de `main`). Base local: Rincón 502 creado y sembrado; Azúcar Negra y sus 5 usuarios de prueba borrados con respaldo previo. Los registros históricos no se reescriben. En producción, retirarlo lo hace el dueño desde Super › Restaurantes.
