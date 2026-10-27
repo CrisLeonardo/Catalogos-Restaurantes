@@ -7,6 +7,8 @@ import { Icon } from '@/components/icons';
 import Catalog from '@/components/menu/catalog';
 import ProductSheet from '@/components/menu/product-sheet';
 import { CartBar, CartPanel } from '@/components/menu/cart';
+import { PedidoDemo } from '@/components/pidelo/pedido-demo';
+import { DEMO_SLUG } from '@/lib/tenant';
 import ActiveOrderChip from '@/components/active-order-chip';
 import WaiterCallButton from '@/components/menu/waiter-call-button';
 import RewardsSection from '@/components/menu/rewards-section';
@@ -101,6 +103,10 @@ export default function MenuClient({
   // cuenta/fidelidad/mis pedidos (datos personales de otros clientes) y los
   // avisos de Google; el pedido va directo al checkout de mostrador.
   const [kiosk, setKiosk] = useState(false);
+  // La demo pública (Rincón 502, sin base): el carrito termina en «Pídelo tú
+  // mismo» y no hay «Mis pedidos» ni pedido activo que consultar (EV-01).
+  const demo = restaurantId === DEMO_SLUG;
+  const [demoOpen, setDemoOpen] = useState(false);
 
   useEffect(() => {
     setKiosk(isKioskMode());
@@ -304,8 +310,15 @@ export default function MenuClient({
       {ordersEnabled && (vitrina
         ? !selected && !cartOpen && <VitrinaBag onOpen={() => setCartOpen(true)} />
         : <CartBar onOpen={() => setCartOpen(true)} />)}
-      {ordersEnabled && cartOpen && <CartPanel sugerencias={cartPairings} onClose={() => setCartOpen(false)} />}
-      {ordersEnabled && restaurantId && !selected && !cartOpen && !kiosk && (
+      {ordersEnabled && cartOpen && (
+        <CartPanel
+          sugerencias={cartPairings}
+          onClose={() => setCartOpen(false)}
+          onPedirDemo={demo ? () => { setCartOpen(false); setDemoOpen(true); } : undefined}
+        />
+      )}
+      {demo && <PedidoDemo open={demoOpen} onClose={() => setDemoOpen(false)} />}
+      {ordersEnabled && restaurantId && !demo && !selected && !cartOpen && !kiosk && (
         <ActiveOrderChip restaurantId={restaurantId} />
       )}
 
@@ -316,7 +329,7 @@ export default function MenuClient({
       {/* Barra de navegación inferior — se oculta cuando hay un sheet de producto
           o carrito abierto, y en KIOSKO (cuenta/fidelidad/pedidos son datos
           personales que no deben quedar a la vista en un aparato compartido). */}
-      {ordersEnabled && !vitrina && !selected && !cartOpen && !kiosk && (
+      {ordersEnabled && !demo && !vitrina && !selected && !cartOpen && !kiosk && (
         <BottomNav
           active={activeTab}
           ordersEnabled={ordersEnabled}
