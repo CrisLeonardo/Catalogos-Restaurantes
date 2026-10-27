@@ -128,11 +128,9 @@ Cada hallazgo dice **qué pasa**, **por qué importa** (psicología o venta) y *
 
 ### P3 — Catálogo digital
 
-#### EV-12 · La portada del menú se interpone entre el QR y la comida
+#### EV-12 · La portada del menú se interpone entre el QR y la comida — **ya estaba resuelto**
 - **Qué pasa:** en el teléfono, la primera pantalla de Rincón 502 es logo, nombre, lema y «Ver el menú»: **ningún platillo a la vista**.
-- **Por qué importa:** quien escaneó el QR desde la mesa ya decidió comer ahí. Cada toque extra antes de ver comida es un pequeño freno (y en pedidos para llevar, abandono).
-- **Ya existe la solución, pero como ajuste:** la portada «Directo» (`components/menu/portada.tsx`) hace justo esto, pero el dueño tiene que descubrirla en Personalizar › Portada.
-- **Qué haría:** que se elija sola según de dónde viene el comensal: si entra con `?mesa=` (QR de mesa), **portada «Directo» siempre**, sin importar la que eligió el dueño; la portada grande se queda para quien llega por Instagram o Google. Nadie tiene que saber que existe la opción.
+- **Corrección (2026-10-27):** esto solo pasa a quien llega sin mesa (Instagram, Google, la demo). Con el QR de mesa, `components/menu-shell.tsx` ya quita la portada y abre directo en la carta desde la auditoría del 2026-10-02 (D-7). La revisión se hizo en la demo, que se abre sin `?mesa=`, y por eso no se vio. No queda nada que hacer.
 
 #### EV-13 · Los nombres de los platillos van encima de la imagen
 - **Qué pasa:** en la estructura de la demo, nombre y precio se pintan sobre la ilustración. Con ilustraciones funciona; con fotos reales de restaurante (fondos claros, platos blancos) el texto se pierde.
@@ -207,7 +205,7 @@ La propuesta para que eso «se vea con medio vistazo»:
 | 2 | EV-02 + EV-03 prueba inversa y botón | Mediano (toca cobros: probar contra Postgres real) | Quita la fricción más cara y la promesa rota. |
 | 3 | EV-04 primeros pasos en tres | Chico | Reutiliza el pedido de prueba de EV-01. |
 | 4 | EV-09 + EV-10 + EV-11 portada | Chico | Solo textos y orden. |
-| 5 | EV-12 portada «Directo» con `?mesa=` | Chico | La variante ya existe; es una condición. |
+| — | ~~EV-12 portada directa con `?mesa=`~~ | — | Ya estaba hecho (D-7, 2026-10-02). |
 | 6 | EV-05 + EV-06 funciones y Números | Grande | Mueve pantallas; requiere diseño antes. |
 | 7 | EV-07 «Hazlo por mí» | Grande | Requiere sacar paleta del logo. |
 | 8 | EV-08 «¿Para qué es este aparato?» | Mediano | Mucho ya existe (Modo servicio, Cocina). |
@@ -215,6 +213,15 @@ La propuesta para que eso «se vea con medio vistazo»:
 | — | EV-17, EV-18 | Chico | Pulido. |
 
 ---
+
+## Estado (2026-10-27)
+
+| Hallazgo | Estado |
+|---|---|
+| EV-00, EV-16 | Arreglados en el PR #47 (`fix/membresia-mesero-cocina-y-carbon`). |
+| EV-10, EV-11, EV-14, EV-15, EV-17, EV-18 | Arreglados en el PR #48 (`fix/primera-impresion`). |
+| EV-12 | Ya estaba hecho (D-7). |
+| EV-01 a EV-09, EV-13 | Pendientes. |
 
 ## 6. Pendiente de esta auditoría
 
