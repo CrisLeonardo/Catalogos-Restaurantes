@@ -133,6 +133,9 @@ export default function TutorialHub({ plan, modules, contact }: Props) {
             onClick={() => {
               if (typeof window !== 'undefined') {
                 window.localStorage.removeItem('leogin_tour_completed');
+                // Pedido a mano: se abre aunque esté la lista de primeros
+                // pasos, que normalmente lo deja en espera (welcome-tour.tsx).
+                try { window.sessionStorage.setItem('leogin_tour_pedido', '1'); } catch { /* sin almacenamiento */ }
                 window.location.href = panelHref(base, '/admin');
               }
             }}

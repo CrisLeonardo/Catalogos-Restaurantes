@@ -44,9 +44,12 @@ const STEPS: StepDef[] = [
 interface Props {
   restaurantName?: string;
   preview?: boolean;
+  /** La lista de primeros pasos está en pantalla: no abrirse solo encima de
+   *  ella (auditoría de experiencia 2026-10-27, EV-14 — una voz por vez). */
+  enEspera?: boolean;
 }
 
-export default function WelcomeTour({ restaurantName, preview }: Props) {
+export default function WelcomeTour({ restaurantName, preview, enEspera = false }: Props) {
   const [active, setActive] = useState(false);
   const [step, setStep] = useState(0);
   const [spotRect, setSpotRect] = useState<DOMRect | null>(null);
@@ -54,11 +57,18 @@ export default function WelcomeTour({ restaurantName, preview }: Props) {
 
   useEffect(() => {
     if (preview) return;
+    // En espera, salvo que lo hayan pedido desde Ayuda (tutorial-hub.tsx).
+    let pedido = false;
+    try {
+      pedido = sessionStorage.getItem('leogin_tour_pedido') === '1';
+      if (pedido) sessionStorage.removeItem('leogin_tour_pedido');
+    } catch { /* sin almacenamiento: queda en espera */ }
+    if (enEspera && !pedido) return;
     if (localStorage.getItem(TOUR_KEY) !== 'true') {
       const t = setTimeout(() => setActive(true), 700);
       return () => clearTimeout(t);
     }
-  }, [preview]);
+  }, [preview, enEspera]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 821);

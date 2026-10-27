@@ -221,6 +221,11 @@ export default async function AdminHomePage() {
   // ninguna" y "la apagué yo" ya los cubre el aviso del layout
   // (components/admin/main-pc-banner.tsx) en todas las pantallas.
   let agentOffline = false;
+  /* «Tu local no tiene PC principal» era un aviso en TODAS las pantallas del
+     panel (EV-14): ahora es una fila de aquí, solo para quien decide la
+     infraestructura y solo con pedidos (sin pedidos no hay comandas que
+     imprimir). Durante los primeros pasos no sale: ahí ya es un paso. */
+  let pcState: 'missing' | 'off' | null = null;
   if (ordersEnabled && restaurantId && allow('impresion')) {
     const db = createServiceClient();
     const { data: agent } = await db
@@ -233,6 +238,11 @@ export default async function AdminHomePage() {
     // eslint-disable-next-line react-hooks/purity
     const stale = !!lastSeen && Date.now() - new Date(lastSeen).getTime() > 10 * 60_000;
     if (stale && (agent?.is_active as boolean | null) !== false) agentOffline = true;
+    const decide = profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN';
+    if (decide && !needsOnboarding) {
+      if (!agent) pcState = 'missing';
+      else if ((agent.is_active as boolean | null) === false) pcState = 'off';
+    }
   }
 
   /* Platillos a la vista sin foto (auditoría 2026-10-02, MEN-12). Sin foto
@@ -329,6 +339,16 @@ export default async function AdminHomePage() {
       title: 'La PC del local dejó de responder',
       desc: 'Revisa que esté encendida y con internet — mientras tanto no se imprimen comandas solas.',
       action: 'Revisar',
+    });
+  }
+  if (pcState) {
+    alerts.push({
+      key: 'pc-principal', href: panelHref(base, '/admin/mi-pc'), level: 'info',
+      title: pcState === 'missing' ? 'Aún no eliges la PC del local' : 'La PC del local está apagada',
+      desc: pcState === 'missing'
+        ? 'Con ella las comandas se imprimen solas y un corte de internet no detiene el servicio.'
+        : 'Mientras siga apagada no se imprimen comandas solas ni hay respaldo si se cae el internet.',
+      action: pcState === 'missing' ? 'Elegirla' : 'Encenderla',
     });
   }
   if (onTrial && trialLeft <= 3) {

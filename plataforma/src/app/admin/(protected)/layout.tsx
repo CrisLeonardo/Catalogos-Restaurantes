@@ -1,7 +1,6 @@
 import { headers, cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getStaffUser } from '@/lib/supabase/server';
-import { createServiceClient } from '@/lib/supabase/service';
 import { getAdminContext, myOrganizationId } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import AdminShell from '@/components/admin/shell';
@@ -9,7 +8,6 @@ import { PlanPricingProvider } from '@/components/plan-pricing-context';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import GroupOwnerBanner from '@/components/admin/group-owner-banner';
 import VerifyEmailBanner from '@/components/admin/verify-email-banner';
-import MainPcBanner from '@/components/admin/main-pc-banner';
 import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
 import SessionHeartbeat from '@/components/admin/session-heartbeat';
 import { can, isMeseroOnly } from '@/lib/permissions';
@@ -174,26 +172,16 @@ export default async function AdminProtectedLayout({
 
   const planActual = (currentRestaurant?.plan_actual as string | null) ?? null;
 
-  // ¿El restaurante tiene una PC principal encendida? Solo la nube lo sabe con
-  // certeza — ve TODO el local, no solo el dispositivo desde el que se mira.
-  // Si NO la tiene, el dueño ve el aviso en TODAS las pantallas del panel (no
-  // solo dentro de Leogin Desktop, como antes: quien abría el panel desde el
-  // navegador jamás se enteraba de que le faltaba). Dueños solamente: el
-  // personal no decide la infraestructura del restaurante.
-  //
-  // Se pide junto con los precios (más abajo se esperan los dos a la vez):
-  // son independientes y antes iban en fila, una ida y vuelta más.
-  let localServerState: 'missing' | 'off' | null = null;
-  const agentPromise =
-    currentRestaurant?.id &&
-    (profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN')
-      ? createServiceClient()
-          .from('print_agents')
-          .select('id, is_active')
-          .eq('restaurant_id', currentRestaurant.id)
-          .maybeSingle()
-          .then(({ data }) => data)
-      : null;
+  // El aviso «Tu local no tiene PC principal» ya NO se pinta aquí, en todas
+  // las pantallas: ocupaba un cuarto del teléfono en Hoy, Pedidos, Menú… y
+  // salía también a quien no tiene pedidos (Básico), que no imprime nada.
+  // Vive en «Necesita tu atención» de Hoy y en la lista de primeros pasos
+  // (auditoría de experiencia 2026-10-27, EV-14: una voz por vez).
+
+  // El tour de bienvenida espera mientras esté la lista de primeros pasos:
+  // abrirlo encima de ella eran dos guías hablando a la vez (EV-14).
+  const tourEnEspera =
+    profile.role === 'RESTAURANT_OWNER' && currentRestaurant?.onboarding_done === false;
 
   // El PLAN manda sobre restaurants.modules: si el plan lo incluye, se entrega,
   // aunque la bandera del jsonb se haya quedado atrás. La migración 095 ya
@@ -222,15 +210,10 @@ export default async function AdminProtectedLayout({
 
   // Precios vigentes para los upsells del panel (candados de plan, módulos,
   // suscripción): reflejan lo que el super admin configuró, no el default.
-  const [pricing, agentRow, memberships] = await Promise.all([
+  const [pricing, memberships] = await Promise.all([
     getEffectivePlanPricing(),
-    agentPromise,
     getMyMemberships(),
   ]);
-  if (agentPromise) {
-    if (!agentRow) localServerState = 'missing';
-    else if ((agentRow.is_active as boolean | null) === false) localServerState = 'off';
-  }
 
   return (
     <PlanPricingProvider pricing={pricing}>
@@ -267,13 +250,13 @@ export default async function AdminProtectedLayout({
         || profile.role === 'SUPER_ADMIN'
       }
       hasMultipleRestaurants={memberships.length > 1}
+      tourEnEspera={tourEnEspera}
       isOperatorSession={isOperatorSession}
     >
       {needsEmailVerification && <VerifyEmailBanner email={user.email ?? null} />}
       {groupReturnUrl && (
         <GroupOwnerBanner branchName={restaurantName} returnUrl={groupReturnUrl} />
       )}
-      {localServerState && <MainPcBanner state={localServerState} />}
       {isOperatorSession && <OperatorHeartbeat profileId={ctx.userId} />}
       <SessionHeartbeat />
       {children}
