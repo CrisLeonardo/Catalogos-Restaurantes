@@ -6,6 +6,14 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+## v0.14.0 — 2026-10-27 · Pídelo tú mismo
+PR #45-#49 · sin migraciones
+- **Pídelo tú mismo** (PR #49, hallazgo EV-01 de la [auditoría de experiencia y venta](docs/auditorias/AUDITORIA_EXPERIENCIA_Y_VENTA_2026-10-27.md)): la demo de Rincón 502 deja pedir. El carrito termina en «Enviar mi pedido de prueba» y enseña «¡Así le llegó a la cocina!», el panel con el pedido sonando, que se puede aceptar y marcar listo. En la web, en PC, «Haz un pedido de prueba» abre una sala con su QR: lo que el visitante pide desde su celular aparece y suena en el panel de la página, con su nombre. Sin base de datos (difusión de Supabase Realtime).
+- **Auditoría de experiencia y venta** (PR #46): el panel, la web y el catálogo evaluados con la vara de Nintendo y Apple y de venta, con pasada en pantalla. 19 hallazgos (EV-00 a EV-18; EV-12 ya estaba hecho); quedan pendientes EV-02 a EV-09 y EV-13.
+- **Primera impresión** (PR #48): Hoy ya no dice «↓ 100 %» antes de la primera venta, sino con cuánto cierra un día igual (EV-15). El aviso de la PC principal deja de salir en todas las pantallas y pasa a «Necesita tu atención» en Hoy, solo con pedidos; el tour de bienvenida no se abre encima de los primeros pasos (EV-14). El panel dice «platillo» en todas partes (EV-17). Las llamadas al mesero dejan de contar a las 3 horas (EV-18). En la web, «0 apps que descargar» en lugar de «7 herramientas» y Premium «Recomendado» en lugar de «Más popular» (EV-10 y EV-11).
+- **Arreglos** (PR #47): Tomar pedidos salía en blanco y Cocina devolvía al login al dueño del modelo de membresías (EV-00). «Carbón de Autor» salía clara pese a ser la paleta oscura insignia; ahora tiene sus colores, y el alta arranca en claro con la paleta nueva «Lino & Coral», igual que antes (EV-16).
+- **Ventana con versión vieja** (PR #45): una pestaña abierta desde antes de un despliegue se recarga sola ante «Failed to find Server Action» en vez de quedarse rota.
+
 ## v0.13.0 — 2026-10-26 · Tu restaurante, bajo control
 PR #27, #28, #33-#36, #38-#42 · migraciones 145-147 (aplicadas en producción antes del despliegue)
 - **Tu restaurante, bajo control** (PR #38 y #39, [estrategia de atracción](docs/negocio/ESTRATEGIA_ATRACCION_2026-10-25.md)): la promesa de marca, Leo v2 y una portada nueva con la intro animada de 54 s («Las tres fugas», con cortes de 30 y 15 s para redes) en `/intro`, «Del caos al control» al deslizar y la vitrina «Tu menú, a tu manera» con el menú de verdad en las 8 estructuras.
