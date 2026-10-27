@@ -57,7 +57,11 @@ export interface PlanFeatures {
   priceLabel: string;
   /** Cobro único de configuración asistida (referencia; el cobro real es manual). */
   setupFee: number;
-  badge?: 'MÁS POPULAR' | 'TODO INCLUIDO' | 'GRATIS';
+  /* «MÁS POPULAR» salió el 2026-10-27: sin clientes que lo respalden, si un
+     prospecto pregunta cuántos lo usan la etiqueta se cae y arrastra la
+     confianza en lo demás (auditoría de experiencia, EV-11). Volver a ella
+     cuando sea cierto. */
+  badge?: 'RECOMENDADO' | 'TODO INCLUIDO' | 'GRATIS';
   highlight: boolean;
 }
 
@@ -107,7 +111,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     code: 'PREMIUM',
     name: 'Premium',
     tagline: 'Para llevar, comer en local y a domicilio — panel de mesero, analítica e inventario',
-    badge: 'MÁS POPULAR',
+    badge: 'RECOMENDADO',
     highlight: true,
     priceMonthly: 349,
     priceLabel: 'Q349 / mes',

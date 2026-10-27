@@ -4,7 +4,7 @@ import { Icon } from '@/components/icons';
 import { conEvento, EVENTOS } from '@/lib/analytics';
 import { SiteHeader, SiteFooter, SectionHead, contactHref } from '@/components/site-chrome';
 import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
-import { PLANS, PLAN_POINTS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceQ, type PlanPricing } from '@/lib/plans';
+import { PLANS, PLAN_POINTS, PUBLIC_PLANS, planPriceQ, type PlanPricing } from '@/lib/plans';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { getLandingProof } from '@/lib/db/landing';
 import { LandingPhone, Testimonials } from '@/components/landing-proof';
@@ -19,15 +19,14 @@ import { disenosDeLaPortada } from '@/lib/landing-disenos';
 /* Cifras de la tira de confianza. Solo hechos verificables del producto —
    nada de "+200 restaurantes" ni promedios inventados.
 
-   El número de módulos sale de INCLUDED_MODULES.PREMIUM, la misma fuente
-   que /planes: escrito a mano se quedaría desfasado en cuanto se agregue
-   o se retire uno. */
-const PREMIUM_MODULE_COUNT = INCLUDED_MODULES.PREMIUM.length;
-
+   Cada cifra es algo que el dueño siente en el bolsillo o en el día. La
+   tercera era «7 herramientas incluidas en Premium», un número de catálogo
+   que a quien no conoce el producto no le dice nada (auditoría de
+   experiencia 2026-10-27, EV-10). */
 const PROOF = [
   { value: 'Q0',  label: 'El plan Básico es gratis para siempre' },
   { value: '0 %', label: 'De comisión sobre lo que vendes' },
-  { value: String(PREMIUM_MODULE_COUNT), label: 'Herramientas incluidas en Premium sin costo extra' },
+  { value: '0',   label: 'Apps que tus clientes tienen que descargar' },
   { value: 'Hoy', label: 'Tu menú puede quedar en vivo el mismo día' },
 ];
 
