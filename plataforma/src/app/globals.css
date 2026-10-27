@@ -3319,16 +3319,15 @@ html[data-platform] .asphalt::after { display: none; }
 }
 @keyframes leo-asoma { from { transform: translate3d(0, 10%, 0); } to { transform: translate3d(0, -58%, 0); } }
 @keyframes leo-globo { 0%, 55% { opacity: 0; transform: scale(0.6) translate3d(-12px, 8px, 0); } 75%, 100% { opacity: 1; transform: none; } }
-@keyframes leo-saluda { 0%, 100% { transform: rotate(95deg); } 50% { transform: rotate(128deg); } }
+@keyframes leo-saluda { 0%, 100% { transform: rotate(100deg); } 50% { transform: rotate(124deg); } }
 @keyframes leo-parpadea { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.12); } }
 @keyframes leo-brinca { 0%, 100% { transform: translate3d(0, 0, 0); } 45% { transform: translate3d(0, -7%, 0); } 60% { transform: translate3d(0, 0, 0) scale(1.04, 0.95); } }
 @keyframes leo-flota { 0%, 100% { opacity: 0.55; transform: translate3d(0, 0, 0); } 50% { opacity: 1; transform: translate3d(1.5px, -2px, 0); } }
-.leo-brazo { transform-box: view-box; transform-origin: 24.5px 50px; transform: rotate(95deg); }
-.leo-brazo-arriba { transform-box: view-box; transform-origin: 24.5px 50px; transform: rotate(125deg); }
-.leo-feliz .leo-cuerpo { transform-box: view-box; transform-origin: 50px 88px; }
+.leo-brazo { transform-box: view-box; transform-origin: 20.5px 47px; transform: rotate(100deg); }
+.leo-feliz .leo-cuerpo { transform-box: view-box; transform-origin: 56px 88px; }
 @media (prefers-reduced-motion: no-preference) {
   .leo-brazo { animation: leo-saluda 1.5s ease-in-out infinite; }
-  .leo-ojos { transform-box: view-box; transform-origin: 38px 25px; animation: leo-parpadea 4.6s infinite; }
+  .leo-ojos { transform-box: view-box; transform-origin: 37px 27px; animation: leo-parpadea 4.6s infinite; }
   .leo-feliz .leo-cuerpo { animation: leo-brinca 0.9s cubic-bezier(.3, 1.4, .5, 1) 3; }
   .leo-zzz { animation: leo-flota 2.4s ease-in-out infinite; }
 }

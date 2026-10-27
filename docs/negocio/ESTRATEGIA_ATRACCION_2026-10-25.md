@@ -379,6 +379,8 @@ Sí se puede hacer, y tiene un uso muy claro: **contar el antes.** El caos de ho
 
 El diseño, las expresiones, las variantes y la voz están en [`docs/diseno/marca/leo-y-color.html`](../diseno/marca/leo-y-color.html). Leo v2 está hecho en código (SVG), así que se puede animar y cambiar de expresión en la web y en el panel sin archivos pesados. Antes de imprimirlo o de pasarlo a la app conviene una última pasada de ilustración.
 
+**Actualización (2026-10-27): Leo v3 aplicado.** El dueño eligió la silueta **S2** (pie más largo y campanita en la punta, el «ding» de pedido nuevo hecho dibujo) con los ojos **E1** (blancos con pupila) entre cinco siluetas y cinco pares de ojos ([`leo-v3-propuesta.html`](../diseno/marca/leo-v3-propuesta.html) y [`leo-v3-variantes.html`](../diseno/marca/leo-v3-variantes.html)). Cambia respecto a la v2: ceja derecha siempre alzada, sonrisa con dientes en vez de lengua, dos brazos y **tres niveles de detalle** según el tamaño (completo, compacto y mínimo, con color plano en los chicos). El componente es `plataforma/src/components/leo.tsx` y la intro lleva la misma cara. La campanita no va en la intro: ahí el hueco de la L lo ocupa la bandeja. Sigue pendiente la prueba con gente («¿qué es?») y la pasada de un ilustrador.
+
 ---
 
 ## 6. Qué cambia en cada lado
