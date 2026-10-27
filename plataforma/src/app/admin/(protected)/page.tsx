@@ -209,7 +209,7 @@ export default async function AdminHomePage() {
       { key: 'cuenta', label: 'Creaste tu cuenta', desc: 'Tu restaurante ya existe en Leogin', icon: 'user', href: panelHref(base, '/admin/perfil'), done: true },
       { key: 'marca', label: 'Personaliza tu marca', desc: 'Logo, colores y estilo', icon: 'sparkle', href: panelHref(base, '/admin/personalizacion'), done: hasLogo },
       { key: 'categoria', label: 'Crea una categoría', desc: 'Organiza tu menú', icon: 'tag', href: panelHref(base, '/admin/categorias'), done: (catCount ?? 0) > 0 },
-      { key: 'platillo', label: 'Agrega tu primer platillo', desc: 'Suma un producto', icon: 'plus', href: panelHref(base, '/admin/menu/productos/new'), done: (prodCount ?? 0) > 0 },
+      { key: 'platillo', label: 'Agrega tu primer platillo', desc: 'Con foto, nombre y precio', icon: 'plus', href: panelHref(base, '/admin/menu/productos/new'), done: (prodCount ?? 0) > 0 },
       { key: 'qr', label: 'Comparte tu menú', desc: 'Descarga tu código QR', icon: 'image', href: panelHref(base, '/admin/qr'), done: (visitStats?.last30 ?? 0) > 0 },
       { key: 'escritorio', label: 'Elige la PC del local', desc: 'Para que imprima sola y no te frene un corte de internet', icon: 'monitor', href: panelHref(base, '/admin/mi-pc'), done: false, optional: true },
     ];

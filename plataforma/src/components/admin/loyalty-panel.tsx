@@ -265,7 +265,7 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
         <div className="adm-label">{editingId ? 'Editar recompensa' : 'Nueva recompensa'}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
           <div>
-            <label style={labelStyle}>Producto del menú</label>
+            <label style={labelStyle}>Platillo del menú</label>
             <Select
               options={[{ value: '', label: '— Recompensa sin producto —' }, ...products.map((p) => ({ value: p.id, label: `${p.name} · ${fmtMoney(Number(p.price))}` }))]}
               value={form.product_id ?? ''}

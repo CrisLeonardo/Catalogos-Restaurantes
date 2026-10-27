@@ -224,7 +224,7 @@ function ProductTable({ title, rows, colA, colB }: { title: string; rows: { name
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 56px 90px', gap: 8, fontSize: 11, color: 'var(--u-text-4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            <span>Producto</span><span style={{ textAlign: 'right' }}>{colA}</span><span style={{ textAlign: 'right' }}>{colB}</span>
+            <span>Platillo</span><span style={{ textAlign: 'right' }}>{colA}</span><span style={{ textAlign: 'right' }}>{colB}</span>
           </div>
           {rows.map((r, i) => (
             <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 56px 90px', gap: 8, fontSize: 13, padding: '5px 0', borderTop: i > 0 ? '1px solid var(--u-hair)' : 'none' }}>
