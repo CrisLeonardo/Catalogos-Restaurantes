@@ -129,7 +129,7 @@ export default async function TuAnoPage() {
           <CompartirAno datos={datos} leoId="tu-ano" />
         </div>
         <div data-leo="tu-ano" className="shrink-0">
-          <Leo id="leo-tu-ano" expresion="feliz" size={150} />
+          <Leo id="leo-tu-ano" expresion="feliz" size={150} sticker />
         </div>
       </div>
 

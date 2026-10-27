@@ -33,7 +33,7 @@ export default function HitoTarjeta({ restaurantId, hito }: { restaurantId: stri
     <div className="hito-tarjeta relative flex items-center gap-4 rounded-adm-xl border border-adm-border bg-adm-card p-4 pr-12 shadow-adm-sm md:p-5 md:pr-14">
       <div className="relative shrink-0">
         <Confeti piezas={22} alcance={0.55} />
-        <Leo id={`leo-hito-${hito.clave}`} expresion="feliz" size={64} />
+        <Leo id={`leo-hito-${hito.clave}`} expresion="feliz" size={64} sticker />
       </div>
       <div className="min-w-0">
         <h3 className="t-display" style={{ fontSize: 18, margin: 0, color: 'var(--u-text)' }}>{hito.titulo}</h3>

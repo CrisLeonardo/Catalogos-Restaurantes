@@ -1,5 +1,6 @@
 /* Leo, la mascota de Leogin (v3: docs/diseno/marca/leo-v3-propuesta.html y
-   leo-v3-variantes.html, silueta S2 con ojos E1). Es la L del logo con cara:
+   leo-v3-variantes.html, silueta S2 con ojos E1; el pie termina en punta
+   recta, P2 de leo-cara-y-sticker.html, para que no se lea como bota). Es la L del logo con cara:
    ojos con brillo, ceja derecha siempre alzada, sonrisa con dientes, cachetes,
    moño de mesero, dos brazos y una campanita en la punta del pie, el «ding» de
    pedido nuevo hecho dibujo. El brazo y el parpadeo los mueve globals.css
@@ -25,13 +26,18 @@
    Leo vive en Leogin (la web, el panel, la billetera), NUNCA dentro del menú
    de un restaurante: ahí la marca es la del restaurante.
 
+   `sticker` lo dibuja como calcomanía (borde blanco, sombra corta, un poco
+   girado y «se pega» al aparecer; U1 de leo-cara-y-sticker.html). Solo para
+   logros de verdad: primer pedido, hitos, récord, tu año. Nunca en cobrar,
+   cerrar caja ni junto a un error.
+
    `id` hace únicos los degradados y recortes del SVG; con dos Leos en la
    misma página cada uno lleva el suyo. */
 
 export type LeoExpresion = 'saluda' | 'senala' | 'feliz' | 'duerme';
 export type LeoNivel = 'completo' | 'compacto' | 'minimo';
 
-const CUERPO = 'M34 6h6a14 14 0 0 1 14 14v38a6 6 0 0 0 6 6h20a12 12 0 0 1 0 24H32a12 12 0 0 1-12-12V20A14 14 0 0 1 34 6Z';
+const CUERPO = 'M34 6h6a14 14 0 0 1 14 14v38a6 6 0 0 0 6 6h27a5 5 0 0 1 5 5v14a5 5 0 0 1-5 5H32a12 12 0 0 1-12-12V20A14 14 0 0 1 34 6Z';
 const TINTA = '#1C1C1E';
 const LABIO = '#4A1A12';
 const PLANO = '#EE6B3F';
@@ -60,6 +66,7 @@ export function Leo({
   expresion = 'saluda',
   size,
   nivel,
+  sticker = false,
 }: {
   id?: string;
   className?: string;
@@ -68,6 +75,8 @@ export function Leo({
   size?: number;
   /** Nivel de detalle; por defecto sale del tamaño. */
   nivel?: LeoNivel;
+  /** Estilo calcomanía, para logros. */
+  sticker?: boolean;
 }) {
   const g = `${id}-g`;
   const c = `${id}-c`;
@@ -96,7 +105,9 @@ export function Leo({
       aria-hidden
       width={size}
       height={size}
-      className={[className, expresion === 'feliz' ? 'leo-feliz' : null].filter(Boolean).join(' ') || undefined}
+      className={[className, expresion === 'feliz' ? 'leo-feliz' : null, sticker ? 'leo-sticker' : null].filter(Boolean).join(' ') || undefined}
+      // El borde blanco crece con el dibujo: 1.5 px en un chip, 4 px en la fiesta.
+      style={sticker && size ? ({ '--leo-borde': `${Math.min(4, Math.max(1.5, size * 0.03))}px` } as React.CSSProperties) : undefined}
     >
       <defs>
         <linearGradient id={g} x1="20" y1="6" x2="92" y2="88" gradientUnits="userSpaceOnUse">
@@ -105,7 +116,8 @@ export function Leo({
         </linearGradient>
         <clipPath id={c}><path d={CUERPO} /></clipPath>
       </defs>
-      {!minimo && <ellipse cx="56" cy="90.8" rx="36" ry="2.8" fill="#000" opacity=".28" />}
+      {/* Como sticker, la sombra la pone el CSS: la del suelo saldría con borde blanco. */}
+      {!minimo && !sticker && <ellipse cx="56" cy="90.8" rx="36" ry="2.8" fill="#000" opacity=".28" />}
       <g className="leo-cuerpo">
         <ellipse cx="30" cy="87.2" rx="5.2" ry="3" fill="#B9402F" />
         <ellipse cx="44" cy="87.2" rx="5.2" ry="3" fill="#B9402F" />
