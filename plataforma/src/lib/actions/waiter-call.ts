@@ -8,6 +8,7 @@ import { sendPushToRestaurant } from '@/lib/push';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import { faltaLaColumna } from '@/lib/db/migracion-ausente';
+import { llamadaVigenteDesde } from '@/lib/llamada-vigente';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
@@ -145,6 +146,8 @@ export async function getPendingWaiterCalls(restaurantId: string): Promise<Waite
     .select(cols)
     .eq('restaurant_id', restaurantId)
     .is('resolved_at', null)
+    // Una llamada de hace horas ya no es de nadie (lib/llamada-vigente.ts).
+    .gte('created_at', llamadaVigenteDesde())
     .order('created_at', { ascending: true });
 
   // Mismo cuidado que en el insert: si la migracion 122 no corrio en este

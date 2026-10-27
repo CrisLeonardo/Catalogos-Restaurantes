@@ -3,6 +3,7 @@ import { faltaLaColumna } from '@/lib/db/migracion-ausente';
 import { hayColumnaMesa, mesaDeFila, direccionDeMesa } from '@/lib/db/mesa-columna';
 import { diaDeNegocio, inicioDelDia, minutosDelDia, sumarDias as sumarDiasKey } from '@/lib/caja/dia';
 import { corteDelRestaurante } from '@/lib/db/dia-negocio';
+import { llamadaVigenteDesde } from '@/lib/llamada-vigente';
 import type { Order, OrderItem, OrderStatus, OrderVoid } from '@/types';
 
 export type OrderWithItems = Order & {
@@ -379,6 +380,8 @@ export async function getPendingTableCalls(restaurantId: string): Promise<Record
     .select(cols)
     .eq('restaurant_id', restaurantId)
     .is('resolved_at', null)
+    // Una llamada de hace horas ya no es de nadie (lib/llamada-vigente.ts).
+    .gte('created_at', llamadaVigenteDesde())
     .order('created_at', { ascending: false })
     .limit(100);
 
