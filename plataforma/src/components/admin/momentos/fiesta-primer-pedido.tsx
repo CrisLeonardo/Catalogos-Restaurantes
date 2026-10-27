@@ -88,7 +88,7 @@ export default function FiestaPrimerPedido({ restaurantId, restaurantName }: { r
       <div className="fiesta-tarjeta">
         <div className="fiesta-leo">
           <Confeti piezas={40} />
-          <Leo id="leo-primer-pedido" expresion="feliz" size={128} />
+          <Leo id="leo-primer-pedido" expresion="feliz" size={128} sticker />
         </div>
         <h2 id="fiesta-titulo" className="t-display" style={{ fontSize: 24, margin: '6px 0 0', color: 'var(--u-text)' }}>
           ¡Llegó tu primer pedido!

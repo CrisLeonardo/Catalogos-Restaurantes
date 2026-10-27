@@ -23,7 +23,7 @@ export function TuDiaTira({
     <div className="mt-3 flex flex-wrap items-center gap-2">
       {record && (
         <span className="tu-dia-chip tu-dia-record">
-          <Leo id="leo-record" expresion="feliz" size={26} />
+          <Leo id="leo-record" expresion="feliz" size={26} sticker />
           {record.texto}
         </span>
       )}
