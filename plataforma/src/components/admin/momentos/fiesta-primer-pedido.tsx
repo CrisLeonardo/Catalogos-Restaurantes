@@ -14,9 +14,11 @@ import { Confeti } from '@/components/confeti';
    ------------------------------------------------------------
    Una sola vez en la vida del restaurante: el pedido número 1 es
    el momento que el dueño le va a contar a otros (regla del pico,
-   estrategia §2.7). Se pregunta al servidor cuando entra un
-   pedido nuevo (evento `order-new` de notifications.tsx) y al
-   abrir el panel, por si el dueño no estaba mirando.
+   estrategia §2.7). Vive en Hoy y no en todo el panel: encima
+   de Pedidos o de la caja estorbaría justo cuando hay que
+   atender ese pedido. Se pregunta al servidor al abrir Hoy (por
+   si el dueño no estaba mirando) y cuando entra un pedido nuevo
+   con Hoy abierto (evento `order-new` de notifications.tsx).
 
    Cada aparato lo recuerda en localStorage: «visto» después de
    cerrarlo, «no-aplica» cuando ya hay más pedidos de los que se

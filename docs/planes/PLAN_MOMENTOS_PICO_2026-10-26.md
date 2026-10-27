@@ -56,7 +56,7 @@
 
 - **Leo** (`components/leo.tsx`) tiene cuatro expresiones: saluda, señala, feliz y duerme. Señala en la guía de primeros pasos y en las pantallas vacías del panel (`ui/empty-state.tsx`, todas a la vez), celebra en el primer pedido, los hitos, el récord y «Tu año», y saluda en la billetera.
 - **Lo que se celebra** sale de reglas puras con pruebas (`lib/momentos.ts`): sin historia suficiente no hay récord (7 días con venta para «el mejor del mes», 2 días iguales para «el mejor martes») y sin 3 pedidos no hay hora pico. Las cifras vienen del mismo reporte SQL que Métricas (`leogin_sales_report`), con la hora de corte del restaurante.
-- **El primer pedido** se pregunta al servidor cuando entra un pedido y al abrir el panel; cada aparato recuerda que ya lo vio. Se celebra hasta el tercer pedido y dos semanas después, por si el dueño no estaba mirando.
+- **El primer pedido** se celebra solo en Hoy: encima de Pedidos o de la caja tapaba justo la pantalla donde ese pedido se atiende (lo destapó la prueba E2E de la CI, que anula un primer pedido). Se pregunta al servidor al abrir Hoy y cuando entra un pedido con Hoy abierto; cada aparato recuerda que ya lo vio. Se celebra hasta el tercer pedido y dos semanas después, por si el dueño no estaba mirando.
 - **Las imágenes para compartir** (plato del día y Tu año) se dibujan en el navegador, en 1080 × 1920: `next/og` no lee las fotos WebP y ahí ya están las letras de Leogin. Sin foto del platillo sale un plato dibujado.
 - **Los puntos** que se le anuncian al comensal salen de la misma regla que los acredita (`puntosDelPedido` en `lib/db/loyalty.ts`).
 - **La sorpresa** se sortea una sola vez por pedido en el servidor y queda escrita: recargar no vuelve a tirar los dados.

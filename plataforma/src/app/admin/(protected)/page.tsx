@@ -27,6 +27,7 @@ import {
 } from '@/components/admin/hoy-widgets';
 import { SalesTrendWidget, TopTodayWidget } from '@/components/admin/sales-widgets';
 import HitoTarjeta from '@/components/admin/momentos/hito-tarjeta';
+import FiestaPrimerPedido from '@/components/admin/momentos/fiesta-primer-pedido';
 import { TuDiaTira } from '@/components/admin/momentos/tu-dia';
 import CompartirPlato from '@/components/admin/momentos/compartir-plato';
 import type { MarcaRestaurante, PlatoParaCompartir } from '@/lib/compartir/plato';
@@ -459,6 +460,13 @@ export default async function AdminHomePage() {
       {/* Primeros pasos (solo la primera vez) */}
       {needsOnboarding && onboardingSteps.length > 0 && restaurantId && (
         <OnboardingChecklist restaurantId={restaurantId} firstName={(profile.full_name || '').trim().split(' ')[0]} steps={onboardingSteps} />
+      )}
+
+      {/* El pedido número 1 del restaurante es una fiesta (P3). Solo aquí, en
+          Hoy: encima de Pedidos, Tomar pedidos o la caja taparía justo la
+          pantalla donde ese pedido se está atendiendo. */}
+      {ordersEnabled && restaurantId && (
+        <FiestaPrimerPedido restaurantId={restaurantId} restaurantName={brandName} />
       )}
 
       {/* Un hito alcanzado: 100 pedidos, el primer mes, un año (P6). Sin
