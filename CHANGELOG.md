@@ -6,6 +6,11 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+## v0.14.1 — 2026-10-27 · Leo v3 y sticker de logros
+PR #51-#53 · sin migraciones
+- **Leo v3** (PR #51 y #52, [propuesta](docs/diseno/marca/leo-v3-propuesta.html) y [variantes](docs/diseno/marca/leo-v3-variantes.html)): silueta S2 con campanita en la punta del pie y ojos E1. Tiene ceja derecha siempre alzada, sonrisa con dientes y dos brazos, con tres niveles de detalle según el tamaño (completo, compacto y mínimo, con color plano en los chicos). Aplicado en el componente y en la intro.
+- **Pie recto y sticker de logros** (PR #53, [hoja de cara y sticker](docs/diseno/marca/leo-cara-y-sticker.html)): el pie termina en punta recta para que la silueta no se lea como bota, en el panel y en la intro. Leo sale como calcomanía (borde blanco, giro y animación de pegado) solo en los logros del panel: la fiesta del primer pedido, las tarjetas de hito, el récord de «Tu día» y «Tu año». La cara se queda igual.
+
 ## v0.14.0 — 2026-10-27 · Pídelo tú mismo
 PR #45-#49 · sin migraciones
 - **Pídelo tú mismo** (PR #49, hallazgo EV-01 de la [auditoría de experiencia y venta](docs/auditorias/AUDITORIA_EXPERIENCIA_Y_VENTA_2026-10-27.md)): la demo de Rincón 502 deja pedir. El carrito termina en «Enviar mi pedido de prueba» y enseña «¡Así le llegó a la cocina!», el panel con el pedido sonando, que se puede aceptar y marcar listo. En la web, en PC, «Haz un pedido de prueba» abre una sala con su QR: lo que el visitante pide desde su celular aparece y suena en el panel de la página, con su nombre. Sin base de datos (difusión de Supabase Realtime).
