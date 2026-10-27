@@ -1,0 +1,517 @@
+<title>Leo y el color de Leogin</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@500&family=Geist:wght@400;500;600;700&family=Unbounded:wght@600;700;800&display=swap">
+<style>
+/* Hoja de marca: una banda oscura (el mundo de Leo, como el ícono) y el resto
+   en neutros cálidos. Leo es el único elemento con color fuerte de la página. */
+:root {
+  --bg: #FBF8F3;
+  --surface: #FFFFFF;
+  --ink: #1C1C1E;
+  --muted: #6B655F;
+  --line: rgba(28, 28, 30, 0.1);
+  --chip: #F3EEE6;
+  --acc: #B4492A;
+  --good: #23855A;
+  --bad: #C62828;
+  --f-display: 'Unbounded', 'Arial Black', system-ui, sans-serif;
+  --f-ui: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-mono: 'Geist Mono', ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121214; --surface: #1C1C1E; --ink: #F2EEE8; --muted: #A39C93;
+    --line: rgba(242, 238, 232, 0.12); --chip: #26262A; --acc: #F5A030; --good: #5BC596; --bad: #FF8A80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121214; --surface: #1C1C1E; --ink: #F2EEE8; --muted: #A39C93;
+  --line: rgba(242, 238, 232, 0.12); --chip: #26262A; --acc: #F5A030; --good: #5BC596; --bad: #FF8A80;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.55 var(--f-ui); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--f-display); letter-spacing: -0.02em; text-wrap: balance; margin: 0; }
+h2 { font-size: clamp(26px, 3.4vw, 38px); line-height: 1.1; font-weight: 700; }
+h3 { font-size: 18px; line-height: 1.25; font-weight: 700; }
+p { margin: 0; }
+.lead { color: var(--muted); font-size: 17px; max-width: 64ch; margin-top: 12px; }
+.eyebrow { font: 600 12px var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--acc); }
+section { padding-block: clamp(48px, 7vw, 88px); border-top: 1px solid var(--line); }
+section:first-of-type { border-top: 0; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 22px; min-width: 0; }
+.grid { display: grid; gap: 16px; }
+.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 900px) { .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .g3 { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .g2, .g4 { grid-template-columns: 1fr; } }
+.head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 28px; }
+
+/* Banda de Leo (siempre oscura, como el ícono) */
+.hero { background: radial-gradient(900px 520px at 72% 40%, rgba(232, 83, 74, 0.2), transparent 62%), #121214; color: #F2EEE8; }
+.hero .wrap { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 24px; align-items: center; padding-block: clamp(40px, 6vw, 72px); }
+.hero h1 { font-size: clamp(36px, 5.6vw, 66px); line-height: 1.02; font-weight: 800; letter-spacing: -0.035em; }
+.hero h1 span { background: linear-gradient(120deg, #E8534A, #F5A030); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero p { color: #B5AEA4; font-size: 18px; margin-top: 18px; max-width: 46ch; }
+.hero .eyebrow { color: #F5A030; }
+.hero nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 26px; }
+.hero nav a { color: #F2EEE8; text-decoration: none; font: 600 14px var(--f-ui); border: 1px solid rgba(242, 238, 232, 0.18); padding: 9px 14px; border-radius: 999px; }
+.hero nav a:hover { background: rgba(242, 238, 232, 0.08); }
+.hero nav a:focus-visible { outline: 2px solid #F5A030; outline-offset: 2px; }
+.hero-leo { width: min(420px, 100%); margin: 0 auto; aspect-ratio: 1; }
+.hero-leo svg { width: 100%; height: 100%; display: block; }
+@media (max-width: 760px) { .hero .wrap { grid-template-columns: 1fr; } .hero-leo { width: min(300px, 80%); } }
+
+/* Leo en movimiento (solo en la portada) */
+.idle .leo-all { transform-box: view-box; transform-origin: 52px 89px; animation: bob 2.6s ease-in-out infinite; }
+.idle .leo-eyes { transform-box: fill-box; transform-origin: center; animation: blink 4.6s infinite; }
+.idle .leo-pupil { animation: look 9s ease-in-out infinite; }
+.idle .leo-arm { transform-box: view-box; transform-origin: 24.5px 50px; animation: wave 6s ease-in-out infinite; }
+.idle .leo-browL, .idle .leo-browR { animation: brow 6s ease-in-out infinite; }
+@keyframes bob { 50% { transform: translateY(-1.4px) scaleY(1.012); } }
+@keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.08); } }
+@keyframes look { 0%, 30%, 100% { transform: translate(0, 0); } 38%, 52% { transform: translate(-1.3px, 0.2px); } 60%, 74% { transform: translate(0.8px, -0.6px); } }
+@keyframes wave { 0%, 50%, 100% { transform: rotate(0deg); } 57% { transform: rotate(100deg); } 61% { transform: rotate(78deg); } 65% { transform: rotate(104deg); } 69% { transform: rotate(78deg); } 73% { transform: rotate(100deg); } 82% { transform: rotate(0deg); } }
+@keyframes brow { 0%, 52%, 84%, 100% { transform: translateY(0); } 58%, 78% { transform: translateY(-1.8px); } }
+@media (prefers-reduced-motion: reduce) { .idle * { animation: none !important; } }
+
+/* Antes y después */
+.vs { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 16px; align-items: stretch; }
+@media (max-width: 760px) { .vs { grid-template-columns: 1fr; } }
+.vs .card { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.vs .pic { width: 100%; max-width: 260px; aspect-ratio: 1; }
+.vs .pic svg { width: 100%; height: 100%; }
+.vs .tag { font: 600 13px var(--f-ui); color: var(--muted); }
+.changes { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 22px; }
+@media (max-width: 560px) { .changes { grid-template-columns: 1fr; } }
+.changes li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; }
+.changes li b { display: block; font-weight: 700; }
+.changes li span { color: var(--muted); font-size: 14.5px; }
+.changes .n { width: 28px; height: 28px; border-radius: 50%; background: var(--chip); display: grid; place-items: center; font: 700 12px var(--f-mono); color: var(--acc); }
+
+/* Expresiones y variantes */
+.expr { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 18px 14px 20px; }
+.expr .pic { width: 100%; max-width: 170px; aspect-ratio: 1; }
+.expr .pic svg { width: 100%; height: 100%; }
+.expr h3 { font-size: 16px; }
+.expr p { font-size: 13.5px; color: var(--muted); }
+.badge { display: inline-block; font: 700 11.5px var(--f-ui); letter-spacing: 0.04em; padding: 5px 9px; border-radius: 999px; background: #E3F4EA; color: #1F6E49; }
+.why h3 { margin-bottom: 8px; }
+.why p { color: var(--muted); font-size: 15px; }
+.why .k { font: 700 12px var(--f-mono); color: var(--acc); margin-bottom: 10px; display: block; }
+.voice { display: grid; grid-template-columns: 64px 1fr; gap: 14px; align-items: center; }
+.voice .pic { width: 64px; height: 64px; }
+.voice .pic svg { width: 100%; height: 100%; }
+.voice small { display: block; font: 600 12px var(--f-ui); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.voice q { font: 600 16.5px/1.35 var(--f-ui); quotes: "«" "»"; }
+
+/* Color */
+.verdict { background: #1C1C1E; color: #F2EEE8; border-radius: 28px; padding: clamp(24px, 4vw, 44px); display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: center; }
+@media (max-width: 640px) { .verdict { grid-template-columns: 1fr; } }
+.verdict .orb { width: 132px; height: 132px; border-radius: 34px; background: linear-gradient(135deg, #E8534A, #F5A030); box-shadow: 0 20px 50px rgba(232, 83, 74, 0.35); }
+.verdict h2 { font-size: clamp(24px, 3vw, 34px); }
+.verdict p { color: #B5AEA4; margin-top: 10px; max-width: 60ch; }
+.conds { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.conds span { font: 600 13.5px var(--f-ui); background: rgba(242, 238, 232, 0.08); border: 1px solid rgba(242, 238, 232, 0.14); padding: 8px 12px; border-radius: 999px; }
+.sw { border-radius: 22px; overflow: hidden; border: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; min-width: 0; }
+.sw .chip { height: 108px; display: flex; align-items: flex-end; padding: 12px 14px; font: 500 13px var(--f-mono); }
+.sw .body { padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 6px; }
+.sw .body b { font-family: var(--f-display); font-size: 17px; letter-spacing: -0.01em; }
+.sw .body .from { font-size: 13.5px; color: var(--acc); font-weight: 600; }
+.sw .body p { font-size: 14px; color: var(--muted); }
+.feel h3 { margin: 10px 0 6px; }
+.feel p { color: var(--muted); font-size: 14.5px; }
+.feel .dots { display: flex; gap: 6px; }
+.feel .dots i { width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--line); }
+.mix { display: grid; gap: 14px; }
+.mix-row { display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: center; }
+@media (max-width: 560px) { .mix-row { grid-template-columns: 1fr; gap: 6px; } }
+.mix-row b { font-weight: 700; }
+.mix-row small { display: block; color: var(--muted); font-size: 13px; }
+.bar { display: flex; height: 44px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
+.bar span { display: flex; align-items: center; padding-left: 10px; font: 600 12.5px var(--f-mono); white-space: nowrap; overflow: hidden; }
+.ctab { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.ctab th { text-align: left; font: 600 12px var(--f-ui); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 0 12px 10px; }
+.ctab td { padding: 10px 12px; border-top: 1px solid var(--line); vertical-align: middle; }
+.ctab .sample { display: inline-flex; align-items: center; justify-content: center; width: 96px; height: 40px; border-radius: 10px; font: 700 15px var(--f-ui); border: 1px solid var(--line); }
+.ctab .r { font: 600 15px var(--f-mono); }
+.pill { display: inline-block; font: 700 12px var(--f-ui); padding: 5px 9px; border-radius: 999px; white-space: nowrap; }
+.pill.ok { background: #E3F4EA; color: #1F6E49; }
+.pill.mid { background: #FFF1DD; color: #8A4B08; }
+.pill.no { background: #FDE4E2; color: #A12A20; }
+.scroll { overflow-x: auto; }
+.cb { display: grid; gap: 14px; }
+.cb-row { display: grid; grid-template-columns: 170px 1fr; gap: 14px; align-items: center; }
+@media (max-width: 560px) { .cb-row { grid-template-columns: 1fr; gap: 6px; } }
+.cb-row small { color: var(--muted); font-size: 13.5px; }
+.states { display: flex; gap: 10px; flex-wrap: wrap; }
+.st { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; font: 700 15px var(--f-ui); }
+.st svg { width: 18px; height: 18px; }
+.deut { filter: url(#deuter); }
+.cat { display: flex; flex-wrap: wrap; gap: 10px; }
+.cat div { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px 10px 10px; font: 600 14px var(--f-ui); }
+.cat i { width: 30px; height: 30px; border-radius: 9px; flex: none; }
+.cat small { display: block; font: 500 12px var(--f-ui); color: var(--muted); }
+.cat .me { border-color: rgba(232, 83, 74, 0.5); }
+.risk h3 { margin-bottom: 6px; }
+.risk p { color: var(--muted); font-size: 14.5px; }
+.risk .fix { margin-top: 10px; font-size: 14.5px; color: var(--ink); }
+.risk .fix b { color: var(--good); }
+.rules { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; align-content: start; }
+.rules li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; }
+.rules li::before { content: "✓"; font-weight: 800; color: var(--good); }
+.rules li.not::before { content: "✕"; color: var(--bad); }
+.foot { color: var(--muted); font-size: 13.5px; padding-block: 34px 48px; }
+</style>
+
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">Marca Leogin · 26 de octubre de 2026</div>
+      <h1>Leo y el <span>color</span> de Leogin</h1>
+      <p>Leo v2, con más personalidad y la misma «L» del logo, y por qué el naranja sí es el color correcto, con las tres condiciones que lo hacen funcionar.</p>
+      <nav aria-label="Secciones">
+        <a href="#leo">Leo v2</a><a href="#expresiones">Expresiones</a><a href="#color">Color</a><a href="#reglas">Reglas</a>
+      </nav>
+    </div>
+    <div class="hero-leo idle" id="heroLeo"></div>
+  </div>
+</header>
+
+<main>
+  <section id="leo"><div class="wrap">
+    <div class="head"><span class="eyebrow">De sosa a simpática</span><h2>Qué cambió de Leo v1 a v2</h2>
+      <p class="lead">La primera versión era el logo con ojos. La segunda toma lo que hace funcionar a mascotas como la de Duolingo, sin copiarla: una cara que domina, emociones legibles y gestos.</p></div>
+    <div class="vs">
+      <div class="card"><div class="pic" id="v1"></div><span class="tag">v1 · el logo con ojos</span></div>
+      <div class="card" style="align-items:stretch">
+        <ul class="changes">
+          <li><span class="n">1</span><div><b>Ojos más grandes, con brillo</b><span>La cara es lo primero que mira el cerebro; el brillo hace que «mire» de vuelta.</span></div></li>
+          <li><span class="n">2</span><div><b>Cejas</b><span>Dicen la emoción aunque el resto esté quieto: sorpresa, preocupación, orgullo.</span></div></li>
+          <li><span class="n">3</span><div><b>Boca abierta con lengua</b><span>Una sonrisa que se ve desde lejos y se contagia.</span></div></li>
+          <li><span class="n">4</span><div><b>Cachetes</b><span>Suavizan la cara y la hacen tierna.</span></div></li>
+          <li><span class="n">5</span><div><b>Moño de mesero</b><span>Dice «servicio» sin palabras, incluso en chiquito.</span></div></li>
+          <li><span class="n">6</span><div><b>Brazo y pies</b><span>Ahora puede saludar, celebrar, señalar y caminar.</span></div></li>
+          <li><span class="n">7</span><div><b>Volumen</b><span>Luz arriba y sombra abajo: se siente como un objeto, no como un dibujo plano.</span></div></li>
+          <li><span class="n">8</span><div><b>Sigue siendo la «L»</b><span>Cabeza ancha y punta recta para que se lea como letra y no como bota. Al final del video se vuelve el logo.</span></div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="head" style="margin-top:56px"><span class="eyebrow">La psicología</span><h2>Por qué ahora sí atrapa</h2></div>
+    <div class="grid g4 why">
+      <div class="card"><span class="k">Esquema infantil · Lorenz</span><h3>Lo tierno se mira más</h3><p>Cabeza grande, ojos enormes y brazos cortos activan en el cerebro la respuesta de «qué tierno»: atención y simpatía automáticas. Es la fórmula de Duo, Pikachu y los Minions.</p></div>
+      <div class="card"><span class="k">Detección de caras</span><h3>Las caras van primero</h3><p>Vemos caras antes que cualquier otra cosa, hasta en un enchufe. Una «L» con ojos se mira antes que cualquier texto de la página.</p></div>
+      <div class="card"><span class="k">Contagio emocional</span><h3>Su alegría se pega</h3><p>Ver una cara feliz nos pone un poco felices. Cuando Leo celebra el récord del día, el dueño siente el logro como suyo.</p></div>
+      <div class="card"><span class="k">Constancia</span><h3>Siempre el mismo carácter</h3><p>Duo funciona porque siempre es insistente y simpático. Leo es servicial, orgulloso de su restaurante y un poco dramático cuando algo sale mal.</p></div>
+    </div>
+  </div></section>
+
+  <section id="expresiones"><div class="wrap">
+    <div class="head"><span class="eyebrow">Repertorio</span><h2>Ocho expresiones, cada una con su momento</h2>
+      <p class="lead">Leo no aparece al azar: cada cara responde a algo que le pasa al restaurante. Así se vuelve un indicador emocional, no un adorno.</p></div>
+    <div class="grid g4" id="exprGrid"></div>
+
+    <div class="head" style="margin-top:56px"><span class="eyebrow">Accesorio</span><h2>¿Moño, gorro o nada?</h2></div>
+    <div class="grid g3" id="accGrid"></div>
+
+    <div class="head" style="margin-top:56px"><span class="eyebrow">Cómo habla</span><h2>La voz de Leo</h2>
+      <p class="lead">Frases cortas, de tú, con humor chapín y sin burlarse nunca del dueño.</p></div>
+    <div class="grid g2" id="voiceGrid"></div>
+  </div></section>
+
+  <section id="color"><div class="wrap">
+    <div class="verdict">
+      <div class="orb" aria-hidden="true"></div>
+      <div>
+        <span class="eyebrow" style="color:#F5A030">Psicología del color · veredicto</span>
+        <h2 style="margin-top:8px">Sí: el naranja coral es el color correcto para Leogin.</h2>
+        <p>Es el que mejor junta lo que la marca tiene que transmitir: antojo y energía para el comensal, y además «esto se mueve» para el dueño. Pero solo funciona con tres condiciones. Sin ellas, el naranja se vuelve «barato» o «comida rápida».</p>
+        <div class="conds"><span>1 · Carbón como ancla de confianza</span><span>2 · Poco y donde importa (60·30·10)</span><span>3 · Reglas de contraste y de estados</span></div>
+      </div>
+    </div>
+
+    <div class="grid g3 why" style="margin-top:18px">
+      <div class="card"><span class="k">Encaje con la categoría</span><h3>Comida pide cálido; un sistema de dinero pide seriedad</h3><p>Los estudios de color de marca coinciden en que importa menos el color en sí y más si «queda» con lo que vendes. Leogin vende dos cosas: comida (sensorial, social) y control del dinero (funcional). Por eso necesita naranja y carbón juntos, no uno solo.</p></div>
+      <div class="card"><span class="k">Atención y energía</span><h3>Lo cálido y saturado se ve primero</h3><p>Más que el tono, lo que activa es la saturación: un naranja vivo sube la energía y jala la mirada. Perfecto para el botón principal y para celebrar. Malo para pintar pantallas enteras: cansa y pierde fuerza.</p></div>
+      <div class="card"><span class="k">Identidad local</span><h3>Son los colores de la cocina chapina</h3><p>Achiote, maíz, comal, tortilla y hierbas. La paleta no se eligió en abstracto: sale de la comida que vende el cliente. Esa historia se puede contar en ventas.</p></div>
+    </div>
+
+    <div class="head" style="margin-top:56px"><span class="eyebrow">La paleta</span><h2>Seis colores, cada uno con su trabajo</h2></div>
+    <div class="grid g3" id="palette"></div>
+
+    <div class="head" style="margin-top:56px"><span class="eyebrow">Lo que debe sentir cada quien</span><h2>Tres públicos, tres emociones</h2></div>
+    <div class="grid g3 feel">
+      <div class="card"><div class="dots"><i style="background:#1C1C1E"></i><i style="background:#FFFFFF"></i><i style="background:#2F9E6B"></i></div><h3>Dueño: confianza y control</h3><p>Decide con su dinero. Carbón, blanco y verde para «todo cuadra». El degradado aparece solo cuando hay un logro: primer pedido, récord.</p></div>
+      <div class="card"><div class="dots"><i style="background:#F4F4F6"></i><i style="background:#1C1C1E"></i><i style="background:#F5A030"></i></div><h3>Personal: calma bajo presión</h3><p>Trabaja con prisa y muchas horas. Neutros y color solo para el estado de cada pedido, siempre con ícono y texto.</p></div>
+      <div class="card"><div class="dots"><i style="background:#E8534A"></i><i style="background:#F5A030"></i><i style="background:#1F4D3A"></i></div><h3>Comensal: antojo y alegría</h3><p>Cálidos, fotos grandes y los colores del restaurante (aquí, el verde de La Ceiba). Leogin solo pone su «L» chiquita.</p></div>
+    </div>
+
+    <div class="head" style="margin-top:56px"><span class="eyebrow">Cuánto de cada uno</span><h2>La regla 60 · 30 · 10</h2>
+      <p class="lead">El naranja es especia, no plato: entre menos se usa, más fuerza tiene cada vez que aparece (efecto aislamiento).</p></div>
+    <div class="mix" id="mix"></div>
+
+    <div class="head" style="margin-top:56px"><span class="eyebrow">Que se lea</span><h2>Contraste: cuáles combinaciones sirven para texto</h2>
+      <p class="lead">Calculado con la fórmula de las pautas de accesibilidad web (WCAG). Para texto normal hace falta 4.5 : 1 y para texto grande, 3 : 1.</p></div>
+    <div class="card scroll"><table class="ctab" id="ctab"><thead><tr><th>Combinación</th><th>Muestra</th><th>Contraste</th><th>Para qué sirve</th></tr></thead><tbody></tbody></table></div>
+
+    <div class="head" style="margin-top:56px"><span class="eyebrow">Daltonismo</span><h2>Brasa y Albahaca se confunden</h2>
+      <p class="lead">Cerca de 1 de cada 12 hombres distingue mal el rojo del verde. En la cocina, «urgente» y «listo» no pueden depender solo del color.</p></div>
+    <div class="card cb" id="cb"></div>
+
+    <div class="head" style="margin-top:56px"><span class="eyebrow">La categoría</span><h2>Casi toda la comida tira a cálido</h2>
+      <p class="lead">Eso confirma que el naranja te pone en la categoría correcta sin explicar nada. Por lo mismo, el color solo no te distingue: lo que es solo de Leogin es el degradado brasa → mango sobre carbón, y Leo.</p></div>
+    <div class="cat" id="cat"></div>
+    <p style="color:var(--muted);font-size:13px;margin-top:10px">Colores aproximados de cada marca, solo como referencia.</p>
+
+    <div class="head" style="margin-top:56px"><span class="eyebrow">Riesgos</span><h2>Lo que puede salir mal con el naranja</h2></div>
+    <div class="grid g3 risk">
+      <div class="card"><h3>Verse «barato» o de comida rápida</h3><p>Pasa cuando rojo, naranja y amarillo saturados llenan superficies grandes, como en una cadena de hamburguesas.</p><p class="fix"><b>Cómo evitarlo:</b> fondos neutros y naranja junto a carbón. Esa pareja se lee «premium», como el ícono.</p></div>
+      <div class="card"><h3>Confundirse con alarma</h3><p>En pantallas, rojo-naranja también significa «error». Si Brasa marca botones y errores, el usuario duda.</p><p class="fix"><b>Cómo evitarlo:</b> errores en un rojo distinto y más oscuro, siempre con ícono y texto. Brasa nunca es error.</p></div>
+      <div class="card"><h3>Cansar en el panel</h3><p>El dueño y el personal miran el panel horas seguidas. Mucho color saturado fatiga y todo parece urgente.</p><p class="fix"><b>Cómo evitarlo:</b> en el panel, el naranja solo va en el botón principal y la marca (≈5 %).</p></div>
+    </div>
+  </div></section>
+
+  <section id="reglas"><div class="wrap">
+    <div class="head"><span class="eyebrow">Para no olvidar</span><h2>Reglas de Leo y del color</h2></div>
+    <div class="grid g2">
+      <ul class="rules">
+        <li>Leo aparece en la web, el registro, las pantallas vacías, las celebraciones, la billetera y las redes.</li>
+        <li>Cada aparición de Leo responde a algo que pasó (una expresión por momento).</li>
+        <li>Leo se puede volver el logo y el logo se puede volver Leo: son el mismo.</li>
+        <li class="not">Leo dentro del menú del restaurante (ahí solo va la «L» chiquita del pie).</li>
+        <li class="not">Leo en momentos de presión (mesero tomando un pedido) ni en errores que cuestan dinero.</li>
+      </ul>
+      <ul class="rules">
+        <li>Degradado brasa → mango solo en el logo, el botón principal y los logros.</li>
+        <li>Texto de acento sobre claro en Terracota oscura; sobre oscuro, en Mango.</li>
+        <li>Estados siempre con color + ícono + palabra.</li>
+        <li class="not">Texto blanco pequeño sobre Brasa, Mango o Albahaca.</li>
+        <li class="not">Brasa para errores, o naranja de fondo en pantallas enteras.</li>
+      </ul>
+    </div>
+  </div></section>
+</main>
+<footer class="wrap foot">Parte de la estrategia de atracción de Leogin (docs/negocio/ESTRATEGIA_ATRACCION_2026-10-25.md). Leo v2 es un diseño en desarrollo: se itera antes de fijarlo.</footer>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="deuter" color-interpolation-filters="linearRGB">
+    <feColorMatrix type="matrix" values="0.367 0.861 -0.228 0 0  0.280 0.673 0.047 0 0  -0.012 0.043 0.969 0 0  0 0 0 1 0"/>
+  </filter>
+</svg>
+
+<script>
+/* Leo v2: la «L» del logo como personaje. Mismo marco 0–100 que el ícono,
+   para que al final pueda volverse el logo. Todas las piezas existen siempre;
+   las opciones solo eligen cuáles se ven (así se pueden animar). */
+let leoN = 0;
+function leoV2(o = {}) {
+  const id = 'lv' + (leoN++);
+  const eyes = o.eyes || 'open';      // open | happy | closed | wink | half
+  const brows = o.brows || 'neutral'; // neutral | up | worried | determined
+  const mouth = o.mouth || 'smile';   // smile | o | wavy | smirk | calm
+  const arm = o.arm || 'down';        // down | wave | up | none
+  const acc = o.acc || 'bow';         // bow | chef | none
+  const extra = o.extra || '';        // sweat | zzz | sparkles
+  const px = o.px || 0, py = o.py || 0;
+  const vis = (b) => (b ? '' : ' opacity="0"');
+  const tf = (t) => (t ? ` transform="${t}"` : '');
+  const BODY = 'M36 9h4a13 13 0 0 1 13 13v32a5 5 0 0 0 5 5h18a7 7 0 0 1 7 7v12a7 7 0 0 1-7 7H33a10 10 0 0 1-10-10V22a13 13 0 0 1 13-13Z';
+  const MOUTH = 'M30.8 37.4Q38 39.3 45.2 37.4Q44.7 46.6 38 46.6Q31.3 46.6 30.8 37.4Z';
+  const browT = {
+    neutral: ['', ''], up: ['translate(0 -2.6)', 'translate(0 -2.6)'],
+    worried: ['rotate(-15 31.2 13.8)', 'rotate(15 44.8 13.8)'],
+    determined: ['rotate(13 31.2 14.2)', 'rotate(-13 44.8 14.2)'],
+  }[brows];
+  const armT = { down: '', wave: 'rotate(95 24.5 50)', up: 'rotate(125 24.5 50)', none: '' }[arm];
+  const pup = px || py ? `translate(${px} ${py})` : '';
+  const ink = '#1C1C1E', lip = '#4A1A12';
+  return `<svg viewBox="${o.viewBox || '0 0 100 100'}" overflow="visible" aria-hidden="true">
+  <defs>
+    <linearGradient id="${id}g" x1="23" y1="9" x2="83" y2="85" gradientUnits="userSpaceOnUse"><stop stop-color="#E8534A"/><stop offset="1" stop-color="#F5A030"/></linearGradient>
+    <clipPath id="${id}c"><path d="${BODY}"/></clipPath>
+    <clipPath id="${id}m"><path d="${MOUTH}"/></clipPath>
+  </defs>
+  <rect class="leo-bg" width="100" height="100" rx="22" fill="#1C1C1E"${vis(o.bg)}/>
+  <ellipse class="leo-shadow" cx="52" cy="89.6" rx="31" ry="2.8" fill="#000" opacity="${o.shadow === false ? 0 : 0.28}"/>
+  <g class="leo-all">
+    <g class="leo-feet"><ellipse cx="31" cy="86.4" rx="5.4" ry="3" fill="#B9402F"/><ellipse cx="45" cy="86.4" rx="5.4" ry="3" fill="#B9402F"/></g>
+    <g class="leo-tray"${vis(o.tray)}>
+      <rect x="75" y="47.2" width="2.8" height="12.6" rx="1.4" fill="#F7B451"/>
+      <rect x="62.4" y="44.4" width="28.4" height="3.8" rx="1.9" fill="#EEE8DE"/>
+      <rect x="63.6" y="47.5" width="26" height="1.2" rx=".6" fill="#C9C0B2"/>
+      <g class="leo-ticket"${vis(o.ticket)} transform="translate(.4 .8)">
+        <path d="M67 30h17v12.6l-2.1 1-2.1-1-2.1 1-2.1-1-2.1 1-2.1-1-2.1 1-2.3-1Z" fill="#FFFDF6"/>
+        <rect x="69" y="33" width="9" height="1.8" rx=".9" fill="#2B2622"/>
+        <rect x="69" y="36.5" width="12" height="1.3" rx=".65" fill="#9C958C"/>
+        <rect x="69" y="39.3" width="7" height="1.3" rx=".65" fill="#9C958C"/>
+      </g>
+    </g>
+    <path class="leo-body" d="${BODY}" fill="url(#${id}g)"/>
+    <g class="leo-shine" clip-path="url(#${id}c)">
+      <ellipse cx="28.5" cy="17" rx="9" ry="15" fill="#fff" opacity=".2"/>
+      <rect x="18" y="79.4" width="70" height="8" fill="#8F2A22" opacity=".22"/>
+      <rect x="49.5" y="6" width="6" height="50" fill="#8F2A22" opacity=".12"/>
+    </g>
+    <path class="leo-logo" d="M27 19h18v44h27v18H27Z" fill="url(#${id}g)" opacity="0"/>
+    <g class="leo-arm"${vis(arm !== 'none')}${tf(armT)}>
+      <path d="M25 49.6C19 50.6 16.4 53.6 15.6 58.2" stroke="url(#${id}g)" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <circle cx="15.4" cy="59" r="3.7" fill="url(#${id}g)"/>
+    </g>
+    <g class="leo-bow"${vis(acc === 'bow')}>
+      <path d="M38 52.4L31.4 48.8Q29.8 48.1 29.8 49.8V55Q29.8 56.7 31.4 56ZM38 52.4L44.6 48.8Q46.2 48.1 46.2 49.8V55Q46.2 56.7 44.6 56Z" fill="${ink}"/>
+      <rect x="36" y="50.5" width="4" height="3.8" rx="1.3" fill="#3A3A40"/>
+    </g>
+    <g class="leo-chef" stroke="#D3CABB" stroke-width=".9"${vis(acc === 'chef')}>
+      <circle cx="30" cy="1.5" r="6.4" fill="#fff"/><circle cx="38" cy="-1.5" r="7.4" fill="#fff"/><circle cx="46" cy="1.5" r="6.4" fill="#fff"/>
+      <rect x="26" y="2" width="24" height="9.2" rx="2.5" fill="#fff"/><rect x="26" y="9" width="24" height="2.6" rx="1" fill="#E4DDD1"/>
+    </g>
+    <g class="leo-face">
+      <g class="leo-cheeks" fill="#FF8E8E" opacity=".5"><ellipse cx="26.4" cy="37.6" rx="2.6" ry="1.7"/><ellipse cx="49.8" cy="37.6" rx="2.4" ry="1.7"/></g>
+      <g class="leo-eyes">
+        <g class="leo-eye leo-eyeL"${vis(['open', 'wink', 'half'].includes(eyes))}>
+          <ellipse cx="31.2" cy="25" rx="6.8" ry="8.2" fill="#fff"/>
+          <g class="leo-pupil"${tf(pup)}><circle cx="32.2" cy="26.3" r="4" fill="${ink}"/><circle cx="33.7" cy="24.3" r="1.5" fill="#fff"/><circle cx="31" cy="28.2" r=".65" fill="#fff"/></g>
+        </g>
+        <g class="leo-eye leo-eyeR"${vis(['open', 'half'].includes(eyes))}>
+          <ellipse cx="44.8" cy="25" rx="6.8" ry="8.2" fill="#fff"/>
+          <g class="leo-pupil"${tf(pup)}><circle cx="45.8" cy="26.3" r="4" fill="${ink}"/><circle cx="47.3" cy="24.3" r="1.5" fill="#fff"/><circle cx="44.6" cy="28.2" r=".65" fill="#fff"/></g>
+        </g>
+      </g>
+      <g class="leo-lids"${vis(eyes === 'half')}>
+        <path d="M24.1 26.4A7.1 8.6 0 0 1 38.3 26.4Z" fill="#D9493F"/><path d="M37.7 26.4A7.1 8.6 0 0 1 51.9 26.4Z" fill="#D9493F"/>
+        <path d="M24.6 26.4H37.8M38.2 26.4H51.4" stroke="${ink}" stroke-width="1.4" stroke-linecap="round"/>
+      </g>
+      <path class="leo-happyL" d="M26.6 28q4.6-6.6 9.2 0" stroke="${ink}" stroke-width="2.6" fill="none" stroke-linecap="round"${vis(eyes === 'happy')}/>
+      <path class="leo-happyR" d="M40.2 28q4.6-6.6 9.2 0" stroke="${ink}" stroke-width="2.6" fill="none" stroke-linecap="round"${vis(eyes === 'happy' || eyes === 'wink')}/>
+      <path class="leo-closed" d="M26.8 25.6q4.4 3.8 8.8 0M40.4 25.6q4.4 3.8 8.8 0" stroke="${ink}" stroke-width="2.4" fill="none" stroke-linecap="round"${vis(eyes === 'closed')}/>
+      <path class="leo-browL" d="M26.6 14.4q4.6-2.8 9.2-.8" stroke="${ink}" stroke-width="2.4" fill="none" stroke-linecap="round"${tf(browT[0])}/>
+      <path class="leo-browR" d="M40.2 13.6q4.6-2 9.2.8" stroke="${ink}" stroke-width="2.4" fill="none" stroke-linecap="round"${tf(browT[1])}/>
+      <g class="leo-mouth"${vis(mouth === 'smile')}>
+        <path d="${MOUTH}" fill="${lip}"/>
+        <ellipse cx="38" cy="46" rx="4.4" ry="3" fill="#F07C6C" clip-path="url(#${id}m)"/>
+      </g>
+      <ellipse class="leo-mouthO" cx="38" cy="41.6" rx="2.9" ry="3.5" fill="${lip}"${vis(mouth === 'o')}/>
+      <path class="leo-mouthWavy" d="M32 41.8q1.5-1.6 3 0t3 0 3 0 3 0" stroke="${lip}" stroke-width="1.9" fill="none" stroke-linecap="round" stroke-linejoin="round"${vis(mouth === 'wavy')}/>
+      <path class="leo-mouthSmirk" d="M32.8 40.6q5.4 3.8 10.6-1.4" stroke="${lip}" stroke-width="2.1" fill="none" stroke-linecap="round"${vis(mouth === 'smirk')}/>
+      <path class="leo-mouthCalm" d="M32.8 39.8q5.2 4.4 10.4 0" stroke="${lip}" stroke-width="2.1" fill="none" stroke-linecap="round"${vis(mouth === 'calm')}/>
+    </g>
+    <g class="leo-extra">
+      <path class="leo-sweat" d="M57.4 13.5c-2.1 3.3-3 5.1-3 6.6a3 3 0 0 0 6 0c0-1.5-.9-3.3-3-6.6Z" fill="#8FD3FF"${vis(extra === 'sweat')}/>
+      <g class="leo-zzz" fill="#F5A030" font-family="Unbounded, 'Arial Black', sans-serif" font-weight="800"${vis(extra === 'zzz')}><text x="55" y="12" font-size="8">z</text><text x="62" y="5" font-size="6">z</text><text x="67.5" y="0" font-size="4.5">z</text></g>
+      <g class="leo-sparkles"${vis(extra === 'sparkles')}><path d="M10 18l1.3 3.7L15 23l-3.7 1.3L10 28l-1.3-3.7L5 23l3.7-1.3Z" fill="#F5A030"/><path d="M60 4l1 2.8 2.8 1-2.8 1-1 2.8-1-2.8-2.8-1 2.8-1Z" fill="#fff"/><path d="M88 30l1.2 3.4 3.4 1.2-3.4 1.2-1.2 3.4-1.2-3.4-3.4-1.2 3.4-1.2Z" fill="#F5A030"/></g>
+    </g>
+  </g>
+</svg>`;
+}
+</script>
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  $('#heroLeo').innerHTML = leoV2({ px: -0.4 });
+
+  // Leo v1, tal como estaba en la primera intro
+  $('#v1').innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="v1g" x1="27" y1="19" x2="72" y2="81" gradientUnits="userSpaceOnUse"><stop stop-color="#E8534A"/><stop offset="1" stop-color="#F5A030"/></linearGradient></defs><ellipse cx="49.5" cy="83.5" rx="25" ry="3.2" fill="#000" opacity=".2"/><path d="M33 19h6a6 6 0 0 1 6 6v38h21a6 6 0 0 1 6 6v6a6 6 0 0 1-6 6H33a6 6 0 0 1-6-6V25a6 6 0 0 1 6-6Z" fill="url(#v1g)"/><rect x="30.2" y="23" width="2.6" height="26" rx="1.3" fill="#fff" opacity=".22"/><ellipse cx="32.6" cy="32" rx="3.3" ry="4.1" fill="#fff"/><ellipse cx="40.1" cy="32" rx="3.3" ry="4.1" fill="#fff"/><circle cx="33.1" cy="32.6" r="1.85" fill="#1C1C1E"/><circle cx="40.6" cy="32.6" r="1.85" fill="#1C1C1E"/><path d="M32.8 40.2q3.6 3.4 7.2 0" stroke="#1C1C1E" stroke-width="1.7" fill="none" stroke-linecap="round"/></svg>`;
+
+  const exprs = [
+    ['Contento', 'Su cara de siempre: inicio y bienvenida.', {}],
+    ['¡Hola!', 'Registro y primera visita.', { arm: 'wave', brows: 'up' }],
+    ['¡Récord!', 'Primer pedido, mejor día, hitos.', { eyes: 'happy', arm: 'up', extra: 'sparkles' }],
+    ['¿Eh?', 'Página no encontrada.', { brows: 'up', mouth: 'o', px: -0.6 }],
+    ['Orgulloso', 'Resumen del día con buenos números.', { eyes: 'half', mouth: 'smirk' }],
+    ['Sin internet', 'Se fue la señal; él guarda todo.', { brows: 'worried', mouth: 'wavy', extra: 'sweat' }],
+    ['Cerrado', 'Fuera de horario.', { eyes: 'closed', mouth: 'calm', extra: 'zzz' }],
+    ['Guiño', 'Redes, sorpresas y premios.', { eyes: 'wink', mouth: 'smirk' }],
+  ];
+  $('#exprGrid').innerHTML = exprs.map(([n, d, o]) => `<div class="card expr"><div class="pic">${leoV2(o)}</div><h3>${n}</h3><p>${d}</p></div>`).join('');
+
+  const accs = [
+    ['Moño de mesero', 'Dice «servicio» y se entiende aun en 32 px. Va con lo que hace Leogin: atender.', { acc: 'bow' }, true],
+    ['Gorro de chef', 'Dice «cocina», pero tapa la cabeza, compite con las cejas y en chiquito se pierde.', { acc: 'chef' }, false],
+    ['Sin accesorio', 'Más limpio y más cerca del logo, pero con menos personalidad.', { acc: 'none' }, false],
+  ];
+  $('#accGrid').innerHTML = accs.map(([n, d, o, rec]) => `<div class="card expr"><div class="pic">${leoV2(o)}</div><h3>${n} ${rec ? '<span class="badge">Recomendado</span>' : ''}</h3><p>${d}</p></div>`).join('');
+
+  const voice = [
+    ['Pantalla vacía', 'Todavía no hay pedidos. Yo aquí, listo con la bandeja.', {}],
+    ['Sin internet', 'Se fue el internet… tranquilo, yo guardo todo y lo subo solito.', { brows: 'worried', mouth: 'wavy', extra: 'sweat' }],
+    ['Récord del mes', '¡Q3,422.80! Hoy sí se lució la cocina.', { eyes: 'happy', arm: 'up', extra: 'sparkles' }],
+    ['Restaurante cerrado', 'Ya cerramos. Mañana a las 7 te espero con el comal caliente.', { eyes: 'closed', mouth: 'calm', extra: 'zzz' }],
+  ];
+  $('#voiceGrid').innerHTML = voice.map(([k, q, o]) => `<div class="card voice"><div class="pic">${leoV2(Object.assign({ viewBox: '8 -6 86 100' }, o))}</div><div><small>${k}</small><q>${q}</q></div></div>`).join('');
+
+  // Paleta
+  const pal = [
+    ['Brasa', '#E8534A', '#FFFFFF', 'El achiote y el comal encendido', 'Acción y apetito. Botón principal, la «L», logros. Nunca para errores.'],
+    ['Mango', '#F5A030', '#1C1C1E', 'El maíz y la fruta madura', 'Alegría y calidez. Celebraciones, «en espera». Texto oscuro encima.'],
+    ['Carbón', '#1C1C1E', '#F2EEE8', 'El comal y el frijol negro', 'Seriedad y control. Es lo que hace que el naranja se vea premium.'],
+    ['Masa', '#FBF6EE', '#1C1C1E', 'La tortilla recién hecha', 'Calma y hogar. Fondo de la web y de la billetera; el panel sigue en neutros.'],
+    ['Albahaca', '#2F9E6B', '#FFFFFF', 'Las hierbas: chipilín, cilantro', '«Listo» y «el dinero cuadra». Para texto blanco, su versión oscura #23855A.'],
+    ['Terracota oscura', '#B4492A', '#FFFFFF', 'El barro de las ollas', 'El acento para texto sobre fondos claros: se lee bien en blanco y en masa.'],
+  ];
+  $('#palette').innerHTML = pal.map(([n, hex, on, from, role]) => `<div class="sw"><div class="chip" style="background:${hex};color:${on}">${hex}</div><div class="body"><b>${n}</b><span class="from">${from}</span><p>${role}</p></div></div>`).join('');
+
+  // 60 · 30 · 10 por superficie
+  const mix = [
+    ['Web', 'distleogin.com', [['Masa / blanco', 60, '#FBF6EE', '#1C1C1E'], ['Carbón', 30, '#1C1C1E', '#F2EEE8'], ['Brasa · Mango', 10, 'linear-gradient(90deg,#E8534A,#F5A030)', '#1C1C1E']]],
+    ['Panel', 'del restaurante', [['Neutros claros', 70, '#F4F4F6', '#1C1C1E'], ['Carbón y grises', 25, '#3A3A40', '#F2EEE8'], ['Brasa', 5, '#E8534A', '#FFFFFF']]],
+    ['Billetera', 'casa de Leo', [['Masa', 55, '#FBF6EE', '#1C1C1E'], ['Carbón', 25, '#1C1C1E', '#F2EEE8'], ['Brasa · Mango', 20, 'linear-gradient(90deg,#E8534A,#F5A030)', '#1C1C1E']]],
+    ['Menú', 'lo decide el restaurante', [['Colores del restaurante', 96, 'repeating-linear-gradient(135deg,#1F4D3A 0 14px,#2F6E52 14px 28px)', '#F6EFE3'], ['L', 4, '#E8534A', '#FFFFFF']]],
+  ];
+  $('#mix').innerHTML = mix.map(([n, s, parts]) => `<div class="mix-row"><div><b>${n}</b><small>${s}</small></div><div class="bar">${parts.map(([l, p, bg, c]) => `<span style="flex:${p};background:${bg};color:${c}" title="${l} ${p} %">${p >= 15 ? `${l} · ${p} %` : ''}</span>`).join('')}</div></div>`).join('');
+
+  // Contraste WCAG
+  const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  const lum = (hex) => { const n = parseInt(hex.slice(1), 16); return 0.2126 * lin(n >> 16) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255); };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const pairs = [
+    ['Blanco sobre Brasa', '#FFFFFF', '#E8534A'],
+    ['Blanco sobre Mango', '#FFFFFF', '#F5A030'],
+    ['Carbón sobre Mango', '#1C1C1E', '#F5A030'],
+    ['Brasa sobre Carbón', '#E8534A', '#1C1C1E'],
+    ['Mango sobre Carbón', '#F5A030', '#1C1C1E'],
+    ['Brasa sobre Masa', '#E8534A', '#FBF6EE'],
+    ['Terracota oscura sobre Masa', '#B4492A', '#FBF6EE'],
+    ['Blanco sobre Albahaca', '#FFFFFF', '#2F9E6B'],
+    ['Blanco sobre Albahaca oscura', '#FFFFFF', '#23855A'],
+    ['Carbón sobre Masa', '#1C1C1E', '#FBF6EE'],
+  ];
+  $('#ctab tbody').innerHTML = pairs.map(([n, fg, bg]) => {
+    const r = ratio(fg, bg);
+    const v = r >= 4.5 ? ['ok', 'Cualquier texto'] : r >= 3 ? ['mid', 'Solo texto grande (24 px, o 19 px en negrita)'] : ['no', 'No para texto'];
+    return `<tr><td>${n}</td><td><span class="sample" style="background:${bg};color:${fg}">Pedir</span></td><td class="r">${r.toFixed(1)} : 1</td><td><span class="pill ${v[0]}">${v[1]}</span></td></tr>`;
+  }).join('');
+
+  // Daltonismo
+  const ico = {
+    urg: '<svg viewBox="0 0 20 20"><path d="M10 3v8M10 15.5v.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>',
+    wait: '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M10 6v4.5l3 2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/></svg>',
+    ok: '<svg viewBox="0 0 20 20"><path d="M4.5 10.5l3.5 3.5 7.5-8" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>',
+  };
+  const chips = (withIcon) => `<div class="states"><span class="st" style="background:#E8534A;color:#fff">${withIcon ? ico.urg + 'Urgente' : 'Urgente'}</span><span class="st" style="background:#F5A030;color:#1C1C1E">${withIcon ? ico.wait + 'En espera' : 'En espera'}</span><span class="st" style="background:#23855A;color:#fff">${withIcon ? ico.ok + 'Listo' : 'Listo'}</span></div>`;
+  const solid = () => `<div class="states" aria-hidden="true">${['#E8534A', '#F5A030', '#23855A'].map((c) => `<span class="st" style="background:${c};width:112px;height:40px"></span>`).join('')}</div>`;
+  $('#cb').innerHTML = `
+    <div class="cb-row"><small>Visión típica, solo color</small>${solid()}</div>
+    <div class="cb-row"><small>Daltonismo rojo-verde (simulado), solo color</small><div class="deut">${solid()}</div></div>
+    <div class="cb-row"><small>Daltonismo, con ícono y palabra</small><div class="deut">${chips(true)}</div></div>`;
+
+  // Categoría
+  const cat = [
+    ['Leogin', 'brasa → mango + carbón', 'linear-gradient(135deg,#E8534A,#F5A030)', true],
+    ['Toast', 'sistema para restaurantes, EE. UU.', '#FF4C00'],
+    ['Rappi', 'domicilios', '#FF441F'],
+    ['DoorDash', 'domicilios', '#FF3008'],
+    ['PedidosYa', 'domicilios', '#FA0050'],
+    ['Glovo', 'domicilios', '#FFC244'],
+    ['Uber Eats', 'domicilios', 'linear-gradient(135deg,#06C167 50%,#000 50%)'],
+    ['Square', 'cobros', '#1A1A1A'],
+  ];
+  $('#cat').innerHTML = cat.map(([n, s, bg, me]) => `<div class="${me ? 'me' : ''}"><i style="background:${bg}"></i><span>${n}<small>${s}</small></span></div>`).join('');
+})();
+</script>
