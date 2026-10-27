@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
+import { resolveOwnRestaurantId } from '@/lib/db/membership';
 import { getKitchenOrders } from '@/lib/db/orders';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import KitchenDisplay from '@/components/admin/kitchen-display';
@@ -22,8 +23,11 @@ export default async function CocinaPage() {
     .eq('id', user.id)
     .single();
 
+  // El restaurante del subdominio si es suyo por membresía: el dueño del
+  // modelo de membresías (migración 113) no tiene `restaurant_id` en el
+  // perfil, y sin esto Cocina lo devolvía al login con la sesión abierta.
   // SUPER_ADMIN no tiene restaurant_id propio: lo resolvemos del slug de tenant.
-  let restaurantId = (profile?.restaurant_id as string | null) ?? null;
+  let restaurantId = await resolveOwnRestaurantId(profile?.restaurant_id as string | null);
   if (!restaurantId && profile?.role === 'SUPER_ADMIN' && slug) {
     const tenant = await getRestaurantBySlug(slug);
     restaurantId = tenant?.restaurant.id ?? null;

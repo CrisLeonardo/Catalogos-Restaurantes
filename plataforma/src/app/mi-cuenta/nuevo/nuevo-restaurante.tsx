@@ -127,7 +127,9 @@ export default function NuevoRestaurante({
   // Estándar elige 2 de los 3 modos de pedido (el 3ero requiere Premium).
   const [estandarTypes, setEstandarTypes] = useState<OrderTypeOption[]>(['dine_in', 'pickup']);
   // Estilo visual de inicio (plantilla); siempre se puede cambiar en Personalizar.
-  const [templateId, setTemplateId] = useState('carbon-autor');
+  // Claro por defecto (2026-08-24): «Lino & Coral», no «Carbón de Autor», que
+  // es oscura de verdad desde 2026-10-27.
+  const [templateId, setTemplateId] = useState('lino-coral');
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [slugEdited, setSlugEdited] = useState(false);
