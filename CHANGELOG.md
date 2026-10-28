@@ -6,6 +6,7 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 - **Leogin para quien vende en línea** ([plan](docs/planes/PLAN_PORTADA_Y_VENDE_EN_LINEA_2026-10-27.md)): página `/vende-en-linea` para quien vende por WhatsApp o Instagram sin local («Tu menú en un link. Tus pedidos, en orden.»), con el chat que se vuelve un pedido, lo que no le va a estorbar tachado, la Vitrina por temporadas y «Menos de Q7 al día». Puerta en la segunda pantalla de la portada y enlace en la cabecera, el menú y el pie. El alta llega con Estándar «para llevar + a domicilio» ya marcado.
+- **Video «Del chat al pedido»** (mismo plan, §3): 30 s vertical (y corte de 15 s) para quien vende en línea, hecho con código como la intro: el chat lleno de «¿precio?» y el pedido perdido, Leo, el link en la bio, el cliente que pide solo, el pedido que llega completo y la semana. Se ve en `/vende-en-linea` («Míralo en 30 segundos», ruta `/intro-en-linea`); `grabar-video.mjs` y `publicar-en-web.mjs` aceptan `--archivo en-linea.html`.
 - **La portada en el teléfono** (mismo plan): sin desborde lateral (la intro salía cortada), el video en el primer pantallazo, cabecera sólida, la vitrina de diseños «mitad y mitad», menos recorrido en «Del caos al control», cifras 2×2 y carruseles; la intro vertical centrada.
 
 ## v0.14.1 — 2026-10-27 · Leo v3 y sticker de logros

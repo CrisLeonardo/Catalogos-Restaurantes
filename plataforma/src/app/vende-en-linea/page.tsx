@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { Leo } from '@/components/leo';
 import { LandingDemo } from '@/components/landing-demo';
+import { LandingIntro } from '@/components/landing-intro';
 import { CtaEnLinea } from '@/components/en-linea/cta-en-linea';
 import { SiteHeader, SiteFooter, SectionHead, contactHref } from '@/components/site-chrome';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
@@ -23,7 +24,7 @@ import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
 
    El orden es el del plan (docs/planes/PLAN_PORTADA_Y_VENDE_EN_LINEA_2026-10-27.md §2):
    espejo (ese soy yo) → alivio (el chat se vuelve un pedido) →
-   cómo (tres pasos) → poda (solo lo que necesitas) → precio en
+   la historia en 30 s (el video) → cómo (tres pasos) → poda (solo lo que necesitas) → precio en
    pequeño (menos de Q7 al día) → dudas → cierre con Leo.
 
    Lo que se promete es lo que hay en Estándar con «para llevar» y
@@ -202,6 +203,31 @@ export default async function VendeEnLinea() {
                 <p className="lp-body" style={{ fontSize: 13.5, marginTop: 8 }}>{d.texto}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* ── El video: la historia completa después del espejo ──
+            «Del chat al pedido» (docs/diseno/intro-animada/en-linea.html):
+            el mismo recorrido de la página en 30 s, vertical y con letreros,
+            porque así se ve en un celular y así circula en los estados. */}
+        <section className="lp-shell lp-section">
+          <div className="lp-split">
+            <div>
+              <div className="lp-eyebrow">Míralo en 30 segundos</div>
+              <h2 className="lp-h2" style={{ marginTop: 14 }}>Del chat al pedido</h2>
+              <p className="lp-lead" style={{ marginTop: 16, fontSize: 16 }}>
+                De la primera «¿precio?» del día a saber cuánto vendiste el domingo. Dura 30
+                segundos y se entiende sin sonido.
+              </p>
+            </div>
+            <div className="lp-split-media" style={{ display: 'flex', justifyContent: 'center' }}>
+              <LandingIntro
+                ruta="intro-en-linea"
+                vertical
+                alt="Del chat al pedido: Leogin para quien vende en línea"
+                etiqueta="Del chat al pedido · 30 s"
+              />
+            </div>
           </div>
         </section>
 

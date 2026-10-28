@@ -66,7 +66,16 @@ Recomendación: **no** meterlo en la intro de 54 s. Hacer un video aparte, corto
 
 Se reutiliza todo lo de la intro (`docs/diseno/intro-animada/`): GSAP, Leo, la paleta, `CUTS`, `grabar-video.mjs` y `publicar-en-web.mjs`. Archivo nuevo: `docs/diseno/intro-animada/en-linea.html`.
 
-### Guion propuesto · «Del chat al pedido» (30 s, 9:16; corte de 15 s)
+### Guion · «Del chat al pedido» (30 s, 9:16; corte de 15 s) — ✅ hecho 2026-10-27
+
+El dueño aprobó el guion («Sí, hazlo»). Está en `docs/diseno/intro-animada/en-linea.html` (mismo reproductor y API `__intro` que la intro) y se ve en `/vende-en-linea` («Míralo en 30 segundos», ruta `/intro-en-linea`).
+
+- **Cómo quedó:** el antes va cuadro por cuadro sobre kraft: el chat de «Dulce Antojo» se llena de «¿precio?», el contador sube a 99+, la dirección de Andrea queda enterrada, el dedo la busca y Andrea se va («Ya no, gracias. Le pedí a otro lado.»). Se congela, cae Leo y el mundo pasa al carbón: perfil con el link → el menú (estructura Vitrina) → el cliente pide solo (2 cajas + 1 pastel, mapa, efectivo con Q200) → «¡Pedido enviado!» → en el celular del dueño suena el aviso y el pedido llega con «Qué quiere · A dónde va · Cómo paga» → el domingo, Q3,480 y 41 pedidos (marcado **Ejemplo**) → firma con Leo, la promesa y `distleogin.com/vende-en-linea`.
+- **Grabarlo:** `node docs/diseno/intro-animada/grabar-video.mjs --archivo en-linea.html` (y `--corte 15`) deja WebM 9:16 + WAV de la marimba en la carpeta que se pida; el MP4 con sonido se arma en Clipchamp (no hay ffmpeg completo). Los videos van en `docs/diseno/intro-animada/videos/`, fuera de git.
+- **Publicarlo en la web:** `node docs/diseno/intro-animada/publicar-en-web.mjs --archivo en-linea.html`.
+- **Trampa:** `gsap.set(..., { clearProps })` sobre un `<svg>` lo saca del DOM para medirlo y lo regresa AL FINAL de su padre: los íconos quedaban después del texto. Al reconstruir solo se limpian elementos que no son SVG.
+
+Guion original:
 
 | Tiempo | Imagen | Letrero / voz |
 |---|---|---|
@@ -83,7 +92,7 @@ Corte de 15 s: 0–2 · 9–13 · 19–23 · 26–30. Sin logos ni colores de Wh
 
 ## 4. Pendiente
 
-- [ ] **Video «Del chat al pedido»** con el guion de §3 (esperando visto bueno del dueño al guion).
+- [x] **Video «Del chat al pedido»** con el guion de §3 (hecho 2026-10-27; ver §3).
 - [ ] Póster y bucle **verticales** para la tarjeta de la intro en el teléfono: hoy la imagen 16:9 deja chico el texto del gancho. Se graban con `grabar-video.mjs` en formato `v`.
 - [ ] Panel en modo «solo en línea»: además de lo que ya oculta `admin-nav.ts`, no enseñar como candado (venta de Premium) lo que es de salón.
 - [ ] Medir la portada en un teléfono real en producción (Lighthouse móvil) antes y después.

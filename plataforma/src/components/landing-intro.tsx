@@ -14,8 +14,23 @@ import { useEffect, useRef, useState } from 'react';
  * de lo que se fue, PLAN_MOMENTOS_PICO W3): movimiento desde el primer
  * segundo. Se pide cuando la página ya cargó (o a los 2 s), no con «reducir
  * movimiento» ni con ahorro de datos, y se pausa fuera de la pantalla. Si el
- * navegador no lo sabe reproducir, se queda la imagen. */
-export function LandingIntro() {
+ * navegador no lo sabe reproducir, se queda la imagen.
+ *
+ * La misma tarjeta sirve a «Del chat al pedido» en /vende-en-linea: otra ruta
+ * (`/intro-en-linea`, con su portada y su bucle) y solo vertical. */
+export function LandingIntro({
+  ruta = 'intro',
+  vertical = false,
+  alt = '¿Sabes cuánto dinero se te fue hoy? Intro de Leogin',
+  etiqueta = 'Mira cómo funciona · 54 s',
+}: {
+  /** Carpeta en public/ y ruta del HTML: 'intro' o 'intro-en-linea'. */
+  ruta?: string;
+  /** Solo 9:16: la tarjeta es vertical y la ventana nunca pide el 16:9. */
+  vertical?: boolean;
+  alt?: string;
+  etiqueta?: string;
+} = {}) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [src, setSrc] = useState<string | null>(null);
@@ -34,7 +49,7 @@ export function LandingIntro() {
     });
     io.observe(v);
     const empezar = () => {
-      v.src = '/intro/bucle.webm';
+      v.src = `/${ruta}/bucle.webm`;
       if (visible) v.play().catch(() => {});
     };
     // Al terminar de cargar la página, o a los dos segundos si algo pesado
@@ -52,7 +67,7 @@ export function LandingIntro() {
       if (t) clearTimeout(t);
       window.removeEventListener('load', alCargar);
     };
-  }, []);
+  }, [ruta]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -65,22 +80,22 @@ export function LandingIntro() {
 
   const open = () => {
     videoRef.current?.pause();
-    const vertical = window.matchMedia('(max-aspect-ratio: 4/5)').matches;
-    setSrc(`/intro?modo=web&auto=1&sonido=1&formato=${vertical ? 'v' : 'h'}`);
+    const enVertical = vertical || window.matchMedia('(max-aspect-ratio: 4/5)').matches;
+    setSrc(`/${ruta}?modo=web&auto=1&sonido=1&formato=${enVertical ? 'v' : 'h'}`);
     dialogRef.current?.showModal();
   };
   const close = () => dialogRef.current?.close();
 
   return (
     <>
-      <button type="button" className="lp-intro" onClick={open} aria-haspopup="dialog">
+      <button type="button" className={`lp-intro${vertical ? ' lp-intro-v' : ''}`} onClick={open} aria-haspopup="dialog">
         <Image
-          src="/intro/portada.jpg"
-          alt="¿Sabes cuánto dinero se te fue hoy? Intro de Leogin"
-          width={1920}
-          height={1080}
-          sizes="(max-width: 900px) 92vw, 620px"
-          priority
+          src={`/${ruta}/portada.jpg`}
+          alt={alt}
+          width={vertical ? 1080 : 1920}
+          height={vertical ? 1920 : 1080}
+          sizes={vertical ? '(max-width: 900px) 70vw, 320px' : '(max-width: 900px) 92vw, 620px'}
+          priority={!vertical}
           className="lp-intro-img"
         />
         <video
@@ -98,22 +113,22 @@ export function LandingIntro() {
         <span className="lp-intro-play" aria-hidden>
           <svg viewBox="0 0 24 24" width="30" height="30"><path d="M8 5.5v13l11-6.5z" fill="currentColor" /></svg>
         </span>
-        <span className="lp-intro-chip">Mira cómo funciona · 54 s</span>
+        <span className="lp-intro-chip">{etiqueta}</span>
       </button>
 
       {/* Un clic fuera del video (en el fondo oscuro) también cierra. */}
       <dialog
         ref={dialogRef}
-        className="lp-intro-dialog"
-        aria-label="Intro de Leogin"
+        className={`lp-intro-dialog${vertical ? ' lp-intro-dialog-v' : ''}`}
+        aria-label={alt}
         onClick={(e) => { if (e.target === e.currentTarget) close(); }}
       >
-        <button type="button" className="lp-intro-close" onClick={close} aria-label="Cerrar la intro">
+        <button type="button" className="lp-intro-close" onClick={close} aria-label="Cerrar el video">
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden>
             <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
           </svg>
         </button>
-        {src && <iframe src={src} title="Intro de Leogin" allow="autoplay; fullscreen" className="lp-intro-frame" />}
+        {src && <iframe src={src} title={alt} allow="autoplay; fullscreen" className="lp-intro-frame" />}
       </dialog>
     </>
   );

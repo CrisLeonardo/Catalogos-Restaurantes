@@ -10,6 +10,7 @@
 //   node docs/diseno/intro-animada/grabar-video.mjs --fotos 5,20,36 → solo fotos PNG de esos segundos
 //   node docs/diseno/intro-animada/grabar-video.mjs --solo-sonido   → solo la banda sonora (WAV)
 //   node docs/diseno/intro-animada/grabar-video.mjs --corte 30      → versión de 30 s (Reels, TikTok); --corte 15 → estado de WhatsApp
+//   node docs/diseno/intro-animada/grabar-video.mjs --archivo en-linea.html → «Del chat al pedido» (9:16, 30 s; --corte 15)
 //   opciones: --fps 30 --salida <archivo.webm> --carpeta <dir>
 //
 // El ffmpeg de Playwright solo escribe video WebM (VP9), sin audio. Si hay un
@@ -30,16 +31,20 @@ const { chromium } = require('playwright');
 
 const args = process.argv.slice(2);
 const opt = (n, d) => { const i = args.indexOf(`--${n}`); return i >= 0 ? args[i + 1] : d; };
-const formato = opt('formato', 'h') === 'v' ? 'v' : 'h';
+// Qué video: la intro (16:9 por defecto) o «Del chat al pedido» (solo 9:16).
+const archivo = opt('archivo', 'intro.html');
+const esIntro = archivo === 'intro.html';
+const formato = opt('formato', esIntro ? 'h' : 'v') === 'v' ? 'v' : 'h';
 const fps = Number(opt('fps', 30));
 const fotos = opt('fotos', null);
 const soloSonido = args.includes('--solo-sonido');
 const corte = { 30: 'r30', 15: 's15' }[opt('corte', '')] || 'full';
 const sufijo = { full: '', r30: '-30s', s15: '-15s' }[corte];
 const carpeta = path.resolve(opt('carpeta', path.join(os.tmpdir(), 'leogin-intro')));
-const nombre = `intro-leogin-${formato === 'v' ? '9x16' : '16x9'}${sufijo}`;
+const base = esIntro ? 'intro-leogin' : `leogin-${path.basename(archivo, '.html')}`;
+const nombre = `${base}-${formato === 'v' ? '9x16' : '16x9'}${sufijo}`;
 const salida = path.resolve(opt('salida', path.join(carpeta, `${nombre}.webm`)));
-const sonido = path.join(carpeta, `intro-leogin-sonido${sufijo}.wav`);
+const sonido = path.join(carpeta, `${base}-sonido${sufijo}.wav`);
 fs.mkdirSync(carpeta, { recursive: true });
 
 function buscarFfmpeg() {
@@ -58,9 +63,9 @@ function ffmpegCompleto() {
   return r.status === 0 && /libx264/.test(r.stdout) && /\baac\b/.test(r.stdout) ? 'ffmpeg' : null;
 }
 
-// intro.html está escrito como contenido de Artifact (sin <!doctype>): se envuelve.
-const html = fs.readFileSync(path.join(aqui, 'intro.html'), 'utf8');
-const envuelto = path.join(carpeta, 'intro-envuelta.html');
+// Los videos están escritos como contenido de Artifact (sin <!doctype>): se envuelven.
+const html = fs.readFileSync(path.join(aqui, archivo), 'utf8');
+const envuelto = path.join(carpeta, `${base}-envuelta.html`);
 fs.writeFileSync(envuelto, `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>${html}</body></html>`);
 
 const navegador = await chromium.launch();
@@ -88,7 +93,7 @@ async function grabarSonido() {
 if (fotos) {
   for (const s of fotos.split(',').map(Number)) {
     await cuadro(s);
-    const f = path.join(carpeta, `foto-${formato}-${String(s).replace('.', '_')}.png`);
+    const f = path.join(carpeta, `foto-${base}-${formato}-${String(s).replace('.', '_')}.png`);
     await pagina.screenshot({ path: f });
     console.log(f);
   }

@@ -3550,10 +3550,16 @@ html:has(.lp-intro-dialog[open]) { overflow: hidden; }
   color: #fff; background: rgba(12, 12, 14, 0.72); border: 1px solid rgba(255, 255, 255, 0.18);
 }
 .lp-intro-close:focus-visible { outline: 2px solid #F5A030; outline-offset: 2px; }
+/* «Del chat al pedido» (/vende-en-linea): tarjeta y ventana verticales. En la
+   computadora la ventana mide lo alto de la pantalla y el ancho de un 9:16
+   más la barra de controles (~64 px). */
+.lp-intro-v { aspect-ratio: 9 / 16; max-width: 320px; border-radius: 26px; }
+.lp-intro-dialog-v { width: min(94vw, calc((100dvh - 104px) * 0.5625)); }
+.lp-intro-dialog-v .lp-intro-frame { height: calc(100dvh - 40px); }
 /* En el teléfono la intro va en vertical y ocupa toda la pantalla */
 @media (max-aspect-ratio: 4/5) {
   .lp-intro-dialog { width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; }
-  .lp-intro-frame { height: 100dvh; max-height: none; }
+  .lp-intro-frame, .lp-intro-dialog-v .lp-intro-frame { height: 100dvh; max-height: none; }
   .lp-intro-close { top: max(10px, env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); }
 }
 

@@ -11,6 +11,11 @@
 //   node docs/diseno/intro-animada/publicar-en-web.mjs
 //
 // Se vuelve a correr cada vez que cambie intro.html.
+//
+// «Del chat al pedido» (en-linea.html, solo 9:16) va igual a su propia ruta:
+//   node docs/diseno/intro-animada/publicar-en-web.mjs --archivo en-linea.html
+//   → src/app/intro-en-linea/intro-html.ts y public/intro-en-linea/{sonido.webm,portada.jpg,bucle.webm}
+//   (GSAP se comparte: /intro/gsap.min.js)
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -25,10 +30,19 @@ const { chromium } = require('playwright');
 const QRCode = require('qrcode');
 
 const URL_QR = 'https://distleogin.com';
+const args = process.argv.slice(2);
+const archivo = (() => { const i = args.indexOf('--archivo'); return i >= 0 ? args[i + 1] : 'intro.html'; })();
+// Qué se publica y dónde. `portadaT` es el segundo del póster; el bucle va
+// sin sonido en la tarjeta (`escala` = deviceScaleFactor del navegador).
+const CONF = {
+  'intro.html': { ruta: 'intro', formato: 'h', ancho: 1920, alto: 1080, qr: true, portadaT: 1.6, bucle: { desde: 0, hasta: 7.5, fps: 15, escala: 0.4 } },
+  'en-linea.html': { ruta: 'intro-en-linea', formato: 'v', ancho: 1080, alto: 1920, qr: false, portadaT: 1.2, bucle: { desde: 0, hasta: 6, fps: 15, escala: 0.3 } },
+}[archivo];
+if (!CONF) throw new Error(`No sé publicar ${archivo}`);
 // En Windows, con core.autocrlf, Git deja el archivo con CRLF: se normaliza
 // para que los reemplazos de abajo (que buscan saltos de línea simples)
 // encuentren su texto.
-const original = fs.readFileSync(path.join(aqui, 'intro.html'), 'utf8').replace(/\r\n/g, '\n');
+const original = fs.readFileSync(path.join(aqui, archivo), 'utf8').replace(/\r\n/g, '\n');
 
 // ── 1 · El QR, calculado una vez (en la web no se carga la librería) ──
 function qrSvg() {
@@ -48,9 +62,11 @@ const cambiar = (a, b) => {
 };
 cambiar('<meta name="claude:viewport-fit-sides" content="cover">\n', '');
 cambiar('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>',
-  `<script nonce="__NONCE__">window.__INTRO_SONIDO__ = '/intro/sonido.webm';</script>\n<script nonce="__NONCE__" src="/intro/gsap.min.js"></script>`);
-cambiar('<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>\n', '');
-cambiar('  const qrSvg = qrPath();', `  const qrSvg = ${JSON.stringify(qrSvg())};`);
+  `<script nonce="__NONCE__">window.__INTRO_SONIDO__ = '/${CONF.ruta}/sonido.webm';</script>\n<script nonce="__NONCE__" src="/intro/gsap.min.js"></script>`);
+if (CONF.qr) {
+  cambiar('<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>\n', '');
+  cambiar('  const qrSvg = qrPath();', `  const qrSvg = ${JSON.stringify(qrSvg())};`);
+}
 html = html.replaceAll('<script>', '<script nonce="__NONCE__">');
 if (/cdnjs|unpkg|jsdelivr/.test(html)) throw new Error('Quedó un script de un CDN externo.');
 html = `<!doctype html>
@@ -64,33 +80,36 @@ ${html}
 `;
 const ts = `/* eslint-disable */
 // Generado por docs/diseno/intro-animada/publicar-en-web.mjs a partir de
-// docs/diseno/intro-animada/intro.html. No se edita a mano: se cambia la
-// intro y se vuelve a correr el script.
+// docs/diseno/intro-animada/${archivo}. No se edita a mano: se cambia el
+// video y se vuelve a correr el script.
 export const INTRO_HTML = ${JSON.stringify(html)};
 `;
-fs.mkdirSync(path.join(plataforma, 'src/app/intro'), { recursive: true });
-fs.writeFileSync(path.join(plataforma, 'src/app/intro/intro-html.ts'), ts);
+fs.mkdirSync(path.join(plataforma, `src/app/${CONF.ruta}`), { recursive: true });
+fs.writeFileSync(path.join(plataforma, `src/app/${CONF.ruta}/intro-html.ts`), ts);
 console.log(`intro-html.ts · ${(ts.length / 1024).toFixed(0)} KB`);
 
-// ── 3 · GSAP desde el propio sitio ──
-const publico = path.join(plataforma, 'public/intro');
+// ── 3 · GSAP desde el propio sitio (uno solo para los dos videos) ──
+const publico = path.join(plataforma, `public/${CONF.ruta}`);
 fs.mkdirSync(publico, { recursive: true });
-fs.copyFileSync(require.resolve('gsap/dist/gsap.min.js'), path.join(publico, 'gsap.min.js'));
-console.log('gsap.min.js copiado');
+if (CONF.ruta === 'intro') {
+  fs.copyFileSync(require.resolve('gsap/dist/gsap.min.js'), path.join(publico, 'gsap.min.js'));
+  console.log('gsap.min.js copiado');
+}
 
 // ── 4 · Portada y sonido, con la intro de prueba en un navegador sin ventana ──
 const tmp = path.join(os.tmpdir(), 'leogin-intro-web');
 fs.mkdirSync(tmp, { recursive: true });
-const envuelto = path.join(tmp, 'intro.html');
+const envuelto = path.join(tmp, archivo);
 fs.writeFileSync(envuelto, `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>${original}</body></html>`);
 const navegador = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-const pagina = await navegador.newPage({ viewport: { width: 1920, height: 1080 } });
+const pagina = await navegador.newPage({ viewport: { width: CONF.ancho, height: CONF.alto } });
 await pagina.goto(pathToFileURL(envuelto).href, { waitUntil: 'networkidle' });
 await pagina.waitForFunction(() => window.__intro && window.gsap);
 await pagina.evaluate(() => window.__intro.ready);
-await pagina.evaluate(() => window.__intro.renderMode('h', 'full'));
-// El gancho, con «se te fue» ya subrayado: la pregunta invita a darle «play»
-await pagina.evaluate(() => window.__intro.seek(1.6));
+await pagina.evaluate((f) => window.__intro.renderMode(f, 'full'), CONF.formato);
+// El gancho ya dicho («se te fue» subrayado; «¿precio?» en el de en línea):
+// la pregunta invita a darle «play»
+await pagina.evaluate((t) => window.__intro.seek(t), CONF.portadaT);
 await pagina.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
 await pagina.screenshot({ path: path.join(publico, 'portada.jpg'), type: 'jpeg', quality: 80 });
 console.log('portada.jpg lista');
@@ -113,12 +132,12 @@ function buscarFfmpeg() {
   }
   throw new Error('No encontré el ffmpeg de Playwright. Corre `npx playwright install ffmpeg` dentro de plataforma/.');
 }
-const BUCLE = { desde: 0, hasta: 7.5, fps: 15 };
-const chica = await navegador.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 0.4 });
+const BUCLE = CONF.bucle;
+const chica = await navegador.newPage({ viewport: { width: CONF.ancho, height: CONF.alto }, deviceScaleFactor: BUCLE.escala });
 await chica.goto(pathToFileURL(envuelto).href, { waitUntil: 'networkidle' });
 await chica.waitForFunction(() => window.__intro && window.gsap);
 await chica.evaluate(() => window.__intro.ready);
-await chica.evaluate(() => window.__intro.renderMode('h', 'full'));
+await chica.evaluate((f) => window.__intro.renderMode(f, 'full'), CONF.formato);
 const salidaBucle = path.join(publico, 'bucle.webm');
 const ff = spawn(buscarFfmpeg(), [
   '-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(BUCLE.fps), '-c:v', 'mjpeg', '-i', 'pipe:0',
