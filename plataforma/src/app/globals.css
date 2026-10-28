@@ -3508,6 +3508,10 @@ html[data-platform] .asphalt::after { display: none; }
   background: linear-gradient(180deg, transparent 55%, rgba(18, 18, 20, 0.55));
 }
 .lp-intro-img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+/* Tarjeta cuadrada en el teléfono (landing-intro.tsx, `cuadrada`): la versión
+   vertical de la intro recortada arriba, con el gancho casi al doble. */
+.lp-intro picture { display: contents; }
+@media (max-width: 560px) { .lp-intro-cuadrada { aspect-ratio: 1; } }
 /* El bucle sin sonido (landing-intro.tsx): aparece cuando de verdad ya corre. */
 .lp-intro-video {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none;

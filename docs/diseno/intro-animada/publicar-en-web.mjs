@@ -7,6 +7,8 @@
 //   · public/intro/sonido.webm    → la banda sonora ya grabada (Opus, ~0.6 MB)
 //   · public/intro/portada.jpg    → el cuadro que se ve antes de tocar «play»
 //   · public/intro/bucle.webm     → los primeros 7.5 s sin sonido, en bucle en la tarjeta
+//   · public/intro/portada-cuadrada.jpg y bucle-cuadrado.webm → lo mismo para la
+//     tarjeta cuadrada del teléfono (la versión vertical, recortada arriba)
 //
 //   node docs/diseno/intro-animada/publicar-en-web.mjs
 //
@@ -35,7 +37,7 @@ const archivo = (() => { const i = args.indexOf('--archivo'); return i >= 0 ? ar
 // Qué se publica y dónde. `portadaT` es el segundo del póster; el bucle va
 // sin sonido en la tarjeta (`escala` = deviceScaleFactor del navegador).
 const CONF = {
-  'intro.html': { ruta: 'intro', formato: 'h', ancho: 1920, alto: 1080, qr: true, portadaT: 1.6, bucle: { desde: 0, hasta: 7.5, fps: 15, escala: 0.4 } },
+  'intro.html': { ruta: 'intro', formato: 'h', ancho: 1920, alto: 1080, qr: true, portadaT: 1.6, cuadrada: true, bucle: { desde: 0, hasta: 7.5, fps: 15, escala: 0.4 } },
   'en-linea.html': { ruta: 'intro-en-linea', formato: 'v', ancho: 1080, alto: 1920, qr: false, portadaT: 1.2, bucle: { desde: 0, hasta: 6, fps: 15, escala: 0.3 } },
 }[archivo];
 if (!CONF) throw new Error(`No sé publicar ${archivo}`);
@@ -133,26 +135,48 @@ function buscarFfmpeg() {
   throw new Error('No encontré el ffmpeg de Playwright. Corre `npx playwright install ffmpeg` dentro de plataforma/.');
 }
 const BUCLE = CONF.bucle;
-const chica = await navegador.newPage({ viewport: { width: CONF.ancho, height: CONF.alto }, deviceScaleFactor: BUCLE.escala });
-await chica.goto(pathToFileURL(envuelto).href, { waitUntil: 'networkidle' });
-await chica.waitForFunction(() => window.__intro && window.gsap);
-await chica.evaluate(() => window.__intro.ready);
-await chica.evaluate((f) => window.__intro.renderMode(f, 'full'), CONF.formato);
-const salidaBucle = path.join(publico, 'bucle.webm');
-const ff = spawn(buscarFfmpeg(), [
-  '-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(BUCLE.fps), '-c:v', 'mjpeg', '-i', 'pipe:0',
-  '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '42', '-row-mt', '1', '-deadline', 'good', '-cpu-used', '3', '-an',
-  salidaBucle,
-], { stdio: ['pipe', 'inherit', 'inherit'] });
-const terminado = new Promise((r) => ff.on('close', r));
-const cuadros = Math.round((BUCLE.hasta - BUCLE.desde) * BUCLE.fps);
-for (let i = 0; i < cuadros; i++) {
-  await chica.evaluate((t) => window.__intro.seek(t), BUCLE.desde + i / BUCLE.fps);
-  const jpg = await chica.screenshot({ type: 'jpeg', quality: 90 });
-  if (!ff.stdin.write(jpg)) await new Promise((r) => ff.stdin.once('drain', r));
+// Una página del video ya en modo grabación, en el formato y la escala que se pidan.
+async function abrir(formato, ancho, alto, escala = 1) {
+  const p = await navegador.newPage({ viewport: { width: ancho, height: alto }, deviceScaleFactor: escala });
+  await p.goto(pathToFileURL(envuelto).href, { waitUntil: 'networkidle' });
+  await p.waitForFunction(() => window.__intro && window.gsap);
+  await p.evaluate(() => window.__intro.ready);
+  await p.evaluate((f) => window.__intro.renderMode(f, 'full'), formato);
+  return p;
 }
-ff.stdin.end();
-const codigo = await terminado;
-if (codigo !== 0) throw new Error(`ffmpeg terminó con ${codigo}`);
-console.log(`bucle.webm · ${(fs.statSync(salidaBucle).size / 1024).toFixed(0)} KB`);
+// El bucle sin sonido: cuadro por cuadro a ffmpeg (VP9), recortado si se pide.
+async function grabarBucle(p, nombre, clip) {
+  const salida = path.join(publico, nombre);
+  const ff = spawn(buscarFfmpeg(), [
+    '-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(BUCLE.fps), '-c:v', 'mjpeg', '-i', 'pipe:0',
+    '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '42', '-row-mt', '1', '-deadline', 'good', '-cpu-used', '3', '-an',
+    salida,
+  ], { stdio: ['pipe', 'inherit', 'inherit'] });
+  const terminado = new Promise((r) => ff.on('close', r));
+  const cuadros = Math.round((BUCLE.hasta - BUCLE.desde) * BUCLE.fps);
+  for (let i = 0; i < cuadros; i++) {
+    await p.evaluate((t) => window.__intro.seek(t), BUCLE.desde + i / BUCLE.fps);
+    const jpg = await p.screenshot({ type: 'jpeg', quality: 90, ...(clip ? { clip } : {}) });
+    if (!ff.stdin.write(jpg)) await new Promise((r) => ff.stdin.once('drain', r));
+  }
+  ff.stdin.end();
+  const codigo = await terminado;
+  if (codigo !== 0) throw new Error(`ffmpeg terminó con ${codigo}`);
+  console.log(`${nombre} · ${(fs.statSync(salida).size / 1024).toFixed(0)} KB`);
+}
+await grabarBucle(await abrir(CONF.formato, CONF.ancho, CONF.alto, BUCLE.escala), 'bucle.webm');
+
+// ── 6 · En el teléfono, la tarjeta es cuadrada (PLAN_PORTADA_Y_VENDE_EN_LINEA §2) ──
+// La versión vertical recortada arriba: el gancho sale casi al doble de
+// tamaño que en el 16:9 de 335 px, y la tarjeta cabe con los botones en la
+// primera pantalla (un 9:16 completo los empujaba fuera).
+if (CONF.cuadrada) {
+  const clip = { x: 0, y: 0, width: 1080, height: 1080 };
+  const grande = await abrir('v', 1080, 1920);
+  await grande.evaluate((t) => window.__intro.seek(t), CONF.portadaT);
+  await grande.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  await grande.screenshot({ path: path.join(publico, 'portada-cuadrada.jpg'), type: 'jpeg', quality: 80, clip });
+  console.log('portada-cuadrada.jpg lista');
+  await grabarBucle(await abrir('v', 1080, 1920, BUCLE.escala), 'bucle-cuadrado.webm', clip);
+}
 await navegador.close();

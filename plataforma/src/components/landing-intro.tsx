@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import Image, { getImageProps } from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 
 /* La intro animada en la portada (la sirve la ruta /intro).
@@ -17,10 +17,17 @@ import { useEffect, useRef, useState } from 'react';
  * navegador no lo sabe reproducir, se queda la imagen.
  *
  * La misma tarjeta sirve a «Del chat al pedido» en /vende-en-linea: otra ruta
- * (`/intro-en-linea`, con su portada y su bucle) y solo vertical. */
+ * (`/intro-en-linea`, con su portada y su bucle) y solo vertical.
+ *
+ * Con `cuadrada`, en el teléfono la tarjeta es cuadrada y enseña la versión
+ * vertical recortada arriba: en el 16:9 de 335 px el gancho medía 13 px de
+ * alto; así, 22. La decide el CSS y el <picture>: no hay salto al hidratar. */
+const CUADRADA = '(max-width: 560px)';
+
 export function LandingIntro({
   ruta = 'intro',
   vertical = false,
+  cuadrada = false,
   alt = '¿Sabes cuánto dinero se te fue hoy? Intro de Leogin',
   etiqueta = 'Mira cómo funciona · 54 s',
 }: {
@@ -28,6 +35,8 @@ export function LandingIntro({
   ruta?: string;
   /** Solo 9:16: la tarjeta es vertical y la ventana nunca pide el 16:9. */
   vertical?: boolean;
+  /** En el teléfono, tarjeta cuadrada (portada-cuadrada.jpg y bucle-cuadrado.webm). */
+  cuadrada?: boolean;
   alt?: string;
   etiqueta?: string;
 } = {}) {
@@ -49,7 +58,7 @@ export function LandingIntro({
     });
     io.observe(v);
     const empezar = () => {
-      v.src = `/${ruta}/bucle.webm`;
+      v.src = cuadrada && matchMedia(CUADRADA).matches ? `/${ruta}/bucle-cuadrado.webm` : `/${ruta}/bucle.webm`;
       if (visible) v.play().catch(() => {});
     };
     // Al terminar de cargar la página, o a los dos segundos si algo pesado
@@ -67,7 +76,7 @@ export function LandingIntro({
       if (t) clearTimeout(t);
       window.removeEventListener('load', alCargar);
     };
-  }, [ruta]);
+  }, [ruta, cuadrada]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -88,16 +97,25 @@ export function LandingIntro({
 
   return (
     <>
-      <button type="button" className={`lp-intro${vertical ? ' lp-intro-v' : ''}`} onClick={open} aria-haspopup="dialog">
-        <Image
-          src={`/${ruta}/portada.jpg`}
-          alt={alt}
-          width={vertical ? 1080 : 1920}
-          height={vertical ? 1920 : 1080}
-          sizes={vertical ? '(max-width: 900px) 70vw, 320px' : '(max-width: 900px) 92vw, 620px'}
-          priority={!vertical}
-          className="lp-intro-img"
-        />
+      <button
+        type="button"
+        className={`lp-intro${vertical ? ' lp-intro-v' : ''}${cuadrada ? ' lp-intro-cuadrada' : ''}`}
+        onClick={open}
+        aria-haspopup="dialog"
+      >
+        {cuadrada ? (
+          <PortadaCuadrada ruta={ruta} alt={alt} />
+        ) : (
+          <Image
+            src={`/${ruta}/portada.jpg`}
+            alt={alt}
+            width={vertical ? 1080 : 1920}
+            height={vertical ? 1920 : 1080}
+            sizes={vertical ? '(max-width: 900px) 70vw, 320px' : '(max-width: 900px) 92vw, 620px'}
+            priority={!vertical}
+            className="lp-intro-img"
+          />
+        )}
         <video
           ref={videoRef}
           className="lp-intro-video"
@@ -131,5 +149,22 @@ export function LandingIntro({
         {src && <iframe src={src} title={alt} allow="autoplay; fullscreen" className="lp-intro-frame" />}
       </dialog>
     </>
+  );
+}
+
+/* La portada con dirección de arte: cuadrada en el teléfono, 16:9 en lo demás
+   (getImageProps + <picture>, como lo recomienda la guía de next/image). */
+function PortadaCuadrada({ ruta, alt }: { ruta: string; alt: string }) {
+  const {
+    props: { srcSet: telefono },
+  } = getImageProps({ alt, src: `/${ruta}/portada-cuadrada.jpg`, width: 1080, height: 1080, sizes: '92vw' });
+  const {
+    props: { srcSet: ancha, ...resto },
+  } = getImageProps({ alt, src: `/${ruta}/portada.jpg`, width: 1920, height: 1080, sizes: '(max-width: 900px) 92vw, 620px', priority: true });
+  return (
+    <picture>
+      <source media={CUADRADA} srcSet={telefono} sizes="92vw" />
+      <img {...resto} srcSet={ancha} alt={alt} className="lp-intro-img" />
+    </picture>
   );
 }

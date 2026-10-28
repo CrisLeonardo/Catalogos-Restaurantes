@@ -206,7 +206,7 @@ export default async function LeoginLanding() {
 
             <div className="lp-hero-media" style={{ display: 'flex', justifyContent: 'center' }}>
               <div className="lp-hero-tarjeta" style={{ width: '100%' }}>
-                <LandingIntro />
+                <LandingIntro cuadrada />
               </div>
             </div>
 
