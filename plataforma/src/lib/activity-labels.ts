@@ -176,6 +176,17 @@ function queHizo(r: ActivityLike): string {
       const verbo = m.evento === 'borrado' ? 'borró' : 'anotó';
       return `${verbo} un gasto de caja${monto != null ? ` de ${fmtMoney(monto)}` : ''}${e ? ` — «${e}»` : ''}`;
     }
+    /* Encargos y transferencias del comensal (migración 149). */
+    case 'encargo':
+      switch (m.evento) {
+        case 'creado': return `abrió los encargos «${e}»${num(m.cupo) != null ? ` (cupo ${num(m.cupo)})` : ''}`;
+        case 'pausado': return `pausó los encargos «${e}»`;
+        default: return `reanudó los encargos «${e}»`;
+      }
+    case 'transferencia':
+      return m.confirmada
+        ? `confirmó la transferencia del pedido ${e}`
+        : `marcó como no recibida la transferencia del pedido ${e}`;
     case 'pausa_pedidos':
       return m.pausado ? 'pausó los pedidos en línea' : 'reanudó los pedidos en línea';
     case 'horario':

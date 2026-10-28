@@ -12,7 +12,7 @@ import type { ThemeConfig, ThemeContent } from '@/lib/theme/defaults';
    ============================================================ */
 
 export type OrderType = 'PICKUP' | 'DELIVERY' | 'DINE_IN';
-export type PayMethod = 'CASH' | 'CARD';
+export type PayMethod = 'CASH' | 'CARD' | 'TRANSFER';
 
 /** «Mi zona no aparece» en el selector de zonas. */
 export const NO_ZONE = '__fuera__';
@@ -47,6 +47,8 @@ export interface CheckoutDone {
   coursePreference: string;
   /** Enlace de WhatsApp con el pedido ya escrito (null en el local y en kiosko). */
   waUrl: string | null;
+  /** Encargo (mig. 149): «vie 30 oct · 8 a 11 a. m.» en vez del tiempo estimado. */
+  encargoEntrega?: string | null;
 }
 
 export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -121,6 +123,8 @@ export function buildWhatsAppUrl({
   lines.push(`💰 ${content.cart.total}: *${formatPrice(snap.totalSnapshot, config)}*`);
   if (snap.paymentSnapshot === 'CARD') {
     lines.push(`💳 Pago: Tarjeta al recibir`);
+  } else if (snap.paymentSnapshot === 'TRANSFER') {
+    lines.push(`🏦 Pago: Transferencia (subo el comprobante en el seguimiento del pedido)`);
   } else {
     const cAmt = snap.cashAmountSnapshot;
     const changeInfo = cAmt > 0 ? ` — paga con ${formatPrice(cAmt, config)} (cambio: ${formatPrice(cAmt - snap.totalSnapshot, config)})` : '';

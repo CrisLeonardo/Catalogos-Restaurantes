@@ -287,6 +287,15 @@ export interface ThemeConfig {
   dineInTableCount: number;       // 1–50 mesas que aparecen en el selector
   dineInCourseOptions: string[];  // preferencias de servicio configurables
   acceptsCard: boolean;           // habilita la opción "pagar con tarjeta" en delivery y pickup
+  /** Pago por transferencia (mig. 149): el comensal transfiere y sube el
+   *  comprobante en el seguimiento del pedido. Solo se ofrece si además
+   *  hay banco y número de cuenta. Los datos son públicos a propósito: el
+   *  comensal los necesita para transferir. */
+  acceptsTransfer: boolean;
+  transferBank: string;
+  transferAccountType: string;
+  transferAccountNumber: string;
+  transferAccountHolder: string;
   tipEnabled: boolean;            // propina obligatoria activa (ver tipOrderTypes)
   tipPercent: number;             // porcentaje a cobrar (ej. 10 = 10 %)
   tipOrderTypes: OrderType[];     // a qué tipos de pedido aplica la propina obligatoria
@@ -492,6 +501,11 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   dineInTableCount: 20,
   dineInCourseOptions: ['Entrada primero', 'Plato principal primero', 'Postre al final'],
   acceptsCard: false,
+  acceptsTransfer: false,
+  transferBank: '',
+  transferAccountType: '',
+  transferAccountNumber: '',
+  transferAccountHolder: '',
   tipEnabled: false,
   tipPercent: 10,
   tipOrderTypes: ['dine_in'],

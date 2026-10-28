@@ -53,7 +53,9 @@ export default function CheckoutSuccess({
   // Kiosko: sin WhatsApp ni seguimiento en el aparato compartido — solo el
   // número de pedido grande y el regreso al menú para el siguiente cliente.
   const waUrl = kiosk ? null : done.waUrl;
-  const subtitle = content.confirmation.subtitle || `${config.brandName} ya recibió tu pedido y lo está preparando.`;
+  const subtitle = done.encargoEntrega
+    ? `${config.brandName} ya tiene tu encargo apartado.`
+    : content.confirmation.subtitle || `${config.brandName} ya recibió tu pedido y lo está preparando.`;
   const typeLabel = done.orderType === 'DINE_IN'
     ? `Mesa ${done.tableNumber ?? '?'}`
     : done.orderType === 'PICKUP'
@@ -80,13 +82,16 @@ export default function CheckoutSuccess({
           {done.orderType === 'DINE_IN' && done.coursePreference && (
             <Row k="Servicio" v={done.coursePreference} />
           )}
-          <Row k={content.confirmation.eta} v={content.confirmation.etaValue} />
+          {done.encargoEntrega
+            ? <Row k="Entrega" v={done.encargoEntrega} />
+            : <Row k={content.confirmation.eta} v={content.confirmation.etaValue} />}
           {done.orderType !== 'DINE_IN' && (
             <Row
               k={content.confirmation.payment}
               /* Para llevar se paga en el local: «Efectivo», no «contra entrega». */
               v={done.payment === 'CARD'
                 ? content.checkout.payCard
+                : done.payment === 'TRANSFER' ? 'Transferencia'
                 : done.orderType === 'PICKUP' ? content.checkout.payCashPickup : content.checkout.payCash}
             />
           )}
@@ -108,10 +113,12 @@ export default function CheckoutSuccess({
         {trackToken && !kiosk && (
           <div style={{ width: '100%' }}>
             <PrimaryButton href={tp(`/pedido/${trackToken}`)} full iconRight="arrowRight">
-              {content.confirmation.track}
+              {done.payment === 'TRANSFER' ? 'Pagar y subir mi comprobante' : content.confirmation.track}
             </PrimaryButton>
             <p className="t-mute" style={{ fontSize: 'var(--m-fs-xs)', margin: '7px 0 0', textAlign: 'center' }}>
-              Ahí te avisamos cuando esté listo.
+              {done.payment === 'TRANSFER'
+                ? 'Ahí está la cuenta para transferir y el botón para mandar la foto.'
+                : 'Ahí te avisamos cuando esté listo.'}
             </p>
           </div>
         )}
