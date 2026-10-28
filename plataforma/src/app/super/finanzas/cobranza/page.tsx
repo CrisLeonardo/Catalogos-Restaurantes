@@ -9,6 +9,7 @@ import { getBillingDashboard, isOnTrial, trialDaysLeft, planLabel } from '@/lib/
 import { setRestaurantStatusSuper } from '@/lib/actions/super-admin';
 import { fmtMoney } from '@/lib/money';
 import GenerateMonthlyButton from '@/components/super/generate-monthly-button';
+import { contarComprobantesPorRevisar } from '@/lib/db/comprobantes';
 
 export const metadata = { title: 'Cobranza — Super Admin' };
 export const dynamic = 'force-dynamic';
@@ -20,7 +21,7 @@ function periodLabel(period: string): string {
 }
 
 export default async function CobranzaPage() {
-  const { rows, stats, period } = await getBillingDashboard();
+  const [{ rows, stats, period }, porRevisar] = await Promise.all([getBillingDashboard(), contarComprobantesPorRevisar()]);
 
   // Ordena por urgencia: vencidos → pendientes del mes → con cobro activo → resto.
   const rank = (r: (typeof rows)[number]) => {
@@ -47,6 +48,16 @@ export default async function CobranzaPage() {
         </p>
         <GenerateMonthlyButton />
       </div>
+
+      {porRevisar > 0 && (
+        <Card className="flex flex-wrap items-center justify-between gap-3 p-3.5" style={{ border: '1px solid var(--c-warn-line)' }}>
+          <span style={{ fontSize: 13, color: 'var(--u-text-2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Icon name="receipt" size={16} style={{ color: 'var(--c-warn)' }} />
+            {porRevisar === 1 ? 'Hay 1 comprobante de pago por revisar.' : `Hay ${porRevisar} comprobantes de pago por revisar.`}
+          </span>
+          <Button size="sm" render={<Link href="/super/finanzas/comprobantes" />}>Revisar</Button>
+        </Card>
+      )}
 
       {/* Alerta suspensión manual */}
       {needsSuspension.length > 0 && (

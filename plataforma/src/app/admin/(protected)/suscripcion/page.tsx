@@ -25,6 +25,9 @@ import { panelLink, panelBase } from '@/lib/panel-links-server';
 import { panelHref } from '@/lib/panel-links';
 import { conMesesLegibles, fechaCorta } from '@/lib/dates';
 import { getPlatformContactSettings } from '@/lib/actions/super-admin';
+import { ultimoComprobante } from '@/lib/db/comprobantes';
+import { codigoDePago } from '@/lib/pago-plan';
+import PagaTuPlan from '@/components/admin/paga-tu-plan';
 
 export const metadata = { title: 'Mi suscripción – Panel admin' };
 export const dynamic = 'force-dynamic';
@@ -74,11 +77,12 @@ export default async function SuscripcionPage() {
   }
   if (!restaurantId) redirect('/admin/login');
 
-  const [billingResult, feeBreakdown, pricing, contacto] = await Promise.all([
+  const [billingResult, feeBreakdown, pricing, contacto, comprobante] = await Promise.all([
     getMyBilling(restaurantId),
     getFeeBreakdown(restaurantId),
     getEffectivePlanPricing(),
     getPlatformContactSettings(),
+    ultimoComprobante(restaurantId),
   ]);
   const { config, invoices, pendingTotal, currency } = billingResult;
 
@@ -168,6 +172,30 @@ export default async function SuscripcionPage() {
             </Button>
           )}
         </Card>
+      )}
+
+      {/* ── Paga tu mensualidad ──────────────────────────────────
+          Arriba de todo: si hay algo que pagar, es lo primero que el dueño
+          viene a hacer aquí, y antes ni sabía cómo (plan 2026-10-28, §3). */}
+      {pendingTotal > 0 && (
+        <PagaTuPlan
+          restaurantId={restaurantId}
+          amount={pendingTotal}
+          currency={currency}
+          vencido={hasOverdue}
+          codigo={codigoDePago(restaurantId)}
+          cuenta={{
+            banco: contacto.pay_bank,
+            tipoCuenta: contacto.pay_account_type,
+            numeroCuenta: contacto.pay_account_number,
+            titular: contacto.pay_account_holder,
+          }}
+          notas={contacto.payment_instructions}
+          waHref={comprobanteHref}
+          ultimo={comprobante
+            ? { status: comprobante.status, createdAt: comprobante.createdAt, reviewNote: comprobante.reviewNote }
+            : null}
+        />
       )}
 
       {/* ── Tu plan actual ───────────────────────────────────── */}
@@ -368,52 +396,18 @@ export default async function SuscripcionPage() {
       {/* ── Estado de cuenta ─────────────────────────────────── */}
       {config && (config.monthly_fee > 0 || invoices.length > 0) && (
         <>
-          <Card
-            className="p-5"
-            style={{ border: hasOverdue ? '1px solid var(--c-danger-line)' : pendingTotal > 0 ? '1px solid var(--c-warn-line)' : '1px solid var(--c-ok-line)' }}
-          >
-            <div className="adm-label">Estado de cuenta</div>
-            {pendingTotal > 0 ? (
-              <>
-                <div className="t-mono" style={{ fontWeight: 600, fontSize: 28, color: hasOverdue ? 'var(--c-danger)' : 'var(--c-warn)', lineHeight: 1, marginTop: 4 }}>
-                  {fmtMoney(pendingTotal, currency)}
-                </div>
-                <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 4 }}>
-                  {hasOverdue ? 'Tienes pagos vencidos' : 'Pendiente por pagar'} · {pending.length} {pending.length === 1 ? 'cobro' : 'cobros'}.
-                </div>
-                {/* Con pagos pendientes, la pantalla decía cuánto se debía pero
-                    no CÓMO pagarlo: ni cuenta ni a quién mandar el comprobante
-                    (auditoría 2026-10-02, AJU-13). Las instrucciones las escribe
-                    Leogin en Super › Configuración › Soporte. */}
-                {contacto.payment_instructions && (
-                  <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)' }}>
-                    <div className="adm-label" style={{ marginBottom: 4 }}>Cómo pagar</div>
-                    <div style={{ fontSize: 13, color: 'var(--u-text-2)', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
-                      {contacto.payment_instructions}
-                    </div>
-                  </div>
-                )}
-                {comprobanteHref && (
-                  <a
-                    href={comprobanteHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-accent press"
-                    style={{ marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 18px', borderRadius: 'var(--radius-lg)', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}
-                  >
-                    <Icon name="whatsapp" size={16} /> Enviar comprobante de pago
-                  </a>
-                )}
-              </>
-            ) : (
-              <>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, color: 'var(--c-ok)', lineHeight: 1.1, marginTop: 4 }}>
-                  Estás al día ✓
-                </div>
-                <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 4 }}>No tienes cobros pendientes. ¡Gracias!</div>
-              </>
-            )}
-          </Card>
+          {/* Con algo pendiente, el estado de cuenta ES la tarjeta «Paga tu
+              mensualidad» de arriba (monto, cuenta y comprobante); aquí solo
+              queda el «al día». */}
+          {pendingTotal <= 0 && (
+            <Card className="p-5" style={{ border: '1px solid var(--c-ok-line)' }}>
+              <div className="adm-label">Estado de cuenta</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, color: 'var(--c-ok)', lineHeight: 1.1, marginTop: 4 }}>
+                Estás al día ✓
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 4 }}>No tienes cobros pendientes. ¡Gracias!</div>
+            </Card>
+          )}
 
           {/* Detalles del plan */}
           <StatGroup>
@@ -424,8 +418,10 @@ export default async function SuscripcionPage() {
           </StatGroup>
 
           <Card className="p-3.5" style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
-            Los pagos se realizan al inicio de cada mes. Cuando registremos tu pago, el cobro
-            aparecerá como <strong style={{ color: 'var(--c-ok)' }}>Pagado</strong> aquí mismo.
+            Pagas por transferencia al inicio de cada mes con tu código{' '}
+            <strong className="t-mono" style={{ color: 'var(--u-text-2)' }}>{codigoDePago(restaurantId)}</strong>.
+            Subes el comprobante aquí y, al revisarlo, el cobro aparece como{' '}
+            <strong style={{ color: 'var(--c-ok)' }}>Pagado</strong>.
           </Card>
 
           {/* Historial */}

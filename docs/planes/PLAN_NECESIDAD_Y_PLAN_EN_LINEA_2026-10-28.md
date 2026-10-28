@@ -103,6 +103,16 @@ En «Mi suscripción», cuando hay algo pendiente, se ve el monto, un texto libr
 4. **Revisión en Super › Finanzas › Comprobantes:** foto, monto, código y boleta. «Aprobar» marca como pagadas las facturas que cubre (método Transferencia) y reactiva al restaurante si estaba suspendido. «Rechazar» pide un motivo.
 5. Los comprobantes van en un **bucket privado** (`payment-proofs`): traen datos bancarios del cliente. Solo se leen con enlaces firmados de corta vida desde el super admin.
 
+### Cómo quedó (2026-10-28, rama `feat/paga-tu-plan`)
+
+- Migración `148_comprobantes_de_pago.sql`: tabla `payment_proofs` y bucket privado `payment-proofs`. Se aplica **antes** de desplegar. Sin ella, Mi suscripción sigue enseñando cómo pagar y avisa que el comprobante va por WhatsApp.
+- El dueño sube el archivo directo al bucket con una URL firmada, así que no pasa por el límite de 1 MB de las server actions. Las fotos se comprimen en el navegador antes de subir.
+- Código de pago: `LG-` + los seis primeros caracteres del id del restaurante (`lib/pago-plan.ts`).
+- Al subir un comprobante se manda un correo a soporte (si Resend está configurado). Aprobar y rechazar quedan en la bitácora del super admin (`cobro.aprobar` y `cobro.rechazar`).
+- **Probado en local** del lado del dueño: los tres pasos, la subida real al bucket, «en revisión», «rechazado» con su motivo, el aviso en Hoy y «al día».
+- **Sin probar en pantalla:** la bandeja Super › Finanzas › Comprobantes y el formulario de la cuenta. El super admin local pide verificación en dos pasos. Hay que revisarlos en producción después de desplegar.
+- Trampa del entorno local: el Storage local fallaba en **toda** subida (`42P10`, le faltaba un índice con `COLLATE "C"` en `storage.objects`). Se arregló creando el índice a mano en la base local; en la nube no pasa.
+
 ### Lo que queda para después
 
 - **Cambiar de plan desde el panel** (hoy «Actualizar a…» abre WhatsApp): elegir el plan, ver el prorrateo y que la factura nazca sola. Va junto con la fase del plan En línea.
@@ -112,7 +122,7 @@ En «Mi suscripción», cuando hay algo pendiente, se ve el monto, un texto libr
 
 | Fase | Contenido | Rama | Casilla |
 |---|---|---|---|
-| 1 | **Paga tu plan** (§3). Migración 148 | `feat/paga-tu-plan` | [ ] |
+| 1 | **Paga tu plan** (§3). Migración 148 | `feat/paga-tu-plan` | [x] 2026-10-28 (falta probar en producción la bandeja del super, ver §3) |
 | 2 | N4 transferencia con comprobante del comensal + N6 encargos y preventa (para la temporada de diciembre) | `feat/encargos-y-transferencia` | [ ] |
 | 3 | Plan «En línea» Q99: `plans.ts` + migración que reconcilia `platform_settings` y las funciones de cobro (`leogin_compute_monthly_fee`, `leogin_fee_breakdown`) + `/planes`, registro, `/vende-en-linea` y cambio de plan desde el panel | `feat/plan-en-linea` | [ ] |
 | 4 | Dejar al día `PRECIOS_VIGENTES.md`, `Cotizador.xlsx` y el `.docx` de planes. Siguen hablando de módulos a la carta y del «Plan a tu medida», que el código quitó el 2026-08-21; además hay que sumar En línea. Decidir el Panel de grupo (Q299) | `docs/precios-al-dia` | [ ] |

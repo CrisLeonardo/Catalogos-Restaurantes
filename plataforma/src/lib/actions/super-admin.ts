@@ -806,6 +806,12 @@ export interface PlatformContactSettings {
   /** Cómo pagan los restaurantes su mensualidad (banco, cuenta, a nombre de
    *  quién). Se les enseña en Mi suscripción cuando tienen algo pendiente. */
   payment_instructions: string;
+  /** Cuenta a la que se transfiere (Mi suscripción la enseña con botón de
+   *  copiar). Si falta el banco o el número, se cae a payment_instructions. */
+  pay_bank: string;
+  pay_account_type: string;
+  pay_account_number: string;
+  pay_account_holder: string;
 }
 
 /** Lee los datos de contacto del soporte desde platform_settings. */
@@ -819,6 +825,10 @@ export async function getPlatformContactSettings(): Promise<PlatformContactSetti
     support_whatsapp: (map.support_whatsapp as string) ?? '',
     support_email: (map.support_email as string) ?? '',
     payment_instructions: (map.payment_instructions as string) ?? '',
+    pay_bank: (map.pay_bank as string) ?? '',
+    pay_account_type: (map.pay_account_type as string) ?? '',
+    pay_account_number: (map.pay_account_number as string) ?? '',
+    pay_account_holder: (map.pay_account_holder as string) ?? '',
   };
 }
 
@@ -836,6 +846,16 @@ export async function savePlatformSettings(
   const email = String(formData.get('support_email') ?? '').trim();
   const pago = String(formData.get('payment_instructions') ?? '').trim();
   if (pago.length > 600) return { error: 'Las instrucciones de pago son muy largas (máximo 600 caracteres).' };
+  const cuenta = {
+    pay_bank: String(formData.get('pay_bank') ?? '').trim(),
+    pay_account_type: String(formData.get('pay_account_type') ?? '').trim(),
+    pay_account_number: String(formData.get('pay_account_number') ?? '').trim(),
+    pay_account_holder: String(formData.get('pay_account_holder') ?? '').trim(),
+  };
+  if (Object.values(cuenta).some((v) => v.length > 80))
+    return { error: 'Cada dato de la cuenta admite hasta 80 caracteres.' };
+  if (cuenta.pay_account_number && !/^[\d\s\-]{4,40}$/.test(cuenta.pay_account_number))
+    return { error: 'El número de cuenta solo lleva dígitos, espacios y guiones.' };
 
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return { error: 'El correo electrónico no es válido.' };
@@ -848,6 +868,7 @@ export async function savePlatformSettings(
       { key: 'support_whatsapp', value: whatsapp },
       { key: 'support_email', value: email },
       { key: 'payment_instructions', value: pago },
+      ...Object.entries(cuenta).map(([key, value]) => ({ key, value })),
     ],
     { onConflict: 'key' },
   );

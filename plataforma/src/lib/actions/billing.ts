@@ -11,7 +11,7 @@
    ============================================================ */
 
 import { createClient } from '@/lib/supabase/server';
-import { resolveEffectiveRole } from '@/lib/db/membership';
+import { usuarioDelCobro } from '@/lib/auth/acceso-cobro';
 import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath, updateTag } from 'next/cache';
 import { fmtMoney } from '@/lib/money';
@@ -454,28 +454,7 @@ export async function getMyBilling(restaurantId: string): Promise<MyBilling> {
   const empty: MyBilling = { config: null, invoices: [], pendingTotal: 0, currency: 'GTQ' };
   if (!UUID_RE.test(restaurantId)) return empty;
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return empty;
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, restaurant_id')
-    .eq('id', user.id)
-    .single();
-
-  // Qué es esta persona EN ESTE restaurante. Mirar solo el perfil dejaba
-  // fuera al dueño del modelo de membresías, que lo tiene en null; y el rol
-  // se toma también del efectivo para no abrirle esto a quien es personal de
-  // OTRO restaurante y aquí solo es mesero.
-  const efectivo = await resolveEffectiveRole(
-    { role: profile?.role ?? null, permissions: null },
-    restaurantId,
-  );
-  const allowed =
-    profile?.role === 'SUPER_ADMIN' ||
-    (['RESTAURANT_OWNER', 'RESTAURANT_STAFF'].includes(efectivo.role) &&
-      (efectivo.isMember || profile?.restaurant_id === restaurantId));
-  if (!allowed) return empty;
+  if (!(await usuarioDelCobro(restaurantId))) return empty;
 
   const [config, invoices] = await Promise.all([
     getBillingConfig(restaurantId),

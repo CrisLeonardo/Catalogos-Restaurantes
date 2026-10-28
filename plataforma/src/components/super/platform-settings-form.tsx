@@ -66,9 +66,43 @@ export default function PlatformSettingsForm({ settings }: Props) {
           </p>
         </div>
 
+      </Card>
+
+      <Card style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 18, marginTop: 14 }}>
+        <div>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', margin: 0 }}>
+            Cuenta para recibir pagos
+          </h3>
+          <p style={{ ...hint, marginTop: 4 }}>
+            El restaurante la ve en «Mi suscripción» con un botón para copiar el número,
+            su código de pago y dónde subir el comprobante.
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+          {([
+            ['pay_bank', 'Banco', 'Banco Industrial', settings.pay_bank],
+            ['pay_account_type', 'Tipo de cuenta', 'Monetaria', settings.pay_account_type],
+            ['pay_account_number', 'Número de cuenta', '000-000000-0', settings.pay_account_number],
+            ['pay_account_holder', 'A nombre de', 'Nombre del titular', settings.pay_account_holder],
+          ] as const).map(([name, label, ph, value]) => (
+            <div key={name} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label htmlFor={name} style={{ ...FIELD_LABEL, marginBottom: 0 }}>{label}</label>
+              <Input
+                id={name}
+                name={name}
+                defaultValue={value}
+                placeholder={ph}
+                maxLength={80}
+                inputMode={name === 'pay_account_number' ? 'numeric' : undefined}
+              />
+            </div>
+          ))}
+        </div>
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <label htmlFor="payment_instructions" style={{ ...FIELD_LABEL, marginBottom: 0 }}>
-            Cómo te pagan los restaurantes
+            Notas para el pago (opcional)
           </label>
           <Textarea
             id="payment_instructions"
@@ -76,11 +110,10 @@ export default function PlatformSettingsForm({ settings }: Props) {
             rows={4}
             maxLength={600}
             defaultValue={settings.payment_instructions}
-            placeholder={'Depósito o transferencia a Banco Industrial\nCuenta monetaria 000-000000-0\nA nombre de …'}
+            placeholder={'También aceptamos depósito en agencia.\nSi pagas varios meses juntos, avísanos.'}
           />
           <p style={hint}>
-            Se le enseña al restaurante en «Mi suscripción» cuando tiene un cobro pendiente,
-            junto con un botón para mandarte el comprobante por WhatsApp.
+            Sale debajo de la cuenta. Si no llenas banco y número, este texto hace de instrucciones completas.
           </p>
         </div>
       </Card>
