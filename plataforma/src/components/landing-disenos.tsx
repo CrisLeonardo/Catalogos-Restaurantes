@@ -89,7 +89,9 @@ export function LandingDisenos({ disenos, combinaciones }: { disenos: Diseno[]; 
       (entries) => {
         for (const e of entries) if (e.isIntersecting) setActivo(Number((e.target as HTMLElement).dataset.dzI));
       },
-      { rootMargin: movil ? '-66% 0px -22% 0px' : '-46% 0px -46% 0px' },
+      // En el celular el teléfono ocupa la mitad de arriba: la franja es la
+      // de justo debajo.
+      { rootMargin: movil ? '-56% 0px -30% 0px' : '-46% 0px -46% 0px' },
     );
     tarjetas.forEach((t) => io.observe(t));
     return () => io.disconnect();
@@ -230,25 +232,32 @@ export function LandingDisenos({ disenos, combinaciones }: { disenos: Diseno[]; 
               )}
             </div>
           </div>
-          <figcaption className="lp-dz-estado">
-            <span className="lp-dz-estado-nombre">{diseno.nombre}</span>
-            <span aria-hidden>·</span>
-            <span>{estiloNombre}</span>
-          </figcaption>
         </figure>
 
-        <div className="lp-dz-acciones">
-          <button type="button" className="lp-btn lp-btn-sm lp-btn-soft" onClick={() => tocar(!tocando)} aria-pressed={tocando}>
-            <Icon name={tocando ? 'check' : 'smile'} size={15} />
-            {tocando ? 'Listo' : 'Tócalo tú'}
-          </button>
-          <Link
-            href="/registro"
-            {...conEvento('lp-btn lp-btn-sm lp-btn-primary', EVENTOS.clicCrear, 'vitrina de diseños')}
-            onClick={() => guardarEleccionMuestra(estilo, nombre)}
-          >
-            Quiero este diseño <Icon name="arrowRight" size={14} />
-          </Link>
+        {/* Fuera de la figura a propósito: en el celular va a la derecha del
+            teléfono (mitad y mitad), y en la computadora debajo. */}
+        <div className="lp-dz-lado">
+          <p className="lp-dz-estado" aria-live="polite">
+            <span className="lp-dz-estado-num" aria-hidden>{String(activo + 1).padStart(2, '0')}</span>
+            <span className="lp-dz-estado-nombre">{diseno.nombre}</span>
+            <span className="lp-dz-estado-sep" aria-hidden>·</span>
+            <span>{estiloNombre}</span>
+          </p>
+          <div className="lp-dz-acciones">
+            <button type="button" className="lp-btn lp-btn-sm lp-btn-soft" onClick={() => tocar(!tocando)} aria-pressed={tocando}>
+              <Icon name={tocando ? 'check' : 'smile'} size={15} />
+              {tocando ? 'Listo' : 'Tócalo tú'}
+            </button>
+            <Link
+              href="/registro"
+              {...conEvento('lp-btn lp-btn-sm lp-btn-primary', EVENTOS.clicCrear, 'vitrina de diseños')}
+              onClick={() => guardarEleccionMuestra(estilo, nombre)}
+            >
+              <span className="lp-dz-cta-largo">Quiero este diseño</span>
+              <span className="lp-dz-cta-corto">Lo quiero</span>
+              <Icon name="arrowRight" size={14} />
+            </Link>
+          </div>
         </div>
       </div>
     </div>

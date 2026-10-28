@@ -2785,11 +2785,13 @@ html[data-platform] .asphalt::after { display: none; }
 }
 
 /* ── Cabecera ────────────────────────────────────────────── */
+/* Sólida, sin vidrio: un `backdrop-filter` en una barra fija se vuelve a
+   pintar en CADA cuadro del deslizar, y en un Android de gama media era el
+   tirón que se sentía al bajar la portada (2026-10-27). Además, nada de
+   superficies translúcidas en el sitio (decisión de marca 2026-10-09). */
 .lp-header {
   position: sticky; top: 0; z-index: 60;
-  background: color-mix(in srgb, var(--brand-bg) 78%, transparent);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  backdrop-filter: blur(18px) saturate(160%);
+  background: color-mix(in srgb, var(--brand-bg) 55%, #ffffff);
   border-bottom: 1px solid var(--lp-line);
 }
 .lp-header-inner {
@@ -2853,6 +2855,13 @@ html[data-platform] .asphalt::after { display: none; }
   color: var(--u-text); font-weight: 650;
 }
 @media (max-width: 860px) { .lp-menu { display: block; } }
+/* Entre 861 y 1080 px no caben siete enlaces y los dos botones: «Escritorio»
+   se va al menú desplegable (que ya lo tiene) y el menú aparece. */
+.lp-navlink { white-space: nowrap; }
+@media (max-width: 1080px) {
+  .lp-navlink-extra { display: none; }
+  .lp-menu { display: block; }
+}
 /* En el teléfono la cabecera es logo + CTA + menú. "Acceder" sale de la
    barra pero NO desaparece —ese fue el error de una versión anterior, que
    dejó a cualquier celular sin botón de login a la vista—: vive como última
@@ -2875,12 +2884,19 @@ html[data-platform] .asphalt::after { display: none; }
 
 /* ── Rejillas ────────────────────────────────────────────── */
 .lp-hero-grid {
-  display: grid; gap: clamp(32px, 5vw, 64px);
+  display: grid; column-gap: clamp(32px, 5vw, 64px); row-gap: 0;
   /* El titular manda: con 50/50 el h1 de 68 px caía a cuatro líneas cortas
      en una columna de 500 px. */
   grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
-  align-items: center;
+  /* Tres piezas: en la computadora el video ocupa la columna derecha entera;
+     en el teléfono va entre el titular y los botones (ver abajo). */
+  grid-template-areas: "copia media" "acciones media";
 }
+.lp-hero-copy { grid-area: copia; align-self: end; }
+.lp-hero-media { grid-area: media; align-self: center; }
+.lp-hero-acciones { grid-area: acciones; align-self: start; padding-top: 30px; }
+.lp-hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+.lp-hero-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 26px; }
 .lp-split {
   display: grid; gap: clamp(28px, 4.5vw, 56px);
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2888,6 +2904,8 @@ html[data-platform] .asphalt::after { display: none; }
 }
 @media (max-width: 940px) {
   .lp-hero-grid, .lp-split { grid-template-columns: minmax(0, 1fr); }
+  .lp-hero-grid { grid-template-areas: "copia" "media" "acciones"; row-gap: 22px; }
+  .lp-hero-acciones { padding-top: 0; }
   /* En una sola columna el texto va SIEMPRE primero: en la sección del
      panel el mockup iba antes que el titular y en móvil abría con una
      captura sin contexto. */
@@ -2900,6 +2918,78 @@ html[data-platform] .asphalt::after { display: none; }
 }
 .lp-cols-3 { display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 860px) { .lp-cols-3 { grid-template-columns: minmax(0, 1fr); } }
+
+/* En el teléfono: los dos botones a lo ancho (es donde cae el pulgar) y las
+   píldoras en una sola fila que se desliza, con el borde que se desvanece
+   para que se note que sigue. */
+@media (max-width: 560px) {
+  .lp-hero-ctas { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .lp-hero-ctas > .lp-btn { width: 100%; }
+  .lp-hero-chips {
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-top: 18px;
+    margin-inline: calc(-1 * var(--lp-gutter)); padding: 2px var(--lp-gutter) 6px;
+    -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
+    mask-image: linear-gradient(90deg, #000 85%, transparent);
+  }
+  .lp-hero-chips::-webkit-scrollbar { display: none; }
+}
+
+/* Tira de cifras: 2x2 en el teléfono. En una columna eran cuatro filas y
+   media pantalla para cuatro números. */
+.lp-cifras {
+  padding: clamp(20px, 3vw, 30px); display: grid; gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+@media (max-width: 560px) {
+  .lp-cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 14px; }
+}
+
+/* ── Puerta de «vende en línea» (landing.tsx) ────────────── */
+.lp-puerta {
+  display: flex; align-items: center; gap: 14px; max-width: 780px; margin: 0 auto;
+  padding: 16px 18px; border-radius: 20px; text-decoration: none;
+  background: #1C1C1E; color: #F5F3EF; box-shadow: var(--lp-shadow-md);
+  transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+}
+.lp-puerta-icono {
+  flex-shrink: 0; width: 44px; height: 44px; border-radius: 14px;
+  display: grid; place-items: center; background: #23855A; color: #fff;
+}
+.lp-puerta-texto { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.lp-puerta-pregunta { font-size: 12.5px; font-weight: 700; color: #F5A030; line-height: 1.35; }
+.lp-puerta-titulo { font-size: 15.5px; font-weight: 700; line-height: 1.35; }
+.lp-puerta-flecha { margin-left: auto; flex-shrink: 0; opacity: 0.8; transition: transform 200ms var(--ease-out); }
+.lp-puerta:active { transform: scale(0.99); }
+.lp-puerta:focus-visible { outline: 3px solid var(--brand-accent); outline-offset: 3px; }
+@media (hover: hover) {
+  .lp-puerta:hover { transform: translateY(-2px); box-shadow: var(--lp-shadow-lg); }
+  .lp-puerta:hover .lp-puerta-flecha { transform: translateX(3px); }
+}
+
+/* ── Secciones que se pintan al acercarse ────────────────────
+   `content-visibility: auto` se salta el trabajo de las secciones lejanas al
+   cargar (en el teléfono la portada mide ~20 pantallas). Contiene la
+   pintura, así que el relleno vertical deja sitio a las sombras de las
+   tarjetas y el margen negativo lo devuelve. No va en las secciones con
+   escena fija (`position: sticky`) ni en las que tienen ancla del menú. */
+.lp-diferido {
+  content-visibility: auto; contain-intrinsic-size: auto 900px;
+  padding-block: 48px; margin-top: calc(var(--lp-rhythm) - 48px); margin-bottom: -48px;
+}
+
+/* ── Carrusel del teléfono («Para tus clientes» / «Para ti») ─
+   En la computadora es una columna; en el teléfono, una fila que se desliza
+   con el dedo: ocho tarjetas en columna eran 1 900 px de bajar. */
+.lp-carrusel { display: flex; flex-direction: column; gap: 12px; }
+@media (max-width: 940px) {
+  .lp-carrusel {
+    flex-direction: row; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain;
+    scrollbar-width: none; margin-inline: calc(-1 * var(--lp-gutter));
+    padding: 4px var(--lp-gutter) 12px; scroll-padding-inline: var(--lp-gutter);
+  }
+  .lp-carrusel::-webkit-scrollbar { display: none; }
+  .lp-carrusel > * { flex: 0 0 min(80%, 320px); scroll-snap-align: start; }
+}
 
 /* Bento de capacidades: 6 columnas en escritorio, 2 en móvil. */
 .lp-bento { display: grid; gap: 12px; grid-template-columns: repeat(6, minmax(0, 1fr)); }
@@ -2985,6 +3075,13 @@ html[data-platform] .asphalt::after { display: none; }
 /* Barra de avance: solo existe donde puede moverse. */
 .lp-avance { display: none; }
 
+/* Lo que entra de lado (data-fx="izq"/"der") empieza 44 px fuera de su
+   sitio. En el teléfono eso ensanchaba la página a 399 px en una pantalla
+   de 375: se podía arrastrar de lado y las ventanas (la intro) salían
+   corridas y cortadas. `clip` recorta sin crear contenedor de scroll, así
+   que las escenas fijas (`sticky`) siguen funcionando. */
+.lp-main { overflow-x: clip; }
+
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
     [data-fx] {
@@ -2997,6 +3094,9 @@ html[data-platform] .asphalt::after { display: none; }
     [data-fx="der"] { animation-name: fx-der; }
     [data-fx="crecer"] { animation-name: fx-crecer; }
     [data-fx="enderezar"] { animation-name: fx-enderezar; animation-range: entry 0% cover 42%; transform-origin: 50% 100%; }
+    /* Dentro del carrusel (un contenedor de scroll) view() mediría el
+       carrusel y no la página: ahí las tarjetas no entran, ya están. */
+    @media (max-width: 940px) { .lp-carrusel > [data-fx] { animation-name: none; } }
 
     .lp-avance {
       display: block; position: fixed; inset: 0 0 auto; z-index: 70; height: 3px;
@@ -3027,15 +3127,22 @@ html[data-platform] .asphalt::after { display: none; }
   transform-origin: 0 50%;
 }
 @media (prefers-reduced-motion: no-preference) {
-  .lp-h1 .lp-w { animation: lp-palabra 720ms var(--ease-entry) both; animation-delay: calc(140ms + var(--i, 0) * 95ms); }
-  .lp-subraya::after { animation: lp-subraya 900ms cubic-bezier(0.65, 0, 0.35, 1) 820ms both; }
-  .lp-hero-tarjeta { animation: lp-asienta 1100ms var(--ease-entry) 260ms both; }
+  /* El titular es lo primero que se lee: entra en medio segundo. Con 720 ms
+     y 95 ms por palabra, «control.» terminaba de aparecer a 1.3 s y el
+     primer vistazo era un hueco. */
+  .lp-h1 .lp-w { animation: lp-palabra 520ms var(--ease-entry) both; animation-delay: calc(40ms + var(--i, 0) * 60ms); }
+  .lp-subraya::after { animation: lp-subraya 800ms cubic-bezier(0.65, 0, 0.35, 1) 480ms both; }
+  .lp-hero-tarjeta { animation: lp-asienta 900ms var(--ease-entry) 140ms both; }
 }
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
-    /* Al bajar, el texto se va más rápido que la tarjeta: profundidad. */
-    .lp-hero-copy { animation: lp-hero-sube linear both; animation-timeline: view(); animation-range: exit 0% exit 100%; }
-    .lp-hero-media { animation: lp-hero-atras linear both; animation-timeline: view(); animation-range: exit 0% exit 100%; }
+    /* Al bajar, el texto se va más rápido que la tarjeta: profundidad. Solo
+       en la computadora: en el teléfono el video va entre el texto y los
+       botones, y los botones se le montaban encima al subir. */
+    @media (min-width: 941px) {
+      .lp-hero-copy, .lp-hero-acciones { animation: lp-hero-sube linear both; animation-timeline: view(); animation-range: exit 0% exit 100%; }
+      .lp-hero-media { animation: lp-hero-atras linear both; animation-timeline: view(); animation-range: exit 0% exit 100%; }
+    }
   }
 }
 
@@ -3201,11 +3308,14 @@ html[data-platform] .asphalt::after { display: none; }
     /* stretch: los pasos van en position:absolute y no le dan ancho a su
        caja; centrados, la columna se encogía a nada. */
     .lp-cc-escena { display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; gap: 14px; }
-    .lp-cc-pasos { min-height: 10em; }
+    /* Dos pantallas y media de recorrido y no tres: en el teléfono el
+       pulgar sentía la escena «atorada». */
+    .lp-cc { height: 250svh; }
+    .lp-cc-pasos { min-height: 7.5em; }
     .lp-cc-paso .lp-h2 { font-size: clamp(21px, 5.6vw, 28px); margin-top: 8px; }
     .lp-cc-paso p { display: none; }
-    .lp-cc-pista { margin-top: 0; }
-    .lp-cc-lienzo { width: min(100%, calc((100svh - 62px - 15em) * 0.6667)); }
+    .lp-cc-pista { margin-top: 8px; }
+    .lp-cc-lienzo { width: min(100%, calc((100svh - 62px - 7.5em - 72px) * 0.6667)); }
   }
 }
 
@@ -3272,34 +3382,53 @@ html[data-platform] .asphalt::after { display: none; }
 .lp-dz-pantalla[data-tocando] .lp-dz-frame { pointer-events: auto; }
 .lp-dz-pantalla[data-tocando] { box-shadow: 0 0 0 3px var(--brand-accent); }
 .lp-dz-cargando {
+  /* Fondo opaco: el menú se pinta debajo antes de avisar que está listo, y
+     sin fondo se veían dos «R» encimadas. */
   position: absolute; inset: 0; z-index: 1; display: grid; place-content: center; justify-items: center; gap: 10px;
+  background: #161512;
   color: #F7F3EF; font-family: var(--font-display); font-weight: 800; font-size: 15px;
 }
 .lp-dz-cargando-logo {
   width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center;
   background: #2a2724; font-size: 26px; animation: bob 1.6s ease-in-out infinite;
 }
+.lp-dz-lado { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .lp-dz-estado {
   display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 99px;
   font-size: 12.5px; font-weight: 650; color: var(--u-text-2);
   background: var(--lp-card); border: 1px solid var(--lp-line-2); box-shadow: var(--lp-shadow-sm);
 }
+.lp-dz-estado-num { font-family: var(--ui-font-mono); font-weight: 700; color: var(--brand-accent-ink); }
 .lp-dz-estado-nombre { font-weight: 800; color: var(--u-text); }
+.lp-dz-cta-corto { display: none; }
 .lp-dz-acciones { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .lp-dz-nota { font-size: 12.5px; line-height: 1.5; color: var(--u-text-4); padding: 0 6px; }
 
 /* En el celular el teléfono va arriba, fijo, en una franja opaca; las
    estructuras pasan por debajo y la que cruza la franja de lectura (justo
    bajo el teléfono) es la que se pinta. */
+/* Mitad y mitad (2026-10-27): el teléfono, chico, a la izquierda; el
+   nombre del estilo y los botones a la derecha. Antes el teléfono iba
+   centrado con todo debajo y la franja fija se comía dos tercios de la
+   pantalla: quedaba un renglón para leer las estructuras. */
 @media (max-width: 899px) {
-  .lp-dz { --dz-alto: min(48svh, 430px); display: flex; flex-direction: column; gap: 0; }
+  .lp-dz { --dz-alto: min(36svh, 320px); display: flex; flex-direction: column; gap: 0; }
   .lp-dz-escenario {
     order: -1; z-index: 2; top: 62px; width: calc(100% + 2 * var(--lp-gutter)); margin-inline: calc(-1 * var(--lp-gutter));
-    padding: 10px var(--lp-gutter) 12px; gap: 8px;
+    padding: 10px var(--lp-gutter) 12px;
+    display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 16px;
     background: var(--brand-bg); box-shadow: 0 14px 18px -16px rgba(23, 22, 26, 0.35);
   }
-  .lp-dz-lista { padding-top: 12px; padding-bottom: 30svh; }
-  .lp-dz-card { min-height: 34svh; padding: 20px 18px; }
+  .lp-dz-lado { align-items: stretch; gap: 10px; }
+  .lp-dz-estado { flex-wrap: wrap; border-radius: 14px; padding: 9px 12px; row-gap: 2px; }
+  .lp-dz-estado-nombre { flex-basis: 100%; order: -1; font-size: 15px; font-family: var(--font-display); letter-spacing: -0.02em; }
+  .lp-dz-estado-sep { display: none; }
+  .lp-dz-acciones { flex-direction: column; align-items: stretch; }
+  .lp-dz-acciones .lp-btn { width: 100%; padding-inline: 10px; }
+  .lp-dz-cta-largo { display: none; }
+  .lp-dz-cta-corto { display: inline; }
+  .lp-dz-lista { padding-top: 12px; padding-bottom: 34svh; }
+  .lp-dz-card { min-height: 28svh; padding: 20px 18px; }
   .lp-dz-titulo { font-size: 26px; }
   .lp-dz-hint { font-size: 13.5px; }
 }
@@ -3379,6 +3508,10 @@ html[data-platform] .asphalt::after { display: none; }
   background: linear-gradient(180deg, transparent 55%, rgba(18, 18, 20, 0.55));
 }
 .lp-intro-img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+/* Tarjeta cuadrada en el teléfono (landing-intro.tsx, `cuadrada`): la versión
+   vertical de la intro recortada arriba, con el gancho casi al doble. */
+.lp-intro picture { display: contents; }
+@media (max-width: 560px) { .lp-intro-cuadrada { aspect-ratio: 1; } }
 /* El bucle sin sonido (landing-intro.tsx): aparece cuando de verdad ya corre. */
 .lp-intro-video {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none;
@@ -3421,10 +3554,16 @@ html:has(.lp-intro-dialog[open]) { overflow: hidden; }
   color: #fff; background: rgba(12, 12, 14, 0.72); border: 1px solid rgba(255, 255, 255, 0.18);
 }
 .lp-intro-close:focus-visible { outline: 2px solid #F5A030; outline-offset: 2px; }
+/* «Del chat al pedido» (/vende-en-linea): tarjeta y ventana verticales. En la
+   computadora la ventana mide lo alto de la pantalla y el ancho de un 9:16
+   más la barra de controles (~64 px). */
+.lp-intro-v { aspect-ratio: 9 / 16; max-width: 320px; border-radius: 26px; }
+.lp-intro-dialog-v { width: min(94vw, calc((100dvh - 104px) * 0.5625)); }
+.lp-intro-dialog-v .lp-intro-frame { height: calc(100dvh - 40px); }
 /* En el teléfono la intro va en vertical y ocupa toda la pantalla */
 @media (max-aspect-ratio: 4/5) {
   .lp-intro-dialog { width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; }
-  .lp-intro-frame { height: 100dvh; max-height: none; }
+  .lp-intro-frame, .lp-intro-dialog-v .lp-intro-frame { height: 100dvh; max-height: none; }
   .lp-intro-close { top: max(10px, env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); }
 }
 
@@ -3482,6 +3621,175 @@ html:has(.lp-intro-dialog[open]) { overflow: hidden; }
   box-shadow: 0 8px 22px color-mix(in srgb, var(--ph-accent) 35%, transparent);
 }
 .lp-ph-caption { position: relative; font-size: 13px; color: var(--u-text-4); }
+
+/* ============================================================
+   VENDE EN LÍNEA (src/app/vende-en-linea/page.tsx)
+   ------------------------------------------------------------
+   La misma gramática de la portada (lp-*) con su propia escena:
+   el chat lleno de preguntas que se vuelve un pedido.
+   ============================================================ */
+.el-hero {
+  display: grid; column-gap: clamp(32px, 5vw, 64px); row-gap: 0;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  grid-template-areas: "copia media" "acciones media";
+}
+.el-hero-copy { grid-area: copia; align-self: end; container-type: inline-size; }
+.el-hero-media { grid-area: media; align-self: center; display: flex; justify-content: center; }
+.el-hero-acciones { grid-area: acciones; align-self: start; padding-top: 28px; }
+.el-hero-chip {
+  margin-bottom: 20px; white-space: normal; border-radius: 14px; font-weight: 600;
+  background: color-mix(in srgb, #2F9E6B 10%, #fff); border-color: color-mix(in srgb, #2F9E6B 26%, transparent); color: #1d6b47;
+}
+.el-h1 { font-size: clamp(32px, 9.6cqi, 58px); }
+@media (max-width: 940px) {
+  .el-hero { grid-template-columns: minmax(0, 1fr); grid-template-areas: "copia" "media" "acciones"; row-gap: 24px; }
+  .el-hero-acciones { padding-top: 0; }
+}
+/* En el teléfono el dibujo es alto (9:16): los botones van antes y el
+   chat asoma debajo, ya moviéndose. Con el teléfono primero, el botón
+   quedaba fuera del primer pantallazo. */
+@media (max-width: 560px) {
+  .el-hero { grid-template-areas: "copia" "acciones" "media"; }
+}
+
+/* ── La escena: del chat al pedido ───────────────────────── */
+.el-escena { margin: 0; position: relative; }
+.el-escena::before {
+  content: ""; position: absolute; inset: 8% -12%; pointer-events: none; z-index: -1;
+  background: radial-gradient(60% 55% at 50% 50%, color-mix(in srgb, #2F9E6B 16%, transparent), transparent 72%);
+}
+.el-telefono { width: min(250px, 66vw); }
+.el-pantalla {
+  position: relative; display: flex; flex-direction: column; aspect-ratio: 9 / 16;
+  background: #EFE7DD; color: #1A1613; font-family: var(--font-sans), system-ui, sans-serif;
+}
+@media (max-width: 560px) { .el-telefono { width: min(214px, 58vw); } }
+.el-chat-barra {
+  display: flex; align-items: center; gap: 9px; padding: 20px 12px 10px;
+  background: #23855A; color: #fff;
+}
+.el-chat-barra b { display: block; font-size: 12.5px; line-height: 1.2; }
+.el-chat-barra small { display: block; font-size: 10px; opacity: 0.85; }
+.el-chat-avatar {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  display: grid; place-items: center; background: #F5A030; color: #fff;
+  font-family: var(--font-display); font-weight: 800; font-size: 13px;
+}
+.el-chat { flex: 1; display: flex; flex-direction: column; gap: 7px; padding: 12px 10px; opacity: 0.3; }
+.el-burbuja {
+  align-self: flex-start; max-width: 84%; padding: 6px 10px 7px;
+  border-radius: 12px 12px 12px 3px; background: #fff; box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
+  font-size: 11.5px; line-height: 1.3;
+}
+.el-burbuja small { display: block; font-size: 9.5px; font-weight: 700; color: #1d6b47; }
+.el-pedido { position: absolute; left: 9px; right: 9px; top: 74px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.el-aviso {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 99px;
+  background: #1C1C1E; color: #fff; font-size: 11px; font-weight: 700;
+}
+.el-pedido-tarjeta {
+  align-self: stretch; display: flex; flex-direction: column; gap: 6px; padding: 12px;
+  border-radius: 14px; background: #fff; border: 1.5px solid #E8A48E;
+  box-shadow: 0 12px 28px rgba(23, 22, 26, 0.16); color: #17161a; font-size: 11.5px;
+}
+.el-pedido-tarjeta header { display: flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 700; color: rgba(23, 22, 26, 0.6); }
+.el-pedido-tarjeta header .lp-cc-chip { margin: 0; padding: 3px 7px; font-size: 9px; }
+.el-pedido-tarjeta strong { font-family: var(--font-display); font-size: 14.5px; font-weight: 800; letter-spacing: -0.02em; }
+.el-pedido-tarjeta ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.el-pedido-tarjeta p { display: flex; align-items: center; gap: 5px; font-size: 10.5px; color: rgba(23, 22, 26, 0.7); }
+.el-pedido-tarjeta footer { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+.el-pedido-tarjeta footer .t-mono { font-size: 15px; font-weight: 800; }
+.el-aceptar { padding: 6px 12px; border-radius: 9px; background: #C4532F; color: #fff; font-size: 11px; font-weight: 700; }
+
+/* Bucle de 12 s: cada pregunta entra a su turno, todas se barren y entra
+   el pedido, que se queda a la vista más de cuatro segundos para leerse.
+   Sin movimiento se queda el pedido sobre el chat apagado. */
+@keyframes el-burbuja {
+  0% { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.96); }
+  4%, 34% { opacity: 1; transform: none; }
+  38%, 100% { opacity: 0; transform: translate3d(-10px, -8px, 0) scale(0.9); }
+}
+@keyframes el-pedido {
+  0%, 56% { opacity: 0; transform: translate3d(0, 26px, 0) scale(0.94); }
+  61%, 95% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translate3d(0, -6px, 0); }
+}
+@keyframes el-aviso {
+  0%, 58% { opacity: 0; transform: translate3d(0, -10px, 0) scale(0.9); }
+  62%, 95% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .el-chat { opacity: 1; }
+  .el-burbuja { animation: el-burbuja 12s var(--ease-out) infinite both; animation-delay: calc(var(--b, 0) * 0.55s); }
+  .el-pedido-tarjeta { animation: el-pedido 12s cubic-bezier(0.3, 1.25, 0.5, 1) infinite both; }
+  .el-aviso { animation: el-aviso 12s ease-out infinite both; }
+}
+
+/* ── ¿Te suena? ──────────────────────────────────────────── */
+.el-dolor { padding: 24px 22px; }
+.el-burbuja-suelta {
+  display: inline-block; padding: 9px 13px; border-radius: 14px 14px 14px 4px;
+  background: #DCF8C6; color: #1A1613; font-size: 14px; font-weight: 600;
+  box-shadow: 0 2px 6px rgba(23, 22, 26, 0.07);
+}
+
+/* ── Solo lo que necesitas ───────────────────────────────── */
+.el-poda {
+  display: grid; gap: 16px; margin-top: 34px; align-items: start;
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+}
+.el-si { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.el-si-fila { padding: 18px; display: flex; gap: 14px; align-items: flex-start; border-radius: 18px; }
+.el-no { padding: 22px; border-radius: 20px; display: flex; flex-direction: column; gap: 14px; }
+.el-no ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.el-no li {
+  display: flex; align-items: center; gap: 9px; font-size: 14px; color: var(--u-text-3);
+  text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--u-text) 28%, transparent);
+}
+.el-no li svg { color: var(--u-text-4); flex-shrink: 0; }
+@media (max-width: 940px) { .el-poda { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 560px) { .el-si { grid-template-columns: minmax(0, 1fr); } }
+
+/* ── Una pieza de Vitrina ────────────────────────────────── */
+.el-vitrina {
+  width: min(100%, 320px); border-radius: 22px; overflow: hidden;
+  background: #2B1D1A; color: #F7EDE4; box-shadow: var(--lp-shadow-lg);
+}
+.el-vitrina-cinta {
+  padding: 9px 14px; background: #E8534A; color: #fff; white-space: nowrap; overflow: hidden;
+  font: 800 10.5px/1 var(--ui-font-mono), monospace; letter-spacing: 0.08em;
+}
+.el-vitrina-foto { display: grid; place-items: center; aspect-ratio: 1 / 0.92; background: radial-gradient(circle at 50% 42%, #5a3a32, #2B1D1A 72%); }
+.el-vitrina-foto svg { width: 72%; height: auto; }
+.el-vitrina-pie { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 14px 16px 10px; }
+.el-vitrina-pie b { display: block; font-family: var(--font-display); font-size: 17px; letter-spacing: -0.02em; }
+.el-vitrina-pie small { display: block; margin-top: 3px; font-size: 12px; font-weight: 700; color: #F5A030; }
+.el-vitrina-pie .t-mono { font-size: 20px; font-weight: 800; }
+.el-vitrina-barra { height: 6px; margin: 0 16px 16px; border-radius: 99px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.el-vitrina-barra span { display: block; width: 87%; height: 100%; background: linear-gradient(90deg, #E8534A, #F5A030); }
+
+/* ── Precio en pequeño ───────────────────────────────────── */
+.el-precio {
+  padding: clamp(24px, 4vw, 40px); display: flex; flex-wrap: wrap;
+  align-items: center; justify-content: space-between; gap: 24px;
+}
+.el-precio-cifra {
+  margin-top: 12px; font-size: clamp(34px, 6vw, 54px); font-weight: 800;
+  letter-spacing: -0.04em; line-height: 1; color: var(--brand-accent-ink);
+}
+.el-precio-cifra small { font-size: 0.42em; letter-spacing: -0.01em; color: var(--u-text-3); }
+.el-precio-acciones { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+@media (max-width: 560px) {
+  .el-precio-acciones, .el-precio-acciones .lp-btn { width: 100%; }
+}
+
+.el-cierre-banda {
+  overflow: hidden; border-radius: 28px; text-align: center;
+  padding: clamp(40px, 6vw, 64px) clamp(24px, 4vw, 48px);
+  background: linear-gradient(150deg, #1f1e23 0%, #17161a 55%, #1b2a22 100%);
+  box-shadow: var(--lp-shadow-lg);
+}
 
 /* Enlace de texto del sitio (subrayado al pasar). */
 .lp-link { color: var(--brand-accent-ink); font-weight: 600; text-decoration: none; }

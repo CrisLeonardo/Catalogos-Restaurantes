@@ -34,7 +34,7 @@
 html, body { height: 100%; }
 [hidden] { display: none !important; }
 body {
-  background: var(--page);
+  margin: 0; background: var(--page);
   color: var(--ink);
   font-family: var(--f-ui);
   padding-left: max(16px, env(safe-area-inset-left, 0px));
@@ -101,6 +101,9 @@ body.render .player { max-width: none; margin: 0; gap: 0; }
    Solo el escenario y la barra de controles, con el botón de sonido. */
 body.web { padding: 0; background: var(--noche); }
 body.web .player { max-width: none; margin: 0; gap: 0; }
+/* En el teléfono (vertical) sobraba un hueco negro bajo los controles:
+   el escenario y la barra van centrados en la pantalla. */
+body.web .player { min-height: 100%; justify-content: center; }
 body.web .top, body.web .chapters, body.web .note { display: none; }
 body.web .controls .btn { flex: none; padding: 9px 12px; }
 @media (max-width: 560px) { body.web #sndTxt { display: none; } }

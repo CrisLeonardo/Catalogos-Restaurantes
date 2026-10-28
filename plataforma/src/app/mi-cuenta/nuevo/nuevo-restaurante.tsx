@@ -7,6 +7,7 @@ import { Icon } from '@/components/icons';
 import TemplateGallery from '@/components/admin/template-gallery';
 import { findStructure, findTemplate } from '@/lib/theme/templates';
 import { borrarEleccionMuestra, leerEleccionMuestra } from '@/lib/muestra-mensajes';
+import { borrarPerfil, leerPerfil } from '@/lib/perfil-negocio';
 import { createAnotherRestaurant, type NewRestaurantState } from '@/lib/actions/mi-cuenta';
 import { RestauranteListo } from '@/components/signup/restaurante-listo';
 import { PLAN_POINTS, defaultPlanPricing, planPriceLabel, planPriceQ, type PlanPricing } from '@/lib/plans';
@@ -117,6 +118,7 @@ export default function NuevoRestaurante({
   useEffect(() => {
     if (state && 'url' in state) {
       borrarEleccionMuestra();
+      borrarPerfil();
       setListo(state.url);
     }
   }, [state]);
@@ -150,6 +152,18 @@ export default function NuevoRestaurante({
       setDesdeVitrina(true);
     }
     if (eleccion.nombre.trim().length >= 2) setName((actual) => actual || eleccion.nombre.trim());
+  }, []);
+
+  // Quien llegó por /vende-en-linea no tiene mesas: el plan llega armado
+  // como lo va a usar —Estándar con para llevar y a domicilio— en vez de
+  // Premium con un salón y un mesero que no tiene (lib/perfil-negocio.ts).
+  // Solo cambia lo que viene marcado; puede elegir otro igual.
+  const [enLinea, setEnLinea] = useState(false);
+  useEffect(() => {
+    if (leerPerfil() !== 'en-linea') return;
+    setEnLinea(true);
+    setSelectedPlan('ESTANDAR');
+    setEstandarTypes(['pickup', 'delivery']);
   }, []);
 
   const effectiveSlug = slugEdited ? slug : localSlugify(name);
@@ -212,6 +226,12 @@ export default function NuevoRestaurante({
             ? `Elige el plan con el que quieres empezar. Todos incluyen ${trialDays} días gratis.`
             : 'Elige el plan de este restaurante. Se cobra aparte y se suma a tu mensualidad desde hoy: la prueba gratis es solo para el primero.'}
         </p>
+        {enLinea && (
+          <p style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, lineHeight: 1.5, margin: 0, padding: '10px 12px', borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--brand-accent) 8%, transparent)', color: 'var(--u-text-2)' }}>
+            <Icon name="truck" size={16} style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 2 }} />
+            Lo dejamos listo para vender en línea: Estándar con para llevar y a domicilio, sin mesas ni meseros. Puedes cambiarlo si quieres.
+          </p>
+        )}
         <div className="signup-plans">
           {PLAN_CARDS.map((plan) => {
             const active = selectedPlan === plan.code;

@@ -184,3 +184,31 @@ function todoApagadoMenosPedidos(): NavContext {
     cuponesActive: false, dineInEnabled: true, planActual: 'PREMIUM', showStaff: false, preview: false,
   };
 }
+
+describe('quien vende solo en línea no ve el salón con candado', () => {
+  const hrefs = (ctx: NavContext) => buildNav(ctx).flatMap((g) => g.items.map((it) => `${it.href}${it.locked ? ' 🔒' : ''}`));
+  const SALON = ['/admin/mesas', '/admin/mesero', '/admin/ajustes/salon'];
+
+  it('Estándar con recoger y domicilio: sin Mesas, Tomar pedidos ni Salón', () => {
+    const vistos = hrefs({ ...CTX_DUEÑO, planActual: 'ESTANDAR', dineInEnabled: false });
+    for (const r of SALON) expect(vistos.some((h) => h.startsWith(r)), r).toBe(false);
+    expect(vistos).toContain('/admin/pedidos');
+  });
+
+  it('Estándar con comer en local: Mesas y Salón abiertos, Tomar pedidos con candado (eso sí se vende)', () => {
+    const vistos = hrefs({ ...CTX_DUEÑO, planActual: 'ESTANDAR', dineInEnabled: true });
+    expect(vistos).toContain('/admin/mesas');
+    expect(vistos).toContain('/admin/ajustes/salon');
+    expect(vistos).toContain('/admin/mesero 🔒');
+  });
+
+  it('Básico sin pedidos sigue viendo el Salón con candado: puede tener local', () => {
+    const vistos = hrefs({ ...CTX_DUEÑO, planActual: 'BASICO', ordersEnabled: false, dineInEnabled: false });
+    expect(vistos).toContain('/admin/ajustes/salon 🔒');
+  });
+
+  it('en la vista previa del súper admin se enseña todo', () => {
+    const vistos = hrefs({ ...CTX_DUEÑO, planActual: 'ESTANDAR', dineInEnabled: false, preview: true });
+    for (const r of SALON) expect(vistos.some((h) => h.startsWith(r)), r).toBe(true);
+  });
+});
