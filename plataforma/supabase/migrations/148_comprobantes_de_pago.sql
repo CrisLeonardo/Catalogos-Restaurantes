@@ -53,6 +53,14 @@ create index if not exists payment_proofs_submitted_idx
 
 alter table public.payment_proofs enable row level security;
 
+-- La regla restrictiva de la 137 (Super Admin con segundo factor) en la
+-- tabla nueva: el CI (audit-rls-candados.mjs) exige que la lleven todas.
+drop policy if exists super_admin_segundo_factor on public.payment_proofs;
+create policy super_admin_segundo_factor on public.payment_proofs
+  as restrictive for all to authenticated
+  using ((select public.leogin_sesion_con_segundo_factor()))
+  with check ((select public.leogin_sesion_con_segundo_factor()));
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'payment-proofs',
