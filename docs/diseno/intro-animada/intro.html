@@ -914,6 +914,16 @@ body.render .overlay { display: none; }
         <path d="M20.5 47Q14 49 12.2 56" stroke="url(#${id}g)" stroke-width="5.6" fill="none" stroke-linecap="round"/>
         <circle cx="12" cy="57.6" r="4" fill="url(#${id}g)"/>
       </g>
+      <g class="leo-bell"${vis(arm !== 'none')}>
+        <rect x="72.5" y="61.6" width="15" height="3" rx="1.5" fill="#D49A1E"/>
+        <path d="M73.5 61.6a6.5 6.5 0 0 1 13 0Z" fill="#F5C03A"/>
+        <path d="M75.6 59.2a4.8 4.8 0 0 1 2.2-3.2" stroke="#fff" opacity=".6" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+        <circle cx="80" cy="54.4" r="1.5" fill="#D49A1E"/>
+      </g>
+      <g class="leo-armR"${vis(arm !== 'none')}>
+        <path d="M53 46Q67 40.5 78 49.6" stroke="url(#${id}g)" stroke-width="5.6" fill="none" stroke-linecap="round"/>
+        <circle cx="79.6" cy="51.6" r="4" fill="url(#${id}g)"/>
+      </g>
       <g class="leo-bow"${vis(acc === 'bow')}>
         <path d="M37 56L27.6 51Q26.2 50.3 26.2 51.9V60.1Q26.2 61.7 27.6 61ZM37 56L46.4 51Q47.8 50.3 47.8 51.9V60.1Q47.8 61.7 46.4 61Z" fill="${ink}"/>
         <rect x="34.8" y="52.6" width="4.4" height="6.8" rx="1.6" fill="#3A3A40"/>
@@ -968,7 +978,7 @@ body.render .overlay { display: none; }
       smile: q('.leo-mouth'), mouthO: q('.leo-mouthO'), happy: qa('.leo-happyL, .leo-happyR'), happyR: q('.leo-happyR'),
       closed: q('.leo-closed'), brows: qa('.leo-browL, .leo-browR'), arm: q('.leo-arm'),
       tray: q('.leo-tray'), ticket: q('.leo-ticket'), body: q('.leo-body'), logo: q('.leo-logo'),
-      bg: q('.leo-bg'), shadow: q('.leo-shadow'), shine: q('.leo-shine'), deco: qa('.leo-bow, .leo-cheeks, .leo-feet'),
+      bg: q('.leo-bg'), shadow: q('.leo-shadow'), shine: q('.leo-shine'), deco: qa('.leo-bow, .leo-cheeks, .leo-feet, .leo-bell, .leo-armR'),
       calm: q('.leo-mouthCalm'), zzz: q('.leo-zzz'), lids: q('.leo-lids'), smirk: q('.leo-mouthSmirk'),
     };
   }
