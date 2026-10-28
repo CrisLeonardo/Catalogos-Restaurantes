@@ -167,9 +167,15 @@ export default async function LeoginLanding() {
       <div className="lp-avance" aria-hidden />
       <SiteHeader home />
 
-      <main className="anim-fade-up">
-        {/* ── Portada ───────────────────────────────────────── */}
-        <section className="lp-shell" style={{ paddingTop: 'clamp(44px, 7vw, 84px)' }}>
+      {/* Sin `anim-fade-up` en <main>: animaba la página ENTERA (17 000 px en
+          el teléfono) como una sola capa al cargar. La portada ya tiene su
+          propia entrada; lo demás entra al deslizar. */}
+      <main className="lp-main">
+        {/* ── Portada ─────────────────────────────────────────
+            Tres piezas y no dos columnas: en el teléfono el video va ENTRE el
+            titular y los botones, dentro del primer pantallazo. Antes iba al
+            final de la columna y el primer vistazo era solo texto. */}
+        <section className="lp-shell" style={{ paddingTop: 'clamp(28px, 7vw, 84px)' }}>
           <div className="lp-hero-grid">
             <div className="lp-hero-copy">
               <span
@@ -192,12 +198,20 @@ export default async function LeoginLanding() {
                 <span className="lp-w" style={palabra(4)}>.</span>
               </h1>
 
-              <p className="lp-lead" style={{ marginTop: 22, maxWidth: 560 }}>
+              <p className="lp-lead" style={{ marginTop: 20, maxWidth: 560 }}>
                 Pedidos, cocina, caja e inventario en tu celular, aunque no estés.
                 Una mensualidad fija y cero comisión sobre lo que vendes.
               </p>
+            </div>
 
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 30 }}>
+            <div className="lp-hero-media" style={{ display: 'flex', justifyContent: 'center' }}>
+              <div className="lp-hero-tarjeta" style={{ width: '100%' }}>
+                <LandingIntro />
+              </div>
+            </div>
+
+            <div className="lp-hero-acciones">
+              <div className="lp-hero-ctas">
                 {/* El sí chico primero (estrategia §2.14 y §4): el menú, no «el sistema». */}
                 <Link href="/registro" {...conEvento('lp-btn lp-btn-lg lp-btn-primary', EVENTOS.clicCrear, 'portada')}>
                   Crear mi menú gratis
@@ -205,12 +219,14 @@ export default async function LeoginLanding() {
                 <LandingDemo href={demoUrl} />
               </div>
 
-              <p className="lp-body" style={{ fontSize: 13.5, marginTop: 18, color: 'var(--u-text-4)' }}>
+              <p className="lp-body" style={{ fontSize: 13.5, marginTop: 16, color: 'var(--u-text-4)' }}>
                 Plan Básico gratis para siempre · {pricing.trialDays} días de prueba en los planes
                 con pedidos · sin tarjeta
               </p>
 
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 28 }}>
+              {/* En el teléfono es una sola fila que se desliza: cuatro filas
+                  de píldoras empujaban la tira de cifras a la tercera pantalla. */}
+              <div className="lp-hero-chips">
                 {[
                   { icon: 'wallet',  label: 'Sin comisión por pedido' },
                   { icon: 'grid',    label: 'Sin apps que descargar' },
@@ -224,21 +240,12 @@ export default async function LeoginLanding() {
                 ))}
               </div>
             </div>
-
-            <div className="lp-hero-media" style={{ display: 'flex', justifyContent: 'center' }}>
-              <div className="lp-hero-tarjeta" style={{ width: '100%' }}>
-                <LandingIntro />
-              </div>
-            </div>
           </div>
         </section>
 
         {/* ── Tira de cifras ────────────────────────────────── */}
         <section className="lp-shell lp-section-tight">
-          <div
-            className="lp-card"
-            style={{ padding: 'clamp(20px, 3vw, 30px)', display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))' }}
-          >
+          <div className="lp-card lp-cifras">
             {PROOF.map((p, i) => (
               <div key={p.label} data-fx="crecer" style={fx(i)}>
                 <div
@@ -293,7 +300,7 @@ export default async function LeoginLanding() {
         </section>
 
         {/* ── Centro de control ─────────────────────────────── */}
-        <section className="lp-shell lp-section">
+        <section className="lp-shell lp-section lp-diferido">
           <div className="lp-split">
             <div className="lp-split-media" data-fx="enderezar" style={{ display: 'flex', justifyContent: 'center' }}>
               <PanelMockup />
@@ -339,7 +346,7 @@ export default async function LeoginLanding() {
         </section>
 
         {/* ── Funciona sin internet ─────────────────────────── */}
-        <section className="lp-shell lp-section">
+        <section className="lp-shell lp-section lp-diferido">
           <div className="lp-split">
             <div>
               <div className="lp-eyebrow">Leogin Escritorio</div>
@@ -432,7 +439,7 @@ export default async function LeoginLanding() {
         </section>
 
         {/* ── Para quién ────────────────────────────────────── */}
-        <section className="lp-shell lp-section">
+        <section className="lp-shell lp-section lp-diferido">
           <SectionHead
             eyebrow="Dos lados, un sistema"
             title="Enamora a tus clientes y controla tu negocio"
@@ -445,13 +452,13 @@ export default async function LeoginLanding() {
           <div className="lp-split" style={{ marginTop: 34, alignItems: 'start' }}>
             <div>
               <div className="lp-eyebrow" style={{ marginBottom: 16, display: 'block' }}>Para tus clientes</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="lp-carrusel">
                 {FOR_DINER.map((f, i) => <FeatureRow key={f.title} {...f} lado="izq" i={i} />)}
               </div>
             </div>
             <div>
               <div className="lp-eyebrow" style={{ marginBottom: 16, display: 'block' }}>Para ti, el dueño</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="lp-carrusel">
                 {FOR_OWNER.map((f, i) => <FeatureRow key={f.title} {...f} lado="der" i={i} />)}
               </div>
             </div>
@@ -459,7 +466,7 @@ export default async function LeoginLanding() {
         </section>
 
         {/* ── Cómo empezar ──────────────────────────────────── */}
-        <section className="lp-shell lp-section">
+        <section className="lp-shell lp-section lp-diferido">
           <SectionHead
             eyebrow="Cómo se empieza"
             title="De cero a tu menú en línea"
@@ -561,7 +568,7 @@ export default async function LeoginLanding() {
         </section>
 
         {/* ── Preguntas frecuentes ──────────────────────────── */}
-        <section className="lp-shell lp-section">
+        <section className="lp-shell lp-section lp-diferido">
           <SectionHead eyebrow="Dudas" title="Preguntas frecuentes" center />
           <div style={{ maxWidth: 820, margin: '30px auto 0' }}>
             {FAQS.map((f, i) => (

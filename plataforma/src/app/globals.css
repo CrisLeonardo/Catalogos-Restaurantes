@@ -2785,11 +2785,13 @@ html[data-platform] .asphalt::after { display: none; }
 }
 
 /* ── Cabecera ────────────────────────────────────────────── */
+/* Sólida, sin vidrio: un `backdrop-filter` en una barra fija se vuelve a
+   pintar en CADA cuadro del deslizar, y en un Android de gama media era el
+   tirón que se sentía al bajar la portada (2026-10-27). Además, nada de
+   superficies translúcidas en el sitio (decisión de marca 2026-10-09). */
 .lp-header {
   position: sticky; top: 0; z-index: 60;
-  background: color-mix(in srgb, var(--brand-bg) 78%, transparent);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  backdrop-filter: blur(18px) saturate(160%);
+  background: color-mix(in srgb, var(--brand-bg) 55%, #ffffff);
   border-bottom: 1px solid var(--lp-line);
 }
 .lp-header-inner {
@@ -2875,12 +2877,19 @@ html[data-platform] .asphalt::after { display: none; }
 
 /* ── Rejillas ────────────────────────────────────────────── */
 .lp-hero-grid {
-  display: grid; gap: clamp(32px, 5vw, 64px);
+  display: grid; column-gap: clamp(32px, 5vw, 64px); row-gap: 0;
   /* El titular manda: con 50/50 el h1 de 68 px caía a cuatro líneas cortas
      en una columna de 500 px. */
   grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
-  align-items: center;
+  /* Tres piezas: en la computadora el video ocupa la columna derecha entera;
+     en el teléfono va entre el titular y los botones (ver abajo). */
+  grid-template-areas: "copia media" "acciones media";
 }
+.lp-hero-copy { grid-area: copia; align-self: end; }
+.lp-hero-media { grid-area: media; align-self: center; }
+.lp-hero-acciones { grid-area: acciones; align-self: start; padding-top: 30px; }
+.lp-hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+.lp-hero-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 26px; }
 .lp-split {
   display: grid; gap: clamp(28px, 4.5vw, 56px);
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2888,6 +2897,8 @@ html[data-platform] .asphalt::after { display: none; }
 }
 @media (max-width: 940px) {
   .lp-hero-grid, .lp-split { grid-template-columns: minmax(0, 1fr); }
+  .lp-hero-grid { grid-template-areas: "copia" "media" "acciones"; row-gap: 22px; }
+  .lp-hero-acciones { padding-top: 0; }
   /* En una sola columna el texto va SIEMPRE primero: en la sección del
      panel el mockup iba antes que el titular y en móvil abría con una
      captura sin contexto. */
@@ -2900,6 +2911,56 @@ html[data-platform] .asphalt::after { display: none; }
 }
 .lp-cols-3 { display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 860px) { .lp-cols-3 { grid-template-columns: minmax(0, 1fr); } }
+
+/* En el teléfono: los dos botones a lo ancho (es donde cae el pulgar) y las
+   píldoras en una sola fila que se desliza, con el borde que se desvanece
+   para que se note que sigue. */
+@media (max-width: 560px) {
+  .lp-hero-ctas { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .lp-hero-ctas > .lp-btn { width: 100%; }
+  .lp-hero-chips {
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-top: 18px;
+    margin-inline: calc(-1 * var(--lp-gutter)); padding: 2px var(--lp-gutter) 6px;
+    -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
+    mask-image: linear-gradient(90deg, #000 85%, transparent);
+  }
+  .lp-hero-chips::-webkit-scrollbar { display: none; }
+}
+
+/* Tira de cifras: 2x2 en el teléfono. En una columna eran cuatro filas y
+   media pantalla para cuatro números. */
+.lp-cifras {
+  padding: clamp(20px, 3vw, 30px); display: grid; gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+@media (max-width: 560px) {
+  .lp-cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 14px; }
+}
+
+/* ── Secciones que se pintan al acercarse ────────────────────
+   `content-visibility: auto` se salta el trabajo de las secciones lejanas al
+   cargar (en el teléfono la portada mide ~20 pantallas). Contiene la
+   pintura, así que el relleno vertical deja sitio a las sombras de las
+   tarjetas y el margen negativo lo devuelve. No va en las secciones con
+   escena fija (`position: sticky`) ni en las que tienen ancla del menú. */
+.lp-diferido {
+  content-visibility: auto; contain-intrinsic-size: auto 900px;
+  padding-block: 48px; margin-top: calc(var(--lp-rhythm) - 48px); margin-bottom: -48px;
+}
+
+/* ── Carrusel del teléfono («Para tus clientes» / «Para ti») ─
+   En la computadora es una columna; en el teléfono, una fila que se desliza
+   con el dedo: ocho tarjetas en columna eran 1 900 px de bajar. */
+.lp-carrusel { display: flex; flex-direction: column; gap: 12px; }
+@media (max-width: 940px) {
+  .lp-carrusel {
+    flex-direction: row; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain;
+    scrollbar-width: none; margin-inline: calc(-1 * var(--lp-gutter));
+    padding: 4px var(--lp-gutter) 12px; scroll-padding-inline: var(--lp-gutter);
+  }
+  .lp-carrusel::-webkit-scrollbar { display: none; }
+  .lp-carrusel > * { flex: 0 0 min(80%, 320px); scroll-snap-align: start; }
+}
 
 /* Bento de capacidades: 6 columnas en escritorio, 2 en móvil. */
 .lp-bento { display: grid; gap: 12px; grid-template-columns: repeat(6, minmax(0, 1fr)); }
@@ -2985,6 +3046,13 @@ html[data-platform] .asphalt::after { display: none; }
 /* Barra de avance: solo existe donde puede moverse. */
 .lp-avance { display: none; }
 
+/* Lo que entra de lado (data-fx="izq"/"der") empieza 44 px fuera de su
+   sitio. En el teléfono eso ensanchaba la página a 399 px en una pantalla
+   de 375: se podía arrastrar de lado y las ventanas (la intro) salían
+   corridas y cortadas. `clip` recorta sin crear contenedor de scroll, así
+   que las escenas fijas (`sticky`) siguen funcionando. */
+.lp-main { overflow-x: clip; }
+
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
     [data-fx] {
@@ -2997,6 +3065,9 @@ html[data-platform] .asphalt::after { display: none; }
     [data-fx="der"] { animation-name: fx-der; }
     [data-fx="crecer"] { animation-name: fx-crecer; }
     [data-fx="enderezar"] { animation-name: fx-enderezar; animation-range: entry 0% cover 42%; transform-origin: 50% 100%; }
+    /* Dentro del carrusel (un contenedor de scroll) view() mediría el
+       carrusel y no la página: ahí las tarjetas no entran, ya están. */
+    @media (max-width: 940px) { .lp-carrusel > [data-fx] { animation-name: none; } }
 
     .lp-avance {
       display: block; position: fixed; inset: 0 0 auto; z-index: 70; height: 3px;
@@ -3027,15 +3098,22 @@ html[data-platform] .asphalt::after { display: none; }
   transform-origin: 0 50%;
 }
 @media (prefers-reduced-motion: no-preference) {
-  .lp-h1 .lp-w { animation: lp-palabra 720ms var(--ease-entry) both; animation-delay: calc(140ms + var(--i, 0) * 95ms); }
-  .lp-subraya::after { animation: lp-subraya 900ms cubic-bezier(0.65, 0, 0.35, 1) 820ms both; }
-  .lp-hero-tarjeta { animation: lp-asienta 1100ms var(--ease-entry) 260ms both; }
+  /* El titular es lo primero que se lee: entra en medio segundo. Con 720 ms
+     y 95 ms por palabra, «control.» terminaba de aparecer a 1.3 s y el
+     primer vistazo era un hueco. */
+  .lp-h1 .lp-w { animation: lp-palabra 520ms var(--ease-entry) both; animation-delay: calc(40ms + var(--i, 0) * 60ms); }
+  .lp-subraya::after { animation: lp-subraya 800ms cubic-bezier(0.65, 0, 0.35, 1) 480ms both; }
+  .lp-hero-tarjeta { animation: lp-asienta 900ms var(--ease-entry) 140ms both; }
 }
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
-    /* Al bajar, el texto se va más rápido que la tarjeta: profundidad. */
-    .lp-hero-copy { animation: lp-hero-sube linear both; animation-timeline: view(); animation-range: exit 0% exit 100%; }
-    .lp-hero-media { animation: lp-hero-atras linear both; animation-timeline: view(); animation-range: exit 0% exit 100%; }
+    /* Al bajar, el texto se va más rápido que la tarjeta: profundidad. Solo
+       en la computadora: en el teléfono el video va entre el texto y los
+       botones, y los botones se le montaban encima al subir. */
+    @media (min-width: 941px) {
+      .lp-hero-copy, .lp-hero-acciones { animation: lp-hero-sube linear both; animation-timeline: view(); animation-range: exit 0% exit 100%; }
+      .lp-hero-media { animation: lp-hero-atras linear both; animation-timeline: view(); animation-range: exit 0% exit 100%; }
+    }
   }
 }
 
@@ -3201,11 +3279,14 @@ html[data-platform] .asphalt::after { display: none; }
     /* stretch: los pasos van en position:absolute y no le dan ancho a su
        caja; centrados, la columna se encogía a nada. */
     .lp-cc-escena { display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; gap: 14px; }
-    .lp-cc-pasos { min-height: 10em; }
+    /* Dos pantallas y media de recorrido y no tres: en el teléfono el
+       pulgar sentía la escena «atorada». */
+    .lp-cc { height: 250svh; }
+    .lp-cc-pasos { min-height: 7.5em; }
     .lp-cc-paso .lp-h2 { font-size: clamp(21px, 5.6vw, 28px); margin-top: 8px; }
     .lp-cc-paso p { display: none; }
-    .lp-cc-pista { margin-top: 0; }
-    .lp-cc-lienzo { width: min(100%, calc((100svh - 62px - 15em) * 0.6667)); }
+    .lp-cc-pista { margin-top: 8px; }
+    .lp-cc-lienzo { width: min(100%, calc((100svh - 62px - 7.5em - 72px) * 0.6667)); }
   }
 }
 
@@ -3272,34 +3353,53 @@ html[data-platform] .asphalt::after { display: none; }
 .lp-dz-pantalla[data-tocando] .lp-dz-frame { pointer-events: auto; }
 .lp-dz-pantalla[data-tocando] { box-shadow: 0 0 0 3px var(--brand-accent); }
 .lp-dz-cargando {
+  /* Fondo opaco: el menú se pinta debajo antes de avisar que está listo, y
+     sin fondo se veían dos «R» encimadas. */
   position: absolute; inset: 0; z-index: 1; display: grid; place-content: center; justify-items: center; gap: 10px;
+  background: #161512;
   color: #F7F3EF; font-family: var(--font-display); font-weight: 800; font-size: 15px;
 }
 .lp-dz-cargando-logo {
   width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center;
   background: #2a2724; font-size: 26px; animation: bob 1.6s ease-in-out infinite;
 }
+.lp-dz-lado { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .lp-dz-estado {
   display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 99px;
   font-size: 12.5px; font-weight: 650; color: var(--u-text-2);
   background: var(--lp-card); border: 1px solid var(--lp-line-2); box-shadow: var(--lp-shadow-sm);
 }
+.lp-dz-estado-num { font-family: var(--ui-font-mono); font-weight: 700; color: var(--brand-accent-ink); }
 .lp-dz-estado-nombre { font-weight: 800; color: var(--u-text); }
+.lp-dz-cta-corto { display: none; }
 .lp-dz-acciones { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .lp-dz-nota { font-size: 12.5px; line-height: 1.5; color: var(--u-text-4); padding: 0 6px; }
 
 /* En el celular el teléfono va arriba, fijo, en una franja opaca; las
    estructuras pasan por debajo y la que cruza la franja de lectura (justo
    bajo el teléfono) es la que se pinta. */
+/* Mitad y mitad (2026-10-27): el teléfono, chico, a la izquierda; el
+   nombre del estilo y los botones a la derecha. Antes el teléfono iba
+   centrado con todo debajo y la franja fija se comía dos tercios de la
+   pantalla: quedaba un renglón para leer las estructuras. */
 @media (max-width: 899px) {
-  .lp-dz { --dz-alto: min(48svh, 430px); display: flex; flex-direction: column; gap: 0; }
+  .lp-dz { --dz-alto: min(36svh, 320px); display: flex; flex-direction: column; gap: 0; }
   .lp-dz-escenario {
     order: -1; z-index: 2; top: 62px; width: calc(100% + 2 * var(--lp-gutter)); margin-inline: calc(-1 * var(--lp-gutter));
-    padding: 10px var(--lp-gutter) 12px; gap: 8px;
+    padding: 10px var(--lp-gutter) 12px;
+    display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 16px;
     background: var(--brand-bg); box-shadow: 0 14px 18px -16px rgba(23, 22, 26, 0.35);
   }
-  .lp-dz-lista { padding-top: 12px; padding-bottom: 30svh; }
-  .lp-dz-card { min-height: 34svh; padding: 20px 18px; }
+  .lp-dz-lado { align-items: stretch; gap: 10px; }
+  .lp-dz-estado { flex-wrap: wrap; border-radius: 14px; padding: 9px 12px; row-gap: 2px; }
+  .lp-dz-estado-nombre { flex-basis: 100%; order: -1; font-size: 15px; font-family: var(--font-display); letter-spacing: -0.02em; }
+  .lp-dz-estado-sep { display: none; }
+  .lp-dz-acciones { flex-direction: column; align-items: stretch; }
+  .lp-dz-acciones .lp-btn { width: 100%; padding-inline: 10px; }
+  .lp-dz-cta-largo { display: none; }
+  .lp-dz-cta-corto { display: inline; }
+  .lp-dz-lista { padding-top: 12px; padding-bottom: 34svh; }
+  .lp-dz-card { min-height: 28svh; padding: 20px 18px; }
   .lp-dz-titulo { font-size: 26px; }
   .lp-dz-hint { font-size: 13.5px; }
 }
