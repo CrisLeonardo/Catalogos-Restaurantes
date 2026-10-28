@@ -62,6 +62,9 @@ import {
   workbookToBase64,
 } from '@/lib/documents/excel';
 import { longDate } from '@/lib/documents/format';
+import { encargoParaPedido } from '@/lib/db/encargos';
+import { diaDeEntrega, entroEnElCupo, estadoEncargo, textoEntrega } from '@/lib/encargos';
+import { aceptaTransferencia } from '@/lib/pago-transferencia';
 import type { DocumentBranding } from '@/lib/documents/types';
 import type {
   OrderItemOption,
@@ -266,7 +269,7 @@ export async function createOrder(
     return { error: first?.message ?? 'Datos del pedido inválidos.' };
   }
 
-  const { restaurantId, items, customer, paymentMethod, cashAmount, tipAccepted, clientId } = parsed.data;
+  const { restaurantId, items, customer, paymentMethod, cashAmount, tipAccepted, clientId, encargoId } = parsed.data;
 
   const db = createServiceClient();
 
@@ -337,6 +340,9 @@ export async function createOrder(
       .single(),
     resolveDinerForOrder(restaurantId),
   ]);
+  // Encargo: se lee aparte porque solo existe cuando el comensal eligió una
+  // tanda, y casi ningún pedido la trae.
+  const encargo = encargoId ? await encargoParaPedido(restaurantId, encargoId) : null;
 
   // Reintento idempotente (cola offline del catálogo, ver migración 061):
   // si este client_id ya generó un pedido, devuélvelo tal cual SIN
@@ -397,7 +403,16 @@ export async function createOrder(
       };
     }
   }
-  if (
+  // Encargos (mig. 149): se reciben aunque el local esté cerrado ahora —
+  // son para otro día—, pero solo mientras la tanda esté abierta y con lugar.
+  // El lugar se vuelve a comprobar DESPUÉS de crear el pedido (ver abajo).
+  if (encargoId) {
+    if (!encargo) return { error: 'Ese encargo ya no está disponible. Actualiza la página.' };
+    if (customer.type === 'DINE_IN') return { error: 'Los encargos son para llevar o a domicilio.' };
+    const estado = estadoEncargo(encargo);
+    if (estado === 'lleno') return { error: `Ya no quedan lugares para «${encargo.titulo}».` };
+    if (estado !== 'abierto') return { error: `«${encargo.titulo}» ya no recibe encargos.` };
+  } else if (
     !isOpenNow(
       restaurant.hours as WeeklyHours | null,
       (restaurant.timezone as string) || 'America/Guatemala',
@@ -527,6 +542,16 @@ export async function createOrder(
 
   const themeConfig = resolveTheme((themeRow as ThemeRow) ?? null).config;
 
+  // Transferencia: solo si el restaurante la activó con su cuenta; y una
+  // tanda con «pago adelantado» no acepta otra forma de pago.
+  const metodo = customer.type === 'DINE_IN' ? 'CASH' : (paymentMethod ?? 'CASH');
+  if (metodo === 'TRANSFER' && !aceptaTransferencia(themeConfig)) {
+    return { error: 'Este restaurante no recibe transferencias. Elige otra forma de pago.' };
+  }
+  if (encargo?.pagoAdelantado && metodo !== 'TRANSFER') {
+    return { error: `«${encargo.titulo}» se paga por adelantado con transferencia.` };
+  }
+
   const { subtotal, fee, discount, tip, total, applied } = await computeOrderPricing(
     restaurantId, themeConfig, customer.type, tipAccepted, parsed.data.couponCode, verifiedItems,
     customer.type === 'DELIVERY' ? customer.zone : null,
@@ -564,10 +589,16 @@ export async function createOrder(
     customer.type === 'DINE_IN'
       ? (customer.tableNumber !== undefined ? `Mesa ${customer.tableNumber}` : null)
       : (customer.address ?? null);
-  const notes =
+  const notasDelCliente =
     customer.type === 'DINE_IN' && customer.coursePreference
       ? `[Servicio: ${customer.coursePreference}]${customer.notes ? ` · ${customer.notes}` : ''}`
       : (customer.notes ?? null);
+  // El encargo va en las notas a propósito: así sale en la tarjeta del panel
+  // Y en la comanda impresa, que es donde la cocina tiene que leer «para el
+  // sábado» sin abrir ninguna pantalla.
+  const notes = encargo
+    ? `[Encargo: ${encargo.titulo} · ${textoEntrega(encargo)}]${notasDelCliente ? ` · ${notasDelCliente}` : ''}`
+    : notasDelCliente;
 
   // Numeración atómica + pedido + ítems en UNA transacción (RPC place_order):
   // evita el número duplicado por carrera (count(*)+1) y los pedidos huérfanos
@@ -586,8 +617,8 @@ export async function createOrder(
     p_delivery_fee:   fee,
     p_total:          total,
     p_notes:          notes,
-    p_payment_method: customer.type === 'DINE_IN' ? 'CASH' : (paymentMethod ?? 'CASH'),
-    p_cash_amount:    customer.type === 'DELIVERY' && (paymentMethod ?? 'CASH') === 'CASH' && cashAmount != null ? cashAmount : null,
+    p_payment_method: metodo,
+    p_cash_amount:    customer.type === 'DELIVERY' && metodo === 'CASH' && cashAmount != null ? cashAmount : null,
     p_tip:            tip,
     p_client_id: clientId ?? null,
     p_items: verifiedItems.map((i) => ({
@@ -606,6 +637,33 @@ export async function createOrder(
   const order = placed as { id: string; order_number: string; public_token: string } | null;
   if (orderError || !order) {
     return { error: orderError?.message ?? 'Error al crear el pedido.' };
+  }
+
+  // Encargo y transferencia (mig. 149): place_order no conoce estas columnas,
+  // se marcan justo después. Si la migración aún no corrió, el pedido sigue
+  // siendo válido (efectivo/tarjeta ni lo notan).
+  if (encargo || metodo === 'TRANSFER') {
+    await db.from('orders').update({
+      ...(encargo ? { encargo_id: encargo.id } : {}),
+      ...(metodo === 'TRANSFER' ? { transfer_status: 'ESPERANDO' } : {}),
+    }).eq('id', order.id);
+  }
+
+  // El último lugar de una tanda lo pueden pedir dos a la vez: los dos
+  // pasan la comprobación de arriba y crean su pedido. Aquí, con los dos ya
+  // guardados, cada uno calcula el mismo orden y solo el que quedó fuera se
+  // anula (devolviendo su stock) antes de tocar cupón, puntos o avisos.
+  if (encargo) {
+    const { data: enLaTanda } = await db
+      .from('orders')
+      .select('id, created_at')
+      .eq('encargo_id', encargo.id)
+      .neq('status', 'CANCEL');
+    if (!entroEnElCupo((enLaTanda ?? []) as { id: string; created_at: string }[], order.id, encargo.cupo)) {
+      await db.rpc('restock_order', { p_order_id: order.id });
+      await db.from('orders').update({ status: 'CANCEL', cancelled_at: new Date().toISOString() }).eq('id', order.id);
+      return { error: `Se acaba de llenar «${encargo.titulo}». No se hizo ningún cobro.` };
+    }
   }
 
   // Persistir el cupón aplicado (metadata para recibos/reportes) y contar su
@@ -639,7 +697,12 @@ export async function createOrder(
     customer.type === 'DELIVERY' ? 'A domicilio' :
     customer.type === 'DINE_IN'  ? 'Comer aquí'  :
     'Para llevar';
-  notifyNewOrder(restaurantId, order, `${order.order_number} · ${customer.name} · ${typeLabel}`);
+  notifyNewOrder(
+    restaurantId,
+    order,
+    `${order.order_number} · ${customer.name} · ${typeLabel}${encargo ? ` · Encargo ${diaDeEntrega(encargo.entregaFecha)}` : ''}`,
+    encargo ? '📦 Nuevo encargo' : undefined,
+  );
 
   return {
     success: true,
@@ -2560,6 +2623,11 @@ export interface PublicOrder {
   total: number;
   createdAt: string;
   items: PublicOrderItem[];
+  paymentMethod: string;
+  /** Pago por transferencia (mig. 149); null si no aplica o la migración no corrió. */
+  transferStatus: 'ESPERANDO' | 'POR_CONFIRMAR' | 'CONFIRMADO' | 'RECHAZADO' | null;
+  /** Encargo (mig. 149): «vie 30 oct · 8 a 11 a. m.»; null si es un pedido de ahora. */
+  encargoEntrega: string | null;
 }
 
 /**
@@ -2586,6 +2654,15 @@ export async function cancelPublicOrder(
 
   const yaConfirmado = 'Solo puedes cancelar un pedido que aún no ha sido confirmado por el restaurante.';
   if (order.status !== 'NEW') return { error: yaConfirmado };
+
+  // Con la transferencia ya enviada o confirmada, cancelar solo dejaría el
+  // dinero en el aire: eso lo arregla el restaurante, que puede devolverlo.
+  // Aparte y tolerante, por si la migración 149 aún no corrió.
+  const { data: pago } = await db.from('orders').select('transfer_status').eq('id', order.id).maybeSingle();
+  const ts = (pago as { transfer_status?: string | null } | null)?.transfer_status;
+  if (ts === 'POR_CONFIRMAR' || ts === 'CONFIRMADO') {
+    return { error: 'Ya enviaste tu pago. Para cancelar, escríbele al restaurante.' };
+  }
 
   /* Comprobar NEW, reponer stock y cancelar, de una vez y con la fila
      bloqueada (migración 143, PROD-09). Hacerlo en tres pasos desde aquí
@@ -2632,13 +2709,28 @@ export async function getPublicOrder(
   const { data } = await db
     .from('orders')
     .select(
-      'order_number, status, order_type, customer_name, subtotal, delivery_fee, discount, loyalty_points_redeemed, loyalty_discount, total, created_at, restaurant_id, items:order_items(name_snapshot, quantity, subtotal, options_snapshot)',
+      'id, order_number, status, order_type, customer_name, subtotal, delivery_fee, discount, loyalty_points_redeemed, loyalty_discount, total, created_at, restaurant_id, payment_method, items:order_items(name_snapshot, quantity, subtotal, options_snapshot)',
     )
     .eq('public_token', token)
     .single();
 
   // El pedido debe pertenecer al restaurante del subdominio actual.
   if (!data || data.restaurant_id !== restaurantId) return null;
+
+  // Aparte y sin romper nada si la migración 149 aún no corrió: pedirla en
+  // la consulta de arriba tumbaría el seguimiento de TODOS los pedidos.
+  let transferStatus: PublicOrder['transferStatus'] = null;
+  let encargoEntrega: string | null = null;
+  const { data: extra } = await db
+    .from('orders')
+    .select('transfer_status, encargo:encargo_fechas(entrega_fecha, entrega_hora)')
+    .eq('id', data.id)
+    .maybeSingle();
+  if (extra) {
+    const x = extra as unknown as { transfer_status?: string | null; encargo?: { entrega_fecha: string; entrega_hora: string | null } | null };
+    transferStatus = (x.transfer_status ?? null) as PublicOrder['transferStatus'];
+    if (x.encargo) encargoEntrega = textoEntrega({ entregaFecha: x.encargo.entrega_fecha, entregaHora: x.encargo.entrega_hora });
+  }
 
   return {
     orderNumber: data.order_number as string,
@@ -2658,6 +2750,9 @@ export async function getPublicOrder(
       subtotal: Number(it.subtotal),
       options: (it.options_snapshot as OrderItemOption[] | null) ?? null,
     })),
+    paymentMethod: (data.payment_method as string) ?? 'CASH',
+    transferStatus,
+    encargoEntrega,
   };
 }
 

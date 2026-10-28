@@ -73,6 +73,7 @@ export const EXPERT_KEYS = [
     modo de pedido o la propina sería un desastre silencioso. */
 export const OPERATIONAL_KEYS = [
   'orderTypes', 'deliveryFee', 'dineInTableCount', 'dineInCourseOptions', 'acceptsCard',
+  'acceptsTransfer', 'transferBank', 'transferAccountType', 'transferAccountNumber', 'transferAccountHolder',
   'tipEnabled', 'tipPercent', 'tipOrderTypes',
   'autoConfirmEnabled', 'autoConfirmMinutes',
   'kdsYellowMin', 'kdsRedMin', 'kdsConfirmFirst',

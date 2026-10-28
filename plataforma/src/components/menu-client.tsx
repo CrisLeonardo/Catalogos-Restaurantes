@@ -14,6 +14,7 @@ import WaiterCallButton from '@/components/menu/waiter-call-button';
 import RewardsSection from '@/components/menu/rewards-section';
 import BottomNav, { type NavTab } from '@/components/menu/bottom-nav';
 import { VitrinaBag, VitrinaTopBar } from '@/components/menu/vitrina-bar';
+import EncargosBanda from '@/components/menu/encargos-banda';
 import OverlayBackground from '@/components/menu/overlay-background';
 import { useHojaEnHistorial, leerHojaGuardada, olvidarHojaGuardada } from '@/components/menu/use-hoja-en-historial';
 import { useCart, carritoGuardadoTieneAlgo } from '@/lib/cart-context';
@@ -273,6 +274,10 @@ export default function MenuClient({
         />
       )}
 
+      {/* Encargos con cupo (mig. 149): solo si hay alguna tanda abierta. Ni en
+          la demo (no hay base) ni en el kiosko (es para pedir ahí mismo). */}
+      {ordersEnabled && restaurantId && !demo && !kiosk && <EncargosBanda restaurantId={restaurantId} />}
+
       <Catalog
         categories={categories}
         products={products}
@@ -312,6 +317,7 @@ export default function MenuClient({
         : <CartBar onOpen={() => setCartOpen(true)} />)}
       {ordersEnabled && cartOpen && (
         <CartPanel
+          restaurantId={restaurantId}
           sugerencias={cartPairings}
           onClose={() => setCartOpen(false)}
           onPedirDemo={demo ? () => { setCartOpen(false); setDemoOpen(true); } : undefined}

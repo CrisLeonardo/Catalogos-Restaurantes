@@ -123,7 +123,7 @@ En «Mi suscripción», cuando hay algo pendiente, se ve el monto, un texto libr
 | Fase | Contenido | Rama | Casilla |
 |---|---|---|---|
 | 1 | **Paga tu plan** (§3). Migración 148 | `feat/paga-tu-plan` | [x] 2026-10-28 (falta probar en producción la bandeja del super, ver §3) |
-| 2 | N4 transferencia con comprobante del comensal + N6 encargos y preventa (para la temporada de diciembre) | `feat/encargos-y-transferencia` | [ ] |
+| 2 | N4 transferencia con comprobante del comensal + N6 encargos y preventa (para la temporada de diciembre). Migración 149 | `feat/encargos-y-transferencia` | [x] 2026-10-28 (ver §4 bis) |
 | 3 | Plan «En línea» Q99: `plans.ts` + migración que reconcilia `platform_settings` y las funciones de cobro (`leogin_compute_monthly_fee`, `leogin_fee_breakdown`) + `/planes`, registro, `/vende-en-linea` y cambio de plan desde el panel | `feat/plan-en-linea` | [ ] |
 | 4 | Dejar al día `PRECIOS_VIGENTES.md`, `Cotizador.xlsx` y el `.docx` de planes. Siguen hablando de módulos a la carta y del «Plan a tu medida», que el código quitó el 2026-08-21; además hay que sumar En línea. Decidir el Panel de grupo (Q299) | `docs/precios-al-dia` | [ ] |
 | 5 | N1 «Lo que Leogin te dejó» + garantía + calculadora en `/vende-en-linea` | `feat/lo-que-te-dejo` | [ ] |
@@ -134,6 +134,28 @@ En «Mi suscripción», cuando hay algo pendiente, se ve el monto, un texto libr
 | — | N8 Leo contesta tu WhatsApp | — | ⏸ pendiente |
 
 Cada fase con migración dice en su PR en qué orden se aplica respecto al despliegue.
+
+### §4 bis · Cómo quedó la fase 2 (2026-10-28, rama `feat/encargos-y-transferencia`)
+
+- **Migración 149** (después de la 148, antes del código):
+  - tabla `encargo_fechas`;
+  - en `orders`, las columnas `encargo_id`, `transfer_status` y `transfer_proof_path`;
+  - la función `leogin_archive_abandoned_delivery_orders` redefinida. **Trampa:** la de la 099 cancelaba a las 6 horas todo pedido para llevar o a domicilio, encargos incluidos. Ahora un encargo se archiva solo un día después de su fecha de entrega. Probado en local en los dos sentidos.
+- **Encargos.** Se crean en **Pedidos › Encargos** con nombre, día de entrega, horario, hasta cuándo se reciben, cupo de pedidos y, si se quiere, pago por adelantado.
+  - En el menú, una franja arriba enseña «Quedan N», la hora de cierre y el botón «Encargar para este día». Los números se piden al abrir el menú, porque la página está en caché.
+  - El carrito manda `?encargo=` al checkout, que abre aunque el local esté cerrado y quita «comer aquí».
+  - El encargo va en las notas del pedido, así que sale en la tarjeta del panel y en la comanda impresa.
+  - El cupo se cuenta con pedidos reales no anulados. Si dos personas piden el último lugar a la vez, se resuelve **después** de crear el pedido (`entroEnElCupo`): el que queda fuera se anula y se le repone el stock.
+- **Transferencia del comensal.** Se activa en **Ajustes › Pedidos y cobro** con la cuenta del restaurante, que se guarda en el tema porque el comensal la necesita para transferir.
+  - El comensal elige «Transferencia» y en el seguimiento ve la cuenta y sube su comprobante al bucket privado (`pedidos/{restaurant_id}/`).
+  - En el panel, la tarjeta del pedido tiene «Ver comprobante», «Confirmar pago» y «No llegó».
+  - Con el pago enviado o confirmado, el comensal ya no puede cancelar desde el seguimiento.
+- **Probado en local, en pantalla:** activar la transferencia, crear la tanda, la franja en el teléfono, el carrito, el checkout con pago adelantado, la confirmación con «Entrega», la subida del comprobante, confirmarlo en el panel, la tanda llena («Agotado») y el archivado automático.
+- **Para después:**
+  - cupo por unidades (hoy es por pedidos);
+  - anticipo parcial (hoy es todo o nada);
+  - limitar una tanda a ciertos platillos;
+  - que el pedido de encargo no entre a «Por enviar a cocina» hasta el día de la entrega.
 
 ## 5. Decisiones que le tocan al dueño
 

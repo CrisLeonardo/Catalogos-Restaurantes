@@ -250,6 +250,11 @@ export interface Order {
   customer_id: string | null;
   payment_method: string;
   cash_amount: number | null;
+  /** Tanda de encargos (mig. 149); ausente antes de la migración. */
+  encargo_id?: string | null;
+  /** Pago por transferencia del comensal (mig. 149). */
+  transfer_status?: 'ESPERANDO' | 'POR_CONFIRMAR' | 'CONFIRMADO' | 'RECHAZADO' | null;
+  transfer_proof_path?: string | null;
   status: OrderStatus;
   subtotal: number;
   delivery_fee: number;

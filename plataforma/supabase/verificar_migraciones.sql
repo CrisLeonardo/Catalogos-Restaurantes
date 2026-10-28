@@ -134,7 +134,12 @@ huellas(n, que, ok, cuando) as (values
   ('148', 'paga tu plan: comprobantes de transferencia (payment_proofs)',
      to_regclass('public.payment_proofs') is not null
      and exists (select 1 from storage.buckets where id = 'payment-proofs'),
-     'ANTES de desplegar')
+     'ANTES de desplegar'),
+  ('149', 'encargos con cupo y transferencia del comensal (encargo_fechas)',
+     to_regclass('public.encargo_fechas') is not null
+     and exists (select 1 from information_schema.columns
+                  where table_schema = 'public' and table_name = 'orders' and column_name = 'transfer_status'),
+     'ANTES de desplegar, después de la 148')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,
