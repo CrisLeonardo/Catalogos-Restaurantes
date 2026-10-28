@@ -93,6 +93,8 @@ Corte de 15 s: 0–2 · 9–13 · 19–23 · 26–30. Sin logos ni colores de Wh
 ## 4. Pendiente
 
 - [x] **Video «Del chat al pedido»** con el guion de §3 (hecho 2026-10-27; ver §3).
-- [ ] Póster y bucle **verticales** para la tarjeta de la intro en el teléfono: hoy la imagen 16:9 deja chico el texto del gancho. Se graban con `grabar-video.mjs` en formato `v`.
-- [ ] Panel en modo «solo en línea»: además de lo que ya oculta `admin-nav.ts`, no enseñar como candado (venta de Premium) lo que es de salón.
+- [x] Póster y bucle para la tarjeta de la intro en el teléfono (2026-10-27): **cuadrados**, no 9:16 completos, porque un 9:16 empujaba los botones fuera del primer pantallazo. Son la versión vertical recortada arriba (`portada-cuadrada.jpg`, `bucle-cuadrado.webm`, los genera `publicar-en-web.mjs`): el gancho pasa de ~13 px a ~22 px de alto en un teléfono de 375. `LandingIntro cuadrada` los elige con `<picture>` y `matchMedia('(max-width: 560px)')`.
+- [x] Panel «solo en línea» (2026-10-27): con pedidos, sin «comer en local» y sin un plan con mesero (el Estándar de recoger + domicilio), Mesas, Tomar pedidos y Salón ya no salen con candado: se ocultan (`admin-nav.ts`, pruebas en `admin-nav.test.ts`). El Básico y quien tiene local siguen viendo el candado, porque a ellos sí se les vende.
 - [ ] Medir la portada en un teléfono real en producción (Lighthouse móvil) antes y después.
+
+**Arreglado de paso (2026-10-27):** las dos páginas de video no quitaban el margen de 8 px que el navegador le pone a `<body>`. Todo lo grabado (videos, pósteres, bucles) salía con una franja oscura arriba y a la izquierda y 8 px menos abajo y a la derecha, y en la ventana de la web el escenario quedaba corrido. `body { margin: 0 }` en `intro.html` y `en-linea.html`; se volvieron a publicar pósteres y bucles. **Los videos de la intro que ya se hayan subido a redes tienen la franja:** se regraban con `grabar-video.mjs`.
