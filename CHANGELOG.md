@@ -6,6 +6,8 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+- **Leo con los dos brazos en la intro** (`fix/leo-intro-dos-brazos`): el Leo de la intro solo dibujaba el brazo izquierdo y no tenía la campanita; ahora lleva el brazo derecho apoyado en la campana, igual que el componente `leo.tsx`. Se regeneró `/intro`. Los medios de la portada (imagen y bucle) no tienen a Leo, así que no cambian.
+
 ## v0.14.1 — 2026-10-27 · Leo v3 y sticker de logros
 PR #51-#53 · sin migraciones
 - **Leo v3** (PR #51 y #52, [propuesta](docs/diseno/marca/leo-v3-propuesta.html) y [variantes](docs/diseno/marca/leo-v3-variantes.html)): silueta S2 con campanita en la punta del pie y ojos E1. Tiene ceja derecha siempre alzada, sonrisa con dientes y dos brazos, con tres niveles de detalle según el tamaño (completo, compacto y mínimo, con color plano en los chicos). Aplicado en el componente y en la intro.
