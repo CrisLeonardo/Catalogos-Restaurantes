@@ -49,6 +49,14 @@ create index if not exists encargo_fechas_restaurant_idx
 
 alter table public.encargo_fechas enable row level security;
 
+-- La regla restrictiva de la 137 (Super Admin con segundo factor): el CI
+-- (audit-rls-candados.mjs) exige que la lleve toda tabla nueva.
+drop policy if exists super_admin_segundo_factor on public.encargo_fechas;
+create policy super_admin_segundo_factor on public.encargo_fechas
+  as restrictive for all to authenticated
+  using ((select public.leogin_sesion_con_segundo_factor()))
+  with check ((select public.leogin_sesion_con_segundo_factor()));
+
 alter table public.orders
   add column if not exists encargo_id          uuid references public.encargo_fechas(id) on delete set null,
   add column if not exists transfer_status     text,
