@@ -48,9 +48,10 @@ export function SiteHeader({ home = false }: { home?: boolean }) {
         <nav aria-label="Navegación principal" className="lp-nav">
           <a href={anchor('producto')} className="lp-navlink">Producto</a>
           <a href={anchor('capacidades')} className="lp-navlink">Funciones</a>
+          <Link href="/vende-en-linea" className="lp-navlink">Vende en línea</Link>
           <Link href="/planes" className="lp-navlink">Planes</Link>
           <a href={demoUrl} className="lp-navlink">Demo</a>
-          <Link href="/descargas" className="lp-navlink">Escritorio</Link>
+          <Link href="/descargas" className="lp-navlink lp-navlink-extra">Escritorio</Link>
           <Link href="/login" className="lp-btn lp-btn-sm lp-btn-soft lp-nav-secondary" style={{ marginLeft: 8 }}>
             Acceder
           </Link>
@@ -97,6 +98,7 @@ export function SiteFooter({ home = false }: { home?: boolean }) {
 
           <FooterCol title="Producto">
             <a href={anchor('capacidades')} className="lp-footer-link">Funciones</a>
+            <Link href="/vende-en-linea" className="lp-footer-link">Para vender en línea</Link>
             <Link href="/planes" className="lp-footer-link">Planes y precios</Link>
             <a href={demoUrl} className="lp-footer-link">Demo en vivo</a>
             <Link href="/descargas" className="lp-footer-link">Leogin Escritorio</Link>

@@ -2855,6 +2855,13 @@ html[data-platform] .asphalt::after { display: none; }
   color: var(--u-text); font-weight: 650;
 }
 @media (max-width: 860px) { .lp-menu { display: block; } }
+/* Entre 861 y 1080 px no caben siete enlaces y los dos botones: «Escritorio»
+   se va al menú desplegable (que ya lo tiene) y el menú aparece. */
+.lp-navlink { white-space: nowrap; }
+@media (max-width: 1080px) {
+  .lp-navlink-extra { display: none; }
+  .lp-menu { display: block; }
+}
 /* En el teléfono la cabecera es logo + CTA + menú. "Acceder" sale de la
    barra pero NO desaparece —ese fue el error de una versión anterior, que
    dejó a cualquier celular sin botón de login a la vista—: vive como última
@@ -2935,6 +2942,28 @@ html[data-platform] .asphalt::after { display: none; }
 }
 @media (max-width: 560px) {
   .lp-cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 14px; }
+}
+
+/* ── Puerta de «vende en línea» (landing.tsx) ────────────── */
+.lp-puerta {
+  display: flex; align-items: center; gap: 14px; max-width: 780px; margin: 0 auto;
+  padding: 16px 18px; border-radius: 20px; text-decoration: none;
+  background: #1C1C1E; color: #F5F3EF; box-shadow: var(--lp-shadow-md);
+  transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+}
+.lp-puerta-icono {
+  flex-shrink: 0; width: 44px; height: 44px; border-radius: 14px;
+  display: grid; place-items: center; background: #23855A; color: #fff;
+}
+.lp-puerta-texto { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.lp-puerta-pregunta { font-size: 12.5px; font-weight: 700; color: #F5A030; line-height: 1.35; }
+.lp-puerta-titulo { font-size: 15.5px; font-weight: 700; line-height: 1.35; }
+.lp-puerta-flecha { margin-left: auto; flex-shrink: 0; opacity: 0.8; transition: transform 200ms var(--ease-out); }
+.lp-puerta:active { transform: scale(0.99); }
+.lp-puerta:focus-visible { outline: 3px solid var(--brand-accent); outline-offset: 3px; }
+@media (hover: hover) {
+  .lp-puerta:hover { transform: translateY(-2px); box-shadow: var(--lp-shadow-lg); }
+  .lp-puerta:hover .lp-puerta-flecha { transform: translateX(3px); }
 }
 
 /* ── Secciones que se pintan al acercarse ────────────────────
@@ -3582,6 +3611,175 @@ html:has(.lp-intro-dialog[open]) { overflow: hidden; }
   box-shadow: 0 8px 22px color-mix(in srgb, var(--ph-accent) 35%, transparent);
 }
 .lp-ph-caption { position: relative; font-size: 13px; color: var(--u-text-4); }
+
+/* ============================================================
+   VENDE EN LÍNEA (src/app/vende-en-linea/page.tsx)
+   ------------------------------------------------------------
+   La misma gramática de la portada (lp-*) con su propia escena:
+   el chat lleno de preguntas que se vuelve un pedido.
+   ============================================================ */
+.el-hero {
+  display: grid; column-gap: clamp(32px, 5vw, 64px); row-gap: 0;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  grid-template-areas: "copia media" "acciones media";
+}
+.el-hero-copy { grid-area: copia; align-self: end; container-type: inline-size; }
+.el-hero-media { grid-area: media; align-self: center; display: flex; justify-content: center; }
+.el-hero-acciones { grid-area: acciones; align-self: start; padding-top: 28px; }
+.el-hero-chip {
+  margin-bottom: 20px; white-space: normal; border-radius: 14px; font-weight: 600;
+  background: color-mix(in srgb, #2F9E6B 10%, #fff); border-color: color-mix(in srgb, #2F9E6B 26%, transparent); color: #1d6b47;
+}
+.el-h1 { font-size: clamp(32px, 9.6cqi, 58px); }
+@media (max-width: 940px) {
+  .el-hero { grid-template-columns: minmax(0, 1fr); grid-template-areas: "copia" "media" "acciones"; row-gap: 24px; }
+  .el-hero-acciones { padding-top: 0; }
+}
+/* En el teléfono el dibujo es alto (9:16): los botones van antes y el
+   chat asoma debajo, ya moviéndose. Con el teléfono primero, el botón
+   quedaba fuera del primer pantallazo. */
+@media (max-width: 560px) {
+  .el-hero { grid-template-areas: "copia" "acciones" "media"; }
+}
+
+/* ── La escena: del chat al pedido ───────────────────────── */
+.el-escena { margin: 0; position: relative; }
+.el-escena::before {
+  content: ""; position: absolute; inset: 8% -12%; pointer-events: none; z-index: -1;
+  background: radial-gradient(60% 55% at 50% 50%, color-mix(in srgb, #2F9E6B 16%, transparent), transparent 72%);
+}
+.el-telefono { width: min(250px, 66vw); }
+.el-pantalla {
+  position: relative; display: flex; flex-direction: column; aspect-ratio: 9 / 16;
+  background: #EFE7DD; color: #1A1613; font-family: var(--font-sans), system-ui, sans-serif;
+}
+@media (max-width: 560px) { .el-telefono { width: min(214px, 58vw); } }
+.el-chat-barra {
+  display: flex; align-items: center; gap: 9px; padding: 20px 12px 10px;
+  background: #23855A; color: #fff;
+}
+.el-chat-barra b { display: block; font-size: 12.5px; line-height: 1.2; }
+.el-chat-barra small { display: block; font-size: 10px; opacity: 0.85; }
+.el-chat-avatar {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  display: grid; place-items: center; background: #F5A030; color: #fff;
+  font-family: var(--font-display); font-weight: 800; font-size: 13px;
+}
+.el-chat { flex: 1; display: flex; flex-direction: column; gap: 7px; padding: 12px 10px; opacity: 0.3; }
+.el-burbuja {
+  align-self: flex-start; max-width: 84%; padding: 6px 10px 7px;
+  border-radius: 12px 12px 12px 3px; background: #fff; box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
+  font-size: 11.5px; line-height: 1.3;
+}
+.el-burbuja small { display: block; font-size: 9.5px; font-weight: 700; color: #1d6b47; }
+.el-pedido { position: absolute; left: 9px; right: 9px; top: 74px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.el-aviso {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 99px;
+  background: #1C1C1E; color: #fff; font-size: 11px; font-weight: 700;
+}
+.el-pedido-tarjeta {
+  align-self: stretch; display: flex; flex-direction: column; gap: 6px; padding: 12px;
+  border-radius: 14px; background: #fff; border: 1.5px solid #E8A48E;
+  box-shadow: 0 12px 28px rgba(23, 22, 26, 0.16); color: #17161a; font-size: 11.5px;
+}
+.el-pedido-tarjeta header { display: flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 700; color: rgba(23, 22, 26, 0.6); }
+.el-pedido-tarjeta header .lp-cc-chip { margin: 0; padding: 3px 7px; font-size: 9px; }
+.el-pedido-tarjeta strong { font-family: var(--font-display); font-size: 14.5px; font-weight: 800; letter-spacing: -0.02em; }
+.el-pedido-tarjeta ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.el-pedido-tarjeta p { display: flex; align-items: center; gap: 5px; font-size: 10.5px; color: rgba(23, 22, 26, 0.7); }
+.el-pedido-tarjeta footer { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+.el-pedido-tarjeta footer .t-mono { font-size: 15px; font-weight: 800; }
+.el-aceptar { padding: 6px 12px; border-radius: 9px; background: #C4532F; color: #fff; font-size: 11px; font-weight: 700; }
+
+/* Bucle de 12 s: cada pregunta entra a su turno, todas se barren y entra
+   el pedido, que se queda a la vista más de cuatro segundos para leerse.
+   Sin movimiento se queda el pedido sobre el chat apagado. */
+@keyframes el-burbuja {
+  0% { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.96); }
+  4%, 34% { opacity: 1; transform: none; }
+  38%, 100% { opacity: 0; transform: translate3d(-10px, -8px, 0) scale(0.9); }
+}
+@keyframes el-pedido {
+  0%, 56% { opacity: 0; transform: translate3d(0, 26px, 0) scale(0.94); }
+  61%, 95% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translate3d(0, -6px, 0); }
+}
+@keyframes el-aviso {
+  0%, 58% { opacity: 0; transform: translate3d(0, -10px, 0) scale(0.9); }
+  62%, 95% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .el-chat { opacity: 1; }
+  .el-burbuja { animation: el-burbuja 12s var(--ease-out) infinite both; animation-delay: calc(var(--b, 0) * 0.55s); }
+  .el-pedido-tarjeta { animation: el-pedido 12s cubic-bezier(0.3, 1.25, 0.5, 1) infinite both; }
+  .el-aviso { animation: el-aviso 12s ease-out infinite both; }
+}
+
+/* ── ¿Te suena? ──────────────────────────────────────────── */
+.el-dolor { padding: 24px 22px; }
+.el-burbuja-suelta {
+  display: inline-block; padding: 9px 13px; border-radius: 14px 14px 14px 4px;
+  background: #DCF8C6; color: #1A1613; font-size: 14px; font-weight: 600;
+  box-shadow: 0 2px 6px rgba(23, 22, 26, 0.07);
+}
+
+/* ── Solo lo que necesitas ───────────────────────────────── */
+.el-poda {
+  display: grid; gap: 16px; margin-top: 34px; align-items: start;
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+}
+.el-si { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.el-si-fila { padding: 18px; display: flex; gap: 14px; align-items: flex-start; border-radius: 18px; }
+.el-no { padding: 22px; border-radius: 20px; display: flex; flex-direction: column; gap: 14px; }
+.el-no ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.el-no li {
+  display: flex; align-items: center; gap: 9px; font-size: 14px; color: var(--u-text-3);
+  text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--u-text) 28%, transparent);
+}
+.el-no li svg { color: var(--u-text-4); flex-shrink: 0; }
+@media (max-width: 940px) { .el-poda { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 560px) { .el-si { grid-template-columns: minmax(0, 1fr); } }
+
+/* ── Una pieza de Vitrina ────────────────────────────────── */
+.el-vitrina {
+  width: min(100%, 320px); border-radius: 22px; overflow: hidden;
+  background: #2B1D1A; color: #F7EDE4; box-shadow: var(--lp-shadow-lg);
+}
+.el-vitrina-cinta {
+  padding: 9px 14px; background: #E8534A; color: #fff; white-space: nowrap; overflow: hidden;
+  font: 800 10.5px/1 var(--ui-font-mono), monospace; letter-spacing: 0.08em;
+}
+.el-vitrina-foto { display: grid; place-items: center; aspect-ratio: 1 / 0.92; background: radial-gradient(circle at 50% 42%, #5a3a32, #2B1D1A 72%); }
+.el-vitrina-foto svg { width: 72%; height: auto; }
+.el-vitrina-pie { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 14px 16px 10px; }
+.el-vitrina-pie b { display: block; font-family: var(--font-display); font-size: 17px; letter-spacing: -0.02em; }
+.el-vitrina-pie small { display: block; margin-top: 3px; font-size: 12px; font-weight: 700; color: #F5A030; }
+.el-vitrina-pie .t-mono { font-size: 20px; font-weight: 800; }
+.el-vitrina-barra { height: 6px; margin: 0 16px 16px; border-radius: 99px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.el-vitrina-barra span { display: block; width: 87%; height: 100%; background: linear-gradient(90deg, #E8534A, #F5A030); }
+
+/* ── Precio en pequeño ───────────────────────────────────── */
+.el-precio {
+  padding: clamp(24px, 4vw, 40px); display: flex; flex-wrap: wrap;
+  align-items: center; justify-content: space-between; gap: 24px;
+}
+.el-precio-cifra {
+  margin-top: 12px; font-size: clamp(34px, 6vw, 54px); font-weight: 800;
+  letter-spacing: -0.04em; line-height: 1; color: var(--brand-accent-ink);
+}
+.el-precio-cifra small { font-size: 0.42em; letter-spacing: -0.01em; color: var(--u-text-3); }
+.el-precio-acciones { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+@media (max-width: 560px) {
+  .el-precio-acciones, .el-precio-acciones .lp-btn { width: 100%; }
+}
+
+.el-cierre-banda {
+  overflow: hidden; border-radius: 28px; text-align: center;
+  padding: clamp(40px, 6vw, 64px) clamp(24px, 4vw, 48px);
+  background: linear-gradient(150deg, #1f1e23 0%, #17161a 55%, #1b2a22 100%);
+  box-shadow: var(--lp-shadow-lg);
+}
 
 /* Enlace de texto del sitio (subrayado al pasar). */
 .lp-link { color: var(--brand-accent-ink); font-weight: 600; text-decoration: none; }

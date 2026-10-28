@@ -5,6 +5,8 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
 ## Sin publicar
+- **Leogin para quien vende en línea** ([plan](docs/planes/PLAN_PORTADA_Y_VENDE_EN_LINEA_2026-10-27.md)): página `/vende-en-linea` para quien vende por WhatsApp o Instagram sin local («Tu menú en un link. Tus pedidos, en orden.»), con el chat que se vuelve un pedido, lo que no le va a estorbar tachado, la Vitrina por temporadas y «Menos de Q7 al día». Puerta en la segunda pantalla de la portada y enlace en la cabecera, el menú y el pie. El alta llega con Estándar «para llevar + a domicilio» ya marcado.
+- **La portada en el teléfono** (mismo plan): sin desborde lateral (la intro salía cortada), el video en el primer pantallazo, cabecera sólida, la vitrina de diseños «mitad y mitad», menos recorrido en «Del caos al control», cifras 2×2 y carruseles; la intro vertical centrada.
 
 ## v0.14.1 — 2026-10-27 · Leo v3 y sticker de logros
 PR #51-#53 · sin migraciones

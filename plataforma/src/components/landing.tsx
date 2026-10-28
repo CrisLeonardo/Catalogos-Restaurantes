@@ -260,6 +260,21 @@ export default async function LeoginLanding() {
           </div>
         </section>
 
+        {/* ── La puerta de quien vende en línea ────────────────
+            Quien no tiene local lee «tu restaurante» y se va pensando que
+            esto es para otros. En la segunda pantalla, una pregunta en la
+            que se reconoce y una página contada con su noche (el chat). */}
+        <section className="lp-shell" style={{ marginTop: 16 }}>
+          <Link href="/vende-en-linea" className="lp-puerta" data-fx="">
+            <span className="lp-puerta-icono" aria-hidden><Icon name="whatsapp" size={20} /></span>
+            <span className="lp-puerta-texto">
+              <span className="lp-puerta-pregunta">¿No tienes local? ¿Vendes por WhatsApp o Instagram?</span>
+              <span className="lp-puerta-titulo">Leogin también es para ti: tu menú en un link y tus pedidos, en orden.</span>
+            </span>
+            <Icon name="arrowRight" size={18} className="lp-puerta-flecha" />
+          </Link>
+        </section>
+
         {/* ── Ya lo usan (solo con testimonios guardados en el Super, WEB-02) ── */}
         {proof.testimonials.length > 0 && (
           <section id="clientes" className="lp-shell lp-section">

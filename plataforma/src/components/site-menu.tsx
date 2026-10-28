@@ -80,6 +80,7 @@ export default function SiteMenu({ home = false, demoUrl }: Props) {
         <nav className="lp-menu-panel" aria-label="Navegación del sitio" onClick={() => setOpen(false)}>
           <a href={anchor('producto')} className="lp-menu-link">Producto</a>
           <a href={anchor('capacidades')} className="lp-menu-link">Funciones</a>
+          <Link href="/vende-en-linea" className="lp-menu-link">Vende en línea</Link>
           <Link href="/planes" className="lp-menu-link">Planes y precios</Link>
           <a href={demoUrl} className="lp-menu-link">Ver una demo</a>
           <Link href="/descargas" className="lp-menu-link">Leogin Escritorio</Link>
