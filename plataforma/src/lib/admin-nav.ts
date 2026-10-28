@@ -108,6 +108,14 @@ export function buildNav(ctx: NavContext): NavGroup[] {
   // Mesas se habilita también si el restaurante ya tiene "comer en local"
   // activo (ESTANDAR puede elegirlo entre sus dos modos), no solo por plan.
   const mesasAccessible = hasWaiterPanel || ctx.dineInEnabled;
+  // Quien vende solo en línea (pide pedidos, sin «comer en local» y sin un
+  // plan con mesero: el Estándar de recoger + domicilio) no tiene salón. Ahí
+  // Mesas, Tomar pedidos y Salón con candado no venden nada: le dicen que
+  // Leogin es para otros (docs/planes/PLAN_PORTADA_Y_VENDE_EN_LINEA_2026-10-27.md).
+  // Se ocultan. El Básico sin pedidos y quien sí tiene local los siguen viendo.
+  const soloEnLinea = ctx.ordersEnabled && !ctx.dineInEnabled && !hasWaiterPanel;
+  const salon = (enabled: boolean, inPlan: boolean, item: NavItem): NavItem[] =>
+    soloEnLinea && !ctx.preview ? [] : lockable(ctx, enabled, inPlan, item);
 
   const groups: NavGroup[] = [
     {
@@ -126,8 +134,8 @@ export function buildNav(ctx: NavContext): NavGroup[] {
         ? [
             { href: '/admin/pedidos', label: 'En vivo', key: 'pedidos' },
             { href: '/admin/cocina', label: 'Cocina', key: 'cocina' },
-            ...lockable(ctx, mesasAccessible, mesasAccessible, { href: '/admin/mesas', label: 'Mesas', key: 'mesas' }),
-            ...lockable(ctx, hasWaiterPanel, hasWaiterPanel, { href: '/admin/mesero', label: 'Tomar pedidos', key: 'mesero' }),
+            ...salon(mesasAccessible, mesasAccessible, { href: '/admin/mesas', label: 'Mesas', key: 'mesas' }),
+            ...salon(hasWaiterPanel, hasWaiterPanel, { href: '/admin/mesero', label: 'Tomar pedidos', key: 'mesero' }),
           ]
         : [],
     },
@@ -199,7 +207,7 @@ export function buildNav(ctx: NavContext): NavGroup[] {
            2026-08-26, donde ahora vive solo lo que ESTÁ PASANDO. Conserva la
            llave 'mesas' a propósito: quien podía configurar el salón sigue
            pudiendo, sin tocar el modelo de permisos. */
-        ...lockable(ctx, mesasAccessible, mesasAccessible, { href: '/admin/ajustes/salon', label: 'Salón', key: 'mesas' }),
+        ...salon(mesasAccessible, mesasAccessible, { href: '/admin/ajustes/salon', label: 'Salón', key: 'mesas' }),
         ...(on(ctx.ordersEnabled)
           ? [
               { href: '/admin/ajustes/entrega', label: 'Zona de entrega', key: 'ajustes' },
