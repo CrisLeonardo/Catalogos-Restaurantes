@@ -54,7 +54,7 @@ function buildFaqs(pricing: PlanPricing) {
     },
     {
       q: '¿Cuál es la diferencia entre los planes?',
-      a: `Básico (${planPriceLabel(pricing, 'BASICO')}) es solo menú digital: tu carta con fotos, precios y QR imprimible, sin pedidos en línea. En línea (${planPriceLabel(pricing, 'EN_LINEA')}, sin alta) es para quien vende por WhatsApp o Instagram: pedidos para llevar y a domicilio con zonas de reparto y seguimiento del pedido, 1 usuario y hasta ${PLANS.EN_LINEA.maxProducts} productos. Estándar (${planPriceLabel(pricing, 'ESTANDAR')}) agrega pedidos en línea con avisos en tiempo real, reportes financieros y corte de caja, eligiendo 2 de los 3 modos (comer en local, para llevar, a domicilio). Premium (${planPriceLabel(pricing, 'PREMIUM')}) incluye los 3 modos de pedido a la vez, panel de mesero, personalización completa, analítica/inventario/personal y todos los módulos disponibles.`,
+      a: `Básico (${planPriceLabel(pricing, 'BASICO')}) es solo menú digital: tu carta con fotos, precios y QR imprimible, sin pedidos en línea. En línea (${planPriceLabel(pricing, 'EN_LINEA')}, sin alta) es para quien vende por WhatsApp o Instagram: pedidos para llevar y a domicilio con zonas de reparto y seguimiento del pedido, hasta ${PLANS.EN_LINEA.monthlyOrderCap} pedidos al mes, 1 usuario y hasta ${PLANS.EN_LINEA.maxProducts} productos. Si un mes pasas los ${PLANS.EN_LINEA.monthlyOrderCap} pedidos no se corta ninguno: te avisamos y al mes siguiente pasas a Estándar. Estándar (${planPriceLabel(pricing, 'ESTANDAR')}) agrega pedidos en línea con avisos en tiempo real, reportes financieros y corte de caja, eligiendo 2 de los 3 modos (comer en local, para llevar, a domicilio). Premium (${planPriceLabel(pricing, 'PREMIUM')}) incluye los 3 modos de pedido a la vez, panel de mesero, personalización completa, analítica/inventario/personal y todos los módulos disponibles.`,
     },
     {
       q: '¿Cómo funciona Multisucursal / Franquicias?',
@@ -192,6 +192,7 @@ export default async function PlanesPage() {
                     { label: 'Pedidos para llevar y a domicilio', ok: true },
                     { label: 'Zonas de reparto y seguimiento del pedido', ok: true },
                     { label: 'WhatsApp y panel en tiempo real', ok: true },
+                    { label: `Hasta ${PLANS.EN_LINEA.monthlyOrderCap} pedidos al mes`, ok: true },
                     { label: 'Sin costo de alta', ok: true },
                     { label: 'Comer en local, reportes y corte de caja', ok: false },
                   ] : code === 'ESTANDAR' ? [

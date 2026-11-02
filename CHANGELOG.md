@@ -5,6 +5,7 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
 ## Sin publicar
+- **Tope de 300 pedidos al mes en En línea**: lo que ahora lo separa de Estándar. Es un tope blando: nunca se corta un pedido; el panel «Hoy» avisa al llegar al 80 % y al pasarlo, Mi suscripción enseña «Pedidos este mes: N de 300» y se pide pasar a Estándar el mes siguiente. Se cuenta por mes del calendario en la zona del restaurante, sin los cancelados. Planes, alta y /vende-en-linea lo dicen.
 - **Se retiran los encargos y la transferencia del comensal** (migración 153): por decisión del dueño salen **Pedidos › Encargos**, la franja de encargos del menú, la opción «Transferencia» del checkout con su comprobante, la cuenta del restaurante en Ajustes › Pedidos y cobro y el aviso de pago en la tarjeta del pedido. La 153 devuelve el archivado automático al de la 099 y borra `encargo_fechas` y sus columnas en `orders`. **Paga tu plan** (148) no cambia. En línea se vende con zonas de reparto y seguimiento del pedido en vez de encargos.
 
 ## v0.16.0 — 2026-11-02 · Paga tu plan, encargos y plan En línea

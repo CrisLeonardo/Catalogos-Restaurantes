@@ -29,6 +29,8 @@ import { codigoDePago } from '@/lib/pago-plan';
 import PagaTuPlan from '@/components/admin/paga-tu-plan';
 import CambiarPlan from '@/components/admin/cambiar-plan';
 import { duenoDelRestaurante } from '@/lib/auth/acceso-cobro';
+import { estadoDelTope } from '@/lib/tope-pedidos';
+import { pedidosDelMes } from '@/lib/db/tope-pedidos';
 
 export const metadata = { title: 'Mi suscripción – Panel admin' };
 export const dynamic = 'force-dynamic';
@@ -100,13 +102,16 @@ export default async function SuscripcionPage() {
   const db = createServiceClient();
   const { data: restRow } = await db
     .from('restaurants')
-    .select('plan_actual, name')
+    .select('plan_actual, name, timezone')
     .eq('id', restaurantId)
     .single();
   const currentPlan = ((restRow?.plan_actual as PlanCode | null) ?? 'BASICO') as PlanCode;
   if (restRow?.name) restaurantName = restRow.name as string;
 
   const planInfo = PLANS[currentPlan];
+  const tope = planInfo?.monthlyOrderCap
+    ? estadoDelTope(currentPlan, await pedidosDelMes(restaurantId, (restRow?.timezone as string | null) ?? 'America/Guatemala'))
+    : null;
   const pending = invoices.filter((i) => i.status === 'PENDING');
   const hasOverdue = pending.some((i) => isOverdue(i));
   const onTrial = isOnTrial(config);
@@ -301,6 +306,18 @@ export default async function SuscripcionPage() {
             {config.setup_fee > 0 && <Stat label="Implementación" value={fmtMoney(config.setup_fee, currency)} />}
             <Stat label="Próximo cobro" value={nextChargeLabel(config.billing_day)} />
             {config.started_at && <Stat label="Cliente desde" value={fechaCorta(config.started_at)} />}
+            {tope && (
+              <Stat
+                label="Pedidos este mes"
+                value={`${tope.usados.toLocaleString('es-GT')} de ${tope.tope.toLocaleString('es-GT')}`}
+                tone={tope.nivel === 'pasado' ? 'danger' : tope.nivel === 'cerca' ? 'warn' : undefined}
+                sub={tope.nivel === 'pasado'
+                  ? 'Pasaste el tope de tu plan. Ningún pedido se corta; el próximo mes te toca Estándar.'
+                  : tope.nivel === 'cerca'
+                    ? `Te quedan ${tope.restantes}. Al pasarlos tu menú sigue vendiendo.`
+                    : 'Se reinicia el día 1. Si lo pasas, tu menú sigue vendiendo.'}
+              />
+            )}
           </StatGroup>
 
           <Card className="p-3.5" style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>

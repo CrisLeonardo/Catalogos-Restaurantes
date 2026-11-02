@@ -12,6 +12,8 @@ import { ultimoComprobante } from '@/lib/db/comprobantes';
 import { getVisitStats } from '@/lib/actions/metrics';
 import { subdomainUrl } from '@/lib/tenant';
 import { PLANS, withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
+import { estadoDelTope } from '@/lib/tope-pedidos';
+import { pedidosDelMes } from '@/lib/db/tope-pedidos';
 import { isModuleActive } from '@/lib/modules';
 import { Icon } from '@/components/icons';
 import { can } from '@/lib/permissions';
@@ -205,6 +207,12 @@ export default async function AdminHomePage() {
       })()
     : null;
 
+  // ── Tope de pedidos de En línea (solo aviso, nunca corta un pedido) ──
+  const plan = (restaurant?.plan_actual ?? null) as PlanCode | null;
+  const tope = plan && PLANS[plan].monthlyOrderCap && restaurantId && allow('suscripcion')
+    ? estadoDelTope(plan, await pedidosDelMes(restaurantId, timezone))
+    : null;
+
   // ── Aviso de visitas del plan gratuito (solo aviso, nunca bloquea el menú) ──
   const visitWarningLimit = restaurant?.plan_actual ? PLANS[restaurant.plan_actual].monthlyVisitWarning : undefined;
   const visitWarning = !!visitStats && !!visitWarningLimit && visitStats.last30 >= visitWarningLimit;
@@ -384,6 +392,18 @@ export default async function AdminHomePage() {
       key: 'trial', href: panelHref(base, '/admin/suscripcion'), level: 'urgente',
       title: `Tu prueba termina en ${trialLeft} día${trialLeft !== 1 ? 's' : ''}`,
       desc: 'Contáctanos para continuar sin interrupciones.',
+      action: 'Ver planes',
+    });
+  }
+  if (tope && tope.nivel !== 'ok') {
+    alerts.push({
+      key: 'tope-pedidos', href: panelHref(base, '/admin/suscripcion'), level: tope.nivel === 'pasado' ? 'urgente' : 'aviso',
+      title: tope.nivel === 'pasado'
+        ? `¡${tope.usados.toLocaleString('es-GT')} pedidos este mes! Pasaste los ${tope.tope} de En línea`
+        : `Llevas ${tope.usados.toLocaleString('es-GT')} de ${tope.tope} pedidos este mes`,
+      desc: tope.nivel === 'pasado'
+        ? 'Tu menú sigue vendiendo: no se corta ningún pedido. Desde el próximo mes tu negocio necesita Estándar, con pedidos y productos sin tope.'
+        : 'Te va bien. Si pasas el tope tu menú sigue vendiendo, y el próximo mes te pediremos pasar a Estándar.',
       action: 'Ver planes',
     });
   }
