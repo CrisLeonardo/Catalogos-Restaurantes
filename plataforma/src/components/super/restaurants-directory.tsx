@@ -192,7 +192,7 @@ function FilterChip({ label, active, onClick, danger, dot }: {
 }
 
 
-const PLAN_LABELS: Record<string, string> = { BASICO: 'Básico', ESTANDAR: 'Estándar', PREMIUM: 'Premium', PRO: 'Pro' };
+const PLAN_LABELS: Record<string, string> = { BASICO: 'Básico', EN_LINEA: 'En línea', ESTANDAR: 'Estándar', PREMIUM: 'Premium', PRO: 'Pro' };
 function labelOf(plan: string): string { return PLAN_LABELS[plan] ?? plan; }
 
 function fmt(n: number, cur: string): string {

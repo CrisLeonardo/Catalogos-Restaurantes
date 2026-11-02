@@ -95,6 +95,7 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
       >
         <Grid>
           <Field name="plan_price_BASICO"   label="Básico"   value={pricing.basico}   dot={PLAN_COLORS.BASICO} />
+          <Field name="plan_price_EN_LINEA" label="En línea" value={pricing.enLinea} dot={PLAN_COLORS.EN_LINEA} />
           <Field name="plan_price_ESTANDAR" label="Estándar" value={pricing.estandar} dot={PLAN_COLORS.ESTANDAR} />
           <Field name="plan_price_PREMIUM"  label="Premium"  value={pricing.premium}  dot={PLAN_COLORS.PREMIUM} />
           <Field name="plan_price_PRO"      label="Pro"      value={pricing.pro}      dot={PLAN_COLORS.PRO} />
@@ -107,6 +108,7 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
       >
         <Grid>
           <Field name="setup_fee_BASICO"   label="Básico"   value={pricing.setupFeeBasico}   dot={PLAN_COLORS.BASICO} />
+          <Field name="setup_fee_EN_LINEA" label="En línea" value={pricing.setupFeeEnLinea} dot={PLAN_COLORS.EN_LINEA} />
           <Field name="setup_fee_ESTANDAR" label="Estándar" value={pricing.setupFeeEstandar} dot={PLAN_COLORS.ESTANDAR} />
           <Field name="setup_fee_PREMIUM"  label="Premium"  value={pricing.setupFeePremium}  dot={PLAN_COLORS.PREMIUM} />
           <Field name="setup_fee_PRO"      label="Pro (incluida)" value={pricing.setupFeePro} dot={PLAN_COLORS.PRO} />

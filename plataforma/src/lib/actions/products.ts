@@ -84,7 +84,7 @@ async function checkProductLimit(
     .eq('restaurant_id', ctx.restaurantId);
 
   if ((count ?? 0) >= maxProducts) {
-    return `Llegaste al límite de ${maxProducts} productos del plan gratuito. Sube de plan para agregar productos ilimitados.`;
+    return `Llegaste al límite de ${maxProducts} productos de tu plan. Sube de plan para agregar productos ilimitados.`;
   }
   return null;
 }

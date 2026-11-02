@@ -8,7 +8,8 @@
    defecto sin tocar código — ver src/lib/db/billing.ts).
 
    Modelo (desde 2026-08-21): SIN cobro por GMV/ventas y SIN precio
-   variable. 4 planes de precio fijo, cada uno con su set de módulos
+   variable. Planes de precio fijo (EN_LINEA se sumó el 2026-10-28, ver
+   docs/planes/PLAN_NECESIDAD_Y_PLAN_EN_LINEA_2026-10-28.md §2), cada uno con su set de módulos
    ya definido — nada de comprar módulos sueltos ni de descuento por
    desactivar un canal. Quien quiere solo lo de entrada va a Estándar;
    quien lo quiere todo va a Premium. (Antes hubo un modelo de "módulos
@@ -33,7 +34,7 @@
 
 import type { ActivatableModuleKey } from './modules';
 
-export type PlanCode = 'BASICO' | 'ESTANDAR' | 'PREMIUM' | 'PRO';
+export type PlanCode = 'BASICO' | 'EN_LINEA' | 'ESTANDAR' | 'PREMIUM' | 'PRO';
 
 export interface PlanFeatures {
   products: 'unlimited';
@@ -81,6 +82,32 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasOrders: false,
     hasWhatsapp: false,
     hasRealtime: false,
+    hasFullTheme: false,
+    hasWaiterPanel: false,
+    hasPrinting: false,
+    hasFinance: false,
+    hasAnalytics: false,
+    highlight: false,
+  },
+  /* Para quien solo vende en línea (WhatsApp, Instagram, cocina oculta,
+     cocina de casa) y va empezando: Q99 y sin alta. A cambio, solo para
+     llevar y a domicilio (nada de comer en local: quien tiene mesas sigue
+     necesitando Estándar o Premium), un usuario, 150 productos y sin
+     finanzas, cupones, lealtad, impresión ni mesero. Encargos y
+     transferencia sí (mig. 149): es justo lo que este negocio necesita. */
+  EN_LINEA: {
+    code: 'EN_LINEA',
+    name: 'En línea',
+    tagline: 'Vende para llevar y a domicilio desde tu WhatsApp o Instagram, sin comisión por pedido',
+    priceMonthly: 99,
+    priceLabel: 'Q99 / mes',
+    setupFee: 0,
+    products: 'unlimited',
+    maxProducts: 150,
+    users: 1,
+    hasOrders: true,
+    hasWhatsapp: true,
+    hasRealtime: true,
     hasFullTheme: false,
     hasWaiterPanel: false,
     hasPrinting: false,
@@ -155,9 +182,9 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
  *  arma y factura igual internamente, pero no aparece aquí — ver nota
  *  "PAUSADO" arriba. PLAN_ORDER (abajo) sigue teniendo los 4, para que
  *  el super admin pueda seguir asignando Pro a mano. */
-export const PUBLIC_PLANS: PlanCode[] = ['BASICO', 'ESTANDAR', 'PREMIUM'];
+export const PUBLIC_PLANS: PlanCode[] = ['BASICO', 'EN_LINEA', 'ESTANDAR', 'PREMIUM'];
 
-export const PLAN_ORDER: PlanCode[] = ['BASICO', 'ESTANDAR', 'PREMIUM', 'PRO'];
+export const PLAN_ORDER: PlanCode[] = ['BASICO', 'EN_LINEA', 'ESTANDAR', 'PREMIUM', 'PRO'];
 
 export function isUpgrade(current: PlanCode, target: PlanCode): boolean {
   return PLAN_ORDER.indexOf(target) > PLAN_ORDER.indexOf(current);
@@ -167,6 +194,19 @@ export function isUpgrade(current: PlanCode, target: PlanCode): boolean {
  *  para llevar, a domicilio). Para tener los 3 a la vez hay que subir a
  *  Premium — este número es la única fuente de verdad de ese tope. */
 export const ESTANDAR_MAX_ORDER_TYPES = 2;
+
+/** Modos de pedido que un plan NO permite, aunque el tema los pida. En
+ *  línea es para llevar y a domicilio: comer en local es de Estándar en
+ *  adelante. Básico no tiene pedidos (lo controla `hasOrders`). */
+export const PLAN_ORDER_TYPES_BLOCKED: Partial<Record<PlanCode, ('dine_in' | 'pickup' | 'delivery')[]>> = {
+  EN_LINEA: ['dine_in'],
+};
+
+/** Los modos que el plan deja usar, de una lista pedida. */
+export function orderTypesForPlan<T extends string>(plan: PlanCode | string | null | undefined, types: T[]): T[] {
+  const bloqueados = (PLAN_ORDER_TYPES_BLOCKED[(plan ?? 'BASICO') as PlanCode] ?? []) as string[];
+  return types.filter((t) => !bloqueados.includes(t));
+}
 
 /** Siguiente plan que se le puede ofrecer a un cliente (solo dentro de
  *  PUBLIC_PLANS — nunca recomienda un plan pausado como Pro). */
@@ -217,6 +257,7 @@ export function planPriceLabel(pricing: PlanPricing, code: PlanCode): string {
 /** Módulos incluidos en cada plan — es lo que el plan trae, sin costo extra ni compra suelta. */
 export const INCLUDED_MODULES: Record<PlanCode, ActivatableModuleKey[]> = {
   BASICO: [],
+  EN_LINEA: [],
   ESTANDAR: [],
   PREMIUM: ['llamada_mesero', 'encuestas', 'cupones', 'loyalty', 'recetas', 'reservaciones', 'lista_espera'],
   PRO: ['reservaciones', 'lista_espera', 'llamada_mesero', 'encuestas', 'cupones', 'loyalty', 'recetas', 'proveedores', 'fel'],
@@ -314,6 +355,7 @@ export function withPlanFloor(
    destacado y es lo que ata la página al resto de la marca. */
 export const PLAN_ACCENT: Record<PlanCode, string> = {
   BASICO: '#475569',
+  EN_LINEA: '#0369a1',
   ESTANDAR: '#047857',
   PREMIUM: '#c2542f',
   PRO: '#6d28d9',
@@ -324,6 +366,7 @@ export const PLAN_ACCENT: Record<PlanCode, string> = {
    Super y el panel del dueño — chips, puntos de la barra lateral, precios. */
 export const PLAN_COLOR_VAR: Record<PlanCode, string> = {
   BASICO: 'var(--plan-basico)',
+  EN_LINEA: 'var(--plan-en-linea)',
   ESTANDAR: 'var(--plan-estandar)',
   PREMIUM: 'var(--plan-premium)',
   PRO: 'var(--plan-pro)',
@@ -338,6 +381,7 @@ export const PLAN_COLOR_VAR: Record<PlanCode, string> = {
    siendo el bueno — no uses este. */
 export const PLAN_ACCENT_INK: Record<PlanCode, string> = {
   BASICO: '#3f4b5c',
+  EN_LINEA: '#075985',
   ESTANDAR: '#04624a',
   PREMIUM: '#9c3f21',
   PRO: '#5b21b6',
@@ -363,6 +407,12 @@ export const PLAN_POINTS: Record<PlanCode, { text: string; positive: boolean }[]
     { text: 'Tu logo y color de marca', positive: true },
     { text: 'Sin pedidos en línea', positive: false },
   ],
+  EN_LINEA: [
+    { text: 'Para llevar y a domicilio', positive: true },
+    { text: 'Encargos con cupo y pago por transferencia', positive: true },
+    { text: 'Avisos en tiempo real y WhatsApp', positive: true },
+    { text: 'Hasta 150 productos · 1 usuario', positive: true },
+  ],
   ESTANDAR: [
     { text: 'Elige 2 de 3 modos de pedido', positive: true },
     { text: 'Avisos en tiempo real y WhatsApp', positive: true },
@@ -382,3 +432,65 @@ export const PLAN_POINTS: Record<PlanCode, { text: string; positive: boolean }[]
     { text: 'Soporte prioritario', positive: true },
   ],
 };
+
+/* ============================================================
+   CAMBIAR DE PLAN (desde el panel del dueño, 2026-10-28)
+   ------------------------------------------------------------
+   `withPlanFloor` solo SUBE: garantiza lo que el plan nuevo promete,
+   pero no apaga lo que traía el anterior. Al bajar de Premium a En
+   línea, analítica, inventario, cupones o lealtad se quedaban
+   encendidos en el jsonb y el restaurante seguía teniendo lo que ya
+   no paga. Aquí se apaga lo que el plan de antes daba y el nuevo no,
+   y después se aplica el piso del nuevo.
+   ============================================================ */
+
+const BANDERAS_DE_PLAN: PlanFeatureFlag[] = ['orders', 'whatsapp_notify', 'analitica', 'inventario', 'personal', 'finanzas'];
+
+/** Módulos con los que queda el restaurante al pasar de `antes` a `despues`. */
+export function modulosAlCambiarDePlan(
+  antes: PlanCode,
+  despues: PlanCode,
+  modules: Record<string, boolean> = {},
+): Record<string, boolean> {
+  const out: Record<string, boolean> = { ...modules };
+  const piso = planFeatureFloor(despues);
+  for (const f of BANDERAS_DE_PLAN) out[f] = piso[f];
+  for (const key of INCLUDED_MODULES[antes] ?? []) {
+    if (!INCLUDED_MODULES[despues].includes(key)) out[key] = false;
+  }
+  return withPlanFloor(despues, out);
+}
+
+/** Modos de pedido con los que queda el tema al cambiar de plan: se quita lo
+ *  que el plan nuevo no permite y, si no queda ninguno, los de fábrica. */
+export function modosAlCambiarDePlan(
+  plan: PlanCode,
+  actuales: ('dine_in' | 'pickup' | 'delivery')[],
+): ('dine_in' | 'pickup' | 'delivery')[] {
+  if (plan === 'BASICO') return ['pickup'];
+  let modos = orderTypesForPlan(plan, actuales);
+  if (plan === 'ESTANDAR' && modos.length > ESTANDAR_MAX_ORDER_TYPES) {
+    // Se quedan los de vender fuera antes que el salón: es lo que se pierde
+    // con menos ruido (las mesas se vuelven a encender en Funciones).
+    modos = (['pickup', 'delivery', 'dine_in'] as const).filter((m) => modos.includes(m)).slice(0, ESTANDAR_MAX_ORDER_TYPES);
+  }
+  if (modos.length > 0) return modos;
+  return plan === 'EN_LINEA' ? ['pickup', 'delivery'] : plan === 'ESTANDAR' ? ['pickup', 'dine_in'] : ['dine_in', 'delivery', 'pickup'];
+}
+
+/** Lo que el restaurante deja de tener al pasar de `antes` a `despues`, para avisarle antes de confirmar. */
+export function loQueSePierde(antes: PlanCode, despues: PlanCode): string[] {
+  const a = PLANS[antes];
+  const d = PLANS[despues];
+  const fuera: string[] = [];
+  if (a.hasOrders && !d.hasOrders) fuera.push('Pedidos en línea');
+  if (!orderTypesForPlan(despues, ['dine_in']).length && orderTypesForPlan(antes, ['dine_in']).length && d.hasOrders) fuera.push('Pedidos para comer en local');
+  if (a.hasWaiterPanel && !d.hasWaiterPanel) fuera.push('Panel de mesero y mapa de mesas');
+  if (a.hasFinance && !d.hasFinance) fuera.push('Reportes financieros y corte de caja');
+  if (a.hasAnalytics && !d.hasAnalytics) fuera.push('Analítica, inventario y personal');
+  if (a.hasFullTheme && !d.hasFullTheme) fuera.push('Personalización completa');
+  const modulos = (INCLUDED_MODULES[antes] ?? []).filter((k) => !INCLUDED_MODULES[despues].includes(k));
+  if (modulos.length > 0) fuera.push(`${modulos.length} ${modulos.length === 1 ? 'herramienta incluida' : 'herramientas incluidas'} (lealtad, cupones y más)`);
+  if (d.maxProducts && !a.maxProducts) fuera.push(`Productos ilimitados (el plan nuevo llega a ${d.maxProducts})`);
+  return fuera;
+}

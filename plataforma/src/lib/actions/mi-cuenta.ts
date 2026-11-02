@@ -219,7 +219,9 @@ export async function createAnotherRestaurant(
   const rawSlug = ((formData.get('slug') as string) ?? '').trim().toLowerCase();
   const rawPlan = formData.get('plan_code') as string | null;
   const planCode: PlanCode =
-    rawPlan === 'BASICO' ? 'BASICO' : rawPlan === 'ESTANDAR' ? 'ESTANDAR' : 'PREMIUM';
+    rawPlan === 'BASICO' ? 'BASICO'
+      : rawPlan === 'EN_LINEA' ? 'EN_LINEA'
+        : rawPlan === 'ESTANDAR' ? 'ESTANDAR' : 'PREMIUM';
   const template = findTemplate(((formData.get('template_id') as string) ?? '').trim());
   const whatsapp = ((formData.get('whatsapp') as string) ?? '').trim() || null;
 
@@ -309,6 +311,7 @@ export async function createAnotherRestaurant(
   // ── Tema ───────────────────────────────────────────────────
   const orderTypes: OrderType[] =
     planCode === 'BASICO' ? ['pickup']
+      : planCode === 'EN_LINEA' ? ['pickup', 'delivery']
       : planCode === 'ESTANDAR' ? estandarOrderTypes
         : ['dine_in', 'delivery', 'pickup'];
   await db.from('restaurant_themes').insert({

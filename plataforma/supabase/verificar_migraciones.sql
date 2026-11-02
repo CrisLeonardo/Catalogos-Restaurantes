@@ -139,7 +139,13 @@ huellas(n, que, ok, cuando) as (values
      to_regclass('public.encargo_fechas') is not null
      and exists (select 1 from information_schema.columns
                   where table_schema = 'public' and table_name = 'orders' and column_name = 'transfer_status'),
-     'ANTES de desplegar, después de la 148')
+     'ANTES de desplegar, después de la 148'),
+  ('150', 'plan En línea (EN_LINEA en la restricción y en el cobro)',
+     exists (select 1 from pg_constraint
+              where conname = 'restaurants_plan_actual_check'
+                and pg_get_constraintdef(oid) like '%EN_LINEA%')
+     and exists (select 1 from platform_settings where key = 'plan_price_EN_LINEA'),
+     'ANTES de desplegar')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

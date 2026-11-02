@@ -7,6 +7,7 @@ import type { PlanPricing } from '@/lib/plans';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { fmtMoney } from '@/lib/money';
+import { CtaEnLinea } from '@/components/en-linea/cta-en-linea';
 
 export const metadata = {
   title: 'Planes y precios — Leogin',
@@ -49,11 +50,11 @@ function buildFaqs(pricing: PlanPricing) {
     },
     {
       q: '¿Qué incluye cada plan?',
-      a: 'Cada plan ya trae definido lo suyo — no hay módulos sueltos que comprar aparte. Si solo necesitas lo básico para vender en línea, Estándar te alcanza; si quieres reservaciones, lealtad, cupones, encuestas y todo lo demás sin ir activando una cosa a la vez, Premium lo incluye todo por su precio fijo.',
+      a: 'Cada plan ya trae definido lo suyo — no hay módulos sueltos que comprar aparte. Si vendes solo para llevar y a domicilio y vas empezando, En línea te alcanza; si además tienes mesas o quieres reportes y corte de caja, Estándar; si quieres reservaciones, lealtad, cupones, encuestas y todo lo demás sin ir activando una cosa a la vez, Premium lo incluye todo por su precio fijo.',
     },
     {
-      q: '¿Cuál es la diferencia entre Básico, Estándar y Premium?',
-      a: `Básico (${planPriceLabel(pricing, 'BASICO')}) es solo menú digital: tu carta con fotos, precios y QR imprimible, sin pedidos en línea. Estándar (${planPriceLabel(pricing, 'ESTANDAR')}) agrega pedidos en línea con avisos en tiempo real, reportes financieros y corte de caja, eligiendo 2 de los 3 modos (comer en local, para llevar, a domicilio). Premium (${planPriceLabel(pricing, 'PREMIUM')}) incluye los 3 modos de pedido a la vez, panel de mesero, personalización completa, analítica/inventario/personal y todos los módulos disponibles.`,
+      q: '¿Cuál es la diferencia entre los planes?',
+      a: `Básico (${planPriceLabel(pricing, 'BASICO')}) es solo menú digital: tu carta con fotos, precios y QR imprimible, sin pedidos en línea. En línea (${planPriceLabel(pricing, 'EN_LINEA')}, sin alta) es para quien vende por WhatsApp o Instagram: pedidos para llevar y a domicilio, encargos con cupo y pago por transferencia, 1 usuario y hasta ${PLANS.EN_LINEA.maxProducts} productos. Estándar (${planPriceLabel(pricing, 'ESTANDAR')}) agrega pedidos en línea con avisos en tiempo real, reportes financieros y corte de caja, eligiendo 2 de los 3 modos (comer en local, para llevar, a domicilio). Premium (${planPriceLabel(pricing, 'PREMIUM')}) incluye los 3 modos de pedido a la vez, panel de mesero, personalización completa, analítica/inventario/personal y todos los módulos disponibles.`,
     },
     {
       q: '¿Cómo funciona Multisucursal / Franquicias?',
@@ -133,12 +134,9 @@ export default async function PlanesPage() {
 
       {/* Tarjetas de los planes */}
       <section style={{ maxWidth: 1100, margin: '0 auto', padding: '0 18px 24px' }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: 20,
-          alignItems: 'start',
-        }}>
+        {/* Cuatro planes: 4, 2 o 1 columna (lp-cols-4). Con auto-fit salían
+            tres arriba y Premium huérfano abajo en anchos medianos. */}
+        <div className="lp-cols-4" style={{ gap: 20, alignItems: 'start' }}>
           {PUBLIC_PLANS.map((code) => {
             const p = PLANS[code];
             const accent = PLAN_ACCENT[code];
@@ -189,6 +187,13 @@ export default async function PlanesPage() {
                     { label: `Hasta ${PLANS.BASICO.maxProducts} productos`, ok: true },
                     { label: 'Tu logo y color de marca', ok: true },
                     { label: 'Pedidos en línea', ok: false },
+                  ] : code === 'EN_LINEA' ? [
+                    { label: 'Todo lo del Básico', ok: true },
+                    { label: 'Pedidos para llevar y a domicilio', ok: true },
+                    { label: 'Encargos con cupo y pago por transferencia', ok: true },
+                    { label: 'WhatsApp y panel en tiempo real', ok: true },
+                    { label: 'Sin costo de alta', ok: true },
+                    { label: 'Comer en local, reportes y corte de caja', ok: false },
                   ] : code === 'ESTANDAR' ? [
                     { label: 'Todo lo del Básico', ok: true },
                     { label: 'Elige 2 de 3 modos de pedido', ok: true },
@@ -217,18 +222,26 @@ export default async function PlanesPage() {
                   ))}
                 </ul>
 
-                <Link
-                  href="/registro"
-                  {...conEvento(`lp-btn ${p.highlight ? '' : 'lp-btn-soft'}`, EVENTOS.clicCrear, `planes ${p.name}`)}
-                  style={{
-                    width: '100%', marginTop: 'auto',
-                    ...(p.highlight
-                      ? { background: accent, color: '#fff', boxShadow: `0 8px 22px color-mix(in srgb, ${accent} 28%, transparent)` }
-                      : {}),
-                  }}
-                >
-                  {code === 'BASICO' ? 'Empezar con Básico' : `Elegir ${p.name}`}
-                </Link>
+                {/* En línea deja el alta armada para vender en línea (perfil
+                    'en-linea', ver lib/perfil-negocio.ts), igual que su página. */}
+                {code === 'EN_LINEA' ? (
+                  <CtaEnLinea className="lp-btn lp-btn-soft" lugar="planes" style={{ width: '100%', marginTop: 'auto' }}>
+                    Elegir {p.name}
+                  </CtaEnLinea>
+                ) : (
+                  <Link
+                    href="/registro"
+                    {...conEvento(`lp-btn ${p.highlight ? '' : 'lp-btn-soft'}`, EVENTOS.clicCrear, `planes ${p.name}`)}
+                    style={{
+                      width: '100%', marginTop: 'auto',
+                      ...(p.highlight
+                        ? { background: accent, color: '#fff', boxShadow: `0 8px 22px color-mix(in srgb, ${accent} 28%, transparent)` }
+                        : {}),
+                    }}
+                  >
+                    {code === 'BASICO' ? 'Empezar con Básico' : `Elegir ${p.name}`}
+                  </Link>
+                )}
               </div>
             );
           })}

@@ -7,6 +7,7 @@ import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import { listStaff, getActivityLog } from '@/lib/actions/staff';
 import { ADMIN_SECTIONS, type SectionKey } from '@/lib/permissions';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
+import { PLANS, type PlanCode } from '@/lib/plans';
 import StaffPanel from '@/components/admin/staff-panel';
 import AccessLogPanel from '@/components/admin/access-log-panel';
 import TrustedDevicesPanel from '@/components/admin/trusted-devices-panel';
@@ -83,7 +84,7 @@ export default async function AdminPersonalPage() {
   const modSettings = (restaurant?.module_settings as ModuleSettings | null) ?? null;
   const planActual = (restaurant?.plan_actual as string | null) ?? null;
   const ordersEnabled = mod?.['orders'] === true;
-  const hasWaiterPanel = planActual !== 'BASICO' && planActual !== 'ESTANDAR';
+  const hasWaiterPanel = PLANS[(planActual ?? 'BASICO') as PlanCode]?.hasWaiterPanel ?? false;
   // Igual que en mesas/page.tsx: "comer en local" activo también da acceso
   // a Mesas, aunque el plan no incluya el panel de mesero completo.
   const dineInEnabled = resolveTheme((themeRow as ThemeRow) ?? null).config.orderTypes.includes('dine_in');

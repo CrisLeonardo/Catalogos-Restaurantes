@@ -173,6 +173,8 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
   // ESTANDAR_MAX_ORDER_TYPES (2 de 3) — el 3ero requiere subir a Premium.
   const isEstandar = planActual === 'ESTANDAR';
   const isBasico = planActual === 'BASICO';
+  // En línea: para llevar y a domicilio; comer en local pide Estándar.
+  const isEnLinea = planActual === 'EN_LINEA';
 
   function toggle(key: ActivatableModuleKey, next: boolean) {
     setError(null);
@@ -338,6 +340,8 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
             // ESTANDAR: cualquier modo, hasta el tope de 2 — el que falta pide Premium.
             const locked = isBasico
               ? m.id !== 'pickup'
+              : isEnLinea
+                ? m.id === 'dine_in'
               : isEstandar
                 ? (!on && activeTypes >= ESTANDAR_MAX_ORDER_TYPES)
                 : false;
@@ -351,7 +355,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                   icon={m.icon}
                   label={m.label}
                   description={m.description}
-                  lockLabel={isBasico ? 'Requiere Estándar' : 'Requiere Premium'}
+                  lockLabel={isBasico || isEnLinea ? 'Requiere Estándar' : 'Requiere Premium'}
                 />
               );
             }
@@ -389,6 +393,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
         <SectionNote>
           Al menos uno tiene que estar activo.
           {isBasico && <> El plan Básico es solo menú digital: los pedidos en línea empiezan en Estándar ({planPriceLabel(pricing, 'ESTANDAR')}).</>}
+          {isEnLinea && <> Tu plan En línea es para llevar y a domicilio; para recibir pedidos en tus mesas, Estándar ({planPriceLabel(pricing, 'ESTANDAR')}).</>}
           {isEstandar && <> Tu plan Estándar incluye {ESTANDAR_MAX_ORDER_TYPES} de los 3 modos y tú eliges cuáles; para tener los tres a la vez, Premium ({premiumLabel}).</>}
         </SectionNote>
       </Section>

@@ -208,10 +208,12 @@ export async function savePricingSettings(
 
   const rows = [
     { key: 'plan_price_BASICO',        value: nonNeg('plan_price_BASICO') },
+    { key: 'plan_price_EN_LINEA',      value: nonNeg('plan_price_EN_LINEA') },
     { key: 'plan_price_ESTANDAR',      value: nonNeg('plan_price_ESTANDAR') },
     { key: 'plan_price_PREMIUM',       value: nonNeg('plan_price_PREMIUM') },
     { key: 'plan_price_PRO',           value: nonNeg('plan_price_PRO') },
     { key: 'setup_fee_BASICO',     value: nonNeg('setup_fee_BASICO') },
+    { key: 'setup_fee_EN_LINEA',   value: nonNeg('setup_fee_EN_LINEA') },
     { key: 'setup_fee_ESTANDAR',   value: nonNeg('setup_fee_ESTANDAR') },
     { key: 'setup_fee_PREMIUM',    value: nonNeg('setup_fee_PREMIUM') },
     { key: 'setup_fee_PRO',        value: nonNeg('setup_fee_PRO') },

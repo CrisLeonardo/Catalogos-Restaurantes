@@ -103,8 +103,8 @@ export function buildNav(ctx: NavContext): NavGroup[] {
   const on = (flag: boolean) => ctx.preview || flag;
   const plan = PLANS[(ctx.planActual ?? 'BASICO') as PlanCode] ?? PLANS.BASICO;
 
-  // BASICO y ESTANDAR no incluyen el panel de mesero (toma de pedidos por staff).
-  const hasWaiterPanel = ctx.planActual !== 'BASICO' && ctx.planActual !== 'ESTANDAR';
+  // BASICO, EN_LINEA y ESTANDAR no incluyen el panel de mesero (lo dice el plan).
+  const hasWaiterPanel = plan.hasWaiterPanel;
   // Mesas se habilita también si el restaurante ya tiene "comer en local"
   // activo (ESTANDAR puede elegirlo entre sus dos modos), no solo por plan.
   const mesasAccessible = hasWaiterPanel || ctx.dineInEnabled;

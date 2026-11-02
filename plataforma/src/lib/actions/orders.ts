@@ -65,6 +65,7 @@ import { longDate } from '@/lib/documents/format';
 import { encargoParaPedido } from '@/lib/db/encargos';
 import { diaDeEntrega, entroEnElCupo, estadoEncargo, textoEntrega } from '@/lib/encargos';
 import { aceptaTransferencia } from '@/lib/pago-transferencia';
+import { orderTypesForPlan } from '@/lib/plans';
 import type { DocumentBranding } from '@/lib/documents/types';
 import type {
   OrderItemOption,
@@ -310,7 +311,7 @@ export async function createOrder(
       : Promise.resolve({ data: null }),
     db
       .from('restaurants')
-      .select('id, modules, status, whatsapp_number, timezone, hours, hour_exceptions, orders_paused, pause_message, delivery_zones, location_lat, location_lng, delivery_radius_km')
+      .select('id, modules, status, plan_actual, whatsapp_number, timezone, hours, hour_exceptions, orders_paused, pause_message, delivery_zones, location_lat, location_lng, delivery_radius_km')
       .eq('id', restaurantId)
       .single(),
     db
@@ -374,6 +375,13 @@ export async function createOrder(
   const modules = restaurant.modules as { orders?: boolean } | null;
   if (!modules?.orders)
     return { error: 'Este restaurante no acepta pedidos en línea.' };
+
+  // El plan manda sobre el tema: En línea no recibe pedidos en mesa aunque
+  // un QR viejo de mesa siga pegado por ahí.
+  const tipoDelPlan = customer.type === 'DINE_IN' ? 'dine_in' : customer.type === 'DELIVERY' ? 'delivery' : 'pickup';
+  if (orderTypesForPlan(restaurant.plan_actual as string | null, [tipoDelPlan]).length === 0) {
+    return { error: 'Este restaurante recibe pedidos para llevar y a domicilio.' };
+  }
 
   // Operación: pausa manual y horario real también se validan AQUÍ
   // (el cliente puede tener la página abierta desde antes del cierre).
