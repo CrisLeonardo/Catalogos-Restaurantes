@@ -130,6 +130,10 @@ huellas(n, que, ok, cuando) as (values
   ('147', 'lealtad: premio al primer pedido y sorpresa de la casa',
      exists (select 1 from information_schema.columns
               where table_schema = 'public' and table_name = 'orders' and column_name = 'sorpresa'),
+     'ANTES de desplegar'),
+  ('148', 'paga tu plan: comprobantes de transferencia (payment_proofs)',
+     to_regclass('public.payment_proofs') is not null
+     and exists (select 1 from storage.buckets where id = 'payment-proofs'),
      'ANTES de desplegar')
 )
 select n as migracion,

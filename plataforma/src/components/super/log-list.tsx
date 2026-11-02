@@ -84,6 +84,12 @@ const ACCION: Record<AccionSuper, {
   'grupo.borrar': {
     conObjetivo: 'Borró el grupo', solo: 'Borró un grupo', icon: 'trash', grave: true, borraElObjetivo: true,
   },
+  'cobro.aprobar': {
+    conObjetivo: 'Aprobó el comprobante de pago de', solo: 'Aprobó un comprobante de pago', icon: 'checkCircle',
+  },
+  'cobro.rechazar': {
+    conObjetivo: 'Rechazó el comprobante de pago de', solo: 'Rechazó un comprobante de pago', icon: 'alertCircle',
+  },
 };
 
 export default function LogList({

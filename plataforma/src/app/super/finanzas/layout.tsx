@@ -1,9 +1,10 @@
 import { PageHeader } from '@/components/super/ui';
 import SectionTabs from '@/components/super/section-tabs';
 
-/* Finanzas del super admin, en 3 vistas:
+/* Finanzas del super admin, en 4 vistas:
    · Resumen  — cuánto entra, cómo crece y a quién hay que cobrarle
    · Cobranza — la operación mensual (mensualidades, vencidos, suspensión)
+   · Comprobantes — transferencias que suben los restaurantes, por aprobar
    · Pagos    — historial de pagos registrados con recibo PDF */
 
 export default function FinanzasLayout({ children }: { children: React.ReactNode }) {
@@ -17,6 +18,7 @@ export default function FinanzasLayout({ children }: { children: React.ReactNode
         tabs={[
           { seg: '', label: 'Resumen', icon: 'chart' },
           { seg: 'cobranza', label: 'Cobranza', icon: 'wallet' },
+          { seg: 'comprobantes', label: 'Comprobantes', icon: 'receipt' },
           { seg: 'pagos', label: 'Pagos', icon: 'checkCircle' },
         ]}
       />

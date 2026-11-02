@@ -7,7 +7,8 @@ import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getOrderStats, getActiveOrdersPreview, type ActiveOrderPreview } from '@/lib/db/orders';
 import { getHoyWidgets } from '@/lib/db/hoy';
-import { getBillingConfig, isOnTrial, trialDaysLeft } from '@/lib/db/billing';
+import { getBillingConfig, getInvoices, isOnTrial, isOverdue, trialDaysLeft } from '@/lib/db/billing';
+import { ultimoComprobante } from '@/lib/db/comprobantes';
 import { getVisitStats } from '@/lib/actions/metrics';
 import { subdomainUrl } from '@/lib/tenant';
 import { PLANS, withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
@@ -187,6 +188,23 @@ export default async function AdminHomePage() {
   const onTrial = isOnTrial(billing);
   const trialLeft = onTrial ? trialDaysLeft(billing) : 0;
 
+  // ── Cobro pendiente de la mensualidad (Paga tu plan) ────────
+  // Antes nada en el panel decía que había algo por pagar: el dueño se
+  // enteraba cuando lo suspendían. Solo quien puede ver Mi suscripción.
+  const cobro = billing && restaurantId && allow('suscripcion')
+    ? await (async () => {
+        const [invoices, comprobante] = await Promise.all([getInvoices(restaurantId, 24), ultimoComprobante(restaurantId)]);
+        const pendientes = invoices.filter((i) => i.status === 'PENDING');
+        if (pendientes.length === 0) return null;
+        return {
+          total: pendientes.reduce((s, i) => s + i.amount, 0),
+          currency: billing.currency,
+          vencido: pendientes.some((i) => isOverdue(i)),
+          enRevision: comprobante?.status === 'SUBMITTED',
+        };
+      })()
+    : null;
+
   // ── Aviso de visitas del plan gratuito (solo aviso, nunca bloquea el menú) ──
   const visitWarningLimit = restaurant?.plan_actual ? PLANS[restaurant.plan_actual].monthlyVisitWarning : undefined;
   const visitWarning = !!visitStats && !!visitWarningLimit && visitStats.last30 >= visitWarningLimit;
@@ -349,6 +367,16 @@ export default async function AdminHomePage() {
         ? 'Con ella las comandas se imprimen solas y un corte de internet no detiene el servicio.'
         : 'Mientras siga apagada no se imprimen comandas solas ni hay respaldo si se cae el internet.',
       action: pcState === 'missing' ? 'Elegirla' : 'Encenderla',
+    });
+  }
+  if (cobro && !cobro.enRevision) {
+    alerts.push({
+      key: 'cobro', href: panelHref(base, '/admin/suscripcion'), level: cobro.vencido ? 'urgente' : 'aviso',
+      title: cobro.vencido
+        ? `Tu pago de ${fmtMoney(cobro.total, cobro.currency)} está vencido`
+        : `Tienes ${fmtMoney(cobro.total, cobro.currency)} por pagar`,
+      desc: 'Transfiere, escribe tu código de pago y sube el comprobante. Te toma un minuto.',
+      action: 'Pagar',
     });
   }
   if (onTrial && trialLeft <= 3) {

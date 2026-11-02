@@ -64,7 +64,10 @@ export type AccionSuper =
   | 'restaurante.plan'
   | 'restaurante.estado'
   // Grupos
-  | 'grupo.borrar';
+  | 'grupo.borrar'
+  // Comprobantes de pago de la mensualidad (Paga tu plan)
+  | 'cobro.aprobar'
+  | 'cobro.rechazar';
 
 export type EntradaDeBitacora = {
   action: AccionSuper;
