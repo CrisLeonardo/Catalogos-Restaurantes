@@ -238,6 +238,8 @@ export type TableOccupancy = {
   since: string;
   /** Mesero que tomó el pedido, o `null` si el comensal ordenó por su cuenta. */
   waiterName: string | null;
+  /** Su id: es lo que permite el filtro «Mis mesas» sin comparar nombres. */
+  waiterId?: string | null;
   /** Estado que MANDA en la mesa: el menos avanzado de sus pedidos. Una mesa
       con un plato servido y otro en cocina sigue siendo "en cocina". */
   status: OrderStatus;
@@ -281,7 +283,7 @@ export async function getActiveTableNumbers(restaurantId: string): Promise<Recor
     .order('created_at', { ascending: true })
     .limit(200);
 
-  const BASE = 'id, address, created_at, accepted_at, status, total, served_at, ready_at, items:order_items(quantity), waiter:profiles!orders_waiter_id_fkey(full_name)';
+  const BASE = 'id, address, created_at, accepted_at, status, total, served_at, ready_at, waiter_id, items:order_items(quantity), waiter:profiles!orders_waiter_id_fkey(full_name)';
   const MESA = (await hayColumnaMesa()) ? ', table_number' : '';
 
   /* `party_size` es de la migración 123. Donde todavía no corrió, pedirla
@@ -302,12 +304,13 @@ export async function getActiveTableNumbers(restaurantId: string): Promise<Recor
   const mesaDePedido = new Map<string, number>();
 
   for (const row of (data ?? []) as unknown as (Record<string, unknown>)[]) {
-    const { created_at, accepted_at, status, total, served_at, ready_at, party_size, items, waiter } = row as {
+    const { created_at, accepted_at, status, total, served_at, ready_at, party_size, items, waiter, waiter_id } = row as {
       address: string | null; created_at: string; accepted_at: string | null; status: OrderStatus;
       total: number | string | null; served_at: string | null; ready_at: string | null;
       party_size?: number | null;
       items?: { quantity: number }[] | null;
       waiter?: { full_name: string | null } | null;
+      waiter_id?: string | null;
     };
     const n = mesaDeFila(row as { table_number?: number | null; address?: string | null });
     if (n == null) continue;
@@ -320,6 +323,7 @@ export async function getActiveTableNumbers(restaurantId: string): Promise<Recor
       result[n] = {
         since: created_at,
         waiterName: waiter?.full_name ?? null,
+        waiterId: waiter_id ?? null,
         status,
         itemCount: platos,
         total: Number(total ?? 0),

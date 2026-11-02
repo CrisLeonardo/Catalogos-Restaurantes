@@ -167,6 +167,13 @@ describe('nombre, alias y zona', () => {
     expect(m.etiqueta).toBe('Terraza 2 · cumpleaños de Sofi');
   });
 
+  it('la alergia sale del turno de la mesa, sin espacios de más', () => {
+    const conAlergia = mesasDeServicio(entrada({ seatings: { 2: sentada({ allergies: '  maní  ' }) } })).find((x) => x.n === 2)!;
+    expect(conAlergia.alergia).toBe('maní');
+    const sin = mesasDeServicio(entrada({ seatings: { 2: sentada({ allergies: '   ' }) } })).find((x) => x.n === 2)!;
+    expect(sin.alergia).toBeNull();
+  });
+
   it('sin alias ni nombre, la etiqueta es «Mesa N»', () => {
     expect(etiquetaDeMesa(4, '', null)).toBe('Mesa 4');
   });
@@ -180,8 +187,8 @@ describe('filtros', () => {
   const mesas = mesasDeServicio(entrada({
     tableCount: 4,
     occupancy: {
-      1: ocupada(),
-      2: ocupada({ status: 'SERVED' }),
+      1: ocupada({ waiterId: 'ana' }),
+      2: ocupada({ status: 'SERVED', waiterId: 'luis' }),
       3: ocupada({ status: 'NEW', waiterName: null }),
     },
     qrPendiente: { 3: 2 },
@@ -193,6 +200,11 @@ describe('filtros', () => {
 
   it('«Por cobrar» deja las que ya comieron', () => {
     expect(mesas.filter((m) => pasaFiltro(m, 'Por cobrar')).map((m) => m.n)).toEqual([2]);
+  });
+
+  it('«Mis mesas» deja solo las de quien mira, y nada si no se sabe quién es', () => {
+    expect(mesas.filter((m) => pasaFiltro(m, 'Mías', 'ana')).map((m) => m.n)).toEqual([1]);
+    expect(mesas.filter((m) => pasaFiltro(m, 'Mías', null))).toEqual([]);
   });
 
   it('«Falta servir» incluye lo que llegó por QR y nadie ha aceptado', () => {

@@ -22,6 +22,7 @@ import {
 import type { TableCall, TableOccupancy } from '@/lib/db/orders';
 import type { TableSeating } from '@/lib/db/table-sessions';
 import type { FloorPlan } from '@/lib/theme/defaults';
+import type { Densidad } from '@/lib/plano-salon';
 import type { OrderStatus } from '@/types';
 
 /** Lo que las tres piezas necesitan saber de una mesa. */
@@ -674,41 +675,66 @@ export function TableRow({
    Ya no es un círculo con un número. Lleva número, personas, monto,
    estado y mesero: el plano deja de ser un mapa mudo y pasa a ser
    la misma información del salón, colocada como está el local.
+
+   Llena el sitio que le da el visor del plano y enseña lo que cabe
+   (`densidad`): con el plano entero en un teléfono es un número con su
+   color; al acercar gana el monto y el estado, y a tamaño completo, el
+   nombre y el mesero.
    ════════════════════════════════════════════════════════════ */
 export function TablePin({
-  t, x, y, selected, onSelect,
+  t, selected, onSelect, densidad = 'completa',
 }: {
   t: SalonTable;
-  /** 0..1 dentro del lienzo. */
-  x: number;
-  y: number;
   selected: boolean;
   onSelect: () => void;
+  densidad?: Densidad;
 }) {
   const tono = tableTone(t.state);
   const libre = tono === 'libre';
-  return (
-    <button
-      type="button"
-      className="salon-pin press"
-      data-kind={t.state.kind}
-      data-tone={tono}
-      data-sel={selected ? '1' : '0'}
-      onClick={onSelect}
-      style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
-      aria-label={`Mesa ${t.n} · ${t.state.label}`}
-      aria-current={selected ? 'true' : undefined}
-    >
-      <span style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-        <span
-          className="t-mono"
-          style={{
-            fontSize: 18, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1,
-            color: libre ? 'var(--u-text-4)' : 'var(--u-text)',
-          }}
-        >
-          {t.n}
+  const comun = {
+    type: 'button' as const,
+    className: 'salon-pin press',
+    'data-kind': t.state.kind,
+    'data-tone': tono,
+    'data-sel': selected ? '1' : '0',
+    'data-dens': densidad,
+    onClick: onSelect,
+    'aria-label': `Mesa ${t.n} · ${t.state.label}${t.totalCorto ? ` · ${t.totalCorto}` : ''}`,
+    'aria-current': selected ? ('true' as const) : undefined,
+  };
+  const numero = (
+    <span className="t-mono salon-pin-n" style={{ color: libre ? 'var(--u-text-4)' : 'var(--u-text)' }}>
+      {t.n}
+    </span>
+  );
+
+  if (densidad === 'mini') return <button {...comun}>{numero}</button>;
+
+  if (densidad === 'media') {
+    return (
+      <button {...comun}>
+        <span style={{ display: 'flex', alignItems: 'baseline', gap: 4, minWidth: 0 }}>
+          {numero}
+          <span style={{ flex: 1 }} />
+          {t.totalCorto && (
+            <span className="t-mono" style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--u-text-2)', whiteSpace: 'nowrap' }}>
+              {t.totalCorto}
+            </span>
+          )}
         </span>
+        {!libre && (
+          <span style={{ fontSize: 10.5, lineHeight: 1.25, fontWeight: 600, color: estadoInk(t), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {t.state.short}
+          </span>
+        )}
+      </button>
+    );
+  }
+
+  return (
+    <button {...comun}>
+      <span style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+        {numero}
         {/* `nowrap` y recorte: a 100 px de ancho, «4 pers» partido en dos
             renglones descuadra el pin entero. En el plano el nombre manda
             sobre las sillas — quien mira el plano ya sabe dónde está la

@@ -18,7 +18,7 @@
  * carta. `lib/table-state.ts` recibe las dos y decide.
  */
 import { createServiceClient } from '@/lib/supabase/service';
-import { faltaLaTabla } from '@/lib/db/migracion-ausente';
+import { faltaLaColumna, faltaLaTabla } from '@/lib/db/migracion-ausente';
 import { getActiveTableNumbers } from '@/lib/db/orders';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 
@@ -35,6 +35,8 @@ export type TableSeating = {
   seatedAt: string;
   source: 'walk_in' | 'reservation' | 'waitlist' | 'order';
   note: string | null;
+  /** Alergias de la mesa (migración 151). Salen en cada comanda. */
+  allergies?: string | null;
 };
 
 /**
@@ -111,17 +113,23 @@ export async function getOpenTableSessions(
   if (!(await hayTurnosDeMesa())) return {};
 
   const db = createServiceClient();
-  const { data, error } = await db
+  const pedir = (extra: string) => db
     .from('table_sessions')
     .select(
       'id, table_number, party_size, waiter_id, seated_at, source, note,'
       + ' waiter:profiles!table_sessions_waiter_id_fkey(full_name),'
-      + ' anfitrion:profiles!table_sessions_seated_by_fkey(full_name)',
+      + ` anfitrion:profiles!table_sessions_seated_by_fkey(full_name)${extra}`,
     )
     .eq('restaurant_id', restaurantId)
     .is('closed_at', null)
     .order('seated_at', { ascending: true })
     .limit(300);
+
+  /* `allergies` es de la 151. Donde no ha corrido, pedirla tumbaría la
+     consulta entera y TODAS las mesas sentadas se verían libres: se
+     reintenta sin ella, como `party_size` en la ocupación. */
+  let { data, error } = await pedir(', allergies');
+  if (error && faltaLaColumna(error)) ({ data, error } = await pedir(''));
 
   if (error) return {};
 
@@ -144,6 +152,7 @@ export async function getOpenTableSessions(
       seatedAt: String(row.seated_at),
       source: (row.source as TableSeating['source']) ?? 'walk_in',
       note: (row.note as string | null) ?? null,
+      allergies: (row.allergies as string | null | undefined) ?? null,
     };
   }
   return out;

@@ -697,17 +697,19 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
      se COMPRUEBAN en el mismo orden de siempre: nada se devuelve (ni el
      pedido de un reintento) antes de haber validado al mesero. */
   const [
-    { data: waiterProfile },
+    acceso,
     { data: existing },
     { data: restaurant },
     priced,
     { data: themeRow },
   ] = await Promise.all([
-    db
-      .from('profiles')
-      .select('role, restaurant_id, permissions')
-      .eq('id', user.id)
-      .single(),
+    /* Quién puede mandar lo decide la MISMA regla que el resto del
+       servicio (membresía, grupo, super admin). Antes se exigía
+       profiles.restaurant_id === restaurantId, y un dueño con dos
+       restaurantes —que entra a la segunda sucursal por membresía— no
+       podía mandar ni una comanda: «No autorizado» y el pedido de vuelta
+       al carrito. */
+    assertTableAccess(restaurantId),
     // Reintento idempotente (fallback offline del mesero — hub local o cola
     // del dispositivo, ver waiter-panel.tsx): si este client_id ya generó un
     // pedido, se devuelve tal cual sin repetir push ni impresión (mismo
@@ -735,13 +737,7 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
       .single(),
   ]);
 
-  if (
-    !waiterProfile ||
-    waiterProfile.restaurant_id !== restaurantId ||
-    !can(waiterProfile.role as string, waiterProfile.permissions as string[] | null, 'mesero')
-  ) {
-    return { error: 'No autorizado.' };
-  }
+  if ('error' in acceso) return { error: 'No autorizado.' };
 
   if (existing) {
     return { success: true, orderId: existing.id as string, orderNumber: existing.order_number as string };

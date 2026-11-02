@@ -34,6 +34,8 @@ export interface HojaMesaProps {
   busy: boolean;
   onClose: () => void;
   onNombre: (nombre: string) => void;
+  /** Guarda las alergias de la mesa (vacío = sin alergias). */
+  onAlergia: (alergia: string) => void;
   onMover: (n: number) => void;
   onJuntar: (n: number) => void;
   onLiberar: () => void;
@@ -45,9 +47,10 @@ export interface HojaMesaProps {
 
 export function HojaMesa({
   mesa, libres, ocupadas, money, busy, onClose,
-  onNombre, onMover, onJuntar, onLiberar, onArticuloLibre, onImprimirCuenta,
+  onNombre, onAlergia, onMover, onJuntar, onLiberar, onArticuloLibre, onImprimirCuenta,
 }: HojaMesaProps) {
   const [nombre, setNombre] = useState(mesa.nombre);
+  const [alergia, setAlergia] = useState(mesa.alergia ?? '');
   const [accion, setAccion] = useState<'mover' | 'juntar' | 'liberar' | null>(null);
 
   /* La confirmación en dos toques CADUCA. El prototipo la dejaba armada
@@ -76,6 +79,19 @@ export function HojaMesa({
             maxLength={40}
           />
           <div className="sv-foot-note">Lo ve todo el local, no solo esta tablet.</div>
+        </Campo>
+
+        <Campo label="Alergias de la mesa">
+          <input
+            className="sv-field"
+            value={alergia}
+            onChange={(e) => setAlergia(e.target.value)}
+            onBlur={() => { if (alergia.trim() !== (mesa.alergia ?? '')) onAlergia(alergia.trim()); }}
+            placeholder="Ej. maní, mariscos"
+            maxLength={120}
+            aria-describedby="alergia-nota"
+          />
+          <div className="sv-foot-note" id="alergia-nota">Sale en cada comanda de esta mesa como «ALERGIA: …».</div>
         </Campo>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -351,14 +367,33 @@ export function HojaAtajos({ onClose }: { onClose: () => void }) {
    destruye algo.
    ════════════════════════════════════════════════════════════ */
 
-export function HojaLinea({ linea, money, onClose, onServir, onDeshacerServir, onAnular }: {
+export function HojaLinea({
+  linea, money, onClose, onServir, onDeshacerServir, onAnular,
+  destinos = [], sillas = null, busy = false, onMover, onAsiento,
+}: {
   linea: LineaServicio;
   money: (n: number) => string;
   onClose: () => void;
   onServir: () => void;
   onDeshacerServir: () => void;
   onAnular: () => void;
+  /** Las otras mesas, para «Pasar a otra mesa». */
+  destinos?: MesaServicio[];
+  /** Sillas de la mesa, para ofrecer asientos. */
+  sillas?: number | null;
+  busy?: boolean;
+  onMover?: (mesa: number, cantidad: number) => void;
+  onAsiento?: (asiento: number | null) => void;
 }) {
+  const [moviendo, setMoviendo] = useState(false);
+  const [cuantos, setCuantos] = useState(linea.cantidad);
+  /* Asientos que ofrecer: los de la mesa, y al menos el que ya tiene. */
+  const nAsientos = Math.min(12, Math.max(sillas ?? 4, linea.asiento ?? 0));
+  const sePuedeMover = !linea.pagada && !linea.enviando;
+  // Primero las que tienen gente: un plato equivocado casi siempre era de
+  // otra mesa ocupada, no de una vacía.
+  const orden = [...destinos].sort((a, b) => Number(a.estado === 'libre') - Number(b.estado === 'libre') || a.n - b.n);
+
   return (
     <Hoja onClose={onClose} label={`Opciones de ${linea.nombre}`}>
       <div className="sv-sheet-pad">
@@ -385,6 +420,80 @@ export function HojaLinea({ linea, money, onClose, onServir, onDeshacerServir, o
             <Icon name="undo" size={17} />
             No estaba servido
           </button>
+        )}
+
+        {onAsiento && sePuedeMover && (
+          <Campo label="Asiento">
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="sv-choice"
+                data-on={linea.asiento == null ? '1' : '0'}
+                onClick={() => onAsiento(null)}
+                disabled={busy}
+              >
+                De la mesa
+              </button>
+              {Array.from({ length: nAsientos }, (_, i) => i + 1).map((a) => (
+                <button
+                  key={a}
+                  type="button"
+                  className="sv-choice"
+                  data-on={linea.asiento === a ? '1' : '0'}
+                  style={{ minWidth: 48 }}
+                  onClick={() => onAsiento(a)}
+                  disabled={busy}
+                  aria-label={`Asiento ${a}`}
+                >
+                  {a}
+                </button>
+              ))}
+            </div>
+          </Campo>
+        )}
+
+        {onMover && sePuedeMover && (
+          <>
+            <button
+              type="button"
+              className="sv-cta"
+              data-tone="quiet"
+              data-on={moviendo ? '1' : '0'}
+              onClick={() => setMoviendo((v) => !v)}
+              disabled={busy}
+            >
+              <Icon name="arrowRight" size={17} />
+              Pasar a otra mesa
+            </button>
+            {moviendo && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {linea.cantidad > 1 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--u-text-3)' }}>
+                    Cuántos
+                    <button type="button" className="sv-step" onClick={() => setCuantos((n) => Math.max(1, n - 1))} aria-label="Uno menos">
+                      <Icon name="minus" size={16} />
+                    </button>
+                    <Mono size={16}>{cuantos}</Mono>
+                    <button type="button" className="sv-step" onClick={() => setCuantos((n) => Math.min(linea.cantidad, n + 1))} aria-label="Uno más">
+                      <Icon name="plus" size={16} />
+                    </button>
+                    <span>de {linea.cantidad}</span>
+                  </div>
+                )}
+                <div style={{ fontSize: 13, color: 'var(--u-text-3)', fontWeight: 500 }}>
+                  Elige la mesa. El plato no se vuelve a mandar a cocina.
+                </div>
+                <div className="sv-pick">
+                  {orden.map((m) => (
+                    <button key={m.n} type="button" disabled={busy} onClick={() => onMover(m.n, cuantos)}>
+                      <span className="sv-pick-n">{m.n}</span>
+                      <span className="sv-pick-sub">{m.total > 0 ? money(m.total) : m.estado === 'libre' ? 'libre' : (m.zona ?? '')}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         <button

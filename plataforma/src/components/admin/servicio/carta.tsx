@@ -11,8 +11,11 @@
      2. LOS MÁS PEDIDOS, seis platos a un toque, numerados del 1 al 9 en
         PC. Salen de las ventas reales del restaurante, no de una lista
         que alguien mantiene a mano;
-     3. la REJILLA, para quien prefiere tocar. Un toque agrega uno;
-        «Opciones» abre la hoja.
+     3. la REJILLA, para quien prefiere tocar, con la FOTO de cada plato
+        (el mesero reconoce el plato antes de leer el nombre). Funciona
+        como cualquier POS: un toque agrega uno —o abre la hoja si el plato
+        tiene un grupo obligatorio—, el número de la esquina dice cuántos
+        van, «−» quita uno y «⋯» abre opciones y nota.
 
    Lo AGOTADO sale, apagado y sin poder tocarse. El prototipo del handoff
    no lo contemplaba y esconderlo no contesta la pregunta que el mesero
@@ -20,14 +23,19 @@
    lo escribió mal, si no existe o si se acabó — que es lo único que le
    puede decir a quien tiene enfrente. */
 
-import { useMemo, useRef, type KeyboardEvent } from 'react';
+import { useMemo, useRef, type CSSProperties, type KeyboardEvent } from 'react';
+import AssetImage from '@/components/asset-image';
 import { Icon } from '@/components/icons';
 import { Kicker, Pill } from '@/components/admin/servicio/pieces';
 import { coincide, leerComanda, normalizar } from '@/lib/servicio/comanda';
+import { iniciales, quedanPocos, tinteDe } from '@/lib/servicio/carta';
 import type { Category, Product } from '@/types';
 
 /** Cuántos platos lleva la fila de «los más pedidos». */
 export const MAX_FAVS = 6;
+
+/** Tres columnas en el teléfono; unos 150 px en tablet y PC. */
+const FOTO_SIZES = '(max-width: 640px) 34vw, 160px';
 
 export interface CartaProps {
   products: Product[];
@@ -44,6 +52,10 @@ export interface CartaProps {
   onAdd: (p: Product, qty: number) => void;
   /** «Opciones»: abre la hoja de modificadores de ese plato. */
   onOpts: (p: Product, qty: number) => void;
+  /** «−» en la tarjeta: quita una unidad de lo apuntado sin enviar. */
+  onRemove: (p: Product) => void;
+  /** «Ya hay» en un plato agotado. Solo llega con permiso de carta. */
+  onReponer?: (p: Product) => void;
   /** Cobrar algo que no está en la carta (M-09), con el nombre ya escrito. */
   onOpenItem: (nombre: string) => void;
   onVoz: () => void;
@@ -59,7 +71,7 @@ export interface CartaProps {
 
 export default function Carta({
   products, categories, masPedidos, q, setQ, cat, setCat,
-  qtyOf, onAdd, onOpts, onOpenItem, onVoz, conTeclado, aprendiz, hayVoz, money, movil,
+  qtyOf, onAdd, onOpts, onRemove, onReponer, onOpenItem, onVoz, conTeclado, aprendiz, hayVoz, money, movil,
 }: CartaProps) {
   const input = useRef<HTMLInputElement | null>(null);
 
@@ -131,6 +143,11 @@ export default function Carta({
   }
 
   const mostrarFavs = favs.length > 0 && (!movil || (!term && !cat));
+
+  /* Si ningún plato tiene foto, una rejilla de iniciales sería una pared de
+     cuadros de colores ocupando el doble que hoy: la carta se queda con las
+     tarjetas compactas de texto. Con UNA foto ya vale la pena. */
+  const conFotos = useMemo(() => activos.some((p) => !!p.image_url), [activos]);
 
   return (
     <>
@@ -223,6 +240,51 @@ export default function Carta({
             {dishes.map((p) => {
               const enComanda = qtyOf(p.id);
               const agotado = !p.is_available;
+              const quedan = quedanPocos(p);
+              /* Los dos mandos pequeños de la tarjeta, como en cualquier
+                 POS: «−» quita uno de lo apuntado sin abrir la comanda, y
+                 «⋯» abre opciones y nota. Cada uno detiene el toque para que
+                 no agregue un plato por error. Van sobre la foto o, sin
+                 fotos, en el pie. */
+              const mandos = agotado ? (onReponer ? (
+                <span className="sv-dish-tools">
+                  <button
+                    type="button"
+                    className="sv-dish-tool"
+                    data-txt="1"
+                    onClick={(e) => { e.stopPropagation(); onReponer(p); }}
+                    aria-label={`${p.name} ya hay otra vez`}
+                  >
+                    Ya hay
+                  </button>
+                </span>
+              ) : null) : (
+                <span className="sv-dish-tools">
+                  {enComanda > 0 && (
+                    <button
+                      type="button"
+                      className="sv-dish-tool"
+                      onClick={(e) => { e.stopPropagation(); onRemove(p); }}
+                      aria-label={`Quitar un ${p.name}`}
+                      title="Quitar uno"
+                    >
+                      <Icon name="minus" size={16} />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="sv-dish-tool"
+                    onClick={(e) => { e.stopPropagation(); onOpts(p, 1); }}
+                    aria-label={`Opciones y nota de ${p.name}`}
+                    title="Opciones y nota"
+                  >
+                    <Icon name="more" size={16} />
+                  </button>
+                </span>
+              );
+              const aviso = agotado
+                ? <span className="sv-dish-out">Agotado</span>
+                : quedan != null ? <span className="sv-dish-left">Quedan {quedan}</span> : null;
               return (
                 <div
                   key={p.id}
@@ -232,29 +294,32 @@ export default function Carta({
                   role="button"
                   tabIndex={agotado ? -1 : 0}
                   aria-disabled={agotado}
+                  aria-label={`${p.name}, ${money(p.price)}${agotado ? ', agotado' : ''}${enComanda > 0 ? `, ${enComanda} en la comanda` : ''}`}
                   onClick={() => { if (!agotado) onAdd(p, 1); }}
                   onKeyDown={(e) => {
                     if (agotado) return;
                     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAdd(p, 1); }
                   }}
                 >
-                  {!agotado && enComanda > 0 && <span className="sv-dish-q">{enComanda}</span>}
+                  {conFotos && (
+                    <span className="sv-dish-ph">
+                      {p.image_url ? (
+                        <AssetImage src={p.image_url} alt="" fill sizes={FOTO_SIZES} style={{ objectFit: 'cover' }} />
+                      ) : (
+                        <span className="sv-dish-ini" style={{ '--tinte': tinteDe(p.name) } as CSSProperties} aria-hidden>
+                          {iniciales(p.name)}
+                        </span>
+                      )}
+                      {aviso}
+                      {mandos}
+                    </span>
+                  )}
+                  {!agotado && enComanda > 0 && <span className="sv-dish-q">×{enComanda}</span>}
                   <span className="sv-dish-name">{p.name}</span>
+                  {!conFotos && aviso && <span>{aviso}</span>}
                   <span className="sv-dish-foot">
                     <span className="sv-dish-price">{money(p.price)}</span>
-                    {/* «Agotado» va donde iría «Opciones»: un plato que no se
-                        puede pedir no tiene opciones que abrir, y arriba, en
-                        la esquina, se montaba encima del nombre. */}
-                    {agotado ? <span className="sv-dish-out">Agotado</span> : (
-                      <button
-                        type="button"
-                        className="sv-dish-opts"
-                        onClick={(e) => { e.stopPropagation(); onOpts(p, 1); }}
-                        aria-label={`Opciones de ${p.name}`}
-                      >
-                        Opciones
-                      </button>
-                    )}
+                    {!conFotos && mandos}
                   </span>
                 </div>
               );

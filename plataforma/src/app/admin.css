@@ -1324,13 +1324,20 @@
 .salon-steps > span { flex: 1; height: 4px; border-radius: 99px; }
 
 /* ── Mesa en el plano ─────────────────────────────────────────
-   100 px dibujados, 88 en el teléfono. */
+   Llena el sitio que le da el visor (plano-visor.tsx), que la mide
+   según la distancia a su vecina y el zoom. Lo que enseña dentro va por
+   `data-dens`: mini = número; media = número, monto y estado;
+   completa = además nombre y mesero. */
 .salon-pin {
-  position: absolute; width: 100px; transform: translate(-50%, -50%);
-  display: flex; flex-direction: column; gap: 3px;
-  padding: 9px 10px; border-radius: 14px; cursor: pointer; text-align: left;
+  width: 100%; height: 100%; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: center; gap: 3px;
+  padding: 8px 10px; border-radius: 14px; cursor: pointer; text-align: left;
 }
-@media (max-width: 767px) { .salon-pin { width: 88px; padding: 8px 9px; border-radius: 13px; }}
+.salon-pin-n { font-size: 18px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+.salon-pin[data-dens="media"] { padding: 5px 7px; gap: 2px; border-radius: 11px; }
+.salon-pin[data-dens="media"] .salon-pin-n { font-size: 16px; }
+.salon-pin[data-dens="mini"] { padding: 0; align-items: center; border-radius: 10px; }
+.salon-pin[data-dens="mini"] .salon-pin-n { font-size: 15px; }
 .salon-pin[data-tone="alarma"] {
   border: 1.5px solid var(--brand-accent);
   background: color-mix(in srgb, var(--brand-accent) 12%, var(--adm-card));
@@ -1351,7 +1358,6 @@
 }
 .salon-pin[data-sel="1"] { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
 
-/* El lienzo del plano: rejilla de referencia, nada más. */
 /* ── La leyenda del salón ─────────────────────────────────────
    Los tres estados, con los nombres que dicta lib/table-state.ts. La
    comparten el plano del dueño y el salón del mesero: antes cada una
@@ -1380,30 +1386,79 @@
   border: 1.5px dashed var(--u-hair-2); background: transparent;
 }
 
-.salon-canvas {
-  position: relative; flex: 1; min-height: 340px; overflow: hidden;
+
+/* ── El visor del plano (plano-visor.tsx) ─────────────────────
+   Lo comparten Mesas y Tomar pedidos. El visor tiene el alto que le da
+   quien lo usa; dentro, el lienzo CABE (ver lib/plano-salon.ts) y solo
+   se desplaza cuando se acerca con zoom. Nunca más ancho que la
+   pantalla: antes el lienzo medía 620 px en un teléfono de 375 y la
+   página entera se corría de lado. */
+.plano-visor {
+  position: relative; min-width: 0; min-height: 0; overflow: hidden;
   border-radius: 18px; border: 1px solid var(--u-hair-2);
-  background-color: color-mix(in srgb, var(--u-text) 2%, transparent);
+  background-color: color-mix(in srgb, var(--u-text) 2%, var(--adm-card));
   background-image:
-    linear-gradient(color-mix(in srgb, var(--u-text) 3.5%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--u-text) 3.5%, transparent) 1px, transparent 1px);
-  background-size: 100% 9%, 6.25% 100%;
+    radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--u-text) 12%, transparent) 1px, transparent 0);
+  background-size: 22px 22px;
 }
-@media (max-width: 767px) {
-  .salon-canvas { background-size: 100% 9%, 12.5% 100%; }
-  /* Catorce mesas de 88 px en 340 px de ancho se pisan unas a otras. El
-     plano conserva su tamaño y es el lienzo el que se desplaza: mejor
-     arrastrar el salón que no poder leer ninguna mesa. */
-  .salon-floor-scroll { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-  .salon-floor-scroll::-webkit-scrollbar { display: none; }
-  .salon-floor-scroll > .salon-canvas { min-width: 620px; }}
+.plano-scroll {
+  position: absolute; inset: 0; overflow: auto;
+  /* El pellizco lo lleva el visor: que el navegador no amplíe la página. */
+  touch-action: pan-x pan-y; overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.plano-pista {
+  min-width: 100%; min-height: 100%; width: max-content;
+  display: flex; align-items: center; justify-content: center; box-sizing: border-box;
+}
+.plano-lienzo { position: relative; flex-shrink: 0; }
+.plano-zona, .plano-sitio { position: absolute; }
+.plano-zona { pointer-events: none; }
+.plano-zona > * { width: 100%; height: 100%; }
+.plano-mandos {
+  position: absolute; right: 10px; bottom: 10px; z-index: 3;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.plano-mandos > button {
+  width: 40px; height: 40px; border-radius: 12px; cursor: pointer;
+  display: grid; place-items: center; padding: 0;
+  border: 1px solid var(--u-hair-2); background: var(--adm-card); color: var(--u-text);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--u-text) 10%, transparent);
+}
+.plano-mandos > button:disabled { opacity: 0.4; cursor: default; }
+.plano-mandos > button[data-on="1"] { background: var(--u-text); color: var(--adm-card); border-color: var(--u-text); }
+@media (pointer: fine) { .plano-mandos > button { width: 34px; height: 34px; border-radius: 10px; } }
+
+/* En Mesas el visor ocupa el alto de la pantalla menos el cromo, con
+   suelo y techo: en un teléfono se baja un poco la página y el plano
+   entero queda a la vista; en PC cabe sin desplazar. */
+.salon-plan-visor,
+.salon-floor-plano .sv-plano-visor {
+  flex: none; width: 100%;
+  height: clamp(340px, calc(100dvh - var(--adm-nav-h, 0px) - 150px), 820px);
+}
+/* En Mesas el plano de Tomar pedidos va dentro de la página, no en su capa. */
+.salon-floor-plano .sv-plano-wrap { padding: 0; }
+
+/* Las zonas del salón como pestañas, con cuántas mesas tienen gente. */
+.salon-niveles { display: flex; gap: 6px; flex-wrap: wrap; }
+.salon-niveles > button {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 12px; border-radius: 99px; cursor: pointer;
+  font-size: 13px; font-weight: 600;
+  border: 1px solid var(--u-hair-2); background: var(--adm-card); color: var(--u-text-2);
+}
+.salon-niveles > button > span { font-size: 11px; color: var(--u-text-4); }
+.salon-niveles > button[data-on="1"] { background: var(--u-text); color: var(--adm-card); border-color: var(--u-text); }
+.salon-niveles > button[data-on="1"] > span { color: color-mix(in srgb, var(--adm-card) 70%, transparent); }
+@media (pointer: coarse) { .salon-niveles > button { height: 44px; padding: 0 14px; } }
 
 /* ── El plano y lo que no cabe en él ──────────────────────────
    «Fuera del plano» estaba DEBAJO del lienzo, y el lienzo era 16:10
    fijo: con cinco mesas colocadas de veinte, las otras quince vivían
    bajo 708 px de vacío y fuera de la primera pantalla. Ahora va al
    lado, en su propia columna, y baja solo cuando ya no cabe. */
-.salon-plan-row { display: flex; gap: 14px; align-items: flex-start; flex: 1; min-height: 0; }
+.salon-plan-row { display: flex; gap: 14px; align-items: flex-start; flex: 1; min-height: 0; min-width: 0; }
 .salon-plan-out {
   width: 226px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px;
   /* Con veinte mesas sin colocar la columna crecería más que el plano y
@@ -2389,65 +2444,106 @@
 }
 .sv-fav-price { font-family: var(--ui-font-mono); font-size: 12px; font-weight: 500; color: var(--u-text-3); }
 
-/* ── Rejilla de platos (regla 1: nunca menos de dos columnas) ── */
+/* ── Rejilla de platos (regla 1: nunca menos de dos columnas) ──
+   Con la FOTO de cada plato arriba (carta.tsx). Si el restaurante no
+   tiene ni una foto, la tarjeta pierde el recuadro de la foto y queda
+   como siempre: nombre, precio y lo que pase. */
 .sv-dishes {
   display: grid; gap: 10px;
   grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
 }
 .sv-dish {
   position: relative; display: flex; flex-direction: column; justify-content: space-between;
-  gap: 10px; min-height: 96px; padding: 12px; border-radius: var(--radius-lg);
+  gap: 8px; min-height: 96px; padding: 12px; border-radius: var(--radius-lg);
   cursor: pointer; text-align: left; font: inherit; color: var(--u-text);
   background: var(--adm-card); border: 1px solid var(--u-hair);
   transition: border-color 120ms var(--ease-out), transform 90ms var(--ease-out);
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
 }
-.sv-dish:hover { border-color: var(--u-text-4); }
-.sv-dish:active { transform: scale(0.985); }
-/* Ya está en la comanda: la tarjeta se tiñe y lleva la cuenta. */
+@media (hover: hover) { .sv-dish:hover { border-color: var(--u-text-4); } }
+.sv-dish:active { transform: scale(0.97); }
+.sv-dish:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
+/* Ya está en la comanda: borde de acento y la cuenta en la esquina. */
 .sv-dish[data-has="1"] {
-  background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
+  background: color-mix(in srgb, var(--brand-accent) 8%, var(--adm-card));
   border-color: var(--brand-accent);
+  box-shadow: 0 0 0 1px var(--brand-accent);
 }
 /* Agotado: se VE, pero no se puede pedir. Esconderlo no contesta la
-   pregunta que el mesero tiene delante del cliente. */
-/* Se apaga el CONTENIDO y no la tarjeta: con la tarjeta entera a 0.55
-   la propia etiqueta «Agotado» se quedaba sin contraste. */
+   pregunta que el mesero tiene delante del cliente. Se apaga el
+   CONTENIDO y no la tarjeta: con la tarjeta entera a 0.55 la propia
+   etiqueta «Agotado» se quedaba sin contraste. */
 .sv-dish[data-out="1"] { cursor: default; background: var(--surface-1); }
 .sv-dish[data-out="1"] .sv-dish-name,
 .sv-dish[data-out="1"] .sv-dish-price { opacity: 0.55; }
-.sv-dish[data-out="1"]:hover { border-color: var(--u-hair); }
+.sv-dish[data-out="1"] .sv-dish-ph > img,
+.sv-dish[data-out="1"] .sv-dish-ini { filter: grayscale(1); opacity: 0.45; }
+@media (hover: hover) { .sv-dish[data-out="1"]:hover { border-color: var(--u-hair); } }
+
+/* La foto: cuadrada, a sangre arriba de la tarjeta. */
+/* Con fotos, tarjetas más angostas: una foto se reconoce a 125 px y así
+   caben cinco por renglón en una tablet y cuatro en la carta de la PC. */
+.sv-dishes:has(.sv-dish-ph) { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); }
+.sv-dish:has(.sv-dish-ph) { padding: 0; gap: 0; justify-content: flex-start; overflow: hidden; }
+.sv-dish-ph {
+  position: relative; display: block; width: 100%; aspect-ratio: 1 / 1; max-width: 100%;
+  background: var(--surface-2); overflow: hidden;
+}
+.sv-dish-ini {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-size: 24px; font-weight: 700; letter-spacing: 0.02em;
+  background: color-mix(in oklab, var(--tinte) 24%, var(--adm-card));
+  color: color-mix(in oklab, var(--tinte) 55%, var(--u-text));
+}
+.sv-dish:has(.sv-dish-ph) .sv-dish-name { padding: 8px 10px 0; }
+.sv-dish:has(.sv-dish-ph) .sv-dish-foot { padding: 4px 10px 10px; margin-top: auto; }
 .sv-dish-name {
-  display: block; font-size: 14px; font-weight: 600; line-height: 1.25;
-  letter-spacing: -0.01em; padding-right: 30px;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  font-size: 14px; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em;
 }
 .sv-dish-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .sv-dish-price { font-family: var(--ui-font-mono); font-size: 13px; font-weight: 600; color: var(--u-text-2); }
-/* «Opciones» vive DENTRO de una tarjeta cuyo toque agrega un plato: si
-   es chico, el dedo agrega platos por error. 44 px, siempre. */
-.sv-dish-opts {
-  min-height: var(--m-tap); min-width: var(--m-tap); padding: 0 13px;
-  display: grid; place-items: center; border: none; cursor: pointer;
-  font: inherit; font-size: 12px; font-weight: 600; color: var(--u-text-2);
-  border-radius: var(--radius-md); background: var(--surface-2);
-  transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
-}
-.sv-dish-opts:hover {
-  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
-  color: var(--brand-accent-ink);
-}
+
+/* La cantidad en la comanda, en la esquina de la foto. */
 .sv-dish-q {
-  position: absolute; top: 8px; right: 8px; min-width: 26px; height: 26px; padding: 0 7px;
+  position: absolute; top: 8px; right: 8px; z-index: 2;
+  min-width: 28px; height: 28px; padding: 0 8px;
   border-radius: var(--radius-full); background: var(--adm-accent-fill, var(--brand-accent)); color: var(--brand-on-accent);
   font-family: var(--ui-font-mono); font-size: 13px; font-weight: 600;
   display: grid; place-items: center;
+  box-shadow: 0 0 0 2px var(--adm-card);
 }
-/* Vive en el pie, en el sitio de «Opciones» (ver carta.tsx): arriba, en
-   la esquina, se montaba sobre el nombre del plato. */
-.sv-dish-out {
-  padding: 4px 9px; border-radius: 7px;
+/* Sin foto, el número no puede taparle el nombre al plato. */
+.sv-dish:not(:has(.sv-dish-ph)) .sv-dish-name { padding-right: 34px; }
+
+/* «−» y «⋯»: pequeños de ver y de 44 px de tocar (un toque fuera de
+   ellos agrega un plato, así que errar el blanco cuesta caro). */
+.sv-dish-tools { display: flex; gap: 6px; flex-shrink: 0; }
+.sv-dish-ph > .sv-dish-tools { position: absolute; z-index: 2; right: 8px; bottom: 8px; }
+.sv-dish-tool {
+  position: relative; width: 32px; height: 32px; border-radius: var(--radius-full);
+  display: grid; place-items: center; padding: 0; cursor: pointer;
+  border: 1px solid var(--u-hair-2); background: var(--adm-card); color: var(--u-text);
+  box-shadow: 0 2px 6px color-mix(in srgb, #000 18%, transparent);
+}
+.sv-dish-tool::after { content: ""; position: absolute; inset: -6px; }
+/* «Ya hay» en un plato agotado: con texto, y sin apagarse con la tarjeta. */
+.sv-dish-tool[data-txt="1"] { width: auto; padding: 0 12px; font: inherit; font-size: 12px; font-weight: 700; }
+@media (hover: hover) { .sv-dish-tool:hover { background: var(--surface-2); } }
+
+/* «Quedan 3» y «Agotado»: sobre la foto, arriba a la izquierda (abajo van
+   «−» y «⋯», y en 110 px no caben las dos cosas en un renglón); sin foto,
+   debajo del nombre. */
+.sv-dish-left, .sv-dish-out {
+  padding: 3px 8px; border-radius: 7px;
   font-size: 11px; font-weight: 700; white-space: nowrap;
-  background: var(--c-warn-bg); color: var(--c-warn);
 }
+.sv-dish-left { background: var(--c-warn-bg); color: var(--c-warn); }
+.sv-dish-out { background: var(--u-text); color: var(--adm-card); }
+.sv-dish-ph > .sv-dish-left,
+.sv-dish-ph > .sv-dish-out { position: absolute; left: 8px; top: 8px; z-index: 1; }
+.sv-dish:not(:has(.sv-dish-ph)) .sv-dish-out,
+.sv-dish:not(:has(.sv-dish-ph)) .sv-dish-left { display: inline-block; }
 /* La rejilla lleva el mismo margen lateral que el buscador y las
    categorías de encima: con 18 px contra 12 en el teléfono, las tarjetas
    no caían en la misma línea que la píldora «Todos». */
@@ -2468,6 +2564,17 @@
 .sv-ticket-title { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
 .sv-ticket-sub { font-size: 12px; font-weight: 500; color: var(--u-text-3); margin-top: 2px; }
 .sv-ticket-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+/* Alergias de la mesa (mig. 151): arriba de la comanda y en rojo, porque
+   es lo único de la pantalla que puede mandar a alguien al hospital. */
+.sv-alergia {
+  display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;
+  border-radius: var(--radius-md); border: 1.5px solid var(--c-danger);
+  background: color-mix(in srgb, var(--c-danger) 10%, var(--adm-card)); color: var(--c-danger);
+  font-size: 14px; line-height: 1.35;
+}
+.sv-alergia > svg { flex-shrink: 0; margin-top: 1px; }
+.sv-alergia b { font-weight: 700; }
+.sv-alergia small { display: block; font-size: 12px; color: var(--u-text-3); margin-top: 2px; }
 
 /* El aviso del pedido por QR. Es lo primero de la comanda porque es lo
    único que puede estar esperando una respuesta. */
@@ -2910,7 +3017,8 @@
   animation: pop-in 140ms var(--ease-entry) both;
 }
 @media (min-width: 900px) {
-  .sv-plano-panel { height: auto; max-height: 92%; border-radius: var(--radius-xl); }}
+  /* Alto fijo y no `auto`: el visor de dentro necesita un alto que medir. */
+  .sv-plano-panel { height: min(92%, 860px); border-radius: var(--radius-xl); }}
 .sv-plano-head {
   flex: 0 0 auto; display: flex; align-items: center; gap: 10px;
   padding: 14px 16px calc(10px); border-bottom: 1px solid var(--u-hair);
@@ -2926,63 +3034,49 @@
    ancho mínimo y se desplaza, que es como se lee un mapa.
    ══════════════════════════════════════════════════════════════ */
 .sv-plano-wrap {
-  flex: 1; min-height: 0; overflow: auto; padding: 14px 16px 20px;
-  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  flex: 1; min-height: 0; padding: 12px 14px 16px;
+  display: flex; flex-direction: column; gap: 12px;
 }
-.sv-plano {
-  position: relative; flex-shrink: 0; aspect-ratio: 4 / 3;
-  /* En el teléfono manda el ANCHO y el plano se desplaza: un mapa
-     encogido hasta caber son mesas de dieciocho píxeles con un número
-     dentro, que es lo que hacía ilegible al plano anterior. */
-  width: 100%; min-width: 520px;
-  border-radius: var(--radius-xl); border: 1px solid var(--u-hair);
-  background:
-    radial-gradient(circle at 1px 1px, var(--u-hair) 1px, transparent 0) 0 0 / 28px 28px,
-    var(--adm-card);
-}
-@media (min-width: 900px) {
-  /* En pantalla grande el plano entero cabe de un vistazo sin desplazar,
-     que es justo lo que se le pide a un plano.
-
-     El tope se pone por ANCHO y no por alto a propósito: `height: 100%`
-     aquí dentro no resuelve —el panel que lo contiene se dimensiona por su
-     contenido, así que el porcentaje no tiene contra qué medirse— y el
-     lienzo se quedaba en un sliver de dos centímetros. Con
-     `min(100%, 70vh × 4/3)` el ancho siempre es un número, y la proporción
-     4:3 deriva el alto de ahí sin pasar de 70vh. */
-  .sv-plano { width: min(100%, calc(70vh * 4 / 3)); min-width: 0; }}
+.sv-plano-visor { flex: 1 1 auto; min-height: 260px; }
 .sv-plano-fix {
-  position: absolute; display: flex; align-items: center; justify-content: center; gap: 6px;
-  /* Las coordenadas que llegan ya son la esquina superior izquierda del
-     trozo enseñado, así que aquí NO se centra con transform. */
+  display: flex; align-items: center; justify-content: center; gap: 6px;
   border-radius: var(--radius-md); border: 1px dashed var(--u-hair-2);
   background: var(--surface-1); color: var(--u-text-3);
   font-size: 11px; font-weight: 600; text-align: center; overflow: hidden;
-  padding: 2px 6px; pointer-events: none;
+  padding: 2px 6px;
 }
+/* La mesa llena el sitio que le da el visor; su tamaño sale de la
+   distancia a la vecina más cercana y del zoom. */
 .sv-plano-mesa {
-  position: absolute; transform: translate(-50%, -50%);
+  position: relative; width: 100%; height: 100%;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
-  width: 74px; height: 74px; padding: 4px; cursor: pointer; font: inherit;
+  padding: 3px; cursor: pointer; font: inherit;
   background: var(--sv-bg); border: 1.5px solid var(--sv-line); color: var(--u-text);
   border-radius: var(--radius-md);
   transition: transform 90ms var(--ease-out);
 }
 .sv-plano-mesa[data-shape="circle"] { border-radius: 50%; }
-.sv-plano-mesa:hover { transform: translate(-50%, -50%) scale(1.04); }
-.sv-plano-mesa[data-on="1"] { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
+.sv-plano-mesa:active { transform: scale(0.96); }
+@media (hover: hover) { .sv-plano-mesa:hover { transform: scale(1.04); } }
+.sv-plano-mesa[data-on="1"] { outline: 2.5px solid var(--brand-accent); outline-offset: 2px; }
 .sv-plano-n { font-family: var(--ui-font-mono); font-size: 18px; font-weight: 600; line-height: 1; }
+.sv-plano-mesa[data-dens="mini"] .sv-plano-n { font-size: 15px; }
+.sv-plano-mesa[data-dens="completa"] .sv-plano-n { font-size: 20px; }
 .sv-plano-sub {
   font-size: 10.5px; font-weight: 600; color: var(--sv-ink);
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.sv-plano-total { font-family: var(--ui-font-mono); font-size: 11px; color: var(--u-text-2); }
+.sv-plano-total {
+  font-family: var(--ui-font-mono); font-size: 11px; color: var(--u-text-2);
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .sv-plano-mano {
   position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%;
   background: var(--c-danger-solid); border: 2px solid var(--adm-card);
 }
 /* Las que el dueño no colocó en el plano: van debajo, no desaparecen. */
 .sv-plano-fuera {
+  flex: 0 0 auto; max-height: 34%; overflow-y: auto;
   width: 100%; padding: 12px 14px; border-radius: var(--radius-lg);
   border: 1px dashed var(--u-hair-2); display: flex; flex-direction: column; gap: 10px;
 }
@@ -2994,20 +3088,37 @@
   /* Una cosa a la vez: ni riel ni comanda al lado. */
   .sv-body { flex-direction: column; }
   .sv-dish { min-height: 118px; padding: 14px; border-radius: var(--radius-xl); border-width: 1.5px; }
-  .sv-dish-name { font-size: 15px; padding-right: 32px; }
+  .sv-dish-name { font-size: 15px; }
   .sv-dish-price { font-size: 14px; }
   /* Tantas columnas como quepan, con tarjetas de 150 px o más. Con DOS
      fijas, una tablet de 780 px de módulo enseñaba cuatro platos enormes
      mientras el salón, al lado, ya iba a cuatro columnas. */
   .sv-dishes { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .sv-dish:has(.sv-dish-ph) { min-height: 0; }
   .sv-carta-head { padding: 12px 12px 8px; }
   .sv-carta-bars { padding: 0 12px 10px; }
   .sv-carta-list { padding: 2px 12px 16px; }
   .sv-ticket-body { padding: 14px 12px 16px; }
   .sv-foot-total { font-size: 28px; }}
-/* Regla 1 del handoff: en el teléfono, dos columnas y nunca una. */
+/* Regla 1 del handoff: en el teléfono, dos columnas y nunca una. Con
+   fotos, TRES en el teléfono (como Square o Toast): la foto se reconoce
+   aunque mida 110 px, y caben nueve platos en vez de seis. */
 @container sv (max-width: 640px) {
-  .sv-dishes { grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+  .sv-dishes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* Tantas como quepan desde 104 px: tres en el teléfono y cuatro en la
+     carta de la PC, que también mide menos de 640. */
+  .sv-dishes:has(.sv-dish-ph) { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+  .sv-dish:has(.sv-dish-ph) { border-radius: var(--radius-lg); border-width: 1px; }
+  .sv-dish:has(.sv-dish-ph) .sv-dish-name { font-size: 13px; padding: 6px 8px 0; }
+  .sv-dish:has(.sv-dish-ph) .sv-dish-foot { padding: 2px 8px 8px; }
+  .sv-dish:has(.sv-dish-ph) .sv-dish-price { font-size: 12px; }
+  .sv-dish-ini { font-size: 20px; }
+  .sv-dish-q { top: 6px; right: 6px; min-width: 26px; height: 26px; font-size: 12px; }
+  .sv-dish-ph > .sv-dish-left, .sv-dish-ph > .sv-dish-out { left: 6px; top: 6px; padding: 2px 6px; }
+  .sv-dish-ph > .sv-dish-tools { right: 6px; bottom: 6px; }}
+/* Un teléfono muy angosto (o con letra grande) vuelve a dos. */
+@container sv (max-width: 330px) {
+  .sv-dishes:has(.sv-dish-ph) { grid-template-columns: repeat(2, minmax(0, 1fr)); }}
 
 /* ── LA BARRA DE DESTINOS DEL TELÉFONO ─────────────────────────
    El resto del panel esquiva esa barra con el relleno inferior de
@@ -3035,10 +3146,6 @@
   .admin-shell:has(.sv) .admin-fab-flat { display: block; }
   .admin-shell:has(.sv) .admin-fab { justify-content: center; gap: 3px; }}
 
-/* El plano vive en una capa FIJA, fuera del armazón: ahí lo que manda es
-   la pantalla, no el módulo. */
-@media (max-width: 899px) {
-  .sv-plano { min-width: 460px; }}
 
 /* Puntero grueso: fuera las pistas de teclado, que no llevan a ningún
    sitio en una tablet. Se decide por el PUNTERO y no por el ancho —una
