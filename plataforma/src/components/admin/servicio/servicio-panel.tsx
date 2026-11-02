@@ -64,11 +64,11 @@ import {
 import { reconocimientoDisponible } from '@/lib/servicio/voz';
 import {
   createWaiterOrder, freeTable, getTableBill, moveTableOrders, resolveTableCalls,
-  updateOrderStatus, printTableBillShare,
+  updateOrderStatus, printTableBillShare, setItemSeat,
 } from '@/lib/actions/orders';
 import {
   cobrarParteDeMesa, cobrarPedidoParaLlevar, cobradoDeMesa, deshacerServirLineas,
-  marcarAgotado, ponerAlergiaDeMesa, ponerNombreDeMesa, servirLineas,
+  marcarAgotado, moverPlatoDeMesa, ponerAlergiaDeMesa, ponerNombreDeMesa, servirLineas,
 } from '@/lib/actions/servicio';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { otraRonda, ultimaRonda } from '@/lib/servicio/ronda';
@@ -977,6 +977,31 @@ export default function ServicioPanel({
     });
   }, [sel, restaurantId]);
 
+  /** «Ese pepián era de la 7»: pasa el plato a otra cuenta sin anularlo. */
+  const moverPlato = useCallback((l: LineaServicio, destino: number, cantidad: number) => {
+    if (sel.kind !== 'mesa') return;
+    const n = sel.n;
+    startWork(async () => {
+      const res = await moverPlatoDeMesa(restaurantId, l.id, cantidad, destino);
+      if (res.error) { setAviso({ text: res.error, bad: true }); return; }
+      setHoja(null);
+      setAviso({ text: `${cantidad}× ${l.nombre} pasó a la mesa ${destino}${res.origenCerrado ? '. Esta cuenta quedó vacía' : ''}` });
+      await cargarMesa(n);
+    });
+  }, [sel, restaurantId, cargarMesa]);
+
+  const cambiarAsiento = useCallback((l: LineaServicio, asiento: number | null) => {
+    if (sel.kind !== 'mesa') return;
+    const n = sel.n;
+    startWork(async () => {
+      const res = await setItemSeat(restaurantId, l.id, asiento);
+      if (res.error) { setAviso({ text: res.error, bad: true }); return; }
+      setHoja(null);
+      setAviso({ text: asiento ? `${l.nombre} · asiento ${asiento}` : `${l.nombre} · de la mesa` });
+      await cargarMesa(n);
+    });
+  }, [sel, restaurantId, cargarMesa]);
+
   const atender = useCallback(() => {
     if (sel.kind !== 'mesa') return;
     const n = sel.n;
@@ -1640,6 +1665,11 @@ export default function ServicioPanel({
           onClose={() => setHoja(null)}
           onServir={() => { servir(hoja.linea); setHoja(null); }}
           onDeshacerServir={() => deshacerServir(hoja.linea)}
+          destinos={sel.kind === 'mesa' ? mesas.filter((m) => m.n !== sel.n) : []}
+          sillas={mesaSel?.sillas ?? null}
+          busy={trabajando}
+          onMover={sel.kind === 'mesa' && hoja.linea.orderId ? (destino, cantidad) => moverPlato(hoja.linea, destino, cantidad) : undefined}
+          onAsiento={sel.kind === 'mesa' && hoja.linea.orderId ? (asiento) => cambiarAsiento(hoja.linea, asiento) : undefined}
           onAnular={() => {
             const l = hoja.linea;
             const o = ordersVivos.find((x) => x.id === l.orderId);

@@ -710,3 +710,54 @@ export async function ponerAlergiaDeMesa(
   revalidarSalon();
   return { ok: true };
 }
+
+/* ────────────────────────────────────────────────────────────
+   7 · PASAR UN PLATO A OTRA MESA (migración 152)
+   ------------------------------------------------------------
+   «Ese pepián era de la 7.» El plato cambia de cuenta sin anularlo ni
+   volver a imprimirlo: ya está hecho. Todo el dinero (subtotal, propina,
+   total de las dos cuentas) lo mueve `move_order_item` en una sola
+   transacción, y ahí viven también los «no»: lo anulado, una cuenta con
+   cobros o descuentos.
+   ──────────────────────────────────────────────────────────── */
+
+export async function moverPlatoDeMesa(
+  restaurantId: string,
+  itemId: string,
+  cantidad: number,
+  mesaDestino: number,
+): Promise<{ error?: string; needsMigration?: boolean; creada?: boolean; origenCerrado?: boolean }> {
+  const qty = Math.trunc(cantidad);
+  if (!restaurantId || !itemId || qty < 1 || !Number.isInteger(mesaDestino) || mesaDestino < 1 || mesaDestino > 500) {
+    return { error: 'Datos inválidos.' };
+  }
+
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
+
+  const db = createServiceClient();
+  // El plato tiene que ser de ESTE restaurante (mismo candado que setItemSeat).
+  const { data: item } = await db
+    .from('order_items')
+    .select('id, order:orders!inner(restaurant_id)')
+    .eq('id', itemId)
+    .maybeSingle();
+  const dueño = (item as { order?: { restaurant_id: string } | null } | null)?.order?.restaurant_id;
+  if (!item || dueño !== restaurantId) return { error: 'Plato no encontrado.' };
+
+  const { data, error } = await db.rpc('move_order_item', {
+    p_order_item_id: itemId,
+    p_quantity: qty,
+    p_target_table: mesaDestino,
+  });
+  if (error) {
+    if (error.code === 'PGRST202' || error.code === '42883') {
+      return { error: 'Falta la migración 152 para pasar platos entre mesas.', needsMigration: true };
+    }
+    return { error: error.message };
+  }
+
+  const r = (data ?? {}) as { created?: boolean; source_closed?: boolean };
+  revalidarSalon();
+  return { creada: !!r.created, origenCerrado: !!r.source_closed };
+}

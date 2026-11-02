@@ -47,6 +47,8 @@ export interface LineaServicio {
   orderId?: string;
   /** Solo en las enviadas: el estado del pedido al que pertenece. */
   estadoPedido?: OrderStatus;
+  /** Solo en las enviadas: a qué asiento va (`null` = de la mesa). */
+  asiento?: number | null;
   /** Ya saldada en un cobro por partes (migración 125 + `cobrarParteDeMesa`). */
   pagada: boolean;
   /** Artículo libre (M-09): no está en la carta y su precio lo escribió alguien. */
@@ -153,6 +155,7 @@ export function comandaDeMesa(
         nota: item.note ?? '',
         orderId: o.id,
         estadoPedido: estado,
+        asiento: item.seat_no ?? null,
         pagada: pagadas.has(item.id),
         libre: item.product_id == null,
       });
