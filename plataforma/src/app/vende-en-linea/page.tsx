@@ -8,7 +8,10 @@ import { LandingIntro } from '@/components/landing-intro';
 import { CtaEnLinea } from '@/components/en-linea/cta-en-linea';
 import { SiteHeader, SiteFooter, SectionHead, contactHref } from '@/components/site-chrome';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
-import { planPriceLabel } from '@/lib/plans';
+import { planPriceLabel, PLANS } from '@/lib/plans';
+
+/** Pedidos al mes que incluye En línea (tope blando, ver lib/tope-pedidos.ts). */
+const TOPE = PLANS.EN_LINEA.monthlyOrderCap ?? 300;
 import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
 
 /* ============================================================
@@ -120,7 +123,7 @@ function faqs(trialDays: number, enLinea: string, basico: string) {
     },
     {
       q: '¿Cuánto cuesta?',
-      a: `El plan En línea cuesta ${enLinea}, sin costo de alta, y empiezas con ${trialDays} días gratis, sin tarjeta. Si por ahora solo quieres tu catálogo en un link, sin pedidos en línea, el Básico es ${basico.toLowerCase()} para siempre. Cuando crezcas (más personas, reportes y corte de caja, mesas), subes a Estándar.`,
+      a: `El plan En línea cuesta ${enLinea}, sin costo de alta, incluye hasta ${TOPE} pedidos al mes y empiezas con ${trialDays} días gratis, sin tarjeta. Si por ahora solo quieres tu catálogo en un link, sin pedidos en línea, el Básico es ${basico.toLowerCase()} para siempre. Cuando crezcas (más de ${TOPE} pedidos al mes, más personas, reportes y corte de caja, mesas), subes a Estándar. Si un mes pasas los ${TOPE}, no se corta ningún pedido: te avisamos y al mes siguiente cambias.`,
     },
   ];
 }
@@ -316,8 +319,8 @@ export default async function VendeEnLinea() {
               <div className="lp-eyebrow">Precio fijo, sin comisión</div>
               <div className="el-precio-cifra t-mono">Menos de Q{alDia}<small> al día</small></div>
               <p className="lp-body" style={{ marginTop: 10, maxWidth: 460 }}>
-                El plan En línea cuesta {enLineaLabel}, sin costo de alta. Vendas Q500 o Q50,000
-                en el mes, lo que vendes es tuyo: no cobramos un porcentaje de tus pedidos.
+                El plan En línea cuesta {enLineaLabel}, sin costo de alta, con hasta {TOPE} pedidos al
+                mes. Lo que vendes es tuyo: no cobramos un porcentaje de tus pedidos.
               </p>
             </div>
             <div className="el-precio-acciones">

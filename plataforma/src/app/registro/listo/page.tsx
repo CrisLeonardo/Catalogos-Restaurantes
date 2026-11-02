@@ -49,7 +49,7 @@ function buildPlanInfo(pricing: PlanPricing) {
         'Pedidos para llevar y a domicilio en tu menú',
         'Zonas de reparto y seguimiento del pedido',
         'Alerta WhatsApp al recibir pedido',
-        'Notificaciones en tiempo real',
+        `Hasta ${PLANS.EN_LINEA.monthlyOrderCap} pedidos al mes`,
       ],
       nextSteps: [
         'Sube tus productos y fotos',

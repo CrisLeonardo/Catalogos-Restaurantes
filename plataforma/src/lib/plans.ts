@@ -54,6 +54,8 @@ export interface PlanFeatures {
   hasAnalytics: boolean;
   /** Visitas mensuales al menú público a partir de las que se avisa (solo aviso, nunca bloquea el menú). */
   monthlyVisitWarning?: number;
+  /** Pedidos al mes incluidos (tope BLANDO: avisa y pide subir, nunca corta un pedido). Ver lib/tope-pedidos.ts. */
+  monthlyOrderCap?: number;
   priceMonthly: number;
   priceLabel: string;
   /** Cobro único de configuración asistida (referencia; el cobro real es manual). */
@@ -105,6 +107,9 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     setupFee: 0,
     products: 'unlimited',
     maxProducts: 150,
+    // Lo que lo separa de Estándar desde que salieron los encargos
+    // (2026-11-02): es para empezar. Unos 10 pedidos al día.
+    monthlyOrderCap: 300,
     users: 1,
     hasOrders: true,
     hasWhatsapp: true,
@@ -412,7 +417,7 @@ export const PLAN_POINTS: Record<PlanCode, { text: string; positive: boolean }[]
     { text: 'Para llevar y a domicilio', positive: true },
     { text: 'Zonas de reparto y seguimiento del pedido', positive: true },
     { text: 'Avisos en tiempo real y WhatsApp', positive: true },
-    { text: 'Hasta 150 productos · 1 usuario', positive: true },
+    { text: 'Hasta 300 pedidos al mes · 150 productos · 1 usuario', positive: true },
   ],
   ESTANDAR: [
     { text: 'Elige 2 de 3 modos de pedido', positive: true },
