@@ -15,7 +15,8 @@ import { headers } from 'next/headers';
 import { getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
-import { resolveOwnRestaurantId } from '@/lib/db/membership';
+import { resolveOwnRestaurantId, resolveEffectiveRole } from '@/lib/db/membership';
+import { can } from '@/lib/permissions';
 import { getActiveTableNumbers, getPendingTableCalls, getWaiterActiveOrders } from '@/lib/db/orders';
 import { getOpenTableSessions } from '@/lib/db/table-sessions';
 import { getWaiterCatalogCached } from '@/lib/db/menu';
@@ -104,6 +105,14 @@ export default async function MeseroPage() {
     getAgentHubInfo(restaurantId),
   ]);
 
+  /* Quien administra la carta puede marcar un plato agotado desde aquí
+     (el «86» de Toast). La acción lo vuelve a comprobar en el servidor. */
+  const efectivo = await resolveEffectiveRole(
+    { role: (profile?.role as string) ?? '', permissions: (profile?.permissions as string[] | null) ?? null },
+    restaurantId,
+  );
+  const puedeAgotar = profile?.role === 'SUPER_ADMIN' || can(efectivo.role, efectivo.permissions, 'catalogo');
+
   return (
     <ServicioPanel
       waiterId={user.id}
@@ -135,6 +144,7 @@ export default async function MeseroPage() {
       }}
       hubUrl={hubInfo.hubUrl}
       hubToken={hubInfo.hubToken}
+      puedeAgotar={puedeAgotar}
     />
   );
 }

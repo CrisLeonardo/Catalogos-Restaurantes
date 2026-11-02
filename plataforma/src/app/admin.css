@@ -2472,6 +2472,8 @@
   box-shadow: 0 2px 6px color-mix(in srgb, #000 18%, transparent);
 }
 .sv-dish-tool::after { content: ""; position: absolute; inset: -6px; }
+/* «Ya hay» en un plato agotado: con texto, y sin apagarse con la tarjeta. */
+.sv-dish-tool[data-txt="1"] { width: auto; padding: 0 12px; font: inherit; font-size: 12px; font-weight: 700; }
 @media (hover: hover) { .sv-dish-tool:hover { background: var(--surface-2); } }
 
 /* «Quedan 3» y «Agotado»: sobre la foto, arriba a la izquierda (abajo van

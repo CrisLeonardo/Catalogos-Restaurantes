@@ -70,11 +70,14 @@ export interface HojaOpcionesProps {
   onAdd: (line: CartLine) => void;
   onSave: (lineId: string, line: Omit<CartLine, 'lineId'>) => void;
   onClose: () => void;
+  /** «Marcar agotado» (el 86 de Toast). Solo llega si quien mira tiene permiso de carta. */
+  onAgotar?: () => void;
 }
 
 export default function HojaOpciones({
-  product, currency, initialLine, initialQty = 1, onAdd, onSave, onClose,
+  product, currency, initialLine, initialQty = 1, onAdd, onSave, onClose, onAgotar,
 }: HojaOpcionesProps) {
+  const [confirmarAgotado, setConfirmarAgotado] = useState(false);
   /* En un `useMemo` y no suelto: `?? []` crea un array nuevo en cada
      render, y con él dentro de las dependencias el precio de la línea se
      recalculaba en todos. */
@@ -288,6 +291,20 @@ export default function HojaOpciones({
             {initialLine ? 'Guardar' : 'Agregar'} · {money(unidad * qty)}
           </button>
         </div>
+
+        {/* Dos toques, como «Liberar mesa»: agotar un plato lo apaga en
+            todas las tablets y en el menú del comensal. */}
+        {onAgotar && !initialLine && (
+          <button
+            type="button"
+            className="sv-cta"
+            data-tone={confirmarAgotado ? 'danger' : 'quiet'}
+            style={confirmarAgotado ? { height: 46 } : { height: 46, color: 'var(--c-danger)' }}
+            onClick={() => (confirmarAgotado ? onAgotar() : setConfirmarAgotado(true))}
+          >
+            {confirmarAgotado ? 'Toca otra vez: se apaga en todo el local' : 'Se acabó · marcar agotado'}
+          </button>
+        )}
       </div>
     </Hoja>
   );

@@ -36,6 +36,7 @@ import { hayTurnosDeMesa, hayPagosDeMesa } from '@/lib/db/table-sessions';
 import { faltaLaColumna, faltaLaTabla } from '@/lib/db/migracion-ausente';
 import { isPaymentMethod, type PaymentMethod } from '@/lib/payment-method';
 import { updateOrderStatus } from '@/lib/actions/orders';
+import { revalidatePath, updateTag } from 'next/cache';
 
 /** Tope de líneas que una llamada puede tocar. Una mesa no acumula más. */
 const MAX_LINEAS = 120;
@@ -609,4 +610,42 @@ export async function cobrarPedidoParaLlevar(
 
   revalidarSalon();
   return { ok: true };
+}
+
+/* ────────────────────────────────────────────────────────────
+   5 · AGOTAR UN PLATO DESDE EL SERVICIO
+   ------------------------------------------------------------
+   En Toast se llama «86»: cocina avisa que se acabó y quien lleva la
+   carta lo marca ahí mismo, sin ir a Menú. Lo puede hacer quien tiene
+   permiso de carta (dueño, gerente o personal con «catalogo»); el
+   mesero sin ese permiso no ve el botón, y aquí se vuelve a comprobar
+   porque la interfaz no es un candado.
+   ──────────────────────────────────────────────────────────── */
+
+export async function marcarAgotado(
+  restaurantId: string,
+  productId: string,
+  agotado: boolean,
+): Promise<{ error?: string }> {
+  if (!restaurantId || !productId) return { error: 'Datos inválidos.' };
+
+  const acceso = await assertTableAccess(restaurantId, ['catalogo']);
+  if ('error' in acceso) return { error: 'Solo quien administra la carta puede marcar un plato como agotado.' };
+
+  const db = createServiceClient();
+  const { data, error } = await db
+    .from('products')
+    .update({ is_available: !agotado, unavailable_at: agotado ? new Date().toISOString() : null })
+    .eq('id', productId)
+    .eq('restaurant_id', restaurantId)
+    .select('id');
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: 'Ese plato no es de este restaurante.' };
+
+  // La misma etiqueta que invalida Menú: el catálogo del mesero está en
+  // caché con ella (getWaiterCatalogCached) y el menú público también.
+  updateTag(`menu:${restaurantId}`);
+  revalidatePath('/admin/menu');
+  revalidarSalon();
+  return {};
 }

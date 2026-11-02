@@ -68,7 +68,7 @@ import {
 } from '@/lib/actions/orders';
 import {
   cobrarParteDeMesa, cobrarPedidoParaLlevar, cobradoDeMesa, deshacerServirLineas,
-  ponerNombreDeMesa, servirLineas,
+  marcarAgotado, ponerNombreDeMesa, servirLineas,
 } from '@/lib/actions/servicio';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order-queue';
@@ -155,17 +155,31 @@ export interface ServicioPanelProps {
   floorPlan: FloorPlan | null;
   hubUrl: string | null;
   hubToken: string | null;
+  /** Tiene permiso de carta: puede marcar un plato agotado desde aquí. */
+  puedeAgotar?: boolean;
 }
 
 export default function ServicioPanel({
   waiterId, waiterName, restaurantId, restaurantName, logoUrl,
-  categories, products, masPedidos, initialOrders,
+  categories, products: productosServidor, masPedidos, initialOrders,
   occupancy, calls, seatings, tableCount,
-  pickupEnabled, tipEnabled, tipEnabledPickup, currency, floorPlan, hubUrl, hubToken,
+  pickupEnabled, tipEnabled, tipEnabledPickup, currency, floorPlan, hubUrl, hubToken, puedeAgotar = false,
 }: ServicioPanelProps) {
   const servicio = useServiceMode();
   const now = useReloj();
   const mod = useTeclaMod();
+
+  /* ── La carta, con lo que se agotó en ESTE aparato ──────────
+     Marcar agotado se ve al instante aquí; la respuesta de la acción
+     trae el catálogo nuevo y entonces la corrección local sobra. */
+  const [agotadosLocal, setAgotadosLocal] = useState<Record<string, boolean>>({});
+  useEffect(() => { setAgotadosLocal({}); }, [productosServidor]);
+  const products = useMemo(
+    () => (Object.keys(agotadosLocal).length === 0
+      ? productosServidor
+      : productosServidor.map((p) => (p.id in agotadosLocal ? { ...p, is_available: !agotadosLocal[p.id] } : p))),
+    [productosServidor, agotadosLocal],
+  );
 
   /* ── Qué está elegido ─────────────────────────────────────── */
   const [sel, setSel] = useState<Sel>({ kind: 'none' });
@@ -615,6 +629,19 @@ export default function ServicioPanel({
       return out;
     });
   }, [sel]);
+
+  /** El 86 de Toast: se acabó, se apaga en todo el local (y «Ya hay» lo devuelve). */
+  const agotar = useCallback(async (p: Product, agotado: boolean) => {
+    setAgotadosLocal((prev) => ({ ...prev, [p.id]: agotado }));
+    setHoja(null);
+    const res = await marcarAgotado(restaurantId, p.id, agotado);
+    if (res.error) {
+      setAgotadosLocal((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => id !== p.id)));
+      setAviso({ text: res.error, bad: true });
+      return;
+    }
+    setAviso({ text: agotado ? `${p.name} · agotado en todo el local` : `${p.name} · disponible otra vez` });
+  }, [restaurantId]);
 
   const qtyOf = useCallback(
     (productId: string) => carrito.filter((l) => l.productId === productId).reduce((s, l) => s + l.quantity, 0),
@@ -1097,6 +1124,7 @@ export default function ServicioPanel({
     onAdd: agregarProducto,
     onOpts: (p: Product, qty: number) => setHoja({ k: 'mods', product: p, qty }),
     onRemove: quitarUno,
+    onReponer: puedeAgotar ? (p: Product) => { void agotar(p, false); } : undefined,
     onOpenItem: (nombre: string) => setHoja({ k: 'libre', nombre }),
     onVoz: () => setHoja({ k: 'voz' }),
     conTeclado, aprendiz, hayVoz, money, movil,
@@ -1460,6 +1488,7 @@ export default function ServicioPanel({
           currency={currency}
           initialLine={hoja.line}
           initialQty={hoja.qty}
+          onAgotar={puedeAgotar ? () => { void agotar(hoja.product, true); } : undefined}
           onAdd={(linea) => { empujar(linea); setHoja(null); }}
           onSave={(lineId, linea) => {
             const k = cartKey(sel);
