@@ -134,6 +134,9 @@ export function buildNav(ctx: NavContext): NavGroup[] {
         ? [
             { href: '/admin/pedidos', label: 'En vivo', key: 'pedidos' },
             { href: '/admin/cocina', label: 'Cocina', key: 'cocina' },
+            /* Encargos con cupo (mig. 149): pedidos para otro día. Llave
+               'pedidos': quien atiende los pedidos atiende estos. */
+            { href: '/admin/encargos', label: 'Encargos', key: 'pedidos' },
             ...salon(mesasAccessible, mesasAccessible, { href: '/admin/mesas', label: 'Mesas', key: 'mesas' }),
             ...salon(hasWaiterPanel, hasWaiterPanel, { href: '/admin/mesero', label: 'Tomar pedidos', key: 'mesero' }),
           ]

@@ -9,6 +9,7 @@ import { remainingQuantity, type OrderWithItems } from '@/lib/db/orders';
 import { printTicket, isKitchenAutoPrintEnabled, markKitchenPrinted, hasPrinterConfigured } from '@/lib/printing';
 import { buildKitchenEscPos, buildReceiptEscPos, ticketTime, ticketDateTime, type TicketFormat } from '@/lib/escpos';
 import VoidOrderDialog from '@/components/admin/void-order-dialog';
+import TransferenciaPedido from '@/components/admin/transferencia-pedido';
 import {
   STATUS_LABEL, STATUS_CHIP, nextStatus, nextLabel, isCardTerminal,
   stageClock, fmtElapsed, clockChipClass,
@@ -656,6 +657,9 @@ export default function OrderCard({
               </p>
             )}
           </div>
+        )}
+        {order.payment_method === 'TRANSFER' && order.transfer_status && (
+          <TransferenciaPedido orderId={order.id} estado={order.transfer_status} />
         )}
         {order.notes && (
           <div className="note note-warn" style={{ marginTop: 4 }}>

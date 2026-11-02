@@ -17,6 +17,8 @@ import { Price, PrimaryButton } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { formatPrice } from '@/lib/theme/resolve';
 import { getPublicOrder, cancelPublicOrder, type PublicOrder } from '@/lib/actions/orders';
+import TrackerTransferencia from '@/components/tracker-transferencia';
+import type { DatosBancarios } from '@/lib/pago-plan';
 import { useTenantPrefix } from '@/lib/tenant-client';
 import type { OrderStatus } from '@/types';
 import { waDigits } from '@/lib/reminder';
@@ -47,12 +49,15 @@ export default function OrderTracker({
   restaurantId,
   initialOrder,
   whatsapp,
+  cuentaTransferencia = null,
 }: {
   token: string;
   restaurantId: string;
   initialOrder: PublicOrder;
   /** WhatsApp del restaurante, para que un pedido cancelado tenga salida. */
   whatsapp?: string | null;
+  /** Cuenta del restaurante para pagar por transferencia (mig. 149). */
+  cuentaTransferencia?: DatosBancarios | null;
 }) {
   const config = useThemeConfig();
   const content = useThemeContent();
@@ -206,8 +211,21 @@ export default function OrderTracker({
           </button>
         )}
 
+        {/* Transferencia: la cuenta y el comprobante, antes que nada más. */}
+        {!cancelled && order.paymentMethod === 'TRANSFER' && cuentaTransferencia && (
+          <div style={{ marginTop: 14 }}>
+            <TrackerTransferencia
+              token={token}
+              restaurantId={restaurantId}
+              total={order.total}
+              cuenta={cuentaTransferencia}
+              estadoInicial={order.transferStatus}
+            />
+          </div>
+        )}
+
         {/* Botón cancelar — solo disponible cuando el pedido está en NEW */}
-        {order.status === 'NEW' && (
+        {order.status === 'NEW' && order.transferStatus !== 'POR_CONFIRMAR' && order.transferStatus !== 'CONFIRMADO' && (
           <div style={{ marginTop: 14 }}>
             {cancelError && (
               <p style={{ fontSize: 12.5, color: 'var(--c-danger)', marginBottom: 8 }}>{cancelError}</p>
@@ -345,7 +363,9 @@ export default function OrderTracker({
                     </div>
                     {active && step.status === 'NEW' && (
                       <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
-                        {content.confirmation.eta}: {content.confirmation.etaValue}
+                        {order.encargoEntrega
+                          ? `Encargo para ${order.encargoEntrega}`
+                          : `${content.confirmation.eta}: ${content.confirmation.etaValue}`}
                       </div>
                     )}
                   </div>

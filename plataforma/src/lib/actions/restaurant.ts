@@ -17,6 +17,7 @@ import { panelLink } from '@/lib/panel-links-server';
 import { puedeEnSeccion, SIN_SECCION } from '@/lib/auth/seccion';
 import { horaACorte } from '@/lib/caja/dia';
 import { faltaLaColumna } from '@/lib/db/migracion-ausente';
+import { limpiarCuenta } from '@/lib/pago-transferencia';
 
 export type RestaurantState = { error: string } | null;
 
@@ -506,6 +507,7 @@ export async function saveOrdersAndCurrency(input: {
     'tipEnabled' | 'tipPercent' | 'acceptsCard' |
     'currencySymbol' | 'currencyPosition' | 'locale' | 'animations'
   > & Partial<Pick<ThemeConfig,
+    'acceptsTransfer' | 'transferBank' | 'transferAccountType' | 'transferAccountNumber' | 'transferAccountHolder' |
     'floorPlan' | 'kdsYellowMin' | 'kdsRedMin' | 'kdsConfirmFirst' |
     'salonReadyMin' | 'salonUnpaidMin' | 'salonUnacceptedMin' |
     'autoConfirmEnabled' | 'autoConfirmMinutes' | 'tipOrderTypes' | 'deliveryFee'
@@ -566,6 +568,9 @@ export async function saveOrdersAndCurrency(input: {
     const fee = Number(input.patch.deliveryFee);
     newConfig.deliveryFee = Number.isFinite(fee) ? Math.max(0, Math.min(10_000, Math.round(fee * 100) / 100)) : 0;
   }
+  // La cuenta para transferencias la lee el público en el checkout: se
+  // guarda limpia (sin saltos raros ni letras en el número).
+  if ('acceptsTransfer' in input.patch) Object.assign(newConfig, limpiarCuenta(input.patch));
 
   const { error } = await db
     .from('restaurant_themes')

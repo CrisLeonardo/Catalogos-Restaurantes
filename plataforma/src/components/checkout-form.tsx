@@ -26,6 +26,8 @@ import CheckoutSuccess from '@/components/checkout/checkout-success';
 import { PayOption, FormSection, CheckoutQueued } from '@/components/checkout/form-parts';
 import EmptyCart from '@/components/checkout/empty-cart';
 import type { Sugerencia } from '@/components/menu/pairings';
+import type { DatosBancarios } from '@/lib/pago-plan';
+import { elegirEncargo } from '@/lib/encargo-elegido';
 
 const DeliveryMap = dynamic(() => import('./delivery-map'), {
   ssr: false,
@@ -60,6 +62,12 @@ interface Props {
   hubToken?: string | null;
   /** «Lo más pedido» para el carrito vacío (CAT-09). */
   sugeridos?: Sugerencia[];
+  /** Tanda de encargos elegida en el menú y validada por el servidor (mig. 149). */
+  encargo?: { id: string; titulo: string; entrega: string; quedan: number; pagoAdelantado: boolean } | null;
+  /** Cuenta del restaurante si recibe transferencias (null = no se ofrece). */
+  transferencia?: DatosBancarios | null;
+  /** Venía de un encargo que ya se llenó o cerró: el pedido va para ahora. */
+  encargoNoDisponible?: boolean;
 }
 
 type Step = 'form' | 'success' | 'queued';
@@ -81,6 +89,9 @@ export default function CheckoutForm({
   hubUrl = null,
   hubToken = null,
   sugeridos = [],
+  encargo = null,
+  transferencia = null,
+  encargoNoDisponible = false,
 }: Props) {
   const config  = useThemeConfig();
   const content = useThemeContent();
@@ -105,7 +116,8 @@ export default function CheckoutForm({
   const typeOptions = kiosk
     ? [{ id: 'PICKUP' as const, label: content.checkout.pickup, icon: 'bag' }]
     : ([
-        config.orderTypes.includes('dine_in')  && hasScannedTable && { id: 'DINE_IN'   as const, label: content.checkout.dineIn, icon: 'utensils' },
+        // Un encargo es para otro día: nunca «comer aquí».
+        config.orderTypes.includes('dine_in')  && hasScannedTable && !encargo && { id: 'DINE_IN'   as const, label: content.checkout.dineIn, icon: 'utensils' },
         config.orderTypes.includes('delivery') && { id: 'DELIVERY'  as const, label: content.checkout.delivery, icon: 'truck' },
         config.orderTypes.includes('pickup')   && { id: 'PICKUP'    as const, label: content.checkout.pickup, icon: 'bag' },
       ].filter(Boolean) as { id: OrderType; label: string; icon: string }[]);
@@ -162,7 +174,10 @@ export default function CheckoutForm({
   }, [kiosk, step]);
 
   // Método de pago
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD'>('CASH');
+  // Una tanda con «pago adelantado» solo admite transferencia (createOrder
+  // lo vuelve a exigir).
+  const soloTransferencia = !!encargo?.pagoAdelantado && !!transferencia;
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'TRANSFER'>(soloTransferencia ? 'TRANSFER' : 'CASH');
   const [cashAmount, setCashAmount] = useState('');
 
   // Propina obligatoria — el admin decide en qué tipos de pedido se cobra
@@ -365,7 +380,11 @@ export default function CheckoutForm({
       whatsappNumber, config, content,
       orderNumber: result.orderNumber ?? '',
       snap,
-      form: { name, phone, address, zone, notes, tableNumber, coursePreference, deliveryLat, deliveryLng },
+      // El mensaje al restaurante también dice que es encargo y para cuándo.
+      form: {
+        name, phone, address, zone, tableNumber, coursePreference, deliveryLat, deliveryLng,
+        notes: encargo ? `Encargo: ${encargo.titulo} · ${encargo.entrega}${notes ? ` · ${notes}` : ''}` : notes,
+      },
     });
     setDone({
       orderNumber: result.orderNumber ?? '',
@@ -376,6 +395,7 @@ export default function CheckoutForm({
       tableNumber,
       coursePreference,
       waUrl,
+      encargoEntrega: encargo?.entrega ?? null,
     });
 
     if (clientIdRef.current) removeQueuedOrder(restaurantId, clientIdRef.current);
@@ -388,6 +408,7 @@ export default function CheckoutForm({
     if (snap.orderTypeSnapshot === 'DINE_IN') clearScannedTable(restaurantId);
 
     clearCart();
+    if (encargo || encargoNoDisponible) elegirEncargo(restaurantId, null);
     setStep('success');
 
     if (waUrl) {
@@ -543,6 +564,7 @@ export default function CheckoutForm({
       ...(needsCashAmount && cashAmountNum > 0 ? { cashAmount: cashAmountNum } : {}),
       tipAccepted: showTip,
       clientId: clientIdRef.current,
+      ...(encargo ? { encargoId: encargo.id } : {}),
     };
     pendingPayloadRef.current = payload;
     pendingSnapshotRef.current = {
@@ -648,6 +670,23 @@ export default function CheckoutForm({
       />
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Encargo (mig. 149): que no quede duda de que esto es para otro día. */}
+        {encargo && (
+          <div style={{ background: 'var(--brand-bg)', border: '1px solid var(--u-hair)', borderRadius: 'var(--m-r-md)', padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <Icon name="calendar" size={18} style={{ flexShrink: 0, marginTop: 2, color: 'var(--brand-accent-ink)' }} />
+            <div>
+              <div style={{ fontSize: 'var(--m-fs-md)', fontWeight: 800, color: 'var(--u-text)' }}>Encargo: {encargo.titulo}</div>
+              <div style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-3)', marginTop: 2 }}>
+                Entrega {encargo.entrega} · {encargo.quedan === 1 ? 'queda 1 lugar' : `quedan ${encargo.quedan} lugares`}
+              </div>
+            </div>
+          </div>
+        )}
+        {encargoNoDisponible && (
+          <p role="status" style={{ background: 'var(--brand-bg)', border: '1px solid var(--u-hair)', borderRadius: 'var(--m-r-md)', padding: '12px 14px', margin: 0, fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)', lineHeight: 1.5 }}>
+            Ese encargo ya se llenó o dejó de recibir pedidos. Si confirmas, tu pedido va para ahora.
+          </p>
+        )}
         {/* Tipo de pedido */}
         {typeOptions.length > 1 && (
           <div>
@@ -902,8 +941,8 @@ export default function CheckoutForm({
           <div>
             <label className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)', textShadow: labelShadow }}>{content.checkout.payLabel}</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
-              {/* Efectivo */}
-              <PayOption
+              {/* Efectivo (no en una tanda que se paga por adelantado) */}
+              {!soloTransferencia && <PayOption
                 icon="banknote"
                 label={type === 'DELIVERY' ? content.checkout.payCash : content.checkout.payCashPickup}
                 sublabel={type === 'DELIVERY' ? content.checkout.payCashSub : content.checkout.payCashPickupSub}
@@ -913,9 +952,9 @@ export default function CheckoutForm({
                 activeText={activeText}
                 glass={payGlass}
                 textShadow={labelShadow}
-              />
+              />}
               {/* Tarjeta — solo si el restaurante lo habilita */}
-              {config.acceptsCard && (
+              {config.acceptsCard && !soloTransferencia && (
                 <PayOption
                   icon="creditCard"
                   label={content.checkout.payCard}
@@ -928,7 +967,27 @@ export default function CheckoutForm({
                   textShadow={labelShadow}
                 />
               )}
+              {/* Transferencia (mig. 149): solo con la cuenta configurada. La
+                  cuenta y la subida del comprobante están en el seguimiento. */}
+              {transferencia && (
+                <PayOption
+                  icon="wallet"
+                  label="Transferencia"
+                  sublabel={`${transferencia.banco} · subes tu comprobante al terminar`}
+                  selected={paymentMethod === 'TRANSFER'}
+                  onClick={() => setPaymentMethod('TRANSFER')}
+                  activeBg={activeBg}
+                  activeText={activeText}
+                  glass={payGlass}
+                  textShadow={labelShadow}
+                />
+              )}
             </div>
+            {soloTransferencia && (
+              <p style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-3)', margin: '8px 0 0', lineHeight: 1.5, textShadow: labelShadow }}>
+                Este encargo se paga por adelantado: así te apartamos tu lugar.
+              </p>
+            )}
 
             {/* Efectivo con cambio — solo DELIVERY + CASH */}
             {type === 'DELIVERY' && paymentMethod === 'CASH' && (

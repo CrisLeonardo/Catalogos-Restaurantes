@@ -35,6 +35,7 @@ import { useValueDirty } from '@/lib/use-form-dirty';
 type Patch = Pick<ThemeConfig,
   'orderTypes' | 'dineInTableCount' | 'dineInCourseOptions' |
   'tipEnabled' | 'tipPercent' | 'tipOrderTypes' | 'acceptsCard' |
+  'acceptsTransfer' | 'transferBank' | 'transferAccountType' | 'transferAccountNumber' | 'transferAccountHolder' |
   'currencySymbol' | 'currencyPosition' | 'locale' | 'animations' |
   'kdsYellowMin' | 'kdsRedMin' | 'kdsConfirmFirst' |
   'salonReadyMin' | 'salonUnpaidMin' | 'salonUnacceptedMin' |
@@ -200,6 +201,39 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
           A domicilio el repartidor lleva el POS y cobra al entregar; para
           recoger se cobra con la terminal del local. Envío en 0 = gratis.
         </SectionNote>
+      </Section>
+
+      {/* Transferencia (mig. 149): el cliente ve esta cuenta al pedir, sube su
+          comprobante y tú lo confirmas desde el pedido. Sin banco y número no
+          se ofrece aunque el interruptor esté encendido. */}
+      <Section title="Transferencia">
+        <List>
+          <ToggleRow
+            label="Recibir pagos por transferencia"
+            desc="El cliente transfiere y sube su comprobante. Tú lo confirmas desde el pedido."
+            value={patch.acceptsTransfer}
+            onChange={(v) => set('acceptsTransfer', v)}
+          />
+          {patch.acceptsTransfer && ([
+            ['transferBank', 'Banco', 'Banco Industrial'],
+            ['transferAccountType', 'Tipo de cuenta', 'Monetaria'],
+            ['transferAccountNumber', 'Número de cuenta', '000-000000-0'],
+            ['transferAccountHolder', 'A nombre de', 'Nombre del titular'],
+          ] as const).map(([k, label, ph]) => (
+            <ListRow key={k}>
+              <ListText title={label} />
+              <input
+                type="text" value={patch[k]} placeholder={ph} maxLength={80} aria-label={label}
+                inputMode={k === 'transferAccountNumber' ? 'numeric' : undefined}
+                onChange={(e) => set(k, e.target.value)}
+                className="adm-field adm-field-auto" style={{ width: 'min(220px, 52vw)' }}
+              />
+            </ListRow>
+          ))}
+        </List>
+        {patch.acceptsTransfer && (!patch.transferBank.trim() || !patch.transferAccountNumber.trim()) && (
+          <SectionNote>Falta el banco o el número de cuenta: mientras tanto tus clientes no verán esta opción.</SectionNote>
+        )}
       </Section>
 
       <Section title="Propina">

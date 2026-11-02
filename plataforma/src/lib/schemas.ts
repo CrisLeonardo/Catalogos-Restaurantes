@@ -129,8 +129,11 @@ const createOrderBase = z
     deliveryFee: z.number().min(0).max(10_000).default(0),
     /** Código de cupón opcional escrito en el checkout. */
     couponCode: z.string().max(40).transform((v) => v.trim()).optional(),
-    /** Método de pago elegido por el cliente. DINE_IN no lleva método (el mesero lo maneja). */
-    paymentMethod: z.enum(['CASH', 'CARD']).default('CASH'),
+    /** Método de pago elegido por el cliente. DINE_IN no lleva método (el mesero lo maneja).
+     *  TRANSFER solo vale si el restaurante la activó con su cuenta (mig. 149). */
+    paymentMethod: z.enum(['CASH', 'CARD', 'TRANSFER']).default('CASH'),
+    /** Tanda de encargos a la que va el pedido (mig. 149). Sin ella, es un pedido de ahora. */
+    encargoId: z.string().guid().optional(),
     /** Monto en efectivo que el cliente dará (para que el repartidor lleve cambio). Solo DELIVERY+CASH. */
     cashAmount: z.number().min(0).max(1_000_000).optional(),
     /** Indica si el cliente aceptó incluir propina. Solo cuenta en los tipos de pedido que el restaurante habilitó (tipOrderTypes). */

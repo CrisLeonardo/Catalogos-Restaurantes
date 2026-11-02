@@ -3,13 +3,14 @@
 /* Carrito del cliente — barra inferior (resumen) + panel (bottom-sheet).
    Moneda y textos vienen del motor. Portado de ClientScreens.jsx. */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { Price, QtyStepper, PrimaryButton, ctaClass } from '@/components/menu/ui';
 import { useCart } from '@/lib/cart-context';
 import { useThemeContent, useThemeConfig, useText } from '@/lib/theme/context';
 import { useTenantPrefix } from '@/lib/tenant-client';
+import { leerEncargoElegido, type EncargoElegido } from '@/lib/encargo-elegido';
 import { Acompanantes, type Sugerencia } from '@/components/menu/pairings';
 
 /* Barra inferior fija con el resumen del carrito. */
@@ -46,8 +47,10 @@ export function CartBar({ onOpen, cartIconHidden }: { onOpen: () => void; cartIc
 }
 
 /* Panel del carrito (bottom-sheet). */
-export function CartPanel({ onClose, sugerencias = [], onPedirDemo }: {
+export function CartPanel({ onClose, sugerencias = [], onPedirDemo, restaurantId }: {
   onClose: () => void;
+  /** Para saber si el comensal eligió una tanda de encargos (mig. 149). */
+  restaurantId?: string;
   /** «Acompáñalo con…» con lo que todavía no lleva (CAT-13). */
   sugerencias?: Sugerencia[];
   /** En la demo no hay checkout: el botón abre «Pídelo tú mismo». */
@@ -56,7 +59,12 @@ export function CartPanel({ onClose, sugerencias = [], onPedirDemo }: {
   const { items, addItem, updateQuantity, removeItem, total, pointsToRedeem } = useCart();
   const content = useThemeContent();
   const titleT = useText('heading', 'cartTitle');
-  const checkoutHref = useTenantPrefix('/checkout');
+  const checkoutBase = useTenantPrefix('/checkout');
+  // Con una tanda de encargos elegida en el menú, el checkout la recibe por
+  // la URL: así sabe que puede abrir aunque el local esté cerrado ahora.
+  const [encargo, setEncargo] = useState<EncargoElegido | null>(null);
+  useEffect(() => { if (restaurantId) setEncargo(leerEncargoElegido(restaurantId)); }, [restaurantId]);
+  const checkoutHref = encargo ? `${checkoutBase}?encargo=${encargo.id}` : checkoutBase;
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -165,6 +173,11 @@ export function CartPanel({ onClose, sugerencias = [], onPedirDemo }: {
                 <span style={{ fontWeight: 700, fontSize: 'var(--m-fs-lg)', color: 'var(--u-text)' }}>{content.cart.total}</span>
                 <Price amount={total} size={22} />
               </div>
+              {encargo && !onPedirDemo && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)', fontWeight: 600 }}>
+                  <Icon name="calendar" size={14} /> Encargo: {encargo.titulo} · {encargo.entrega}
+                </div>
+              )}
               {onPedirDemo
                 ? <PrimaryButton onClick={onPedirDemo} size="lg" full iconRight="arrowRight">Enviar mi pedido de prueba</PrimaryButton>
                 : <PrimaryButton href={checkoutHref} onClick={onClose} size="lg" full iconRight="arrowRight">{content.cart.checkout}</PrimaryButton>}
