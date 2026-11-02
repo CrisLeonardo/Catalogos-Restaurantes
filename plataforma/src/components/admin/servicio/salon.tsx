@@ -14,16 +14,18 @@
    anterior, y es la que impide que el plano diga «Comiendo» donde la
    ficha dice «Falta servir».
 
-   El PLANO es nuevo y no venía en el handoff. Se rehízo entero: el
-   anterior encogía el lienzo hasta caber en el teléfono —mesas de
-   dieciocho píxeles con un número dentro— y aquí se hace al revés, que
-   es como se lee un mapa: el lienzo conserva un tamaño mínimo legible y
-   la pantalla se desplaza por encima. */
+   El PLANO no venía en el handoff. El primero encogía el lienzo hasta
+   caber —mesas de dieciocho píxeles— y el segundo hizo lo contrario,
+   un ancho mínimo que obligaba a arrastrar de lado. Ahora el plano cabe
+   (se encuadra y, en pantalla vertical, se gira), las mesas miden lo que
+   permite su vecina más cercana con suelo táctil, y se acerca con dos
+   dedos: ver components/admin/salon/plano-visor.tsx. */
 
 import { useMemo } from 'react';
 import { Icon } from '@/components/icons';
 import { ChipEstado, ChipMano, Mono } from '@/components/admin/servicio/pieces';
 import { FIXTURE_META, fixtureLabel } from '@/components/admin/salon/fixtures';
+import PlanoVisor from '@/components/admin/salon/plano-visor';
 import { subtituloDeMesa, type MesaServicio } from '@/lib/servicio/estado';
 import { fmtMinShort } from '@/lib/table-state';
 import type { FloorPlan } from '@/lib/theme/defaults';
@@ -136,52 +138,35 @@ export function nivelesConMesas(floorPlan: FloorPlan | null): { id: string; name
   return floorPlan.levels.filter((l) => usados.has(l.id));
 }
 
-/* ── El ENCUADRE ───────────────────────────────────────────────
-   Un plano dibujado casi nunca llena el lienzo: si el dueño colocó todo
-   en la mitad de arriba, enseñar el local entero deja media pantalla de
-   vacío y las mesas del tamaño de una moneda. Se enseña el TROZO que
-   tiene algo, con aire alrededor.
-
-   Esta idea —la mejor que tenía el plano anterior— se conserva tal cual,
-   con sus mismos números: están medidos contra planos de verdad. */
-interface Encuadre { x: number; y: number; w: number; h: number }
-const COMPLETO: Encuadre = { x: 0, y: 0, w: 1, h: 1 };
-/** Aire alrededor de lo dibujado, en fracción del lienzo. */
-const MARGEN = 0.09;
-/** Por debajo de esto el recorte amplía demasiado y desorienta. */
-const MIN_LADO = 0.36;
-/** Con menos vacío que esto no vale la pena recortar. */
-const MAX_APROVECHADO = 0.72;
-
-function tramo(a: number, b: number): readonly [number, number] {
-  let lo = a - MARGEN;
-  let hi = b + MARGEN;
-  if (hi - lo < MIN_LADO) {
-    const centro = (lo + hi) / 2;
-    lo = centro - MIN_LADO / 2;
-    hi = centro + MIN_LADO / 2;
+/** Cuántas mesas de cada nivel tienen gente, para las pestañas de zona. */
+export function ocupacionPorNivel(floorPlan: FloorPlan, mesas: MesaServicio[]): Map<string, { con: number; total: number }> {
+  const porNumero = new Map(mesas.map((m) => [m.n, m]));
+  const out = new Map<string, { con: number; total: number }>();
+  for (const t of floorPlan.tables) {
+    const m = porNumero.get(t.n);
+    if (!m) continue;
+    const c = out.get(t.level) ?? { con: 0, total: 0 };
+    c.total += 1;
+    if (m.estado !== 'libre') c.con += 1;
+    out.set(t.level, c);
   }
-  // Empujar hacia dentro antes de recortar: así el ancho se conserva
-  // cuando el contenido está pegado a un canto.
-  if (lo < 0) { hi -= lo; lo = 0; }
-  if (hi > 1) { lo -= hi - 1; hi = 1; }
-  return [Math.max(0, lo), Math.min(1, hi)] as const;
+  return out;
 }
 
-function encuadrar(cajas: { x0: number; y0: number; x1: number; y1: number }[]): Encuadre {
-  if (cajas.length === 0) return COMPLETO;
-  const [x0, x1] = tramo(Math.min(...cajas.map((c) => c.x0)), Math.max(...cajas.map((c) => c.x1)));
-  const [y0, y1] = tramo(Math.min(...cajas.map((c) => c.y0)), Math.max(...cajas.map((c) => c.y1)));
-  const enc = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
-  return enc.w * enc.h >= MAX_APROVECHADO ? COMPLETO : enc;
-}
-
+/* El encuadre, el giro en pantallas verticales, el tamaño de las mesas
+   y el zoom los decide `PlanoVisor`, el mismo de Pedidos › Mesas. Este
+   plano dibujaba en 4:3 cuando el editor guarda en 16:10 (el local salía
+   estirado) y tenía 460 px de ancho mínimo en el teléfono. */
 export function SalonPlano({
   mesas, sel, onPick, money, floorPlan, nivel,
 }: SalonProps & { floorPlan: FloorPlan; nivel: string }) {
-  const porNumero = new Map(mesas.map((m) => [m.n, m]));
-  const colocadas = floorPlan.tables.filter((t) => t.level === nivel && porNumero.has(t.n));
-  const fixtures = (floorPlan.fixtures ?? []).filter((f) => f.level === nivel);
+  const porNumero = useMemo(() => new Map(mesas.map((m) => [m.n, m])), [mesas]);
+  const colocadas = useMemo(
+    () => floorPlan.tables.filter((t) => t.level === nivel && porNumero.has(t.n)),
+    [floorPlan, nivel, porNumero],
+  );
+  const forma = useMemo(() => new Map(colocadas.map((t) => [t.n, t.shape ?? 'square'])), [colocadas]);
+  const fixtures = useMemo(() => (floorPlan.fixtures ?? []).filter((f) => f.level === nivel), [floorPlan, nivel]);
 
   /* Las que el dueño NO colocó no desaparecen: una mesa con gente que no
      esté en el plano seguiría teniendo dinero dentro, y esconderla es el
@@ -189,69 +174,47 @@ export function SalonPlano({
   const colocadasN = new Set(floorPlan.tables.map((t) => t.n));
   const sueltas = mesas.filter((m) => !colocadasN.has(m.n));
 
-  const enc = useMemo(() => encuadrar([
-    ...colocadas.map((t) => ({ x0: t.x, y0: t.y, x1: t.x, y1: t.y })),
-    ...fixtures.map((f) => ({
-      x0: f.x - f.w / 2, y0: f.y - f.h / 2, x1: f.x + f.w / 2, y1: f.y + f.h / 2,
-    })),
-  ]), [colocadas, fixtures]);
-
-  /** De coordenada del local a coordenada del trozo que se está viendo. */
-  const px = (x: number) => ((x - enc.x) / enc.w) * 100;
-  const py = (y: number) => ((y - enc.y) / enc.h) * 100;
-
   return (
-    <div className="sv-plano-wrap sv-vs">
-      {/* La proporción es la del TROZO enseñado, no la del local entero:
-          recortar la mitad del alto y conservar el 4:3 volvería a dejar el
-          vacío que el recorte acaba de quitar. */}
-      <div className="sv-plano" style={{ aspectRatio: `${4 * enc.w} / ${3 * enc.h}` }}>
-        {fixtures.map((f) => {
-          const meta = FIXTURE_META[f.kind];
-          return (
-            <div
-              key={f.id}
-              className="sv-plano-fix"
-              style={{
-                left: `${px(f.x - f.w / 2)}%`, top: `${py(f.y - f.h / 2)}%`,
-                width: `${(f.w / enc.w) * 100}%`, height: `${(f.h / enc.h) * 100}%`,
-              }}
-            >
-              <Icon name={meta.icon} size={13} />
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {fixtureLabel(f)}
-              </span>
-            </div>
-          );
-        })}
-
-        {colocadas.map((t) => {
-          const m = porNumero.get(t.n);
+    <div className="sv-plano-wrap">
+      <PlanoVisor
+        className="sv-plano-visor"
+        colocadas={colocadas}
+        zonas={fixtures}
+        mesaMax={84}
+        claveGiro="leogin:plano-giro:servicio"
+        renderZona={(f) => (
+          <div className="sv-plano-fix">
+            <Icon name={FIXTURE_META[f.kind].icon} size={13} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fixtureLabel(f)}</span>
+          </div>
+        )}
+        renderMesa={(n, geo) => {
+          const m = porNumero.get(n);
           if (!m) return null;
+          const sub = m.total > 0
+            ? money(m.total)
+            : m.estado !== 'libre' && m.minutos != null ? fmtMinShort(m.minutos) : (m.sillas ? `${m.sillas} p.` : '');
           return (
             <button
-              key={t.n}
               type="button"
               className="sv-plano-mesa"
               data-st={m.estado}
-              data-shape={t.shape ?? 'square'}
+              data-shape={forma.get(n)}
+              data-dens={geo.densidad}
               data-on={m.n === sel ? '1' : '0'}
-              style={{ left: `${px(t.x)}%`, top: `${py(t.y)}%` }}
               title={`${m.etiqueta} · ${subtituloDeMesa(m)}`}
+              aria-label={`${m.etiqueta} · ${subtituloDeMesa(m)}`}
               onClick={() => onPick(m.n)}
             >
               <span className="sv-plano-n">{m.n}</span>
-              {m.total > 0
-                ? <span className="sv-plano-total">{money(m.total)}</span>
-                : <span className="sv-plano-sub">{m.sillas ? `${m.sillas} p.` : ''}</span>}
-              {m.estado !== 'libre' && m.total === 0 && (
-                <span className="sv-plano-sub">{m.minutos != null ? fmtMinShort(m.minutos) : ''}</span>
+              {geo.densidad !== 'mini' && sub && (
+                <span className={m.total > 0 ? 'sv-plano-total' : 'sv-plano-sub'}>{sub}</span>
               )}
               {m.atencion && <span className="sv-plano-mano" aria-hidden />}
             </button>
           );
-        })}
-      </div>
+        }}
+      />
 
       {sueltas.length > 0 && (
         <div className="sv-plano-fuera">

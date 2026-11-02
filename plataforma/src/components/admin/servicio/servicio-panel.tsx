@@ -38,7 +38,7 @@ import { Icon } from '@/components/icons';
 import {
   ChipEstado, Ghost, Key, Kicker, Pill, Toast, atajo, useReloj, useTeclaMod, type Aviso,
 } from '@/components/admin/servicio/pieces';
-import { SalonFichas, SalonPlano, SalonRiel, hayPlano, nivelesConMesas } from '@/components/admin/servicio/salon';
+import { SalonFichas, SalonPlano, SalonRiel, hayPlano, nivelesConMesas, ocupacionPorNivel } from '@/components/admin/servicio/salon';
 import Carta from '@/components/admin/servicio/carta';
 import Comanda from '@/components/admin/servicio/comanda';
 import HojaCobro, { type PagoElegido } from '@/components/admin/servicio/hoja-cobro';
@@ -64,16 +64,17 @@ import {
 import { reconocimientoDisponible } from '@/lib/servicio/voz';
 import {
   createWaiterOrder, freeTable, getTableBill, moveTableOrders, resolveTableCalls,
-  updateOrderStatus, printTableBillShare,
+  updateOrderStatus, printTableBillShare, setItemSeat,
 } from '@/lib/actions/orders';
 import {
   cobrarParteDeMesa, cobrarPedidoParaLlevar, cobradoDeMesa, deshacerServirLineas,
-  ponerNombreDeMesa, servirLineas,
+  marcarAgotado, moverPlatoDeMesa, ponerAlergiaDeMesa, ponerNombreDeMesa, servirLineas,
 } from '@/lib/actions/servicio';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
+import { otraRonda, ultimaRonda } from '@/lib/servicio/ronda';
 import { getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order-queue';
 import { billBreakdown, type BillBreakdown } from '@/lib/bill-split';
-import type { OrderWithItems, TableOccupancy, TableCall } from '@/lib/db/orders';
+import { remainingQuantity, type OrderWithItems, type TableOccupancy, type TableCall } from '@/lib/db/orders';
 import type { TableSeating } from '@/lib/db/table-sessions';
 import type { FloorPlan } from '@/lib/theme/defaults';
 import type { Category, OrderStatus, Product } from '@/types';
@@ -155,22 +156,48 @@ export interface ServicioPanelProps {
   floorPlan: FloorPlan | null;
   hubUrl: string | null;
   hubToken: string | null;
+  /** Tiene permiso de carta: puede marcar un plato agotado desde aquí. */
+  puedeAgotar?: boolean;
 }
 
 export default function ServicioPanel({
   waiterId, waiterName, restaurantId, restaurantName, logoUrl,
-  categories, products, masPedidos, initialOrders,
+  categories, products: productosServidor, masPedidos, initialOrders,
   occupancy, calls, seatings, tableCount,
-  pickupEnabled, tipEnabled, tipEnabledPickup, currency, floorPlan, hubUrl, hubToken,
+  pickupEnabled, tipEnabled, tipEnabledPickup, currency, floorPlan, hubUrl, hubToken, puedeAgotar = false,
 }: ServicioPanelProps) {
   const servicio = useServiceMode();
   const now = useReloj();
   const mod = useTeclaMod();
 
+  /* ── La carta, con lo que se agotó en ESTE aparato ──────────
+     Marcar agotado se ve al instante aquí; la respuesta de la acción
+     trae el catálogo nuevo y entonces la corrección local sobra. */
+  const [agotadosLocal, setAgotadosLocal] = useState<Record<string, boolean>>({});
+  useEffect(() => { setAgotadosLocal({}); }, [productosServidor]);
+  const products = useMemo(
+    () => (Object.keys(agotadosLocal).length === 0
+      ? productosServidor
+      : productosServidor.map((p) => (p.id in agotadosLocal ? { ...p, is_available: !agotadosLocal[p.id] } : p))),
+    [productosServidor, agotadosLocal],
+  );
+
   /* ── Qué está elegido ─────────────────────────────────────── */
   const [sel, setSel] = useState<Sel>({ kind: 'none' });
   const [pantalla, setPantalla] = useState<Pantalla>('sala');
-  const [filtro, setFiltro] = useState<FiltroSalon>('Todas');
+  const [filtro, setFiltroEstado] = useState<FiltroSalon>('Todas');
+  /* El filtro se recuerda en el aparato: quien trabaja con «Mis mesas» lo
+     quiere puesto cada vez que abre la tablet, como la sección en Toast. */
+  useEffect(() => {
+    try {
+      const f = localStorage.getItem('leogin:servicio-filtro');
+      if (f && (FILTROS as readonly string[]).includes(f)) setFiltroEstado(f as FiltroSalon);
+    } catch { /* sin almacenamiento */ }
+  }, []);
+  const setFiltro = useCallback((f: FiltroSalon) => {
+    setFiltroEstado(f);
+    try { localStorage.setItem('leogin:servicio-filtro', f); } catch { /* sin almacenamiento */ }
+  }, []);
   /* El plano NO es una vista del riel: en 264 px serían mesas de
      dieciocho píxeles. Se abre encima de todo, se mira, se toca una mesa
      y se cierra habiéndola elegido — que es para lo que sirve un plano:
@@ -445,9 +472,11 @@ export default function ServicioPanel({
     qrPendiente: qrPendientePorMesa, floorPlan, now,
   }), [tableCount, occupancy, calls, seatings, sinEnviarPorMesa, totalSinEnviarPorMesa, qrPendientePorMesa, floorPlan, now]);
 
+  const misMesas = useMemo(() => mesas.filter((m) => m.meseroId === waiterId).length, [mesas, waiterId]);
+
   const mesasVisibles = useMemo(
-    () => porUrgencia(mesas.filter((m) => pasaFiltro(m, filtro))),
-    [mesas, filtro],
+    () => porUrgencia(mesas.filter((m) => pasaFiltro(m, filtro, waiterId))),
+    [mesas, filtro, waiterId],
   );
 
   const mesaSel = sel.kind === 'mesa' ? mesas.find((m) => m.n === sel.n) ?? null : null;
@@ -490,6 +519,12 @@ export default function ServicioPanel({
     [sel.kind, ordersVivos, carrito, pagadasSet, vueloAqui],
   );
   const resumen = useMemo(() => resumirComanda(lineas), [lineas]);
+
+  /* ── Otra ronda ───────────────────────────────────────────── */
+  const unidadesRonda = useMemo(() => {
+    const r = sel.kind === 'mesa' ? ultimaRonda(ordersVivos) : null;
+    return r ? r.items.reduce((s, it) => s + remainingQuantity(it, r.voids), 0) : 0;
+  }, [sel.kind, ordersVivos]);
 
   const desglose: BillBreakdown | null = useMemo(
     () => (ordersVivos.length ? billBreakdown(ordersVivos) : null),
@@ -582,6 +617,56 @@ export default function ServicioPanel({
     });
   }, [sel]);
 
+  /** «−» en la tarjeta del plato: quita UNA unidad de lo apuntado sin enviar.
+      Si el plato está en varias líneas (con opciones distintas), sale de la
+      última que se apuntó, que es la que el mesero acaba de tocar. Lo ya
+      enviado no se toca desde aquí: eso es anular, con motivo y PIN. */
+  const quitarUno = useCallback((p: Product) => {
+    const k = cartKey(sel);
+    if (!k) return;
+    setCarts((prev) => {
+      const actual = prev[k] ?? [];
+      const i = actual.map((l) => l.productId).lastIndexOf(p.id);
+      if (i < 0) return prev;
+      const siguiente = actual
+        .map((l, j) => (j === i ? { ...l, quantity: l.quantity - 1 } : l))
+        .filter((l) => l.quantity > 0);
+      const out = { ...prev };
+      if (siguiente.length) out[k] = siguiente; else delete out[k];
+      return out;
+    });
+  }, [sel]);
+
+  /** El 86 de Toast: se acabó, se apaga en todo el local (y «Ya hay» lo devuelve). */
+  const agotar = useCallback(async (p: Product, agotado: boolean) => {
+    setAgotadosLocal((prev) => ({ ...prev, [p.id]: agotado }));
+    setHoja(null);
+    const res = await marcarAgotado(restaurantId, p.id, agotado);
+    if (res.error) {
+      setAgotadosLocal((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => id !== p.id)));
+      setAviso({ text: res.error, bad: true });
+      return;
+    }
+    setAviso({ text: agotado ? `${p.name} · agotado en todo el local` : `${p.name} · disponible otra vez` });
+  }, [restaurantId]);
+
+  /** Copia la última ronda al carrito contra la carta de hoy y dice qué no se pudo. */
+  const repetirRonda = useCallback(() => {
+    const { lineas: copia, faltan } = otraRonda(ordersVivos, products);
+    if (copia.length === 0) {
+      setAviso({ text: faltan.length ? `No se pudo repetir: ${faltan.join(', ')} ya no está disponible.` : 'No hay ronda que repetir.', bad: true });
+      return;
+    }
+    for (const l of copia) empujar(l, false);
+    const n = copia.reduce((s, l) => s + l.quantity, 0);
+    setAviso({
+      text: faltan.length
+        ? `Otra ronda: ${n} al carrito. Sin ${faltan.join(', ')} (agotado o cambió en la carta).`
+        : `Otra ronda: ${n} ${n === 1 ? 'plato' : 'platos'} al carrito. Revisa y envía.`,
+      bad: faltan.length > 0,
+    });
+  }, [ordersVivos, products, empujar]);
+
   const qtyOf = useCallback(
     (productId: string) => carrito.filter((l) => l.productId === productId).reduce((s, l) => s + l.quantity, 0),
     [carrito],
@@ -591,6 +676,7 @@ export default function ServicioPanel({
   const enviar = useCallback(() => {
     if (sel.kind === 'none' || carrito.length === 0) return;
     const mesa = sel.kind === 'mesa' ? sel.n : null;
+    const alergiaMesa = mesa ? mesas.find((m) => m.n === mesa)?.alergia ?? null : null;
     const k = cartKey(sel);
     const aEnviar = [...carrito];
     /* UUID de verdad, no una cadena con pinta de id: `orders.client_id` es
@@ -627,6 +713,10 @@ export default function ServicioPanel({
         phone: '',
         type: (mesa ? 'DINE_IN' : 'PICKUP') as 'PICKUP' | 'DINE_IN',
         ...(mesa ? { tableNumber: mesa } : {}),
+        /* La alergia de la mesa viaja en la nota del PEDIDO: es la que el
+           agente imprime («NOTA: …») y la que enseña la pantalla de cocina.
+           En cada envío, no solo en el primero. */
+        ...(mesa && alergiaMesa ? { notes: `ALERGIA: ${alergiaMesa}` } : {}),
       },
       tipAccepted: aplicaPropina && subtotal > 0,
     };
@@ -717,7 +807,7 @@ export default function ServicioPanel({
         contarCola();
       }
     })();
-  }, [sel, carrito, nombreLlevar, waiterId, restaurantId, tipEnabled, tipEnabledPickup, hubUrl, hubToken, movil, cargarMesa, contarCola]);
+  }, [sel, carrito, nombreLlevar, waiterId, restaurantId, tipEnabled, tipEnabledPickup, hubUrl, hubToken, movil, cargarMesa, contarCola, mesas]);
 
   /* ── Servir ───────────────────────────────────────────────── */
   const servir = useCallback((l: LineaServicio) => {
@@ -876,6 +966,41 @@ export default function ServicioPanel({
       if (res.error) { setAviso({ text: res.error, bad: true }); return; }
     });
   }, [sel, restaurantId]);
+
+  const anotarAlergia = useCallback((alergia: string) => {
+    if (sel.kind !== 'mesa') return;
+    const n = sel.n;
+    startWork(async () => {
+      const res = await ponerAlergiaDeMesa(restaurantId, n, alergia);
+      if (res.error) { setAviso({ text: res.error, bad: true }); return; }
+      setAviso({ text: alergia ? `Alergia anotada: saldrá en cada comanda de la mesa ${n}` : 'Alergia quitada' });
+    });
+  }, [sel, restaurantId]);
+
+  /** «Ese pepián era de la 7»: pasa el plato a otra cuenta sin anularlo. */
+  const moverPlato = useCallback((l: LineaServicio, destino: number, cantidad: number) => {
+    if (sel.kind !== 'mesa') return;
+    const n = sel.n;
+    startWork(async () => {
+      const res = await moverPlatoDeMesa(restaurantId, l.id, cantidad, destino);
+      if (res.error) { setAviso({ text: res.error, bad: true }); return; }
+      setHoja(null);
+      setAviso({ text: `${cantidad}× ${l.nombre} pasó a la mesa ${destino}${res.origenCerrado ? '. Esta cuenta quedó vacía' : ''}` });
+      await cargarMesa(n);
+    });
+  }, [sel, restaurantId, cargarMesa]);
+
+  const cambiarAsiento = useCallback((l: LineaServicio, asiento: number | null) => {
+    if (sel.kind !== 'mesa') return;
+    const n = sel.n;
+    startWork(async () => {
+      const res = await setItemSeat(restaurantId, l.id, asiento);
+      if (res.error) { setAviso({ text: res.error, bad: true }); return; }
+      setHoja(null);
+      setAviso({ text: asiento ? `${l.nombre} · asiento ${asiento}` : `${l.nombre} · de la mesa` });
+      await cargarMesa(n);
+    });
+  }, [sel, restaurantId, cargarMesa]);
 
   const atender = useCallback(() => {
     if (sel.kind !== 'mesa') return;
@@ -1042,6 +1167,10 @@ export default function ServicioPanel({
 
   const nivelesPlano = useMemo(() => nivelesConMesas(floorPlan), [floorPlan]);
   const nivelActivo = nivel ?? nivelesPlano[0]?.id ?? '';
+  const ocupacionNiveles = useMemo(
+    () => (floorPlan ? ocupacionPorNivel(floorPlan, mesas) : new Map<string, { con: number; total: number }>()),
+    [floorPlan, mesas],
+  );
   const conPlano = hayPlano(floorPlan);
 
   const accionesPaleta: AccionPaleta[] = useMemo(() => [
@@ -1062,6 +1191,8 @@ export default function ServicioPanel({
     products, categories, masPedidos, q, setQ, cat, setCat, qtyOf,
     onAdd: agregarProducto,
     onOpts: (p: Product, qty: number) => setHoja({ k: 'mods', product: p, qty }),
+    onRemove: quitarUno,
+    onReponer: puedeAgotar ? (p: Product) => { void agotar(p, false); } : undefined,
     onOpenItem: (nombre: string) => setHoja({ k: 'libre', nombre }),
     onVoz: () => setHoja({ k: 'voz' }),
     conTeclado, aprendiz, hayVoz, money, movil,
@@ -1088,6 +1219,9 @@ export default function ServicioPanel({
     onLinea: (l: LineaServicio) => setHoja({ k: 'linea', linea: l }),
     aprendiz,
     ocupado: trabajando,
+    onOtraRonda: sel.kind === 'mesa' ? repetirRonda : undefined,
+    unidadesRonda,
+    alergia: sel.kind === 'mesa' ? mesaSel?.alergia ?? null : null,
   };
 
   /* La mesa se está leyendo y todavía no hay nada que enseñar. */
@@ -1217,7 +1351,12 @@ export default function ServicioPanel({
 
               <div className="sv-hs sv-hs-fade">
                 {FILTROS.map((f) => (
-                  <Pill key={f} on={filtro === f} onClick={() => setFiltro(f)}>{f}</Pill>
+                  <Pill key={f} on={filtro === f} onClick={() => setFiltro(f)}>
+                    {f === 'Mías' ? 'Mis mesas' : f}
+                    {f === 'Mías' && misMesas > 0 && (
+                      <span className="t-mono" style={{ marginLeft: 6, opacity: 0.7 }}>{misMesas}</span>
+                    )}
+                  </Pill>
                 ))}
               </div>
 
@@ -1281,7 +1420,7 @@ export default function ServicioPanel({
                   <SalonRiel mesas={mesasVisibles} sel={sel.kind === 'mesa' ? sel.n : null} onPick={elegir} money={redondear} estrecho={estrecho} />
                 )}
                 {mesasVisibles.length === 0 && (
-                  <div className="sv-vacio">No hay mesas en «{filtro}».</div>
+                  <div className="sv-vacio">{filtro === 'Mías' ? 'Todavía no atiendes ninguna mesa. Abre una desde «Todas» o «Libres».' : `No hay mesas en «${filtro}».`}</div>
                 )}
               </div>
             )}
@@ -1420,6 +1559,7 @@ export default function ServicioPanel({
           currency={currency}
           initialLine={hoja.line}
           initialQty={hoja.qty}
+          onAgotar={puedeAgotar ? () => { void agotar(hoja.product, true); } : undefined}
           onAdd={(linea) => { empujar(linea); setHoja(null); }}
           onSave={(lineId, linea) => {
             const k = cartKey(sel);
@@ -1483,6 +1623,7 @@ export default function ServicioPanel({
           busy={trabajando || envioPendiente}
           onClose={() => setHoja(null)}
           onNombre={nombrarMesa}
+          onAlergia={anotarAlergia}
           onMover={(n) => mover(n, false)}
           onJuntar={(n) => mover(n, true)}
           onLiberar={liberar}
@@ -1528,6 +1669,11 @@ export default function ServicioPanel({
           onClose={() => setHoja(null)}
           onServir={() => { servir(hoja.linea); setHoja(null); }}
           onDeshacerServir={() => deshacerServir(hoja.linea)}
+          destinos={sel.kind === 'mesa' ? mesas.filter((m) => m.n !== sel.n) : []}
+          sillas={mesaSel?.sillas ?? null}
+          busy={trabajando}
+          onMover={sel.kind === 'mesa' && hoja.linea.orderId ? (destino, cantidad) => moverPlato(hoja.linea, destino, cantidad) : undefined}
+          onAsiento={sel.kind === 'mesa' && hoja.linea.orderId ? (asiento) => cambiarAsiento(hoja.linea, asiento) : undefined}
           onAnular={() => {
             const l = hoja.linea;
             const o = ordersVivos.find((x) => x.id === l.orderId);
@@ -1576,7 +1722,14 @@ export default function ServicioPanel({
             {nivelesPlano.length > 1 && (
               <div className="sv-hs" style={{ padding: '10px 16px 0' }}>
                 {nivelesPlano.map((l) => (
-                  <Pill key={l.id} on={nivelActivo === l.id} onClick={() => setNivel(l.id)}>{l.name}</Pill>
+                  <Pill key={l.id} on={nivelActivo === l.id} onClick={() => setNivel(l.id)}>
+                    {l.name}
+                    {ocupacionNiveles.has(l.id) && (
+                      <span className="t-mono" style={{ marginLeft: 6, opacity: 0.7 }}>
+                        {ocupacionNiveles.get(l.id)!.con}/{ocupacionNiveles.get(l.id)!.total}
+                      </span>
+                    )}
+                  </Pill>
                 ))}
               </div>
             )}

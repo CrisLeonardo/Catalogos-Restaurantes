@@ -36,6 +36,7 @@ import { hayTurnosDeMesa, hayPagosDeMesa } from '@/lib/db/table-sessions';
 import { faltaLaColumna, faltaLaTabla } from '@/lib/db/migracion-ausente';
 import { isPaymentMethod, type PaymentMethod } from '@/lib/payment-method';
 import { updateOrderStatus } from '@/lib/actions/orders';
+import { revalidatePath, updateTag } from 'next/cache';
 
 /** Tope de líneas que una llamada puede tocar. Una mesa no acumula más. */
 const MAX_LINEAS = 120;
@@ -609,4 +610,154 @@ export async function cobrarPedidoParaLlevar(
 
   revalidarSalon();
   return { ok: true };
+}
+
+/* ────────────────────────────────────────────────────────────
+   5 · AGOTAR UN PLATO DESDE EL SERVICIO
+   ------------------------------------------------------------
+   En Toast se llama «86»: cocina avisa que se acabó y quien lleva la
+   carta lo marca ahí mismo, sin ir a Menú. Lo puede hacer quien tiene
+   permiso de carta (dueño, gerente o personal con «catalogo»); el
+   mesero sin ese permiso no ve el botón, y aquí se vuelve a comprobar
+   porque la interfaz no es un candado.
+   ──────────────────────────────────────────────────────────── */
+
+export async function marcarAgotado(
+  restaurantId: string,
+  productId: string,
+  agotado: boolean,
+): Promise<{ error?: string }> {
+  if (!restaurantId || !productId) return { error: 'Datos inválidos.' };
+
+  const acceso = await assertTableAccess(restaurantId, ['catalogo']);
+  if ('error' in acceso) return { error: 'Solo quien administra la carta puede marcar un plato como agotado.' };
+
+  const db = createServiceClient();
+  const { data, error } = await db
+    .from('products')
+    .update({ is_available: !agotado, unavailable_at: agotado ? new Date().toISOString() : null })
+    .eq('id', productId)
+    .eq('restaurant_id', restaurantId)
+    .select('id');
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: 'Ese plato no es de este restaurante.' };
+
+  // La misma etiqueta que invalida Menú: el catálogo del mesero está en
+  // caché con ella (getWaiterCatalogCached) y el menú público también.
+  updateTag(`menu:${restaurantId}`);
+  revalidatePath('/admin/menu');
+  revalidarSalon();
+  return {};
+}
+
+/* ────────────────────────────────────────────────────────────
+   6 · ALERGIAS DE LA MESA (migración 151)
+   ------------------------------------------------------------
+   Se anotan una vez y salen en cada comanda de la mesa como
+   «ALERGIA: …» (la nota del pedido, que ya imprime el agente y enseña
+   la pantalla de cocina). Mismo camino que el nombre: viven en el turno
+   y, si la mesa no tenía, se abre uno.
+   ──────────────────────────────────────────────────────────── */
+
+const MAX_ALERGIA = 120;
+
+export async function ponerAlergiaDeMesa(
+  restaurantId: string,
+  tableNumber: number,
+  alergia: string,
+): Promise<{ error?: string; ok?: boolean; needsMigration?: boolean }> {
+  if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
+
+  const acceso = await assertTableAccess(restaurantId, ['mesero', 'mesas']);
+  if ('error' in acceso) return acceso;
+  if (!(await hayTurnosDeMesa())) {
+    return { error: 'Falta la migración 128 para anotar alergias en la mesa.', needsMigration: true };
+  }
+
+  const limpio = (alergia ?? '').replace(/\s+/g, ' ').trim().slice(0, MAX_ALERGIA);
+  const db = createServiceClient();
+
+  const { data, error } = await db
+    .from('table_sessions')
+    .update({ allergies: limpio || null })
+    .eq('restaurant_id', restaurantId)
+    .eq('table_number', tableNumber)
+    .is('closed_at', null)
+    .select('id');
+
+  if (error) {
+    if (faltaLaColumna(error)) {
+      return { error: 'Falta la migración 151 para anotar alergias en la mesa.', needsMigration: true };
+    }
+    return { error: error.message };
+  }
+
+  if ((data ?? []).length === 0) {
+    if (!limpio) return { ok: true };
+    const abierto = await db.from('table_sessions').insert({
+      restaurant_id: restaurantId,
+      table_number: tableNumber,
+      allergies: limpio,
+      seated_by: acceso.actor.userId,
+      source: 'order',
+    });
+    if (abierto.error) {
+      if (abierto.error.code === '23505') return { error: 'Alguien acaba de tocar esta mesa. Vuelve a intentar.' };
+      return { error: abierto.error.message };
+    }
+  }
+
+  revalidarSalon();
+  return { ok: true };
+}
+
+/* ────────────────────────────────────────────────────────────
+   7 · PASAR UN PLATO A OTRA MESA (migración 152)
+   ------------------------------------------------------------
+   «Ese pepián era de la 7.» El plato cambia de cuenta sin anularlo ni
+   volver a imprimirlo: ya está hecho. Todo el dinero (subtotal, propina,
+   total de las dos cuentas) lo mueve `move_order_item` en una sola
+   transacción, y ahí viven también los «no»: lo anulado, una cuenta con
+   cobros o descuentos.
+   ──────────────────────────────────────────────────────────── */
+
+export async function moverPlatoDeMesa(
+  restaurantId: string,
+  itemId: string,
+  cantidad: number,
+  mesaDestino: number,
+): Promise<{ error?: string; needsMigration?: boolean; creada?: boolean; origenCerrado?: boolean }> {
+  const qty = Math.trunc(cantidad);
+  if (!restaurantId || !itemId || qty < 1 || !Number.isInteger(mesaDestino) || mesaDestino < 1 || mesaDestino > 500) {
+    return { error: 'Datos inválidos.' };
+  }
+
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
+
+  const db = createServiceClient();
+  // El plato tiene que ser de ESTE restaurante (mismo candado que setItemSeat).
+  const { data: item } = await db
+    .from('order_items')
+    .select('id, order:orders!inner(restaurant_id)')
+    .eq('id', itemId)
+    .maybeSingle();
+  const dueño = (item as { order?: { restaurant_id: string } | null } | null)?.order?.restaurant_id;
+  if (!item || dueño !== restaurantId) return { error: 'Plato no encontrado.' };
+
+  const { data, error } = await db.rpc('move_order_item', {
+    p_order_item_id: itemId,
+    p_quantity: qty,
+    p_target_table: mesaDestino,
+  });
+  if (error) {
+    if (error.code === 'PGRST202' || error.code === '42883') {
+      return { error: 'Falta la migración 152 para pasar platos entre mesas.', needsMigration: true };
+    }
+    return { error: error.message };
+  }
+
+  const r = (data ?? {}) as { created?: boolean; source_closed?: boolean };
+  revalidarSalon();
+  return { creada: !!r.created, origenCerrado: !!r.source_closed };
 }
