@@ -93,8 +93,9 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
      cocina de casa) y va empezando: Q99 y sin alta. A cambio, solo para
      llevar y a domicilio (nada de comer en local: quien tiene mesas sigue
      necesitando Estándar o Premium), un usuario, 150 productos y sin
-     finanzas, cupones, lealtad, impresión ni mesero. Encargos y
-     transferencia sí (mig. 149): es justo lo que este negocio necesita. */
+     finanzas, cupones, lealtad, impresión ni mesero. Los encargos con
+     cupo y la transferencia del comensal (mig. 149) se retiraron el
+     2026-11-02 por decisión del dueño (mig. 153). */
   EN_LINEA: {
     code: 'EN_LINEA',
     name: 'En línea',
@@ -409,7 +410,7 @@ export const PLAN_POINTS: Record<PlanCode, { text: string; positive: boolean }[]
   ],
   EN_LINEA: [
     { text: 'Para llevar y a domicilio', positive: true },
-    { text: 'Encargos con cupo y pago por transferencia', positive: true },
+    { text: 'Zonas de reparto y seguimiento del pedido', positive: true },
     { text: 'Avisos en tiempo real y WhatsApp', positive: true },
     { text: 'Hasta 150 productos · 1 usuario', positive: true },
   ],
