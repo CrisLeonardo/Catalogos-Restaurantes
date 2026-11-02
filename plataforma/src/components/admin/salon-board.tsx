@@ -28,7 +28,7 @@ import { fmtMoney } from '@/components/admin/orders-panel';
 import type { PanelCurrency } from '@/components/admin/order-card';
 import BillPanel, { type BillData } from '@/components/admin/salon/bill-panel';
 import SalonCanvas, { SalonViewSwitch, useSalonView } from '@/components/admin/salon/salon-canvas';
-import { SalonPlano, hayPlano, nivelesConMesas } from '@/components/admin/servicio/salon';
+import { SalonPlano, hayPlano, nivelesConMesas, ocupacionPorNivel } from '@/components/admin/servicio/salon';
 import { mesasDeServicio } from '@/lib/servicio/estado';
 import { buildSalonTables, type SalonTable } from '@/components/admin/salon/pieces';
 import { useSalonLive } from '@/components/admin/salon/use-salon-live';
@@ -184,6 +184,10 @@ export default function SalonBoard({
   const nivelesPlano = useMemo(() => nivelesConMesas(floorPlan), [floorPlan]);
   const [nivel, setNivel] = useState<string | null>(null);
   const nivelActivo = nivel ?? nivelesPlano[0]?.id ?? '';
+  const ocupacionNiveles = useMemo(
+    () => (floorPlan ? ocupacionPorNivel(floorPlan, mesasServicio) : new Map<string, { con: number; total: number }>()),
+    [floorPlan, mesasServicio],
+  );
 
   /* ── El filtro de la tira (M-19) ──────────────────────────
      Tocar «Te necesitan · 5» deja en pantalla esas cinco mesas. Antes la
@@ -582,19 +586,23 @@ export default function SalonBoard({
           —una mesa, una acción, con la métrica que el encargado elige—,
           porque ahí el trabajo es otro: repartir el salón, no cobrarlo. */}
       {view === 'plano' && conPlano && floorPlan ? (
-        <div className="salon-floor">
+        <div className="salon-floor salon-floor-plano">
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {nivelesPlano.length > 1 && (
-              <div className="sv-hs">
+              <div className="salon-niveles" role="tablist" aria-label="Zona del salón">
                 {nivelesPlano.map((l) => (
                   <button
                     key={l.id}
                     type="button"
-                    className="sv-pill"
+                    role="tab"
+                    aria-selected={nivelActivo === l.id}
                     data-on={nivelActivo === l.id ? '1' : '0'}
                     onClick={() => setNivel(l.id)}
                   >
                     {l.name}
+                    {ocupacionNiveles.has(l.id) && (
+                      <span className="t-mono">{ocupacionNiveles.get(l.id)!.con}/{ocupacionNiveles.get(l.id)!.total}</span>
+                    )}
                   </button>
                 ))}
               </div>

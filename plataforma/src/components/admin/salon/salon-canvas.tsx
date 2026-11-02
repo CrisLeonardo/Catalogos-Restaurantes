@@ -31,6 +31,7 @@ import Link from '@/components/admin/panel-link';
 import { Icon, type IconName } from '@/components/icons';
 import { FIXTURE_META, fixtureLabel } from '@/components/admin/salon/fixtures';
 import { TableCard, TableRow, TablePin, type SalonTable } from '@/components/admin/salon/pieces';
+import PlanoVisor from '@/components/admin/salon/plano-visor';
 import { TONE_LABEL, TONE_ORDER, tableTone } from '@/lib/table-state';
 import type { FloorPlan } from '@/lib/theme/defaults';
 
@@ -283,21 +284,34 @@ export default function SalonCanvas({
   return (
     <div className="salon-floor">
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--u-text-3)' }}>
-          {levels.length > 1 && levels.map((l) => (
-            <button
-              key={l.id}
-              type="button"
-              onClick={() => setNivel(l.id)}
-              style={{
-                border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 12,
-                fontWeight: l.id === nivel ? 600 : 400,
-                color: l.id === nivel ? 'var(--u-text-2)' : 'var(--u-text-4)',
-              }}
-            >
-              {l.name}
-            </button>
-          ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 12, color: 'var(--u-text-3)' }}>
+          {/* Las zonas como pestañas tocables, con cuántas mesas tienen gente:
+              eran texto de 12 px sin aspecto de botón y, en el teléfono,
+              imposibles de acertar con el dedo. */}
+          {planEnabled && levels.length > 1 && (
+            <div className="salon-niveles" role="tablist" aria-label="Zona del salón">
+              {levels.map((l) => {
+                const delNivel = (floorPlan?.tables ?? []).filter((ft) => ft.level === l.id);
+                const conGente = delNivel.filter((ft) => {
+                  const t = tables.find((x) => x.n === ft.n);
+                  return t && tableTone(t.state) !== 'libre';
+                }).length;
+                return (
+                  <button
+                    key={l.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={l.id === nivel}
+                    data-on={l.id === nivel ? '1' : '0'}
+                    onClick={() => setNivel(l.id)}
+                  >
+                    {l.name}
+                    <span className="t-mono">{conGente}/{delNivel.length}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <span style={{ flex: 1 }} />
           <SalonLegend />
         </div>
@@ -331,53 +345,16 @@ function BotonReordenar({ onClick }: { onClick: () => void }) {
 /* ── El plano ─────────────────────────────────────────────────
    Las zonas fijas (barra, caja, cocina) salen del plano que el dueño
    dibujó en Ajustes › Salón — no están quemadas aquí. Un plano sin
-   dibujar cae en una cuadrícula automática, que es mejor que una
-   pantalla vacía diciendo «configura tu salón».                */
+   dibujar cae en una rejilla automática que llena el hueco, que es
+   mejor que una pantalla vacía diciendo «configura tu salón».
 
-/* ── Recortar el plano a lo que hay dibujado ───────────────────
-   El lienzo era 16:10 fijo. Con un plano de prueba —cinco mesas
-   colocadas de veinte— medía 1.132 × 708 px con el 85 % en blanco, y
-   las quince restantes vivían debajo de ese vacío, fuera de la
-   primera pantalla. Un plano a medio dibujar es el estado normal de
-   un restaurante que acaba de empezar, y la vista lo castigaba.
+   Cómo cabe en cada pantalla (encuadre, giro, tamaño de mesa, zoom) lo
+   decide `PlanoVisor` con `lib/plano-salon.ts`, el mismo que usa el
+   plano de Tomar pedidos. Antes el lienzo medía 620 px de ancho mínimo
+   en el teléfono y la página entera se corría de lado.          */
 
-   El encuadre es la caja que ocupa lo dibujado, con aire alrededor
-   —los pines miden 100 px y se dibujan CENTRADOS en su punto, así que
-   sin margen se salen— y con un mínimo para que una sola mesa no se
-   coma la pantalla. Las coordenadas siguen siendo las del dueño: lo
-   que cambia es qué trozo del local se enseña, no dónde está cada
-   mesa dentro de él.                                            */
-interface Encuadre { x: number; y: number; w: number; h: number }
-const COMPLETO: Encuadre = { x: 0, y: 0, w: 1, h: 1 };
-/** Aire alrededor de lo dibujado, en fracción del lienzo. */
-const MARGEN = 0.09;
-/** Por debajo de esto el recorte amplía demasiado y desorienta. */
-const MIN_LADO = 0.36;
-/** Con menos vacío que esto no vale la pena recortar. */
-const MAX_APROVECHADO = 0.72;
-
-function tramo(a: number, b: number): readonly [number, number] {
-  let lo = a - MARGEN;
-  let hi = b + MARGEN;
-  if (hi - lo < MIN_LADO) {
-    const centro = (lo + hi) / 2;
-    lo = centro - MIN_LADO / 2;
-    hi = centro + MIN_LADO / 2;
-  }
-  // Empujar hacia dentro antes de recortar: así el ancho se conserva
-  // cuando el contenido está pegado a un canto.
-  if (lo < 0) { hi -= lo; lo = 0; }
-  if (hi > 1) { lo -= hi - 1; hi = 1; }
-  return [Math.max(0, lo), Math.min(1, hi)] as const;
-}
-
-function encuadrar(cajas: { x0: number; y0: number; x1: number; y1: number }[]): Encuadre {
-  if (cajas.length === 0) return COMPLETO;
-  const [x0, x1] = tramo(Math.min(...cajas.map((c) => c.x0)), Math.max(...cajas.map((c) => c.x1)));
-  const [y0, y1] = tramo(Math.min(...cajas.map((c) => c.y0)), Math.max(...cajas.map((c) => c.y1)));
-  const enc = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
-  return enc.w * enc.h >= MAX_APROVECHADO ? COMPLETO : enc;
-}
+/** Proporción de la ficha del plano: más ancha que alta, como siempre. */
+const PIN_PROPORCION = 1.35;
 
 function Plano({
   tables, floorPlan, nivel, selected, onOpen,
@@ -389,91 +366,46 @@ function Plano({
   onOpen: (n: number) => void;
 }) {
   const porN = useMemo(() => new Map(tables.map((t) => [t.n, t])), [tables]);
-  const colocadas = (floorPlan?.tables ?? []).filter((t) => t.level === nivel && porN.has(t.n));
-  const zonas = (floorPlan?.fixtures ?? []).filter((f) => f.level === nivel);
-  const enPlano = new Set(colocadas.map((t) => t.n));
+  const colocadas = useMemo(
+    () => (floorPlan?.tables ?? []).filter((t) => t.level === nivel && porN.has(t.n)),
+    [floorPlan, nivel, porN],
+  );
+  const zonas = useMemo(() => (floorPlan?.fixtures ?? []).filter((f) => f.level === nivel), [floorPlan, nivel]);
+  /* Una mesa colocada en OTRO nivel no está «fuera del plano»: está en la
+     otra pestaña. Fuera es la que el dueño no colocó en ninguno. */
+  const enPlano = new Set((floorPlan?.tables ?? []).map((t) => t.n));
 
   /* Las que el dueño no colocó siguen existiendo: se enseñan aparte en
      vez de desaparecer del salón por un descuido del plano. Van por
      número, no por urgencia: aquí se busca «la 14». */
   const fuera = tables.filter((t) => !enPlano.has(t.n)).sort((a, b) => a.n - b.n);
 
-  // Sin plano dibujado: se reparten en rejilla dentro del mismo lienzo, para
-  // que cambiar de vista siga significando algo.
   const auto = colocadas.length === 0;
-  const cols = Math.max(1, Math.min(6, Math.ceil(Math.sqrt(tables.length))));
-  const filas = Math.max(1, Math.ceil(tables.length / cols));
-
-  /* Con la rejilla automática el lienzo ya está lleno de lado a lado: no
-     hay nada que recortar. Con plano dibujado, se enseña el trozo del
-     local que tiene algo. */
-  const enc = useMemo(() => (auto ? COMPLETO : encuadrar([
-    ...colocadas.map((t) => ({ x0: t.x, y0: t.y, x1: t.x, y1: t.y })),
-    ...zonas.map((f) => ({ x0: f.x - f.w / 2, y0: f.y - f.h / 2, x1: f.x + f.w / 2, y1: f.y + f.h / 2 })),
-  ])), [auto, colocadas, zonas]);
-
-  /** De coordenada del local a coordenada del trozo que se está viendo. */
-  const px = (x: number) => ((x - enc.x) / enc.w) * 100;
-  const py = (y: number) => ((y - enc.y) / enc.h) * 100;
+  const numeros = useMemo(() => (auto ? tables.map((t) => t.n) : []), [auto, tables]);
 
   return (
     <div className="salon-plan-row">
-      {/* La proporción es la del TROZO enseñado, calculada sobre el 16:10
-          del local entero: recortar la mitad de alto da un lienzo el doble
-          de ancho que alto, y ese vacío deja de existir. En el teléfono el
-          envoltorio se desplaza en horizontal para que no se pisen. */}
-      <div className="salon-floor-scroll" style={{ flex: 1, minWidth: 0 }}>
-        <div
-          className="salon-canvas"
-          style={{
-            aspectRatio: `${16 * enc.w} / ${10 * enc.h}`,
-            flex: '0 0 auto',
-            minHeight: enc === COMPLETO ? undefined : 240,
-          }}
-        >
-          {zonas.map((f) => (
-            <div
-              key={f.id}
-              className="salon-zone"
-              style={{
-                left: `${px(f.x - f.w / 2)}%`,
-                top: `${py(f.y - f.h / 2)}%`,
-                width: `${(f.w / enc.w) * 100}%`,
-                height: `${(f.h / enc.h) * 100}%`,
-              }}
-            >
-              <Icon name={FIXTURE_META[f.kind].icon} size={18} />
-              <span style={{ padding: '0 4px', textAlign: 'center', lineHeight: 1.1 }}>{fixtureLabel(f)}</span>
-            </div>
-          ))}
-
-          {auto
-            ? tables.map((t, i) => (
-              <TablePin
-                key={t.n}
-                t={t}
-                x={((i % cols) + 0.5) / cols}
-                y={(Math.floor(i / cols) + 0.5) / filas}
-                selected={selected === t.n}
-                onSelect={() => onOpen(t.n)}
-              />
-            ))
-            : colocadas.map((ft) => {
-              const t = porN.get(ft.n);
-              if (!t) return null;
-              return (
-                <TablePin
-                  key={ft.n}
-                  t={t}
-                  x={px(ft.x) / 100}
-                  y={py(ft.y) / 100}
-                  selected={selected === ft.n}
-                  onSelect={() => onOpen(ft.n)}
-                />
-              );
-            })}
-        </div>
-      </div>
+      <PlanoVisor
+        className="salon-plan-visor"
+        colocadas={colocadas}
+        numeros={numeros}
+        zonas={zonas}
+        proporcion={PIN_PROPORCION}
+        mesaMax={110}
+        claveGiro="leogin:plano-giro:mesas"
+        renderZona={(f) => (
+          <div className="salon-zone">
+            <Icon name={FIXTURE_META[f.kind].icon} size={18} />
+            <span style={{ padding: '0 4px', textAlign: 'center', lineHeight: 1.1 }}>{fixtureLabel(f)}</span>
+          </div>
+        )}
+        renderMesa={(n, geo) => {
+          const t = porN.get(n);
+          return t ? (
+            <TablePin t={t} densidad={geo.densidad} selected={selected === n} onSelect={() => onOpen(n)} />
+          ) : null;
+        }}
+      />
 
       {/* AL LADO, no debajo: eran quince mesas —tres de ellas ocupadas—
           escondidas bajo un lienzo de 708 px casi vacío. */}
@@ -484,8 +416,8 @@ function Plano({
           </div>
           <div className="salon-plan-out-pins">
             {fuera.map((t) => (
-              <div key={t.n} style={{ position: 'relative', width: 100, height: 74 }}>
-                <TablePin t={t} x={0.5} y={0.5} selected={selected === t.n} onSelect={() => onOpen(t.n)} />
+              <div key={t.n} style={{ width: 100, height: 74 }}>
+                <TablePin t={t} selected={selected === t.n} onSelect={() => onOpen(t.n)} />
               </div>
             ))}
           </div>
