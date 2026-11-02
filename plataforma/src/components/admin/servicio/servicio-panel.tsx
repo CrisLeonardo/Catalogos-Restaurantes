@@ -38,7 +38,7 @@ import { Icon } from '@/components/icons';
 import {
   ChipEstado, Ghost, Key, Kicker, Pill, Toast, atajo, useReloj, useTeclaMod, type Aviso,
 } from '@/components/admin/servicio/pieces';
-import { SalonFichas, SalonPlano, SalonRiel, hayPlano, nivelesConMesas } from '@/components/admin/servicio/salon';
+import { SalonFichas, SalonPlano, SalonRiel, hayPlano, nivelesConMesas, ocupacionPorNivel } from '@/components/admin/servicio/salon';
 import Carta from '@/components/admin/servicio/carta';
 import Comanda from '@/components/admin/servicio/comanda';
 import HojaCobro, { type PagoElegido } from '@/components/admin/servicio/hoja-cobro';
@@ -1042,6 +1042,10 @@ export default function ServicioPanel({
 
   const nivelesPlano = useMemo(() => nivelesConMesas(floorPlan), [floorPlan]);
   const nivelActivo = nivel ?? nivelesPlano[0]?.id ?? '';
+  const ocupacionNiveles = useMemo(
+    () => (floorPlan ? ocupacionPorNivel(floorPlan, mesas) : new Map<string, { con: number; total: number }>()),
+    [floorPlan, mesas],
+  );
   const conPlano = hayPlano(floorPlan);
 
   const accionesPaleta: AccionPaleta[] = useMemo(() => [
@@ -1576,7 +1580,14 @@ export default function ServicioPanel({
             {nivelesPlano.length > 1 && (
               <div className="sv-hs" style={{ padding: '10px 16px 0' }}>
                 {nivelesPlano.map((l) => (
-                  <Pill key={l.id} on={nivelActivo === l.id} onClick={() => setNivel(l.id)}>{l.name}</Pill>
+                  <Pill key={l.id} on={nivelActivo === l.id} onClick={() => setNivel(l.id)}>
+                    {l.name}
+                    {ocupacionNiveles.has(l.id) && (
+                      <span className="t-mono" style={{ marginLeft: 6, opacity: 0.7 }}>
+                        {ocupacionNiveles.get(l.id)!.con}/{ocupacionNiveles.get(l.id)!.total}
+                      </span>
+                    )}
+                  </Pill>
                 ))}
               </div>
             )}
