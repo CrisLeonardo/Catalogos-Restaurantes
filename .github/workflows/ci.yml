@@ -84,7 +84,11 @@ jobs:
       - name: CLI de Supabase
         uses: supabase/setup-cli@v3
         with:
-          version: latest
+          # Fijada a la misma versión que se usa en local. Con «latest», una
+          # versión nueva dejó de aceptar [inbucket] en config.toml y tumbó
+          # el arranque de Supabase en todos los PR sin que cambiara nada aquí
+          # (2026-11-02). Subirla a mano, probando antes en local.
+          version: 3.0.0
 
       - name: Levantar Supabase local
         run: supabase start
