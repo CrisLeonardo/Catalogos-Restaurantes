@@ -135,17 +135,22 @@ huellas(n, que, ok, cuando) as (values
      to_regclass('public.payment_proofs') is not null
      and exists (select 1 from storage.buckets where id = 'payment-proofs'),
      'ANTES de desplegar'),
-  ('149', 'encargos con cupo y transferencia del comensal (encargo_fechas)',
-     to_regclass('public.encargo_fechas') is not null
-     and exists (select 1 from information_schema.columns
-                  where table_schema = 'public' and table_name = 'orders' and column_name = 'transfer_status'),
-     'ANTES de desplegar, después de la 148'),
+  -- La 149 (encargos y transferencia del comensal) la retira la 153: no se
+  -- comprueba. Da igual si corrió o no; la 153 deja la base igual.
+  ('149', 'encargos con cupo y transferencia del comensal — retirada por la 153',
+     null,
+     'no hace falta aplicarla'),
   ('150', 'plan En línea (EN_LINEA en la restricción y en el cobro)',
      exists (select 1 from pg_constraint
               where conname = 'restaurants_plan_actual_check'
                 and pg_get_constraintdef(oid) like '%EN_LINEA%')
      and exists (select 1 from platform_settings where key = 'plan_price_EN_LINEA'),
-     'ANTES de desplegar')
+     'ANTES de desplegar'),
+  ('153', 'retira encargos y transferencia del comensal (sin encargo_fechas)',
+     to_regclass('public.encargo_fechas') is null
+     and not exists (select 1 from information_schema.columns
+                      where table_schema = 'public' and table_name = 'orders' and column_name = 'transfer_status'),
+     'DESPUÉS de desplegar (o a la vez)')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

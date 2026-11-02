@@ -47,15 +47,14 @@ function buildPlanInfo(pricing: PlanPricing) {
       subtitle: `Tu prueba de ${trialDays} días comienza hoy.`,
       features: [
         'Pedidos para llevar y a domicilio en tu menú',
-        'Encargos con cupo y pago por transferencia',
+        'Zonas de reparto y seguimiento del pedido',
         'Alerta WhatsApp al recibir pedido',
         'Notificaciones en tiempo real',
       ],
       nextSteps: [
         'Sube tus productos y fotos',
         'Pon el enlace de tu menú en tu Instagram y tu WhatsApp',
-        'Activa la transferencia en Ajustes › Pedidos y cobro',
-        'Abre tu primer encargo en Pedidos › Encargos',
+        'Dibuja tus zonas de reparto y su tarifa en Ajustes',
       ],
     },
     ESTANDAR: {

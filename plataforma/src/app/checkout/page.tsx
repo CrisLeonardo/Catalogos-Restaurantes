@@ -14,18 +14,10 @@ import { getAgentHubInfo } from '@/lib/print-agent';
 import CheckoutForm from '@/components/checkout-form';
 import CheckoutBlocked from '@/components/checkout-blocked';
 import { orderTypesForPlan } from '@/lib/plans';
-import { encargoParaPedido } from '@/lib/db/encargos';
-import { estadoEncargo, lugaresLibres, textoEntrega } from '@/lib/encargos';
-import { aceptaTransferencia, cuentaDelRestaurante } from '@/lib/pago-transferencia';
 
 export const metadata: Metadata = { title: 'Hacer pedido' };
 
-export default async function CheckoutPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ encargo?: string }>;
-}) {
-  const sp = await searchParams;
+export default async function CheckoutPage() {
   const slug = (await headers()).get('x-tenant-slug');
   if (!slug) notFound();
 
@@ -49,22 +41,6 @@ export default async function CheckoutPage({
   // createOrder vuelve a validar en el servidor; esto es solo la UX.
   const paused = restaurant.orders_paused === true;
   const open = isOpenNow(restaurant.hours, restaurant.timezone || 'America/Guatemala', new Date(), restaurant.hour_exceptions);
-
-  // Encargo (mig. 149): con una tanda abierta y con lugar, se puede pedir
-  // aunque el local esté cerrado ahora — es para otro día. createOrder lo
-  // vuelve a validar todo.
-  const encargoFila = sp.encargo && /^[0-9a-f-]{36}$/i.test(sp.encargo)
-    ? await encargoParaPedido(restaurant.id, sp.encargo)
-    : null;
-  const encargo = encargoFila && estadoEncargo(encargoFila) === 'abierto'
-    ? {
-        id: encargoFila.id,
-        titulo: encargoFila.titulo,
-        entrega: textoEntrega(encargoFila),
-        quedan: lugaresLibres(encargoFila),
-        pagoAdelantado: encargoFila.pagoAdelantado,
-      }
-    : null;
   const hasCoupons = await hasActiveCoupons(restaurant.id);
   // Zonas con su tarifa (migración 104). El checkout las muestra; el cobro
   // real lo recalcula createOrder contra esta misma tabla.
@@ -95,7 +71,7 @@ export default async function CheckoutPage({
     now: ahora.getTime(),
   }).map((p) => ({ id: p.id, name: p.name, name_en: p.name_en, price: p.price, image_url: p.image_url }));
 
-  if (paused || (!open && !encargo)) {
+  if (paused || !open) {
     return (
       <ThemeProvider config={resolved.config} content={resolved.content}>
         <CheckoutBlocked
@@ -122,9 +98,6 @@ export default async function CheckoutPage({
           hubUrl={hubUrl}
           hubToken={hubToken}
           sugeridos={sugeridos}
-          encargo={encargo}
-          encargoNoDisponible={!!sp.encargo && !encargo}
-          transferencia={aceptaTransferencia(resolved.config) ? cuentaDelRestaurante(resolved.config) : null}
         />
       </CartProvider>
     </ThemeProvider>

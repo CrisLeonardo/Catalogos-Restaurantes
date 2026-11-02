@@ -137,6 +137,14 @@ Cada fase con migración dice en su PR en qué orden se aplica respecto al despl
 
 ### §4 bis · Cómo quedó la fase 2 (2026-10-28, rama `feat/encargos-y-transferencia`)
 
+> **RETIRADA el 2026-11-02** por decisión del dueño: los encargos con cupo y la
+> transferencia del comensal salen del todo (código y pantallas). La migración 149
+> se conserva en el historial y la **153** deja la base como si no hubiera corrido
+> (el archivador vuelve al de la 099, fuera `encargo_fechas` y las columnas de
+> `orders`). «Paga tu plan» (fase 1, migración 148) se queda. En línea se queda
+> con para llevar, domicilio, zonas de reparto y seguimiento; cómo separarlo más de
+> Estándar está pendiente de decidir. Lo que sigue describe lo que se construyó.
+
 - **Migración 149** (después de la 148, antes del código):
   - tabla `encargo_fechas`;
   - en `orders`, las columnas `encargo_id`, `transfer_status` y `transfer_proof_path`;

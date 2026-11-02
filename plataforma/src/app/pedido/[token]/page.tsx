@@ -5,7 +5,6 @@ import { ThemeProvider } from '@/lib/theme/context';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getPublicOrder } from '@/lib/actions/orders';
 import OrderTracker from '@/components/order-tracker';
-import { cuentaDelRestaurante, aceptaTransferencia } from '@/lib/pago-transferencia';
 
 /* ============================================================
    /pedido/[token] — Seguimiento público del pedido
@@ -45,7 +44,6 @@ export default async function PedidoPage({
         restaurantId={data.restaurant.id}
         initialOrder={order}
         whatsapp={data.restaurant.orders_whatsapp || data.restaurant.whatsapp_number}
-        cuentaTransferencia={aceptaTransferencia(data.resolved.config) ? cuentaDelRestaurante(data.resolved.config) : null}
       />
     </ThemeProvider>
   );

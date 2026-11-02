@@ -29,8 +29,9 @@ import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
 
    Lo que se promete es lo que hay en el plan En línea (Q99, desde el
    2026-10-28): pedidos para llevar y a domicilio con avisos y WhatsApp,
-   zonas de reparto, horario, seguimiento, encargos con cupo y pago por
-   transferencia. Reportes y corte de caja son de Estándar; lealtad,
+   zonas de reparto, horario y seguimiento. (Los encargos con cupo y la
+   transferencia del comensal se retiraron el 2026-11-02.) Reportes y
+   corte de caja son de Estándar; lealtad,
    cupones e inventario, de Premium: aquí no se prometen.
    ============================================================ */
 
@@ -89,8 +90,6 @@ const SI = [
   { icon: 'bellRing',  t: 'Te suena cada pedido', d: 'En tu celular y en la computadora. Y si tu cliente quiere, te lo manda por WhatsApp ya escrito.' },
   { icon: 'clock',     t: 'Tu horario manda', d: 'Fuera de horario tu menú avisa cuándo vuelves a abrir. Nadie pide a las 3 a. m. si no quieres.' },
   { icon: 'mapPin',    t: 'Tu cliente sigue su pedido', d: 'Recibido, preparando, en camino: lo ve solo, en vivo.' },
-  { icon: 'calendar',  t: 'Encargos con cupo', d: 'Tamales del sábado, pasteles, el almuerzo de la semana: abres la fecha, pones el cupo y tu menú dice cuántos lugares quedan.' },
-  { icon: 'wallet',    t: 'Te pagan por transferencia', d: 'Tu cliente ve tu cuenta, transfiere y sube la foto del comprobante. Tú lo confirmas con un toque, sin buscar capturas en el chat.' },
 ];
 
 /* Lo que no le va a estorbar: dicho en voz alta, porque «el sistema completo
@@ -113,11 +112,11 @@ function faqs(trialDays: number, enLinea: string, basico: string) {
     },
     {
       q: '¿Cómo me pagan?',
-      a: 'El cliente elige al pedir: efectivo al recibir (te dice con cuánto, para que lleves el cambio), tarjeta si llevas POS, o transferencia a tu cuenta, subiendo la foto del comprobante. El dinero te lo pagan a ti, como siempre: Leogin no lo toca ni se queda con un porcentaje.',
+      a: 'El cliente elige al pedir: efectivo al recibir (te dice con cuánto, para que lleves el cambio) o tarjeta si llevas POS. El dinero te lo pagan a ti, como siempre: Leogin no lo toca ni se queda con un porcentaje.',
     },
     {
       q: '¿Y si solo vendo algunos días o por temporadas?',
-      a: 'Pones tu horario y fuera de él tu menú avisa cuándo vuelves. Si vendes por encargo —tamales del sábado, pasteles, cajas de fin de semana—, abres la fecha con su cupo y tus clientes encargan aunque hoy no estés vendiendo; puedes pedir que paguen por adelantado.',
+      a: 'Pones tu horario y fuera de él tu menú avisa cuándo vuelves a abrir. Si un día no vendes, pausas los pedidos con un toque y los reanudas cuando quieras.',
     },
     {
       q: '¿Cuánto cuesta?',
