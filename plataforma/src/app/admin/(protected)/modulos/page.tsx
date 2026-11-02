@@ -47,6 +47,7 @@ export default async function ModulosPage() {
   // Premium+ → los tres canales.
   const defaultOrderTypes: OrderType[] =
     planActual === 'BASICO' ? ['pickup']
+    : planActual === 'EN_LINEA' ? ['pickup', 'delivery']
     : planActual === 'ESTANDAR' ? ['pickup', 'dine_in']
     : ['dine_in', 'delivery', 'pickup'];
   const orderTypes: OrderType[] =

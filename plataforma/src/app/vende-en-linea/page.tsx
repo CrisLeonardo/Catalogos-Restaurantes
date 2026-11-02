@@ -27,10 +27,11 @@ import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
    la historia en 30 s (el video) → cómo (tres pasos) → poda (solo lo que necesitas) → precio en
    pequeño (menos de Q7 al día) → dudas → cierre con Leo.
 
-   Lo que se promete es lo que hay en Estándar con «para llevar» y
-   «a domicilio»: pedidos con avisos y WhatsApp, zonas de reparto,
-   horario, seguimiento del pedido, reportes y corte. Lealtad,
-   cupones e inventario son de Premium y aquí no se prometen.
+   Lo que se promete es lo que hay en el plan En línea (Q99, desde el
+   2026-10-28): pedidos para llevar y a domicilio con avisos y WhatsApp,
+   zonas de reparto, horario, seguimiento, encargos con cupo y pago por
+   transferencia. Reportes y corte de caja son de Estándar; lealtad,
+   cupones e inventario, de Premium: aquí no se prometen.
    ============================================================ */
 
 export const metadata: Metadata = {
@@ -81,21 +82,22 @@ const PASOS = [
   },
 ];
 
-/* Lo que sí usa quien vende en línea (Estándar con recoger + domicilio). */
+/* Lo que sí usa quien vende en línea (plan En línea: recoger + domicilio). */
 const SI = [
   { icon: 'grid',      t: 'Tu menú en un link', d: 'Fotos, precios, variantes y combos. Cambias un precio y se ve al momento.' },
   { icon: 'truck',     t: 'Para recoger y a domicilio', d: 'Con mapa, zonas de envío y su tarifa. El cliente no tiene que explicarte cómo llegar.' },
   { icon: 'bellRing',  t: 'Te suena cada pedido', d: 'En tu celular y en la computadora. Y si tu cliente quiere, te lo manda por WhatsApp ya escrito.' },
   { icon: 'clock',     t: 'Tu horario manda', d: 'Fuera de horario tu menú avisa cuándo vuelves a abrir. Nadie pide a las 3 a. m. si no quieres.' },
   { icon: 'mapPin',    t: 'Tu cliente sigue su pedido', d: 'Recibido, preparando, en camino: lo ve solo, en vivo.' },
-  { icon: 'wallet',    t: 'Sabes cuánto vendiste', d: 'Ventas del día y de la semana, efectivo y tarjeta, y el corte al cerrar.' },
+  { icon: 'calendar',  t: 'Encargos con cupo', d: 'Tamales del sábado, pasteles, el almuerzo de la semana: abres la fecha, pones el cupo y tu menú dice cuántos lugares quedan.' },
+  { icon: 'wallet',    t: 'Te pagan por transferencia', d: 'Tu cliente ve tu cuenta, transfiere y sube la foto del comprobante. Tú lo confirmas con un toque, sin buscar capturas en el chat.' },
 ];
 
 /* Lo que no le va a estorbar: dicho en voz alta, porque «el sistema completo
    para tu restaurante» le suena a algo que no va a saber usar. */
 const NO = ['Mesas y meseros', 'Pantalla de cocina', 'Impresoras de comandas', 'Caja por turnos', 'Inventario con recetas'];
 
-function faqs(trialDays: number, estandar: string, basico: string) {
+function faqs(trialDays: number, enLinea: string, basico: string) {
   return [
     {
       q: '¿Necesito tener un local?',
@@ -111,15 +113,15 @@ function faqs(trialDays: number, estandar: string, basico: string) {
     },
     {
       q: '¿Cómo me pagan?',
-      a: 'El cliente elige al pedir: efectivo o tarjeta al recibir, y si paga en efectivo te dice con cuánto, para que lleves el cambio. El dinero te lo pagan a ti, como siempre: Leogin no lo toca ni se queda con un porcentaje.',
+      a: 'El cliente elige al pedir: efectivo al recibir (te dice con cuánto, para que lleves el cambio), tarjeta si llevas POS, o transferencia a tu cuenta, subiendo la foto del comprobante. El dinero te lo pagan a ti, como siempre: Leogin no lo toca ni se queda con un porcentaje.',
     },
     {
       q: '¿Y si solo vendo algunos días o por temporadas?',
-      a: 'Pones tu horario y fuera de él tu menú avisa cuándo vuelves. Si vendes por ediciones —postres de temporada, cajas de fin de semana—, la estructura Vitrina abre y cierra pedidos con cuenta regresiva y te muestra cuántas quedan.',
+      a: 'Pones tu horario y fuera de él tu menú avisa cuándo vuelves. Si vendes por encargo —tamales del sábado, pasteles, cajas de fin de semana—, abres la fecha con su cupo y tus clientes encargan aunque hoy no estés vendiendo; puedes pedir que paguen por adelantado.',
     },
     {
       q: '¿Cuánto cuesta?',
-      a: `El plan Estándar, con para recoger y a domicilio, cuesta ${estandar} y empiezas con ${trialDays} días gratis, sin tarjeta. Si por ahora solo quieres tu catálogo en un link, sin pedidos en línea, el Básico es ${basico.toLowerCase()} para siempre.`,
+      a: `El plan En línea cuesta ${enLinea}, sin costo de alta, y empiezas con ${trialDays} días gratis, sin tarjeta. Si por ahora solo quieres tu catálogo en un link, sin pedidos en línea, el Básico es ${basico.toLowerCase()} para siempre. Cuando crezcas (más personas, reportes y corte de caja, mesas), subes a Estándar.`,
     },
   ];
 }
@@ -127,13 +129,13 @@ function faqs(trialDays: number, estandar: string, basico: string) {
 export default async function VendeEnLinea() {
   const pricing = await getEffectivePlanPricing();
   const demoUrl = subdomainUrl(DEMO_SLUG);
-  const estandarLabel = planPriceLabel(pricing, 'ESTANDAR');
+  const enLineaLabel = planPriceLabel(pricing, 'EN_LINEA');
   const basicoLabel = planPriceLabel(pricing, 'BASICO');
-  const estandarMes = pricing.prices.ESTANDAR;
-  // «Menos de Q7 al día»: el precio partido en días se compara con un
+  const enLineaMes = pricing.prices.EN_LINEA;
+  // «Menos de Q4 al día»: el precio partido en días se compara con un
   // refresco, no con una mensualidad (contabilidad mental).
-  const alDia = Math.ceil(estandarMes / 30);
-  const preguntas = faqs(pricing.trialDays, estandarLabel, basicoLabel);
+  const alDia = Math.ceil(enLineaMes / 30);
+  const preguntas = faqs(pricing.trialDays, enLineaLabel, basicoLabel);
 
   const root = rootDomainForUrls();
   const base = `${root.includes('localhost') || root.startsWith('127.') ? 'http' : 'https'}://${root}`;
@@ -315,8 +317,8 @@ export default async function VendeEnLinea() {
               <div className="lp-eyebrow">Precio fijo, sin comisión</div>
               <div className="el-precio-cifra t-mono">Menos de Q{alDia}<small> al día</small></div>
               <p className="lp-body" style={{ marginTop: 10, maxWidth: 460 }}>
-                El plan Estándar, con para recoger y a domicilio, cuesta {estandarLabel}. Vendas
-                Q500 o Q50,000 en el mes, lo que vendes es tuyo: no cobramos un porcentaje de tus pedidos.
+                El plan En línea cuesta {enLineaLabel}, sin costo de alta. Vendas Q500 o Q50,000
+                en el mes, lo que vendes es tuyo: no cobramos un porcentaje de tus pedidos.
               </p>
             </div>
             <div className="el-precio-acciones">

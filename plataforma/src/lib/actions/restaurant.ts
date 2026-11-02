@@ -12,7 +12,9 @@ import { redirect } from 'next/navigation';
 import type { HourInterval, WeeklyHours, HourExceptions } from '@/lib/hours';
 import type { ThemeConfig, ThemeContent, OrderType } from '@/lib/theme/defaults';
 import { extractVisualConfig, type TemplateConfig } from '@/lib/theme/templates';
-import { ESTANDAR_MAX_ORDER_TYPES } from '@/lib/plans';
+import { ESTANDAR_MAX_ORDER_TYPES, orderTypesForPlan } from '@/lib/plans';
+
+const PLAN_SIN_LOCAL = 'El plan En línea es para llevar y a domicilio. Para recibir pedidos en tus mesas, sube a Estándar.';
 import { panelLink } from '@/lib/panel-links-server';
 import { puedeEnSeccion, SIN_SECCION } from '@/lib/auth/seccion';
 import { horaACorte } from '@/lib/caja/dia';
@@ -551,6 +553,9 @@ export async function saveOrdersAndCurrency(input: {
     if (rest?.plan_actual === 'ESTANDAR' && input.patch.orderTypes.length > ESTANDAR_MAX_ORDER_TYPES) {
       return { error: `El plan Estándar permite hasta ${ESTANDAR_MAX_ORDER_TYPES} modos de pedido a la vez. Para activar los 3, actualiza a Premium.` };
     }
+    if (orderTypesForPlan(rest?.plan_actual, input.patch.orderTypes).length !== input.patch.orderTypes.length) {
+      return { error: PLAN_SIN_LOCAL };
+    }
   }
 
   const { data: row } = await db
@@ -639,6 +644,9 @@ export async function updateOwnOrderTypes(
     }
     if (plan === 'ESTANDAR' && orderTypes.length > ESTANDAR_MAX_ORDER_TYPES) {
       return { error: `El plan Estándar permite hasta ${ESTANDAR_MAX_ORDER_TYPES} modos de pedido a la vez. Para activar los 3, actualiza a Premium.` };
+    }
+    if (orderTypesForPlan(plan, orderTypes).length !== orderTypes.length) {
+      return { error: PLAN_SIN_LOCAL };
     }
   }
   const { data: row } = await db

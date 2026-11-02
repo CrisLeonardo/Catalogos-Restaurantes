@@ -124,7 +124,7 @@ En «Mi suscripción», cuando hay algo pendiente, se ve el monto, un texto libr
 |---|---|---|---|
 | 1 | **Paga tu plan** (§3). Migración 148 | `feat/paga-tu-plan` | [x] 2026-10-28 (falta probar en producción la bandeja del super, ver §3) |
 | 2 | N4 transferencia con comprobante del comensal + N6 encargos y preventa (para la temporada de diciembre). Migración 149 | `feat/encargos-y-transferencia` | [x] 2026-10-28 (ver §4 bis) |
-| 3 | Plan «En línea» Q99: `plans.ts` + migración que reconcilia `platform_settings` y las funciones de cobro (`leogin_compute_monthly_fee`, `leogin_fee_breakdown`) + `/planes`, registro, `/vende-en-linea` y cambio de plan desde el panel | `feat/plan-en-linea` | [ ] |
+| 3 | Plan «En línea» Q99: `plans.ts` + migración que reconcilia `platform_settings` y las funciones de cobro (`leogin_compute_monthly_fee`, `leogin_fee_breakdown`) + `/planes`, registro, `/vende-en-linea` y cambio de plan desde el panel. Migración 150 | `feat/plan-en-linea` | [x] 2026-11-01 (ver §4 ter) |
 | 4 | Dejar al día `PRECIOS_VIGENTES.md`, `Cotizador.xlsx` y el `.docx` de planes. Siguen hablando de módulos a la carta y del «Plan a tu medida», que el código quitó el 2026-08-21; además hay que sumar En línea. Decidir el Panel de grupo (Q299) | `docs/precios-al-dia` | [ ] |
 | 5 | N1 «Lo que Leogin te dejó» + garantía + calculadora en `/vende-en-linea` | `feat/lo-que-te-dejo` | [ ] |
 | 6 | N3 «Tus clientes que se fueron» (primero confirmar los datos de teléfono) | `feat/clientes-que-se-fueron` | [ ] |
@@ -157,10 +157,28 @@ Cada fase con migración dice en su PR en qué orden se aplica respecto al despl
   - limitar una tanda a ciertos platillos;
   - que el pedido de encargo no entre a «Por enviar a cocina» hasta el día de la entrega.
 
+### §4 ter · Cómo quedó la fase 3 (2026-11-01, rama `feat/plan-en-linea`)
+
+- **Código del plan:** `EN_LINEA`, entre Básico y Estándar en `PLAN_ORDER` y en `PUBLIC_PLANS`. Q99, **alta Q0** (la propuesta de §5; si el dueño decide cobrarla, se cambia en Super › Configuración sin tocar código), 150 productos, 1 usuario.
+- **Migración 150**, antes de desplegar:
+  - la restricción `restaurants_plan_actual_check` acepta `EN_LINEA`;
+  - `plan_price_EN_LINEA = 99` y `setup_fee_EN_LINEA = 0`, solo si no existían;
+  - `leogin_compute_monthly_fee` y `leogin_fee_breakdown` cobran En línea;
+  - `leogin_plan_module_floor` le da solo pedidos + WhatsApp. **Trampa:** sin esa rama, En línea caía en el `else` de Premium y recibía gratis finanzas, analítica, inventario y personal.
+  - Probado en local con una transacción deshecha: cobro de Q99 y módulos `orders` + `whatsapp_notify`.
+- **Lo que se hace cumplir.** Sin comer en local, en cuatro sitios: al guardar los modos de pedido, en Funciones (candado «Requiere Estándar»), en el checkout y en `createOrder`. Sin finanzas, analítica, inventario, personal, cupones, lealtad ni mesero: lo cuida el piso del plan. Tope de 150 productos (`checkProductLimit` ya lo leía del plan). El tope de usuarios no lo aplica ningún plan; sin «Personal», En línea no puede agregar a nadie.
+- **Panel de mesero.** Cinco sitios decidían «tiene mesero» escribiendo `!== 'BASICO' && !== 'ESTANDAR'` a mano, y con En línea le habrían dado mesero. Ahora leen `PLANS[plan].hasWaiterPanel`.
+- **Cambiar de plan desde el panel.** Mi suscripción tiene los cuatro planes y una confirmación con el precio, desde cuándo y, si es bajar, **lo que se deja de tener**. Sin prorrateo: el precio nuevo cuenta desde el próximo corte.
+  - `cambiarMiPlan` (solo el dueño) cambia el plan, recalcula los módulos (`modulosAlCambiarDePlan`: al bajar se apagan los del plan anterior; antes `withPlanFloor` solo subía), ajusta los modos de pedido y la mensualidad automática, lo anota en la bitácora y avisa a Leogin por correo.
+  - Se quitaron las tarjetas «Actualizar a…» que abrían WhatsApp.
+- **Web:** cuarta tarjeta en `/planes` y en la portada (cuadrícula 4 → 2 → 1), preguntas frecuentes al día, `/vende-en-linea` con Q99 («Menos de Q4 al día»), encargos y transferencia, y el alta con En línea elegido para quien llega desde ahí.
+- **Probado en local, en pantalla:** las tarjetas, `/vende-en-linea`, el alta con En línea elegido, y cambiar Rincón 502 de Premium a En línea (módulos, modos, Q99, sin Mesas ni Tomar pedidos, comer en local con candado) y de vuelta a Premium.
+- **Pendiente para la fase 4:** `PRECIOS_VIGENTES.md`, `Cotizador.xlsx` y el `.docx` de planes todavía no mencionan En línea.
+
 ## 5. Decisiones que le tocan al dueño
 
 - [x] Precio de «En línea»: **Q99** (2026-10-28).
-- [ ] ¿Se cobra alta en «En línea»? La propuesta es **Q0**, porque son negocios que van empezando.
+- [ ] ¿Se cobra alta en «En línea»? La propuesta es **Q0**, porque son negocios que van empezando. **Así quedó en la fase 3**; se cambia en Super › Configuración sin tocar código.
 - [ ] Texto final de la garantía de N1 y desde cuándo corre.
 - [ ] ¿Qué se hace con el Panel de grupo a Q299, que cuesta más que Estándar completo?
 - [ ] ¿FEL entra en el siguiente plan grande?

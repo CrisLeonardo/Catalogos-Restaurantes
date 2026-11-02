@@ -507,7 +507,7 @@ export default async function LeoginLanding() {
             lead="Empieza gratis. No cobramos comisión por pedido ni un porcentaje de tus ventas. Cancela cuando quieras."
             center
           />
-          <div className="lp-cols-3" style={{ marginTop: 34, alignItems: 'stretch' }}>
+          <div className="lp-cols-4" style={{ marginTop: 34, alignItems: 'stretch' }}>
             {landingPlans(pricing).map((p, i) => (
               <div
                 key={p.code}

@@ -2438,7 +2438,9 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
 /* Registro: tarjetas de plan. Apiladas en móvil (legibles a todo el ancho),
    3 columnas cuando hay espacio. Evita el caso feo de 2 columnas con 3 cards. */
 .signup-plans { display: grid; grid-template-columns: 1fr; gap: 10px; }
-@media (min-width: 560px) { .signup-plans { grid-template-columns: repeat(3, 1fr); } }
+/* Cuatro planes desde En línea (2026-10-28): de dos en dos; en tres columnas
+   el cuarto quedaba huérfano abajo. */
+@media (min-width: 560px) { .signup-plans { grid-template-columns: repeat(2, 1fr); } }
 /* En móvil la foto va primero (es lo primero que se quiere ver); en PC vive
    en la columna lateral derecha. */
 
@@ -2918,6 +2920,11 @@ html[data-platform] .asphalt::after { display: none; }
 }
 .lp-cols-3 { display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 860px) { .lp-cols-3 { grid-template-columns: minmax(0, 1fr); } }
+/* Planes de la portada: cuatro desde En línea (2026-10-28). Cuatro columnas
+   en escritorio, dos en tableta, una en el teléfono. */
+.lp-cols-4 { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1080px) { .lp-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .lp-cols-4 { grid-template-columns: minmax(0, 1fr); } }
 
 /* En el teléfono: los dos botones a lo ancho (es donde cae el pulgar) y las
    píldoras en una sola fila que se desliza, con el borde que se desvanece
@@ -3985,18 +3992,21 @@ html[data-admin-area] {
    clara para que se vea sobre el fondo. Premium = coral de la marca. */
 :root {
   --plan-basico:   #475569;
+  --plan-en-linea: #0369a1;
   --plan-estandar: #047857;
   --plan-premium:  #c2542f;
   --plan-pro:      #6d28d9;
 }
 html[data-admin-area] {
   --plan-basico:   #a8b0bc;
+  --plan-en-linea: #38bdf8;
   --plan-estandar: #34d399;
   --plan-premium:  #e58a5f;
   --plan-pro:      #a78bfa;
 }
 html[data-admin-area][data-scheme="light"] {
   --plan-basico:   #475569;
+  --plan-en-linea: #0369a1;
   --plan-estandar: #047857;
   --plan-premium:  #c2542f;
   --plan-pro:      #6d28d9;

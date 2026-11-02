@@ -30,7 +30,7 @@ import {
    justamente lo que impedía tener dos restaurantes con un solo correo.
    ============================================================ */
 
-type PlanOption = 'BASICO' | 'ESTANDAR' | 'PREMIUM';
+type PlanOption = 'BASICO' | 'EN_LINEA' | 'ESTANDAR' | 'PREMIUM';
 type OrderTypeOption = 'dine_in' | 'pickup' | 'delivery';
 
 const ORDER_TYPE_LABEL: Record<OrderTypeOption, string> = {
@@ -73,6 +73,14 @@ function buildPlanCards(pricing: PlanPricing, esElPrimero: boolean): PlanCardDef
       priceUnit: '',
       trialLabel: 'Gratis para siempre, sin tarjeta',
       features: PLAN_POINTS.BASICO,
+    },
+    {
+      code: 'EN_LINEA',
+      name: 'En línea',
+      priceLabel: planPriceQ(pricing, 'EN_LINEA'),
+      priceUnit: '/ mes',
+      trialLabel: conPrueba ? `Con ${trial} días gratis · sin alta` : 'Sin costo de alta',
+      features: PLAN_POINTS.EN_LINEA,
     },
     {
       code: 'ESTANDAR',
@@ -155,14 +163,14 @@ export default function NuevoRestaurante({
   }, []);
 
   // Quien llegó por /vende-en-linea no tiene mesas: el plan llega armado
-  // como lo va a usar —Estándar con para llevar y a domicilio— en vez de
+  // como lo va a usar —En línea, para llevar y a domicilio— en vez de
   // Premium con un salón y un mesero que no tiene (lib/perfil-negocio.ts).
   // Solo cambia lo que viene marcado; puede elegir otro igual.
   const [enLinea, setEnLinea] = useState(false);
   useEffect(() => {
     if (leerPerfil() !== 'en-linea') return;
     setEnLinea(true);
-    setSelectedPlan('ESTANDAR');
+    setSelectedPlan('EN_LINEA');
     setEstandarTypes(['pickup', 'delivery']);
   }, []);
 
@@ -229,7 +237,7 @@ export default function NuevoRestaurante({
         {enLinea && (
           <p style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, lineHeight: 1.5, margin: 0, padding: '10px 12px', borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--brand-accent) 8%, transparent)', color: 'var(--u-text-2)' }}>
             <Icon name="truck" size={16} style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 2 }} />
-            Lo dejamos listo para vender en línea: Estándar con para llevar y a domicilio, sin mesas ni meseros. Puedes cambiarlo si quieres.
+            Lo dejamos listo para vender en línea: el plan En línea, con para llevar y a domicilio, sin mesas ni meseros. Puedes cambiarlo si quieres.
           </p>
         )}
         <div className="signup-plans">
@@ -417,6 +425,8 @@ export default function NuevoRestaurante({
             value={
               selectedPlan === 'BASICO'
                 ? `Básico · ${planPriceLabel(pricing, 'BASICO')} para siempre`
+                : selectedPlan === 'EN_LINEA'
+                  ? `En línea · Para llevar + A domicilio · ${planPriceLabel(pricing, 'EN_LINEA')}${conPrueba ? ` (${trialDays} días gratis)` : ''}`
                 : selectedPlan === 'ESTANDAR'
                   ? `Estándar · ${estandarSummary} · ${planPriceLabel(pricing, 'ESTANDAR')}${conPrueba ? ` (${trialDays} días gratis)` : ''}`
                   : conPrueba
@@ -445,6 +455,8 @@ export default function NuevoRestaurante({
               : conPrueba
                 ? (selectedPlan === 'ESTANDAR'
                   ? `Tu restaurante queda en vivo con pedidos de ${estandarSummary.toLowerCase()} activos. Sin tarjeta. Sin compromiso.`
+                  : selectedPlan === 'EN_LINEA'
+                  ? 'Tu restaurante queda en vivo con pedidos para llevar y a domicilio. Sin tarjeta. Sin compromiso.'
                   : 'Tu restaurante queda en vivo con pedidos online activos. Sin tarjeta. Sin compromiso. Cancela cuando quieras.')
                 : 'La prueba gratis es una por persona y ya la usaste en tu primer restaurante, así que este entra a tu mensualidad desde hoy. Puedes darlo de baja cuando quieras.'}
           </p>

@@ -38,6 +38,26 @@ function buildPlanInfo(pricing: PlanPricing) {
         'Activa WhatsApp en Módulos para alertas',
       ],
     },
+    EN_LINEA: {
+      name: 'En línea',
+      badge: `PRUEBA ${trialDays} DÍAS`,
+      badgeColor: 'var(--c-ok)',
+      badgeBg: 'var(--c-ok-bg)',
+      detail: `luego ${planPriceLabel(pricing, 'EN_LINEA')} · sin alta, sin tarjeta ni compromiso`,
+      subtitle: `Tu prueba de ${trialDays} días comienza hoy.`,
+      features: [
+        'Pedidos para llevar y a domicilio en tu menú',
+        'Encargos con cupo y pago por transferencia',
+        'Alerta WhatsApp al recibir pedido',
+        'Notificaciones en tiempo real',
+      ],
+      nextSteps: [
+        'Sube tus productos y fotos',
+        'Pon el enlace de tu menú en tu Instagram y tu WhatsApp',
+        'Activa la transferencia en Ajustes › Pedidos y cobro',
+        'Abre tu primer encargo en Pedidos › Encargos',
+      ],
+    },
     ESTANDAR: {
       name: 'Estándar',
       badge: `PRUEBA ${trialDays} DÍAS`,
@@ -88,7 +108,7 @@ export default async function RegistroListoPage({
 }) {
   const { slug, plan } = await searchParams;
   const safeSlug = (slug ?? '').toLowerCase().replace(/[^a-z0-9-]/g, '');
-  const safePlan = plan === 'BASICO' ? 'BASICO' : plan === 'ESTANDAR' ? 'ESTANDAR' : 'PREMIUM';
+  const safePlan = plan === 'BASICO' ? 'BASICO' : plan === 'EN_LINEA' ? 'EN_LINEA' : plan === 'ESTANDAR' ? 'ESTANDAR' : 'PREMIUM';
   const panelUrl = safeSlug ? adminUrl(safeSlug) : '/login';
   const menuUrl = safeSlug ? subdomainUrl(safeSlug) : '/';
   const pricing = await getEffectivePlanPricing();

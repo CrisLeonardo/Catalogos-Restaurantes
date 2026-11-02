@@ -102,7 +102,8 @@ describe('isUpgrade / nextPlan', () => {
   });
 
   it('nextPlan avanza dentro de los planes públicos', () => {
-    expect(nextPlan('BASICO')).toBe('ESTANDAR');
+    expect(nextPlan('BASICO')).toBe('EN_LINEA');
+    expect(nextPlan('EN_LINEA')).toBe('ESTANDAR');
     expect(nextPlan('ESTANDAR')).toBe('PREMIUM');
   });
 
@@ -112,5 +113,46 @@ describe('isUpgrade / nextPlan', () => {
 
   it('nextPlan no recomienda PRO (pausado, fuera de PUBLIC_PLANS)', () => {
     expect(nextPlan('PRO')).toBeNull();
+  });
+});
+
+describe('cambiar de plan desde el panel', () => {
+  it('bajar de Premium a En línea apaga lo que ya no paga', async () => {
+    const { modulosAlCambiarDePlan } = await import('./plans');
+    const premium = { catalog: true, orders: true, whatsapp_notify: true, finanzas: true, analitica: true, inventario: true, personal: true, loyalty: true, cupones: true, reservaciones: true, multi_branch: false };
+    const m = modulosAlCambiarDePlan('PREMIUM', 'EN_LINEA', premium);
+    expect(m.orders).toBe(true);
+    expect(m.whatsapp_notify).toBe(true);
+    expect(m.finanzas).toBe(false);
+    expect(m.analitica).toBe(false);
+    expect(m.loyalty).toBe(false);
+    expect(m.cupones).toBe(false);
+    expect(m.multi_branch).toBe(false);
+  });
+
+  it('subir de En línea a Premium trae lo incluido', async () => {
+    const { modulosAlCambiarDePlan } = await import('./plans');
+    const m = modulosAlCambiarDePlan('EN_LINEA', 'PREMIUM', { catalog: true, orders: true, whatsapp_notify: true });
+    expect(m.analitica).toBe(true);
+    expect(m.loyalty).toBe(true);
+    expect(m.reservaciones).toBe(true);
+  });
+
+  it('los modos de pedido se ajustan al plan nuevo', async () => {
+    const { modosAlCambiarDePlan } = await import('./plans');
+    expect(modosAlCambiarDePlan('EN_LINEA', ['dine_in', 'pickup', 'delivery'])).toEqual(['pickup', 'delivery']);
+    expect(modosAlCambiarDePlan('EN_LINEA', ['dine_in'])).toEqual(['pickup', 'delivery']);
+    expect(modosAlCambiarDePlan('ESTANDAR', ['dine_in', 'pickup', 'delivery'])).toEqual(['pickup', 'delivery']);
+    expect(modosAlCambiarDePlan('PREMIUM', ['pickup'])).toEqual(['pickup']);
+    expect(modosAlCambiarDePlan('BASICO', ['delivery'])).toEqual(['pickup']);
+  });
+
+  it('avisa lo que se pierde al bajar y nada al subir', async () => {
+    const { loQueSePierde } = await import('./plans');
+    const bajar = loQueSePierde('PREMIUM', 'EN_LINEA');
+    expect(bajar).toContain('Pedidos para comer en local');
+    expect(bajar).toContain('Reportes financieros y corte de caja');
+    expect(bajar.some((t) => t.startsWith('Productos ilimitados'))).toBe(true);
+    expect(loQueSePierde('EN_LINEA', 'PREMIUM')).toEqual([]);
   });
 });

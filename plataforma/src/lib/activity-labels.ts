@@ -187,6 +187,8 @@ function queHizo(r: ActivityLike): string {
       return m.confirmada
         ? `confirmó la transferencia del pedido ${e}`
         : `marcó como no recibida la transferencia del pedido ${e}`;
+    case 'plan_cambiado':
+      return `cambió el plan a ${e}`;
     case 'pausa_pedidos':
       return m.pausado ? 'pausó los pedidos en línea' : 'reanudó los pedidos en línea';
     case 'horario':

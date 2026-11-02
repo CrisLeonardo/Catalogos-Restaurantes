@@ -101,7 +101,7 @@ export default async function AdminAjustesPage() {
      (un ESTÁNDAR puede elegirlo). Los dos sitios tienen que decir lo mismo o
      el menú vuelve a prometer una pantalla que la portada no enseña. */
   const plan = (restaurant?.plan_actual ?? 'BASICO') as PlanCode;
-  const mesasAccesible = (plan !== 'BASICO' && plan !== 'ESTANDAR') || dineInEnabled;
+  const mesasAccesible = (PLANS[plan]?.hasWaiterPanel ?? false) || dineInEnabled;
 
   /* La MISMA cuenta que la pantalla Funciones (modules-panel.tsx). Antes se
      contaban todas las banderas encendidas del jsonb —pedidos, catálogo,

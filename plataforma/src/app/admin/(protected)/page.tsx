@@ -654,7 +654,7 @@ export default async function AdminHomePage() {
 
       {/* Qué incluye subir de plan. Vive al FINAL a propósito: es una oferta,
           no una tarea del día, y no debe competir con lo de arriba. */}
-      {(restaurant?.plan_actual === 'BASICO' || restaurant?.plan_actual === 'ESTANDAR') && (
+      {(restaurant?.plan_actual === 'BASICO' || restaurant?.plan_actual === 'EN_LINEA' || restaurant?.plan_actual === 'ESTANDAR') && (
         <Card>
           <CardContent className="pt-5">
             <LockedFeatureSection restaurantName={brandName} planActual={restaurant.plan_actual} />

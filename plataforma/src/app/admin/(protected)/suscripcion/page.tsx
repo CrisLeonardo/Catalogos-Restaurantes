@@ -8,18 +8,17 @@ import {
   isOverdue, isOnTrial, trialDaysLeft, planLabel,
   getFeeBreakdown, type Invoice, type FeeBreakdown,
 } from '@/lib/db/billing';
-import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, nextPlan, isUpgrade, isModuleIncluded, planPriceLabel, type PlanCode } from '@/lib/plans';
+import { PLANS, INCLUDED_MODULES, isModuleIncluded, planPriceLabel, type PlanCode } from '@/lib/plans';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { rootDomainForUrls } from '@/lib/tenant';
 import { fmtMoney } from '@/lib/money';
 import { Icon } from '@/components/icons';
 import { createServiceClient } from '@/lib/supabase/service';
-import { Card, cardVariants } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Section } from '@/components/ui/section';
 import { Stat, StatGroup } from '@/components/ui/stat';
 import { List, ListRow, ListText } from '@/components/ui/list';
-import { cn } from '@/lib/utils';
 import ReceiptDownloadButton from '@/components/super/receipt-download-button';
 import { panelLink, panelBase } from '@/lib/panel-links-server';
 import { panelHref } from '@/lib/panel-links';
@@ -28,6 +27,8 @@ import { getPlatformContactSettings } from '@/lib/actions/super-admin';
 import { ultimoComprobante } from '@/lib/db/comprobantes';
 import { codigoDePago } from '@/lib/pago-plan';
 import PagaTuPlan from '@/components/admin/paga-tu-plan';
+import CambiarPlan from '@/components/admin/cambiar-plan';
+import { duenoDelRestaurante } from '@/lib/auth/acceso-cobro';
 
 export const metadata = { title: 'Mi suscripción – Panel admin' };
 export const dynamic = 'force-dynamic';
@@ -77,13 +78,15 @@ export default async function SuscripcionPage() {
   }
   if (!restaurantId) redirect('/admin/login');
 
-  const [billingResult, feeBreakdown, pricing, contacto, comprobante] = await Promise.all([
+  const [billingResult, feeBreakdown, pricing, contacto, comprobante, dueno] = await Promise.all([
     getMyBilling(restaurantId),
     getFeeBreakdown(restaurantId),
     getEffectivePlanPricing(),
     getPlatformContactSettings(),
     ultimoComprobante(restaurantId),
+    duenoDelRestaurante(restaurantId),
   ]);
+  const esDueno = !!dueno;
   const { config, invoices, pendingTotal, currency } = billingResult;
 
   // La "Mensualidad" mostrada debe reflejar siempre el precio real vigente.
@@ -116,8 +119,6 @@ export default async function SuscripcionPage() {
     ? `https://wa.me/${waPago}?text=${encodeURIComponent(`Hola, soy de ${restaurantName}. Te envío el comprobante de pago de ${fmtMoney(pendingTotal, currency)}.`)}`
     : null;
 
-  const nextPlanCode = nextPlan(currentPlan);
-  const nextPlanInfo = nextPlanCode ? PLANS[nextPlanCode] : null;
   const includedCount = INCLUDED_MODULES[currentPlan].length;
 
   // Plan feature highlights
@@ -159,16 +160,13 @@ export default async function SuscripcionPage() {
           </div>
           <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 6, lineHeight: 1.5 }}>
             {trialLeft <= 3
-              ? `Tu prueba termina pronto. Contáctanos para continuar sin interrupciones.`
+              ? `Tu prueba termina pronto. Confirma tu plan abajo para seguir sin interrupciones.`
               : `Tu restaurante está en vivo sin costo. Cuando termine la prueba, te avisaremos antes de cualquier cobro.`}
           </div>
           {trialLeft <= 7 && (
-            <Button
-              render={<a href={upgradeHref(restaurantName, planInfo?.name ?? 'Premium')} target="_blank" rel="noopener noreferrer" />}
-              className="mt-3.5 rounded-adm-full"
-            >
+            <Button render={<a href="#cambiar-plan" />} className="mt-3.5 rounded-adm-full">
               <Icon name="sparkle" size={14} />
-              Continuar con Leogin
+              Elegir mi plan
             </Button>
           )}
         </Card>
@@ -251,130 +249,18 @@ export default async function SuscripcionPage() {
         <MeasureCard b={feeBreakdown} currency={currency} autoPrice={config?.auto_price !== false} />
       )}
 
-      {/* ── Lo que te falta en Básico (solo BASICO) ──────────── */}
-      {currentPlan === 'BASICO' && nextPlanInfo && (
-        <Card
-          className="p-5"
-          style={{ border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' }}
-        >
-          <div className="adm-label" style={{ color: 'var(--brand-accent-ink)' }}>Con Premium ({planPriceLabel(pricing, 'PREMIUM')}) desbloqueas</div>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--u-text)', marginTop: 4, lineHeight: 1.15 }}>
-            Todo lo que falta en tu plan actual
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 3, lineHeight: 1.5 }}>
-            Sin límite de ventas · Sin compromiso · Tu menú sigue en vivo
-          </div>
-
-          {/* Feature grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 9, marginTop: 16 }}>
-            {[
-              { icon: 'whatsapp',  label: 'Aviso por WhatsApp',      desc: 'Alerta inmediata en cada pedido' },
-              { icon: 'thumbsUp', label: 'Programa de lealtad',      desc: 'Puntos que hacen volver a tus clientes' },
-              { icon: 'ticket',   label: 'Cupones y descuentos',     desc: 'Convierte visitas en pedidos' },
-              { icon: 'calendar', label: 'Reservaciones en línea',   desc: 'Mesas llenas incluso entre semana' },
-              { icon: 'chart',    label: 'Estadísticas avanzadas',   desc: 'Ventas, horas pico y ticket promedio' },
-              { icon: 'users',    label: 'Usuarios ilimitados',      desc: 'Tu equipo opera sin depender de ti' },
-              { icon: 'truck',    label: 'Pedidos a domicilio',      desc: 'Entregas a domicilio con mapa integrado' },
-              { icon: 'grid',     label: 'Comer en local (QR)',      desc: 'Pedidos desde la mesa del cliente' },
-              { icon: 'userPlus', label: 'Panel de mesero',          desc: 'Tablet para tomar pedidos en sala' },
-              { icon: 'bellRing', label: 'Alertas en tiempo real',   desc: 'Panel de cocina y pedidos en vivo' },
-              { icon: 'sparkle',  label: 'Personalización completa', desc: 'Fuentes, colores, estilos sin límite' },
-              { icon: 'print',    label: 'Impresión de comandas',    desc: 'Tickets directo a tu impresora' },
-            ].map(({ icon, label, desc }) => (
-              <div key={label} style={{
-                display: 'flex', gap: 9, alignItems: 'flex-start',
-                padding: '10px 11px', borderRadius: 'var(--radius-md)',
-                background: 'rgba(var(--brand-accent-rgb,99,102,241),0.05)',
-                border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.12)',
-              }}>
-                <Icon name={icon} size={15} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0, marginTop: 1 }} />
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text-2)', lineHeight: 1.2 }}>{label}</div>
-                  <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2, lineHeight: 1.35 }}>{desc}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 18 }}>
-            <Button render={<a href={upgradeHref(restaurantName, nextPlanInfo.name)} target="_blank" rel="noopener noreferrer" />} className="rounded-adm-full">
-              <Icon name="sparkle" size={14} />
-              Actualizar a Premium — {planPriceLabel(pricing, 'PREMIUM')}
-            </Button>
-            <Button render={<a href={planesUrl} target="_blank" rel="noopener noreferrer" />} variant="secondary" className="rounded-adm-full">
-              Ver todos los planes <Icon name="chevronRight" size={14} />
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {/* ── Actualizar plan (Estándar/Premium en adelante) ───── */}
-      {nextPlanInfo && currentPlan !== 'BASICO' && (
-        <Card className="p-5">
-          <div className="adm-label" style={{ color: 'var(--brand-accent-ink)' }}>
-            Siguiente plan disponible
-          </div>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--u-text)', marginTop: 4 }}>
-            {nextPlanInfo.name} — {nextPlanCode ? planPriceLabel(pricing, nextPlanCode) : ''}
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 3, lineHeight: 1.5 }}>
-            {nextPlanInfo.tagline}
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
-            <Button render={<a href={upgradeHref(restaurantName, nextPlanInfo.name)} target="_blank" rel="noopener noreferrer" />} className="rounded-adm-full">
-              <Icon name="sparkle" size={14} />
-              Actualizar a {nextPlanInfo.name}
-            </Button>
-            <Button render={<a href={planesUrl} target="_blank" rel="noopener noreferrer" />} variant="secondary" className="rounded-adm-full">
-              Ver todos los planes <Icon name="chevronRight" size={14} />
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {/* ── Más opciones de upgrade (planes 2+ pasos arriba) ── */}
-      {(() => {
-        const higherPlans = PUBLIC_PLANS.filter((p) => isUpgrade(currentPlan, p) && p !== nextPlanCode);
-        if (higherPlans.length === 0) return null;
-        return (
-          <Card className="flex flex-col gap-3 p-4">
-            <div className="adm-label" style={{ color: 'var(--u-text-4)' }}>
-              Más opciones de upgrade
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
-              {higherPlans.map((code) => {
-                const p = PLANS[code];
-                return (
-                  <a
-                    key={code}
-                    href={upgradeHref(restaurantName, p.name)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cn(cardVariants({ variant: 'interactive' }), 'flex flex-col gap-1.5 p-3.5 no-underline')}
-                  >
-                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>
-                      {p.name}
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--u-text-3)' }}>
-                      {planPriceLabel(pricing, code)}
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--u-text-4)', lineHeight: 1.4 }}>
-                      {p.tagline}
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--brand-accent-ink)', fontWeight: 700, marginTop: 4 }}>
-                      Solicitar →
-                    </div>
-                  </a>
-                );
-              })}
-            </div>
-            <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: 0, lineHeight: 1.5 }}>
-              Puedes saltar directamente al plan que mejor se ajuste a lo que necesitas.
-            </p>
-          </Card>
-        );
-      })()}
+      {/* ── Cambiar de plan (fase 3 del plan 2026-10-28) ─────────
+          Antes: una tarjeta de Premium para el Básico, otra con el
+          «siguiente plan» y otra con «más opciones», y las tres abrían un
+          WhatsApp a Leogin. Ahora el dueño lo cambia aquí mismo. */}
+      <CambiarPlan
+        restaurantId={restaurantId}
+        planActual={currentPlan}
+        pricing={pricing}
+        esDueno={esDueno}
+        enPrueba={onTrial}
+        proximoCorte={config ? nextChargeLabel(config.billing_day) : null}
+      />
 
       {/* ── ¿Varias sucursales? ───────────────────────────────── */}
       <Card className="flex flex-wrap items-center justify-between gap-3 p-3.5">

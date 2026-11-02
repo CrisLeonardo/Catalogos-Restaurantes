@@ -13,6 +13,7 @@ import { isModuleActive } from '@/lib/modules';
 import { getAgentHubInfo } from '@/lib/print-agent';
 import CheckoutForm from '@/components/checkout-form';
 import CheckoutBlocked from '@/components/checkout-blocked';
+import { orderTypesForPlan } from '@/lib/plans';
 import { encargoParaPedido } from '@/lib/db/encargos';
 import { estadoEncargo, lugaresLibres, textoEntrega } from '@/lib/encargos';
 import { aceptaTransferencia, cuentaDelRestaurante } from '@/lib/pago-transferencia';
@@ -39,9 +40,10 @@ export default async function CheckoutPage({
   // BASICO solo soporta pickup. ESTANDAR y Premium+ honran sus orderTypes
   // configurados (en Estándar son los 2 de 3 modos elegidos por el dueño).
   const planActual = (restaurant.plan_actual as string | null) ?? null;
+  // En línea: el plan quita «comer en local» aunque el tema lo tenga guardado.
   const safeConfig = planActual === 'BASICO'
     ? { ...resolved.config, orderTypes: ['pickup' as const] }
-    : resolved.config;
+    : { ...resolved.config, orderTypes: orderTypesForPlan(planActual, resolved.config.orderTypes) };
 
   // Operación: pausa manual ("cocina saturada") y horario real.
   // createOrder vuelve a validar en el servidor; esto es solo la UX.

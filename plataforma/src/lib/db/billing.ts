@@ -48,11 +48,13 @@ export interface BillingConfig {
 /** Parámetros globales de precio + gracia (platform_settings, mig. 035 + 072). */
 export interface PricingSettings {
   basico: number;
+  enLinea: number;
   estandar: number;
   premium: number;
   pro: number;
   /** Cobro único de configuración asistida por plan (referencia; se factura manual). */
   setupFeeBasico: number;
+  setupFeeEnLinea: number;
   setupFeeEstandar: number;
   setupFeePremium: number;
   setupFeePro: number;
@@ -77,7 +79,7 @@ export const PLAN_META: Record<string, {
       label: PLANS[code].name,
       price: PLANS[code].priceMonthly,
       hasOrders: PLANS[code].hasOrders,
-      color: code === 'BASICO' ? 'gray' : code === 'ESTANDAR' ? 'emerald' : code === 'PREMIUM' ? 'blue' : 'purple',
+      color: code === 'BASICO' ? 'gray' : code === 'EN_LINEA' ? 'sky' : code === 'ESTANDAR' ? 'emerald' : code === 'PREMIUM' ? 'blue' : 'purple',
     },
   ]),
 );
@@ -216,10 +218,12 @@ async function leerPricingSettings(): Promise<PricingSettings> {
   const b = (k: string, d: boolean) => { const v = map.get(k); return v == null || v === '' ? d : v === 'true'; };
   return {
     basico:             n('plan_price_BASICO',   PLANS.BASICO.priceMonthly),
+    enLinea:            n('plan_price_EN_LINEA', PLANS.EN_LINEA.priceMonthly),
     estandar:           n('plan_price_ESTANDAR', PLANS.ESTANDAR.priceMonthly),
     premium:            n('plan_price_PREMIUM',  PLANS.PREMIUM.priceMonthly),
     pro:                n('plan_price_PRO',      PLANS.PRO.priceMonthly),
     setupFeeBasico:     n('setup_fee_BASICO',   PLANS.BASICO.setupFee),
+    setupFeeEnLinea:    n('setup_fee_EN_LINEA', PLANS.EN_LINEA.setupFee),
     setupFeeEstandar:   n('setup_fee_ESTANDAR', PLANS.ESTANDAR.setupFee),
     setupFeePremium:    n('setup_fee_PREMIUM',  PLANS.PREMIUM.setupFee),
     setupFeePro:        n('setup_fee_PRO',      PLANS.PRO.setupFee),
@@ -241,6 +245,7 @@ export const getEffectivePlanPricing = cache(async (): Promise<PlanPricing> => {
   return {
     prices: {
       BASICO: s.basico,
+      EN_LINEA: s.enLinea,
       ESTANDAR: s.estandar,
       PREMIUM: s.premium,
       PRO: s.pro,

@@ -16,7 +16,7 @@ export interface Restaurant {
   slug: string;
   name: string;
   tagline: string | null;
-  plan_actual: 'BASICO' | 'ESTANDAR' | 'PREMIUM' | 'PRO';
+  plan_actual: 'BASICO' | 'EN_LINEA' | 'ESTANDAR' | 'PREMIUM' | 'PRO';
   modules: {
     catalog: boolean;
     orders: boolean;

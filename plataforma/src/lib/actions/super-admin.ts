@@ -8,7 +8,7 @@ import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { PRICING_SETTINGS_TAG } from '@/lib/db/billing';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
-import { withPlanFloor, type PlanCode } from '@/lib/plans';
+import { withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
 import { logChannelChanges } from '@/lib/db/channel-history';
 import { slugify, validateSlug, crossSlugCollision, slugAliasOfOther } from '@/lib/slug';
 import type { ThemeConfig, ThemeContent, OrderType } from '@/lib/theme/defaults';
@@ -141,7 +141,7 @@ export async function updateRestaurantPlan(
 
   const id = formData.get('id') as string;
   const plan_actual = formData.get('plan_actual') as string;
-  const VALID_PLANS = ['BASICO', 'ESTANDAR', 'PREMIUM', 'PRO'];
+  const VALID_PLANS: string[] = PLAN_ORDER;
   if (!VALID_PLANS.includes(plan_actual)) return { error: 'Plan inválido.' };
 
   const feat = (key: string) => formData.get(`feature_${key}`) === 'true';

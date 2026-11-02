@@ -27,6 +27,8 @@ const ALL_UPGRADE_FEATURES: UpgradeFeature[] = [
     impact: 'Tu equipo toma pedidos desde una tablet en la mesa y ves un mapa con el estado de cada una (libre, ocupada, por cobrar). No es un módulo que se compre aparte: es exclusivo de Premium.',
     currentLabel: 'Sin panel de mesero ni mapa de mesas',
     premiumLabel: 'Panel de mesero + mapa de mesas',
+    // Quien solo vende en línea no tiene mesas: ofrecérselas no vende nada.
+    excludeFor: ['EN_LINEA'],
   },
   {
     icon: 'whatsapp',
@@ -35,7 +37,7 @@ const ALL_UPGRADE_FEATURES: UpgradeFeature[] = [
     impact: 'Cada nuevo pedido llega a tu WhatsApp al instante. Los restaurantes que responden rápido completan más pedidos y reciben mejores reseñas.',
     currentLabel: 'Solo visible en el panel',
     premiumLabel: 'Alerta inmediata en WhatsApp',
-    excludeFor: ['ESTANDAR'],
+    excludeFor: ['ESTANDAR', 'EN_LINEA'],
   },
   {
     icon: 'thumbsUp',
@@ -60,6 +62,7 @@ const ALL_UPGRADE_FEATURES: UpgradeFeature[] = [
     impact: 'Tus clientes reservan mesa desde el menú digital. Sabes con anticipación cuántos comensales llegan y puedes planificar tu cocina sin sorpresas.',
     currentLabel: 'Sin reservas en línea',
     premiumLabel: 'Agenda integrada en tu menú',
+    excludeFor: ['EN_LINEA'],
   },
   {
     icon: 'chart',
@@ -94,9 +97,10 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
   const pricing = usePlanPricing();
 
   const isEstandar = planActual === 'ESTANDAR';
-  const currentPrice = planPriceQ(pricing, isEstandar ? 'ESTANDAR' : 'BASICO');
-  const currentPlanLabel = isEstandar ? 'Estándar' : 'Básico';
-  const fromPlanLabel = isEstandar ? 'de Estándar' : 'de Básico';
+  const isEnLinea = planActual === 'EN_LINEA';
+  const currentPrice = planPriceQ(pricing, isEstandar ? 'ESTANDAR' : isEnLinea ? 'EN_LINEA' : 'BASICO');
+  const currentPlanLabel = isEstandar ? 'Estándar' : isEnLinea ? 'En línea' : 'Básico';
+  const fromPlanLabel = isEstandar ? 'de Estándar' : isEnLinea ? 'En línea' : 'de Básico';
 
   const features = ALL_UPGRADE_FEATURES.filter(f => !f.excludeFor?.includes(planActual));
 
@@ -107,11 +111,15 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
 
   const headerTitle = isEstandar
     ? 'Funciones disponibles en Premium'
-    : `${features.length} herramientas que tu competencia ya usa`;
+    : isEnLinea
+      ? 'Para cuando tu negocio crezca'
+      : `${features.length} herramientas que tu competencia ya usa`;
 
   const headerDesc = isEstandar
     ? 'Tu plan Estándar incluye pedidos para llevar. Con Premium desbloqueas entregas a domicilio, comer en local y todo lo siguiente.'
-    : `Están incluidas en Premium (${planPriceLabel(pricing, 'PREMIUM')}). Toca cualquiera para ver cómo impacta tu negocio.`;
+    : isEnLinea
+      ? `Tu plan En línea ya recibe pedidos para llevar y a domicilio. Con Premium (${planPriceLabel(pricing, 'PREMIUM')}) sumas esto:`
+      : `Están incluidas en Premium (${planPriceLabel(pricing, 'PREMIUM')}). Toca cualquiera para ver cómo impacta tu negocio.`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
