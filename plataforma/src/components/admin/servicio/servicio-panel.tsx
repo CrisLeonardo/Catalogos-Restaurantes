@@ -582,6 +582,26 @@ export default function ServicioPanel({
     });
   }, [sel]);
 
+  /** «−» en la tarjeta del plato: quita UNA unidad de lo apuntado sin enviar.
+      Si el plato está en varias líneas (con opciones distintas), sale de la
+      última que se apuntó, que es la que el mesero acaba de tocar. Lo ya
+      enviado no se toca desde aquí: eso es anular, con motivo y PIN. */
+  const quitarUno = useCallback((p: Product) => {
+    const k = cartKey(sel);
+    if (!k) return;
+    setCarts((prev) => {
+      const actual = prev[k] ?? [];
+      const i = actual.map((l) => l.productId).lastIndexOf(p.id);
+      if (i < 0) return prev;
+      const siguiente = actual
+        .map((l, j) => (j === i ? { ...l, quantity: l.quantity - 1 } : l))
+        .filter((l) => l.quantity > 0);
+      const out = { ...prev };
+      if (siguiente.length) out[k] = siguiente; else delete out[k];
+      return out;
+    });
+  }, [sel]);
+
   const qtyOf = useCallback(
     (productId: string) => carrito.filter((l) => l.productId === productId).reduce((s, l) => s + l.quantity, 0),
     [carrito],
@@ -1062,6 +1082,7 @@ export default function ServicioPanel({
     products, categories, masPedidos, q, setQ, cat, setCat, qtyOf,
     onAdd: agregarProducto,
     onOpts: (p: Product, qty: number) => setHoja({ k: 'mods', product: p, qty }),
+    onRemove: quitarUno,
     onOpenItem: (nombre: string) => setHoja({ k: 'libre', nombre }),
     onVoz: () => setHoja({ k: 'voz' }),
     conTeclado, aprendiz, hayVoz, money, movil,

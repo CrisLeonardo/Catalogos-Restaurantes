@@ -2389,65 +2389,104 @@
 }
 .sv-fav-price { font-family: var(--ui-font-mono); font-size: 12px; font-weight: 500; color: var(--u-text-3); }
 
-/* ── Rejilla de platos (regla 1: nunca menos de dos columnas) ── */
+/* ── Rejilla de platos (regla 1: nunca menos de dos columnas) ──
+   Con la FOTO de cada plato arriba (carta.tsx). Si el restaurante no
+   tiene ni una foto, la tarjeta pierde el recuadro de la foto y queda
+   como siempre: nombre, precio y lo que pase. */
 .sv-dishes {
   display: grid; gap: 10px;
   grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
 }
 .sv-dish {
   position: relative; display: flex; flex-direction: column; justify-content: space-between;
-  gap: 10px; min-height: 96px; padding: 12px; border-radius: var(--radius-lg);
+  gap: 8px; min-height: 96px; padding: 12px; border-radius: var(--radius-lg);
   cursor: pointer; text-align: left; font: inherit; color: var(--u-text);
   background: var(--adm-card); border: 1px solid var(--u-hair);
   transition: border-color 120ms var(--ease-out), transform 90ms var(--ease-out);
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
 }
-.sv-dish:hover { border-color: var(--u-text-4); }
-.sv-dish:active { transform: scale(0.985); }
-/* Ya está en la comanda: la tarjeta se tiñe y lleva la cuenta. */
+@media (hover: hover) { .sv-dish:hover { border-color: var(--u-text-4); } }
+.sv-dish:active { transform: scale(0.97); }
+.sv-dish:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
+/* Ya está en la comanda: borde de acento y la cuenta en la esquina. */
 .sv-dish[data-has="1"] {
-  background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
+  background: color-mix(in srgb, var(--brand-accent) 8%, var(--adm-card));
   border-color: var(--brand-accent);
+  box-shadow: 0 0 0 1px var(--brand-accent);
 }
 /* Agotado: se VE, pero no se puede pedir. Esconderlo no contesta la
-   pregunta que el mesero tiene delante del cliente. */
-/* Se apaga el CONTENIDO y no la tarjeta: con la tarjeta entera a 0.55
-   la propia etiqueta «Agotado» se quedaba sin contraste. */
+   pregunta que el mesero tiene delante del cliente. Se apaga el
+   CONTENIDO y no la tarjeta: con la tarjeta entera a 0.55 la propia
+   etiqueta «Agotado» se quedaba sin contraste. */
 .sv-dish[data-out="1"] { cursor: default; background: var(--surface-1); }
 .sv-dish[data-out="1"] .sv-dish-name,
 .sv-dish[data-out="1"] .sv-dish-price { opacity: 0.55; }
-.sv-dish[data-out="1"]:hover { border-color: var(--u-hair); }
+.sv-dish[data-out="1"] .sv-dish-ph > img,
+.sv-dish[data-out="1"] .sv-dish-ini { filter: grayscale(1); opacity: 0.45; }
+@media (hover: hover) { .sv-dish[data-out="1"]:hover { border-color: var(--u-hair); } }
+
+/* La foto: cuadrada, a sangre arriba de la tarjeta. */
+/* Con fotos, tarjetas más angostas: una foto se reconoce a 125 px y así
+   caben cinco por renglón en una tablet y cuatro en la carta de la PC. */
+.sv-dishes:has(.sv-dish-ph) { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); }
+.sv-dish:has(.sv-dish-ph) { padding: 0; gap: 0; justify-content: flex-start; overflow: hidden; }
+.sv-dish-ph {
+  position: relative; display: block; width: 100%; aspect-ratio: 1 / 1; max-width: 100%;
+  background: var(--surface-2); overflow: hidden;
+}
+.sv-dish-ini {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-size: 24px; font-weight: 700; letter-spacing: 0.02em;
+  background: color-mix(in oklab, var(--tinte) 24%, var(--adm-card));
+  color: color-mix(in oklab, var(--tinte) 55%, var(--u-text));
+}
+.sv-dish:has(.sv-dish-ph) .sv-dish-name { padding: 8px 10px 0; }
+.sv-dish:has(.sv-dish-ph) .sv-dish-foot { padding: 4px 10px 10px; margin-top: auto; }
 .sv-dish-name {
-  display: block; font-size: 14px; font-weight: 600; line-height: 1.25;
-  letter-spacing: -0.01em; padding-right: 30px;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  font-size: 14px; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em;
 }
 .sv-dish-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .sv-dish-price { font-family: var(--ui-font-mono); font-size: 13px; font-weight: 600; color: var(--u-text-2); }
-/* «Opciones» vive DENTRO de una tarjeta cuyo toque agrega un plato: si
-   es chico, el dedo agrega platos por error. 44 px, siempre. */
-.sv-dish-opts {
-  min-height: var(--m-tap); min-width: var(--m-tap); padding: 0 13px;
-  display: grid; place-items: center; border: none; cursor: pointer;
-  font: inherit; font-size: 12px; font-weight: 600; color: var(--u-text-2);
-  border-radius: var(--radius-md); background: var(--surface-2);
-  transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
-}
-.sv-dish-opts:hover {
-  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
-  color: var(--brand-accent-ink);
-}
+
+/* La cantidad en la comanda, en la esquina de la foto. */
 .sv-dish-q {
-  position: absolute; top: 8px; right: 8px; min-width: 26px; height: 26px; padding: 0 7px;
+  position: absolute; top: 8px; right: 8px; z-index: 2;
+  min-width: 28px; height: 28px; padding: 0 8px;
   border-radius: var(--radius-full); background: var(--adm-accent-fill, var(--brand-accent)); color: var(--brand-on-accent);
   font-family: var(--ui-font-mono); font-size: 13px; font-weight: 600;
   display: grid; place-items: center;
+  box-shadow: 0 0 0 2px var(--adm-card);
 }
-/* Vive en el pie, en el sitio de «Opciones» (ver carta.tsx): arriba, en
-   la esquina, se montaba sobre el nombre del plato. */
-.sv-dish-out {
-  padding: 4px 9px; border-radius: 7px;
+/* Sin foto, el número no puede taparle el nombre al plato. */
+.sv-dish:not(:has(.sv-dish-ph)) .sv-dish-name { padding-right: 34px; }
+
+/* «−» y «⋯»: pequeños de ver y de 44 px de tocar (un toque fuera de
+   ellos agrega un plato, así que errar el blanco cuesta caro). */
+.sv-dish-tools { display: flex; gap: 6px; flex-shrink: 0; }
+.sv-dish-ph > .sv-dish-tools { position: absolute; z-index: 2; right: 8px; bottom: 8px; }
+.sv-dish-tool {
+  position: relative; width: 32px; height: 32px; border-radius: var(--radius-full);
+  display: grid; place-items: center; padding: 0; cursor: pointer;
+  border: 1px solid var(--u-hair-2); background: var(--adm-card); color: var(--u-text);
+  box-shadow: 0 2px 6px color-mix(in srgb, #000 18%, transparent);
+}
+.sv-dish-tool::after { content: ""; position: absolute; inset: -6px; }
+@media (hover: hover) { .sv-dish-tool:hover { background: var(--surface-2); } }
+
+/* «Quedan 3» y «Agotado»: sobre la foto, arriba a la izquierda (abajo van
+   «−» y «⋯», y en 110 px no caben las dos cosas en un renglón); sin foto,
+   debajo del nombre. */
+.sv-dish-left, .sv-dish-out {
+  padding: 3px 8px; border-radius: 7px;
   font-size: 11px; font-weight: 700; white-space: nowrap;
-  background: var(--c-warn-bg); color: var(--c-warn);
 }
+.sv-dish-left { background: var(--c-warn-bg); color: var(--c-warn); }
+.sv-dish-out { background: var(--u-text); color: var(--adm-card); }
+.sv-dish-ph > .sv-dish-left,
+.sv-dish-ph > .sv-dish-out { position: absolute; left: 8px; top: 8px; z-index: 1; }
+.sv-dish:not(:has(.sv-dish-ph)) .sv-dish-out,
+.sv-dish:not(:has(.sv-dish-ph)) .sv-dish-left { display: inline-block; }
 /* La rejilla lleva el mismo margen lateral que el buscador y las
    categorías de encima: con 18 px contra 12 en el teléfono, las tarjetas
    no caían en la misma línea que la píldora «Todos». */
@@ -2994,20 +3033,37 @@
   /* Una cosa a la vez: ni riel ni comanda al lado. */
   .sv-body { flex-direction: column; }
   .sv-dish { min-height: 118px; padding: 14px; border-radius: var(--radius-xl); border-width: 1.5px; }
-  .sv-dish-name { font-size: 15px; padding-right: 32px; }
+  .sv-dish-name { font-size: 15px; }
   .sv-dish-price { font-size: 14px; }
   /* Tantas columnas como quepan, con tarjetas de 150 px o más. Con DOS
      fijas, una tablet de 780 px de módulo enseñaba cuatro platos enormes
      mientras el salón, al lado, ya iba a cuatro columnas. */
   .sv-dishes { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .sv-dish:has(.sv-dish-ph) { min-height: 0; }
   .sv-carta-head { padding: 12px 12px 8px; }
   .sv-carta-bars { padding: 0 12px 10px; }
   .sv-carta-list { padding: 2px 12px 16px; }
   .sv-ticket-body { padding: 14px 12px 16px; }
   .sv-foot-total { font-size: 28px; }}
-/* Regla 1 del handoff: en el teléfono, dos columnas y nunca una. */
+/* Regla 1 del handoff: en el teléfono, dos columnas y nunca una. Con
+   fotos, TRES en el teléfono (como Square o Toast): la foto se reconoce
+   aunque mida 110 px, y caben nueve platos en vez de seis. */
 @container sv (max-width: 640px) {
-  .sv-dishes { grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+  .sv-dishes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* Tantas como quepan desde 104 px: tres en el teléfono y cuatro en la
+     carta de la PC, que también mide menos de 640. */
+  .sv-dishes:has(.sv-dish-ph) { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+  .sv-dish:has(.sv-dish-ph) { border-radius: var(--radius-lg); border-width: 1px; }
+  .sv-dish:has(.sv-dish-ph) .sv-dish-name { font-size: 13px; padding: 6px 8px 0; }
+  .sv-dish:has(.sv-dish-ph) .sv-dish-foot { padding: 2px 8px 8px; }
+  .sv-dish:has(.sv-dish-ph) .sv-dish-price { font-size: 12px; }
+  .sv-dish-ini { font-size: 20px; }
+  .sv-dish-q { top: 6px; right: 6px; min-width: 26px; height: 26px; font-size: 12px; }
+  .sv-dish-ph > .sv-dish-left, .sv-dish-ph > .sv-dish-out { left: 6px; top: 6px; padding: 2px 6px; }
+  .sv-dish-ph > .sv-dish-tools { right: 6px; bottom: 6px; }}
+/* Un teléfono muy angosto (o con letra grande) vuelve a dos. */
+@container sv (max-width: 330px) {
+  .sv-dishes:has(.sv-dish-ph) { grid-template-columns: repeat(2, minmax(0, 1fr)); }}
 
 /* ── LA BARRA DE DESTINOS DEL TELÉFONO ─────────────────────────
    El resto del panel esquiva esa barra con el relleno inferior de
