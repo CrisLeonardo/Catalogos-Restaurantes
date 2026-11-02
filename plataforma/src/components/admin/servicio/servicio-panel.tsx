@@ -170,7 +170,19 @@ export default function ServicioPanel({
   /* ── Qué está elegido ─────────────────────────────────────── */
   const [sel, setSel] = useState<Sel>({ kind: 'none' });
   const [pantalla, setPantalla] = useState<Pantalla>('sala');
-  const [filtro, setFiltro] = useState<FiltroSalon>('Todas');
+  const [filtro, setFiltroEstado] = useState<FiltroSalon>('Todas');
+  /* El filtro se recuerda en el aparato: quien trabaja con «Mis mesas» lo
+     quiere puesto cada vez que abre la tablet, como la sección en Toast. */
+  useEffect(() => {
+    try {
+      const f = localStorage.getItem('leogin:servicio-filtro');
+      if (f && (FILTROS as readonly string[]).includes(f)) setFiltroEstado(f as FiltroSalon);
+    } catch { /* sin almacenamiento */ }
+  }, []);
+  const setFiltro = useCallback((f: FiltroSalon) => {
+    setFiltroEstado(f);
+    try { localStorage.setItem('leogin:servicio-filtro', f); } catch { /* sin almacenamiento */ }
+  }, []);
   /* El plano NO es una vista del riel: en 264 px serían mesas de
      dieciocho píxeles. Se abre encima de todo, se mira, se toca una mesa
      y se cierra habiéndola elegido — que es para lo que sirve un plano:
@@ -445,9 +457,11 @@ export default function ServicioPanel({
     qrPendiente: qrPendientePorMesa, floorPlan, now,
   }), [tableCount, occupancy, calls, seatings, sinEnviarPorMesa, totalSinEnviarPorMesa, qrPendientePorMesa, floorPlan, now]);
 
+  const misMesas = useMemo(() => mesas.filter((m) => m.meseroId === waiterId).length, [mesas, waiterId]);
+
   const mesasVisibles = useMemo(
-    () => porUrgencia(mesas.filter((m) => pasaFiltro(m, filtro))),
-    [mesas, filtro],
+    () => porUrgencia(mesas.filter((m) => pasaFiltro(m, filtro, waiterId))),
+    [mesas, filtro, waiterId],
   );
 
   const mesaSel = sel.kind === 'mesa' ? mesas.find((m) => m.n === sel.n) ?? null : null;
@@ -1238,7 +1252,12 @@ export default function ServicioPanel({
 
               <div className="sv-hs sv-hs-fade">
                 {FILTROS.map((f) => (
-                  <Pill key={f} on={filtro === f} onClick={() => setFiltro(f)}>{f}</Pill>
+                  <Pill key={f} on={filtro === f} onClick={() => setFiltro(f)}>
+                    {f === 'Mías' ? 'Mis mesas' : f}
+                    {f === 'Mías' && misMesas > 0 && (
+                      <span className="t-mono" style={{ marginLeft: 6, opacity: 0.7 }}>{misMesas}</span>
+                    )}
+                  </Pill>
                 ))}
               </div>
 
@@ -1302,7 +1321,7 @@ export default function ServicioPanel({
                   <SalonRiel mesas={mesasVisibles} sel={sel.kind === 'mesa' ? sel.n : null} onPick={elegir} money={redondear} estrecho={estrecho} />
                 )}
                 {mesasVisibles.length === 0 && (
-                  <div className="sv-vacio">No hay mesas en «{filtro}».</div>
+                  <div className="sv-vacio">{filtro === 'Mías' ? 'Todavía no atiendes ninguna mesa. Abre una desde «Todas» o «Libres».' : `No hay mesas en «${filtro}».`}</div>
                 )}
               </div>
             )}

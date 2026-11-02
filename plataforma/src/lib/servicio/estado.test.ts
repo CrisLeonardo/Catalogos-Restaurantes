@@ -180,8 +180,8 @@ describe('filtros', () => {
   const mesas = mesasDeServicio(entrada({
     tableCount: 4,
     occupancy: {
-      1: ocupada(),
-      2: ocupada({ status: 'SERVED' }),
+      1: ocupada({ waiterId: 'ana' }),
+      2: ocupada({ status: 'SERVED', waiterId: 'luis' }),
       3: ocupada({ status: 'NEW', waiterName: null }),
     },
     qrPendiente: { 3: 2 },
@@ -193,6 +193,11 @@ describe('filtros', () => {
 
   it('«Por cobrar» deja las que ya comieron', () => {
     expect(mesas.filter((m) => pasaFiltro(m, 'Por cobrar')).map((m) => m.n)).toEqual([2]);
+  });
+
+  it('«Mis mesas» deja solo las de quien mira, y nada si no se sabe quién es', () => {
+    expect(mesas.filter((m) => pasaFiltro(m, 'Mías', 'ana')).map((m) => m.n)).toEqual([1]);
+    expect(mesas.filter((m) => pasaFiltro(m, 'Mías', null))).toEqual([]);
   });
 
   it('«Falta servir» incluye lo que llegó por QR y nadie ha aceptado', () => {
