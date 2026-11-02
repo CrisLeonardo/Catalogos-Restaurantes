@@ -68,7 +68,7 @@ import {
 } from '@/lib/actions/orders';
 import {
   cobrarParteDeMesa, cobrarPedidoParaLlevar, cobradoDeMesa, deshacerServirLineas,
-  marcarAgotado, ponerNombreDeMesa, servirLineas,
+  marcarAgotado, ponerAlergiaDeMesa, ponerNombreDeMesa, servirLineas,
 } from '@/lib/actions/servicio';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { otraRonda, ultimaRonda } from '@/lib/servicio/ronda';
@@ -676,6 +676,7 @@ export default function ServicioPanel({
   const enviar = useCallback(() => {
     if (sel.kind === 'none' || carrito.length === 0) return;
     const mesa = sel.kind === 'mesa' ? sel.n : null;
+    const alergiaMesa = mesa ? mesas.find((m) => m.n === mesa)?.alergia ?? null : null;
     const k = cartKey(sel);
     const aEnviar = [...carrito];
     /* UUID de verdad, no una cadena con pinta de id: `orders.client_id` es
@@ -712,6 +713,10 @@ export default function ServicioPanel({
         phone: '',
         type: (mesa ? 'DINE_IN' : 'PICKUP') as 'PICKUP' | 'DINE_IN',
         ...(mesa ? { tableNumber: mesa } : {}),
+        /* La alergia de la mesa viaja en la nota del PEDIDO: es la que el
+           agente imprime («NOTA: …») y la que enseña la pantalla de cocina.
+           En cada envío, no solo en el primero. */
+        ...(mesa && alergiaMesa ? { notes: `ALERGIA: ${alergiaMesa}` } : {}),
       },
       tipAccepted: aplicaPropina && subtotal > 0,
     };
@@ -802,7 +807,7 @@ export default function ServicioPanel({
         contarCola();
       }
     })();
-  }, [sel, carrito, nombreLlevar, waiterId, restaurantId, tipEnabled, tipEnabledPickup, hubUrl, hubToken, movil, cargarMesa, contarCola]);
+  }, [sel, carrito, nombreLlevar, waiterId, restaurantId, tipEnabled, tipEnabledPickup, hubUrl, hubToken, movil, cargarMesa, contarCola, mesas]);
 
   /* ── Servir ───────────────────────────────────────────────── */
   const servir = useCallback((l: LineaServicio) => {
@@ -959,6 +964,16 @@ export default function ServicioPanel({
     startWork(async () => {
       const res = await ponerNombreDeMesa(restaurantId, n, nombre);
       if (res.error) { setAviso({ text: res.error, bad: true }); return; }
+    });
+  }, [sel, restaurantId]);
+
+  const anotarAlergia = useCallback((alergia: string) => {
+    if (sel.kind !== 'mesa') return;
+    const n = sel.n;
+    startWork(async () => {
+      const res = await ponerAlergiaDeMesa(restaurantId, n, alergia);
+      if (res.error) { setAviso({ text: res.error, bad: true }); return; }
+      setAviso({ text: alergia ? `Alergia anotada: saldrá en cada comanda de la mesa ${n}` : 'Alergia quitada' });
     });
   }, [sel, restaurantId]);
 
@@ -1177,6 +1192,7 @@ export default function ServicioPanel({
     ocupado: trabajando,
     onOtraRonda: sel.kind === 'mesa' ? repetirRonda : undefined,
     unidadesRonda,
+    alergia: sel.kind === 'mesa' ? mesaSel?.alergia ?? null : null,
   };
 
   /* La mesa se está leyendo y todavía no hay nada que enseñar. */
@@ -1578,6 +1594,7 @@ export default function ServicioPanel({
           busy={trabajando || envioPendiente}
           onClose={() => setHoja(null)}
           onNombre={nombrarMesa}
+          onAlergia={anotarAlergia}
           onMover={(n) => mover(n, false)}
           onJuntar={(n) => mover(n, true)}
           onLiberar={liberar}

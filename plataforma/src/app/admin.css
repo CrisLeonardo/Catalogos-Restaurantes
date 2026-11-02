@@ -2509,6 +2509,17 @@
 .sv-ticket-title { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
 .sv-ticket-sub { font-size: 12px; font-weight: 500; color: var(--u-text-3); margin-top: 2px; }
 .sv-ticket-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+/* Alergias de la mesa (mig. 151): arriba de la comanda y en rojo, porque
+   es lo único de la pantalla que puede mandar a alguien al hospital. */
+.sv-alergia {
+  display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;
+  border-radius: var(--radius-md); border: 1.5px solid var(--c-danger);
+  background: color-mix(in srgb, var(--c-danger) 10%, var(--adm-card)); color: var(--c-danger);
+  font-size: 14px; line-height: 1.35;
+}
+.sv-alergia > svg { flex-shrink: 0; margin-top: 1px; }
+.sv-alergia b { font-weight: 700; }
+.sv-alergia small { display: block; font-size: 12px; color: var(--u-text-3); margin-top: 2px; }
 
 /* El aviso del pedido por QR. Es lo primero de la comanda porque es lo
    único que puede estar esperando una respuesta. */

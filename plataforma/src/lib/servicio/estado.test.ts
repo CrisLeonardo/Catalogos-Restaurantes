@@ -167,6 +167,13 @@ describe('nombre, alias y zona', () => {
     expect(m.etiqueta).toBe('Terraza 2 · cumpleaños de Sofi');
   });
 
+  it('la alergia sale del turno de la mesa, sin espacios de más', () => {
+    const conAlergia = mesasDeServicio(entrada({ seatings: { 2: sentada({ allergies: '  maní  ' }) } })).find((x) => x.n === 2)!;
+    expect(conAlergia.alergia).toBe('maní');
+    const sin = mesasDeServicio(entrada({ seatings: { 2: sentada({ allergies: '   ' }) } })).find((x) => x.n === 2)!;
+    expect(sin.alergia).toBeNull();
+  });
+
   it('sin alias ni nombre, la etiqueta es «Mesa N»', () => {
     expect(etiquetaDeMesa(4, '', null)).toBe('Mesa 4');
   });

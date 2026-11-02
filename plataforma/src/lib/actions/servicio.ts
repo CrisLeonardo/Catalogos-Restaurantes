@@ -649,3 +649,64 @@ export async function marcarAgotado(
   revalidarSalon();
   return {};
 }
+
+/* ────────────────────────────────────────────────────────────
+   6 · ALERGIAS DE LA MESA (migración 151)
+   ------------------------------------------------------------
+   Se anotan una vez y salen en cada comanda de la mesa como
+   «ALERGIA: …» (la nota del pedido, que ya imprime el agente y enseña
+   la pantalla de cocina). Mismo camino que el nombre: viven en el turno
+   y, si la mesa no tenía, se abre uno.
+   ──────────────────────────────────────────────────────────── */
+
+const MAX_ALERGIA = 120;
+
+export async function ponerAlergiaDeMesa(
+  restaurantId: string,
+  tableNumber: number,
+  alergia: string,
+): Promise<{ error?: string; ok?: boolean; needsMigration?: boolean }> {
+  if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
+
+  const acceso = await assertTableAccess(restaurantId, ['mesero', 'mesas']);
+  if ('error' in acceso) return acceso;
+  if (!(await hayTurnosDeMesa())) {
+    return { error: 'Falta la migración 128 para anotar alergias en la mesa.', needsMigration: true };
+  }
+
+  const limpio = (alergia ?? '').replace(/\s+/g, ' ').trim().slice(0, MAX_ALERGIA);
+  const db = createServiceClient();
+
+  const { data, error } = await db
+    .from('table_sessions')
+    .update({ allergies: limpio || null })
+    .eq('restaurant_id', restaurantId)
+    .eq('table_number', tableNumber)
+    .is('closed_at', null)
+    .select('id');
+
+  if (error) {
+    if (faltaLaColumna(error)) {
+      return { error: 'Falta la migración 151 para anotar alergias en la mesa.', needsMigration: true };
+    }
+    return { error: error.message };
+  }
+
+  if ((data ?? []).length === 0) {
+    if (!limpio) return { ok: true };
+    const abierto = await db.from('table_sessions').insert({
+      restaurant_id: restaurantId,
+      table_number: tableNumber,
+      allergies: limpio,
+      seated_by: acceso.actor.userId,
+      source: 'order',
+    });
+    if (abierto.error) {
+      if (abierto.error.code === '23505') return { error: 'Alguien acaba de tocar esta mesa. Vuelve a intentar.' };
+      return { error: abierto.error.message };
+    }
+  }
+
+  revalidarSalon();
+  return { ok: true };
+}

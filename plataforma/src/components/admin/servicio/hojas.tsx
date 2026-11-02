@@ -34,6 +34,8 @@ export interface HojaMesaProps {
   busy: boolean;
   onClose: () => void;
   onNombre: (nombre: string) => void;
+  /** Guarda las alergias de la mesa (vacío = sin alergias). */
+  onAlergia: (alergia: string) => void;
   onMover: (n: number) => void;
   onJuntar: (n: number) => void;
   onLiberar: () => void;
@@ -45,9 +47,10 @@ export interface HojaMesaProps {
 
 export function HojaMesa({
   mesa, libres, ocupadas, money, busy, onClose,
-  onNombre, onMover, onJuntar, onLiberar, onArticuloLibre, onImprimirCuenta,
+  onNombre, onAlergia, onMover, onJuntar, onLiberar, onArticuloLibre, onImprimirCuenta,
 }: HojaMesaProps) {
   const [nombre, setNombre] = useState(mesa.nombre);
+  const [alergia, setAlergia] = useState(mesa.alergia ?? '');
   const [accion, setAccion] = useState<'mover' | 'juntar' | 'liberar' | null>(null);
 
   /* La confirmación en dos toques CADUCA. El prototipo la dejaba armada
@@ -76,6 +79,19 @@ export function HojaMesa({
             maxLength={40}
           />
           <div className="sv-foot-note">Lo ve todo el local, no solo esta tablet.</div>
+        </Campo>
+
+        <Campo label="Alergias de la mesa">
+          <input
+            className="sv-field"
+            value={alergia}
+            onChange={(e) => setAlergia(e.target.value)}
+            onBlur={() => { if (alergia.trim() !== (mesa.alergia ?? '')) onAlergia(alergia.trim()); }}
+            placeholder="Ej. maní, mariscos"
+            maxLength={120}
+            aria-describedby="alergia-nota"
+          />
+          <div className="sv-foot-note" id="alergia-nota">Sale en cada comanda de esta mesa como «ALERGIA: …».</div>
         </Campo>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

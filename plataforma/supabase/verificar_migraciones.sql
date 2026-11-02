@@ -145,7 +145,11 @@ huellas(n, que, ok, cuando) as (values
               where conname = 'restaurants_plan_actual_check'
                 and pg_get_constraintdef(oid) like '%EN_LINEA%')
      and exists (select 1 from platform_settings where key = 'plan_price_EN_LINEA'),
-     'ANTES de desplegar')
+     'ANTES de desplegar'),
+  ('151', 'alergias de la mesa (table_sessions.allergies)',
+     exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'table_sessions' and column_name = 'allergies'),
+     'antes o después de desplegar')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

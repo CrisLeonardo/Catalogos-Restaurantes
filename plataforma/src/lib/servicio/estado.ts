@@ -87,6 +87,8 @@ export interface MesaServicio {
   mesero: string | null;
   /** Su id, para «Mis mesas». */
   meseroId: string | null;
+  /** Alergias anotadas en la mesa («maní, mariscos»), o null. */
+  alergia: string | null;
 }
 
 /** Qué hace falta para resolver una mesa. */
@@ -209,6 +211,7 @@ export function mesasDeServicio(e: EntradaSalon): MesaServicio[] {
       fuera,
       mesero: occ?.waiterName ?? seat?.waiterName ?? null,
       meseroId: occ?.waiterId ?? seat?.waiterId ?? null,
+      alergia: seat?.allergies?.trim() || null,
     };
   };
 
