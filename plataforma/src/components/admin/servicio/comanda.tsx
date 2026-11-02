@@ -46,11 +46,15 @@ export interface ComandaProps {
   aprendiz: boolean;
   /** Mientras se envía o se sirve, para no dejar tocar dos veces. */
   ocupado: boolean;
+  /** «Otra ronda»: copia la última ronda enviada al carrito. Sin rondas, no llega. */
+  onOtraRonda?: () => void;
+  /** Cuántas unidades tiene esa última ronda, para el botón. */
+  unidadesRonda?: number;
 }
 
 export default function Comanda({
   resumen, money, pendientes, onAceptarQr, onRechazarQr, atencion, onAtender,
-  onStep, onEditar, onServir, onLinea, aprendiz, ocupado,
+  onStep, onEditar, onServir, onLinea, aprendiz, ocupado, onOtraRonda, unidadesRonda = 0,
 }: ComandaProps) {
   const { nuevas, cocina, servidas, nNuevas, nCocina, nServidas } = resumen;
   const vacia = nuevas.length + cocina.length + servidas.length === 0 && !pendientes;
@@ -223,6 +227,22 @@ export default function Comanda({
         <div className="sv-vacio" style={{ padding: '26px 0' }}>
           Mesa abierta y sin nada.<br />Toca un plato y aparece aquí.
         </div>
+      )}
+
+      {/* «Otra igual»: la mitad de los pedidos de una mesa de amigos. Va al
+          carrito para revisarla, nunca directo a cocina. */}
+      {onOtraRonda && unidadesRonda > 0 && (
+        <button
+          type="button"
+          className="sv-cta"
+          data-tone="quiet"
+          style={{ height: 46, fontSize: 14 }}
+          onClick={onOtraRonda}
+          disabled={ocupado}
+        >
+          <Icon name="undo" size={16} />
+          Otra ronda · repetir la última ({unidadesRonda} {unidadesRonda === 1 ? 'plato' : 'platos'})
+        </button>
       )}
     </div>
   );

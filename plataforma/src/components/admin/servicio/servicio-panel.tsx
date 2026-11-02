@@ -71,9 +71,10 @@ import {
   marcarAgotado, ponerNombreDeMesa, servirLineas,
 } from '@/lib/actions/servicio';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
+import { otraRonda, ultimaRonda } from '@/lib/servicio/ronda';
 import { getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order-queue';
 import { billBreakdown, type BillBreakdown } from '@/lib/bill-split';
-import type { OrderWithItems, TableOccupancy, TableCall } from '@/lib/db/orders';
+import { remainingQuantity, type OrderWithItems, type TableOccupancy, type TableCall } from '@/lib/db/orders';
 import type { TableSeating } from '@/lib/db/table-sessions';
 import type { FloorPlan } from '@/lib/theme/defaults';
 import type { Category, OrderStatus, Product } from '@/types';
@@ -519,6 +520,12 @@ export default function ServicioPanel({
   );
   const resumen = useMemo(() => resumirComanda(lineas), [lineas]);
 
+  /* ── Otra ronda ───────────────────────────────────────────── */
+  const unidadesRonda = useMemo(() => {
+    const r = sel.kind === 'mesa' ? ultimaRonda(ordersVivos) : null;
+    return r ? r.items.reduce((s, it) => s + remainingQuantity(it, r.voids), 0) : 0;
+  }, [sel.kind, ordersVivos]);
+
   const desglose: BillBreakdown | null = useMemo(
     () => (ordersVivos.length ? billBreakdown(ordersVivos) : null),
     [ordersVivos],
@@ -642,6 +649,23 @@ export default function ServicioPanel({
     }
     setAviso({ text: agotado ? `${p.name} · agotado en todo el local` : `${p.name} · disponible otra vez` });
   }, [restaurantId]);
+
+  /** Copia la última ronda al carrito contra la carta de hoy y dice qué no se pudo. */
+  const repetirRonda = useCallback(() => {
+    const { lineas: copia, faltan } = otraRonda(ordersVivos, products);
+    if (copia.length === 0) {
+      setAviso({ text: faltan.length ? `No se pudo repetir: ${faltan.join(', ')} ya no está disponible.` : 'No hay ronda que repetir.', bad: true });
+      return;
+    }
+    for (const l of copia) empujar(l, false);
+    const n = copia.reduce((s, l) => s + l.quantity, 0);
+    setAviso({
+      text: faltan.length
+        ? `Otra ronda: ${n} al carrito. Sin ${faltan.join(', ')} (agotado o cambió en la carta).`
+        : `Otra ronda: ${n} ${n === 1 ? 'plato' : 'platos'} al carrito. Revisa y envía.`,
+      bad: faltan.length > 0,
+    });
+  }, [ordersVivos, products, empujar]);
 
   const qtyOf = useCallback(
     (productId: string) => carrito.filter((l) => l.productId === productId).reduce((s, l) => s + l.quantity, 0),
@@ -1151,6 +1175,8 @@ export default function ServicioPanel({
     onLinea: (l: LineaServicio) => setHoja({ k: 'linea', linea: l }),
     aprendiz,
     ocupado: trabajando,
+    onOtraRonda: sel.kind === 'mesa' ? repetirRonda : undefined,
+    unidadesRonda,
   };
 
   /* La mesa se está leyendo y todavía no hay nada que enseñar. */
