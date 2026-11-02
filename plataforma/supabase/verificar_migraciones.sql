@@ -145,6 +145,13 @@ huellas(n, que, ok, cuando) as (values
               where conname = 'restaurants_plan_actual_check'
                 and pg_get_constraintdef(oid) like '%EN_LINEA%')
      and exists (select 1 from platform_settings where key = 'plan_price_EN_LINEA'),
+     'ANTES de desplegar'),
+  ('151', 'alergias de la mesa (table_sessions.allergies)',
+     exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'table_sessions' and column_name = 'allergies'),
+     'antes o después de desplegar'),
+  ('152', 'pasar un plato a otra mesa (move_order_item)',
+     to_regprocedure('public.move_order_item(uuid,integer,integer)') is not null,
      'ANTES de desplegar')
 )
 select n as migracion,

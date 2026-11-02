@@ -46,17 +46,29 @@ export interface ComandaProps {
   aprendiz: boolean;
   /** Mientras se envía o se sirve, para no dejar tocar dos veces. */
   ocupado: boolean;
+  /** «Otra ronda»: copia la última ronda enviada al carrito. Sin rondas, no llega. */
+  onOtraRonda?: () => void;
+  /** Cuántas unidades tiene esa última ronda, para el botón. */
+  unidadesRonda?: number;
+  /** Alergias anotadas en la mesa: van arriba de todo, en rojo. */
+  alergia?: string | null;
 }
 
 export default function Comanda({
   resumen, money, pendientes, onAceptarQr, onRechazarQr, atencion, onAtender,
-  onStep, onEditar, onServir, onLinea, aprendiz, ocupado,
+  onStep, onEditar, onServir, onLinea, aprendiz, ocupado, onOtraRonda, unidadesRonda = 0, alergia = null,
 }: ComandaProps) {
   const { nuevas, cocina, servidas, nNuevas, nCocina, nServidas } = resumen;
   const vacia = nuevas.length + cocina.length + servidas.length === 0 && !pendientes;
 
   return (
     <div className="sv-ticket-body">
+      {alergia && (
+        <div className="sv-alergia" role="note">
+          <Icon name="alertCircle" size={18} />
+          <span><b>Alergia:</b> {alergia}<small>Sale en cada comanda de esta mesa.</small></span>
+        </div>
+      )}
       {/* Alguien levantó la mano. Va arriba del todo y con su acción al
           lado: el aviso sin salida es lo que hace que la gente lo ignore. */}
       {atencion && (
@@ -223,6 +235,22 @@ export default function Comanda({
         <div className="sv-vacio" style={{ padding: '26px 0' }}>
           Mesa abierta y sin nada.<br />Toca un plato y aparece aquí.
         </div>
+      )}
+
+      {/* «Otra igual»: la mitad de los pedidos de una mesa de amigos. Va al
+          carrito para revisarla, nunca directo a cocina. */}
+      {onOtraRonda && unidadesRonda > 0 && (
+        <button
+          type="button"
+          className="sv-cta"
+          data-tone="quiet"
+          style={{ height: 46, fontSize: 14 }}
+          onClick={onOtraRonda}
+          disabled={ocupado}
+        >
+          <Icon name="undo" size={16} />
+          Otra ronda · repetir la última ({unidadesRonda} {unidadesRonda === 1 ? 'plato' : 'platos'})
+        </button>
       )}
     </div>
   );

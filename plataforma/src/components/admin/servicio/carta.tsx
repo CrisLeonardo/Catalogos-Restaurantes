@@ -54,6 +54,8 @@ export interface CartaProps {
   onOpts: (p: Product, qty: number) => void;
   /** «−» en la tarjeta: quita una unidad de lo apuntado sin enviar. */
   onRemove: (p: Product) => void;
+  /** «Ya hay» en un plato agotado. Solo llega con permiso de carta. */
+  onReponer?: (p: Product) => void;
   /** Cobrar algo que no está en la carta (M-09), con el nombre ya escrito. */
   onOpenItem: (nombre: string) => void;
   onVoz: () => void;
@@ -69,7 +71,7 @@ export interface CartaProps {
 
 export default function Carta({
   products, categories, masPedidos, q, setQ, cat, setCat,
-  qtyOf, onAdd, onOpts, onRemove, onOpenItem, onVoz, conTeclado, aprendiz, hayVoz, money, movil,
+  qtyOf, onAdd, onOpts, onRemove, onReponer, onOpenItem, onVoz, conTeclado, aprendiz, hayVoz, money, movil,
 }: CartaProps) {
   const input = useRef<HTMLInputElement | null>(null);
 
@@ -244,7 +246,19 @@ export default function Carta({
                  «⋯» abre opciones y nota. Cada uno detiene el toque para que
                  no agregue un plato por error. Van sobre la foto o, sin
                  fotos, en el pie. */
-              const mandos = agotado ? null : (
+              const mandos = agotado ? (onReponer ? (
+                <span className="sv-dish-tools">
+                  <button
+                    type="button"
+                    className="sv-dish-tool"
+                    data-txt="1"
+                    onClick={(e) => { e.stopPropagation(); onReponer(p); }}
+                    aria-label={`${p.name} ya hay otra vez`}
+                  >
+                    Ya hay
+                  </button>
+                </span>
+              ) : null) : (
                 <span className="sv-dish-tools">
                   {enComanda > 0 && (
                     <button

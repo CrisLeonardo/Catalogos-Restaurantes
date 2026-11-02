@@ -51,7 +51,7 @@ export const ATENCION_LABEL: Record<'cuenta' | 'llamada', string> = {
 };
 
 /** Los filtros de la fila superior del salón. */
-export const FILTROS = ['Todas', 'Con pedido', 'Falta servir', 'Por cobrar', 'Libres'] as const;
+export const FILTROS = ['Todas', 'Mías', 'Con pedido', 'Falta servir', 'Por cobrar', 'Libres'] as const;
 export type FiltroSalon = (typeof FILTROS)[number];
 
 export interface MesaServicio {
@@ -85,6 +85,10 @@ export interface MesaServicio {
   fuera: boolean;
   /** Quién la está atendiendo. */
   mesero: string | null;
+  /** Su id, para «Mis mesas». */
+  meseroId: string | null;
+  /** Alergias anotadas en la mesa («maní, mariscos»), o null. */
+  alergia: string | null;
 }
 
 /** Qué hace falta para resolver una mesa. */
@@ -206,6 +210,8 @@ export function mesasDeServicio(e: EntradaSalon): MesaServicio[] {
       qrPendiente,
       fuera,
       mesero: occ?.waiterName ?? seat?.waiterName ?? null,
+      meseroId: occ?.waiterId ?? seat?.waiterId ?? null,
+      alergia: seat?.allergies?.trim() || null,
     };
   };
 
@@ -225,8 +231,12 @@ export function mesasDeServicio(e: EntradaSalon): MesaServicio[] {
 }
 
 /** ¿Esta mesa entra en el filtro elegido? */
-export function pasaFiltro(m: MesaServicio, filtro: FiltroSalon): boolean {
+export function pasaFiltro(m: MesaServicio, filtro: FiltroSalon, yo: string | null = null): boolean {
   switch (filtro) {
+    /* «Mis mesas», como la sección del mesero en Toast: las que tienen
+       pedido o turno a su nombre. Las libres no son de nadie y se buscan
+       en «Todas» o «Libres». */
+    case 'Mías': return yo != null && m.meseroId === yo;
     case 'Con pedido': return m.estado !== 'libre';
     case 'Falta servir': return m.estado === 'cocina' || m.qrPendiente > 0;
     case 'Por cobrar': return m.estado === 'listo';
