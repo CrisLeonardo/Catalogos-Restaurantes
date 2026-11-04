@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { diaDeNegocio } from '@/lib/caja/dia';
 import { corteDelRestaurante } from '@/lib/db/dia-negocio';
+import type { EstadoLectura } from '@/lib/db/lectura';
 
 /* ============================================================
    ANALÍTICA AVANZADA — Fase B (Admin Pro)
@@ -16,6 +17,10 @@ export type Velocity = { name: string; qty: number };
 export type CountSplit = { key: string; label: string; count: number };
 
 export interface Analytics {
+  /** ¿Se pudo leer todo? `error`: los ceros de abajo NO significan cero
+   *  pedidos. `parcial`: se llegó al tope de filas y hay más de lo contado
+   *  (auditoría 2026-11-03, X20/PA-T16). */
+  estado: EstadoLectura;
   from: string;
   to: string;
   totalOrders: number;     // incluye cancelados
@@ -43,8 +48,8 @@ const CHANNEL_LABEL: Record<string, string> = {
   PICKUP: 'Para llevar', DELIVERY: 'A domicilio', DINE_IN: 'En el local',
 };
 
-const EMPTY = (from: string, to: string): Analytics => ({
-  from, to, totalOrders: 0, validOrders: 0, cancelled: 0, cancelRate: 0,
+const EMPTY = (from: string, to: string, estado: EstadoLectura = 'ok'): Analytics => ({
+  estado, from, to, totalOrders: 0, validOrders: 0, cancelled: 0, cancelRate: 0,
   heat: [], heatMax: 0, peakLabel: null, busiestWeekday: null,
   topSellers: [], deadStock: [], byChannel: [], byPayment: [], byZone: [],
   avgPrepMin: null, avgDeliveryMin: null, prepSamples: 0, deliverySamples: 0,
@@ -85,15 +90,22 @@ export async function getAnalytics(
   const sinceUtc = new Date(`${from}T00:00:00Z`); sinceUtc.setUTCDate(sinceUtc.getUTCDate() - 1);
   const untilUtc = new Date(`${to}T00:00:00Z`); untilUtc.setUTCDate(untilUtc.getUTCDate() + 2);
 
-  const [{ data: orderData }, { data: productData }] = await Promise.all([
+  const TOPE_PEDIDOS = 20000, TOPE_PRODUCTOS = 2000;
+  const [{ data: orderData, error: errPedidos }, { data: productData, error: errProductos }] = await Promise.all([
     db.from('orders')
       .select('created_at, order_type, payment_method, delivery_zone, status, ready_at, delivered_at, items:order_items(name_snapshot, quantity)')
       .eq('restaurant_id', restaurantId)
       .gte('created_at', sinceUtc.toISOString())
       .lte('created_at', untilUtc.toISOString())
-      .limit(20000),
-    db.from('products').select('name').eq('restaurant_id', restaurantId).limit(2000),
+      .limit(TOPE_PEDIDOS),
+    db.from('products').select('name').eq('restaurant_id', restaurantId).limit(TOPE_PRODUCTOS),
   ]);
+  if (errPedidos || errProductos) {
+    console.error('[analytics]', errPedidos?.code ?? '', errPedidos?.message ?? '', errProductos?.code ?? '', errProductos?.message ?? '');
+    return EMPTY(from, to, 'error');
+  }
+  const estado: EstadoLectura =
+    (orderData?.length ?? 0) >= TOPE_PEDIDOS || (productData?.length ?? 0) >= TOPE_PRODUCTOS ? 'parcial' : 'ok';
 
   const rows = (orderData ?? []) as Row[];
 
@@ -184,7 +196,7 @@ export async function getAnalytics(
     [...m.entries()].map(([key, count]) => ({ key, label: labeler(key), count })).sort((a, b) => b.count - a.count);
 
   return {
-    from, to,
+    estado, from, to,
     totalOrders,
     validOrders: totalOrders - cancelled,
     cancelled,

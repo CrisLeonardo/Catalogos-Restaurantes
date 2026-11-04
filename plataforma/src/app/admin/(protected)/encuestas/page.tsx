@@ -3,6 +3,7 @@ import { resolveModuleContext } from '@/lib/modules-server';
 import { getRatings, getRatingsSummary } from '@/lib/db/encuestas';
 import EncuestasPanel from '@/components/admin/encuestas-panel';
 import { panelLink } from '@/lib/panel-links-server';
+import { peorEstado } from '@/lib/db/lectura';
 
 export const metadata = { title: 'Encuestas – Panel admin' };
 
@@ -17,7 +18,12 @@ export default async function EncuestasPage() {
 
   return (
     <div className="anim-fade-up">
-      <EncuestasPanel ratings={ratings} summary={summary} />
+      <EncuestasPanel
+        ratings={ratings.datos}
+        summary={summary.datos}
+        estado={peorEstado(ratings.estado, summary.estado)}
+        leidoEn={summary.leidoEn}
+      />
     </div>
   );
 }

@@ -202,7 +202,7 @@ export default async function AdminHomePage() {
           total: pendientes.reduce((s, i) => s + i.amount, 0),
           currency: billing.currency,
           vencido: pendientes.some((i) => isOverdue(i)),
-          enRevision: comprobante?.status === 'SUBMITTED',
+          enRevision: comprobante.datos?.status === 'SUBMITTED',
         };
       })()
     : null;

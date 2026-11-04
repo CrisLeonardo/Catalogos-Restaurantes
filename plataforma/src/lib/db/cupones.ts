@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/service';
+import { lecturaDe, type Lectura } from '@/lib/db/lectura';
 
 export type DiscountType = 'PERCENT' | 'FIXED';
 
@@ -18,14 +19,15 @@ export interface Coupon {
   created_at: string;
 }
 
-export async function getCoupons(restaurantId: string): Promise<Coupon[]> {
+/** Un error ya no se pinta «Aún no tienes cupones» (auditoría 2026-11-03, X20). */
+export async function getCoupons(restaurantId: string): Promise<Lectura<Coupon[]>> {
   const db = createServiceClient();
-  const { data } = await db
+  const { data, error } = await db
     .from('coupons')
     .select('*')
     .eq('restaurant_id', restaurantId)
     .order('created_at', { ascending: false });
-  return (data ?? []) as Coupon[];
+  return lecturaDe(error, data as Coupon[] | null, [], { contexto: 'getCoupons' });
 }
 
 export async function getCouponByCode(restaurantId: string, code: string): Promise<Coupon | null> {

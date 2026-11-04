@@ -17,6 +17,8 @@ import {
 import type { WaitlistEntry, WaitlistSummary } from '@/lib/db/waitlist';
 import { FIELD_LABEL } from '@/components/admin/field-label';
 import { EmptyState } from '@/components/ui/empty-state';
+import AvisoLectura from '@/components/admin/aviso-lectura';
+import type { EstadoLectura } from '@/lib/db/lectura';
 
 interface Props {
   restaurantId: string;
@@ -27,6 +29,10 @@ interface Props {
       (migración 128, M-04). Vacío = el local no usa mesas numeradas, o no
       queda ninguna: entonces «Sentar» funciona como siempre, sin mesa. */
   freeTables: number[];
+  /** Si la cola no se pudo leer, «Nadie está esperando» sería mentira: hay
+      gente en la puerta que el host dejaría de atender. */
+  estado: EstadoLectura;
+  leidoEn: string;
 }
 
 const labelStyle: React.CSSProperties = FIELD_LABEL;
@@ -47,7 +53,7 @@ function whatsappHref(phone: string, restaurantName: string): string {
   return `https://wa.me/${digits}?text=${msg}`;
 }
 
-export default function WaitlistPanel({ restaurantId, entries, recent, summary, freeTables }: Props) {
+export default function WaitlistPanel({ restaurantId, entries, recent, summary, freeTables, estado, leidoEn }: Props) {
   const [tab, setTab] = useState<'cola' | 'nueva'>('cola');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -102,15 +108,17 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* KPIs */}
-      <StatGroup>
-        <Stat label="Esperando" value={String(summary.waiting)} />
-        <Stat label="Avisados" value={String(summary.notified)} />
-        <Stat
-          label="Espera promedio hoy"
-          value={summary.avgWaitMinutesToday != null ? `${summary.avgWaitMinutesToday} min` : '—'}
-        />
-      </StatGroup>
+      {/* KPIs — con la consulta caída, «Esperando 0» sería mentira: no se pintan. */}
+      {estado !== 'error' && (
+        <StatGroup>
+          <Stat label="Esperando" value={String(summary.waiting)} />
+          <Stat label="Avisados" value={String(summary.notified)} />
+          <Stat
+            label="Espera promedio hoy"
+            value={summary.avgWaitMinutesToday != null ? `${summary.avgWaitMinutesToday} min` : '—'}
+          />
+        </StatGroup>
+      )}
 
       {error && (
         <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 13 }}>
@@ -159,6 +167,14 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
             </div>
           </form>
         </Card>
+      ) : estado === 'error' ? (
+        <AvisoLectura
+          estado="error"
+          que="la lista de espera"
+          noConcluir="No significa que no haya nadie esperando: revisa la puerta."
+          leidoEn={leidoEn}
+          sinDatos={entries.length === 0}
+        />
       ) : entries.length === 0 ? (
         <EmptyState
           icon="users"

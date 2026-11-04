@@ -6,6 +6,7 @@ import { getActiveWaitlist, getRecentWaitlist, getWaitlistSummary } from '@/lib/
 import { getFreeTableNumbers } from '@/lib/db/table-sessions';
 import WaitlistPanel from '@/components/admin/waitlist-panel';
 import { panelLink } from '@/lib/panel-links-server';
+import { peorEstado } from '@/lib/db/lectura';
 
 export const metadata = { title: 'Lista de espera – Panel admin' };
 
@@ -31,7 +32,15 @@ export default async function AdminListaEsperaPage() {
 
   return (
     <div className="anim-fade-up">
-      <WaitlistPanel restaurantId={mc.restaurantId} entries={entries} recent={recent} summary={summary} freeTables={freeTables} />
+      <WaitlistPanel
+        restaurantId={mc.restaurantId}
+        entries={entries.datos}
+        recent={recent.datos}
+        summary={summary.datos}
+        freeTables={freeTables}
+        estado={peorEstado(entries.estado, summary.estado)}
+        leidoEn={entries.leidoEn}
+      />
     </div>
   );
 }

@@ -37,8 +37,14 @@ export async function POST(req: Request) {
   if (!autorizado(req, esperado)) return Response.json({ error: 'No autorizado.' }, { status: 401 });
 
   const salud = await getClientHealth();
-  if (salud.faltaMigracion) {
+  if (salud.estado === 'falta-migracion') {
     return Response.json({ ok: true, faltaMigracion: true, avisos: 0 }, { headers: { 'Cache-Control': 'no-store' } });
+  }
+  /* Si la consulta falló, «0 avisos» sería decir que todo está sano.
+     Responde con error para que quien programa el cron lo vea (auditoría
+     2026-11-03, N12). */
+  if (salud.estado === 'error') {
+    return Response.json({ ok: false, error: 'No se pudo consultar la salud de los clientes.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
   }
 
   const alertas = alertasDeSalud(salud.restaurantes, salud.cuentas);

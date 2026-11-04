@@ -31,6 +31,7 @@ import CambiarPlan from '@/components/admin/cambiar-plan';
 import { duenoDelRestaurante } from '@/lib/auth/acceso-cobro';
 import { estadoDelTope } from '@/lib/tope-pedidos';
 import { pedidosDelMes } from '@/lib/db/tope-pedidos';
+import AvisoLectura from '@/components/admin/aviso-lectura';
 
 export const metadata = { title: 'Mi suscripción – Panel admin' };
 export const dynamic = 'force-dynamic';
@@ -180,6 +181,17 @@ export default async function SuscripcionPage() {
       {/* ── Paga tu mensualidad ──────────────────────────────────
           Arriba de todo: si hay algo que pagar, es lo primero que el dueño
           viene a hacer aquí, y antes ni sabía cómo (plan 2026-10-28, §3). */}
+      {/* Si no se pudo consultar el último comprobante, «no has mandado
+          ninguno» sería falso: el dueño volvería a mandarlo (auditoría
+          2026-11-03, N13). */}
+      {pendingTotal > 0 && comprobante.estado === 'error' && (
+        <AvisoLectura
+          estado="error"
+          que="tu último comprobante"
+          noConcluir="Si ya lo mandaste, no hace falta volver a enviarlo."
+          leidoEn={comprobante.leidoEn}
+        />
+      )}
       {pendingTotal > 0 && (
         <PagaTuPlan
           restaurantId={restaurantId}
@@ -195,8 +207,8 @@ export default async function SuscripcionPage() {
           }}
           notas={contacto.payment_instructions}
           waHref={comprobanteHref}
-          ultimo={comprobante
-            ? { status: comprobante.status, createdAt: comprobante.createdAt, reviewNote: comprobante.reviewNote }
+          ultimo={comprobante.datos
+            ? { status: comprobante.datos.status, createdAt: comprobante.datos.createdAt, reviewNote: comprobante.datos.reviewNote }
             : null}
         />
       )}
