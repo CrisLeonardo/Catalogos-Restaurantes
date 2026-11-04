@@ -119,6 +119,23 @@ export async function getIngredientMovements(
 
 export type RecipeLineInput = { ingredient_id: string; quantity: number };
 
+/** Lo que dijo la base → algo que el dueño entiende. Las validaciones de la
+ *  función ya vienen en español; lo demás no se le enseña tal cual. */
+function mensajeDeReceta(error: { code?: string | null; message?: string | null }): string {
+  switch (error.code) {
+    case '23514': // check_violation: insumo de otro restaurante
+    case '22023': // invalid_parameter_value: cantidad, repetidos, formato
+    case 'P0002': // no_data_found: el platillo no es de aquí
+      return error.message ?? 'No se pudo guardar la receta.';
+    case 'PGRST202':
+    case '42883':
+      return 'Falta aplicar la migración 156 para guardar recetas.';
+    default:
+      console.error('[saveProductRecipe]', error.code ?? '', error.message ?? '');
+      return 'No se pudo guardar la receta. Tu receta anterior sigue igual.';
+  }
+}
+
 /**
  * Carga la receta de un producto (con auth). La usa el modal del catálogo para
  * traer la receta de forma perezosa al abrir el editor de un platillo existente.
@@ -153,28 +170,16 @@ export async function saveProductRecipe(
   if ('error' in resolved) return resolved;
   const { restaurantId } = resolved;
 
-  const supabase = createServiceClient();
-
-  const { data: prod } = await supabase
-    .from('products')
-    .select('id')
-    .eq('id', productId)
-    .eq('restaurant_id', restaurantId)
-    .single();
-  if (!prod) return { error: 'Producto no encontrado' };
-
-  await supabase.from('recipe_items').delete().eq('product_id', productId);
-
-  if (lines.length > 0) {
-    const { error } = await supabase.from('recipe_items').insert(
-      lines.map((l) => ({
-        product_id: productId,
-        ingredient_id: l.ingredient_id,
-        quantity: l.quantity,
-      })),
-    );
-    if (error) return { error: error.message };
-  }
+  /* Todo o nada (migración 156, auditoría 2026-11-03 X08/X11). Antes se
+     borraba la receta y DESPUÉS se insertaba la nueva en otra llamada: si la
+     inserción fallaba, la receta quedaba vacía. La función valida también
+     que el platillo y cada insumo sean de este restaurante. */
+  const { error } = await createServiceClient().rpc('leogin_reemplazar_receta', {
+    p_restaurant_id: restaurantId,
+    p_product_id: productId,
+    p_lineas: lines.map((l) => ({ ingredient_id: l.ingredient_id, quantity: Number(l.quantity) })),
+  });
+  if (error) return { error: mensajeDeReceta(error) };
 
   revalidatePath(`/admin/menu/productos/${productId}`);
   return { ok: true };

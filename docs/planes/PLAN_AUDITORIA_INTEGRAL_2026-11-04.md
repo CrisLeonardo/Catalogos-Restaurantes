@@ -182,6 +182,16 @@ Orden recomendado: primero lo de más riesgo y menor tamaño, y lo que destraba 
 **Hacer:** una función `reemplazar_receta` transaccional que valida que cada ingrediente sea del mismo restaurante. En compras, validar proveedor, producto e insumo; en repartidores, `profile_id` y `driverId`. Usar restricciones compuestas `(id, restaurant_id)` donde aplique. Reordenar categorías con una función atómica (X12).
 **Aceptación:** si falla la inserción, la receta y el costo anteriores quedan intactos; con dos restaurantes de prueba, un ID ajeno se rechaza sin leer ni modificar nada; reordenar no duplica posiciones.
 
+**Estado (2026-11-04): hecha.**
+- **Reproducido antes de arreglar, en la base local:** una inserción fallida dejaba la receta vacía (X08). Un insumo ajeno se aceptaba y el costo del platillo pasaba a ser el precio ajeno, 9,99 (X11). Con dos categorías en la misma posición, «subir» no encontraba vecina (X12).
+- **Migración 156** (ANTES de desplegar):
+  - `leogin_reemplazar_receta`: todo o nada; valida cantidades, repetidos y que el insumo sea de este restaurante.
+  - `leogin_mover_categoria`: bloquea, renumera 0..n-1 y cambia de lugar.
+  - Candados en la base (triggers) para receta↔insumo, renglón de compra↔producto o insumo, compra↔proveedor, pedido↔repartidor y repartidor↔usuario del personal. Valen para cualquier camino de escritura, incluido el service role.
+- **Prueba repetible:** `supabase/pruebas/156_receta_atomica_y_referencias.sql` corre en Postgres real dentro de una transacción que se deshace y cubre PA-T10, PA-T11 y X12.
+- **En pantalla:** se guardó una receta de 150 g (costo 7,50 en la base) y se probaron «Subir» y «Bajar» en Categorías (el orden volvió a ser el original). Los datos de prueba se borraron.
+- **Queda para 0.8:** la cabecera huérfana de una compra cuyos renglones fallan.
+
 ### 0.8 · Compras: creación atómica y estados válidos — M · migración
 
 **Cubre:** X10, R12.1–2, PA-T12.
@@ -332,7 +342,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 - [ ] 0.4 Pausa de pedidos real
 - [ ] 0.5 Cupones: vigencia, programación y límites
 - [ ] 0.6 Pedido, cupón y puntos en una sola operación
-- [ ] 0.7 Receta atómica y referencias entre restaurantes
+- [x] 0.7 Receta atómica y referencias entre restaurantes (rama `fix/receta-atomica-y-referencias`, mig 156, 2026-11-04)
 - [ ] 0.8 Compras: creación atómica y estados válidos
 - [ ] 0.9 Sentar desde espera o reserva sin estados partidos
 - [ ] 0.10 Caja honesta
