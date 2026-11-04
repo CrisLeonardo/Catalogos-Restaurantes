@@ -29,7 +29,7 @@ import { logActivity } from '@/lib/activity';
 import type { DocumentBranding } from '@/lib/documents/types';
 import { esperadoEnCajon, type CuadreDelPeriodo } from '@/lib/caja/libro';
 import {
-  leerTurno, hayPendientes,
+  leerTurno, hayPendientes, ultimoCierre,
   type CobroDelTurno, type Pendientes, type LecturaDelTurno,
 } from '@/lib/caja/turno-servidor';
 import type { Aprobador } from '@/lib/void-approval';
@@ -725,6 +725,12 @@ export interface CajaPayload {
   notes?: string | null;
   /** Reparto de propinas (paso 3). null = todavía no se repartió. */
   tips?: TipShare[] | null;
+  /** El cajero contó: billetes, o confirmó «no hay efectivo en la caja».
+   *  Contar Q0 es un dato; no haber contado, no (auditoría 2026-11-03, N05). */
+  efectivoContado?: boolean;
+  /** Desde cuándo contaba el periodo que vio el cajero al abrir la pantalla.
+   *  Si alguien cerró después, este cierre llegaría tarde. */
+  periodoDesde?: string | null;
 }
 
 /** Lee el payload y calcula el cuadre desde el SERVIDOR, nunca del cliente. */
@@ -839,6 +845,16 @@ export interface CajaCloseResult {
   /** Cómo va el día del turno (PLAN_MOMENTOS_PICO P5): lo vendido en TODO
    *  el día, no solo en efectivo, y el récord si de verdad lo es. */
   dia: { ventas: number; pedidos: number; record: RecordDelDia | null } | null;
+  /** Cuándo se abrió físicamente la caja; null = el turno no se abrió. */
+  openedAt: string | null;
+  /** Algo que salió mal DESPUÉS de escribir el corte (el corte ya quedó). */
+  aviso: string | null;
+}
+
+/** Ya existía el corte de este periodo: lo cerró otro aparato (o un intento anterior). */
+export interface CorteYaHecho {
+  at: string;
+  cashierName: string | null;
 }
 
 /**
@@ -852,13 +868,25 @@ export interface CajaCloseResult {
  */
 export async function closeCaja(
   input: CajaPayload & { confirmPending?: boolean },
-): Promise<{ result?: CajaCloseResult; pending?: Pendientes; error?: string }> {
+): Promise<{ result?: CajaCloseResult; pending?: Pendientes; yaCerrado?: CorteYaHecho; error?: string }> {
   const ctx = await authRestaurant(input.restaurantId);
   if (!ctx) return { error: 'No autorizado.' };
 
   const c = await cuadre(ctx, input);
   if (c.l.sinMigracion) return { error: SIN_145 };
-  if (c.counted <= 0 && c.esperadoEnCaja > 0) return { error: 'Cuenta el efectivo antes de cerrar el turno.' };
+
+  /* ¿Alguien cerró desde que el cajero abrió la pantalla? Entonces este
+     cierre llega tarde: el servidor calcularía un periodo nuevo y casi
+     vacío, y escribiría un segundo corte con un sobrante falso. */
+  if (input.periodoDesde && c.l.ultimoCierre
+      && new Date(c.l.ultimoCierre.closedAt).getTime() > new Date(input.periodoDesde).getTime()) {
+    return { yaCerrado: { at: c.l.ultimoCierre.closedAt, cashierName: c.l.ultimoCierre.cashierName } };
+  }
+
+  // Contar Q0 es un dato; no haber contado, no. Aunque el esperado sea Q0.
+  if (!(c.counted > 0) && input.efectivoContado !== true) {
+    return { error: 'Cuenta el efectivo (o marca «No hay efectivo en la caja») antes de cerrar el turno.' };
+  }
   if (hayPendientes(c.l.pendientes) && !input.confirmPending) return { pending: c.l.pendientes };
 
   const tips = input.tips ?? null;
@@ -896,23 +924,34 @@ export async function closeCaja(
       .in('status', ['OPEN', 'DRAFT'])
       .select('id');
     if (error) return { error: error.message };
-    if (!data || data.length === 0) return { error: 'Este turno ya se cerró desde otro aparato.' };
+    if (!data || data.length === 0) return yaCerradoPorOtro(ctx, input.restaurantId);
     id = data[0].id as string;
   } else {
+    /* Turno sin apertura: se permite, queda marcado (opened_at null). El
+       índice único de la 158 hace que dos aparatos no escriban dos cortes
+       del mismo periodo: el segundo choca y se le dice. */
     const { data, error } = await ctx.db
       .from('cash_counts')
       .insert({ ...fila, restaurant_id: input.restaurantId, created_by: ctx.userId })
       .select('id')
       .single();
+    if (error?.code === '23505') return yaCerradoPorOtro(ctx, input.restaurantId);
     if (error || !data) return { error: error?.message ?? 'No se pudo cerrar la caja.' };
     id = data.id as string;
   }
 
   // Los gastos que se contaron, y solo esos: uno anotado un segundo después
-  // ya es del turno siguiente.
+  // ya es del turno siguiente. Si esto falla, el corte YA quedó escrito:
+  // no se deshace, pero se dice (antes se callaba).
+  let aviso: string | null = null;
   const gastos = c.l.gastos.map((g) => g.id);
   if (gastos.length > 0) {
-    await ctx.db.from('cash_expenses').update({ cash_count_id: id }).in('id', gastos).is('cash_count_id', null);
+    const { error: errGastos } = await ctx.db
+      .from('cash_expenses').update({ cash_count_id: id }).in('id', gastos).is('cash_count_id', null);
+    if (errGastos) {
+      console.error('[closeCaja] gastos', errGastos.code ?? '', errGastos.message ?? '');
+      aviso = 'El corte quedó guardado, pero no se pudieron ligar los gastos a él. Avísale a soporte: los gastos podrían aparecer también en el turno siguiente.';
+    }
   }
 
   await logActivity({
@@ -967,7 +1006,16 @@ export async function closeCaja(
       periodStart: c.l.desde,
       closedAt: cerradoEn,
       openedByName: c.l.abierto?.openedByName ?? null,
+      openedAt: c.l.abierto?.openedAt ?? null,
       pendingTotal: c.l.pendientes.total,
+      aviso,
     },
   };
+}
+
+/** El corte que ya existe para este periodo, para decírselo al que llegó tarde. */
+async function yaCerradoPorOtro(ctx: Ctx, restaurantId: string): Promise<{ yaCerrado?: CorteYaHecho; error?: string }> {
+  const ultimo = await ultimoCierre(ctx.db, restaurantId);
+  if (!ultimo) return { error: 'Este turno ya se cerró desde otro aparato.' };
+  return { yaCerrado: { at: ultimo.closedAt, cashierName: ultimo.cashierName } };
 }

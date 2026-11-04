@@ -206,6 +206,16 @@ Orden recomendado: primero lo de más riesgo y menor tamaño, y lo que destraba 
 
 **Aceptación:** dos cierres simultáneos dan un solo corte; el historial aparece al instante; el cierre normal de Q70 sigue funcionando.
 
+**Estado (2026-11-04): hecha**, según la [maqueta aprobada](https://claude.ai/artifact/VgTzm7KQTRk4W1Cy2X8XGz).
+- **Pasos:** la ✓ de «Efectivo» solo aparece con el conteo hecho; si se pasó de largo, dice «! falta contar» en ámbar. La casilla «No hay efectivo en la caja» registra Q0 a propósito. El servidor exige el conteo confirmado aunque el esperado sea Q0.
+- **Turno sin apertura:** se permite y queda marcado. El aviso se integró en la tarjeta «El turno no se ha abierto» que ya existía, en vez de repetirlo; el fondo pasa a llamarse «declarado al cerrar». En el historial lleva la marca «Sin apertura» y el fondo declarado.
+- **Recibo e historial (N07):** «Cobros de 05:00 a 10:48 · caja abierta a las 10:48 por Ana», y la explicación si se abrió tarde. La fila del historial usa el periodo de cobros.
+- **Doble cierre:** el cierre compara el periodo que vio el cajero con el último cierre y avisa «Este turno ya se cerró…». Como respaldo, la **migración 158** pone un índice único de un corte vivo por periodo (ANTES de desplegar). Además, los errores de caja ya no se borran solos a los 4,5 s.
+- **Gastos:** si falla atarlos al corte, se avisa en el recibo.
+- **Probado en el navegador con dos pestañas** (sin apertura y con apertura tardía): un solo corte por periodo, el aviso en la segunda pestaña e historial al instante. El índice también se probó directo en SQL. Los cortes de prueba se borraron.
+- **N06:** en local el historial ya se actualizaba al cerrar; se comprobó en cada prueba.
+- **Pendiente para 1.2:** el borrador no recuerda la casilla «No hay efectivo» al retomarlo.
+
 ### 0.11 · Cola offline que no promete de más — S/M
 
 **Cubre:** T02 (contrato de guardado), M06 (la parte offline), M§8 «Cola offline, espacio lleno».
@@ -335,7 +345,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 - [ ] 0.7 Receta atómica y referencias entre restaurantes
 - [ ] 0.8 Compras: creación atómica y estados válidos
 - [ ] 0.9 Sentar desde espera o reserva sin estados partidos
-- [ ] 0.10 Caja honesta
+- [x] 0.10 Caja honesta (rama `fix/caja-honesta`, mig 158, 2026-11-04)
 - [ ] 0.11 Cola offline que no promete de más
 - [ ] 0.12 Acceso por sucursal con membresías
 - [ ] 0.13 Probar el circuito del dinero en Postgres real

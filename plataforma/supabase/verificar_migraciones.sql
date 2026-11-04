@@ -157,7 +157,10 @@ huellas(n, que, ok, cuando) as (values
      to_regclass('public.encargo_fechas') is null
      and not exists (select 1 from information_schema.columns
                       where table_schema = 'public' and table_name = 'orders' and column_name = 'transfer_status'),
-     'DESPUÉS de desplegar (o a la vez)')
+     'DESPUÉS de desplegar (o a la vez)'),
+  ('158', 'un solo corte de caja por periodo (índice cash_counts_un_corte_por_periodo)',
+     exists (select 1 from pg_indexes where indexname = 'cash_counts_un_corte_por_periodo'),
+     'ANTES de desplegar (o a la vez); si dice NO, hay cortes repetidos que revisar a mano')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

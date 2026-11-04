@@ -92,8 +92,13 @@ function CashCountCard({
   /* El periodo que cubrió: «14:02 – 22:40». Los cortes de antes de la 145
      solo saben cuándo se cerraron. */
   const periodo = entry.period_start
-    ? `${formatTime(entry.opened_at ?? entry.period_start, timezone)} – ${formatTime(cerradoEn(entry), timezone)}`
+    /* La hora de la fila es la del PERIODO de cobros. Antes se usaba la de
+       apertura y una caja abierta tarde salía «10:48 – 10:48» (N07). */
+    ? `${formatTime(entry.period_start ?? entry.opened_at, timezone)} – ${formatTime(cerradoEn(entry), timezone)}`
     : formatTime(cerradoEn(entry), timezone);
+  /* Turno cerrado sin haberse abierto (permitido, pero se marca). Solo se
+     sabe en cortes de la 145 en adelante, que traen period_start. */
+  const sinApertura = !!entry.period_start && !entry.opened_at;
 
   return (
     <div className="caja-corte" data-void={esAnulado ? '1' : '0'}>
@@ -104,12 +109,19 @@ function CashCountCard({
               {periodo}
             </span>
             {entry.shift_label && <span className="caja-marca">{entry.shift_label}</span>}
+            {sinApertura && (
+              <span style={{ fontSize: 11, fontWeight: 600, borderRadius: 'var(--radius-full)', padding: '1px 8px', background: 'var(--c-warn-bg)', color: 'var(--c-warn)' }}>
+                Sin apertura
+              </span>
+            )}
           </div>
           {(entry.cashier_name || entry.opened_by_name) && (
             <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>
-              {entry.opened_by_name && entry.opened_by_name !== entry.cashier_name
-                ? `Abrió ${entry.opened_by_name.split(' ')[0]} · cerró ${entry.cashier_name?.split(' ')[0] ?? '—'}`
-                : entry.cashier_name}
+              {sinApertura
+                ? `Cerró ${entry.cashier_name?.split(' ')[0] ?? '—'} · fondo declarado ${money(Number(entry.opening_float))}`
+                : entry.opened_at
+                  ? `Abrió ${formatTime(entry.opened_at, timezone)}${entry.opened_by_name ? ` (${entry.opened_by_name.split(' ')[0]})` : ''} · cerró ${entry.cashier_name?.split(' ')[0] ?? '—'}`
+                  : entry.cashier_name}
             </div>
           )}
         </div>
