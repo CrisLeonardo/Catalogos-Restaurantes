@@ -9,13 +9,19 @@ import { Icon } from '@/components/icons';
 import { PrimaryButton } from '@/components/menu/ui';
 import { useThemeContent } from '@/lib/theme/context';
 import { useTenantPrefix } from '@/lib/tenant-client';
+import { fraseDeRegreso } from '@/lib/pausa-pedidos';
 
 export default function CheckoutBlocked({
   reason,
   pauseMessage,
+  pausedUntil = null,
+  timezone = 'America/Guatemala',
 }: {
   reason: 'closed' | 'paused';
   pauseMessage: string | null;
+  /** Fin de la pausa (migración 155). Con fin, el comensal sabe cuándo volver. */
+  pausedUntil?: string | null;
+  timezone?: string;
 }) {
   const content = useThemeContent();
   const backHref = useTenantPrefix('/');
@@ -24,6 +30,7 @@ export default function CheckoutBlocked({
     reason === 'paused'
       ? pauseMessage?.trim() || content.checkout.pausedMsg || 'Estamos a tope en cocina. Vuelve a intentar en unos minutos.'
       : content.checkout.closedMsg;
+  const regreso = reason === 'paused' ? fraseDeRegreso(pausedUntil, timezone) : null;
 
   return (
     <main className="themed-type" style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
@@ -35,6 +42,11 @@ export default function CheckoutBlocked({
         <p className="t-serif" style={{ fontSize: 16, lineHeight: 1.45, marginBottom: 22 }}>
           {msg}
         </p>
+        {regreso && (
+          <p style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.45, margin: '-10px 0 22px', color: 'var(--u-text)' }}>
+            {regreso}
+          </p>
+        )}
         <PrimaryButton href={backHref} full>{content.tracking.back}</PrimaryButton>
       </Glass>
     </main>

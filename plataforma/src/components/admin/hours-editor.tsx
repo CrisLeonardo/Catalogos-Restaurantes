@@ -4,13 +4,15 @@
    OPERACIÓN — horarios de apertura + pausa de pedidos
    ------------------------------------------------------------
    · Horario semanal con múltiples turnos por día.
-   · Toggle "pausar pedidos" con mensaje personalizable.
+   · La pausa de pedidos ya NO es parte de este formulario: es una acción
+     inmediata (components/admin/pausa-pedidos.tsx, auditoría 2026-11-03,
+     X01). Se pinta arriba, fuera del <form>, para que «Guardar horario»
+     nunca la toque.
    · Zona horaria del restaurante.
    ============================================================ */
 
 import { useActionState, useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
 import { Select } from '@/components/ui/select';
 import { updateRestaurantOps, type SaveState } from '@/lib/actions/restaurant';
 import { DAY_LABELS, DAY_ORDER, type DayKey, type HourInterval, type WeeklyHours, type HourExceptions } from '@/lib/hours';
@@ -19,6 +21,7 @@ import { FIELD_LABEL } from '@/components/admin/field-label';
 import SaveBar from '@/components/admin/save-bar';
 import { useFormDirty } from '@/lib/use-form-dirty';
 import { corteAHora, CORTE_POR_OMISION } from '@/lib/caja/dia';
+import PausaPedidos from '@/components/admin/pausa-pedidos';
 
 const TIMEZONES = [
   'America/Guatemala',
@@ -97,12 +100,11 @@ function buildExceptionsJson(rows: ExceptionRow[]): string {
 
 const empty: SaveState = null;
 
-export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) {
+export default function HoursEditor({ restaurant, pintadoEn }: { restaurant: Restaurant; pintadoEn: number }) {
   const [state, formAction, isPending] = useActionState(updateRestaurantOps, empty);
   const { ref: formRef, dirty, markSaved } = useFormDirty();
   useEffect(() => { if (state && 'saved' in state) markSaved(); }, [state, markSaved]);
   const [days, setDays] = useState<Record<DayKey, DayState>>(() => initDays(restaurant.hours));
-  const [paused, setPaused] = useState(restaurant.orders_paused === true);
   /** Ningún día encendido → se guarda `hours = null` → abierto siempre. */
   const sinHorario = DAY_ORDER.every((d) => !days[d].on);
   const [timezone, setTimezone] = useState(restaurant.timezone || 'America/Guatemala');
@@ -158,55 +160,21 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
   const labelStyle: React.CSSProperties = FIELD_LABEL;
 
   return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <PausaPedidos
+      restaurantId={restaurant.id}
+      timezone={restaurant.timezone || 'America/Guatemala'}
+      inicial={{
+        orders_paused: restaurant.orders_paused === true,
+        orders_paused_until: restaurant.orders_paused_until ?? null,
+        pause_message: restaurant.pause_message ?? null,
+      }}
+      pintadoEn={pintadoEn}
+    />
     <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <input type="hidden" name="restaurantId" value={restaurant.id} />
       <input type="hidden" name="hours" value={buildHoursJson(days)} />
       <input type="hidden" name="hour_exceptions" value={buildExceptionsJson(exceptions)} />
-      <input type="hidden" name="orders_paused" value={String(paused)} />
-
-      {/* ── Pausa de pedidos ── */}
-      <Card
-        data-tour-step="perfil-pausa"
-        className="p-4"
-        style={{ border: paused ? '1px solid var(--c-warn-line)' : undefined }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--u-text)' }}>
-              {paused ? 'Pedidos en pausa' : 'Recibiendo pedidos'}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
-              {paused
-                ? 'Tus clientes no pueden pedir hasta que lo vuelvas a encender.'
-                : '¿Cocina saturada? Apágalo para pausar sin tocar tus horarios.'}
-            </div>
-          </div>
-          {/* Encendido = recibiendo pedidos. Estaba al revés (`checked={paused}`):
-              el rótulo decía «Recibiendo pedidos» con el interruptor APAGADO, y
-              encenderlo pausaba (auditoría 2026-10-02, AJU-01). */}
-          <Switch
-            checked={!paused}
-            onCheckedChange={(on) => setPaused(!on)}
-            aria-label="Recibir pedidos"
-          />
-        </div>
-        {paused && (
-          <div style={{ marginTop: 12 }}>
-            <label htmlFor="pause_message" style={labelStyle}>Mensaje para tus clientes</label>
-            <input
-              id="pause_message"
-              name="pause_message"
-              type="text"
-              defaultValue={restaurant.pause_message ?? ''}
-              placeholder="Estamos a tope. ¡Volvemos en 30 minutos!"
-              className="adm-field adm-field-sm adm-field-mono adm-field-auto" style={{ width: '100%', fontFamily: 'var(--ui-font-sans)' }}
-            />
-          </div>
-        )}
-        {!paused && (
-          <input type="hidden" name="pause_message" value={restaurant.pause_message ?? ''} />
-        )}
-      </Card>
 
       {/* ── Horario semanal ── */}
       <Card className="p-4">
@@ -463,5 +431,6 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
 
       <SaveBar dirty={dirty} pending={isPending} status={state} label="Guardar horario" />
     </form>
+    </div>
   );
 }
