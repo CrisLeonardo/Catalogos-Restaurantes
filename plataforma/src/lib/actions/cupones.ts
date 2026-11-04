@@ -7,6 +7,7 @@ import { canActOnRestaurant } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
 import { canActOnGroupBranch } from '@/lib/db/admin';
 import { resolveCoupon, type DiscountType } from '@/lib/db/cupones';
+import { conservarSiNoCambio, vigenciaDesdeFormulario } from '@/lib/cupones/vigencia';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { logActivity } from '@/lib/activity';
 
@@ -67,6 +68,33 @@ async function getAuthorized(restaurantId: string) {
   return { ok: true as const, userId: user.id };
 }
 
+/* Las fechas del formulario son días del calendario del LOCAL ("AAAA-MM-DD").
+   Antes iban sueltas a una columna timestamptz y Postgres las guardaba como
+   medianoche UTC: el cupón vencía a las 18:00 del día anterior en Guatemala
+   (auditoría 2026-11-03, X05). Ver lib/cupones/vigencia. */
+async function zonaDelRestaurante(restaurantId: string): Promise<string> {
+  const { data } = await createServiceClient()
+    .from('restaurants')
+    .select('timezone')
+    .eq('id', restaurantId)
+    .maybeSingle();
+  return (data as { timezone?: string | null } | null)?.timezone || 'America/Guatemala';
+}
+
+/** Datos del formulario. En las fechas, `null` = sin límite por ese lado. */
+export interface CouponInput {
+  code: string;
+  description?: string;
+  discount_type: DiscountType;
+  discount_value: number;
+  min_order?: number;
+  max_uses?: number;
+  /** "AAAA-MM-DD" en la zona del local. */
+  valid_from: string | null;
+  /** "AAAA-MM-DD" en la zona del local; vale el día completo. */
+  valid_until: string | null;
+}
+
 /* Bitácora antifraude (PROD-10): un cupón del 100 % para un amigo es
    exactamente lo que el dueño quiere poder ver después, con el importe. */
 function anotarCupon(
@@ -81,16 +109,7 @@ function anotarCupon(
 
 export async function createCoupon(
   restaurantId: string,
-  data: {
-    code: string;
-    description?: string;
-    discount_type: DiscountType;
-    discount_value: number;
-    min_order?: number;
-    max_uses?: number;
-    valid_from?: string;
-    valid_until?: string;
-  },
+  data: CouponInput,
 ): Promise<CouponResult> {
   const auth = await getAuthorized(restaurantId);
   if (!auth.ok) return { error: auth.error };
@@ -101,6 +120,9 @@ export async function createCoupon(
   if (!data.discount_value || data.discount_value <= 0) return { error: 'El valor del descuento debe ser mayor a 0.' };
   if (data.discount_type === 'PERCENT' && data.discount_value > 100) return { error: 'El porcentaje no puede superar 100%.' };
 
+  const vigencia = vigenciaDesdeFormulario(data.valid_from, data.valid_until, await zonaDelRestaurante(restaurantId));
+  if ('error' in vigencia) return { error: vigencia.error };
+
   const db = createServiceClient();
   const { error } = await db.from('coupons').insert({
     restaurant_id: restaurantId,
@@ -110,8 +132,8 @@ export async function createCoupon(
     discount_value: data.discount_value,
     min_order: data.min_order || null,
     max_uses: data.max_uses || null,
-    valid_from: data.valid_from || null,
-    valid_until: data.valid_until || null,
+    valid_from: vigencia.valid_from,
+    valid_until: vigencia.valid_until,
     is_active: true,
   });
   if (error) {
@@ -130,16 +152,7 @@ export async function createCoupon(
 export async function updateCoupon(
   restaurantId: string,
   couponId: string,
-  data: {
-    code: string;
-    description?: string;
-    discount_type: DiscountType;
-    discount_value: number;
-    min_order?: number;
-    max_uses?: number;
-    valid_from?: string;
-    valid_until?: string;
-  },
+  data: CouponInput,
 ): Promise<CouponResult> {
   const auth = await getAuthorized(restaurantId);
   if (!auth.ok) return { error: auth.error };
@@ -150,13 +163,20 @@ export async function updateCoupon(
   if (!data.discount_value || data.discount_value <= 0) return { error: 'El valor del descuento debe ser mayor a 0.' };
   if (data.discount_type === 'PERCENT' && data.discount_value > 100) return { error: 'El porcentaje no puede superar 100%.' };
 
+  const zona = await zonaDelRestaurante(restaurantId);
+  const pedida = vigenciaDesdeFormulario(data.valid_from, data.valid_until, zona);
+  if ('error' in pedida) return { error: pedida.error };
+
   const db = createServiceClient();
   const { data: previo } = await db
     .from('coupons')
-    .select('discount_type, discount_value')
+    .select('discount_type, discount_value, valid_from, valid_until')
     .eq('id', couponId)
     .eq('restaurant_id', restaurantId)
     .maybeSingle();
+  const vigencia = previo
+    ? conservarSiNoCambio(pedida, { valid_from: previo.valid_from, valid_until: previo.valid_until }, zona)
+    : pedida;
   const { error } = await db.from('coupons').update({
     code,
     description: data.description?.trim() || null,
@@ -164,8 +184,8 @@ export async function updateCoupon(
     discount_value: data.discount_value,
     min_order: data.min_order || null,
     max_uses: data.max_uses || null,
-    valid_from: data.valid_from || null,
-    valid_until: data.valid_until || null,
+    valid_from: vigencia.valid_from,
+    valid_until: vigencia.valid_until,
   }).eq('id', couponId).eq('restaurant_id', restaurantId);
   if (error) {
     if (error.message.includes('unique')) return { error: 'Ya existe un cupón con ese código.' };
