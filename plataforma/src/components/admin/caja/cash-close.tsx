@@ -108,6 +108,8 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
   const [opening, setOpening] = useState<string>(String(state.shift?.openingFloat ?? state.draft?.openingFloat ?? 0));
   const [shift, setShift] = useState(state.shift?.shiftLabel ?? state.draft?.shiftLabel ?? '');
   const [notes, setNotes] = useState(state.draft?.notes ?? '');
+  /** El cajero confirmó que no hay efectivo: contado Q0 a propósito. */
+  const [sinEfectivo, setSinEfectivo] = useState(false);
   useEffect(() => {
     // Al abrir el turno desde otro aparato, el fondo es el suyo.
     if (abierto) setOpening(String(state.shift?.openingFloat ?? 0));
@@ -128,7 +130,10 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
   const [porConfirmar, setPorConfirmar] = useState<Pendientes | null>(null);
 
   useEffect(() => {
-    if (!aviso) return;
+    /* Solo se van solos los avisos buenos. Un error de dinero —«este turno
+       ya se cerró», «no se pudo cerrar»— se queda hasta la siguiente acción:
+       a los 4,5 s el cajero podía no haberlo leído. */
+    if (!aviso || aviso.bad) return;
     const t = setTimeout(() => setAviso(null), 4500);
     return () => clearTimeout(t);
   }, [aviso]);
@@ -146,7 +151,11 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
   const diferencia = r2(contado - esperadoEnCaja);
   const cuadra = Math.abs(diferencia) < 0.005;
   const hayConteo = centavos > 0;
-  const puedeCerrar = hayConteo || esperadoEnCaja <= 0;
+  /* Contar Q0 es un dato; no haber contado, no (auditoría 2026-11-03, N05).
+     Antes con esperado Q0 se cerraba sin contar, y el paso 1 llevaba ✓
+     apenas se pasaba al 2. */
+  const conteoHecho = hayConteo || sinEfectivo;
+  const puedeCerrar = conteoHecho;
 
   /* Desde cuándo cuenta: «desde el cierre de Ana a las 15:00» o «desde
      las 05:00», que es lo que el cajero necesita para creerse el número. */
@@ -166,9 +175,12 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
     shiftLabel: shift,
     notes,
     tips,
-  }), [restaurantId, counts, openNum, shift, notes, tips]);
+    efectivoContado: conteoHecho,
+    periodoDesde: state.periodStart,
+  }), [restaurantId, counts, openNum, shift, notes, tips, conteoHecho, state.periodStart]);
 
   function guardarBorrador() {
+    setAviso(null);
     startSave(async () => {
       const res = await saveCajaDraft(payload());
       if (res.error) { setAviso({ text: res.error, bad: true }); return; }
@@ -178,9 +190,21 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
   }
 
   function cerrarTurno(confirmPending = false) {
+    setAviso(null);
     startSave(async () => {
       const res = await closeCaja({ ...payload(), confirmPending });
       if (res.pending) { setPorConfirmar(res.pending); return; }
+      if (res.yaCerrado) {
+        // Otro aparato (o un intento anterior) ya cerró este periodo.
+        setPorConfirmar(null);
+        const quien = res.yaCerrado.cashierName?.split(' ')[0];
+        setAviso({
+          text: `Este turno ya se cerró${quien ? `: lo cerró ${quien}` : ''} a las ${hora(res.yaCerrado.at, timezone)} desde otro aparato. Tu conteo no se guardó como un corte nuevo; el corte está en «Cortes recientes».`,
+          bad: true,
+        });
+        refrescar();
+        return;
+      }
       if (res.error || !res.result) { setAviso({ text: res.error ?? 'No se pudo cerrar la caja.', bad: true }); return; }
       setPorConfirmar(null);
       setCerrado(res.result);
@@ -206,6 +230,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
           setOpening('0');
           setShift('');
           setNotes('');
+          setSinEfectivo(false);
           irA(1);
         }}
       />
@@ -305,7 +330,15 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
 
       {/* ── Los tres pasos ── */}
       <div className="caja-steps">
-        <PasoChip n={1} titulo="Efectivo" detalle={hayConteo ? money(contado) : 'sin contar'} on={paso === 1} hecho={paso > 1} onClick={() => irA(1)} />
+        <PasoChip
+          n={1}
+          titulo="Efectivo"
+          detalle={conteoHecho ? (hayConteo ? money(contado) : `${money(0)} (sin efectivo)`) : paso > 1 ? 'falta contar' : 'sin contar'}
+          on={paso === 1}
+          hecho={conteoHecho}
+          falta={!conteoHecho && paso > 1}
+          onClick={() => irA(1)}
+        />
         <PasoChip n={2} titulo="Gastos" detalle={state.expenses.length === 0 ? 'ninguno' : `${state.expenses.length} anotado${state.expenses.length === 1 ? '' : 's'}`} on={paso === 2} hecho={paso > 2} onClick={() => irA(2)} />
         <PasoChip n={3} titulo="Propinas" detalle={state.tipsTotal > 0 ? `${money(state.tipsTotal)} por repartir` : 'sin propinas'} on={paso === 3} hecho={false} onClick={() => irA(3)} ultimo />
       </div>
@@ -326,6 +359,9 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
               opening={opening}
               setOpening={setOpening}
               fondoFijo={abierto ? { quien: state.shift?.openedByName ?? null, cuando: hora(state.shift?.openedAt, timezone) } : null}
+              hayConteo={hayConteo}
+              sinEfectivo={sinEfectivo}
+              setSinEfectivo={setSinEfectivo}
             />
           )}
           {paso === 2 && (
@@ -359,7 +395,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
             contado={contado}
             diferencia={diferencia}
             cuadra={cuadra}
-            hayConteo={hayConteo}
+            hayConteo={conteoHecho}
           />
 
           <TarjetaPendientes pending={state.pending} liberadas={state.releasedUnpaid} />
@@ -388,7 +424,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
             )}
             {!puedeCerrar && paso === 3 && (
               <p style={{ margin: 0, fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.45 }}>
-                Falta contar el efectivo del paso 1 para poder cerrar.
+                Falta contar el efectivo del paso 1 (o marcar «No hay efectivo en la caja») para poder cerrar.
               </p>
             )}
           </div>
@@ -438,6 +474,8 @@ function AbrirTurno({ restaurantId, shift, cobradoEnEfectivo, desde, onAviso }: 
           Ábrelo con el fondo que hay en el cajón: queda escrito quién lo abrió y con cuánto, y el cierre
           ya no lo puede cambiar.
           {cobradoEnEfectivo > 0 && ` Ya van ${money(cobradoEnEfectivo)} cobrados en efectivo ${desde}.`}
+          {/* Decisión del dueño (2026-11-04): cerrar sin abrir se permite, pero se dice y se marca. */}
+          {' '}Si lo cierras sin abrirlo, el corte quedará marcado «sin apertura» y el fondo será el que declares al cerrar.
         </p>
       </div>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
@@ -559,8 +597,10 @@ function ConfirmarPendientes({ pending, enviando, onCancelar, onCerrar }: {
 }
 
 /* ── El indicador de pasos ────────────────────────────────────── */
-function PasoChip({ n, titulo, detalle, on, hecho, onClick, ultimo }: {
+function PasoChip({ n, titulo, detalle, on, hecho, falta = false, onClick, ultimo }: {
   n: number; titulo: string; detalle: string; on: boolean; hecho: boolean;
+  /** Se pasó de largo sin hacerlo: ámbar, nunca ✓. */
+  falta?: boolean;
   onClick: () => void; ultimo?: boolean;
 }) {
   return (
@@ -580,17 +620,17 @@ function PasoChip({ n, titulo, detalle, on, hecho, onClick, ultimo }: {
           style={{
             display: 'grid', placeItems: 'center', width: 28, height: 28, borderRadius: 'var(--radius-full)', flexShrink: 0,
             fontSize: 13, fontWeight: 700,
-            background: on ? 'var(--adm-accent-fill, var(--brand-accent))' : 'color-mix(in srgb, var(--u-text) 8%, transparent)',
-            color: on ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
+            background: on ? 'var(--adm-accent-fill, var(--brand-accent))' : falta ? 'var(--c-warn-bg)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)',
+            color: on ? 'var(--brand-on-accent, #fff)' : falta ? 'var(--c-warn)' : 'var(--u-text-2)',
           }}
         >
-          {hecho ? '✓' : n}
+          {hecho ? '✓' : falta ? '!' : n}
         </span>
         <span style={{ minWidth: 0 }}>
           <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: on ? 'var(--brand-accent-ink)' : 'var(--u-text-2)' }}>
             {titulo}
           </span>
-          <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-4)', marginTop: 1 }}>{detalle}</span>
+          <span style={{ display: 'block', fontSize: 12, color: falta ? 'var(--c-warn)' : 'var(--u-text-4)', fontWeight: falta ? 600 : undefined, marginTop: 1 }}>{detalle}</span>
         </span>
       </button>
       {!ultimo && (
@@ -607,13 +647,16 @@ function PasoChip({ n, titulo, detalle, on, hecho, onClick, ultimo }: {
 }
 
 /* ── Paso 1 · contar ──────────────────────────────────────────── */
-function PasoEfectivo({ counts, setCount, opening, setOpening, fondoFijo }: {
+function PasoEfectivo({ counts, setCount, opening, setOpening, fondoFijo, hayConteo, sinEfectivo, setSinEfectivo }: {
   counts: Record<string, number>;
   setCount: (field: string, val: string) => void;
   opening: string;
   setOpening: (v: string) => void;
   /** El turno se abrió con fondo: se enseña, no se edita. */
   fondoFijo: { quien: string | null; cuando: string } | null;
+  hayConteo: boolean;
+  sinEfectivo: boolean;
+  setSinEfectivo: (v: boolean) => void;
 }) {
   return (
     <>
@@ -651,7 +694,7 @@ function PasoEfectivo({ counts, setCount, opening, setOpening, fondoFijo }: {
           ) : (
             <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <label htmlFor="caja-fondo" style={{ fontSize: 12, color: 'var(--u-text-3)' }}>
-                Fondo con el que abriste
+                Fondo declarado al cerrar
               </label>
               <input
                 id="caja-fondo"
@@ -667,12 +710,32 @@ function PasoEfectivo({ counts, setCount, opening, setOpening, fondoFijo }: {
               />
               {/* Sin esta línea nadie sabe si el fondo suma o resta al cuadre. */}
               <p id="caja-fondo-ayuda" style={{ margin: 0, fontSize: 11, lineHeight: 1.4, color: 'var(--u-text-4)' }}>
-                Se descuenta del total contado para saber si cuadra.
+                Nadie lo registró al abrir: es lo que dices ahora. Se descuenta del total contado para saber si cuadra.
               </p>
             </div>
           )}
         </Tarjeta>
       </div>
+
+      {/* Contar Q0 a propósito: distinto de no haber contado. */}
+      {!hayConteo && (
+        <label
+          htmlFor="caja-sin-efectivo"
+          style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 12px', border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontSize: 13, lineHeight: 1.45 }}
+        >
+          <input
+            id="caja-sin-efectivo"
+            type="checkbox"
+            checked={sinEfectivo}
+            onChange={(e) => setSinEfectivo(e.target.checked)}
+            style={{ width: 18, height: 18, marginTop: 1, accentColor: 'var(--brand-accent)' }}
+          />
+          <span>
+            <strong style={{ color: 'var(--u-text)', fontWeight: 600 }}>No hay efectivo en la caja</strong>
+            <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)' }}>Queda anotado como «contado: {money(0)}».</span>
+          </span>
+        </label>
+      )}
     </>
   );
 }
@@ -1072,14 +1135,23 @@ function CierreHecho({ result, dateLabel, shift, cashierName, restaurantName, ti
   onOtro: () => void;
 }) {
   const cuadra = Math.abs(result.difference) < 0.005;
-  const periodo = `de ${hora(result.periodStart, timezone)} a ${hora(result.closedAt, timezone)}`;
+  /* El periodo de los cobros y la hora en que se abrió la caja son cosas
+     distintas: con la caja abierta a las 10:48, el corte cuenta desde las
+     05:00 y antes se leía como un turno de 10:48 a 10:48 (auditoría
+     2026-11-03, N07). */
+  const periodo = `cobros de ${hora(result.periodStart, timezone)} a ${hora(result.closedAt, timezone)}`;
+  const apertura = result.openedAt
+    ? `caja abierta a las ${hora(result.openedAt, timezone)}${result.openedByName ? ` por ${result.openedByName.split(' ')[0]}` : ''}`
+    : 'sin apertura';
+  const abrioTarde = !!result.openedAt
+    && new Date(result.openedAt).getTime() - new Date(result.periodStart).getTime() > 60_000;
 
   /* El resumen por WhatsApp es cómo se manda de verdad un cierre a un
      dueño que no está en el local: texto plano, sin adjuntos y sin
      pedirle que entre a ninguna parte. */
   const texto = [
     `Cierre de caja · ${restaurantName}`,
-    `${dateLabel}${shift.trim() ? ` · ${shift.trim()}` : ''} · ${periodo} · ${cashierName}`,
+    `${dateLabel}${shift.trim() ? ` · ${shift.trim()}` : ''} · ${periodo} · ${apertura} · cerró ${cashierName}`,
     result.dia && result.dia.pedidos > 0
       ? `Hoy vendiste ${money(result.dia.ventas)} en ${result.dia.pedidos} ${result.dia.pedidos === 1 ? 'pedido' : 'pedidos'}${result.dia.record ? ` · ${result.dia.record.texto}` : ''}`
       : null,
@@ -1104,9 +1176,22 @@ function CierreHecho({ result, dateLabel, shift, cashierName, restaurantName, ti
       <div>
         <div className="t-display" style={{ fontSize: 22, lineHeight: 1.15 }}>Turno cerrado</div>
         <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 3 }}>
-          {[dateLabel, shift.trim() || null, periodo, cashierName].filter(Boolean).join(' · ')}
+          {[dateLabel, shift.trim() || null].filter(Boolean).join(' · ')}
         </div>
+        <div style={{ fontSize: 13, color: 'var(--u-text-2)', marginTop: 2 }}>
+          <strong style={{ color: 'var(--u-text)', fontWeight: 600 }}>{periodo.charAt(0).toUpperCase() + periodo.slice(1)}</strong>
+          {' · '}{apertura}{' · '}cerró {cashierName.split(' ')[0]}
+        </div>
+        {abrioTarde && (
+          <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
+            Incluye lo cobrado antes de abrir la caja: el turno empieza a contar al inicio del día de caja.
+          </div>
+        )}
       </div>
+
+      {result.aviso && (
+        <div role="alert" className="note note-danger" style={{ fontSize: 13 }}>{result.aviso}</div>
+      )}
 
       {/* El final del día (PLAN_MOMENTOS_PICO P5): lo vendido en todo el día
           sube solo y, si es récord de verdad, Leo celebra con confeti. */}
