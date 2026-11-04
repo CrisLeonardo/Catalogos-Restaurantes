@@ -176,6 +176,16 @@ Orden recomendado: primero lo de más riesgo y menor tamaño, y lo que destraba 
 **Hacer:** el cupón (con su uso condicionado al tope: `uses < max_uses`) y el canje de puntos se aplican dentro de `place_order` o en una función que lo envuelva en una sola transacción. La cancelación revierte el uso y los puntos según una regla escrita. Idempotencia por `client_id` (ya existe para el pedido; se extiende a sus efectos).
 **Aceptación:** pruebas en Postgres real: dos pedidos compiten por el último uso del cupón y solo uno lo obtiene; si un paso falla, no queda un pedido con descuento sin cupón registrado; dos canjes contra un saldo que no alcanza solo aceptan lo que cubre el saldo.
 
+**Estado (2026-11-04): hecha.**
+- **Reproducido antes de arreglar:** un cupón de 1 uso terminó con 2. Dos pedidos salieron con la recompensa y solo uno pagó los puntos, porque el error del segundo canje se ignoraba.
+- **Migración 157** (ANTES de desplegar): `leogin_crear_pedido` crea el pedido, aplica el cupón con la fila bloqueada, revisa el tope y que el descuento coincida, y canjea las recompensas, todo en una transacción. Errores: LGC01 (cupón ya no disponible), LGC02 (descuento cambiado) y P0001 (stock, puntos). La reversión al cancelar o anular sigue siendo la de la 144 y ahora siempre encuentra el cupón.
+- **`createOrder`:** usa la operación única. Si falta la 157, sigue por el camino anterior. Un reintento con el mismo `client_id` devuelve el mismo pedido. **Además:** si el cupón que el comensal vio aplicado ya no vale al confirmar, el pedido no se crea y se le dice; antes salía a precio completo sin avisar.
+- **Pruebas:**
+  - `supabase/pruebas/157_*.sql` (tope, descuento alterado, vencido, reintento, PA-T08, cancelación una sola vez, fallo a mitad).
+  - Carrera real con dos conexiones: el pedido B esperó el bloqueo y fue rechazado; el cupón quedó en 1/1.
+  - En pantalla, checkout local con MESA5: agotado al confirmar → mensaje y sin pedido; con un uso libre → pedido de Q45 con el cupón registrado; al cancelar, el uso volvió. Los datos de prueba se borraron.
+- **Visto de paso:** al agregar el primer platillo aparece la invitación de puntos con Google (M07, ficha 3.3). La confirmación dice «ya recibió tu pedido y lo está preparando» cuando el pedido todavía está NUEVO (M06, ficha 1.12).
+
 ### 0.7 · Receta atómica y referencias entre restaurantes — M · migración
 
 **Cubre:** X08, X11, X12, R08.5, R10 (la parte de integridad), R30.2, PA-T10, PA-T11.
@@ -331,7 +341,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 - [ ] 0.3 Error no es vacío ni cero
 - [ ] 0.4 Pausa de pedidos real
 - [ ] 0.5 Cupones: vigencia, programación y límites
-- [ ] 0.6 Pedido, cupón y puntos en una sola operación
+- [x] 0.6 Pedido, cupón y puntos en una sola operación (rama `fix/pedido-cupon-puntos-atomico`, mig 157, 2026-11-04)
 - [ ] 0.7 Receta atómica y referencias entre restaurantes
 - [ ] 0.8 Compras: creación atómica y estados válidos
 - [ ] 0.9 Sentar desde espera o reserva sin estados partidos

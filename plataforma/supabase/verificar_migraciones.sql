@@ -157,7 +157,10 @@ huellas(n, que, ok, cuando) as (values
      to_regclass('public.encargo_fechas') is null
      and not exists (select 1 from information_schema.columns
                       where table_schema = 'public' and table_name = 'orders' and column_name = 'transfer_status'),
-     'DESPUÉS de desplegar (o a la vez)')
+     'DESPUÉS de desplegar (o a la vez)'),
+  ('157', 'pedido, cupón y puntos en una sola operación (leogin_crear_pedido)',
+     to_regprocedure('public.leogin_crear_pedido(uuid,text,text,text,text,text,double precision,double precision,uuid,numeric,numeric,numeric,text,jsonb,text,numeric,numeric,uuid,uuid,numeric,uuid,uuid[])') is not null,
+     'ANTES de desplegar')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,
