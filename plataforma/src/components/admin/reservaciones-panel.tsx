@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -85,6 +86,9 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
+  /* El panel vive detrás de una ruta reescrita (/panel/<slug>/…) y no
+     siempre se repinta solo tras una acción: se pide de nuevo a mano. */
+  const router = useRouter();
 
   // Form state
   const [form, setForm] = useState({
@@ -102,6 +106,7 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
     startTransition(async () => {
       const res = await createReservation(restaurantId, form);
       if (res.error) { setError(res.error); return; }
+      router.refresh();
       setForm({ customer_name: '', customer_phone: '', party_size: 2, date: new Date().toISOString().slice(0, 10), time: '19:00', notes: '' });
       setTab('activas');
     });
@@ -110,18 +115,24 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
   /* La mesa elegida para cada reserva, mientras no llegan. Por reserva y no
      una sola: en un servicio entran varias a la vez. */
   const [mesaDe, setMesaDe] = useState<Record<string, string>>({});
+  /* Solo cuenta si sigue libre. Tras un choque («ya está ocupada») el panel
+     se refresca y esa mesa sale de la lista: el botón no debe seguir
+     ofreciéndola. */
+  const mesaElegida = (id: string) => (freeTables.includes(Number(mesaDe[id])) ? mesaDe[id] : '');
 
   function handleStatus(id: string, status: ReservationStatus) {
-    const mesa = Number(mesaDe[id]);
+    const mesa = Number(mesaElegida(id));
     setBusyId(id);
+    setError(null);
     startTransition(async () => {
       const res = await updateReservationStatus(
         restaurantId, id, status,
         status === 'SEATED' && Number.isFinite(mesa) && mesa > 0 ? mesa : null,
       );
       setBusyId(null);
-      if (res.error) { setError(res.error); return; }
+      if (res.error) { setError(res.error); router.refresh(); return; }
       setMesaDe((prev) => { const next = { ...prev }; delete next[id]; return next; });
+      router.refresh();
     });
   }
 
@@ -132,6 +143,7 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
       const res = await deleteReservation(restaurantId, id);
       setBusyId(null);
       if (res.error) { setError(res.error); return; }
+      router.refresh();
     });
   }
 
@@ -170,28 +182,28 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={labelStyle}>Nombre del cliente *</label>
-                <input className="adm-field" value={form.customer_name} onChange={(e) => setField('customer_name', e.target.value)} required placeholder="Juan García" />
+                <label style={labelStyle} htmlFor="reserva-nombre">Nombre del cliente *</label>
+                <input id="reserva-nombre" autoComplete="off" className="adm-field" value={form.customer_name} onChange={(e) => setField('customer_name', e.target.value)} required placeholder="Juan García" />
               </div>
               <div>
-                <label style={labelStyle}>Teléfono</label>
-                <input className="adm-field" value={form.customer_phone} onChange={(e) => setField('customer_phone', e.target.value)} placeholder="+502 0000-0000" />
+                <label style={labelStyle} htmlFor="reserva-telefono">Teléfono</label>
+                <input id="reserva-telefono" type="tel" inputMode="tel" autoComplete="off" className="adm-field" value={form.customer_phone} onChange={(e) => setField('customer_phone', e.target.value)} placeholder="+502 0000-0000" />
               </div>
               <div>
-                <label style={labelStyle}>Personas *</label>
-                <input className="adm-field" type="number" inputMode="decimal" min={1} max={100} value={form.party_size} onChange={(e) => setField('party_size', parseInt(e.target.value) || 1)} required />
+                <label style={labelStyle} htmlFor="reserva-personas">Personas *</label>
+                <input id="reserva-personas" className="adm-field" type="number" inputMode="numeric" min={1} max={100} value={form.party_size} onChange={(e) => setField('party_size', parseInt(e.target.value) || 1)} required />
               </div>
               <div>
-                <label style={labelStyle}>Fecha *</label>
-                <input className="adm-field" type="date" value={form.date} onChange={(e) => setField('date', e.target.value)} required />
+                <label style={labelStyle} htmlFor="reserva-fecha">Fecha *</label>
+                <input id="reserva-fecha" className="adm-field" type="date" value={form.date} onChange={(e) => setField('date', e.target.value)} required />
               </div>
               <div>
-                <label style={labelStyle}>Hora *</label>
-                <input className="adm-field" type="time" value={form.time} onChange={(e) => setField('time', e.target.value)} required />
+                <label style={labelStyle} htmlFor="reserva-hora">Hora *</label>
+                <input id="reserva-hora" className="adm-field" type="time" value={form.time} onChange={(e) => setField('time', e.target.value)} required />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={labelStyle}>Notas</label>
-                <textarea className="adm-field" style={{ resize: 'vertical', minHeight: 60 }} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Preferencias, alergia, ocasión especial…" />
+                <label style={labelStyle} htmlFor="reserva-notas">Notas</label>
+                <textarea id="reserva-notas" className="adm-field" style={{ resize: 'vertical', minHeight: 60 }} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Preferencias, alergia, ocasión especial…" />
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -243,7 +255,7 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
                             número de mesa no significa nada. */}
                         {nextStatus === 'SEATED' && freeTables.length > 0 && (
                           <select
-                            value={mesaDe[r.id] ?? ''}
+                            value={mesaElegida(r.id)}
                             onChange={(e) => setMesaDe((prev) => ({ ...prev, [r.id]: e.target.value }))}
                             aria-label={`Mesa para ${r.customer_name}`}
                             style={{
@@ -260,8 +272,8 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
                         )}
                         {nextStatus && (
                           <Button type="button" onClick={() => handleStatus(r.id, nextStatus)} disabled={busy} variant="secondary" size="sm" className="rounded-adm-full">
-                            {nextStatus === 'SEATED' && mesaDe[r.id]
-                              ? `En mesa ${mesaDe[r.id]} →`
+                            {nextStatus === 'SEATED' && mesaElegida(r.id)
+                              ? `En mesa ${mesaElegida(r.id)} →`
                               : `${STATUS_LABEL[nextStatus]} →`}
                           </Button>
                         )}

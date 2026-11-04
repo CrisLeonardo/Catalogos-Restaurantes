@@ -17,7 +17,7 @@ import { canActOnRestaurant } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
 import { canActOnGroupBranch } from '@/lib/db/admin';
 import { can } from '@/lib/permissions';
-import { seatTable } from '@/lib/actions/table-sessions';
+import { mesaAbiertaDelOrigen, sentarDesdeOrigen } from '@/lib/mesa/sentar-desde-origen';
 import { faltaLaColumna } from '@/lib/db/migracion-ausente';
 
 export type WaitlistResult = { error?: string; ok?: boolean };
@@ -108,44 +108,61 @@ export async function markWaitlistSeated(
   const auth = await getAuthorizedRestaurantId(restaurantId);
   if (!auth.ok) return { error: auth.error };
 
-  const mesa = tableNumber != null && Number.isInteger(tableNumber) && tableNumber >= 1 && tableNumber <= 999
+  const elegida = tableNumber != null && Number.isInteger(tableNumber) && tableNumber >= 1 && tableNumber <= 999
     ? tableNumber
     : null;
+  // Sin mesa elegida: si un intento anterior ya ocupó una para este grupo, es esa.
+  const mesa = elegida ?? await mesaAbiertaDelOrigen(restaurantId, id);
 
   const db = createServiceClient();
-  const cambios: Record<string, unknown> = { status: 'SEATED', seated_at: new Date().toISOString() };
-  if (mesa != null) cambios.table_number = mesa;
 
-  const pedir = (cols: Record<string, unknown>) => db
+  // El grupo: quién es, cuántos y si sigue esperando.
+  const { data: grupo, error: errGrupo } = await db
+    .from('waitlist_entries')
+    .select('customer_name, party_size, status')
+    .eq('id', id)
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
+  if (errGrupo) return { error: 'No se pudo leer la lista de espera. Intenta de nuevo.' };
+  if (!grupo) return { error: 'Ese grupo ya no está en la lista.' };
+  const fila = grupo as { customer_name: string; party_size: number | null; status: string };
+  // Repetir «Sentar» sobre un grupo ya sentado no hace nada más.
+  if (fila.status === 'SEATED') return { ok: true };
+  if (fila.status === 'CANCELLED') return { error: 'Ese grupo se canceló.' };
+
+  /* PRIMERO la mesa, después el grupo (auditoría 2026-11-03, X14). Antes
+     se marcaba «sentados» y luego se intentaba ocupar la mesa: si estaba
+     ocupada por otros, la lista decía «sentados en la 9» y la 9 seguía
+     siendo de otro grupo. Ahora, si la mesa no se puede ocupar, el grupo
+     sigue en la cola con la causa. */
+  let sinTurnos = false;
+  if (mesa != null) {
+    const res = await sentarDesdeOrigen(restaurantId, mesa, {
+      source: 'waitlist', originId: id, partySize: fila.party_size, quien: fila.customer_name,
+    });
+    if ('error' in res) return { error: res.error };
+    sinTurnos = 'sinTurnos' in res;
+  }
+
+  const cambios: Record<string, unknown> = { status: 'SEATED', seated_at: new Date().toISOString() };
+  if (mesa != null && !sinTurnos) cambios.table_number = mesa;
+  const marcar = (cols: Record<string, unknown>) => db
     .from('waitlist_entries')
     .update(cols)
     .eq('id', id)
     .eq('restaurant_id', restaurantId)
-    .select('party_size')
-    .maybeSingle();
+    .in('status', ['WAITING', 'NOTIFIED']);
 
-  let { data, error } = await pedir(cambios);
-  /* Si falta la columna, la 128 todavía no corrió aquí. Sentar tiene que
-     seguir funcionando: se reintenta sin la mesa, igual que `party_size` en
-     el salón. Perder el número es malo; no poder sentar, peor. */
-  if (faltaLaColumna(error) && mesa != null) {
-    ({ data, error } = await pedir({ status: 'SEATED', seated_at: new Date().toISOString() }));
+  let { error } = await marcar(cambios);
+  /* Sin la 128 no existe la columna de la mesa: se marca sin ella. Perder
+     el número es malo; no poder sentar, peor. */
+  if (faltaLaColumna(error) && 'table_number' in cambios) {
+    ({ error } = await marcar({ status: 'SEATED', seated_at: cambios.seated_at }));
   }
-  if (error) return { error: error.message };
-
-  if (mesa != null) {
-    const res = await seatTable(restaurantId, mesa, {
-      partySize: (data?.party_size as number | null) ?? null,
-      source: 'waitlist',
-      originId: id,
-    });
-    /* Si la mesa ya estaba sentada no se deshace nada: la gente YA está
-       marcada como sentada, que es lo que el host acaba de hacer. Se le
-       dice, y él decide si era otra mesa. */
-    if (res.error && !res.needsMigration) {
-      revalidatePath('/admin/lista-espera');
-      return { error: res.error };
-    }
+  if (error) {
+    /* La mesa ya quedó ocupada por este grupo. Volver a tocar «Sentar» lo
+       termina: la mesa reconoce que es de este grupo y no abre otra. */
+    return { error: 'La mesa quedó ocupada, pero no se pudo marcar al grupo como sentado. Vuelve a tocar «Sentar»: retoma esa mesa.' };
   }
 
   revalidatePath('/admin/lista-espera');

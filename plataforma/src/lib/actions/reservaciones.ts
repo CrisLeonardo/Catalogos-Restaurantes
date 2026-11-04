@@ -7,7 +7,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { canActOnGroupBranch } from '@/lib/db/admin';
 import { puedeEnSeccion, SIN_SECCION } from '@/lib/auth/seccion';
 import type { ReservationStatus } from '@/lib/db/reservaciones';
-import { seatTable } from '@/lib/actions/table-sessions';
+import { mesaAbiertaDelOrigen, sentarDesdeOrigen } from '@/lib/mesa/sentar-desde-origen';
 import { faltaLaColumna } from '@/lib/db/migracion-ausente';
 
 export type ReservationResult = { error?: string; ok?: boolean };
@@ -94,37 +94,57 @@ export async function updateReservationStatus(
   const auth = await getAuthorizedRestaurantId(restaurantId);
   if (!auth.ok) return { error: auth.error };
 
-  const mesa = status === 'SEATED'
+  const elegida = status === 'SEATED'
     && tableNumber != null && Number.isInteger(tableNumber) && tableNumber >= 1 && tableNumber <= 999
     ? tableNumber
     : null;
+  // «En mesa» sin mesa elegida: si un intento anterior ya ocupó una para esta reserva, es esa.
+  const mesa = elegida ?? (status === 'SEATED' ? await mesaAbiertaDelOrigen(restaurantId, reservationId) : null);
 
   const db = createServiceClient();
+
+  /* «En mesa» con mesa: PRIMERO se ocupa la mesa, después cambia la
+     reserva (auditoría 2026-11-03, N22/E14). Antes la reserva quedaba «En
+     mesa 9» aunque la 9 fuera de otro grupo. Si la mesa no se puede
+     ocupar, la reserva no cambia y se dice por qué. Repetirlo es seguro:
+     una mesa abierta por ESTA reserva se reconoce y no se abre otra. */
+  let sinTurnos = false;
+  if (mesa != null) {
+    const { data: reserva, error: errLeer } = await db
+      .from('reservations')
+      .select('customer_name, party_size')
+      .eq('id', reservationId)
+      .eq('restaurant_id', restaurantId)
+      .maybeSingle();
+    if (errLeer) return { error: 'No se pudo leer la reserva. Intenta de nuevo.' };
+    if (!reserva) return { error: 'Esa reserva ya no existe.' };
+    const r = reserva as { customer_name: string; party_size: number | null };
+    const res = await sentarDesdeOrigen(restaurantId, mesa, {
+      source: 'reservation', originId: reservationId, partySize: r.party_size, quien: `La reserva de ${r.customer_name}`,
+    });
+    if ('error' in res) {
+      revalidatePath('/admin/reservaciones');
+      return { error: res.error };
+    }
+    sinTurnos = 'sinTurnos' in res;
+  }
+
   const base: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
   const pedir = (cols: Record<string, unknown>) => db
     .from('reservations')
     .update(cols)
     .eq('id', reservationId)
-    .eq('restaurant_id', restaurantId)
-    .select('party_size')
-    .maybeSingle();
+    .eq('restaurant_id', restaurantId);
 
-  let { data, error } = await pedir(mesa != null ? { ...base, table_number: mesa } : base);
+  let { error } = await pedir(mesa != null && !sinTurnos ? { ...base, table_number: mesa } : base);
   // Si falta la columna, la 128 no ha corrido aquí. Cambiar de estado no
   // puede depender de una columna que todavía no existe.
-  if (faltaLaColumna(error) && mesa != null) ({ data, error } = await pedir(base));
-  if (error) return { error: error.message };
-
-  if (mesa != null) {
-    const res = await seatTable(restaurantId, mesa, {
-      partySize: (data?.party_size as number | null) ?? null,
-      source: 'reservation',
-      originId: reservationId,
-    });
-    if (res.error && !res.needsMigration) {
-      revalidatePath('/admin/reservaciones');
-      return { error: res.error };
+  if (faltaLaColumna(error) && mesa != null) ({ error } = await pedir(base));
+  if (error) {
+    if (mesa != null) {
+      return { error: 'La mesa quedó ocupada, pero no se pudo cambiar la reserva a «En mesa». Vuelve a intentarlo.' };
     }
+    return { error: error.message };
   }
 
   revalidatePath('/admin/reservaciones');
