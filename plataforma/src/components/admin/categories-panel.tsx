@@ -150,7 +150,6 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
                 <form action={async (fd) => { mover({ id: c.id, dir: -1 }); await moveCategoryUp(fd); }}>
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="id"           value={c.id} />
-                  <input type="hidden" name="sort_order"   value={String(c.sort_order)} />
                   <button type="submit" className="press tap44" style={reorderBtn} title="Subir">
                     <Icon name="arrowUp" size={12} />
                   </button>
@@ -162,7 +161,6 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
                 <form action={async (fd) => { mover({ id: c.id, dir: 1 }); await moveCategoryDown(fd); }}>
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="id"           value={c.id} />
-                  <input type="hidden" name="sort_order"   value={String(c.sort_order)} />
                   <button type="submit" className="press tap44" style={reorderBtn} title="Bajar">
                     <Icon name="arrowDown" size={12} />
                   </button>
