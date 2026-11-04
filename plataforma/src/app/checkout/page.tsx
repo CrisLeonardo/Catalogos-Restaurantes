@@ -8,6 +8,7 @@ import { hasAnyHours, isOpenNow } from '@/lib/hours';
 import { getMenuDataCached, getTopSellingProductIdsCached } from '@/lib/db/menu';
 import { masPedidos } from '@/lib/menu-pairings';
 import { hasActiveCoupons } from '@/lib/db/cupones';
+import { pausaVigente } from '@/lib/pausa-pedidos';
 import { getDeliveryZones } from '@/lib/db/zones';
 import { isModuleActive } from '@/lib/modules';
 import { getAgentHubInfo } from '@/lib/print-agent';
@@ -39,7 +40,8 @@ export default async function CheckoutPage() {
 
   // Operación: pausa manual ("cocina saturada") y horario real.
   // createOrder vuelve a validar en el servidor; esto es solo la UX.
-  const paused = restaurant.orders_paused === true;
+  // Una pausa con hora de fin termina sola (migración 155, lib/pausa-pedidos).
+  const paused = pausaVigente(restaurant);
   const open = isOpenNow(restaurant.hours, restaurant.timezone || 'America/Guatemala', new Date(), restaurant.hour_exceptions);
   const hasCoupons = await hasActiveCoupons(restaurant.id);
   // Zonas con su tarifa (migración 104). El checkout las muestra; el cobro
@@ -77,6 +79,8 @@ export default async function CheckoutPage() {
         <CheckoutBlocked
           reason={paused ? 'paused' : 'closed'}
           pauseMessage={restaurant.pause_message}
+          pausedUntil={paused ? restaurant.orders_paused_until ?? null : null}
+          timezone={restaurant.timezone || 'America/Guatemala'}
         />
       </ThemeProvider>
     );

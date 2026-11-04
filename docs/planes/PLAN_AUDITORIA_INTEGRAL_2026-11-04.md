@@ -159,6 +159,14 @@ Orden recomendado: primero lo de más riesgo y menor tamaño, y lo que destraba 
 **Hacer:** sacar la pausa del formulario de horario y convertirla en una acción inmediata con confirmación del servidor: «Pausar 15 / 30 / 60 min · hasta reactivar», con la hora de reapertura a la vista. Mientras se guarda, el panel dice «Pausando…». Si falla, sigue diciendo «Recibiendo pedidos».
 **Aceptación:** video o capturas del caso bueno, del fallo de red y de la red lenta. Una pausa temporal se reabre sola a la hora prometida (necesita una columna para la hora de fin, en una migración nueva).
 
+**Estado (2026-11-04): hecha**, según la [maqueta aprobada](https://claude.ai/artifact/EPL6nSoti8abF1My1YiN8p).
+- **Regla única:** `lib/pausa-pedidos.ts` (15 pruebas) decide si hay pausa. Una pausa con fin termina sola: `orders_paused = true` con fecha pasada significa «terminó a esa hora». La usan crear pedido, el checkout, la tarjeta del panel, Mi cuenta y el panel del grupo.
+- **Acciones inmediatas:** `pausarPedidos` (15/30/60 min o hasta reactivar), `extenderPausaPedidos` (+15 min, sobre lo guardado) y `reanudarPedidos`, todas con bitácora. «Guardar horario» ya no escribe la pausa.
+- **Comensal:** la pantalla de checkout bloqueado agrega «Volvemos a recibir pedidos a las…».
+- **Migración 155** (`orders_paused_until`), **ANTES de desplegar**. Sin ella, «Hasta reactivar» funciona, las pausas con duración piden aplicar la migración, y crear pedido y Mi cuenta no se caen.
+- **Probado en el navegador con la base local:** recibiendo → elegir → «Pausando…» → en pausa (base y bitácora correctas); fallo de red simulado (sigue «Recibiendo» y la base sin cambios); +15 min; fin automático con el checkout abierto; hasta reactivar → reanudar.
+- **Visto de paso, para la ficha 1.11 (N11/E08):** en la pantalla de checkout bloqueado, el título y el mensaje claros sobre la tarjeta de vidrio clara casi no se leen. Ya pasaba antes de este cambio.
+
 ### 0.5 · Cupones: vigencia, programación y límites — M · migración probable
 
 **Cubre:** X04, X05, X06, R15.4, PA-T04, PA-T05, PA-T06.
@@ -329,7 +337,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 - [ ] 0.1 Textos y enlaces que prometen otra cosa
 - [ ] 0.2 Una sola fuente para plan, precio y alcance
 - [ ] 0.3 Error no es vacío ni cero
-- [ ] 0.4 Pausa de pedidos real
+- [x] 0.4 Pausa de pedidos real (rama `fix/pausa-pedidos-real`, mig 155, 2026-11-04)
 - [ ] 0.5 Cupones: vigencia, programación y límites
 - [ ] 0.6 Pedido, cupón y puntos en una sola operación
 - [ ] 0.7 Receta atómica y referencias entre restaurantes

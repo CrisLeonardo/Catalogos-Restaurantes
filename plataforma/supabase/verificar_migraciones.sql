@@ -157,7 +157,11 @@ huellas(n, que, ok, cuando) as (values
      to_regclass('public.encargo_fechas') is null
      and not exists (select 1 from information_schema.columns
                       where table_schema = 'public' and table_name = 'orders' and column_name = 'transfer_status'),
-     'DESPUÉS de desplegar (o a la vez)')
+     'DESPUÉS de desplegar (o a la vez)'),
+  ('155', 'pausa de pedidos con hora de fin (restaurants.orders_paused_until)',
+     exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'restaurants' and column_name = 'orders_paused_until'),
+     'ANTES de desplegar')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,
