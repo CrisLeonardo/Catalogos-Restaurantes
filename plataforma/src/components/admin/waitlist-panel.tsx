@@ -4,6 +4,7 @@
    lanzamiento). Anotar → Avisar (con WhatsApp si hay teléfono) → Sentar. */
 
 import { useEffect, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Stat, StatGroup } from '@/components/ui/stat';
@@ -52,6 +53,11 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
+  /* Las acciones revalidan la ruta, pero el panel vive detrás de una ruta
+     reescrita (/panel/<slug>/…) y no siempre se repinta solo: se pide de
+     nuevo a mano tras cada cambio, como en la Caja. Sin esto, sentar con
+     éxito dejaba el grupo en la cola y el error anterior a la vista. */
+  const router = useRouter();
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -62,6 +68,10 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
   /* La mesa elegida para cada quien, mientras no se les sienta. Por entrada
      y no una sola: el host puede tener dos grupos a punto de entrar. */
   const [mesaDe, setMesaDe] = useState<Record<string, string>>({});
+  /* Solo cuenta si sigue libre. Tras un choque («ya está ocupada») el panel
+     se refresca y esa mesa sale de la lista: el botón no debe seguir
+     ofreciéndola. */
+  const mesaElegida = (id: string) => (freeTables.includes(Number(mesaDe[id])) ? mesaDe[id] : '');
 
   const [form, setForm] = useState({ customer_name: '', party_size: 2, phone: '', notes: '' });
   function setField(k: string, v: string | number) {
@@ -71,32 +81,38 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
   function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setError(null);
     startTransition(async () => {
       const res = await addToWaitlist(restaurantId, form);
       if (res.error) { setError(res.error); return; }
       setForm({ customer_name: '', party_size: 2, phone: '', notes: '' });
       setTab('cola');
+      router.refresh();
     });
   }
 
   function handleAction(id: string, action: (restaurantId: string, id: string) => Promise<{ error?: string }>) {
     setBusyId(id);
+    setError(null);
     startTransition(async () => {
       const res = await action(restaurantId, id);
       setBusyId(null);
       if (res.error) { setError(res.error); return; }
+      router.refresh();
     });
   }
 
   /** Sentarlos, con mesa si se eligió una. */
   function handleSeat(id: string) {
-    const mesa = Number(mesaDe[id]);
+    const mesa = Number(mesaElegida(id));
     setBusyId(id);
+    setError(null);
     startTransition(async () => {
       const res = await markWaitlistSeated(restaurantId, id, Number.isFinite(mesa) && mesa > 0 ? mesa : null);
       setBusyId(null);
-      if (res.error) { setError(res.error); return; }
+      if (res.error) { setError(res.error); router.refresh(); return; }
       setMesaDe((prev) => { const next = { ...prev }; delete next[id]; return next; });
+      router.refresh();
     });
   }
 
@@ -132,22 +148,22 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
           <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 14 }}>Agregar a la lista de espera</p>
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <label style={labelStyle}>Nombre del grupo *</label>
-              <input className="adm-field" value={form.customer_name} onChange={(e) => setField('customer_name', e.target.value)} required placeholder="Familia Pérez" autoFocus />
+              <label style={labelStyle} htmlFor="espera-nombre">Nombre del grupo *</label>
+              <input id="espera-nombre" autoComplete="off" className="adm-field" value={form.customer_name} onChange={(e) => setField('customer_name', e.target.value)} required placeholder="Familia Pérez" autoFocus />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <label style={labelStyle}>Personas *</label>
-                <input className="adm-field" type="number" inputMode="decimal" min={1} max={100} value={form.party_size} onChange={(e) => setField('party_size', parseInt(e.target.value) || 1)} required />
+                <label style={labelStyle} htmlFor="espera-personas">Personas *</label>
+                <input id="espera-personas" className="adm-field" type="number" inputMode="numeric" min={1} max={100} value={form.party_size} onChange={(e) => setField('party_size', parseInt(e.target.value) || 1)} required />
               </div>
               <div>
-                <label style={labelStyle}>Teléfono</label>
-                <input className="adm-field" value={form.phone} onChange={(e) => setField('phone', e.target.value)} placeholder="Opcional — para avisar por WhatsApp" />
+                <label style={labelStyle} htmlFor="espera-telefono">Teléfono</label>
+                <input id="espera-telefono" type="tel" inputMode="tel" autoComplete="off" className="adm-field" value={form.phone} onChange={(e) => setField('phone', e.target.value)} placeholder="Opcional — para avisar por WhatsApp" />
               </div>
             </div>
             <div>
-              <label style={labelStyle}>Notas</label>
-              <textarea className="adm-field" style={{ resize: 'vertical', minHeight: 60 }} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Preferencia de mesa, ocasión especial…" />
+              <label style={labelStyle} htmlFor="espera-notas">Notas</label>
+              <textarea id="espera-notas" className="adm-field" style={{ resize: 'vertical', minHeight: 60 }} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Preferencia de mesa, ocasión especial…" />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <Button type="submit" disabled={isPending}>
@@ -206,7 +222,7 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
                       salón no se enteraba: la mesa seguía saliendo libre. */}
                   {freeTables.length > 0 && (
                     <select
-                      value={mesaDe[w.id] ?? ''}
+                      value={mesaElegida(w.id)}
                       onChange={(e) => setMesaDe((prev) => ({ ...prev, [w.id]: e.target.value }))}
                       aria-label={`Mesa para ${w.customer_name}`}
                       style={{
@@ -228,7 +244,7 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
                     size="sm"
                     className="rounded-adm-full"
                   >
-                    {mesaDe[w.id] ? `Sentar en ${mesaDe[w.id]}` : 'Sentar'}
+                    {mesaElegida(w.id) ? `Sentar en ${mesaElegida(w.id)}` : 'Sentar'}
                   </Button>
                   <Button type="button" onClick={() => handleAction(w.id, cancelWaitlistEntry)} disabled={busy} variant="outline" size="sm"
                     className="rounded-adm-full border-[var(--c-danger-line)] text-[var(--c-danger)]">
