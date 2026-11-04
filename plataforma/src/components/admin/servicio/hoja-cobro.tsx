@@ -219,7 +219,10 @@ export default function HojaCobro({
             Cuenta completa
           </button>
           <button type="button" role="tab" data-on={modo === 'iguales' ? '1' : '0'} aria-selected={modo === 'iguales'} onClick={() => { setModo('iguales'); setMarcadas([]); setRecibido(null); }}>
-            Partes iguales
+            {/* Solo calcula: cobra la cuenta entera de una vez. Se llamaba
+                «Partes iguales» y prometía cobros por persona que no hace
+                (auditoría 2026-11-03, N02/F11; el cobro real es la 1.1). */}
+            Calcular partes
           </button>
           <button type="button" role="tab" data-on={modo === 'platos' ? '1' : '0'} aria-selected={modo === 'platos'} onClick={() => { setModo('platos'); setRecibido(null); }}>
             Por platos
@@ -244,6 +247,12 @@ export default function HojaCobro({
               <Mono size={22}>{money(r2(pendiente / Math.max(1, personas)))}</Mono>
               <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500 }}>cada uno</div>
             </div>
+          </div>
+        )}
+        {modo === 'iguales' && (
+          <div style={{ fontSize: 13, color: 'var(--u-text-3)', fontWeight: 500, lineHeight: 1.45 }}>
+            Solo calcula cuánto le toca a cada quien. El cobro de abajo es por la cuenta
+            completa; para cobrar a cada persona por separado usa «Por platos».
           </div>
         )}
 

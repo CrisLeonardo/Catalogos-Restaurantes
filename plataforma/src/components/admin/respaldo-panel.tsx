@@ -40,7 +40,7 @@ export default function RespaldoPanel({ restaurantId }: { restaurantId: string }
     if (!(await asegurar())) return;
     start(async () => {
       const res = await exportBackupXlsx(restaurantId);
-      if (res.error || !res.xlsx) { toast.add({ title: res.error ?? 'No se pudo generar el respaldo.', type: 'error' }); return; }
+      if (res.error || !res.xlsx) { toast.add({ title: res.error ?? 'No se pudo generar el archivo.', type: 'error' }); return; }
       const binary = atob(res.xlsx);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -58,9 +58,11 @@ export default function RespaldoPanel({ restaurantId }: { restaurantId: string }
   return (
     <div className="adm-w-read flex flex-col gap-6">
       <p className="text-[14px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
-        Una copia completa de lo tuyo en un solo archivo de Excel, para guardarla
-        donde quieras. Para los reportes del día a día están Catálogo, Clientes y
-        Pedidos.
+        Tu catálogo, tus clientes y tus pedidos recientes en un solo archivo de
+        Excel, para guardarlos donde quieras. Abajo está exactamente lo que
+        incluye: sirve para tener tus datos a la mano, no para restaurar el
+        restaurante completo. Para los reportes del día a día están Catálogo,
+        Clientes y Pedidos.
       </p>
 
       <Section title="Qué te llevas">
@@ -84,7 +86,7 @@ export default function RespaldoPanel({ restaurantId }: { restaurantId: string }
 
       <Button onClick={download} disabled={pending} className="self-start rounded-adm-full">
         <Icon name="download" size={15} />
-        {pending ? 'Generando…' : 'Descargar la copia (.xlsx)'}
+        {pending ? 'Generando…' : 'Descargar el Excel (.xlsx)'}
       </Button>
 
       <p className="text-[12px] leading-snug" style={{ color: 'var(--u-text-4)' }}>

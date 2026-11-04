@@ -159,7 +159,7 @@ export default async function AdminAjustesPage() {
     ...(showStaff
       ? [{ href: '/admin/modulos', icon: 'grid', label: 'Funciones', desc: 'Enciende y apaga lo que usa tu restaurante', key: 'modulos', value: activeModules ? `${activeModules} activas` : undefined } as Row]
       : []),
-    { href: '/admin/respaldo', icon: 'download', label: 'Copia de tus datos', desc: 'Descarga todo lo tuyo cuando quieras', key: 'respaldo' },
+    { href: '/admin/respaldo', icon: 'download', label: 'Exportar tus datos', desc: 'Tu catálogo, clientes y pedidos en un Excel', key: 'respaldo' },
     { href: '/admin/ayuda', icon: 'helpCircle', label: 'Ayuda y tutoriales', desc: 'Guías paso a paso de cada pantalla', key: 'ayuda' },
   ];
 

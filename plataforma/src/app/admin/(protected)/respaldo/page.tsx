@@ -6,7 +6,7 @@ import { can } from '@/lib/permissions';
 import RespaldoPanel from '@/components/admin/respaldo-panel';
 import { panelLink } from '@/lib/panel-links-server';
 
-export const metadata = { title: 'Respaldo de datos – Panel admin' };
+export const metadata = { title: 'Exportar datos – Panel admin' };
 
 /* ============================================================
    /admin/respaldo — respaldo completo self-service

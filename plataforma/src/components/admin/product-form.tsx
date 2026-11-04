@@ -500,7 +500,7 @@ export default function ProductForm({ restaurantId, categories, product, default
             <Glass variant="quiet" style={{ padding: 18 }}>
               <SectionHead
                 title="Receta"
-                hint="Define ingredientes y cantidades — el costo del platillo se calcula solo y descuenta inventario."
+                hint="Define ingredientes y cantidades y el costo del platillo se calcula solo. Por ahora la receta no descuenta inventario al vender."
               />
               <RecipeEditor
                 productId={product.id}

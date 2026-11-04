@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { conEvento, EVENTOS } from '@/lib/analytics';
-import { SiteHeader, SiteFooter, SectionHead } from '@/components/site-chrome';
+import { SiteHeader, SiteFooter, SectionHead, contactHref, CONTACT_ICON } from '@/components/site-chrome';
 import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceLabel, PLAN_ACCENT, PLAN_ACCENT_INK } from '@/lib/plans';
 import type { PlanPricing } from '@/lib/plans';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
@@ -18,13 +18,6 @@ export const metadata = {
 // regenera sola (ISR) y además savePricingSettings la revalida al guardar.
 export const revalidate = 600;
 
-const CONTACT_WA = process.env.NEXT_PUBLIC_CONTACT_WHATSAPP;
-const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'crisleonardo100@gmail.com';
-
-function waLink(msg: string) {
-  if (CONTACT_WA) return `https://wa.me/${CONTACT_WA}?text=${encodeURIComponent(msg)}`;
-  return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(msg)}`;
-}
 
 
 const FEATURE_ROWS: { label: string; key: keyof typeof PLANS.BASICO }[] = [
@@ -42,11 +35,11 @@ function buildFaqs(pricing: PlanPricing) {
   return [
     {
       q: '¿Por qué no cobran según lo que vendo?',
-      a: 'Porque no queremos ser un costo que crece cuando te va mejor. Pagas un precio fijo por el plan y los módulos que usas — igual en un mes flojo que en tu mejor mes. Es la misma razón por la que existimos: reemplazar el modelo de comisión de las apps de delivery (18-30% por pedido) por algo predecible.',
+      a: 'Porque no queremos ser un costo que crece cuando te va mejor. Pagas un precio fijo por tu plan, igual en un mes flojo que en tu mejor mes. Es la misma razón por la que existimos: reemplazar el modelo de comisión de las apps de delivery (18-30% por pedido) por algo predecible.',
     },
     {
       q: '¿Qué pasa si mi restaurante crece mucho?',
-      a: 'Nada cambia en tu cobro. No hay tope de ventas ni de pedidos en ningún plan. Solo subes de plan cuando necesitas más funciones (más usuarios, panel de mesero, facturación electrónica) — nunca porque vendiste más.',
+      a: `Ningún plan cobra por lo que vendes. Estándar y Premium no tienen tope de pedidos: subes de plan cuando necesitas más funciones (más usuarios, panel de mesero, facturación electrónica), no porque vendiste más. En línea es el plan para empezar e incluye hasta ${PLANS.EN_LINEA.monthlyOrderCap} pedidos al mes; si un mes los pasas no se corta ningún pedido: te avisamos y al mes siguiente pasas a Estándar.`,
     },
     {
       q: '¿Qué incluye cada plan?',
@@ -356,7 +349,7 @@ export default async function PlanesPage() {
           Para grupos grandes, escríbenos: armamos un plan a medida.
         </p>
         <a
-          href={waLink('Hola, quiero información sobre planes para mi grupo de restaurantes / franquicia')}
+          href={contactHref('Hola, quiero información sobre planes para mi grupo de restaurantes / franquicia')}
           target="_blank"
           rel="noopener noreferrer"
           className="lp-btn lp-btn-soft"
@@ -398,11 +391,11 @@ export default async function PlanesPage() {
               Crear mi restaurante gratis
             </Link>
             <a
-              href={waLink('Hola, quiero una demo de Leogin para mi restaurante')}
+              href={contactHref('Hola, quiero una demo de Leogin para mi restaurante')}
               target="_blank" rel="noopener noreferrer"
               className="lp-btn lp-btn-soft"
             >
-              <Icon name="whatsapp" size={16} /> Hablar con ventas
+              <Icon name={CONTACT_ICON} size={16} /> Hablar con ventas
             </a>
           </div>
         </div>

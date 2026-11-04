@@ -6,6 +6,7 @@ import { getActiveWaitlist, getRecentWaitlist, getWaitlistSummary } from '@/lib/
 import { getFreeTableNumbers } from '@/lib/db/table-sessions';
 import WaitlistPanel from '@/components/admin/waitlist-panel';
 import { panelLink } from '@/lib/panel-links-server';
+import { createServiceClient } from '@/lib/supabase/service';
 
 export const metadata = { title: 'Lista de espera – Panel admin' };
 
@@ -20,18 +21,20 @@ export default async function AdminListaEsperaPage() {
   const mc = await resolveModuleContext('lista_espera');
   if (!mc.ok) redirect(await panelLink('/admin/modulos'));
 
-  const [entries, recent, summary, freeTables] = await Promise.all([
+  const [entries, recent, summary, freeTables, { data: local }] = await Promise.all([
     getActiveWaitlist(mc.restaurantId),
     getRecentWaitlist(mc.restaurantId),
     getWaitlistSummary(mc.restaurantId),
     /* Dónde se puede sentar a quien lleva media hora esperando (M-04).
        Hasta la migración 128 esta pantalla no tenía forma de decirlo. */
     getFreeTableNumbers(mc.restaurantId),
+    createServiceClient().from('restaurants').select('timezone').eq('id', mc.restaurantId).maybeSingle(),
   ]);
+  const timezone = (local as { timezone?: string | null } | null)?.timezone || 'America/Guatemala';
 
   return (
     <div className="anim-fade-up">
-      <WaitlistPanel restaurantId={mc.restaurantId} entries={entries} recent={recent} summary={summary} freeTables={freeTables} />
+      <WaitlistPanel restaurantId={mc.restaurantId} entries={entries} recent={recent} summary={summary} freeTables={freeTables} timezone={timezone} />
     </div>
   );
 }
