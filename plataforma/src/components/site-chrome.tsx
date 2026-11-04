@@ -21,6 +21,12 @@ import { subdomainUrl, DEMO_SLUG } from '@/lib/tenant';
 const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'crisleonardo100@gmail.com';
 const CONTACT_WA = process.env.NEXT_PUBLIC_CONTACT_WHATSAPP; // solo dígitos, con código de país
 
+/** El ícono y la forma de decirlo siguen al canal REAL del enlace. Antes los
+ *  botones decían «WhatsApp» con su ícono aunque abrieran un correo
+ *  (auditoría 2026-11-03, F02). */
+export const CONTACT_ICON = CONTACT_WA ? 'whatsapp' : 'mail';
+export const CONTACT_VIA = CONTACT_WA ? 'por WhatsApp' : 'por correo';
+
 /** Enlace de contacto: WhatsApp si hay número configurado, si no correo. */
 export function contactHref(msg = 'Hola, quiero una demo de Leogin para mi restaurante') {
   return CONTACT_WA
@@ -92,7 +98,7 @@ export function SiteFooter({ home = false }: { home?: boolean }) {
               className="lp-btn lp-btn-sm lp-btn-soft"
               style={{ marginTop: 18 }}
             >
-              <Icon name="whatsapp" size={15} /> Hablar con nosotros
+              <Icon name={CONTACT_ICON} size={15} /> Hablar con nosotros
             </a>
           </div>
 

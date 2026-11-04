@@ -9,6 +9,14 @@ import { isGoogleAuthEnabled } from '@/lib/auth-config';
 import { getPinAccess, readDeviceId, restaurantIdForDevice } from '@/lib/auth/trusted-device';
 import LoginClient from './login-client';
 
+/* Igual que /admin/login: sin metadata propia la pestaña heredaba «Menú en
+   línea» del layout raíz mientras el dueño escribía su contraseña
+   (auditoría 2026-11-03, F22). */
+export const metadata = {
+  title: 'Acceso al panel — Leogin',
+  robots: { index: false, follow: false },
+};
+
 export default async function LoginPage({
   searchParams,
 }: {

@@ -970,7 +970,7 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
         id: 'crear-receta',
         title: 'Arma la receta de un platillo',
         description:
-          'En la ficha del platillo, sección «Receta», agrega cada ingrediente con su cantidad. El costo del platillo se calcula solo y cada venta descuenta los ingredientes.',
+          'En la ficha del platillo, sección «Receta», agrega cada ingrediente con su cantidad. El costo del platillo se calcula solo con lo que cuesta cada ingrediente.',
         route: 'Menú → Platillos → Editar → Receta',
       },
       {

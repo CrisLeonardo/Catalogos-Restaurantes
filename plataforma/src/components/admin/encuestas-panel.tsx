@@ -115,7 +115,7 @@ export default function EncuestasPanel({ ratings, summary }: Props) {
 
       <div className="note note-info" style={{ fontSize: 13, fontWeight: 500 }}>
         <Icon name="helpCircle" size={16} style={{ flexShrink: 0, marginTop: 1 }} />
-        Los clientes reciben un enlace de calificación al finalizar su pedido. La encuesta es anónima y toma menos de 30 segundos.
+        Al terminar su pedido, el cliente ve una encuesta de menos de 30 segundos. No es anónima: si dejó su nombre en el pedido, lo ves junto a su calificación para poder darle seguimiento, y así se lo decimos antes de responder.
       </div>
     </div>
   );

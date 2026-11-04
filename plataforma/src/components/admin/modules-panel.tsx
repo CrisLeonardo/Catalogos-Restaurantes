@@ -71,21 +71,21 @@ const CHANNEL_META: { id: OrderType; label: string; description: string; icon: s
     label: 'Comer en el local',
     description: 'El cliente pide desde la mesa escaneando el QR. Requiere configurar el número de mesas.',
     icon: 'utensils',
-    configHref: '/admin/mesas',
+    configHref: '/admin/ajustes/salon',
   },
   {
     id: 'pickup',
     label: 'Para llevar',
     description: 'El cliente hace su pedido en línea y lo retira en el mostrador de tu local.',
     icon: 'bag',
-    configHref: '/admin/personalizacion',
+    configHref: '/admin/ajustes/pedidos',
   },
   {
     id: 'delivery',
     label: 'A domicilio',
     description: 'El cliente ingresa su dirección y el pedido se entrega donde está. Puedes definir zonas y costo de envío.',
     icon: 'truck',
-    configHref: '/admin/personalizacion',
+    configHref: '/admin/ajustes/entrega',
   },
 ];
 

@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { diaDeNegocio } from '@/lib/caja/dia';
 import { corteDelRestaurante } from '@/lib/db/dia-negocio';
+import { normalize as normalizarMetodo, labelOf as nombreDelMetodo } from '@/lib/payment-method';
 
 /* ============================================================
    ANALÍTICA AVANZADA — Fase B (Admin Pro)
@@ -132,7 +133,7 @@ export async function getAnalytics(
     if (!isCancel) {
       const ch = o.order_type;
       channel.set(ch, (channel.get(ch) ?? 0) + 1);
-      const pm = (o.payment_method || 'CASH').toUpperCase();
+      const pm = normalizarMetodo(o.payment_method);
       payment.set(pm, (payment.get(pm) ?? 0) + 1);
       if (o.delivery_zone) zone.set(o.delivery_zone, (zone.get(o.delivery_zone) ?? 0) + 1);
 
@@ -192,7 +193,9 @@ export async function getAnalytics(
     heat, heatMax, peakLabel, busiestWeekday,
     topSellers, deadStock,
     byChannel: mkSplit(channel, (k) => CHANNEL_LABEL[k] ?? k),
-    byPayment: mkSplit(payment, (k) => (k === 'CASH' ? 'Efectivo' : k)),
+    // El vocabulario único de lib/payment-method: antes solo traducía CASH
+    // y la pantalla imprimía «CARD» (auditoría 2026-11-03, X19).
+    byPayment: mkSplit(payment, nombreDelMetodo),
     byZone: mkSplit(zone, (k) => k),
     avgPrepMin: prepN > 0 ? prepSum / prepN : null,
     avgDeliveryMin: delN > 0 ? delSum / delN : null,

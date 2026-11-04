@@ -27,6 +27,9 @@ interface Props {
       (migración 128, M-04). Vacío = el local no usa mesas numeradas, o no
       queda ninguna: entonces «Sentar» funciona como siempre, sin mesa. */
   freeTables: number[];
+  /** Zona del restaurante: el historial muestra fecha y hora en la del local,
+      no en la del servidor ni la del aparato. */
+  timezone: string;
 }
 
 const labelStyle: React.CSSProperties = FIELD_LABEL;
@@ -41,13 +44,24 @@ function elapsedLabel(from: string, now: number): string {
   return `hace ${h}h${m > 0 ? ` ${m}min` : ''}`;
 }
 
+/** «3 nov, 14:20» en la zona del local. El historial reúne varios días: sin
+ *  fecha, una espera de anteayer parecía de hoy (auditoría 2026-11-03, X13). */
+function cuandoFue(iso: string, timezone: string): string {
+  const formato: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' };
+  try {
+    return new Date(iso).toLocaleString('es-GT', { ...formato, timeZone: timezone });
+  } catch {
+    return new Date(iso).toLocaleString('es-GT', formato);
+  }
+}
+
 function whatsappHref(phone: string, restaurantName: string): string {
   const digits = phone.replace(/[^\d]/g, '');
   const msg = encodeURIComponent(`¡Hola! Ya tenemos mesa lista para ustedes en ${restaurantName || 'el restaurante'}. Te esperamos 🙂`);
   return `https://wa.me/${digits}?text=${msg}`;
 }
 
-export default function WaitlistPanel({ restaurantId, entries, recent, summary, freeTables }: Props) {
+export default function WaitlistPanel({ restaurantId, entries, recent, summary, freeTables, timezone }: Props) {
   const [tab, setTab] = useState<'cola' | 'nueva'>('cola');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -243,7 +257,7 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
 
       {tab === 'cola' && recent.length > 0 && (
         <div>
-          <div className="adm-label" style={{ marginBottom: 10 }}>Hoy más temprano</div>
+          <div className="adm-label" style={{ marginBottom: 10 }}>Historial reciente</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {recent.slice(0, 8).map((w) => (
               <div key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', fontSize: 12, color: 'var(--u-text-3)' }}>
@@ -254,6 +268,9 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
                   · {w.status === 'SEATED'
                     ? `sentados${w.table_number ? ` en la mesa ${w.table_number}` : ''}`
                     : 'cancelado'}
+                </span>
+                <span style={{ marginLeft: 'auto', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                  {cuandoFue(w.seated_at ?? w.created_at, timezone)}
                 </span>
               </div>
             ))}

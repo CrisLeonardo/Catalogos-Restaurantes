@@ -375,7 +375,7 @@ export default function AdminShell({
     '/admin/cupones': 'Cupones',
     '/admin/lealtad': 'Lealtad',
     '/admin/modulos': 'Funciones',
-    '/admin/respaldo': 'Copia de datos',
+    '/admin/respaldo': 'Exportar datos',
   };
   const HELP_SECTIONS: Record<string, string> = {
     '/admin/menu':             'catalogo',

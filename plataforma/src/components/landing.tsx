@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { conEvento, EVENTOS } from '@/lib/analytics';
-import { SiteHeader, SiteFooter, SectionHead, contactHref } from '@/components/site-chrome';
+import { SiteHeader, SiteFooter, SectionHead, contactHref, CONTACT_ICON, CONTACT_VIA } from '@/components/site-chrome';
 import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
 import { PLANS, PLAN_POINTS, PUBLIC_PLANS, planPriceQ, type PlanPricing } from '@/lib/plans';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
@@ -33,7 +33,7 @@ const PROOF = [
 const FOR_OWNER = [
   { icon: 'bell',    title: 'Los pedidos no se te escapan', body: 'Cada pedido suena y aparece al instante en tu panel, en la cocina y en la impresora de comandas.' },
   { icon: 'wallet',  title: 'Tu dinero, cuadrado',          body: 'Corte de caja, costo por plato, margen real y reportes que puedes exportar. Sin hojas de cálculo a mano.' },
-  { icon: 'box',     title: 'Sabes qué tienes y qué falta', body: 'Inventario con recetas y kardex: cada venta descuenta insumos y te avisa antes de quedarte sin nada.' },
+  { icon: 'box',     title: 'Sabes qué tienes y qué falta', body: 'Inventario por platillo que baja con cada venta y te avisa antes de agotarse, y recetas que calculan cuánto te cuesta cada plato.' },
   { icon: 'sparkle', title: 'Tu marca, no la nuestra',      body: 'Colores, logo, fotos y tipografía propios. Tus clientes ven tu restaurante, no “otra app” con tu comida adentro.' },
 ];
 const FOR_DINER = [
@@ -631,7 +631,7 @@ export default async function LeoginLanding() {
                 </h2>
                 <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(245,243,239,0.72)', maxWidth: 520, margin: '14px auto 0' }}>
                   Crea tu restaurante en minutos y pruébalo sin pagar nada. ¿Prefieres que te
-                  acompañemos en la configuración? Escríbenos por WhatsApp y lo armamos juntos.
+                  acompañemos en la configuración? Escríbenos {CONTACT_VIA} y lo armamos juntos.
                 </p>
                 <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 30 }}>
                   <Link href="/registro" {...conEvento('lp-btn lp-btn-lg lp-btn-primary', EVENTOS.clicCrear, 'cierre')}>
@@ -644,7 +644,7 @@ export default async function LeoginLanding() {
                     className="lp-btn lp-btn-lg"
                     style={{ background: 'rgba(245,243,239,0.10)', color: '#F5F3EF', borderColor: 'rgba(245,243,239,0.22)' }}
                   >
-                    <Icon name="whatsapp" size={17} /> Hablar con ventas
+                    <Icon name={CONTACT_ICON} size={17} /> Hablar con ventas
                   </a>
                 </div>
               </div>
