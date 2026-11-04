@@ -4,11 +4,16 @@ import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Stat, StatGroup } from '@/components/ui/stat';
 import type { OrderRating, RatingsSummary } from '@/lib/db/encuestas';
+import type { EstadoLectura } from '@/lib/db/lectura';
+import AvisoLectura from '@/components/admin/aviso-lectura';
 import { useState } from 'react';
 
 interface Props {
   ratings: OrderRating[];
   summary: RatingsSummary;
+  /** Con `error`, ni el promedio ni «Aún no hay reseñas» son ciertos: no se pintan. */
+  estado: EstadoLectura;
+  leidoEn: string;
 }
 
 function Stars({ value, size = 14 }: { value: number; size?: number }) {
@@ -36,7 +41,7 @@ function DistBar({ label, count, total }: { label: string; count: number; total:
   );
 }
 
-export default function EncuestasPanel({ ratings, summary }: Props) {
+export default function EncuestasPanel({ ratings, summary, estado, leidoEn }: Props) {
   /* Cinco a la vista y «Ver todas»: antes la lista tenía su propio scroll
      de 400 px dentro de la página — scroll dentro de scroll, que en el
      teléfono atrapa el dedo (auditoría 2026-10-02, CLI-04). */
@@ -44,6 +49,18 @@ export default function EncuestasPanel({ ratings, summary }: Props) {
   const shownRatings = allReviews ? ratings : ratings.slice(0, 5);
   const avgDisplay = summary.average > 0 ? summary.average.toFixed(1) : '—';
   const avgMonthDisplay = summary.avgThisMonth > 0 ? summary.avgThisMonth.toFixed(1) : '—';
+
+  if (estado === 'error') {
+    return (
+      <AvisoLectura
+        estado="error"
+        que="las encuestas"
+        noConcluir="No significa que no tengas reseñas ni que el promedio sea cero."
+        leidoEn={leidoEn}
+        sinDatos
+      />
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>

@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { createServiceClient } from '@/lib/supabase/service';
-import { faltaLaTabla } from '@/lib/db/migracion-ausente';
+import { lecturaDe, type EstadoLectura, type Lectura } from '@/lib/db/lectura';
 import type { EstadoComprobante } from '@/lib/pago-plan';
 
 /* ============================================================
@@ -47,8 +47,9 @@ function norm(row: Record<string, unknown>): Comprobante {
 }
 
 /** El último comprobante del restaurante (para pintar «en revisión» o «rechazado»).
- *  null si no hay ninguno o si la migración 148 aún no corrió aquí. */
-export async function ultimoComprobante(restaurantId: string): Promise<Comprobante | null> {
+ *  `datos: null` si no hay ninguno; el estado dice si se pudo consultar
+ *  (antes un error también devolvía null, como si nunca hubiera mandado uno). */
+export async function ultimoComprobante(restaurantId: string): Promise<Lectura<Comprobante | null>> {
   const db = createServiceClient();
   const { data, error } = await db
     .from('payment_proofs')
@@ -57,8 +58,7 @@ export async function ultimoComprobante(restaurantId: string): Promise<Comproban
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error || !data) return null;
-  return norm(data as Record<string, unknown>);
+  return lecturaDe(error, data ? norm(data as Record<string, unknown>) : null, null, { contexto: 'ultimoComprobante' });
 }
 
 export interface ComprobantePorRevisar extends Comprobante {
@@ -70,8 +70,10 @@ export interface ComprobantePorRevisar extends Comprobante {
 }
 
 /** Bandeja del super admin: lo que espera revisión, el más viejo primero.
- *  `disponible: false` cuando la migración 148 todavía no corrió. */
-export async function comprobantesPorRevisar(): Promise<{ disponible: boolean; items: ComprobantePorRevisar[] }> {
+ *  `estado: 'falta-migracion'` cuando la 148 todavía no corrió; `'error'` si
+ *  la consulta falló (antes eso se pintaba «No hay comprobantes por
+ *  revisar», auditoría 2026-11-03, N13). */
+export async function comprobantesPorRevisar(): Promise<{ estado: EstadoLectura; items: ComprobantePorRevisar[] }> {
   const db = createServiceClient();
   const { data, error } = await db
     .from('payment_proofs')
@@ -79,7 +81,7 @@ export async function comprobantesPorRevisar(): Promise<{ disponible: boolean; i
     .eq('status', 'SUBMITTED')
     .order('created_at', { ascending: true })
     .limit(50);
-  if (error) return { disponible: !faltaLaTabla(error), items: [] };
+  if (error) return { estado: lecturaDe(error, null, null, { contexto: 'comprobantesPorRevisar' }).estado, items: [] };
 
   const items = await Promise.all(
     (data ?? []).map(async (row) => {
@@ -97,15 +99,15 @@ export async function comprobantesPorRevisar(): Promise<{ disponible: boolean; i
       };
     }),
   );
-  return { disponible: true, items };
+  return { estado: 'ok', items };
 }
 
-/** Cuántos esperan revisión (para el aviso en Cobranza). 0 si no hay tabla. */
-export async function contarComprobantesPorRevisar(): Promise<number> {
+/** Cuántos esperan revisión (para el aviso en Cobranza). Un error no es un 0. */
+export async function contarComprobantesPorRevisar(): Promise<Lectura<number>> {
   const db = createServiceClient();
   const { count, error } = await db
     .from('payment_proofs')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'SUBMITTED');
-  return error ? 0 : count ?? 0;
+  return lecturaDe(error, count ?? 0, 0, { contexto: 'contarComprobantesPorRevisar' });
 }

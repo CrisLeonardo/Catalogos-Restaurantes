@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/icons';
 import ComprobanteRevision from '@/components/super/comprobante-revision';
 import { comprobantesPorRevisar } from '@/lib/db/comprobantes';
+import AvisoLectura from '@/components/admin/aviso-lectura';
 import { codigoDePago } from '@/lib/pago-plan';
 import { fmtMoney } from '@/lib/money';
 import { fechaCorta } from '@/lib/dates';
@@ -14,9 +15,21 @@ export const dynamic = 'force-dynamic';
    «Mi suscripción» (plan 2026-10-28, §3). Aprobar marca pagadas las facturas
    que cubría el envío; rechazar deja un motivo que el dueño ve. */
 export default async function ComprobantesPage() {
-  const { disponible, items } = await comprobantesPorRevisar();
+  const { estado, items } = await comprobantesPorRevisar();
 
-  if (!disponible) {
+  /* Un error ya no se pinta «No hay comprobantes por revisar» (auditoría
+     2026-11-03, N13): puede haber pagos esperando. */
+  if (estado === 'error') {
+    return (
+      <AvisoLectura
+        estado="error"
+        que="los comprobantes"
+        noConcluir="Puede haber pagos esperando revisión: reintenta antes de dar algo por pendiente o por pagado."
+      />
+    );
+  }
+
+  if (estado === 'falta-migracion') {
     return (
       <Card className="p-5" style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
         Falta aplicar la migración 148 (comprobantes de pago) en esta base. Mientras tanto, los

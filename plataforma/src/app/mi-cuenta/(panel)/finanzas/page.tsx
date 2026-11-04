@@ -6,6 +6,7 @@ import DateRangeForm from '@/components/admin/date-range-form';
 import GroupFinanceExport from '@/components/mi-cuenta/group-finance-export';
 import { fmtMoney } from '@/lib/money';
 import Kpi from '@/components/mi-cuenta/kpi';
+import { coberturaDeCostos } from '@/lib/finanzas-cobertura';
 import { ChartReadout } from '@/components/ui/chart-readout';
 import { diaSemana } from '@/lib/dates';
 
@@ -45,6 +46,13 @@ export default async function FinanzasGrupoPage({
   // costo cargado (lib/db/group.ts, auditoría 2026-10-02, MIC-01).
   const margin = report.totalMarginPct;
   const cost = report.totalCost;
+  /* Sin costos cargados, «Costo Q0 · Utilidad Q0» se lee como un resultado:
+     es un dato que falta (auditoría 2026-11-03, X21). Con costos a medias se
+     dice qué parte de lo vendido cubren, igual que Finanzas del panel. */
+  const cobertura = coberturaDeCostos({ productRevenue: report.totalProductRevenue, costedRevenue: report.totalCostedRevenue });
+  const sinCostos = cobertura.tipo === 'sin-costos';
+  const costosAMedias = cobertura.tipo === 'parcial';
+  const coberturaPct = cobertura.tipo === 'parcial' ? cobertura.pct : null;
   const avgTicket = report.totalOrders > 0 ? report.totalRevenue / report.totalOrders : 0;
 
   return (
@@ -63,11 +71,30 @@ export default async function FinanzasGrupoPage({
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
         <Kpi label={varios ? 'Ingreso del grupo' : 'Ingreso'} value={money(report.totalRevenue)} hero />
-        <Kpi label="Costo de lo vendido" value={money(cost)} />
-        <Kpi label="Utilidad" value={money(report.totalProfit)} sub={margin != null ? `margen ${margin.toFixed(0)}%` : undefined} />
+        {sinCostos ? (
+          <>
+            <Kpi label="Costo de lo vendido" value="Sin datos" sub="ningún platillo vendido tiene costo" small />
+            <Kpi label="Utilidad" value="No disponible" sub="faltan costos" small />
+          </>
+        ) : (
+          <>
+            <Kpi label="Costo de lo vendido" value={money(cost)} sub={costosAMedias ? `de ${coberturaPct}% de lo vendido` : undefined} />
+            <Kpi label="Utilidad" value={money(report.totalProfit)} sub={margin != null ? `margen ${margin.toFixed(0)}%${costosAMedias ? ' · parcial' : ''}` : undefined} />
+          </>
+        )}
         <Kpi label="Ticket promedio" value={money(avgTicket)} />
         <Kpi label="Pedidos" value={String(report.totalOrders)} />
       </div>
+
+      {(sinCostos || costosAMedias) && (
+        <div style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5, padding: '0 2px' }}>
+          {sinCostos ? (
+            <>Ninguno de los platillos vendidos tiene costo cargado, así que todavía no se puede calcular la utilidad. Pon el <strong>Costo</strong> en el editor de cada platillo.</>
+          ) : (
+            <>La utilidad solo cuenta los platillos que tienen costo: <strong>{money(report.totalCostedRevenue)}</strong> de <strong>{money(report.totalProductRevenue)}</strong> vendidos ({coberturaPct}%). Pon el <strong>Costo</strong> en el resto para verla completa.</>
+          )}
+        </div>
+      )}
 
       <div className="glass" style={{ borderRadius: 'var(--radius-lg)', padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)' }}>{varios ? 'Ingreso diario del grupo' : 'Ingreso diario'}</div>
@@ -117,8 +144,8 @@ export default async function FinanzasGrupoPage({
                     <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{money(ticket)} c/u</div>
                   </div>
                   <div style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>
-                    {money(b.profit)}
-                    <div style={{ fontSize: 11, color: m != null && m < 0 ? 'var(--c-danger)' : 'var(--u-text-4)' }}>{m != null ? `${m.toFixed(0)}% margen` : '—'}</div>
+                    {coberturaDeCostos(b).tipo === 'sin-costos' ? 'Sin datos' : money(b.profit)}
+                    <div style={{ fontSize: 11, color: m != null && m < 0 ? 'var(--c-danger)' : 'var(--u-text-4)' }}>{m != null ? `${m.toFixed(0)}% margen` : coberturaDeCostos(b).tipo === 'sin-costos' ? 'faltan costos' : '—'}</div>
                   </div>
                 </div>
               );

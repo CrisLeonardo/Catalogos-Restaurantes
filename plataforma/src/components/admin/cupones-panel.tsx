@@ -13,10 +13,15 @@ import { fmtMoney } from '@/lib/money';
 import { FIELD_LABEL } from '@/components/admin/field-label';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Stat, StatGroup } from '@/components/ui/stat';
+import AvisoLectura from '@/components/admin/aviso-lectura';
+import type { EstadoLectura } from '@/lib/db/lectura';
 
 interface Props {
   restaurantId: string;
   coupons: Coupon[];
+  /** Si la consulta falló, la lista vacía NO significa «sin cupones». */
+  estado: EstadoLectura;
+  leidoEn: string;
 }
 
 const labelStyle: React.CSSProperties = FIELD_LABEL;
@@ -34,7 +39,7 @@ function couponStatus(c: Coupon): { label: string; color: string } {
   return { label: 'Activo', color: 'var(--c-ok)' };
 }
 
-export default function CuponesPanel({ restaurantId, coupons }: Props) {
+export default function CuponesPanel({ restaurantId, coupons, estado, leidoEn }: Props) {
   const { confirm, dialog } = useConfirm();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -119,6 +124,13 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       {dialog}
+      <AvisoLectura
+        estado={estado}
+        que="tus cupones"
+        noConcluir="No significa que no tengas cupones."
+        leidoEn={leidoEn}
+        sinDatos={coupons.length === 0}
+      />
       {/* Cifras con la fila del panel (no píldoras propias) y solo si ya hay
           cupones: «0 activos · 0 total» no le dice nada a quien empieza
           (auditoría 2026-10-02, T-05). */}
@@ -197,7 +209,7 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
       )}
 
       {/* Lista de cupones */}
-      {coupons.length === 0 && !showForm ? (
+      {coupons.length === 0 && !showForm && estado === 'error' ? null : coupons.length === 0 && !showForm ? (
         <EmptyState
           icon="ticket"
           title="Aún no tienes cupones"
