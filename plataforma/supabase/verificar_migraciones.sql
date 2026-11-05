@@ -157,7 +157,12 @@ huellas(n, que, ok, cuando) as (values
      to_regclass('public.encargo_fechas') is null
      and not exists (select 1 from information_schema.columns
                       where table_schema = 'public' and table_name = 'orders' and column_name = 'transfer_status'),
-     'DESPUÉS de desplegar (o a la vez)')
+     'DESPUÉS de desplegar (o a la vez)'),
+  ('160', 'cobro parcial y cierre de mesa transaccionales',
+     exists (select 1 from information_schema.columns where table_schema='public' and table_name='order_payments' and column_name='item_amounts')
+     and to_regprocedure('public.leogin_cobrar_parte_mesa(uuid,integer,uuid[],jsonb,uuid)') is not null
+     and to_regprocedure('public.leogin_confirmar_cierre_mesa(uuid,integer,uuid[],jsonb,uuid)') is not null,
+     'ANTES de desplegar; después de 001–159')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,
