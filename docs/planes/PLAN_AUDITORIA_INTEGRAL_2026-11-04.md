@@ -220,6 +220,8 @@ Orden recomendado: primero lo de más riesgo y menor tamaño, y lo que destraba 
 **Hacer:** reproducir primero el caso del dueño con membresía y sin `profiles.restaurant_id`, y el de varios locales. Rastrear la reescritura de `proxy.ts`, las cabeceras y `resolveRestaurantId`. Ampliar el E2E con esos usuarios, un empleado restringido y el superadmin con MFA. **No** se corrige copiando `restaurant_id` a todos.
 **Aceptación:** cada `/panel/<slug>` abre el local elegido o explica por qué se niega; pasar del local A al B no mezcla datos; una acción invocada directamente sin permiso se rechaza en el servidor.
 
+**Estado (2026-11-05):** implementada en `fix/acceso-sucursal-membresias`, encima de #71, sin migración. El GET moderno funcionó en un entorno limpio; no se atribuye una causa no demostrada al rebote N14 observado durante la auditoría. Sí se reprodujeron ocho regresiones contra la base anterior: seis acciones usaban el permiso global en vez de la membresía de la sucursal, y dos casos del resolvedor caían al restaurante del perfil al faltar acceso o no existir el slug. Ahora se rechazan, el acceso conserva la sección tras login/MFA y reconoce «Continuar como» por membresía; Mi cuenta explica los rechazos. Cocina y mesero usan el local elegido también con perfil legado o grupo. Evidencia y comandos en §8 del [registro de traspaso](../registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md).
+
 ### 0.13 · Probar el circuito del dinero en Postgres real — L
 
 **Cubre:** C08, E03 (cobros y cierres), T01 (cobro, devolución y cierre), filas de M§8.
@@ -339,7 +341,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 - [ ] 0.9 Sentar desde espera o reserva sin estados partidos
 - [ ] 0.10 Caja honesta
 - [ ] 0.11 Cola offline que no promete de más
-- [ ] 0.12 Acceso por sucursal con membresías
+- [x] 0.12 Acceso por sucursal con membresías
 - [ ] 0.13 Probar el circuito del dinero en Postgres real
 
 **Ola 1**: [ ] 1.0 · [ ] 1.1 · [ ] 1.2 · [ ] 1.3 · [ ] 1.4 · [ ] 1.5 · [ ] 1.6 · [ ] 1.7 · [ ] 1.8 · [ ] 1.9 · [ ] 1.10 · [ ] 1.11 · [ ] 1.12

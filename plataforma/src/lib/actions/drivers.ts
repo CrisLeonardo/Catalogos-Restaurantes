@@ -18,11 +18,11 @@
    dinero pasa por las manos del repartidor y sin ese dato no hay cuadre.
    ============================================================ */
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { resolveOwnRestaurantId } from '@/lib/db/membership';
-import { can } from '@/lib/permissions';
+import { puedeEnSeccion } from '@/lib/auth/seccion';
 import { revalidatePath } from 'next/cache';
 import { after } from 'next/server';
 import { logActivity } from '@/lib/activity';
@@ -33,7 +33,7 @@ export type DriverState = { error: string } | { ok: true } | null;
 /** Contexto del DUEÑO (gestión de repartidores). */
 async function adminContext(formData: FormData) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return null;
 
   const { data: profile } = await supabase
@@ -43,8 +43,6 @@ async function adminContext(formData: FormData) {
     .single();
   if (!profile) return null;
 
-  if (!can(profile.role, profile.permissions as string[] | null, 'repartidores')) return null;
-
   // Quien administra un grupo entra a la sucursal del subdominio, verificada
   // contra su organización; el resto, al suyo. `resolveGroupBranchId` da null
   // si no administra ninguno (migración 116).
@@ -53,6 +51,7 @@ async function adminContext(formData: FormData) {
     : ((await resolveGroupBranchId()) ?? (await resolveOwnRestaurantId(profile.restaurant_id)));
 
   if (!restaurantId) return null;
+  if (!(await puedeEnSeccion(restaurantId, 'repartidores'))) return null;
   return { db: createServiceClient(), restaurantId, userId: user.id };
 }
 
@@ -63,7 +62,7 @@ async function adminContext(formData: FormData) {
  */
 async function driverContext() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return null;
 
   const { data: profile } = await supabase
@@ -73,8 +72,6 @@ async function driverContext() {
     .single();
   if (!profile) return null;
 
-  if (!can(profile.role, profile.permissions as string[] | null, 'reparto')) return null;
-
   const db = createServiceClient();
   const { data: driver } = await db
     .from('drivers')
@@ -83,6 +80,7 @@ async function driverContext() {
     .single();
 
   if (!driver || !driver.activo) return null;
+  if (!(await puedeEnSeccion(driver.restaurant_id as string, 'reparto'))) return null;
 
   return {
     db,

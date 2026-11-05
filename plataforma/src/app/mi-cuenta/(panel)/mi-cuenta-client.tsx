@@ -12,7 +12,7 @@ import LeoginInstallBanner from '@/components/leogin-install-banner';
 
 
 export default function MiCuentaClient({
-  cards, pricing, accountName, canCreate, groupName,
+  cards, pricing, accountName, canCreate, groupName, accessMessage,
 }: {
   cards: MembershipCard[];
   pricing: PlanPricing;
@@ -20,6 +20,7 @@ export default function MiCuentaClient({
   canCreate: boolean;
   /** Nombre del grupo, si esta cuenta tiene dos o más restaurantes propios. */
   groupName: string | null;
+  accessMessage: string | null;
 }) {
   /** Restaurante cuyo PIN se está pidiendo (null = ninguno). */
   const [asking, setAsking] = useState<MembershipCard | null>(null);
@@ -44,11 +45,11 @@ export default function MiCuentaClient({
           Hola, {accountName.split('@')[0].split(' ')[0]}
         </h1>
         <p className="t-mute" style={{ fontSize: 14, marginTop: 8, marginBottom: 26 }}>
-          {cards.length === 0
+          {accessMessage ?? (cards.length === 0
             ? 'Todavía no tienes ningún restaurante. Crea el primero aquí abajo.'
             : cards.length === 1
               ? 'Este es tu restaurante.'
-              : `Tienes ${cards.length} restaurantes. Elige a cuál quieres entrar.`}
+              : `Tienes ${cards.length} restaurantes. Elige a cuál quieres entrar.`)}
         </p>
 
         {/* Desde el origen único, Mi cuenta ES el sitio correcto para

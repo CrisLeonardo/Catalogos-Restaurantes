@@ -29,7 +29,8 @@ export const dynamic = 'force-dynamic';
  * finanzas), que el marco de esta carpeta enseña a quien tiene dos o más
  * restaurantes propios.
  */
-export default async function MiCuentaPage() {
+export default async function MiCuentaPage({ searchParams }: { searchParams: Promise<{ acceso?: string }> }) {
+  const acceso = (await searchParams).acceso;
   const supabase = await createClient();
   const { data: { user } } = await getStaffUser();
   if (!user) redirect('/admin/login');
@@ -45,7 +46,8 @@ export default async function MiCuentaPage() {
   // membresías no están aplicadas, o la fila se perdió. Enseñarle aquí un
   // "crea tu primer restaurante" sería mentirle sobre lo que ya tiene, así
   // que se le devuelve al camino de siempre.
-  if (cards.length === 0 && !scope && profile?.restaurant_id) redirect('/registro');
+  if (cards.length === 0 && !scope && profile?.restaurant_id
+      && acceso !== 'sin-permiso' && acceso !== 'no-disponible') redirect('/registro');
 
   return (
     <MiCuentaClient
@@ -57,6 +59,11 @@ export default async function MiCuentaPage() {
       // del local, que es una credencial de turno, no una persona.
       canCreate={!isSyntheticStaffEmail(user.email)}
       groupName={scope?.isGroup ? scope.name : null}
+      accessMessage={acceso === 'sin-permiso'
+        ? 'No tienes acceso a ese restaurante. Elige uno de tus restaurantes o pide al dueño que te invite.'
+        : acceso === 'no-disponible'
+          ? 'No pudimos abrir ese restaurante. Revisa la dirección o elige uno de tus restaurantes.'
+          : null}
     />
   );
 }

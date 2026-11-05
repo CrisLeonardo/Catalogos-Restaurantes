@@ -2,7 +2,7 @@
 
 Documento de traspaso para retomar el trabajo en otra sesión o cuenta sin perder el contexto. Resume qué se logró, qué está en curso y qué falta, con listas para marcar.
 
-> **Resumen:** la ola 0 lleva **10 de 13 fichas hechas**, cada una en su rama y su PR. Hay **11 PR abiertos** (#71 a #81), todos con el CI en verde y **ninguno fusionado**. Faltan las fichas **0.12, 0.2 y 0.13**. Después viene la ola 1, que empieza por la **1.0 (paleta)**. Nada de esto está desplegado.
+> **Actualización del 2026-11-05:** la ola 0 lleva **11 de 13 fichas implementadas**. A los PR #71–#81 se suma la ficha **0.12** en `fix/acceso-sucursal-membresias` (detalle y validación en §8). Ninguno se fusionó durante esta continuación. El CI de #71–#81 estaba en verde al traspaso; el del nuevo PR se comprueba aparte. Faltan **0.2 y 0.13**. Después viene la ola 1, que empieza por **1.0 (paleta)**. No se desplegó nada durante esta continuación.
 
 ---
 
@@ -46,7 +46,7 @@ Documento de traspaso para retomar el trabajo en otra sesión o cuenta sin perde
 
 ## 3. Lo logrado: fichas de la ola 0
 
-Todas salen de `docs/plan-auditoria-integral`, van contra `main` y tienen el CI en verde (revisado el 2026-11-04). Cada PR explica el fallo reproducido, el arreglo y las pruebas.
+Todas salen de `docs/plan-auditoria-integral` y van contra `main`. Los PR #71–#81 tenían el CI en verde al revisarlos el 2026-11-04; la 0.12 se valida el 2026-11-05 (§8). Cada PR explica el fallo reproducido, el arreglo y las pruebas.
 
 | Ficha | PR | Rama | Migración | Qué resolvió |
 |---|---|---|---|---|
@@ -61,6 +61,7 @@ Todas salen de `docs/plan-auditoria-integral`, van contra `main` y tienen el CI 
 | 0.9 Sentar sin estados partidos | [#79](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/79) | `fix/sentar-sin-estados-partidos` | — | Primero la mesa, después el grupo (`lib/mesa/sentar-desde-origen.ts`); repetir no abre otra; etiquetas en los formularios de reserva y espera |
 | 0.8 Compras atómicas y estados | [#80](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/80) | `fix/compras-atomicas-y-estados` | **159** (ANTES o a la vez) | Una compra recibida ya no vuelve a borrador (antes sumaba el stock dos veces). `leogin_crear_compra` con folio bajo candado. Prueba `159_*.sql` |
 | 0.11 Cola offline honesta | [#81](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/81) | `fix/cola-offline-honesta` | — | `saveQueuedOrder` dice si guardó de verdad; «No se guardó en este teléfono». **La cola del mesero vuelve a reenviarse** (ver §4) |
+| 0.12 Acceso por sucursal | PR de esta rama | `fix/acceso-sucursal-membresias` | — | Permiso efectivo por membresía en seis resolutores de acciones; rechazo sin caer a otro local; destino tras login/MFA; «Continuar como» moderno; cocina/mesero con sucursal coherente. Ver §8 |
 
 ### Hallazgos importantes del camino
 
@@ -117,15 +118,15 @@ Todas salen de `docs/plan-auditoria-integral`, van contra `main` y tienen el CI 
 
 ## 6. Lo que falta
 
-### Ola 0 (3 fichas). Orden recomendado: 0.12 → 0.2 → 0.13
+### Ola 0 (2 fichas). Orden recomendado: 0.2 → 0.13
 
 - [x] 0.1 · [x] 0.3 · [x] 0.4 · [x] 0.5 · [x] 0.6 · [x] 0.7 · [x] 0.8 · [x] 0.9 · [x] 0.10 · [x] 0.11
-- [ ] **0.12 Acceso por sucursal con membresías** (M). N14, E04, T06, F20, PA-T29.
-  - [ ] Reproducir primero el caso de un dueño con membresía y sin `profiles.restaurant_id`, y el de varios locales.
-  - [ ] Rastrear la reescritura de `proxy.ts`, las cabeceras y `resolveRestaurantId`.
-  - [ ] Ampliar el E2E con esos usuarios, con un empleado restringido y con el superadmin con MFA.
-  - [ ] **No** corregirlo copiando `restaurant_id` a todos.
-  - [ ] Aceptación: cada `/panel/<slug>` abre el local elegido o explica por qué no; pasar del local A al B no mezcla datos; una acción llamada directamente sin permiso se rechaza en el servidor.
+- [x] **0.12 Acceso por sucursal con membresías** (M). N14, E04, T06, F20, PA-T29. Implementada y probada en esta rama; falta fusionar/desplegar.
+  - [x] Dueño con membresías y `profiles.restaurant_id = null`, A → B → A, perfil legado con A y membresía B, y dueño de grupo sin restaurante personal.
+  - [x] Rewrite y cabeceras: GET y POST conservan el slug de la ruta, aunque el cliente mande otro y aunque rote la cookie de sesión.
+  - [x] E2E con empleado restringido, acciones/exportación directas, almacenamiento y superadmin con TOTP real.
+  - [x] Sin copiar `restaurant_id` a los perfiles modernos.
+  - [x] Denegación explicada en Mi cuenta; sin escritura de respaldo en otro local; destino conservado al acceder y verificar MFA. Evidencia en §8.
 - [ ] **0.2 Una sola fuente para plan, precio y alcance** (M). E01, N15, N23, R36.1–2, R37.2, W01.
   - [ ] Que web, comparación, Hoy, suscripción y superadmin lean su texto de `lib/plans.ts`.
   - [ ] Separar «incluido», «habilitado», «configurado» y «activo».
@@ -208,6 +209,52 @@ Por cada ficha:
 ### Datos de prueba que quedan en la base local
 - Pedido de la Mesa 1 por Q52, sin cobrar (de la ficha 0.1).
 - Cliente «AUD Cola» (de una prueba del 2026-10-27).
+
+---
+
+## 8. Continuación del 2026-11-05 · ficha 0.12
+
+**Rama:** `fix/acceso-sucursal-membresias`, desde `origin/docs/plan-auditoria-integral`. **Base del PR:** `main`; fusionar #71 primero. **Sin migración:** la 160 sigue libre. No se modificaron datos ni despliegues de producción.
+
+### Reproducción y alcance
+
+- El dueño moderno sin restaurante en el perfil pudo abrir sus sucursales en limpio: el rebote concreto N14 de la auditoría no se reprodujo de forma determinista. No se cambia el proxy sin evidencia de que pierda las cabeceras.
+- Se ejecutaron las nuevas pruebas contra los archivos de la base anterior y después contra los corregidos: **8 fallos antes, 0 después** en los 19 casos de acciones/membresías. Seis resolutores autorizaban por el rol global (categorías, productos, inventario, canales, WhatsApp y repartidores); dos casos del resolvedor volvían al restaurante del perfil al pedir un slug inexistente o sin acceso.
+- Las acciones ahora usan `getStaffUser` y el permiso efectivo de la sucursal mediante `puedeEnSeccion`. Las exportaciones de productos mantienen su comprobación de pertenencia y también pasan por la sesión con MFA.
+- `resolveOwnRestaurantId` devuelve `null` ante un tenant desconocido o ajeno; conserva el camino legado cuando no hay tenant en la petición.
+- Login, Google, «Continuar como» y MFA conservan el destino `/panel/<slug>/<seccion>` validado; se rechazan destinos externos, barras invertidas y segmentos de escape. Las pantallas de destino vuelven a aplicar sus candados.
+- Mi cuenta explica si falta acceso o no se pudo resolver el restaurante, usando el texto existente de la pantalla. Cocina/mesero priorizan el local elegido en su armazón y admiten también el grupo en sus páginas.
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| Vitest completo | 1.365 pruebas pasan, 1 omitida previamente; 93 archivos |
+| TypeScript y build optimizado | Correctos con `npm run build` |
+| Lint | Sin errores; tres advertencias previas fuera de la ficha (dos directivas en intro y la dependencia `tp` del checkout) |
+| E2E | 8 escenarios nuevos de acceso, más los 2 existentes de creación/anulación y aislamiento de pedidos; se ejecutan contra Supabase local |
+| Datos de prueba | Cuentas, restaurantes, organizaciones y archivos propios de cada corrida; limpieza al finalizar |
+
+Los ocho escenarios nuevos cubren: dueño moderno A → B → A; acción directa rechazada por permiso; exportación propia/ajena/restringida; lectura y escritura RLS más fotos; superadmin AAL1 → TOTP → AAL2 con regreso a su sección; rechazo explicado y «Continuar como» moderno; grupo legado; cocina/mesero con perfil legado A y membresía B.
+
+Desde `plataforma/`, con Supabase local arrancado:
+
+```powershell
+npm test
+npm run lint
+npm run build
+npm run start
+```
+
+En otra terminal, para reutilizar ese servidor optimizado:
+
+```powershell
+npx playwright test
+```
+
+La CI sigue ejecutando la suite con su servidor de desarrollo. Las navegaciones de lectura toleran el aborto puntual por activación inicial del service worker o compilación, comprobando siempre la URL y el dato esperados; ninguna escritura se reintenta para ocultar un rechazo.
+
+**Siguiente ficha:** 0.2, al recibir el «sí, sigue» del dueño. Fusionar los PR y desplegar siguen siendo pasos separados que debe pedir el dueño.
 
 ---
 
