@@ -108,10 +108,10 @@ jobs:
       - name: Candados de RLS (migraciones 136 y 137) — audit-rls-candados.mjs
         run: node scripts/audit-rls-candados.mjs
 
-      # La matriz completa todavía documenta los tres defectos 0.17–0.19.
+      # La matriz completa todavía documenta los dos defectos 0.18–0.19.
       # Estas garantías corregidas sí bloquean regresiones en cada PR.
-      - name: Dinero en Postgres — cobro concurrente, atomicidad, identidad y saldo (0.14–0.16)
-        run: npm run test:dinero -- -t '0.14|0.15|0.16|D03|D04|D05'
+      - name: Dinero en Postgres — cobro concurrente, atomicidad, identidad y saldo (0.14–0.17)
+        run: npm run test:dinero -- -t '0.14|0.15|0.16|0.17|D03|D04|D05|D07'
 
       - name: Instalar Chromium de Playwright
         run: npx playwright install --with-deps chromium

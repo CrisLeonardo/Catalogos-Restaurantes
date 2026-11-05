@@ -97,7 +97,7 @@ vi.mock('@/lib/db/mesa-columna', () => ({
 }));
 
 import { cancelPublicOrder, freeTable, updateOrderStatus } from './orders';
-import { cobrarParteDeMesa } from './servicio';
+import { cobrarParteDeMesa, cobradoDeMesa } from './servicio';
 import { assertTableAccess } from '@/lib/auth/table-access';
 import { logActivity } from '@/lib/activity';
 import { enqueueKitchenForOrder } from '@/lib/print-agent';
@@ -229,6 +229,28 @@ describe('cobro parcial conserva el límite de autorización (0.14)', () => {
     expect(result).toMatchObject({ needsMigration: true });
     expect(result.error).toMatch(/migración 161/);
     expect(h.servicio.consultas.some((c) => c.op === 'insert' || c.op === 'update')).toBe(false);
+  });
+});
+
+describe('cuotas de pantalla y cobro comparten SQL (0.17)', () => {
+  it('una lectura sin autorización no consulta las cuotas', async () => {
+    vi.mocked(assertTableAccess).mockResolvedValueOnce({ error: 'No autorizado.' });
+    h.servicio = dobleDeSupabase(() => undefined);
+    expect(await cobradoDeMesa(RID, 1)).toEqual({ error: 'No autorizado.' });
+    expect(h.servicio.consultas).toEqual([]);
+  });
+  it('sin la 164 no inventa cuotas con el prorrateo anterior', async () => {
+    h.servicio = dobleDeSupabase(() => ({ error: { code: 'PGRST202', message: 'Could not find the function' } }));
+    const result = await cobradoDeMesa(RID, 1);
+    expect(result.needsMigration).toBe(true);
+    expect(result.error).toMatch(/migración 164/);
+    expect(h.servicio.consultas.map((c) => c.tabla)).toEqual(['leogin_saldos_platos_mesa']);
+  });
+  it('devuelve las cuotas exactas y los pagos de la lectura transaccional', async () => {
+    const original = { total: 33.33, lineasPagadas: ['i-1'], lineasPendientes: { 'i-1': 0, 'i-2': 33.34, 'i-3': 33.33 } };
+    h.servicio = dobleDeSupabase(() => ({ data: original }));
+    expect(await cobradoDeMesa(RID, 1)).toEqual(original);
+    expect(h.servicio.consultas[0]).toMatchObject({ tabla: 'leogin_saldos_platos_mesa', valores: { p_restaurant: RID, p_mesa: 1 } });
   });
 });
 

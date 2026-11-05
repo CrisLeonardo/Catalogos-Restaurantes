@@ -1,4 +1,4 @@
-# Circuito del dinero en Postgres — fichas 0.13–0.16
+# Circuito del dinero en Postgres — fichas 0.13–0.17
 
 La suite ejecuta las acciones de producción `cobrarParteDeMesa`, `freeTable`, `devolverCobro`, `abrirTurno` y `closeCaja`, la lectura `leerTurno` y el RPC SQL `leogin_sales_report` contra Supabase local. No reemplaza consultas, respuestas, aritmética ni restricciones de Postgres por simulaciones.
 
@@ -14,7 +14,7 @@ npm run test:dinero -- --reporter=verbose
 
 Lee `.env.local`/`.env.test` sin sobrescribir variables ya exportadas. Requiere `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` de **la base local**. Para los bloqueos usa `DINERO_DATABASE_URL`; por omisión, la conexión de desarrollo del `supabase/config.toml` de este repo: `postgresql://postgres:postgres@127.0.0.1:54601/postgres`. Son las credenciales estándar del stack local. Si usas otro puerto, exporta esa variable antes de ejecutar.
 
-Ambas direcciones deben ser loopback; la suite rechaza destinos externos y comprueba que SQL y PostgREST ven el mismo restaurante temporal. No necesita servidor Next ni navegador. La versión original de 0.13 usaba el esquema 001–153; **esta rama necesita además la 160, la 161, la 162 y la 163, en ese orden y antes del código**, con los cambios anteriores de la ola 0 cuando correspondan. No aplica migraciones, no hace reset y no cambia restaurantes existentes. No borres tu base para ejecutar esta prueba.
+Ambas direcciones deben ser loopback; la suite rechaza destinos externos y comprueba que SQL y PostgREST ven el mismo restaurante temporal. No necesita servidor Next ni navegador. La versión original de 0.13 usaba el esquema 001–153; **esta rama necesita además la 160, la 161, la 162, la 163, la 164 y la 165, en ese orden y antes del código**, con los cambios anteriores de la ola 0 cuando correspondan. No aplica migraciones, no hace reset y no cambia restaurantes existentes. No borres tu base para ejecutar esta prueba.
 
 Cada caso crea su propio restaurante `aud-dinero-<uuid>`, pedidos y movimientos. La suite crea dos usuarios temporales `aud-dinero-…@test.local`. `afterEach` elimina exclusivamente el restaurante creado, con sus filas en cascada, aun cuando una aserción falla; `afterAll` elimina los usuarios. Un fallo de limpieza también hace fallar el comando. Si se mata el proceso, revisa exclusivamente los identificadores AUD de esa corrida antes de limpiar manualmente.
 
@@ -121,6 +121,25 @@ npm run test:dinero -- -t '0.14|0.15|0.16|D03|D04|D05'
 
 **31 comprobaciones seleccionadas pasan:** las 22 anteriores, D05 y ocho garantías nuevas. Se prueban correcciones/devoluciones por pedido, rondas saldadas, métodos mixtos y efectivo sin repetir, un método sin importe que cubre solo saldo, rechazo del importe incorrecto sin escrituras, ronda ajena al snapshot sin cerrar, 1.200 pagos previos sumados completos y privilegios del RPC. Los puntos de pérdida de respuesta y bloqueo observado reconocen el transporte nuevo del cierre, sin modificar las invariantes.
 
-**Matriz actual completa: 37 ejecutadas, 34 pasan, 3 fallan; salida 1.** Permanecen D07/0.17, D08/0.18 y D09/0.19 con sus valores esperados originales. El cierre sigue sin certificar el centavo por línea, los periodos simultáneos de caja ni el límite exacto del día.
+**Matriz completa después de 0.16: 37 ejecutadas, 34 pasan, 3 fallan; salida 1.** Permanecen D07/0.17, D08/0.18 y D09/0.19 con sus valores esperados originales. El cierre sigue sin certificar el centavo por línea, los periodos simultáneos de caja ni el límite exacto del día.
 
 El nuevo E2E cobra Q40, agrega una ronda Q20 y cierra el saldo Q80 desde la pantalla real. Verifica Q100/Q20 por pedido y el movimiento previo idéntico. No se reconstruyen movimientos históricos, no se hace reset y los fixtures se limpian al terminar.
+
+
+## Corrección 0.17 · migraciones 164 y 165
+
+Aplicar `164_centavos_reparto_platos.sql` y después `165_saldo_mesa_con_cuotas_no_verificables.sql`, **después de la 163 y antes del código**. Solo se aplicaron localmente; las migraciones previas permanecen intactas. La 165 conserva los totales del legado sin reparto sin editar la 164 ya aplicada.
+
+D07 falla antes del arreglo al intentar Q33.34 frente a la cuota independiente Q33.33. Después verifica **Q33.34 + Q33.33 + Q33.33**, neto y asignaciones `item_amounts` Q100. El desempate por línea usa UUID, no el orden de la petición; el fixture elige el mismo orden sin modificar los importes esperados.
+
+Una sola función SQL determina las cuotas del pedido. Las cantidades vivas ponderan los extras (positivos o negativos), el resto mayor distribuye los centavos y las líneas históricas saldadas verificables conservan su importe exacto. La lectura y el cobro usan esa función bajo el bloqueo de cuenta de 0.14; la pantalla recibe las cuotas pendientes, sin volver a prorratearlas. La identidad durable y el cierre por saldo se conservan.
+
+La 164 por sí sola devolvía error sin total en un legado Q40 sin reparto. Se reprodujo esa regresión con una aserción que esperaba Q40. La 165 devuelve el total y `avisoCuotas`: bloquea la asignación por platos no verificable, pero mantiene el cierre completo Q60/Q20 de 0.16. Ni las filas anteriores ni una cuenta histórica Q99.99 se reescriben automáticamente.
+
+```powershell
+npm run test:dinero -- -t '0.14|0.15|0.16|0.17|D03|D04|D05|D07'
+```
+
+**42 comprobaciones seleccionadas pasan:** las 31 anteriores, D07 y diez garantías nuevas de cuotas, legado, cantidades, descuentos, fracciones, concurrencia y privilegios. Las pruebas de lectura verifican sesión autorizada y migración ausente sin volver al cálculo anterior. El E2E comprueba los tres importes del botón contra los tres movimientos reales, total Q100 y cierre del pedido.
+
+**Matriz actual completa: 47 ejecutadas, 45 pasan y 2 fallan; salida 1.** D08/0.18 y D09/0.19 permanecen visibles. Con 164 D08 reprodujo dinero fuera de ambos periodos; en la última corrida con 165 falló en la guarda temporal previa, con una diferencia de 3 ms entre Postgres y el cierre de Windows. La guarda no se elimina ni relaja: 0.18 debe certificar la carrera con ambos relojes controlados. D09 sigue dando Q3 frente a Q5 esperado. No se declara certificada la matriz completa ni se toca el código de caja para ocultar esos casos.

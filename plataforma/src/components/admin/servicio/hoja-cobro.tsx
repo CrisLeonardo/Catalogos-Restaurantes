@@ -59,6 +59,8 @@ export interface HojaCobroProps {
   porCobrar: number;
   /** El dinero que esta mesa ya pagó en cobros parciales. */
   yaCobrado: number;
+  /** Cuotas pendientes del mismo cálculo SQL que confirma el cobro. null para llevar. */
+  saldosPlatos: Record<string, number> | null;
   money: (n: number) => string;
   /** Símbolo de moneda, para los importes rápidos en efectivo. */
   redondear: (n: number) => string;
@@ -87,7 +89,7 @@ function billetes(total: number): number[] {
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
 export default function HojaCobro({
-  titulo, resumen, desglose, porCobrar, yaCobrado, money, redondear, sugerencias, onSugerir,
+  titulo, resumen, desglose, porCobrar, yaCobrado, saldosPlatos, money, redondear, sugerencias, onSugerir,
   busy, onClose, onCobrarTodo, onCobrarParte,
 }: HojaCobroProps) {
   const [modo, setModo] = useState<ModoCobro>('todo');
@@ -112,17 +114,13 @@ export default function HojaCobro({
     return cobrables.filter((l) => set.has(l.id));
   }, [cobrables, marcadas]);
 
-  /* Una parte paga su trozo de propina y de descuento, no solo sus platos.
-     Si no, la última persona en pagar cargaría con toda la propina de la
-     mesa —y la suma de las partes no daría el total—. Es el mismo reparto
-     proporcional que hace `lib/bill-split.ts`. */
-  const factorExtras = desglose && desglose.items > 0
-    ? desglose.grandTotal / desglose.items
-    : 1;
-
+  /* Las cuotas de mesa vienen de Postgres: incluyen el residuo de centavos,
+     los extras de cada pedido y lo ya pagado. No volver a prorratearlas aquí.
+     El pedido para llevar conserva su cálculo previo sin cobro parcial. */
+  const factorExtras = desglose && desglose.items > 0 ? desglose.grandTotal / desglose.items : 1;
   const importeParte = useMemo(
-    () => r2(parte.reduce((s, l) => s + importeLinea(l), 0) * factorExtras),
-    [parte, factorExtras],
+    () => r2(parte.reduce((s, l) => s + (saldosPlatos ? saldosPlatos[l.id] ?? 0 : importeLinea(l) * factorExtras), 0)),
+    [parte, saldosPlatos, factorExtras],
   );
 
   /* Qué se está cobrando AHORA. En «partes iguales» se cobra la cuenta

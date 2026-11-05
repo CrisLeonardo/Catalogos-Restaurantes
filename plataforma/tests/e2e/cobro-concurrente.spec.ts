@@ -98,6 +98,7 @@ test('dos empleados cobran un plato una vez; el saldo se cobra y la mesa se cier
     await expect(pages[0].getByText(/cobrado · la mesa sigue abierta/).or(pages[0].getByText(/ya están pagados|saldo cambió/)).first()).toBeVisible();
     await expect(pages[1].getByText(/cobrado · la mesa sigue abierta/).or(pages[1].getByText(/ya están pagados|saldo cambió/)).first()).toBeVisible();
     await openBill(pages[0]);
+    await pages[0].getByRole('tab', { name: 'Cuenta completa', exact: true }).click();
     await pages[0].getByRole('button', { name: 'Tarjeta', exact: true }).click();
     await pages[0].getByRole('button', { name: /Cobrar Q18\.00 y cerrar/ }).click();
     await expect(pages[0].getByText(/Mesa 1 libre/)).toBeVisible();
@@ -185,5 +186,38 @@ test('0.16 · un parcial y una ronda nueva se cierran cobrando el saldo de cada 
     expect(pagos.filter((p) => p.order_id === second.id).reduce((n, p) => n + Number(p.amount), 0)).toBe(20);
     expect(pagos.filter((p) => p.id === previo[0].id)).toEqual(previo);
     expect(check(await db.from('orders').select('status').in('id', [first.id, second.id]))?.map((o) => o.status)).toEqual(['DELIVERED', 'DELIVERED']);
+  } finally { await context.close(); }
+});
+
+test('0.17 · el botón y Postgres conservan Q33.34 + Q33.33 + Q33.33', async ({ browser }) => {
+  test.setTimeout(180_000);
+  const o = check(await db.from('orders').insert({ restaurant_id: restaurantId, order_number: `AUD-centavo-${suffix}`,
+    customer_name: 'AUD Centavos', customer_phone: '00000000', order_type: 'DINE_IN', table_number: 3,
+    address: 'Mesa 3', status: 'SERVED', subtotal: 90, tip: 20, discount: 10, total: 100 }).select('id').single())!;
+  const ids = Array.from({ length: 3 }, () => crypto.randomUUID()).sort();
+  check(await db.from('order_items').insert(ids.map((id, i) => ({ id, order_id: o.id, name_snapshot: `AUD Residuo ${i + 1}`,
+    price_snapshot: 30, quantity: 1, subtotal: 30, served_at: new Date().toISOString() }))));
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  try {
+    await login(context, users[0].email);
+    const page = await context.newPage();
+    for (let i = 0; i < 3; i++) {
+      await openBill(page, 3);
+      await page.getByRole('tab', { name: 'Por platos' }).click();
+      await page.getByRole('button', { name: new RegExp(`1× AUD Residuo ${i + 1}.*c/u`) }).click();
+      await page.getByRole('button', { name: 'Tarjeta', exact: true }).click();
+      if (i < 2) {
+        const amount = i === 0 ? '33.34' : '33.33';
+        await page.getByRole('button', { name: `Cobrar Q${amount} de esta parte`, exact: true }).click();
+        await expect(page.getByText(/cobrado · la mesa sigue abierta/)).toBeVisible();
+      } else {
+        await page.getByRole('button', { name: 'Cobrar Q33.33 y cerrar', exact: true }).click();
+        await expect(page.getByText(/Mesa 3 libre/)).toBeVisible();
+      }
+    }
+    const payments = check(await db.from('order_payments').select('*').eq('order_id', o.id).order('created_at'))!;
+    expect(payments.map((p) => Number(p.amount))).toEqual([33.34, 33.33, 33.33]);
+    expect(payments.reduce((sum, p) => sum + Math.round(Number(p.amount) * 100), 0)).toBe(10000);
+    expect(check(await db.from('orders').select('status').eq('id', o.id).single())?.status).toBe('DELIVERED');
   } finally { await context.close(); }
 });

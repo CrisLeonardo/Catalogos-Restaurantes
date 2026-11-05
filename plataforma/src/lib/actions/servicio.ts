@@ -32,7 +32,6 @@ import { identidadCobroValida, type ResultadoCobro } from '@/lib/cobro-intento';
 import { createServiceClient } from '@/lib/supabase/service';
 import { assertTableAccess } from '@/lib/auth/table-access';
 import { revalidarSalon } from '@/lib/salon-cache';
-import { hayColumnaMesa, direccionDeMesa } from '@/lib/db/mesa-columna';
 import { hayTurnosDeMesa, hayPagosDeMesa } from '@/lib/db/table-sessions';
 import { faltaLaColumna, faltaLaTabla, faltaLaFuncion } from '@/lib/db/migracion-ausente';
 import { isPaymentMethod, type PaymentMethod } from '@/lib/payment-method';
@@ -46,26 +45,6 @@ const MAX_LINEAS = 120;
 const SIN_COLUMNA =
   'Falta la migración 133 para poder marcar los platos uno a uno. '
   + 'Mientras tanto, «Servido» marca la ronda entera.';
-
-function campoMesa(porNumero: boolean, tableNumber: number): [string, string | number] {
-  return porNumero ? ['table_number', tableNumber] : ['address', direccionDeMesa(tableNumber)];
-}
-
-/** Los pedidos vivos de una mesa, con sus líneas. Lo comparten las tres. */
-async function pedidosDeMesa(
-  db: ReturnType<typeof createServiceClient>,
-  restaurantId: string,
-  tableNumber: number,
-) {
-  const [colMesa, valMesa] = campoMesa(await hayColumnaMesa(), tableNumber);
-  return db
-    .from('orders')
-    .select('id, status, total')
-    .eq('restaurant_id', restaurantId)
-    .eq('order_type', 'DINE_IN')
-    .eq(colMesa, valMesa)
-    .not('status', 'in', '("DELIVERED","CANCEL")');
-}
 
 /* ────────────────────────────────────────────────────────────
    1 · SERVIR PLATO A PLATO
@@ -282,42 +261,23 @@ export async function cobrarParteDeMesa(
 export async function cobradoDeMesa(
   restaurantId: string,
   tableNumber: number,
-): Promise<{ error?: string; total?: number; lineasPagadas?: string[] }> {
+): Promise<{ error?: string; total?: number; lineasPagadas?: string[]; lineasPendientes?: Record<string, number>; avisoCuotas?: string | null; needsMigration?: boolean }> {
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
 
   const acceso = await assertTableAccess(restaurantId);
   if ('error' in acceso) return acceso;
 
   const db = createServiceClient();
-  const { data: ordenes, error } = await pedidosDeMesa(db, restaurantId, tableNumber);
-  if (error) return { error: error.message };
-  const ids = (ordenes ?? []).map((o) => o.id as string);
-  if (ids.length === 0) return { total: 0, lineasPagadas: [] };
+  const { data, error } = await db.rpc('leogin_saldos_platos_mesa', {
+    p_restaurant: restaurantId, p_mesa: tableNumber,
+  });
+  if (error) {
+    if (faltaLaFuncion(error)) return { error: 'Falta la migración 164 para consultar las cuotas exactas por plato.', needsMigration: true };
+    return { error: error.message };
+  }
+  if (!data) return { error: 'No se pudo leer el saldo por plato.' };
+  return data;
 
-  const { data: pagos, error: errPagos } = await db
-    .from('order_payments')
-    .select('amount')
-    .in('order_id', ids);
-  if (errPagos && !faltaLaTabla(errPagos)) return { error: errPagos.message };
-
-  const total = Math.round(
-    ((pagos ?? []) as { amount: number }[]).reduce((s, p) => s + Number(p.amount ?? 0), 0) * 100,
-  ) / 100;
-
-  const { data: split } = await db
-    .from('table_splits')
-    .select('assignment, paid')
-    .eq('restaurant_id', restaurantId)
-    .eq('table_number', tableNumber)
-    .maybeSingle();
-
-  const assignment = (split?.assignment as Record<string, string[]> | null) ?? {};
-  const paid = new Set(Array.isArray(split?.paid) ? (split!.paid as string[]) : []);
-  const lineasPagadas = Object.entries(assignment)
-    .filter(([, quienes]) => quienes.some((q) => paid.has(q)))
-    .map(([itemId]) => itemId);
-
-  return { total, lineasPagadas };
 }
 
 /* ────────────────────────────────────────────────────────────

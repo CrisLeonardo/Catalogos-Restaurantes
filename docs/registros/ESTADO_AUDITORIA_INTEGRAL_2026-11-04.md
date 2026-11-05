@@ -411,7 +411,34 @@ El RPC es `security invoker`, solo ejecutable por `service_role`; la acción man
 - **Navegador:** cinco E2E contra el servidor optimizado, incluidas las cuatro regresiones anteriores. El nuevo cobra Q40 en una primera ronda, recibe otra Q20 y cierra Q80: el libro conserva Q100/Q20 por pedido y el movimiento previo intacto.
 - Datos temporales AUD limpiados; no se suben secretos, reportes ni trazas. CRLF conservado. El CI remoto se consulta una vez al abrir el PR, sin polling. FEL/impresión siguen fuera del alcance certificado por el arnés.
 
-**Siguiente ficha:** 0.17, pendiente de nueva instrucción. Se detiene esta entrega en 0.16; la ola 0 sigue abierta, sin changelog de cierre ni etiquetas. Antes de integrar/desplegar deben verificarse CI, dependencias, autorización y orden de migraciones.
+**Siguiente ficha al cerrar 0.16:** 0.17, autorizada y continuada en §14. Se detiene esta entrega en 0.16; la ola 0 sigue abierta, sin changelog de cierre ni etiquetas. Antes de integrar/desplegar deben verificarse CI, dependencias, autorización y orden de migraciones.
+
+## 14. Continuación del 2026-11-05 · ficha 0.17
+
+**Rama:** `fix/centavos-reparto-persistido`, desde `origin/fix/cierre-saldo-por-pedido` (`45ca69b`, #87), tras actualizar `main` y comprobar el árbol limpio. #86 y #87 siguen abiertos, **con sus CI terminados en verde** en la consulta inicial. PR propio contra `fix/cierre-saldo-por-pedido`; conserva la cadena #71 → #84 → #85 → #86 → #87 → esta ficha. El dueño confirmó **dejar cada PR listo y autorizar las fusiones por separado**. No se fusiona, despliega ni etiqueta, ni se hace polling del CI.
+
+**Migraciones 164_centavos_reparto_platos.sql y 165_saldo_mesa_con_cuotas_no_verificables.sql:** números libres en los árboles remotos comprobados. Aplicar **después de la 163, en ese orden y ANTES del código**. Solo aplicadas en Postgres local, sin reset ni escrituras de datos históricos. La 165 corrige la lectura de un legado no verificable sin editar la 164 ya aplicada. Las migraciones 160–163 se conservan intactas; el verificador marca 160–165 «sí». Siguiente libre: **166**. No se consultó ni modificó producción.
+
+### Reproducción y corrección
+
+- **Antes:** D07 pide Q33.34 en la primera de tres líneas Q30, con Q10 de descuento y Q20 de propina. La cuota SQL redondeaba cada línea a Q33.33 y rechazaba el primer importe. Se ejecutó y falló antes de crear la migración o cambiar el cálculo.
+- `leogin_cuotas_platos_pedido` calcula las cuotas por pedido en centavos enteros. Reparte el residuo por fracción descendente (resto mayor), con UUID ascendente como desempate; el orden de clic no decide a quién le toca. Pondera el subtotal por las unidades vivas y distribuye los extras propios de cada pedido, incluidos los descuentos.
+- Los platos ya saldados con asignación verificable conservan exactamente su importe. El saldo se distribuye entre los que quedan; los importes parcialmente cobrados se descuentan y una línea no se marca saldada hasta completar su cuota. Si la evidencia histórica no permite repartir sin alterar cobros anteriores, se informa y no se inventa una asignación ni se reconstruye un centavo faltante.
+- La 164 reemplaza únicamente el cálculo de cuotas en la función de cobro de la 160: conserva sus bloqueos, autorización externa, validación de saldo, asignaciones por plato y commit conjunto de movimiento/reparto. La envoltura durable de 0.15 y el cierre de saldo de 0.16 siguen intactos.
+- `leogin_saldos_platos_mesa` usa el mismo cálculo y devuelve cuotas pendientes, líneas saldadas y total cobrado bajo el bloqueo de cuenta. La hoja de cobro suma esas cuotas en lugar de aplicar otro factor en el navegador. Los errores se muestran con los avisos existentes; no cambia el diseño de pantalla.
+- Se reprodujo una regresión intermedia de lectura: con Q40 legados sin reparto, la 164 devolvía error sin el total. La prueba esperaba Q40 y falló. La **165** separa `avisoCuotas` del total: ese pedido no habilita cobro por platos sin evidencia, pero conserva el cierre completo Q60/Q20 de 0.16, con el movimiento Q40 intacto. La 164 aplicada permanece sin editar.
+
+### Validación
+
+- **Postgres real:** D07 confirma Q33.34 + Q33.33 + Q33.33, libro y suma de `item_amounts` Q100. El empate de líneas iguales se prueba en orden de UUID; no se cambia ningún importe esperado.
+- Diez garantías nuevas cubren legado sin reparto con cierre íntegro, extras negativos, cantidades, extras diferentes por ronda, una línea histórica saldada a Q33.33, cuota parcialmente cobrada hasta el último centavo, línea gratuita, cuenta histórica marcada saldada a Q99.99 sin backfill, concurrencia por el centavo y privilegios de los RPC.
+- **CI:** `npm run test:dinero -- -t '0.14|0.15|0.16|0.17|D03|D04|D05|D07'`: **42 seleccionadas pasan**. Los cinco casos fuera del filtro siguen en la matriz completa, sin omisiones ni inversión de aserciones.
+- **Matriz completa:** **47 ejecutadas, 45 pasan y 2 fallan**, salida 1. D08/0.18 y D09/0.19 siguen pendientes. En la corrida con 164 D08 reprodujo dinero fuera de ambos periodos; en la última corrida con 165 falló antes, en la guarda temporal del intercalado por 3 ms entre el reloj de Postgres y el cierre de Windows. No se eliminó ni relajó esa guarda. La 0.18 debe controlar también ese reloj al certificar la carrera. D09 conserva el resultado Q3 frente a Q5 esperado en el inicio exacto del día.
+- **Unitarias:** 1.346 pasan y una omisión previa, 91 archivos. Se agregan garantías de autorización, migración ausente sin fallback y respuesta SQL exacta de las cuotas. Tipos, lint y build optimizado correctos; lint conserva las tres advertencias previas. Auditores RLS y `security definer` sin hallazgos. Ejecutar tipos después del build: una corrida simultánea encontró archivos `.next/types` temporalmente retirados por Next; se repitió la comprobación aislada sin cambiar configuración ni ignorar errores.
+- **Navegador:** seis E2E contra el servidor optimizado, conservando los cinco anteriores. El nuevo cobra los tres platos con los botones Q33.34/Q33.33/Q33.33 y verifica Q100 en Postgres y pedido entregado. Una corrida de la regresión de dos empleados agotó el tiempo al reabrir el saldo Q18; la traza conservaba el modo por platos en una sesión. El caso aislado pasó sin cambiar producción. El E2E selecciona ahora explícitamente Cuenta completa al reabrir, conservando las aserciones Q52/Q18 y sin ampliar tiempos.
+- Fixtures AUD limpiados; sin secretos ni artefactos de prueba en el PR. Archivos en CRLF. La suite no certifica FEL/impresión ni la pertenencia de pagos a caja. La ola 0 sigue abierta.
+
+**Siguiente ficha:** 0.18, pendiente de nueva instrucción. Esta entrega se detiene en 0.17; no se cambia el changelog de cierre ni se crean etiquetas. Para fusionar sigue haciendo falta la autorización expresa del dueño, el CI en verde y las dependencias resueltas; desplegar requiere además verificar las migraciones de producción en el orden indicado.
 
 ---
 
