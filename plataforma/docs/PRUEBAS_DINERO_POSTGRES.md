@@ -1,4 +1,4 @@
-# Circuito del dinero en Postgres — fichas 0.13–0.18
+# Circuito del dinero en Postgres — fichas 0.13–0.19
 
 La suite ejecuta las acciones de producción `cobrarParteDeMesa`, `freeTable`, `devolverCobro`, `abrirTurno` y `closeCaja`, la lectura `leerTurno` y el RPC SQL `leogin_sales_report` contra Supabase local. No reemplaza consultas, respuestas, aritmética ni restricciones de Postgres por simulaciones.
 
@@ -14,11 +14,11 @@ npm run test:dinero -- --reporter=verbose
 
 Lee `.env.local`/`.env.test` sin sobrescribir variables ya exportadas. Requiere `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` de **la base local**. Para los bloqueos usa `DINERO_DATABASE_URL`; por omisión, la conexión de desarrollo del `supabase/config.toml` de este repo: `postgresql://postgres:postgres@127.0.0.1:54601/postgres`. Son las credenciales estándar del stack local. Si usas otro puerto, exporta esa variable antes de ejecutar.
 
-Ambas direcciones deben ser loopback; la suite rechaza destinos externos y comprueba que SQL y PostgREST ven el mismo restaurante temporal. No necesita servidor Next ni navegador. La versión original de 0.13 usaba el esquema 001–153; **esta rama necesita además las migraciones 160–167 en orden y antes del código**, con los cambios anteriores de la ola 0 cuando correspondan. No aplica migraciones, no hace reset y no cambia restaurantes existentes. No borres tu base para ejecutar esta prueba.
+Ambas direcciones deben ser loopback; la suite rechaza destinos externos y comprueba que SQL y PostgREST ven el mismo restaurante temporal. No necesita servidor Next ni navegador. La versión original de 0.13 usaba el esquema 001–153; **esta rama necesita además las migraciones 160–168 en orden y antes del código**, con los cambios anteriores de la ola 0 cuando correspondan. No aplica migraciones, no hace reset y no cambia restaurantes existentes. No borres tu base para ejecutar esta prueba.
 
 Cada caso crea su propio restaurante `aud-dinero-<uuid>`, pedidos y movimientos. La suite crea dos usuarios temporales `aud-dinero-…@test.local`. `afterEach` elimina exclusivamente el restaurante creado, con sus filas en cascada, aun cuando una aserción falla; `afterAll` elimina los usuarios. Un fallo de limpieza también hace fallar el comando. Si se mata el proceso, revisa exclusivamente los identificadores AUD de esa corrida antes de limpiar manualmente.
 
-`npm test` mantiene las unitarias sin depender de una base. La integración tiene configuración separada (`vitest.dinero.config.mts`), no usa `skip` ni invierte los fallos con `test.fails`. **Su código de salida es 1 mientras existan los defectos pendientes.** Al corregir cada ficha debe pasar su caso y al cerrar la ola debe pasar la suite completa. Desde 0.14, CI ejecuta el subconjunto corregido descrito al final; ese verde no certifica toda la matriz.
+`npm test` mantiene las unitarias sin depender de una base. La integración tiene configuración separada (`vitest.dinero.config.mts`), no usa `skip` ni invierte los fallos con `test.fails`. Desde 0.19, **los 69 casos pasan, con código de salida 0, y CI ejecuta la matriz completa**. En las entregas 0.13–0.18 el comando completo fallaba con los defectos pendientes; su filtro de CI solo certificaba el subconjunto corregido. Esos resultados se conservan abajo como evidencia histórica. La matriz no certifica todavía toda la auditoría ni las integraciones externas.
 
 ## Resultado original de 0.13 · 2026-11-05
 
@@ -163,4 +163,17 @@ npm run test:dinero -- -t '0.14|0.15|0.16|0.17|0.18|D03|D04|D05|D07|D08'
 
 **56 comprobaciones seleccionadas pasan:** las 42 anteriores, D08 y trece garantías de esta ficha. Las dos órdenes de la carrera usan bloqueos observados por `pg_blocking_pids`; no se usa una pausa fija para declararlas concurrentes. El E2E cierra dos periodos de Q10 y comprueba el primer recibo intacto y el enlace del pago posterior.
 
-**Matriz actual completa: 60 ejecutadas, 59 pasan y 1 falla; salida 1.** D09/0.19 sigue dando Q3 frente a Q5 esperado, con los mismos tres timestamps y las mismas aserciones. La certificación completa permanece pendiente. Los cuatro casos fuera del filtro se ejecutan en el comando completo, sin omisiones ni aserciones invertidas.
+**Matriz completa después de 0.18: 60 ejecutadas, 59 pasan y 1 falla; salida 1.** D09/0.19 sigue dando Q3 frente a Q5 esperado, con los mismos tres timestamps y las mismas aserciones. La certificación completa permanece pendiente. Los cuatro casos fuera del filtro se ejecutan en el comando completo, sin omisiones ni aserciones invertidas.
+
+
+## Corrección 0.19 · migración 168
+
+Aplicar `168_limites_periodo_caja.sql` **después de 167 y antes del código**. Solo se aplicó localmente, sin reset ni escrituras de datos. Conserva el RPC anterior para el despliegue por etapas y añade `leogin_leer_periodo_caja_limites`, `security invoker`, exclusivo del servicio. Si falta el lector nuevo, la acción rechaza sin firmar un cero ni volver al lector de límites incorrectos.
+
+Antes del arreglo, D09 reprodujo Q3 en caja frente a Q5 en el reporte, con los mismos tres instantes originales. Ahora el inicio del día se incluye; el último corte se excluye porque ya contabilizó su instante. Un corte exactamente a las 05:00 también es exclusivo. La frontera enviada a Postgres conserva los seis decimales del corte tanto para registros SQL como para filas legadas. No se actualizan importes, fechas ni recibos históricos. Se mantiene el día de apertura del turno y el corte configurado por el local.
+
+La regla se aplica a pagos, entregas sin movimientos, gastos y propinas. El listado de pedidos cerrados usa la misma selección para decidir si una mesa es reabrible. El camino de compatibilidad sin la 166 también respeta los límites, pero sigue sin permitir cerrar sin la revisión protegida.
+
+**Resultado completo: 69 casos pasan, salida 0.** D09 y nueve garantías adicionales cubren ambas fuentes del libro en el inicio y hasta final, microsegundos a ambos lados de un corte, unión de periodos sin pérdida ni duplicados, corte exactamente al inicio, corte previo de otro día, turno abierto del día anterior, otra zona/corte a medianoche y privilegios del nuevo lector. CI reemplaza el filtro por `npm run test:dinero`; también ejecuta D01, D02 y D06.
+
+La prueba nueva del navegador usa restaurante y empleado propios: Q1 antes de las 05:00, Q2 exactos y Q3 después. El primer corte espera y cuenta Q5; el siguiente espera Q0, conservando íntegro el primer recibo. La regresión de 0.18 conserva dos cortes Q10/Q10; su corrección de hidratación ya tiene CI verde en #89. FEL e impresión siguen fuera de esta certificación.

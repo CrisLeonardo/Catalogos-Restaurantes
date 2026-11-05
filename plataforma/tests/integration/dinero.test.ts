@@ -256,6 +256,107 @@ describe('M§8 · circuito del dinero en Postgres', () => {
   });
 });
 
+describe('0.19 · límites exactos del periodo de caja', () => {
+  const inicio = '2026-11-05T11:00:00.000Z';
+  const ahora = new Date('2026-11-05T12:00:00Z');
+  async function corte(at: string, efectivo = 3) {
+    return checked(await db.from('cash_counts').insert({ restaurant_id: rid(), business_date: '2026-11-05',
+      status: 'CLOSED', period_start: '2026-11-04T11:00:00Z', closed_at: at,
+      expected_cash: efectivo, counted_cash: efectivo, by_method: { CASH: efectivo } }).select('*').single())!;
+  }
+  async function fuentes(at: string, amount: number, gestionado = false) {
+    const pago = await order([amount], { at });
+    const entrega = await order([amount], { table: 2, at });
+    checked(await db.from('order_payments').insert({ restaurant_id: rid(), order_id: pago.id,
+      method: 'CASH', amount, ...(gestionado ? {} : { created_at: at }) }));
+    checked(await db.from('orders').update({ status: 'DELIVERED', order_type: 'PICKUP',
+      delivered_at: at, payment_method: 'CASH', tip: amount }).eq('id', entrega.id));
+    const gasto = checked(await db.from('cash_expenses').insert({ restaurant_id: rid(),
+      business_date: '2026-11-05', concept: 'AUD límite', amount,
+      ...(gestionado ? {} : { created_at: at }) }).select('id').single())!;
+    // Fija únicamente marcas de los fixtures para probar ambos libros con
+    // precisión de Postgres; no cambia el reloj ni las consultas de producción.
+    await sql.query('update public.orders set caja_registrado_en=$2 where id=$1', [entrega.id, gestionado ? at : null]);
+    if (gestionado) {
+      await sql.query('update public.order_payments set caja_registrado_en=$2 where order_id=$1', [pago.id, at]);
+      await sql.query('update public.cash_expenses set caja_registrado_en=$2 where id=$1', [gasto.id, at]);
+    }
+    return { pago, entrega, gasto };
+  }
+  for (const gestionado of [false, true]) {
+    it(`incluye pagos, entregas, gastos y propinas del inicio; excluye los anteriores y futuros (${gestionado ? 'registro SQL' : 'legado'})`, async () => {
+      await fuentes('2026-11-05T10:59:59.999999Z', 1, gestionado);
+      const exacto = await fuentes(inicio, 2, gestionado);
+      await fuentes('2026-11-05T11:00:00.000001Z', 3, gestionado);
+      await fuentes('2026-11-05T12:00:00.000001Z', 4, gestionado);
+      const l = await period(ahora);
+      expect(l.cuadre.efectivo).toBe(10);
+      expect(l.gastosTotal).toBe(5);
+      expect(l.propinasTotal).toBe(5);
+      expect(l.cobros.map((c) => c.orderId)).toContain(exacto.entrega.id);
+      expect(l.gastos).toHaveLength(2);
+    });
+    it(`conserva microsegundos y excluye el instante de un corte firmado (${gestionado ? 'registro SQL' : 'legado'})`, async () => {
+      await fuentes('2026-11-05T11:30:00.123455Z', 1, gestionado);
+      await fuentes('2026-11-05T11:30:00.123456Z', 2, gestionado);
+      await fuentes('2026-11-05T11:30:00.123457Z', 4, gestionado);
+      const hasta = '2026-11-05T11:30:00.123456Z';
+      const primero = checked(await db.rpc('leogin_leer_periodo_caja_limites', {
+        p_restaurant: rid(), p_desde: inicio, p_gestion_desde: inicio,
+        p_hasta: hasta, p_incluir_desde: true,
+      }));
+      expect(primero.pagos.map((p: { amount: number }) => Number(p.amount)).sort()).toEqual([1, 2]);
+      expect(primero.entregados).toHaveLength(2);
+      expect(primero.gastos.reduce((s: number, g: { amount: number }) => s + Number(g.amount), 0)).toBe(3);
+      const previo = await corte(hasta, 6);
+      const l = await period(ahora);
+      expect(l.desde).toBe(previo.closed_at);
+      expect(l.cuadre.efectivo).toBe(8);
+      expect(l.gastosTotal).toBe(4);
+      expect(l.propinasTotal).toBe(4);
+      expect(Number(previo.expected_cash) + l.cuadre.efectivo).toBe(14);
+      expect(checked(await db.from('cash_counts').select('*').eq('id', previo.id).single())).toEqual(previo);
+    });
+  }
+  it('un cierre exactamente al inicio ya incluye ese instante y el siguiente no lo duplica', async () => {
+    await fuentes(inicio, 2);
+    await fuentes('2026-11-05T11:00:00.000001Z', 3);
+    const previo = await corte(inicio, 4);
+    const l = await period(ahora);
+    expect(l.cuadre.efectivo).toBe(6);
+    expect(l.gastosTotal).toBe(3);
+    expect(l.propinasTotal).toBe(3);
+    expect(checked(await db.from('cash_counts').select('*').eq('id', previo.id).single())).toEqual(previo);
+  });
+  it('un cierre del día anterior conserva inclusivo el inicio del nuevo día', async () => {
+    await corte('2026-11-05T10:59:59.999999Z');
+    await fuentes(inicio, 2);
+    expect((await period(ahora)).cuadre.efectivo).toBe(4);
+  });
+  it('mantiene el día de apertura de un turno que sigue abierto al pasar las 05:00', async () => {
+    checked(await db.from('cash_counts').insert({ restaurant_id: rid(), business_date: '2026-11-04',
+      status: 'OPEN', opened_at: '2026-11-05T10:00:00Z', opening_float: 0 }));
+    await fuentes('2026-11-04T11:00:00.000Z', 2);
+    const l = await period(ahora);
+    expect(l.dia).toBe('2026-11-04');
+    expect(l.cuadre.efectivo).toBe(4);
+  });
+  it('el lector nuevo solo permite al servicio ejecutar SQL con security invoker', async () => {
+    const { rows } = await sql.query("select prosecdef,has_function_privilege('anon',oid,'execute') anon,has_function_privilege('authenticated',oid,'execute') auth,has_function_privilege('service_role',oid,'execute') service from pg_proc where proname='leogin_leer_periodo_caja_limites'");
+    expect(rows).toEqual([{ prosecdef: false, anon: false, auth: false, service: true }]);
+  });
+  it('respeta otra zona y corte a medianoche, coincidiendo con el informe SQL', async () => {
+    await fuentes('2026-11-05T05:59:59.999999Z', 1);
+    await fuentes('2026-11-05T06:00:00.000Z', 2);
+    const l = await leerTurno(db, { restaurantId: rid(), timezone: 'America/Mexico_City', corteMin: 0, ahora });
+    const report = checked(await db.rpc('leogin_sales_report', { p_restaurant_id: rid(), p_from: '2026-11-05',
+      p_to: '2026-11-05', p_timezone: 'America/Mexico_City', p_cutoff_minutes: 0 }));
+    expect(l.desde).toBe('2026-11-05T06:00:00.000Z');
+    expect(l.cuadre.efectivo).toBe(4);
+    expect(Number(report.revenue)).toBe(l.cuadre.efectivo);
+  });
+});
+
 describe('0.14 · garantías del cobro transaccional', () => {
   it('no cobra dos veces una línea aunque el pedido tenga otros platos pendientes', async () => {
     const o = await order([10, 10]);

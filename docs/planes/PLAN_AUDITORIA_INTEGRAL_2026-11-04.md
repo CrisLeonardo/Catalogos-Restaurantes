@@ -262,6 +262,8 @@ Orden recomendado: primero lo de más riesgo y menor tamaño, y lo que destraba 
 
 **Cubre:** C08, M§8 «Cambio de día a 05:00 y zona horaria». **Reproducido:** Guatemala 04:59:59.999 Q1, 05:00:00.000 Q2, 05:00:00.001 Q3: SQL informa Q5 para el día nuevo; caja informa Q3 y omite Q2. **Hacer:** acordar límites inclusivos/exclusivos entre el inicio del día y el último cierre; cambiar todo a `gte` duplicaría los movimientos del límite entre cierres. **Aceptación:** D09 pasa y la unión de periodos no pierde ni duplica el instante exacto; mantener la misma zona y corte en caja e informes.
 
+**Estado (2026-11-05):** implementada en `fix/limite-inicio-dia-caja`, desde #89 corregida (`a7e80a0`, CI verde). **Migración 168 después de 167 y antes del código.** Inicio del día inclusivo; último corte exclusivo, incluso si coincide con las 05:00. Se conservan sus microsegundos y los cortes históricos. D09 pasa y la matriz completa alcanza **69/69**; CI ejecuta ahora toda la matriz. Traspaso en §16 del [registro](../registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md).
+
 ---
 
 ## 6. Olas 1 a 4, línea comercial y calidad
@@ -382,7 +384,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 - [x] 0.16 Cerrar cobrando solo el saldo de cada pedido (D05) — migración 163 y saldo neto bajo bloqueo
 - [x] 0.17 Centavos del reparto persistido (D07) — cuotas comunes en SQL, migraciones 164/165
 - [x] 0.18 Cobros en tránsito al cerrar un turno (D08) — revisión y registro SQL, migraciones 166/167
-- [ ] 0.19 Incluir el instante exacto del inicio del día (D09)
+- [x] 0.19 Incluir el instante exacto del inicio del día (D09) — migración 168; matriz completa en CI
 
 **Ola 1**: [ ] 1.0 · [ ] 1.1 · [ ] 1.2 · [ ] 1.3 · [ ] 1.4 · [ ] 1.5 · [ ] 1.6 · [ ] 1.7 · [ ] 1.8 · [ ] 1.9 · [ ] 1.10 · [ ] 1.11 · [ ] 1.12
 **Ola 2**: [ ] 2.1 · [ ] 2.2 · [ ] 2.3 · [ ] 2.4 · [ ] 2.5 · [ ] 2.6 · [ ] 2.7 · [ ] 2.8 · [ ] 2.9 · [ ] 2.10 · [ ] 2.11 · [ ] 2.12

@@ -192,7 +192,10 @@ huellas(n, que, ok, cuando) as (values
   ('167', 'ventana de negocio de los registros de caja',
      exists(select 1 from pg_proc where oid=to_regprocedure('public.leogin_leer_periodo_caja(uuid,timestamptz,timestamptz,timestamptz)')
        and prosrc like '%g.caja_registrado_en>coalesce(p_gestion_desde%'),
-     'ANTES de desplegar; después de la 166')
+     'ANTES de desplegar; después de la 166'),
+  ('168', 'inicio del día inclusivo y último corte exclusivo en caja',
+     to_regprocedure('public.leogin_leer_periodo_caja_limites(uuid,timestamptz,timestamptz,timestamptz,boolean)') is not null,
+     'ANTES de desplegar; después de la 167')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

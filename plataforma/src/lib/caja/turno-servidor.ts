@@ -255,27 +255,32 @@ export async function leerTurno(db: Db, opts: {
     timezone,
     corteMin,
   });
-  const desdeIso = desde.toISOString();
+  // El inicio del día se incluye; un cierre (incluso a las 05:00) ya
+  // contabilizó su instante. Conserva los seis decimales del corte SQL.
+  const incluirDesde = !cierre || new Date(cierre.closedAt).getTime() < desde.getTime();
+  const desdeIso = incluirDesde ? desde.toISOString() : cierre!.closedAt;
   const hastaIso = !opts.ahora && control ? control.hasta : ahora.toISOString();
   const dia = diaDeNegocio(turno?.openedAt ? new Date(turno.openedAt) : ahora, timezone, corteMin);
 
   /* El registro gestionado usa la marca SQL en la misma ventana de negocio.
-     El corte previo conserva sus microsegundos; la frontera inicial del día
-     sigue siendo la anterior hasta la ficha 0.19. */
+     El corte previo conserva sus microsegundos y es exclusivo; el inicio
+     del día sin corte en esa frontera es inclusivo. */
   const desdeGestionado = control?.ultimoCierreEn && new Date(control.ultimoCierreEn).getTime() >= desde.getTime()
     ? control.ultimoCierreEn : desdeIso;
   let circuito: { pagos: FilaPago[]; entregados: string[]; gastos: LecturaDelTurno['gastos'] } | null = null;
   if (control) {
-    const res = await db.rpc('leogin_leer_periodo_caja', { p_restaurant: restaurantId,
-      p_desde: desdeIso, p_gestion_desde: desdeGestionado, p_hasta: hastaIso });
-    if (res.error || !res.data) throw new Error('No se pudo leer el periodo de caja: ' + (res.error?.message ?? 'sin resultado'));
+    const res = await db.rpc('leogin_leer_periodo_caja_limites', { p_restaurant: restaurantId,
+      p_desde: desdeIso, p_gestion_desde: desdeGestionado, p_hasta: hastaIso, p_incluir_desde: incluirDesde });
+    if (res.error || !res.data) throw new Error(faltaLaFuncion(res.error)
+      ? 'Falta la migración 168 para leer los límites del periodo de caja.'
+      : 'No se pudo leer el periodo de caja: ' + (res.error?.message ?? 'sin resultado'));
     circuito = res.data;
   }
   let filasDelPeriodo: FilaPago[];
   if (circuito) filasDelPeriodo = circuito.pagos;
   else {
     const res = await db.from('order_payments').select('id, order_id, method, amount, kind, created_at')
-      .eq('restaurant_id', restaurantId).gt('created_at', desdeIso).lte('created_at', hastaIso).limit(5000);
+      .eq('restaurant_id', restaurantId).filter('created_at', incluirDesde ? 'gte' : 'gt', desdeIso).lte('created_at', hastaIso).limit(5000);
     if (res.error) throw new Error('No se pudo leer el periodo legado: ' + res.error.message);
     filasDelPeriodo = (res.data ?? []) as FilaPago[];
   }
@@ -287,7 +292,7 @@ export async function leerTurno(db: Db, opts: {
     }
   } else entregados.push(...await pedidos(db, (cols) => db.from('orders').select(cols)
     .eq('restaurant_id', restaurantId).eq('status', 'DELIVERED')
-    .gt('delivered_at', desdeIso).lte('delivered_at', hastaIso).limit(5000)));
+    .filter('delivered_at', incluirDesde ? 'gte' : 'gt', desdeIso).lte('delivered_at', hastaIso).limit(5000)));
 
   /* Un pedido entregado usa sus filas si tiene ALGUNA, de cuando sea: un
      domicilio que se entregó hoy y se cobró por partes ayer no puede contar
@@ -344,8 +349,7 @@ export async function leerTurno(db: Db, opts: {
     // Una devolución de un pedido cobrado otro día también es un movimiento
     // de este turno, pero su «cuándo» es el de la devolución.
     const at = delPeriodo.map((m) => m.at).sort()[0] ?? o.delivered_at ?? o.created_at;
-    const cierrePedido = o.caja_registrado_en ?? o.delivered_at;
-    const cerroAqui = o.status === 'DELIVERED' && !!cierrePedido && cierrePedido > desdeIso;
+    const cerroAqui = entregados.some((entregado) => entregado.id === o.id);
     const reabierta = filas.some((f) => f.kind === 'REOPEN');
     const mesa = mesaDeFila(o);
     cobros.push({
@@ -393,7 +397,8 @@ export async function leerTurno(db: Db, opts: {
   else {
     const { data, error } = await db.from('cash_expenses')
       .select('id, concept, amount, paid_by, receipt_url, notes, created_at')
-      .eq('restaurant_id', restaurantId).is('cash_count_id', null).gt('created_at', desdeIso).order('created_at');
+      .eq('restaurant_id', restaurantId).is('cash_count_id', null).filter('created_at', incluirDesde ? 'gte' : 'gt', desdeIso)
+      .lte('created_at', hastaIso).order('created_at');
     if (error) throw new Error('No se pudieron leer los gastos de caja: ' + error.message);
     gastos = (data ?? []).map((g) => ({ ...g, amount: Number(g.amount) })) as typeof gastos;
   }
