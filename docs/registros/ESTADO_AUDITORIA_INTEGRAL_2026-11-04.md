@@ -2,7 +2,7 @@
 
 Documento de traspaso para retomar el trabajo en otra sesión o cuenta sin perder el contexto. Resume qué se logró, qué está en curso y qué falta, con listas para marcar.
 
-> **Resumen:** la ola 0 lleva **10 de 13 fichas hechas**, cada una en su rama y su PR. Hay **11 PR abiertos** (#71 a #81), todos con el CI en verde y **ninguno fusionado**. Faltan las fichas **0.12, 0.2 y 0.13**. Después viene la ola 1, que empieza por la **1.0 (paleta)**. Nada de esto está desplegado.
+> **Actualización del 2026-11-05:** la ola 0 lleva **12 de 13 fichas implementadas**. A los PR #71–#81 se suman **0.12, PR #82** (§8), y **0.2**, en `fix/planes-precio-y-alcance` (§9). El CI de #82 ya está en verde; el del nuevo PR se comprueba aparte. Ninguno se fusionó ni se desplegó durante esta continuación. Falta **0.13 (pruebas del dinero en Postgres)**. Después viene la ola 1, que empieza por **1.0 (paleta)**.
 
 ---
 
@@ -46,7 +46,7 @@ Documento de traspaso para retomar el trabajo en otra sesión o cuenta sin perde
 
 ## 3. Lo logrado: fichas de la ola 0
 
-Todas salen de `docs/plan-auditoria-integral`, van contra `main` y tienen el CI en verde (revisado el 2026-11-04). Cada PR explica el fallo reproducido, el arreglo y las pruebas.
+Todas salen de `docs/plan-auditoria-integral` y van contra `main`. Los PR #71–#81 tenían el CI en verde al revisarlos el 2026-11-04; la 0.12 se valida el 2026-11-05 (§8). Cada PR explica el fallo reproducido, el arreglo y las pruebas.
 
 | Ficha | PR | Rama | Migración | Qué resolvió |
 |---|---|---|---|---|
@@ -61,6 +61,8 @@ Todas salen de `docs/plan-auditoria-integral`, van contra `main` y tienen el CI 
 | 0.9 Sentar sin estados partidos | [#79](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/79) | `fix/sentar-sin-estados-partidos` | — | Primero la mesa, después el grupo (`lib/mesa/sentar-desde-origen.ts`); repetir no abre otra; etiquetas en los formularios de reserva y espera |
 | 0.8 Compras atómicas y estados | [#80](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/80) | `fix/compras-atomicas-y-estados` | **159** (ANTES o a la vez) | Una compra recibida ya no vuelve a borrador (antes sumaba el stock dos veces). `leogin_crear_compra` con folio bajo candado. Prueba `159_*.sql` |
 | 0.11 Cola offline honesta | [#81](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/81) | `fix/cola-offline-honesta` | — | `saveQueuedOrder` dice si guardó de verdad; «No se guardó en este teléfono». **La cola del mesero vuelve a reenviarse** (ver §4) |
+| 0.12 Acceso por sucursal | [#82](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/82) | `fix/acceso-sucursal-membresias` | — | Permiso efectivo por membresía en seis resolutores de acciones; rechazo sin caer a otro local; destino tras login/MFA; «Continuar como» moderno; cocina/mesero con sucursal coherente. Ver §8 |
+| 0.2 Plan, precio y alcance | PR de esta rama | `fix/planes-precio-y-alcance` | — | Contrato de presentación compartido, mensualidad acordada separada de tarifa pública, contador derivado y estados de las funciones distintos. Ver §9 |
 
 ### Hallazgos importantes del camino
 
@@ -117,21 +119,21 @@ Todas salen de `docs/plan-auditoria-integral`, van contra `main` y tienen el CI 
 
 ## 6. Lo que falta
 
-### Ola 0 (3 fichas). Orden recomendado: 0.12 → 0.2 → 0.13
+### Ola 0 (1 ficha). Siguiente: 0.13
 
 - [x] 0.1 · [x] 0.3 · [x] 0.4 · [x] 0.5 · [x] 0.6 · [x] 0.7 · [x] 0.8 · [x] 0.9 · [x] 0.10 · [x] 0.11
-- [ ] **0.12 Acceso por sucursal con membresías** (M). N14, E04, T06, F20, PA-T29.
-  - [ ] Reproducir primero el caso de un dueño con membresía y sin `profiles.restaurant_id`, y el de varios locales.
-  - [ ] Rastrear la reescritura de `proxy.ts`, las cabeceras y `resolveRestaurantId`.
-  - [ ] Ampliar el E2E con esos usuarios, con un empleado restringido y con el superadmin con MFA.
-  - [ ] **No** corregirlo copiando `restaurant_id` a todos.
-  - [ ] Aceptación: cada `/panel/<slug>` abre el local elegido o explica por qué no; pasar del local A al B no mezcla datos; una acción llamada directamente sin permiso se rechaza en el servidor.
-- [ ] **0.2 Una sola fuente para plan, precio y alcance** (M). E01, N15, N23, R36.1–2, R37.2, W01.
-  - [ ] Que web, comparación, Hoy, suscripción y superadmin lean su texto de `lib/plans.ts`.
-  - [ ] Separar «incluido», «habilitado», «configurado» y «activo».
-  - [ ] Contar las funciones a partir de la misma lista que se muestra (hoy dice «7 funciones» con ocho en la lista).
-  - [ ] En Hoy, Estándar se describe con los permisos efectivos, no con el nombre del plan.
-  - [ ] Aceptación: pruebas en cinco superficies con Estándar con 2 de 3 canales, Premium a precio fijo, En línea con tope blando y un precio de excepción; el mismo importe y el mismo alcance en todas. No recalcula contratos históricos.
+- [x] **0.12 Acceso por sucursal con membresías** (M). N14, E04, T06, F20, PA-T29. Implementada y probada en su rama ([#82](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/82)); falta fusionar/desplegar.
+  - [x] Dueño con membresías y `profiles.restaurant_id = null`, A → B → A, perfil legado con A y membresía B, y dueño de grupo sin restaurante personal.
+  - [x] Rewrite y cabeceras: GET y POST conservan el slug de la ruta, aunque el cliente mande otro y aunque rote la cookie de sesión.
+  - [x] E2E con empleado restringido, acciones/exportación directas, almacenamiento y superadmin con TOTP real.
+  - [x] Sin copiar `restaurant_id` a los perfiles modernos.
+  - [x] Denegación explicada en Mi cuenta; sin escritura de respaldo en otro local; destino conservado al acceder y verificar MFA. Evidencia en §8.
+- [x] **0.2 Una sola fuente para plan, precio y alcance** (M). E01, N15, N23, R36.1–2, R37.2, W01. Implementada en esta rama; falta fusionar/desplegar.
+  - [x] Web, comparación y paneles usan `lib/plans.ts`; el servidor comparte la lectura del acuerdo con `getRestaurantPlanPresentation`.
+  - [x] Se distingue incluido, habilitado, encendido y configuración comprobada/desconocida; encendido no promete estar listo.
+  - [x] Se cuenta la misma lista de prestaciones que se muestra. Las excepciones de inventario, analítica y personal se describen por separado.
+  - [x] Hoy muestra las modalidades permitidas y las encendidas, no «Estándar = solo para llevar».
+  - [x] Matriz con Estándar 2/3, Premium fijo, En línea con límite blando y acuerdo manual; factura histórica y acuerdo permanecen intactos. Ver §9.
 - [ ] **0.13 Probar el circuito del dinero en Postgres real** (L). C08, E03, T01, M§8.
   - [ ] Suite de integración contra la base local con estos casos:
     - [ ] Q100 entre 3 personas (33,34 + 33,33 + 33,33).
@@ -208,6 +210,95 @@ Por cada ficha:
 ### Datos de prueba que quedan en la base local
 - Pedido de la Mesa 1 por Q52, sin cobrar (de la ficha 0.1).
 - Cliente «AUD Cola» (de una prueba del 2026-10-27).
+
+---
+
+## 8. Continuación del 2026-11-05 · ficha 0.12
+
+**Rama:** `fix/acceso-sucursal-membresias`, desde `origin/docs/plan-auditoria-integral`. **Base del PR:** `main`; fusionar #71 primero. **Sin migración:** la 160 sigue libre. No se modificaron datos ni despliegues de producción.
+
+### Reproducción y alcance
+
+- El dueño moderno sin restaurante en el perfil pudo abrir sus sucursales en limpio: el rebote concreto N14 de la auditoría no se reprodujo de forma determinista. No se cambia el proxy sin evidencia de que pierda las cabeceras.
+- Se ejecutaron las nuevas pruebas contra los archivos de la base anterior y después contra los corregidos: **8 fallos antes, 0 después** en los 19 casos de acciones/membresías. Seis resolutores autorizaban por el rol global (categorías, productos, inventario, canales, WhatsApp y repartidores); dos casos del resolvedor volvían al restaurante del perfil al pedir un slug inexistente o sin acceso.
+- Las acciones ahora usan `getStaffUser` y el permiso efectivo de la sucursal mediante `puedeEnSeccion`. Las exportaciones de productos mantienen su comprobación de pertenencia y también pasan por la sesión con MFA.
+- `resolveOwnRestaurantId` devuelve `null` ante un tenant desconocido o ajeno; conserva el camino legado cuando no hay tenant en la petición.
+- Login, Google, «Continuar como» y MFA conservan el destino `/panel/<slug>/<seccion>` validado; se rechazan destinos externos, barras invertidas y segmentos de escape. Las pantallas de destino vuelven a aplicar sus candados.
+- Mi cuenta explica si falta acceso o no se pudo resolver el restaurante, usando el texto existente de la pantalla. Cocina/mesero priorizan el local elegido en su armazón y admiten también el grupo en sus páginas.
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| Vitest completo | 1.365 pruebas pasan, 1 omitida previamente; 93 archivos |
+| TypeScript y build optimizado | Correctos con `npm run build` |
+| Lint | Sin errores; tres advertencias previas fuera de la ficha (dos directivas en intro y la dependencia `tp` del checkout) |
+| E2E | 8 escenarios nuevos de acceso, más los 2 existentes de creación/anulación y aislamiento de pedidos; se ejecutan contra Supabase local |
+| Datos de prueba | Cuentas, restaurantes, organizaciones y archivos propios de cada corrida; limpieza al finalizar |
+
+Los ocho escenarios nuevos cubren: dueño moderno A → B → A; acción directa rechazada por permiso; exportación propia/ajena/restringida; lectura y escritura RLS más fotos; superadmin AAL1 → TOTP → AAL2 con regreso a su sección; rechazo explicado y «Continuar como» moderno; grupo legado; cocina/mesero con perfil legado A y membresía B.
+
+Desde `plataforma/`, con Supabase local arrancado:
+
+```powershell
+npm test
+npm run lint
+npm run build
+npm run start
+```
+
+En otra terminal, para reutilizar ese servidor optimizado:
+
+```powershell
+npx playwright test
+```
+
+La CI sigue ejecutando la suite con su servidor de desarrollo. Las navegaciones de lectura toleran el aborto puntual por activación inicial del service worker o compilación, comprobando siempre la URL y el dato esperados; ninguna escritura se reintenta para ocultar un rechazo.
+
+**Siguiente ficha al cerrar 0.12:** 0.2, continuada en §9. Fusionar los PR y desplegar siguen siendo pasos separados que debe pedir el dueño.
+
+## 9. Continuación del 2026-11-05 · ficha 0.2
+
+**Rama:** `fix/planes-precio-y-alcance`, desde `origin/docs/plan-auditoria-integral`. PR contra `main`, encima de #71. No incorpora el código del PR #82; ambas fichas son independientes y este registro conserva el estado de las dos. **Sin migración:** la 160 sigue libre.
+
+### Qué se reprodujo y corrigió
+
+- Una prueba de render reprodujo el texto de Hoy que atribuía solo pedidos para llevar a Estándar. Ahora describe las tres modalidades elegibles, el máximo de dos y cuáles están encendidas en ese local.
+- Una prueba de navegador con un acuerdo manual de **Q275.25** reprodujo que la cabecera de Suscripción mostraba la tarifa pública. La misma lectura alimenta ahora cabecera, desglose, Funciones, Hoy y Super, conservando los centavos y la moneda del acuerdo.
+- El contador usaba los siete módulos incluidos mientras el listado mostraba otro conjunto de ocho prestaciones. El catálogo compartido incluye ahora las prestaciones base y los módulos; cada contador cuenta sus propias filas. Premium muestra 18 prestaciones incluidas en el catálogo completo, y Funciones distingue los siete módulos de esas prestaciones base.
+- Incluido en plan no equivale a habilitado por excepción, encendido ni configurado. Cuando no hay una comprobación de configuración se dice «sin comprobar», nunca «listo».
+- La web, las tarjetas y la tabla comparten límites y alcance. La FAQ ya no promete pedidos ilimitados en En línea; los 300 pedidos son un límite blando y no se corta ninguno. No se anuncian como contratables módulos exclusivos de Pro, que sigue pausado.
+- La tarjeta del plan actual y la confirmación de cambio respetan un acuerdo manual. Elegir otro plan no se presenta como una sustitución del acuerdo cuando `auto_price = false`; eso coincide con el comportamiento existente del motor. No se cambió la acción que guarda el plan.
+
+### Tarifas y acuerdos
+
+La web pública y su comparación muestran **tarifas publicadas**, sin exponer acuerdos privados. Los paneles autorizados muestran **la mensualidad del restaurante**, con la tarifa pública etiquetada como referencia. No se cambian precios globales, cuotas guardadas, facturas, reglas SQL ni fechas de cobro. La definición de presentación lleva la versión `2026-11-05`; no es una migración ni una nueva revisión de contratos.
+
+`PlanPricing` también transporta los precios vigentes de configuración asistida, evitando que su descripción pública invente que es gratuita. Un importe manual de cero conserva su significado y una factura ya emitida conserva su importe.
+
+### Validación
+
+- **Unitarias:** 1.351 pasan, una omitida previamente, 92 archivos. Esta rama parte de #71: la suite nueva de acceso del PR #82 se incorpora al fusionar aquel PR.
+- **TypeScript y lint:** correctos; lint conserva las tres advertencias previas de intro y checkout, sin errores nuevos.
+- **Build optimizado:** correcto con `npm run build`.
+- **Navegador:** los seis escenarios de la suite pasan contra el servidor optimizado: los cuatro casos de `tests/e2e/planes.spec.ts` y los dos existentes de pedidos. Se comprueban web, comparación, Hoy, Suscripción, Funciones y Super con un superadmin con TOTP real, sin contraseñas introducidas en formularios.
+- **Regresión de dinero:** después de recorrer las pantallas se comprueba que `monthly_fee` y `auto_price` no cambiaron y que la factura histórica de Q88.88 mantiene importe, pagado y periodo.
+- **Pantalla:** 390, 768 y 1280 px en claro/oscuro; se corrigió el ajuste de línea del bloque de precio para que la descripción completa no desborde en móvil. Capturas de fixtures `AUD`, sin datos de producción.
+- Las pruebas crean y eliminan sus restaurantes, usuarios y facturas; no modifican los precios globales ni los restaurantes existentes. Después de la corrida se comprobó en Postgres que quedaron cero restaurantes y cero usuarios con el prefijo temporal `aud-plan-`.
+
+Comandos desde `plataforma/`:
+
+```powershell
+npm test
+npm run lint
+npm run typecheck
+npm run build
+npm run start
+```
+
+En otra terminal: `npx playwright test`. La configuración reutiliza el servidor optimizado local; la CI levanta su propio servidor de desarrollo.
+
+**Siguiente ficha:** 0.13, después del «sí, sigue» del dueño. Antes de fusionar, #71 debe entrar primero y el CI de cada PR debe estar en verde. No se fusionó ni se desplegó durante 0.2.
 
 ---
 

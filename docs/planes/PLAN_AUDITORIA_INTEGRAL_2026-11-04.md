@@ -149,6 +149,8 @@ Orden recomendado: primero lo de más riesgo y menor tamaño, y lo que destraba 
 **Hacer:** que web, comparación, Hoy, suscripción y superadmin lean su texto de `lib/plans.ts`. Hoy cada uno arma su propio texto. Separar «incluido», «habilitado», «configurado» y «activo». Calcular el contador de funciones a partir de la misma lista que se muestra (evita el «7 funciones» con ocho en la lista). Hoy en Estándar: el texto sale de los permisos efectivos, no del nombre del plan.
 **Aceptación:** pruebas para el mismo restaurante en cinco superficies (Estándar con 2 de 3 canales, Premium a precio fijo, En línea con el tope blando y un precio de excepción); el mismo importe y el mismo alcance en todas. No recalcula contratos históricos.
 
+**Estado (2026-11-05):** implementada en `fix/planes-precio-y-alcance`, encima de #71, sin migración. `plans.ts` reúne la presentación versionada de plan, modalidades, prestaciones, límites, tarifa pública y acuerdo particular; `getRestaurantPlanPresentation` comparte esa lectura entre los paneles. Web y comparación conservan la tarifa pública; Hoy, Suscripción, Funciones y Super muestran la mensualidad del restaurante y explican su diferencia cuando hay un acuerdo. Se reproduce y corrige el texto de Estándar en Hoy y la cabecera que ocultaba una mensualidad manual de Q275.25; los contadores salen de las filas que se muestran. Se conserva el acuerdo manual también al previsualizar un cambio de plan. Las pruebas verifican que las lecturas no modifican el cobro guardado ni la factura histórica. Evidencia en §9 del [registro](../registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md).
+
 ### 0.3 · Error no es vacío ni cero — M
 
 **Cubre:** E02, N12, N13, X20, X07, X21, D06 (la parte de errores), PA-T09, PA-T16, PA-T17.
@@ -329,7 +331,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 
 **Ola 0**
 - [ ] 0.1 Textos y enlaces que prometen otra cosa
-- [ ] 0.2 Una sola fuente para plan, precio y alcance
+- [x] 0.2 Una sola fuente para plan, precio y alcance
 - [ ] 0.3 Error no es vacío ni cero
 - [ ] 0.4 Pausa de pedidos real
 - [ ] 0.5 Cupones: vigencia, programación y límites

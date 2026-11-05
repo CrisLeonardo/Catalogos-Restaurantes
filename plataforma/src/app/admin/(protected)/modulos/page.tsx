@@ -5,7 +5,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { createServiceClient } from '@/lib/supabase/service';
 import ModulesPanel from '@/components/admin/modules-panel';
 import { getPlatformContactSettings } from '@/lib/actions/super-admin';
-import { getFeeBreakdown } from '@/lib/db/billing';
+import { getRestaurantPlanPresentation } from '@/lib/db/billing';
 import type { ModulesMap, ModuleSettings } from '@/lib/modules';
 import type { OrderType } from '@/lib/theme/defaults';
 import { panelLink } from '@/lib/panel-links-server';
@@ -34,11 +34,11 @@ export default async function ModulosPage() {
   if (!restaurantId) redirect('/admin/login');
 
   const db = createServiceClient();
-  const [{ data: rest }, { data: theme }, contact, feeBreakdown] = await Promise.all([
+  const [{ data: rest }, { data: theme }, contact, contract] = await Promise.all([
     db.from('restaurants').select('modules, module_settings, plan_actual').eq('id', restaurantId).single(),
     db.from('restaurant_themes').select('config').eq('restaurant_id', restaurantId).maybeSingle(),
     getPlatformContactSettings(),
-    getFeeBreakdown(restaurantId),
+    getRestaurantPlanPresentation(restaurantId),
   ]);
 
   const planActual = (rest?.plan_actual as string | null) ?? null;
@@ -63,7 +63,8 @@ export default async function ModulosPage() {
         orderTypes={orderTypes}
         supportWhatsapp={contact.support_whatsapp}
         planActual={planActual}
-        billedNow={feeBreakdown?.final ?? null}
+        billedNow={contract?.monthlyAmount ?? null}
+        billedCurrency={contract?.currency ?? 'GTQ'}
       />
     </div>
   );
