@@ -84,7 +84,8 @@ export async function order(amounts: number[], opts: { total?: number; tip?: num
 }
 
 export async function ledger(orderId?: string) {
-  let query = db.from('order_payments').select('*').eq('restaurant_id', state.restaurantId).order('created_at');
+  // Un lote puede compartir fecha. El desempate permite comparar las filas completas.
+  let query = db.from('order_payments').select('*').eq('restaurant_id', state.restaurantId).order('created_at').order('id');
   if (orderId) query = query.eq('order_id', orderId);
   return checked(await query)!;
 }
