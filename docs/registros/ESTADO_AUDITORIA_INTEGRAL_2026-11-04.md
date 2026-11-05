@@ -507,7 +507,7 @@ El chat «Recupera el resultado del cobro» permanece archivado, con sus turnos 
 
 **Validación:** Chromium revisó 88 combinaciones de pantalla, tema, ancho y estado, y dos recorridos interactivos. Los tres anchos son 390, 768 y 1280 px. También se comprobó el reflujo a 195 px de ancho efectivo, equivalente a 390 px al 200 %, y se inspeccionaron las capturas de Hoy y Cobro y la comparación móvil. Se verificaron el pie visible, el bloqueo de efectivo insuficiente y de cálculo de partes, la cantidad y el total de Carta, el cierre con Escape y la devolución de foco. Cero errores de JavaScript, solicitudes externas o desbordes horizontales en las vistas revisadas. Contraste del texto blanco del botón principal de 4,56:1 y 4,71:1, respectivamente. Esta verificación corresponde al prototipo.
 
-**Chat:** «Continuar implementación de auditoría» estaba sin proyecto asociado. Se vinculó a **Leogin**, el mismo proyecto local que «Retoma el trabajo de Claude Code». La asociación se confirmó mediante la herramienta de Codex. El icono de la barra lateral queda sin verificación visual.
+**Chat:** «Continuar implementación de auditoría» sigue sin proyecto asociado. Codex devolvió éxito al moverlo a **Leogin** en dos intentos, pero la consulta posterior aún indica proyecto nulo y lo coloca en Tareas. La asociación y la aparición del icono siguen pendientes. La rama y el PR se verifican en Git y GitHub.
 
 **Decisión pendiente:** elegir Identidad actual depurada u Hospitalidad precisa, como indica el plan en §1 y §3. Después se aterrizan los tokens y componentes en la rama de 1.0. La ficha permanece abierta y el plan conserva las dependencias de integración de la ola 0.
 
