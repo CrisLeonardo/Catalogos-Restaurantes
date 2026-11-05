@@ -8,11 +8,11 @@
    Todo valida el rol del usuario; el Super Admin opera por slug.
    ============================================================ */
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { resolveOwnRestaurantId } from '@/lib/db/membership';
-import { can } from '@/lib/permissions';
+import { puedeEnSeccion } from '@/lib/auth/seccion';
 import { revalidatePath, updateTag } from 'next/cache';
 import { logActivity } from '@/lib/activity';
 import { getProductMovements as fetchProductMovements, type StockMovement } from '@/lib/db/kardex';
@@ -21,7 +21,7 @@ type Ctx = { db: ReturnType<typeof createServiceClient>; restaurantId: string; u
 
 async function resolveContext(restaurantIdFromForm?: string | null): Promise<Ctx | null> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return null;
 
   const { data: profile } = await supabase
@@ -30,9 +30,6 @@ async function resolveContext(restaurantIdFromForm?: string | null): Promise<Ctx
     .eq('id', user.id)
     .single();
   if (!profile) return null;
-
-  // Un staff sin permiso "inventario" no puede ajustar stock (candado server-side).
-  if (!can(profile.role, profile.permissions as string[] | null, 'inventario')) return null;
 
   // Quien administra un grupo entra a la sucursal del subdominio, verificada
   // contra su organización; el resto, al suyo. `resolveGroupBranchId` da null
@@ -43,6 +40,7 @@ async function resolveContext(restaurantIdFromForm?: string | null): Promise<Ctx
        ?? (await resolveOwnRestaurantId(profile.restaurant_id))
        ?? '');
   if (!restaurantId) return null;
+  if (!(await puedeEnSeccion(restaurantId, 'inventario'))) return null;
 
   return { db: createServiceClient(), restaurantId, userId: user.id };
 }

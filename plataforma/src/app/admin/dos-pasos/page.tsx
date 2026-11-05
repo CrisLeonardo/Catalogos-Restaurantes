@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getStaffSessionRaw } from '@/lib/supabase/server';
 import { destinoTrasSegundoFactor } from '@/lib/auth/segundo-factor-destino';
 import DosPasosClient from './dos-pasos-client';
+import { destinoDePanel } from '@/lib/auth/panel-destino';
 
 export const metadata = {
   title: 'Verificación en dos pasos — Leogin',
@@ -15,17 +16,18 @@ export const metadata = {
  * del sitio no tiene sesión (`getStaffUser`) y la base no le enseña nada
  * (migración 137).
  */
-export default async function DosPasosPage() {
+export default async function DosPasosPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const next = destinoDePanel((await searchParams).next);
   const { res, paso } = await getStaffSessionRaw();
   if (!res.data.user) redirect('/admin/login');
   // Ya verificado (o no le toca): a donde iba. También es lo que pinta la
   // respuesta de la acción que acaba de verificar el código (ver
   // destinoTrasSegundoFactor), así que tiene que ser el MISMO destino.
-  if (paso === 'listo') redirect(await destinoTrasSegundoFactor(res.data.user.id));
+  if (paso === 'listo') redirect(await destinoTrasSegundoFactor(res.data.user.id, next));
 
   return (
     <main style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: 24 }}>
-      <DosPasosClient paso={paso} correo={res.data.user.email ?? null} />
+      <DosPasosClient paso={paso} correo={res.data.user.email ?? null} next={next} />
     </main>
   );
 }

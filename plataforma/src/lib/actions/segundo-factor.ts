@@ -112,5 +112,5 @@ export async function confirmarCodigo(_prev: CodigoState, formData: FormData): P
   await writeSessionActivity(user.id);
 
   // Ya con el código puesto, a donde iba.
-  return { url: await destinoTrasSegundoFactor(user.id) };
+  return { url: await destinoTrasSegundoFactor(user.id, formData.get('next')) };
 }

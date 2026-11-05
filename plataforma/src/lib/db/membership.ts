@@ -92,15 +92,14 @@ export async function resolveOwnRestaurantId(
     .select('id')
     .eq('slug', tenantSlug)
     .maybeSingle();
-  if (!tenant) return profileRestaurantId ?? null;
+  if (!tenant) return null;
 
   const tenantId = tenant.id as string;
   if (tenantId === profileRestaurantId) return tenantId;
 
-  // Solo se acepta el restaurante del subdominio si de verdad es suyo. Sin
-  // membresía se devuelve el de siempre, y el candado de tenant (que corre
-  // en el layout) ya habrá impedido que esta persona esté viendo esa página.
-  return (await getMyMembership(tenantId)) ? tenantId : (profileRestaurantId ?? null);
+  // Una Server Action puede invocarse sin pasar por el layout. Si la ruta
+  // pide B y no tiene acceso, se rechaza: nunca se escribe en A como respaldo.
+  return (await getMyMembership(tenantId)) ? tenantId : null;
 }
 
 /**

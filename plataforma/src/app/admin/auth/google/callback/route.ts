@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { destinoDePanel, segundoFactorPara } from '@/lib/auth/panel-destino';
 import { cookies } from 'next/headers';
 import { createOAuthCallbackClient } from '@/lib/supabase/server';
 import { resolveStaffDestination } from '@/lib/auth/destination';
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
   // terminaría en /registro.
   const { data: { session } } = await supabase.auth.getSession();
   if (pasoSegundoFactor(user, aalDelToken(session?.access_token)) !== 'listo') {
-    return NextResponse.redirect(`${origin}/admin/dos-pasos`);
+    return NextResponse.redirect(`${origin}${segundoFactorPara(safeNext)}`);
   }
 
   if (intent === 'reauth' && safeNext) {
@@ -145,7 +146,7 @@ export async function GET(request: NextRequest) {
   });
 
   const tenantSlug = request.headers.get('x-tenant-slug');
-  const destination = await resolveStaffDestination(
+  const destination = destinoDePanel(safeNext) ?? await resolveStaffDestination(
     supabase,
     profile as { role: string; permissions: string[] | null; restaurant_id: string | null },
     tenantSlug,

@@ -9,11 +9,11 @@
    ============================================================ */
 
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { resolveOwnRestaurantId } from '@/lib/db/membership';
-import { can } from '@/lib/permissions';
+import { puedeEnSeccion } from '@/lib/auth/seccion';
 import { CHANNELS, type Channel } from '@/lib/channels';
 
 export type ChannelActionResult = { error?: string; ok?: boolean };
@@ -30,7 +30,7 @@ interface Ctx {
  */
 async function resolveContext(restaurantIdFromForm?: string | null): Promise<Ctx | null> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return null;
 
   const { data: profile } = await supabase
@@ -39,8 +39,6 @@ async function resolveContext(restaurantIdFromForm?: string | null): Promise<Ctx
     .eq('id', user.id)
     .single();
   if (!profile) return null;
-
-  if (!can(profile.role, profile.permissions as string[] | null, 'ajustes')) return null;
 
   // Quien administra un grupo entra a la sucursal del subdominio, verificada
   // contra su organización; el resto, al suyo. `resolveGroupBranchId` da null
@@ -51,6 +49,7 @@ async function resolveContext(restaurantIdFromForm?: string | null): Promise<Ctx
        ?? (await resolveOwnRestaurantId(profile.restaurant_id))
        ?? '');
   if (!restaurantId) return null;
+  if (!(await puedeEnSeccion(restaurantId, 'ajustes'))) return null;
 
   return { db: createServiceClient(), restaurantId };
 }
