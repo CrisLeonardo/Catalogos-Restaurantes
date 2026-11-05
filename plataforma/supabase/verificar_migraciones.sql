@@ -174,7 +174,15 @@ huellas(n, que, ok, cuando) as (values
      'ANTES de desplegar; después de la 161'),
   ('163', 'cierre sobre el saldo neto de cada pedido',
      to_regprocedure('public.leogin_cerrar_saldo_mesa(uuid,integer,uuid[],jsonb,uuid,uuid)') is not null,
-     'ANTES de desplegar; después de la 162')
+     'ANTES de desplegar; después de la 162'),
+  ('164', 'centavos exactos comunes al cobro y a la pantalla por platos',
+     to_regprocedure('public.leogin_cuotas_platos_pedido(uuid,jsonb,jsonb)') is not null
+     and to_regprocedure('public.leogin_saldos_platos_mesa(uuid,integer)') is not null,
+     'ANTES de desplegar; después de la 163'),
+  ('165', 'conserva el total al advertir cuotas no verificables',
+     exists (select 1 from pg_proc where oid=to_regprocedure('public.leogin_saldos_platos_mesa(uuid,integer)')
+       and prosrc like '%avisoCuotas%'),
+     'ANTES de desplegar; después de la 164')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

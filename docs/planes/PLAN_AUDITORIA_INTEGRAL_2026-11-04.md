@@ -250,6 +250,8 @@ Orden recomendado: primero lo de más riesgo y menor tamaño, y lo que destraba 
 
 **Cubre:** C08, E03, M§8 «Descuento y propina fraccionados». **Reproducido:** tres platos Q30, descuento Q10 y propina Q20 suman Q100; el reparto calcula Q33.34/Q33.33/Q33.33, pero la acción recorta cada línea a Q33.33 y guarda Q99.99. **Hacer:** distribuir el residuo de centavos con una política única entre cálculo y persistencia, sin alterar pagos previos ni marcar como saldado lo que no lo está. **Aceptación:** D07 pasa; libro, saldo y asignaciones conservan exactamente Q100, con reparto también por cantidad y extras negativos.
 
+**Estado (2026-11-05):** implementada en `fix/centavos-reparto-persistido`, desde #87. **Migraciones 164 y 165 después de la 163 y antes del código.** Postgres distribuye el residuo por el resto mayor, con UUID como desempate, y la pantalla usa esas mismas cuotas pendientes. Los cobros saldados verificables se conservan; un centavo histórico faltante no se reconstruye. La 165 mantiene el total monetario cuando el reparto no es verificable, para conservar el cierre seguro de 0.16. D07 y diez garantías nuevas pasan. Matriz: **47 ejecutadas, 45 pasan y 2 fallan**, por 0.18–0.19. Evidencia en §14 del [registro](../registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md).
+
 ### 0.18 · Cobros en tránsito al cerrar un turno — L · bug de D08
 
 **Cubre:** C08, E03, T01, M§8 «Cierre simultáneo y venta al límite». **Reproducido:** un INSERT real de pago queda esperando el bloqueo de su pedido; caja cierra sin verlo; al confirmar, el pago conserva una fecha anterior al corte. Ni ese cierre ni el siguiente periodo incluyen Q10. **Hacer:** coordinar cobros y cierre en la base con una regla durable de pertenencia a turno que contemple transacciones iniciadas pero no confirmadas; conservar los cortes firmados. No resolverlo con una pausa fija ni reconstruyendo un recibo histórico desde datos actuales. **Aceptación:** D08 pasa con bloqueo observado por `pg_blocking_pids`, tanto si confirma primero el cobro como el cierre: cada movimiento confirmado pertenece a un periodo y el total se reconcilia.
@@ -376,7 +378,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 - [x] 0.14 Cobro parcial concurrente sin sobrecobro (D03) — migración 160 y garantías en CI
 - [x] 0.15 Identidad durable del intento de cobro (D04) — migraciones 161/162 y recuperación del resultado original
 - [x] 0.16 Cerrar cobrando solo el saldo de cada pedido (D05) — migración 163 y saldo neto bajo bloqueo
-- [ ] 0.17 Centavos del reparto persistido (D07)
+- [x] 0.17 Centavos del reparto persistido (D07) — cuotas comunes en SQL, migraciones 164/165
 - [ ] 0.18 Cobros en tránsito al cerrar un turno (D08)
 - [ ] 0.19 Incluir el instante exacto del inicio del día (D09)
 

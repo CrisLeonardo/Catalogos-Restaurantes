@@ -54,7 +54,7 @@ import { money as fmtMoney, newLineId, LIBRE_ID, type CartLine } from '@/compone
 import type { PanelCurrency } from '@/components/admin/order-card';
 
 import {
-  comandaDeMesa, resumirComanda, unidadDeCarrito, importeLinea,
+  comandaDeMesa, resumirComanda, unidadDeCarrito,
   type EnvioEnVuelo, type LineaServicio,
 } from '@/lib/servicio/comanda';
 import {
@@ -225,6 +225,7 @@ export default function ServicioPanel({
   /* ── La mesa abierta, desde la base ───────────────────────── */
   const [mesaOrders, setMesaOrders] = useState<OrderWithItems[]>([]);
   const [pagadas, setPagadas] = useState<string[]>([]);
+  const [saldosPlatos, setSaldosPlatos] = useState<Record<string, number>>({});
   /* El DINERO ya cobrado de esta mesa, leído de `order_payments`. No se
      deduce de las líneas marcadas: la suma de las líneas es consumo y el
      dinero lleva además propina, así que restar lo uno de lo otro deja la
@@ -402,8 +403,11 @@ export default function ServicioPanel({
       if (yo !== lecturaRef.current) return;
       setMesaOrders('orders' in bill ? bill.orders : []);
       setPagadas(cobrado.lineasPagadas ?? []);
+      setSaldosPlatos(cobrado.lineasPendientes ?? {});
       setCobrado(cobrado.total ?? 0);
       if ('error' in bill) setAviso({ text: bill.error, bad: true });
+      else if (cobrado.error) setAviso({ text: cobrado.error, bad: true });
+      else if (cobrado.avisoCuotas) setAviso({ text: cobrado.avisoCuotas, bad: true });
     } catch {
       /* Sin conexión la mesa se queda con lo que hubiera: lo apuntado en
          este aparato se sigue viendo y se puede seguir tomando el pedido,
@@ -417,7 +421,7 @@ export default function ServicioPanel({
   }, [restaurantId]);
 
   useEffect(() => {
-    if (sel.kind !== 'mesa') { setMesaOrders([]); setPagadas([]); setCobrado(0); return; }
+    if (sel.kind !== 'mesa') { setMesaOrders([]); setPagadas([]); setSaldosPlatos({}); setCobrado(0); return; }
     void cargarMesa(sel.n);
   }, [sel, cargarMesa]);
 
@@ -926,11 +930,11 @@ export default function ServicioPanel({
 
   const cobrarParte = useCallback((parte: LineaServicio[], pagos: PagoElegido[]) => {
     if (sel.kind !== 'mesa') return;
-    const importe = parte.reduce((s, l) => s + importeLinea(l), 0);
+    const importe = parte.reduce((s, l) => s + (saldosPlatos[l.id] ?? 0), 0);
     const solicitud: SolicitudCobro = { mesa: sel.n, operacion: 'parte', items: parte.map((l) => l.id),
       pagos: pagos.map((p) => ({ ...p, amount: p.amount ?? importe })) };
     startWork(async () => { await ejecutarCobro(solicitud); });
-  }, [sel, ejecutarCobro]);
+  }, [sel, ejecutarCobro, saldosPlatos]);
 
   const cobrarLlevar = useCallback((pagos: PagoElegido[]) => {
     if (!pedidoSel) return;
@@ -1633,6 +1637,7 @@ export default function ServicioPanel({
           desglose={desglose}
           porCobrar={porCobrarReal}
           yaCobrado={cobrado}
+          saldosPlatos={sel.kind === 'mesa' ? saldosPlatos : null}
           money={money}
           redondear={redondear}
           sugerencias={sugerencias}

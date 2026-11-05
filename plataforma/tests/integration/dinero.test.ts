@@ -200,8 +200,11 @@ describe('M§8 · circuito del dinero en Postgres', () => {
     const o = await order([30, 30, 30], { total: 100, discount: 10, tip: 20 });
     const split = computeSplit({ orders: [o as OrderWithItems], mode: 'equal', peopleIds: ['a', 'b', 'c'], assignment: {} });
     expect(split.people.map((p) => p.total)).toEqual([33.34, 33.33, 33.33]);
-    for (let i = 0; i < 3; i++) success(await pay([o.items[i].id], split.people[i].total));
+    // El empate del residuo por plato lo decide el UUID, no el orden de clic.
+    const items = [...o.items].sort((a, b) => a.id.localeCompare(b.id));
+    for (let i = 0; i < 3; i++) success(await pay([items[i].id], split.people[i].total));
     expect(net(await ledger(o.id)), 'El reparto persistido debe coincidir con el total exacto de la cuenta').toBe(10000);
+    expect((await ledger(o.id)).reduce((sum, p) => sum + Object.values(p.item_amounts).reduce<number>((s, n) => s + Math.round(Number(n) * 100), 0), 0)).toBe(10000);
     expect((await period()).pendientes.total).toBe(0);
   });
 
@@ -614,5 +617,121 @@ describe('0.16 · cierre sobre el saldo de cada pedido', () => {
   it('solo el servicio puede ejecutar el nuevo cierre de saldo', async () => {
     const privileges = await sql.query("select prosecdef, has_function_privilege('anon',oid,'execute') anon, has_function_privilege('authenticated',oid,'execute') auth, has_function_privilege('service_role',oid,'execute') service from pg_proc where oid='public.leogin_cerrar_saldo_mesa(uuid,integer,uuid[],jsonb,uuid,uuid)'::regprocedure");
     expect(privileges.rows).toEqual([{ prosecdef: false, anon: false, auth: false, service: true }]);
+  });
+});
+
+describe('0.17 · centavos exactos del reparto persistido', () => {
+  it('un legado sin reparto mantiene su total y permite el cierre completo seguro de 0.16', async () => {
+    const first = await order([40, 60]);
+    const old = checked(await db.from('order_payments').insert({ restaurant_id: rid(), order_id: first.id, method: 'CASH', amount: 40 }).select('*').single())!;
+    const second = await order([20]);
+    const preview = await cobradoDeMesa(rid(), 1);
+    expect(preview.total).toBe(40);
+    expect(preview.avisoCuotas).toMatch(/sin asignación verificable/);
+    expect(preview.lineasPendientes?.[first.items[0].id]).toBeUndefined();
+    expect((await pay([first.items[1].id], 60)).error).toMatch(/sin asignación verificable/);
+    success(await freeTable(rid(), 1, { method: 'CARD', amount: 120-preview.total! }, randomUUID()));
+    expect(net(await ledger(first.id))).toBe(10000);
+    expect(net(await ledger(second.id))).toBe(2000);
+    expect(checked(await db.from('order_payments').select('*').eq('id', old.id).single())).toEqual(old);
+  });
+
+  it('los extras negativos también conservan el total al cobrar en otro orden', async () => {
+    const o = await order([30, 30, 30], { total: 80, discount: 10 });
+    const items = [...o.items].sort((a, b) => a.id.localeCompare(b.id));
+    const preview = await cobradoDeMesa(rid(), 1);
+    expect(items.map((i: { id: string }) => preview.lineasPendientes?.[i.id])).toEqual([26.67, 26.67, 26.66]);
+    for (const i of [...items].reverse()) {
+      const actual = await cobradoDeMesa(rid(), 1);
+      success(await pay([i.id], actual.lineasPendientes![i.id]));
+    }
+    expect(net(await ledger(o.id))).toBe(8000);
+    expect((await cobradoDeMesa(rid(), 1)).lineasPagadas).toHaveLength(3);
+  });
+
+  it('pondera la cantidad de unidades de la línea sin perder el centavo', async () => {
+    const o = await order([60, 30], { total: 100, tip: 10 });
+    checked(await db.from('order_items').update({ quantity: 2, price_snapshot: 30 }).eq('id', o.items[0].id));
+    const preview = await cobradoDeMesa(rid(), 1);
+    expect(o.items.map((i: { id: string }) => preview.lineasPendientes?.[i.id])).toEqual([66.67, 33.33]);
+    for (const i of o.items) success(await pay([i.id], preview.lineasPendientes![i.id]));
+    expect(net(await ledger(o.id))).toBe(10000);
+  });
+
+  it('aplica los extras de cada pedido en vez de un factor global de la mesa', async () => {
+    const a = await order([30, 30], { total: 70, tip: 10 });
+    const b = await order([20], { total: 15, discount: 5 });
+    const preview = await cobradoDeMesa(rid(), 1);
+    expect(a.items.map((i: { id: string }) => preview.lineasPendientes?.[i.id])).toEqual([35, 35]);
+    expect(preview.lineasPendientes?.[b.items[0].id]).toBe(15);
+    success(await pay([a.items[0].id, b.items[0].id], 50));
+    success(await pay([a.items[1].id], 35));
+    expect(net(await ledger(a.id))).toBe(7000);
+    expect(net(await ledger(b.id))).toBe(1500);
+  });
+
+  it('conserva una línea histórica saldada a Q33.33 y distribuye Q66.67 solo entre las pendientes', async () => {
+    const o = await order([30, 30, 30], { total: 100, tip: 20, discount: 10 });
+    const items = [...o.items].sort((a, b) => a.id.localeCompare(b.id));
+    const old = checked(await db.from('order_payments').insert({ restaurant_id: rid(), order_id: o.id, method: 'CASH', amount: 33.33,
+      item_amounts: { [items[0].id]: 33.33 } }).select('*').single())!;
+    checked(await db.from('table_splits').insert({ restaurant_id: rid(), table_number: 1, mode: 'byItem',
+      people: [{ id: 'old', name: 'AUD histórico' }], assignment: { [items[0].id]: ['old'] }, paid: ['old'] }));
+    const preview = await cobradoDeMesa(rid(), 1);
+    expect(items.map((i: { id: string }) => preview.lineasPendientes?.[i.id])).toEqual([0, 33.34, 33.33]);
+    success(await pay([items[1].id], 33.34));
+    success(await pay([items[2].id], 33.33));
+    expect(checked(await db.from('order_payments').select('*').eq('id', old.id).single())).toEqual(old);
+    expect(net(await ledger(o.id))).toBe(10000);
+  });
+
+  it('una cuota fraccionada no se marca pagada antes de completar su centavo', async () => {
+    const o = await order([30, 30, 30], { total: 100, tip: 20, discount: 10 });
+    const items = [...o.items].sort((a, b) => a.id.localeCompare(b.id));
+    success(await pay([items[0].id], 10));
+    const preview = await cobradoDeMesa(rid(), 1);
+    expect(preview.lineasPendientes?.[items[0].id]).toBe(23.34);
+    expect(preview.lineasPagadas).not.toContain(items[0].id);
+    success(await pay([items[0].id], 23.33));
+    expect((await cobradoDeMesa(rid(), 1)).lineasPagadas).not.toContain(items[0].id);
+    success(await pay([items[0].id], 0.01));
+    expect((await cobradoDeMesa(rid(), 1)).lineasPagadas).toContain(items[0].id);
+    for (const i of items.slice(1)) success(await pay([i.id], 33.33));
+    expect(net(await ledger(o.id))).toBe(10000);
+  });
+
+  it('una línea gratuita no consume el residuo de las líneas cobrables', async () => {
+    const o = await order([0, 1, 1], { total: 2.01, tip: 0.01 });
+    const preview = await cobradoDeMesa(rid(), 1);
+    expect(preview.lineasPendientes?.[o.items[0].id]).toBe(0);
+    expect(o.items.slice(1).map((i: { id: string }) => preview.lineasPendientes![i.id]).sort()).toEqual([1, 1.01]);
+    for (const i of o.items.slice(1)) success(await pay([i.id], preview.lineasPendientes![i.id]));
+    expect(net(await ledger(o.id))).toBe(201);
+  });
+
+  it('no reconstruye el centavo de una cuenta histórica ya marcada saldada a Q99.99', async () => {
+    const o = await order([30, 30, 30], { total: 100, tip: 20, discount: 10 });
+    checked(await db.from('order_payments').insert(o.items.map((i: { id: string }) => ({ restaurant_id: rid(), order_id: o.id,
+      method: 'CASH', amount: 33.33, item_amounts: { [i.id]: 33.33 } }))));
+    checked(await db.from('table_splits').insert({ restaurant_id: rid(), table_number: 1, mode: 'byItem',
+      people: [{ id: 'old', name: 'AUD histórico' }], assignment: Object.fromEntries(o.items.map((i: { id: string }) => [i.id, ['old']])), paid: ['old'] }));
+    const before = await ledger(o.id);
+    expect((await cobradoDeMesa(rid(), 1)).avisoCuotas).toMatch(/sin cambiar cobros anteriores/);
+    expect((await pay([o.items[0].id], 0.01)).error).toMatch(/sin cambiar cobros anteriores/);
+    expect(await ledger(o.id)).toEqual(before);
+  });
+
+  it('dos empleados no consumen dos veces la cuota que recibió el centavo', async () => {
+    const o = await order([30, 30, 30], { total: 100, tip: 20, discount: 10 });
+    const first = [...o.items].sort((a, b) => a.id.localeCompare(b.id))[0];
+    const results = await Promise.all([actor(0, () => pay([first.id], 33.34)), actor(1, () => pay([first.id], 33.34))]);
+    expect(results.filter((r) => !r.error)).toHaveLength(1);
+    expect(net(await ledger(o.id))).toBe(3334);
+  });
+
+  it('los dos RPC de cuota y lectura son invoker y exclusivos del servicio', async () => {
+    const { rows } = await sql.query("select prosecdef,has_function_privilege('anon',oid,'execute') anon,has_function_privilege('authenticated',oid,'execute') auth,has_function_privilege('service_role',oid,'execute') service from pg_proc where proname in ('leogin_cuotas_platos_pedido','leogin_saldos_platos_mesa')");
+    expect(rows).toHaveLength(2);
+    for (const row of rows) expect(row).toEqual({ prosecdef: false, anon: false, auth: false, service: true });
   });
 });
