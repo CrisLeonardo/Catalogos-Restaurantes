@@ -472,6 +472,33 @@ El chat «Recupera el resultado del cobro» permanece archivado, con sus turnos 
 
 **Siguiente ficha:** 0.19, autorizada en la continuación del 2026-11-05. La entrega se detiene en 0.18. La ola 0 sigue abierta: no se cambia el changelog de cierre ni se crean etiquetas. Para fusionar se requiere la autorización expresa del dueño, CI verde y dependencias resueltas; para desplegar, verificar antes las migraciones de producción y su orden.
 
+## 16. Continuación del 2026-11-05 · ficha 0.19
+
+**Revisión del chat anterior:** «Recupera el resultado del cobro» está archivado, no perdido: se leyeron sus seis turnos disponibles, incluido el último interrumpido que pidió pasar a otro chat y cerrarlo. Sus entregas 0.15–0.18 coinciden con los commits locales/remotos y los PR #86–#89. No había cambios locales sin guardar al empezar. Se comprobó CI verde de #86, #87 y #88. El fallo posterior del primer CI de #89 se reprodujo y corrigió en su propia rama con `a7e80a0` (§15); su CI nuevo terminó en verde en una consulta posterior, sin polling. No se restaura ni borra el chat archivado; se conserva el cierre solicitado.
+
+**Rama:** `fix/limite-inicio-dia-caja`, desde `origin/fix/cobros-en-transito-caja` (`a7e80a0`, #89), después de actualizar `main`. PR propio contra esa rama para aislar 0.19 y conservar #71 → #84 → #85 → #86 → #87 → #88 → #89 → esta ficha. Continúan las reglas de Claude/repositorio: reproducción previa, Postgres real, rama/PR por ficha y traspaso con el código. Cada fusión requiere autorización expresa por separado; no se fusiona, despliega ni etiqueta.
+
+**Migración 168_limites_periodo_caja.sql:** número libre en los árboles remotos comprobados. Aplicar **después de 167 y ANTES de este código**. Solo aplicada en Postgres local, sin reset ni DML histórico. Las migraciones anteriores quedan intactas. Verificador 160–168 «sí»; siguiente número previsto: **169**, que debe verificarse al empezar la siguiente migración. No se consultó ni modificó producción.
+
+### Reproducción y corrección
+
+- **Antes:** se ejecutó D09 sobre el código de #89 y la base 160–167: Q1 a 04:59:59.999, Q2 a 05:00:00.000 y Q3 a 05:00:00.001. El reporte devuelve Q5 y caja Q3; falla la aserción original. No se cambian sus instantes ni expectativas.
+- **Límite según su origen:** el inicio del día de negocio es inclusivo; el último corte firmado es exclusivo porque ya incluyó su instante final. Si coinciden exactamente a las 05:00, prevalece el corte exclusivo. La hora y la zona siguen siendo las configuradas por el local, y un turno abierto conserva el día en que abrió.
+- **Precisión:** el timestamp original del corte se envía completo a Postgres, sin convertirlo de nuevo a ISO a través de `Date`, tanto para el legado como para el registro gestionado. Se prueban movimientos a un microsegundo antes, en y después del corte, la unión de ambos periodos y la conservación íntegra del recibo.
+- **Todas las fuentes:** pagos, entregas sin movimientos, gastos y propinas comparten los límites. La selección de entregados también decide si una mesa cerró en el periodo y puede reabrirse; evita otra comparación textual de timestamps. El camino de compatibilidad sin la 166 conserva la misma inclusión y el límite superior de gastos, sin habilitar cierres desprotegidos.
+- **Despliegue:** el RPC nuevo `leogin_leer_periodo_caja_limites` es `security invoker` y exclusivo de `service_role`. Se conserva intacto el lector anterior para el código previo durante el despliegue por etapas. Si falta la 168, el cierre devuelve error de migración antes de guardar dinero o un recibo; no vuelve al lector incorrecto.
+- No se reconstruyen cortes ni se cambian importes o fechas de los movimientos existentes. La 168 solo crea función y permisos. Se conserva la revisión y coordinación transaccional de 0.18 y las garantías monetarias de 0.14–0.17.
+
+### Validación
+
+- **Postgres real:** matriz completa **69/69, salida 0**, sin omisiones ni aserciones invertidas. D09 y nueve garantías nuevas incluyen legado/registro SQL, pagos/entregas/gastos/propinas, microsegundos, corte al inicio, corte anterior, turno nocturno, otra zona/corte a medianoche y privilegios. Los periodos adyacentes reconcilian sus importes sin pérdidas ni duplicados.
+- **CI:** se reemplaza el filtro monetario por `npm run test:dinero`; ahora también bloquean D01, D02 y D06. La matriz certifica el dinero bajo el alcance de su arnés, no toda la auditoría pendiente ni FEL/impresión.
+- **Unitarias:** 1.350 pasan y una omisión previa, 92 archivos; ejecución con `--maxWorkers=2`. La primera corrida simultánea con build agotó tiempos; se repitió sin ampliar límites. Tipos y build optimizado correctos; lint completo sin errores, con las tres advertencias previas. Auditores RLS y security definer: cero hallazgos.
+- **Navegador:** ocho E2E pasan contra el servidor optimizado. La prueba nueva usa restaurante y empleado propios. Cierra Q5 (Q2 exactos + Q3 posteriores), cierra el siguiente Q0 y compara todas las columnas del primer corte. La primera versión del fixture reutilizaba al empleado de otro restaurante y perdió el conteo al navegar; el fixture aislado y su navegación por pasos pasan sin ampliar tiempos ni alterar la aserción monetaria. Se conserva la regresión Q10/Q10 de 0.18.
+- CRLF conservado; secretos, trazas y reportes de prueba quedan fuera del commit. La limpieza AUD se comprueba al terminar.
+
+**Siguiente paso:** integrar las fichas de la ola 0 en su orden de dependencias, con autorización por cada fusión, CI verde y comprobación/orden de migraciones de producción. La ola 0 sigue pendiente de integración y despliegue: no se cierra el plan ni el changelog, ni se propone una etiqueta como si ya estuviera publicada. La próxima ficha funcional es 1.0; cualquier cambio visual requiere su maqueta y aprobación según el plan. Esta entrega se detiene en 0.19.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

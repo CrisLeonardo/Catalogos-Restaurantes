@@ -3,6 +3,7 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 import { readFileSync } from 'node:fs';
+import { diaDeNegocio, inicioDelDia } from '../../src/lib/caja/dia';
 
 try {
   for (const line of readFileSync('.env.local', 'utf8').split('\n')) {
@@ -266,4 +267,68 @@ test('0.18 · caja conserva el primer recibo y cuenta el pago posterior una vez 
     expect(counts[0]).toEqual(first);
     expect(counts[1].caja_corte_previo).toBe(first.id);
   } finally { await context.close(); }
+});
+
+test('0.19 · el cierre incluye el cobro del inicio exacto del día una sola vez', async ({ browser }) => {
+  test.setTimeout(180_000);
+  const diaSlug = `${slug}-dia`;
+  const rest = check(await db.from('restaurants').insert({ name: 'AUD Límite', slug: diaSlug, status: 'active',
+    plan_actual: 'PREMIUM', onboarding_done: true, timezone: 'America/Guatemala', day_cutoff_minutes: 300,
+    modules: { orders: true } }).select('id').single())!;
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  let userId: string | undefined;
+  try {
+    check(await db.from('restaurant_themes').insert({ restaurant_id: rest.id, brand_name: 'AUD Límite' }));
+    const email = `aud-cobro-${suffix}-dia@test.local`;
+    const user = await db.auth.admin.createUser({ email, email_confirm: true });
+    if (user.error) throw user.error;
+    userId = user.data.user!.id;
+    check(await db.from('profiles').upsert({ id: userId, full_name: 'AUD Caja día', restaurant_id: rest.id,
+      role: 'RESTAURANT_STAFF', permissions: ['finanzas'] }));
+    const reloj = check(await db.rpc('leogin_contexto_caja', { p_restaurant: rest.id, p_cambio: false }));
+    const dia = diaDeNegocio(new Date(reloj.hasta), 'America/Guatemala', 300);
+    const inicio = inicioDelDia(dia, 'America/Guatemala', 300).getTime();
+    for (const [i, offset] of [-1, 0, 1].entries()) {
+      const at = new Date(inicio + offset).toISOString();
+      const o = check(await db.from('orders').insert({ restaurant_id: rest.id, order_number: `AUD-dia-${suffix}-${i}`,
+        customer_name: 'AUD Día', customer_phone: '00000000', order_type: 'PICKUP', status: 'DELIVERED',
+        subtotal: i + 1, total: i + 1, created_at: at, delivered_at: at }).select('id').single())!;
+      check(await db.from('order_payments').insert({ restaurant_id: rest.id, order_id: o.id,
+        method: 'CASH', amount: i + 1, created_at: at }));
+    }
+    await login(context, email);
+    const page = await context.newPage();
+    await page.goto(`${origin}/panel/${diaSlug}/caja`, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('button', { name: 'Siguiente: gastos', exact: true }).click();
+    await page.getByRole('button', { name: /Efectivo sin contar/ }).click();
+    const billetes = page.getByRole('spinbutton', { name: 'Cuántos billetes de Q5', exact: true });
+    await expect(async () => {
+      await billetes.fill('');
+      await billetes.fill('1');
+      await expect(billetes).toHaveAttribute('data-filled', '1');
+    }).toPass({ timeout: 15_000 });
+    await page.getByRole('button', { name: 'Siguiente: gastos', exact: true }).click();
+    await page.getByRole('button', { name: 'Siguiente: propinas', exact: true }).click();
+    await page.getByRole('button', { name: 'Cerrar el turno', exact: true }).click();
+    await expect(page.getByText('Turno cerrado', { exact: true }).first()).toBeVisible();
+    const first = check(await db.from('cash_counts').select('*').eq('restaurant_id', rest.id).eq('status', 'CLOSED').single())!;
+    expect(Number(first.expected_cash)).toBe(5);
+    expect(Number(first.counted_cash)).toBe(5);
+    await page.goto(`${origin}/panel/${diaSlug}/caja`, { waitUntil: 'domcontentloaded' });
+    // Una segunda lectura/cierre conserva el recibo y no vuelve a contar Q2 ni Q3.
+    await page.getByRole('button', { name: 'Siguiente: gastos', exact: true }).click();
+    await page.getByRole('button', { name: 'Siguiente: propinas', exact: true }).click();
+    await page.getByRole('button', { name: 'Cerrar el turno', exact: true }).click();
+    await expect(page.getByText('Turno cerrado', { exact: true }).first()).toBeVisible();
+    const cortes = check(await db.from('cash_counts').select('*').eq('restaurant_id', rest.id).eq('status', 'CLOSED').order('closed_at'))!;
+    expect(cortes.map((c) => Number(c.expected_cash))).toEqual([5, 0]);
+    expect(cortes[0]).toEqual(first);
+  } finally {
+    await context.close();
+    if (userId) {
+      const deleted = await db.auth.admin.deleteUser(userId);
+      if (deleted.error) throw deleted.error;
+    }
+    check(await db.from('restaurants').delete().eq('id', rest.id));
+  }
 });
