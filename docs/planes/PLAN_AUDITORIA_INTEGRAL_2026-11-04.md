@@ -244,6 +244,8 @@ Orden recomendado: primero lo de más riesgo y menor tamaño, y lo que destraba 
 
 **Cubre:** E03, C08, M§8 «Pago parcial y nuevo platillo». **Reproducido:** pedido Q100 con Q40 ya cobrados; ronda nueva Q20; se cierra con Q80. El libro suma Q120, pero todo queda en el primer pedido y el nuevo se entrega con Q0. **Hacer:** descontar el neto ya cobrado por pedido antes de asignar el nuevo pago y cerrar; no basta con cuadrar el total de la mesa. **Aceptación:** D05 pasa: Q100/Q20 por pedido, Q120 de libro, pagos anteriores intactos y ninguna ronda entregada sin su cobro. Probar correcciones/devoluciones posteriores sobre cada pedido.
 
+**Estado (2026-11-05):** implementada en `fix/cierre-saldo-por-pedido`, desde #86 y con PR propio contra esa rama. **Migración 163 después de la 162 y antes del código.** SQL calcula el saldo neto por pedido dentro del bloqueo de 0.14 y conserva el resultado durable de 0.15. D05 confirma Q60/Q20 nuevos, con Q40 previos intactos; también pasan ocho garantías de métodos/efectivo, pedido ya saldado, pago sin importe, rechazo de importe incorrecto, ronda fuera del snapshot, más de mil movimientos previos, privilegios y correcciones/devoluciones posteriores. Matriz: **37 ejecutadas, 34 pasan y 3 fallan** por 0.17–0.19. Traspaso en §13 del [registro](../registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md).
+
 ### 0.17 · Centavos del reparto persistido — M · bug de D07
 
 **Cubre:** C08, E03, M§8 «Descuento y propina fraccionados». **Reproducido:** tres platos Q30, descuento Q10 y propina Q20 suman Q100; el reparto calcula Q33.34/Q33.33/Q33.33, pero la acción recorta cada línea a Q33.33 y guarda Q99.99. **Hacer:** distribuir el residuo de centavos con una política única entre cálculo y persistencia, sin alterar pagos previos ni marcar como saldado lo que no lo está. **Aceptación:** D07 pasa; libro, saldo y asignaciones conservan exactamente Q100, con reparto también por cantidad y extras negativos.
@@ -373,7 +375,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 - [ ] 0.13 Probar el circuito del dinero en Postgres real — entregada en su rama #84; conserva su marca al fusionar
 - [x] 0.14 Cobro parcial concurrente sin sobrecobro (D03) — migración 160 y garantías en CI
 - [x] 0.15 Identidad durable del intento de cobro (D04) — migraciones 161/162 y recuperación del resultado original
-- [ ] 0.16 Cerrar cobrando solo el saldo de cada pedido (D05)
+- [x] 0.16 Cerrar cobrando solo el saldo de cada pedido (D05) — migración 163 y saldo neto bajo bloqueo
 - [ ] 0.17 Centavos del reparto persistido (D07)
 - [ ] 0.18 Cobros en tránsito al cerrar un turno (D08)
 - [ ] 0.19 Incluir el instante exacto del inicio del día (D09)

@@ -171,7 +171,10 @@ huellas(n, que, ok, cuando) as (values
   ('162', 'segundo factor restrictivo en cobro_intentos',
      exists (select 1 from pg_policy where polrelid=to_regclass('public.cobro_intentos')
        and polname='super_admin_segundo_factor' and not polpermissive),
-     'ANTES de desplegar; después de la 161')
+     'ANTES de desplegar; después de la 161'),
+  ('163', 'cierre sobre el saldo neto de cada pedido',
+     to_regprocedure('public.leogin_cerrar_saldo_mesa(uuid,integer,uuid[],jsonb,uuid,uuid)') is not null,
+     'ANTES de desplegar; después de la 162')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

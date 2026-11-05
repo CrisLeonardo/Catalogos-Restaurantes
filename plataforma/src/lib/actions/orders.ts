@@ -32,7 +32,6 @@ import { getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalt
 import { resolveItemOptions } from '@/lib/order-options';
 import { isUnavailable } from '@/lib/product-availability';
 import { isPaymentMethod, type PaymentMethod } from '@/lib/payment-method';
-import { repartirPagos, type PagoEntrada } from '@/lib/table-payments';
 import { hayColumnaMesa, direccionDeMesa } from '@/lib/db/mesa-columna';
 import { assertTableAccess } from '@/lib/auth/table-access';
 import { faltaLaColumna, faltaLaFuncion, faltaLaTabla } from '@/lib/db/migracion-ausente';
@@ -1145,9 +1144,8 @@ export async function freeTable(
   const porNumero = await hayColumnaMesa();
   const [colMesa, valMesa] = campoMesa(porNumero, tableNumber);
 
-  /* Los pedidos ANTES de cerrarlos: hace falta el total de cada uno para
-     repartir el dinero entre ellos, y después del UPDATE ya no se pueden
-     distinguir de los que se cerraron esta noche por otra vía. */
+  /* Conservar el snapshot: una ronda que llegue después debe seguir abierta.
+     SQL calcula el saldo neto de estos pedidos bajo el bloqueo de cuenta. */
   const { data: vivos, error: errLeer } = await db
     .from('orders')
     .select('id, total, created_at')
@@ -1158,38 +1156,21 @@ export async function freeTable(
     .order('created_at', { ascending: true });
 
   if (errLeer) return { error: errLeer.message };
-  const ordenes = (vivos ?? []).map((o) => ({ id: o.id as string, total: Number(o.total ?? 0) }));
+  const idsLeidos = (vivos ?? []).map((o) => o.id as string);
 
-  /* Cómo se reparte el dinero entre los pedidos de la mesa (M-11).
-     ------------------------------------------------------------
-     Sin importe, un pago cubre lo que quede: es el caso de siempre —«toda
-     la mesa en efectivo»— y así una sola llamada sigue significando lo
-     mismo que antes de esta migración. Con importes, cada uno pone lo
-     suyo y la aritmética vive en `lib/table-payments.ts`, probada aparte
-     porque de aquí sale lo que el dueño cuenta en el cajón. */
-  const totalMesa = ordenes.reduce((s, o) => s + o.total, 0);
-  const puesto = pagos.reduce((s, p) => s + (p.amount ?? 0), 0);
-  const entradas: PagoEntrada[] = pagos.map((p) => ({
-    method: p.method,
-    amount: p.amount ?? Math.max(0, totalMesa - puesto),
-    cashReceived: p.method === 'CASH' ? p.cashReceived ?? null : null,
-  }));
-  const filas = repartirPagos(ordenes, entradas);
-
-  /* El servidor SQL vuelve a comprobar el saldo bajo el mismo bloqueo
-     que el cobro parcial. Pedidos, movimientos, reparto y sesión se
-     confirman juntos; nunca se cierra tras un INSERT de pago fallido. */
+  /* El servidor descuenta el neto previo por pedido antes de repartir.
+     Dinero, cierre y resultado durable se confirman juntos; liberar sin
+     cobro conserva el camino explícito de la 160. */
   const { data: confirmados, error: errCierre } = await db.rpc(
-    pagos.length ? 'leogin_cerrar_mesa_idempotente' : 'leogin_confirmar_cierre_mesa', {
+    pagos.length ? 'leogin_cerrar_saldo_mesa' : 'leogin_confirmar_cierre_mesa', {
       p_restaurant: restaurantId,
       p_mesa: tableNumber,
-      p_orders: ordenes.map((o) => o.id),
-      p_filas: filas,
+      p_orders: idsLeidos,
       p_actor: acceso.actor.userId,
-      ...(pagos.length ? { p_intento: intentoId, p_pagos: pagos } : {}),
+      ...(pagos.length ? { p_intento: intentoId, p_pagos: pagos } : { p_filas: [] }),
     });
   if (errCierre) {
-    if (faltaLaFuncion(errCierre)) return { error: `Falta la migración ${pagos.length ? 161 : 160} para cerrar la cuenta con el saldo protegido.`, needsMigration: true };
+    if (faltaLaFuncion(errCierre)) return { error: `Falta la migración ${pagos.length ? 163 : 160} para cerrar la cuenta con el saldo protegido.`, needsMigration: true };
     return { error: errCierre.message, incierto: !/^(LGD0[12]|22023)$/.test(errCierre.code ?? '') };
   }
   const ids = (pagos.length ? confirmados?.orderIds : confirmados) as string[];

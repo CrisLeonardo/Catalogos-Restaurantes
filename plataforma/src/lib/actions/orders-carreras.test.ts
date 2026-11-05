@@ -163,17 +163,17 @@ describe('freeTable confirma el snapshot en una transacción (0.14)', () => {
     h.sesion = dobleDeSupabase(() => undefined);
     h.servicio = dobleDeSupabase((c) => {
       if (c.tabla === 'orders' && c.op === 'select') return { data: [{ id: 'o-1', total: 60 }, { id: 'o-2', total: 40 }] };
-      if (c.tabla === 'leogin_cerrar_mesa_idempotente') return rpc;
+      if (c.tabla === 'leogin_cerrar_saldo_mesa') return rpc;
     });
   }
   it('envía únicamente los pedidos leídos y difiere FEL para los confirmados', async () => {
     montar({ data: { intentoId: TOKEN, cobrado: 100, paymentIds: ['p-1'], orderIds: ['o-1', 'o-2'] } });
     expect(await freeTable(RID, 4, { method: 'CASH' }, TOKEN)).toMatchObject({ intentoId: TOKEN, cobrado: 100 });
-    const args = h.servicio.consultas.find((c) => c.tabla === 'leogin_cerrar_mesa_idempotente')!.valores as {
-      p_orders: string[]; p_filas: { orderId: string; amount: number }[];
+    const args = h.servicio.consultas.find((c) => c.tabla === 'leogin_cerrar_saldo_mesa')!.valores as {
+      p_orders: string[]; p_pagos: { method: string }[];
     };
     expect(args.p_orders).toEqual(['o-1', 'o-2']);
-    expect(args.p_filas.reduce((s, f) => s + f.amount, 0)).toBe(100);
+    expect(args.p_pagos).toEqual([{ method: 'CASH' }]);
     await correrPendientes();
     expect(emitirFacturaAutomatica).toHaveBeenCalledWith(RID, 'o-1');
     expect(emitirFacturaAutomatica).toHaveBeenCalledWith(RID, 'o-2');
@@ -184,9 +184,9 @@ describe('freeTable confirma el snapshot en una transacción (0.14)', () => {
     expect(h.servicio.consultas.some((c) => c.op === 'insert' || c.op === 'update')).toBe(false);
     expect(h.pendientes).toEqual([]);
   });
-  it('sin la migración 161 no vuelve al cierre inseguro anterior', async () => {
+  it('sin la migración 163 no vuelve al cierre inseguro anterior', async () => {
     montar({ error: { code: 'PGRST202', message: 'Could not find the function' } });
-    expect((await freeTable(RID, 4, { method: 'CARD' }, TOKEN)).error).toMatch(/migración 161/);
+    expect((await freeTable(RID, 4, { method: 'CARD' }, TOKEN)).error).toMatch(/migración 163/);
     expect(h.servicio.consultas.some((c) => c.op === 'insert' || c.op === 'update')).toBe(false);
   });
   it('recupera antes de leer una mesa reutilizada y devuelve el resultado guardado', async () => {
@@ -195,6 +195,11 @@ describe('freeTable confirma el snapshot en una transacción (0.14)', () => {
     expect(await freeTable(RID, 4, { method: 'CARD', amount: 100 }, TOKEN)).toEqual(original);
     expect(h.servicio.consultas.map((c) => c.tabla)).toEqual(['leogin_recuperar_intento_cobro']);
     expect(h.pendientes).toEqual([]);
+  });
+  it('sin la recuperación de la 161 no vuelve a leer ni intenta cobrar', async () => {
+    h.servicio = dobleDeSupabase(() => ({ error: { code: 'PGRST202', message: 'Could not find the function' } }));
+    expect((await freeTable(RID, 4, { method: 'CARD', amount: 100 }, TOKEN)).error).toMatch(/migración 161/);
+    expect(h.servicio.consultas.map((c) => c.tabla)).toEqual(['leogin_recuperar_intento_cobro']);
   });
 });
 
