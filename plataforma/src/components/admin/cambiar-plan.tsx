@@ -9,7 +9,7 @@ import { Icon } from '@/components/icons';
 import { cambiarMiPlan } from '@/lib/actions/cambiar-plan';
 import {
   PLANS, PLAN_POINTS, PUBLIC_PLANS, PLAN_COLOR_VAR, isUpgrade, loQueSePierde, planPriceLabel,
-  type PlanCode, type PlanPricing,
+  planChangePresentation, type planPresentation, type PlanCode, type PlanPricing,
 } from '@/lib/plans';
 
 /* ============================================================
@@ -30,9 +30,10 @@ interface Props {
   enPrueba: boolean;
   /** «1 dic 2026» */
   proximoCorte: string | null;
+  currentPresentation?: ReturnType<typeof planPresentation> | null;
 }
 
-export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno, enPrueba, proximoCorte }: Props) {
+export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno, enPrueba, proximoCorte, currentPresentation }: Props) {
   const router = useRouter();
   const [elegido, setElegido] = useState<PlanCode | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +42,7 @@ export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno
 
   const pierde = elegido ? loQueSePierde(planActual, elegido) : [];
   const sube = elegido ? isUpgrade(planActual, elegido) : false;
+  const preview = elegido ? planChangePresentation(currentPresentation, elegido, pricing) : null;
 
   function confirmar() {
     if (!elegido) return;
@@ -80,9 +82,9 @@ export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno
                   <span aria-hidden style={{ width: 8, height: 8, borderRadius: 'var(--radius-full)', background: PLAN_COLOR_VAR[code] }} />
                   {p.name}
                 </span>
-                <span className="t-mono" style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text-2)' }}>{planPriceLabel(pricing, code)}</span>
+                <span className="t-mono" style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text-2)' }}>{actual && currentPresentation ? currentPresentation.monthlyLabel : planPriceLabel(pricing, code)}</span>
               </div>
-              {actual && <span className="chip chip-ok" style={{ alignSelf: 'flex-start' }}>Tu plan</span>}
+              {actual && <span className="chip chip-ok" style={{ alignSelf: 'flex-start' }}>{currentPresentation?.manual ? 'Tu plan · precio acordado' : 'Tu plan'}</span>}
               <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {PLAN_POINTS[code].map((pt) => (
                   <li key={pt.text} style={{ display: 'flex', gap: 6, fontSize: 12, color: pt.positive ? 'var(--u-text-3)' : 'var(--u-text-4)' }}>
@@ -100,13 +102,15 @@ export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '8px 0 0' }}>Solo el dueño del restaurante puede cambiar el plan.</p>
       )}
 
-      {elegido && (
+      {elegido && preview && (
         <Card className="p-4" style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--u-text)' }}>
-            {sube ? 'Subir' : 'Cambiar'} a {PLANS[elegido].name} · {planPriceLabel(pricing, elegido)}
+            {sube ? 'Subir' : 'Cambiar'} a {PLANS[elegido].name} · {preview.monthlyLabel}
           </div>
           <p style={{ fontSize: 13, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-            {pricing.prices[elegido] === 0
+            {preview.manual
+              ? `El cambio del plan es inmediato. Se conserva tu mensualidad acordada (${preview.monthlyLabel}); la tarifa pública de ${preview.name} es ${preview.publicLabel}.`
+              : pricing.prices[elegido] === 0
               ? 'Es gratis: dejas de pagar mensualidad desde tu próximo corte.'
               : enPrueba
                 ? `Sigues en tu prueba gratis. Al terminar, se cobra ${planPriceLabel(pricing, elegido)}.`

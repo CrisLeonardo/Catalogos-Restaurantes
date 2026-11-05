@@ -4,9 +4,9 @@ import { SavedBanner } from '@/components/super/ui';
 import PlanEditor from '@/components/super/plan-editor';
 import OrderTypesEditor from '@/components/super/order-types-editor';
 import { getRestaurantFullById } from '@/lib/db/super-admin';
-import { getEffectivePlanPricing, getFeeBreakdown } from '@/lib/db/billing';
+import { getEffectivePlanPricing, getRestaurantPlanPresentation } from '@/lib/db/billing';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
-import { fmtMoney } from '@/lib/money';
+import { formatPlanAmount } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Plan y módulos — Super Admin' };
@@ -24,20 +24,20 @@ export default async function FichaPlanPage({
   if (!row) notFound();
 
   const theme = row.restaurant_themes[0] ?? null;
-  const [planPricing, feeBreakdown] = await Promise.all([
+  const [planPricing, contract] = await Promise.all([
     getEffectivePlanPricing(),
-    getFeeBreakdown(id),
+    getRestaurantPlanPresentation(id),
   ]);
   const resolved = resolveTheme(theme as ThemeRow | null, row.slug, {
     brandName: row.name,
     tagline: row.tagline,
   });
 
-  const fmtQ = (n: number) => fmtMoney(n, 'GTQ', 0);
+  const fmtQ = formatPlanAmount;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {saved === 'plan' && <SavedBanner message="Plan y módulos guardados. La mensualidad automática ya se recalculó." />}
+      {saved === 'plan' && <SavedBanner message="Plan y módulos guardados. Revisa la mensualidad y el próximo cobro en Cobro." />}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <PlanEditor key={row.id} restaurant={row} pricing={planPricing} />
@@ -50,18 +50,17 @@ export default async function FichaPlanPage({
         )}
       </div>
 
-      {feeBreakdown && (
+      {contract && (
         <section>
           <h2 style={{ fontWeight: 600, fontSize: 15, marginBottom: 12, color: 'var(--u-text)' }}>
             Desglose de mensualidad
           </h2>
           <Glass variant="quiet" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <Row label="Precio del plan" value={fmtQ(feeBreakdown.base)} />
+            <Row label="Tarifa pública del plan" value={fmtQ(contract.publicAmount)} />
             <div style={{ height: 1, background: 'var(--u-hair)', margin: '4px 0' }} />
-            <Row label="Mensualidad calculada" value={fmtQ(feeBreakdown.final)} bold />
+            <Row label="Mensualidad del restaurante" value={contract.monthlyLabel} bold />
             <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '4px 0 0', lineHeight: 1.5 }}>
-              Precio fijo según el plan, sin descuento por canal ni módulos a la carta. Si «Precio automático»
-              está apagado en la pestaña Cobro, el monto real facturado puede diferir (override manual).
+              {contract.priceExplanation} {contract.orderScope}. {contract.selectedScope}.
             </p>
           </Glass>
         </section>

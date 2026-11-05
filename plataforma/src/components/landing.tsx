@@ -4,7 +4,7 @@ import { Icon } from '@/components/icons';
 import { conEvento, EVENTOS } from '@/lib/analytics';
 import { SiteHeader, SiteFooter, SectionHead, contactHref } from '@/components/site-chrome';
 import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
-import { PLANS, PLAN_POINTS, PUBLIC_PLANS, planPriceQ, type PlanPricing } from '@/lib/plans';
+import { PLANS, PUBLIC_PLANS, planPriceQ, planPresentation, type PlanPricing } from '@/lib/plans';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { getLandingProof } from '@/lib/db/landing';
 import { LandingPhone, Testimonials } from '@/components/landing-proof';
@@ -96,14 +96,14 @@ function landingPlans(pricing: PlanPricing) {
     isFree: pricing.prices[code] === 0,
     tagline: PLANS[code].tagline,
     // Los mismos puntos que en Mi cuenta y Suscripción (MIC-05).
-    points: PLAN_POINTS[code],
+    points: planPresentation({ plan: code, pricing }).points,
     accent: PLANS[code].highlight,
     badge: PLANS[code].badge,
   }));
 }
 
 const FAQS = [
-  { q: '¿Necesito saber de tecnología?', a: 'No. Te guiamos paso a paso y en minutos tienes tu menú en vivo. Si prefieres, lo configuramos por ti sin costo adicional.' },
+  { q: '¿Necesito saber de tecnología?', a: 'No. Te guiamos paso a paso y en minutos tienes tu menú en vivo. Si prefieres configuración asistida, consulta su tarifa en Planes.' },
   { q: '¿Cobran comisión por cada pedido?', a: 'No. Pagas una mensualidad fija según tu plan. Lo que vendes es tuyo: igual en un mes flojo que en tu mejor mes, sin porcentajes sobre tus ventas.' },
   { q: '¿Mis clientes tienen que descargar una app?', a: 'No. Todo abre con el QR en el navegador del celular, al instante. Si tu cliente quiere, puede “instalarlo” en su pantalla de inicio, pero es opcional.' },
   { q: '¿Y si se va el internet en el restaurante?', a: 'Sigues operando. Con Leogin Escritorio la caja funciona en tu red local: toma pedidos, imprime las comandas y sincroniza todo con la nube en cuanto vuelve la conexión.' },
