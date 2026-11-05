@@ -498,5 +498,10 @@ describe('0.15 · identidad durable del intento', () => {
     for (const row of rows) expect(row).toMatchObject({ prosecdef: false, anon: false, auth: false, service: true });
     const privileges = await sql.query("select has_table_privilege('anon','public.cobro_intentos','SELECT,INSERT,UPDATE,DELETE') anon, has_table_privilege('authenticated','public.cobro_intentos','SELECT,INSERT,UPDATE,DELETE') auth, has_table_privilege('service_role','public.cobro_intentos','UPDATE,DELETE') mutable, relrowsecurity rls from pg_class where oid='public.cobro_intentos'::regclass");
     expect(privileges.rows[0]).toEqual({ anon: false, auth: false, mutable: false, rls: true });
+    const policies = await sql.query("select polname, polpermissive, polcmd, pg_get_expr(polqual,polrelid) as filtro, pg_get_expr(polwithcheck,polrelid) as escritura from pg_policy where polrelid='public.cobro_intentos'::regclass");
+    expect(policies.rows).toHaveLength(1);
+    expect(policies.rows[0]).toMatchObject({ polname: 'super_admin_segundo_factor', polpermissive: false, polcmd: '*' });
+    expect(policies.rows[0].filtro).toContain('leogin_sesion_con_segundo_factor()');
+    expect(policies.rows[0].escritura).toContain('leogin_sesion_con_segundo_factor()');
   });
 });

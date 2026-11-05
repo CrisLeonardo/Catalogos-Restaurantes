@@ -14,7 +14,7 @@ npm run test:dinero -- --reporter=verbose
 
 Lee `.env.local`/`.env.test` sin sobrescribir variables ya exportadas. Requiere `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` de **la base local**. Para los bloqueos usa `DINERO_DATABASE_URL`; por omisión, la conexión de desarrollo del `supabase/config.toml` de este repo: `postgresql://postgres:postgres@127.0.0.1:54601/postgres`. Son las credenciales estándar del stack local. Si usas otro puerto, exporta esa variable antes de ejecutar.
 
-Ambas direcciones deben ser loopback; la suite rechaza destinos externos y comprueba que SQL y PostgREST ven el mismo restaurante temporal. No necesita servidor Next ni navegador. La versión original de 0.13 usaba el esquema 001–153; **esta rama necesita además la 160 y la 161, en ese orden y antes del código**, con los cambios anteriores de la ola 0 cuando correspondan. No aplica migraciones, no hace reset y no cambia restaurantes existentes. No borres tu base para ejecutar esta prueba.
+Ambas direcciones deben ser loopback; la suite rechaza destinos externos y comprueba que SQL y PostgREST ven el mismo restaurante temporal. No necesita servidor Next ni navegador. La versión original de 0.13 usaba el esquema 001–153; **esta rama necesita además la 160, la 161 y la 162, en ese orden y antes del código**, con los cambios anteriores de la ola 0 cuando correspondan. No aplica migraciones, no hace reset y no cambia restaurantes existentes. No borres tu base para ejecutar esta prueba.
 
 Cada caso crea su propio restaurante `aud-dinero-<uuid>`, pedidos y movimientos. La suite crea dos usuarios temporales `aud-dinero-…@test.local`. `afterEach` elimina exclusivamente el restaurante creado, con sus filas en cascada, aun cuando una aserción falla; `afterAll` elimina los usuarios. Un fallo de limpieza también hace fallar el comando. Si se mata el proceso, revisa exclusivamente los identificadores AUD de esa corrida antes de limpiar manualmente.
 
@@ -85,7 +85,7 @@ Los nueve casos originales siguen ejecutándose con el comando completo: **20 ej
 
 ## Corrección 0.15 · migración 161
 
-Aplicar `161_identidad_intento_cobro.sql` **después de la 160 y antes de desplegar**. No se edita ni sustituye la 160: los nuevos RPC envuelven su cobro/cierre transaccional. La tabla `cobro_intentos` confirma solicitud y resultado junto con el dinero. El bloqueo por restaurante/intento se toma antes del bloqueo de cuenta. Sin migración no hay fallback sin identidad.
+Aplicar `161_identidad_intento_cobro.sql` y después `162_cobro_intentos_segundo_factor.sql`, **después de la 160 y antes de desplegar**. La 162 incorpora a la tabla nueva el candado restrictivo de segundo factor de la 137, cuya ausencia hizo fallar el primer CI de #86. La 161 ya aplicada permanece intacta. No se edita ni sustituye la 160: los nuevos RPC envuelven su cobro/cierre transaccional. La tabla `cobro_intentos` confirma solicitud y resultado junto con el dinero. El bloqueo por restaurante/intento se toma antes del bloqueo de cuenta. Sin migración no hay fallback sin identidad.
 
 La identidad viaja desde el aparato y persiste antes de la petición, sin TTL. Se conservan el UUID y toda la solicitud tras un error de transporte, una sesión no autorizada o una recarga. Solo el éxito o un rechazo transaccional definitivo permiten retirar el pendiente. Un intento nuevo recibe otro UUID, aunque coincidan los platos, métodos e importes; una identidad ya confirmada con contenido distinto se rechaza. No se reconstruye el resultado desde el saldo actual.
 
@@ -104,3 +104,6 @@ Un desfase observado de 8 ms entre Windows y el contenedor podía dejar un movim
 **Resultado completo actual: 29 ejecutadas, 25 pasan, 4 fallan; código de salida 1.** D04 pasa. D05/0.16, D07/0.17, D08/0.18 y D09/0.19 siguen fallando con sus aserciones monetarias originales. No se declara certificada la matriz completa.
 
 El E2E de 0.15 ejecuta la acción Next real y espera su respuesta antes de abortar la entrega al navegador; verifica que Q52 ya están confirmados, recarga Servicio y comprueba el mismo intento/recibo, sin cambios en los movimientos. Se limpia el fixture al terminar. La recuperación vuelve a autorizar al empleado antes de acceder al registro; ni clientes anónimos ni autenticados pueden leerlo directamente. FEL e impresión continúan fuera del alcance certificado por esta suite.
+
+
+El comando `node scripts/audit-rls-candados.mjs` reproduce el fallo previo (un hallazgo por la política ausente) y después de la 162 devuelve cero hallazgos. La prueba de privilegios de 0.15 exige además la política restrictiva `super_admin_segundo_factor`, sin políticas permisivas, con filtro y condición de escritura de segundo factor. Se mantiene el acceso exclusivo del servicio y el resultado de la matriz monetaria.

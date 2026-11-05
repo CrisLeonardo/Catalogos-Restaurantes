@@ -355,9 +355,9 @@ No se marca ninguna de esas cinco fichas como terminada. La ola 0 sigue abierta;
 
 ## 12. Continuación del 2026-11-05 · ficha 0.15
 
-**Rama:** `fix/identidad-intento-cobro`, desde `origin/fix/cobro-parcial-concurrente` (`311f3b3`). Se actualizó `main` antes de crear la rama y se comprobaron #71, #84 y #85: **los tres siguen abiertos**; el CI de #85 terminó en verde. #85 conserva el arnés de #84 aunque sus commits no son ancestros. Esta ficha conserva ambos cambios íntegros; su PR se abre **contra `fix/cobro-parcial-concurrente`** para aislar la revisión. Orden de integración: #71 → #84 → #85 → esta ficha, resolviendo las versiones del arnés al fusionar. No se fusionó, desplegó ni etiquetó nada.
+**Rama:** `fix/identidad-intento-cobro`, desde `origin/fix/cobro-parcial-concurrente` (`311f3b3`). Se actualizó `main` antes de crear la rama y se comprobaron #71, #84 y #85: **los tres siguen abiertos**; el CI de #85 terminó en verde. #85 conserva el arnés de #84 aunque sus commits no son ancestros. Esta ficha conserva ambos cambios íntegros; su [PR #86](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/86) está abierto **contra `fix/cobro-parcial-concurrente`** para aislar la revisión. Orden de integración: #71 → #84 → #85 → esta ficha, resolviendo las versiones del arnés al fusionar. No se fusionó, desplegó ni etiquetó nada.
 
-**Migración 161**, libre al comprobar las ramas remotas: aplicar **después de la 160 y ANTES de este código**. La 160 permanece intacta y sus bloqueos/asignaciones siguen siendo la implementación monetaria. Solo se aplicó la 161 en Postgres local, sin reset ni reconstrucción histórica; huellas 160/161 «sí». La siguiente migración libre pasa a ser la **162**. No se comprobó ni modificó el estado SQL de producción.
+**Migración 161**, libre al comprobar las ramas remotas: aplicar **después de la 160 y ANTES de este código**. La 160 permanece intacta y sus bloqueos/asignaciones siguen siendo la implementación monetaria. Solo se aplicó la 161 en Postgres local, sin reset ni reconstrucción histórica; huellas 160/161 «sí». La corrección de CI añade la **162**, también antes del código y después de la 161. Ambas solo se aplicaron localmente; la siguiente migración libre pasa a ser la **163**. No se comprobó ni modificó el estado SQL de producción.
 
 ### Reproducción y corrección
 
@@ -366,7 +366,7 @@ No se marca ninguna de esas cinco fichas como terminada. La ola 0 sigue abierta;
 - `cobro_intentos` guarda solicitud, actor, mesa, operación y resultado original (importe e IDs de movimientos/pedidos) en la misma transacción que el pago, reparto y cierre. Su clave única es restaurante/UUID. El bloqueo por intento precede al bloqueo de mesa de la 160; dos solicitudes simultáneas del mismo intento devuelven el mismo resultado. Reutilizar la identidad con otra solicitud, mesa, operación o empleado se rechaza sin dinero nuevo.
 - El cierre busca el intento **antes** de volver a leer la mesa. Si se reutilizó para una ronda nueva, recupera únicamente el resultado anterior y no entrega ni cobra esa ronda. No recalcula un recibo a partir del saldo actual. El resultado original también se conserva tras una devolución.
 - Una identidad nueva permite pagar de nuevo Q40 de una línea Q100 que ya recibió Q40; aún permite Q20 y rechaza exceder el saldo. No se deduplican pagos por igualdad de importe/método. No se cambian importes, movimientos ni asignaciones históricos.
-- Tabla con RLS sin políticas de cliente; RPC `security invoker` ejecutables solo por `service_role`. El servicio solo puede insertar/leer los intentos, sin actualizarlos ni borrarlos directamente. Cada acción autoriza sesión/sucursal antes de consultar o ejecutar; si falta la 161 no hay vuelta al camino sin identidad.
+- Tabla con RLS sin políticas permisivas de cliente; RPC `security invoker` ejecutables solo por `service_role`. El servicio solo puede insertar/leer los intentos, sin actualizarlos ni borrarlos directamente. Cada acción autoriza sesión/sucursal antes de consultar o ejecutar; si falta la 161 no hay vuelta al camino sin identidad.
 
 ### Validación
 
@@ -378,7 +378,13 @@ No se marca ninguna de esas cinco fichas como terminada. La ola 0 sigue abierta;
 - TypeScript y build optimizado correctos. Lint sin errores, con las tres advertencias previas de intro/checkout. Auditoría `security definer`: cero hallazgos. No cambia el diseño de pantalla; los avisos usan los componentes existentes. La suite no certifica FEL, impresión ni efectos externos.
 - Fixtures AUD limpiados al terminar, también en corridas fallidas; comprobación final de restaurantes/usuarios de dinero y cobro sin residuos. No se suben secretos, trazas, reportes ni capturas de pruebas. Archivos conservados en CRLF.
 
-**Siguiente ficha:** 0.16, pendiente de nueva instrucción. Esta entrega se detiene en 0.15. La ola 0 sigue abierta: no corresponde cerrar el changelog ni crear etiquetas. Antes de desplegar deben revisarse las dependencias de los PR y aplicar las migraciones en el orden indicado; no basta el verde del subconjunto monetario.
+### Corrección del CI de #86 en la misma rama
+
+El primer CI de #86 falló en `audit-rls-candados.mjs`: faltaba en la tabla nueva la política restrictiva `super_admin_segundo_factor` que exige la 137. Se reprodujo localmente con un hallazgo. Se conserva intacta la 161 ya aplicada y se agrega **162_cobro_intentos_segundo_factor.sql**, sin cambiar datos, permisos ni funciones monetarias. La política es restrictiva y no concede acceso al cliente.
+
+Después de aplicar la 162 solo en Postgres local, el auditor de candados devuelve cero hallazgos y pasan las 22 comprobaciones de 0.14–0.15. La garantía de privilegios también comprueba ahora que exista exactamente la política restrictiva esperada, con filtro y condición de escritura de segundo factor. El verificador marca 160, 161 y 162 «sí». Tipos y lint del archivo modificado correctos. Se sube la corrección al mismo PR; el CI nuevo queda pendiente de su resultado, sin polling. Esta corrección no empieza 0.16.
+
+**Siguiente ficha:** 0.16, autorizada para continuar tras cerrar la corrección de CI de 0.15. Esta entrega se detiene en 0.15. La ola 0 sigue abierta: no corresponde cerrar el changelog ni crear etiquetas. Antes de desplegar deben revisarse las dependencias de los PR y aplicar las migraciones en el orden indicado; no basta el verde del subconjunto monetario.
 
 ---
 

@@ -167,7 +167,11 @@ huellas(n, que, ok, cuando) as (values
      to_regclass('public.cobro_intentos') is not null
      and to_regprocedure('public.leogin_cobrar_parte_mesa_idempotente(uuid,integer,uuid[],jsonb,uuid,uuid)') is not null
      and to_regprocedure('public.leogin_cerrar_mesa_idempotente(uuid,integer,uuid[],jsonb,uuid,uuid,jsonb)') is not null,
-     'ANTES de desplegar; después de la 160')
+     'ANTES de desplegar; después de la 160'),
+  ('162', 'segundo factor restrictivo en cobro_intentos',
+     exists (select 1 from pg_policy where polrelid=to_regclass('public.cobro_intentos')
+       and polname='super_admin_segundo_factor' and not polpermissive),
+     'ANTES de desplegar; después de la 161')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,
