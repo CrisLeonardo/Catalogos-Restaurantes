@@ -72,7 +72,7 @@ import {
 } from '@/lib/actions/servicio';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { otraRonda, ultimaRonda } from '@/lib/servicio/ronda';
-import { getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order-queue';
+import { causaNoGuardado, getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order-queue';
 import { billBreakdown, type BillBreakdown } from '@/lib/bill-split';
 import { remainingQuantity, type OrderWithItems, type TableOccupancy, type TableCall } from '@/lib/db/orders';
 import type { TableSeating } from '@/lib/db/table-sessions';
@@ -672,6 +672,58 @@ export default function ServicioPanel({
     [carrito],
   );
 
+  /* ── La cola del aparato se REENVÍA ──────────────────────────
+     Auditoría 2026-11-03, ficha 0.11. Desde el rediseño de Tomar pedidos
+     la cola solo se CONTABA: nadie la reenviaba, y el aviso prometía «se
+     enviará solo al volver la señal». El panel anterior sí lo hacía (se
+     perdió al reemplazarlo). Ahora se reenvía al abrir el panel, al volver
+     la señal y cada 15 s mientras haya algo guardado, con su MISMO
+     clientId: el servidor es idempotente por él (migración 061), así que
+     un reenvío nunca duplica. Lo que está en vuelo en este momento se
+     deja a su propio envío. */
+  const enVueloRef = useRef(enVuelo);
+  useEffect(() => { enVueloRef.current = enVuelo; }, [enVuelo]);
+  const reenviando = useRef(false);
+  const reenviarCola = useCallback(async () => {
+    if (reenviando.current) return;
+    reenviando.current = true;
+    try {
+      const enCurso = new Set(Object.values(enVueloRef.current).flat().map((e) => e.clientId));
+      for (const q of getQueuedOrders(restaurantId, 'waiter')) {
+        if (enCurso.has(q.clientId)) continue;
+        const cliente = (q.payload as { customer?: { name?: string; tableNumber?: number } } | null)?.customer;
+        const lugar = cliente?.name || 'Pedido';
+        let res: Awaited<ReturnType<typeof createWaiterOrder>>;
+        try {
+          res = await createWaiterOrder(q.payload);
+        } catch {
+          break; // sigue sin señal: el próximo intento lo vuelve a probar
+        }
+        removeQueuedOrder(restaurantId, q.clientId, 'waiter');
+        if (res.error) {
+          setAviso({ text: `Un pedido guardado sin señal no entró a cocina · ${lugar}: ${res.error} Vuelve a apuntarlo.`, bad: true });
+          continue;
+        }
+        setAviso({ text: `El pedido guardado sin señal ya está en cocina · ${lugar}` });
+        const ahora = selRef.current;
+        const n = cliente?.tableNumber;
+        if (n && ahora.kind === 'mesa' && ahora.n === n) await cargarMesa(n);
+      }
+    } finally {
+      reenviando.current = false;
+      contarCola();
+    }
+  }, [restaurantId, cargarMesa, contarCola]);
+  useEffect(() => {
+    void reenviarCola();
+    const onOnline = () => { void reenviarCola(); };
+    window.addEventListener('online', onOnline);
+    const id = setInterval(() => {
+      try { if (getQueuedOrders(restaurantId, 'waiter').length > 0) void reenviarCola(); } catch { /* sin almacenamiento */ }
+    }, 15_000);
+    return () => { clearInterval(id); window.removeEventListener('online', onOnline); };
+  }, [reenviarCola, restaurantId]);
+
   /* ── Enviar a cocina ──────────────────────────────────────── */
   const enviar = useCallback(() => {
     if (sel.kind === 'none' || carrito.length === 0) return;
@@ -751,7 +803,10 @@ export default function ServicioPanel({
       if (!mesa) setNombreLlevar((prev) => prev || nombreEnviado);
     };
 
-    saveQueuedOrder(restaurantId, { clientId, payload: input, queuedAt: new Date().toISOString() }, 'waiter');
+    /* Si el aparato no lo pudo guardar (memoria llena, modo privado), el
+       envío sigue —con señal llega igual—, pero si la red falla NO se
+       puede decir «quedó guardado»: la comanda vuelve al carrito. */
+    const guardado = saveQueuedOrder(restaurantId, { clientId, payload: input, queuedAt: new Date().toISOString() }, 'waiter');
     setCarts((prev) => { const out = { ...prev }; delete out[k]; return out; });
     setEnVuelo((prev) => ({ ...prev, [k]: [...(prev[k] ?? []), { clientId, lineas: aEnviar }] }));
     setAviso({ text: `Enviando ${unidades} a cocina · ${lugar}…` });
@@ -796,10 +851,21 @@ export default function ServicioPanel({
             return;
           }
         }
+        if (!guardado.ok) {
+          /* Puede que la nube sí lo recibiera antes de cortarse: por eso se
+             pide mirar la mesa antes de reenviar, en vez de reenviarlo a
+             ciegas con otro clientId. */
+          devolverAlCarrito();
+          setAviso({
+            text: `Sin conexión, y no se guardó en este aparato porque ${causaNoGuardado(guardado.motivo)}. La comanda volvió al carrito · ${lugar}: antes de reenviarla, mira en la mesa si llegó a cocina.`,
+            bad: true,
+          });
+          return;
+        }
         setAviso({
           text: conLibres
-            ? 'Sin conexión: el pedido quedó guardado aquí con su artículo libre y se enviará entero al volver la señal. Avisa a cocina a mano.'
-            : 'Sin conexión: el pedido quedó guardado en este aparato y se enviará solo al volver la señal.',
+            ? `Sin conexión: el pedido quedó guardado aquí con su artículo libre y se enviará entero al volver la señal. Cocina aún no lo tiene: avísale a mano · ${lugar}.`
+            : `Sin conexión: el pedido quedó guardado en este aparato y se enviará solo al volver la señal. Cocina aún no lo tiene · ${lugar}.`,
           bad: true,
         });
       } finally {
