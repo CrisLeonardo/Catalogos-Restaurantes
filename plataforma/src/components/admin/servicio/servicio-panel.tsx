@@ -61,6 +61,7 @@ import {
   mesasDeServicio, pasaFiltro, porUrgencia, resumenDelSalon, subtituloDeMesa,
   FILTROS, type FiltroSalon,
 } from '@/lib/servicio/estado';
+import { leerIntento, prepararIntento, resolverIntento, type SolicitudCobro } from '@/lib/cobro-intento';
 import { reconocimientoDisponible } from '@/lib/servicio/voz';
 import {
   createWaiterOrder, freeTable, getTableBill, moveTableOrders, resolveTableCalls,
@@ -872,35 +873,64 @@ export default function ServicioPanel({
   }, [ordersQr]);
 
   /* ── Cobrar ───────────────────────────────────────────────── */
+  const cobroEnVuelo = useRef(false);
+  const ejecutarCobro = useCallback(async (solicitud?: SolicitudCobro) => {
+    if (cobroEnVuelo.current) return;
+    cobroEnVuelo.current = true;
+    try {
+      // Persistir ANTES de enviar. Al reintentar se usa todo el payload original,
+      // aunque la lectura en vivo ya muestre el plato pagado o la mesa libre.
+      const intento = solicitud
+        ? prepararIntento(localStorage, restaurantId, waiterId, solicitud)
+        : leerIntento(localStorage, restaurantId, waiterId);
+      if (!intento) return;
+      const { mesa, operacion, items, pagos } = intento.solicitud;
+      const res = operacion === 'parte'
+        ? await cobrarParteDeMesa(restaurantId, mesa, items, pagos, intento.id)
+        : await freeTable(restaurantId, mesa, pagos, intento.id);
+      if (res.error) {
+        if (res.incierto === false) resolverIntento(localStorage, restaurantId, waiterId, intento.id);
+        setAviso({ text: res.incierto
+          ? 'Cobro sin confirmar. Reintenta o vuelve a abrir Servicio para recuperar el resultado.'
+          : res.error, bad: true });
+        return;
+      }
+      resolverIntento(localStorage, restaurantId, waiterId, intento.id);
+      setHoja(null);
+      if (operacion === 'cierre') {
+        setSel({ kind: 'none' });
+        setPantalla('sala');
+        setAviso({ text: `${money(res.cobrado ?? 0)} cobrado · Mesa ${mesa} libre` });
+      } else {
+        setAviso({ text: `${money(res.cobrado ?? 0)} cobrado · la mesa sigue abierta` });
+        void cargarMesa(mesa);
+      }
+    } catch {
+      setAviso({ text: 'No se pudo confirmar el cobro. Reintenta desde este aparato para recuperar el resultado.', bad: true });
+    } finally { cobroEnVuelo.current = false; }
+  }, [restaurantId, waiterId, money, cargarMesa]);
+
+  useEffect(() => {
+    const recuperar = () => { startWork(async () => { await ejecutarCobro(); }); };
+    recuperar();
+    window.addEventListener('online', recuperar);
+    return () => window.removeEventListener('online', recuperar);
+  }, [ejecutarCobro]);
+
   const cobrarTodo = useCallback((pagos: PagoElegido[]) => {
     if (sel.kind !== 'mesa') return;
-    const n = sel.n;
-    const importe = porCobrarReal;
-    startWork(async () => {
-      const res = await freeTable(restaurantId, n, pagos);
-      if (res.error) { setAviso({ text: res.error, bad: true }); return; }
-      setHoja(null);
-      setSel({ kind: 'none' });
-      setPantalla('sala');
-      setAviso({ text: `${money(importe)} cobrado · Mesa ${n} libre` });
-    });
-  }, [sel, restaurantId, porCobrarReal, money]);
+    const solicitud: SolicitudCobro = { mesa: sel.n, operacion: 'cierre', items: [],
+      pagos: pagos.map((p) => ({ ...p, amount: p.amount ?? porCobrarReal })) };
+    startWork(async () => { await ejecutarCobro(solicitud); });
+  }, [sel, porCobrarReal, ejecutarCobro]);
 
   const cobrarParte = useCallback((parte: LineaServicio[], pagos: PagoElegido[]) => {
     if (sel.kind !== 'mesa') return;
-    const n = sel.n;
     const importe = parte.reduce((s, l) => s + importeLinea(l), 0);
-    startWork(async () => {
-      const res = await cobrarParteDeMesa(
-        restaurantId, n, parte.map((l) => l.id),
-        pagos.map((p) => ({ method: p.method, amount: p.amount ?? importe, cashReceived: p.cashReceived })),
-      );
-      if (res.error) { setAviso({ text: res.error, bad: true }); return; }
-      setHoja(null);
-      setAviso({ text: `${money(res.cobrado ?? importe)} cobrado · la mesa sigue abierta` });
-      void cargarMesa(n);
-    });
-  }, [sel, restaurantId, money, cargarMesa]);
+    const solicitud: SolicitudCobro = { mesa: sel.n, operacion: 'parte', items: parte.map((l) => l.id),
+      pagos: pagos.map((p) => ({ ...p, amount: p.amount ?? importe })) };
+    startWork(async () => { await ejecutarCobro(solicitud); });
+  }, [sel, ejecutarCobro]);
 
   const cobrarLlevar = useCallback((pagos: PagoElegido[]) => {
     if (!pedidoSel) return;

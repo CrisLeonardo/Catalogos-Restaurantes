@@ -162,7 +162,12 @@ huellas(n, que, ok, cuando) as (values
      exists (select 1 from information_schema.columns where table_schema='public' and table_name='order_payments' and column_name='item_amounts')
      and to_regprocedure('public.leogin_cobrar_parte_mesa(uuid,integer,uuid[],jsonb,uuid)') is not null
      and to_regprocedure('public.leogin_confirmar_cierre_mesa(uuid,integer,uuid[],jsonb,uuid)') is not null,
-     'ANTES de desplegar; después de 001–159')
+     'ANTES de desplegar; después de 001–159'),
+  ('161', 'identidad durable y recuperación del resultado del cobro',
+     to_regclass('public.cobro_intentos') is not null
+     and to_regprocedure('public.leogin_cobrar_parte_mesa_idempotente(uuid,integer,uuid[],jsonb,uuid,uuid)') is not null
+     and to_regprocedure('public.leogin_cerrar_mesa_idempotente(uuid,integer,uuid[],jsonb,uuid,uuid,jsonb)') is not null,
+     'ANTES de desplegar; después de la 160')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

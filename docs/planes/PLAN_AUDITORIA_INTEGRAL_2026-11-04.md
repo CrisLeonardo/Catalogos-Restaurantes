@@ -238,6 +238,8 @@ Orden recomendado: primero lo de más riesgo y menor tamaño, y lo que destraba 
 
 **Cubre:** E03, T01, M§8 «Doble clic y respuesta perdida». **Reproducido:** se pierde el acuse después de confirmar el INSERT Q10; repetir el intento deja Q20. **Hacer:** identidad estable de la operación desde el cliente hasta la base, unicidad durable y recuperación del resultado/recibo original. Coordinar con 0.14; un intento nuevo no equivale a repetir el anterior. **Aceptación:** D04 pasa con respuesta perdida después del commit y reintento; un segundo pago legítimo con otra identidad sigue permitido hasta el saldo disponible.
 
+**Estado (2026-11-05):** implementada en `fix/identidad-intento-cobro`, desde #85; PR propio contra esa rama para revisar solo esta ficha. **Migración 161 después de la 160 y antes del código.** El aparato guarda identidad y solicitud antes de enviar; Postgres confirma el resultado original junto con dinero/reparto/cierre y lo devuelve al reintentar, incluso después de cerrar, devolver o reutilizar la mesa. Otra identidad permite un pago legítimo idéntico hasta el saldo disponible. D04 y nueve garantías nuevas pasan; las doce de 0.14 se conservan. Matriz completa: **29 ejecutadas, 25 pasan y 4 fallan** por 0.16–0.19, sin ocultarlos. Evidencia y traspaso en §12 del [registro](../registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md).
+
 ### 0.16 · Cerrar cobrando solo el saldo de cada pedido — M · bug de D05
 
 **Cubre:** E03, C08, M§8 «Pago parcial y nuevo platillo». **Reproducido:** pedido Q100 con Q40 ya cobrados; ronda nueva Q20; se cierra con Q80. El libro suma Q120, pero todo queda en el primer pedido y el nuevo se entrega con Q0. **Hacer:** descontar el neto ya cobrado por pedido antes de asignar el nuevo pago y cerrar; no basta con cuadrar el total de la mesa. **Aceptación:** D05 pasa: Q100/Q20 por pedido, Q120 de libro, pagos anteriores intactos y ninguna ronda entregada sin su cobro. Probar correcciones/devoluciones posteriores sobre cada pedido.
@@ -370,7 +372,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 - [ ] 0.12 Acceso por sucursal con membresías
 - [ ] 0.13 Probar el circuito del dinero en Postgres real — entregada en su rama #84; conserva su marca al fusionar
 - [x] 0.14 Cobro parcial concurrente sin sobrecobro (D03) — migración 160 y garantías en CI
-- [ ] 0.15 Identidad durable del intento de cobro (D04)
+- [x] 0.15 Identidad durable del intento de cobro (D04) — migración 161 y recuperación del resultado original
 - [ ] 0.16 Cerrar cobrando solo el saldo de cada pedido (D05)
 - [ ] 0.17 Centavos del reparto persistido (D07)
 - [ ] 0.18 Cobros en tránsito al cerrar un turno (D08)

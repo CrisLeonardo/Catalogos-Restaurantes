@@ -28,6 +28,7 @@
    leen juntas o no se entienden.
    ════════════════════════════════════════════════════════════ */
 
+import { identidadCobroValida, type ResultadoCobro } from '@/lib/cobro-intento';
 import { createServiceClient } from '@/lib/supabase/service';
 import { assertTableAccess } from '@/lib/auth/table-access';
 import { revalidarSalon } from '@/lib/salon-cache';
@@ -221,13 +222,7 @@ export interface CobroParcial {
   cashReceived?: number | null;
 }
 
-export interface CobroParcialResult {
-  error?: string;
-  /** Lo que de verdad se apuntó. */
-  cobrado?: number;
-  /** Falta la función transaccional de la 160. */
-  needsMigration?: boolean;
-}
+export type CobroParcialResult = ResultadoCobro;
 
 /**
  * Cobra unas líneas de la mesa y la deja abierta.
@@ -242,8 +237,10 @@ export async function cobrarParteDeMesa(
   tableNumber: number,
   itemIds: string[],
   pagos: CobroParcial[],
+  intentoId: string,
 ): Promise<CobroParcialResult> {
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
+  if (!identidadCobroValida(intentoId)) return { error: 'Falta la identidad del intento de cobro.' };
   if (!Array.isArray(itemIds) || itemIds.length === 0) {
     return { error: 'No hay nada marcado que cobrar.' };
   }
@@ -259,20 +256,21 @@ export async function cobrarParteDeMesa(
 
   const db = createServiceClient();
 
-  const { data, error } = await db.rpc('leogin_cobrar_parte_mesa', {
+  const { data, error } = await db.rpc('leogin_cobrar_parte_mesa_idempotente', {
     p_restaurant: restaurantId,
     p_mesa: tableNumber,
+    p_intento: intentoId,
     p_items: itemIds,
     p_pagos: pagos,
     p_actor: acceso.actor.userId,
   });
   if (error) {
-    if (faltaLaFuncion(error)) return { error: 'Falta la migración 160 para cobrar con el saldo protegido.', needsMigration: true };
-    return { error: error.message };
+    if (faltaLaFuncion(error)) return { error: 'Falta la migración 161 para recuperar los intentos de cobro.', needsMigration: true };
+    return { error: error.message, incierto: !/^(LGD0[12]|22023)$/.test(error.code ?? '') };
   }
-  if (!data || !(Number(data.cobrado) > 0)) return { error: 'No se pudo confirmar el cobro. Actualiza la cuenta.' };
+  if (!data || !(Number(data.cobrado) > 0)) return { error: 'No se pudo confirmar el cobro. Reintenta para recuperar el resultado.', incierto: true };
   revalidarSalon();
-  return { cobrado: Number(data.cobrado) };
+  return data as CobroParcialResult;
 }
 
 /**
