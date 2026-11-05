@@ -1105,6 +1105,7 @@ export default function ServicioPanel({
       if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'k') return;
       e.preventDefault();
       e.stopPropagation();
+      if ((e.target as HTMLElement | null)?.closest('dialog[open]')) return;
       setPaleta(true);
     }
     window.addEventListener('keydown', onModK, true);

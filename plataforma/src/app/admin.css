@@ -735,7 +735,7 @@
      "Nuevo" y "Autorizar" de Personal. 40 px es el punto donde el dedo deja
      de fallar sin que las filas densas se hinchen (44 dejaría filas de 72 px
      en listas que ya son largas). */
-  .admin-content [data-slot="button"] { min-height: 40px; }
+  .admin-content [data-slot="button"]:not([data-size="touch"], [data-size="action"]) { min-height: 40px; }
   .admin-live { display: none !important; }
   .admin-kiosk .waiter-cart-bar { bottom: 0 !important; }
 
@@ -2812,6 +2812,23 @@
   font-family: var(--ui-font-mono); font-size: 28px; font-weight: 600;
   letter-spacing: -0.03em; margin-top: 4px;
 }
+
+.hoja-cobro { --hoja-superficie: var(--adm-overlay, var(--adm-card)); }
+.sv-cobro-contenido, .sv-cobro-modo, .sv-cobro-pie { display: flex; flex-direction: column; gap: 12px; }
+.sv-cobro-modo { margin-top: 12px; }
+.sv-cobro-metodos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.sv-cobro-metodos .sv-choice { flex: 1 1 auto; min-width: 0; padding-inline: 12px; overflow-wrap: anywhere; }
+.sv-cobro-fila { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.sv-cobro-fila > :first-child { color: var(--u-text-2); font-size: 14px; }
+.sv-cobro-fila[data-destacada] { padding: 8px 12px; border-radius: var(--radius-md); background: var(--adm-card); }
+.sv-cobro-importe { margin-inline-start: auto; text-align: right; font-variant-numeric: tabular-nums; }
+.hoja-cobro .sv-seg { flex-wrap: wrap; }
+.hoja-cobro .sv-seg > button { flex: 1 1 5.5rem; min-height: 48px; overflow-wrap: anywhere; }
+.hoja-cobro .sv-seg > button[aria-selected="true"] { background: var(--adm-card); color: var(--u-text); box-shadow: var(--adm-shadow-xs); }
+.hoja-cobro .sv-cobro-partes { flex-wrap: wrap; }
+.hoja-cobro .sv-step { min-width: 48px; min-height: 48px; }
+.hoja-cobro .sv-pay { flex-wrap: wrap; }
+.hoja-cobro button:disabled { cursor: not-allowed; opacity: .55; }
 .sv-x {
   width: 38px; height: 38px; flex-shrink: 0; border: none; border-radius: var(--radius-lg);
   background: var(--surface-2); color: var(--u-text); display: grid; place-items: center;
@@ -3268,6 +3285,28 @@ html[data-admin-area] .glass-solid {
    línea base de una caja con overflow. */
 .rodillo-cifra { line-height: 1.2; white-space: nowrap; }
 .rodillo-cifra > span { display: inline-block; height: 1.2em; vertical-align: top; }
+
+/* Hoy da la primera posición a ventas. Se escala por el ancho de su
+   propia celda para conservar los importes completos al ampliar la página. */
+.hoy-cifras > [data-slot="stat"] { container-type: inline-size; }
+.hoy-cifras [data-slot="stat-value"] {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: clamp(13px, 11cqi, 28px);
+}
+@media (min-width: 768px) {
+  .hoy-cifras { grid-template-columns: minmax(0, 1.35fr) repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .hoy-cifras > [data-slot="stat"]:first-child { grid-column: 1 / -1; }
+  .hoy-cifras > [data-slot="stat"]:nth-child(2) { border-left: 0; border-top-width: 1px; }
+  .hoy-cifras > [data-slot="stat"]:nth-child(3) { grid-column: auto; border-left-width: 1px; }
+}
+@media (max-width: 350px) {
+  .hoy-cifras { grid-template-columns: minmax(0, 1fr); }
+  .hoy-cifras > [data-slot="stat"]:nth-child(3) { border-left: 0; }
+}
 .rodillo-col { overflow: hidden; }
 .rodillo-tira { display: block; transform: translate3d(0, calc(var(--d) * -1.2em), 0); }
 .rodillo-tira > span { display: block; height: 1.2em; }

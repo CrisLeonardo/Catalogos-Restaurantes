@@ -511,6 +511,19 @@ El chat «Recupera el resultado del cobro» permanece archivado, con sus turnos 
 
 **Decisión pendiente:** elegir Identidad actual depurada u Hospitalidad precisa, como indica el plan en §1 y §3. Después se aterrizan los tokens y componentes en la rama de 1.0. La ficha permanece abierta y el plan conserva las dependencias de integración de la ola 0.
 
+## 18. Implementación de la base visual · ficha 1.0
+
+**Rama:** `feat/exploracion-sistema-visual`, [PR #91](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/91), con base en #90. Se actualizó `main` y se retomó la misma rama de la maqueta. Al pedir la implementación, se tomó Identidad actual depurada como valor predeterminado, con los tokens de marca vigentes y la alternativa editorial en la comparación. La fusión se autoriza por separado.
+
+- **Antes:** la prueba con una cuenta real de Q70 en un ancho de 390 px encontró el importe sin el rótulo «Por cobrar». La hoja de Carta colocaba su acción al final del contenido desplazable. En Cobro los métodos y los platos marcados se distinguían principalmente por sus estilos.
+- **Hoja compartida:** Cobro y Carta usan `HojaOperativa`, con cabecera y pie visibles, cuerpo desplazable y superficie sólida que lee el tema. El diálogo nativo deja inerte el fondo. Tab y Shift+Tab recorren la hoja, Escape cierra y el foco vuelve al disparador. El atajo global de Servicio no abre la paleta por detrás de la hoja.
+- **Cobro:** el saldo tiene un rótulo explícito. La acción de 56 px, los métodos y la selección por platos usan los estados accesibles del control. El selector admite flechas. «Calcular partes» explica el importe de referencia y mantiene la acción de cobrar el saldo completo. Los importes y los intentos pasan por las acciones y reglas de la ola 0.
+- **Carta:** cantidad y total se leen junto a la acción, mientras el platillo y sus opciones se desplazan. La ficha conserva los textos y precios configurados, la marca, la selección de opciones, el carrito y el historial. En **Hoy**, el botón compartido da 48 px a las acciones y el resumen adapta su cifra al ancho de la celda. Se mantienen los permisos y fuentes de datos de las tres pantallas.
+- **Validación:** build y tipos correctos, 1.350 unitarias aprobadas y una omisión previa. Lint sin errores y con las tres advertencias previas. Pasaron 10 E2E contra el servidor optimizado y la matriz de 69 casos de dinero en Supabase local. El commit `6fe3f74` desempata por ID al leer movimientos de la prueba con el mismo `created_at`. Las comparaciones siguen exigiendo igualdad de las filas completas.
+- **Revisión visual:** Hoy, Cobro y Carta en 390, 768 y 1280 px, claro y oscuro, con datos ficticios. Se ajustó el ancho del método Transferencia y se quitó la interferencia del mínimo móvil de 40 px en los dos tamaños táctiles. El E2E verifica los 56 px del cobro, la acción visible, el ciclo de foco y el regreso al disparador. Las capturas locales no forman parte del commit.
+
+La siguiente ficha es **1.1 · Cobro completo**, con rama y PR propios. La lectura de fallos de datos depende de 0.3 y el recorrido completo de Carta se valida con 1.11. Las pruebas con personas y lectores de pantalla en recorridos reales siguen en el plan. Esta ficha no requiere una migración SQL.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

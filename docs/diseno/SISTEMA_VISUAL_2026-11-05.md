@@ -1,6 +1,6 @@
 # Sistema visual de Leogin · ficha 1.0
 
-La [maqueta comparativa](./MAQUETAS_SISTEMA_VISUAL_2026-11-05.html) presenta **Hoy, Cobro y Carta del comensal** con los mismos datos ficticios en ambas direcciones. Los controles permiten cambiar de pantalla, tema, ancho y estado. El estudio continúa la [dirección visual de la auditoría](../auditorias/AUDITORIA_INTEGRAL_2026-11-03.md#5-dirección-visual-concreta-hospitalidad-precisa) y queda a la espera de la elección prevista en el [plan](../planes/PLAN_AUDITORIA_INTEGRAL_2026-11-04.md#3-decisiones).
+La [maqueta comparativa](./MAQUETAS_SISTEMA_VISUAL_2026-11-05.html) presenta **Hoy, Cobro y Carta del comensal** con los mismos datos ficticios en ambas direcciones. Los controles permiten cambiar de pantalla, tema, ancho y estado. El estudio continúa la [dirección visual de la auditoría](../auditorias/AUDITORIA_INTEGRAL_2026-11-03.md#5-dirección-visual-concreta-hospitalidad-precisa) y documenta las dos opciones del [plan](../planes/PLAN_AUDITORIA_INTEGRAL_2026-11-04.md#3-decisiones).
 
 | Dirección | Claro | Oscuro | Tipografía y superficie |
 |---|---|---|---|
@@ -23,10 +23,12 @@ La carta usa un restaurante ficticio para comparar la jerarquía sin que cambien
 
 El coral o la terracota indican marca y acción principal. Verde, ámbar, rojo y azul conservan los significados de resultado, atención, error e información. En la dirección editorial, la tipografía serif se reserva para títulos. Los campos y el dinero conservan tipografía operativa.
 
-## Paso siguiente tras elegir
+## Aplicación en el PR #91
 
-1. Registrar la dirección aprobada y sus tokens de superficie, texto, marca, foco y estados. Partir de los componentes compartidos y preservar el alcance del CSS de personal y de la carta pública.
-2. Aplicar los componentes primero a los recorridos que especifica la auditoría. La ficha 1.1 define el cobro completo, la 1.2 la caja y la 1.11 la ficha del comensal. Los datos y las reglas de cobro de la ola 0 sirven como regresión.
-3. Probar las pantallas reales con teclado, lector de pantalla, zoom al 200 %, claro y oscuro. Para N09, los seis indicadores de superadmin deben poder verse en 3×2 a 1280 px o reducirse a las cifras prioritarias. Esa pantalla se revisa con 4.9.
+El usuario pidió continuar con la implementación. Como no indicó una paleta concreta, la base usa **Identidad actual depurada** y las variables de tema existentes. Hospitalidad precisa queda disponible en la comparación. La Carta sigue leyendo la marca configurada por el restaurante.
 
-La elección queda abierta entre **Identidad actual depurada** y **Hospitalidad precisa**. La maqueta documenta el aspecto y el comportamiento esperado con acciones simuladas. La revisión técnica y las pruebas con personas de Q.3 corresponden a la interfaz implementada.
+- **Hoy.** Acciones de 48 px con `Button`, foco visible y ventas como primera cifra. Los importes se adaptan al ancho de la celda y las filas alinean el importe a la derecha.
+- **Cobro.** La hoja mantiene «Por cobrar» y la acción de 56 px a la vista. El selector anuncia el modo y permite navegar con flechas. «Calcular partes» explica que el importe individual es una referencia. El botón de cobro continúa usando el saldo y las acciones existentes.
+- **Carta.** La misma hoja mantiene a la vista cantidad y total. La foto, las opciones y la descripción se desplazan en su contenido. Se conserva la navegación del historial. La ventana modal evita enfocar el fondo, conserva el ciclo de Tab y devuelve el foco al disparador al cerrar.
+
+La ficha 1.1 desarrolla el cobro completo, la 1.2 la caja y la 1.11 el recorrido de la ficha del comensal. Para N09, los seis indicadores de superadmin deben poder verse en 3×2 a 1280 px o reducirse a las cifras prioritarias. Esa pantalla se revisa con 4.9. Las pruebas con personas y lectores de pantalla de los recorridos completos se registran por separado.

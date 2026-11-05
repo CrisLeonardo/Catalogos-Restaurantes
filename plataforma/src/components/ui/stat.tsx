@@ -90,6 +90,7 @@ function Stat({
       {/* En el teléfono la cifra baja a 23 px: con dos columnas, un importe
           como "Q7,920.00" a 28 px se sale de su celda. */}
       <div
+        data-slot="stat-value"
         className="t-mono mt-1.5 truncate text-[22px] leading-tight font-semibold text-adm-text md:text-[length:var(--stat-fs,28px)]"
         style={tone ? { color: TONE_COLOR[tone] } : undefined}
       >

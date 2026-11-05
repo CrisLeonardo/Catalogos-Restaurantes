@@ -81,6 +81,27 @@ test.afterAll(async () => {
   if (errors.length) throw new AggregateError(errors, 'Limpieza E2E de cobro');
 });
 
+test('1.0 · el cobro mantiene el saldo y la acción visibles y contiene el foco', async ({ browser }) => {
+  test.setTimeout(180_000);
+  const context = await browser.newContext({ viewport: { width: 390, height: 650 } });
+  try {
+    await login(context, users[0].email);
+    const page = await context.newPage();
+    await openBill(page);
+    const hoja = page.getByRole('dialog', { name: /^Cobrar/ });
+    const cobrar = hoja.getByRole('button', { name: 'Cobrar Q70.00 y cerrar', exact: true });
+    await expect(cobrar).toBeInViewport({ ratio: 1 });
+    await expect(cobrar).toHaveCSS('min-height', '56px');
+    await expect(hoja.getByText('Por cobrar', { exact: true })).toBeInViewport({ ratio: 1 });
+    await cobrar.focus();
+    await page.keyboard.press('Tab');
+    await expect.poll(() => hoja.evaluate((el) => el.contains(document.activeElement))).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(hoja).toBeHidden();
+    await expect(page.getByRole('button', { name: /^Cobrar y cerrar mesa/ }).first()).toBeFocused();
+  } finally { await context.close(); }
+});
+
 test('dos empleados cobran un plato una vez; el saldo se cobra y la mesa se cierra', async ({ browser }) => {
   test.setTimeout(180_000);
   const contexts = await Promise.all(users.map(() => browser.newContext({ viewport: { width: 1280, height: 900 } })));

@@ -1345,7 +1345,7 @@
       const pick = (name, fallback) =>
         allowed[name].includes(params.get(name)) ? params.get(name) : fallback;
       const model = {
-        direction: pick("direction", "hospitalidad"),
+        direction: pick("direction", "actual"),
         screen: pick("screen", "hoy"),
         scheme: pick("scheme", "light"),
         state: pick("state", "normal"),
@@ -1381,7 +1381,7 @@
         document.documentElement.dataset.scheme = model.scheme;
       }
       function review() {
-        root.innerHTML = `<div class="review"><header class="review-head"><div><div class="eyebrow muted">LEOGIN · EXPLORACIÓN 1.0</div><h1>La misma tarea. Dos identidades.</h1><p class="intro">Compara Hoy, Cobro y Carta con los mismos datos y estados. La identidad actual ya usa coral y neutros cálidos: esta comparación conserva esa base y explora una dirección más editorial.</p></div><span class="stamp">Propuesta · pendiente de tu elección</span></header><div class="controls"><label>Pantalla<select id="screen">${Object.entries(
+        root.innerHTML = `<div class="review"><header class="review-head"><div><div class="eyebrow muted">LEOGIN · EXPLORACIÓN 1.0</div><h1>La misma tarea. Dos identidades.</h1><p class="intro">Compara Hoy, Cobro y Carta con los mismos datos y estados. La identidad actual ya usa coral y neutros cálidos: esta comparación conserva esa base y explora una dirección más editorial.</p></div><span class="stamp">Base aplicada · Identidad actual depurada</span></header><div class="controls"><label>Pantalla<select id="screen">${Object.entries(
           screenNames,
         )
           .map(([k, v]) => `<option value="${k}">${v}</option>`)
