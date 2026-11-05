@@ -6,7 +6,7 @@
 
 Este plan convierte la auditoría del 2–3 de noviembre en trabajo ejecutable. **No repite el detalle de la auditoría**: cada ficha dice qué hallazgos cubre y dónde leer su especificación. Su aporte está en cuatro cosas:
 
-1. **Une los duplicados.** La entrega trae unos 196 identificadores (F, N, X, E, D, W, A, C, O, M, S, T, R) y muchos describen el mismo trabajo. Aquí quedan en **66 fichas**, y el [índice inverso](#8-índice-inverso-cada-id-de-la-auditoría-tiene-dueño) prueba que ninguno se perdió.
+1. **Une los duplicados.** La entrega trae unos 196 identificadores (F, N, X, E, D, W, A, C, O, M, S, T, R) y muchos describen el mismo trabajo. Las **66 fichas originales** los reúnen; la prueba 0.13 agregó **seis correcciones reproducidas (0.14–0.19)**, para 72 fichas. El [índice inverso](#8-índice-inverso-cada-id-de-la-auditoría-tiene-dueño) prueba que ninguno se perdió.
 2. **Lo comprobé contra el código de hoy.** Los hallazgos críticos se revisaron en el repositorio el 2026-11-04 (§2). Uno resultó más grave de lo que dice la auditoría (X05).
 3. **Aplica tus decisiones** del 2026-11-04 (§3).
 4. **Sigue las reglas del repo**: una ficha es una rama y un PR, con reproducción del fallo antes del arreglo, maqueta antes de cualquier cambio visual y las migraciones numeradas desde la 154.
@@ -226,6 +226,32 @@ Orden recomendado: primero lo de más riesgo y menor tamaño, y lo que destraba 
 **Hacer:** una suite de integración contra la base local que corre M§8: Q100 entre 3 (33,34 + 33,33 + 33,33), Q200 con tres pagos mixtos, dos empleados que cobran el mismo saldo, doble clic con la respuesta perdida, pago parcial y luego un platillo nuevo, devolución de otro turno, descuento y propina repartidos, cierre mientras entra un cobro, y el corte de las 05:00 con zona horaria. Cada fallo que encuentre se vuelve una ficha propia (bug) antes de la ola 1.
 **Aceptación:** la suite corre en CI o tiene un comando documentado; hay una tabla de resultados por caso.
 
+**Estado (2026-11-05):** suite implementada en `fix/pruebas-dinero-postgres`, sin cambiar las acciones monetarias ni agregar migraciones. `npm run test:dinero -- --reporter=verbose`, desde `plataforma/`, ejecuta las nueve invariantes contra PostgREST/Postgres local y limpia sus fixtures incluso cuando fallan. **Tres casos pasan y seis reproducen defectos**; el comando devuelve 1, sin omitir ni invertir esos fallos. La 0.13 entrega las pruebas, no certifica el dinero. Datos, pasos, importes esperados/reales, alcance de los dobles de sesión y tabla de resultados en [PRUEBAS_DINERO_POSTGRES](../../plataforma/docs/PRUEBAS_DINERO_POSTGRES.md). Las seis fichas siguientes bloquean la ola 1.
+
+### 0.14 · Cobro parcial concurrente sin sobrecobro — L · bug de D03
+
+**Cubre:** E03, T01, M§8 «Dos empleados cobran el mismo saldo». **Reproducido:** dos empleados leen el mismo consumo Q10 y ambas llamadas a `cobrarParteDeMesa` insertan Q10; el libro termina en Q20. **Hacer:** confirmar de forma atómica el saldo disponible, las líneas asignadas y el movimiento; el segundo intento no puede volver a consumir ese saldo. Conservar la identidad del empleado y la trazabilidad. **Aceptación:** D03 pasa en Postgres con dos identidades y lecturas intercaladas; también debe reconciliar el cobro de cierre, sin restaurar datos de prueba sobre cobros existentes.
+
+### 0.15 · Identidad durable del intento de cobro — L · bug de D04
+
+**Cubre:** E03, T01, M§8 «Doble clic y respuesta perdida». **Reproducido:** se pierde el acuse después de confirmar el INSERT Q10; repetir el intento deja Q20. **Hacer:** identidad estable de la operación desde el cliente hasta la base, unicidad durable y recuperación del resultado/recibo original. Coordinar con 0.14; un intento nuevo no equivale a repetir el anterior. **Aceptación:** D04 pasa con respuesta perdida después del commit y reintento; un segundo pago legítimo con otra identidad sigue permitido hasta el saldo disponible.
+
+### 0.16 · Cerrar cobrando solo el saldo de cada pedido — M · bug de D05
+
+**Cubre:** E03, C08, M§8 «Pago parcial y nuevo platillo». **Reproducido:** pedido Q100 con Q40 ya cobrados; ronda nueva Q20; se cierra con Q80. El libro suma Q120, pero todo queda en el primer pedido y el nuevo se entrega con Q0. **Hacer:** descontar el neto ya cobrado por pedido antes de asignar el nuevo pago y cerrar; no basta con cuadrar el total de la mesa. **Aceptación:** D05 pasa: Q100/Q20 por pedido, Q120 de libro, pagos anteriores intactos y ninguna ronda entregada sin su cobro. Probar correcciones/devoluciones posteriores sobre cada pedido.
+
+### 0.17 · Centavos del reparto persistido — M · bug de D07
+
+**Cubre:** C08, E03, M§8 «Descuento y propina fraccionados». **Reproducido:** tres platos Q30, descuento Q10 y propina Q20 suman Q100; el reparto calcula Q33.34/Q33.33/Q33.33, pero la acción recorta cada línea a Q33.33 y guarda Q99.99. **Hacer:** distribuir el residuo de centavos con una política única entre cálculo y persistencia, sin alterar pagos previos ni marcar como saldado lo que no lo está. **Aceptación:** D07 pasa; libro, saldo y asignaciones conservan exactamente Q100, con reparto también por cantidad y extras negativos.
+
+### 0.18 · Cobros en tránsito al cerrar un turno — L · bug de D08
+
+**Cubre:** C08, E03, T01, M§8 «Cierre simultáneo y venta al límite». **Reproducido:** un INSERT real de pago queda esperando el bloqueo de su pedido; caja cierra sin verlo; al confirmar, el pago conserva una fecha anterior al corte. Ni ese cierre ni el siguiente periodo incluyen Q10. **Hacer:** coordinar cobros y cierre en la base con una regla durable de pertenencia a turno que contemple transacciones iniciadas pero no confirmadas; conservar los cortes firmados. No resolverlo con una pausa fija ni reconstruyendo un recibo histórico desde datos actuales. **Aceptación:** D08 pasa con bloqueo observado por `pg_blocking_pids`, tanto si confirma primero el cobro como el cierre: cada movimiento confirmado pertenece a un periodo y el total se reconcilia.
+
+### 0.19 · Incluir el instante exacto del inicio del día — M · bug de D09
+
+**Cubre:** C08, M§8 «Cambio de día a 05:00 y zona horaria». **Reproducido:** Guatemala 04:59:59.999 Q1, 05:00:00.000 Q2, 05:00:00.001 Q3: SQL informa Q5 para el día nuevo; caja informa Q3 y omite Q2. **Hacer:** acordar límites inclusivos/exclusivos entre el inicio del día y el último cierre; cambiar todo a `gte` duplicaría los movimientos del límite entre cierres. **Aceptación:** D09 pasa y la unión de periodos no pierde ni duplica el instante exacto; mantener la misma zona y corte en caja e informes.
+
 ---
 
 ## 6. Olas 1 a 4, línea comercial y calidad
@@ -237,7 +263,7 @@ Las fichas indican **qué cubren y dónde está la especificación**. El detalle
 | Ficha | Tamaño | Cubre | Especificación | Notas |
 |---|---|---|---|---|
 | **1.0 Exploración de paleta y sistema visual** | L | D01, D02, D03, N09, M§5, apartado §9–10 | M§5 «Especificación inicial» y «Pasada de precisión» | **Primero.** Maquetas de Hoy, Cobro y Carta del comensal: identidad actual (con las reglas aplicadas) frente a «hospitalidad precisa». Eliges tú; después se definen los tokens y los componentes con todos sus estados |
-| 1.1 Cobro completo | L | E06, N02, N03, N04, C01, C02, C03, F11, F12, R05.5–6, filas de dinero de M§8 | M§4.5, C01–C03 | Partes que se cobran de verdad, pago mixto, importe libre y efectivo recibido libre. Se quitan los postres de la hoja de cobro. En móvil: «Consumo · pagado · por cobrar». Depende de 0.13 |
+| 1.1 Cobro completo | L | E06, N02, N03, N04, C01, C02, C03, F11, F12, R05.5–6, filas de dinero de M§8 | M§4.5, C01–C03 | Partes que se cobran de verdad, pago mixto, importe libre y efectivo recibido libre. Se quitan los postres de la hoja de cobro. En móvil: «Consumo · pagado · por cobrar». Depende de 0.13 y de corregir 0.14–0.19 |
 | 1.2 Caja: borrador, cuadre y recibo | L | E05, C04, C06, F13, R22.3–4 | M§4.6, C04, C06 | Autoguardado del conteo, cuadre explicable hasta el movimiento, recibo estable. Depende de 0.10 |
 | 1.3 Mesa: pagada, por limpiar y libre | M | C07, R04, M§4.4 (modelo de estados) | R04, C07 | Pagar no libera la mesa por sí solo |
 | 1.4 Servicio estable por turno | M | E07, N08, N10, O03, R05.1–4 | M§4.4, E07 | Favoritos y atajos fijos durante el turno; modo servicio con el armazón reducido |
@@ -340,7 +366,13 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 - [ ] 0.10 Caja honesta
 - [ ] 0.11 Cola offline que no promete de más
 - [ ] 0.12 Acceso por sucursal con membresías
-- [ ] 0.13 Probar el circuito del dinero en Postgres real
+- [x] 0.13 Probar el circuito del dinero en Postgres real — suite y tabla entregadas; dinero sin certificar
+- [ ] 0.14 Cobro parcial concurrente sin sobrecobro (D03)
+- [ ] 0.15 Identidad durable del intento de cobro (D04)
+- [ ] 0.16 Cerrar cobrando solo el saldo de cada pedido (D05)
+- [ ] 0.17 Centavos del reparto persistido (D07)
+- [ ] 0.18 Cobros en tránsito al cerrar un turno (D08)
+- [ ] 0.19 Incluir el instante exacto del inicio del día (D09)
 
 **Ola 1**: [ ] 1.0 · [ ] 1.1 · [ ] 1.2 · [ ] 1.3 · [ ] 1.4 · [ ] 1.5 · [ ] 1.6 · [ ] 1.7 · [ ] 1.8 · [ ] 1.9 · [ ] 1.10 · [ ] 1.11 · [ ] 1.12
 **Ola 2**: [ ] 2.1 · [ ] 2.2 · [ ] 2.3 · [ ] 2.4 · [ ] 2.5 · [ ] 2.6 · [ ] 2.7 · [ ] 2.8 · [ ] 2.9 · [ ] 2.10 · [ ] 2.11 · [ ] 2.12
@@ -383,4 +415,4 @@ Si un ID aparece en dos fichas, la primera corrige la verdad (texto o integridad
 
 **PA-T (pruebas por apartado):** T01→0.4 · T02→2.8 · T03→2.8 · T04→0.5 · T05→0.5 · T06→0.5 · T07→0.6 · T08→0.6 · T09→0.3 · T10→0.7 · T11→0.7 · T12→0.8 · T13→4.2 · T14→3.2 · T15→3.2, 4.8 · T16→0.3 · T17→0.3, 3.2 · T18→0.9 · T19→1.8 · T20→1.8 · T21→2.6 · T22→2.6 · T23→4.6 · T24→1.9 · T25→1.11 · T26→1.11 · T27→4.5 · T28→4.10 · T29→0.12 · T30→4.7
 
-**Matriz de dinero (M§8):** las filas de cobro, caja, promociones y concurrencia → 0.13 (prueba), y luego 0.6, 0.10, 1.1 y 1.2 (arreglos). Sentar una reserva → 0.9. Cola offline → 0.11. Dueño sin `restaurant_id` y empleado sin permiso → 0.12. Salud y comprobantes con error → 0.3. Más filas que el límite → 4.8. Tema oscuro, zoom y lector de pantalla → 1.11. Restauración → 4.5. Impresora → 2.6. Último producto en dos aparatos → 1.10. Reconexión con precio cambiado → 4.6.
+**Matriz de dinero (M§8):** las filas de cobro, caja, promociones y concurrencia → 0.13 (prueba); sus seis defectos reproducidos → 0.14–0.19, antes de la ola 1. También 0.6, 0.10, 1.1 y 1.2 (arreglos y ampliaciones). Sentar una reserva → 0.9. Cola offline → 0.11. Dueño sin `restaurant_id` y empleado sin permiso → 0.12. Salud y comprobantes con error → 0.3. Más filas que el límite → 4.8. Tema oscuro, zoom y lector de pantalla → 1.11. Restauración → 4.5. Impresora → 2.6. Último producto en dos aparatos → 1.10. Reconexión con precio cambiado → 4.6.
