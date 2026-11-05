@@ -466,7 +466,11 @@ El RPC es `security invoker`, solo ejecutable por `service_role`; la acción man
 - **Navegador:** siete E2E contra el servidor optimizado. Se conservan los seis anteriores; el nuevo cierra Q10, registra otros Q10, cierra el siguiente periodo Q10 y verifica el primer recibo íntegro y el enlace de ambos periodos. No cambia el diseño de pantalla.
 - SQL no actualiza importes, fechas originales ni cortes históricos. La comparación de huellas previa/posterior a la DDL coincide (en esta base local había cero pagos/cortes persistentes antes de las pruebas); las garantías usan fixtures históricos con contenido y comprueban sus filas completas intactas después de nuevas operaciones. Se comprueba limpieza AUD al terminar. CRLF conservado; no se suben secretos, trazas, reportes ni capturas. FEL/impresión no quedan certificados.
 
-**Siguiente ficha:** 0.19, pendiente de nueva instrucción. La entrega se detiene en 0.18. La ola 0 sigue abierta: no se cambia el changelog de cierre ni se crean etiquetas. Para fusionar se requiere la autorización expresa del dueño, CI verde y dependencias resueltas; para desplegar, verificar antes las migraciones de producción y su orden.
+### Revisión del chat y corrección del CI de #89 · 2026-11-05
+
+El chat «Recupera el resultado del cobro» permanece archivado, con sus turnos y entregas 0.15–0.18 legibles. El último turno pidió pasar a otro chat y cerrarlo; su respuesta anunció el archivo y se interrumpió antes de entregar el prompt final. Los commits y PR #86–#89 se conservan, sin fusiones. El CI de #89 terminó después de la entrega con un fallo del E2E nuevo: Playwright llenaba el HTML antes de la hidratación y React mantenía el conteo en cero, por lo que «Cerrar el turno» seguía deshabilitado. Se reprodujo localmente con el mismo error. La prueba ahora introduce el conteo y exige su atributo derivado `data-filled=1` antes de avanzar, con reintento acotado; no fuerza clics ni cambia las aserciones Q10/Q10 o el primer recibo íntegro. El caso pasa contra el servidor de desarrollo, igual que el modo del CI. Next actualizó automáticamente el encabezado de su bloque gestionado en AGENTS.md; se conserva ese cambio.
+
+**Siguiente ficha:** 0.19, autorizada en la continuación del 2026-11-05. La entrega se detiene en 0.18. La ola 0 sigue abierta: no se cambia el changelog de cierre ni se crean etiquetas. Para fusionar se requiere la autorización expresa del dueño, CI verde y dependencias resueltas; para desplegar, verificar antes las migraciones de producción y su orden.
 
 ---
 

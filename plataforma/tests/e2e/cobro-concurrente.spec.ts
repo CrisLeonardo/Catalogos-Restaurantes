@@ -238,7 +238,14 @@ test('0.18 · caja conserva el primer recibo y cuenta el pago posterior una vez 
     const page = await context.newPage();
     async function cerrarDesdePantalla() {
       await page.goto(`${origin}/panel/${slug}/caja`, { waitUntil: 'domcontentloaded' });
-      await page.getByRole('spinbutton', { name: 'Cuántos billetes de Q10', exact: true }).fill('1');
+      const billetes = page.getByRole('spinbutton', { name: 'Cuántos billetes de Q10', exact: true });
+      // El HTML puede aparecer antes de hidratar: verifica el conteo de React,
+      // no solo el valor que Playwright escribió en el input del servidor.
+      await expect(async () => {
+        await billetes.fill('');
+        await billetes.fill('1');
+        await expect(billetes).toHaveAttribute('data-filled', '1');
+      }).toPass({ timeout: 15_000 });
       await page.getByRole('button', { name: 'Siguiente: gastos', exact: true }).click();
       await page.getByRole('button', { name: 'Siguiente: propinas', exact: true }).click();
       await page.getByRole('button', { name: 'Cerrar el turno', exact: true }).click();
