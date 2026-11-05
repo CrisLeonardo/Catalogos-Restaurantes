@@ -188,6 +188,23 @@ Orden recomendado: primero lo de más riesgo y menor tamaño, y lo que destraba 
 **Hacer:** crear la cabecera y las líneas en una sola función. Máquina de estados: BORRADOR → ENVIADA → RECIBIDA/CANCELADA. Una compra RECIBIDA no vuelve a BORRADOR; las correcciones se hacen con un documento de devolución (ficha 4.2). Conservar `leogin_receive_purchase_order`, que ya es atómica.
 **Aceptación:** la secuencia recibida → borrador → recibida se rechaza y el stock no se suma dos veces; si fallan las líneas, no queda una cabecera huérfana.
 
+**Estado (2026-11-04): hecha.** Reproducido antes en la base local: recibir 10 kg → volver a borrador → recibir otra vez dejaba 20 kg y dos movimientos.
+- **Migración 159** (ANTES de desplegar, o a la vez):
+  - **Estados en la base, para cualquier camino:** borrador → enviada → recibida, borrador → recibida, y borrador o enviada → cancelada. Recibida y cancelada son finales. El error es `LGC03`, con un mensaje en español.
+  - **Renglones:** los de una compra recibida o cancelada no se tocan. El borrado en cascada sigue funcionando.
+  - **`leogin_crear_compra`:** cabecera y renglones en una transacción. Valida cantidades, costos y que proveedor, platillos e insumos sean del restaurante. El folio se toma bajo candado y el total se calcula en la base.
+- **Acción:**
+  - Enviar o cancelar solo desde los estados válidos (`lib/compras/estados.ts`). La regla vale aunque la 159 no haya corrido.
+  - Si otro aparato ya movió la orden, se explica por qué no se puede.
+  - Sin la 159, crear borra la cabecera si fallan los renglones.
+  - Los errores técnicos ya no se muestran tal cual.
+- **Probado:**
+  - Prueba SQL repetible en `supabase/pruebas/159_*.sql`.
+  - Folio con dos sesiones a la vez: 1 y 2.
+  - En el navegador: crear, enviar, recibir desde «otro aparato» y cancelar desde la pantalla vieja. Sale el aviso, la orden queda recibida y el stock en 10 con un solo movimiento.
+  - Los datos de prueba se borraron.
+- **Queda para 4.2:** recepción parcial, devoluciones y evitar la doble orden por doble toque.
+
 ### 0.9 · Sentar desde espera o reserva sin estados partidos — M
 
 **Cubre:** X14, N22, E14, PA-T18, M§8 «Sentar reserva falla».
@@ -333,7 +350,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 - [ ] 0.5 Cupones: vigencia, programación y límites
 - [ ] 0.6 Pedido, cupón y puntos en una sola operación
 - [ ] 0.7 Receta atómica y referencias entre restaurantes
-- [ ] 0.8 Compras: creación atómica y estados válidos
+- [x] 0.8 Compras: creación atómica y estados válidos (rama `fix/compras-atomicas-y-estados`, mig 159, 2026-11-04)
 - [ ] 0.9 Sentar desde espera o reserva sin estados partidos
 - [ ] 0.10 Caja honesta
 - [ ] 0.11 Cola offline que no promete de más
