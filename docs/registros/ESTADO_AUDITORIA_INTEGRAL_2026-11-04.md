@@ -384,7 +384,34 @@ El primer CI de #86 falló en `audit-rls-candados.mjs`: faltaba en la tabla nuev
 
 Después de aplicar la 162 solo en Postgres local, el auditor de candados devuelve cero hallazgos y pasan las 22 comprobaciones de 0.14–0.15. La garantía de privilegios también comprueba ahora que exista exactamente la política restrictiva esperada, con filtro y condición de escritura de segundo factor. El verificador marca 160, 161 y 162 «sí». Tipos y lint del archivo modificado correctos. Se sube la corrección al mismo PR; el CI nuevo queda pendiente de su resultado, sin polling. Esta corrección no empieza 0.16.
 
-**Siguiente ficha:** 0.16, autorizada para continuar tras cerrar la corrección de CI de 0.15. Esta entrega se detiene en 0.15. La ola 0 sigue abierta: no corresponde cerrar el changelog ni crear etiquetas. Antes de desplegar deben revisarse las dependencias de los PR y aplicar las migraciones en el orden indicado; no basta el verde del subconjunto monetario.
+**Siguiente ficha al cerrar 0.15:** 0.16, autorizada y continuada en §13. Esta entrega se detiene en 0.15. La ola 0 sigue abierta: no corresponde cerrar el changelog ni crear etiquetas. Antes de desplegar deben revisarse las dependencias de los PR y aplicar las migraciones en el orden indicado; no basta el verde del subconjunto monetario.
+
+## 13. Continuación del 2026-11-05 · ficha 0.16
+
+**Rama:** `fix/cierre-saldo-por-pedido`, desde `origin/fix/identidad-intento-cobro` (`dcbcdcb`, #86 incluida la corrección de CI con migración 162). `main` actualizado antes de crearla. PR propio **contra `fix/identidad-intento-cobro`** para revisar únicamente 0.16. Se conserva toda la cadena #71 → #84 → #85 → #86 → esta ficha. No se fusiona, despliega ni etiqueta; se pidió aclarar la autorización de fusiones y sigue pendiente; no se infiere del permiso para continuar las fichas.
+
+**Migración 163_cierre_saldo_por_pedido.sql:** número libre en los árboles remotos comprobados; aplicar **después de la 162 y ANTES del código**. Solo aplicada en Postgres local, sin reset. Huellas 160–163 «sí»; migraciones 160–162 intactas. Siguiente libre: **164**. No se consultó ni modificó el SQL de producción.
+
+### Reproducción y corrección
+
+D05 se ejecutó antes de modificar el cierre: Q40 ya pagados en un pedido Q100 y una ronda Q20; cerrar Q80 devolvió «El pago no coincide con el saldo actual de cada pedido». La protección de 0.14 evitó escribir mal el dinero, pero la acción seguía distribuyendo sobre totales completos en vez de saldos.
+
+El nuevo RPC `leogin_cerrar_saldo_mesa` recupera primero el intento de 0.15 y toma el bloqueo de cuenta/pedidos de 0.14. Dentro de ese bloqueo calcula para cada pedido del snapshot **total menos la suma de todos sus movimientos**: pagos, cierres, cambios de método, devoluciones y reaperturas. No consulta solo la primera página de movimientos ni modifica el pasado.
+
+Distribuye los pagos nuevos por antigüedad de pedido (`created_at`, desempate por ID) y orden de método recibido. Un pedido ya saldado no consume dinero nuevo; el efectivo recibido aparece una sola vez por pago. Si falta un único importe, cubre el saldo restante; si los importes no coinciden con el saldo se rechaza íntegramente, sin recortarlos ni cerrar. El mismo RPC de 160–161 confirma asignación, movimientos, estado, sesión y resultado original en una transacción. Liberar sin cobrar conserva su vía explícita anterior. Una ronda que queda fuera del snapshot permanece abierta.
+
+El RPC es `security invoker`, solo ejecutable por `service_role`; la acción mantiene autorización de sesión/sucursal y rechaza si falta la 163, sin volver al reparto anterior. No cambia la pantalla ni se requieren cambios de diseño.
+
+### Validación
+
+- **Postgres real:** D05 pasa con netos Q100/Q20; los Q40 originales quedan idénticos y ambos pedidos se entregan. Ocho garantías adicionales prueban corrección de método y devolución independiente por pedido, pedido ya saldado, varios métodos/efectivo, método sin importe, rechazo del importe incorrecto sin efectos, ronda fuera del snapshot, 1.200 movimientos previos sin truncamiento y privilegios del RPC.
+- **Regresión en CI:** `npm run test:dinero -- -t '0.14|0.15|0.16|D03|D04|D05'`: **31 seleccionadas pasan**. Se adaptaron únicamente los puntos de transporte del cierre para seguir probando la pérdida de respuesta y el bloqueo observado con el RPC nuevo. Una corrida simultánea con el build agotó los 30 segundos en un caso previo de legado; al repetir sin el build pasaron las 31, sin ampliar tiempos ni modificar la aserción.
+- **Matriz completa:** **37 ejecutadas, 34 pasan y 3 fallan**, salida 1. D07/0.17 conserva la diferencia de centavo; D08/0.18 conserva el cobro fuera de ambos periodos; D09/0.19 conserva la omisión de las 05:00 exactas. No se omiten ni se invierten esas aserciones.
+- **Unitarias:** 1.343 pasan y una omisión previa, 91 archivos. Tipos, lint y build optimizado correctos; lint mantiene las tres advertencias previas. Auditores `security definer` y candados de RLS: cero hallazgos.
+- **Navegador:** cinco E2E contra el servidor optimizado, incluidas las cuatro regresiones anteriores. El nuevo cobra Q40 en una primera ronda, recibe otra Q20 y cierra Q80: el libro conserva Q100/Q20 por pedido y el movimiento previo intacto.
+- Datos temporales AUD limpiados; no se suben secretos, reportes ni trazas. CRLF conservado. El CI remoto se consulta una vez al abrir el PR, sin polling. FEL/impresión siguen fuera del alcance certificado por el arnés.
+
+**Siguiente ficha:** 0.17, pendiente de nueva instrucción. Se detiene esta entrega en 0.16; la ola 0 sigue abierta, sin changelog de cierre ni etiquetas. Antes de integrar/desplegar deben verificarse CI, dependencias, autorización y orden de migraciones.
 
 ---
 

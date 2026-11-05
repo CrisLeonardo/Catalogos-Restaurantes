@@ -1,4 +1,4 @@
-# Circuito del dinero en Postgres — fichas 0.13–0.15
+# Circuito del dinero en Postgres — fichas 0.13–0.16
 
 La suite ejecuta las acciones de producción `cobrarParteDeMesa`, `freeTable`, `devolverCobro`, `abrirTurno` y `closeCaja`, la lectura `leerTurno` y el RPC SQL `leogin_sales_report` contra Supabase local. No reemplaza consultas, respuestas, aritmética ni restricciones de Postgres por simulaciones.
 
@@ -14,7 +14,7 @@ npm run test:dinero -- --reporter=verbose
 
 Lee `.env.local`/`.env.test` sin sobrescribir variables ya exportadas. Requiere `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` de **la base local**. Para los bloqueos usa `DINERO_DATABASE_URL`; por omisión, la conexión de desarrollo del `supabase/config.toml` de este repo: `postgresql://postgres:postgres@127.0.0.1:54601/postgres`. Son las credenciales estándar del stack local. Si usas otro puerto, exporta esa variable antes de ejecutar.
 
-Ambas direcciones deben ser loopback; la suite rechaza destinos externos y comprueba que SQL y PostgREST ven el mismo restaurante temporal. No necesita servidor Next ni navegador. La versión original de 0.13 usaba el esquema 001–153; **esta rama necesita además la 160, la 161 y la 162, en ese orden y antes del código**, con los cambios anteriores de la ola 0 cuando correspondan. No aplica migraciones, no hace reset y no cambia restaurantes existentes. No borres tu base para ejecutar esta prueba.
+Ambas direcciones deben ser loopback; la suite rechaza destinos externos y comprueba que SQL y PostgREST ven el mismo restaurante temporal. No necesita servidor Next ni navegador. La versión original de 0.13 usaba el esquema 001–153; **esta rama necesita además la 160, la 161, la 162 y la 163, en ese orden y antes del código**, con los cambios anteriores de la ola 0 cuando correspondan. No aplica migraciones, no hace reset y no cambia restaurantes existentes. No borres tu base para ejecutar esta prueba.
 
 Cada caso crea su propio restaurante `aud-dinero-<uuid>`, pedidos y movimientos. La suite crea dos usuarios temporales `aud-dinero-…@test.local`. `afterEach` elimina exclusivamente el restaurante creado, con sus filas en cascada, aun cuando una aserción falla; `afterAll` elimina los usuarios. Un fallo de limpieza también hace fallar el comando. Si se mata el proceso, revisa exclusivamente los identificadores AUD de esa corrida antes de limpiar manualmente.
 
@@ -101,9 +101,26 @@ npm run test:dinero -- -t '0.14|0.15|D03|D04'
 
 Un desfase observado de 8 ms entre Windows y el contenedor podía dejar un movimiento reciente fuera de una lectura del arnés por parecer futuro. Para las lecturas sin fecha explícita se consulta el reloj real de Postgres. No se modifica el reloj de producción, no se introducen esperas y se conservan los tiempos explícitos de D09 y la carrera observada de D08.
 
-**Resultado completo actual: 29 ejecutadas, 25 pasan, 4 fallan; código de salida 1.** D04 pasa. D05/0.16, D07/0.17, D08/0.18 y D09/0.19 siguen fallando con sus aserciones monetarias originales. No se declara certificada la matriz completa.
+**Resultado completo después de 0.15: 29 ejecutadas, 25 pasan, 4 fallan; código de salida 1.** D04 pasa. D05/0.16, D07/0.17, D08/0.18 y D09/0.19 siguen fallando con sus aserciones monetarias originales. No se declara certificada la matriz completa.
 
 El E2E de 0.15 ejecuta la acción Next real y espera su respuesta antes de abortar la entrega al navegador; verifica que Q52 ya están confirmados, recarga Servicio y comprueba el mismo intento/recibo, sin cambios en los movimientos. Se limpia el fixture al terminar. La recuperación vuelve a autorizar al empleado antes de acceder al registro; ni clientes anónimos ni autenticados pueden leerlo directamente. FEL e impresión continúan fuera del alcance certificado por esta suite.
 
 
 El comando `node scripts/audit-rls-candados.mjs` reproduce el fallo previo (un hallazgo por la política ausente) y después de la 162 devuelve cero hallazgos. La prueba de privilegios de 0.15 exige además la política restrictiva `super_admin_segundo_factor`, sin políticas permisivas, con filtro y condición de escritura de segundo factor. Se mantiene el acceso exclusivo del servicio y el resultado de la matriz monetaria.
+
+
+## Corrección 0.16 · migración 163
+
+Aplicar `163_cierre_saldo_por_pedido.sql` **después de la 162 y antes del código**. Conserva intactas las migraciones anteriores. El cierre recupera primero su identidad durable; después calcula en Postgres, bajo el bloqueo de cuenta, el saldo neto de cada pedido del snapshot y reparte únicamente ese saldo. La confirmación de dinero, cierre y resultado sigue usando la transacción de 160–161.
+
+**Antes:** D05 rechazó el cierre Q80 de un pedido Q100 con Q40 previos y una ronda nueva Q20. **Después:** confirma Q60 nuevos en el primero y Q20 en el segundo, conservando exactamente las filas anteriores y entregando ambos pedidos. Las correcciones de método y devoluciones posteriores conservan la asignación y no sacan dinero de otra ronda.
+
+```powershell
+npm run test:dinero -- -t '0.14|0.15|0.16|D03|D04|D05'
+```
+
+**31 comprobaciones seleccionadas pasan:** las 22 anteriores, D05 y ocho garantías nuevas. Se prueban correcciones/devoluciones por pedido, rondas saldadas, métodos mixtos y efectivo sin repetir, un método sin importe que cubre solo saldo, rechazo del importe incorrecto sin escrituras, ronda ajena al snapshot sin cerrar, 1.200 pagos previos sumados completos y privilegios del RPC. Los puntos de pérdida de respuesta y bloqueo observado reconocen el transporte nuevo del cierre, sin modificar las invariantes.
+
+**Matriz actual completa: 37 ejecutadas, 34 pasan, 3 fallan; salida 1.** Permanecen D07/0.17, D08/0.18 y D09/0.19 con sus valores esperados originales. El cierre sigue sin certificar el centavo por línea, los periodos simultáneos de caja ni el límite exacto del día.
+
+El nuevo E2E cobra Q40, agrega una ronda Q20 y cierra el saldo Q80 desde la pantalla real. Verifica Q100/Q20 por pedido y el movimiento previo idéntico. No se reconstruyen movimientos históricos, no se hace reset y los fixtures se limpian al terminar.

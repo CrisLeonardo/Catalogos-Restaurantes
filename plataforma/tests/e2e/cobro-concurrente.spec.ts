@@ -42,9 +42,9 @@ async function login(context: BrowserContext, email: string) {
   if (verified.error) throw verified.error;
   await context.addInitScript(() => localStorage.setItem('leogin_tour_completed', 'true'));
 }
-async function openBill(page: Page) {
+async function openBill(page: Page, mesa = 1) {
   await expect(async () => {
-    await page.goto(`${origin}/panel/${slug}/mesero?mesa=1`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${origin}/panel/${slug}/mesero?mesa=${mesa}`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('button', { name: /^Cobrar y cerrar mesa/ }).first()).toBeVisible();
   }).toPass({ timeout: 90_000 });
   await page.getByRole('button', { name: /^Cobrar y cerrar mesa/ }).first().click();
@@ -148,5 +148,42 @@ test('0.15 · una respuesta perdida se recupera tras recargar con la identidad o
     expect(check(await db.from('order_payments').select('*').eq('order_id', o.id))).toEqual(payments);
     expect(check(await db.from('cobro_intentos').select('resultado').eq('restaurant_id', restaurantId).eq('intento_id', pending.id).single())).toEqual(original);
     expect(original.resultado).toMatchObject({ intentoId: pending.id, cobrado: 52, paymentIds: payments!.map((p) => p.id) });
+  } finally { await context.close(); }
+});
+
+test('0.16 · un parcial y una ronda nueva se cierran cobrando el saldo de cada pedido', async ({ browser }) => {
+  test.setTimeout(180_000);
+  async function ronda(amounts: number[], numero: string) {
+    const total = amounts.reduce((s, n) => s + n, 0);
+    const o = check(await db.from('orders').insert({ restaurant_id: restaurantId, order_number: `AUD-ronda-${numero}-${suffix}`,
+      customer_name: 'AUD Rondas', customer_phone: '00000000', order_type: 'DINE_IN', table_number: 2,
+      address: 'Mesa 2', status: 'SERVED', subtotal: total, total }).select('id').single())!;
+    check(await db.from('order_items').insert(amounts.map((amount) => ({ order_id: o.id, name_snapshot: `AUD Ronda ${amount}`,
+      price_snapshot: amount, quantity: 1, subtotal: amount, served_at: new Date().toISOString() }))));
+    return o;
+  }
+  const first = await ronda([40, 60], 'primera');
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  try {
+    await login(context, users[0].email);
+    const page = await context.newPage();
+    await openBill(page, 2);
+    await page.getByRole('tab', { name: 'Por platos' }).click();
+    await page.getByRole('button', { name: /1× AUD Ronda 40.*c\/u/ }).click();
+    await page.getByRole('button', { name: 'Tarjeta', exact: true }).click();
+    await page.getByRole('button', { name: /Cobrar Q40\.00 de esta parte/ }).click();
+    await expect(page.getByText(/Q40\.00 cobrado · la mesa sigue abierta/)).toBeVisible();
+    const previo = check(await db.from('order_payments').select('*').eq('order_id', first.id))!;
+    expect(previo).toHaveLength(1);
+    const second = await ronda([20], 'segunda');
+    await openBill(page, 2);
+    await page.getByRole('button', { name: 'Tarjeta', exact: true }).click();
+    await page.getByRole('button', { name: /Cobrar Q80\.00 y cerrar/ }).click();
+    await expect(page.getByText(/Q80\.00 cobrado · Mesa 2 libre/)).toBeVisible();
+    const pagos = check(await db.from('order_payments').select('*').in('order_id', [first.id, second.id]))!;
+    expect(pagos.filter((p) => p.order_id === first.id).reduce((n, p) => n + Number(p.amount), 0)).toBe(100);
+    expect(pagos.filter((p) => p.order_id === second.id).reduce((n, p) => n + Number(p.amount), 0)).toBe(20);
+    expect(pagos.filter((p) => p.id === previo[0].id)).toEqual(previo);
+    expect(check(await db.from('orders').select('status').in('id', [first.id, second.id]))?.map((o) => o.status)).toEqual(['DELIVERED', 'DELIVERED']);
   } finally { await context.close(); }
 });
