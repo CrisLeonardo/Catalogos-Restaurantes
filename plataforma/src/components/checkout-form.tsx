@@ -11,7 +11,7 @@ import { formatPrice, shadowCss, tipAppliesToType } from '@/lib/theme/resolve';
 import { createOrder, type CreateOrderResult } from '@/lib/actions/orders';
 import { getMyCheckoutProfile } from '@/lib/actions/loyalty';
 import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer-local';
-import { getQueuedOrders, removeQueuedOrder, saveQueuedOrder } from '@/lib/order-queue';
+import { getQueuedOrders, removeQueuedOrder, saveQueuedOrder, type MotivoNoGuardado } from '@/lib/order-queue';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { isValidGuatemalaPhone } from '@/lib/schemas';
 import { getScannedTable, clearScannedTable, watchScannedTable } from '@/lib/table-session';
@@ -124,6 +124,10 @@ export default function CheckoutForm({
   }, [hubUrl]);
 
   const [step, setStep] = useState<Step>('form');
+  /* Si la cola del aparato NO pudo guardar el pedido (memoria llena,
+     modo privado), la pantalla «sin conexión» no puede decir «se guardó»:
+     el pedido solo vive en esta pantalla (auditoría 0.11). */
+  const [noGuardado, setNoGuardado] = useState<MotivoNoGuardado | null>(null);
   // Lo que enseña la confirmación; se fija al confirmarse (ver CheckoutDone).
   const [done, setDone] = useState<CheckoutDone | null>(null);
   const [error, setError] = useState('');
@@ -413,13 +417,29 @@ export default function CheckoutForm({
       if (hubResult) { finishSuccess(hubResult); return; }
     }
 
-    saveQueuedOrder(restaurantId, {
+    const guardado = saveQueuedOrder(restaurantId, {
       clientId,
       payload,
       queuedAt: new Date().toISOString(),
       total: pendingSnapshotRef.current?.totalSnapshot,
     });
+    setNoGuardado(guardado.ok ? null : guardado.motivo);
     setStep('queued');
+  }
+
+  /** «Intentar guardar otra vez»: por si la persona liberó espacio o el
+      bloqueo era pasajero. Mismo clientId: reemplaza, no duplica. */
+  function guardarOtraVez() {
+    const clientId = clientIdRef.current;
+    const payload = pendingPayloadRef.current;
+    if (!clientId || !payload) return;
+    const guardado = saveQueuedOrder(restaurantId, {
+      clientId,
+      payload,
+      queuedAt: new Date().toISOString(),
+      total: pendingSnapshotRef.current?.totalSnapshot,
+    });
+    setNoGuardado(guardado.ok ? null : guardado.motivo);
   }
 
   /** Reintenta el pedido en cola. Idempotente: mismo clientId siempre,
@@ -562,12 +582,16 @@ export default function CheckoutForm({
     // peor caso es un pedido que el reintento de la próxima visita envía
     // solo — nunca uno perdido; el clientId idempotente (migración 061)
     // garantiza que jamás se duplica.
-    saveQueuedOrder(restaurantId, {
+    // Si este primer guardado falla no se detiene nada: con señal el
+    // pedido sale igual. Sin señal, queueCurrentOrder lo intenta de nuevo
+    // y la pantalla dice la verdad sobre el resultado.
+    const guardado = saveQueuedOrder(restaurantId, {
       clientId: clientIdRef.current,
       payload,
       queuedAt: new Date().toISOString(),
       total: totalSnapshot,
     });
+    setNoGuardado(guardado.ok ? null : guardado.motivo);
 
     start(async () => {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -605,7 +629,7 @@ export default function CheckoutForm({
 
   /* ── Pedido en cola (sin conexión) ── */
   if (step === 'queued') {
-    return <CheckoutQueued error={error} pending={isPending} onRetry={retryQueued} />;
+    return <CheckoutQueued error={error} pending={isPending} onRetry={retryQueued} noGuardado={noGuardado} onGuardar={guardarOtraVez} />;
   }
 
   /* ── Confirmación ── */
