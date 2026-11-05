@@ -114,7 +114,7 @@ export async function waitForBlockedPayment(blockerPid: number, expected = 1) {
     const until = Date.now() + 8_000;
     while (Date.now() < until) {
       const found = await observer.query<{ n: number }>(
-        "select count(*)::int n from pg_stat_activity where $1 = any(pg_blocking_pids(pid)) and (query ilike '%order_payments%' or query ilike '%leogin_cobrar_parte_mesa%' or query ilike '%leogin_confirmar_cierre_mesa%' or query ilike '%leogin_cerrar_mesa_idempotente%' or query ilike '%leogin_cerrar_saldo_mesa%')", [blockerPid],
+        "select count(*)::int n from pg_stat_activity where $1 = any(pg_blocking_pids(pid)) and (query ilike '%order_payments%' or query ilike '%leogin_cobrar_parte_mesa%' or query ilike '%leogin_confirmar_cierre_mesa%' or query ilike '%leogin_cerrar_mesa_idempotente%' or query ilike '%leogin_cerrar_saldo_mesa%' or query ilike '%leogin_contexto_caja%' or query ilike '%leogin_confirmar_cierre_caja%' or query ilike '%orders%')", [blockerPid],
       );
       if (found.rows[0].n >= expected) return;
       await new Promise((done) => setTimeout(done, 20));

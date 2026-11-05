@@ -1,4 +1,4 @@
-# Circuito del dinero en Postgres — fichas 0.13–0.17
+# Circuito del dinero en Postgres — fichas 0.13–0.18
 
 La suite ejecuta las acciones de producción `cobrarParteDeMesa`, `freeTable`, `devolverCobro`, `abrirTurno` y `closeCaja`, la lectura `leerTurno` y el RPC SQL `leogin_sales_report` contra Supabase local. No reemplaza consultas, respuestas, aritmética ni restricciones de Postgres por simulaciones.
 
@@ -14,7 +14,7 @@ npm run test:dinero -- --reporter=verbose
 
 Lee `.env.local`/`.env.test` sin sobrescribir variables ya exportadas. Requiere `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` de **la base local**. Para los bloqueos usa `DINERO_DATABASE_URL`; por omisión, la conexión de desarrollo del `supabase/config.toml` de este repo: `postgresql://postgres:postgres@127.0.0.1:54601/postgres`. Son las credenciales estándar del stack local. Si usas otro puerto, exporta esa variable antes de ejecutar.
 
-Ambas direcciones deben ser loopback; la suite rechaza destinos externos y comprueba que SQL y PostgREST ven el mismo restaurante temporal. No necesita servidor Next ni navegador. La versión original de 0.13 usaba el esquema 001–153; **esta rama necesita además la 160, la 161, la 162, la 163, la 164 y la 165, en ese orden y antes del código**, con los cambios anteriores de la ola 0 cuando correspondan. No aplica migraciones, no hace reset y no cambia restaurantes existentes. No borres tu base para ejecutar esta prueba.
+Ambas direcciones deben ser loopback; la suite rechaza destinos externos y comprueba que SQL y PostgREST ven el mismo restaurante temporal. No necesita servidor Next ni navegador. La versión original de 0.13 usaba el esquema 001–153; **esta rama necesita además las migraciones 160–167 en orden y antes del código**, con los cambios anteriores de la ola 0 cuando correspondan. No aplica migraciones, no hace reset y no cambia restaurantes existentes. No borres tu base para ejecutar esta prueba.
 
 Cada caso crea su propio restaurante `aud-dinero-<uuid>`, pedidos y movimientos. La suite crea dos usuarios temporales `aud-dinero-…@test.local`. `afterEach` elimina exclusivamente el restaurante creado, con sus filas en cascada, aun cuando una aserción falla; `afterAll` elimina los usuarios. Un fallo de limpieza también hace fallar el comando. Si se mata el proceso, revisa exclusivamente los identificadores AUD de esa corrida antes de limpiar manualmente.
 
@@ -142,4 +142,25 @@ npm run test:dinero -- -t '0.14|0.15|0.16|0.17|D03|D04|D05|D07'
 
 **42 comprobaciones seleccionadas pasan:** las 31 anteriores, D07 y diez garantías nuevas de cuotas, legado, cantidades, descuentos, fracciones, concurrencia y privilegios. Las pruebas de lectura verifican sesión autorizada y migración ausente sin volver al cálculo anterior. El E2E comprueba los tres importes del botón contra los tres movimientos reales, total Q100 y cierre del pedido.
 
-**Matriz actual completa: 47 ejecutadas, 45 pasan y 2 fallan; salida 1.** D08/0.18 y D09/0.19 permanecen visibles. Con 164 D08 reprodujo dinero fuera de ambos periodos; en la última corrida con 165 falló en la guarda temporal previa, con una diferencia de 3 ms entre Postgres y el cierre de Windows. La guarda no se elimina ni relaja: 0.18 debe certificar la carrera con ambos relojes controlados. D09 sigue dando Q3 frente a Q5 esperado. No se declara certificada la matriz completa ni se toca el código de caja para ocultar esos casos.
+**Matriz completa después de 0.17: 47 ejecutadas, 45 pasan y 2 fallan; salida 1.** D08/0.18 y D09/0.19 permanecen visibles. Con 164 D08 reprodujo dinero fuera de ambos periodos; en la última corrida con 165 falló en la guarda temporal previa, con una diferencia de 3 ms entre Postgres y el cierre de Windows. La guarda no se elimina ni relaja: 0.18 debe certificar la carrera con ambos relojes controlados. D09 sigue dando Q3 frente a Q5 esperado. No se declara certificada la matriz completa ni se toca el código de caja para ocultar esos casos.
+
+
+## Corrección 0.18 · migraciones 166 y 167
+
+Aplicar `166_cobros_y_cierre_caja_coordinados.sql` y después `167_ventana_negocio_registro_caja.sql`, **después de 165 y antes del código**. La 167 conserva la ventana de negocio sin editar la 166 ya aplicada. Solo se aplicaron localmente, sin reset ni backfill monetario.
+
+La reproducción previa de D08 conserva el bloqueo real observado y las mismas escrituras. Para evitar que una diferencia de unos milisegundos entre Windows y Postgres corte la prueba en la guarda temporal, se fija únicamente `Date` del proceso que invoca la acción al reloj real de Postgres leído después de observar el bloqueo; los temporizadores y Postgres siguen siendo reales. Antes del arreglo la guarda pasa y el dinero Q10 no pertenece al corte Q0 ni al siguiente Q0.
+
+Después, los movimientos operativos con timestamp por defecto reciben `caja_registrado_en` y `caja_corte_previo`, conservando su `created_at`. El registro y el cierre comparten bloqueo por restaurante; la marca SQL es monótona y conserva microsegundos. Si el corte gana, el movimiento espera y se registra después; si el pago gana, el contexto del cierre espera su commit. La revisión del libro evita firmar una lectura que perdió un movimiento entre la lectura y el guardado. El RPC confirma corte y gastos juntos y no reconstruye recibos históricos.
+
+También se registra la entrega nueva sin filas de pago, conservando esa segunda fuente del libro. Las escrituras autorizadas por RLS invalidan la revisión mediante un trigger restringido. Las inserciones explícitamente fechadas conservan su tratamiento legado; no se recrean cobros históricos como dinero nuevo. Los límites de negocio se mantienen y el instante exacto inicial se deja a 0.19.
+
+Guardar, descartar o abrir un borrador que otro aparato ya cerró devuelve rechazo sin modificar el corte. Se prueban las tres carreras y el rollback de una asignación de gastos fallida. Los agregados de caja no quedan recortados por el límite de PostgREST; se comprueban 1.200 movimientos y se pagina el detalle.
+
+```powershell
+npm run test:dinero -- -t '0.14|0.15|0.16|0.17|0.18|D03|D04|D05|D07|D08'
+```
+
+**56 comprobaciones seleccionadas pasan:** las 42 anteriores, D08 y trece garantías de esta ficha. Las dos órdenes de la carrera usan bloqueos observados por `pg_blocking_pids`; no se usa una pausa fija para declararlas concurrentes. El E2E cierra dos periodos de Q10 y comprueba el primer recibo intacto y el enlace del pago posterior.
+
+**Matriz actual completa: 60 ejecutadas, 59 pasan y 1 falla; salida 1.** D09/0.19 sigue dando Q3 frente a Q5 esperado, con los mismos tres timestamps y las mismas aserciones. La certificación completa permanece pendiente. Los cuatro casos fuera del filtro se ejecutan en el comando completo, sin omisiones ni aserciones invertidas.
