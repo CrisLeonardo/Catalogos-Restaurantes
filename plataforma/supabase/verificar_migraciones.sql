@@ -182,7 +182,17 @@ huellas(n, que, ok, cuando) as (values
   ('165', 'conserva el total al advertir cuotas no verificables',
      exists (select 1 from pg_proc where oid=to_regprocedure('public.leogin_saldos_platos_mesa(uuid,integer)')
        and prosrc like '%avisoCuotas%'),
-     'ANTES de desplegar; después de la 164')
+     'ANTES de desplegar; después de la 164'),
+  ('166', 'registro y cierre de caja coordinados por revisión',
+     to_regclass('public.caja_control') is not null
+     and to_regprocedure('public.leogin_confirmar_cierre_caja(uuid,bigint,uuid,timestamptz,uuid,jsonb,uuid[],uuid)') is not null
+     and exists(select 1 from pg_trigger where tgname='registro_caja_pago' and not tgisinternal)
+     and exists(select 1 from information_schema.columns where table_schema='public' and table_name='order_payments' and column_name='caja_registrado_en'),
+     'ANTES de desplegar; después de la 165'),
+  ('167', 'ventana de negocio de los registros de caja',
+     exists(select 1 from pg_proc where oid=to_regprocedure('public.leogin_leer_periodo_caja(uuid,timestamptz,timestamptz,timestamptz)')
+       and prosrc like '%g.caja_registrado_en>coalesce(p_gestion_desde%'),
+     'ANTES de desplegar; después de la 166')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

@@ -17,7 +17,7 @@
  */
 
 import type { createServiceClient } from '@/lib/supabase/service';
-import { faltaLaColumna, faltaLaMigracion } from '@/lib/db/migracion-ausente';
+import { faltaLaColumna, faltaLaMigracion, faltaLaFuncion } from '@/lib/db/migracion-ausente';
 import { etiquetaDeMesa, mesaDeFila } from '@/lib/mesa';
 import { diaDeNegocio } from './dia';
 import {
@@ -91,6 +91,8 @@ export interface PropinaPorPersona {
 }
 
 export interface LecturaDelTurno {
+  /** Revisión y corte previo de la lectura protegida; null sin la 166. */
+  controlCaja: { revision: number; ultimoCierreId: string | null } | null;
   /** Día de negocio del turno (YYYY-MM-DD). */
   dia: string;
   desde: string;
@@ -161,7 +163,7 @@ export async function ultimoCierre(db: Db, restaurantId: string): Promise<Ultimo
   };
 }
 
-type FilaPago = { id: string; order_id: string; method: string; amount: number | string; kind?: string | null; created_at: string };
+type FilaPago = { id: string; order_id: string; method: string; amount: number | string; kind?: string | null; created_at: string; caja_registrado_en?: string | null };
 
 /** Las filas de `order_payments` de unos pedidos, cualquiera sea su fecha. */
 export async function filasDePedidos(db: Db, restaurantId: string, orderIds: string[]): Promise<FilaPago[]> {
@@ -169,19 +171,18 @@ export async function filasDePedidos(db: Db, restaurantId: string, orderIds: str
   const out: FilaPago[] = [];
   for (let i = 0; i < orderIds.length; i += 300) {
     const trozo = orderIds.slice(i, i + 300);
-    let res = await db
-      .from('order_payments')
-      .select('id, order_id, method, amount, kind, created_at')
-      .eq('restaurant_id', restaurantId)
-      .in('order_id', trozo);
-    if (res.error && faltaLaColumna(res.error)) {
-      res = await db
-        .from('order_payments')
-        .select('id, order_id, method, amount, created_at')
-        .eq('restaurant_id', restaurantId)
-        .in('order_id', trozo) as typeof res;
+    for (let desde = 0; ; desde += 500) {
+      let res = await db.from('order_payments').select('id, order_id, method, amount, kind, created_at')
+        .eq('restaurant_id', restaurantId).in('order_id', trozo).order('id').range(desde, desde + 499);
+      if (res.error && faltaLaColumna(res.error)) {
+        res = await db.from('order_payments').select('id, order_id, method, amount, created_at')
+          .eq('restaurant_id', restaurantId).in('order_id', trozo).order('id').range(desde, desde + 499) as typeof res;
+      }
+      if (res.error) throw new Error('No se pudo leer el libro de cobros: ' + res.error.message);
+      const filas = (res.data ?? []) as FilaPago[];
+      out.push(...filas);
+      if (filas.length < 500) break;
     }
-    out.push(...((res.data ?? []) as FilaPago[]));
   }
   return out;
 }
@@ -192,7 +193,7 @@ const aMovimiento = (f: FilaPago): Movimiento => ({
   method: f.method,
   amount: Number(f.amount),
   kind: ((f.kind as ClaseMovimiento | null) ?? 'PAYMENT'),
-  at: f.created_at,
+  at: f.caja_registrado_en ?? f.created_at,
 });
 
 type FilaPedido = {
@@ -201,13 +202,17 @@ type FilaPedido = {
   delivered_at: string | null; created_at: string; address: string | null;
   table_number?: number | null; customer_name: string | null; waiter_id: string | null;
   waiter?: { full_name: string | null } | null;
+  caja_registrado_en?: string | null;
 };
 
-const COLS_PEDIDO = 'id, order_number, order_type, status, payment_method, total, tip, delivered_at, created_at, address, table_number, customer_name, waiter_id, waiter:profiles!orders_waiter_id_fkey(full_name)';
+const COLS_PEDIDO = 'id, order_number, order_type, status, payment_method, total, tip, delivered_at, created_at, address, table_number, customer_name, waiter_id, waiter:profiles!orders_waiter_id_fkey(full_name), caja_registrado_en';
 
-async function pedidos(db: Db, q: (cols: string) => PromiseLike<{ data: unknown; error: { code?: string } | null }>): Promise<FilaPedido[]> {
-  let res = await q(COLS_PEDIDO);
-  if (res.error && faltaLaColumna(res.error)) res = await q(COLS_PEDIDO.replace(', table_number', ''));
+async function pedidos(db: Db, q: (cols: string) => PromiseLike<{ data: unknown; error: { code?: string; message?: string } | null }>): Promise<FilaPedido[]> {
+  let cols = COLS_PEDIDO;
+  let res = await q(cols);
+  if (res.error && faltaLaColumna(res.error)) { cols = cols.replace(', caja_registrado_en', ''); res = await q(cols); }
+  if (res.error && faltaLaColumna(res.error)) res = await q(cols.replace(', table_number', ''));
+  if (res.error) throw new Error('No se pudieron leer los pedidos de caja: ' + (res.error.message ?? 'consulta fallida'));
   return ((res.data ?? []) as FilaPedido[]);
 }
 
@@ -231,7 +236,12 @@ export async function leerTurno(db: Db, opts: {
   ahora?: Date;
 }): Promise<LecturaDelTurno> {
   const { restaurantId, timezone, corteMin } = opts;
-  const ahora = opts.ahora ?? new Date();
+  const contexto = await db.rpc('leogin_contexto_caja', { p_restaurant: restaurantId, p_cambio: false });
+  if (contexto.error && !faltaLaFuncion(contexto.error)) throw new Error('No se pudo leer la revisión de caja: ' + contexto.error.message);
+  const control = contexto.error ? null : contexto.data as {
+    revision: number; hasta: string; ultimoCierreId: string | null; ultimoCierreEn: string | null;
+  } | null;
+  const ahora = opts.ahora ?? new Date(control?.hasta ?? Date.now());
 
   const [{ turno, sinMigracion }, cierre] = await Promise.all([
     turnoAbierto(db, restaurantId),
@@ -246,40 +256,38 @@ export async function leerTurno(db: Db, opts: {
     corteMin,
   });
   const desdeIso = desde.toISOString();
-  const hastaIso = ahora.toISOString();
+  const hastaIso = !opts.ahora && control ? control.hasta : ahora.toISOString();
   const dia = diaDeNegocio(turno?.openedAt ? new Date(turno.openedAt) : ahora, timezone, corteMin);
 
-  /* ── 1. El dinero que entró y salió en el periodo ── */
-  let filasDelPeriodo: FilaPago[] = [];
-  {
-    let res = await db
-      .from('order_payments')
-      .select('id, order_id, method, amount, kind, created_at')
-      .eq('restaurant_id', restaurantId)
-      .gt('created_at', desdeIso)
-      .lte('created_at', hastaIso)
-      .limit(5000);
-    if (res.error && faltaLaColumna(res.error)) {
-      res = await db
-        .from('order_payments')
-        .select('id, order_id, method, amount, created_at')
-        .eq('restaurant_id', restaurantId)
-        .gt('created_at', desdeIso)
-        .lte('created_at', hastaIso)
-        .limit(5000) as typeof res;
-    }
+  /* El registro gestionado usa la marca SQL en la misma ventana de negocio.
+     El corte previo conserva sus microsegundos; la frontera inicial del día
+     sigue siendo la anterior hasta la ficha 0.19. */
+  const desdeGestionado = control?.ultimoCierreEn && new Date(control.ultimoCierreEn).getTime() >= desde.getTime()
+    ? control.ultimoCierreEn : desdeIso;
+  let circuito: { pagos: FilaPago[]; entregados: string[]; gastos: LecturaDelTurno['gastos'] } | null = null;
+  if (control) {
+    const res = await db.rpc('leogin_leer_periodo_caja', { p_restaurant: restaurantId,
+      p_desde: desdeIso, p_gestion_desde: desdeGestionado, p_hasta: hastaIso });
+    if (res.error || !res.data) throw new Error('No se pudo leer el periodo de caja: ' + (res.error?.message ?? 'sin resultado'));
+    circuito = res.data;
+  }
+  let filasDelPeriodo: FilaPago[];
+  if (circuito) filasDelPeriodo = circuito.pagos;
+  else {
+    const res = await db.from('order_payments').select('id, order_id, method, amount, kind, created_at')
+      .eq('restaurant_id', restaurantId).gt('created_at', desdeIso).lte('created_at', hastaIso).limit(5000);
+    if (res.error) throw new Error('No se pudo leer el periodo legado: ' + res.error.message);
     filasDelPeriodo = (res.data ?? []) as FilaPago[];
   }
-
-  /* ── 2. Los pedidos entregados en el periodo ── */
-  const entregados = await pedidos(db, (cols) => db
-    .from('orders')
-    .select(cols)
-    .eq('restaurant_id', restaurantId)
-    .eq('status', 'DELIVERED')
-    .gt('delivered_at', desdeIso)
-    .lte('delivered_at', hastaIso)
-    .limit(5000));
+  const entregados: FilaPedido[] = [];
+  if (circuito) {
+    for (let i = 0; i < circuito.entregados.length; i += 300) {
+      entregados.push(...await pedidos(db, (cols) => db.from('orders').select(cols)
+        .eq('restaurant_id', restaurantId).in('id', circuito!.entregados.slice(i, i + 300))));
+    }
+  } else entregados.push(...await pedidos(db, (cols) => db.from('orders').select(cols)
+    .eq('restaurant_id', restaurantId).eq('status', 'DELIVERED')
+    .gt('delivered_at', desdeIso).lte('delivered_at', hastaIso).limit(5000)));
 
   /* Un pedido entregado usa sus filas si tiene ALGUNA, de cuando sea: un
      domicilio que se entregó hoy y se cobró por partes ayer no puede contar
@@ -293,7 +301,7 @@ export async function leerTurno(db: Db, opts: {
       orderType: o.order_type,
       method: o.payment_method ?? 'CASH',
       total: Number(o.total ?? 0),
-      at: o.delivered_at as string,
+      at: o.caja_registrado_en ?? o.delivered_at as string,
     }));
 
   const movimientos = filasDelPeriodo.map(aMovimiento);
@@ -336,7 +344,8 @@ export async function leerTurno(db: Db, opts: {
     // Una devolución de un pedido cobrado otro día también es un movimiento
     // de este turno, pero su «cuándo» es el de la devolución.
     const at = delPeriodo.map((m) => m.at).sort()[0] ?? o.delivered_at ?? o.created_at;
-    const cerroAqui = o.status === 'DELIVERED' && !!o.delivered_at && o.delivered_at > desdeIso;
+    const cierrePedido = o.caja_registrado_en ?? o.delivered_at;
+    const cerroAqui = o.status === 'DELIVERED' && !!cierrePedido && cierrePedido > desdeIso;
     const reabierta = filas.some((f) => f.kind === 'REOPEN');
     const mesa = mesaDeFila(o);
     cobros.push({
@@ -380,15 +389,13 @@ export async function leerTurno(db: Db, opts: {
 
   /* ── 4. Gastos del periodo, todavía sin atar a ningún corte ── */
   let gastos: LecturaDelTurno['gastos'] = [];
-  {
-    const { data, error } = await db
-      .from('cash_expenses')
+  if (circuito) gastos = circuito.gastos.map((g) => ({ ...g, amount: Number(g.amount) }));
+  else {
+    const { data, error } = await db.from('cash_expenses')
       .select('id, concept, amount, paid_by, receipt_url, notes, created_at')
-      .eq('restaurant_id', restaurantId)
-      .is('cash_count_id', null)
-      .gt('created_at', desdeIso)
-      .order('created_at', { ascending: true });
-    if (!error) gastos = (data ?? []).map((r) => ({ ...r, amount: Number(r.amount) })) as typeof gastos;
+      .eq('restaurant_id', restaurantId).is('cash_count_id', null).gt('created_at', desdeIso).order('created_at');
+    if (error) throw new Error('No se pudieron leer los gastos de caja: ' + error.message);
+    gastos = (data ?? []).map((g) => ({ ...g, amount: Number(g.amount) })) as typeof gastos;
   }
 
   /* ── 5. Propinas de lo que se cerró en el periodo ──
@@ -452,6 +459,7 @@ export async function leerTurno(db: Db, opts: {
   };
 
   return {
+    controlCaja: control ? { revision: control.revision, ultimoCierreId: control.ultimoCierreId } : null,
     dia,
     desde: desdeIso,
     hasta: hastaIso,

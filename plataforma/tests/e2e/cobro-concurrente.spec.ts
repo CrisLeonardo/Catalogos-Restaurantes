@@ -221,3 +221,49 @@ test('0.17 · el botón y Postgres conservan Q33.34 + Q33.33 + Q33.33', async ({
     expect(check(await db.from('orders').select('status').eq('id', o.id).single())?.status).toBe('DELIVERED');
   } finally { await context.close(); }
 });
+
+test('0.18 · caja conserva el primer recibo y cuenta el pago posterior una vez en el siguiente', async ({ browser }) => {
+  test.setTimeout(180_000);
+  check(await db.from('restaurants').update({ modules: { orders: true } }).eq('id', restaurantId));
+  check(await db.from('profiles').update({ permissions: ['mesero', 'finanzas'] }).eq('id', users[0].id));
+  const o = check(await db.from('orders').insert({ restaurant_id: restaurantId, order_number: `AUD-caja-${suffix}`,
+    customer_name: 'AUD Caja', customer_phone: '00000000', order_type: 'DINE_IN', table_number: 4,
+    address: 'Mesa 4', status: 'SERVED', subtotal: 20, total: 20 }).select('id').single())!;
+  check(await db.from('order_items').insert({ order_id: o.id, name_snapshot: 'AUD Caja 20', price_snapshot: 20,
+    quantity: 1, subtotal: 20, served_at: new Date().toISOString() }));
+  check(await db.from('order_payments').insert({ restaurant_id: restaurantId, order_id: o.id, method: 'CASH', amount: 10 }));
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  try {
+    await login(context, users[0].email);
+    const page = await context.newPage();
+    async function cerrarDesdePantalla() {
+      await page.goto(`${origin}/panel/${slug}/caja`, { waitUntil: 'domcontentloaded' });
+      const billetes = page.getByRole('spinbutton', { name: 'Cuántos billetes de Q10', exact: true });
+      // El HTML puede aparecer antes de hidratar: verifica el conteo de React,
+      // no solo el valor que Playwright escribió en el input del servidor.
+      await expect(async () => {
+        await billetes.fill('');
+        await billetes.fill('1');
+        await expect(billetes).toHaveAttribute('data-filled', '1');
+      }).toPass({ timeout: 15_000 });
+      await page.getByRole('button', { name: 'Siguiente: gastos', exact: true }).click();
+      await page.getByRole('button', { name: 'Siguiente: propinas', exact: true }).click();
+      await page.getByRole('button', { name: 'Cerrar el turno', exact: true }).click();
+      await page.getByRole('button', { name: 'Cerrar el turno igual', exact: true }).click();
+      await expect(page.getByText('Turno cerrado', { exact: true }).first()).toBeVisible();
+    }
+    await cerrarDesdePantalla();
+    const first = check(await db.from('cash_counts').select('*').eq('restaurant_id', restaurantId).eq('status', 'CLOSED').single())!;
+    expect(Number(first.expected_cash)).toBe(10);
+    expect(first.caja_revision).not.toBeNull();
+    const payment = check(await db.from('order_payments').insert({ restaurant_id: restaurantId, order_id: o.id,
+      method: 'CASH', amount: 10 }).select('*').single())!;
+    expect(payment.caja_corte_previo).toBe(first.id);
+    expect(payment.caja_registrado_en > first.closed_at).toBe(true);
+    await cerrarDesdePantalla();
+    const counts = check(await db.from('cash_counts').select('*').eq('restaurant_id', restaurantId).eq('status', 'CLOSED').order('closed_at'))!;
+    expect(counts.map((c) => Number(c.expected_cash))).toEqual([10, 10]);
+    expect(counts[0]).toEqual(first);
+    expect(counts[1].caja_corte_previo).toBe(first.id);
+  } finally { await context.close(); }
+});

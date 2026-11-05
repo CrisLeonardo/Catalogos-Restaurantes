@@ -38,20 +38,15 @@ vi.mock('@/lib/whatsapp/notify', () => ({ notifyOrderStatus: vi.fn() }));
 
 import { cobrarParteDeMesa, cobradoDeMesa } from '@/lib/actions/servicio';
 import { freeTable } from '@/lib/actions/orders';
-import { abrirTurno, closeCaja } from '@/lib/actions/finanzas';
+import { abrirTurno, closeCaja, saveCajaDraft, discardCajaDraft } from '@/lib/actions/finanzas';
 import { corregirMetodoDePago, devolverCobro } from '@/lib/actions/caja-correcciones';
 import { leerTurno } from '@/lib/caja/turno-servidor';
 import { computeSplit } from '@/lib/bill-split';
 import type { OrderWithItems } from '@/lib/db/orders';
 
 const rid = () => state.restaurantId;
-const period = async (ahora?: Date) => {
-  // Windows y el contenedor local pueden diferir unos milisegundos. Leer el
-  // reloj real de Postgres evita excluir un commit recién confirmado como
-  // si fuera futuro. D09 conserva sus instantes explícitos y D08 su carrera.
-  ahora ??= (await sql.query('select clock_timestamp() as ahora')).rows[0].ahora;
-  return leerTurno(db, { restaurantId: rid(), timezone: 'America/Guatemala', corteMin: 300, ahora });
-};
+// El reloj operativo lo da el contexto SQL; D09 conserva sus instantes explícitos.
+const period = (ahora?: Date) => leerTurno(db, { restaurantId: rid(), timezone: 'America/Guatemala', corteMin: 300, ahora });
 const pay = (ids: string[], amount: number, method = 'CASH', id: string = randomUUID()) => cobrarParteDeMesa(rid(), 1, ids, [{ amount, method: method as 'CASH' | 'CARD' }], id);
 function success(result: { error?: string }) { expect(result.error).toBeUndefined(); }
 
@@ -220,7 +215,12 @@ describe('M§8 · circuito del dinero en Postgres', () => {
       // La 0.10 exige confirmar explícitamente Q0; también se envía al
       // ejecutarla desde la base anterior, que todavía ignora este campo.
       const payload = { restaurantId: rid(), counts: {}, openingFloat: 0, confirmPending: true, efectivoContado: true };
-      close = await closeCaja(payload);
+      // El reloj del cierre anterior era Windows: fijarlo al reloj real de
+      // Postgres DESPUÉS de observar la espera evita una guarda falsa por desfase.
+      const ahoraSQL = (await sql.query('select clock_timestamp() as ahora')).rows[0].ahora;
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(ahoraSQL);
+      try { close = await closeCaja(payload); } finally { vi.useRealTimers(); }
       success(close);
       expect(close.result).toBeDefined();
     } finally {
@@ -230,6 +230,8 @@ describe('M§8 · circuito del dinero en Postgres', () => {
     const rows = await ledger(o.id);
     expect(net(rows)).toBe(1000);
     expect(new Date(rows[0].created_at).getTime()).toBeLessThanOrEqual(new Date(close!.result!.closedAt).getTime());
+    expect(rows[0].caja_registrado_en > close!.result!.closedAt).toBe(true);
+    expect(rows[0].caja_corte_previo).toBe(close!.result!.id);
     const next = await period();
     expect(Math.round(((close!.result?.expected ?? 0) + next.cuadre.efectivo) * 100),
       'Ningún pago confirmado puede quedar fuera de ambos periodos').toBe(1000);
@@ -733,5 +735,206 @@ describe('0.17 · centavos exactos del reparto persistido', () => {
     const { rows } = await sql.query("select prosecdef,has_function_privilege('anon',oid,'execute') anon,has_function_privilege('authenticated',oid,'execute') auth,has_function_privilege('service_role',oid,'execute') service from pg_proc where proname in ('leogin_cuotas_platos_pedido','leogin_saldos_platos_mesa')");
     expect(rows).toHaveLength(2);
     for (const row of rows) expect(row).toEqual({ prosecdef: false, anon: false, auth: false, service: true });
+  });
+});
+
+describe('0.18 · pertenencia durable y cierre de caja coordinado', () => {
+  const cerrar = (counts: Record<string, number> = {}) => closeCaja({ restaurantId: rid(), counts, openingFloat: 0, confirmPending: true });
+
+  it.each(['guardar', 'descartar', 'abrir'] as const)('un %s desactualizado no reescribe un corte ya firmado', async (modo) => {
+    if (modo === 'abrir') success(await saveCajaDraft({ restaurantId: rid(), counts: {}, openingFloat: 0 }));
+    else success(await abrirTurno({ restaurantId: rid(), openingFloat: 0 }));
+    let first: Awaited<ReturnType<typeof closeCaja>> | undefined;
+    let guardado: Record<string, unknown> | undefined;
+    state.beforeFetch = async (url, method) => {
+      if (!first && method === 'PATCH' && url.pathname.endsWith('/cash_counts')) {
+        first = await closeCaja({ restaurantId: rid(), counts: {}, openingFloat: 0, notes: 'AUD recibo firmado' });
+        success(first);
+        guardado = checked(await db.from('cash_counts').select('*').eq('id', first.result!.id).single())!;
+      }
+    };
+    const result = modo === 'guardar' ? await saveCajaDraft({ restaurantId: rid(), counts: {}, openingFloat: 0 })
+      : modo === 'descartar' ? await discardCajaDraft(rid()) : await abrirTurno({ restaurantId: rid(), openingFloat: 50 });
+    state.beforeFetch = null;
+    expect(first?.result).toBeDefined();
+    expect(result.error).toMatch(/turno.*cerró/);
+    expect(checked(await db.from('cash_counts').select('*').eq('id', first!.result!.id).single())).toEqual(guardado);
+  });
+
+  it('si gana el pago, la lectura del cierre espera su commit y lo incluye una vez', async () => {
+    const o = await order([10]);
+    success(await abrirTurno({ restaurantId: rid(), openingFloat: 0 }));
+    await sql.query('begin');
+    // La FK del firmante espera después del trigger de caja: el pago ya
+    // conserva el bloqueo de caja pero todavía no ha confirmado su INSERT.
+    const lock = await sql.query('select pg_backend_pid() pid,id from public.profiles where id=$1 for update', [state.users[0]]);
+    const pago = pay([o.items[0].id], 10);
+    let cierre: ReturnType<typeof cerrar> | undefined;
+    let results;
+    try {
+      await waitForBlockedPayment(lock.rows[0].pid);
+      const pagoPid = (await sql.query("select pid from pg_stat_activity where $1=any(pg_blocking_pids(pid)) and query ilike '%leogin_cobrar_parte_mesa%'", [lock.rows[0].pid])).rows[0].pid;
+      cierre = cerrar({ bil_10: 1 });
+      await waitForBlockedPayment(pagoPid);
+    } finally {
+      await sql.query('rollback');
+      results = await Promise.all([pago, cierre]);
+    }
+    success(results[0]);
+    expect(results[1]).toBeDefined();
+    success(results[1]!);
+    expect(results[1]!.result?.expected).toBe(10);
+    expect((await period()).cuadre.efectivo).toBe(0);
+    expect(net(await ledger(o.id))).toBe(1000);
+  });
+
+  it('un pago entre lectura y guardado rechaza el corte viejo sin modificar el turno', async () => {
+    const o = await order([10, 10]);
+    success(await abrirTurno({ restaurantId: rid(), openingFloat: 0 }));
+    success(await pay([o.items[0].id], 10));
+    let injected = false;
+    state.beforeFetch = async (url, method) => {
+      if (!injected && method === 'POST' && url.pathname.endsWith('/rpc/leogin_confirmar_cierre_caja')) {
+        injected = true;
+        success(await pay([o.items[1].id], 10));
+      }
+    };
+    expect((await cerrar({ bil_10: 1 })).error).toMatch(/caja cambió/);
+    state.beforeFetch = null;
+    expect(injected).toBe(true);
+    expect(checked(await db.from('cash_counts').select('status').eq('restaurant_id', rid()))).toEqual([{ status: 'OPEN' }]);
+    const result = await cerrar({ bil_20: 1 });
+    success(result);
+    expect(result.result?.expected).toBe(20);
+    expect(net(await ledger(o.id))).toBe(2000);
+  });
+
+  it('dos aparatos sobre la misma lectura no guardan dos cortes del turno', async () => {
+    const o = await order([10]);
+    success(await abrirTurno({ restaurantId: rid(), openingFloat: 0 }));
+    success(await pay([o.items[0].id], 10));
+    const gate = deferred();
+    let readers = 0;
+    state.beforeFetch = async (url, method) => {
+      if (method === 'POST' && url.pathname.endsWith('/rpc/leogin_contexto_caja')) {
+        if (++readers === 2) gate.resolve();
+        await bounded(gate.promise);
+      }
+    };
+    const results = await Promise.all([actor(0, () => cerrar({ bil_10: 1 })), actor(1, () => cerrar({ bil_10: 1 }))]);
+    state.beforeFetch = null;
+    expect(readers).toBe(2);
+    expect(results.filter((r) => r.result)).toHaveLength(1);
+    expect(results.filter((r) => r.error)).toHaveLength(1);
+    expect(checked(await db.from('cash_counts').select('expected_cash').eq('restaurant_id', rid()).eq('status', 'CLOSED'))).toEqual([{ expected_cash: 10 }]);
+  });
+
+  it('una devolución después del corte no reescribe su recibo y pertenece al siguiente', async () => {
+    const o = await order([10]);
+    success(await pay([o.items[0].id], 10));
+    success(await freeTable(rid(), 1));
+    const first = await cerrar({ bil_10: 1 });
+    success(first);
+    const guardado = checked(await db.from('cash_counts').select('*').eq('id', first.result!.id).single());
+    success(await devolverCobro({ restaurantId: rid(), orderId: o.id, reason: 'AUD devolución después del corte protegido' }));
+    expect((await period()).cuadre.efectivo).toBe(-10);
+    const second = await cerrar();
+    success(second);
+    expect(second.result?.expected).toBe(-10);
+    expect(second.result?.refundsCash).toBe(10);
+    expect(checked(await db.from('cash_counts').select('*').eq('id', first.result!.id).single())).toEqual(guardado);
+    expect((await period()).cuadre.efectivo).toBe(0);
+  });
+
+  it('un fallo al ligar gastos revierte el corte en la misma transacción', async () => {
+    success(await abrirTurno({ restaurantId: rid(), openingFloat: 0 }));
+    const gasto = checked(await db.from('cash_expenses').insert({ restaurant_id: rid(), business_date: '2026-11-05', concept: 'AUD gasto', amount: 1 }).select('*').single())!;
+    const l = await period();
+    const before = checked(await db.from('cash_counts').select('*').eq('id', l.abierto!.id).single());
+    const result = await db.rpc('leogin_confirmar_cierre_caja', { p_restaurant: rid(), p_revision: l.controlCaja!.revision,
+      p_ultimo: l.controlCaja!.ultimoCierreId, p_hasta: l.hasta, p_abierto: l.abierto!.id,
+      p_fila: { business_date: l.dia, opening_float: 0, expected_cash: 0, counted_cash: 0, difference: 1,
+        by_method: {}, denomination_breakdown: {}, status: 'CLOSED', expenses_total: 1, tips_total: 0,
+        period_start: l.desde, closed_at: l.hasta }, p_gastos: [gasto.id, gasto.id], p_actor: state.users[0] });
+    expect(result.error?.message).toMatch(/gastos cambiaron/);
+    expect(checked(await db.from('cash_counts').select('*').eq('id', l.abierto!.id).single())).toEqual(before);
+    expect(checked(await db.from('cash_expenses').select('*').eq('id', gasto.id).single())).toEqual(gasto);
+  });
+
+  it('una entrega sin filas que confirma después del corte queda en el periodo siguiente', async () => {
+    const o = await order([10]);
+    checked(await db.from('orders').update({ order_type: 'PICKUP' }).eq('id', o.id));
+    success(await abrirTurno({ restaurantId: rid(), openingFloat: 0 }));
+    await sql.query('begin');
+    const lock = await sql.query('select pg_backend_pid() pid,id from public.orders where id=$1 for update', [o.id]);
+    const antes = (await sql.query('select clock_timestamp() ahora')).rows[0].ahora.toISOString();
+    const entrega = db.from('orders').update({ status: 'DELIVERED', delivered_at: antes }).eq('id', o.id).then(checked);
+    let close: Awaited<ReturnType<typeof cerrar>>;
+    try {
+      await waitForBlockedPayment(lock.rows[0].pid);
+      close = await cerrar();
+      success(close);
+    } finally { await sql.query('rollback'); await entrega; }
+    expect(close!.result?.expected).toBe(0);
+    const next = await period();
+    expect(next.cuadre.efectivo).toBe(10);
+    expect(next.cuadre.cobrado).toBe(10);
+    expect(next.cobros.find((c) => c.orderId === o.id)!.at > close!.result!.closedAt).toBe(true);
+    expect(await ledger(o.id)).toEqual([]);
+    const second = await cerrar({ bil_10: 1 });
+    success(second);
+    expect(second.result?.expected).toBe(10);
+    expect((await period()).cuadre.efectivo).toBe(0);
+  });
+
+  it('el cuadre y el corte incluyen más de mil movimientos sin truncarlos', async () => {
+    const o = await order([20]);
+    checked(await db.from('order_payments').insert(Array.from({ length: 1200 }, () => ({ restaurant_id: rid(), order_id: o.id, method: 'CASH', amount: 0.01 }))));
+    const l = await period();
+    expect(l.cuadre.efectivo).toBe(12);
+    expect(l.pendientes.total).toBe(8);
+    const close = await cerrar({ bil_10: 1, mon_1: 2 });
+    success(close);
+    expect(close.result?.expected).toBe(12);
+    expect((await period()).cuadre.efectivo).toBe(0);
+  });
+
+  it('la nueva marca conserva la ventana de negocio sin arrastrar dinero o gastos del día anterior', async () => {
+    const o = await order([10]);
+    success(await pay([o.items[0].id], 10));
+    const gasto = checked(await db.from('cash_expenses').insert({ restaurant_id: rid(), business_date: '2026-11-04', concept: 'AUD día previo', amount: 1 }).select('id').single())!;
+    // Fixture de un registro operativo previo al inicio, sin tocar created_at.
+    await sql.query("update public.order_payments set caja_registrado_en='2026-11-05T10:59:59.999Z' where order_id=$1", [o.id]);
+    await sql.query("update public.cash_expenses set caja_registrado_en='2026-11-05T10:59:59.999Z' where id=$1", [gasto.id]);
+    const anterior = await period(new Date('2026-11-05T10:59:59.999Z'));
+    const actual = await period(new Date('2026-11-05T12:00:00Z'));
+    expect(anterior.cuadre.efectivo).toBe(10);
+    expect(anterior.gastosTotal).toBe(1);
+    expect(actual.cuadre.efectivo).toBe(0);
+    expect(actual.gastosTotal).toBe(0);
+  });
+
+  it('una escritura de sesión autorizada invalida el corte sin dar acceso a caja_control', async () => {
+    const o = await order([10]);
+    checked(await db.from('profiles').update({ restaurant_id: rid() }).eq('id', state.users[0]));
+    const before = await period();
+    await sql.query('begin');
+    try {
+      await sql.query("select set_config('request.jwt.claims',$1,true)", [JSON.stringify({ sub: state.users[0], role: 'authenticated', aal: 'aal2' })]);
+      await sql.query('set local role authenticated');
+      const updated = await sql.query("update public.orders set status='PREP' where id=$1 returning id", [o.id]);
+      expect(updated.rowCount).toBe(1);
+      await sql.query('reset role');
+      const version = await sql.query('select revision from public.caja_control where restaurant_id=$1', [rid()]);
+      expect(Number(version.rows[0].revision)).toBeGreaterThan(before.controlCaja!.revision);
+    } finally { await sql.query('rollback'); }
+  });
+
+  it('RPC y control de caja no son accesibles a clientes; se conserva el candado MFA', async () => {
+    const { rows } = await sql.query("select proname,has_function_privilege('anon',oid,'execute') anon,has_function_privilege('authenticated',oid,'execute') auth,has_function_privilege('service_role',oid,'execute') service from pg_proc where proname in ('leogin_contexto_caja','leogin_registrar_cambio_caja','leogin_leer_periodo_caja','leogin_confirmar_cierre_caja')");
+    expect(rows).toHaveLength(4);
+    for (const row of rows) expect(row).toMatchObject({ anon: false, auth: false, service: true });
+    const table = await sql.query("select has_table_privilege('authenticated','public.caja_control','SELECT,INSERT,UPDATE,DELETE') auth,has_table_privilege('anon','public.caja_control','SELECT,INSERT,UPDATE,DELETE') anon, exists(select 1 from pg_policy where polrelid='public.caja_control'::regclass and polname='super_admin_segundo_factor' and not polpermissive) mfa");
+    expect(table.rows[0]).toEqual({ auth: false, anon: false, mfa: true });
   });
 });
