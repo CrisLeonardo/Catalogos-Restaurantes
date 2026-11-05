@@ -1,5 +1,6 @@
 'use server';
 
+import { identidadCobroValida, type ResultadoCobro } from '@/lib/cobro-intento';
 import { createClient, createDinerClient, getStaffUser } from '@/lib/supabase/server';
 import { canActOnRestaurant, resolveEffectiveRole } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
@@ -1111,13 +1112,15 @@ export async function freeTable(
   restaurantId: string,
   tableNumber: number,
   payment?: TablePayment | TablePayment[],
-): Promise<{ error?: string }> {
+  intentoId?: string,
+): Promise<ResultadoCobro> {
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
 
   /* Uno o varios. Se admite el valor suelto de siempre porque media
      aplicación llama así —el salón, la caja, el cierre rápido— y M-11 no
      tiene por qué obligarlas a cambiar para cobrar de una sola forma. */
   const pagos = payment == null ? [] : Array.isArray(payment) ? payment : [payment];
+  if (pagos.length && !identidadCobroValida(intentoId)) return { error: 'Falta la identidad del intento de cobro.' };
   if (pagos.some((p) => !isPaymentMethod(p.method))) return { error: 'Forma de pago inválida.' };
   if (pagos.some((p) => p.amount != null && !(Number.isFinite(p.amount) && p.amount > 0))) {
     return { error: 'Importe de pago inválido.' };
@@ -1127,6 +1130,18 @@ export async function freeTable(
   if ('error' in acceso) return acceso;
 
   const db = createServiceClient();
+  // Recuperar ANTES de releer pedidos: puede ser una mesa ya cerrada o reutilizada.
+  if (pagos.length) {
+    const { data: previo, error } = await db.rpc('leogin_recuperar_intento_cobro', {
+      p_restaurant: restaurantId, p_mesa: tableNumber, p_intento: intentoId,
+      p_operacion: 'cierre', p_solicitud: { pagos }, p_actor: acceso.actor.userId,
+    });
+    if (error) {
+      if (faltaLaFuncion(error)) return { error: 'Falta la migración 161 para recuperar los intentos de cobro.', needsMigration: true };
+      return { error: error.message, incierto: !/^(LGD0[12]|22023)$/.test(error.code ?? '') };
+    }
+    if (previo) { revalidarSalon(); return previo as ResultadoCobro; }
+  }
   const porNumero = await hayColumnaMesa();
   const [colMesa, valMesa] = campoMesa(porNumero, tableNumber);
 
@@ -1164,19 +1179,21 @@ export async function freeTable(
   /* El servidor SQL vuelve a comprobar el saldo bajo el mismo bloqueo
      que el cobro parcial. Pedidos, movimientos, reparto y sesión se
      confirman juntos; nunca se cierra tras un INSERT de pago fallido. */
-  const { data: confirmados, error: errCierre } = await db.rpc('leogin_confirmar_cierre_mesa', {
-    p_restaurant: restaurantId,
-    p_mesa: tableNumber,
-    p_orders: ordenes.map((o) => o.id),
-    p_filas: filas,
-    p_actor: acceso.actor.userId,
-  });
+  const { data: confirmados, error: errCierre } = await db.rpc(
+    pagos.length ? 'leogin_cerrar_mesa_idempotente' : 'leogin_confirmar_cierre_mesa', {
+      p_restaurant: restaurantId,
+      p_mesa: tableNumber,
+      p_orders: ordenes.map((o) => o.id),
+      p_filas: filas,
+      p_actor: acceso.actor.userId,
+      ...(pagos.length ? { p_intento: intentoId, p_pagos: pagos } : {}),
+    });
   if (errCierre) {
-    if (faltaLaFuncion(errCierre)) return { error: 'Falta la migración 160 para cerrar la cuenta con el saldo protegido.' };
-    return { error: errCierre.message };
+    if (faltaLaFuncion(errCierre)) return { error: `Falta la migración ${pagos.length ? 161 : 160} para cerrar la cuenta con el saldo protegido.`, needsMigration: true };
+    return { error: errCierre.message, incierto: !/^(LGD0[12]|22023)$/.test(errCierre.code ?? '') };
   }
-  if (!Array.isArray(confirmados)) return { error: 'No se pudo confirmar el cierre. Actualiza la cuenta.' };
-  const ids = confirmados as string[];
+  const ids = (pagos.length ? confirmados?.orderIds : confirmados) as string[];
+  if (!Array.isArray(ids)) return { error: 'No se pudo confirmar el cierre. Reintenta para recuperar el resultado.', incierto: true };
 
   // Una factura por pedido cerrado. En `after` para no dejar al mesero
   // esperando al certificador con la mesa ocupada en pantalla.
@@ -1187,7 +1204,7 @@ export async function freeTable(
   }
 
   revalidarSalon();
-  return {};
+  return pagos.length ? confirmados as ResultadoCobro : {};
 }
 
 export async function updateOrderStatus(

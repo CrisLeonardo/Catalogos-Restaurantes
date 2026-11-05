@@ -351,7 +351,40 @@ No se marca ninguna de esas cinco fichas como terminada. La ola 0 sigue abierta;
 - **Base local:** migración 160 aplicada/reaplicada sin reconstruir dinero, huella «sí» en el verificador, privilegios de los tres RPC comprobados y auditoría de `security definer` sin hallazgos.
 - No cambia el diseño de pantalla. Los datos de las pruebas pertenecen a fixtures AUD y se eliminan al finalizar, incluidas las corridas que fallaron al ajustar selectores del navegador.
 
-**Siguiente ficha:** 0.15, después del «sí, sigue» del dueño. Fusionar y desplegar siguen requiriendo la instrucción del dueño, con el CI en verde y el orden de migración indicado.
+**Siguiente ficha al cerrar 0.14:** 0.15, autorizada y continuada en §12. Fusionar y desplegar siguen requiriendo la instrucción del dueño, con el CI en verde y el orden de migración indicado.
+
+## 12. Continuación del 2026-11-05 · ficha 0.15
+
+**Rama:** `fix/identidad-intento-cobro`, desde `origin/fix/cobro-parcial-concurrente` (`311f3b3`). Se actualizó `main` antes de crear la rama y se comprobaron #71, #84 y #85: **los tres siguen abiertos**; el CI de #85 terminó en verde. #85 conserva el arnés de #84 aunque sus commits no son ancestros. Esta ficha conserva ambos cambios íntegros; su [PR #86](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/86) está abierto **contra `fix/cobro-parcial-concurrente`** para aislar la revisión. Orden de integración: #71 → #84 → #85 → esta ficha, resolviendo las versiones del arnés al fusionar. No se fusionó, desplegó ni etiquetó nada.
+
+**Migración 161**, libre al comprobar las ramas remotas: aplicar **después de la 160 y ANTES de este código**. La 160 permanece intacta y sus bloqueos/asignaciones siguen siendo la implementación monetaria. Solo se aplicó la 161 en Postgres local, sin reset ni reconstrucción histórica; huellas 160/161 «sí». La corrección de CI añade la **162**, también antes del código y después de la 161. Ambas solo se aplicaron localmente; la siguiente migración libre pasa a ser la **163**. No se comprobó ni modificó el estado SQL de producción.
+
+### Reproducción y corrección
+
+- **Antes:** D04 perdió la respuesta exitosa del RPC después del commit real de Q10; el reintento devolvió «Esos platos ya están pagados. Actualiza la cuenta», sin recuperar su resultado. La prueba adaptada falló antes de cambiar acciones o aplicar la 161.
+- El cliente persiste UUID y solicitud completa **antes** de enviar. Una petición en vuelo impide el doble clic; una respuesta incierta conserva el mismo intento sin caducidad. Al recargar Servicio, volver a tener conexión o reintentar se envía la solicitud original, aunque Realtime ya muestre la línea pagada. Sin almacenamiento no se envía el cobro. La clave local se separa por restaurante/empleado; se retira solo al confirmar el resultado o un rechazo transaccional definitivo.
+- `cobro_intentos` guarda solicitud, actor, mesa, operación y resultado original (importe e IDs de movimientos/pedidos) en la misma transacción que el pago, reparto y cierre. Su clave única es restaurante/UUID. El bloqueo por intento precede al bloqueo de mesa de la 160; dos solicitudes simultáneas del mismo intento devuelven el mismo resultado. Reutilizar la identidad con otra solicitud, mesa, operación o empleado se rechaza sin dinero nuevo.
+- El cierre busca el intento **antes** de volver a leer la mesa. Si se reutilizó para una ronda nueva, recupera únicamente el resultado anterior y no entrega ni cobra esa ronda. No recalcula un recibo a partir del saldo actual. El resultado original también se conserva tras una devolución.
+- Una identidad nueva permite pagar de nuevo Q40 de una línea Q100 que ya recibió Q40; aún permite Q20 y rechaza exceder el saldo. No se deduplican pagos por igualdad de importe/método. No se cambian importes, movimientos ni asignaciones históricos.
+- Tabla con RLS sin políticas permisivas de cliente; RPC `security invoker` ejecutables solo por `service_role`. El servicio solo puede insertar/leer los intentos, sin actualizarlos ni borrarlos directamente. Cada acción autoriza sesión/sucursal antes de consultar o ejecutar; si falta la 161 no hay vuelta al camino sin identidad.
+
+### Validación
+
+- **Postgres real:** D04 y nueve garantías nuevas de 0.15 pasan, junto con las doce de 0.14: **22 seleccionadas en CI**, comando `npm run test:dinero -- -t '0.14|0.15|D03|D04'`.
+- **Matriz completa:** **29 ejecutadas, 25 pasan y 4 fallan**, código de salida 1. D05/0.16 y D07/0.17 siguen rechazando sin escribir la asignación incorrecta; D08/0.18 y D09/0.19 siguen reproduciendo los defectos de periodo/límite. No hay `skip` ni aserciones invertidas en la matriz completa.
+- Se observó un desfase de 8 ms entre Windows y Postgres que podía excluir como futuro un pago recién confirmado en una lectura del arnés. Las lecturas sin fecha explícita toman ahora `clock_timestamp()` real de la misma base. D09 mantiene sus instantes explícitos y D08 su bloqueo observado; ni el código de caja ni sus resultados esperados cambian.
+- **Unitarias:** 1.342 pasan, una omisión previa, 91 archivos. Se prueban la persistencia anterior al envío, recuperación de payload original, identidad nueva tras resolver, fallo de almacenamiento, autorización, migración ausente, respuesta incierta y recuperación del cierre antes de releer pedidos.
+- **Navegador:** cuatro E2E pasan contra el servidor optimizado. Además de las tres regresiones existentes, se confirma un cobro Q52, se pierde la respuesta real de la acción Next, se recarga y se verifica la recuperación con el mismo UUID/recibo y movimientos intactos; el pendiente local desaparece solo después del éxito.
+- TypeScript y build optimizado correctos. Lint sin errores, con las tres advertencias previas de intro/checkout. Auditoría `security definer`: cero hallazgos. No cambia el diseño de pantalla; los avisos usan los componentes existentes. La suite no certifica FEL, impresión ni efectos externos.
+- Fixtures AUD limpiados al terminar, también en corridas fallidas; comprobación final de restaurantes/usuarios de dinero y cobro sin residuos. No se suben secretos, trazas, reportes ni capturas de pruebas. Archivos conservados en CRLF.
+
+### Corrección del CI de #86 en la misma rama
+
+El primer CI de #86 falló en `audit-rls-candados.mjs`: faltaba en la tabla nueva la política restrictiva `super_admin_segundo_factor` que exige la 137. Se reprodujo localmente con un hallazgo. Se conserva intacta la 161 ya aplicada y se agrega **162_cobro_intentos_segundo_factor.sql**, sin cambiar datos, permisos ni funciones monetarias. La política es restrictiva y no concede acceso al cliente.
+
+Después de aplicar la 162 solo en Postgres local, el auditor de candados devuelve cero hallazgos y pasan las 22 comprobaciones de 0.14–0.15. La garantía de privilegios también comprueba ahora que exista exactamente la política restrictiva esperada, con filtro y condición de escritura de segundo factor. El verificador marca 160, 161 y 162 «sí». Tipos y lint del archivo modificado correctos. Se sube la corrección al mismo PR; el CI nuevo queda pendiente de su resultado, sin polling. Esta corrección no empieza 0.16.
+
+**Siguiente ficha:** 0.16, autorizada para continuar tras cerrar la corrección de CI de 0.15. Esta entrega se detiene en 0.15. La ola 0 sigue abierta: no corresponde cerrar el changelog ni crear etiquetas. Antes de desplegar deben revisarse las dependencias de los PR y aplicar las migraciones en el orden indicado; no basta el verde del subconjunto monetario.
 
 ---
 

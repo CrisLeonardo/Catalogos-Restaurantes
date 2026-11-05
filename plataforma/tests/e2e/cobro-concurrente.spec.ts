@@ -106,3 +106,47 @@ test('dos empleados cobran un plato una vez; el saldo se cobra y la mesa se cier
     expect(check(await db.from('orders').select('status').eq('id', orderId).single())?.status).toBe('DELIVERED');
   } finally { await Promise.allSettled(contexts.map((context) => context.close())); }
 });
+
+test('0.15 · una respuesta perdida se recupera tras recargar con la identidad original', async ({ browser }) => {
+  test.setTimeout(180_000);
+  const o = check(await db.from('orders').insert({ restaurant_id: restaurantId, order_number: `AUD-retry-${suffix}`,
+    customer_name: 'AUD Reintento', customer_phone: '00000000', order_type: 'DINE_IN', table_number: 1,
+    address: 'Mesa 1', status: 'SERVED', subtotal: 70, total: 70 }).select('id').single())!;
+  const items = check(await db.from('order_items').insert([52, 18].map((amount) => ({ order_id: o.id,
+    name_snapshot: `AUD Reintento ${amount}`, price_snapshot: amount, quantity: 1, subtotal: amount,
+    served_at: new Date().toISOString() }))).select('id,subtotal'))!;
+  const itemId = items.find((i) => Number(i.subtotal) === 52)!.id;
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  try {
+    await login(context, users[0].email);
+    const page = await context.newPage();
+    await openBill(page);
+    await page.getByRole('tab', { name: 'Por platos' }).click();
+    await page.getByRole('button', { name: /1× AUD Reintento 52.*c\/u/ }).click();
+    await page.getByRole('button', { name: 'Tarjeta', exact: true }).click();
+    let lost = false;
+    await page.route('**/*', async (route) => {
+      const request = route.request();
+      if (!lost && request.method() === 'POST' && request.headers()['next-action'] && request.postData()?.includes(itemId)) {
+        const response = await route.fetch(); // acción y COMMIT reales antes de perder la respuesta
+        expect(response.ok()).toBe(true);
+        expect(check(await db.from('order_payments').select('id').eq('order_id', o.id))).toHaveLength(1);
+        lost = true;
+        await route.abort('failed');
+      } else await route.continue();
+    });
+    await page.getByRole('button', { name: /Cobrar Q52\.00 de esta parte/ }).click();
+    await expect(page.getByText(/No se pudo confirmar el cobro/)).toBeVisible();
+    expect(lost).toBe(true);
+    const key = `leogin:cobro-pendiente:${restaurantId}:${users[0].id}`;
+    const pending = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)!), key);
+    const original = check(await db.from('cobro_intentos').select('resultado').eq('restaurant_id', restaurantId).eq('intento_id', pending.id).single())!;
+    const payments = check(await db.from('order_payments').select('*').eq('order_id', o.id));
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.getByText(/Q52\.00 cobrado · la mesa sigue abierta/)).toBeVisible();
+    expect(await page.evaluate((k) => localStorage.getItem(k), key)).toBeNull();
+    expect(check(await db.from('order_payments').select('*').eq('order_id', o.id))).toEqual(payments);
+    expect(check(await db.from('cobro_intentos').select('resultado').eq('restaurant_id', restaurantId).eq('intento_id', pending.id).single())).toEqual(original);
+    expect(original.resultado).toMatchObject({ intentoId: pending.id, cobrado: 52, paymentIds: payments!.map((p) => p.id) });
+  } finally { await context.close(); }
+});

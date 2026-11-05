@@ -45,8 +45,14 @@ import { computeSplit } from '@/lib/bill-split';
 import type { OrderWithItems } from '@/lib/db/orders';
 
 const rid = () => state.restaurantId;
-const period = (ahora = new Date()) => leerTurno(db, { restaurantId: rid(), timezone: 'America/Guatemala', corteMin: 300, ahora });
-const pay = (ids: string[], amount: number, method = 'CASH') => cobrarParteDeMesa(rid(), 1, ids, [{ amount, method: method as 'CASH' | 'CARD' }]);
+const period = async (ahora?: Date) => {
+  // Windows y el contenedor local pueden diferir unos milisegundos. Leer el
+  // reloj real de Postgres evita excluir un commit recién confirmado como
+  // si fuera futuro. D09 conserva sus instantes explícitos y D08 su carrera.
+  ahora ??= (await sql.query('select clock_timestamp() as ahora')).rows[0].ahora;
+  return leerTurno(db, { restaurantId: rid(), timezone: 'America/Guatemala', corteMin: 300, ahora });
+};
+const pay = (ids: string[], amount: number, method = 'CASH', id: string = randomUUID()) => cobrarParteDeMesa(rid(), 1, ids, [{ amount, method: method as 'CASH' | 'CARD' }], id);
 function success(result: { error?: string }) { expect(result.error).toBeUndefined(); }
 
 beforeAll(async () => {
@@ -99,7 +105,7 @@ describe('M§8 · circuito del dinero en Postgres', () => {
 
   it('D02 · Q200: tarjeta 80, efectivo 50 y tarjeta 70 se reconcilian con caja', async () => {
     const o = await order([200]);
-    success(await freeTable(rid(), 1, [{ method: 'CARD', amount: 80 }, { method: 'CASH', amount: 50 }, { method: 'CARD', amount: 70 }]));
+    success(await freeTable(rid(), 1, [{ method: 'CARD', amount: 80 }, { method: 'CASH', amount: 50 }, { method: 'CARD', amount: 70 }], randomUUID()));
     const rows = await ledger(o.id);
     // Un INSERT por lote comparte timestamp; SQL no promete orden entre empates.
     expect(rows.map((p) => [p.method, Number(p.amount)]).sort()).toEqual([['CARD', 70], ['CARD', 80], ['CASH', 50]]);
@@ -115,7 +121,7 @@ describe('M§8 · circuito del dinero en Postgres', () => {
     const gate = deferred();
     let readers = 0;
     state.beforeFetch = async (url, method) => {
-      if (method === 'POST' && url.pathname.endsWith('/rpc/leogin_cobrar_parte_mesa')) {
+      if (method === 'POST' && url.pathname.endsWith('/rpc/leogin_cobrar_parte_mesa_idempotente')) {
         if (++readers === 2) gate.resolve();
         await bounded(gate.promise);
       }
@@ -129,21 +135,29 @@ describe('M§8 · circuito del dinero en Postgres', () => {
     expect(net(rows), 'Dos peticiones no pueden cobrar Q20 por un consumo de Q10').toBe(1000);
   });
 
-  it('D04 · reintentar tras perder el acuse de un pago no duplica dinero', async () => {
+  it('D04 · recupera el resultado original al perder la respuesta después del commit', async () => {
     const o = await order([10]);
-    let lost = false;
+    const intentoId = randomUUID();
+    const cobrar = () => cobrarParteDeMesa(rid(), 1, [o.items[0].id], [{ method: 'CASH', amount: 10 }], intentoId);
+    let original: unknown;
     state.afterFetch = async (url, method, response) => {
-      if (!lost && method === 'POST' && (url.pathname.endsWith('/order_payments') || url.pathname.endsWith('/rpc/leogin_cobrar_parte_mesa'))) {
+      if (!original && method === 'POST' && url.pathname.includes('/rpc/leogin_cobrar_parte_mesa')) {
         expect(response.ok).toBe(true);
-        lost = true;
+        original = await response.clone().json();
         throw new TypeError('AUD: acuse perdido después del commit');
       }
     };
-    await pay([o.items[0].id], 10);
+    const perdido = await cobrar();
     state.afterFetch = null;
-    expect(lost).toBe(true);
-    success(await pay([o.items[0].id], 10));
-    expect(net(await ledger(o.id)), 'El reintento debe recuperar el cobro original').toBe(1000);
+    expect(perdido.error).toBeDefined();
+    expect(original).toBeDefined();
+    const filasOriginales = await ledger(o.id);
+    const recuperado = await cobrar();
+    success(recuperado);
+    expect(recuperado).toEqual(original);
+    expect(recuperado).toMatchObject({ intentoId, cobrado: 10, paymentIds: filasOriginales.map((p) => p.id) });
+    expect(await ledger(o.id)).toEqual(filasOriginales);
+    expect(net(await ledger(o.id))).toBe(1000);
   });
 
   it('D05 · pago parcial, nueva ronda y cierre conservan lo cobrado y solo cobran el saldo', async () => {
@@ -153,7 +167,7 @@ describe('M§8 · circuito del dinero en Postgres', () => {
     const before = await cobradoDeMesa(rid(), 1);
     expect(before.total).toBe(40);
     expect((await period()).pendientes.total).toBe(80);
-    success(await freeTable(rid(), 1, { method: 'CARD', amount: 80 }));
+    success(await freeTable(rid(), 1, { method: 'CARD', amount: 80 }, randomUUID()));
     const rows = await ledger();
     expect(net(rows), 'Consumo Q120, previo Q40, saldo Q80').toBe(12000);
     expect.soft(net(rows.filter((r) => r.order_id === first.id)), 'Primer pedido: Q100, no Q120').toBe(10000);
@@ -279,7 +293,7 @@ describe('0.14 · garantías del cobro transaccional', () => {
     const b = await order([60]);
     success(await cobrarParteDeMesa(rid(), 1, [a.items[0].id, b.items[0].id], [
       { method: 'CARD', amount: 50 }, { method: 'CASH', amount: 50, cashReceived: 100 },
-    ]));
+    ], randomUUID()));
     const rows = await ledger();
     expect(net(rows.filter((p) => p.order_id === a.id))).toBe(4000);
     expect(net(rows.filter((p) => p.order_id === b.id))).toBe(6000);
@@ -318,7 +332,7 @@ describe('0.14 · garantías del cobro transaccional', () => {
     await sql.query('begin');
     const lock = await sql.query("select pg_backend_pid() pid, pg_advisory_xact_lock(hashtextextended('cobro/' || $1 || '/1',0))", [rid()]);
     const partial = actor(0, () => pay([o.items[0].id], 10));
-    const close = actor(1, () => freeTable(rid(), 1, { method: 'CARD', amount: 20 }));
+    const close = actor(1, () => freeTable(rid(), 1, { method: 'CARD', amount: 20 }, randomUUID()));
     let results;
     try {
       await waitForBlockedPayment(lock.rows[0].pid, 2);
@@ -336,11 +350,11 @@ describe('0.14 · garantías del cobro transaccional', () => {
   it('rechaza un cierre desactualizado sin entregar pedidos ni añadir movimientos', async () => {
     const o = await order([10, 10]);
     success(await pay([o.items[0].id], 10));
-    expect((await freeTable(rid(), 1, { method: 'CARD', amount: 20 })).error).toMatch(/No se cerró la mesa/);
+    expect((await freeTable(rid(), 1, { method: 'CARD', amount: 20 }, randomUUID())).error).toMatch(/No se cerró la mesa/);
     expect(net(await ledger(o.id))).toBe(1000);
     expect(checked(await db.from('orders').select('status').eq('id', o.id).single())?.status).toBe('SERVED');
     // Con un saldo actualizado, un solo pedido se cierra sin repetir el pago.
-    success(await freeTable(rid(), 1, { method: 'CARD', amount: 10 }));
+    success(await freeTable(rid(), 1, { method: 'CARD', amount: 10 }, randomUUID()));
     expect(net(await ledger(o.id))).toBe(2000);
   });
 
@@ -348,5 +362,146 @@ describe('0.14 · garantías del cobro transaccional', () => {
     const { rows } = await sql.query("select proname, has_function_privilege('anon',oid,'execute') anon, has_function_privilege('authenticated',oid,'execute') auth, has_function_privilege('service_role',oid,'execute') service from pg_proc where proname in ('leogin_cobrar_parte_mesa','leogin_confirmar_cierre_mesa','leogin_bloquear_cuenta_mesa')");
     expect(rows).toHaveLength(3);
     for (const row of rows) expect(row).toMatchObject({ anon: false, auth: false, service: true });
+  });
+});
+
+describe('0.15 · identidad durable del intento', () => {
+  it('una identidad queda acotada al restaurante y no recupera el recibo de otro local', async () => {
+    const id = randomUUID();
+    const o = await order([10]);
+    const original = await pay([o.items[0].id], 10, 'CASH', id);
+    success(original);
+    const other = checked(await db.from('restaurants').insert({ name: 'AUD Dinero otro', slug: `aud-dinero-${randomUUID()}`, status: 'active' }).select('id').single())!;
+    try {
+      // Acceso de servicio para consultar otro fixture, nunca otro local real.
+      const found = checked(await db.rpc('leogin_recuperar_intento_cobro', {
+        p_restaurant: other.id, p_mesa: 1, p_intento: id, p_operacion: 'parte',
+        p_solicitud: { items: [o.items[0].id], pagos: [{ method: 'CASH', amount: 10 }] }, p_actor: state.users[0],
+      }));
+      expect(found).toBeNull();
+      expect(await pay([o.items[0].id], 10, 'CASH', id)).toEqual(original);
+    } finally { checked(await db.from('restaurants').delete().eq('id', other.id)); }
+  });
+
+  it('dos peticiones del mismo intento parcial devuelven exactamente un resultado', async () => {
+    const o = await order([100]);
+    const id = randomUUID();
+    const results = await Promise.all([pay([o.items[0].id], 40, 'CASH', id), pay([o.items[0].id], 40, 'CASH', id)]);
+    results.forEach(success);
+    expect(results[0]).toEqual(results[1]);
+    expect(await ledger(o.id)).toHaveLength(1);
+    expect(net(await ledger(o.id))).toBe(4000);
+    expect(checked(await db.from('cobro_intentos').select('*').eq('restaurant_id', rid()))).toHaveLength(1);
+  });
+
+  it('otra identidad permite un pago idéntico legítimo hasta el saldo disponible', async () => {
+    const o = await order([100]);
+    const original = await pay([o.items[0].id], 40);
+    success(original);
+    const second = await pay([o.items[0].id], 40);
+    success(second);
+    expect(second.paymentIds).not.toEqual(original.paymentIds);
+    expect((await pay([o.items[0].id], 40)).error).toMatch(/saldo cambió/);
+    success(await pay([o.items[0].id], 20));
+    const rows = await ledger(o.id);
+    expect(net(rows)).toBe(10000);
+    expect(rows).toHaveLength(3);
+    expect(await pay([o.items[0].id], 40, 'CASH', original.intentoId)).toEqual(original);
+    expect(await ledger(o.id)).toEqual(rows);
+  });
+
+  it('no reutiliza la identidad con otro importe, método, línea, mesa, operación o empleado', async () => {
+    const o = await order([100, 100]);
+    const id = randomUUID();
+    success(await pay([o.items[0].id], 40, 'CASH', id));
+    const before = await ledger(o.id);
+    const changed = [
+      await pay([o.items[0].id], 20, 'CASH', id),
+      await pay([o.items[0].id], 40, 'CARD', id),
+      await pay([o.items[1].id], 40, 'CASH', id),
+      await cobrarParteDeMesa(rid(), 2, [o.items[0].id], [{ method: 'CASH', amount: 40 }], id),
+      await freeTable(rid(), 1, { method: 'CASH', amount: 40 }, id),
+      await actor(1, () => pay([o.items[0].id], 40, 'CASH', id)),
+    ];
+    for (const result of changed) expect(result.error).toMatch(/identidad del intento/);
+    expect(await ledger(o.id)).toEqual(before);
+  });
+
+  it('un fallo de reparto no deja ni dinero ni identidad; permite repetir tras corregirlo', async () => {
+    const o = await order([10]);
+    const id = randomUUID();
+    checked(await db.from('table_splits').insert({ restaurant_id: rid(), table_number: 1, mode: 'byItem',
+      people: Array.from({ length: 30 }, (_, i) => ({ id: `p${i}`, name: `AUD ${i}` })), assignment: {}, paid: [] }));
+    expect((await pay([o.items[0].id], 10, 'CASH', id)).error).toMatch(/30 partes/);
+    expect(await ledger(o.id)).toEqual([]);
+    expect(checked(await db.from('cobro_intentos').select('*').eq('restaurant_id', rid()))).toEqual([]);
+    checked(await db.from('table_splits').delete().eq('restaurant_id', rid()));
+    success(await pay([o.items[0].id], 10, 'CASH', id));
+    expect(net(await ledger(o.id))).toBe(1000);
+  });
+
+  it('recupera el cierre perdido aunque la mesa ya tenga una ronda nueva', async () => {
+    const o = await order([10]);
+    const id = randomUUID();
+    const close = () => freeTable(rid(), 1, { method: 'CARD', amount: 10 }, id);
+    let original: unknown;
+    state.afterFetch = async (url, method, response) => {
+      if (!original && method === 'POST' && url.pathname.endsWith('/rpc/leogin_cerrar_mesa_idempotente')) {
+        expect(response.ok).toBe(true);
+        original = await response.clone().json();
+        throw new TypeError('AUD: cierre confirmado sin acuse');
+      }
+    };
+    expect((await close()).error).toBeDefined();
+    state.afterFetch = null;
+    expect(original).toBeDefined();
+    const rows = await ledger(o.id);
+    const fresh = await order([20]);
+    const freshBefore = checked(await db.from('orders').select('*').eq('id', fresh.id).single());
+    const recovered = await close();
+    success(recovered);
+    expect(recovered).toEqual(original);
+    expect(recovered).toMatchObject({ intentoId: id, cobrado: 10, paymentIds: rows.map((p) => p.id), orderIds: [o.id] });
+    expect(await ledger(o.id)).toEqual(rows);
+    expect(await ledger(fresh.id)).toEqual([]);
+    expect(checked(await db.from('orders').select('*').eq('id', fresh.id).single())).toEqual(freshBefore);
+  });
+
+  it('un cierre simultáneo con la misma identidad confirma una sola vez', async () => {
+    const o = await order([10]);
+    const id = randomUUID();
+    const close = () => freeTable(rid(), 1, { method: 'CARD', amount: 10 }, id);
+    const results = await Promise.all([close(), close()]);
+    results.forEach(success);
+    expect(results[0]).toEqual(results[1]);
+    expect(await ledger(o.id)).toHaveLength(1);
+    expect(net(await ledger(o.id))).toBe(1000);
+    expect((await freeTable(rid(), 1, { method: 'CARD', amount: 10 }, randomUUID())).error).toMatch(/ya se cobró/);
+  });
+
+  it('devuelve el recibo guardado aun tras cerrar y devolver; no reconstruye el original', async () => {
+    const o = await order([10]);
+    const id = randomUUID();
+    const original = await pay([o.items[0].id], 10, 'CASH', id);
+    success(original);
+    success(await freeTable(rid(), 1));
+    success(await devolverCobro({ restaurantId: rid(), orderId: o.id, reason: 'AUD devolución posterior al intento' }));
+    const before = await ledger(o.id);
+    expect(await pay([o.items[0].id], 10, 'CASH', id)).toEqual(original);
+    expect(await ledger(o.id)).toEqual(before);
+    expect(net(before)).toBe(0);
+  });
+
+  it('la recuperación exige servicio y la tabla durable no admite escritura de clientes ni actualización del servicio', async () => {
+    const { rows } = await sql.query("select proname, prosecdef, has_function_privilege('anon',oid,'execute') anon, has_function_privilege('authenticated',oid,'execute') auth, has_function_privilege('service_role',oid,'execute') service from pg_proc where proname in ('leogin_recuperar_intento_cobro','leogin_cobrar_parte_mesa_idempotente','leogin_cerrar_mesa_idempotente')");
+    expect(rows).toHaveLength(3);
+    for (const row of rows) expect(row).toMatchObject({ prosecdef: false, anon: false, auth: false, service: true });
+    const privileges = await sql.query("select has_table_privilege('anon','public.cobro_intentos','SELECT,INSERT,UPDATE,DELETE') anon, has_table_privilege('authenticated','public.cobro_intentos','SELECT,INSERT,UPDATE,DELETE') auth, has_table_privilege('service_role','public.cobro_intentos','UPDATE,DELETE') mutable, relrowsecurity rls from pg_class where oid='public.cobro_intentos'::regclass");
+    expect(privileges.rows[0]).toEqual({ anon: false, auth: false, mutable: false, rls: true });
+    const policies = await sql.query("select polname, polpermissive, polcmd, pg_get_expr(polqual,polrelid) as filtro, pg_get_expr(polwithcheck,polrelid) as escritura from pg_policy where polrelid='public.cobro_intentos'::regclass");
+    expect(policies.rows).toHaveLength(1);
+    expect(policies.rows[0]).toMatchObject({ polname: 'super_admin_segundo_factor', polpermissive: false, polcmd: '*' });
+    expect(policies.rows[0].filtro).toContain('leogin_sesion_con_segundo_factor()');
+    expect(policies.rows[0].escritura).toContain('leogin_sesion_con_segundo_factor()');
   });
 });
