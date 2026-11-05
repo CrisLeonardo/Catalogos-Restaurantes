@@ -33,7 +33,7 @@ import { assertTableAccess } from '@/lib/auth/table-access';
 import { revalidarSalon } from '@/lib/salon-cache';
 import { hayColumnaMesa, direccionDeMesa } from '@/lib/db/mesa-columna';
 import { hayTurnosDeMesa, hayPagosDeMesa } from '@/lib/db/table-sessions';
-import { faltaLaColumna, faltaLaTabla } from '@/lib/db/migracion-ausente';
+import { faltaLaColumna, faltaLaTabla, faltaLaFuncion } from '@/lib/db/migracion-ausente';
 import { isPaymentMethod, type PaymentMethod } from '@/lib/payment-method';
 import { updateOrderStatus } from '@/lib/actions/orders';
 import { revalidatePath, updateTag } from 'next/cache';
@@ -225,7 +225,7 @@ export interface CobroParcialResult {
   error?: string;
   /** Lo que de verdad se apuntó. */
   cobrado?: number;
-  /** La 129 no ha corrido aquí. */
+  /** Falta la función transaccional de la 160. */
   needsMigration?: boolean;
 }
 
@@ -259,167 +259,20 @@ export async function cobrarParteDeMesa(
 
   const db = createServiceClient();
 
-  /* Las líneas, con su pedido y su importe. El importe sale de la BASE y
-     no de lo que mandó el navegador: es dinero. */
-  const { data: lineas, error: errLeer } = await db
-    .from('order_items')
-    .select('id, order_id, subtotal, order:orders!inner(restaurant_id, status)')
-    .in('id', itemIds);
-
-  if (errLeer) return { error: errLeer.message };
-
-  type Fila = {
-    id: string; order_id: string; subtotal: number;
-    order?: { restaurant_id: string; status: string } | null;
-  };
-  const propias = ((lineas ?? []) as unknown as Fila[]).filter(
-    (l) => l.order?.restaurant_id === restaurantId
-      && l.order.status !== 'DELIVERED' && l.order.status !== 'CANCEL',
-  );
-  if (propias.length === 0) return { error: 'Esos platos ya no están en la mesa.' };
-
-  /* Cuánto le toca a cada pedido.
-     ------------------------------------------------------------
-     No es la suma de sus líneas marcadas: eso es CONSUMO, y el pedido
-     cobra `orders.total`, que además lleva propina y descuentos. Una
-     parte tiene que pagar su trozo de esos extras — si no, quien pague
-     el último carga con toda la propina de la mesa y la suma de las
-     partes no da el total.
-
-     Así que se reparte en proporción DENTRO DE CADA PEDIDO: lo marcado
-     sobre lo que ese pedido consumió, aplicado a lo que ese pedido
-     cobra. Mismo criterio que `lib/bill-split.ts`. */
-  const marcadoPorPedido = new Map<string, number>();
-  for (const l of propias) {
-    marcadoPorPedido.set(l.order_id, (marcadoPorPedido.get(l.order_id) ?? 0) + Number(l.subtotal ?? 0));
+  const { data, error } = await db.rpc('leogin_cobrar_parte_mesa', {
+    p_restaurant: restaurantId,
+    p_mesa: tableNumber,
+    p_items: itemIds,
+    p_pagos: pagos,
+    p_actor: acceso.actor.userId,
+  });
+  if (error) {
+    if (faltaLaFuncion(error)) return { error: 'Falta la migración 160 para cobrar con el saldo protegido.', needsMigration: true };
+    return { error: error.message };
   }
-
-  const { data: todasLasLineas } = await db
-    .from('order_items')
-    .select('order_id, subtotal')
-    .in('order_id', [...marcadoPorPedido.keys()]);
-
-  const consumoPorPedido = new Map<string, number>();
-  for (const l of (todasLasLineas ?? []) as { order_id: string; subtotal: number }[]) {
-    consumoPorPedido.set(l.order_id, (consumoPorPedido.get(l.order_id) ?? 0) + Number(l.subtotal ?? 0));
-  }
-
-  const { data: totales } = await db
-    .from('orders')
-    .select('id, total')
-    .in('id', [...marcadoPorPedido.keys()]);
-  const totalPorPedido = new Map(
-    ((totales ?? []) as { id: string; total: number }[]).map((o) => [o.id, Number(o.total ?? 0)]),
-  );
-
-  const porPedido = new Map<string, number>();
-  for (const [orderId, marcado] of marcadoPorPedido) {
-    const consumoPedido = consumoPorPedido.get(orderId) ?? marcado;
-    const totalPedido = totalPorPedido.get(orderId) ?? consumoPedido;
-    const factor = consumoPedido > 0 ? totalPedido / consumoPedido : 1;
-    porPedido.set(orderId, Math.round(marcado * factor * 100) / 100);
-  }
-
-  const consumo = Math.round([...porPedido.values()].reduce((s, v) => s + v, 0) * 100) / 100;
-  if (consumo <= 0) return { error: 'Esa parte no suma nada.' };
-
-  /* El dinero que entró, repartido por pedido y por método. Se recorta a
-     lo que esa parte vale: si alguien puso de más en efectivo, el exceso
-     es vuelto y no una venta. */
-  const filas: {
-    restaurant_id: string; order_id: string; method: string;
-    amount: number; cash_received: number | null; taken_by: string;
-  }[] = [];
-
-  let restante = Math.min(
-    consumo,
-    Math.round(pagos.reduce((s, p) => s + p.amount, 0) * 100) / 100,
-  );
-
-  for (const [orderId, tocaRaw] of porPedido) {
-    if (restante <= 0.004) break;
-    let toca = Math.min(Math.round(tocaRaw * 100) / 100, restante);
-    for (const pago of pagos) {
-      if (toca <= 0.004) break;
-      const aplica = Math.min(Math.round(pago.amount * 100) / 100, toca);
-      if (aplica <= 0.004) continue;
-      filas.push({
-        restaurant_id: restaurantId,
-        order_id: orderId,
-        method: pago.method,
-        amount: aplica,
-        /* Solo se deja escrito el «recibí» cuando de verdad cubre lo que
-           se le aplicó: un recibí menor es un teclazo a medias y haría
-           que el ticket prometiera un vuelto que nadie dio. Mismo
-           criterio que `freeTable`. */
-        cash_received: pago.method === 'CASH' && pago.cashReceived != null
-          && pago.cashReceived >= aplica ? pago.cashReceived : null,
-        taken_by: acceso.actor.userId,
-      });
-      toca = Math.round((toca - aplica) * 100) / 100;
-      restante = Math.round((restante - aplica) * 100) / 100;
-    }
-  }
-
-  if (filas.length === 0) return { error: 'Ese pago no cubre nada de la parte marcada.' };
-
-  const { error: errPago } = await db.from('order_payments').insert(filas);
-  if (errPago) {
-    if (faltaLaTabla(errPago)) {
-      return {
-        error: 'Falta la migración 129 para poder cobrar por partes sin cerrar la mesa.',
-        needsMigration: true,
-      };
-    }
-    return { error: errPago.message };
-  }
-
-  /* Y la línea queda marcada como saldada en el reparto compartido, para
-     que la siguiente persona que abra la mesa —en otra tablet— vea qué
-     falta por cobrar y no vuelva a cobrarlo. La 125 puede no estar: eso
-     no invalida el dinero que ya entró, así que se degrada en silencio. */
-  await marcarLineasPagadas(db, restaurantId, tableNumber, propias.map((l) => l.id));
-
+  if (!data || !(Number(data.cobrado) > 0)) return { error: 'No se pudo confirmar el cobro. Actualiza la cuenta.' };
   revalidarSalon();
-  return { cobrado: Math.round(filas.reduce((s, f) => s + f.amount, 0) * 100) / 100 };
-}
-
-/** Apunta en `table_splits` qué líneas ya están saldadas. */
-async function marcarLineasPagadas(
-  db: ReturnType<typeof createServiceClient>,
-  restaurantId: string,
-  tableNumber: number,
-  itemIds: string[],
-): Promise<void> {
-  const { data, error } = await db
-    .from('table_splits')
-    .select('mode, people, assignment, paid')
-    .eq('restaurant_id', restaurantId)
-    .eq('table_number', tableNumber)
-    .maybeSingle();
-  if (error && faltaLaTabla(error)) return;
-
-  /* Una persona por cobro parcial. No se reutiliza «la misma persona»
-     porque cada parte la paga alguien distinto: eso es lo que significa
-     cobrar por platos. */
-  const people = Array.isArray(data?.people) ? (data!.people as { id: string; name?: string }[]) : [];
-  const assignment = (data?.assignment as Record<string, string[]> | null) ?? {};
-  const paid = Array.isArray(data?.paid) ? (data!.paid as string[]) : [];
-
-  const id = `p${people.length + 1}`;
-  const siguiente = {
-    mode: 'byItem' as const,
-    people: [...people, { id, name: `Parte ${people.length + 1}` }].slice(0, 30),
-    assignment: { ...assignment, ...Object.fromEntries(itemIds.map((i) => [i, [id]])) },
-    paid: [...new Set([...paid, id])].slice(0, 31),
-    updated_at: new Date().toISOString(),
-  };
-
-  await db.from('table_splits').upsert({
-    restaurant_id: restaurantId,
-    table_number: tableNumber,
-    ...siguiente,
-  }, { onConflict: 'restaurant_id,table_number' });
+  return { cobrado: Number(data.cobrado) };
 }
 
 /**

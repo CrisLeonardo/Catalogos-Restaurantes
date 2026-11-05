@@ -31,10 +31,9 @@ import { getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalt
 import { resolveItemOptions } from '@/lib/order-options';
 import { isUnavailable } from '@/lib/product-availability';
 import { isPaymentMethod, type PaymentMethod } from '@/lib/payment-method';
-import { repartirPagos, metodoDominante, type PagoEntrada } from '@/lib/table-payments';
+import { repartirPagos, type PagoEntrada } from '@/lib/table-payments';
 import { hayColumnaMesa, direccionDeMesa } from '@/lib/db/mesa-columna';
 import { assertTableAccess } from '@/lib/auth/table-access';
-import { cerrarTurnoDeMesa, hayPagosDeMesa } from '@/lib/db/table-sessions';
 import { faltaLaColumna, faltaLaFuncion, faltaLaTabla } from '@/lib/db/migracion-ausente';
 
 /**
@@ -1162,97 +1161,22 @@ export async function freeTable(
   }));
   const filas = repartirPagos(ordenes, entradas);
 
-  /* Qué método se escribe en cada pedido. Sigue siendo UNA palabra por
-     pedido —el ticket, los informes y analítica la leen así desde
-     siempre— y es la del método que más puso. El detalle exacto está en
-     `order_payments`. */
-  const metodoDe = new Map<string, string>();
-  const recibidoDe = new Map<string, number | null>();
-  for (const o of ordenes) {
-    const suyas = filas.filter((f) => f.orderId === o.id);
-    if (suyas.length === 0) continue;
-    metodoDe.set(o.id, metodoDominante(suyas));
-    /* El efectivo recibido se guarda SOLO cuando de verdad cubre lo que
-       se le aplicó: un "recibí" menor es un teclazo a medias, y dejarlo
-       escrito haría que el ticket prometiera un vuelto que nadie dio. */
-    const enEfectivo = suyas.filter((f) => f.method === 'CASH');
-    const recibido = enEfectivo.find((f) => f.cashReceived != null)?.cashReceived ?? null;
-    const aplicado = enEfectivo.reduce((s, f) => s + f.amount, 0);
-    recibidoDe.set(o.id, recibido != null && recibido >= aplicado ? recibido : null);
+  /* El servidor SQL vuelve a comprobar el saldo bajo el mismo bloqueo
+     que el cobro parcial. Pedidos, movimientos, reparto y sesión se
+     confirman juntos; nunca se cierra tras un INSERT de pago fallido. */
+  const { data: confirmados, error: errCierre } = await db.rpc('leogin_confirmar_cierre_mesa', {
+    p_restaurant: restaurantId,
+    p_mesa: tableNumber,
+    p_orders: ordenes.map((o) => o.id),
+    p_filas: filas,
+    p_actor: acceso.actor.userId,
+  });
+  if (errCierre) {
+    if (faltaLaFuncion(errCierre)) return { error: 'Falta la migración 160 para cerrar la cuenta con el saldo protegido.' };
+    return { error: errCierre.message };
   }
-
-  const cierre: Record<string, unknown> = {
-    status: 'DELIVERED',
-    delivered_at: new Date().toISOString(),
-  };
-
-  /* Se cierran SOLO los pedidos que se leyeron arriba, y solo si siguen
-     abiertos (PROD-07, auditoría de salida a producción). Antes se cerraba
-     «todo lo abierto en la mesa en este momento»: una ronda que el mesero
-     mandaba justo mientras caja cobraba quedaba cerrada sin pago, y dos
-     aparatos cobrando a la vez registraban el pago dos veces. Lo que
-     devuelve el `update` es lo que ESTA llamada cerró de verdad, y solo
-     de eso se escribe el método y el detalle del pago. */
-  let ids: string[] = [];
-  if (ordenes.length > 0) {
-    const { data: cerrados, error } = await db
-      .from('orders')
-      .update(cierre)
-      .eq('restaurant_id', restaurantId)
-      .in('id', ordenes.map((o) => o.id))
-      .not('status', 'in', '("DELIVERED","CANCEL")')
-      .select('id');
-
-    if (error) return { error: error.message };
-    ids = (cerrados ?? []).map((r) => r.id as string);
-    // Otro aparato cobró la mesa entre la lectura y el cierre.
-    if (ids.length === 0) return { error: 'Esta mesa ya se cobró.' };
-  }
-  const cerradosAqui = new Set(ids);
-
-  for (const [orderId, metodo] of metodoDe) {
-    if (!cerradosAqui.has(orderId)) continue;
-    await db
-      .from('orders')
-      .update({ payment_method: metodo, cash_amount: recibidoDe.get(orderId) ?? null })
-      .eq('id', orderId);
-  }
-
-  /* Y el detalle, fila por fila. Si la 129 todavía no corrió aquí, el
-     cobro NO se cae: la mesa se cierra igual con su método dominante,
-     que es exactamente lo que hacía antes de esta migración. */
-  const filasCerradas = filas.filter((f) => cerradosAqui.has(f.orderId));
-  if (filasCerradas.length > 0 && (await hayPagosDeMesa())) {
-    const pagosDeCierre = filasCerradas.map((f) => ({
-      restaurant_id: restaurantId,
-      order_id: f.orderId,
-      method: f.method,
-      amount: f.amount,
-      cash_received: f.cashReceived,
-      taken_by: acceso.actor.userId,
-      /* El cobro que CIERRA la mesa, distinto de los cobros por partes: es
-         el que se compensa si la mesa se reabre por error (migración 145). */
-      kind: 'TABLE_CLOSE',
-    }));
-    const { error: errPagos } = await db.from('order_payments').insert(pagosDeCierre);
-    // Sin la 145 la columna no existe: el cobro se escribe como antes.
-    if (errPagos && faltaLaColumna(errPagos)) {
-      await db.from('order_payments').insert(pagosDeCierre.map(({ kind: _kind, ...resto }) => resto));
-    }
-  }
-
-  /* El reparto era de la gente que se acaba de ir: heredarlo a los
-     próximos comensales mezclaría dos cuentas que no tienen nada que
-     ver (migración 125). Si la tabla no existe todavía, no pasa nada. */
-  await db.from('table_splits')
-    .delete()
-    .eq('restaurant_id', restaurantId)
-    .eq('table_number', tableNumber);
-
-  /* Y el turno se cierra aquí (migración 128). Cobrar es lo que vacía una
-     mesa: si el turno siguiera abierto, la mesa quedaría «sentada» para
-     siempre y el salón no se vaciaría nunca. */
-  await cerrarTurnoDeMesa(restaurantId, tableNumber);
+  if (!Array.isArray(confirmados)) return { error: 'No se pudo confirmar el cierre. Actualiza la cuenta.' };
+  const ids = confirmados as string[];
 
   // Una factura por pedido cerrado. En `after` para no dejar al mesero
   // esperando al certificador con la mesa ocupada en pantalla.
