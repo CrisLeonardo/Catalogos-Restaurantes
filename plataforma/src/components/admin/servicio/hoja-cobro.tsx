@@ -28,7 +28,10 @@
    transferencia, y el arqueo de la noche los cuenta por separado. */
 
 import { useMemo, useState } from 'react';
-import { Hoja, HojaHead, Kicker, Mono } from '@/components/admin/servicio/pieces';
+import { Tabs } from '@base-ui/react/tabs';
+import { HojaOperativa } from '@/components/ui/hoja-operativa';
+import { Button } from '@/components/ui/button';
+import { Kicker, Mono } from '@/components/admin/servicio/pieces';
 import { importeLinea, type LineaServicio, type ResumenComanda } from '@/lib/servicio/comanda';
 import { PAYMENT_LABEL, PAYMENT_METHODS, type PaymentMethod } from '@/lib/payment-method';
 import type { BillBreakdown } from '@/lib/bill-split';
@@ -175,11 +178,28 @@ export default function HojaCobro({
       ? `Cobrar ${money(importeParte)} de esta parte`
       : `Cobrar ${money(base)} y cerrar`;
 
-  return (
-    <Hoja onClose={onClose} label={`Cobrar ${titulo}`}>
-      <div className="sv-sheet-pad">
-        <HojaHead title={`Cobrar ${titulo}`} total={money(pendiente)} onClose={onClose} />
+  const pie = (
+    <div className="sv-cobro-pie">
+      {esParcial && (
+        <p className="sv-foot-note">
+          La mesa sigue abierta con {money(r2(pendiente - importeParte))} pendientes.
+        </p>
+      )}
+      <Button type="button" size="action" className="w-full" onClick={cobrar} disabled={!puede} aria-busy={busy}>
+        {busy ? 'Cobrando…' : cta}
+      </Button>
+    </div>
+  );
 
+  return (
+    <HojaOperativa
+      label={`Cobrar ${titulo}`}
+      className="hoja-cobro"
+      onClose={onClose}
+      resumen={<Fila label="Por cobrar" valor={money(pendiente)} destacada />}
+      footer={pie}
+    >
+      <div className="sv-cobro-contenido">
         {/* El desglose de verdad. Solo sale cuando hay algo que desglosar:
             una mesa sin propina ni descuento no necesita tres renglones
             para decir que el total es el total. */}
@@ -203,7 +223,7 @@ export default function HojaCobro({
             <div style={{ fontSize: 13, fontWeight: 600 }}>{sugerencias.label}</div>
             <div className="sv-opts-row">
               {sugerencias.items.map((p) => (
-                <button key={p.id} type="button" className="sv-fav" onClick={() => onSugerir(p)}>
+                <button key={p.id} type="button" className="sv-fav" disabled={busy} onClick={() => onSugerir(p)}>
                   + {p.name}
                   <span className="sv-fav-price">{money(p.price)}</span>
                 </button>
@@ -212,41 +232,44 @@ export default function HojaCobro({
           </div>
         )}
 
-        <div className="sv-seg" role="tablist">
-          <button type="button" role="tab" data-on={modo === 'todo' ? '1' : '0'} aria-selected={modo === 'todo'} onClick={() => { setModo('todo'); setMarcadas([]); setRecibido(null); }}>
-            Cuenta completa
-          </button>
-          <button type="button" role="tab" data-on={modo === 'iguales' ? '1' : '0'} aria-selected={modo === 'iguales'} onClick={() => { setModo('iguales'); setMarcadas([]); setRecibido(null); }}>
-            Partes iguales
-          </button>
-          <button type="button" role="tab" data-on={modo === 'platos' ? '1' : '0'} aria-selected={modo === 'platos'} onClick={() => { setModo('platos'); setRecibido(null); }}>
-            Por platos
-          </button>
-        </div>
-
-        {modo === 'iguales' && (
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-            padding: 14, borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair)',
-            background: 'var(--adm-card)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button type="button" className="sv-step" style={{ width: 46, height: 46 }} onClick={() => setPersonas((n) => Math.max(1, n - 1))} aria-label="Una persona menos">−</button>
-              <div style={{ minWidth: 76, textAlign: 'center' }}>
-                <Mono size={20}>{personas}</Mono>
-                <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500 }}>personas</div>
+        <Tabs.Root
+          value={modo}
+          onValueChange={(value) => {
+            if (busy || (value !== 'todo' && value !== 'iguales' && value !== 'platos')) return;
+            setModo(value);
+            if (value !== 'platos') setMarcadas([]);
+            setRecibido(null);
+          }}
+        >
+          <Tabs.List className="sv-seg" aria-label="Alcance del cobro">
+            <Tabs.Tab value="todo" disabled={busy}>Cuenta completa</Tabs.Tab>
+            <Tabs.Tab value="iguales" disabled={busy}>Calcular partes</Tabs.Tab>
+            <Tabs.Tab value="platos" disabled={busy}>Por platos</Tabs.Tab>
+          </Tabs.List>
+          <Tabs.Panel value="todo" />
+          <Tabs.Panel value="iguales" className="sv-cobro-modo">
+            <div className="sv-cobro-partes" style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+              padding: 14, borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair)',
+              background: 'var(--adm-card)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button type="button" className="sv-step" disabled={busy} onClick={() => setPersonas((n) => Math.max(1, n - 1))} aria-label="Una persona menos">−</button>
+                <div style={{ minWidth: 76, textAlign: 'center' }}>
+                  <Mono size={20}>{personas}</Mono>
+                  <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500 }}>personas</div>
+                </div>
+                <button type="button" className="sv-step" disabled={busy} onClick={() => setPersonas((n) => Math.min(20, n + 1))} aria-label="Una persona más">+</button>
               </div>
-              <button type="button" className="sv-step" style={{ width: 46, height: 46 }} onClick={() => setPersonas((n) => Math.min(20, n + 1))} aria-label="Una persona más">+</button>
+              <div style={{ textAlign: 'right' }}>
+                <Mono size={22}>{money(r2(pendiente / Math.max(1, personas)))}</Mono>
+                <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500 }}>cada uno</div>
+              </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <Mono size={22}>{money(r2(pendiente / Math.max(1, personas)))}</Mono>
-              <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500 }}>cada uno</div>
-            </div>
-          </div>
-        )}
+            <p className="sv-foot-note">Importe de referencia por persona. El botón cobra el saldo completo.</p>
+          </Tabs.Panel>
 
-        {modo === 'platos' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Tabs.Panel value="platos" className="sv-cobro-modo">
             <div style={{ fontSize: 13, color: 'var(--u-text-3)', fontWeight: 500, lineHeight: 1.45 }}>
               Toca lo que paga esta persona. Lo demás queda abierto en la mesa.
             </div>
@@ -258,6 +281,8 @@ export default function HojaCobro({
                   type="button"
                   className="sv-pay"
                   data-on={on ? '1' : '0'}
+                  aria-pressed={on}
+                  disabled={busy}
                   onClick={() => setMarcadas((prev) => (on ? prev.filter((x) => x !== l.id) : [...prev, l.id]))}
                 >
                   <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
@@ -269,25 +294,27 @@ export default function HojaCobro({
                     </span>
                   </span>
                   <Mono size={14}>{money(importeLinea(l))}</Mono>
-                  <span className="sv-pay-box">{on ? '✓' : ''}</span>
+                  <span className="sv-pay-box" aria-hidden>{on ? '✓' : ''}</span>
                 </button>
               );
             })}
             {cobrables.length === 0 && (
               <div className="sv-vacio" style={{ padding: '18px 0' }}>Ya está todo cobrado.</div>
             )}
-          </div>
-        )}
+          </Tabs.Panel>
+        </Tabs.Root>
 
         <div>
           <Kicker>¿Cómo pagan?</Kicker>
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <div className="sv-cobro-metodos" role="group" aria-label="Método de pago">
             {PAYMENT_METHODS.map((m) => (
               <button
                 key={m}
                 type="button"
                 className="sv-choice"
                 data-on={metodo === m ? '1' : '0'}
+                aria-pressed={metodo === m}
+                disabled={busy}
                 onClick={() => { setMetodo(m); setRecibido(null); }}
               >
                 {PAYMENT_LABEL[m]}
@@ -306,6 +333,8 @@ export default function HojaCobro({
                   className="sv-choice"
                   data-mono="1"
                   data-on={recibido === v ? '1' : '0'}
+                  aria-pressed={recibido === v}
+                  disabled={busy}
                   style={{ flex: '0 0 auto', minWidth: 0 }}
                   onClick={() => setRecibido(recibido === v ? null : v)}
                 >
@@ -317,7 +346,7 @@ export default function HojaCobro({
               ))}
             </div>
             {vuelto != null && (
-              <div className="sv-vuelto">
+              <div className="sv-vuelto" role="status">
                 <span style={{ fontSize: 14, fontWeight: 600 }}>Vuelto</span>
                 <span className="sv-vuelto-n">{money(vuelto)}</span>
               </div>
@@ -326,30 +355,24 @@ export default function HojaCobro({
         )}
 
         {faltaEfectivo && (
-          <div className="sv-hint" style={{ background: 'var(--c-danger-bg)', color: 'var(--c-danger)' }}>
+          <div className="sv-hint" role="alert" style={{ background: 'var(--c-danger-bg)', color: 'var(--c-danger)' }}>
             Con {money(recibido ?? 0)} no alcanza: faltan {money(r2(base - (recibido ?? 0)))}.
           </div>
         )}
 
-        <button type="button" className="sv-cta" data-tone="ok" style={{ height: 58, fontSize: 16 }} onClick={cobrar} disabled={!puede}>
-          {busy ? 'Cobrando…' : cta}
-        </button>
-
-        {esParcial && (
-          <div className="sv-foot-note">
-            Se cobra solo esta parte. La mesa sigue abierta con {money(r2(pendiente - importeParte))} pendientes.
-          </div>
-        )}
       </div>
-    </Hoja>
+    </HojaOperativa>
   );
 }
 
-function Fila({ label, valor, tone }: { label: string; valor: string; tone?: 'ok' }) {
+function Fila({ label, valor, tone, destacada = false }: {
+  label: string; valor: string; tone?: 'ok'; destacada?: boolean;
+}) {
   return (
-    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
-      <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{label}</span>
-      <Mono size={14} weight={500} color={tone === 'ok' ? 'var(--c-ok)' : 'var(--u-text-2)'}>{valor}</Mono>
+    <div className="sv-cobro-fila" data-destacada={destacada || undefined}>
+      <span>{label}</span>
+      <Mono className="sv-cobro-importe" size={destacada ? 21 : 14} weight={destacada ? 600 : 500}
+        color={tone === 'ok' ? 'var(--c-ok)' : undefined}>{valor}</Mono>
     </div>
   );
 }

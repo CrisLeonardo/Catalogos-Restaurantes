@@ -116,6 +116,36 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
     await cleanupTenant(tenantB);
   });
 
+  test('1.0 · la ficha del platillo conserva la acción y devuelve el foco', async ({ page }) => {
+    test.setTimeout(180_000);
+    await page.setViewportSize({ width: 390, height: 560 });
+    await page.goto(tenantUrl(tenantA.slug));
+    const verMenu = page.getByRole('button', { name: 'Ver el menú' });
+    if (await verMenu.isVisible()) await verMenu.click();
+    const omitir = page.getByRole('button', { name: 'Ahora no' });
+    await omitir.waitFor({ state: 'visible', timeout: 5_000 }).catch(() => {});
+    if (await omitir.isVisible()) await omitir.click();
+
+    const tarjeta = page.getByRole('button', { name: `Ver ${tenantA.productName}`, exact: true }).first();
+    const ficha = page.getByRole('dialog', { name: tenantA.productName, exact: true });
+    await expect(async () => {
+      await tarjeta.focus();
+      await tarjeta.press('Enter');
+      await expect(ficha).toBeVisible({ timeout: 3_000 });
+    }).toPass({ timeout: 60_000 });
+    const agregar = ficha.getByRole('button', { name: /Agregar.*42\.00/ });
+    await expect(agregar).toBeInViewport({ ratio: 1 });
+    await page.keyboard.press('Escape');
+    await expect(ficha).toBeHidden();
+    await expect(tarjeta).toBeFocused();
+
+    await tarjeta.press('Enter');
+    await expect(ficha).toBeVisible();
+    await agregar.click();
+    await expect(ficha).toBeHidden();
+    await expect(page.getByText('Ver carrito')).toBeVisible();
+  });
+
   test('crear pedido desde el menú público y anularlo desde el panel admin', async ({ page }) => {
     // En CI corre contra `next dev`: cada pantalla se compila la primera vez
     // que se pide (menú, checkout, login, pedidos), y eso solo ya se comía

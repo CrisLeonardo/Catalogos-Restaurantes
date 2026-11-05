@@ -499,6 +499,31 @@ El chat «Recupera el resultado del cobro» permanece archivado, con sus turnos 
 
 **Siguiente paso:** integrar las fichas de la ola 0 en su orden de dependencias, con autorización por cada fusión, CI verde y comprobación/orden de migraciones de producción. La ola 0 sigue pendiente de integración y despliegue: no se cierra el plan ni el changelog, ni se propone una etiqueta como si ya estuviera publicada. La próxima ficha funcional es 1.0; cualquier cambio visual requiere su maqueta y aprobación según el plan. Esta entrega se detiene en 0.19.
 
+## 17. Continuación del 2026-11-05 · ficha 1.0 en revisión
+
+**Rama:** `feat/exploracion-sistema-visual`, sobre `origin/fix/limite-inicio-dia-caja` (`f08bda8`, PR #90), después de actualizar `main`. El PR de maquetas queda en borrador y su base aísla los documentos de esta ficha. #90 sigue abierto y su CI terminó en verde. Cada fusión conserva la autorización por separado.
+
+**Maquetas:** [comparador interactivo](../diseno/MAQUETAS_SISTEMA_VISUAL_2026-11-05.html) de Hoy, Cobro y Carta. Identidad actual depurada usa coral y neutros del panel. Hospitalidad precisa usa marfil, terracota, títulos editoriales y un oscuro de carbón verdoso propuesto para revisión. Ambas comparten datos ficticios, jerarquía y estados. El [inventario y contrato candidato](../diseno/SISTEMA_VISUAL_2026-11-05.md) recogen componentes y alcance de las fichas posteriores. Este PR contiene la exploración y sus notas, sin migraciones ni cambios de aplicación.
+
+**Validación:** Chromium revisó 88 combinaciones de pantalla, tema, ancho y estado, y dos recorridos interactivos. Los tres anchos son 390, 768 y 1280 px. También se comprobó el reflujo a 195 px de ancho efectivo, equivalente a 390 px al 200 %, y se inspeccionaron las capturas de Hoy y Cobro y la comparación móvil. Se verificaron el pie visible, el bloqueo de efectivo insuficiente y de cálculo de partes, la cantidad y el total de Carta, el cierre con Escape y la devolución de foco. Cero errores de JavaScript, solicitudes externas o desbordes horizontales en las vistas revisadas. Contraste del texto blanco del botón principal de 4,56:1 y 4,71:1, respectivamente. Esta verificación corresponde al prototipo.
+
+**Chat:** «Continuar implementación de auditoría» sigue sin proyecto asociado. Codex devolvió éxito al moverlo a **Leogin** en dos intentos, pero la consulta posterior aún indica proyecto nulo y lo coloca en Tareas. La asociación y la aparición del icono siguen pendientes. La rama y el PR se verifican en Git y GitHub.
+
+**Decisión pendiente:** elegir Identidad actual depurada u Hospitalidad precisa, como indica el plan en §1 y §3. Después se aterrizan los tokens y componentes en la rama de 1.0. La ficha permanece abierta y el plan conserva las dependencias de integración de la ola 0.
+
+## 18. Implementación de la base visual · ficha 1.0
+
+**Rama:** `feat/exploracion-sistema-visual`, [PR #91](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/91), con base en #90. Se actualizó `main` y se retomó la misma rama de la maqueta. Al pedir la implementación, se tomó Identidad actual depurada como valor predeterminado, con los tokens de marca vigentes y la alternativa editorial en la comparación. La fusión se autoriza por separado.
+
+- **Antes:** la prueba con una cuenta real de Q70 en un ancho de 390 px encontró el importe sin el rótulo «Por cobrar». La hoja de Carta colocaba su acción al final del contenido desplazable. En Cobro los métodos y los platos marcados se distinguían principalmente por sus estilos.
+- **Hoja compartida:** Cobro y Carta usan `HojaOperativa`, con cabecera y pie visibles, cuerpo desplazable y superficie sólida que lee el tema. El diálogo nativo deja inerte el fondo. Tab y Shift+Tab recorren la hoja, Escape cierra y el foco vuelve al disparador. El atajo global de Servicio no abre la paleta por detrás de la hoja.
+- **Cobro:** el saldo tiene un rótulo explícito. La acción de 56 px, los métodos y la selección por platos usan los estados accesibles del control. El selector admite flechas. «Calcular partes» explica el importe de referencia y mantiene la acción de cobrar el saldo completo. Los importes y los intentos pasan por las acciones y reglas de la ola 0.
+- **Carta:** cantidad y total se leen junto a la acción, mientras el platillo y sus opciones se desplazan. La ficha conserva los textos y precios configurados, la marca, la selección de opciones, el carrito y el historial. En **Hoy**, el botón compartido da 48 px a las acciones y el resumen adapta su cifra al ancho de la celda. Se mantienen los permisos y fuentes de datos de las tres pantallas.
+- **Validación:** build y tipos correctos, 1.350 unitarias aprobadas y una omisión previa. Lint sin errores y con las tres advertencias previas. Pasaron 10 E2E contra el servidor optimizado y la matriz de 69 casos de dinero en Supabase local. El commit `6fe3f74` desempata por ID al leer movimientos de la prueba con el mismo `created_at`. Las comparaciones siguen exigiendo igualdad de las filas completas.
+- **Revisión visual:** Hoy, Cobro y Carta en 390, 768 y 1280 px, claro y oscuro, con datos ficticios. Se ajustó el ancho del método Transferencia y se quitó la interferencia del mínimo móvil de 40 px en los dos tamaños táctiles. El E2E verifica los 56 px del cobro, la acción visible, el ciclo de foco y el regreso al disparador. Las capturas locales no forman parte del commit.
+
+La siguiente ficha es **1.1 · Cobro completo**, con rama y PR propios. La lectura de fallos de datos depende de 0.3 y el recorrido completo de Carta se valida con 1.11. Las pruebas con personas y lectores de pantalla en recorridos reales siguen en el plan. Esta ficha no requiere una migración SQL.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

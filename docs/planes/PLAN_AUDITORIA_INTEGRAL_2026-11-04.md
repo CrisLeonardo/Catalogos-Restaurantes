@@ -288,6 +288,8 @@ Las fichas indican **qué cubren y dónde está la especificación**. El detalle
 | 1.11 Comensal: ficha, carrito, temas y accesibilidad | L | E08, N11, F09, F10, D04, D08, M02, M03, M04, M08, PA-T25, PA-T26 | M§4.10, M02–M04 | Pie fijo con total, contraste del modal de lealtad, foco en los diálogos, carrito editable |
 | 1.12 Comensal: entrada, checkout y seguimiento | M | M01, M05, M06, X23 | M§4.10, M05–M06 | Recibido, aceptado, preparando y listo; tiempos como estimación; sin promesas fijas configurables |
 
+**Estado de 1.0 (2026-11-05):** base visual implementada en el [PR #91](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/91). Al pedir continuar, se adoptó Identidad actual depurada como predeterminada. Hoy prioriza ventas y usa el botón compartido. Cobro y Carta usan una hoja con cabecera y pie visibles, contenido desplazable y retorno del foco. El [comparador](../diseno/MAQUETAS_SISTEMA_VISUAL_2026-11-05.html) conserva las dos direcciones y el [contrato de componentes](../diseno/SISTEMA_VISUAL_2026-11-05.md) indica el alcance por ficha. Traspaso en §18 del [registro](../registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md).
+
 ### Ola 2 · Arranque y autonomía
 
 | Ficha | Tamaño | Cubre | Especificación |
@@ -386,7 +388,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 - [x] 0.18 Cobros en tránsito al cerrar un turno (D08) — revisión y registro SQL, migraciones 166/167
 - [x] 0.19 Incluir el instante exacto del inicio del día (D09) — migración 168; matriz completa en CI
 
-**Ola 1**: [ ] 1.0 · [ ] 1.1 · [ ] 1.2 · [ ] 1.3 · [ ] 1.4 · [ ] 1.5 · [ ] 1.6 · [ ] 1.7 · [ ] 1.8 · [ ] 1.9 · [ ] 1.10 · [ ] 1.11 · [ ] 1.12
+**Ola 1**: [x] 1.0 (base visual, PR #91) · [ ] 1.1 · [ ] 1.2 · [ ] 1.3 · [ ] 1.4 · [ ] 1.5 · [ ] 1.6 · [ ] 1.7 · [ ] 1.8 · [ ] 1.9 · [ ] 1.10 · [ ] 1.11 · [ ] 1.12
 **Ola 2**: [ ] 2.1 · [ ] 2.2 · [ ] 2.3 · [ ] 2.4 · [ ] 2.5 · [ ] 2.6 · [ ] 2.7 · [ ] 2.8 · [ ] 2.9 · [ ] 2.10 · [ ] 2.11 · [ ] 2.12
 **Ola 3**: [ ] 3.1 · [ ] 3.2 · [ ] 3.3 · [ ] 3.4 · [ ] 3.5 · [ ] 3.6 · [ ] 3.7
 **Ola 4**: [ ] 4.1 · [ ] 4.2 · [ ] 4.3 · [ ] 4.4 · [ ] 4.5 · [ ] 4.6 · [ ] 4.7 · [ ] 4.8 · [ ] 4.9 · [ ] 4.10 · [ ] 4.11 · [ ] 4.12

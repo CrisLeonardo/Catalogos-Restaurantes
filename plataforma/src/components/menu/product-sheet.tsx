@@ -6,7 +6,8 @@
 
 import AssetImage from '@/components/asset-image';
 import { PRODUCT_ART_SIZES } from '@/lib/asset-image';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { HojaOperativa } from '@/components/ui/hoja-operativa';
 import { Icon } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { Tag, QtyStepper, PrimaryButton, Price } from '@/components/menu/ui';
@@ -86,12 +87,6 @@ export default function ProductSheet({
   /** Acompañantes marcados. No se agregan al tocarlos sino con el platillo:
       cerrar la ficha sin pedir no deja una bebida suelta en el carrito. */
   const [extras, setExtras] = useState<ReadonlySet<string>>(() => new Set());
-
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
-  }, []);
 
   function toggleChoice(group: ProductOptionGroup, choiceId: string) {
     setMissingGroupId((m) => (m === group.id ? null : m));
@@ -183,244 +178,227 @@ export default function ProductSheet({
 
   const usePhoto = product.image_url && config.productArt !== 'pattern';
 
-  return (
-    <div
-      className="menu-sheet-wrap"
-      style={{ position: 'fixed', inset: 0, zIndex: 60 }}
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label={name}
-    >
-      <div style={{ position: 'absolute', inset: 0, background: 'var(--scrim)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} />
-      {/* `.menu-sheet`: hoja pegada al borde inferior en el teléfono y diálogo
-          centrado de tablet para arriba. Ver globals.css. */}
-      <div
-        className="glass anim-slide-up menu-sheet"
-        onClick={(e) => e.stopPropagation()}
-        style={{ padding: '18px 20px 24px', overflowY: 'auto' }}
-      >
-        <button
-          onClick={onClose}
-          className="press glass-quiet"
-          style={{ position: 'absolute', top: 'var(--m-sp-4)', right: 'var(--m-sp-4)', zIndex: 2, minWidth: 'var(--m-tap)', minHeight: 'var(--m-tap)', borderRadius: 'var(--m-r-sm)', border: '1px solid var(--u-hair)', background: 'var(--surface-2)', display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer' }}
-          aria-label="Cerrar"
-        >
-          <Icon name="x" size={18} />
-        </button>
+  const pie = (
+    <div className="hoja-platillo-accion">
+      {ordersEnabled && !edicionPermitePedir(edicion) ? (
+        <div className="m-sheet-closed" role="status">
+          {edicion.estado === 'proxima' && edicion.abre !== null ? `Esta edición abre el ${fechaCorta(edicion.abre)}` : content.vitrina.launchClosed}
+        </div>
+      ) : ordersEnabled ? (
+        <>
+          <QtyStepper value={qty} size="lg" onMinus={() => setQty(Math.max(1, qty - 1))} onPlus={() => setQty(qty + 1)} />
+          <PrimaryButton size="lg" full onClick={add} style={{ flex: 1, opacity: missingRequired ? 0.55 : 1 }}>
+            {content.product.add} · <span className="t-mono" style={{ fontWeight: 700, color: 'inherit' }}>{formatPrice(unitPrice * qty + extrasTotal, config)}</span>
+          </PrimaryButton>
+        </>
+      ) : (
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+          <Price amount={unitPrice} size={24} />
+        </div>
+      )}
+    </div>
+  );
 
-        {/* Hero */}
-        <div style={{ borderRadius: 'var(--m-r-xl)', overflow: 'hidden', position: 'relative', aspectRatio: '1.5', background: 'var(--surface-1)', border: '1px solid var(--u-hair)' }}>
-          {usePhoto ? (
-            <>
-              {/* Capa de fondo: la MISMA foto que la tarjeta que se acaba de
-                  tocar (mismo `sizes` → mismo archivo) — ya está en la caché
-                  del navegador y se pinta al instante. Antes la ficha pedía
-                  otra más grande y el hueco se quedaba vacío mientras
-                  llegaba. La nítida entra encima con un fundido. */}
-              <AssetImage src={product.image_url!} alt="" aria-hidden fill loading="eager" style={{ objectFit: 'cover' }} sizes={PRODUCT_ART_SIZES} />
-              <AssetImage
-                src={product.image_url!}
-                alt={name}
-                fill
-                loading="eager"
-                fetchPriority="high"
-                sizes="(max-width: 500px) 92vw, 460px"
-                onLoad={() => setHeroReady(true)}
-                style={{ objectFit: 'cover', opacity: heroReady ? 1 : 0, transition: 'opacity 180ms ease-out' }}
-              />
-            </>
-          ) : (
-            <div style={{ position: 'absolute', inset: 0, color: 'var(--u-text)' }}>
-              <BrandPattern icon={icon} seed={seedFromString(product.id)} iconScale={1.5} faint={0.2} />
+  return (
+    <HojaOperativa
+      label={name}
+      title={<span className="t-display" style={{ ...titleT.vars, fontSize: 22 * titleT.size }}>{name}</span>}
+      closeLabel={locale === 'en' ? 'Close' : 'Cerrar'}
+      className="hoja-platillo"
+      onClose={onClose}
+      footer={pie}
+    >
+      {/* Hero */}
+      <div style={{ borderRadius: 'var(--m-r-xl)', overflow: 'hidden', position: 'relative', aspectRatio: '1.5', background: 'var(--surface-1)', border: '1px solid var(--u-hair)' }}>
+        {usePhoto ? (
+          <>
+            {/* Capa de fondo: la MISMA foto que la tarjeta que se acaba de
+                tocar (mismo `sizes` → mismo archivo) — ya está en la caché
+                del navegador y se pinta al instante. Antes la ficha pedía
+                otra más grande y el hueco se quedaba vacío mientras
+                llegaba. La nítida entra encima con un fundido. */}
+            <AssetImage src={product.image_url!} alt="" aria-hidden fill loading="eager" style={{ objectFit: 'cover' }} sizes={PRODUCT_ART_SIZES} />
+            <AssetImage
+              src={product.image_url!}
+              alt={name}
+              fill
+              loading="eager"
+              fetchPriority="high"
+              sizes="(max-width: 500px) 92vw, 460px"
+              onLoad={() => setHeroReady(true)}
+              style={{ objectFit: 'cover', opacity: heroReady ? 1 : 0, transition: 'opacity 180ms ease-out' }}
+            />
+          </>
+        ) : (
+          <div style={{ position: 'absolute', inset: 0, color: 'var(--u-text)' }}>
+            <BrandPattern icon={icon} seed={seedFromString(product.id)} iconScale={1.5} faint={0.2} />
+          </div>
+        )}
+        {config.showTags && product.tags && product.tags.length > 0 && (
+          <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', gap: 6 }}>
+            {product.tags.map((t) => <Tag key={t} label={t} />)}
+          </div>
+        )}
+      </div>
+
+      <div style={{ padding: '18px 2px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {description && (
+          <p className="hoja-platillo-descripcion">{description}</p>
+        )}
+        {ordersEnabled && <Price amount={unitPrice} size={22} />}
+        {product.dietary_tags && product.dietary_tags.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {product.dietary_tags.map((k) => {
+              const t = DIETARY_TAG_MAP[k];
+              if (!t) return null;
+              return (
+                <span
+                  key={k}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 'var(--m-r-pill)',
+                    background: 'var(--surface-2)', border: '1px solid var(--u-hair)', fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-2)',
+                  }}
+                >
+                  <span aria-hidden>{t.icon}</span> {locale === 'en' ? t.labelEn : t.label}
+                </span>
+              );
+            })}
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
+          {[{ i: 'clock', t: content.product.prepTime }, { i: 'flame', t: content.product.fresh }].map((x, k) => (
+            <div key={k} className="m-surface" style={{ borderRadius: 'var(--m-r-md)', padding: 'var(--m-sp-3)', display: 'flex', alignItems: 'center', gap: 'var(--m-sp-2)', flex: 1 }}>
+              <Icon name={x.i} size={16} style={{ color: 'var(--u-text-2)' }} />
+              <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)', fontWeight: 500 }}>{x.t}</span>
             </div>
-          )}
-          {config.showTags && product.tags && product.tags.length > 0 && (
-            <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', gap: 6 }}>
-              {product.tags.map((t) => <Tag key={t} label={t} />)}
-            </div>
-          )}
+          ))}
         </div>
 
-        <div style={{ padding: '18px 2px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <h2 className="t-display" style={{ ...titleT.vars, fontSize: 28 * titleT.size }}>{name}</h2>
-          {description && (
-            <p className="t-serif" style={{ fontSize: 'var(--m-fs-lg)', lineHeight: 1.4 }}>{description}</p>
-          )}
-          {product.dietary_tags && product.dietary_tags.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {product.dietary_tags.map((k) => {
-                const t = DIETARY_TAG_MAP[k];
-                if (!t) return null;
-                return (
-                  <span
-                    key={k}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 'var(--m-r-pill)',
-                      background: 'var(--surface-2)', border: '1px solid var(--u-hair)', fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-2)',
-                    }}
-                  >
-                    <span aria-hidden>{t.icon}</span> {locale === 'en' ? t.labelEn : t.label}
-                  </span>
-                );
-              })}
-            </div>
-          )}
-          <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
-            {[{ i: 'clock', t: content.product.prepTime }, { i: 'flame', t: content.product.fresh }].map((x, k) => (
-              <div key={k} className="m-surface" style={{ borderRadius: 'var(--m-r-md)', padding: 'var(--m-sp-3)', display: 'flex', alignItems: 'center', gap: 'var(--m-sp-2)', flex: 1 }}>
-                <Icon name={x.i} size={16} style={{ color: 'var(--u-text-2)' }} />
-                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)', fontWeight: 500 }}>{x.t}</span>
+        {/* ── Variantes / extras / combo ── */}
+        {groups.map((group) => {
+          const picked = selected[group.id] ?? [];
+          const isCombo = group.type === 'combo';
+          const hint = isCombo
+            ? 'Personaliza tu combo'
+            : group.type === 'single'
+              ? group.required ? content.product.chooseOne : content.product.optional
+              : group.max && group.max > 0
+                ? `${content.product.optional} · máx ${group.max}`
+                : content.product.optional;
+          const required = group.type === 'single' && !!group.required;
+          const missing = missingGroupId === group.id;
+          return (
+            /* Mismas clases que el modal del mesero (ver .opt-* en globals.css):
+               una sola definición del selector de opciones para las dos caras
+               del producto. El estado "elegido" usa el acento del restaurante,
+               no un verde suelto ni una píldora negra. */
+            <div key={group.id} id={`optgrp-${group.id}`} className="opt-group" style={{ marginTop: 4 }}>
+              <div className="opt-head">
+                <span className="opt-title">{group.name}</span>
+                <span className="opt-hint" data-required={required ? '1' : '0'}>{hint}</span>
               </div>
-            ))}
-          </div>
 
-          {/* ── Variantes / extras / combo ── */}
-          {groups.map((group) => {
-            const picked = selected[group.id] ?? [];
-            const isCombo = group.type === 'combo';
-            const hint = isCombo
-              ? 'Personaliza tu combo'
-              : group.type === 'single'
-                ? group.required ? content.product.chooseOne : content.product.optional
-                : group.max && group.max > 0
-                  ? `${content.product.optional} · máx ${group.max}`
-                  : content.product.optional;
-            const required = group.type === 'single' && !!group.required;
-            const missing = missingGroupId === group.id;
-            return (
-              /* Mismas clases que el modal del mesero (ver .opt-* en globals.css):
-                 una sola definición del selector de opciones para las dos caras
-                 del producto. El estado "elegido" usa el acento del restaurante,
-                 no un verde suelto ni una píldora negra. */
-              <div key={group.id} id={`optgrp-${group.id}`} className="opt-group" style={{ marginTop: 4 }}>
-                <div className="opt-head">
-                  <span className="opt-title">{group.name}</span>
-                  <span className="opt-hint" data-required={required ? '1' : '0'}>{hint}</span>
+              {missing && (
+                <div className="note note-warn" style={{ marginBottom: 10 }}>
+                  <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+                  {content.product.chooseOne}: {group.name}
                 </div>
+              )}
 
-                {missing && (
-                  <div className="note note-warn" style={{ marginBottom: 10 }}>
-                    <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
-                    {content.product.chooseOne}: {group.name}
-                  </div>
-                )}
-
-                {isCombo ? (
-                  /* ── Combo: filas con checkmark, precio visible como ahorro al quitar ── */
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                    {group.choices.map((choice) => {
-                      const included = picked.includes(choice.id);
-                      const delta = Number(choice.priceDelta) || 0;
-                      return (
-                        <div key={choice.id} style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                          <button
-                            type="button"
-                            onClick={() => toggleChoice(group, choice.id)}
-                            className="press opt-row"
-                            aria-pressed={included}
-                          >
-                            <span className="opt-check">
-                              {included && <Icon name="check" size={12} strokeWidth={3} />}
-                            </span>
-                            <span className="opt-row-name">{choice.name}</span>
-                            {delta > 0 && (
-                              <span className="opt-row-delta">
-                                {included ? `+${formatPrice(delta, config)}` : `−${formatPrice(delta, config)}`}
-                              </span>
-                            )}
-                          </button>
-                          {included && choice.variants && choice.variants.length > 0 && (
-                            <div className="opt-variants">
-                              {choice.variants.map((variant) => {
-                                const on = variantSelected[choice.id] === variant.id;
-                                const vDelta = Number(variant.priceDelta) || 0;
-                                return (
-                                  <button
-                                    key={variant.id}
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); chooseVariant(choice.id, variant.id); }}
-                                    className="press opt-pill opt-pill-sm"
-                                    aria-pressed={on}
-                                  >
-                                    {variant.name}
-                                    {vDelta !== 0 && (
-                                      // .opt-delta hereda el color de la píldora a propósito: con
-                                      // la clase `t-mono`, la regla `.themed-type .t-mono` forzaba
-                                      // color = --u-text y el precio desaparecía al elegirla.
-                                      <span className="opt-delta">
-                                        {vDelta > 0 ? '+' : '−'}{formatPrice(Math.abs(vDelta), config)}
-                                      </span>
-                                    )}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  /* ── Single / Multi: píldoras ── */
-                  <div className="opt-pills">
-                    {group.choices.map((choice) => {
-                      const on = picked.includes(choice.id);
-                      const delta = Number(choice.priceDelta) || 0;
-                      return (
+              {isCombo ? (
+                /* ── Combo: filas con checkmark, precio visible como ahorro al quitar ── */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                  {group.choices.map((choice) => {
+                    const included = picked.includes(choice.id);
+                    const delta = Number(choice.priceDelta) || 0;
+                    return (
+                      <div key={choice.id} style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                         <button
-                          key={choice.id}
                           type="button"
                           onClick={() => toggleChoice(group, choice.id)}
-                          className="press opt-pill"
-                          aria-pressed={on}
+                          className="press opt-row"
+                          aria-pressed={included}
                         >
-                          {on && <Icon name="check" size={13} strokeWidth={3} />}
-                          {choice.name}
-                          {delta !== 0 && (
-                            <span className="opt-delta">
-                              {delta > 0 ? '+' : '−'}{formatPrice(Math.abs(delta), config)}
+                          <span className="opt-check">
+                            {included && <Icon name="check" size={12} strokeWidth={3} />}
+                          </span>
+                          <span className="opt-row-name">{choice.name}</span>
+                          {delta > 0 && (
+                            <span className="opt-row-delta">
+                              {included ? `+${formatPrice(delta, config)}` : `−${formatPrice(delta, config)}`}
                             </span>
                           )}
                         </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          {ordersEnabled && (
-            <Acompanantes
-              items={acompanantes}
-              elegidos={extras}
-              onToggle={toggleExtra}
-              nota={{ es: 'Se suma a tu pedido', en: 'Added to your order' }}
-            />
-          )}
-        </div>
-
-        {/* Acción */}
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 20 }}>
-          {ordersEnabled && !edicionPermitePedir(edicion) ? (
-            <div className="m-sheet-closed" role="status">
-              {edicion.estado === 'proxima' && edicion.abre !== null ? `Esta edición abre el ${fechaCorta(edicion.abre)}` : content.vitrina.launchClosed}
+                        {included && choice.variants && choice.variants.length > 0 && (
+                          <div className="opt-variants">
+                            {choice.variants.map((variant) => {
+                              const on = variantSelected[choice.id] === variant.id;
+                              const vDelta = Number(variant.priceDelta) || 0;
+                              return (
+                                <button
+                                  key={variant.id}
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); chooseVariant(choice.id, variant.id); }}
+                                  className="press opt-pill opt-pill-sm"
+                                  aria-pressed={on}
+                                >
+                                  {variant.name}
+                                  {vDelta !== 0 && (
+                                    // .opt-delta hereda el color de la píldora a propósito: con
+                                    // la clase `t-mono`, la regla `.themed-type .t-mono` forzaba
+                                    // color = --u-text y el precio desaparecía al elegirla.
+                                    <span className="opt-delta">
+                                      {vDelta > 0 ? '+' : '−'}{formatPrice(Math.abs(vDelta), config)}
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* ── Single / Multi: píldoras ── */
+                <div className="opt-pills">
+                  {group.choices.map((choice) => {
+                    const on = picked.includes(choice.id);
+                    const delta = Number(choice.priceDelta) || 0;
+                    return (
+                      <button
+                        key={choice.id}
+                        type="button"
+                        onClick={() => toggleChoice(group, choice.id)}
+                        className="press opt-pill"
+                        aria-pressed={on}
+                      >
+                        {on && <Icon name="check" size={13} strokeWidth={3} />}
+                        {choice.name}
+                        {delta !== 0 && (
+                          <span className="opt-delta">
+                            {delta > 0 ? '+' : '−'}{formatPrice(Math.abs(delta), config)}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          ) : ordersEnabled ? (
-            <>
-              <QtyStepper value={qty} size="lg" onMinus={() => setQty(Math.max(1, qty - 1))} onPlus={() => setQty(qty + 1)} />
-              <PrimaryButton size="lg" full onClick={add} style={{ flex: 1, opacity: missingRequired ? 0.55 : 1 }}>
-                {content.product.add} · <span className="t-mono" style={{ fontWeight: 700, color: 'inherit' }}>{formatPrice(unitPrice * qty + extrasTotal, config)}</span>
-              </PrimaryButton>
-            </>
-          ) : (
-            <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-              <Price amount={unitPrice} size={24} />
-            </div>
-          )}
-        </div>
+          );
+        })}
+
+        {ordersEnabled && (
+          <Acompanantes
+            items={acompanantes}
+            elegidos={extras}
+            onToggle={toggleExtra}
+            nota={{ es: 'Se suma a tu pedido', en: 'Added to your order' }}
+          />
+        )}
       </div>
-    </div>
+    </HojaOperativa>
   );
 }
