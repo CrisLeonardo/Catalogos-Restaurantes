@@ -1,0 +1,1657 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Leogin · Exploración del sistema visual · 1.0</title>
+    <style>
+      /* Estudio aislado: no se importa desde la aplicación. Sin dependencias externas. */
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font:
+          16px/1.5 system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      :root {
+        --bg: #f2f1ee;
+        --paper: #fff;
+        --soft: #e9e7e3;
+        --ink: #17161a;
+        --muted: #59565a;
+        --line: #cbc7c2;
+        --accent: #c2542f;
+        --accent-ink: #a8461f;
+        --on-accent: #fff;
+        --hover: #a8461f;
+        --ok: #25634a;
+        --warn: #875900;
+        --danger: #ad3328;
+        --info: #255e85;
+        --radius: 18px;
+        --heading: system-ui, sans-serif;
+        --tracking: -0.045em;
+        --shadow: 0 2px 6px #241b1010;
+      }
+      [data-direction="hospitalidad"] {
+        --bg: #f7f4ee;
+        --paper: #fffefb;
+        --soft: #ece7dc;
+        --ink: #202420;
+        --muted: #5b625b;
+        --line: #cdc9be;
+        --accent: #c74b24;
+        --accent-ink: #a33e1d;
+        --hover: #a33e1d;
+        --radius: 12px;
+        --heading: Georgia, "Times New Roman", serif;
+        --tracking: -0.025em;
+        --shadow: none;
+      }
+      [data-scheme="dark"] {
+        color-scheme: dark;
+        --bg: #0c0b0a;
+        --paper: #1a1917;
+        --soft: #24221f;
+        --ink: #f5f3ef;
+        --muted: #bcb6af;
+        --line: #5c554d;
+        --accent: #c2542f;
+        --accent-ink: #efa88e;
+        --hover: #a8461f;
+        --ok: #9ad1b4;
+        --warn: #edc17a;
+        --danger: #ffb1a7;
+        --info: #a6c9eb;
+        --shadow: 0 2px 6px #0003;
+      }
+      [data-direction="hospitalidad"][data-scheme="dark"] {
+        --bg: #181b18;
+        --paper: #222722;
+        --soft: #303630;
+        --ink: #f7f4ee;
+        --muted: #c2c8be;
+        --line: #60695e;
+        --accent: #c74b24;
+        --accent-ink: #ffb194;
+        --hover: #a33e1d;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+        color: inherit;
+      }
+      button,
+      select {
+        cursor: pointer;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--paper);
+      }
+      button {
+        min-height: 48px;
+        padding: 10px 16px;
+        font-weight: 600;
+        transition:
+          background 150ms,
+          transform 150ms;
+      }
+      button:hover:not(:disabled) {
+        background: var(--soft);
+      }
+      button:active:not(:disabled) {
+        transform: translateY(1px);
+      }
+      button:disabled {
+        cursor: not-allowed;
+        background: var(--soft);
+        color: var(--muted);
+      }
+      :focus-visible {
+        outline: 3px solid var(--accent-ink);
+        outline-offset: 3px;
+      }
+      input,
+      select,
+      textarea {
+        min-height: 48px;
+        padding: 10px 12px;
+        min-width: 0;
+      }
+      input {
+        width: 100%;
+      }
+      input[aria-invalid="true"] {
+        border: 2px solid var(--danger);
+      }
+      input[type="radio"],
+      input[type="checkbox"] {
+        width: 24px;
+        height: 24px;
+        min-height: 24px;
+        accent-color: var(--accent);
+      }
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+      h1,
+      h2 {
+        font-family: var(--heading);
+        letter-spacing: var(--tracking);
+        font-weight: 600;
+      }
+      h1 {
+        font-size: clamp(30px, 4.3vw, 46px);
+        line-height: 1.1;
+      }
+      h2 {
+        font-size: 28px;
+        line-height: 1.2;
+      }
+      h3 {
+        font-size: 18px;
+        line-height: 1.3;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .small {
+        font-size: 13px;
+      }
+      .money {
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        letter-spacing: -0.025em;
+      }
+      .primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--on-accent);
+        min-height: 56px;
+      }
+      .primary:hover:not(:disabled) {
+        background: var(--hover);
+        border-color: var(--hover);
+      }
+      .secondary {
+        background: transparent;
+      }
+      .danger {
+        color: var(--danger);
+      }
+      .ok {
+        color: var(--ok);
+      }
+      .eyebrow {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.035em;
+      }
+      .stack {
+        display: grid;
+        gap: 20px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      .row > * {
+        min-width: 0;
+      }
+      .wrap {
+        flex-wrap: wrap;
+      }
+      .card {
+        min-width: 0;
+        padding: 24px;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+        background: var(--soft);
+        white-space: nowrap;
+      }
+      .pill.ok {
+        background: color-mix(in srgb, var(--ok) 11%, var(--paper));
+      }
+      .pill.warn {
+        color: var(--warn);
+        background: color-mix(in srgb, var(--warn) 11%, var(--paper));
+      }
+      .notice {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        padding: 16px;
+        border: 1px solid currentColor;
+        border-radius: 12px;
+        color: var(--info);
+        background: var(--paper);
+      }
+      .notice p {
+        font-size: 14px;
+        margin-top: 3px;
+      }
+      .notice.error {
+        color: var(--danger);
+      }
+      .notice.warn {
+        color: var(--warn);
+      }
+      .notice.success {
+        color: var(--ok);
+      }
+      .notice button {
+        margin-top: 12px;
+      }
+      .grow {
+        flex: 1;
+      }
+      .divider {
+        height: 1px;
+        background: var(--line);
+      }
+      .sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+      }
+      .review {
+        max-width: 1440px;
+        margin: auto;
+        padding: 28px 32px;
+      }
+      .review-head {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 24px;
+      }
+      .review h1 {
+        font:
+          600 30px/1.2 system-ui,
+          sans-serif;
+        letter-spacing: -0.035em;
+      }
+      .review .intro {
+        max-width: 760px;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 15px;
+      }
+      .review .stamp {
+        font-size: 13px;
+        border: 1px solid var(--line);
+        padding: 8px 12px;
+        border-radius: 8px;
+        white-space: nowrap;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 24px;
+        align-items: end;
+        padding: 20px 0;
+        border-block: 1px solid var(--line);
+        margin-bottom: 22px;
+      }
+      .controls label {
+        display: grid;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .controls select {
+        font-size: 14px;
+      }
+      .controls .seg {
+        margin-left: auto;
+      }
+      .seg {
+        display: flex;
+        gap: 4px;
+        padding: 4px;
+        background: var(--soft);
+        border-radius: 12px;
+        flex-wrap: wrap;
+      }
+      .seg button {
+        border-color: transparent;
+        background: transparent;
+        min-height: 44px;
+        padding: 8px 14px;
+        font-size: 14px;
+      }
+      .seg button[aria-pressed="true"] {
+        color: var(--ink);
+        background: var(--paper);
+        box-shadow: var(--shadow);
+      }
+      .stage {
+        overflow: auto;
+        border: 1px solid var(--line);
+        background: var(--soft);
+        border-radius: 16px;
+        padding: 20px;
+      }
+      .preview-frame {
+        margin: auto;
+        background: var(--bg);
+        box-shadow: 0 8px 30px #0002;
+        width: 1280px;
+        max-width: none;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      iframe {
+        display: block;
+        width: 100%;
+        height: 900px;
+        border: 0;
+        background: var(--paper);
+      }
+      .direction-note {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin: 14px 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .swatches {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .swatch {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 1px solid var(--line);
+        background: var(--swatch);
+      }
+      .review-footer {
+        margin-top: 20px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .app {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 212px minmax(0, 1fr);
+      }
+      .sidebar {
+        background: var(--paper);
+        padding: 28px 20px;
+        border-right: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+      }
+      .logo {
+        font-size: 29px;
+        font-weight: 800;
+        letter-spacing: -0.08em;
+      }
+      .logo span {
+        color: var(--accent-ink);
+      }
+      .restaurant-name {
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .sidebar nav {
+        display: grid;
+        gap: 8px;
+      }
+      .sidebar nav button {
+        text-align: left;
+        background: none;
+        border: 0;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .sidebar nav button[aria-current="page"] {
+        background: var(--soft);
+        color: var(--accent-ink);
+        font-weight: 700;
+      }
+      .sidebar-footer {
+        margin-top: auto;
+        padding-top: 32px;
+      }
+      .avatar {
+        display: inline-grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: var(--soft);
+        font-weight: 600;
+        flex-shrink: 0;
+      }
+      .work {
+        min-width: 0;
+      }
+      .topbar {
+        height: 76px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 0 36px;
+        border-bottom: 1px solid var(--line);
+        background: var(--paper);
+      }
+      .topbar .breadcrumb {
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .topbar .prototype {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .content {
+        padding: 36px;
+        max-width: 1240px;
+        margin: auto;
+      }
+      .page-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 24px;
+        margin-bottom: 28px;
+      }
+      .page-head p {
+        margin-top: 8px;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .metric {
+        padding: 24px;
+      }
+      .metric b {
+        display: block;
+        font-size: 30px;
+        margin: 12px 0 3px;
+        line-height: 1.1;
+      }
+      .metric.main b {
+        font-size: 40px;
+      }
+      .metric.main {
+        border-top: 3px solid var(--accent);
+      }
+      .columns {
+        display: grid;
+        grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr);
+        gap: 24px;
+      }
+      .list {
+        list-style: none;
+        padding: 0;
+        margin: 4px 0 0;
+      }
+      .list li {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 18px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .list li:last-child {
+        border-bottom: 0;
+      }
+      .list .grow {
+        display: grid;
+        gap: 5px;
+      }
+      .circle {
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: var(--soft);
+        font-size: 18px;
+        font-weight: 600;
+        flex-shrink: 0;
+      }
+      .list button {
+        padding: 8px 12px;
+      }
+      .callout {
+        border-left: 3px solid var(--accent);
+        padding: 4px 0 4px 16px;
+      }
+      .mobile-nav {
+        display: none;
+      }
+      .status-icon {
+        font-size: 22px;
+        line-height: 1.1;
+      }
+      .empty {
+        text-align: center;
+        max-width: 640px;
+        margin: 70px auto;
+        padding: 36px;
+        display: grid;
+        justify-items: center;
+        gap: 16px;
+      }
+      .empty h2 {
+        font-size: 32px;
+      }
+      .skeleton {
+        height: 20px;
+        border-radius: 7px;
+        background: var(--soft);
+        animation: pulse 1.8s infinite;
+      }
+      .skeleton.big {
+        height: 72px;
+      }
+      .skeleton.block {
+        height: 130px;
+      }
+      .skeleton-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+      .skeleton-grid .card {
+        display: grid;
+        gap: 20px;
+      }
+      .skeleton-grid + * {
+        margin-top: 24px;
+      }
+      @keyframes pulse {
+        50% {
+          opacity: 0.5;
+        }
+      }
+      .bill-page {
+        max-width: 1020px;
+        margin: auto;
+      }
+      .bill-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(300px, 0.85fr);
+        gap: 24px;
+        align-items: start;
+      }
+      .bill-lines .row {
+        padding: 16px 0;
+        border-bottom: 1px solid var(--line);
+        align-items: start;
+      }
+      .bill-lines .row:last-child {
+        border-bottom: 0;
+      }
+      .bill-lines .row p {
+        margin-top: 5px;
+      }
+      .balance {
+        padding: 24px;
+        background: var(--paper);
+        border-top: 3px solid var(--accent);
+        border-radius: var(--radius);
+        border-inline: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 20px;
+      }
+      .balance .sums {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .balance .sums span {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .balance .sums b {
+        display: block;
+        font-size: 25px;
+        margin-top: 5px;
+      }
+      .balance .sums .due b {
+        color: var(--accent-ink);
+      }
+      .methods {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .methods button {
+        flex: 1;
+        min-height: 52px;
+      }
+      .methods button[aria-pressed="true"] {
+        border: 2px solid var(--accent-ink);
+        color: var(--accent-ink);
+        background: var(--soft);
+      }
+      .field {
+        display: grid;
+        gap: 7px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .field small {
+        font-weight: 400;
+        color: var(--muted);
+      }
+      .field-group {
+        display: grid;
+        gap: 14px;
+        margin-top: 18px;
+      }
+      .pay-footer {
+        padding-top: 20px;
+        display: grid;
+        gap: 12px;
+      }
+      .pay-footer .primary {
+        width: 100%;
+      }
+      .pay-footer .small {
+        text-align: center;
+      }
+      .mode-description {
+        font-size: 14px;
+        color: var(--muted);
+        margin: 12px 0 4px;
+      }
+      .mini-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 14px;
+        margin-top: 12px;
+      }
+      .large-amount {
+        font-size: 40px;
+        font-weight: 600;
+        line-height: 1.2;
+      }
+      .receipt {
+        max-width: 540px;
+        margin: 32px auto;
+      }
+      .receipt .row {
+        padding: 12px 0;
+      }
+      .receipt .primary {
+        width: 100%;
+        margin-top: 24px;
+      }
+      .menu-top {
+        padding: 22px 32px;
+        background: var(--paper);
+        border-bottom: 1px solid var(--line);
+      }
+      .menu-brand {
+        font-family: var(--heading);
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.03em;
+      }
+      .menu-tabs {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+      }
+      .menu-tabs span {
+        font-size: 14px;
+        padding: 6px 12px;
+        background: var(--soft);
+        border-radius: 999px;
+      }
+      .dish-page {
+        max-width: 1060px;
+        margin: 0 auto;
+        padding: 36px;
+      }
+      .dish-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        align-items: start;
+      }
+      .dish-art {
+        position: relative;
+        display: grid;
+        place-items: center;
+        min-height: 340px;
+        border-radius: var(--radius);
+        background: var(--soft);
+        overflow: hidden;
+      }
+      .dish-art svg {
+        width: 90%;
+        max-width: 430px;
+        height: auto;
+      }
+      .dish-art figcaption {
+        position: absolute;
+        left: 16px;
+        bottom: 12px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .dish-art figure {
+        margin: 0;
+      }
+      .dish-title {
+        font-size: 40px;
+        margin: 8px 0 14px;
+      }
+      .dish-price {
+        font-size: 30px;
+        margin: 18px 0;
+      }
+      .options {
+        margin-top: 24px;
+        display: grid;
+        gap: 12px;
+      }
+      .option {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--paper);
+        min-height: 58px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      .option:has(input:checked) {
+        border-color: var(--accent-ink);
+      }
+      .option .included {
+        margin-left: auto;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .dish-footer {
+        position: sticky;
+        bottom: 0;
+        padding: 16px 32px;
+        border-top: 1px solid var(--line);
+        background: var(--paper);
+        display: flex;
+        justify-content: flex-end;
+        gap: 16px;
+        align-items: center;
+      }
+      .dish-footer .primary {
+        min-width: 240px;
+      }
+      .quantity {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .quantity button {
+        width: 48px;
+        padding: 0;
+        font-size: 22px;
+      }
+      .quantity output {
+        min-width: 20px;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
+      .dish-extra {
+        margin-top: 18px;
+      }
+      .dish-extra textarea {
+        width: 100%;
+        resize: vertical;
+        margin-top: 7px;
+      }
+      .kit {
+        display: grid;
+        gap: 24px;
+        grid-template-columns: 1fr 1fr;
+      }
+      .kit .card {
+        display: grid;
+        align-content: start;
+        gap: 18px;
+      }
+      .kit .buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .kit table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      .kit th,
+      .kit td {
+        padding: 12px 0;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+      .kit .right {
+        text-align: right;
+      }
+      .kit .error-help {
+        color: var(--danger);
+      }
+      .kit .tile {
+        min-width: 0;
+      }
+      .kit .tile span {
+        display: block;
+      }
+      .kit .component-tabs {
+        display: flex;
+        gap: 6px;
+      }
+      .kit .component-tabs button {
+        flex: 1;
+        min-width: 0;
+      }
+      .kit .component-tabs [aria-pressed="true"] {
+        background: var(--soft);
+        border-color: var(--accent-ink);
+      }
+      dialog {
+        background: var(--paper);
+        color: var(--ink);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 28px;
+        width: min(480px, calc(100vw - 32px));
+      }
+      dialog::backdrop {
+        background: #0009;
+      }
+      dialog .stack {
+        gap: 18px;
+      }
+      dialog .primary {
+        width: 100%;
+      }
+      dialog .row button {
+        width: 48px;
+        flex-shrink: 0;
+        padding: 0;
+        font-size: 24px;
+      }
+      .fixed-demo {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 8;
+        padding: 5px 12px;
+        text-align: center;
+        background: var(--soft);
+        color: var(--muted);
+        font-size: 11px;
+        letter-spacing: 0.02em;
+      }
+      .product {
+        padding-top: 26px;
+      }
+      @media (max-width: 1050px) {
+        .app {
+          grid-template-columns: 180px minmax(0, 1fr);
+        }
+        .sidebar {
+          padding: 24px 12px;
+        }
+        .content {
+          padding: 28px 24px;
+        }
+        .topbar {
+          padding: 0 24px;
+        }
+        .columns {
+          grid-template-columns: 1fr;
+        }
+        .bill-layout {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .bill-layout > .stack {
+          gap: 16px;
+        }
+        .pay-footer {
+          position: sticky;
+          bottom: 0;
+          background: var(--paper);
+          padding: 18px;
+          border-top: 1px solid var(--line);
+          margin: 0 -24px -24px;
+          border-radius: 0 0 var(--radius) var(--radius);
+        }
+        .metric b {
+          font-size: 26px;
+        }
+        .metric.main b {
+          font-size: 34px;
+        }
+        .kit {
+          grid-template-columns: 1fr;
+        }
+        .dish-layout {
+          gap: 26px;
+        }
+        .dish-art {
+          min-height: 300px;
+        }
+      }
+      @media (max-width: 650px) {
+        .review {
+          padding: 20px 12px;
+        }
+        .review-head {
+          display: block;
+        }
+        .review h1 {
+          font-size: 26px;
+        }
+        .review .stamp {
+          display: inline-block;
+          margin-top: 12px;
+        }
+        .controls {
+          gap: 12px;
+        }
+        .controls label {
+          flex: 1;
+          min-width: 132px;
+        }
+        .controls .seg {
+          width: 100%;
+          margin: 0;
+        }
+        .stage {
+          padding: 8px;
+        }
+        .app {
+          display: block;
+        }
+        .sidebar {
+          display: none;
+        }
+        .topbar {
+          height: 60px;
+          padding: 0 20px;
+        }
+        .topbar .breadcrumb {
+          font-size: 13px;
+        }
+        .topbar .prototype {
+          display: none;
+        }
+        .content {
+          padding: 24px 20px 96px;
+        }
+        .page-head {
+          display: block;
+          margin-bottom: 24px;
+        }
+        .page-head .primary {
+          margin-top: 18px;
+          width: 100%;
+        }
+        .page-head p {
+          font-size: 14px;
+        }
+        .metrics {
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+        .metric {
+          padding: 18px;
+        }
+        .metric.main {
+          grid-column: 1/-1;
+        }
+        .metric.main b {
+          font-size: 40px;
+        }
+        .metric b {
+          font-size: 28px;
+        }
+        .columns {
+          gap: 18px;
+        }
+        .card {
+          padding: 20px;
+        }
+        .list li {
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+        .list li .grow {
+          min-width: 140px;
+        }
+        .list li button {
+          margin-left: auto;
+        }
+        .mobile-nav {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          padding: 8px 12px max(8px, env(safe-area-inset-bottom));
+          display: flex;
+          justify-content: space-around;
+          gap: 4px;
+          background: var(--paper);
+          border-top: 1px solid var(--line);
+          z-index: 3;
+        }
+        .mobile-nav button {
+          border: 0;
+          background: none;
+          font-size: 12px;
+          display: grid;
+          gap: 2px;
+          padding: 3px 10px;
+          min-height: 52px;
+          align-content: center;
+        }
+        .mobile-nav button[aria-current="page"] {
+          color: var(--accent-ink);
+        }
+        .mobile-nav .nav-icon {
+          font-size: 20px;
+        }
+        .bill-page .page-head .pill {
+          margin-top: 14px;
+        }
+        .bill-page .balance {
+          padding: 20px;
+        }
+        .balance .sums {
+          gap: 7px;
+        }
+        .balance .sums b {
+          font-size: 23px;
+        }
+        .bill-page .pay-card {
+          padding-bottom: 0;
+        }
+        .bill-page ~ .mobile-nav {
+          display: none;
+        }
+        .bill-page {
+          padding-bottom: 174px;
+        }
+        .bill-page .balance {
+          position: sticky;
+          top: 26px;
+          z-index: 2;
+        }
+        .bill-page .pay-footer {
+          position: fixed;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 4;
+          margin: 0;
+          padding: 16px 20px;
+          border-radius: 0;
+        }
+        .bill-page .pay-card {
+          padding-bottom: 20px;
+        }
+        .bill-page .content {
+          padding-bottom: 24px;
+        }
+        .bill-layout {
+          gap: 18px;
+        }
+        .bill-lines {
+          font-size: 14px;
+        }
+        .bill-lines .row {
+          gap: 12px;
+        }
+        .bill-lines .row .money {
+          font-size: 16px;
+        }
+        .bill-lines h2 {
+          font-size: 24px;
+        }
+        .bill-page .bill-layout .seg button {
+          font-size: 13px;
+          padding: 8px;
+        }
+        .menu-top {
+          padding: 20px;
+        }
+        .menu-brand {
+          font-size: 24px;
+        }
+        .dish-page {
+          padding: 20px 20px 140px;
+        }
+        .dish-layout {
+          grid-template-columns: 1fr;
+          gap: 24px;
+        }
+        .dish-art {
+          min-height: 240px;
+        }
+        .dish-art svg {
+          max-width: 300px;
+        }
+        .dish-title {
+          font-size: 34px;
+        }
+        .dish-footer {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          z-index: 4;
+          padding: 14px 20px;
+          gap: 12px;
+          justify-content: space-between;
+        }
+        .dish-footer .primary {
+          min-width: 0;
+          flex: 1;
+          padding-inline: 12px;
+          font-size: 14px;
+        }
+        .quantity {
+          gap: 10px;
+        }
+        .quantity button {
+          width: 48px;
+          min-height: 48px;
+        }
+        .dish-price {
+          font-size: 28px;
+        }
+        .empty {
+          margin: 36px auto;
+          padding: 24px 16px;
+        }
+        .skeleton-grid {
+          grid-template-columns: 1fr;
+        }
+        .kit table {
+          font-size: 13px;
+        }
+        .kit .money {
+          white-space: normal;
+          overflow-wrap: anywhere;
+        }
+      }
+      .product .seg button {
+        min-height: 48px;
+      }
+      @media (max-width: 340px) {
+        .product {
+          overflow-wrap: anywhere;
+        }
+        .metrics {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .metric.main b {
+          font-size: 22px;
+        }
+        .bill-layout .stack > * {
+          min-width: 0;
+        }
+        .methods button {
+          flex-basis: 100%;
+          min-width: 0;
+        }
+        .metric.main {
+          grid-column: auto;
+        }
+        .balance .sums {
+          grid-template-columns: 1fr;
+        }
+        .balance .sums > div {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+        }
+        .balance .sums b {
+          margin: 0;
+          font-size: 20px;
+        }
+        .list li .grow {
+          min-width: 0;
+        }
+        .dish-footer {
+          flex-wrap: wrap;
+        }
+        .dish-footer .primary {
+          flex-basis: 100%;
+        }
+        .quantity {
+          width: 100%;
+          justify-content: center;
+        }
+        .dish-page {
+          padding-bottom: 210px;
+        }
+        .menu-top > .row {
+          flex-wrap: wrap;
+        }
+        .bill-page .pay-footer .primary {
+          white-space: normal;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+          scroll-behavior: auto !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="root"></main>
+    <dialog id="demo-dialog" aria-labelledby="dialog-title">
+      <div class="stack">
+        <div class="row">
+          <h2 id="dialog-title">Vista de prueba</h2>
+          <button id="dialog-close" type="button" aria-label="Cerrar diálogo">×</button>
+        </div>
+        <p id="dialog-copy"></p>
+        <p class="small muted">
+          Simulación con datos ficticios. No guarda pedidos, cobros ni cambios en ningún restaurante.
+        </p>
+        <button id="dialog-done" class="primary" type="button">Volver a la maqueta</button>
+      </div>
+    </dialog>
+    <script>
+      "use strict";
+      const root = document.getElementById("root");
+      const params = new URLSearchParams(location.search);
+      const allowed = {
+        direction: ["actual", "hospitalidad"],
+        screen: ["hoy", "cobro", "carta", "componentes"],
+        scheme: ["light", "dark"],
+        state: [
+          "normal",
+          "vacio",
+          "cargando",
+          "error",
+          "parcial",
+          "permiso",
+          "offline",
+          "confirmando",
+          "exito",
+        ],
+      };
+      const pick = (name, fallback) =>
+        allowed[name].includes(params.get(name)) ? params.get(name) : fallback;
+      const model = {
+        direction: pick("direction", "hospitalidad"),
+        screen: pick("screen", "hoy"),
+        scheme: pick("scheme", "light"),
+        state: pick("state", "normal"),
+        width: [390, 768, 1280].includes(Number(params.get("width"))) ? Number(params.get("width")) : 1280,
+      };
+      const names = { actual: "Identidad actual depurada", hospitalidad: "Hospitalidad precisa" };
+      const screenNames = {
+        hoy: "Hoy",
+        cobro: "Cobro",
+        carta: "Carta del comensal",
+        componentes: "Componentes y estados",
+      };
+      const money = (cents) =>
+        "Q" +
+        new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+          cents / 100,
+        );
+      let method = "CASH",
+        billMode = "todo",
+        quantity = 1;
+      function dialog(title, copy) {
+        document.getElementById("dialog-title").textContent = title;
+        document.getElementById("dialog-copy").textContent = copy;
+        document.getElementById("demo-dialog").showModal();
+        document.getElementById("dialog-close").focus();
+      }
+      for (const id of ["dialog-close", "dialog-done"])
+        document
+          .getElementById(id)
+          .addEventListener("click", () => document.getElementById("demo-dialog").close());
+      function applyTheme() {
+        document.documentElement.dataset.direction = model.direction;
+        document.documentElement.dataset.scheme = model.scheme;
+      }
+      function review() {
+        root.innerHTML = `<div class="review"><header class="review-head"><div><div class="eyebrow muted">LEOGIN · EXPLORACIÓN 1.0</div><h1>La misma tarea. Dos identidades.</h1><p class="intro">Compara Hoy, Cobro y Carta con los mismos datos y estados. La identidad actual ya usa coral y neutros cálidos: esta comparación conserva esa base y explora una dirección más editorial.</p></div><span class="stamp">Propuesta · pendiente de tu elección</span></header><div class="controls"><label>Pantalla<select id="screen">${Object.entries(
+          screenNames,
+        )
+          .map(([k, v]) => `<option value="${k}">${v}</option>`)
+          .join(
+            "",
+          )}</select></label><label>Tema<select id="scheme"><option value="light">Claro</option><option value="dark">Oscuro</option></select></label><label>Ancho<select id="width"><option value="390">390 px · teléfono</option><option value="768">768 px · tableta</option><option value="1280">1280 px · escritorio</option></select></label><label>Estado<select id="state"><option value="normal">Normal</option><option value="vacio">Vacío</option><option value="cargando">Cargando</option><option value="error">Error</option><option value="parcial">Datos parciales</option><option value="permiso">Sin permiso</option><option value="offline">Sin conexión</option><option value="confirmando">Confirmando</option><option value="exito">Éxito</option></select></label><div class="seg" role="group" aria-label="Dirección visual">${Object.entries(
+          names,
+        )
+          .map(
+            ([k, v]) =>
+              `<button type="button" data-direction-choice="${k}" aria-pressed="${model.direction === k}">${v}</button>`,
+          )
+          .join(
+            "",
+          )}</div></div><div class="direction-note"><span id="direction-description"></span><span class="swatches" aria-label="Paleta: fondo, superficie, texto y acento"><i class="swatch" style="--swatch:var(--bg)"></i><i class="swatch" style="--swatch:var(--paper)"></i><i class="swatch" style="--swatch:var(--ink)"></i><i class="swatch" style="--swatch:var(--accent)"></i></span></div><div class="stage"><div class="preview-frame" id="frame-wrap"><iframe id="preview" title="Maqueta de Leogin con datos ficticios"></iframe></div></div><footer class="review-footer">Datos ficticios · acciones simuladas · sin conexión a la base de datos. Ambas opciones comparten jerarquía, contenido, objetivos táctiles y estados. La marca del restaurante sigue siendo configurable.</footer></div>`;
+        for (const key of ["screen", "scheme", "state", "width"]) {
+          const el = document.getElementById(key);
+          el.value = String(model[key]);
+          el.addEventListener("change", () => {
+            model[key] = key === "width" ? Number(el.value) : el.value;
+            updatePreview();
+          });
+        }
+        document.querySelectorAll("[data-direction-choice]").forEach((b) =>
+          b.addEventListener("click", () => {
+            model.direction = b.dataset.directionChoice;
+            updatePreview();
+          }),
+        );
+        updatePreview();
+      }
+      function updatePreview() {
+        applyTheme();
+        document
+          .querySelectorAll("[data-direction-choice]")
+          .forEach((b) =>
+            b.setAttribute("aria-pressed", String(b.dataset.directionChoice === model.direction)),
+          );
+        document.getElementById("direction-description").textContent =
+          model.direction === "actual"
+            ? "Coral actual · neutros cálidos · títulos de palo seco · tarjetas de 18 px"
+            : "Terracota · marfil y carbón verdoso · títulos editoriales · superficies más sobrias";
+        const url = new URL(location.href);
+        url.search = "";
+        for (const [k, v] of Object.entries(model)) url.searchParams.set(k, v);
+        url.searchParams.set("preview", "1");
+        document.getElementById("frame-wrap").style.width = model.width + "px";
+        document.getElementById("preview").src = url.href;
+        const share = new URL(url);
+        share.searchParams.delete("preview");
+        history.replaceState(null, "", share.href);
+      }
+      function nav() {
+        return `<aside class="sidebar"><div class="logo">leo<span>gin</span></div><div><p class="restaurant-name">Rincón 502</p><p class="small muted">Restaurante · Guatemala</p></div><nav aria-label="Panel"><button type="button" ${model.screen === "hoy" ? 'aria-current="page"' : ""} data-demo="Hoy">◷ &nbsp; Hoy</button><button type="button" data-demo="Pedidos">▤ &nbsp; Pedidos</button><button type="button" data-demo="Servicio">▦ &nbsp; Tomar pedido</button><button type="button" data-demo="Carta">≡ &nbsp; Carta</button><button type="button" ${model.screen === "cobro" ? 'aria-current="page"' : ""} data-demo="Caja">▣ &nbsp; Caja</button><button type="button" data-demo="Negocio">↗ &nbsp; Negocio</button></nav><div class="sidebar-footer"><div class="row"><span class="avatar">AM</span><div class="grow"><b class="small">Ana Morales</b><p class="small muted">Encargada · turno tarde</p></div></div></div></aside>`;
+      }
+      function mobileNav() {
+        return `<nav class="mobile-nav" aria-label="Panel móvil"><button type="button" aria-current="page" data-demo="Hoy"><span class="nav-icon">◷</span>Hoy</button><button type="button" data-demo="Pedidos"><span class="nav-icon">▤</span>Pedidos</button><button type="button" data-demo="Servicio"><span class="nav-icon">▦</span>Servicio</button><button type="button" data-demo="Más opciones"><span class="nav-icon">···</span>Más</button></nav>`;
+      }
+      function shell(content) {
+        return `<div class="app">${nav()}<div class="work"><header class="topbar"><span class="breadcrumb">Rincón 502 / ${screenNames[model.screen]}</span><span class="prototype">Ana Morales · Encargada</span></header>${content}</div></div>${model.screen === "hoy" ? mobileNav() : ""}`;
+      }
+      function notice() {
+        const messages = {
+          error: [
+            "error",
+            "!",
+            "No pudimos actualizar los datos",
+            "Última lectura válida: 12:45. No se confirmó ninguna acción nueva.",
+          ],
+          parcial: [
+            "warn",
+            "!",
+            "Datos incompletos",
+            "Falta actualizar una parte de la lectura. Revisa antes de continuar.",
+          ],
+          offline: [
+            "warn",
+            "↯",
+            "Sin conexión",
+            "Los cambios no se enviarán. Conserva esta pantalla y vuelve a conectar.",
+          ],
+          confirmando: [
+            "",
+            "◌",
+            "Confirmando la solicitud",
+            "Espera la respuesta antes de repetir la acción.",
+          ],
+          exito: [
+            "success",
+            "✓",
+            "Acción completada · simulación",
+            "Resultado de prueba confirmado. No se modificó ninguna base de datos.",
+          ],
+        };
+        const msg = messages[model.state];
+        return msg
+          ? `<div class="notice ${msg[0]}" role="${model.state === "error" ? "alert" : "status"}" style="margin-bottom:24px"><span class="status-icon" aria-hidden="true">${msg[1]}</span><div><b>${msg[2]}</b><p>${msg[3]}</p>${model.state === "error" ? '<button type="button" data-retry>Volver a intentar</button>' : ""}</div></div>`
+          : "";
+      }
+      function special() {
+        if (model.state === "permiso")
+          return `<section class="empty"><span class="circle" aria-hidden="true">⌑</span><h2>Esta tarea necesita otro permiso.</h2><p class="muted">Tu sesión sigue abierta. Pide al encargado acceso a ${model.screen === "cobro" ? "cobros" : "esta sección"} para continuar.</p><button type="button" data-demo="Volver a mi trabajo">Volver a mi trabajo</button></section>`;
+        if (model.state === "cargando")
+          return `<section aria-busy="true" aria-label="Cargando ${screenNames[model.screen]}"><p class="small muted" style="margin-bottom:24px">Leyendo datos…</p><div class="skeleton-grid">${[1, 2, 3].map(() => '<div class="card"><div class="skeleton"></div><div class="skeleton big"></div></div>').join("")}</div><div class="card stack"><div class="skeleton"></div><div class="skeleton block"></div><div class="skeleton"></div></div></section>`;
+        if (model.state === "vacio")
+          return `<section class="empty"><span class="circle" aria-hidden="true">${model.screen === "carta" ? "≡" : "◷"}</span><h2>${model.screen === "hoy" ? "El turno está por empezar." : model.screen === "cobro" ? "Esta mesa aún no tiene consumo." : "La carta todavía está en preparación."}</h2><p class="muted">${model.screen === "hoy" ? "Todavía no hay pedidos de este turno. Abre una mesa o toma el primer pedido." : model.screen === "cobro" ? "Los platillos aparecerán aquí cuando se agregue un pedido. No hay un cobro para confirmar." : "El restaurante aún no ha publicado platillos disponibles. Puedes consultar al personal."}</p><button class="primary" type="button" data-demo="${model.screen === "hoy" ? "Tomar el primer pedido" : "Volver"}">${model.screen === "hoy" ? "Tomar el primer pedido" : "Volver"}</button></section>`;
+        return "";
+      }
+      function hoy() {
+        const disabled = ["error", "parcial", "offline", "confirmando", "permiso", "cargando"].includes(model.state)
+          ? "disabled"
+          : "";
+        return shell(
+          `<main class="content"><div class="page-head"><div><p class="eyebrow muted">Jueves 5 de noviembre · turno tarde</p><h1 style="margin-top:8px">Tu turno, de un vistazo.</h1><p class="muted">Rincón 502 · Ana, encargada</p></div><button class="primary" type="button" data-demo="Tomar pedido" ${disabled}>+ Tomar pedido</button></div>${special() || `${notice()}<section class="metrics" aria-label="Resumen del turno"><div class="card metric main"><span class="small muted">Cobrado en el turno</span><b class="money">Q1,248.00</b><span class="small muted">18 pedidos · lectura de las 12:45</span></div><div class="card metric"><span class="small muted">Mesas ocupadas</span><b class="money">6 <span class="muted" style="font-size:18px">/ 12</span></b><span class="small muted">2 listas para cobrar</span></div><div class="card metric"><span class="small muted">En cocina</span><b class="money">4</b><span class="small muted">La más antigua: 8 min</span></div></section><div class="columns"><section class="card"><div class="row"><h2>Lo que sigue</h2><span class="pill">3 tareas</span></div><ul class="list"><li><span class="circle">8</span><div class="grow"><b>Mesa 8 pide la cuenta</b><span class="small muted">Q52.00 pagados · Q18.00 por cobrar</span></div><button type="button" data-demo="Cobrar Mesa 8" ${disabled}>Cobrar</button></li><li><span class="circle">4</span><div class="grow"><b>Pedido para llevar listo</b><span class="small muted">#1042 · Sofía Ramírez</span></div><span class="pill ok">✓ Listo</span></li><li><span class="circle">2</span><div class="grow"><b>Mesa 2 espera sus bebidas</b><span class="small muted">4 personas · aceptado hace 6 min</span></div><span class="pill warn">◷ En preparación</span></li></ul></section><aside class="stack"><section class="card stack"><div class="row"><h3>El salón</h3><span class="pill ok">● Operando</span></div><div class="row"><span class="muted">Libres</span><b class="money">6 mesas</b></div><div class="row"><span class="muted">Por limpiar</span><b class="money">1 mesa</b></div><button type="button" data-demo="Ver el salón">Ver el salón</button><p class="small muted">Estado de mesa propuesto para 1.3.</p></section><div class="callout"><b class="small">Caja del turno</b><p class="small muted" style="margin-top:6px">Fondo Q200.00 · abierta por Ana a las 11:00. El cuadre se revisa en Caja.</p></div></aside></div>`}</main>`,
+        );
+      }
+      function cobro() {
+        const locked = ["error", "parcial", "offline", "confirmando"].includes(model.state);
+        return shell(
+          `<main class="content bill-page"><div class="page-head"><div><p class="eyebrow muted">Servicio · 2 personas</p><h1 style="margin-top:8px">Cobrar Mesa 8</h1><p class="muted">Ana Morales · cuenta abierta a las 12:10</p></div><span class="pill">Cuenta #1041</span></div>${special() || `${notice()}${model.state === "exito" ? `<section class="card receipt stack"><span class="pill ok">✓ Pago confirmado · simulación</span><h2>Cuenta pagada.</h2><div><div class="row"><span>Consumo total</span><b class="money">Q70.00</b></div><div class="row"><span>Pagado anteriormente</span><b class="money">Q52.00</b></div><div class="row"><span>Este pago</span><b class="money">Q18.00</b></div><div class="row"><span>Por cobrar</span><b class="money">Q0.00</b></div></div><p class="muted">Un mismo intento conserva este resultado. La mesa queda por limpiar en el flujo propuesto de 1.3.</p><button type="button" class="primary" data-reset>Volver al ejemplo</button></section>` : `<section class="balance" aria-label="Resumen de cuenta"><div class="sums"><div><span>Consumo</span><b class="money">Q70.00</b></div><div><span>Ya pagado</span><b class="money">Q52.00</b></div><div class="due"><span>Por cobrar</span><b class="money">Q18.00</b></div></div></section><div class="bill-layout"><section class="card bill-lines"><div class="row"><h2>La cuenta</h2><span class="small muted">2 platillos</span></div><div class="row"><div class="grow"><b>1 × Hamburguesa de la casa con papas rústicas</b><p class="small muted">Sin cebolla · acompañado de ensalada</p><span class="pill ok" style="margin-top:12px">✓ Pagado con tarjeta</span></div><b class="money">Q52.00</b></div><div class="row"><div class="grow"><b>1 × Limonada con hierbabuena</b><p class="small muted">Sin azúcar</p><span class="pill" style="margin-top:12px">Pendiente</span></div><b class="money">Q18.00</b></div><p class="small muted" style="margin-top:18px">Los platos pagados conservan su importe. No se vuelven a cobrar.</p></section><section class="card pay-card"><div class="stack"><h2>Completar el cobro</h2><div><div class="seg" role="group" aria-label="Alcance del cobro"><button type="button" data-mode="todo" aria-pressed="true">Cuenta completa</button><button type="button" data-mode="platos" aria-pressed="false">Por platos</button><button type="button" data-mode="iguales" aria-pressed="false">Calcular partes</button></div><p class="mode-description" id="mode-description">Se cobrará el saldo pendiente de la cuenta.</p></div><div><p class="small muted" style="margin-bottom:10px">Método de pago</p><div class="methods" role="group" aria-label="Método de pago"><button type="button" data-method="CASH" aria-pressed="true" ${locked ? "disabled" : ""}>Efectivo</button><button type="button" data-method="CARD" aria-pressed="false" ${locked ? "disabled" : ""}>Tarjeta</button><button type="button" data-method="MIXED" aria-pressed="false" ${locked ? "disabled" : ""}>Mixto</button></div><div id="method-fields" class="field-group"></div></div></div><div class="pay-footer"><button id="pay" type="button" class="primary" ${locked ? "disabled" : ""}>${model.state === "confirmando" ? "Confirmando…" : "Cobrar Q18.00"}</button><p class="small muted">Simulación · sin impresión ni emisión de factura</p></div></section></div>`}`}</main>`,
+        );
+      }
+      function art() {
+        return `<figure class="dish-art"><svg viewBox="0 0 460 360" role="img" aria-label="Ilustración de una hamburguesa con papas, referencia para fotografía del restaurante"><ellipse cx="230" cy="292" rx="175" ry="27" fill="currentColor" opacity=".08"/><ellipse cx="224" cy="227" rx="178" ry="110" fill="#e2d5bb"/><ellipse cx="224" cy="215" rx="159" ry="91" fill="#f7efde"/><g transform="translate(82,70)"><path d="M4 129 Q13 46 104 44 Q192 47 201 129Z" fill="#d79a4d"/><path d="M19 111 Q40 62 105 61 Q165 64 184 111" fill="none" stroke="#efbe72" stroke-width="14" stroke-linecap="round"/><g fill="#f9e4ad"><ellipse cx="69" cy="81" rx="3" ry="7" transform="rotate(35 69 81)"/><ellipse cx="117" cy="77" rx="3" ry="7" transform="rotate(-25 117 77)"/><ellipse cx="147" cy="96" rx="3" ry="7"/></g><path d="M2 133 Q18 118 34 135 Q51 119 68 137 Q86 122 105 137 Q128 119 146 137 Q172 118 198 133 L198 151 L2 151Z" fill="#58854b"/><path d="M7 150 Q107 139 195 151 L182 171 L21 172Z" fill="#bd4e32"/><path d="M7 167 L195 166 L196 183 L107 199 L9 182Z" fill="#edbd53"/><rect x="8" y="177" width="190" height="27" rx="13" fill="#684332"/><path d="M10 207 L196 207 Q188 241 102 240 Q20 238 10 207" fill="#ca8b43"/></g><g fill="#dda950" stroke="#f3c16a" stroke-width="4" stroke-linejoin="round"><path d="M306 152 l18 -8 36 92 -19 6Z"/><path d="M334 144 l18 3 -5 95 -21 -1Z"/><path d="M356 158 l18 10 -39 85 -18 -10Z"/><path d="M376 183 l13 16 -59 61 -15 -15Z"/></g></svg><figcaption>Ilustración de referencia · fotografía propia en producción</figcaption></figure>`;
+      }
+      function carta() {
+        return `<header class="menu-top"><div class="row"><div><div class="menu-brand">Rincón 502</div><span class="small muted">Cocina de barrio, hecha en casa.</span></div><span class="pill">Mesa 8</span></div><nav class="menu-tabs" aria-label="Categorías"><span>De la casa</span><span>Bebidas</span><span>Para compartir</span></nav></header><main class="dish-page">${special() || `${notice()}<div class="dish-layout">${art()}<section><p class="eyebrow" style="color:var(--accent-ink)">De la casa</p><h1 class="dish-title">Hamburguesa de la casa</h1><p class="muted">Carne a la plancha, queso, vegetales frescos y nuestra salsa de la casa. Con acompañamiento incluido.</p><b class="dish-price money" style="display:block">Q52.00</b><div class="options"><div class="row"><h3>Tu acompañamiento</h3><span class="small muted">Obligatorio · elige 1</span></div><label class="option"><input type="radio" name="side" value="papas" checked><span>Papas rústicas</span><span class="included">Incluido</span></label><label class="option"><input type="radio" name="side" value="ensalada"><span>Ensalada fresca</span><span class="included">Incluido</span></label></div><label class="field dish-extra">¿Alguna indicación?<textarea id="dish-note" rows="2" placeholder="Por ejemplo: sin cebolla"></textarea><small>Opcional. Para alergias, consulta al personal.</small></label></section></div>`}</main>${!["vacio", "cargando", "permiso"].includes(model.state) ? `<footer class="dish-footer"><div class="quantity"><button type="button" id="minus" aria-label="Quitar una unidad" disabled>−</button><output id="quantity" aria-live="polite">1</output><button type="button" id="plus" aria-label="Agregar una unidad">+</button></div><button type="button" id="add" class="primary" ${["error", "parcial", "offline", "confirmando"].includes(model.state) ? "disabled" : ""}>${model.state === "confirmando" ? "Agregando…" : "Agregar · Q52.00"}</button></footer>` : ""}`;
+      }
+      function componentes() {
+        return shell(
+          `<main class="content"><div class="page-head"><div><p class="eyebrow muted">Biblioteca candidata · no aplicada</p><h1 style="margin-top:8px">Una función, una pieza.</h1><p class="muted">Los mismos estados en el panel y la carta.</p></div></div><div class="kit"><section class="card"><h2>Acciones</h2><div class="buttons"><button class="primary" type="button" data-demo="Acción principal">Acción principal</button><button type="button" data-demo="Acción secundaria">Secundaria</button><button class="secondary" type="button" data-demo="Volver">Volver</button><button class="danger" type="button" data-demo="Acción destructiva">Anular con motivo</button><button class="primary" type="button" disabled>No disponible</button><button type="button" disabled aria-busy="true">◌ Confirmando…</button></div><p class="small muted">48 px de alto; 56 px en la acción principal. Foco por teclado visible; hover y pulsado conservan posición.</p></section><section class="card"><h2>Campos y selección</h2><label class="field">Efectivo recibido<input type="text" inputmode="decimal" value="Q20.00"><small>El cambio se calcula desde el saldo.</small></label><label class="field">Importe del pago<input value="Q10.00" aria-invalid="true" aria-describedby="amount-error"><small id="amount-error" class="error-help">Faltan Q8.00 para cubrir el saldo.</small></label><div class="component-tabs" role="group" aria-label="Método de ejemplo"><button type="button" aria-pressed="true" data-kit-tab>Efectivo</button><button type="button" aria-pressed="false" data-kit-tab>Tarjeta</button></div></section><section class="card"><h2>Estados con significado</h2><div class="notice success"><span aria-hidden="true">✓</span><div><b>Pago confirmado</b><p>El mismo intento recupera el resultado original.</p></div></div><div class="notice error"><span aria-hidden="true">!</span><div><b>No se pudo confirmar</b><p>La respuesta es incierta. Conservamos el intento para recuperar su resultado.</p></div></div><div class="row wrap"><span class="pill ok">✓ Listo</span><span class="pill warn">◷ Preparando</span><span class="pill">Sin datos</span></div></section><section class="card"><h2>Números y nombres largos</h2><table><thead><tr><th scope="col">Concepto</th><th class="right" scope="col">Importe</th></tr></thead><tbody><tr><td>Limonada natural</td><td class="right money">Q9.00</td></tr><tr><td>Servicio de celebración familiar con nombre extenso</td><td class="right money">Q99,999.99</td></tr></tbody></table><div class="row"><span class="small muted">Estándar · modalidad de muestra</span><span><b class="money">Q299</b> <span class="small muted">/ mes</span></span></div><button type="button" data-demo="Hoja de confirmación">Abrir hoja de confirmación</button><p class="small muted">Precio ilustrativo; no constituye una oferta. La implementación usa el contrato único de 0.2.</p></section></div></main>`,
+        );
+      }
+      function updatePay() {
+        const pay = document.getElementById("pay");
+        if (!pay) return;
+        const cash = document.getElementById("cash");
+        const invalid =
+          method === "CASH" &&
+          cash &&
+          (cash.value === "" || !Number.isFinite(Number(cash.value)) || Number(cash.value) < 18);
+        pay.disabled =
+          !!invalid ||
+          billMode === "iguales" ||
+          ["error", "parcial", "offline", "confirmando"].includes(model.state);
+      }
+      function methodFields() {
+        const fields = document.getElementById("method-fields");
+        if (!fields) return;
+        fields.innerHTML =
+          method === "CASH"
+            ? '<label class="field">Efectivo recibido<input id="cash" type="number" min="0" step="0.01" inputmode="decimal" value="20" aria-describedby="cash-help"><small id="cash-help">Debe cubrir Q18.00 de saldo.</small></label><div class="row"><span class="muted">Cambio</span><b id="change" class="money">Q2.00</b></div>'
+            : method === "MIXED"
+              ? '<div class="mini-row"><span>Tarjeta</span><b class="money">Q12.00</b></div><div class="mini-row"><span>Efectivo</span><b class="money">Q6.00</b></div><p class="small muted">Q12.00 + Q6.00 = Q18.00. Ejemplo visual del flujo futuro de 1.1.</p>'
+              : '<p class="small muted">Confirma el cargo en la terminal antes de registrar el cobro.</p>';
+        const cash = document.getElementById("cash");
+        if (cash) cash.disabled = ["error", "parcial", "offline", "confirmando"].includes(model.state);
+        if (cash)
+          cash.addEventListener("input", () => {
+            const value = Number(cash.value);
+            const valid = cash.value !== "" && Number.isFinite(value) && value >= 18;
+            document.getElementById("change").textContent = valid
+              ? money(Math.round(value * 100) - 1800)
+              : "Importe insuficiente";
+            cash.setAttribute("aria-invalid", String(!valid));
+            updatePay();
+          });
+      }
+      function bind() {
+        document
+          .querySelectorAll("[data-demo]")
+          .forEach((b) =>
+            b.addEventListener("click", () =>
+              dialog(
+                b.dataset.demo,
+                "Este control muestra la dirección visual y los estados de la tarea. No ejecuta una operación real.",
+              ),
+            ),
+          );
+        document.querySelector("[data-retry]")?.addEventListener("click", () => {
+          model.state = "normal";
+          product();
+        });
+        document.querySelector("[data-reset]")?.addEventListener("click", () => {
+          model.state = "normal";
+          product();
+        });
+        document.querySelectorAll("[data-method]").forEach((b) =>
+          b.addEventListener("click", () => {
+            method = b.dataset.method;
+            document
+              .querySelectorAll("[data-method]")
+              .forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+            methodFields();
+            updatePay();
+          }),
+        );
+        document.querySelectorAll("[data-mode]").forEach((b) =>
+          b.addEventListener("click", () => {
+            billMode = b.dataset.mode;
+            document
+              .querySelectorAll("[data-mode]")
+              .forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+            document.getElementById("mode-description").textContent =
+              billMode === "platos"
+                ? "Limonada · saldo de esta línea: Q18.00."
+                : billMode === "iguales"
+                  ? "2 personas · Q9.00 cada una. Solo cálculo; todavía no registra partes individuales."
+                  : "Se cobrará el saldo pendiente de la cuenta.";
+            updatePay();
+          }),
+        );
+        document.getElementById("pay")?.addEventListener("click", () => {
+          model.state = "exito";
+          product();
+          document.querySelector("[data-reset]")?.focus();
+        });
+        document
+          .querySelectorAll("[data-kit-tab]")
+          .forEach((b) =>
+            b.addEventListener("click", () =>
+              document
+                .querySelectorAll("[data-kit-tab]")
+                .forEach((x) => x.setAttribute("aria-pressed", String(x === b))),
+            ),
+          );
+        function updateQty() {
+          document.getElementById("quantity").textContent = String(quantity);
+          document.getElementById("minus").disabled = quantity <= 1;
+          document.getElementById("plus").disabled = quantity >= 20;
+          document.getElementById("add").textContent = "Agregar · " + money(quantity * 5200);
+        }
+        document.getElementById("minus")?.addEventListener("click", () => {
+          quantity = Math.max(1, quantity - 1);
+          updateQty();
+        });
+        document.getElementById("plus")?.addEventListener("click", () => {
+          quantity = Math.min(20, quantity + 1);
+          updateQty();
+        });
+        document
+          .getElementById("add")
+          ?.addEventListener("click", () =>
+            dialog(
+              "Carrito de prueba",
+              quantity +
+                " × Hamburguesa de la casa · " +
+                money(quantity * 5200) +
+                ". Acompañamiento: " +
+                document.querySelector('input[name="side"]:checked').value +
+                ". Puedes revisar tu pedido antes de enviarlo.",
+            ),
+          );
+        methodFields();
+      }
+      function product() {
+        applyTheme();
+        root.className = "product";
+        method = "CASH";
+        billMode = "todo";
+        quantity = 1;
+        root.innerHTML =
+          '<div class="fixed-demo">MAQUETA · DATOS FICTICIOS · ' +
+          names[model.direction] +
+          "</div>" +
+          { hoy, cobro, carta, componentes }[model.screen]();
+        bind();
+      }
+      if (params.get("preview") === "1") product();
+      else review();
+    </script>
+  </body>
+</html>

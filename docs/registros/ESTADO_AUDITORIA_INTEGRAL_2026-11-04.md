@@ -499,6 +499,18 @@ El chat «Recupera el resultado del cobro» permanece archivado, con sus turnos 
 
 **Siguiente paso:** integrar las fichas de la ola 0 en su orden de dependencias, con autorización por cada fusión, CI verde y comprobación/orden de migraciones de producción. La ola 0 sigue pendiente de integración y despliegue: no se cierra el plan ni el changelog, ni se propone una etiqueta como si ya estuviera publicada. La próxima ficha funcional es 1.0; cualquier cambio visual requiere su maqueta y aprobación según el plan. Esta entrega se detiene en 0.19.
 
+## 17. Continuación del 2026-11-05 · ficha 1.0 en revisión
+
+**Rama:** `feat/exploracion-sistema-visual`, sobre `origin/fix/limite-inicio-dia-caja` (`f08bda8`, PR #90), después de actualizar `main`. El PR de maquetas queda en borrador y su base aísla los documentos de esta ficha. #90 sigue abierto y su CI terminó en verde. Cada fusión conserva la autorización por separado.
+
+**Maquetas:** [comparador interactivo](../diseno/MAQUETAS_SISTEMA_VISUAL_2026-11-05.html) de Hoy, Cobro y Carta. Identidad actual depurada usa coral y neutros del panel. Hospitalidad precisa usa marfil, terracota, títulos editoriales y un oscuro de carbón verdoso propuesto para revisión. Ambas comparten datos ficticios, jerarquía y estados. El [inventario y contrato candidato](../diseno/SISTEMA_VISUAL_2026-11-05.md) recogen componentes y alcance de las fichas posteriores. Este PR contiene la exploración y sus notas, sin migraciones ni cambios de aplicación.
+
+**Validación:** Chromium revisó 88 combinaciones de pantalla, tema, ancho y estado, y dos recorridos interactivos. Los tres anchos son 390, 768 y 1280 px. También se comprobó el reflujo a 195 px de ancho efectivo, equivalente a 390 px al 200 %, y se inspeccionaron las capturas de Hoy y Cobro y la comparación móvil. Se verificaron el pie visible, el bloqueo de efectivo insuficiente y de cálculo de partes, la cantidad y el total de Carta, el cierre con Escape y la devolución de foco. Cero errores de JavaScript, solicitudes externas o desbordes horizontales en las vistas revisadas. Contraste del texto blanco del botón principal de 4,56:1 y 4,71:1, respectivamente. Esta verificación corresponde al prototipo.
+
+**Chat:** «Continuar implementación de auditoría» estaba sin proyecto asociado. Se vinculó a **Leogin**, el mismo proyecto local que «Retoma el trabajo de Claude Code». La asociación se confirmó mediante la herramienta de Codex. El icono de la barra lateral queda sin verificación visual.
+
+**Decisión pendiente:** elegir Identidad actual depurada u Hospitalidad precisa, como indica el plan en §1 y §3. Después se aterrizan los tokens y componentes en la rama de 1.0. La ficha permanece abierta y el plan conserva las dependencias de integración de la ola 0.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*
