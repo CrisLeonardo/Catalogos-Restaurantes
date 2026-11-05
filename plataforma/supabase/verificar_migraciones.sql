@@ -157,7 +157,11 @@ huellas(n, que, ok, cuando) as (values
      to_regclass('public.encargo_fechas') is null
      and not exists (select 1 from information_schema.columns
                       where table_schema = 'public' and table_name = 'orders' and column_name = 'transfer_status'),
-     'DESPUÉS de desplegar (o a la vez)')
+     'DESPUÉS de desplegar (o a la vez)'),
+  ('159', 'compras: creación atómica (leogin_crear_compra) y estados que no retroceden',
+     to_regprocedure('public.leogin_crear_compra(uuid,uuid,text,jsonb)') is not null
+     and exists (select 1 from pg_trigger where tgname = 'candado_estado_compra'),
+     'ANTES de desplegar (o a la vez)')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

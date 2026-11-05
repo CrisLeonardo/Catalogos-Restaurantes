@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service';
 import { authorizeModuleAction } from '@/lib/module-auth';
+import { faltaLaFuncion } from '@/lib/db/migracion-ausente';
+import { DESDE, mensajeDeCompra, motivoDeRechazo, type EstadoCompra } from '@/lib/compras/estados';
 
 export type SupplierActionResult = { error?: string; ok?: boolean; id?: string };
 
@@ -100,17 +102,34 @@ export async function createPurchaseOrder(
   if (clean.length === 0) return { error: 'Agrega al menos un renglón con descripción y cantidad.' };
 
   const db = createServiceClient();
+
+  /* Cabecera y renglones en una sola transacción (auditoría 0.8, X10).
+     Antes iban en dos escrituras: si fallaban los renglones quedaba una
+     orden vacía con folio y total. */
+  const { data, error } = await db.rpc('leogin_crear_compra', {
+    p_restaurant_id: restaurantId,
+    p_supplier_id: supplierId,
+    p_notes: notes,
+    p_lineas: clean,
+  });
+  if (!error) {
+    const fila = (Array.isArray(data) ? data[0] : data) as { id: string } | null;
+    revalidatePath('/admin/proveedores');
+    return { ok: true, id: fila?.id };
+  }
+  if (!faltaLaFuncion(error)) return { error: mensajeDeCompra(error, 'No se pudo crear la orden. Intenta de nuevo.') };
+
+  // Sin la 159: como antes, pero sin dejar una cabecera huérfana.
   const { data: folioData } = await db.rpc('leogin_next_po_folio', { p_restaurant_id: restaurantId });
   const folio = (folioData as number) ?? 1;
+  const total = clean.reduce((a, l) => a + Math.round(l.cantidad * l.costo_unitario * 100) / 100, 0);
 
-  const total = clean.reduce((a, l) => a + l.cantidad * l.costo_unitario, 0);
-
-  const { data: po, error } = await db
+  const { data: po, error: errCabecera } = await db
     .from('purchase_orders')
     .insert({ restaurant_id: restaurantId, supplier_id: supplierId, folio, notes: notes.trim(), total })
     .select('id')
     .single();
-  if (error) return { error: error.message };
+  if (errCabecera) return { error: mensajeDeCompra(errCabecera, 'No se pudo crear la orden. Intenta de nuevo.') };
 
   const poId = po!.id as string;
   const { error: itemsErr } = await db.from('purchase_order_items').insert(
@@ -125,19 +144,28 @@ export async function createPurchaseOrder(
       ingredient_id: l.ingredient_id,
     })),
   );
-  if (itemsErr) return { error: itemsErr.message };
+  if (itemsErr) {
+    await db.from('purchase_orders').delete().eq('id', poId).eq('restaurant_id', restaurantId);
+    return { error: mensajeDeCompra(itemsErr, 'No se pudo crear la orden. Intenta de nuevo.') };
+  }
 
   revalidatePath('/admin/proveedores');
   return { ok: true, id: poId };
 }
 
+/**
+ * Enviar o cancelar. Solo desde los estados que lo permiten (auditoría
+ * 0.8): una orden recibida no vuelve a borrador ni se cancela, porque
+ * su mercadería ya está en el inventario. Recibir va por el RPC atómico.
+ */
 export async function setPurchaseOrderStatus(
   restaurantId: string,
   poId: string,
-  estado: 'BORRADOR' | 'ENVIADA' | 'RECIBIDA' | 'CANCELADA',
+  estado: Exclude<EstadoCompra, 'BORRADOR'>,
 ): Promise<SupplierActionResult> {
   // Recibir tiene efectos reales (stock + costo promedio) — va por el RPC atómico.
   if (estado === 'RECIBIDA') return receivePurchaseOrder(restaurantId, poId);
+  if (estado !== 'ENVIADA' && estado !== 'CANCELADA') return { error: 'Estado no válido.' };
 
   const auth = await authorizeModuleAction(restaurantId, 'proveedores');
   if ('error' in auth) return auth;
@@ -146,12 +174,30 @@ export async function setPurchaseOrderStatus(
     estado === 'ENVIADA' ? { sent_at: new Date().toISOString() } : {};
 
   const db = createServiceClient();
-  const { error } = await db
+  // La condición sobre el estado actual hace la regla atómica aun sin la 159.
+  const { data, error } = await db
     .from('purchase_orders')
     .update({ estado, ...stamp })
     .eq('id', poId)
-    .eq('restaurant_id', restaurantId);
-  if (error) return { error: error.message };
+    .eq('restaurant_id', restaurantId)
+    .in('estado', [...DESDE[estado]])
+    .select('id');
+  if (error) return { error: mensajeDeCompra(error, 'No se pudo cambiar la orden. Intenta de nuevo.') };
+
+  if (!data || data.length === 0) {
+    const { data: actual } = await db
+      .from('purchase_orders')
+      .select('estado')
+      .eq('id', poId)
+      .eq('restaurant_id', restaurantId)
+      .maybeSingle();
+    revalidatePath('/admin/proveedores');
+    if (!actual) return { error: 'Esa orden ya no existe.' };
+    const desde = (actual as { estado: string }).estado;
+    // Otro aparato ya hizo lo mismo: no es un error.
+    if (desde === estado) return { ok: true };
+    return { error: motivoDeRechazo(desde, estado) };
+  }
 
   revalidatePath('/admin/proveedores');
   return { ok: true };
@@ -162,6 +208,7 @@ export async function setPurchaseOrderStatus(
  * a cada renglón vinculado a un producto o insumo real: suma stock, recalcula
  * el costo, y audita el movimiento en stock_movements. Atómico e idempotente
  * (leogin_receive_purchase_order, migración 088) — service_role únicamente.
+ * Desde la 159 una recibida ya no puede reabrirse, así que no se suma dos veces.
  */
 export async function receivePurchaseOrder(restaurantId: string, poId: string): Promise<SupplierActionResult> {
   const auth = await authorizeModuleAction(restaurantId, 'proveedores');
@@ -169,7 +216,7 @@ export async function receivePurchaseOrder(restaurantId: string, poId: string): 
 
   const db = createServiceClient();
   const { error } = await db.rpc('leogin_receive_purchase_order', { p_po_id: poId, p_restaurant_id: restaurantId });
-  if (error) return { error: error.message };
+  if (error) return { error: mensajeDeCompra(error, 'No se pudo recibir la orden. Intenta de nuevo.') };
 
   revalidatePath('/admin/proveedores');
   revalidatePath('/admin/inventario');
