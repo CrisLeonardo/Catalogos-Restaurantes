@@ -2,6 +2,8 @@
 
 **Creado el 2026-11-04 · base `876dd50` (v0.17.0) · rama del plan `docs/plan-auditoria-integral`.**
 
+> **Avance y traspaso:** el estado de cada ficha, los PR abiertos y lo que falta están en [`registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md`](../registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md).
+
 Este plan convierte la auditoría del 2–3 de noviembre en trabajo ejecutable. **No repite el detalle de la auditoría**: cada ficha dice qué hallazgos cubre y dónde leer su especificación. Su aporte está en cuatro cosas:
 
 1. **Une los duplicados.** La entrega trae unos 196 identificadores (F, N, X, E, D, W, A, C, O, M, S, T, R) y muchos describen el mismo trabajo. Aquí quedan en **66 fichas**, y el [índice inverso](#8-índice-inverso-cada-id-de-la-auditoría-tiene-dueño) prueba que ninguno se perdió.
