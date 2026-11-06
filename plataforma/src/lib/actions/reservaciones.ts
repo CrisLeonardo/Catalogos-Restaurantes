@@ -7,8 +7,9 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { canActOnGroupBranch } from '@/lib/db/admin';
 import { puedeEnSeccion, SIN_SECCION } from '@/lib/auth/seccion';
 import type { ReservationStatus } from '@/lib/db/reservaciones';
-import { seatTable } from '@/lib/actions/table-sessions';
-import { faltaLaColumna } from '@/lib/db/migracion-ausente';
+import { sentarDesdeRecepcion } from '@/lib/actions/table-sessions';
+import { getMesasConfiguradas } from '@/lib/db/table-sessions';
+import { revalidarSalon } from '@/lib/salon-cache';
 
 export type ReservationResult = { error?: string; ok?: boolean };
 
@@ -99,36 +100,38 @@ export async function updateReservationStatus(
     ? tableNumber
     : null;
 
-  const db = createServiceClient();
-  const base: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
-  const pedir = (cols: Record<string, unknown>) => db
-    .from('reservations')
-    .update(cols)
-    .eq('id', reservationId)
-    .eq('restaurant_id', restaurantId)
-    .select('party_size')
-    .maybeSingle();
+  if (mesa != null) return sentarDesdeRecepcion(restaurantId, mesa, reservationId, 'reservation');
 
-  let { data, error } = await pedir(mesa != null ? { ...base, table_number: mesa } : base);
-  // Si falta la columna, la 128 no ha corrido aquí. Cambiar de estado no
-  // puede depender de una columna que todavía no existe.
-  if (faltaLaColumna(error) && mesa != null) ({ data, error } = await pedir(base));
+  const { error } = await createServiceClient().from('reservations')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', reservationId)
+    .eq('restaurant_id', restaurantId);
   if (error) return { error: error.message };
 
+  revalidatePath('/admin/reservaciones');
+  return { ok: true };
+}
+
+export async function preverMesaDeReserva(
+  restaurantId: string, reservationId: string, mesa: number | null,
+): Promise<ReservationResult> {
+  const auth = await getAuthorizedRestaurantId(restaurantId);
+  if (!auth.ok) return { error: auth.error };
+  let capacidad: number | null = null;
   if (mesa != null) {
-    const res = await seatTable(restaurantId, mesa, {
-      partySize: (data?.party_size as number | null) ?? null,
-      source: 'reservation',
-      originId: reservationId,
-    });
-    if (res.error && !res.needsMigration) {
-      revalidatePath('/admin/reservaciones');
-      return { error: res.error };
+    try {
+      const elegida = (await getMesasConfiguradas(restaurantId)).find((m) => m.n === mesa);
+      if (!elegida) return { error: 'La mesa ya no está en el salón.' };
+      capacidad = elegida.capacidad;
+    } catch {
+      return { error: 'No se pudo leer la capacidad del salón.' };
     }
   }
-
-  revalidatePath('/admin/reservaciones');
-  if (mesa != null) revalidatePath('/admin/mesas');
+  const { error } = await createServiceClient().rpc('leogin_prever_mesa_de_reserva', {
+    p_restaurant: restaurantId, p_reserva: reservationId, p_mesa: mesa, p_capacidad: capacidad,
+  });
+  if (error) return { error: error.message };
+  revalidarSalon();
   return { ok: true };
 }
 

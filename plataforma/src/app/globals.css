@@ -3996,6 +3996,8 @@ html:has(.lp-intro-dialog[open]) { overflow: hidden; }
 [data-st="borrador"] { --sv-bg: var(--c-warn-bg); --sv-line: var(--c-warn-line); --sv-ink: var(--c-warn); }
 [data-st="cocina"]   { --sv-bg: var(--c-info-bg); --sv-line: var(--c-info-line); --sv-ink: var(--c-info); }
 [data-st="listo"]    { --sv-bg: var(--c-ok-bg);   --sv-line: var(--c-ok-line);   --sv-ink: var(--c-ok); }
+[data-st="pagada"]   { --sv-bg: var(--c-ok-bg);   --sv-line: var(--c-ok-line);   --sv-ink: var(--c-ok); }
+[data-st="limpieza"] { --sv-bg: var(--c-warn-bg); --sv-line: var(--c-warn-line); --sv-ink: var(--c-warn); }
 /* «Sentada» es el quinto estado que el diseño no traía: la mesa está
    ocupada y todavía no ha pedido. No lleva color de alarma —no hay nada
    que se enfríe— pero tampoco puede verse libre, que era el bug. */

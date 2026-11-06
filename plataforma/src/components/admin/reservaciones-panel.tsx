@@ -10,8 +10,10 @@ import {
   createReservation,
   updateReservationStatus,
   deleteReservation,
+  preverMesaDeReserva,
 } from '@/lib/actions/reservaciones';
 import type { Reservation, ReservationSummary } from '@/lib/db/reservaciones';
+import type { MesaRecepcion } from '@/lib/db/table-sessions';
 import { FIELD_LABEL } from '@/components/admin/field-label';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 
@@ -22,7 +24,8 @@ interface Props {
   /** Mesas libres ahora mismo, para decir EN CUÁL se sienta la reserva
       (migración 128, M-04). Vacío = no queda ninguna, o el local no usa
       mesas numeradas: «En mesa →» sigue funcionando sin número. */
-  freeTables: number[];
+  freeTables: MesaRecepcion[];
+  configuredTables: MesaRecepcion[];
 }
 
 type ReservationStatus = Reservation['status'];
@@ -79,7 +82,7 @@ function groupByDate(reservations: Reservation[]): [string, Reservation[]][] {
   return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
 }
 
-export default function ReservacionesPanel({ restaurantId, reservations, summary, freeTables }: Props) {
+export default function ReservacionesPanel({ restaurantId, reservations, summary, freeTables, configuredTables }: Props) {
   const [tab, setTab] = useState<'activas' | 'nueva'>('activas');
   const { confirm, dialog } = useConfirm();
   const [error, setError] = useState<string | null>(null);
@@ -111,8 +114,8 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
      una sola: en un servicio entran varias a la vez. */
   const [mesaDe, setMesaDe] = useState<Record<string, string>>({});
 
-  function handleStatus(id: string, status: ReservationStatus) {
-    const mesa = Number(mesaDe[id]);
+  function handleStatus(id: string, status: ReservationStatus, prevista?: number | null) {
+    const mesa = Number(mesaDe[id] ?? prevista ?? '');
     setBusyId(id);
     startTransition(async () => {
       const res = await updateReservationStatus(
@@ -122,6 +125,15 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
       setBusyId(null);
       if (res.error) { setError(res.error); return; }
       setMesaDe((prev) => { const next = { ...prev }; delete next[id]; return next; });
+    });
+  }
+
+  function handlePrever(id: string, mesa: string) {
+    setBusyId(id);
+    startTransition(async () => {
+      const res = await preverMesaDeReserva(restaurantId, id, mesa ? Number(mesa) : null);
+      setBusyId(null);
+      if (res.error) setError(res.error);
     });
   }
 
@@ -233,6 +245,18 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
                           {r.customer_phone ? ` · ${r.customer_phone}` : ''}
                         </div>
                         {r.notes && <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 3, fontStyle: 'italic' }}>{r.notes}</div>}
+                        {r.status === 'CONFIRMED' && configuredTables.length > 0 && (
+                          <label className="grid gap-1 mt-2">
+                            <span className="sv-foot-note">Mesa prevista para {formatTime(r.time)}</span>
+                            <select className="adm-field" value={r.table_number ?? ''} disabled={busy}
+                              aria-label={`Mesa prevista para ${r.customer_name}`}
+                              onChange={(e) => handlePrever(r.id, e.target.value)}>
+                              <option value="">Sin asignar</option>
+                              {configuredTables.filter((m) => m.n === r.table_number || m.capacidad == null || m.capacidad >= r.party_size)
+                                .map(({ n, capacidad }) => <option key={n} value={n}>Mesa {n}{capacidad ? ` · ${capacidad} plazas` : ''}</option>)}
+                            </select>
+                          </label>
+                        )}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                         <span style={{ fontSize: 11, fontWeight: 600, color: STATUS_COLOR[r.status] }}>
@@ -241,9 +265,9 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
                         {/* En qué mesa se sientan (M-04). Solo en el paso que
                             los mete al salón: en «Confirmar» o «Completar» un
                             número de mesa no significa nada. */}
-                        {nextStatus === 'SEATED' && freeTables.length > 0 && (
+                        {nextStatus === 'SEATED' && (freeTables.length > 0 || r.table_number != null) && (
                           <select
-                            value={mesaDe[r.id] ?? ''}
+                            value={mesaDe[r.id] ?? r.table_number ?? ''}
                             onChange={(e) => setMesaDe((prev) => ({ ...prev, [r.id]: e.target.value }))}
                             aria-label={`Mesa para ${r.customer_name}`}
                             style={{
@@ -253,15 +277,22 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
                             }}
                           >
                             <option value="" style={{ color: 'var(--u-text)' }}>Sin mesa</option>
-                            {freeTables.map((n) => (
-                              <option key={n} value={n} style={{ color: 'var(--u-text)' }}>Mesa {n}</option>
+                            {r.table_number != null && !freeTables.some((m) => m.n === r.table_number) && (
+                              <option value={r.table_number}>Mesa {r.table_number} · ocupada</option>
+                            )}
+                            {freeTables.filter((m) => m.capacidad == null || m.capacidad >= r.party_size).map(({ n, capacidad }) => (
+                              <option key={n} value={n} style={{ color: 'var(--u-text)' }}>Mesa {n}{capacidad ? ' · ' + capacidad + ' plazas' : ''}</option>
                             ))}
                           </select>
                         )}
                         {nextStatus && (
-                          <Button type="button" onClick={() => handleStatus(r.id, nextStatus)} disabled={busy} variant="secondary" size="sm" className="rounded-adm-full">
-                            {nextStatus === 'SEATED' && mesaDe[r.id]
-                              ? `En mesa ${mesaDe[r.id]} →`
+                          <Button type="button" onClick={() => handleStatus(r.id, nextStatus, r.table_number)}
+                            disabled={busy || (nextStatus === 'SEATED' && !!(mesaDe[r.id] ?? r.table_number)
+                              && !freeTables.some((m) => m.n === Number(mesaDe[r.id] ?? r.table_number)
+                                && (m.capacidad == null || m.capacidad >= r.party_size)))}
+                            variant="secondary" size="sm" className="rounded-adm-full">
+                            {nextStatus === 'SEATED' && (mesaDe[r.id] ?? r.table_number)
+                              ? `En mesa ${mesaDe[r.id] ?? r.table_number} →`
                               : `${STATUS_LABEL[nextStatus]} →`}
                           </Button>
                         )}

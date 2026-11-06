@@ -52,10 +52,22 @@ async function openBill(page: Page, mesa = 1, localSlug = slug) {
   await expect(page.getByRole('tab', { name: 'Por platos' })).toBeVisible();
 }
 
+async function limpiarYLiberar(page: Page, mesa: number) {
+  await page.getByRole('button', { name: 'Pasar a limpieza', exact: true }).click();
+  await expect(page.getByText(`Mesa ${mesa} por limpiar`, { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Confirmar limpieza y liberar', exact: true }).click();
+  await expect(page.getByText(`Mesa ${mesa} limpia y libre`, { exact: true })).toBeVisible();
+}
+
 test.beforeAll(async () => {
   const rest = check(await db.from('restaurants').insert({ name: 'AUD Cobro', slug, status: 'active', plan_actual: 'PREMIUM', onboarding_done: true }).select('id').single());
   restaurantId = rest!.id;
-  check(await db.from('restaurant_themes').insert({ restaurant_id: restaurantId, brand_name: 'AUD Cobro', config: { orderTypes: ['dine_in'] } }));
+  check(await db.from('restaurant_themes').insert({ restaurant_id: restaurantId, brand_name: 'AUD Cobro', config: {
+    orderTypes: ['dine_in'],
+    floorPlan: { enabled: true, levels: [{ id: 'comedor', name: 'Comedor' }],
+      tables: [1, 2, 3, 9, 12].map((n, i) => ({ n, level: 'comedor', x: 0.2 + (i % 3) * 0.3, y: 0.3 + Math.floor(i / 3) * 0.4, seats: 4 })),
+    },
+  } }));
   for (let i = 0; i < 2; i++) {
     const email = `aud-cobro-${suffix}-${i}@test.local`;
     const created = await db.auth.admin.createUser({ email, email_confirm: true });
@@ -79,6 +91,46 @@ test.afterAll(async () => {
     if (result.error) errors.push(result.error);
   }
   if (errors.length) throw new AggregateError(errors, 'Limpieza E2E de cobro');
+});
+
+test('1.3 · el plano y la comanda muestran pago, entrega y limpieza por separado', async ({ browser }) => {
+  test.setTimeout(180_000);
+  const pedido = check(await db.from('orders').insert({
+    restaurant_id: restaurantId, order_number: `AUD-SALON-${suffix}`, customer_name: 'AUD Salón', customer_phone: '00000000',
+    order_type: 'DINE_IN', table_number: 12, address: 'Mesa 12', status: 'READY', subtotal: 32, total: 32,
+  }).select('id').single())!;
+  check(await db.from('order_items').insert({ order_id: pedido.id, name_snapshot: 'Postre de la casa',
+    price_snapshot: 32, quantity: 1, subtotal: 32 }));
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  try {
+    await login(context, users[0].email);
+    const page = await context.newPage();
+    await openBill(page, 12);
+    await page.getByRole('button', { name: 'Tarjeta', exact: true }).click();
+    await page.getByRole('button', { name: 'Cobrar Q32.00', exact: true }).click();
+    await expect(page.getByText('Pagada · quedan pedidos por entregar.')).toBeVisible();
+    const mesa = page.getByRole('button', { name: /^Mesa 12 ·/ });
+    await expect(mesa).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Servido', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Pasar a limpieza', exact: true })).toHaveCount(0);
+    for (const width of [768, 390]) {
+      await page.setViewportSize({ width, height: 840 });
+      const volver = page.getByRole('button', { name: 'Volver al salón', exact: true });
+      if (width === 768) await expect(mesa).toBeVisible();
+      else {
+        await expect(mesa).toBeHidden();
+        await volver.click();
+        await expect(mesa).toBeVisible();
+        await mesa.click();
+      }
+      await expect(page.getByText('Pagada · quedan pedidos por entregar.')).toBeVisible();
+    }
+    await page.getByRole('button', { name: 'Servido', exact: true }).click();
+    await limpiarYLiberar(page, 12);
+    await expect(mesa).toHaveAccessibleName(/^Mesa 12 · Libre/);
+    expect(check(await db.from('order_payments').select('amount,method').eq('order_id', pedido.id)))
+      .toEqual([{ amount: 32, method: 'CARD' }]);
+  } finally { await context.close(); }
 });
 
 test('1.1 · un abono libre mixto deja la mesa abierta y registra los dos métodos', async ({ browser }) => {
@@ -168,10 +220,10 @@ test('1.1 · las partes pagadas sobreviven a recargar y el cierre se confirma ap
     await page.getByRole('button', { name: 'Registrar Q33.33', exact: true }).click();
     await expect(page.getByText(/Q33\.33 cobrado · la mesa sigue abierta/)).toBeVisible();
     expect(check(await db.from('orders').select('status').eq('id', order.id).single())?.status).toBe('SERVED');
-    await page.getByRole('button', { name: /^Cerrar cuenta pagada/ }).click();
+    await page.getByRole('button', { name: /^Ver pagos/ }).click();
     await expect(page.getByText('Parte 3 · Pagada', { exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Confirmar cierre de cuenta pagada', exact: true }).click();
-    await expect(page.getByText('Cuenta pagada cerrada · Mesa 9 libre', { exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await limpiarYLiberar(page, 9);
     expect(check(await db.from('orders').select('status').eq('id', order.id).single())?.status).toBe('DELIVERED');
     expect(check(await db.from('order_payments').select('method,amount').eq('order_id', order.id).order('method')))
       .toEqual([{ method: 'CARD', amount: 66.67 }, { method: 'TRANSFER', amount: 33.33 }]);
@@ -186,7 +238,7 @@ test('1.0 · el cobro mantiene el saldo y la acción visibles y contiene el foco
     const page = await context.newPage();
     await openBill(page);
     const hoja = page.getByRole('dialog', { name: /^Cobrar/ });
-    const cobrar = hoja.getByRole('button', { name: 'Cobrar Q70.00 y cerrar', exact: true });
+    const cobrar = hoja.getByRole('button', { name: 'Cobrar Q70.00', exact: true });
     await expect(cobrar).toBeInViewport({ ratio: 1 });
     await expect(cobrar).toHaveCSS('min-height', '56px');
     await expect(hoja.getByText('Por cobrar', { exact: true })).toBeInViewport({ ratio: 1 });
@@ -219,8 +271,9 @@ test('dos empleados cobran un plato una vez; el saldo se cobra y la mesa se cier
     await openBill(pages[0]);
     await pages[0].getByRole('tab', { name: 'Cuenta completa', exact: true }).click();
     await pages[0].getByRole('button', { name: 'Tarjeta', exact: true }).click();
-    await pages[0].getByRole('button', { name: /Cobrar Q18\.00 y cerrar/ }).click();
-    await expect(pages[0].getByText(/Mesa 1 libre/)).toBeVisible();
+    await pages[0].getByRole('button', { name: /Cobrar Q18\.00/ }).click();
+    await expect(pages[0].getByText(/Q18\.00 cobrado · la mesa sigue abierta/)).toBeVisible();
+    await limpiarYLiberar(pages[0], 1);
     const payments = check(await db.from('order_payments').select('amount,taken_by').eq('order_id', orderId))!;
     expect(payments.map((p) => Number(p.amount)).sort((a, b) => a - b)).toEqual([18, 52]);
     expect(check(await db.from('orders').select('status').eq('id', orderId).single())?.status).toBe('DELIVERED');
@@ -298,8 +351,9 @@ test('0.16 · un parcial y una ronda nueva se cierran cobrando el saldo de cada 
     const second = await ronda([20], 'segunda');
     await openBill(page, 2);
     await page.getByRole('button', { name: 'Tarjeta', exact: true }).click();
-    await page.getByRole('button', { name: /Cobrar Q80\.00 y cerrar/ }).click();
-    await expect(page.getByText(/Q80\.00 cobrado · Mesa 2 libre/)).toBeVisible();
+    await page.getByRole('button', { name: /Cobrar Q80\.00/ }).click();
+    await expect(page.getByText(/Q80\.00 cobrado · la mesa sigue abierta/)).toBeVisible();
+    await limpiarYLiberar(page, 2);
     const pagos = check(await db.from('order_payments').select('*').in('order_id', [first.id, second.id]))!;
     expect(pagos.filter((p) => p.order_id === first.id).reduce((n, p) => n + Number(p.amount), 0)).toBe(100);
     expect(pagos.filter((p) => p.order_id === second.id).reduce((n, p) => n + Number(p.amount), 0)).toBe(20);
@@ -330,8 +384,8 @@ test('0.17 · el botón y Postgres conservan Q33.34 + Q33.33 + Q33.33', async ({
         await page.getByRole('button', { name: `Cobrar Q${amount} de esta parte`, exact: true }).click();
         await expect(page.getByText(/cobrado · la mesa sigue abierta/)).toBeVisible();
       } else {
-        await page.getByRole('button', { name: 'Cobrar Q33.33 y cerrar', exact: true }).click();
-        await expect(page.getByText(/Mesa 3 libre/)).toBeVisible();
+        await page.getByRole('button', { name: 'Cobrar Q33.33', exact: true }).click();
+        await limpiarYLiberar(page, 3);
       }
     }
     const payments = check(await db.from('order_payments').select('*').eq('order_id', o.id).order('created_at'))!;

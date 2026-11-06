@@ -25,4 +25,6 @@ export function revalidarSalon() {
   revalidatePath('/admin/pedidos');  // la lista de pedidos vivos
   revalidatePath('/admin/cocina');   // la pantalla de cocina
   revalidatePath('/admin/caja');     // el arqueo, que cuenta lo cobrado
+  revalidatePath('/admin/reservaciones');
+  revalidatePath('/admin/lista-espera');
 }

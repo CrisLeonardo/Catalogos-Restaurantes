@@ -447,12 +447,22 @@ export async function enqueueReceiptForOrder(
 
   const { name, format } = await ticketHeader(db, restaurantId);
   const fel = await felTicketForOrder(orderId);
+  const pagosMesa = new Map<string, number>();
+  if (order.order_type === 'DINE_IN') {
+    const { data, error } = await db.from('order_payments').select('method,amount')
+      .eq('restaurant_id', restaurantId).eq('order_id', orderId);
+    if (error) return { queued: false, reason: 'error', message: error.message };
+    for (const { method, amount } of data ?? []) {
+      pagosMesa.set(method, (pagosMesa.get(method) ?? 0) + Math.round(Number(amount) * 100));
+    }
+  }
   const bytes = buildReceiptEscPos(
     order,
     currency,
     name,
     { ...format, locale: cfg.locale || format.locale },
     fel,
+    Array.from(pagosMesa, ([method, centavos]) => ({ method, amount: centavos / 100 })),
   );
   const res = await enqueuePrintJob({
     restaurantId,

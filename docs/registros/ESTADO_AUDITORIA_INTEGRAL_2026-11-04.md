@@ -572,7 +572,16 @@ La siguiente ficha es **1.2 · Caja: borrador, cuadre y recibo**. La ola 1 sigue
 - **Navegador:** dos sesiones independientes recorrieron el cierre en móvil, el registro de la diferencia, la confirmación desde otra cuenta y la lectura posterior del recibo. El verificador confirmó la 172 y los auditores de RLS y funciones SQL devolvieron cero hallazgos.
 - **Revisión visual:** el primer refresco después de cerrar podía reiniciar el formulario de entrega. El formulario se muestra cuando Caja termina de refrescar. El recorrido volvió a pasar y la bandeja de recepción se revisó a 390, 768 y 1280 px, en claro y oscuro.
 
-La siguiente ficha es **1.3 · Mesa pagada, por limpiar y libre**. Quedan 50 fichas del plan, incluidas las tres continuas de calidad. La integración de los PR y el despliegue se gestionan por separado.
+## 23. Mesa pagada, por limpiar y libre · ficha 1.3
+
+**Rama:** `feat/salon-pagada-limpieza`, sobre [PR #96](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/96). Se implementa la segunda vista aprobada del plano con comanda.
+
+- **C07 y M§4.4.** El pago se registra con la misma identidad durable de un abono. Pagar conserva el estado de cocina y entrega. Una mesa pasa a limpieza cuando el grupo se retira y la comanda está entregada. La confirmación de limpieza libera el turno. Las salidas con saldo pendiente y la reapertura desde limpieza requieren Finanzas y quedan en la bitácora. Los recibos leen los métodos e importes registrados.
+- **R04.** Las fichas muestran número, personas, tiempo, saldo y estado. La comanda conserva solicitudes y reserva asociada. Trasladar o unir exige elegir y revisar el origen y destino. Se conservan la cuenta, los avisos y el historial. Si dos grupos tienen reservas vinculadas o un reparto abierto impide unir sin perder información, se informa el conflicto. Recepción comprueba capacidad y ocupación antes de sentar y confirma el turno con el grupo en una sola transacción. Una reserva prevista indica la hora y deja la mesa disponible mientras nadie la ocupe. La ficha 1.8 conserva el trabajo específico de Recepción.
+- **Base.** Aplicar `173_ciclo_operativo_de_mesa.sql` después de la 172 y antes de desplegar el código. La migración protege contra pedidos nuevos y cierres durante la limpieza. El archivador conserva los pedidos con movimientos de caja.
+- **Verificación.** La matriz local llega a 86 casos de Postgres. Los casos nuevos comprueban el pago antes de la entrega, el bloqueo durante limpieza, una salida con saldo, la reapertura, dos llegadas simultáneas, capacidad, reservas futuras y traslado con recibo y solicitudes. Ambos auditores de acceso SQL devolvieron cero hallazgos. Chromium completó el recorrido en 390, 768 y 1280 px y los 12 casos de cobro y Caja. Pasaron 1.350 pruebas unitarias y quedó la omisión previa.
+
+La siguiente ficha es **1.4 · Servicio estable por turno**. Quedan 49 fichas, incluidas las tres continuas de calidad. La integración y el despliegue se gestionan por separado.
 
 ---
 

@@ -29,7 +29,7 @@ interface HojaCobroProps {
   onCobrarParte: (lineas: LineaServicio[], pagos: PagoCobro[]) => void;
   onAbonar: (pagos: PagoCobro[], reparto: string | null, partes: string[]) => void;
   onGuardarPartes: (cantidad: number) => void;
-  onCerrarPagada: () => void;
+  mantieneMesa: boolean;
 }
 
 const centavos = (n: number) => Math.round(n * 100);
@@ -51,7 +51,7 @@ function billetes(total: number): number[] {
 
 export default function HojaCobro({
   titulo, resumen, desglose, porCobrar, yaCobrado, saldosPlatos, contexto, money, redondear,
-  busy, onClose, onCobrarTodo, onCobrarParte, onAbonar, onGuardarPartes, onCerrarPagada,
+  busy, onClose, onCobrarTodo, onCobrarParte, onAbonar, onGuardarPartes, mantieneMesa,
 }: HojaCobroProps) {
   const [modo, setModo] = useState<ModoCobro>('todo');
   const [personas, setPersonas] = useState(2);
@@ -82,7 +82,7 @@ export default function HojaCobro({
   const base = basePorModo[modo];
   const abono = modo === 'libre' || modo === 'iguales';
   const parcialPlatos = modo === 'platos' && base < saldo;
-  const quedaAbierta = abono || parcialPlatos;
+  const quedaAbierta = mantieneMesa || abono || parcialPlatos;
   const montos = PAYMENT_METHODS.map((m) => metodo === 'mixto'
     ? leerCentavos(mixto[m] || '0')
     : (metodo === m ? base : 0));
@@ -94,7 +94,7 @@ export default function HojaCobro({
   const mixtoValido = montos.every((m) => m != null)
     && montos.filter((m) => (m ?? 0) > 0).length >= 2
     && aplicado === base;
-  const puede = !busy && base > 0 && base <= saldo && (!abono || puedeAbonar)
+  const puede = !busy && base > 0 && base <= saldo && (!(abono || (mantieneMesa && !parcialPlatos)) || puedeAbonar)
     && (metodo !== 'mixto' || mixtoValido) && !efectivoInvalido;
   const mostrarEditor = !reparto || reparto.desactualizado || redividir;
   const mostrarPago = !saldada && (modo !== 'iguales' || (!mostrarEditor && partes.length > 0));
@@ -117,7 +117,7 @@ export default function HojaCobro({
     ? 'Marca lo que paga esta persona'
     : abono ? `Registrar ${money(base / 100)}`
       : parcialPlatos ? `Cobrar ${money(base / 100)} de esta parte`
-        : `Cobrar ${money(base / 100)} y cerrar`;
+        : `Cobrar ${money(base / 100)}${mantieneMesa ? '' : ' y cerrar'}`;
 
   return (
     <HojaOperativa
@@ -128,9 +128,7 @@ export default function HojaCobro({
       footer={
         <div className="sv-cobro-pie">
           {saldada ? (
-            <Button type="button" size="action" onClick={onCerrarPagada} disabled={busy} aria-busy={busy}>
-              {busy ? 'Cerrando…' : 'Confirmar cierre de cuenta pagada'}
-            </Button>
+            <p className="sv-foot-note">Cuenta pagada. La mesa sigue ocupada hasta que pase a limpieza.</p>
           ) : mostrarPago && (
             <>
               {efectivo > 0 && (

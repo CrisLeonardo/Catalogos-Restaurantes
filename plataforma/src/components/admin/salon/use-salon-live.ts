@@ -35,7 +35,7 @@ import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 
 /** Un pedido nuevo o cambiado, o una llamada de mesa: las dos cosas
     cambian el salón exactamente igual. */
-const TABLAS = ['orders', 'waiter_calls'] as const;
+const TABLAS = ['orders', 'waiter_calls', 'table_sessions', 'order_payments'] as const;
 
 const COALESCE_MS = 2500;
 /** Por si el canal nunca conectó. Lento a propósito: es una red, no el

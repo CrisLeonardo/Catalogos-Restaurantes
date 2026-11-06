@@ -257,7 +257,7 @@ describe('subtítulo', () => {
       occupancy: { 1: ocupada() },
       qrPendiente: { 1: 2 },
     }))[0];
-    expect(subtituloDeMesa(m, false)).toBe('20 min · 3 platos · QR nuevo');
+    expect(subtituloDeMesa(m, false)).toBe('4 personas · 20 min · 3 platos · QR nuevo');
     expect(subtituloDeMesa(m, true)).toBe('falta servir · QR');
   });
 });
@@ -266,6 +266,6 @@ describe('sin reloj de cliente no hay minutos', () => {
   it('el primer render del servidor no inventa tiempos', () => {
     const m = mesasDeServicio(entrada({ occupancy: { 1: ocupada() }, now: null }))[0];
     expect(m.minutos).toBeNull();
-    expect(subtituloDeMesa(m)).toBe('3 platos');
+    expect(subtituloDeMesa(m)).toBe('4 personas · 3 platos');
   });
 });

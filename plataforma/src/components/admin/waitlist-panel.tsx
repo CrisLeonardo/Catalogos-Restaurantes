@@ -26,7 +26,7 @@ interface Props {
   /** Mesas sin gente ni turno abierto, para sentar ahí a quien esperaba
       (migración 128, M-04). Vacío = el local no usa mesas numeradas, o no
       queda ninguna: entonces «Sentar» funciona como siempre, sin mesa. */
-  freeTables: number[];
+  freeTables: import('@/lib/db/table-sessions').MesaRecepcion[];
 }
 
 const labelStyle: React.CSSProperties = FIELD_LABEL;
@@ -216,8 +216,8 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
                       }}
                     >
                       <option value="" style={{ color: 'var(--u-text)' }}>Sin mesa</option>
-                      {freeTables.map((n) => (
-                        <option key={n} value={n} style={{ color: 'var(--u-text)' }}>Mesa {n}</option>
+                      {freeTables.filter((m) => m.capacidad == null || m.capacidad >= w.party_size).map(({ n, capacidad }) => (
+                        <option key={n} value={n} style={{ color: 'var(--u-text)' }}>Mesa {n}{capacidad ? ' · ' + capacidad + ' plazas' : ''}</option>
                       ))}
                     </select>
                   )}

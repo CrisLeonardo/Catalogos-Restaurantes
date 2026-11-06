@@ -19,6 +19,7 @@ import { resolveOwnRestaurantId, resolveEffectiveRole } from '@/lib/db/membershi
 import { can } from '@/lib/permissions';
 import { getActiveTableNumbers, getPendingTableCalls, getWaiterActiveOrders } from '@/lib/db/orders';
 import { getOpenTableSessions } from '@/lib/db/table-sessions';
+import { getProximasReservasDeMesa } from '@/lib/db/reservaciones';
 import { getWaiterCatalogCached } from '@/lib/db/menu';
 import { withEffectiveAvailability } from '@/lib/product-availability';
 import { getMasPedidosCached } from '@/lib/db/servicio';
@@ -66,7 +67,7 @@ export default async function MeseroPage() {
      restaurante de 40 mesas enseñaba 20. */
   const { data: r } = await db
     .from('restaurants')
-    .select('name, slug')
+    .select('name, slug, timezone')
     .eq('id', restaurantId)
     .single();
 
@@ -89,7 +90,7 @@ export default async function MeseroPage() {
      `getMasPedidosCached` usan la etiqueta `menu:<id>` que ya invalidan
      las acciones de carta e inventario, así que un cambio de menú se
      sigue viendo al instante. */
-  const [catalogo, masPedidos, activeOrders, occupancy, calls, seatings, hubInfo] = await Promise.all([
+  const [catalogo, masPedidos, activeOrders, occupancy, calls, seatings, hubInfo, reservas] = await Promise.all([
     getWaiterCatalogCached(restaurantId),
     getMasPedidosCached(restaurantId),
     getWaiterActiveOrders(restaurantId, user.id),
@@ -103,6 +104,7 @@ export default async function MeseroPage() {
        misma mesa sin saberlo. El handoff del rediseño tampoco lo traía. */
     getOpenTableSessions(restaurantId),
     getAgentHubInfo(restaurantId),
+    getProximasReservasDeMesa(restaurantId, r?.timezone || 'America/Guatemala'),
   ]);
 
   /* Quien administra la carta puede marcar un plato agotado desde aquí
@@ -130,6 +132,7 @@ export default async function MeseroPage() {
       occupancy={occupancy}
       calls={calls}
       seatings={seatings}
+      reservas={reservas}
       tableCount={resolvedConfig?.dineInTableCount ?? 20}
       floorPlan={resolvedConfig?.floorPlan ?? null}
       tipEnabled={resolvedConfig ? tipAppliesToType(resolvedConfig, 'DINE_IN') : false}
@@ -145,6 +148,7 @@ export default async function MeseroPage() {
       hubUrl={hubInfo.hubUrl}
       hubToken={hubInfo.hubToken}
       puedeAgotar={puedeAgotar}
+      puedeGestionarCuenta={profile?.role === 'SUPER_ADMIN' || can(efectivo.role, efectivo.permissions, 'finanzas')}
     />
   );
 }
