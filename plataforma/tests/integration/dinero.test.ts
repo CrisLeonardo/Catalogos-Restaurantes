@@ -36,7 +36,9 @@ vi.mock('@/lib/actions/fel', () => ({ emitirFacturaAutomatica: vi.fn() }));
 vi.mock('@/lib/actions/loyalty', () => ({ awardLoyaltyForOrder: vi.fn(), maybeAwardSignupBonus: vi.fn() }));
 vi.mock('@/lib/whatsapp/notify', () => ({ notifyOrderStatus: vi.fn() }));
 
-import { cobrarParteDeMesa, cobradoDeMesa } from '@/lib/actions/servicio';
+import {
+  cobrarParteDeMesa, cobradoDeMesa, ejecutarAbonoMesa, guardarPartesMesa, leerContextoCobroMesa,
+} from '@/lib/actions/servicio';
 import { freeTable } from '@/lib/actions/orders';
 import { abrirTurno, closeCaja, saveCajaDraft, discardCajaDraft } from '@/lib/actions/finanzas';
 import { corregirMetodoDePago, devolverCobro } from '@/lib/actions/caja-correcciones';
@@ -49,6 +51,12 @@ const rid = () => state.restaurantId;
 const period = (ahora?: Date) => leerTurno(db, { restaurantId: rid(), timezone: 'America/Guatemala', corteMin: 300, ahora });
 const pay = (ids: string[], amount: number, method = 'CASH', id: string = randomUUID()) => cobrarParteDeMesa(rid(), 1, ids, [{ amount, method: method as 'CASH' | 'CARD' }], id);
 function success(result: { error?: string }) { expect(result.error).toBeUndefined(); }
+
+async function cuentaActiva(mesa = 1) {
+  const res = await leerContextoCobroMesa(rid(), mesa);
+  if ('error' in res) throw new Error(res.error);
+  return res.contexto;
+}
 
 beforeAll(async () => {
   await sql.connect();
@@ -83,6 +91,163 @@ afterAll(async () => {
   }
   await sql.end();
   if (errors.length) throw new AggregateError(errors, 'No se completó la limpieza de usuarios AUD.');
+});
+
+describe('1.1 · abonos y partes de mesa persistentes', () => {
+  it('guarda Q100 entre tres, cobra dos partes con un recibo y permite cerrar sin otro movimiento', async () => {
+    const o = await order([100]);
+    const { cuenta } = await cuentaActiva();
+    const plan = await guardarPartesMesa(rid(), 1, cuenta, null, 3);
+    if ('error' in plan) throw new Error(plan.error);
+    const { reparto } = plan;
+    expect(reparto.partes.map((p) => p.importe)).toEqual([33.34, 33.33, 33.33]);
+    const intento = randomUUID();
+    const solicitud = { mesa: 1, operacion: 'abono' as const, cuenta, reparto: reparto.id,
+      partes: reparto.partes.slice(0, 2).map((p) => p.id), pagos: [{ method: 'CARD' as const, amount: 66.67 }] };
+    const primero = await ejecutarAbonoMesa(rid(), solicitud, intento);
+    expect(primero).toMatchObject({ intentoId: intento, cobrado: 66.67 });
+    const vigente = await cuentaActiva();
+    expect(vigente).toMatchObject({ saldo: 33.33, total: 66.67, reparto: { desactualizado: false } });
+    expect(vigente.reparto?.partes.map((p) => p.recibo?.intentoId ?? null)).toEqual([intento, intento, null]);
+    success(await ejecutarAbonoMesa(rid(), { ...solicitud, cuenta: vigente.cuenta,
+      partes: [reparto.partes[2].id], pagos: [{ method: 'TRANSFER', amount: 33.33 }] }, randomUUID()));
+    const saldada = await cuentaActiva();
+    expect(saldada).toMatchObject({ saldo: 0, total: 100, saldada: true });
+    expect(checked(await db.from('orders').select('status').eq('id', o.id).single())?.status).toBe('SERVED');
+    const cierre = { mesa: 1, operacion: 'pagada' as const, cuenta: saldada.cuenta };
+    const idCierre = randomUUID();
+    expect(await ejecutarAbonoMesa(rid(), cierre, idCierre)).toMatchObject({ orderIds: [o.id], paymentIds: [], cobrado: 0 });
+    const nueva = await order([20]);
+    expect(await cuentaActiva()).toMatchObject({ saldo: 20, reparto: null });
+    expect(await ejecutarAbonoMesa(rid(), solicitud, intento)).toEqual(primero);
+    expect(await ejecutarAbonoMesa(rid(), cierre, idCierre)).toMatchObject({ orderIds: [o.id], repetido: true });
+    expect(net(await ledger(o.id))).toBe(10000);
+    expect(await ledger(nueva.id)).toEqual([]);
+  });
+
+  it('solo una caja cobra la misma parte y una ronda nueva conserva la parte pagada al repartir', async () => {
+    const o = await order([100]);
+    const { cuenta } = await cuentaActiva();
+    const plan = await guardarPartesMesa(rid(), 1, cuenta, null, 3);
+    if ('error' in plan) throw new Error(plan.error);
+    const { reparto } = plan;
+    const solicitud = { mesa: 1, operacion: 'abono' as const, cuenta, reparto: reparto.id,
+      partes: [reparto.partes[0].id], pagos: [{ method: 'CARD' as const, amount: 33.34 }] };
+    const gate = deferred();
+    let cajas = 0;
+    state.beforeFetch = async (url, method) => {
+      if (method !== 'POST' || !url.pathname.endsWith('/rpc/leogin_registrar_abono_mesa')) return;
+      if (++cajas === 2) gate.resolve();
+      await bounded(gate.promise);
+    };
+    const resultados = await Promise.all([0, 1].map((i) =>
+      actor(i, () => ejecutarAbonoMesa(rid(), solicitud, randomUUID()))));
+    state.beforeFetch = null;
+    expect(cajas).toBe(2);
+    expect(resultados.filter((r) => r.cobrado === 33.34)).toHaveLength(1);
+    expect(resultados.filter((r) => r.error && r.incierto === false)).toHaveLength(1);
+    expect(net(await ledger(o.id))).toBe(3334);
+
+    await order([10]);
+    const cambiado = await cuentaActiva();
+    expect(cambiado).toMatchObject({ saldo: 76.66, reparto: { desactualizado: true } });
+    expect(await ejecutarAbonoMesa(rid(), { ...solicitud, cuenta: cambiado.cuenta,
+      partes: [reparto.partes[1].id], pagos: [{ method: 'CARD', amount: 33.33 }] }, randomUUID())).toMatchObject({ incierto: false });
+    const nuevo = await guardarPartesMesa(rid(), 1, cambiado.cuenta, reparto.id, 2);
+    if ('error' in nuevo) throw new Error(nuevo.error);
+    expect(nuevo.reparto.id).not.toBe(reparto.id);
+    expect(nuevo.reparto.partes.map((p) => p.importe)).toEqual([33.34, 38.33, 38.33]);
+    expect(nuevo.reparto.partes[0]).toEqual(cambiado.reparto?.partes[0]);
+    expect(await guardarPartesMesa(rid(), 1, cambiado.cuenta, reparto.id, 2)).toHaveProperty('error');
+  });
+
+  it('recupera un abono mixto sin duplicar recibo, efectivo recibido ni movimientos de caja', async () => {
+    const o = await order([120, 80]);
+    const { cuenta } = await cuentaActiva();
+    const solicitud = { mesa: 1, operacion: 'abono' as const, cuenta, reparto: null, partes: [] };
+    for (const pagos of [
+      [{ method: 'CASH' as const, amount: 50, cashReceived: 49.99 }],
+      [{ method: 'CARD' as const, amount: 200.01 }],
+      [{ method: 'CARD' as const, amount: 0.001 }],
+    ]) {
+      expect(await ejecutarAbonoMesa(rid(), { ...solicitud, pagos }, randomUUID())).toMatchObject({ incierto: false });
+    }
+    expect(await ledger(o.id)).toEqual([]);
+    const pagos = [{ method: 'CASH' as const, amount: 50, cashReceived: 100 }, { method: 'CARD' as const, amount: 80 }];
+    const intento = randomUUID();
+    let original: unknown;
+    state.afterFetch = async (url, method, response) => {
+      if (!original && method === 'POST' && url.pathname.endsWith('/rpc/leogin_registrar_abono_mesa')) {
+        expect(response.ok).toBe(true);
+        original = await response.clone().json();
+        throw new TypeError('AUD: acuse del abono perdido después del commit');
+      }
+    };
+    expect(await ejecutarAbonoMesa(rid(), { ...solicitud, pagos }, intento)).toMatchObject({ incierto: true });
+    state.afterFetch = null;
+    expect(original).toMatchObject({ cobrado: 130, pagos });
+    const antes = await ledger(o.id);
+    expect(await ejecutarAbonoMesa(rid(), { ...solicitud, pagos }, intento)).toEqual(original);
+    expect(await ledger(o.id)).toEqual(antes);
+    expect(antes.map((p) => [p.method, p.amount, p.cash_received]).sort()).toEqual([['CARD', 80, null], ['CASH', 50, 100]]);
+    expect(await cuentaActiva()).toMatchObject({ saldo: 70, historial: expect.arrayContaining([
+      expect.objectContaining({ method: 'CASH', amount: 50, cashReceived: 100 }),
+    ]) });
+    expect((await period()).cuadre.porMetodo).toEqual({ CARD: 80, CASH: 50 });
+    success(await freeTable(rid(), 1, { method: 'CARD', amount: 70 }, randomUUID()));
+    expect(net(await ledger(o.id))).toBe(20000);
+  });
+
+  it('exige servir antes de liberar una cuenta pagada y restringe el reparto al servidor', async () => {
+    const o = await order([10]);
+    const { cuenta } = await cuentaActiva();
+    success(await ejecutarAbonoMesa(rid(), { mesa: 1, operacion: 'abono', cuenta,
+      reparto: null, partes: [], pagos: [{ method: 'CARD', amount: 10 }] }, randomUUID()));
+    checked(await db.from('orders').update({ status: 'READY' }).eq('id', o.id));
+    const pagada = await cuentaActiva();
+    expect(pagada.saldada).toBe(true);
+    expect(await ejecutarAbonoMesa(rid(), { mesa: 1, operacion: 'pagada', cuenta: pagada.cuenta }, randomUUID()))
+      .toMatchObject({ error: expect.stringMatching(/Sirve los pedidos/), incierto: false });
+    expect(net(await ledger(o.id))).toBe(1000);
+    const { rows } = await sql.query(`select prosecdef,has_function_privilege('anon',oid,'execute') anon,
+      has_function_privilege('authenticated',oid,'execute') auth,has_function_privilege('service_role',oid,'execute') service
+      from pg_proc where proname in ('leogin_contexto_pago_mesa','leogin_guardar_partes_mesa',
+        'leogin_registrar_abono_mesa','leogin_cerrar_cuenta_pagada')`);
+    expect(rows).toEqual(Array.from({ length: 4 }, () => ({ prosecdef: false, anon: false, auth: false, service: true })));
+    const permisos = await sql.query(`select relrowsecurity, has_table_privilege('anon',oid,'SELECT,INSERT,UPDATE,DELETE') anon,
+      has_table_privilege('authenticated',oid,'SELECT,INSERT,UPDATE,DELETE') auth from pg_class
+      where oid='public.cobro_repartos_mesa'::regclass`);
+    expect(permisos.rows).toEqual([{ relrowsecurity: true, anon: false, auth: false }]);
+  });
+
+  it('distribuye un abono de tres métodos entre rondas con más de 120 platos y respeta propina y descuento', async () => {
+    const primera = await order(Array<number>(121).fill(1), { tip: 18, discount: 4, total: 135 });
+    const segunda = await order([15]);
+    const { cuenta } = await cuentaActiva();
+    const pagos = [{ method: 'CASH' as const, amount: 140, cashReceived: 160 },
+      { method: 'CARD' as const, amount: 4.05 }, { method: 'TRANSFER' as const, amount: 5.95 }];
+    const id = randomUUID();
+    success(await ejecutarAbonoMesa(rid(), { mesa: 1, operacion: 'abono', cuenta, reparto: null, partes: [], pagos }, id));
+    const actual = await cuentaActiva();
+    const ids = primera.items.map((i: { id: string }) => i.id);
+    expect(actual).toMatchObject({ saldo: 0, saldada: true, lineasPagadas: expect.arrayContaining(ids),
+      recibos: [expect.objectContaining({ intentoId: id, cobrado: 150, pagos })] });
+    expect(net(await ledger(primera.id))).toBe(13500);
+    expect(net(await ledger(segunda.id))).toBe(1500);
+    expect((await ledger()).filter((p) => p.cash_received != null).map((p) => p.cash_received)).toEqual([160]);
+    expect((await period()).cuadre.porMetodo).toEqual({ CASH: 140, CARD: 4.05, TRANSFER: 5.95 });
+
+    success(await ejecutarAbonoMesa(rid(), { mesa: 1, operacion: 'pagada', cuenta: actual.cuenta }, randomUUID()));
+    const devuelto = await devolverCobro({ restaurantId: rid(), orderId: primera.id, itemId: primera.items[0].id,
+      method: 'CASH', quantity: 1, reason: 'AUD devolución parcial de abono mixto' });
+    success(devuelto);
+    const movimientos = await ledger();
+    expect(movimientos.filter((p) => p.kind === 'REFUND')).toEqual([
+      expect.objectContaining({ order_id: primera.id, method: 'CASH', amount: -devuelto.amount! }),
+    ]);
+    expect(net(movimientos)).toBe(15000 - Math.round(devuelto.amount! * 100));
+    expect((await period()).cuadre.devoluciones).toBe(devuelto.amount);
+  });
 });
 
 describe('M§8 · circuito del dinero en Postgres', () => {

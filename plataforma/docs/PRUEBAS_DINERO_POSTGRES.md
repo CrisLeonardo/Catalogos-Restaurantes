@@ -1,8 +1,8 @@
-# Circuito del dinero en Postgres — fichas 0.13–0.19
+# Circuito del dinero en Postgres — fichas 0.13–0.19 y 1.1
 
 La suite ejecuta las acciones de producción `cobrarParteDeMesa`, `freeTable`, `devolverCobro`, `abrirTurno` y `closeCaja`, la lectura `leerTurno` y el RPC SQL `leogin_sales_report` contra Supabase local. No reemplaza consultas, respuestas, aritmética ni restricciones de Postgres por simulaciones.
 
-Se sustituyen los límites que necesitan una petición Next (sesión autorizada y caché), la firma de prueba y los efectos externos (notificaciones, impresión, FEL y tareas posteriores). Dos identidades de caja distintas se propagan con `AsyncLocalStorage`. Esto comprueba dinero y persistencia **después de autorizar**, no certifica RLS, MFA, aprobaciones, interfaz de cobro ni integraciones externas. El reparto igualitario se invoca directamente en servidor: su flujo de interfaz sigue pendiente en 1.1.
+Se sustituyen los límites que necesitan una petición Next (sesión autorizada y caché), la firma de prueba y los efectos externos (notificaciones, impresión, FEL y tareas posteriores). Dos identidades de caja distintas se propagan con `AsyncLocalStorage`. La matriz comprueba dinero y persistencia después de autorizar. Playwright cubre por separado la interfaz de cobro con sesiones reales del Supabase local.
 
 ## Ejecutar
 
@@ -14,11 +14,17 @@ npm run test:dinero -- --reporter=verbose
 
 Lee `.env.local`/`.env.test` sin sobrescribir variables ya exportadas. Requiere `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` de **la base local**. Para los bloqueos usa `DINERO_DATABASE_URL`; por omisión, la conexión de desarrollo del `supabase/config.toml` de este repo: `postgresql://postgres:postgres@127.0.0.1:54601/postgres`. Son las credenciales estándar del stack local. Si usas otro puerto, exporta esa variable antes de ejecutar.
 
-Ambas direcciones deben ser loopback; la suite rechaza destinos externos y comprueba que SQL y PostgREST ven el mismo restaurante temporal. No necesita servidor Next ni navegador. La versión original de 0.13 usaba el esquema 001–153; **esta rama necesita además las migraciones 160–168 en orden y antes del código**, con los cambios anteriores de la ola 0 cuando correspondan. No aplica migraciones, no hace reset y no cambia restaurantes existentes. No borres tu base para ejecutar esta prueba.
+Ambas direcciones deben ser loopback; la suite rechaza destinos externos y comprueba que SQL y PostgREST ven el mismo restaurante temporal. No necesita servidor Next ni navegador. La versión original de 0.13 usaba el esquema 001–153. **Esta rama necesita las migraciones 160–169 en orden y antes del código**, con los cambios anteriores de la ola 0 cuando correspondan. La suite opera sobre sus restaurantes temporales y espera un esquema ya preparado.
 
 Cada caso crea su propio restaurante `aud-dinero-<uuid>`, pedidos y movimientos. La suite crea dos usuarios temporales `aud-dinero-…@test.local`. `afterEach` elimina exclusivamente el restaurante creado, con sus filas en cascada, aun cuando una aserción falla; `afterAll` elimina los usuarios. Un fallo de limpieza también hace fallar el comando. Si se mata el proceso, revisa exclusivamente los identificadores AUD de esa corrida antes de limpiar manualmente.
 
-`npm test` mantiene las unitarias sin depender de una base. La integración tiene configuración separada (`vitest.dinero.config.mts`), no usa `skip` ni invierte los fallos con `test.fails`. Desde 0.19, **los 69 casos pasan, con código de salida 0, y CI ejecuta la matriz completa**. En las entregas 0.13–0.18 el comando completo fallaba con los defectos pendientes; su filtro de CI solo certificaba el subconjunto corregido. Esos resultados se conservan abajo como evidencia histórica. La matriz no certifica todavía toda la auditoría ni las integraciones externas.
+`npm test` mantiene las unitarias sin depender de una base. La integración usa `vitest.dinero.config.mts`. CI ejecuta la matriz completa desde 0.19. **En 1.1 pasan 74 casos, con código de salida 0.** Abajo se conservan los resultados históricos de 0.13–0.19.
+
+## Cobro completo 1.1 · migración 169
+
+Aplicar `169_abonos_y_partes_de_mesa.sql` después de la 168 y antes de desplegar. La lectura toma las cuotas de 164/165 y los movimientos de la cuenta activa. La escritura verifica el saldo y la revisión bajo el bloqueo de mesa de la 160. La solicitud y el resultado se guardan con la identidad de la 161 en la misma transacción que los movimientos y las partes pagadas. Los cuatro RPC y el reparto quedan restringidos a `service_role`.
+
+Los cinco casos nuevos comprueban el reparto Q100/3, el recibo compartido por dos partes, el reintento después de cerrar y volver a usar la mesa, el conflicto entre dos cajas, una ronda nueva, un abono mixto Q130 de Q200 con acuse perdido, el cierre con saldo cero y servicio pendiente, y el cuadre por método con propina, descuento, más de 120 platos y devolución parcial. Playwright verifica el abono en un teléfono y las partes tras recargar en escritorio. La primera corrida contra el código anterior falla al buscar la pestaña «Importe libre».
 
 ## Resultado original de 0.13 · 2026-11-05
 

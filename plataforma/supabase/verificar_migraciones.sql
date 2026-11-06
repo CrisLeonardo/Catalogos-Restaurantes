@@ -195,7 +195,16 @@ huellas(n, que, ok, cuando) as (values
      'ANTES de desplegar; después de la 166'),
   ('168', 'inicio del día inclusivo y último corte exclusivo en caja',
      to_regprocedure('public.leogin_leer_periodo_caja_limites(uuid,timestamptz,timestamptz,timestamptz,boolean)') is not null,
-     'ANTES de desplegar; después de la 167')
+     'ANTES de desplegar; después de la 167'),
+  ('169', 'abonos y partes de mesa persistentes',
+     exists (select 1 from pg_class c join pg_policy p on p.polrelid=c.oid
+       where c.oid=to_regclass('public.cobro_repartos_mesa') and c.relrowsecurity
+         and p.polname='super_admin_segundo_factor' and not p.polpermissive)
+     and to_regprocedure('public.leogin_contexto_pago_mesa(uuid,integer)') is not null
+     and to_regprocedure('public.leogin_guardar_partes_mesa(uuid,integer,text,uuid,integer)') is not null
+     and to_regprocedure('public.leogin_registrar_abono_mesa(uuid,integer,text,uuid,uuid[],jsonb,uuid,uuid)') is not null
+     and to_regprocedure('public.leogin_cerrar_cuenta_pagada(uuid,integer,text,uuid,uuid)') is not null,
+     'ANTES de desplegar; después de la 168')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

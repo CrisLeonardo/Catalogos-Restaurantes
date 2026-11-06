@@ -44,7 +44,7 @@ export function HojaOperativa({
   function manejarTecla(event: KeyboardEvent<HTMLDialogElement>) {
     event.stopPropagation();
     if (event.key !== 'Tab') return;
-    const controles = [...event.currentTarget.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, [tabindex]')]
+    const controles = [...event.currentTarget.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, summary, [tabindex]')]
       .filter((el) => el.tabIndex >= 0 && !el.matches(':disabled') && el.getClientRects().length > 0);
     const primero = controles[0];
     const ultimo = controles.at(-1);

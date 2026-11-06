@@ -2825,7 +2825,10 @@
 .hoja-cobro .sv-seg { flex-wrap: wrap; }
 .hoja-cobro .sv-seg > button { flex: 1 1 5.5rem; min-height: 48px; overflow-wrap: anywhere; }
 .hoja-cobro .sv-seg > button[aria-selected="true"] { background: var(--adm-card); color: var(--u-text); box-shadow: var(--adm-shadow-xs); }
-.hoja-cobro .sv-cobro-partes { flex-wrap: wrap; }
+@media (max-width: 479px) {
+  .hoja-cobro .sv-seg[data-mixto] > button { flex-basis: calc(50% - 3px); }
+  .hoja-cobro .sv-cobro-metodos[data-mixto] .sv-choice { flex-basis: calc(50% - 4px); }
+}
 .hoja-cobro .sv-step { min-width: 48px; min-height: 48px; }
 .hoja-cobro .sv-pay { flex-wrap: wrap; }
 .hoja-cobro button:disabled { cursor: not-allowed; opacity: .55; }
@@ -2881,14 +2884,6 @@
   background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
 }
 .sv-choice[data-mono="1"] { font-family: var(--ui-font-mono); }
-
-.sv-vuelto {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 14px; border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
-  color: var(--brand-accent-ink);
-}
-.sv-vuelto-n { font-family: var(--ui-font-mono); font-size: 22px; font-weight: 600; }
 
 /* Fila de «por platos»: toca lo que paga esta persona. */
 .sv-pay {

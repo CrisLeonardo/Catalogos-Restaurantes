@@ -9,13 +9,39 @@ export interface ResultadoCobro {
   cobrado?: number;
   paymentIds?: string[];
   orderIds?: string[];
+  pagos?: PagoCobro[];
+  repetido?: boolean;
 }
 
-export interface SolicitudCobro {
-  mesa: number;
-  operacion: 'parte' | 'cierre';
-  items: string[];
-  pagos: { method: PaymentMethod; amount: number; cashReceived?: number | null }[];
+export interface PagoCobro {
+  method: PaymentMethod;
+  amount: number;
+  cashReceived?: number | null;
+}
+
+export type SolicitudCobro = { mesa: number } & (
+  | { operacion: 'parte' | 'cierre'; items: string[]; pagos: PagoCobro[] }
+  | { operacion: 'abono'; cuenta: string; reparto: string | null; partes: string[]; pagos: PagoCobro[] }
+  | { operacion: 'pagada'; cuenta: string }
+);
+
+export interface RepartoCobro {
+  id: string;
+  desactualizado: boolean;
+  partes: { id: string; numero: number; importe: number; recibo: ResultadoCobro | null }[];
+}
+
+export interface ContextoCobroMesa {
+  cuenta: string;
+  saldo: number;
+  saldada: boolean;
+  total: number;
+  lineasPagadas: string[];
+  lineasPendientes: Record<string, number>;
+  avisoCuotas?: string | null;
+  reparto: RepartoCobro | null;
+  historial: (PagoCobro & { id: string; kind: string; at: string })[];
+  recibos: { intentoId: string; cobrado: number; pagos: PagoCobro[]; at: string }[];
 }
 export interface IntentoCobro { id: string; solicitud: SolicitudCobro }
 export const identidadCobroValida = (id: unknown): id is string =>
