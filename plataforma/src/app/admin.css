@@ -2526,23 +2526,54 @@
 
 .sv-carta-bars { padding: 0 18px 12px; display: flex; flex-direction: column; gap: 10px; }
 
-/* Los más pedidos: un toque y está en la comanda. */
+/* Los puestos mantienen el tamaño aunque cambien nombre, precio o disponibilidad. */
+.sv-favoritos { display: grid; gap: 10px; margin: 4px 0 14px; }
+.sv-favoritos-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sv-favoritos-head h2, .sv-carta-titulo {
+  margin: 0; color: var(--u-text); font-size: 18px; font-weight: 700; letter-spacing: -.02em;
+}
+.sv-carta-titulo { margin-top: 9px; }
+.sv-favoritos-editar {
+  min-height: 44px; flex-shrink: 0; padding: 6px 10px; border-radius: var(--radius-md);
+  border: 1px solid var(--u-hair); color: var(--u-text); background: var(--adm-card);
+  font: inherit; font-size: 13px; cursor: pointer;
+}
+.sv-favoritos-editar:hover { background: var(--surface-2); }
+.sv-fav-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
 .sv-fav {
-  display: inline-flex; align-items: center; gap: 9px;
-  height: var(--m-tap); padding: 0 14px; border-radius: var(--radius-lg);
+  display: grid; grid-template-columns: 24px minmax(0,1fr); align-content: start; column-gap: 7px;
+  min-height: 82px; padding: 9px; border-radius: var(--radius-lg); text-align: start;
   border: 1px solid var(--u-hair); background: var(--adm-card); color: var(--u-text);
-  font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
   transition: border-color 120ms var(--ease-out), background 120ms var(--ease-out);
 }
-.sv-fav:hover {
+.sv-fav:hover:not(:disabled) {
   border-color: var(--brand-accent);
   background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
 }
-.sv-fav-key {
-  font-family: var(--ui-font-mono); font-size: 11px; font-weight: 600;
-  color: var(--u-text-2); background: var(--surface-3); padding: 2px 6px; border-radius: 6px;
+.sv-fav:disabled { background: var(--surface-2); color: var(--u-text-2); cursor: default; }
+.sv-fav-name {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  line-height: 1.24; overflow: hidden; overflow-wrap: anywhere;
 }
-.sv-fav-price { font-family: var(--ui-font-mono); font-size: 12px; font-weight: 500; color: var(--u-text-3); }
+.sv-fav-key {
+  display: grid; place-items: center; grid-row: span 2; align-self: start; min-height: 23px;
+  font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600;
+  color: var(--u-text-2); background: var(--surface-2); border: 1px solid var(--u-hair); border-radius: 6px;
+}
+.sv-fav-price { font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 500; color: var(--u-text-2); }
+.sv-turno-puestos { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.sv-turno-campo { display: grid; min-width: 0; gap: 4px; font-size: 13px; }
+.sv-turno-campo .sv-field { min-width: 0; min-height: 44px; }
+.sv-m-mesas { flex-shrink: 0; padding: 6px 12px; }
+.sv-m-resumen-label { text-align: start; }
+.sv-m-resumen-label small { display: block; color: var(--u-text-2); }
+.sv-line-note { display: block; color: var(--c-warn); font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+.sv-line-error { font-size: 12px; color: var(--c-danger); overflow-wrap: anywhere; }
+.sv-line-done-name .sv-line-mods { display: block; }
+@container sv (max-width: 680px) {
+  .sv-fav-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
 
 /* ── Rejilla de platos (regla 1: nunca menos de dos columnas) ──
    Con la FOTO de cada plato arriba (carta.tsx). Si el restaurante no
@@ -3197,7 +3228,8 @@
    MÓVIL Y TABLET — ajustes de tamaño
    ══════════════════════════════════════════════════════════════ */
 @container sv (max-width: 899px) {
-  .sv-body:not([data-plano="1"]) { flex-direction: column; }
+  .sv-body:not([data-plano="1"]) > .sv-rail { flex-basis: 145px; }
+  .sv-body:not([data-plano="1"]) > .sv-ticket { flex-basis: 254px; }
   .sv-dish { min-height: 118px; padding: 14px; border-radius: var(--radius-xl); border-width: 1.5px; }
   .sv-dish-name { font-size: 15px; }
   .sv-dish-price { font-size: 14px; }
@@ -3262,13 +3294,16 @@
    sitio en una tablet. Se decide por el PUNTERO y no por el ancho —una
    tablet de 1280 px sigue siendo un dedo. */
 @media (pointer: coarse) {
-  .sv-kbd, .sv-fav-key, .sv-cta-key, .sv-foot-keys, .sv-tab-key, .sv-palette-foot { display: none; }}
+  .sv-kbd, .sv-cta-key, .sv-foot-keys, .sv-tab-key, .sv-palette-foot { display: none; }}
 @keyframes fade-in  { from { transform: translateY(7px); }  to { transform: translateY(0); } }
 
 @keyframes adm-nav-spin { to { transform: rotate(360deg); } }
 
 @keyframes adm-shimmer {
   100% { transform: translateX(100%); }
+}
+@container sv (max-width: 680px) {
+  .sv-body:not([data-plano="1"]) { flex-direction: column; }
 }
 @container sv (max-width: 620px) {
   .sv-body[data-plano="1"] { flex-direction: column; }

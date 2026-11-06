@@ -6,6 +6,7 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+- **Servicio estable por turno** (auditoría 1.4, migración 174): los favoritos tienen puestos fijos en cada dispositivo. Tomar pedidos busca por nombre o alias y conserva los borradores al cambiar de mesa. La comanda distingue saldo enviado, platos por enviar y notas para cocina.
 - **Salón y comanda** (auditoría 1.3, migración 173): el plano permanece junto a la comanda en escritorio y el teléfono abre cada mesa por separado. Cobrar conserva los pedidos pendientes de entrega. El personal confirma la limpieza antes de volver a sentar a un grupo. Traslados y llegadas desde Recepción actualizan la ocupación en una transacción.
 
 ## v0.17.0 — 2026-11-02 · Tomar pedidos como un POS y En línea con tope

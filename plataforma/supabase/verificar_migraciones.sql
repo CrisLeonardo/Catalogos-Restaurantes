@@ -230,7 +230,12 @@ huellas(n, que, ok, cuando) as (values
      to_regprocedure('public.leogin_transicion_mesa(uuid,integer,uuid,text,text,uuid)') is not null
      and exists (select 1 from pg_trigger where tgrelid='public.orders'::regclass
        and tgname='leogin_proteger_mesa_en_limpieza'),
-     'ANTES de desplegar; después de la 172')
+     'ANTES de desplegar; después de la 172'),
+  ('174', 'preferencias privadas de Servicio por perfil y alias de trabajo',
+     exists (select 1 from pg_class c join pg_policy p on p.polrelid=c.oid
+       where c.oid=to_regclass('public.servicio_preferencias') and c.relrowsecurity
+         and p.polname='super_admin_segundo_factor' and not p.polpermissive),
+     'ANTES de desplegar; después de la 173')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

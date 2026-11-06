@@ -422,7 +422,7 @@ export function HojaLinea({
       <div className="sv-sheet-pad">
         <HojaHead
           title={`${linea.cantidad}× ${linea.nombre}`}
-          sub={[linea.detalle, `${money(importeLinea(linea))} en la cuenta`].filter(Boolean).join(' · ')}
+          sub={[linea.detalle, linea.nota, `${money(importeLinea(linea))} en la cuenta`].filter(Boolean).join(' · ')}
           onClose={onClose}
         />
 

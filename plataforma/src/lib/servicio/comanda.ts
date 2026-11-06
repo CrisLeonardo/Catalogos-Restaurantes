@@ -23,7 +23,7 @@
    ════════════════════════════════════════════════════════════ */
 
 import { remainingQuantity, type OrderWithItems } from '@/lib/db/orders';
-import { lineDetail, type CartLine } from '@/components/admin/waiter/cart';
+import type { CartLine } from '@/components/admin/waiter/cart';
 import type { OrderItem, OrderStatus } from '@/types';
 
 /** En qué va un renglón de la comanda. */
@@ -38,7 +38,7 @@ export interface LineaServicio {
   /** Precio de UNA unidad, extras incluidos. */
   unidad: number;
   cantidad: number;
-  /** «Sin cebolla · Término medio · la salsa aparte». Vacío si no hay. */
+  /** Modificadores elegidos. La nota de cocina se muestra por separado. */
   detalle: string;
   nota: string;
   /** Solo en `nuevo`: la línea del carrito, para el ± y la hoja de opciones. */
@@ -98,9 +98,7 @@ function lineaServida(item: OrderItem, estado: OrderStatus): boolean {
 
 /** Cómo se lee una línea ya enviada debajo de su nombre. */
 function detalleDeItem(item: OrderItem): string {
-  const partes = (item.options_snapshot ?? []).map((o) => o.variant ?? o.choice);
-  if (item.note) partes.push(item.note);
-  return partes.join(' · ');
+  return (item.options_snapshot ?? []).map((o) => o.variant ?? o.choice).join(' · ');
 }
 
 /**
@@ -127,7 +125,7 @@ export function comandaDeMesa(
       nombre: l.name,
       unidad: unidadDeCarrito(l),
       cantidad: l.quantity,
-      detalle: lineDetail(l),
+      detalle: l.options.map((o) => o.variantName ?? o.choiceName).join(' · '),
       nota: l.note ?? '',
       carrito: l,
       pagada: false,
@@ -177,7 +175,7 @@ export function comandaDeMesa(
         nombre: l.name,
         unidad: unidadDeCarrito(l),
         cantidad: l.quantity,
-        detalle: lineDetail(l),
+        detalle: l.options.map((o) => o.variantName ?? o.choiceName).join(' · '),
         nota: l.note ?? '',
         pagada: false,
         libre: !!l.open,

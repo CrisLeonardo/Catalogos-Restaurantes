@@ -29,8 +29,7 @@ import { money as fmtMoney, newLineId, type CartLine } from '@/components/admin/
 import type { PanelCurrency } from '@/components/admin/order-card';
 import type { Product, ProductOptionGroup } from '@/types';
 
-/** Sin `line`: los valores por omisión (single obligatorio → la primera;
-    combo → todo incluido). Con `line`: la selección exacta que tenía. */
+/** Un combo empieza completo. Los grupos obligatorios esperan una elección. */
 function seleccionInicial(groups: ProductOptionGroup[], line?: CartLine): Record<string, string[]> {
   const sel: Record<string, string[]> = {};
   for (const g of groups) {
@@ -39,7 +38,6 @@ function seleccionInicial(groups: ProductOptionGroup[], line?: CartLine): Record
       continue;
     }
     if (g.type === 'combo') sel[g.id] = g.choices.map((c) => c.id);
-    else if (g.type === 'single' && g.required && g.choices.length > 0) sel[g.id] = [g.choices[0].id];
     else sel[g.id] = [];
   }
   return sel;
@@ -134,11 +132,9 @@ export default function HojaOpciones({
   }, [groups, selected, variantes]);
 
   const unidad = product.price + opciones.reduce((s, o) => s + o.priceDelta, 0);
+  const sinResponder = groups.find((g) => g.type === 'single' && g.required && !(selected[g.id]?.length));
 
   function confirmar() {
-    const sinResponder = groups.find(
-      (g) => g.type === 'single' && g.required && !(selected[g.id]?.length),
-    );
     if (sinResponder) {
       setFalta(sinResponder.id);
       document.getElementById(`sv-grupo-${sinResponder.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -147,7 +143,7 @@ export default function HojaOpciones({
     const limpia = nota.trim() || undefined;
     if (initialLine) {
       onSave(initialLine.lineId, {
-        productId: product.id, name: product.name, price: unidad,
+        productId: product.id, name: product.name, price: product.price,
         quantity: qty, options: opciones, note: limpia,
       });
       return;
@@ -157,7 +153,7 @@ export default function HojaOpciones({
        del mismo plato con las mismas opciones. */
     onAdd({
       lineId: newLineId(product.id),
-      productId: product.id, name: product.name, price: unidad,
+      productId: product.id, name: product.name, price: product.price,
       quantity: qty, options: opciones, note: limpia,
     });
   }
@@ -260,6 +256,7 @@ export default function HojaOpciones({
             value={nota}
             onChange={(e) => setNota(e.target.value.slice(0, 140))}
             placeholder="Ej. la salsa aparte"
+            aria-label="Nota para cocina"
           />
         </div>
 
@@ -288,7 +285,7 @@ export default function HojaOpciones({
             </button>
           </div>
           <button type="button" className="sv-cta" onClick={confirmar}>
-            {initialLine ? 'Guardar' : 'Agregar'} · {money(unidad * qty)}
+            {sinResponder ? `Elegir ${sinResponder.name.toLowerCase()}` : `${initialLine ? 'Guardar' : 'Agregar'} · ${money(unidad * qty)}`}
           </button>
         </div>
 

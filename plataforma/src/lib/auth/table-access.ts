@@ -23,6 +23,7 @@ import { can } from '@/lib/permissions';
 export interface TableActor {
   userId: string;
   role: string;
+  effectiveRole: string;
   /** El restaurante del perfil. `null` en el super admin, que no tiene uno. */
   profileRestaurantId: string | null;
 }
@@ -95,6 +96,7 @@ export async function assertTableAccess(
     actor: {
       userId: user.id,
       role,
+      effectiveRole: efectivo.role ?? role,
       profileRestaurantId: (profile.restaurant_id as string | null) ?? null,
     },
   };

@@ -42,6 +42,35 @@ import { updateOrderStatus } from '@/lib/actions/orders';
 import { emitirFacturaAutomatica } from '@/lib/actions/fel';
 import { revalidatePath, updateTag } from 'next/cache';
 import { after } from 'next/server';
+import { leerPuestos, ROLES_SERVICIO, type PuestosServicio } from '@/lib/servicio/turno';
+
+export async function guardarPreferenciaServicio(
+  restaurantId: string, tipo: 'favoritos' | 'alias', clave: string, valor: PuestosServicio | string,
+): Promise<{ error?: string }> {
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
+  if (acceso.actor.role !== 'SUPER_ADMIN' && acceso.actor.effectiveRole !== 'RESTAURANT_OWNER') {
+    return { error: 'Solo el dueño puede publicar los favoritos y alias del local.' };
+  }
+  const puestos = tipo === 'favoritos' && Object.hasOwn(ROLES_SERVICIO, clave) ? leerPuestos(valor) : null;
+  const alias = tipo === 'alias' && typeof valor === 'string' ? valor.trim() : null;
+  if (!puestos && (alias === null || alias.length > 40 || !identidadCobroValida(clave))) {
+    return { error: 'Revisa los puestos o escribe un alias de hasta 40 caracteres.' };
+  }
+  const ids = puestos ? puestos.filter((id): id is string => id !== null) : [clave];
+  const db = createServiceClient();
+  if (ids.length > 0) {
+    if (!ids.every(identidadCobroValida)) return { error: 'Selecciona platos del catálogo.' };
+    const { count, error } = await db.from('products').select('id', { head: true, count: 'exact' })
+      .eq('restaurant_id', restaurantId).eq('is_active', true).in('id', ids);
+    if (error || count !== ids.length) return { error: 'Un plato ya no está activo en este local. Actualiza la carta.' };
+  }
+  const { error } = await db.from('servicio_preferencias')
+    .upsert({ restaurant_id: restaurantId, tipo, clave, valor: puestos ?? alias });
+  if (error) return { error: 'No se pudo guardar la preferencia. Vuelve a intentar.' };
+  revalidatePath('/admin/mesero');
+  return {};
+}
 
 /** Tope de líneas que una llamada puede tocar. Una mesa no acumula más. */
 const MAX_LINEAS = 120;

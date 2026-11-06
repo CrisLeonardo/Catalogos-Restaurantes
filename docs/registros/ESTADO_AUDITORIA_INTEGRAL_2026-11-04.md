@@ -581,7 +581,17 @@ La siguiente ficha es **1.2 · Caja: borrador, cuadre y recibo**. La ola 1 sigue
 - **Base.** Aplicar `173_ciclo_operativo_de_mesa.sql` después de la 172 y antes de desplegar el código. La migración protege contra pedidos nuevos y cierres durante la limpieza. El archivador conserva los pedidos con movimientos de caja.
 - **Verificación.** La matriz local llega a 86 casos de Postgres. Los casos nuevos comprueban el pago antes de la entrega, el bloqueo durante limpieza, una salida con saldo, la reapertura, dos llegadas simultáneas, capacidad, reservas futuras y traslado con recibo y solicitudes. Ambos auditores de acceso SQL devolvieron cero hallazgos. Chromium completó el recorrido en 390, 768 y 1280 px y los 12 casos de cobro y Caja. Pasaron 1.350 pruebas unitarias y quedó la omisión previa.
 
-La siguiente ficha es **1.4 · Servicio estable por turno**. Quedan 49 fichas, incluidas las tres continuas de calidad. La integración y el despliegue se gestionan por separado.
+## 24. Servicio estable por turno · ficha 1.4
+
+**Rama:** `feat/servicio-turno-estable`, sobre [PR #97](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/97). Se implementa la maqueta aprobada para Tomar pedidos.
+
+- **E07, N08 y N10.** Los puestos 1 a 9 quedan fijados por restaurante, operador y dispositivo. Un agotado conserva su número. Preparar otro turno permite aplicar cambios deliberados. La carta tiene una búsqueda y el modo servicio reduce la navegación alrededor de salón, carta y comanda.
+- **O03 y R05.1–4.** El dueño publica una lista base por perfil y asigna alias internos. La búsqueda tolera tildes. La comanda muestra mesa, personas, ronda, notas, saldo enviado y platos por enviar. Los borradores se conservan por mesa. Los modificadores obligatorios se eligen antes de agregar el plato y el recargo se cuenta una vez. Si cocina rechaza una comanda, el borrador vuelve con el motivo visible. Ante un error de red con conexión aparente se reintenta una vez con el mismo identificador.
+- **Base.** Aplicar `174_preferencias_de_servicio.sql` después de la 173 y antes del código. La tabla tiene RLS y solo permite acceso al servidor. Los favoritos activos de un dispositivo se conservan localmente hasta que el operador los cambie.
+- **Verificación.** Chromium probó veinte ventas, un plato agotado, alias y tildes, tres borradores, una guarnición con recargo, el rechazo del servidor y la pérdida de respuesta tras registrar el pedido. El reintento conservó la identidad y la base recibió una sola comanda. Se verificaron Carta y comanda en 390, 768 y 1280 px.
+- **Prueba de campo.** Queda pendiente observar a personal de servicio durante un turno real, como pide E07.
+
+La siguiente ficha es **1.5 · Cocina por etapa y estación**. Quedan 48 fichas, incluidas las tres continuas de calidad. La integración y el despliegue se gestionan por separado.
 
 ---
 

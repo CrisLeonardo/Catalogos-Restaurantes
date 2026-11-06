@@ -43,14 +43,15 @@ export function getQueuedOrders(restaurantId: string, scope: QueueScope = 'custo
   }
 }
 
-export function saveQueuedOrder(restaurantId: string, order: QueuedOrder, scope: QueueScope = 'customer'): void {
+export function saveQueuedOrder(restaurantId: string, order: QueuedOrder, scope: QueueScope = 'customer'): boolean {
   try {
     const list = [
       order,
       ...getQueuedOrders(restaurantId, scope).filter((o) => o.clientId !== order.clientId),
     ];
     localStorage.setItem(queueKey(restaurantId, scope), JSON.stringify(list));
-  } catch {}
+    return true;
+  } catch { return false; }
 }
 
 export function removeQueuedOrder(restaurantId: string, clientId: string, scope: QueueScope = 'customer'): void {
