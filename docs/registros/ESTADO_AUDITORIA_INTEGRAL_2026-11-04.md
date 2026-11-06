@@ -537,6 +537,16 @@ La siguiente ficha es **1.1 · Cobro completo**, con rama y PR propios. La lectu
 
 La siguiente ficha es **1.2 · Caja: borrador, cuadre y recibo**. La ola 1 sigue en curso.
 
+## 20. Recibo durable de Caja · primera entrega de 1.2
+
+**Rama:** `feat/caja-borrador-cuadre-recibo`, sobre [PR #92](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/92) (`c15ed66`, CI verde). La rama de trabajo parte de esa base después de actualizar `main`. La ficha 1.2 continúa abierta.
+
+- **Antes:** repetir el cierre Q70, después de registrar Q10 del siguiente turno, creó un segundo corte con Q60 de sobrante en el Postgres local.
+- **Base:** aplicar `170_recibo_durable_caja.sql` después de la 169 y antes del código. El cierre de la 166, sus gastos y el nuevo recibo quedan en una transacción. El recibo incluye periodo, fondo, efectivo esperado, conteo por denominación, diferencias, métodos, gastos, propinas, devoluciones y responsables. Queda disponible para lectura autorizada por ID de corte. Los cortes anteriores se conservan en su historial.
+- **Reintento:** la acción acepta una identidad asociada al operador, la solicitud y el turno leído. Repetirla recupera el recibo original aunque haya otro turno activo. Un intento que nunca se confirmó se rechaza si el turno ya cambió. La pantalla existente genera la identidad en el servidor por cada confirmación. Persistirla en el navegador y reabrir el recibo desde Caja corresponden a la siguiente entrega.
+- **Interfaz:** se preparó una maqueta con datos ficticios para revisar el autoguardado, la diferencia entre «sin contar» y «conteo en cero», el origen del cuadre y la confirmación guardada. El §1 pide su aprobación antes de cambiar Caja. Quedan pendientes el borrador versionado, la recuperación desde la interfaz, el detalle completo de movimientos y el traspaso entre responsables.
+- **Validación:** pasaron 77 casos de Postgres, incluidos el acuse perdido, las solicitudes simultáneas y el rechazo de un intento de otro turno. Los E2E de Caja 0.18 y 0.19 conservan los cortes consecutivos y el límite de las 05:00. Los auditores de RLS y funciones SQL devolvieron cero hallazgos. La maqueta se ejercitó a 390, 768 y 1280 px en claro y oscuro.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

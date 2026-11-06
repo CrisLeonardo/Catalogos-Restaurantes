@@ -204,7 +204,14 @@ huellas(n, que, ok, cuando) as (values
      and to_regprocedure('public.leogin_guardar_partes_mesa(uuid,integer,text,uuid,integer)') is not null
      and to_regprocedure('public.leogin_registrar_abono_mesa(uuid,integer,text,uuid,uuid[],jsonb,uuid,uuid)') is not null
      and to_regprocedure('public.leogin_cerrar_cuenta_pagada(uuid,integer,text,uuid,uuid)') is not null,
-     'ANTES de desplegar; después de la 168')
+     'ANTES de desplegar; después de la 168'),
+  ('170', 'identidad de cierre y recibo durable de caja',
+     exists (select 1 from pg_class c join pg_policy p on p.polrelid=c.oid
+       where c.oid=to_regclass('public.caja_recibos') and c.relrowsecurity
+         and p.polname='super_admin_segundo_factor' and not p.polpermissive)
+     and to_regprocedure('public.leogin_recuperar_cierre_caja(uuid,uuid,uuid,jsonb)') is not null
+     and to_regprocedure('public.leogin_confirmar_cierre_caja_con_recibo(uuid,bigint,uuid,timestamptz,uuid,jsonb,uuid[],uuid,uuid,jsonb,jsonb)') is not null,
+     'ANTES de desplegar; después de la 169')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

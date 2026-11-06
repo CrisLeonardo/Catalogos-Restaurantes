@@ -39,6 +39,7 @@ import { getTuDia } from '@/lib/db/momentos';
 import type { RecordDelDia } from '@/lib/momentos';
 import { sendPushToRestaurant } from '@/lib/push';
 import { fmtMoney } from '@/lib/money';
+import { identidadCobroValida } from '@/lib/cobro-intento';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
@@ -728,17 +729,20 @@ export interface CajaPayload {
   tips?: TipShare[] | null;
 }
 
-/** Lee el payload y calcula el cuadre desde el SERVIDOR, nunca del cliente. */
-async function cuadre(ctx: Ctx, input: CajaPayload) {
+function conteoCaja(counts: CajaPayload['counts']) {
   const breakdown: Record<string, number> = {};
   let centavos = 0;
   for (const { field, centavos: c } of DENOM_FIELDS) {
-    const n = Math.max(0, Math.floor(Number(input.counts?.[field]) || 0));
+    const n = Math.max(0, Math.floor(Number(counts?.[field]) || 0));
     breakdown[field] = n;
     centavos += n * c;
   }
-  const counted = Math.round(centavos) / 100;
+  return { breakdown, counted: centavos / 100 };
+}
 
+/** Lee el payload y calcula el cuadre desde el SERVIDOR, nunca del cliente. */
+async function cuadre(ctx: Ctx, input: CajaPayload, conteo = conteoCaja(input.counts)) {
+  const { breakdown, counted } = conteo;
   const l = await lectura(ctx, input.restaurantId);
   /* El fondo de un turno abierto es el que se escribió AL ABRIR: dejar que
      el cierre lo cambie sería la forma más fácil de «cuadrar» un faltante. */
@@ -822,8 +826,8 @@ export async function discardCajaDraft(restaurantId: string): Promise<{ ok?: tru
   return { ok: true };
 }
 
-/** El resultado del cierre, para la pantalla final e imprimir. */
-export interface CajaCloseResult {
+/** Los importes y movimientos confirmados en el corte. */
+export interface CajaReceipt {
   id: string;
   date: string;
   counted: number;
@@ -839,9 +843,43 @@ export interface CajaCloseResult {
   openedByName: string | null;
   /** Lo que quedó sin cobrar y pasa al turno siguiente. */
   pendingTotal: number;
+  expectedDrawer: number;
+  byMethod: CashSummary['byMethod'];
+  counts: Record<string, number>;
+  expenses: { id: string; concept: string; amount: number; at: string }[];
+  tips: TipShare[] | null;
+  openedAt: string | null;
+  shiftLabel: string | null;
+  cashierName: string | null;
+  notes: string | null;
+}
+
+export interface CajaCloseResult extends CajaReceipt {
   /** Cómo va el día del turno (PLAN_MOMENTOS_PICO P5): lo vendido en TODO
    *  el día, no solo en efectivo, y el récord si de verdad lo es. */
   dia: { ventas: number; pedidos: number; record: RecordDelDia | null } | null;
+}
+
+type SolicitudCierre = CajaPayload & { confirmPending?: boolean } & (
+  | { intentoId: string; turno: { desde: string; id: string | null } }
+  | { intentoId?: never; turno?: never }
+);
+
+type RespuestaCierre = { result?: CajaCloseResult; pending?: Pendientes; error?: string };
+
+const SIN_170 = 'Falta la migración 170 para conservar el recibo del cierre de caja.';
+
+/** Lee un recibo ya confirmado sin volver a calcular el turno. */
+export async function getCajaReceipt(restaurantId: string, corteId: string):
+  Promise<{ receipt?: CajaReceipt; error?: string }> {
+  if (!identidadCobroValida(corteId)) return { error: 'Corte inválido.' };
+  const ctx = await authRestaurant(restaurantId);
+  if (!ctx) return { error: 'No autorizado.' };
+  const { data, error } = await ctx.db.from('caja_recibos').select('recibo')
+    .eq('restaurant_id', restaurantId).eq('corte_id', corteId).maybeSingle();
+  if (error) return { error: faltaLaMigracion(error) ? SIN_170 : error.message };
+  if (!data) return { error: 'Ese corte no tiene un recibo detallado disponible.' };
+  return { receipt: data.recibo as CajaReceipt };
 }
 
 /**
@@ -854,22 +892,48 @@ export interface CajaCloseResult {
  * cobrado— y contará en el turno en que se cobre (PROD-02).
  */
 export async function closeCaja(
-  input: CajaPayload & { confirmPending?: boolean },
-): Promise<{ result?: CajaCloseResult; pending?: Pendientes; error?: string }> {
+  input: SolicitudCierre,
+): Promise<RespuestaCierre> {
   const ctx = await authRestaurant(input.restaurantId);
   if (!ctx) return { error: 'No autorizado.' };
 
+  const intentoId = input.intentoId ?? crypto.randomUUID();
+  if (!identidadCobroValida(intentoId) || (input.intentoId && !input.turno?.desde)) {
+    return { error: 'Identidad o turno de cierre inválidos.' };
+  }
+  const conteo = conteoCaja(input.counts);
+  const etiqueta = (input.shiftLabel ?? '').trim() || null;
+  const notas = (input.notes ?? '').trim() || null;
+  const tips = input.tips ?? null;
+  const solicitud = { counts: conteo.breakdown, openingFloat: input.openingFloat,
+    shiftLabel: etiqueta, notes: notas, tips, turno: input.turno ?? null, confirmPending: input.confirmPending === true };
+  const recuperar = async (): Promise<RespuestaCierre | null> => {
+    const { data, error } = await ctx.db.rpc('leogin_recuperar_cierre_caja', {
+      p_restaurant: input.restaurantId, p_intento: intentoId, p_actor: ctx.userId, p_solicitud: solicitud,
+    });
+    if (error) return { error: faltaLaFuncion(error) ? SIN_170 : error.message };
+    return data ? { result: { ...data as CajaReceipt, dia: null } } : null;
+  };
+  if (input.intentoId) {
+    const previo = await recuperar();
+    if (previo) return previo;
+  }
+
   let c: Awaited<ReturnType<typeof cuadre>>;
-  try { c = await cuadre(ctx, input); }
+  try { c = await cuadre(ctx, input, conteo); }
   catch (error) { return { error: error instanceof Error ? error.message : 'No se pudo leer la caja.' }; }
   if (!c.l.controlCaja) return { error: 'Falta la migración 166 para cerrar caja con los cobros protegidos.' };
   if (c.l.sinMigracion) return { error: SIN_145 };
+  if (input.turno && (input.turno.desde !== c.l.desde || input.turno.id !== (c.l.abierto?.id ?? null))) {
+    // Otra petición del mismo intento puede haber confirmado entre las dos lecturas.
+    return (await recuperar()) ?? { error: 'El turno cambió. Revisa el cuadre antes de cerrar.' };
+  }
   if (c.counted <= 0 && c.esperadoEnCaja > 0) return { error: 'Cuenta el efectivo antes de cerrar el turno.' };
   if (hayPendientes(c.l.pendientes) && !input.confirmPending) return { pending: c.l.pendientes };
 
-  const tips = input.tips ?? null;
   const tipsTotal = round2((tips ?? []).reduce((s, t) => s + (Number(t.amount) || 0), 0));
   const cerradoEn = c.l.hasta;
+  const shiftLabel = etiqueta ?? c.l.abierto?.shiftLabel ?? null;
 
   const fila: Record<string, unknown> = {
     business_date:          c.l.dia,
@@ -879,9 +943,9 @@ export async function closeCaja(
     difference:             c.difference,
     by_method:              c.summary.byMethod,
     denomination_breakdown: c.breakdown,
-    shift_label:            (input.shiftLabel ?? '').trim() || c.l.abierto?.shiftLabel || null,
+    shift_label:            shiftLabel,
     cashier_name:           ctx.cashierName,
-    notes:                  (input.notes ?? '').trim() || null,
+    notes:                  notas,
     status:                 'CLOSED',
     expenses_total:         c.expensesTotal,
     tips_total:             tipsTotal,
@@ -891,23 +955,34 @@ export async function closeCaja(
     draft_saved_at:         null,
   };
 
-  const { data: id, error: errCierre } = await ctx.db.rpc('leogin_confirmar_cierre_caja', {
+  const recibo: Omit<CajaReceipt, 'id'> = {
+    date: c.l.dia, counted: c.counted, expected: c.summary.expectedCash, opening: c.opening,
+    expensesTotal: c.expensesTotal, tipsTotal, difference: c.difference,
+    refunds: c.l.cuadre.devoluciones, refundsCash: c.l.cuadre.devolucionesEfectivo,
+    periodStart: c.l.desde, closedAt: cerradoEn, openedByName: c.l.abierto?.openedByName ?? null,
+    pendingTotal: c.l.pendientes.total, expectedDrawer: c.esperadoEnCaja, byMethod: c.summary.byMethod,
+    counts: c.breakdown, expenses: c.l.gastos.map((g) => ({ id: g.id, concept: g.concept, amount: g.amount, at: g.created_at })),
+    tips, openedAt: c.l.abierto?.openedAt ?? null, shiftLabel, cashierName: ctx.cashierName, notes: notas,
+  };
+  const { data, error: errCierre } = await ctx.db.rpc('leogin_confirmar_cierre_caja_con_recibo', {
     p_restaurant: input.restaurantId, p_revision: c.l.controlCaja.revision,
     p_ultimo: c.l.controlCaja.ultimoCierreId, p_hasta: cerradoEn,
     p_abierto: c.l.abierto?.id ?? null, p_fila: fila,
     p_gastos: c.l.gastos.map((g) => g.id), p_actor: ctx.userId,
+    p_intento: intentoId, p_solicitud: solicitud, p_recibo: recibo,
   });
-  if (errCierre) return { error: faltaLaFuncion(errCierre)
-    ? 'Falta la migración 166 para cerrar caja con los cobros protegidos.' : errCierre.message };
-  if (typeof id !== 'string') return { error: 'No se pudo confirmar el cierre de caja.' };
+  if (errCierre) return { error: faltaLaFuncion(errCierre) ? SIN_170 : errCierre.message };
+  const confirmado = data as { recibo: CajaReceipt; repetido: boolean } | null;
+  if (!identidadCobroValida(confirmado?.recibo?.id)) return { error: 'No se pudo confirmar el cierre de caja.' };
+  if (confirmado.repetido) return { result: { ...confirmado.recibo, dia: null } };
 
   await logActivity({
     restaurantId: input.restaurantId,
     actorId: ctx.userId,
     action: 'turno_cerrado',
-    entity: (fila.shift_label as string | null) ?? null,
+    entity: shiftLabel,
     meta: {
-      corteId: id,
+      corteId: confirmado.recibo.id,
       esperado: c.esperadoEnCaja,
       contado: c.counted,
       diferencia: c.difference,
@@ -937,23 +1012,7 @@ export async function closeCaja(
     }).catch(() => { /* sin aviso */ });
   }
 
-  return {
-    result: {
-      dia,
-      id,
-      date: c.l.dia,
-      counted: c.counted,
-      expected: c.summary.expectedCash,
-      opening: c.opening,
-      expensesTotal: c.expensesTotal,
-      tipsTotal,
-      difference: c.difference,
-      refunds: c.l.cuadre.devoluciones,
-      refundsCash: c.l.cuadre.devolucionesEfectivo,
-      periodStart: c.l.desde,
-      closedAt: cerradoEn,
-      openedByName: c.l.abierto?.openedByName ?? null,
-      pendingTotal: c.l.pendientes.total,
-    },
-  };
+  // La celebración del día es de la pantalla anterior al identificador durable.
+  // El contrato con identidad devuelve el mismo resultado en cada recuperación.
+  return { result: { ...confirmado.recibo, dia: input.intentoId ? null : dia } };
 }

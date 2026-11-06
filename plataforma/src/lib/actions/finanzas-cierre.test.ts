@@ -30,7 +30,7 @@ beforeEach(() => {
   h.auth.mockResolvedValue({ db: { rpc: h.rpc }, tz: 'America/Guatemala', corte: 300,
     userId: ACTOR, cashierName: 'AUD Caja', firmaSola: true });
   h.leer.mockResolvedValue(lectura());
-  h.rpc.mockResolvedValue({ data: CUT, error: null });
+  h.rpc.mockResolvedValue({ data: { recibo: { id: CUT, closedAt: hasta }, repetido: false }, error: null });
 });
 
 describe('cierre de caja no vuelve a la escritura sin revisión (0.18)', () => {
@@ -53,7 +53,7 @@ describe('cierre de caja no vuelve a la escritura sin revisión (0.18)', () => {
   it('confirma revisión, corte previo y timestamp SQL sin perder microsegundos', async () => {
     const result = await closeCaja(input);
     expect(result.result?.closedAt).toBe(hasta);
-    expect(h.rpc).toHaveBeenCalledWith('leogin_confirmar_cierre_caja', expect.objectContaining({
+    expect(h.rpc).toHaveBeenCalledWith('leogin_confirmar_cierre_caja_con_recibo', expect.objectContaining({
       p_revision: 12, p_ultimo: CUT, p_hasta: hasta, p_restaurant: RID, p_actor: ACTOR,
       p_abierto: null, p_gastos: [],
     }));
