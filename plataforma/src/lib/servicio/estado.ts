@@ -27,17 +27,20 @@
 
 import type { TableOccupancy, TableCall } from '@/lib/db/orders';
 import type { TableSeating } from '@/lib/db/table-sessions';
+import type { ReservaEnSalon } from '@/lib/db/reservaciones';
 import type { FloorPlan } from '@/lib/theme/defaults';
 import { fmtMin } from '@/lib/table-state';
 
 /** En qué va la mesa. El orden es el de urgencia para el mesero. */
-export type EstadoServicio = 'borrador' | 'cocina' | 'listo' | 'sentada' | 'libre';
+export type EstadoServicio = 'borrador' | 'cocina' | 'listo' | 'pagada' | 'limpieza' | 'sentada' | 'libre';
 
 /** Cómo se llama cada estado en la tarjeta. */
 export const ESTADO_LABEL: Record<EstadoServicio, string> = {
   borrador: 'Sin enviar',
   cocina: 'Falta servir',
   listo: 'Por cobrar',
+  pagada: 'Pagada',
+  limpieza: 'Por limpiar',
   sentada: 'Sin pedir',
   libre: 'Libre',
 };
@@ -79,6 +82,10 @@ export interface MesaServicio {
   sinEnviar: number;
   /** Lo que lleva gastado, incluido lo que aún no ha salido a cocina. */
   total: number;
+  saldo: number;
+  pagada: boolean;
+  personas: number | null;
+  reserva: ReservaEnSalon | null;
   /** Cosas que el comensal pidió por QR y nadie ha aceptado. */
   qrPendiente: number;
   /** Tiene pedido pero su número se sale del salón configurado (M-03). */
@@ -97,6 +104,7 @@ export interface EntradaSalon {
   occupancy: Record<number, TableOccupancy>;
   calls: Record<number, TableCall>;
   seatings: Record<number, TableSeating>;
+  reservas?: Record<number, ReservaEnSalon>;
   /** Unidades sin enviar por mesa, del carrito de ESTE aparato. */
   sinEnviar: Record<number, number>;
   /** Lo apuntado sin enviar, en dinero, por mesa. */
@@ -185,9 +193,12 @@ export function mesasDeServicio(e: EntradaSalon): MesaServicio[] {
 
     const call = llamadaViva(e.calls[n], desde);
 
+    const saldo = Math.max(0, Math.round(((occ?.total ?? 0) - (occ?.paid ?? 0)) * 100) / 100);
+    const pagada = !!occ && occ.paid != null && saldo === 0;
     let estado: EstadoServicio;
-    if (sinEnviar > 0) estado = 'borrador';
-    else if (occ) estado = occ.status === 'SERVED' ? 'listo' : 'cocina';
+    if (seat?.limpiezaDesde) estado = 'limpieza';
+    else if (sinEnviar > 0) estado = 'borrador';
+    else if (occ) estado = occ.status !== 'SERVED' ? 'cocina' : pagada ? 'pagada' : 'listo';
     else if (seat) estado = 'sentada';
     else estado = 'libre';
 
@@ -201,12 +212,16 @@ export function mesasDeServicio(e: EntradaSalon): MesaServicio[] {
       zona: meta?.zona ?? null,
       sillas: meta?.sillas ?? occ?.partySize ?? seat?.partySize ?? null,
       estado,
-      atencion: call ? (call.reason === 'bill' ? 'cuenta' : 'llamada') : null,
+      atencion: call && estado !== 'limpieza' ? (call.reason === 'bill' ? 'cuenta' : 'llamada') : null,
       desde,
       minutos: minutosDesde(desde, e.now),
       platos: (occ?.itemCount ?? 0) + sinEnviar,
       sinEnviar,
       total: Math.round(((occ?.total ?? 0) + (e.totalSinEnviar[n] ?? 0)) * 100) / 100,
+      saldo,
+      pagada,
+      personas: seat?.partySize ?? occ?.partySize ?? null,
+      reserva: e.reservas?.[n] ?? null,
       qrPendiente,
       fuera,
       mesero: occ?.waiterName ?? seat?.waiterName ?? null,
@@ -237,7 +252,7 @@ export function pasaFiltro(m: MesaServicio, filtro: FiltroSalon, yo: string | nu
        pedido o turno a su nombre. Las libres no son de nadie y se buscan
        en «Todas» o «Libres». */
     case 'Mías': return yo != null && m.meseroId === yo;
-    case 'Con pedido': return m.estado !== 'libre';
+    case 'Con pedido': return m.platos > 0;
     case 'Falta servir': return m.estado === 'cocina' || m.qrPendiente > 0;
     case 'Por cobrar': return m.estado === 'listo';
     case 'Libres': return m.estado === 'libre';
@@ -256,9 +271,11 @@ export function resumenDelSalon(mesas: MesaServicio[]): string {
   const libres = mesas.filter((m) => m.estado === 'libre').length;
   const porCobrar = mesas.filter((m) => m.estado === 'listo').length;
   const porServir = mesas.filter((m) => m.estado === 'cocina').length;
+  const porLimpiar = mesas.filter((m) => m.estado === 'limpieza').length;
   const partes = [`${libres} ${libres === 1 ? 'libre' : 'libres'}`];
   if (porCobrar) partes.push(`${porCobrar} por cobrar`);
   if (porServir) partes.push(`${porServir} por servir`);
+  if (porLimpiar) partes.push(`${porLimpiar} por limpiar`);
   const piden = mesas.filter((m) => m.atencion).length;
   if (piden) partes.push(`${piden} ${piden === 1 ? 'te llama' : 'te llaman'}`);
   return partes.join(' · ');
@@ -285,11 +302,12 @@ export function subtituloDeMesa(m: MesaServicio, corto = false): string {
     return m.qrPendiente > 0 ? `${base} · QR` : base;
   }
   const partes: string[] = [];
+  if (m.personas) partes.push(`${m.personas} ${m.personas === 1 ? 'persona' : 'personas'}`);
   /* El mismo reloj que Mesas: «3 h 9 min» y no «189 min» para la misma
      mesa en las dos pantallas. */
   if (m.minutos != null) partes.push(fmtMin(m.minutos));
   if (m.platos > 0) partes.push(`${m.platos} ${m.platos === 1 ? 'plato' : 'platos'}`);
-  else if (m.estado === 'sentada') partes.push(m.sillas ? `${m.sillas} ${m.sillas === 1 ? 'persona' : 'personas'}` : 'sin pedir');
+  else if (m.estado === 'sentada' && !m.personas) partes.push('sin pedir');
   if (m.qrPendiente > 0) partes.push('QR nuevo');
   return partes.join(' · ');
 }
@@ -303,7 +321,7 @@ export function subtituloDeMesa(m: MesaServicio, corto = false): string {
  * atender primero.
  */
 const RANGO: Record<EstadoServicio, number> = {
-  borrador: 0, listo: 1, cocina: 2, sentada: 3, libre: 4,
+  borrador: 0, listo: 1, cocina: 2, limpieza: 3, pagada: 4, sentada: 5, libre: 6,
 };
 
 export function porUrgencia(mesas: MesaServicio[]): MesaServicio[] {

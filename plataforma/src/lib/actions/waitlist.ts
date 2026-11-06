@@ -17,8 +17,7 @@ import { canActOnRestaurant } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
 import { canActOnGroupBranch } from '@/lib/db/admin';
 import { can } from '@/lib/permissions';
-import { seatTable } from '@/lib/actions/table-sessions';
-import { faltaLaColumna } from '@/lib/db/migracion-ausente';
+import { sentarDesdeRecepcion } from '@/lib/actions/table-sessions';
 
 export type WaitlistResult = { error?: string; ok?: boolean };
 
@@ -112,41 +111,13 @@ export async function markWaitlistSeated(
     ? tableNumber
     : null;
 
-  const db = createServiceClient();
-  const cambios: Record<string, unknown> = { status: 'SEATED', seated_at: new Date().toISOString() };
-  if (mesa != null) cambios.table_number = mesa;
+  if (mesa != null) return sentarDesdeRecepcion(restaurantId, mesa, id, 'waitlist');
 
-  const pedir = (cols: Record<string, unknown>) => db
-    .from('waitlist_entries')
-    .update(cols)
+  const { error } = await createServiceClient().from('waitlist_entries')
+    .update({ status: 'SEATED', seated_at: new Date().toISOString() })
     .eq('id', id)
-    .eq('restaurant_id', restaurantId)
-    .select('party_size')
-    .maybeSingle();
-
-  let { data, error } = await pedir(cambios);
-  /* Si falta la columna, la 128 todavía no corrió aquí. Sentar tiene que
-     seguir funcionando: se reintenta sin la mesa, igual que `party_size` en
-     el salón. Perder el número es malo; no poder sentar, peor. */
-  if (faltaLaColumna(error) && mesa != null) {
-    ({ data, error } = await pedir({ status: 'SEATED', seated_at: new Date().toISOString() }));
-  }
+    .eq('restaurant_id', restaurantId);
   if (error) return { error: error.message };
-
-  if (mesa != null) {
-    const res = await seatTable(restaurantId, mesa, {
-      partySize: (data?.party_size as number | null) ?? null,
-      source: 'waitlist',
-      originId: id,
-    });
-    /* Si la mesa ya estaba sentada no se deshace nada: la gente YA está
-       marcada como sentada, que es lo que el host acaba de hacer. Se le
-       dice, y él decide si era otra mesa. */
-    if (res.error && !res.needsMigration) {
-      revalidatePath('/admin/lista-espera');
-      return { error: res.error };
-    }
-  }
 
   revalidatePath('/admin/lista-espera');
   revalidatePath('/admin/mesas');

@@ -283,6 +283,33 @@ export async function cobradoDeMesa(
 
 const SIN_ABONOS = 'Falta la migración 169 para consultar y registrar abonos y partes.';
 
+export async function transicionDeMesa(
+  restaurantId: string, mesa: number, turno: string | null, cuenta: string,
+  accion: 'limpiar' | 'liberar' | 'reabrir' | 'sin_cobro',
+): Promise<{ error?: string }> {
+  if (!Number.isInteger(mesa) || mesa < 1 || !/^[a-f0-9]{32}$/.test(cuenta)
+      || (turno !== null && !identidadCobroValida(turno))
+      || !['limpiar', 'liberar', 'reabrir', 'sin_cobro'].includes(accion)) {
+    return { error: 'Datos de mesa inválidos.' };
+  }
+  const acceso = await assertTableAccess(restaurantId,
+    accion === 'sin_cobro' || accion === 'reabrir' ? ['finanzas'] : ['mesero', 'mesas']);
+  if ('error' in acceso) return acceso;
+  const { data, error } = await createServiceClient().rpc('leogin_transicion_mesa', {
+    p_restaurant: restaurantId, p_mesa: mesa, p_turno: turno, p_cuenta: cuenta,
+    p_accion: accion, p_actor: acceso.actor.userId,
+  });
+  if (error || !data) return { error: error?.message ?? 'No se pudo actualizar la mesa.' };
+  const { orderIds, saldada } = data as { orderIds: string[]; saldada: boolean };
+  if (accion === 'liberar' && saldada && orderIds.length) {
+    after(async () => {
+      for (const id of orderIds) await emitirFacturaAutomatica(restaurantId, id);
+    });
+  }
+  revalidarSalon();
+  return {};
+}
+
 export async function leerContextoCobroMesa(restaurantId: string, mesa: number):
   Promise<{ contexto: ContextoCobroMesa } | { error: string; needsMigration?: boolean }> {
   const acceso = await assertTableAccess(restaurantId);

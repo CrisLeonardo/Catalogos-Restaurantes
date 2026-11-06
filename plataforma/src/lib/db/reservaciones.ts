@@ -24,6 +24,35 @@ export interface ReservationSummary {
   today: number;
 }
 
+export type ReservaEnSalon = { nombre: string; fecha: string; hora: string; personas: number };
+
+export async function getProximasReservasDeMesa(restaurantId: string, timeZone: string):
+  Promise<Record<number, ReservaEnSalon>> {
+  const opciones: Intl.DateTimeFormatOptions = {
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  };
+  let formato: Intl.DateTimeFormat;
+  try {
+    formato = new Intl.DateTimeFormat('sv-SE', { ...opciones, timeZone });
+  } catch {
+    formato = new Intl.DateTimeFormat('sv-SE', { ...opciones, timeZone: 'America/Guatemala' });
+  }
+  const partes = formato.formatToParts(new Date());
+  const valor = (tipo: Intl.DateTimeFormatPartTypes) => partes.find((p) => p.type === tipo)?.value;
+  const hoy = `${valor('year')}-${valor('month')}-${valor('day')}`;
+  const hora = `${valor('hour')}:${valor('minute')}`;
+  const { data } = await createServiceClient().from('reservations')
+    .select('table_number,customer_name,date,time,party_size')
+    .eq('restaurant_id', restaurantId).eq('status', 'CONFIRMED').not('table_number', 'is', null)
+    .or(`date.gt.${hoy},and(date.eq.${hoy},time.gte.${hora})`)
+    .order('date').order('time').limit(100);
+  const resultado: Record<number, ReservaEnSalon> = {};
+  for (const r of data ?? []) {
+    resultado[r.table_number] ??= { nombre: r.customer_name, fecha: r.date, hora: r.time.slice(0, 5), personas: r.party_size };
+  }
+  return resultado;
+}
+
 export async function getReservations(restaurantId: string, dateFrom?: string, dateTo?: string): Promise<Reservation[]> {
   const db = createServiceClient();
   let q = db

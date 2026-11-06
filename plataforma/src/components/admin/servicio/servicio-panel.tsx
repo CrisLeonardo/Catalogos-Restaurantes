@@ -65,12 +65,12 @@ import { leerIntento, prepararIntento, resolverIntento, type ContextoCobroMesa, 
 import { reconocimientoDisponible } from '@/lib/servicio/voz';
 import {
   createWaiterOrder, freeTable, getTableBill, moveTableOrders, resolveTableCalls,
-  updateOrderStatus, printTableBillShare, setItemSeat,
+  updateOrderStatus, printTableBillShare, printReceiptViaAgent, setItemSeat,
 } from '@/lib/actions/orders';
 import {
   cobrarParteDeMesa, cobrarPedidoParaLlevar, cobradoDeMesa, deshacerServirLineas,
   ejecutarAbonoMesa, guardarPartesMesa, leerContextoCobroMesa,
-  marcarAgotado, moverPlatoDeMesa, ponerAlergiaDeMesa, ponerNombreDeMesa, servirLineas,
+  marcarAgotado, moverPlatoDeMesa, ponerAlergiaDeMesa, ponerNombreDeMesa, servirLineas, transicionDeMesa,
 } from '@/lib/actions/servicio';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { otraRonda, ultimaRonda } from '@/lib/servicio/ronda';
@@ -78,6 +78,7 @@ import { getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order
 import { billBreakdown, type BillBreakdown } from '@/lib/bill-split';
 import { remainingQuantity, type OrderWithItems, type TableOccupancy, type TableCall } from '@/lib/db/orders';
 import type { TableSeating } from '@/lib/db/table-sessions';
+import type { ReservaEnSalon } from '@/lib/db/reservaciones';
 import type { FloorPlan } from '@/lib/theme/defaults';
 import type { Category, OrderStatus, Product } from '@/types';
 import { assetSrc } from '@/lib/asset-image';
@@ -151,6 +152,7 @@ export interface ServicioPanelProps {
   occupancy: Record<number, TableOccupancy>;
   calls: Record<number, TableCall>;
   seatings: Record<number, TableSeating>;
+  reservas: Record<number, ReservaEnSalon>;
   tableCount: number;
   pickupEnabled: boolean;
   tipEnabled: boolean;
@@ -161,13 +163,15 @@ export interface ServicioPanelProps {
   hubToken: string | null;
   /** Tiene permiso de carta: puede marcar un plato agotado desde aquí. */
   puedeAgotar?: boolean;
+  puedeGestionarCuenta?: boolean;
 }
 
 export default function ServicioPanel({
   waiterId, waiterName, restaurantId, restaurantName, logoUrl,
   categories, products: productosServidor, masPedidos, initialOrders,
-  occupancy, calls, seatings, tableCount,
-  pickupEnabled, tipEnabled, tipEnabledPickup, currency, floorPlan, hubUrl, hubToken, puedeAgotar = false,
+  occupancy, calls, seatings, reservas, tableCount,
+  pickupEnabled, tipEnabled, tipEnabledPickup, currency, floorPlan, hubUrl, hubToken,
+  puedeAgotar = false, puedeGestionarCuenta = false,
 }: ServicioPanelProps) {
   const servicio = useServiceMode();
   const now = useReloj();
@@ -201,11 +205,7 @@ export default function ServicioPanel({
     setFiltroEstado(f);
     try { localStorage.setItem('leogin:servicio-filtro', f); } catch { /* sin almacenamiento */ }
   }, []);
-  /* El plano NO es una vista del riel: en 264 px serían mesas de
-     dieciocho píxeles. Se abre encima de todo, se mira, se toca una mesa
-     y se cierra habiéndola elegido — que es para lo que sirve un plano:
-     orientarse, no trabajar. */
-  const [planoAbierto, setPlanoAbierto] = useState(false);
+  const [vistaCarta, setVistaCarta] = useState(false);
   const [nivel, setNivel] = useState<string | null>(null);
 
   /* ── El pedido que se está apuntando ──────────────────────── */
@@ -267,8 +267,9 @@ export default function ServicioPanel({
      ahí. */
   const [conTeclado, setConTeclado] = useState(false);
   const [hayVoz, setHayVoz] = useState(false);
-  const [movil, setMovil] = useState(false);
-  const [estrecho, setEstrecho] = useState(false);
+  const [anchoServicio, setAnchoServicio] = useState(Infinity);
+  const movil = anchoServicio <= (vistaCarta ? 899 : 620);
+  const estrecho = anchoServicio <= 1099;
   /* Se observa la RAÍZ y no el armazón: un elemento con `container-type`
      no le reporta sus propios cambios de tamaño a un `ResizeObserver`
      —comprobado en pantalla: el ancho pasó de 906 a 700 px y el
@@ -291,8 +292,7 @@ export default function ServicioPanel({
          ignora. Sin esto el módulo parpadea a la rama del teléfono en el
          primer fotograma de una PC. */
       if (ancho <= 0) return;
-      setMovil(ancho <= 899);
-      setEstrecho(ancho <= 1099);
+      setAnchoServicio(ancho);
     };
     medir(el.clientWidth);
     const ro = new ResizeObserver((entradas) => {
@@ -346,7 +346,7 @@ export default function ServicioPanel({
     if (!Number.isInteger(n) || n < 1) return;
     setSel({ kind: 'mesa', n });
     if (params.get('ir') === 'cobrar' || params.get('ir') === 'dividir') setHoja({ k: 'cobrar' });
-    setPantalla('comanda');
+    setPantalla('ticket');
   }, []);
 
   useEffect(() => {
@@ -483,10 +483,10 @@ export default function ServicioPanel({
   }, [occupancy]);
 
   const mesas = useMemo(() => mesasDeServicio({
-    tableCount, occupancy, calls, seatings,
+    tableCount, occupancy, calls, seatings, reservas,
     sinEnviar: sinEnviarPorMesa, totalSinEnviar: totalSinEnviarPorMesa,
     qrPendiente: qrPendientePorMesa, floorPlan, now,
-  }), [tableCount, occupancy, calls, seatings, sinEnviarPorMesa, totalSinEnviarPorMesa, qrPendientePorMesa, floorPlan, now]);
+  }), [tableCount, occupancy, calls, seatings, reservas, sinEnviarPorMesa, totalSinEnviarPorMesa, qrPendientePorMesa, floorPlan, now]);
 
   const misMesas = useMemo(() => mesas.filter((m) => m.meseroId === waiterId).length, [mesas, waiterId]);
 
@@ -558,10 +558,11 @@ export default function ServicioPanel({
   const valorEnviado = desglose ? desglose.grandTotal : resumen.totalEnviado;
   const totalMesa = Math.round((valorEnviado + resumen.totalNuevo) * 100) / 100;
   const porCobrarReal = Math.max(0, contextoCobro?.saldo ?? Math.round((valorEnviado - cobrado) * 100) / 100);
-  const puedeCobrar = (sel.kind === 'pedido' || !!cuentaMesa)
+  const enLimpieza = mesaSel?.estado === 'limpieza';
+  const puedeCobrar = !enLimpieza && (sel.kind === 'pedido' || !!contextoCobro)
     && resumen.nNuevas === 0 && !envioPendiente
     && (porCobrarReal > 0 || !!contextoCobro?.saldada);
-  const etiquetaCobro = contextoCobro?.saldada ? 'Cerrar cuenta pagada' : 'Cobrar mesa';
+  const etiquetaCobro = contextoCobro?.saldada ? 'Ver pagos' : 'Cobrar mesa';
 
   const pendientesQr = useMemo(() => {
     if (ordersQr.length === 0) return null;
@@ -587,6 +588,7 @@ export default function ServicioPanel({
 
   const empujar = useCallback((linea: CartLine, aviso = true) => {
     if (sel.kind === 'none') { tocaMesa(); return; }
+    if (enLimpieza) { setAviso({ text: 'La mesa está por limpiar. Elige otra para agregar platos.', bad: true }); return; }
     const k = cartKey(sel);
     setCarts((prev) => {
       const actual = prev[k] ?? [];
@@ -606,7 +608,7 @@ export default function ServicioPanel({
     if (aviso) {
       setAviso({ text: `${linea.quantity > 1 ? `${linea.quantity}× ` : ''}${linea.name}` });
     }
-  }, [sel, tocaMesa]);
+  }, [sel, tocaMesa, enLimpieza]);
 
   const agregarProducto = useCallback((p: Product, qty: number) => {
     if (sel.kind === 'none') { tocaMesa(); return; }
@@ -675,6 +677,7 @@ export default function ServicioPanel({
 
   /** Copia la última ronda al carrito contra la carta de hoy y dice qué no se pudo. */
   const repetirRonda = useCallback(() => {
+    if (enLimpieza) return;
     const { lineas: copia, faltan } = otraRonda(ordersVivos, products);
     if (copia.length === 0) {
       setAviso({ text: faltan.length ? `No se pudo repetir: ${faltan.join(', ')} ya no está disponible.` : 'No hay ronda que repetir.', bad: true });
@@ -688,7 +691,7 @@ export default function ServicioPanel({
         : `Otra ronda: ${n} ${n === 1 ? 'plato' : 'platos'} al carrito. Revisa y envía.`,
       bad: faltan.length > 0,
     });
-  }, [ordersVivos, products, empujar]);
+  }, [ordersVivos, products, empujar, enLimpieza]);
 
   const qtyOf = useCallback(
     (productId: string) => carrito.filter((l) => l.productId === productId).reduce((s, l) => s + l.quantity, 0),
@@ -697,7 +700,7 @@ export default function ServicioPanel({
 
   /* ── Enviar a cocina ──────────────────────────────────────── */
   const enviar = useCallback(() => {
-    if (sel.kind === 'none' || carrito.length === 0) return;
+    if (sel.kind === 'none' || carrito.length === 0 || enLimpieza) return;
     const mesa = sel.kind === 'mesa' ? sel.n : null;
     const alergiaMesa = mesa ? mesas.find((m) => m.n === mesa)?.alergia ?? null : null;
     const k = cartKey(sel);
@@ -830,7 +833,7 @@ export default function ServicioPanel({
         contarCola();
       }
     })();
-  }, [sel, carrito, nombreLlevar, waiterId, restaurantId, tipEnabled, tipEnabledPickup, hubUrl, hubToken, movil, cargarMesa, contarCola, mesas]);
+  }, [sel, carrito, nombreLlevar, waiterId, restaurantId, tipEnabled, tipEnabledPickup, hubUrl, hubToken, movil, cargarMesa, contarCola, mesas, enLimpieza]);
 
   /* ── Servir ───────────────────────────────────────────────── */
   const servir = useCallback((l: LineaServicio) => {
@@ -961,10 +964,11 @@ export default function ServicioPanel({
   }, [ejecutarCobro]);
 
   const cobrarTodo = useCallback((pagos: PagoCobro[]) => {
-    if (sel.kind !== 'mesa') return;
-    const solicitud: SolicitudCobro = { mesa: sel.n, operacion: 'cierre', items: [], pagos };
-    void ejecutarCobro(solicitud);
-  }, [sel, ejecutarCobro]);
+    if (sel.kind !== 'mesa' || !contextoCobro) return;
+    void ejecutarCobro({
+      mesa: sel.n, operacion: 'abono', cuenta: contextoCobro.cuenta, reparto: null, partes: [], pagos,
+    });
+  }, [sel, contextoCobro, ejecutarCobro]);
 
   const cobrarParte = useCallback((parte: LineaServicio[], pagos: PagoCobro[]) => {
     if (sel.kind !== 'mesa') return;
@@ -997,13 +1001,6 @@ export default function ServicioPanel({
     }
   };
 
-  const cerrarPagada = () => {
-    if (sel.kind !== 'mesa' || !contextoCobro?.saldada || !puedeCobrar) return;
-    const { n: mesa } = sel;
-    const { cuenta } = contextoCobro;
-    void ejecutarCobro({ mesa, operacion: 'pagada', cuenta });
-  };
-
   const cobrarLlevar = useCallback((pagos: PagoCobro[]) => {
     if (!pedidoSel) return;
     const id = pedidoSel.id;
@@ -1023,18 +1020,35 @@ export default function ServicioPanel({
   }, [pedidoSel, restaurantId]);
 
   /* ── La mesa ──────────────────────────────────────────────── */
-  const liberar = useCallback(() => {
-    if (sel.kind !== 'mesa') return;
-    const n = sel.n;
+  const cambiarEstadoMesa = (accion: Parameters<typeof transicionDeMesa>[4]) => {
+    if (sel.kind !== 'mesa' || !contextoCobro || trabajando || cobrando || envioPendiente) return;
+    const { n } = sel;
+    const turno = seatings[n]?.id ?? null;
     startWork(async () => {
-      const res = await freeTable(restaurantId, n);
+      const res = await transicionDeMesa(restaurantId, n, turno, contextoCobro.cuenta, accion).catch(() => ({
+        error: 'No se pudo confirmar el estado. Actualiza la mesa antes de volver a intentarlo.',
+      }));
       if (res.error) { setAviso({ text: res.error, bad: true }); return; }
-      setHoja(null);
-      setSel({ kind: 'none' });
-      setPantalla('sala');
-      setAviso({ text: `Mesa ${n} liberada sin cobrar`, bad: true });
+      if (accion === 'sin_cobro' || accion === 'liberar') {
+        setCarts((prev) => ({ ...prev, [`mesa-${n}`]: [] }));
+      }
+      if (selRef.current.kind === 'mesa' && selRef.current.n === n) {
+        setHoja(null);
+        if (accion === 'liberar') {
+          setSel({ kind: 'none' });
+          setPantalla('sala');
+        } else {
+          setVistaCarta(false);
+          setPantalla('ticket');
+        }
+      }
+      const estado = {
+        limpiar: 'por limpiar', liberar: 'limpia y libre', reabrir: 'reabierta',
+        sin_cobro: 'por limpiar · salida sin cobrar registrada',
+      };
+      setAviso({ text: `Mesa ${n} ${estado[accion]}` });
     });
-  }, [sel, restaurantId]);
+  };
 
   const mover = useCallback((destino: number, juntar: boolean) => {
     if (sel.kind !== 'mesa') return;
@@ -1135,13 +1149,24 @@ export default function ServicioPanel({
     });
   }, [sel, ordersVivos.length, restaurantId]);
 
+  const reimprimirRecibos = () => {
+    startWork(async () => {
+      for (const pedido of ordersVivos) {
+        const res = await printReceiptViaAgent(pedido.id);
+        if (res.error) { setAviso({ text: res.error, bad: true }); return; }
+      }
+      setAviso({ text: 'Recibos enviados a la impresora' });
+    });
+  };
+
   /* ── Elegir mesa ──────────────────────────────────────────── */
   const elegir = useCallback((n: number) => {
     setSel({ kind: 'mesa', n });
     setQ('');
     setCat(null);
     setHoja(null);
-    if (movil) setPantalla('comanda');
+    setVistaCarta(false);
+    if (movil) setPantalla('ticket');
   }, [movil]);
 
   const abrirLlevar = useCallback((nombre: string) => {
@@ -1150,6 +1175,7 @@ export default function ServicioPanel({
     setCarts((prev) => ({ ...prev, llevar: prev.llevar ?? [] }));
     setHoja(null);
     setQ('');
+    setVistaCarta(true);
     if (movil) setPantalla('comanda');
     if (nombre) setAviso({ text: `Pedido para ${nombre}` });
   }, [movil]);
@@ -1194,7 +1220,7 @@ export default function ServicioPanel({
       if (e.key === 'Escape') {
         if (paleta) { setPaleta(false); return; }
         if (hoja) return;                       // la hoja se cierra sola
-        if (movil && pantalla !== 'sala') { setPantalla('sala'); return; }
+        if (movil && pantalla !== 'sala') { setVistaCarta(false); setPantalla('sala'); return; }
         return;
       }
       /* A partir de aquí, nada mientras se escribe: un «3» dentro del
@@ -1250,6 +1276,10 @@ export default function ServicioPanel({
     [floorPlan, mesas],
   );
   const conPlano = hayPlano(floorPlan);
+  const planoVisible = !vistaCarta;
+  const sinEntrega = ordersVivos.some((pedido) => pedido.status !== 'SERVED') || !!pendientesQr;
+  const puedeLimpiar = !!contextoCobro && !enLimpieza && !sinEntrega && !envioPendiente
+    && resumen.nNuevas === 0 && (contextoCobro.saldada || (!!mesaSel?.desde && ordersVivos.length === 0));
 
   const accionesPaleta: AccionPaleta[] = useMemo(() => [
     { label: 'Enviar a cocina', hint: atajo(mod, '⏎'), run: () => { setPaleta(false); enviar(); }, enabled: resumen.nNuevas > 0 },
@@ -1315,17 +1345,49 @@ export default function ServicioPanel({
         <div className="sv-foot-note">Propina incluida: {money(desglose.tip)}</div>
       )}
       {resumenCobro && <div className="sv-foot-note">{resumenCobro}</div>}
-      {resumen.nNuevas > 0 && (
+      {enLimpieza && (
+        <button type="button" className="sv-cta" disabled={trabajando || !contextoCobro}
+          onClick={() => cambiarEstadoMesa('liberar')}>
+          {mesaSel.sinEnviar > 0 ? `Descartar ${mesaSel.sinEnviar} sin enviar y liberar` : 'Confirmar limpieza y liberar'}
+        </button>
+      )}
+      {puedeLimpiar && (
+        <button type="button" className="sv-cta" disabled={trabajando || cobrando}
+          onClick={() => cambiarEstadoMesa('limpiar')}>Pasar a limpieza</button>
+      )}
+      {contextoCobro?.saldada && sinEntrega && <div className="sv-foot-note">Pagada · quedan pedidos por entregar.</div>}
+      {!enLimpieza && resumen.nNuevas > 0 && (
         <button type="button" className="sv-cta" onClick={enviar}>
           {`Enviar a cocina · ${resumen.nNuevas}`}
           {conTeclado && <span className="sv-cta-key">{atajo(mod, '⏎')}</span>}
         </button>
       )}
-      {puedeCobrar && (
+      {puedeCobrar && !contextoCobro?.saldada && (
         <button type="button" className="sv-cta" data-tone="ok" onClick={() => setHoja({ k: 'cobrar' })}>
           {etiquetaCobro}
           {conTeclado && <span className="sv-cta-key">Alt C</span>}
         </button>
+      )}
+      {sel.kind === 'mesa' && (
+        <div className="sv-mesa-acciones">
+          {enLimpieza && puedeGestionarCuenta && (
+            <button type="button" className="sv-cta" data-tone="quiet" disabled={trabajando || !contextoCobro}
+              onClick={() => cambiarEstadoMesa('reabrir')}>Reabrir mesa</button>
+          )}
+          {puedeCobrar && contextoCobro?.saldada && (
+            <button type="button" className="sv-cta" data-tone="quiet" onClick={() => setHoja({ k: 'cobrar' })}>Ver pagos</button>
+          )}
+          {contextoCobro?.saldada && (
+            <button type="button" className="sv-cta" data-tone="quiet" disabled={trabajando}
+              onClick={reimprimirRecibos}>Reimprimir recibos</button>
+          )}
+          {!enLimpieza && (movil || planoVisible) && (
+            <button type="button" className="sv-cta" data-tone="quiet"
+              onClick={() => { setVistaCarta(true); setPantalla('comanda'); }}>
+              <Icon name="plus" size={17} aria-hidden /> Agregar platos
+            </button>
+          )}
+        </div>
       )}
       {sel.kind === 'llevar' && resumen.nNuevas === 0 && (
         <div className="sv-foot-note">Toca un plato para empezar el pedido de mostrador.</div>
@@ -1400,14 +1462,14 @@ export default function ServicioPanel({
         </div>
       )}
 
-      <div className="sv-body">
+      <div className="sv-body" data-plano={planoVisible ? '1' : undefined}>
         {/* ══ RIEL / SALÓN ══ */}
         {(!movil || pantalla === 'sala') && (
-          <div className={movil ? 'sv-pane' : 'sv-rail'}>
+          <div className={movil ? 'sv-pane' : planoVisible ? 'sv-rail sv-rail-plano' : 'sv-rail'}>
             <div className="sv-rail-head" style={movil ? { padding: '16px 16px 10px' } : undefined}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className={movil ? 'sv-m-sala-title' : 'sv-rail-title'}>Salón</div>
+                  <h1 className={movil ? 'sv-m-sala-title' : 'sv-rail-title'}>Salón</h1>
                   <div className="sv-rail-sub">{resumenDelSalon(mesas)}</div>
                   {enCola > 0 && (
                     <div className="sv-chip" data-st="borrador" style={{ marginTop: 6 }}>
@@ -1434,8 +1496,8 @@ export default function ServicioPanel({
                 ))}
               </div>
 
-              {conPlano && (
-                <Ghost onClick={() => setPlanoAbierto(true)} icon="layout">Ver el plano</Ghost>
+              {!planoVisible && (
+                <Ghost onClick={() => setVistaCarta(false)} icon="layout">Volver al salón</Ghost>
               )}
 
               {aprendiz && (
@@ -1488,7 +1550,21 @@ export default function ServicioPanel({
                   </div>
                 )}
 
-                {movil ? (
+                {planoVisible && conPlano && floorPlan && mesasVisibles.length > 0 ? (
+                  <>
+                    {nivelesPlano.length > 1 && (
+                      <div className="sv-hs" aria-label="Zonas del salón">
+                        {nivelesPlano.map((l) => (
+                          <Pill key={l.id} on={nivelActivo === l.id} onClick={() => setNivel(l.id)}>
+                            {l.name} · {ocupacionNiveles.get(l.id)?.con ?? 0}/{ocupacionNiveles.get(l.id)?.total ?? 0}
+                          </Pill>
+                        ))}
+                      </div>
+                    )}
+                    <SalonPlano mesas={mesasVisibles} sel={sel.kind === 'mesa' ? sel.n : null}
+                      onPick={elegir} money={redondear} floorPlan={floorPlan} nivel={nivelActivo} />
+                  </>
+                ) : movil || planoVisible ? (
                   <SalonFichas mesas={mesasVisibles} sel={sel.kind === 'mesa' ? sel.n : null} onPick={elegir} money={redondear} />
                 ) : (
                   <SalonRiel mesas={mesasVisibles} sel={sel.kind === 'mesa' ? sel.n : null} onPick={elegir} money={redondear} estrecho={estrecho} />
@@ -1511,18 +1587,21 @@ export default function ServicioPanel({
         )}
 
         {/* ══ CARTA ══ */}
-        {(!movil || pantalla === 'comanda') && (
+        {((!movil && !planoVisible) || (movil && pantalla === 'comanda')) && (
           <div className="sv-carta">
             {movil && (
               <div className="sv-m-head">
-                <button type="button" className="sv-m-back" onClick={() => setPantalla('sala')} aria-label="Volver al salón">
+                <button type="button" className="sv-m-back" onClick={() => {
+                  if (sel.kind === 'mesa') setPantalla('ticket');
+                  else { setVistaCarta(false); setPantalla('sala'); }
+                }} aria-label={sel.kind === 'mesa' ? 'Volver a la comanda' : 'Volver al salón'}>
                   <Icon name="chevronLeft" size={20} />
                 </button>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="sv-m-title">{tituloSel}</div>
                   <div className="sv-m-sub">{subSel}</div>
                 </div>
-                {sel.kind === 'mesa' && (
+                {sel.kind === 'mesa' && !enLimpieza && (
                   <button type="button" className="sv-m-back" onClick={() => setHoja({ k: 'mesa' })} aria-label="Opciones de la mesa">
                     <Icon name="more" size={20} />
                   </button>
@@ -1582,7 +1661,9 @@ export default function ServicioPanel({
               <>
                 {movil ? (
                   <div className="sv-m-head">
-                    <button type="button" className="sv-m-back" onClick={() => setPantalla('comanda')} aria-label="Volver a la carta">
+                    <button type="button" className="sv-m-back" onClick={() => {
+                      setVistaCarta(false); setPantalla('sala');
+                    }} aria-label="Volver al salón">
                       <Icon name="chevronLeft" size={20} />
                     </button>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -1592,7 +1673,7 @@ export default function ServicioPanel({
                     {/* Las mismas opciones que en la carta: mover, juntar,
                         imprimir la cuenta. Es justo aquí, con la cuenta
                         delante, donde se piden. */}
-                    {sel.kind === 'mesa' && (
+                    {sel.kind === 'mesa' && !enLimpieza && (
                       <button type="button" className="sv-m-back" onClick={() => setHoja({ k: 'mesa' })} aria-label="Opciones de la mesa">
                         <Icon name="more" size={20} />
                       </button>
@@ -1605,7 +1686,7 @@ export default function ServicioPanel({
                       <div className="sv-ticket-sub">{subSel}</div>
                     </div>
                     {mesaSel && <ChipEstado estado={mesaSel.estado} />}
-                    {sel.kind === 'mesa' && (
+                    {sel.kind === 'mesa' && !enLimpieza && (
                       <button type="button" className="sv-edit" onClick={() => setHoja({ k: 'mesa' })} aria-label="Opciones de la mesa">
                         <Icon name="more" size={18} />
                       </button>
@@ -1613,11 +1694,20 @@ export default function ServicioPanel({
                   </div>
                 )}
 
-                <div className="sv-vs">
+                <section className="sv-vs" aria-label="Comanda de la mesa">
+                  {sel.kind === 'mesa' && seatings[sel.n]?.source === 'reservation' && (
+                    <div className="sv-reserva">Ocupada con reserva{seatings[sel.n]?.note ? ` · ${seatings[sel.n].note}` : ''}</div>
+                  )}
+                  {mesaSel?.reserva && (
+                    <div className="sv-reserva">
+                      Reservada desde las {mesaSel.reserva.hora} del {mesaSel.reserva.fecha.slice(5).split('-').reverse().join('/')}
+                      {' · '}{mesaSel.reserva.nombre} · {mesaSel.reserva.personas} personas
+                    </div>
+                  )}
                   {leyendo
                     ? <div className="sv-vacio">Leyendo la mesa…</div>
                     : <Comanda {...comandaProps} />}
-                </div>
+                </section>
 
                 <div className="sv-foot">{pie}</div>
               </>
@@ -1688,15 +1778,15 @@ export default function ServicioPanel({
           onCobrarParte={cobrarParte}
           onAbonar={abonarMesa}
           onGuardarPartes={repartirMesa}
-          onCerrarPagada={cerrarPagada}
+          mantieneMesa={sel.kind === 'mesa'}
         />
       )}
 
-      {hoja?.k === 'mesa' && mesaSel && (
+      {hoja?.k === 'mesa' && mesaSel && !enLimpieza && (
         <HojaMesa
           mesa={mesaSel}
           libres={mesas.filter((m) => m.estado === 'libre' && m.n !== mesaSel.n)}
-          ocupadas={mesas.filter((m) => m.estado !== 'libre' && m.n !== mesaSel.n)}
+          ocupadas={mesas.filter((m) => m.estado !== 'libre' && m.estado !== 'limpieza' && m.n !== mesaSel.n)}
           money={money}
           busy={trabajando || envioPendiente}
           onClose={() => setHoja(null)}
@@ -1704,7 +1794,8 @@ export default function ServicioPanel({
           onAlergia={anotarAlergia}
           onMover={(n) => mover(n, false)}
           onJuntar={(n) => mover(n, true)}
-          onLiberar={liberar}
+          onLiberar={puedeGestionarCuenta && porCobrarReal > 0 && !sinEntrega && contextoCobro
+            ? () => cambiarEstadoMesa('sin_cobro') : null}
           onArticuloLibre={() => setHoja({ k: 'libre', nombre: '' })}
           onImprimirCuenta={porCobrarReal > 0 ? imprimirCuenta : null}
         />
@@ -1777,50 +1868,6 @@ export default function ServicioPanel({
             if (sel.kind === 'mesa') void cargarMesa(sel.n);
           }}
         />
-      )}
-
-      {planoAbierto && conPlano && floorPlan && (
-        <div className="sv-plano-scrim" onClick={() => setPlanoAbierto(false)}>
-          <div
-            className="sv-plano-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Plano del salón"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sv-plano-head">
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="sv-ticket-title">Plano del salón</div>
-                <div className="sv-ticket-sub">{resumenDelSalon(mesas)}</div>
-              </div>
-              <button type="button" className="sv-x" onClick={() => setPlanoAbierto(false)} aria-label="Cerrar el plano">
-                <Icon name="x" size={17} />
-              </button>
-            </div>
-            {nivelesPlano.length > 1 && (
-              <div className="sv-hs" style={{ padding: '10px 16px 0' }}>
-                {nivelesPlano.map((l) => (
-                  <Pill key={l.id} on={nivelActivo === l.id} onClick={() => setNivel(l.id)}>
-                    {l.name}
-                    {ocupacionNiveles.has(l.id) && (
-                      <span className="t-mono" style={{ marginLeft: 6, opacity: 0.7 }}>
-                        {ocupacionNiveles.get(l.id)!.con}/{ocupacionNiveles.get(l.id)!.total}
-                      </span>
-                    )}
-                  </Pill>
-                ))}
-              </div>
-            )}
-            <SalonPlano
-              mesas={mesas}
-              sel={sel.kind === 'mesa' ? sel.n : null}
-              onPick={(n) => { setPlanoAbierto(false); elegir(n); }}
-              money={redondear}
-              floorPlan={floorPlan}
-              nivel={nivelActivo}
-            />
-          </div>
-        </div>
       )}
 
       {paleta && (

@@ -37,9 +37,10 @@ vi.mock('@/lib/actions/loyalty', () => ({ awardLoyaltyForOrder: vi.fn(), maybeAw
 vi.mock('@/lib/whatsapp/notify', () => ({ notifyOrderStatus: vi.fn() }));
 
 import {
-  cobrarParteDeMesa, cobradoDeMesa, ejecutarAbonoMesa, guardarPartesMesa, leerContextoCobroMesa,
+  cobrarParteDeMesa, cobradoDeMesa, ejecutarAbonoMesa, guardarPartesMesa, leerContextoCobroMesa, transicionDeMesa,
 } from '@/lib/actions/servicio';
-import { freeTable } from '@/lib/actions/orders';
+import { freeTable, moveTableOrders } from '@/lib/actions/orders';
+import { sentarDesdeRecepcion } from '@/lib/actions/table-sessions';
 import { abrirTurno, closeCaja, saveCajaDraft, discardCajaDraft, getCajaReceipt, getCajaState, guardarBorradorCaja } from '@/lib/actions/finanzas';
 import { getRecepcionesCaja, getTraspasoDeCorte } from '@/lib/actions/caja-traspasos';
 import { corregirMetodoDePago, devolverCobro } from '@/lib/actions/caja-correcciones';
@@ -61,6 +62,14 @@ async function cuentaActiva(mesa = 1) {
   const res = await leerContextoCobroMesa(rid(), mesa);
   if ('error' in res) throw new Error(res.error);
   return res.contexto;
+}
+
+async function liberarCuentaPagada() {
+  const { cuenta } = await cuentaActiva();
+  success(await transicionDeMesa(rid(), 1, null, cuenta, 'limpiar'));
+  const turno = checked(await db.from('table_sessions').select('id').eq('restaurant_id', rid())
+    .eq('table_number', 1).is('closed_at', null).single())!;
+  success(await transicionDeMesa(rid(), 1, turno.id, cuenta, 'liberar'));
 }
 
 beforeAll(async () => {
@@ -96,6 +105,98 @@ afterAll(async () => {
   }
   await sql.end();
   if (errors.length) throw new AggregateError(errors, 'No se completó la limpieza de usuarios AUD.');
+});
+
+describe('1.3 · ocupación, pago, entrega y limpieza', () => {
+  it('cobra mientras falta entregar y solo libera después de servir y limpiar', async () => {
+    const o = await order([70], { at: '2026-10-01T12:00:00Z' });
+    checked(await db.from('orders').update({ status: 'READY' }).eq('id', o.id));
+    const { cuenta } = await cuentaActiva();
+    const intento = randomUUID();
+    const solicitud = { mesa: 1, operacion: 'abono' as const, cuenta, reparto: null, partes: [],
+      pagos: [{ method: 'CARD' as const, amount: 70 }] };
+    const recibido = await ejecutarAbonoMesa(rid(), solicitud, intento);
+    expect(recibido).toMatchObject({ cobrado: 70 });
+    const pagada = await cuentaActiva();
+    expect(pagada).toMatchObject({ saldo: 0, saldada: true });
+    expect(checked(await db.from('orders').select('status').eq('id', o.id).single())?.status).toBe('READY');
+    expect((await transicionDeMesa(rid(), 1, null, pagada.cuenta, 'limpiar')).error).toMatch(/entregar/);
+    expect(checked(await db.rpc('leogin_archive_abandoned_orders', { p_restaurant_id: rid() }))).toBe(0);
+    checked(await db.from('orders').update({ status: 'SERVED' }).eq('id', o.id));
+    success(await transicionDeMesa(rid(), 1, null, pagada.cuenta, 'limpiar'));
+    const turno = checked(await db.from('table_sessions').select('id,limpieza_desde')
+      .eq('restaurant_id', rid()).is('closed_at', null).single())!;
+    expect(turno.limpieza_desde).toBeTruthy();
+    await expect(order([8])).rejects.toThrow(/está por limpiar/);
+    expect((await transicionDeMesa(rid(), 1, randomUUID(), pagada.cuenta, 'liberar')).error).toMatch(/ocupación/);
+    success(await transicionDeMesa(rid(), 1, turno.id, pagada.cuenta, 'liberar'));
+    expect(checked(await db.from('orders').select('status').eq('id', o.id).single())?.status).toBe('DELIVERED');
+    expect(await ejecutarAbonoMesa(rid(), solicitud, intento)).toEqual(recibido);
+    expect(net(await ledger(o.id))).toBe(7000);
+    await order([8]);
+  });
+
+  it('la salida sin cobro y la reapertura dejan una bitácora con actor y saldo', async () => {
+    const o = await order([20]);
+    const { cuenta } = await cuentaActiva();
+    expect((await transicionDeMesa(rid(), 1, null, cuenta, 'limpiar')).error).toMatch(/saldo pendiente/);
+    success(await transicionDeMesa(rid(), 1, null, cuenta, 'sin_cobro'));
+    const turno = checked(await db.from('table_sessions').select('id').eq('restaurant_id', rid()).single())!.id;
+    success(await transicionDeMesa(rid(), 1, turno, cuenta, 'reabrir'));
+    expect(checked(await db.from('table_sessions').select('closed_at,limpieza_desde').eq('id', turno).single()))
+      .toEqual({ closed_at: null, limpieza_desde: null });
+    expect(await ledger(o.id)).toEqual([]);
+    const actividad = checked(await db.from('activity_log').select('actor_id,meta').eq('restaurant_id', rid()))!;
+    expect(actividad).toEqual(expect.arrayContaining(['sin_cobro', 'reabrir'].map((transicion) =>
+      expect.objectContaining({ actor_id: currentActor(), meta: expect.objectContaining({ transicion, saldo: 20 }) }))));
+  });
+
+  it('rechaza capacidad insuficiente y dos llegadas simultáneas conservan el estado del grupo perdedor', async () => {
+    const entradas = checked(await db.from('waitlist_entries').insert(['Ana','Luis'].map((customer_name) =>
+      ({ restaurant_id: rid(), customer_name, party_size: 4 }))).select('id'))!;
+    const insuficiente = await db.rpc('leogin_sentar_desde_recepcion', {
+      p_restaurant: rid(), p_mesa: 1, p_origen: entradas[0].id, p_fuente: 'waitlist', p_capacidad: 3,
+      p_actor: currentActor(),
+    });
+    expect(insuficiente.error?.message).toMatch(/capacidad/);
+    const resultados = await Promise.all(entradas.map(({ id }) => sentarDesdeRecepcion(rid(), 1, id, 'waitlist')));
+    expect(resultados.filter((r) => r.ok)).toHaveLength(1);
+    expect(resultados.find((r) => r.error)?.error).toMatch(/ocupada/);
+    expect(checked(await db.from('waitlist_entries').select('status,table_number').eq('restaurant_id', rid()).order('status')))
+      .toEqual([{ status: 'SEATED', table_number: 1 }, { status: 'WAITING', table_number: null }]);
+  });
+
+  it('prevé la reserva para una hora sin ocupar la mesa y evita dos reservas simultáneas', async () => {
+    const reservas = checked(await db.from('reservations').insert(['Ana','Luis'].map((customer_name) =>
+      ({ restaurant_id: rid(), customer_name, party_size: 4, date: '2099-10-12', time: '19:00', status: 'CONFIRMED' })))
+      .select('id'))!;
+    const resultados = await Promise.all(reservas.map(({ id }) => db.rpc('leogin_prever_mesa_de_reserva', {
+      p_restaurant: rid(), p_reserva: id, p_mesa: 1, p_capacidad: 4,
+    })));
+    expect(resultados.filter((r) => !r.error)).toHaveLength(1);
+    expect(resultados.find((r) => r.error)?.error?.message).toMatch(/misma hora/);
+    expect(checked(await db.from('table_sessions').select('id').eq('restaurant_id', rid()))).toEqual([]);
+    await order([20]);
+  });
+
+  it('traslada la cuenta y las solicitudes con su sesión e historial', async () => {
+    const o = await order([20]);
+    const turno = checked(await db.from('table_sessions').insert({
+      restaurant_id: rid(), table_number: 1, party_size: 3, waiter_id: currentActor(), source: 'order',
+    }).select('id').single())!;
+    checked(await db.from('waiter_calls').insert({ restaurant_id: rid(), table_number: 1, reason: 'bill' }));
+    const { cuenta } = await cuentaActiva();
+    const intento = randomUUID();
+    success(await ejecutarAbonoMesa(rid(), { mesa: 1, operacion: 'abono', cuenta, reparto: null, partes: [],
+      pagos: [{ method: 'CASH', amount: 10 }] }, intento));
+    expect(await moveTableOrders(rid(), 1, 2)).toEqual({ moved: 1 });
+    expect(await cuentaActiva(2)).toMatchObject({ saldo: 10, recibos: [expect.objectContaining({ intentoId: intento })] });
+    expect(net(await ledger(o.id))).toBe(1000);
+    expect(checked(await db.from('table_sessions').select('table_number,party_size').eq('id', turno.id).single()))
+      .toEqual({ table_number: 2, party_size: 3 });
+    expect(checked(await db.from('waiter_calls').select('table_number').eq('restaurant_id', rid()).single()))
+      .toEqual({ table_number: 2 });
+  });
 });
 
 describe('1.1 · abonos y partes de mesa persistentes', () => {
@@ -925,7 +1026,7 @@ describe('0.15 · identidad durable del intento', () => {
     const id = randomUUID();
     const original = await pay([o.items[0].id], 10, 'CASH', id);
     success(original);
-    success(await freeTable(rid(), 1));
+    await liberarCuentaPagada();
     success(await devolverCobro({ restaurantId: rid(), orderId: o.id, reason: 'AUD devolución posterior al intento' }));
     const before = await ledger(o.id);
     expect(await pay([o.items[0].id], 10, 'CASH', id)).toEqual(original);
@@ -1265,7 +1366,7 @@ describe('0.18 · pertenencia durable y cierre de caja coordinado', () => {
   it('una devolución después del corte no reescribe su recibo y pertenece al siguiente', async () => {
     const o = await order([10]);
     success(await pay([o.items[0].id], 10));
-    success(await freeTable(rid(), 1));
+    await liberarCuentaPagada();
     const first = await cerrar({ bil_10: 1 });
     success(first);
     const guardado = checked(await db.from('cash_counts').select('*').eq('id', first.result!.id).single());

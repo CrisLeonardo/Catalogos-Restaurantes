@@ -6,6 +6,8 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+- **Salón y comanda** (auditoría 1.3, migración 173): el plano permanece junto a la comanda en escritorio y el teléfono abre cada mesa por separado. Cobrar conserva los pedidos pendientes de entrega. El personal confirma la limpieza antes de volver a sentar a un grupo. Traslados y llegadas desde Recepción actualizan la ocupación en una transacción.
+
 ## v0.17.0 — 2026-11-02 · Tomar pedidos como un POS y En línea con tope
 PR #63-#69 · migraciones 151-153 (en producción: la 152 ANTES del despliegue, la 151 cuando sea, la 153 DESPUÉS; la 149 ya no hace falta)
 - **El plano cabe en cualquier pantalla** (PR #63): en el teléfono el plano de Mesas medía 620 px de ancho mínimo y el de Tomar pedidos 460 px en 4:3 (el editor guarda 16:10), así que la página entera se corría de lado y las mesas se encimaban. Ahora los dos usan un visor común: se encuadra en lo dibujado, se gira 90° solo en pantalla vertical (con botón para girarlo a mano), las mesas miden lo que permite su vecina más cercana con 44 px de mínimo, y se acerca con dos dedos, Ctrl + rueda o botones; al acercar, cada mesa enseña más. Las zonas son pestañas tocables con cuántas mesas tienen gente («Salón 3/14»). «Fuera del plano» ya no cuenta las mesas colocadas en otra zona.

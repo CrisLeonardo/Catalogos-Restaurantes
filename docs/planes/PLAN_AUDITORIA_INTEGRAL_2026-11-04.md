@@ -388,7 +388,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 - [x] 0.18 Cobros en tránsito al cerrar un turno (D08) — revisión y registro SQL, migraciones 166/167
 - [x] 0.19 Incluir el instante exacto del inicio del día (D09) — migración 168; matriz completa en CI
 
-**Ola 1**: [x] 1.0 (base visual, PR #91) · [x] 1.1 (cobro completo, PR #92) · [x] 1.2 (recibo, borrador y traspaso formal; migraciones 170–172) · [ ] 1.3 · [ ] 1.4 · [ ] 1.5 · [ ] 1.6 · [ ] 1.7 · [ ] 1.8 · [ ] 1.9 · [ ] 1.10 · [ ] 1.11 · [ ] 1.12
+**Ola 1**: [x] 1.0 (base visual, PR #91) · [x] 1.1 (cobro completo, PR #92) · [x] 1.2 (recibo, borrador y traspaso formal; migraciones 170–172) · [x] 1.3 (ciclo de mesa, migración 173) · [ ] 1.4 · [ ] 1.5 · [ ] 1.6 · [ ] 1.7 · [ ] 1.8 · [ ] 1.9 · [ ] 1.10 · [ ] 1.11 · [ ] 1.12
 **Ola 2**: [ ] 2.1 · [ ] 2.2 · [ ] 2.3 · [ ] 2.4 · [ ] 2.5 · [ ] 2.6 · [ ] 2.7 · [ ] 2.8 · [ ] 2.9 · [ ] 2.10 · [ ] 2.11 · [ ] 2.12
 **Ola 3**: [ ] 3.1 · [ ] 3.2 · [ ] 3.3 · [ ] 3.4 · [ ] 3.5 · [ ] 3.6 · [ ] 3.7
 **Ola 4**: [ ] 4.1 · [ ] 4.2 · [ ] 4.3 · [ ] 4.4 · [ ] 4.5 · [ ] 4.6 · [ ] 4.7 · [ ] 4.8 · [ ] 4.9 · [ ] 4.10 · [ ] 4.11 · [ ] 4.12

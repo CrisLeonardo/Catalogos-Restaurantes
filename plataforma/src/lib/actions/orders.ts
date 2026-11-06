@@ -1119,7 +1119,8 @@ export async function freeTable(
      aplicación llama así —el salón, la caja, el cierre rápido— y M-11 no
      tiene por qué obligarlas a cambiar para cobrar de una sola forma. */
   const pagos = payment == null ? [] : Array.isArray(payment) ? payment : [payment];
-  if (pagos.length && !identidadCobroValida(intentoId)) return { error: 'Falta la identidad del intento de cobro.' };
+  if (!pagos.length) return { error: 'Registra la salida sin cobrar desde las opciones de la mesa.' };
+  if (!identidadCobroValida(intentoId)) return { error: 'Falta la identidad del intento de cobro.' };
   if (pagos.some((p) => !isPaymentMethod(p.method))) return { error: 'Forma de pago inválida.' };
   if (pagos.some((p) => p.amount != null && !(Number.isFinite(p.amount) && p.amount > 0))) {
     return { error: 'Importe de pago inválido.' };
@@ -1130,17 +1131,15 @@ export async function freeTable(
 
   const db = createServiceClient();
   // Recuperar ANTES de releer pedidos: puede ser una mesa ya cerrada o reutilizada.
-  if (pagos.length) {
-    const { data: previo, error } = await db.rpc('leogin_recuperar_intento_cobro', {
-      p_restaurant: restaurantId, p_mesa: tableNumber, p_intento: intentoId,
-      p_operacion: 'cierre', p_solicitud: { pagos }, p_actor: acceso.actor.userId,
-    });
-    if (error) {
-      if (faltaLaFuncion(error)) return { error: 'Falta la migración 161 para recuperar los intentos de cobro.', needsMigration: true };
-      return { error: error.message, incierto: !/^(LGD0[12]|22023)$/.test(error.code ?? '') };
-    }
-    if (previo) { revalidarSalon(); return previo as ResultadoCobro; }
+  const { data: previo, error } = await db.rpc('leogin_recuperar_intento_cobro', {
+    p_restaurant: restaurantId, p_mesa: tableNumber, p_intento: intentoId,
+    p_operacion: 'cierre', p_solicitud: { pagos }, p_actor: acceso.actor.userId,
+  });
+  if (error) {
+    if (faltaLaFuncion(error)) return { error: 'Falta la migración 161 para recuperar los intentos de cobro.', needsMigration: true };
+    return { error: error.message, incierto: !/^(LGD0[12]|22023)$/.test(error.code ?? '') };
   }
+  if (previo) { revalidarSalon(); return previo as ResultadoCobro; }
   const porNumero = await hayColumnaMesa();
   const [colMesa, valMesa] = campoMesa(porNumero, tableNumber);
 
@@ -1158,22 +1157,15 @@ export async function freeTable(
   if (errLeer) return { error: errLeer.message };
   const idsLeidos = (vivos ?? []).map((o) => o.id as string);
 
-  /* El servidor descuenta el neto previo por pedido antes de repartir.
-     Dinero, cierre y resultado durable se confirman juntos; liberar sin
-     cobro conserva el camino explícito de la 160. */
-  const { data: confirmados, error: errCierre } = await db.rpc(
-    pagos.length ? 'leogin_cerrar_saldo_mesa' : 'leogin_confirmar_cierre_mesa', {
-      p_restaurant: restaurantId,
-      p_mesa: tableNumber,
-      p_orders: idsLeidos,
-      p_actor: acceso.actor.userId,
-      ...(pagos.length ? { p_intento: intentoId, p_pagos: pagos } : { p_filas: [] }),
-    });
+  const { data: confirmados, error: errCierre } = await db.rpc('leogin_cerrar_saldo_mesa', {
+    p_restaurant: restaurantId, p_mesa: tableNumber, p_orders: idsLeidos,
+    p_actor: acceso.actor.userId, p_intento: intentoId, p_pagos: pagos,
+  });
   if (errCierre) {
-    if (faltaLaFuncion(errCierre)) return { error: `Falta la migración ${pagos.length ? 163 : 160} para cerrar la cuenta con el saldo protegido.`, needsMigration: true };
+    if (faltaLaFuncion(errCierre)) return { error: 'Falta la migración 163 para cerrar la cuenta con el saldo protegido.', needsMigration: true };
     return { error: errCierre.message, incierto: !/^(LGD0[12]|22023)$/.test(errCierre.code ?? '') };
   }
-  const ids = (pagos.length ? confirmados?.orderIds : confirmados) as string[];
+  const ids = confirmados?.orderIds as string[];
   if (!Array.isArray(ids)) return { error: 'No se pudo confirmar el cierre. Reintenta para recuperar el resultado.', incierto: true };
 
   // Una factura por pedido cerrado. En `after` para no dejar al mesero
@@ -1185,7 +1177,7 @@ export async function freeTable(
   }
 
   revalidarSalon();
-  return pagos.length ? confirmados as ResultadoCobro : {};
+  return confirmados as ResultadoCobro;
 }
 
 export async function updateOrderStatus(
@@ -1757,51 +1749,13 @@ export async function moveTableOrders(
   const acceso = await assertTableAccess(restaurantId);
   if ('error' in acceso) return acceso;
 
-  const db = createServiceClient();
-  const activos = '("DELIVERED","CANCEL")';
-
-  const porNumero = await hayColumnaMesa();
-  const [colDestino, valDestino] = campoMesa(porNumero, to);
-  const { count: ocupada } = await db
-    .from('orders')
-    .select('id', { count: 'exact', head: true })
-    .eq('restaurant_id', restaurantId)
-    .eq('order_type', 'DINE_IN')
-    .eq(colDestino, valDestino)
-    .not('status', 'in', activos);
-
-  if ((ocupada ?? 0) > 0 && !merge) {
-    return { error: `La mesa ${to} ya tiene gente. Usa «Juntar mesas» si quieres una sola cuenta.` };
-  }
-
-  /* Se escriben LAS DOS: el número es la identidad y la dirección es lo
-     que se imprime en el ticket. Dejar solo una las descuadraría. */
-  const mudanza: Record<string, unknown> = { address: direccionDeMesa(to) };
-  if (porNumero) mudanza.table_number = to;
-  const [colOrigen, valOrigen] = campoMesa(porNumero, from);
-  const { data, error } = await db
-    .from('orders')
-    .update(mudanza)
-    .eq('restaurant_id', restaurantId)
-    .eq('order_type', 'DINE_IN')
-    .eq(colOrigen, valOrigen)
-    .not('status', 'in', activos)
-    .select('id');
-
+  const { data, error } = await createServiceClient().rpc('leogin_trasladar_mesa', {
+    p_restaurant: restaurantId, p_origen: from, p_destino: to, p_unir: merge,
+    p_actor: acceso.actor.userId,
+  });
   if (error) return { error: error.message };
-  if ((data?.length ?? 0) === 0) return { error: `La mesa ${from} no tiene nada que mover.` };
-
-  /* Las llamadas pendientes se van con la mesa: si pidieron la cuenta en
-     la 3 y se pasaron a la 7, el aviso tiene que seguirlos. */
-  await db
-    .from('waiter_calls')
-    .update({ table_number: to })
-    .eq('restaurant_id', restaurantId)
-    .eq('table_number', from)
-    .is('resolved_at', null);
-
   revalidarSalon();
-  return { moved: data?.length ?? 0 };
+  return { moved: Number(data) };
 }
 
 /* ════════════════ EL REPARTO DE LA CUENTA ════════════════

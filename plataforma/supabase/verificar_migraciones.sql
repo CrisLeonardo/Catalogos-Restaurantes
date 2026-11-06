@@ -225,7 +225,12 @@ huellas(n, que, ok, cuando) as (values
      and to_regprocedure('public.leogin_receptores_caja(uuid)') is not null
      and to_regprocedure('public.leogin_solicitar_traspaso_caja(uuid,uuid,uuid,uuid,text)') is not null
      and to_regprocedure('public.leogin_confirmar_traspaso_caja(uuid,uuid,uuid)') is not null,
-     'ANTES de desplegar; después de la 171')
+     'ANTES de desplegar; después de la 171'),
+  ('173', 'ciclo operativo de las mesas y protección durante la limpieza',
+     to_regprocedure('public.leogin_transicion_mesa(uuid,integer,uuid,text,text,uuid)') is not null
+     and exists (select 1 from pg_trigger where tgrelid='public.orders'::regclass
+       and tgname='leogin_proteger_mesa_en_limpieza'),
+     'ANTES de desplegar; después de la 172')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,
