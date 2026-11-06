@@ -40,7 +40,7 @@ import {
   cobrarParteDeMesa, cobradoDeMesa, ejecutarAbonoMesa, guardarPartesMesa, leerContextoCobroMesa,
 } from '@/lib/actions/servicio';
 import { freeTable } from '@/lib/actions/orders';
-import { abrirTurno, closeCaja, saveCajaDraft, discardCajaDraft } from '@/lib/actions/finanzas';
+import { abrirTurno, closeCaja, saveCajaDraft, discardCajaDraft, getCajaReceipt } from '@/lib/actions/finanzas';
 import { corregirMetodoDePago, devolverCobro } from '@/lib/actions/caja-correcciones';
 import { leerTurno } from '@/lib/caja/turno-servidor';
 import { computeSplit } from '@/lib/bill-split';
@@ -247,6 +247,78 @@ describe('1.1 · abonos y partes de mesa persistentes', () => {
     ]);
     expect(net(movimientos)).toBe(15000 - Math.round(devuelto.amount! * 100));
     expect((await period()).cuadre.devoluciones).toBe(devuelto.amount);
+  });
+});
+
+describe('1.2 · recibo durable de cierre', () => {
+  const turnoLeido = async () => {
+    const l = await period();
+    return { desde: l.desde, id: l.abierto?.id ?? null };
+  };
+
+  it('recupera el mismo corte con el intento original aunque ya haya cobros en el siguiente turno', async () => {
+    await order([70]);
+    success(await freeTable(rid(), 1, { method: 'CASH', amount: 70 }, randomUUID()));
+    const input = { restaurantId: rid(), counts: { bil_50: 1, bil_20: 1 }, openingFloat: 0, intentoId: randomUUID(), turno: await turnoLeido() };
+    const primero = await closeCaja(input);
+    expect(primero.result).toMatchObject({ counted: 70, expected: 70, difference: 0 });
+    await order([10]);
+    success(await freeTable(rid(), 1, { method: 'CASH', amount: 10 }, randomUUID()));
+    expect(await closeCaja(input)).toEqual(primero);
+    const { receipt } = await getCajaReceipt(rid(), primero.result!.id);
+    expect(receipt).toMatchObject({ expectedDrawer: 70, counts: { bil_50: 1, bil_20: 1 }, byMethod: { CASH: 70 } });
+    expect(await closeCaja({ ...input, counts: { bil_10: 7 } })).toMatchObject({ error: expect.stringMatching(/otro cierre/) });
+    expect(await actor(1, () => closeCaja(input))).toMatchObject({ error: expect.stringMatching(/otro cierre/) });
+    expect(await closeCaja({ ...input, intentoId: randomUUID() })).toMatchObject({ error: expect.stringMatching(/turno cambió/) });
+    const cortes = checked(await db.from('cash_counts').select('id').eq('restaurant_id', rid()).eq('status', 'CLOSED'));
+    expect(cortes).toEqual([{ id: primero.result?.id }]);
+    expect((await period()).cuadre.efectivo).toBe(10);
+  });
+
+  it('dos solicitudes simultáneas con la misma identidad enlazan gastos y recibo una sola vez', async () => {
+    const pago = await order([20]);
+    success(await freeTable(rid(), 1, { method: 'CASH', amount: 20 }, randomUUID()));
+    const gasto = checked(await db.from('cash_expenses').insert({
+      restaurant_id: rid(), business_date: (await period()).dia, concept: 'AUD Hielo', amount: 5, paid_by: state.users[0],
+    }).select('id').single())!;
+    const input = { restaurantId: rid(), counts: { bil_10: 1, bil_5: 1 }, openingFloat: 0, intentoId: randomUUID(), turno: await turnoLeido() };
+    const gate = deferred();
+    let solicitudes = 0;
+    state.beforeFetch = async (url, method) => {
+      if (method !== 'POST' || !url.pathname.endsWith('/rpc/leogin_confirmar_cierre_caja_con_recibo')) return;
+      if (++solicitudes === 2) gate.resolve();
+      await bounded(gate.promise);
+    };
+    const [primero, repetido] = await Promise.all([closeCaja(input), closeCaja(input)]);
+    state.beforeFetch = null;
+    expect(solicitudes).toBe(2);
+    expect(primero.result).toMatchObject({ counted: 15, expectedDrawer: 15, expenses: [expect.objectContaining({ id: gasto.id, amount: 5 })] });
+    expect(repetido).toEqual(primero);
+    expect(checked(await db.from('cash_expenses').select('cash_count_id').eq('id', gasto.id).single())?.cash_count_id).toBe(primero.result?.id);
+    expect(checked(await db.from('caja_recibos').select('corte_id').eq('restaurant_id', rid()))).toEqual([{ corte_id: primero.result?.id }]);
+    expect(net(await ledger(pago.id))).toBe(2000);
+  });
+
+  it('recupera el recibo tras perder la respuesta del servidor y protege su acceso directo', async () => {
+    const input = { restaurantId: rid(), counts: {}, openingFloat: 0, notes: 'AUD cierre vacío', intentoId: randomUUID(), turno: await turnoLeido() };
+    let confirmado: { recibo?: unknown } | undefined;
+    state.afterFetch = async (url, method, response) => {
+      if (method !== 'POST' || !url.pathname.endsWith('/rpc/leogin_confirmar_cierre_caja_con_recibo')) return;
+      expect(response.ok).toBe(true);
+      confirmado = await response.clone().json();
+      throw new TypeError('AUD: se perdió el acuse del corte después del commit');
+    };
+    expect(await closeCaja(input)).toHaveProperty('error');
+    state.afterFetch = null;
+    const reintento = await closeCaja(input);
+    expect(confirmado?.recibo).toMatchObject({ id: reintento.result?.id, notes: input.notes });
+    expect(reintento.result).toEqual({ ...confirmado?.recibo as object, dia: null });
+    const { rows } = await sql.query(`select relrowsecurity,
+      has_table_privilege('anon',oid,'SELECT,INSERT,UPDATE,DELETE') anon,
+      has_table_privilege('authenticated',oid,'SELECT,INSERT,UPDATE,DELETE') auth,
+      has_table_privilege('service_role',oid,'UPDATE,DELETE') modificable
+      from pg_class where oid='public.caja_recibos'::regclass`);
+    expect(rows).toEqual([{ relrowsecurity: true, anon: false, auth: false, modificable: false }]);
   });
 });
 
@@ -1060,7 +1132,7 @@ describe('0.18 · pertenencia durable y cierre de caja coordinado', () => {
     success(await pay([o.items[0].id], 10));
     let injected = false;
     state.beforeFetch = async (url, method) => {
-      if (!injected && method === 'POST' && url.pathname.endsWith('/rpc/leogin_confirmar_cierre_caja')) {
+      if (!injected && method === 'POST' && url.pathname.endsWith('/rpc/leogin_confirmar_cierre_caja_con_recibo')) {
         injected = true;
         success(await pay([o.items[1].id], 10));
       }
