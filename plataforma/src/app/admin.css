@@ -1771,7 +1771,7 @@
 .caja-cantidad button {
   display: grid; place-items: center; min-width: 44px; min-height: 44px; border-radius: 50%;
   border: 1px solid var(--u-hair-2); background: var(--adm-card); color: var(--u-text);
-  font-size: 21px; line-height: 1;
+  font-size: 20px; line-height: 1;
 }
 .caja-cantidad button:last-child {
   color: var(--brand-accent-ink); border-color: transparent;
