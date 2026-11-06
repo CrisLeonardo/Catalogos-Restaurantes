@@ -41,6 +41,7 @@ import {
 } from '@/lib/actions/servicio';
 import { freeTable } from '@/lib/actions/orders';
 import { abrirTurno, closeCaja, saveCajaDraft, discardCajaDraft, getCajaReceipt, getCajaState, guardarBorradorCaja } from '@/lib/actions/finanzas';
+import { getRecepcionesCaja, getTraspasoDeCorte } from '@/lib/actions/caja-traspasos';
 import { corregirMetodoDePago, devolverCobro } from '@/lib/actions/caja-correcciones';
 import { leerTurno } from '@/lib/caja/turno-servidor';
 import { computeSplit } from '@/lib/bill-split';
@@ -49,6 +50,10 @@ import type { OrderWithItems } from '@/lib/db/orders';
 const rid = () => state.restaurantId;
 // El reloj operativo lo da el contexto SQL; D09 conserva sus instantes explícitos.
 const period = (ahora?: Date) => leerTurno(db, { restaurantId: rid(), timezone: 'America/Guatemala', corteMin: 300, ahora });
+const turnoLeido = async () => {
+  const l = await period();
+  return { desde: l.desde, id: l.abierto?.id ?? null };
+};
 const pay = (ids: string[], amount: number, method = 'CASH', id: string = randomUUID()) => cobrarParteDeMesa(rid(), 1, ids, [{ amount, method: method as 'CASH' | 'CARD' }], id);
 function success(result: { error?: string }) { expect(result.error).toBeUndefined(); }
 
@@ -251,11 +256,6 @@ describe('1.1 · abonos y partes de mesa persistentes', () => {
 });
 
 describe('1.2 · recibo durable de cierre', () => {
-  const turnoLeido = async () => {
-    const l = await period();
-    return { desde: l.desde, id: l.abierto?.id ?? null };
-  };
-
   it('recupera el mismo corte con el intento original aunque ya haya cobros en el siguiente turno', async () => {
     await order([70]);
     success(await freeTable(rid(), 1, { method: 'CASH', amount: 70 }, randomUUID()));
@@ -353,6 +353,67 @@ describe('1.2 · conteo y borrador de Caja', () => {
     expect(corte.result).toMatchObject({ counted: 0, expected: 10, difference: -10 });
     expect(await guardarBorradorCaja({ ...input, revision: borradorRevision })).toMatchObject({ conflicto: true });
     expect((await getCajaState(rid())).cloudDraft).toBeNull();
+  });
+});
+
+describe('1.2 · traspaso entre responsables', () => {
+  it('requiere al receptor designado, conserva la diferencia y admite reintentos', async () => {
+    const r = await closeCaja({ restaurantId: rid(), counts: { bil_10: 1 }, openingFloat: 30,
+      cashCounted: true, intentoId: randomUUID(), turno: await turnoLeido() });
+    success(r);
+    const corte = r.result!.id;
+    const solicitar = (recibe = state.users[1], nota = 'AUD faltante pendiente', entrega = state.users[0]) =>
+      db.rpc('leogin_solicitar_traspaso_caja', { p_restaurant: rid(), p_corte: corte, p_entrega: entrega,
+        p_recibe: recibe, p_nota: nota });
+    const confirmar = (usuario: string) => db.rpc('leogin_confirmar_traspaso_caja', {
+      p_restaurant: rid(), p_corte: corte, p_recibe: usuario,
+    });
+
+    checked(await db.from('restaurant_members').insert({ restaurant_id: rid(), user_id: state.users[1], role: 'STAFF', permissions: ['mesero'] }));
+    expect((await solicitar()).error?.code).toBe('42501');
+    checked(await db.from('restaurant_members').update({ permissions: ['finanzas'] }).eq('restaurant_id', rid()).eq('user_id', state.users[1]));
+    expect((await solicitar(state.users[0])).error?.code).toBe('22023');
+    expect((await solicitar(state.users[0], 'AUD', state.users[1])).error?.code).toBe('42501');
+    expect((await solicitar(state.users[1], '  ')).error?.code).toBe('22023');
+    const pendiente = checked(await solicitar());
+    expect(pendiente).toMatchObject({ corte_id: corte, observacion: 'AUD faltante pendiente', confirmado_at: null });
+    expect(checked(await solicitar())).toEqual(pendiente);
+    expect((await solicitar(state.users[1], 'Otra observación')).error).toBeTruthy();
+    expect((await confirmar(state.users[0])).error?.code).toBe('42501');
+    expect(await getRecepcionesCaja(rid())).toEqual({ pendientes: [] });
+    expect(await actor(1, () => getRecepcionesCaja(rid()))).toMatchObject({
+      pendientes: [{ corte_id: corte, recibo: { difference: -20, expectedDrawer: 30 } }],
+    });
+    expect(await getTraspasoDeCorte(rid(), corte)).toMatchObject({ vigente: true, puedeRecibir: false });
+    const [primero, segundo] = (await Promise.all([confirmar(state.users[1]), confirmar(state.users[1])])).map(checked);
+    expect(primero.confirmado_at).toBeTruthy();
+    expect(segundo).toEqual(primero);
+    expect(await actor(1, () => getRecepcionesCaja(rid()))).toEqual({ pendientes: [] });
+    expect((await getCajaReceipt(rid(), corte)).receipt).toMatchObject({ difference: -20, counted: 10, expectedDrawer: 30 });
+  });
+
+  it('impide recibir un corte anulado o de otro restaurante y protege el RPC', async () => {
+    const r = await closeCaja({ restaurantId: rid(), counts: { bil_10: 1 }, openingFloat: 0,
+      cashCounted: true, intentoId: randomUUID(), turno: await turnoLeido() });
+    success(r);
+    const corte = r.result!.id;
+    checked(await db.from('restaurant_members').insert({ restaurant_id: rid(), user_id: state.users[1], role: 'OWNER' }));
+    checked(await db.rpc('leogin_solicitar_traspaso_caja', { p_restaurant: rid(), p_corte: corte,
+      p_entrega: state.users[0], p_recibe: state.users[1], p_nota: 'AUD' }));
+    const confirmar = (restaurant: string) => db.rpc('leogin_confirmar_traspaso_caja', {
+      p_restaurant: restaurant, p_corte: corte, p_recibe: state.users[1],
+    });
+    expect((await confirmar(randomUUID())).error?.code).toBe('42501');
+    checked(await db.from('restaurant_members').update({ status: 'suspended' }).eq('restaurant_id', rid()).eq('user_id', state.users[1]));
+    expect((await confirmar(rid())).error?.code).toBe('42501');
+    checked(await db.from('restaurant_members').update({ status: 'active' }).eq('restaurant_id', rid()).eq('user_id', state.users[1]));
+    checked(await db.from('cash_counts').update({ status: 'VOID', void_reason: 'AUD anulado', voided_at: new Date().toISOString() }).eq('id', corte));
+    expect((await confirmar(rid())).error?.code).toBe('22023');
+    expect(await actor(1, () => getRecepcionesCaja(rid()))).toEqual({ pendientes: [] });
+    const { rows } = await sql.query(`select has_function_privilege('authenticated', oid, 'execute') as auth,
+      has_function_privilege('anon', oid, 'execute') as anon, has_function_privilege('service_role', oid, 'execute') as servicio
+      from pg_proc where proname in ('leogin_receptores_caja', 'leogin_solicitar_traspaso_caja', 'leogin_confirmar_traspaso_caja')`);
+    expect(rows).toEqual(Array.from({ length: 3 }, () => ({ auth: false, anon: false, servicio: true })));
   });
 });
 

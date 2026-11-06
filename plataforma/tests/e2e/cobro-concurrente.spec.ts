@@ -482,3 +482,67 @@ test('1.2 · Caja móvil cuenta billetes y monedas y retoma el borrador guardado
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   } finally { await context.close(); }
 });
+
+test('1.2 · el traspaso queda pendiente hasta que confirma la otra sesión', async ({ browser }) => {
+  test.setTimeout(180_000);
+  const saliente = await browser.newContext({ viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true });
+  const entrante = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const localSlug = `${slug}-traspaso`;
+  const url = `${origin}/panel/${localSlug}/caja`;
+  let localId: string | undefined;
+  const operadores = users.map((u) => u.id);
+  try {
+    const local = check(await db.from('restaurants').insert({ name: 'AUD Traspaso', slug: localSlug, status: 'active',
+      plan_actual: 'PREMIUM', onboarding_done: true, modules: { orders: true } }).select('id').single())!;
+    localId = local.id;
+    check(await db.from('restaurant_themes').insert({ restaurant_id: local.id, brand_name: 'AUD Traspaso',
+      config: { orderTypes: ['dine_in'] } }));
+    check(await db.from('profiles').update({ restaurant_id: local.id, permissions: ['finanzas'] }).in('id', operadores));
+    await login(saliente, users[0].email);
+    const caja = await saliente.newPage();
+    await caja.goto(url, { waitUntil: 'domcontentloaded' });
+    await caja.getByRole('button', { name: /Efectivo sin contar/ }).click();
+    const billetes = caja.locator('input[name="bil_100"]');
+    await expect(async () => {
+      await billetes.fill('');
+      await billetes.fill('5');
+      await expect(caja.locator('[data-caja-contado]')).toHaveText('Q500.00');
+    }).toPass({ timeout: 30_000 });
+    await caja.getByRole('button', { name: 'Siguiente: gastos', exact: true }).click();
+    await caja.getByRole('button', { name: 'Siguiente: propinas', exact: true }).click();
+    await caja.getByRole('button', { name: 'Cerrar el turno', exact: true }).click();
+    const traspaso = caja.getByRole('region', { name: 'Traspaso de turno' });
+    await expect(traspaso).toBeVisible({ timeout: 30_000 });
+
+    await traspaso.getByRole('combobox', { name: 'Recibe', exact: true }).selectOption(users[1].id);
+    const solicitar = traspaso.getByRole('button', { name: 'Solicitar recepción' });
+    await expect(solicitar).toBeDisabled();
+    await traspaso.getByLabel('Observación de la diferencia').fill('AUD diferencia anotada');
+    await solicitar.click();
+    await expect(traspaso.getByRole('status')).toHaveText('Pendiente de recepción');
+    await expect(traspaso.getByRole('button', { name: 'Confirmar recepción' })).toHaveCount(0);
+    const registro = check(await db.from('caja_traspasos').select('*').eq('restaurant_id', local.id).single())!;
+    expect(registro).toMatchObject({ entrega_id: users[0].id, recibe_id: users[1].id, confirmado_at: null });
+
+    await login(entrante, users[1].email);
+    const otraCaja = await entrante.newPage();
+    await otraCaja.goto(url, { waitUntil: 'domcontentloaded' });
+    const bandeja = otraCaja.getByRole('region', { name: 'Recepciones de Caja' });
+    await expect(bandeja.getByText('AUD diferencia anotada')).toBeVisible();
+    await expect(bandeja.getByText('Q500.00', { exact: true }).first()).toBeVisible();
+    await bandeja.getByRole('button', { name: 'Confirmar recepción' }).click();
+    await expect(bandeja.getByRole('status')).toHaveText('Recepción confirmada');
+    const confirmado = check(await db.from('caja_traspasos').select('confirmado_at')
+      .eq('corte_id', registro.corte_id).single())!;
+    expect(confirmado.confirmado_at).toBeTruthy();
+    await caja.reload({ waitUntil: 'domcontentloaded' });
+    await expect(traspaso.getByRole('status')).toHaveText('Recepción confirmada', { timeout: 30_000 });
+  } finally {
+    await saliente.close();
+    await entrante.close();
+    if (localId) {
+      check(await db.from('profiles').update({ restaurant_id: restaurantId }).in('id', operadores));
+      check(await db.from('restaurants').delete().eq('id', localId));
+    }
+  }
+});

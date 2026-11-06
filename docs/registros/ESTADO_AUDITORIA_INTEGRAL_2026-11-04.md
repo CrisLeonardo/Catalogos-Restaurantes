@@ -560,6 +560,19 @@ La siguiente ficha es **1.2 · Caja: borrador, cuadre y recibo**. La ola 1 sigue
 - **Verificación local:** pasaron 79 casos de Postgres. Playwright verificó el cierre de los turnos consecutivos, el límite de las 05:00 y el borrador móvil de Q5.01 tras recargar. La cuenta local de auditoría de Rincón 502 permite abrir Caja, Tomar pedidos, Pedidos y Finanzas.
 - **Revisión del pie de Caja (2026-11-06):** el botón compartido por los tres pasos quedó sin espacio interior a los lados cuando pasó a ancho automático. Se recuperan los 12 px de la maqueta aprobada. En Caja autenticada, Chromium comprobó ambos lados, la altura de 54 px y la ausencia de desborde a 390, 768 y 1280 px, en claro y oscuro. El arreglo visual se revisa sobre #94. El traspaso entre responsables sigue pendiente de aprobación del recorrido.
 
+## 22. Traspaso formal entre responsables · cierre de 1.2
+
+**Rama:** `feat/caja-traspaso-turno`, sobre [PR #95](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/95). La maqueta del recorrido de entrega y recepción se aprobó antes de implementar.
+
+- **Antes:** el cierre conservaba al operador y el cuadre, pero faltaba un registro que identificara a la persona entrante y distinguiera la solicitud de la recepción confirmada.
+- **Entrega:** quien hizo el cierre elige a otra persona con acceso a Caja en ese restaurante. Si el recibo muestra una diferencia, debe dejar una observación. El traspaso se puede consultar desde el recibo al cerrar o al volver al historial.
+- **Recepción:** la persona designada recibe el pendiente en Caja y confirma con su propia sesión. Los reintentos conservan la primera confirmación. Un corte anulado deja de estar disponible para recepción y el historial conserva el registro. La apertura del siguiente turno sigue siendo una acción independiente.
+- **Base:** aplicar la migración 172 después de la 171 y antes del código. Los registros de traspaso referencian el recibo sin actualizar el corte, sus importes ni sus movimientos.
+- **Pruebas de Postgres:** la matriz llega a 81 casos. Los nuevos comprueban diferencias, reintentos simultáneos, permisos efectivos del receptor, aislamiento entre restaurantes y anulación.
+- **Navegador:** dos sesiones independientes recorrieron el cierre en móvil, el registro de la diferencia, la confirmación desde otra cuenta y la lectura posterior del recibo. El verificador confirmó la 172 y los auditores de RLS y funciones SQL devolvieron cero hallazgos.
+
+La siguiente ficha es **1.3 · Mesa pagada, por limpiar y libre**. Quedan 50 fichas del plan, incluidas las tres continuas de calidad. La integración de los PR y el despliegue se gestionan por separado.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

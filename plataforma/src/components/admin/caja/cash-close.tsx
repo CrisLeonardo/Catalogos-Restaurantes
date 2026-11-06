@@ -46,6 +46,7 @@ import { Leo } from '@/components/leo';
 import { Rodillo } from '@/components/ui/rodillo';
 import { Confeti } from '@/components/confeti';
 import { datosConteo, useBorradorCaja } from './use-borrador-caja';
+import { TraspasoDeRecibo } from './traspaso-caja';
 
 const BILLETES = DENOM_FIELDS.filter((d) => d.kind === 'B');
 const MONEDAS = DENOM_FIELDS.filter((d) => d.kind === 'M');
@@ -217,6 +218,7 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
   if (cerrado) {
     return (
       <CierreHecho
+        restaurantId={restaurantId}
         result={cerrado}
         dateLabel={cerrado.date === state.date ? dateLabel : new Date(`${cerrado.date}T12:00:00Z`).toLocaleDateString('es-GT', { dateStyle: 'long', timeZone: 'UTC' })}
         shift={cerrado.shiftLabel ?? ''}
@@ -1115,7 +1117,8 @@ function TarjetaGastos({ state, onAnotar }: { state: CajaState; onAnotar: () => 
 }
 
 /* ── El turno cerrado ─────────────────────────────────────────── */
-function CierreHecho({ result, dateLabel, shift, cashierName, restaurantName, timezone, tips, onOtro }: {
+function CierreHecho({ restaurantId, result, dateLabel, shift, cashierName, restaurantName, timezone, tips, onOtro }: {
+  restaurantId: string;
   result: CajaCloseResult;
   dateLabel: string;
   shift: string;
@@ -1221,6 +1224,8 @@ function CierreHecho({ result, dateLabel, shift, cashierName, restaurantName, ti
           </>
         )}
       </div>
+
+      <TraspasoDeRecibo key={result.id} restaurantId={restaurantId} recibo={result} timezone={timezone} />
 
       <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
         <BotonSuave onClick={() => window.print()}>
