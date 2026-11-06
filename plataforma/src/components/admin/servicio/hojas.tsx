@@ -332,7 +332,7 @@ export const ATAJOS: { k: string; d: string }[] = [
   { k: '1 – 9', d: 'Agregar el más pedido número N' },
   { k: 'Alt 1 – 9', d: 'Saltar a la mesa abierta N' },
   { k: '⌘⏎ / Ctrl ⏎', d: 'Enviar a cocina' },
-  { k: 'Alt C', d: 'Cobrar y cerrar mesa' },
+  { k: 'Alt C', d: 'Abrir la cuenta de la mesa' },
   { k: '2 pepián ⏎', d: 'Teclear cantidad + plato en el buscador' },
   { k: '/', d: 'Volver al buscador' },
   { k: 'Esc', d: 'Cerrar o volver' },

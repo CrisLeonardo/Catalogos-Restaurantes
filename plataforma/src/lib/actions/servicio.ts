@@ -28,15 +28,20 @@
    leen juntas o no se entienden.
    ════════════════════════════════════════════════════════════ */
 
-import { identidadCobroValida, type ResultadoCobro } from '@/lib/cobro-intento';
+import {
+  identidadCobroValida, type ContextoCobroMesa, type PagoCobro, type RepartoCobro,
+  type ResultadoCobro, type SolicitudCobro,
+} from '@/lib/cobro-intento';
 import { createServiceClient } from '@/lib/supabase/service';
 import { assertTableAccess } from '@/lib/auth/table-access';
 import { revalidarSalon } from '@/lib/salon-cache';
 import { hayTurnosDeMesa, hayPagosDeMesa } from '@/lib/db/table-sessions';
 import { faltaLaColumna, faltaLaTabla, faltaLaFuncion } from '@/lib/db/migracion-ausente';
-import { isPaymentMethod, type PaymentMethod } from '@/lib/payment-method';
+import { isPaymentMethod } from '@/lib/payment-method';
 import { updateOrderStatus } from '@/lib/actions/orders';
+import { emitirFacturaAutomatica } from '@/lib/actions/fel';
 import { revalidatePath, updateTag } from 'next/cache';
+import { after } from 'next/server';
 
 /** Tope de líneas que una llamada puede tocar. Una mesa no acumula más. */
 const MAX_LINEAS = 120;
@@ -195,11 +200,7 @@ export async function deshacerServirLineas(
    2 · COBRAR UNA PARTE SIN CERRAR LA MESA
    ──────────────────────────────────────────────────────────── */
 
-export interface CobroParcial {
-  method: PaymentMethod;
-  amount: number;
-  cashReceived?: number | null;
-}
+export type CobroParcial = PagoCobro;
 
 export type CobroParcialResult = ResultadoCobro;
 
@@ -278,6 +279,67 @@ export async function cobradoDeMesa(
   if (!data) return { error: 'No se pudo leer el saldo por plato.' };
   return data;
 
+}
+
+const SIN_ABONOS = 'Falta la migración 169 para consultar y registrar abonos y partes.';
+
+export async function leerContextoCobroMesa(restaurantId: string, mesa: number):
+  Promise<{ contexto: ContextoCobroMesa } | { error: string; needsMigration?: boolean }> {
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
+  const { data, error } = await createServiceClient().rpc('leogin_contexto_pago_mesa', {
+    p_restaurant: restaurantId, p_mesa: mesa,
+  });
+  if (error && faltaLaFuncion(error)) return { error: SIN_ABONOS, needsMigration: true };
+  if (error || !data) return { error: error?.message ?? 'No se pudo leer la cuenta de la mesa.' };
+  return { contexto: data as ContextoCobroMesa };
+}
+
+export async function guardarPartesMesa(
+  restaurantId: string, mesa: number, cuenta: string, anterior: string | null, cantidad: number,
+): Promise<{ reparto: RepartoCobro } | { error: string }> {
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
+  const { data, error } = await createServiceClient().rpc('leogin_guardar_partes_mesa', {
+    p_restaurant: restaurantId, p_mesa: mesa, p_cuenta: cuenta, p_anterior: anterior, p_n: cantidad,
+  });
+  if (error || !data) return { error: error?.message ?? 'No se pudo guardar el reparto.' };
+  return { reparto: data as RepartoCobro };
+}
+
+export async function ejecutarAbonoMesa(
+  restaurantId: string,
+  solicitud: Extract<SolicitudCobro, { operacion: 'abono' | 'pagada' }>,
+  intentoId: string,
+): Promise<ResultadoCobro> {
+  if (!identidadCobroValida(intentoId) || !Number.isInteger(solicitud.mesa) || solicitud.mesa <= 0
+      || !/^[a-f0-9]{32}$/.test(solicitud.cuenta)) {
+    return { error: 'Datos de cobro inválidos.', incierto: false };
+  }
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
+  const db = createServiceClient();
+  const args = { p_restaurant: restaurantId, p_mesa: solicitud.mesa, p_cuenta: solicitud.cuenta,
+    p_actor: acceso.actor.userId, p_intento: intentoId };
+  const { data, error } = solicitud.operacion === 'abono'
+    ? await db.rpc('leogin_registrar_abono_mesa', {
+      ...args, p_reparto: solicitud.reparto, p_partes: solicitud.partes, p_pagos: solicitud.pagos,
+    })
+    : await db.rpc('leogin_cerrar_cuenta_pagada', args);
+  if (error) {
+    if (faltaLaFuncion(error)) return { error: SIN_ABONOS, needsMigration: true, incierto: true };
+    return { error: error.message, incierto: !/^(LGD0[12]|22\d{3})$/.test(error.code ?? '') };
+  }
+  const resultado = data as ResultadoCobro | null;
+  if (resultado?.intentoId !== intentoId) return { error: 'No se pudo confirmar el cobro.', incierto: true };
+  if (solicitud.operacion === 'pagada' && !resultado.repetido && resultado.orderIds?.length) {
+    const ids = resultado.orderIds;
+    after(async () => {
+      for (const id of ids) await emitirFacturaAutomatica(restaurantId, id);
+    });
+  }
+  revalidarSalon();
+  return resultado;
 }
 
 /* ────────────────────────────────────────────────────────────

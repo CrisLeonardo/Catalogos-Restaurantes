@@ -41,7 +41,7 @@ import {
 import { SalonFichas, SalonPlano, SalonRiel, hayPlano, nivelesConMesas, ocupacionPorNivel } from '@/components/admin/servicio/salon';
 import Carta from '@/components/admin/servicio/carta';
 import Comanda from '@/components/admin/servicio/comanda';
-import HojaCobro, { type PagoElegido } from '@/components/admin/servicio/hoja-cobro';
+import HojaCobro from '@/components/admin/servicio/hoja-cobro';
 import {
   HojaAtajos, HojaLibre, HojaLinea, HojaLlevar, HojaMesa, HojaVoz,
 } from '@/components/admin/servicio/hojas';
@@ -61,7 +61,7 @@ import {
   mesasDeServicio, pasaFiltro, porUrgencia, resumenDelSalon, subtituloDeMesa,
   FILTROS, type FiltroSalon,
 } from '@/lib/servicio/estado';
-import { leerIntento, prepararIntento, resolverIntento, type SolicitudCobro } from '@/lib/cobro-intento';
+import { leerIntento, prepararIntento, resolverIntento, type ContextoCobroMesa, type PagoCobro, type SolicitudCobro } from '@/lib/cobro-intento';
 import { reconocimientoDisponible } from '@/lib/servicio/voz';
 import {
   createWaiterOrder, freeTable, getTableBill, moveTableOrders, resolveTableCalls,
@@ -69,6 +69,7 @@ import {
 } from '@/lib/actions/orders';
 import {
   cobrarParteDeMesa, cobrarPedidoParaLlevar, cobradoDeMesa, deshacerServirLineas,
+  ejecutarAbonoMesa, guardarPartesMesa, leerContextoCobroMesa,
   marcarAgotado, moverPlatoDeMesa, ponerAlergiaDeMesa, ponerNombreDeMesa, servirLineas,
 } from '@/lib/actions/servicio';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
@@ -88,6 +89,7 @@ import { shortOrderNumber } from '@/lib/order-number';
    palabra. Se guarda en el propio aparato —es un borrador, no un
    pedido— y caduca en seis horas, que es un turno. */
 const DRAFT_TTL_MS = 6 * 60 * 60 * 1000;
+const SIN_PLATOS_PAGADOS: string[] = [];
 
 type CartMap = Record<string, CartLine[]>;
 
@@ -224,13 +226,14 @@ export default function ServicioPanel({
 
   /* ── La mesa abierta, desde la base ───────────────────────── */
   const [mesaOrders, setMesaOrders] = useState<OrderWithItems[]>([]);
-  const [pagadas, setPagadas] = useState<string[]>([]);
-  const [saldosPlatos, setSaldosPlatos] = useState<Record<string, number>>({});
-  /* El DINERO ya cobrado de esta mesa, leído de `order_payments`. No se
-     deduce de las líneas marcadas: la suma de las líneas es consumo y el
-     dinero lleva además propina, así que restar lo uno de lo otro deja la
-     cuenta descuadrada. */
-  const [cobrado, setCobrado] = useState(0);
+  const [lecturaCobro, setLecturaCobro] = useState<{
+    mesa: number; contexto: ContextoCobroMesa | null; datos: Awaited<ReturnType<typeof cobradoDeMesa>>;
+  } | null>(null);
+  const cuentaMesa = sel.kind === 'mesa' && lecturaCobro?.mesa === sel.n ? lecturaCobro : null;
+  const contextoCobro = cuentaMesa?.contexto ?? null;
+  const pagadas = cuentaMesa?.datos.lineasPagadas ?? SIN_PLATOS_PAGADOS;
+  const saldosPlatos = cuentaMesa?.datos.lineasPendientes ?? {};
+  const cobrado = cuentaMesa?.datos.total ?? 0;
   const [cargandoMesa, setCargandoMesa] = useState(false);
 
   /* Cuántos pedidos esperan a que vuelva la señal. Se dice en voz alta y
@@ -395,24 +398,26 @@ export default function ServicioPanel({
     const yo = ++lecturaRef.current;
     setCargandoMesa(true);
     try {
-      const [bill, cobrado] = await Promise.all([
+      const [bill, lectura] = await Promise.all([
         getTableBill(restaurantId, n),
-        cobradoDeMesa(restaurantId, n),
+        leerContextoCobroMesa(restaurantId, n),
       ]);
+      const contexto = 'contexto' in lectura ? lectura.contexto : null;
+      const datos: Awaited<ReturnType<typeof cobradoDeMesa>> = 'contexto' in lectura ? lectura.contexto
+        : lectura.needsMigration ? await cobradoDeMesa(restaurantId, n) : lectura;
       // Una lectura más nueva ya salió (o la mesa cambió): esta sobra.
-      if (yo !== lecturaRef.current) return;
+      if (yo !== lecturaRef.current || selRef.current.kind !== 'mesa' || selRef.current.n !== n) return;
       setMesaOrders('orders' in bill ? bill.orders : []);
-      setPagadas(cobrado.lineasPagadas ?? []);
-      setSaldosPlatos(cobrado.lineasPendientes ?? {});
-      setCobrado(cobrado.total ?? 0);
+      setLecturaCobro(datos.error || 'error' in bill ? null : { mesa: n, contexto, datos });
       if ('error' in bill) setAviso({ text: bill.error, bad: true });
-      else if (cobrado.error) setAviso({ text: cobrado.error, bad: true });
-      else if (cobrado.avisoCuotas) setAviso({ text: cobrado.avisoCuotas, bad: true });
+      else if (datos.error) setAviso({ text: datos.error, bad: true });
+      else if (datos.avisoCuotas) setAviso({ text: datos.avisoCuotas, bad: true });
     } catch {
       /* Sin conexión la mesa se queda con lo que hubiera: lo apuntado en
          este aparato se sigue viendo y se puede seguir tomando el pedido,
          que es de lo que trata la cola sin conexión. */
       if (yo === lecturaRef.current) {
+        setLecturaCobro(null);
         setAviso({ text: 'No se pudo leer la mesa. Lo que apuntes se guarda igual.', bad: true });
       }
     } finally {
@@ -421,7 +426,13 @@ export default function ServicioPanel({
   }, [restaurantId]);
 
   useEffect(() => {
-    if (sel.kind !== 'mesa') { setMesaOrders([]); setPagadas([]); setSaldosPlatos({}); setCobrado(0); return; }
+    if (sel.kind !== 'mesa') {
+      lecturaRef.current++;
+      setMesaOrders([]);
+      setLecturaCobro(null);
+      setCargandoMesa(false);
+      return;
+    }
     void cargarMesa(sel.n);
   }, [sel, cargarMesa]);
 
@@ -546,7 +557,11 @@ export default function ServicioPanel({
      vale lo que suman sus líneas (todavía no es un pedido). */
   const valorEnviado = desglose ? desglose.grandTotal : resumen.totalEnviado;
   const totalMesa = Math.round((valorEnviado + resumen.totalNuevo) * 100) / 100;
-  const porCobrarReal = Math.max(0, Math.round((valorEnviado - cobrado) * 100) / 100);
+  const porCobrarReal = Math.max(0, contextoCobro?.saldo ?? Math.round((valorEnviado - cobrado) * 100) / 100);
+  const puedeCobrar = (sel.kind === 'pedido' || !!cuentaMesa)
+    && resumen.nNuevas === 0 && !envioPendiente
+    && (porCobrarReal > 0 || !!contextoCobro?.saldada);
+  const etiquetaCobro = contextoCobro?.saldada ? 'Cerrar cuenta pagada' : 'Cobrar mesa';
 
   const pendientesQr = useMemo(() => {
     if (ordersQr.length === 0) return null;
@@ -560,6 +575,9 @@ export default function ServicioPanel({
 
   /* ── Dinero ───────────────────────────────────────────────── */
   const money = useCallback((n: number) => fmtMoney(n, currency), [currency]);
+  const resumenCobro = cuentaMesa && desglose
+    ? `Consumo ${money(desglose.items)} · pagado ${money(cobrado)} · por cobrar ${money(porCobrarReal)}`
+    : null;
   const redondear = useCallback((n: number) => fmtMoney(n, currency, 0), [currency]);
 
   /* ── Añadir al carrito ────────────────────────────────────── */
@@ -878,72 +896,122 @@ export default function ServicioPanel({
 
   /* ── Cobrar ───────────────────────────────────────────────── */
   const cobroEnVuelo = useRef(false);
+  const [cobrando, setCobrando] = useState(false);
   const ejecutarCobro = useCallback(async (solicitud?: SolicitudCobro) => {
     if (cobroEnVuelo.current) return;
-    cobroEnVuelo.current = true;
+    let intento: ReturnType<typeof leerIntento>;
     try {
       // Persistir ANTES de enviar. Al reintentar se usa todo el payload original,
       // aunque la lectura en vivo ya muestre el plato pagado o la mesa libre.
-      const intento = solicitud
+      intento = solicitud
         ? prepararIntento(localStorage, restaurantId, waiterId, solicitud)
         : leerIntento(localStorage, restaurantId, waiterId);
-      if (!intento) return;
-      const { mesa, operacion, items, pagos } = intento.solicitud;
-      const res = operacion === 'parte'
-        ? await cobrarParteDeMesa(restaurantId, mesa, items, pagos, intento.id)
-        : await freeTable(restaurantId, mesa, pagos, intento.id);
+    } catch {
+      setAviso({ text: 'No se pudo guardar o leer el intento de cobro en este aparato.', bad: true });
+      return;
+    }
+    if (!intento) return;
+    cobroEnVuelo.current = true;
+    setCobrando(true);
+    try {
+      const original = intento.solicitud;
+      const { mesa, operacion } = original;
+      const res = operacion === 'abono' || operacion === 'pagada'
+        ? await ejecutarAbonoMesa(restaurantId, original, intento.id)
+        : operacion === 'parte'
+          ? await cobrarParteDeMesa(restaurantId, mesa, original.items, original.pagos, intento.id)
+          : await freeTable(restaurantId, mesa, original.pagos, intento.id);
+      const sigueEnMesa = selRef.current.kind === 'mesa' && selRef.current.n === mesa;
       if (res.error) {
-        if (res.incierto === false) resolverIntento(localStorage, restaurantId, waiterId, intento.id);
+        if (res.incierto === false) {
+          resolverIntento(localStorage, restaurantId, waiterId, intento.id);
+          if (sigueEnMesa) await cargarMesa(mesa);
+        }
         setAviso({ text: res.incierto
           ? 'Cobro sin confirmar. Reintenta o vuelve a abrir Servicio para recuperar el resultado.'
           : res.error, bad: true });
         return;
       }
       resolverIntento(localStorage, restaurantId, waiterId, intento.id);
-      setHoja(null);
-      if (operacion === 'cierre') {
-        setSel({ kind: 'none' });
-        setPantalla('sala');
-        setAviso({ text: `${money(res.cobrado ?? 0)} cobrado · Mesa ${mesa} libre` });
+      if (sigueEnMesa) setHoja(null);
+      if (operacion === 'cierre' || operacion === 'pagada') {
+        if (sigueEnMesa) {
+          setSel({ kind: 'none' });
+          setPantalla('sala');
+        }
+        setAviso({ text: operacion === 'pagada' ? `Cuenta pagada cerrada · Mesa ${mesa} libre`
+          : `${money(res.cobrado ?? 0)} cobrado · Mesa ${mesa} libre` });
       } else {
         setAviso({ text: `${money(res.cobrado ?? 0)} cobrado · la mesa sigue abierta` });
-        void cargarMesa(mesa);
+        if (sigueEnMesa) await cargarMesa(mesa);
       }
     } catch {
       setAviso({ text: 'No se pudo confirmar el cobro. Reintenta desde este aparato para recuperar el resultado.', bad: true });
-    } finally { cobroEnVuelo.current = false; }
+    } finally {
+      cobroEnVuelo.current = false;
+      setCobrando(false);
+    }
   }, [restaurantId, waiterId, money, cargarMesa]);
 
   useEffect(() => {
-    const recuperar = () => { startWork(async () => { await ejecutarCobro(); }); };
+    const recuperar = () => { void ejecutarCobro(); };
     recuperar();
     window.addEventListener('online', recuperar);
     return () => window.removeEventListener('online', recuperar);
   }, [ejecutarCobro]);
 
-  const cobrarTodo = useCallback((pagos: PagoElegido[]) => {
+  const cobrarTodo = useCallback((pagos: PagoCobro[]) => {
     if (sel.kind !== 'mesa') return;
-    const solicitud: SolicitudCobro = { mesa: sel.n, operacion: 'cierre', items: [],
-      pagos: pagos.map((p) => ({ ...p, amount: p.amount ?? porCobrarReal })) };
-    startWork(async () => { await ejecutarCobro(solicitud); });
-  }, [sel, porCobrarReal, ejecutarCobro]);
+    const solicitud: SolicitudCobro = { mesa: sel.n, operacion: 'cierre', items: [], pagos };
+    void ejecutarCobro(solicitud);
+  }, [sel, ejecutarCobro]);
 
-  const cobrarParte = useCallback((parte: LineaServicio[], pagos: PagoElegido[]) => {
+  const cobrarParte = useCallback((parte: LineaServicio[], pagos: PagoCobro[]) => {
     if (sel.kind !== 'mesa') return;
-    const importe = parte.reduce((s, l) => s + (saldosPlatos[l.id] ?? 0), 0);
-    const solicitud: SolicitudCobro = { mesa: sel.n, operacion: 'parte', items: parte.map((l) => l.id),
-      pagos: pagos.map((p) => ({ ...p, amount: p.amount ?? importe })) };
-    startWork(async () => { await ejecutarCobro(solicitud); });
-  }, [sel, ejecutarCobro, saldosPlatos]);
+    const solicitud: SolicitudCobro = { mesa: sel.n, operacion: 'parte', items: parte.map((l) => l.id), pagos };
+    void ejecutarCobro(solicitud);
+  }, [sel, ejecutarCobro]);
 
-  const cobrarLlevar = useCallback((pagos: PagoElegido[]) => {
+  const abonarMesa = (pagos: PagoCobro[], reparto: string | null, partes: string[]) => {
+    if (sel.kind !== 'mesa' || !contextoCobro || !puedeCobrar) return;
+    const { n: mesa } = sel;
+    const { cuenta } = contextoCobro;
+    void ejecutarCobro({ mesa, operacion: 'abono', cuenta, reparto, partes, pagos });
+  };
+
+  const repartirMesa = async (cantidad: number) => {
+    if (sel.kind !== 'mesa' || !contextoCobro || !puedeCobrar || cobroEnVuelo.current) return;
+    const mesa = sel.n;
+    cobroEnVuelo.current = true;
+    setCobrando(true);
+    try {
+      const res = await guardarPartesMesa(restaurantId, mesa, contextoCobro.cuenta,
+        contextoCobro.reparto?.id ?? null, cantidad);
+      if ('error' in res) setAviso({ text: res.error, bad: true });
+    } catch {
+      setAviso({ text: 'No se pudo confirmar el reparto. Revisa la cuenta antes de cobrar.', bad: true });
+    } finally {
+      if (selRef.current.kind === 'mesa' && selRef.current.n === mesa) await cargarMesa(mesa);
+      cobroEnVuelo.current = false;
+      setCobrando(false);
+    }
+  };
+
+  const cerrarPagada = () => {
+    if (sel.kind !== 'mesa' || !contextoCobro?.saldada || !puedeCobrar) return;
+    const { n: mesa } = sel;
+    const { cuenta } = contextoCobro;
+    void ejecutarCobro({ mesa, operacion: 'pagada', cuenta });
+  };
+
+  const cobrarLlevar = useCallback((pagos: PagoCobro[]) => {
     if (!pedidoSel) return;
     const id = pedidoSel.id;
     const numero = pedidoSel.order_number;
     startWork(async () => {
       const res = await cobrarPedidoParaLlevar(restaurantId, id, {
         method: pagos[0].method,
-        amount: pagos[0].amount ?? Number(pedidoSel.total ?? 0),
+        amount: pagos[0].amount,
         cashReceived: pagos[0].cashReceived,
       });
       if (res.error) { setAviso({ text: res.error, bad: true }); return; }
@@ -1136,7 +1204,7 @@ export default function ServicioPanel({
 
       if (e.altKey && (e.key === 'c' || e.key === 'C')) {
         e.preventDefault();
-        if (resumen.nNuevas === 0 && resumen.porCobrar > 0 && !envioPendiente) setHoja({ k: 'cobrar' });
+        if (puedeCobrar) setHoja({ k: 'cobrar' });
         return;
       }
       if (e.key === '?') { e.preventDefault(); setHoja({ k: 'atajos' }); return; }
@@ -1163,34 +1231,9 @@ export default function ServicioPanel({
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [paleta, hoja, movil, pantalla, resumen.nNuevas, resumen.porCobrar, envioPendiente, enviar, abiertas, favs, elegir, agregarProducto]);
-
-  /* ── Sugerir postre o bebida al cobrar ────────────────────── */
-  const sugerencias = useMemo(() => {
-    if (resumen.servidas.length + resumen.cocina.length === 0) return null;
-    const catDe = new Map(products.map((p) => [p.id, p.category_id]));
-    const nombreCat = new Map(categories.map((c) => [c.id, c.name.toLowerCase()]));
-    const catsEnMesa = new Set(
-      lineas.map((l) => (l.productId ? nombreCat.get(catDe.get(l.productId) ?? '') : null)).filter(Boolean),
-    );
-    const buscar = (palabra: string) => categories.find((c) => c.name.toLowerCase().includes(palabra));
-    const postres = buscar('postre');
-    const bebidas = buscar('bebida');
-    const faltaPostre = postres && !catsEnMesa.has(postres.name.toLowerCase());
-    const faltaBebida = bebidas && !catsEnMesa.has(bebidas.name.toLowerCase());
-    const elegida = faltaPostre ? postres : faltaBebida ? bebidas : null;
-    if (!elegida) return null;
-    const items = products.filter((p) => p.category_id === elegida.id && p.is_active && p.is_available).slice(0, 2);
-    if (items.length === 0) return null;
-    return {
-      label: faltaPostre ? 'Nadie pidió postre. ¿Se lo ofreciste?' : 'No hay bebidas en la cuenta.',
-      items,
-    };
-  }, [resumen, products, categories, lineas]);
+  }, [paleta, hoja, movil, pantalla, resumen.nNuevas, puedeCobrar, enviar, abiertas, favs, elegir, agregarProducto]);
 
   /* ── Lo que el pie puede hacer ────────────────────────────── */
-  const puedeCobrar = (sel.kind === 'mesa' || sel.kind === 'pedido')
-    && resumen.nNuevas === 0 && porCobrarReal > 0.004 && !envioPendiente;
   const tituloSel = sel.kind === 'mesa'
     ? (mesaSel?.etiqueta ?? `Mesa ${sel.n}`)
     : sel.kind === 'llevar' ? 'Para llevar'
@@ -1210,13 +1253,13 @@ export default function ServicioPanel({
 
   const accionesPaleta: AccionPaleta[] = useMemo(() => [
     { label: 'Enviar a cocina', hint: atajo(mod, '⏎'), run: () => { setPaleta(false); enviar(); }, enabled: resumen.nNuevas > 0 },
-    { label: 'Cobrar y cerrar mesa', hint: 'Alt C', run: () => { setPaleta(false); setHoja({ k: 'cobrar' }); }, enabled: puedeCobrar },
+    { label: etiquetaCobro, hint: 'Alt C', run: () => { setPaleta(false); setHoja({ k: 'cobrar' }); }, enabled: puedeCobrar },
     { label: 'Pedido para llevar', hint: 'sin mesa', run: () => { setPaleta(false); setHoja({ k: 'llevar' }); }, enabled: pickupEnabled },
     { label: 'Juntar o mover mesa', hint: 'la mesa abierta', run: () => { setPaleta(false); setHoja({ k: 'mesa' }); }, enabled: sel.kind === 'mesa' },
     { label: 'Cobrar algo que no está en la carta', hint: 'artículo libre', run: () => { setPaleta(false); setHoja({ k: 'libre', nombre: '' }); }, enabled: sel.kind !== 'none' },
     { label: 'Modo aprendiz', hint: aprendiz ? 'activo' : 'apagado', run: () => { setPaleta(false); cambiarAprendiz(); } },
     { label: 'Atajos de teclado', hint: '?', run: () => { setPaleta(false); setHoja({ k: 'atajos' }); } },
-  ], [resumen.nNuevas, puedeCobrar, pickupEnabled, sel.kind, aprendiz, enviar, cambiarAprendiz, mod]);
+  ], [resumen.nNuevas, puedeCobrar, etiquetaCobro, pickupEnabled, sel.kind, aprendiz, enviar, cambiarAprendiz, mod]);
 
   /* ══════════════════════════════════════════════════════════
      LO QUE SE DIBUJA
@@ -1271,11 +1314,7 @@ export default function ServicioPanel({
       {desglose && desglose.tip > 0 && (
         <div className="sv-foot-note">Propina incluida: {money(desglose.tip)}</div>
       )}
-      {cobrado > 0 && (
-        <div className="sv-foot-note">
-          Ya cobrado {money(cobrado)} · faltan {money(porCobrarReal)}
-        </div>
-      )}
+      {resumenCobro && <div className="sv-foot-note">{resumenCobro}</div>}
       {resumen.nNuevas > 0 && (
         <button type="button" className="sv-cta" onClick={enviar}>
           {`Enviar a cocina · ${resumen.nNuevas}`}
@@ -1284,7 +1323,7 @@ export default function ServicioPanel({
       )}
       {puedeCobrar && (
         <button type="button" className="sv-cta" data-tone="ok" onClick={() => setHoja({ k: 'cobrar' })}>
-          Cobrar y cerrar mesa
+          {etiquetaCobro}
           {conTeclado && <span className="sv-cta-key">Alt C</span>}
         </button>
       )}
@@ -1507,6 +1546,7 @@ export default function ServicioPanel({
                     <span style={{ color: 'var(--u-text-3)', fontSize: 13 }}>ver ▲</span>
                   </span>
                 </button>
+                {resumenCobro && <div className="sv-foot-note">{resumenCobro}</div>}
                 {resumen.nNuevas > 0 && (
                   <button type="button" className="sv-cta sv-m-cta" onClick={enviar}>
                     {`Enviar a cocina · ${resumen.nNuevas}`}
@@ -1514,7 +1554,7 @@ export default function ServicioPanel({
                 )}
                 {puedeCobrar && (
                   <button type="button" className="sv-cta sv-m-cta" data-tone="ok" onClick={() => setHoja({ k: 'cobrar' })}>
-                    Cobrar y cerrar mesa
+                    {etiquetaCobro}
                   </button>
                 )}
               </div>
@@ -1631,7 +1671,7 @@ export default function ServicioPanel({
         />
       )}
 
-      {hoja?.k === 'cobrar' && (
+      {hoja?.k === 'cobrar' && (sel.kind === 'pedido' || cuentaMesa) && (
         <HojaCobro
           titulo={tituloSel}
           resumen={resumen}
@@ -1641,12 +1681,14 @@ export default function ServicioPanel({
           saldosPlatos={sel.kind === 'mesa' ? saldosPlatos : null}
           money={money}
           redondear={redondear}
-          sugerencias={sugerencias}
-          onSugerir={(p) => { agregarProducto(p, 1); setHoja(null); }}
-          busy={trabajando || envioPendiente}
+          contexto={contextoCobro}
+          busy={cobrando || (sel.kind === 'pedido' && trabajando) || !puedeCobrar}
           onClose={() => setHoja(null)}
           onCobrarTodo={sel.kind === 'pedido' ? cobrarLlevar : cobrarTodo}
           onCobrarParte={cobrarParte}
+          onAbonar={abonarMesa}
+          onGuardarPartes={repartirMesa}
+          onCerrarPagada={cerrarPagada}
         />
       )}
 

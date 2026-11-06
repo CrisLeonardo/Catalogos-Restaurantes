@@ -524,6 +524,19 @@ El chat «Recupera el resultado del cobro» permanece archivado, con sus turnos 
 
 La siguiente ficha es **1.1 · Cobro completo**, con rama y PR propios. La lectura de fallos de datos depende de 0.3 y el recorrido completo de Carta se valida con 1.11. Las pruebas con personas y lectores de pantalla en recorridos reales siguen en el plan. Esta ficha no requiere una migración SQL.
 
+## 19. Cobro completo de mesa · ficha 1.1
+
+**Rama:** `feat/cobro-completo`, con base en #91 (`54863d5`) para aislar la revisión. Se actualizó `main` antes de crear la rama. Los PR se integran en orden y cada fusión requiere su autorización.
+
+- **Antes:** Playwright abrió la cuenta móvil de Q200, pero falló al buscar «Importe libre». Las partes iguales solo eran una referencia. El cobro de mesa usaba un solo método desde esta hoja y el efectivo recibido se elegía de una lista.
+- **Cobro:** la comanda muestra consumo, pagado y pendiente. La hoja de 1.0 agrega importe libre, partes persistentes y pago mixto con efectivo, tarjeta o transferencia. El campo de efectivo recibido calcula el vuelto sobre la parte aplicada en efectivo. La hoja muestra recibos de los abonos y movimientos del libro. Se retiraron las sugerencias comerciales del cobro.
+- **Partes:** Q100 se reparte en Q33.34 + Q33.33 + Q33.33. Un pago puede cubrir varias partes. Al entrar otra ronda o cambiar el saldo fuera del reparto, el nuevo reparto conserva los recibos y divide el importe restante. Los abonos y partes que agotan el saldo dejan la cuenta pagada y abierta hasta el cierre explícito. La acción de cobrar y cerrar el saldo completo sigue disponible dentro de la hoja. Los nuevos modos corresponden a las cuentas de mesa; los estados del salón se tratan en 1.3 y las correcciones y devoluciones de Caja en 1.2.
+- **Base:** aplicar `169_abonos_y_partes_de_mesa.sql` después de la 168 y antes del código. El intento durable, los movimientos, el reparto y su confirmación comparten transacción. Los cobros anteriores conservan sus filas. Si un cobro legado impide verificar las cuotas, se puede cerrar por saldo completo. La 169 se aplicó al Supabase local.
+- **Pruebas:** la matriz de Postgres pasa 74 casos. Incluye un abono mixto con respuesta perdida, dos cajeros sobre la misma parte, redivisión tras una ronda, cierre sin un segundo movimiento, y una cuenta de más de 120 platos con propina, descuento y devolución parcial. Los auditores de RLS y de funciones SQL devuelven cero hallazgos.
+- **Pantalla:** las pruebas nuevas abren la cuenta en móvil y escritorio, comparan recibo, saldo y movimientos, y recargan el reparto antes de pagar la última parte. La revisión en 390, 768 y 1280 px, en claro y oscuro, llevó el vuelto al pie fijo junto al botón de registro. Build correcto y 1.350 pruebas unitarias aprobadas, con una omisión previa.
+
+La siguiente ficha es **1.2 · Caja: borrador, cuadre y recibo**. La ola 1 sigue en curso.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

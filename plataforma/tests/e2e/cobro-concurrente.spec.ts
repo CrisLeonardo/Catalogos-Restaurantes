@@ -43,12 +43,12 @@ async function login(context: BrowserContext, email: string) {
   if (verified.error) throw verified.error;
   await context.addInitScript(() => localStorage.setItem('leogin_tour_completed', 'true'));
 }
-async function openBill(page: Page, mesa = 1) {
+async function openBill(page: Page, mesa = 1, localSlug = slug) {
   await expect(async () => {
-    await page.goto(`${origin}/panel/${slug}/mesero?mesa=${mesa}`, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('button', { name: /^Cobrar y cerrar mesa/ }).first()).toBeVisible();
+    await page.goto(`${origin}/panel/${localSlug}/mesero?mesa=${mesa}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('button', { name: /^Cobrar mesa/ }).first()).toBeVisible();
   }).toPass({ timeout: 90_000 });
-  await page.getByRole('button', { name: /^Cobrar y cerrar mesa/ }).first().click();
+  await page.getByRole('button', { name: /^Cobrar mesa/ }).first().click();
   await expect(page.getByRole('tab', { name: 'Por platos' })).toBeVisible();
 }
 
@@ -81,6 +81,103 @@ test.afterAll(async () => {
   if (errors.length) throw new AggregateError(errors, 'Limpieza E2E de cobro');
 });
 
+test('1.1 · un abono libre mixto deja la mesa abierta y registra los dos métodos', async ({ browser }) => {
+  test.setTimeout(180_000);
+  const mixtoSlug = `${slug}-mixto`;
+  const rest = check(await db.from('restaurants').insert({ name: 'AUD Mixto', slug: mixtoSlug, status: 'active',
+    plan_actual: 'PREMIUM', onboarding_done: true }).select('id').single())!;
+  const context = await browser.newContext({ viewport: { width: 390, height: 750 } });
+  let userId: string | undefined;
+  try {
+    check(await db.from('restaurant_themes').insert({ restaurant_id: rest.id, brand_name: 'AUD Mixto',
+      config: { orderTypes: ['dine_in'] } }));
+    const email = `aud-cobro-${suffix}-mixto@test.local`;
+    const user = await db.auth.admin.createUser({ email, email_confirm: true });
+    if (user.error) throw user.error;
+    userId = user.data.user!.id;
+    check(await db.from('profiles').upsert({ id: userId, full_name: 'AUD Caja Mixto', restaurant_id: rest.id,
+      role: 'RESTAURANT_STAFF', permissions: ['mesero'] }));
+    await login(context, email);
+    const page = await context.newPage();
+    const order = check(await db.from('orders').insert({ restaurant_id: rest.id, order_number: `AUD-mixto-${suffix}`,
+      customer_name: 'AUD Mixto', customer_phone: '00000000', order_type: 'DINE_IN', table_number: 8,
+      address: 'Mesa 8', status: 'SERVED', subtotal: 200, total: 200 }).select('id').single())!;
+    check(await db.from('order_items').insert({ order_id: order.id, name_snapshot: 'AUD Mixto', price_snapshot: 200,
+      quantity: 1, subtotal: 200, served_at: new Date().toISOString() }));
+    await openBill(page, 8, mixtoSlug);
+    await page.getByRole('tab', { name: 'Importe libre', exact: true }).click({ timeout: 5_000 });
+    await page.getByLabel('Importe a registrar', { exact: true }).fill('130');
+    await page.getByRole('button', { name: 'Pago mixto', exact: true }).click();
+    await page.getByLabel('Efectivo aplicado', { exact: true }).fill('50');
+    await page.getByLabel('Tarjeta aplicada', { exact: true }).fill('80');
+    const recibido = page.getByLabel('Efectivo recibido', { exact: true });
+    const vuelto = page.getByRole('status').filter({ hasText: 'Vuelto' });
+    await recibido.fill('50');
+    await expect(vuelto).toContainText('Q0.00');
+    await recibido.fill('100');
+    await expect(vuelto).toContainText('Q50.00');
+    await expect(vuelto).toBeInViewport({ ratio: 1 });
+    await page.getByRole('button', { name: 'Registrar Q130.00', exact: true }).click();
+    await expect(page.getByText(/Q130\.00 cobrado · la mesa sigue abierta/)).toBeVisible();
+    await expect(page.getByText('Consumo Q200.00 · pagado Q130.00 · por cobrar Q70.00', { exact: true })).toBeVisible();
+    const rows = check(await db.from('order_payments').select('method,amount,cash_received').eq('order_id', order.id).order('method'));
+    expect(rows).toEqual([{ method: 'CARD', amount: 80, cash_received: null }, { method: 'CASH', amount: 50, cash_received: 100 }]);
+    await openBill(page, 8, mixtoSlug);
+    await expect(page.getByRole('dialog', { name: /^Cobrar/ }).getByText('Q70.00', { exact: true }).first()).toBeVisible();
+    await page.getByText('Recibos de abonos', { exact: true }).click();
+    await expect(page.getByText('Recibido Q100.00 · vuelto Q50.00', { exact: true })).toBeVisible();
+    await page.getByText('Historial de cobros', { exact: true }).click();
+    await expect(page.getByText('Recibido Q100.00', { exact: false }).last()).toBeVisible();
+  } finally {
+    await context.close();
+    check(await db.from('restaurants').delete().eq('id', rest.id));
+    if (userId) {
+      const deleted = await db.auth.admin.deleteUser(userId);
+      if (deleted.error) throw deleted.error;
+    }
+  }
+});
+
+test('1.1 · las partes pagadas sobreviven a recargar y el cierre se confirma aparte', async ({ browser }) => {
+  test.setTimeout(180_000);
+  const context = await browser.newContext({ viewport: { width: 1280, height: 850 } });
+  try {
+    await login(context, users[0].email);
+    const page = await context.newPage();
+    const order = check(await db.from('orders').insert({ restaurant_id: restaurantId, order_number: `AUD-partes-${suffix}`,
+      customer_name: 'AUD Partes', customer_phone: '00000000', order_type: 'DINE_IN', table_number: 9,
+      address: 'Mesa 9', status: 'SERVED', subtotal: 100, total: 100 }).select('id').single())!;
+    check(await db.from('order_items').insert({ order_id: order.id, name_snapshot: 'AUD Partes', price_snapshot: 100,
+      quantity: 1, subtotal: 100, served_at: new Date().toISOString() }));
+    await openBill(page, 9);
+    const abrirPartes = () => page.getByRole('tab', { name: 'Partes iguales', exact: true }).click();
+    await abrirPartes();
+    await page.getByRole('button', { name: 'Una parte más' }).click();
+    await page.getByRole('button', { name: 'Guardar reparto', exact: true }).click();
+    await page.getByRole('button', { name: /Parte 1.*Q33\.34/ }).click();
+    await page.getByRole('button', { name: /Parte 2.*Q33\.33/ }).click();
+    await page.getByRole('button', { name: 'Tarjeta', exact: true }).click();
+    await page.getByRole('button', { name: 'Registrar Q66.67', exact: true }).click();
+    await expect(page.getByText(/Q66\.67 cobrado · la mesa sigue abierta/)).toBeVisible();
+    await openBill(page, 9);
+    await abrirPartes();
+    await expect(page.getByText('Parte 1 · Pagada', { exact: true })).toBeVisible();
+    await expect(page.getByText('Parte 2 · Pagada', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: /Parte 3.*Q33\.33/ }).click();
+    await page.getByRole('button', { name: 'Transferencia', exact: true }).click();
+    await page.getByRole('button', { name: 'Registrar Q33.33', exact: true }).click();
+    await expect(page.getByText(/Q33\.33 cobrado · la mesa sigue abierta/)).toBeVisible();
+    expect(check(await db.from('orders').select('status').eq('id', order.id).single())?.status).toBe('SERVED');
+    await page.getByRole('button', { name: /^Cerrar cuenta pagada/ }).click();
+    await expect(page.getByText('Parte 3 · Pagada', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Confirmar cierre de cuenta pagada', exact: true }).click();
+    await expect(page.getByText('Cuenta pagada cerrada · Mesa 9 libre', { exact: true })).toBeVisible();
+    expect(check(await db.from('orders').select('status').eq('id', order.id).single())?.status).toBe('DELIVERED');
+    expect(check(await db.from('order_payments').select('method,amount').eq('order_id', order.id).order('method')))
+      .toEqual([{ method: 'CARD', amount: 66.67 }, { method: 'TRANSFER', amount: 33.33 }]);
+  } finally { await context.close(); }
+});
+
 test('1.0 · el cobro mantiene el saldo y la acción visibles y contiene el foco', async ({ browser }) => {
   test.setTimeout(180_000);
   const context = await browser.newContext({ viewport: { width: 390, height: 650 } });
@@ -98,7 +195,7 @@ test('1.0 · el cobro mantiene el saldo y la acción visibles y contiene el foco
     await expect.poll(() => hoja.evaluate((el) => el.contains(document.activeElement))).toBe(true);
     await page.keyboard.press('Escape');
     await expect(hoja).toBeHidden();
-    await expect(page.getByRole('button', { name: /^Cobrar y cerrar mesa/ }).first()).toBeFocused();
+    await expect(page.getByRole('button', { name: /^Cobrar mesa/ }).first()).toBeFocused();
   } finally { await context.close(); }
 });
 
@@ -260,7 +357,8 @@ test('0.18 · caja conserva el primer recibo y cuenta el pago posterior una vez 
     const page = await context.newPage();
     async function cerrarDesdePantalla() {
       await page.goto(`${origin}/panel/${slug}/caja`, { waitUntil: 'domcontentloaded' });
-      const billetes = page.getByRole('spinbutton', { name: 'Cuántos billetes de Q10', exact: true });
+      const billetes = page.locator('input[name="bil_10"]');
+      await expect(billetes).toBeEditable({ timeout: 30_000 });
       // El HTML puede aparecer antes de hidratar: verifica el conteo de React,
       // no solo el valor que Playwright escribió en el input del servidor.
       await expect(async () => {
