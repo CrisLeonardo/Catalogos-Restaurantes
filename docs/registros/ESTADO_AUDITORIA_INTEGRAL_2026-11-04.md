@@ -570,6 +570,7 @@ La siguiente ficha es **1.2 · Caja: borrador, cuadre y recibo**. La ola 1 sigue
 - **Base:** aplicar la migración 172 después de la 171 y antes del código. Los registros de traspaso referencian el recibo sin actualizar el corte, sus importes ni sus movimientos.
 - **Pruebas de Postgres:** la matriz llega a 81 casos. Los nuevos comprueban diferencias, reintentos simultáneos, permisos efectivos del receptor, aislamiento entre restaurantes y anulación.
 - **Navegador:** dos sesiones independientes recorrieron el cierre en móvil, el registro de la diferencia, la confirmación desde otra cuenta y la lectura posterior del recibo. El verificador confirmó la 172 y los auditores de RLS y funciones SQL devolvieron cero hallazgos.
+- **Revisión visual:** el primer refresco después de cerrar podía reiniciar el formulario de entrega. El formulario se muestra cuando Caja termina de refrescar. El recorrido volvió a pasar y la bandeja de recepción se revisó a 390, 768 y 1280 px, en claro y oscuro.
 
 La siguiente ficha es **1.3 · Mesa pagada, por limpiar y libre**. Quedan 50 fichas del plan, incluidas las tres continuas de calidad. La integración de los PR y el despliegue se gestionan por separado.
 

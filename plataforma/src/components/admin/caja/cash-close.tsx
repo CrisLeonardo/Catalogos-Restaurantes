@@ -109,6 +109,7 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
   const [aviso, setAviso] = useState<{ text: string; bad: boolean } | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [cerrado, setCerrado] = useState<CajaCloseResult | null>(null);
+  const [actualizandoCierre, actualizarCierre] = useTransition();
   const [recuperar, setRecuperar] = useState(false);
   const cierreActivo = useRef(false);
   const claveCierre = `leogin:caja:cierre:${restaurantId}:${operador}`;
@@ -168,7 +169,7 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
       setPorConfirmar(null);
       setRecuperar(false);
       setCerrado(res.result);
-      refrescar();
+      actualizarCierre(refrescar);
     } catch {
       setRecuperar(true);
       setAviso({ text: 'No se confirmó la respuesta. Recupera el cierre antes de volver a intentarlo.', bad: true });
@@ -220,6 +221,7 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
       <CierreHecho
         restaurantId={restaurantId}
         result={cerrado}
+        actualizandoCierre={actualizandoCierre}
         dateLabel={cerrado.date === state.date ? dateLabel : new Date(`${cerrado.date}T12:00:00Z`).toLocaleDateString('es-GT', { dateStyle: 'long', timeZone: 'UTC' })}
         shift={cerrado.shiftLabel ?? ''}
         cashierName={cerrado.cashierName ?? 'Caja'}
@@ -1117,9 +1119,10 @@ function TarjetaGastos({ state, onAnotar }: { state: CajaState; onAnotar: () => 
 }
 
 /* ── El turno cerrado ─────────────────────────────────────────── */
-function CierreHecho({ restaurantId, result, dateLabel, shift, cashierName, restaurantName, timezone, tips, onOtro }: {
+function CierreHecho({ restaurantId, result, actualizandoCierre, dateLabel, shift, cashierName, restaurantName, timezone, tips, onOtro }: {
   restaurantId: string;
   result: CajaCloseResult;
+  actualizandoCierre: boolean;
   dateLabel: string;
   shift: string;
   cashierName: string;
@@ -1225,7 +1228,10 @@ function CierreHecho({ restaurantId, result, dateLabel, shift, cashierName, rest
         )}
       </div>
 
-      <TraspasoDeRecibo key={result.id} restaurantId={restaurantId} recibo={result} timezone={timezone} />
+      {/* Actualizar el periodo puede remontar Caja. Espera antes de aceptar
+          datos de entrega que se perderían al recuperar el recibo. */}
+      {actualizandoCierre ? <p role="status">Actualizando Caja…</p>
+        : <TraspasoDeRecibo key={result.id} restaurantId={restaurantId} recibo={result} timezone={timezone} />}
 
       <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
         <BotonSuave onClick={() => window.print()}>
