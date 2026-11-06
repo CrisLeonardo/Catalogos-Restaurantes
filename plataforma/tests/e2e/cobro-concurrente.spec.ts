@@ -59,6 +59,126 @@ async function limpiarYLiberar(page: Page, mesa: number) {
   await expect(page.getByText(`Mesa ${mesa} limpia y libre`, { exact: true })).toBeVisible();
 }
 
+test('1.4 · conserva puestos, borradores y la guarnición al recuperar un envío', async ({ browser }) => {
+  test.setTimeout(180_000);
+  const productos = check(await db.from('products').insert([
+    { restaurant_id: restaurantId, name: 'Café de olla', price: 17, sort_order: 1 },
+    { restaurant_id: restaurantId, name: 'Limonada', price: 18, sort_order: 2 },
+    { restaurant_id: restaurantId, name: 'Pollo a la plancha', price: 58, sort_order: 3,
+      options: [{ id: 'g1', name: 'Guarnición', type: 'single', required: true, choices: [
+        { id: 'papa', name: 'Papas', priceDelta: 0 }, { id: 'ensalada', name: 'Ensalada', priceDelta: 5 },
+      ] }] },
+  ]).select('id,name'))!;
+  const pollo = productos.find((p) => p.name === 'Pollo a la plancha')!.id;
+  const cafe = productos.find((p) => p.name === 'Café de olla')!.id;
+  check(await db.from('profiles').update({ role: 'RESTAURANT_OWNER' }).eq('id', users[1].id));
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  try {
+    await login(context, users[1].email);
+    const page = await context.newPage();
+    const url = `${origin}/panel/${slug}/mesero?mesa=13`;
+    const abrirCarta = async () => {
+      await page.goto(url, { waitUntil: 'domcontentloaded' });
+      await page.getByRole('button', { name: 'Agregar platos', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Favoritos del turno' })).toBeVisible();
+    };
+    const puesto = (n: number) => page.getByRole('button', { name: new RegExp(`^Puesto ${n} ·`) });
+    await abrirCarta();
+    await expect(puesto(1)).toHaveAccessibleName('Puesto 1 · Café de olla');
+    await expect(puesto(2)).toHaveAccessibleName('Puesto 2 · Limonada');
+    await expect(puesto(3)).toHaveAccessibleName('Puesto 3 · Pollo a la plancha');
+
+    await page.getByRole('button', { name: 'Preparar turno' }).click();
+    const turno = page.getByRole('dialog', { name: 'Preparar turno' });
+    await turno.getByLabel('Plato con alias de trabajo').selectOption(pollo);
+    await turno.getByLabel('Alias', { exact: true }).fill('plancha especial');
+    await turno.getByRole('button', { name: 'Guardar alias' }).click();
+    await expect(turno.getByText('Alias guardado.')).toBeVisible();
+    await turno.getByLabel('Perfil', { exact: true }).selectOption('equipo');
+    await turno.getByLabel('Puesto 1', { exact: true }).selectOption(cafe);
+    await turno.getByRole('button', { name: 'Guardar para Equipo' }).click();
+    await expect(turno.getByText(/Guardado para el perfil/)).toBeVisible();
+    await page.keyboard.press('Escape');
+    const buscar = page.getByRole('textbox', { name: 'Buscar un plato para agregar' });
+    await buscar.fill('plancha especial');
+    await expect(page.locator('.sv-find-parsed')).toContainText('Pollo a la plancha');
+    await buscar.fill('cafe');
+    await expect(page.locator('.sv-find-parsed')).toContainText('Café de olla');
+    await buscar.press('Escape');
+
+    const venta = check(await db.from('orders').insert({
+      restaurant_id: restaurantId, order_number: `AUD-TURNO-VENTAS-${suffix}`, customer_name: 'AUD Ventas',
+      customer_phone: '00000000', order_type: 'PICKUP', status: 'DELIVERED', subtotal: 1160, total: 1160,
+    }).select('id').single())!;
+    check(await db.from('order_items').insert({ order_id: venta.id, product_id: pollo,
+      name_snapshot: 'Pollo a la plancha', price_snapshot: 58, quantity: 20, subtotal: 1160 }));
+    await page.getByRole('button', { name: 'Opciones y nota de Limonada' }).click();
+    const agotado = page.getByRole('dialog', { name: 'Opciones de Limonada' });
+    await agotado.getByRole('button', { name: /marcar agotado/i }).click();
+    await agotado.getByRole('button', { name: /Toca otra vez/ }).click();
+    await expect(puesto(2)).toBeDisabled();
+    await abrirCarta();
+    await expect(puesto(2)).toHaveAccessibleName('Puesto 2 · Limonada · Agotado');
+    await expect(puesto(3)).toHaveAccessibleName('Puesto 3 · Pollo a la plancha');
+    await page.keyboard.press('3');
+    const opciones = page.getByRole('dialog', { name: 'Opciones de Pollo a la plancha' });
+    await opciones.getByRole('button', { name: 'Elegir guarnición' }).click();
+    await expect(opciones.getByText('Falta elegir guarnición.')).toBeVisible();
+    await opciones.getByRole('button', { name: 'Papas', exact: true }).click();
+    await opciones.getByRole('textbox', { name: 'Nota para cocina' }).fill('Sin cebolla');
+    await opciones.getByRole('button', { name: /^Agregar ·/ }).click();
+    const elegirMesa = (n: number) => page.locator('.sv-rail .sv-mesa')
+      .filter({ has: page.locator('.sv-mesa-n', { hasText: new RegExp(`^${n}$`) }) }).click();
+    for (const n of [14, 15]) { await elegirMesa(n); await puesto(1).click(); }
+    await elegirMesa(13);
+    const comanda = page.getByRole('region', { name: 'Comanda de la mesa' });
+    await expect(comanda.getByText('Nota · Sin cebolla')).toBeVisible();
+    await comanda.getByRole('button', { name: 'Cambiar las opciones de Pollo a la plancha' }).click();
+    await opciones.getByRole('button', { name: /Ensalada/ }).click();
+    await opciones.getByRole('button', { name: 'Guardar · Q63.00' }).click();
+    await expect(comanda.getByText('Q63.00 c/u')).toBeVisible();
+
+    check(await db.from('products').update({ is_available: false, unavailable_at: new Date().toISOString() }).eq('id', pollo));
+    const enviar = page.getByRole('button', { name: /^Enviar a cocina · 1/ });
+    await enviar.click();
+    await expect(comanda.locator('.sv-line-error')).toContainText('ya no está disponible');
+    check(await db.from('products').update({ is_available: true, unavailable_at: null }).eq('id', pollo));
+    let primerEnvio: string | undefined;
+    let mismoIntento = false;
+    await page.route('**/*', async (route) => {
+      const request = route.request();
+      const payload = request.postData();
+      if (request.method() !== 'POST' || !request.headers()['next-action'] || !payload?.includes('Sin cebolla')) {
+        await route.continue();
+        return;
+      }
+      if (primerEnvio) {
+        mismoIntento = payload === primerEnvio;
+        await route.continue();
+      } else {
+        const respuesta = await route.fetch();
+        expect(respuesta.ok()).toBe(true);
+        primerEnvio = payload;
+        await route.abort('failed');
+      }
+    });
+    await enviar.dblclick();
+    await expect(comanda.getByText('Ensalada', { exact: true })).toBeVisible();
+    await expect.poll(() => mismoIntento).toBe(true);
+    await expect.poll(async () => check(await db.from('orders').select('id')
+      .eq('restaurant_id', restaurantId).eq('table_number', 13))?.length).toBe(1);
+    const pedidos = check(await db.from('orders').select('id,total').eq('restaurant_id', restaurantId).eq('table_number', 13))!;
+    expect(pedidos.map((o) => Number(o.total))).toEqual([63]);
+    expect(check(await db.from('order_items').select('note,options_snapshot').eq('order_id', pedidos[0].id)))
+      .toMatchObject([{ note: 'Sin cebolla', options_snapshot: [expect.objectContaining({ choice: 'Ensalada' })] }]);
+    await page.setViewportSize({ width: 390, height: 850 });
+    await expect(page.getByRole('button', { name: /Ver comanda.*saldo/ })).toBeVisible();
+  } finally {
+    await context.close();
+    check(await db.from('profiles').update({ role: 'RESTAURANT_STAFF' }).eq('id', users[1].id));
+  }
+});
+
 test.beforeAll(async () => {
   const rest = check(await db.from('restaurants').insert({ name: 'AUD Cobro', slug, status: 'active', plan_actual: 'PREMIUM', onboarding_done: true }).select('id').single());
   restaurantId = rest!.id;

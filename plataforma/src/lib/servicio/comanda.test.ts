@@ -71,12 +71,12 @@ describe('comandaDeMesa — los tres montones', () => {
     expect(comandaDeMesa([pedido('CANCEL', [item()])], [])).toEqual([]);
   });
 
-  it('las opciones y la nota se leen juntas debajo del nombre', () => {
+  it('distingue los modificadores de la nota de cocina', () => {
     const lineas = comandaDeMesa([pedido('PREP', [item({
       options_snapshot: [{ group: 'Término', choice: 'Término medio', priceDelta: 0 }],
       note: 'la salsa aparte',
     })])], []);
-    expect(lineas[0].detalle).toBe('Término medio · la salsa aparte');
+    expect(lineas[0]).toMatchObject({ detalle: 'Término medio', nota: 'la salsa aparte' });
   });
 });
 

@@ -22,7 +22,8 @@ import { getOpenTableSessions } from '@/lib/db/table-sessions';
 import { getProximasReservasDeMesa } from '@/lib/db/reservaciones';
 import { getWaiterCatalogCached } from '@/lib/db/menu';
 import { withEffectiveAvailability } from '@/lib/product-availability';
-import { getMasPedidosCached } from '@/lib/db/servicio';
+import { getMasPedidosCached, getPreferenciasServicio } from '@/lib/db/servicio';
+import { rolDeServicio } from '@/lib/servicio/turno';
 import { getAgentHubInfo } from '@/lib/print-agent';
 import ServicioPanel from '@/components/admin/servicio/servicio-panel';
 import { tipAppliesToType } from '@/lib/theme/resolve';
@@ -90,7 +91,7 @@ export default async function MeseroPage() {
      `getMasPedidosCached` usan la etiqueta `menu:<id>` que ya invalidan
      las acciones de carta e inventario, así que un cambio de menú se
      sigue viendo al instante. */
-  const [catalogo, masPedidos, activeOrders, occupancy, calls, seatings, hubInfo, reservas] = await Promise.all([
+  const [catalogo, masPedidos, activeOrders, occupancy, calls, seatings, hubInfo, reservas, preferencias] = await Promise.all([
     getWaiterCatalogCached(restaurantId),
     getMasPedidosCached(restaurantId),
     getWaiterActiveOrders(restaurantId, user.id),
@@ -105,6 +106,7 @@ export default async function MeseroPage() {
     getOpenTableSessions(restaurantId),
     getAgentHubInfo(restaurantId),
     getProximasReservasDeMesa(restaurantId, r?.timezone || 'America/Guatemala'),
+    getPreferenciasServicio(restaurantId),
   ]);
 
   /* Quien administra la carta puede marcar un plato agotado desde aquí
@@ -128,6 +130,8 @@ export default async function MeseroPage() {
          (auditoría 2026-10-02, CAT-01). */
       products={withEffectiveAvailability(catalogo.products)}
       masPedidos={masPedidos}
+      preferencias={preferencias}
+      rolServicio={rolDeServicio(profile?.role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : efectivo.role)}
       initialOrders={activeOrders}
       occupancy={occupancy}
       calls={calls}

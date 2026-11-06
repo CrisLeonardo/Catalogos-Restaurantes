@@ -16,7 +16,8 @@
    ahorra un dedo en la tablet. */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { coincide, leerComanda, normalizar } from '@/lib/servicio/comanda';
+import { coincide, leerComanda } from '@/lib/servicio/comanda';
+import { buscarPlato } from '@/lib/servicio/turno';
 import { subtituloDeMesa, ESTADO_LABEL, type MesaServicio } from '@/lib/servicio/estado';
 import type { Product } from '@/types';
 
@@ -30,6 +31,7 @@ export interface AccionPaleta {
 
 export interface PaletaProps {
   productos: Product[];
+  alias: Record<string, string>;
   mesas: MesaServicio[];
   acciones: AccionPaleta[];
   /** La mesa abierta, para poder decir «a Mesa 4». */
@@ -51,7 +53,7 @@ interface Resultado {
 const MAX = 9;
 
 export default function Paleta({
-  productos, mesas, acciones, destino, money, onAgregar, onMesa, onClose,
+  productos, alias, mesas, acciones, destino, money, onAgregar, onMesa, onClose,
 }: PaletaProps) {
   const [q, setQ] = useState('');
   const [i, setI] = useState(0);
@@ -67,10 +69,7 @@ export default function Paleta({
     /* La misma regla que el buscador de la carta: lo que EMPIEZA por lo
        tecleado gana. Si no, «car» agregaba aquí unos tacos de carnitas y
        allí una carne asada — el mismo texto, dos platos distintos. */
-    const interpretado = term
-      ? disponibles.find((p) => coincide(p.name, term) && normalizar(p.name).startsWith(normalizar(term)))
-        ?? disponibles.find((p) => coincide(p.name, term)) ?? null
-      : null;
+    const interpretado = buscarPlato(disponibles, term, alias);
 
     const out: Resultado[] = [];
 
@@ -106,7 +105,7 @@ export default function Paleta({
       for (const p of disponibles) {
         if (out.length >= MAX) break;
         if (p.id === interpretado?.id) continue;
-        if (!coincide(p.name, term || texto)) continue;
+        if (!coincide(`${p.name} ${alias[p.id] ?? ''}`, term || texto)) continue;
         out.push({
           kind: 'Plato',
           label: p.name,
@@ -124,7 +123,7 @@ export default function Paleta({
     }
 
     return out.slice(0, MAX);
-  }, [q, productos, mesas, acciones, destino, money, onAgregar, onMesa, onClose]);
+  }, [q, productos, alias, mesas, acciones, destino, money, onAgregar, onMesa, onClose]);
 
   // Al cambiar la búsqueda el resaltado vuelve arriba: si se quedara donde
   // estaba, Enter ejecutaría algo que ya no es lo que se ve.

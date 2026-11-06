@@ -1,11 +1,8 @@
 /**
  * LOS MÁS PEDIDOS.
  *
- * La fila de seis platos a un toque que abre la carta del módulo de
- * servicio. Sale de lo que este restaurante vende de verdad y no de una
- * lista que alguien tenga que mantener a mano: una lista a mano se
- * escribe el primer día y no se vuelve a tocar, y para la segunda semana
- * los seis atajos son los seis platos equivocados.
+ * Las ventas sugieren el orden al preparar el turno. Una vez elegidos,
+ * la carta y los atajos leen los mismos puestos guardados en el dispositivo.
  *
  * Ventana de dos semanas: lo bastante larga para que un martes flojo no
  * la mueva entera, lo bastante corta para que el plato que salió de la
@@ -14,11 +11,26 @@
 
 import { unstable_cache } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service';
+import { leerPuestos, ROLES_SERVICIO, type PreferenciasServicio, type RolServicio } from '@/lib/servicio/turno';
+
+export async function getPreferenciasServicio(restaurantId: string): Promise<PreferenciasServicio> {
+  const { data } = await createServiceClient().from('servicio_preferencias')
+    .select('tipo,clave,valor').eq('restaurant_id', restaurantId);
+  const prefs: PreferenciasServicio = { favoritos: {}, alias: {} };
+  for (const fila of data ?? []) {
+    if (fila.tipo === 'alias' && typeof fila.valor === 'string') prefs.alias[fila.clave] = fila.valor;
+    if (fila.tipo === 'favoritos' && Object.hasOwn(ROLES_SERVICIO, fila.clave)) {
+      const puestos = leerPuestos(fila.valor);
+      if (puestos) prefs.favoritos[fila.clave as RolServicio] = puestos;
+    }
+  }
+  return prefs;
+}
 
 /** Cuántos días mirar hacia atrás. */
 const DIAS = 14;
 
-/** Cuántos devolver. La fila enseña seis; los atajos de teclado, nueve. */
+/** Cuántas sugerencias devolver. La carta y el teclado comparten nueve puestos. */
 const CUANTOS = 9;
 
 async function leerMasPedidos(restaurantId: string): Promise<string[]> {

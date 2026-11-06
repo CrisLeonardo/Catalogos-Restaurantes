@@ -134,6 +134,8 @@ export default function Comanda({
                   )}
                 </div>
                 {l.detalle && <div className="sv-line-mods">{l.detalle}</div>}
+                {l.nota && <div className="sv-line-note">Nota · {l.nota}</div>}
+                {l.carrito?.errorEnvio && <div className="sv-line-error" role="status">{l.carrito.errorEnvio}</div>}
                 <div className="sv-line-unit">{money(l.unidad)} c/u</div>
               </div>
               <div className="sv-line-ctl">
@@ -184,6 +186,7 @@ export default function Comanda({
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span className="sv-line-name" style={{ display: 'block' }}>{l.nombre}</span>
                   {l.detalle && <span className="sv-line-mods" style={{ display: 'block' }}>{l.detalle}</span>}
+                  {l.nota && <span className="sv-line-note">Nota · {l.nota}</span>}
                 </span>
               </button>
               {/* Cobrado en un cobro por partes y todavía en cocina: se dice
@@ -223,7 +226,10 @@ export default function Comanda({
               style={{ border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', font: 'inherit' }}
             >
               <span className="sv-line-q">{l.cantidad}×</span>
-              <span className="sv-line-done-name">{l.nombre}</span>
+              <span className="sv-line-done-name">{l.nombre}
+                {l.detalle && <span className="sv-line-mods">{l.detalle}</span>}
+                {l.nota && <span className="sv-line-note">Nota · {l.nota}</span>}
+              </span>
               {l.pagada && <span className="sv-paid">Pagado</span>}
               <Mono size={13} color="var(--u-text-3)">{money(importeLinea(l))}</Mono>
             </button>
