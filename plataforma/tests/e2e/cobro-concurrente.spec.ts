@@ -355,8 +355,9 @@ test('0.18 · caja conserva el primer recibo y cuenta el pago posterior una vez 
   try {
     await login(context, users[0].email);
     const page = await context.newPage();
-    async function cerrarDesdePantalla() {
+    async function cerrarDesdePantalla(anterior = false) {
       await page.goto(`${origin}/panel/${slug}/caja`, { waitUntil: 'domcontentloaded' });
+      if (anterior) await page.getByRole('button', { name: 'Abrir el siguiente turno', exact: true }).click();
       const billetes = page.locator('input[name="bil_10"]');
       await expect(billetes).toBeEditable({ timeout: 30_000 });
       // El HTML puede aparecer antes de hidratar: verifica el conteo de React,
@@ -380,7 +381,7 @@ test('0.18 · caja conserva el primer recibo y cuenta el pago posterior una vez 
       method: 'CASH', amount: 10 }).select('*').single())!;
     expect(payment.caja_corte_previo).toBe(first.id);
     expect(payment.caja_registrado_en > first.closed_at).toBe(true);
-    await cerrarDesdePantalla();
+    await cerrarDesdePantalla(true);
     const counts = check(await db.from('cash_counts').select('*').eq('restaurant_id', restaurantId).eq('status', 'CLOSED').order('closed_at'))!;
     expect(counts.map((c) => Number(c.expected_cash))).toEqual([10, 10]);
     expect(counts[0]).toEqual(first);
@@ -435,6 +436,8 @@ test('0.19 · el cierre incluye el cobro del inicio exacto del día una sola vez
     expect(Number(first.counted_cash)).toBe(5);
     await page.goto(`${origin}/panel/${diaSlug}/caja`, { waitUntil: 'domcontentloaded' });
     // Una segunda lectura/cierre conserva el recibo y no vuelve a contar Q2 ni Q3.
+    await page.getByRole('button', { name: 'Abrir el siguiente turno', exact: true }).click();
+    await page.getByRole('button', { name: 'Confirmar conteo en cero', exact: true }).click();
     await page.getByRole('button', { name: 'Siguiente: gastos', exact: true }).click();
     await page.getByRole('button', { name: 'Siguiente: propinas', exact: true }).click();
     await page.getByRole('button', { name: 'Cerrar el turno', exact: true }).click();
@@ -450,4 +453,32 @@ test('0.19 · el cierre incluye el cobro del inicio exacto del día una sola vez
     }
     check(await db.from('restaurants').delete().eq('id', rest.id));
   }
+});
+
+test('1.2 · Caja móvil cuenta billetes y monedas y retoma el borrador guardado', async ({ browser }) => {
+  test.setTimeout(180_000);
+  check(await db.from('restaurants').update({ modules: { orders: true } }).eq('id', restaurantId));
+  check(await db.from('profiles').update({ permissions: ['mesero', 'finanzas'] }).eq('id', users[0].id));
+  const context = await browser.newContext({ viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true });
+  try {
+    await login(context, users[0].email);
+    const page = await context.newPage();
+    await page.goto(`${origin}/panel/${slug}/caja`, { waitUntil: 'domcontentloaded' });
+    const q5 = page.getByRole('spinbutton', { name: 'Cuántos billetes de Q5', exact: true });
+    const quitar = page.getByRole('button', { name: 'Quitar un billete de Q5', exact: true });
+    await expect(quitar).toBeDisabled();
+    await expect(q5).toHaveCSS('text-align', 'center');
+    await page.getByRole('button', { name: 'Agregar un billete de Q5', exact: true }).tap();
+    await expect(q5).toHaveValue('1');
+    await page.getByRole('button', { name: 'Monedas', exact: true }).tap();
+    await page.getByRole('button', { name: 'Agregar una moneda de Q0.01', exact: true }).tap();
+    await expect(page.locator('[data-caja-contado]')).toHaveText('Q5.01');
+    await expect(page.getByRole('status').filter({ hasText: 'Guardado en la nube' })).toBeVisible({ timeout: 15_000 });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(q5).toHaveValue('1');
+    await expect(page.locator('[data-caja-contado]')).toHaveText('Q5.01');
+    await page.getByRole('button', { name: 'Monedas', exact: true }).tap();
+    await expect(page.getByRole('spinbutton', { name: 'Cuántas monedas de Q0.01', exact: true })).toHaveValue('1');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  } finally { await context.close(); }
 });

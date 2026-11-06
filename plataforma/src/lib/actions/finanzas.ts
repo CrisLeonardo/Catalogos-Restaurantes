@@ -475,6 +475,12 @@ export interface CajaDraft {
   savedAt: string;
 }
 
+export interface BorradorCaja extends ConteoCaja {
+  revision: string;
+  savedAt: string;
+  actorName: string | null;
+}
+
 /** El turno abierto, tal como lo enseña la pantalla. */
 export interface CajaShift {
   id: string;
@@ -506,6 +512,8 @@ export interface CajaState {
   tips: TipShare[];
   tipsTotal: number;
   draft: CajaDraft | null;
+  cloudDraft?: BorradorCaja | null;
+  draftUnavailable?: boolean;
   /** Hora de corte del día (minutos), para enseñarla. */
   dayCutoff: number;
   /** Quien mira puede firmar sola las correcciones. */
@@ -575,7 +583,16 @@ function estadoDeCaja(ctx: Ctx, l: LecturaDelTurno): CajaState {
 export async function getCajaState(restaurantId: string): Promise<CajaState> {
   const ctx = await authRestaurant(restaurantId);
   if (!ctx) return EMPTY_CAJA(new Date().toISOString().slice(0, 10));
-  return estadoDeCaja(ctx, await lectura(ctx, restaurantId));
+  const turno = await lectura(ctx, restaurantId);
+  const { data, error } = await leerBorradorCaja(ctx, restaurantId, turno.desde);
+  return {
+    ...estadoDeCaja(ctx, turno),
+    cloudDraft: data ? {
+      ...data.payload as ConteoCaja, revision: data.revision as string,
+      savedAt: data.saved_at as string, actorName: data.actor_name as string | null,
+    } : null,
+    draftUnavailable: !!error,
+  };
 }
 
 const SIN_145 = 'Falta la migración 145 en esta base para poder abrir y cerrar turnos.';
@@ -729,6 +746,47 @@ export interface CajaPayload {
   tips?: TipShare[] | null;
 }
 
+export interface ConteoCaja extends Omit<CajaPayload, 'restaurantId'> {
+  cashCounted: boolean;
+  paso: 1 | 2 | 3;
+}
+
+export interface AlcanceCaja {
+  desde: string;
+  id: string | null;
+}
+
+const SIN_171 = 'La sincronización de Caja requiere la migración 171.';
+
+function leerBorradorCaja(ctx: Ctx, restaurantId: string, periodo: string) {
+  return ctx.db.from('caja_borradores').select('revision,saved_at,actor_name,payload')
+    .eq('restaurant_id', restaurantId).eq('period_start', periodo).maybeSingle();
+}
+
+export async function guardarBorradorCaja(input: {
+  restaurantId: string; turno: AlcanceCaja; revision: string | null; conteo: ConteoCaja;
+}): Promise<{ guardado?: { revision: string; savedAt: string }; conflicto?: boolean; error?: string }> {
+  const ctx = await authRestaurant(input.restaurantId);
+  if (!ctx) return { error: 'No autorizado.' };
+  if (input.revision != null && !identidadCobroValida(input.revision)) return { error: 'Revisión inválida.' };
+  const l = await lectura(ctx, input.restaurantId);
+  if (!l.controlCaja || l.sinMigracion) return { error: SIN_171 };
+  if (input.turno.desde !== l.desde || input.turno.id !== (l.abierto?.id ?? null)) {
+    return { conflicto: true, error: 'El turno cambió. Revisa el conteo antes de seguir.' };
+  }
+  const conteo = input.conteo;
+  const { breakdown, counted } = conteoCaja(conteo.counts);
+  const { data, error } = await ctx.db.rpc('leogin_guardar_borrador_caja', {
+    p_restaurant: input.restaurantId, p_periodo: l.desde, p_turno: input.turno.id,
+    p_revision: input.revision, p_corte: l.controlCaja.ultimoCierreId,
+    p_actor: ctx.userId, p_nombre: ctx.cashierName,
+    p_payload: { ...conteo, counts: breakdown, cashCounted: conteo.cashCounted === true || counted > 0 },
+  });
+  if (error) return { error: faltaLaFuncion(error) ? SIN_171 : error.message, conflicto: /^LGD0[45]$/.test(error.code ?? '') };
+  if (!data?.revision) return { error: 'No se confirmó el borrador.' };
+  return { guardado: data };
+}
+
 function conteoCaja(counts: CajaPayload['counts']) {
   const breakdown: Record<string, number> = {};
   let centavos = 0;
@@ -831,6 +889,7 @@ export interface CajaReceipt {
   id: string;
   date: string;
   counted: number;
+  cashCounted?: boolean;
   expected: number;
   opening: number;
   expensesTotal: number;
@@ -860,12 +919,12 @@ export interface CajaCloseResult extends CajaReceipt {
   dia: { ventas: number; pedidos: number; record: RecordDelDia | null } | null;
 }
 
-type SolicitudCierre = CajaPayload & { confirmPending?: boolean } & (
-  | { intentoId: string; turno: { desde: string; id: string | null } }
+export type SolicitudCierre = CajaPayload & { confirmPending?: boolean; cashCounted?: boolean; borradorRevision?: string | null } & (
+  | { intentoId: string; turno: AlcanceCaja }
   | { intentoId?: never; turno?: never }
 );
 
-type RespuestaCierre = { result?: CajaCloseResult; pending?: Pendientes; error?: string };
+type RespuestaCierre = { result?: CajaCloseResult; pending?: Pendientes; error?: string; incierto?: boolean };
 
 const SIN_170 = 'Falta la migración 170 para conservar el recibo del cierre de caja.';
 
@@ -895,7 +954,7 @@ export async function closeCaja(
   input: SolicitudCierre,
 ): Promise<RespuestaCierre> {
   const ctx = await authRestaurant(input.restaurantId);
-  if (!ctx) return { error: 'No autorizado.' };
+  if (!ctx) return input.intentoId ? { error: 'Vuelve a iniciar sesión para recuperar el cierre.', incierto: true } : { error: 'No autorizado.' };
 
   const intentoId = input.intentoId ?? crypto.randomUUID();
   if (!identidadCobroValida(intentoId) || (input.intentoId && !input.turno?.desde)) {
@@ -906,12 +965,14 @@ export async function closeCaja(
   const notas = (input.notes ?? '').trim() || null;
   const tips = input.tips ?? null;
   const solicitud = { counts: conteo.breakdown, openingFloat: input.openingFloat,
-    shiftLabel: etiqueta, notes: notas, tips, turno: input.turno ?? null, confirmPending: input.confirmPending === true };
+    shiftLabel: etiqueta, notes: notas, tips, turno: input.turno ?? null, confirmPending: input.confirmPending === true,
+    ...(input.cashCounted === undefined ? {} : { cashCounted: input.cashCounted }),
+    ...(input.borradorRevision === undefined ? {} : { borradorRevision: input.borradorRevision }) };
   const recuperar = async (): Promise<RespuestaCierre | null> => {
     const { data, error } = await ctx.db.rpc('leogin_recuperar_cierre_caja', {
       p_restaurant: input.restaurantId, p_intento: intentoId, p_actor: ctx.userId, p_solicitud: solicitud,
     });
-    if (error) return { error: faltaLaFuncion(error) ? SIN_170 : error.message };
+    if (error) return { error: faltaLaFuncion(error) ? SIN_170 : error.message, incierto: !/^LGD03$/.test(error.code ?? '') };
     return data ? { result: { ...data as CajaReceipt, dia: null } } : null;
   };
   if (input.intentoId) {
@@ -928,7 +989,16 @@ export async function closeCaja(
     // Otra petición del mismo intento puede haber confirmado entre las dos lecturas.
     return (await recuperar()) ?? { error: 'El turno cambió. Revisa el cuadre antes de cerrar.' };
   }
-  if (c.counted <= 0 && c.esperadoEnCaja > 0) return { error: 'Cuenta el efectivo antes de cerrar el turno.' };
+  if (input.borradorRevision !== undefined) {
+    const { data, error } = await leerBorradorCaja(ctx, input.restaurantId, c.l.desde);
+    if (error) return { error: faltaLaMigracion(error) ? SIN_171 : error.message };
+    if ((data?.revision ?? null) !== input.borradorRevision) {
+      return (await recuperar()) ?? { error: 'Otro aparato guardó un borrador más reciente. Revisa el conteo antes de cerrar.' };
+    }
+  }
+  if (c.counted <= 0 && (input.cashCounted === false || (input.cashCounted === undefined && c.esperadoEnCaja > 0))) {
+    return { error: 'Cuenta el efectivo o confirma el conteo en cero antes de cerrar.' };
+  }
   if (hayPendientes(c.l.pendientes) && !input.confirmPending) return { pending: c.l.pendientes };
 
   const tipsTotal = round2((tips ?? []).reduce((s, t) => s + (Number(t.amount) || 0), 0));
@@ -957,6 +1027,7 @@ export async function closeCaja(
 
   const recibo: Omit<CajaReceipt, 'id'> = {
     date: c.l.dia, counted: c.counted, expected: c.summary.expectedCash, opening: c.opening,
+    ...(input.cashCounted === undefined ? {} : { cashCounted: c.counted > 0 || input.cashCounted }),
     expensesTotal: c.expensesTotal, tipsTotal, difference: c.difference,
     refunds: c.l.cuadre.devoluciones, refundsCash: c.l.cuadre.devolucionesEfectivo,
     periodStart: c.l.desde, closedAt: cerradoEn, openedByName: c.l.abierto?.openedByName ?? null,
@@ -971,7 +1042,10 @@ export async function closeCaja(
     p_gastos: c.l.gastos.map((g) => g.id), p_actor: ctx.userId,
     p_intento: intentoId, p_solicitud: solicitud, p_recibo: recibo,
   });
-  if (errCierre) return { error: faltaLaFuncion(errCierre) ? SIN_170 : errCierre.message };
+  if (errCierre) {
+    const error = faltaLaFuncion(errCierre) ? SIN_170 : errCierre.message;
+    return input.intentoId ? { error, incierto: !/^(LGD0[34]|22023)$/.test(errCierre.code ?? '') } : { error };
+  }
   const confirmado = data as { recibo: CajaReceipt; repetido: boolean } | null;
   if (!identidadCobroValida(confirmado?.recibo?.id)) return { error: 'No se pudo confirmar el cierre de caja.' };
   if (confirmado.repetido) return { result: { ...confirmado.recibo, dia: null } };

@@ -549,4 +549,16 @@ La siguiente ficha es **1.2 · Caja: borrador, cuadre y recibo**. La ola 1 sigue
 
 ---
 
+## 21. Conteo y recuperación en la pantalla de Caja · ficha 1.2
+
+**Rama:** `feat/caja-conteo-autoguardado`, sobre [PR #93](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/93) (`c544c44`, CI verde). La interfaz se implementó después de la aprobación de la maqueta corregida y usa los componentes y tokens del panel.
+
+- **Conteo:** 13 denominaciones, con billete de Q1 y moneda de Q0.01 diferenciados. Cada fila lleva una sola etiqueta de importe, campo centrado, botones de 44 px y subtotal. En móvil se alterna entre billetes y monedas sin perder cantidades. «Sin contar» y «conteo en cero» son estados distintos.
+- **Borrador:** la copia local se guarda por restaurante, periodo y operador. El servidor conserva una versión compartida por periodo. Otro aparato recibe un conflicto si intenta sobrescribir una versión más reciente. El borrador anterior de `cash_counts` sigue disponible para las cuentas legadas.
+- **Cuadre y recibo:** Caja separa contado, esperado y diferencia, enlaza a los movimientos del turno y conserva la solicitud de cierre en el aparato. Al volver a abrir Caja puede recuperar el recibo. Los cortes nuevos se consultan también desde el historial. Queda pendiente la entrega formal entre responsables.
+- **Base:** aplicar la migración 171 después de la 170 y antes de desplegar el código.
+- **Verificación local:** pasaron 79 casos de Postgres. Playwright verificó el cierre de los turnos consecutivos, el límite de las 05:00 y el borrador móvil de Q5.01 tras recargar. La cuenta local de auditoría de Rincón 502 permite abrir Caja, Tomar pedidos, Pedidos y Finanzas.
+
+---
+
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*
