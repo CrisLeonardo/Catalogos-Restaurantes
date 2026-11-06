@@ -40,7 +40,7 @@ import {
   cobrarParteDeMesa, cobradoDeMesa, ejecutarAbonoMesa, guardarPartesMesa, leerContextoCobroMesa,
 } from '@/lib/actions/servicio';
 import { freeTable } from '@/lib/actions/orders';
-import { abrirTurno, closeCaja, saveCajaDraft, discardCajaDraft, getCajaReceipt } from '@/lib/actions/finanzas';
+import { abrirTurno, closeCaja, saveCajaDraft, discardCajaDraft, getCajaReceipt, getCajaState, guardarBorradorCaja } from '@/lib/actions/finanzas';
 import { corregirMetodoDePago, devolverCobro } from '@/lib/actions/caja-correcciones';
 import { leerTurno } from '@/lib/caja/turno-servidor';
 import { computeSplit } from '@/lib/bill-split';
@@ -319,6 +319,40 @@ describe('1.2 · recibo durable de cierre', () => {
       has_table_privilege('service_role',oid,'UPDATE,DELETE') modificable
       from pg_class where oid='public.caja_recibos'::regclass`);
     expect(rows).toEqual([{ relrowsecurity: true, anon: false, auth: false, modificable: false }]);
+  });
+});
+
+describe('1.2 · conteo y borrador de Caja', () => {
+  it('suma por separado un billete de Q1 y una moneda de un centavo en el recibo', async () => {
+    const res = await closeCaja({ restaurantId: rid(), counts: { bil_5: 1, bil_1: 1, mon_1: 2, mon_001: 3 }, openingFloat: 0 });
+    expect(res.result).toMatchObject({ counted: 8.03, counts: { bil_1: 1, mon_001: 3 } });
+  });
+
+  it('conserva el borrador ganador al guardar desde dos aparatos y permite retomar el cero explícito', async () => {
+    await order([10]);
+    success(await freeTable(rid(), 1, { method: 'CASH', amount: 10 }, randomUUID()));
+    const l = await period();
+    const turno = { desde: l.desde, id: l.abierto?.id ?? null };
+    const conteo = { counts: {}, cashCounted: true, openingFloat: 0, paso: 3 as const };
+    const input = { restaurantId: rid(), turno, revision: null, conteo };
+    const [a, b] = await Promise.all([
+      guardarBorradorCaja(input),
+      actor(1, () => guardarBorradorCaja({ ...input, conteo: { ...conteo, counts: { bil_5: 1 } } })),
+    ]);
+    expect([a, b].filter((r) => r.guardado)).toHaveLength(1);
+    expect([a, b].filter((r) => r.conflicto)).toHaveLength(1);
+    const leido = await actor(1, () => getCajaState(rid()));
+    expect(leido.cloudDraft?.revision).toBe((a.guardado ?? b.guardado)?.revision);
+    const borradorRevision = leido.cloudDraft!.revision;
+    expect((await closeCaja({ restaurantId: rid(), turno, intentoId: randomUUID(), counts: {},
+      openingFloat: 0, cashCounted: false, borradorRevision })).error).toMatch(/confirma el conteo en cero/);
+    expect((await closeCaja({ restaurantId: rid(), turno, intentoId: randomUUID(), counts: {},
+      openingFloat: 0, cashCounted: true, borradorRevision: null })).error).toMatch(/más reciente/);
+    const corte = await closeCaja({ restaurantId: rid(), turno, intentoId: randomUUID(), counts: {},
+      openingFloat: 0, cashCounted: true, borradorRevision });
+    expect(corte.result).toMatchObject({ counted: 0, expected: 10, difference: -10 });
+    expect(await guardarBorradorCaja({ ...input, revision: borradorRevision })).toMatchObject({ conflicto: true });
+    expect((await getCajaState(rid())).cloudDraft).toBeNull();
   });
 });
 

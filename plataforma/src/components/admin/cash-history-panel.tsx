@@ -10,7 +10,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { anularCorte, type CashCount } from '@/lib/actions/finanzas';
+import { anularCorte, getCajaReceipt, type CajaReceipt, type CashCount } from '@/lib/actions/finanzas';
 import { DENOM_FIELDS } from '@/lib/finanzas-constants';
 import CashHistoryExportButton from '@/components/admin/cash-history-export-button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -80,8 +80,8 @@ function DenomBreakdown({ breakdown }: { breakdown: Record<string, number> }) {
 }
 
 function CashCountCard({
-  entry, timezone, canVoid, onVoid,
-}: { entry: CashCount; timezone: string; canVoid: boolean; onVoid: () => void }) {
+  entry, timezone, canVoid, onVoid, onReceipt,
+}: { entry: CashCount; timezone: string; canVoid: boolean; onVoid: () => void; onReceipt: () => void }) {
   const [expanded, setExpanded] = useState(false);
 
   const diff = Number(entry.difference);
@@ -144,8 +144,8 @@ function CashCountCard({
         <DenomBreakdown breakdown={entry.denomination_breakdown as Record<string, number>} />
       )}
 
-      {(hasBreakdown || canVoid) && (
         <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
+          <button type="button" onClick={onReceipt} className="caja-link">Ver recibo</button>
           {hasBreakdown && (
             <button type="button" onClick={() => setExpanded((v) => !v)} className="caja-link">
               {expanded ? 'Ocultar desglose' : 'Ver desglose'}
@@ -159,7 +159,6 @@ function CashCountCard({
             </button>
           )}
         </div>
-      )}
     </div>
   );
 }
@@ -241,6 +240,22 @@ export default function CashHistoryPanel({
   shiftOpen?: boolean;
 }) {
   const [anulando, setAnulando] = useState<CashCount | null>(null);
+  const [corteRecibo, setCorteRecibo] = useState<string | null>(null);
+  const [recibo, setRecibo] = useState<CajaReceipt | null>(null);
+  const [errorRecibo, setErrorRecibo] = useState<string | null>(null);
+  const [cargandoRecibo, cargarRecibo] = useTransition();
+  function abrirRecibo(id: string) {
+    setCorteRecibo(id);
+    setRecibo(null);
+    setErrorRecibo(null);
+    cargarRecibo(async () => {
+      try {
+        const res = await getCajaReceipt(restaurantId, id);
+        setRecibo(res.receipt ?? null);
+        setErrorRecibo(res.error ?? null);
+      } catch { setErrorRecibo('No se pudo leer el recibo. Inténtalo de nuevo.'); }
+    });
+  }
   // Solo el último corte vivo, de las últimas 24 h y sin otro turno encima.
   const ultimoVivo = history.find((c) => !anulado(c));
   const anulable = ultimoVivo && !shiftOpen && isWithin24h(cerradoEn(ultimoVivo)) ? ultimoVivo.id : null;
@@ -280,7 +295,7 @@ export default function CashHistoryPanel({
               </div>
               {cortes.map((c) => (
                 <CashCountCard key={c.id} entry={c} timezone={timezone}
-                  canVoid={c.id === anulable} onVoid={() => setAnulando(c)} />
+                  canVoid={c.id === anulable} onVoid={() => setAnulando(c)} onReceipt={() => abrirRecibo(c.id)} />
               ))}
             </div>
           );
@@ -290,6 +305,34 @@ export default function CashHistoryPanel({
         <AnularCorte entry={anulando} restaurantId={restaurantId} timezone={timezone}
           selfApproves={selfApproves} onClose={() => setAnulando(null)} />
       )}
+      <Dialog open={!!corteRecibo} onOpenChange={(open) => { if (!open) setCorteRecibo(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Recibo del cierre</DialogTitle>
+            <DialogDescription>
+              {recibo ? `${formatDay(recibo.date)} · ${formatTime(recibo.closedAt, timezone)} · ${recibo.cashierName ?? 'Caja'}`
+                : cargandoRecibo ? 'Leyendo el corte…' : errorRecibo ?? 'Corte de Caja'}
+            </DialogDescription>
+          </DialogHeader>
+          {recibo && (
+            <div className="caja-recibo">
+              <dl>
+                <dt>Fondo inicial</dt><dd>{money(recibo.opening)}</dd>
+                <dt>Cobros en efectivo</dt><dd>{money(recibo.expected + recibo.refundsCash)}</dd>
+                <dt>Devoluciones en efectivo</dt><dd>{money(recibo.refundsCash)}</dd>
+                <dt>Gastos del turno</dt><dd>{money(recibo.expensesTotal)}</dd>
+                <dt>Efectivo esperado</dt><dd>{money(recibo.expectedDrawer)}</dd>
+                <dt>Total contado</dt><dd>{money(recibo.counted)}</dd>
+                <dt>Diferencia</dt><dd>{money(recibo.difference)}</dd>
+                <dt>Propinas</dt><dd>{money(recibo.tipsTotal)}</dd>
+              </dl>
+              <DenomBreakdown breakdown={recibo.counts} />
+              {recibo.expenses.map((gasto) => <div key={gasto.id}>{gasto.concept} · {money(gasto.amount)}</div>)}
+              {recibo.notes && <p>{recibo.notes}</p>}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

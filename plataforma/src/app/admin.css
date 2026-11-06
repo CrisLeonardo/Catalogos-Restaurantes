@@ -1730,18 +1730,61 @@
 .order-void-x { position: relative; }
 .order-void-x::after { content: ''; position: absolute; inset: -7px -11px; }
 
-.caja-denom { display: grid; grid-template-columns: 58px 1fr 84px; gap: 8px; align-items: center; }
+.caja-metricas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.caja-metricas > div {
+  display: grid; gap: 4px; min-width: 0; padding: 12px;
+  border: 1px solid var(--u-hair); border-radius: var(--radius-lg); background: var(--adm-card);
+}
+.caja-metricas > div:first-child { background: color-mix(in srgb, var(--brand-accent) 11%, var(--adm-card)); }
+.caja-metricas span, .caja-pie-total span { font-size: 12px; color: var(--u-text-3); }
+.caja-metricas strong { font-size: clamp(14px, 2.2vw, 20px); overflow-wrap: anywhere; }
+.caja-metricas [data-cuadra] strong { color: var(--c-ok); }
+.caja-guardado { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.caja-guardado > span {
+  padding: 5px 10px; border-radius: var(--radius-full); font-size: 12px;
+  color: var(--u-text-2); background: var(--adm-card-hover);
+}
+.caja-guardado[data-estado="nube"] > span { color: var(--c-ok); background: var(--c-ok-bg); }
+.caja-guardado:is([data-estado="error"],[data-estado="conflicto"]) > span { color: var(--c-danger); background: var(--c-danger-bg); }
+.caja-grupo {
+  padding: 12px; min-width: 0; border: 1px solid var(--u-hair);
+  border-radius: var(--radius-lg); background: var(--adm-card); box-shadow: var(--adm-shadow-xs);
+}
+.caja-grupo > header {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  border-bottom: 1px solid var(--u-hair); padding-bottom: 9px;
+}
+.caja-grupo h3 { margin: 0; font-size: 16px; font-weight: 700; }
+.caja-grupo > header > span { color: var(--u-text-3); font-size: 12px; }
+.caja-grupo-selector { display: none; }
+.caja-confirmar-cero { min-height: 44px; align-self: flex-start; }
+.caja-denom {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(145px, 56%); gap: 6px;
+  align-items: center; min-height: 62px; border-bottom: 1px solid var(--u-hair);
+}
+.caja-denom:last-child { border-bottom: 0; }
 .caja-denom-label {
-  font-family: var(--ui-font-mono); font-size: 14px; font-weight: 600; color: var(--u-text-2);
+  display: grid; gap: 2px; font-size: 15px; font-weight: 700; color: var(--u-text);
   cursor: pointer;
 }
+.caja-cantidad { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 5px; }
+.caja-cantidad button {
+  display: grid; place-items: center; min-width: 44px; min-height: 44px; border-radius: 50%;
+  border: 1px solid var(--u-hair-2); background: var(--adm-card); color: var(--u-text);
+  font-size: 20px; line-height: 1;
+}
+.caja-cantidad button:last-child {
+  color: var(--brand-accent-ink); border-color: transparent;
+  background: color-mix(in srgb, var(--brand-accent) 13%, var(--adm-card));
+}
+.caja-cantidad button:disabled { opacity: .45; cursor: not-allowed; }
 .caja-denom input {
-  width: 100%; height: 44px; padding: 0 12px; text-align: right;
+  width: 100%; min-width: 0; height: 44px; padding: 0 2px; text-align: center;
   border-radius: 10px; outline: none;
   border: 1px solid var(--u-hair-2);
   background: color-mix(in srgb, var(--u-text) 4%, transparent);
   color: var(--u-text-4);
-  font-family: var(--ui-font-mono); font-size: 18px; font-weight: 600;
+  font-family: var(--ui-font-mono); font-size: 16px; font-weight: 600;
 }
 .caja-denom input[data-filled="1"] {
   border: 1.5px solid var(--brand-accent);
@@ -1749,7 +1792,7 @@
   color: var(--u-text);
 }
 .caja-denom input:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 1px; }
-.caja-denom-sub { font-family: var(--ui-font-mono); font-size: 13px; text-align: right; color: var(--u-text-4); }
+.caja-denom-sub { font-family: var(--ui-font-mono); font-size: 11px; color: var(--u-text-3); overflow-wrap: anywhere; }
 .caja-denom-sub[data-filled="1"] { color: var(--u-text); }
 /* Las flechitas del input numérico roban 20 px justo donde va la cifra. */
 .caja-denom input::-webkit-outer-spin-button,
@@ -1757,10 +1800,17 @@
 .caja-denom input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 
 @media (max-width: 767px) {
-  .caja-denom { grid-template-columns: 62px 1fr 86px; gap: 10px; }
-  .caja-denom-label { font-size: 15px; }
-  .caja-denom input { height: 56px; padding: 0 14px; border-radius: 12px; font-size: 20px; }
-  .caja-denom-sub { font-size: 14px; }}
+  .caja-metricas > div { padding: 8px; }
+  .caja-grupo-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .caja-grupo-selector button {
+    min-height: 44px; border: 1px solid var(--u-hair); border-radius: var(--radius-md); background: var(--adm-card);
+  }
+  .caja-grupo-selector button[aria-pressed="true"] {
+    color: var(--brand-accent-ink); background: color-mix(in srgb, var(--brand-accent) 12%, var(--adm-card));
+  }
+  .caja-grupo:not([data-grupo-activo]) { display: none; }
+  .caja-cantidad :is(button, input) { scroll-margin-block-end: 85px; }
+}
 
 /* Pie fijo del cierre en el teléfono: el total contado y el paso
    siguiente, siempre bajo el pulgar. */
@@ -1773,6 +1823,12 @@
 }
 @media (min-width: 768px) {
   .caja-foot { position: static; margin: 0; padding: 0; border-top: none; border-radius: 0; background: none; }}
+.caja-pie-conteo { flex-flow: row wrap; justify-content: space-between; align-items: center; }
+.caja-pie-conteo > p { flex-basis: 100%; }
+.caja-pie-conteo > .caja-cta { width: auto; }
+.caja-pie-total { display: grid; gap: 1px; }
+.caja-recibo dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px 12px; margin: 0; }
+.caja-recibo dd { margin: 0; text-align: right; font-family: var(--ui-font-mono); }
 
 /* ── Turnos de caja y cobros corregibles (migración 145) ─────────
    Superficies sólidas como el resto del panel: el dinero no se lee
@@ -1784,6 +1840,18 @@
 }
 .caja-abrir { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 14px 20px;
   border-color: color-mix(in srgb, var(--brand-accent) 38%, var(--u-hair)); }
+.caja-abrir-toggle { display: none; }
+.caja-abrir-controles { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 767px) {
+  .caja-abrir { gap: 8px; padding: 4px 12px; }
+  .caja-abrir-toggle {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%;
+    min-height: 44px; border: 0; background: transparent; color: var(--u-text); font-size: 13px; font-weight: 600;
+  }
+  .caja-abrir-toggle span:last-child { color: var(--brand-accent-ink); }
+  .caja-abrir:not([data-expandido]) :is(.caja-abrir-info, .caja-abrir-controles) { display: none; }
+  .caja-abrir[data-expandido] { padding-bottom: 12px; }
+}
 .caja-aviso {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   padding: 10px 14px; border-radius: var(--radius-lg); font-size: 13px;

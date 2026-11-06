@@ -14,7 +14,7 @@ npm run test:dinero -- --reporter=verbose
 
 Lee `.env.local`/`.env.test` sin sobrescribir variables ya exportadas. Requiere `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` de **la base local**. Para los bloqueos usa `DINERO_DATABASE_URL`; por omisión, la conexión de desarrollo del `supabase/config.toml` de este repo: `postgresql://postgres:postgres@127.0.0.1:54601/postgres`. Son las credenciales estándar del stack local. Si usas otro puerto, exporta esa variable antes de ejecutar.
 
-Ambas direcciones deben ser loopback; la suite rechaza destinos externos y comprueba que SQL y PostgREST ven el mismo restaurante temporal. No necesita servidor Next ni navegador. La versión original de 0.13 usaba el esquema 001–153. **Esta rama necesita las migraciones 160–170 en orden y antes del código**, con los cambios anteriores de la ola 0 cuando correspondan. La suite opera sobre sus restaurantes temporales y espera un esquema ya preparado.
+Ambas direcciones deben ser loopback; la suite rechaza destinos externos y comprueba que SQL y PostgREST ven el mismo restaurante temporal. No necesita servidor Next ni navegador. La versión original de 0.13 usaba el esquema 001–153. **Esta rama necesita las migraciones 160–171 en orden y antes del código**, con los cambios anteriores de la ola 0 cuando correspondan. La suite opera sobre sus restaurantes temporales y espera un esquema ya preparado.
 
 Cada caso crea su propio restaurante `aud-dinero-<uuid>`, pedidos y movimientos. La suite crea dos usuarios temporales `aud-dinero-…@test.local`. `afterEach` elimina exclusivamente el restaurante creado, con sus filas en cascada, aun cuando una aserción falla; `afterAll` elimina los usuarios. Un fallo de limpieza también hace fallar el comando. Si se mata el proceso, revisa exclusivamente los identificadores AUD de esa corrida antes de limpiar manualmente.
 
@@ -23,6 +23,8 @@ Cada caso crea su propio restaurante `aud-dinero-<uuid>`, pedidos y movimientos.
 ## Recibo durable 1.2 · migración 170
 
 Aplicar la 170 después de la 169 y antes de desplegar el código. La primera prueba reproduce un cierre Q70 que, al repetir su solicitud después de un cobro de Q10, antes escribía un segundo corte. La nueva ruta conserva la identidad, el corte y el recibo en una sola transacción. Las pruebas recuperan el recibo tras perder la respuesta, hacen competir dos llamadas de la misma identidad y verifican el enlace del gasto y los permisos. También comprueban que una solicitud sin confirmar de un turno anterior se rechaza.
+
+La 171 se aplica después de la 170 y antes de desplegar el código. La prueba de denominaciones reproducía Q7.00 al contar un billete de Q5, un billete de Q1, dos monedas de Q1 y tres monedas de un centavo. Ahora exige Q8.03 y verifica el recibo. La prueba del borrador hace competir dos operadores con la misma revisión, comprueba que solo un guardado prevalece y verifica el cierre explícito con efectivo contado en cero.
 
 ## Cobro completo 1.1 · migración 169
 

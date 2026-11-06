@@ -88,7 +88,9 @@ export default async function AdminCajaPage() {
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
       <CashClose
+        key={`${restaurantId}:${state.periodStart}`}
         restaurantId={restaurantId}
+        operador={ctx.userId}
         state={state}
         dateLabel={fechaLarga(state.date)}
         cashierName={ctx.profile.full_name ?? 'Caja'}

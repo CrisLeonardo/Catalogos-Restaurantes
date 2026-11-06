@@ -33,8 +33,8 @@ import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { DENOM_FIELDS } from '@/lib/finanzas-constants';
 import {
-  addCashExpense, deleteCashExpense, saveCajaDraft, discardCajaDraft, closeCaja, abrirTurno,
-  type CajaState, type TipShare, type CajaCloseResult,
+  addCashExpense, deleteCashExpense, closeCaja, abrirTurno, getCajaReceipt,
+  type CajaState, type TipShare, type CajaCloseResult, type SolicitudCierre,
 } from '@/lib/actions/finanzas';
 import type { Pendientes } from '@/lib/caja/turno-servidor';
 import { corteAHora } from '@/lib/caja/dia';
@@ -45,6 +45,7 @@ import CobrosDelTurno from './cobros-del-turno';
 import { Leo } from '@/components/leo';
 import { Rodillo } from '@/components/ui/rodillo';
 import { Confeti } from '@/components/confeti';
+import { datosConteo, useBorradorCaja } from './use-borrador-caja';
 
 const BILLETES = DENOM_FIELDS.filter((d) => d.kind === 'B');
 const MONEDAS = DENOM_FIELDS.filter((d) => d.kind === 'M');
@@ -65,14 +66,12 @@ function hora(iso: string | null | undefined, tz: string): string {
   }
 }
 
-/** En qué paso va el cierre. El dato vive en la nube (el turno abierto);
-    el cursor es de este aparato: retomar en la tablet donde lo dejaste no
-    obliga a que el teléfono del dueño abra en el mismo sitio. */
 type Paso = 1 | 2 | 3;
-const PASO_KEY = 'leogin:caja-paso';
+type CierrePendiente = Extract<SolicitudCierre, { intentoId: string }>;
 
 interface Props {
   restaurantId: string;
+  operador: string;
   state: CajaState;
   /** "Martes 1 de septiembre" — ya en el idioma y la zona del restaurante. */
   dateLabel: string;
@@ -81,49 +80,37 @@ interface Props {
   timezone: string;
 }
 
-export default function CashClose({ restaurantId, state, dateLabel, cashierName, restaurantName, timezone }: Props) {
+export default function CashClose({ restaurantId, operador, state, dateLabel, cashierName, restaurantName, timezone }: Props) {
   /* Las acciones revalidan la ruta, pero el panel vive detrás de un
      subdominio reescrito y la página no siempre se repinta sola: se pide
      de nuevo a mano después de cada cambio de dinero. */
   const router = useRouter();
   const refrescar = useCallback(() => router.refresh(), [router]);
 
-  const [paso, setPaso] = useState<Paso>(1);
-  useEffect(() => {
-    try {
-      const v = Number(localStorage.getItem(PASO_KEY));
-      if (v === 1 || v === 2 || v === 3) setPaso(v);
-    } catch { /* sin almacenamiento: se empieza por contar */ }
-  }, []);
-  const irA = useCallback((p: Paso) => {
-    setPaso(p);
-    try { localStorage.setItem(PASO_KEY, String(p)); } catch { /* no-op */ }
-  }, []);
-
-  /* El turno abierto de verdad trae su fondo: el cierre no lo cambia. */
   const abierto = !!state.shift?.openedAt;
-
-  /* ── El conteo ────────────────────────────────────────────── */
-  const [counts, setCounts] = useState<Record<string, number>>(state.draft?.counts ?? {});
-  const [opening, setOpening] = useState<string>(String(state.shift?.openingFloat ?? state.draft?.openingFloat ?? 0));
-  const [shift, setShift] = useState(state.shift?.shiftLabel ?? state.draft?.shiftLabel ?? '');
-  const [notes, setNotes] = useState(state.draft?.notes ?? '');
-  useEffect(() => {
-    // Al abrir el turno desde otro aparato, el fondo es el suyo.
-    if (abierto) setOpening(String(state.shift?.openingFloat ?? 0));
-  }, [abierto, state.shift?.openingFloat]);
-
-  /* ── El reparto de propinas ───────────────────────────────── */
-  const [tips, setTips] = useState<TipShare[]>(state.draft?.tips ?? state.tips);
-  useEffect(() => {
-    // Si todavía no se ha tocado el reparto, sigue lo que dice el turno:
-    // una propina que entra a las 22:30 tiene que aparecer.
-    if (!state.draft?.tips) setTips(state.tips);
-  }, [state.tips, state.draft?.tips]);
+  const turno = { desde: state.periodStart, id: state.shift?.id ?? null };
+  const nube = state.cloudDraft ?? null;
+  const previo = nube ?? state.draft;
+  const borrador = useBorradorCaja({
+    restaurantId, operador, turno, nube, disponible: !state.draftUnavailable && !state.needsMigration,
+    inicial: {
+      counts: previo?.counts ?? {}, cashCounted: nube?.cashCounted ?? Object.values(previo?.counts ?? {}).some((n) => n > 0),
+      paso: nube?.paso ?? 1, notes: previo?.notes ?? '', shiftLabel: previo?.shiftLabel ?? state.shift?.shiftLabel ?? '',
+      opening: String(previo?.openingFloat ?? state.shift?.openingFloat ?? 0), tips: previo?.tips ?? null,
+    },
+  });
+  const { conteo, cambiar, guardado, bloqueo, revision, pausar, sincronizar, usarNube, limpiarLocal } = borrador;
+  const { counts, paso, notes, shiftLabel: shift } = conteo;
+  const tips = conteo.tips ?? state.tips;
+  const opening = abierto ? String(state.shift?.openingFloat ?? 0) : conteo.opening;
+  const irA = (p: Paso) => cambiar({ paso: p });
 
   const [aviso, setAviso] = useState<{ text: string; bad: boolean } | null>(null);
-  const [guardando, startSave] = useTransition();
+  const [guardando, setGuardando] = useState(false);
   const [cerrado, setCerrado] = useState<CajaCloseResult | null>(null);
+  const [recuperar, setRecuperar] = useState(false);
+  const cierreActivo = useRef(false);
+  const claveCierre = `leogin:caja:cierre:${restaurantId}:${operador}`;
   /** El cierre se detuvo porque queda algo sin cobrar. */
   const [porConfirmar, setPorConfirmar] = useState<Pendientes | null>(null);
 
@@ -145,8 +132,8 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
   const esperadoEnCaja = r2(openNum + ventasEfectivo - gastos);
   const diferencia = r2(contado - esperadoEnCaja);
   const cuadra = Math.abs(diferencia) < 0.005;
-  const hayConteo = centavos > 0;
-  const puedeCerrar = hayConteo || esperadoEnCaja <= 0;
+  const hayConteo = centavos > 0 || conteo.cashCounted;
+  const puedeCerrar = hayConteo && !bloqueo && guardado.estado !== 'conflicto' && !state.draftUnavailable;
 
   /* Desde cuándo cuenta: «desde el cierre de Ana a las 15:00» o «desde
      las 05:00», que es lo que el cajero necesita para creerse el número. */
@@ -155,38 +142,75 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
     : `desde las ${hora(state.periodStart, timezone)}`;
 
   const setCount = (field: string, val: string) => {
-    const n = Math.max(0, parseInt(val, 10) || 0);
-    setCounts((prev) => ({ ...prev, [field]: n }));
+    const n = Math.min(9999, Math.max(0, parseInt(val, 10) || 0));
+    const siguiente = { ...counts, [field]: n };
+    cambiar({ counts: siguiente, cashCounted: Object.values(siguiente).some((cantidad) => cantidad > 0) });
   };
 
-  const payload = useCallback(() => ({
-    restaurantId,
-    counts,
-    openingFloat: openNum,
-    shiftLabel: shift,
-    notes,
-    tips,
-  }), [restaurantId, counts, openNum, shift, notes, tips]);
-
-  function guardarBorrador() {
-    startSave(async () => {
-      const res = await saveCajaDraft(payload());
-      if (res.error) { setAviso({ text: res.error, bad: true }); return; }
-      setAviso({ text: 'Conteo guardado en el turno. Puedes retomarlo cuando quieras.', bad: false });
-      refrescar();
-    });
-  }
-
-  function cerrarTurno(confirmPending = false) {
-    startSave(async () => {
-      const res = await closeCaja({ ...payload(), confirmPending });
-      if (res.pending) { setPorConfirmar(res.pending); return; }
-      if (res.error || !res.result) { setAviso({ text: res.error ?? 'No se pudo cerrar la caja.', bad: true }); return; }
+  const confirmar = useCallback(async (solicitud: CierrePendiente) => {
+    if (cierreActivo.current) return;
+    cierreActivo.current = true;
+    setGuardando(true);
+    pausar(true);
+    try {
+      const res = await closeCaja(solicitud);
+      if (!res.result) {
+        if (!res.incierto) localStorage.removeItem(claveCierre);
+        setRecuperar(!!res.incierto);
+        if (res.pending) setPorConfirmar(res.pending);
+        else setAviso({ text: res.error ?? 'No se pudo confirmar el cierre.', bad: true });
+        pausar(false);
+        return;
+      }
+      localStorage.setItem(claveCierre, JSON.stringify({ recibo: res.result.id }));
+      limpiarLocal();
       setPorConfirmar(null);
+      setRecuperar(false);
       setCerrado(res.result);
       refrescar();
-      try { localStorage.removeItem(PASO_KEY); } catch { /* no-op */ }
-    });
+    } catch {
+      setRecuperar(true);
+      setAviso({ text: 'No se confirmó la respuesta. Recupera el cierre antes de volver a intentarlo.', bad: true });
+    } finally {
+      cierreActivo.current = false;
+      setGuardando(false);
+    }
+  }, [claveCierre, limpiarLocal, pausar, refrescar]);
+
+  const recuperarCierre = useCallback(async () => {
+    try {
+      const raw = localStorage.getItem(claveCierre);
+      if (!raw) return;
+      const guardado = JSON.parse(raw) as { solicitud?: CierrePendiente; recibo?: string };
+      if (guardado.solicitud) await confirmar(guardado.solicitud);
+      else if (guardado.recibo) {
+        const res = await getCajaReceipt(restaurantId, guardado.recibo);
+        if (res.receipt) {
+          pausar(true);
+          setCerrado({ ...res.receipt, dia: null });
+          setRecuperar(false);
+        } else setAviso({ text: res.error ?? 'No se encontró el recibo.', bad: true });
+      }
+    } catch {
+      setRecuperar(true);
+      setAviso({ text: 'El recibo sigue pendiente de recuperar en este aparato.', bad: true });
+    }
+  }, [claveCierre, confirmar, pausar, restaurantId]);
+  useEffect(() => { void recuperarCierre(); }, [recuperarCierre]);
+
+  function cerrarTurno(confirmPending = false) {
+    if (cierreActivo.current || guardando || !puedeCerrar) return;
+    if (recuperar) { void recuperarCierre(); return; }
+    const solicitud: CierrePendiente = {
+      ...datosConteo({ ...conteo, opening, tips }), restaurantId, turno, intentoId: crypto.randomUUID(),
+      borradorRevision: revision.current, confirmPending,
+    };
+    try {
+      localStorage.setItem(claveCierre, JSON.stringify({ solicitud }));
+      void confirmar(solicitud);
+    } catch {
+      setAviso({ text: 'Habilita el almacenamiento del navegador para poder recuperar el cierre.', bad: true });
+    }
   }
 
   /* ── El turno ya cerrado ──────────────────────────────────── */
@@ -194,19 +218,15 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
     return (
       <CierreHecho
         result={cerrado}
-        dateLabel={dateLabel}
-        shift={shift}
-        cashierName={cashierName}
+        dateLabel={cerrado.date === state.date ? dateLabel : new Date(`${cerrado.date}T12:00:00Z`).toLocaleDateString('es-GT', { dateStyle: 'long', timeZone: 'UTC' })}
+        shift={cerrado.shiftLabel ?? ''}
+        cashierName={cerrado.cashierName ?? 'Caja'}
         restaurantName={restaurantName}
         timezone={timezone}
-        tips={tips}
+        tips={cerrado.tips ?? []}
         onOtro={() => {
-          setCerrado(null);
-          setCounts({});
-          setOpening('0');
-          setShift('');
-          setNotes('');
-          irA(1);
+          try { localStorage.removeItem(claveCierre); } catch { /* La sesión sigue abierta. */ }
+          window.location.reload();
         }}
       />
     );
@@ -231,7 +251,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
               type="text"
               list="caja-turnos"
               value={shift}
-              onChange={(e) => setShift(e.target.value)}
+              onChange={(e) => cambiar({ shiftLabel: e.target.value })}
               placeholder="turno (opcional)"
               size={Math.max(16, shift.length + 1)}
             />
@@ -250,12 +270,12 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
         </div>
         <button
           type="button"
-          onClick={guardarBorrador}
-          disabled={guardando || state.needsMigration}
+          onClick={() => { void sincronizar(); }}
+          disabled={guardando || bloqueo || guardado.estado === 'conflicto' || state.needsMigration}
           className="press caja-boton-suave"
           style={{ height: 38 }}
         >
-          {guardando ? 'Guardando…' : 'Guardar y seguir después'}
+          {bloqueo ? 'Guardando…' : 'Guardar y seguir después'}
         </button>
       </div>
 
@@ -279,33 +299,23 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
         />
       )}
 
-      {state.draft && (
-        <div className="caja-aviso">
-          <Icon name="alertCircle" size={16} style={{ color: 'var(--c-warn)', flexShrink: 0 }} />
-          <span style={{ flex: 1, minWidth: 180, color: 'var(--u-text-2)' }}>
-            Retomaste un conteo guardado a las {hora(state.draft.savedAt, timezone)}.
-          </span>
-          <button
-            type="button"
-            onClick={() => startSave(async () => {
-              const res = await discardCajaDraft(restaurantId);
-              if (res.error) { setAviso({ text: res.error, bad: true }); return; }
-              setCounts({}); setNotes('');
-              if (!abierto) { setOpening('0'); setShift(''); }
-              irA(1);
-              refrescar();
-            })}
-            className="press caja-boton-suave"
-            style={{ height: 32, fontWeight: 600 }}
-          >
-            Empezar de cero
-          </button>
-        </div>
-      )}
+      <div className="caja-guardado" data-estado={guardado.estado}>
+        <span role="status">
+          {guardado.estado === 'nube' ? `Guardado en la nube · ${hora(guardado.at, timezone)}`
+            : guardado.estado === 'guardando' ? 'Guardando borrador…'
+            : guardado.estado === 'local' ? 'Guardado en este aparato · pendiente de sincronizar'
+            : guardado.mensaje ?? (state.draftUnavailable ? 'Sin sincronización. Revisa la conexión con Caja.'
+              : state.draft ? `Conteo anterior guardado a las ${hora(state.draft.savedAt, timezone)}` : 'El conteo se guarda automáticamente')}
+        </span>
+        {guardado.estado === 'conflicto' && (
+          <Button type="button" variant="outline" onClick={usarNube}>Descartar copia local y usar la nube</Button>
+        )}
+        {recuperar && <Button type="button" variant="outline" disabled={guardando} onClick={() => { void recuperarCierre(); }}>Recuperar cierre</Button>}
+      </div>
 
       {/* ── Los tres pasos ── */}
       <div className="caja-steps">
-        <PasoChip n={1} titulo="Efectivo" detalle={hayConteo ? money(contado) : 'sin contar'} on={paso === 1} hecho={paso > 1} onClick={() => irA(1)} />
+        <PasoChip n={1} titulo="Efectivo" detalle={hayConteo ? money(contado) : 'sin contar'} on={paso === 1} hecho={paso > 1 && hayConteo} onClick={() => irA(1)} />
         <PasoChip n={2} titulo="Gastos" detalle={state.expenses.length === 0 ? 'ninguno' : `${state.expenses.length} anotado${state.expenses.length === 1 ? '' : 's'}`} on={paso === 2} hecho={paso > 2} onClick={() => irA(2)} />
         <PasoChip n={3} titulo="Propinas" detalle={state.tipsTotal > 0 ? `${money(state.tipsTotal)} por repartir` : 'sin propinas'} on={paso === 3} hecho={false} onClick={() => irA(3)} ultimo />
       </div>
@@ -317,6 +327,15 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
         </div>
       )}
 
+      <div className="caja-metricas" aria-label="Resumen del cuadre">
+        <div><span>Total contado</span><strong className="t-mono" data-caja-contado>{hayConteo ? money(contado) : '—'}</strong></div>
+        <div><span>Efectivo esperado</span><strong className="t-mono">{money(esperadoEnCaja)}</strong></div>
+        <div data-cuadra={hayConteo && cuadra ? '1' : undefined}>
+          <span>{!hayConteo ? 'Sin contar' : cuadra ? 'Cuadra' : diferencia > 0 ? 'Sobran' : 'Faltan'}</span>
+          <strong className="t-mono">{hayConteo ? money(Math.abs(diferencia)) : '—'}</strong>
+        </div>
+      </div>
+
       <div className="caja-body">
         <div className="caja-main">
           {paso === 1 && (
@@ -324,7 +343,9 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
               counts={counts}
               setCount={setCount}
               opening={opening}
-              setOpening={setOpening}
+              setOpening={(value) => cambiar({ opening: value })}
+              confirmarCero={hayConteo ? undefined : () => cambiar({ cashCounted: true })}
+              limpiarConteo={hayConteo ? () => cambiar({ counts: {}, cashCounted: false }) : undefined}
               fondoFijo={abierto ? { quien: state.shift?.openedByName ?? null, cuando: hora(state.shift?.openedAt, timezone) } : null}
             />
           )}
@@ -339,10 +360,10 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
           {paso === 3 && (
             <PasoPropinas
               tips={tips}
-              setTips={setTips}
+              setTips={(value) => cambiar({ tips: value })}
               total={state.tipsTotal}
               notes={notes}
-              setNotes={setNotes}
+              setNotes={(value) => cambiar({ notes: value })}
             />
           )}
         </div>
@@ -365,8 +386,10 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
           <TarjetaPendientes pending={state.pending} liberadas={state.releasedUnpaid} />
 
           <TarjetaGastos state={state} onAnotar={() => irA(2)} />
-
-          <div className="caja-foot">
+        </div>
+      </div>
+          <div className="caja-foot caja-pie-conteo">
+            <div className="caja-pie-total"><span>Total contado</span><strong className="t-mono">{hayConteo ? money(contado) : '—'}</strong></div>
             {paso < 3 ? (
               <button
                 type="button"
@@ -380,7 +403,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
               <button
                 type="button"
                 onClick={() => cerrarTurno(false)}
-                disabled={guardando || !puedeCerrar || state.needsMigration}
+                disabled={guardando || !puedeCerrar || recuperar || state.needsMigration}
                 className="press btn-accent caja-cta"
               >
                 {guardando ? 'Cerrando…' : 'Cerrar el turno'}
@@ -392,9 +415,8 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
               </p>
             )}
           </div>
-        </div>
-      </div>
 
+      <div id="caja-movimientos">
       <CobrosDelTurno
         restaurantId={restaurantId}
         cobros={state.payments}
@@ -402,6 +424,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
         selfApproves={state.selfApproves}
         onAviso={(a) => { setAviso(a); if (!a.bad) refrescar(); }}
       />
+      </div>
 
       <p style={{ margin: 0, fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
         El día de caja empieza a las {corteAHora(state.dayCutoff)}: lo cobrado antes de esa hora cuenta para el día anterior.
@@ -430,9 +453,14 @@ function AbrirTurno({ restaurantId, shift, cobradoEnEfectivo, desde, onAviso }: 
 }) {
   const [fondo, setFondo] = useState('');
   const [abriendo, start] = useTransition();
+  const [expandido, setExpandido] = useState(false);
   return (
-    <div className="caja-tarjeta caja-abrir">
-      <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+    <div className="caja-tarjeta caja-abrir" data-expandido={expandido || undefined}>
+      <button type="button" className="caja-abrir-toggle" aria-expanded={expandido} aria-controls="caja-abrir-controles"
+        onClick={() => setExpandido(!expandido)}>
+        <span>Turno sin abrir</span><span>{expandido ? 'Ocultar' : 'Registrar apertura'}</span>
+      </button>
+      <div className="caja-abrir-info" style={{ flex: '1 1 260px', minWidth: 0 }}>
         <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)' }}>El turno no se ha abierto</div>
         <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
           Ábrelo con el fondo que hay en el cajón: queda escrito quién lo abrió y con cuánto, y el cierre
@@ -440,7 +468,7 @@ function AbrirTurno({ restaurantId, shift, cobradoEnEfectivo, desde, onAviso }: 
           {cobradoEnEfectivo > 0 && ` Ya van ${money(cobradoEnEfectivo)} cobrados en efectivo ${desde}.`}
         </p>
       </div>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+      <div id="caja-abrir-controles" className="caja-abrir-controles">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <label htmlFor="caja-abrir-fondo" className="caja-campo-label" style={{ margin: 0 }}>Fondo inicial</label>
           <input
@@ -607,36 +635,54 @@ function PasoChip({ n, titulo, detalle, on, hecho, onClick, ultimo }: {
 }
 
 /* ── Paso 1 · contar ──────────────────────────────────────────── */
-function PasoEfectivo({ counts, setCount, opening, setOpening, fondoFijo }: {
+function PasoEfectivo({ counts, setCount, opening, setOpening, fondoFijo, confirmarCero, limpiarConteo }: {
   counts: Record<string, number>;
   setCount: (field: string, val: string) => void;
   opening: string;
   setOpening: (v: string) => void;
   /** El turno se abrió con fondo: se enseña, no se edita. */
   fondoFijo: { quien: string | null; cuando: string } | null;
+  confirmarCero?: () => void;
+  limpiarConteo?: () => void;
 }) {
+  const [grupo, setGrupo] = useState<'Billetes' | 'Monedas'>('Billetes');
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
         <span className="t-display" style={{ flex: 1, minWidth: 160, fontSize: 18, lineHeight: 1.15 }}>
-          Cuenta el efectivo
+          Billetes y monedas
         </span>
-        <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Escribe cuántos hay de cada uno</span>
+        <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Ajusta con − y + o escribe la cantidad.</span>
       </div>
 
+      <div className="caja-grupo-selector" role="group" aria-label="Denominaciones">
+        {(['Billetes', 'Monedas'] as const).map((tipo) => (
+          <button key={tipo} type="button" aria-pressed={grupo === tipo} onClick={() => setGrupo(tipo)}>{tipo}</button>
+        ))}
+      </div>
       <div className="caja-cards">
-        <Tarjeta titulo="Billetes">
-          {BILLETES.map((d) => (
-            <Denom key={d.field} field={d.field} label={d.label} centavos={d.centavos} qty={counts[d.field] || 0} onChange={setCount} />
-          ))}
-        </Tarjeta>
-
-        <Tarjeta titulo="Monedas">
-          {MONEDAS.map((d) => (
-            <Denom key={d.field} field={d.field} label={d.label} centavos={d.centavos} qty={counts[d.field] || 0} onChange={setCount} />
-          ))}
-
-          {fondoFijo ? (
+        {(['Billetes', 'Monedas'] as const).map((tipo) => {
+          const denominaciones = tipo === 'Billetes' ? BILLETES : MONEDAS;
+          const subtotal = denominaciones.reduce((sum, d) => sum + d.centavos * (counts[d.field] ?? 0), 0);
+          return (
+            <section key={tipo} className="caja-grupo" aria-label={tipo} data-grupo-activo={grupo === tipo || undefined}>
+              <header><h3>{tipo}</h3><span className="t-mono">{money(subtotal / 100)}</span></header>
+              {denominaciones.map((d) => (
+                <Denom key={d.field} field={d.field} label={d.label} centavos={d.centavos}
+                  esBillete={d.kind === 'B'} qty={counts[d.field] ?? 0} onChange={setCount} />
+              ))}
+            </section>
+          );
+        })}
+      </div>
+      {confirmarCero && (
+        <button type="button" className="caja-boton-suave caja-confirmar-cero" onClick={confirmarCero}>Confirmar conteo en cero</button>
+      )}
+      {limpiarConteo && (
+        <button type="button" className="caja-boton-suave caja-confirmar-cero" onClick={limpiarConteo}>Limpiar conteo</button>
+      )}
+      <div className="caja-tarjeta">
+        {fondoFijo ? (
             <div style={{ marginTop: 6, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, paddingTop: 10, borderTop: '1px solid var(--u-hair)' }}>
               <span style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.4 }}>
                 Fondo al abrir
@@ -671,19 +717,17 @@ function PasoEfectivo({ counts, setCount, opening, setOpening, fondoFijo }: {
               </p>
             </div>
           )}
-        </Tarjeta>
       </div>
     </>
   );
 }
 
-function Denom({ field, label, centavos, qty, onChange }: {
-  field: string; label: string; centavos: number; qty: number;
+function Denom({ field, label, centavos, esBillete, qty, onChange }: {
+  field: string; label: string; centavos: number; esBillete: boolean; qty: number;
   onChange: (field: string, val: string) => void;
 }) {
   const sub = (qty * centavos) / 100;
   const id = `denom-${field}`;
-  const esBillete = centavos >= 500;
   /* El "Q200" era un <span> suelto: once casillas idénticas sin nombre de
      ningún tipo. Quien cuenta la caja de noche es justo el perfil menos
      técnico del local, y para cualquier lectura asistida eran once campos
@@ -693,14 +737,21 @@ function Denom({ field, label, centavos, qty, onChange }: {
     <div className="caja-denom">
       <label htmlFor={id} className="caja-denom-label">
         {label}
-        <span className="sr-only"> — {descripcion}</span>
+        <span id={`${id}-sub`} className="caja-denom-sub" data-filled={qty > 0 ? '1' : '0'}>
+          {qty > 0 ? money(sub) : '—'}
+        </span>
       </label>
+      <div className="caja-cantidad">
+      <button type="button" className="press" disabled={qty === 0}
+        aria-label={`Quitar ${esBillete ? 'un billete' : 'una moneda'} de ${label}`}
+        onClick={() => onChange(field, String(qty - 1))}>−</button>
       <input
         id={id}
         name={field}
         type="number"
         inputMode="numeric"
         min="0"
+        max="9999"
         step="1"
         value={qty || ''}
         placeholder="0"
@@ -709,9 +760,10 @@ function Denom({ field, label, centavos, qty, onChange }: {
         data-filled={qty > 0 ? '1' : '0'}
         onChange={(e) => onChange(field, e.target.value)}
       />
-      <span id={`${id}-sub`} className="caja-denom-sub" data-filled={qty > 0 ? '1' : '0'}>
-        {money(sub)}
-      </span>
+      <button type="button" className="press" disabled={qty >= 9999}
+        aria-label={`Agregar ${esBillete ? 'un billete' : 'una moneda'} de ${label}`}
+        onClick={() => onChange(field, String(qty + 1))}>+</button>
+      </div>
     </div>
   );
 }
@@ -976,11 +1028,13 @@ function TarjetaCuadre({ ventasEfectivo, devoluciones, desde, gastos, opening, c
       {devoluciones > 0 && <Linea label="Devuelto a clientes" value={`−${money(devoluciones)}`} />}
       {gastos > 0 && <Linea label="Gastos pagados de caja" value={`−${money(gastos)}`} />}
       <Linea label="Fondo inicial" value={money(opening)} />
+      <Linea label="Efectivo esperado" value={money(r2(opening + ventasEfectivo - gastos))} />
+      <a href="#caja-movimientos" className="caja-link">Ver cobros, devoluciones y correcciones</a>
       <div style={{ height: 1, background: 'var(--u-hair)' }} />
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
         <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)' }}>Total contado</span>
         <span className="t-mono" style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--u-text)' }}>
-          {money(contado)}
+          {hayConteo ? money(contado) : '—'}
         </span>
       </div>
 
