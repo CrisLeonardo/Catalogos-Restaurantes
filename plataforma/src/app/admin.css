@@ -1825,7 +1825,7 @@
   .caja-foot { position: static; margin: 0; padding: 0; border-top: none; border-radius: 0; background: none; }}
 .caja-pie-conteo { flex-flow: row wrap; justify-content: space-between; align-items: center; }
 .caja-pie-conteo > p { flex-basis: 100%; }
-.caja-pie-conteo > .caja-cta { width: auto; }
+.caja-pie-conteo > .caja-cta { width: auto; padding-inline: 12px; }
 .caja-pie-total { display: grid; gap: 1px; }
 .caja-recibo dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px 12px; margin: 0; }
 .caja-recibo dd { margin: 0; text-align: right; font-family: var(--ui-font-mono); }

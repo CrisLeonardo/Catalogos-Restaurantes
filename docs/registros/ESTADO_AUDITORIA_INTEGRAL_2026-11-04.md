@@ -558,6 +558,7 @@ La siguiente ficha es **1.2 · Caja: borrador, cuadre y recibo**. La ola 1 sigue
 - **Cuadre y recibo:** Caja separa contado, esperado y diferencia, enlaza a los movimientos del turno y conserva la solicitud de cierre en el aparato. Al volver a abrir Caja puede recuperar el recibo. Los cortes nuevos se consultan también desde el historial. Queda pendiente la entrega formal entre responsables.
 - **Base:** aplicar la migración 171 después de la 170 y antes de desplegar el código.
 - **Verificación local:** pasaron 79 casos de Postgres. Playwright verificó el cierre de los turnos consecutivos, el límite de las 05:00 y el borrador móvil de Q5.01 tras recargar. La cuenta local de auditoría de Rincón 502 permite abrir Caja, Tomar pedidos, Pedidos y Finanzas.
+- **Revisión del pie de Caja (2026-11-06):** el botón compartido por los tres pasos quedó sin espacio interior a los lados cuando pasó a ancho automático. Se recuperan los 12 px de la maqueta aprobada. En Caja autenticada, Chromium comprobó ambos lados, la altura de 54 px y la ausencia de desborde a 390, 768 y 1280 px, en claro y oscuro. El arreglo visual se revisa sobre #94. El traspaso entre responsables sigue pendiente de aprobación del recorrido.
 
 ---
 
