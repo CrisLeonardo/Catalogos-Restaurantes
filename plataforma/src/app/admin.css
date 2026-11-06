@@ -1830,6 +1830,21 @@
 .caja-recibo dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px 12px; margin: 0; }
 .caja-recibo dd { margin: 0; text-align: right; font-family: var(--ui-font-mono); }
 
+.caja-traspaso h2 { margin: 0; font-size: 18px; font-weight: 600; }
+.caja-traspaso-detalle, .caja-traspaso label, .caja-traspaso-receptor { display: grid; gap: 10px; min-width: 0; }
+.caja-traspaso-detalle > button { justify-self: end; }
+.caja-traspaso-personas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 10px; }
+.caja-traspaso-personas > p { display: grid; align-content: start; gap: 8px; }
+.caja-traspaso p { margin: 0; overflow-wrap: anywhere; }
+.caja-traspaso dl { display: flex; flex-wrap: wrap; gap: 8px 12px; margin: 0; }
+.caja-traspaso dl > div { flex: 1 1 85px; display: grid; gap: 4px; min-width: 0; }
+.caja-traspaso dt { font-size: 12px; color: var(--u-text-2); }
+.caja-traspaso dd { margin: 0; text-align: start; overflow-wrap: anywhere; }
+.caja-traspaso-importes > div { padding: 8px; border: 1px solid var(--u-hair-2); border-radius: var(--radius-md); }
+.caja-traspaso-importes dd { font: 600 14px/1.25 var(--ui-font-mono); }
+.caja-traspaso :is(select, textarea) { min-width: 0; }
+.caja-traspaso-error { color: var(--c-danger); }
+
 /* ── Turnos de caja y cobros corregibles (migración 145) ─────────
    Superficies sólidas como el resto del panel: el dinero no se lee
    sobre vidrio. */

@@ -217,7 +217,15 @@ huellas(n, que, ok, cuando) as (values
        where c.oid=to_regclass('public.caja_borradores') and c.relrowsecurity
          and p.polname='super_admin_segundo_factor' and not p.polpermissive)
      and to_regprocedure('public.leogin_guardar_borrador_caja(uuid,timestamptz,uuid,uuid,uuid,uuid,text,jsonb)') is not null,
-     'ANTES de desplegar; después de la 170')
+     'ANTES de desplegar; después de la 170'),
+  ('172', 'traspaso formal entre responsables de Caja',
+     exists (select 1 from pg_class c join pg_policy p on p.polrelid=c.oid
+       where c.oid=to_regclass('public.caja_traspasos') and c.relrowsecurity
+         and p.polname='super_admin_segundo_factor' and not p.polpermissive)
+     and to_regprocedure('public.leogin_receptores_caja(uuid)') is not null
+     and to_regprocedure('public.leogin_solicitar_traspaso_caja(uuid,uuid,uuid,uuid,text)') is not null
+     and to_regprocedure('public.leogin_confirmar_traspaso_caja(uuid,uuid,uuid)') is not null,
+     'ANTES de desplegar; después de la 171')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

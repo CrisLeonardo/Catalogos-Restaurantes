@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/icons';
 import { useFirmaEncargado } from '@/components/admin/caja/firma-encargado';
+import { TraspasoDeRecibo } from '@/components/admin/caja/traspaso-caja';
 import { fmtMoney } from '@/lib/money';
 
 const money = (n: number) => fmtMoney(n);
@@ -329,6 +330,7 @@ export default function CashHistoryPanel({
               <DenomBreakdown breakdown={recibo.counts} />
               {recibo.expenses.map((gasto) => <div key={gasto.id}>{gasto.concept} · {money(gasto.amount)}</div>)}
               {recibo.notes && <p>{recibo.notes}</p>}
+              <TraspasoDeRecibo key={recibo.id} restaurantId={restaurantId} timezone={timezone} recibo={recibo} />
             </div>
           )}
         </DialogContent>

@@ -20,7 +20,9 @@ import { getCajaState } from '@/lib/actions/finanzas';
 import { can } from '@/lib/permissions';
 import CashClose from '@/components/admin/caja/cash-close';
 import CashHistoryPanel from '@/components/admin/cash-history-panel';
+import { RecepcionesPendientes } from '@/components/admin/caja/traspaso-caja';
 import { getCashHistory } from '@/lib/actions/finanzas';
+import { getRecepcionesCaja } from '@/lib/actions/caja-traspasos';
 import { EmptyState } from '@/components/ui/empty-state';
 import { panelLink } from '@/lib/panel-links-server';
 
@@ -80,13 +82,15 @@ export default async function AdminCajaPage() {
     );
   }
 
-  const [state, history] = await Promise.all([
+  const [state, history, recepciones] = await Promise.all([
     getCajaState(restaurantId),
     getCashHistory(restaurantId, 10),
+    getRecepcionesCaja(restaurantId),
   ]);
 
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <RecepcionesPendientes restaurantId={restaurantId} timezone={timezone} {...recepciones} />
       <CashClose
         key={`${restaurantId}:${state.periodStart}`}
         restaurantId={restaurantId}
