@@ -239,7 +239,7 @@ test('1.5 · prepara por puesto y conserva el orden de 30 comandas', async ({ br
     await login(context, users[0].email);
     const page = await context.newPage();
     await page.goto(`${origin}/panel/${slug}/cocina`, { waitUntil: 'domcontentloaded' });
-    const tarjetas = page.getByRole('article', { name: /^Comanda / });
+    const tarjetas = page.getByRole('article', { name: /^Comanda KDS-/ });
     await expect(tarjetas).toHaveCount(30);
     const orden = async () => tarjetas.evaluateAll((nodos) => nodos.map((n) => n.getAttribute('aria-label')));
     const original = await orden();
