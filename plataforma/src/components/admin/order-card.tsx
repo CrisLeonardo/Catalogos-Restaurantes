@@ -456,8 +456,7 @@ export default function OrderCard({
         border: `1px solid ${isAlarm ? 'var(--c-danger-line)' : 'var(--adm-border, var(--u-hair))'}`,
         padding: 14,
         display: 'flex', flexDirection: 'column', gap: 10,
-        opacity: isTerminal ? 0.72 : 1,
-        transition: 'opacity 200ms, border-color 200ms',
+        transition: 'border-color 200ms',
       }}
     >
       {/* Encabezado */}

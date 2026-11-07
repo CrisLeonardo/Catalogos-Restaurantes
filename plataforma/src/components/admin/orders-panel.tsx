@@ -572,7 +572,7 @@ function OrdersPanelInner({
                 </h2>
                 <span className="adm-label">Se cierran al liberar la mesa</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 12, opacity: 0.8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 290px), 1fr))', gap: 12 }}>
                 {servedOpen.map((order) => <OrderCard key={order.id} order={order} {...cardProps} />)}
               </div>
             </section>
@@ -596,7 +596,7 @@ function OrdersPanelInner({
                 <span className="t-mono" style={{ color: 'var(--u-text-3)' }}>{visibleClosed.length}</span>
               </button>
               {showClosed && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 12, opacity: 0.7 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 290px), 1fr))', gap: 12 }}>
                   {visibleClosed.map((order) => <OrderCard key={order.id} order={order} {...cardProps} />)}
                 </div>
               )}
