@@ -1,0 +1,53 @@
+.operacion {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--u-hair-2);
+  border-radius: var(--radius-lg);
+  background: var(--adm-card);
+  color: var(--u-text);
+}
+.conexion, .resumen, .contacto, .incidencias summary, .incidencias li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+.conexion h1 { margin: 0 auto 0 0; font-size: 22px; font-weight: 750; letter-spacing: -.02em; }
+.conexion p { margin: 0; font-size: 14px; font-weight: 650; }
+.conexion [data-conexion='viva'] { color: var(--c-ok); }
+.conexion [data-conexion='aviso'] { color: var(--c-warn); }
+.ultima, .contacto, .cronologia time { margin: 0; color: var(--u-text-3); font-size: 13px; }
+.incidencias { border-top: 1px solid var(--u-hair); }
+.incidencias summary { min-height: 44px; cursor: pointer; color: var(--c-danger); font-size: 14px; }
+.incidencias summary::before { content: '+'; font-size: 16px; }
+.incidencias[open] summary::before { content: '−'; }
+.incidencias summary span { color: var(--u-text-2); }
+.incidencias ul, .cronologia { padding: 0; margin: 0; list-style: none; }
+.incidencias li { border-top: 1px solid var(--u-hair); font-size: 14px; }
+.accion {
+  min-height: 44px;
+  padding: 4px 0;
+  color: var(--brand-accent-ink);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+  text-align: start;
+  cursor: pointer;
+}
+.accion:focus-visible, .incidencias summary:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 3px; }
+.numero { margin: 0; font-size: 18px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.estadoCobro { margin: 0; color: var(--u-text-2); font-size: 13px; font-weight: 650; }
+.contacto { line-height: 1.4; overflow-wrap: anywhere; }
+.contacto a { display: inline-flex; align-items: center; }
+.historial { max-height: calc(100dvh - 32px); overflow: auto; overscroll-behavior: contain; }
+.resumen { margin-bottom: 12px; padding: 10px 0; border-block: 1px solid var(--u-hair); font-size: 14px; }
+.titulo { font-size: 16px; font-weight: 700; margin: 16px 0 8px; }
+.cronologia li { display: grid; gap: 3px; padding: 10px 0; border-top: 1px solid var(--u-hair); font-size: 14px; overflow-wrap: anywhere; }
+.cronologia p { margin: 3px 0 0; color: var(--u-text-2); }
+.cronologia [data-alerta] strong { color: var(--c-danger); }
+@media (min-width: 640px) {
+  .cronologia li { grid-template-columns: minmax(100px, 1fr) minmax(0, 2.5fr); gap: 12px; }
+}

@@ -41,6 +41,7 @@ export function orderClosedAt(o: Pick<Order, 'delivered_at' | 'cancelled_at' | '
 }
 
 export interface PanelOrders {
+  incompleto: boolean;
   /** Todo lo que sigue en curso, del más viejo al más nuevo (FIFO). */
   active: OrderWithItems[];
   /** Cerrados HOY según la hora del restaurante, del cierre más reciente atrás. */
@@ -97,7 +98,7 @@ export async function getPanelOrders(
     .filter((o) => diaDeNegocio(new Date(orderClosedAt(o)), timezone, corte) === todayKey)
     .sort((a, b) => orderClosedAt(b).localeCompare(orderClosedAt(a)));
 
-  return { active: mapOrderRows(activeRes.data), closedToday };
+  return { active: mapOrderRows(activeRes.data), closedToday, incompleto: !!(activeRes.error || closedRes.error) };
 }
 
 /** Una fila de "En curso" en la pantalla Hoy: lo justo para pintarla. */

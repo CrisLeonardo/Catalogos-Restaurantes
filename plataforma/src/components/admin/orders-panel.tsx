@@ -19,6 +19,10 @@ import type { OrderWithItems, OrderStats } from '@/lib/db/orders';
 import { TimesWidget, type TimesData } from '@/components/admin/times-widget';
 import ExportMenu from '@/components/admin/export-menu';
 import type { Order } from '@/types';
+import PedidoHistorial from '@/components/admin/pedido-historial';
+import { incidenciasDePedido, type ResumenPedidoVivo } from '@/lib/pedidos-en-vivo';
+import { shortOrderNumber } from '@/lib/order-number';
+import styles from './pedidos-en-vivo.module.css';
 
 /** Tipo de servicio tal como lo guarda la tabla `orders` (no confundir con el
  *  `OrderType` en minúsculas de la configuración del tema). */
@@ -42,12 +46,15 @@ interface Props {
   agentKitchen?:      boolean;
   agentReceipt?:      boolean;
   /** Estaciones que no lograron imprimir, por id de pedido (M-07). */
-  fallosDeImpresion?: Record<string, { stationId: string; stationName: string }[]>;
+  fallosDeImpresion: Record<string, { stationId: string; stationName: string }[]>;
   autoConfirmEnabled?: boolean;
   autoConfirmMinutes?: number;
   /** Repartidores activos, para asignar entregas (Fase 2). Lista vacía = el
    *  restaurante no usa reparto propio y no se muestra el selector. */
   drivers?: { id: string; nombre: string }[];
+  resumenPorPedido: Record<string, ResumenPedidoVivo>;
+  leidoEn: string;
+  lecturaIncompleta: boolean;
 }
 
 /* El sonido y el aviso visual de "pedido nuevo" ya NO viven aquí: los maneja
@@ -88,15 +95,26 @@ const TYPE_FILTERS: { id: 'ALL' | ServiceType; label: string; icon: string }[] =
 ];
 
 function OrdersPanelInner({
-  activeOrders, closedToday, restaurantId, restaurantName, stats, times, currency, timezone,
+  activeOrders: activosNuevos, closedToday: cerradosNuevos, restaurantId, restaurantName, stats, times, currency, timezone,
   kitchenYellowMin = 10, kitchenRedMin = 20,
   agentKitchen = false, agentReceipt = false,
-  fallosDeImpresion = {},
+  fallosDeImpresion: fallosNuevos,
   autoConfirmEnabled = false, autoConfirmMinutes = 1,
   drivers = [],
+  resumenPorPedido: resumenNuevo, leidoEn: nuevaHora, lecturaIncompleta,
 }: Props) {
   const router = useRouter();
   const toastManager = useToastManager();
+  const lectura = useMemo(() => ({ activeOrders: activosNuevos, closedToday: cerradosNuevos,
+    fallosDeImpresion: fallosNuevos, resumenPorPedido: resumenNuevo, leidoEn: nuevaHora,
+  }), [activosNuevos, cerradosNuevos, fallosNuevos, resumenNuevo, nuevaHora]);
+  const [ultimaLectura, setUltimaLectura] = useState(lectura);
+  useEffect(() => {
+    if (lecturaIncompleta) return;
+    const guardar = setTimeout(() => setUltimaLectura(lectura), 0);
+    return () => clearTimeout(guardar);
+  }, [lectura, lecturaIncompleta]);
+  const { activeOrders, closedToday, fallosDeImpresion, resumenPorPedido, leidoEn } = lecturaIncompleta ? ultimaLectura : lectura;
 
   const ticketFormat: TicketFormat = useMemo(
     () => ({ timezone, locale: currency.locale || 'es-GT' }),
@@ -114,6 +132,10 @@ function OrdersPanelInner({
 
   const [typeFilter, setTypeFilter] = useState<'ALL' | ServiceType>('ALL');
   const [showClosed, setShowClosed] = useState(false);
+  const [pedidoAbierto, setPedidoAbierto] = useState<string | null>(null);
+  const [online, setOnline] = useState(true);
+  const [enVivo, setEnVivo] = useState(false);
+  const [conflicto, setConflicto] = useState('');
 
   // Coalescer de router.refresh() (mismo patrón que admin/notifications.tsx):
   // en una ráfaga (15 pedidos sincronizando de golpe al volver la señal, o
@@ -128,13 +150,26 @@ function OrdersPanelInner({
     const wait = Math.max(0, 2500 - (Date.now() - lastRefresh.current));
     refreshTimer.current = setTimeout(() => {
       refreshTimer.current = null;
+      if (!navigator.onLine) return;
       lastRefresh.current = Date.now();
       router.refresh();
     }, wait);
   }, [router]);
-  useEffect(() => () => {
-    if (refreshTimer.current) clearTimeout(refreshTimer.current);
-  }, []);
+  useEffect(() => {
+    function red() { setOnline(navigator.onLine); if (navigator.onLine) refreshSoon(); }
+    const inicial = setTimeout(red, 0);
+    const respaldo = setInterval(refreshSoon, 25_000);
+    window.addEventListener('online', red);
+    window.addEventListener('offline', red);
+    return () => {
+      clearTimeout(inicial);
+      clearInterval(respaldo);
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
+      refreshTimer.current = null;
+      window.removeEventListener('online', red);
+      window.removeEventListener('offline', red);
+    };
+  }, [refreshSoon]);
 
   // ── Auto-confirm timers ────────────────────────────────────────
   const autoTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -148,29 +183,29 @@ function OrdersPanelInner({
     if (t) { clearTimeout(t); autoTimers.current.delete(orderId); }
   }, []);
 
-  const scheduleAutoConfirm = useCallback((orderId: string, createdAt: string) => {
-    if (!autoConfirmEnabledRef.current) return;
-    cancelAutoConfirm(orderId);
-    const elapsed = Date.now() - new Date(createdAt).getTime();
+  const scheduleAutoConfirm = useCallback((order: Order) => {
+    if (!autoConfirmEnabledRef.current || autoTimers.current.has(order.id)) return;
+    const elapsed = Date.now() - new Date(order.created_at).getTime();
     const delay   = Math.max(0, autoConfirmMinutesRef.current * 60_000 - elapsed);
-    autoTimers.current.set(orderId, setTimeout(async () => {
-      autoTimers.current.delete(orderId);
-      await updateOrderStatus(orderId, 'PREP');
-      refreshSoon();
+    const intento = { id: crypto.randomUUID(), estado: order.status, version: order.updated_at };
+    autoTimers.current.set(order.id, setTimeout(async () => {
+      try {
+        if (navigator.onLine && autoConfirmEnabledRef.current) {
+          const resultado = await updateOrderStatus(order.id, 'PREP', intento);
+          if (!resultado.error) refreshSoon();
+        }
+      } catch { /* La próxima lectura recupera el estado vigente. */ }
+      finally { autoTimers.current.delete(order.id); }
     }, delay));
-  }, [cancelAutoConfirm, refreshSoon]);
+  }, [refreshSoon]);
 
   // Programar para pedidos NEW que ya llegaron al montar el panel.
   useEffect(() => {
-    if (autoConfirmEnabled) {
-      activeOrders.filter((o) => o.status === 'NEW').forEach((o) => {
-        scheduleAutoConfirm(o.id, o.created_at);
-      });
-    }
+    if (autoConfirmEnabled && online && !lecturaIncompleta) activeOrders.filter((o) => o.status === 'NEW').forEach(scheduleAutoConfirm);
+  }, [activeOrders, autoConfirmEnabled, online, lecturaIncompleta, scheduleAutoConfirm]);
+  useEffect(() => {
     const timers = autoTimers.current;
     return () => { timers.forEach(clearTimeout); timers.clear(); };
-  // Solo al montar: activeOrders y autoConfirm* son props de servidor, estables.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   /* ── Comanda por navegador (Web USB), para locales sin Agente ───────────
      Antes la disparaba el botón "Confirmar" de la tarjeta. Eso dejaba fuera
@@ -241,7 +276,7 @@ function OrdersPanelInner({
             if (newOrder.restaurant_id !== restaurantId) return;
             // Sin chime ni toast: NewOrdersAlert ya muestra una tarjeta
             // persistente y suena una sola vez por pedido.
-            if (newOrder.status === 'NEW') scheduleAutoConfirm(newOrder.id, newOrder.created_at);
+            if (newOrder.status === 'NEW') scheduleAutoConfirm(newOrder);
             refreshSoon();
           },
         )
@@ -258,11 +293,12 @@ function OrdersPanelInner({
         )
         .subscribe((status) => {
           if (cancelled || closing) return;
-          if (status === 'SUBSCRIBED') { retryDelay = 2000; return; }
+          if (status === 'SUBSCRIBED') { retryDelay = 2000; setEnVivo(true); refreshSoon(); return; }
           // Sin reintento el canal puede quedar muerto en silencio (red
           // inestable, laptop en suspensión) hasta recargar la página
           // (ver admin/notifications.tsx). Backoff exponencial, máx 30s.
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            setEnVivo(false);
             closing = true;
             supabase.removeChannel(ch);
             retryTimer = setTimeout(() => { if (!cancelled) connect(); }, retryDelay);
@@ -352,7 +388,22 @@ function OrdersPanelInner({
     agentKitchen, agentReceipt,
     fallosDeImpresion,
     drivers, restaurantId,
+    resumenPorPedido,
+    onHistorial: setPedidoAbierto,
+    onCambios: refreshSoon,
+    onError: setConflicto,
+    online: online && !lecturaIncompleta,
   };
+
+  const todos = [...activeOrders, ...closedToday];
+  const seleccionado = todos.find((o) => o.id === pedidoAbierto);
+  const incidencias = todos.flatMap((o) => {
+    const motivos = incidenciasDePedido(o, now, kitchenYellowMin, kitchenRedMin,
+      !!fallosDeImpresion[o.id]?.length, !!resumenPorPedido[o.id]?.avisoFallido);
+    return motivos.length ? [{ o, motivos }] : [];
+  });
+  const ocultas = incidencias.filter(({ o }) => (typeFilter !== 'ALL' && o.order_type !== typeFilter)
+    || (!showClosed && (o.status === 'CANCEL' || o.status === 'DELIVERED'))).length;
 
   const enCocina = activeOrders.filter((o) => o.status === 'PREP').length;
   const listos = activeOrders.filter((o) => o.status === 'READY' || o.status === 'TRANSIT').length;
@@ -362,6 +413,37 @@ function OrdersPanelInner({
 
   return (
     <>
+      <section className={styles.operacion} aria-label="Estado de Pedidos en vivo">
+        <div className={styles.conexion}>
+          <h1>Pedidos en vivo</h1>
+          <p role="status" data-conexion={online && enVivo && !lecturaIncompleta ? 'viva' : 'aviso'}>
+            {!online ? 'Sin conexión · mostrando la última lectura' : lecturaIncompleta ? 'Lectura incompleta · esperando actualización'
+              : enVivo ? 'En línea' : 'Actualización de respaldo'}
+          </p>
+          <span className={styles.ultima}>Datos de las {new Intl.DateTimeFormat(currency.locale || 'es-GT', {
+            timeZone: timezone, hour: '2-digit', minute: '2-digit',
+          }).format(new Date(leidoEn))}</span>
+        </div>
+        {incidencias.length > 0 ? <details className={styles.incidencias}>
+          <summary><strong>{incidencias.length} {incidencias.length === 1 ? 'pedido requiere atención' : 'pedidos requieren atención'}</strong>
+            {ocultas > 0 && <span>{ocultas} fuera de la vista actual</span>}
+          </summary>
+          <ul>{incidencias.map(({ o, motivos }) => <li key={o.id}>
+            <button type="button" className={styles.accion} onClick={() => {
+              if (typeFilter !== 'ALL' && typeFilter !== o.order_type) setTypeFilter(o.order_type);
+              if (o.status === 'DELIVERED' || o.status === 'CANCEL') setShowClosed(true);
+              setPedidoAbierto(o.id);
+            }}>{shortOrderNumber(o.order_number)} · {o.customer_name}</button>
+            <span>{motivos.join(' · ')}</span>
+          </li>)}</ul>
+        </details> : <p className={styles.ultima}>Sin incidencias que requieran atención.</p>}
+      </section>
+      {conflicto && <div className="note note-warn mb-4" role="status">
+        <span>{conflicto}</span><button type="button" className={styles.accion} onClick={() => setConflicto('')}>Cerrar aviso</button>
+      </div>}
+      {seleccionado && <PedidoHistorial key={seleccionado.id} pedido={seleccionado} restaurante={restaurantId}
+        resumen={resumenPorPedido[seleccionado.id]} moneda={currency} zona={timezone} leidoEn={leidoEn}
+        cerrar={() => setPedidoAbierto(null)} />}
       {/* Cifras de OPERACIÓN (D-3, auditoría 2026-10-02): cuántos van, dónde
           están y cuánto se tarda. Lo que se vendió, el ticket y las gráficas
           viven en Hoy y en Negocio › Resumen; aquí repetían esas pantallas.
@@ -411,6 +493,7 @@ function OrdersPanelInner({
                   key={f.id}
                   type="button"
                   onClick={() => setTypeFilter(f.id)}
+                  aria-pressed={on}
                   className="press"
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, whiteSpace: 'nowrap',
@@ -489,7 +572,7 @@ function OrdersPanelInner({
                 </h2>
                 <span className="adm-label">Se cierran al liberar la mesa</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 12, opacity: 0.8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 290px), 1fr))', gap: 12 }}>
                 {servedOpen.map((order) => <OrderCard key={order.id} order={order} {...cardProps} />)}
               </div>
             </section>
@@ -513,7 +596,7 @@ function OrdersPanelInner({
                 <span className="t-mono" style={{ color: 'var(--u-text-3)' }}>{visibleClosed.length}</span>
               </button>
               {showClosed && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 12, opacity: 0.7 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 290px), 1fr))', gap: 12 }}>
                   {visibleClosed.map((order) => <OrderCard key={order.id} order={order} {...cardProps} />)}
                 </div>
               )}

@@ -241,7 +241,12 @@ huellas(n, que, ok, cuando) as (values
      and to_regprocedure('public.leogin_rondas_cocina(uuid,uuid[])') is not null
      and exists (select 1 from pg_trigger where tgrelid='public.orders'::regclass
        and tgname='leogin_proteger_pase_cocina'),
-     'ANTES de desplegar; después de la 174')
+     'ANTES de desplegar; después de la 174'),
+  ('176', 'transiciones recuperables y resumen de cobro y avisos de Pedidos',
+     to_regprocedure('public.leogin_operar_pedido(uuid,uuid,uuid,uuid,text,timestamptz,text,uuid,integer,text,uuid)') is not null
+     and to_regprocedure('public.leogin_resumen_pedidos_vivos(uuid,uuid[])') is not null
+     and to_regclass('public.activity_log_intento_pedido_idx') is not null,
+     'ANTES de desplegar; después de la 175')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

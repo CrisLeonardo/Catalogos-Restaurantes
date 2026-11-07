@@ -216,6 +216,57 @@ test.afterAll(async () => {
   if (errors.length) throw new AggregateError(errors, 'Limpieza E2E de cobro');
 });
 
+test('1.6 · conserva el historial abierto y revela una incidencia fuera del filtro', async ({ browser }) => {
+  test.setTimeout(120_000);
+  const pedido = check(await db.from('orders').insert({ restaurant_id: restaurantId, order_number: 'AUD-R02',
+    customer_name: 'Domicilio de prueba', customer_phone: '00000000', order_type: 'DELIVERY', status: 'READY',
+    subtotal: 25, total: 25, ready_at: new Date(Date.now() - 45 * 60_000).toISOString(),
+  }).select('id').single())!;
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  try {
+    check(await db.from('profiles').update({ permissions: ['mesero', 'pedidos'] }).eq('id', users[0].id));
+    await login(context, users[0].email);
+    const page = await context.newPage();
+    await expect(async () => {
+      await page.goto(`${origin}/panel/${slug}/pedidos`, { waitUntil: 'domcontentloaded' });
+      await expect(page.getByRole('heading', { name: 'Pedidos en vivo', exact: true })).toBeVisible();
+    }).toPass({ timeout: 60_000 });
+    const tarjeta = page.getByRole('article', { name: 'Pedido AUD-R02' });
+    const filtro = page.getByRole('button', { name: /^En local/ });
+    await expect(async () => {
+      await filtro.click();
+      await expect(filtro).toHaveAttribute('aria-pressed', 'true', { timeout: 1500 });
+    }).toPass({ timeout: 15_000 });
+    await expect(tarjeta).toHaveCount(0);
+    await expect(page.getByText('1 fuera de la vista actual')).toBeVisible();
+    await page.getByText('1 pedido requiere atención').click();
+    await page.getByRole('button', { name: 'AUD-R02 · Domicilio de prueba' }).click();
+    const historial = page.getByRole('dialog', { name: 'Pedido AUD-R02' });
+    await expect(historial.getByText('Sin cobro registrado')).toBeVisible();
+    await expect(historial.getByText('Preparación terminada')).toBeVisible();
+    check(await db.from('orders').update({ status: 'TRANSIT', picked_up_at: new Date().toISOString() }).eq('id', pedido.id));
+    await expect(historial.getByText('Domicilio de prueba · En camino')).toBeVisible({ timeout: 35_000 });
+    await expect(historial.getByText('Salió a entregar')).toBeVisible();
+    for (const width of [390, 768, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(historial).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    }
+    await page.keyboard.press('Escape');
+    await expect(historial).toBeHidden();
+    await expect(tarjeta).toBeVisible();
+    await context.setOffline(true);
+    await expect(page.getByText('Sin conexión · mostrando la última lectura')).toBeVisible();
+    await expect(tarjeta.getByRole('button', { name: 'Entregado', exact: true })).toBeDisabled();
+    await context.setOffline(false);
+    await expect(tarjeta.getByRole('button', { name: 'Entregado', exact: true })).toBeEnabled();
+  } finally {
+    await context.close();
+    check(await db.from('profiles').update({ permissions: ['mesero'] }).eq('id', users[0].id));
+    check(await db.from('orders').delete().eq('id', pedido.id));
+  }
+});
+
 test('1.5 · prepara por puesto y conserva el orden de 30 comandas', async ({ browser }) => {
   test.setTimeout(120_000);
   const [cocina, barra] = check(await db.from('print_stations').insert([
