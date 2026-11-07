@@ -12,6 +12,7 @@ import OrdersPanel from '@/components/admin/orders-panel';
 import { getDrivers } from '@/lib/db/drivers';
 import { mesaDeFila, direccionDeMesa } from '@/lib/mesa';
 import { panelLink } from '@/lib/panel-links-server';
+import type { ResumenPedidoVivo } from '@/lib/pedidos-en-vivo';
 
 /* Sin título propio la pestaña heredaba el del menú público: «Menú en
    línea» estando en Pedidos, justo la pantalla que se deja abierta todo
@@ -86,10 +87,17 @@ export default async function PedidosPage() {
      de impresión de un pedido ya entregado no tiene remedio útil.
      Devuelve {} donde no hay estaciones, que es como estaba todo hasta la
      fase 3 de M-07. */
-  const fallosDeImpresion = await getFallosDeImpresion(
-    restaurantId,
-    panelOrders.active.map((o) => o.id),
-  );
+  const idsVisibles = [...panelOrders.active, ...panelOrders.closedToday].map((o) => o.id);
+  const [fallosDeImpresion, resumen] = await Promise.all([
+    getFallosDeImpresion(restaurantId, panelOrders.active.map((o) => o.id), true),
+    idsVisibles.length ? db.rpc('leogin_resumen_pedidos_vivos', { p_restaurante: restaurantId, p_pedidos: idsVisibles }) : { data: [] },
+  ]);
+  const resumenPorPedido: Record<string, ResumenPedidoVivo> = {};
+  if (Array.isArray(resumen.data)) {
+    for (const { pedido, cobrado, movimientos, aviso_fallido } of resumen.data) {
+      resumenPorPedido[pedido] = { cobrado: Number(cobrado), movimientos: Number(movimientos), avisoFallido: aviso_fallido };
+    }
+  }
 
   const SLOW_MINUTES = 30;
   const duraciones = panelOrders.closedToday
@@ -141,6 +149,9 @@ export default async function PedidosPage() {
       agentKitchen={agentKitchen}
       agentReceipt={agentReceipt}
       fallosDeImpresion={fallosDeImpresion}
+      resumenPorPedido={resumenPorPedido}
+      leidoEn={new Date().toISOString()}
+      lecturaIncompleta={panelOrders.incompleto}
       autoConfirmEnabled={themeConfig.autoConfirmEnabled}
       autoConfirmMinutes={themeConfig.autoConfirmMinutes}
       drivers={activeDrivers}

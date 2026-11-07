@@ -274,7 +274,7 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
       page.waitForTimeout(15_000).then(() => 'timeout' as const),
     ]);
     if (result !== 'closed') {
-      const dialogText = await page.locator('.glass.anim-slide-up').innerText().catch(() => '(no se encontró el diálogo)');
+      const dialogText = await page.getByRole('dialog', { name: 'Anular pedido' }).innerText().catch(() => '(no se encontró el diálogo)');
       throw new Error(`El diálogo de anulación no cerró a tiempo. Contenido visible: ${dialogText}`);
     }
 

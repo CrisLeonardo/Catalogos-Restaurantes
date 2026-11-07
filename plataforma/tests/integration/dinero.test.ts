@@ -42,6 +42,7 @@ import {
 import { freeTable, moveTableOrders } from '@/lib/actions/orders';
 import { sentarDesdeRecepcion } from '@/lib/actions/table-sessions';
 import { transicionCocina } from '@/lib/actions/cocina';
+import { leerHistorialPedido } from '@/lib/actions/pedidos-en-vivo';
 import { abrirTurno, closeCaja, saveCajaDraft, discardCajaDraft, getCajaReceipt, getCajaState, guardarBorradorCaja } from '@/lib/actions/finanzas';
 import { getRecepcionesCaja, getTraspasoDeCorte } from '@/lib/actions/caja-traspasos';
 import { corregirMetodoDePago, devolverCobro } from '@/lib/actions/caja-correcciones';
@@ -106,6 +107,57 @@ afterAll(async () => {
   }
   await sql.end();
   if (errors.length) throw new AggregateError(errors, 'No se completó la limpieza de usuarios AUD.');
+});
+
+describe('1.6 · Pedidos en vivo', () => {
+  async function pedidoNuevo() {
+    const o = await order([10]);
+    return checked(await db.from('orders').update({ status: 'NEW' }).eq('id', o.id)
+      .select('id,status,updated_at').single())!;
+  }
+
+  async function operar(o: { id: string; status: string; updated_at: string }, destino: string, extras = {}) {
+    return db.rpc('leogin_operar_pedido', { p_restaurante: rid(), p_pedido: o.id, p_actor: currentActor(),
+      p_intento: randomUUID(), p_estado: o.status, p_version: o.updated_at, p_destino: destino, ...extras });
+  }
+
+  it('recupera la respuesta del mismo intento y muestra el estado vigente al otro operador', async () => {
+    const o = await pedidoNuevo();
+    const intento = randomUUID();
+    const resultado = await Promise.all([
+      operar(o, 'PREP', { p_intento: intento }), operar(o, 'PREP', { p_intento: intento }),
+      actor(1, () => operar(o, 'PREP')),
+    ]);
+    const cambios = resultado.map(checked);
+    expect(cambios.filter((c) => c.cambio)).toHaveLength(1);
+    expect(cambios.every((c) => c.estado === 'PREP')).toBe(true);
+    // Si la otra persona obtuvo el bloqueo primero, los dos intentos de la
+    // primera persona son conflictos. La repetición del ganador sí recupera recibo.
+    const registro = checked(await db.from('activity_log').select('actor_id,meta')
+      .eq('restaurant_id', rid()).eq('action', 'pedido_en_vivo').single())!;
+    const ganador = state.users.indexOf(registro.actor_id);
+    expect(checked(await actor(ganador, () => operar(o, 'PREP', { p_intento: registro.meta.intento }))))
+      .toMatchObject({ estado: 'PREP', cambio: false, repetido: true });
+    expect(checked(await operar(o, 'CANCEL', { p_motivo: 'Duplicado' })))
+      .toMatchObject({ estado: 'PREP', cambio: false, conflicto: true });
+  });
+
+  it('reintenta una anulación parcial sin descontar otra unidad y muestra su motivo en el historial', async () => {
+    const o = await pedidoNuevo();
+    const item = checked(await db.from('order_items').update({ quantity: 2, price_snapshot: 5 })
+      .eq('order_id', o.id).select('id').single())!;
+    const datos = { p_intento: randomUUID(), p_item: item.id, p_cantidad: 1, p_motivo: 'Pedido repetido' };
+    expect(checked(await operar(o, 'CANCEL', datos))).toMatchObject({ estado: 'NEW', cambio: true });
+    expect(checked(await operar(o, 'CANCEL', datos))).toMatchObject({ estado: 'NEW', repetido: true });
+    const distinto = await operar(o, 'CANCEL', { ...datos, p_motivo: 'Otro motivo' });
+    expect(distinto.error?.code).toBe('LGD01');
+    expect(checked(await db.from('order_voids').select('quantity').eq('order_id', o.id))).toEqual([{ quantity: 1 }]);
+    expect(checked(await db.from('orders').select('total').eq('id', o.id).single())?.total).toBe(5);
+    const historial = await leerHistorialPedido(rid(), o.id);
+    expect(historial).toMatchObject({ hitos: expect.arrayContaining([
+      expect.objectContaining({ titulo: 'Anulación · 1× AUD Platillo', detalle: 'Pedido repetido · Por AUD Caja 0' }),
+    ]) });
+  });
 });
 
 describe('1.5 · Cocina por estación y pase', () => {

@@ -6,6 +6,7 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+- **Pedidos en vivo** (auditoría 1.6, migración 176). El tablero avisa cuando un filtro oculta una incidencia. Cada pedido tiene un historial de estados, anulaciones, cobros y avisos fallidos. Los avances y anulaciones del tablero recuperan el resultado de un reintento y detectan cambios hechos desde otro dispositivo.
 - **Cocina por etapa y estación** (auditoría 1.5, migración 175): cada puesto marca sus platos y Pase confirma cuándo los recoge Servicio. El tablero separa los tiempos de preparación y espera de salida, y muestra variantes, alérgenos, anulaciones y fallos de impresión en la comanda.
 - **Servicio estable por turno** (auditoría 1.4, migración 174): los favoritos tienen puestos fijos en cada dispositivo. Tomar pedidos busca por nombre o alias y conserva los borradores al cambiar de mesa. La comanda distingue saldo enviado, platos por enviar y notas para cocina.
 - **Salón y comanda** (auditoría 1.3, migración 173): el plano permanece junto a la comanda en escritorio y el teléfono abre cada mesa por separado. Cobrar conserva los pedidos pendientes de entrega. El personal confirma la limpieza antes de volver a sentar a un grupo. Traslados y llegadas desde Recepción actualizan la ocupación en una transacción.

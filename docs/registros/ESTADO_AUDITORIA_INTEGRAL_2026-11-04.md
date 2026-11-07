@@ -601,7 +601,16 @@ La siguiente ficha es **1.2 · Caja: borrador, cuadre y recibo**. La ola 1 sigue
 - **Verificación.** Pasaron 88 casos con Postgres real y ambos auditores de acceso devolvieron cero hallazgos. Chromium conservó la posición de 30 comandas al avanzar y reabrir preparaciones, comprobó la espera en Pase y probó el audio y el ancho del tablero en 390, 768 y 1280 px.
 - **Validación de campo pendiente.** Revisar legibilidad a distancia, audio e impresión con el equipo del local. El tablero muestra la cola y la demora observada por estación cuando hay suficientes muestras. El encargado debe contrastar esos tiempos con un turno real antes de estimar la capacidad operativa.
 
-La siguiente ficha es **1.6 · Pedidos en vivo**. Quedan siete fichas de implementación de la Ola 1. La integración y el despliegue se gestionan por separado.
+## 26. Pedidos en vivo · ficha 1.6
+
+**Rama** `feat/pedidos-en-vivo`, sobre el [PR #99](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/99).
+
+- **R02.** La franja de incidencias señala demoras, fallos de impresión y avisos fallidos aunque un filtro los oculte. Las tarjetas priorizan número, canal, tiempo y próxima acción. El detalle permanece abierto al actualizarse el pedido. La conexión muestra la hora de la lectura y utiliza actualización de respaldo.
+- **Cobro y anulaciones.** Las tarjetas separan el estado de servicio del dinero registrado. El historial ordena preparación, entrega, cobros, anulaciones y avisos fallidos. Conserva el motivo y quién solicitó y autorizó una anulación cuando existe el registro. La confirmación explica la reposición y el paso de Caja para una devolución.
+- **Concurrencia.** La migración `176_operaciones_de_pedidos_en_vivo.sql` conserva la identidad del intento y la versión de la tarjeta. El recibo se escribe en la bitácora en la misma transacción. Una repetición recupera el resultado y un intento obsoleto informa el estado vigente. Aplicar después de la 175 y antes del código.
+- **Verificación.** Pasaron 90 casos de Postgres, incluidos los intentos simultáneos y una anulación parcial reintentada. Chromium comprobó una incidencia fuera del filtro y un historial abierto mientras el pedido cambiaba de estado en 390, 768 y 1280 px.
+
+La siguiente ficha es **1.7 · Permisos por trabajo**. Quedan seis fichas de implementación de la Ola 1. La integración y el despliegue se gestionan por separado.
 
 ---
 
