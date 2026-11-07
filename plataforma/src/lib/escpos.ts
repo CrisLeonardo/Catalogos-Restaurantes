@@ -168,6 +168,7 @@ export interface KitchenTicketOptions {
   /** Copia pedida a mano ("Reimprimir comanda"): la cocina NO debe cocinarlo
       otra vez. Sin este aviso, un papel repetido es un plato repetido. */
   reprint?: boolean;
+  copyReason?: string;
   /** De qué estación es este papel (migración 130, M-07). Sin esto la
       cabecera decía «COCINA» fija, y en un local con barra el cantinero
       recibía un papel que se anunciaba como de cocina. */
@@ -197,6 +198,7 @@ export function buildKitchenEscPos(
 
   if (reprint) {
     b.bold(true).line('** COPIA - NO COCINAR **').bold(false);
+    if (opts.copyReason) b.line(`Motivo: ${opts.copyReason}`);
   }
 
   // El nombre de la estación, no «COCINA» a secas: en un local con barra

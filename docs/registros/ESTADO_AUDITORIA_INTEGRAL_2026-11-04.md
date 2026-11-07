@@ -591,7 +591,17 @@ La siguiente ficha es **1.2 · Caja: borrador, cuadre y recibo**. La ola 1 sigue
 - **Verificación.** Chromium probó veinte ventas, un plato agotado, alias y tildes, tres borradores, una guarnición con recargo, el rechazo del servidor y la pérdida de respuesta tras registrar el pedido. El reintento conservó la identidad y la base recibió una sola comanda. Se verificaron Carta y comanda en 390, 768 y 1280 px.
 - **Prueba de campo.** Queda pendiente observar a personal de servicio durante un turno real, como pide E07.
 
-La siguiente ficha es **1.5 · Cocina por etapa y estación**. Quedan 48 fichas, incluidas las tres continuas de calidad. La integración y el despliegue se gestionan por separado.
+## 25. Cocina por etapa y estación · ficha 1.5
+
+**Rama** `feat/cocina-etapas-estaciones`, sobre el [PR #98](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/98). El tablero implementa la maqueta aprobada para Cocina y Pase.
+
+- **O02, F15 y M§4.7.** Cada estación conserva su avance por renglón. El último renglón vivo completa la comanda en la misma transacción. Los relojes distinguen aceptación, preparación y espera de salida. Pase registra el retiro de la comanda y Servicio conserva la entrega al comensal.
+- **R03 y D09.** Los puestos reutilizan la configuración de impresión. El tablero conserva la posición de las comandas al actualizar, muestra la ronda cuando hay una ocupación registrada y distingue variantes, notas y alérgenos. La agrupación conserva las referencias de cada comanda. Los marcados se pueden deshacer con bitácora. Cocina confirma los avisos de anulación y puede probar el sonido, silenciarlo o leer los avisos visuales. Una copia de impresión requiere un motivo.
+- **Base.** Aplicar `175_cocina_por_etapa_y_estacion.sql` después de la 174 y antes del código. La migración inicializa las comandas activas y restringe las transiciones a la acción del servidor.
+- **Verificación.** Pasaron 88 casos con Postgres real y ambos auditores de acceso devolvieron cero hallazgos. Chromium conservó la posición de 30 comandas al avanzar y reabrir preparaciones, comprobó la espera en Pase y probó el audio y el ancho del tablero en 390, 768 y 1280 px.
+- **Validación de campo pendiente.** Revisar legibilidad a distancia, audio e impresión con el equipo del local. El tablero muestra la cola y la demora observada por estación cuando hay suficientes muestras. El encargado debe contrastar esos tiempos con un turno real antes de estimar la capacidad operativa.
+
+La siguiente ficha es **1.6 · Pedidos en vivo**. Quedan siete fichas de implementación de la Ola 1. La integración y el despliegue se gestionan por separado.
 
 ---
 

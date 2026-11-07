@@ -269,6 +269,8 @@ export interface Order {
   // Marcas de tiempo de estado (migración 020) — analítica de tiempos.
   accepted_at: string | null;
   ready_at: string | null;
+  cocina_salida_at?: string | null;
+  cocina_anulacion_vista_at?: string | null;
   /** Plato servido en mesa, sin cerrar la mesa todavía (migración 071). */
   served_at: string | null;
   delivered_at: string | null;
@@ -348,6 +350,9 @@ export interface OrderItem {
       todavía no, o pedido anterior a la migración — y ahí manda
       `orders.status`. La regla completa vive en `lib/servicio/comanda.ts`. */
   served_at?: string | null;
+  cocina_estacion_id?: string | null;
+  cocina_alergenos?: string[] | null;
+  cocina_preparada_at?: string | null;
 }
 
 /* ── Carrito ──────────────────────────────────────────────── */
