@@ -309,7 +309,7 @@ export default function MenuClient({
       )}
       {ordersEnabled && (vitrina
         ? !selected && !cartOpen && <VitrinaBag onOpen={() => setCartOpen(true)} />
-        : <CartBar onOpen={() => setCartOpen(true)} />)}
+        : !selected && !cartOpen && <CartBar onOpen={() => setCartOpen(true)} navigationVisible={!demo && !kiosk} />)}
       {ordersEnabled && cartOpen && (
         <CartPanel
           sugerencias={cartPairings}

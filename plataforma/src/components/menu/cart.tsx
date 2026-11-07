@@ -4,43 +4,41 @@
    Moneda y textos vienen del motor. Portado de ClientScreens.jsx. */
 
 import { useEffect } from 'react';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
-import { Price, QtyStepper, PrimaryButton, ctaClass } from '@/components/menu/ui';
+import { Price, QtyStepper, PrimaryButton } from '@/components/menu/ui';
 import { useCart } from '@/lib/cart-context';
 import { useThemeContent, useThemeConfig, useText } from '@/lib/theme/context';
 import { useTenantPrefix } from '@/lib/tenant-client';
 import { Acompanantes, type Sugerencia } from '@/components/menu/pairings';
+import { formatPrice } from '@/lib/theme/resolve';
+import styles from '@/components/ui/capsule-navigation.module.css';
 
 /* Barra inferior fija con el resumen del carrito. */
-export function CartBar({ onOpen, cartIconHidden }: { onOpen: () => void; cartIconHidden?: boolean }) {
-  const { count, total } = useCart();
+export function CartBar({ onOpen, cartIconHidden, navigationVisible = true }: {
+  onOpen: () => void; cartIconHidden?: boolean; navigationVisible?: boolean;
+}) {
+  const { count, total, items } = useCart();
   const content = useThemeContent();
   const config = useThemeConfig();
   if (count === 0 || cartIconHidden) return null;
 
-  // Mismo tope que la barra inferior: fija + centrada no puede superar el ancho
-  // de maqueta (ver el comentario largo en bottom-nav.tsx).
+  const nombre = items.length === 1 ? items[0].name : content.cart.title;
+  const importe = formatPrice(total, config);
   return (
-    // data-carrito-destino: aquí cae el platillo que vuela al agregar y es lo
-    // que rebota (lib/volar-al-carrito.ts).
-    <div data-carrito-destino="" style={{ position: 'fixed', bottom: 68, left: 0, right: 0, maxWidth: '100vw', zIndex: 40, display: 'flex', justifyContent: 'center', padding: '0 16px 16px', pointerEvents: 'none' }}>
-      <Glass
-        interactive
+    <div data-carrito-destino="" className={`${styles.surface} ${styles.cartDock}`} data-without-nav={!navigationVisible}>
+      <button
+        type="button"
         onClick={onOpen}
-        className="anim-slide-up"
-        style={{ pointerEvents: 'auto', width: '100%', maxWidth: 460, borderRadius: 'var(--m-r-lg)', padding: 'var(--m-sp-3) var(--m-sp-3) var(--m-sp-3) var(--m-sp-5)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+        className={styles.cartTray}
+        aria-label={`${content.cart.barCta} · ${count} ${count === 1 ? content.cart.itemsOne : content.cart.itemsMany} · ${importe}`}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* 10,5 px para decir cuantos productos llevas, justo encima de un
-              precio de 18: el dato que confirma el pedido era ilegible. */}
-          <span className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)' }}>{count} {count === 1 ? content.cart.itemsOne : content.cart.itemsMany}</span>
-          <Price amount={total} size={18} />
-        </div>
-        <span className={ctaClass(config.ctaStyle)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 18px', minHeight: 'var(--m-tap)', borderRadius: 'var(--m-r-md)', fontWeight: 600, fontSize: 'var(--m-fs-sm)' }}>
-          {content.cart.barCta} <Icon name="arrowRight" size={16} />
+        <span className={styles.cartCount}>{count} {count === 1 ? content.cart.itemsOne : content.cart.itemsMany}</span>
+        <span className={styles.cartProduct}>
+          <span className={styles.cartName}>{nombre}</span>
+          <span className={styles.cartPrice}>{importe}</span>
         </span>
-      </Glass>
+        <span className={styles.cartBag} aria-hidden="true"><Icon name="bag" size={24} /></span>
+      </button>
     </div>
   );
 }
