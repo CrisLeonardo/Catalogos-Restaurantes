@@ -6,6 +6,7 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+- **Navegación inferior del comensal y superadmin.** La cápsula sigue la referencia aprobada: gris claro, bisel elevado, selección negra e iconos junto al texto. El comensal muestra cantidad, producto e importe sobre la barra cuando tiene un carrito. Superadmin conserva tres accesos visibles y reúne los otros cuatro en «Más». El panel del restaurante conserva sus accesos operativos.
 - **Pedidos en vivo** (auditoría 1.6, migración 176). El tablero avisa cuando un filtro oculta una incidencia. Cada pedido tiene un historial de estados, anulaciones, cobros y avisos fallidos. Los avances y anulaciones del tablero recuperan el resultado de un reintento y detectan cambios hechos desde otro dispositivo.
 - **Cocina por etapa y estación** (auditoría 1.5, migración 175): cada puesto marca sus platos y Pase confirma cuándo los recoge Servicio. El tablero separa los tiempos de preparación y espera de salida, y muestra variantes, alérgenos, anulaciones y fallos de impresión en la comanda.
 - **Servicio estable por turno** (auditoría 1.4, migración 174): los favoritos tienen puestos fijos en cada dispositivo. Tomar pedidos busca por nombre o alias y conserva los borradores al cambiar de mesa. La comanda distingue saldo enviado, platos por enviar y notas para cocina.

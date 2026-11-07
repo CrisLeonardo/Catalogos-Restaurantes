@@ -143,7 +143,22 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
     await expect(ficha).toBeVisible();
     await agregar.click();
     await expect(ficha).toBeHidden();
-    await expect(page.getByText('Ver carrito')).toBeVisible();
+    const carrito = page.getByRole('button', { name: /^Ver carrito/ });
+    await expect(carrito).toBeVisible();
+    await expect(carrito).toContainText(tenantA.productName);
+    await expect(carrito).toContainText('42.00');
+    const navegacion = page.getByRole('navigation', { name: 'Navegación principal' });
+    await expect(navegacion.getByRole('button')).toHaveCount(4);
+    await expect(navegacion.getByRole('button', { name: 'Menú', exact: true })).toHaveAttribute('aria-current', 'page');
+    const barra = await navegacion.boundingBox();
+    const resumen = await carrito.boundingBox();
+    expect(resumen!.y + resumen!.height).toBeLessThan(barra!.y);
+    await carrito.focus();
+    await carrito.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Carrito' })).toBeVisible();
+    await expect(navegacion).toBeHidden();
+    await page.getByRole('dialog', { name: 'Carrito' }).getByRole('button', { name: 'Cerrar', exact: true }).click();
+    await expect(navegacion).toBeVisible();
   });
 
   test('crear pedido desde el menú público y anularlo desde el panel admin', async ({ page }) => {
@@ -189,7 +204,7 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
     const agregar = page.getByRole('button', { name: `Agregar ${tenantA.productName}` });
     await expect(async () => {
       await agregar.click();
-      await expect(page.getByText('Ver carrito')).toBeVisible({ timeout: 3_000 });
+      await expect(page.getByRole('button', { name: /^Ver carrito/ })).toBeVisible({ timeout: 3_000 });
     }).toPass({ timeout: 60_000 });
     await page.goto(tenantUrl(tenantA.slug, '/checkout'));
 

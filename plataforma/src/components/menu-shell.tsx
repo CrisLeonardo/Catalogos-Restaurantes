@@ -125,7 +125,7 @@ export default function MenuShell({ config, content, categories, products, resta
             // Vitrina: la barra de arriba es fija, así que el contenido arranca
             // debajo de ella; y abajo ya no hay barra de navegación que reservar.
             paddingTop: vitrina ? `calc(${VITRINA_TOP_H}px + env(safe-area-inset-top, 0px))` : undefined,
-            paddingBottom: `calc(${vitrina ? '24px' : ordersEnabled ? '80px' : '64px'} + env(safe-area-inset-bottom, 0px))`,
+            paddingBottom: `calc(${vitrina ? '24px' : ordersEnabled ? 'var(--m-nav-h)' : '64px'} + env(safe-area-inset-bottom, 0px))`,
           }}
         >
           <Cinta />

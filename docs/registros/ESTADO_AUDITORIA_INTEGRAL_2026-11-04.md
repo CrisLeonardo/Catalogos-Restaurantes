@@ -612,6 +612,16 @@ La siguiente ficha es **1.2 · Caja: borrador, cuadre y recibo**. La ola 1 sigue
 
 La siguiente ficha es **1.7 · Permisos por trabajo**. Quedan seis fichas de implementación de la Ola 1. La integración y el despliegue se gestionan por separado.
 
+## 27. Navegación inferior aprobada · complemento visual
+
+**Rama** `codex/navegacion-capsula`, sobre el [PR #100](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/100). El usuario aprobó la reconstrucción de su referencia y pidió conservar el resumen auxiliar únicamente en el comensal.
+
+- **Comensal.** La navegación compartida usa una cápsula gris clara con selección negra e iconos y texto en horizontal. Conserva los destinos y las acciones existentes, incluidos los cuatro accesos cuando hay puntos. El resumen usa la cantidad, el nombre y el importe reales del carrito; abre la hoja y se oculta al abrirla o al consultar un platillo. Vitrina conserva su navegación superior propia.
+- **Superadmin.** En móvil quedan Inicio, Locales, Cuentas y Más. La hoja Más mantiene Grupos, Métricas, Finanzas y Ajustes; conserva Escape, foco y selección al cambiar de sección. En escritorio siguen visibles los siete destinos de la barra lateral.
+- **Panel del restaurante.** Se conserva la navegación operativa actual, una de las dos opciones autorizadas por el usuario, por sus destinos y accesos según el trabajo y los permisos de cada operador. No se añade una fila auxiliar.
+- **Verificación.** Tipos, lint y compilación pasan. Chromium comprueba carrito con teclado, cierre, creación y anulación de pedido, aislamiento entre restaurantes y los destinos de superadmin con una sesión de segundo factor real. Las variantes de tres y cuatro destinos caben sin desbordamiento en 320, 390, 768 y 1280 px, con botones de 48 px. Las capturas usan datos locales; no se versionan.
+- **Alcance de auditoría.** Este complemento no cierra 1.11 ni 1.12: quedan la revisión integral de temas, accesibilidad, entrada, checkout y seguimiento. La siguiente ficha continúa siendo **1.7**. No requiere migración ni modifica producción.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

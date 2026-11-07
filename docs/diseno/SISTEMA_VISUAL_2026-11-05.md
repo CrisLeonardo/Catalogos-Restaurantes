@@ -32,3 +32,34 @@ El usuario pidió continuar con la implementación. Como no indicó una paleta c
 - **Carta.** La misma hoja mantiene a la vista cantidad y total. La foto, las opciones y la descripción se desplazan en su contenido. Se conserva la navegación del historial. La ventana modal evita enfocar el fondo, conserva el ciclo de Tab y devuelve el foco al disparador al cerrar.
 
 La ficha 1.1 desarrolla el cobro completo, la 1.2 la caja y la 1.11 el recorrido de la ficha del comensal. Para N09, los seis indicadores de superadmin deben poder verse en 3×2 a 1280 px o reducirse a las cifras prioritarias. Esa pantalla se revisa con 4.9. Las pruebas con personas y lectores de pantalla de los recorridos completos se registran por separado.
+
+## Extensión aprobada · navegación inferior (2026-11-07)
+
+El usuario aprobó la reconstrucción de su referencia para este componente y su integración en comensal y superadmin. Se incorpora a **Identidad actual depurada** como una extensión acotada. La fuente de sus reglas es el [componente compartido](../../plataforma/src/components/ui/capsule-navigation.tsx) y su [hoja de estilos](../../plataforma/src/components/ui/capsule-navigation.module.css).
+
+| Aspecto | Sistema vigente | Aplicación en la cápsula |
+|---|---|---|
+| Color | Variables de tema, coral para marca y acción principal; Carta según la marca del restaurante. | Superficie gris clara y selección carbón constantes, también sobre temas oscuros. Esta paleta pertenece a la cápsula y a su resumen de carrito. |
+| Forma y profundidad | Tarjeta de 18 px y sombra leve en la dirección implementada. | Radio completo, borde elevado claro y sombra neutra exterior con luz interior, según la referencia aprobada. |
+| Interacción | Objetivo de 48 px, foco visible y selección anunciada. | Destinos de 48 px, icono y etiqueta horizontal, foco visible y estado actual mediante `aria-current="page"`. |
+
+### Reglas reutilizables del componente
+
+- **Color.** Superficie (`#ebebeb`), borde (`#f7f7f7`), tinta (`#242424`), selección (`#202020`, canto `#2c2c2c`) y texto seleccionado (`#eee`). El foco usa un contorno azul (`#365b98`, 2 px). Los colores semánticos de avisos y acciones del resto del producto conservan sus reglas.
+- **Geometría.** Rail de altura mínima (64 px), ancho máximo (460 px), separación lateral del viewport (12 px), relleno interior (8 px vertical y 9 px horizontal) y borde claro (3 px). Los destinos distribuyen el ancho según su contenido y mantienen etiquetas completas.
+- **Tipografía.** Geist con Arial y sans-serif de respaldo, peso (550), interlínea (1.2) y espaciado (`-.03em`). Tres destinos usan texto entre 14 y 19 px e iconos de 24 px; cuatro usan texto entre 12 y 15 px e iconos de 20 px, reducidos a 18 px por debajo de 360 px.
+- **Posición.** La navegación fija ocupa (84 px) más el área segura inferior. El contenido y las acciones flotantes deben reservar ese espacio una sola vez. El comensal comparte la medida entre `NAV_HEIGHT` y `--m-nav-h`; superadmin la aplica en `--adm-nav-h` hasta 820 px.
+- **Selección.** Una sola pieza carbón se desplaza al destino actual en (220 ms), con curva `cubic-bezier(.22, 1, .36, 1)`. Se vuelve a medir tras cambios de ancho y carga de la fuente. Con movimiento reducido, el cambio es inmediato. Antes de la medición, el propio destino conserva el fondo seleccionado.
+- **Resumen del carrito.** Sólo el comensal añade cantidad, producto e importe reales sobre la navegación. Es un único botón con piezas de altura mínima (44 px); el importe conserva cifras tabulares y el nombre largo se recorta. Sin navegación baja al área segura; al abrir el carrito o consultar un platillo se oculta según el estado de la pantalla.
+
+### Integración por superficie
+
+El [comensal](../../plataforma/src/components/menu/bottom-nav.tsx) conserva la disponibilidad de sus módulos. Las variantes revisadas son **Pedidos · Menú · Cuenta** y **Menú · Pedidos · Mis puntos · Cuenta**. El [resumen](../../plataforma/src/components/menu/cart.tsx) abre la hoja del carrito existente. Vitrina conserva su navegación superior propia.
+
+[Superadmin](../../plataforma/src/components/super/shell.tsx) usa **Inicio · Locales · Cuentas · Más** hasta 820 px. «Más» abre la hoja operativa con **Grupos, Métricas, Finanzas y Ajustes**, mantiene la selección de esas rutas y devuelve el foco al cerrar con Escape. Por encima de ese ancho siguen visibles los siete destinos laterales. El panel del restaurante conserva su navegación operativa actual por elección autorizada, según trabajos y permisos. Las pestañas superiores de «Mi cuenta» quedan fuera de esta extensión.
+
+### Evidencia y alcance
+
+La revisión independiente emitió **ship**, sin correcciones materiales, tras comparar la referencia y las 13 capturas finales locales: ocho del comensal (tres y cuatro destinos a 320, 390, 768 y 1280 px), cuatro de superadmin a esos anchos y una de «Más» a 390 px. Los archivos son `capsula-real-{tres,cuatro}-{ancho}.png`, `capsula-real-super-{ancho}.png` y `capsula-real-super-mas-390.png`, dentro de `.impeccable/review` de la muestra local; no se versionan. `capsula-real-medidas.json` registra en las ocho variantes del comensal una selección, etiquetas completas, altura de 48 px y ausencia de desborde; `capsula-detector.json` devuelve `[]`.
+
+La [verificación de integración](../registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md#27-navegación-inferior-aprobada--complemento-visual) registra tipos, lint, compilación y cuatro pruebas locales de consumidor y superadmin correctas, incluido segundo factor real. Este complemento **no cierra 1.11 ni 1.12** ni acredita una revisión integral de temas, accesibilidad, entrada, checkout o seguimiento.

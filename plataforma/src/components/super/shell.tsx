@@ -7,15 +7,17 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import { Icon } from '@/components/icons';
 import LogoutButton from '@/components/admin/logout-button';
 import AdminThemeToggle from '@/components/admin/theme-toggle';
 import { LeoginMark } from '@/components/leogin-logo';
 import { ToastProvider, Toaster } from '@/components/ui/toast';
+import CapsuleNavigation, { type CapsuleDestination } from '@/components/ui/capsule-navigation';
+import { HojaOperativa } from '@/components/ui/hoja-operativa';
 
-/* `corto`: la etiqueta en la barra inferior del teléfono, donde siete
-   destinos se reparten 375 px (≈53 cada uno) y «Restaurantes» o
-   «Configuración» salían cortados a «Restaur…». */
+/* `corto`: etiqueta de la cápsula móvil. Tres destinos frecuentes quedan
+   a la vista; Más conserva el acceso a los cuatro restantes. */
 const NAV: { href: string; label: string; icon: string; corto?: string }[] = [
   { href: '/super',               label: 'Inicio',        icon: 'home' },
   { href: '/super/restaurantes',  label: 'Restaurantes',  icon: 'utensils', corto: 'Locales' },
@@ -49,13 +51,23 @@ function isActive(pathname: string, href: string): boolean {
 
 export default function SuperShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [moreOpen, setMoreOpen] = useState(false);
   const title = pathname === '/super'
     ? 'Inicio'
     : TITLES.find(([p]) => pathname.startsWith(p))?.[1] ?? 'Super Admin';
+  const primary = NAV.slice(0, 3);
+  const secondary = NAV.slice(3);
+  const current = NAV.find((item) => isActive(pathname, item.href))
+    ?? (pathname.startsWith('/super/cobros') ? NAV.find((item) => item.href === '/super/finanzas') : undefined);
+  const active = current && primary.includes(current) ? current.href : current ? 'more' : '';
+  const mobileItems: CapsuleDestination[] = [
+    ...primary.map((item) => ({ key: item.href, label: item.corto ?? item.label, icon: item.icon, href: item.href })),
+    { key: 'more', label: 'Más', icon: 'more', onSelect: () => setMoreOpen(true), expanded: moreOpen },
+  ];
 
   return (
     <ToastProvider>
-    <div className="admin-shell">
+    <div className="admin-shell super-shell">
       <aside className="admin-sidebar">
         <Link
           href="/super"
@@ -87,17 +99,15 @@ export default function SuperShell({ children }: { children: React.ReactNode }) 
           </div>
         </Link>
 
-        {/* Los enlaces van DIRECTOS en el nav, como en el panel del
-            restaurante: la barra inferior del teléfono los reparte en una
-            fila, y metidos en un `div` se apilaban en columna — siete
-            destinos, 314 px de barra, un tercio de la pantalla tapado. */}
-        <nav className="admin-nav">
+        {/* En escritorio se conservan todos los destinos en la barra lateral. */}
+        <nav className="admin-nav super-desktop-nav" aria-label="Navegación de superadmin">
           {NAV.map((n) => (
             <Link
               key={n.href}
               href={n.href}
               className="admin-navlink press"
               data-active={isActive(pathname, n.href) ? '1' : '0'}
+              aria-current={current === n ? 'page' : undefined}
             >
               <Icon name={n.icon} size={18} />
               <span className="nav-label">
@@ -137,6 +147,16 @@ export default function SuperShell({ children }: { children: React.ReactNode }) 
           <div style={{ maxWidth: 1160, margin: '0 auto', width: '100%' }}>{children}</div>
         </div>
       </div>
+      <CapsuleNavigation items={mobileItems} active={active} label="Navegación de superadmin" mobileOnly />
+      {moreOpen && <HojaOperativa label="Más destinos de superadmin" onClose={() => setMoreOpen(false)}
+        footer={<button type="button" className="btn-tinted tap44" onClick={() => setMoreOpen(false)}>Cerrar</button>}>
+        <div className="super-mobile-destinations">
+          {secondary.map((item) => <Link key={item.href} href={item.href} onClick={() => setMoreOpen(false)}
+            aria-current={current === item ? 'page' : undefined}>
+            <Icon name={item.icon} size={22} /><span>{item.label}</span>
+          </Link>)}
+        </div>
+      </HojaOperativa>}
     </div>
     <Toaster />
     </ToastProvider>
