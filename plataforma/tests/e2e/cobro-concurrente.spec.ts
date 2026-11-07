@@ -71,6 +71,7 @@ test('1.4 · conserva puestos, borradores y la guarnición al recuperar un enví
   ]).select('id,name'))!;
   const pollo = productos.find((p) => p.name === 'Pollo a la plancha')!.id;
   const cafe = productos.find((p) => p.name === 'Café de olla')!.id;
+  const numeroVenta = `AUD-TURNO-VENTAS-${suffix}`;
   check(await db.from('profiles').update({ role: 'RESTAURANT_OWNER' }).eq('id', users[1].id));
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   try {
@@ -107,7 +108,7 @@ test('1.4 · conserva puestos, borradores y la guarnición al recuperar un enví
     await buscar.press('Escape');
 
     const venta = check(await db.from('orders').insert({
-      restaurant_id: restaurantId, order_number: `AUD-TURNO-VENTAS-${suffix}`, customer_name: 'AUD Ventas',
+      restaurant_id: restaurantId, order_number: numeroVenta, customer_name: 'AUD Ventas',
       customer_phone: '00000000', order_type: 'PICKUP', status: 'DELIVERED', subtotal: 1160, total: 1160,
     }).select('id').single())!;
     check(await db.from('order_items').insert({ order_id: venta.id, product_id: pollo,
@@ -176,6 +177,8 @@ test('1.4 · conserva puestos, borradores y la guarnición al recuperar un enví
   } finally {
     await context.close();
     check(await db.from('profiles').update({ role: 'RESTAURANT_STAFF' }).eq('id', users[1].id));
+    // La venta simulada de favoritos no pertenece al turno que cierran los casos de Caja.
+    check(await db.from('orders').delete().eq('restaurant_id', restaurantId).eq('order_number', numeroVenta));
   }
 });
 
