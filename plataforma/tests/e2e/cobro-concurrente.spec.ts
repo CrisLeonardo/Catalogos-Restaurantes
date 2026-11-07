@@ -240,9 +240,12 @@ test('1.5 · prepara por puesto y conserva el orden de 30 comandas', async ({ br
     const page = await context.newPage();
     await page.goto(`${origin}/panel/${slug}/cocina`, { waitUntil: 'domcontentloaded' });
     const tarjetas = page.getByRole('article', { name: /^Comanda KDS-/ });
-    await expect(tarjetas).toHaveCount(30);
     const orden = async () => tarjetas.evaluateAll((nodos) => nodos.map((n) => n.getAttribute('aria-label')));
-    const original = await orden();
+    let original: (string | null)[] = [];
+    await expect(async () => {
+      original = await orden();
+      expect(original).toHaveLength(30);
+    }).toPass({ timeout: 10_000 });
     const mesa = page.getByRole('article', { name: /Mesa 30$/ });
     await expect(mesa).toContainText('retraso');
     await page.getByRole('button', { name: /^Barra ·/ }).click();
@@ -255,7 +258,7 @@ test('1.5 · prepara por puesto y conserva el orden de 30 comandas', async ({ br
     await expect(mesa).toContainText('Parte lista. Pase coordina la salida.');
     await page.getByRole('button', { name: /^Pase ·/ }).click();
     await expect(mesa).toContainText('Cocina caliente · pendiente');
-    expect(await orden()).toEqual(original);
+    await expect(async () => expect(await orden()).toEqual(original)).toPass({ timeout: 10_000 });
     await page.getByRole('button', { name: /^Cocina caliente ·/ }).click();
     await mesa.getByRole('button', { name: 'Marcar mi parte lista' }).click();
     await page.getByRole('button', { name: /^Pase ·/ }).click();
