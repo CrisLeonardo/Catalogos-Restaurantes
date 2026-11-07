@@ -235,7 +235,13 @@ huellas(n, que, ok, cuando) as (values
      exists (select 1 from pg_class c join pg_policy p on p.polrelid=c.oid
        where c.oid=to_regclass('public.servicio_preferencias') and c.relrowsecurity
          and p.polname='super_admin_segundo_factor' and not p.polpermissive),
-     'ANTES de desplegar; después de la 173')
+     'ANTES de desplegar; después de la 173'),
+  ('175', 'avance de Cocina por renglón, estación y pase',
+     to_regprocedure('public.leogin_transicion_cocina(uuid,uuid,text,uuid,uuid[],timestamptz)') is not null
+     and to_regprocedure('public.leogin_rondas_cocina(uuid,uuid[])') is not null
+     and exists (select 1 from pg_trigger where tgrelid='public.orders'::regclass
+       and tgname='leogin_proteger_pase_cocina'),
+     'ANTES de desplegar; después de la 174')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

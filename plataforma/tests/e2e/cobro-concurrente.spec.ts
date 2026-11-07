@@ -213,6 +213,71 @@ test.afterAll(async () => {
   if (errors.length) throw new AggregateError(errors, 'Limpieza E2E de cobro');
 });
 
+test('1.5 · prepara por puesto y conserva el orden de 30 comandas', async ({ browser }) => {
+  test.setTimeout(120_000);
+  const [cocina, barra] = check(await db.from('print_stations').insert([
+    { restaurant_id: restaurantId, name: 'Cocina caliente', is_default: true },
+    { restaurant_id: restaurantId, name: 'Barra', is_default: false },
+  ]).select('id'))!;
+  const bebida = check(await db.from('products').insert({ restaurant_id: restaurantId,
+    name: 'Horchata de prueba', price: 15, station_id: barra.id, dietary_tags: ['contiene_lacteos'] }).select('id').single())!;
+  const pedidos = check(await db.from('orders').insert(Array.from({ length: 30 }, (_, i) => ({
+    restaurant_id: restaurantId, order_number: `KDS-${i + 1}`, customer_name: 'AUD Cocina', customer_phone: '00000000',
+    order_type: 'DINE_IN', table_number: 30 + i, status: 'PREP', subtotal: i === 0 ? 35 : 20, total: i === 0 ? 35 : 20,
+    created_at: new Date(Date.now() - (30 - i) * 60_000).toISOString(),
+    accepted_at: new Date(Date.now() - (30 - i) * 60_000).toISOString(),
+  }))).select('id,table_number'))!;
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  try {
+    const lista = pedidos as { id: string; table_number: number }[];
+    const id = lista.find((p) => p.table_number === 30)!.id;
+    check(await db.from('order_items').insert([
+      ...lista.map((p) => ({ order_id: p.id, product_id: null, name_snapshot: 'Tostadas', price_snapshot: 20, quantity: 1, subtotal: 20 })),
+      { order_id: id, product_id: bebida.id, name_snapshot: 'Horchata de prueba', price_snapshot: 15, quantity: 1, subtotal: 15 },
+    ]));
+    check(await db.from('profiles').update({ permissions: ['mesero', 'cocina'] }).eq('id', users[0].id));
+    await login(context, users[0].email);
+    const page = await context.newPage();
+    await page.goto(`${origin}/panel/${slug}/cocina`, { waitUntil: 'domcontentloaded' });
+    const tarjetas = page.getByRole('article', { name: /^Comanda / });
+    await expect(tarjetas).toHaveCount(30);
+    const orden = async () => tarjetas.evaluateAll((nodos) => nodos.map((n) => n.getAttribute('aria-label')));
+    const original = await orden();
+    const mesa = page.getByRole('article', { name: /Mesa 30$/ });
+    await expect(mesa).toContainText('retraso');
+    await page.getByRole('button', { name: /^Barra ·/ }).click();
+    await expect(mesa).toContainText('Contiene lácteos');
+    await mesa.getByRole('button', { name: 'Marcar mi parte lista' }).click();
+    await expect(mesa).toContainText('Parte lista. Pase coordina la salida.');
+    await page.getByRole('button', { name: 'Deshacer marcado' }).click();
+    await expect(mesa.getByRole('button', { name: 'Marcar mi parte lista' })).toBeVisible();
+    await mesa.getByRole('button', { name: 'Marcar mi parte lista' }).click();
+    await expect(mesa).toContainText('Parte lista. Pase coordina la salida.');
+    await page.getByRole('button', { name: /^Pase ·/ }).click();
+    await expect(mesa).toContainText('Cocina caliente · pendiente');
+    expect(await orden()).toEqual(original);
+    await page.getByRole('button', { name: /^Cocina caliente ·/ }).click();
+    await mesa.getByRole('button', { name: 'Marcar mi parte lista' }).click();
+    await page.getByRole('button', { name: /^Pase ·/ }).click();
+    await expect(mesa).toContainText('Esperando salida');
+    for (const width of [390, 768, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    }
+    await page.getByRole('button', { name: 'Probar sonido' }).click();
+    await expect(page.getByText('Prueba de sonido reproducida.')).toBeVisible();
+    await mesa.getByRole('button', { name: 'Confirmar salida' }).click();
+    await expect(mesa).toContainText('Salida confirmada para Servicio.');
+    expect(check(await db.from('orders').select('status,served_at').eq('id', id).single())).toEqual({ status: 'READY', served_at: null });
+  } finally {
+    await context.close();
+    check(await db.from('profiles').update({ permissions: ['mesero'] }).eq('id', users[0].id));
+    check(await db.from('orders').delete().in('id', (pedidos as { id: string }[]).map((p) => p.id)));
+    check(await db.from('products').delete().eq('id', bebida.id));
+    check(await db.from('print_stations').delete().in('id', [cocina.id, barra.id]));
+  }
+});
+
 test('1.3 · el plano y la comanda muestran pago, entrega y limpieza por separado', async ({ browser }) => {
   test.setTimeout(180_000);
   const pedido = check(await db.from('orders').insert({

@@ -41,6 +41,7 @@ import {
 } from '@/lib/actions/servicio';
 import { freeTable, moveTableOrders } from '@/lib/actions/orders';
 import { sentarDesdeRecepcion } from '@/lib/actions/table-sessions';
+import { transicionCocina } from '@/lib/actions/cocina';
 import { abrirTurno, closeCaja, saveCajaDraft, discardCajaDraft, getCajaReceipt, getCajaState, guardarBorradorCaja } from '@/lib/actions/finanzas';
 import { getRecepcionesCaja, getTraspasoDeCorte } from '@/lib/actions/caja-traspasos';
 import { corregirMetodoDePago, devolverCobro } from '@/lib/actions/caja-correcciones';
@@ -105,6 +106,65 @@ afterAll(async () => {
   }
   await sql.end();
   if (errors.length) throw new AggregateError(errors, 'No se completó la limpieza de usuarios AUD.');
+});
+
+describe('1.5 · Cocina por estación y pase', () => {
+  async function comanda() {
+    const [cocina, barra] = checked(await db.from('print_stations').insert([
+      { restaurant_id: rid(), name: 'Cocina', is_default: true },
+      { restaurant_id: rid(), name: 'Barra', is_default: false },
+    ]).select('id'))!;
+    const bebida = checked(await db.from('products').insert({ restaurant_id: rid(), name: 'Horchata',
+      price: 15, station_id: barra.id, dietary_tags: ['contiene_lacteos'] }).select('id').single())!;
+    const pedido = checked(await db.from('orders').insert({ restaurant_id: rid(), order_number: `AUD-${randomUUID()}`,
+      customer_name: 'AUD Cocina', customer_phone: '00000000', order_type: 'DINE_IN', table_number: 1,
+      status: 'NEW', subtotal: 35, total: 35 }).select('id').single())!;
+    const [plato, vaso] = checked(await db.from('order_items').insert([
+      { order_id: pedido.id, name_snapshot: 'Tostadas', price_snapshot: 20, quantity: 1, subtotal: 20 },
+      { order_id: pedido.id, name_snapshot: 'Horchata', price_snapshot: 15, quantity: 1, subtotal: 15, product_id: bebida.id },
+    ]).select('id,cocina_estacion_id,cocina_alergenos'))!;
+    expect(plato.cocina_estacion_id).toBe(cocina.id);
+    expect(vaso).toMatchObject({ cocina_estacion_id: barra.id, cocina_alergenos: ['contiene_lacteos'] });
+    const leer = async () => checked(await db.from('orders').select('status,accepted_at,ready_at,cocina_salida_at,served_at')
+      .eq('id', pedido.id).single())!;
+    expect(await transicionCocina(rid(), pedido.id, 'aceptar')).toMatchObject({ estado: 'PREP', cambio: true });
+    return { id: pedido.id, plato: plato.id, vaso: vaso.id, leer };
+  }
+
+  it('conserva el avance parcial, audita deshacer y separa el pase de la entrega', async () => {
+    const { id, plato, vaso, leer } = await comanda();
+    const parte = await transicionCocina(rid(), id, 'preparar', [vaso]);
+    expect(parte).toMatchObject({ estado: 'PREP', cambio: true, lineas: [vaso] });
+    expect(await leer()).toMatchObject({ status: 'PREP', accepted_at: expect.any(String), ready_at: null });
+    const directo = await db.from('orders').update({ status: 'READY' }).eq('id', id);
+    expect(directo.error?.code).toBe('LGD01');
+    expect(await transicionCocina(rid(), id, 'reabrir', [vaso], new Date(0).toISOString())).toHaveProperty('error');
+    if ('error' in parte) throw new Error(parte.error);
+    expect(await transicionCocina(rid(), id, 'reabrir', [vaso], parte.marca)).toMatchObject({ estado: 'PREP', cambio: true });
+    const simultaneas = await Promise.all([plato, vaso].map((linea) => transicionCocina(rid(), id, 'preparar', [linea])));
+    expect(simultaneas).toEqual(expect.arrayContaining([
+      expect.objectContaining({ estado: 'PREP', cambio: true }), expect.objectContaining({ estado: 'READY', cambio: true }),
+    ]));
+    expect(await transicionCocina(rid(), id, 'salida')).toMatchObject({ estado: 'READY', cambio: true });
+    expect(await transicionCocina(rid(), id, 'salida')).toMatchObject({ cambio: false });
+    expect(await transicionCocina(rid(), id, 'reabrir', [vaso], parte.marca)).toHaveProperty('error');
+    expect(await leer()).toMatchObject({ status: 'READY', cocina_salida_at: expect.any(String), served_at: null });
+    const bitacora = checked(await db.from('activity_log').select('entity,actor_id').eq('restaurant_id', rid()).eq('action', 'cocina'))!;
+    expect(bitacora.filter((a) => a.entity === 'salida')).toEqual([{ entity: 'salida', actor_id: currentActor() }]);
+    expect(bitacora).toContainEqual({ entity: 'reabrir', actor_id: currentActor() });
+  });
+
+  it('requiere el aviso vigente de la anulación y no espera el renglón retirado', async () => {
+    const { id, plato, vaso } = await comanda();
+    expect(await transicionCocina(rid(), id, 'preparar', [plato])).toMatchObject({ estado: 'PREP' });
+    const anulacion = checked(await db.from('order_voids').insert({ restaurant_id: rid(), order_id: id,
+      item_id: vaso, quantity: 1, reason: 'Sin existencias', requested_by: currentActor(),
+      approved_by: currentActor() }).select('created_at').single())!;
+    expect(await transicionCocina(rid(), id, 'anulacion', [], new Date(0).toISOString())).toHaveProperty('error');
+    expect(await transicionCocina(rid(), id, 'preparar', [vaso])).toHaveProperty('error');
+    expect(await transicionCocina(rid(), id, 'anulacion', [], anulacion.created_at)).toMatchObject({ estado: 'READY', cambio: true });
+    expect(await transicionCocina(rid(), id, 'anulacion', [], anulacion.created_at)).toMatchObject({ cambio: false });
+  });
 });
 
 describe('1.3 · ocupación, pago, entrega y limpieza', () => {

@@ -309,7 +309,7 @@ export type KitchenEnqueueOutcome =
 export async function enqueueKitchenForOrder(
   restaurantId: string,
   orderId: string,
-  opts: { force?: boolean; stationId?: string } = {},
+  opts: { force?: boolean; stationId?: string; copyReason?: string } = {},
 ): Promise<KitchenEnqueueOutcome> {
   const db = createServiceClient();
 
@@ -343,7 +343,7 @@ export async function enqueueKitchenForOrder(
     if (!opts.force && await comandaYaEncolada(db, restaurantId, orderId)) {
       return { queued: false, reason: 'already-printed' };
     }
-    const bytes = buildKitchenEscPos(order, name, { format, reprint: !!opts.force });
+    const bytes = buildKitchenEscPos(order, name, { format, reprint: !!opts.force, copyReason: opts.copyReason });
     const res = await enqueuePrintJob({
       restaurantId, role: 'kitchen', bytes, orderId, targetOverride: destinoDeSiempre,
     });
@@ -379,6 +379,7 @@ export async function enqueueKitchenForOrder(
       {
         format,
         reprint: !!opts.force,
+        copyReason: opts.copyReason,
         station: {
           name: station.name,
           parte: etiquetaDeParte(partes.indexOf(parte), total),

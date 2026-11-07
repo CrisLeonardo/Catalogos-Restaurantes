@@ -1,450 +1,469 @@
 'use client';
 
-import { memo, useCallback, useEffect, useRef, useState, useTransition } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
-import { Icon } from '@/components/icons';
-import { updateOrderStatus } from '@/lib/actions/orders';
-import { primeAudio, playKitchenSound, loadSoundSettings } from '@/lib/sounds';
+import { transicionCocina, reimprimirCopiaCocina, type AccionCocina } from '@/lib/actions/cocina';
+import { isAudioUnlocked, loadSoundSettings, playKitchenSound, playWaiterSound, primeAudio } from '@/lib/sounds';
 import { remainingQuantity, type OrderWithItems } from '@/lib/db/orders';
-import type { Order } from '@/types';
+import type { FalloDeImpresion } from '@/lib/db/print-stations';
 import { etiquetaDeMesa } from '@/lib/mesa';
 import { shortOrderNumber } from '@/lib/order-number';
+import { useServiceMode } from '@/components/admin/service-mode';
+import {
+  PASE, GENERAL, etapaDe, estacionDe, lineasVivas, ultimaAnulacion, opcionesDe, alergenosDe,
+  agruparPreparaciones, type Etapa, type EstacionCocina,
+} from '@/lib/cocina/tablero';
+import styles from './kitchen-display.module.css';
 
-interface Props {
+type Props = {
   restaurantId: string;
   initialOrders: OrderWithItems[];
-  /* Umbrales del semáforo (minutos de espera desde que entró el pedido).
-     Configurables por el restaurante en Personalización → Cocina. */
+  estaciones: EstacionCocina[];
+  fallos: Record<string, FalloDeImpresion[]>;
+  rondas: Record<string, number>;
   yellowMin: number;
   redMin: number;
-  /** true = solo muestra pedidos ya confirmados (PREP); false = también muestra los recién llegados (NEW). */
-  confirmFirst?: boolean;
-  /** Esquema claro/oscuro del panel admin (cookie `admin-theme`), NO el tema del restaurante. */
-  scheme?: 'light' | 'dark';
-}
-
-/* Paletas de alto contraste — independientes del tema del restaurante, pero
-   sí siguen el switch claro/oscuro del panel admin (igual que el resto del
-   admin, que usa 2 paletas fijas en vez de heredar el tema del tenant). */
-const C_DARK = {
-  bg: '#0b0d10',
-  panel: '#15181d',
-  panelHi: '#1c2026',
-  text: '#f5f7fa',
-  dim: '#9aa3ad',
-  hair: 'color-mix(in srgb, var(--u-text) 9%, transparent)',
-  /* Los colores con SIGNIFICADO salen de los tokens semánticos del panel
-     (--c-ok, --c-warn, --c-danger, --c-info), que ya están afinados para leerse
-     sobre fondo oscuro y claro y cambian solos con el esquema (auditoría
-     2026-10-02, PED-08). Las superficies de arriba sí son propias: la cocina
-     va más oscura y con más contraste que el resto del panel, a propósito. */
-  green: 'var(--c-ok)',
-  amber: 'var(--c-warn)',
-  red: 'var(--c-danger)',
-  blue: 'var(--c-info)',
-  /* Rellenos de los botones grandes, que llevan texto BLANCO encima: tonos
-     -700 (--c-ok-fill / --c-info-fill), que pasan de 5:1. Con los -500
-     «Marcar listo» medía 2.3:1. */
-  fillGreen: 'var(--c-ok-fill)',
-  fillBlue: 'var(--c-info-fill)',
+  confirmFirst: boolean;
+  scheme: 'light' | 'dark';
 };
 
-/* Tonos -700 a propósito: estos colores se usan como TINTA sobre panel blanco
-   (contador "en cocina", opciones del plato, etiqueta de nota). Con los -600
-   de antes, texto de 13 px quedaba en ~3:1 — por debajo del mínimo legible, y
-   en una cocina se mira la pantalla de lejos y de reojo. */
-const C_LIGHT = {
-  bg: '#eef0f3',
-  panel: '#ffffff',
-  panelHi: '#f4f5f7',
-  text: '#14181f',
-  dim: '#525c6b',
-  hair: 'color-mix(in srgb, var(--u-text) 12%, transparent)',
-  green: 'var(--c-ok)',
-  amber: 'var(--c-warn)',
-  red: 'var(--c-danger)',
-  blue: 'var(--c-info)',
-  fillGreen: 'var(--c-ok-fill)',
-  fillBlue: 'var(--c-info-fill)',
+const etapas = { todas: 'Todas', espera: 'Por aceptar', preparacion: 'En preparación', pase: 'Listas para salir' } as const;
+type Filtro = keyof typeof etapas;
+type Comando = {
+  pedido: OrderWithItems; accion: AccionCocina; lineas?: string[]; marca?: string | null;
 };
+type Aviso = { texto: string; error?: boolean; deshacer?: Comando };
+type Copia = { pedido: OrderWithItems; fallo: FalloDeImpresion };
 
-type Palette = typeof C_DARK;
-
-
-function orderLabel(o: OrderWithItems): { icon: string; text: string } {
-  if (o.order_type === 'DINE_IN') {
-    return { icon: 'utensils', text: etiquetaDeMesa(o) };
-  }
-  if (o.order_type === 'PICKUP') return { icon: 'bag', text: 'Para llevar' };
-  return { icon: 'truck', text: 'Domicilio' };
+function minutos(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  if (s >= 172_800) return Math.floor(s / 86_400) + ' días';
+  const h = Math.floor(s / 3600);
+  const m = Math.floor(s / 60) % 60;
+  return (h > 0 ? h + ':' + String(m).padStart(2, '0') : String(m)) + ':' + String(s % 60).padStart(2, '0');
 }
 
-/** Tiempo transcurrido formateado mm:ss (o h:mm:ss si pasa de una hora).
- *  Pasadas 48 h el cronómetro deja de tener sentido operativo (pedido
- *  olvidado/de prueba): se muestra en días para no pintar "193:00:12". */
-function fmtElapsed(ms: number): string {
-  const totalSec = Math.max(0, Math.floor(ms / 1000));
-  const h = Math.floor(totalSec / 3600);
-  if (h >= 48) return `${Math.floor(h / 24)} días`;
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
-}
-
-function semaforo(elapsedMin: number, yellowMin: number, redMin: number, C: Palette): string {
-  if (elapsedMin >= redMin) return C.red;
-  if (elapsedMin >= yellowMin) return C.amber;
-  return C.green;
-}
-
-/**
- * Cronómetro mm:ss de una tarjeta, con su PROPIO reloj.
- *
- * Antes el reloj vivía en KitchenDisplay y bajaba como prop `now` a cada
- * tarjeta: una vez por segundo React reconciliaba el árbol ENTERO de cada
- * pedido — cabecera, la lista de platillos con sus opciones y notas, el aviso
- * del mesero y el botón. Con 20 pedidos de 5 líneas eso es más de mil nodos
- * revisados por segundo, en la tablet más barata del local y justo en hora
- * pico, que es cuando el KDS tiene que responder al toque sin pensárselo.
- *
- * Aquí el segundero solo se pinta a sí mismo: dos nodos. El color del
- * semáforo NO se calcula aquí porque también tiñe el borde y la sombra de la
- * tarjeta — ese viaja como prop ya resuelta desde el padre (que se actualiza
- * cada 10 s, ver el temporizador de KitchenDisplay), así que la tarjeta solo
- * se vuelve a pintar cuando el color de verdad cambia.
- *
- * Empieza en '··:··' y no en el tiempo real: el HTML lo genera el servidor y
- * ahí no existe "ahora" del navegador. Pintar un número en el servidor daría
- * un desajuste de hidratación y, peor, un cronómetro congelado en la hora del
- * servidor durante el primer instante.
- */
-const Cronometro = memo(function Cronometro({ createdMs }: { createdMs: number }) {
-  const [now, setNow] = useState<number | null>(null);
+const Reloj = memo(function Reloj({ desde, etapa, amarillo, rojo }: {
+  desde: string | null; etapa: Etapa; amarillo: number; rojo: number;
+}) {
+  const [ahora, setAhora] = useState<number | null>(null);
   useEffect(() => {
-    setNow(Date.now());
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return <>{now == null ? '··:··' : fmtElapsed(now - createdMs)}</>;
+    if (!desde) return;
+    const primero = setTimeout(() => setAhora(Date.now()), 0);
+    const reloj = setInterval(() => setAhora(Date.now()), 1000);
+    return () => { clearTimeout(primero); clearInterval(reloj); };
+  }, [desde]);
+  const transcurrido = ahora !== null && desde ? ahora - Date.parse(desde) : null;
+  const tono = etapa === 'pase' ? 'ok' : transcurrido !== null && transcurrido >= rojo * 60_000
+    ? 'alerta' : transcurrido !== null && transcurrido >= amarillo * 60_000 ? 'aviso' : undefined;
+  const nombre = etapa === 'pase' ? 'Esperando salida' : etapa === 'espera' ? 'Desde el pedido' : 'En preparación';
+  return (
+    <div className={styles.reloj} data-tono={tono}>
+      <time>{transcurrido == null ? '—' : minutos(transcurrido)}</time>
+      <span>{desde ? nombre : 'Sin hora de aceptación'}{tono === 'alerta' ? ' · retraso' : tono === 'aviso' ? ' · atención' : ''}</span>
+    </div>
+  );
 });
 
-export default function KitchenDisplay({ restaurantId, initialOrders, yellowMin, redMin, confirmFirst = false, scheme = 'dark' }: Props) {
-  const router = useRouter();
-  const orders = initialOrders;
-  const [now, setNow] = useState<number | null>(null);
-  const soundSettingsRef = useRef(loadSoundSettings());
-  const C = scheme === 'light' ? C_LIGHT : C_DARK;
+function ordenarInicial(ordenes: OrderWithItems[]): string[] {
+  const cerrada = (o: OrderWithItems) => etapaDe(o) === 'cancelada' || etapaDe(o) === 'salida';
+  return [...ordenes].sort((a, b) => Number(cerrada(a)) - Number(cerrada(b))).map((o) => o.id);
+}
 
-  // Coalescer de router.refresh() (mismo patrón que orders-panel.tsx): una
-  // ráfaga de pedidos (p. ej. la cola offline sincronizando de golpe) hacía
-  // un re-render completo del server component POR PEDIDO — la pantalla de
-  // cocina se congelaba en plena hora pico. Máximo un refresh cada 2.5 s.
+function nombrePedido(o: OrderWithItems) {
+  if (o.order_type === 'DINE_IN') return etiquetaDeMesa(o);
+  return o.order_type === 'PICKUP' ? 'Para llevar' : 'Domicilio';
+}
+
+export default function KitchenDisplay({
+  restaurantId, initialOrders, estaciones, fallos, rondas, yellowMin, redMin, confirmFirst, scheme,
+}: Props) {
+  const router = useRouter();
+  const modo = useServiceMode();
+  const [seleccion, setSeleccion] = useState(PASE);
+  const [filtro, setFiltro] = useState<Filtro>('todas');
+  const [ordenFijo, setOrdenFijo] = useState(() => ordenarInicial(initialOrders));
+  const [aviso, setAviso] = useState<Aviso | null>(null);
+  const [copia, setCopia] = useState<Copia | null>(null);
+  const [pendientes, setPendientes] = useState<string[]>([]);
+  const enCurso = useRef(new Set<string>());
+  const [online, setOnline] = useState(true);
+  const [vivo, setVivo] = useState(false);
+  const [silencio, setSilencio] = useState(false);
+  const [sonido, setSonido] = useState('Sonido pendiente de activar');
+  const ajustes = useRef(loadSoundSettings());
+  const muteKey = 'leogin:cocina:silencio:' + restaurantId;
+
+  const porEstacion = useMemo(() => {
+    const nombres = new Map(estaciones.map((e) => [e.id, e.name]));
+    for (const o of initialOrders) {
+      for (const l of o.items) {
+        const id = estacionDe(l);
+        if (!nombres.has(id)) nombres.set(id, id === GENERAL ? 'Cocina general' : 'Estación retirada');
+      }
+    }
+    return nombres;
+  }, [estaciones, initialOrders]);
+  const porPuesto = porEstacion.size > 1;
+  const estacion = porPuesto && porEstacion.has(seleccion) ? seleccion : PASE;
+
+  useEffect(() => {
+    setOrdenFijo((antes) => {
+      const conocidos = new Set(antes);
+      const nuevos = initialOrders.filter((o) => !conocidos.has(o.id)).map((o) => o.id);
+      return nuevos.length ? [...antes, ...nuevos] : antes;
+    });
+  }, [initialOrders]);
+
+  const ordenes = useMemo(() => {
+    const mapa = new Map(initialOrders.map((o) => [o.id, o]));
+    const vistos = new Set(ordenFijo);
+    return [...ordenFijo.flatMap((id) => mapa.get(id) ?? []), ...initialOrders.filter((o) => !vistos.has(o.id))];
+  }, [initialOrders, ordenFijo]);
+
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastRefresh  = useRef(0);
+  const ultimaLectura = useRef(0);
   const refreshSoon = useCallback(() => {
     if (refreshTimer.current) return;
-    const wait = Math.max(0, 2500 - (Date.now() - lastRefresh.current));
     refreshTimer.current = setTimeout(() => {
       refreshTimer.current = null;
-      lastRefresh.current = Date.now();
-      router.refresh();
-    }, wait);
+      ultimaLectura.current = Date.now();
+      if (navigator.onLine) router.refresh();
+    }, Math.max(0, 2500 - (Date.now() - ultimaLectura.current)));
   }, [router]);
-  useEffect(() => () => {
-    if (refreshTimer.current) clearTimeout(refreshTimer.current);
-  }, []);
 
-  /* Reloj del ENCABEZADO y del semáforo — cada 10 s, no cada segundo.
-     El segundero de cada pedido ya no depende de este estado: se lo pinta
-     solo el componente <Cronometro>. Lo único que sigue colgando de aquí es
-     la hora hh:mm de la barra (que cambia una vez por minuto) y el color del
-     semáforo, cuyos umbrales están en MINUTOS. A 10 s, el peor retraso al
-     virar a ámbar o rojo son 10 segundos sobre un umbral que el restaurante
-     define en minutos; a cambio, el tablero se reconcilia 6 veces menos. */
   useEffect(() => {
-    const t0 = setTimeout(() => setNow(Date.now()), 0);
-    const id = setInterval(() => setNow(Date.now()), 10_000);
-    return () => { clearTimeout(t0); clearInterval(id); };
-  }, []);
-
-  // Desbloquear AudioContext con el primer gesto del usuario (click, tecla o
-  // toque — antes solo click: en una tablet táctil el primer gesto suele ser
-  // un scroll/touch y el KDS quedaba mudo hasta el primer tap real).
-  useEffect(() => {
-    const events: (keyof DocumentEventMap)[] = ['click', 'pointerdown', 'keydown', 'touchstart'];
-    const handler = () => {
-      primeAudio();
-      events.forEach((ev) => document.removeEventListener(ev, handler));
+    setOnline(navigator.onLine);
+    try { setSilencio(localStorage.getItem(muteKey) === '1'); } catch { /* preferencia opcional */ }
+    function red() { setOnline(navigator.onLine); if (navigator.onLine) refreshSoon(); }
+    window.addEventListener('online', red);
+    window.addEventListener('offline', red);
+    window.addEventListener('focus', refreshSoon);
+    const respaldo = setInterval(refreshSoon, 25_000); // también recoge el estado de impresión
+    return () => {
+      window.removeEventListener('online', red);
+      window.removeEventListener('offline', red);
+      window.removeEventListener('focus', refreshSoon);
+      clearInterval(respaldo);
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
+      refreshTimer.current = null;
     };
-    events.forEach((ev) => document.addEventListener(ev, handler, { once: true }));
-    return () => events.forEach((ev) => document.removeEventListener(ev, handler));
+  }, [muteKey, refreshSoon]);
+
+  const silencioRef = useRef(false);
+  useEffect(() => { silencioRef.current = silencio; }, [silencio]);
+  const anunciadas = useRef(new Set(initialOrders.map((o) => o.id)));
+  const canceladas = useRef(new Set(initialOrders.filter((o) => o.status === 'CANCEL').map((o) => o.id)));
+  const sonar = useCallback((atencion = false) => {
+    const { kitchenVolume, kitchenRepeat } = ajustes.current;
+    if (silencioRef.current || kitchenVolume === 0) return;
+    if (!isAudioUnlocked()) { setSonido('Sonido bloqueado. Usa Probar sonido para activarlo.'); return; }
+    if (atencion) playWaiterSound(kitchenVolume, 1);
+    else playKitchenSound(kitchenVolume, kitchenRepeat);
   }, []);
 
-  /* ── Aviso sonoro: UNA vez por pedido, cuando entra a ESTA pantalla ──
-     La regla es la misma que ya usa la alerta de pedidos del panel: dedup por
-     id. Antes se decidía por el tipo de evento (INSERT suena, UPDATE suena
-     solo si confirmFirst) y eso se rompía en cuanto un pedido nacía ya
-     confirmado —el del mesero, que llega como INSERT en estado PREP— o cuando
-     un UPDATE cualquiera (una anulación, un cupón) tocaba una fila que ya
-     estaba en PREP y hacía sonar la campana otra vez. */
-  const announced = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    // Lo que ya estaba en pantalla al abrirla es historial: no suena.
-    initialOrders.forEach((o) => announced.current.add(o.id));
-    // Solo al montar.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const announce = useCallback((order: Order) => {
-    const visibleHere = confirmFirst ? order.status === 'PREP' : (order.status === 'NEW' || order.status === 'PREP');
-    if (!visibleHere) return;
-    if (announced.current.has(order.id)) return;
-    announced.current.add(order.id);
-    const s = soundSettingsRef.current;
-    playKitchenSound(s.kitchenVolume, s.kitchenRepeat);
-  }, [confirmFirst]);
-
-  // Realtime: pedido que entra a cocina → sonido + refresco; resto → refresco.
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
-
     const supabase = createClient();
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-    let cancelled = false;
-    const { ready, stop: stopAuthSync } = syncRealtimeAuth(supabase);
+    const { ready, stop: stopAuth } = syncRealtimeAuth(supabase);
+    let canal: ReturnType<typeof supabase.channel> | null = null;
+    let terminado = false;
+    let conectadoDesde = Infinity;
+    void ready.then(() => {
+      if (terminado) return;
+      canal = supabase.channel('cocina-' + restaurantId + '-' + crypto.randomUUID().slice(0, 8))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: 'restaurant_id=eq.' + restaurantId }, (evento) => {
+          refreshSoon();
+          if (evento.eventType === 'DELETE') return;
+          const o = evento.new as OrderWithItems;
+          const reciente = Date.parse(evento.commit_timestamp) >= conectadoDesde - 2000;
+          if (o.status === 'CANCEL' && !canceladas.current.has(o.id)) {
+            canceladas.current.add(o.id);
+            if (reciente) sonar(true);
+          }
+          if (o.status !== 'PREP' && (confirmFirst || o.status !== 'NEW')) return;
+          if (anunciadas.current.has(o.id)) return;
+          anunciadas.current.add(o.id);
+          if (reciente) {
+            setAviso({ texto: 'Comanda nueva · ' + nombrePedido(o) + ' · ' + shortOrderNumber(o.order_number) });
+            sonar();
+          }
+        })
+        .subscribe((estado) => {
+          conectadoDesde = estado === 'SUBSCRIBED' ? Date.now() : Infinity;
+          setVivo(estado === 'SUBSCRIBED');
+          if (estado === 'SUBSCRIBED') refreshSoon();
+        });
+    });
+    return () => { terminado = true; if (canal) void supabase.removeChannel(canal); stopAuth(); };
+  }, [restaurantId, confirmFirst, refreshSoon, sonar]);
 
-    (async () => {
-      await ready;
-      if (cancelled) return;
+  async function probarSonido() {
+    primeAudio();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    if (!isAudioUnlocked()) { setSonido('Sonido bloqueado. Los avisos visuales siguen activos.'); return; }
+    const { kitchenVolume, kitchenRepeat } = ajustes.current;
+    playKitchenSound(kitchenVolume || 0.5, kitchenRepeat, { force: true });
+    setSonido('Prueba de sonido reproducida.');
+  }
 
-      channel = supabase
-        .channel(`kds-${restaurantId}-${crypto.randomUUID().slice(0, 8)}`)
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'orders' },
-          (payload) => {
-            const order = payload.new as Order;
-            if (order.restaurant_id !== restaurantId) return;
-            announce(order);
-            refreshSoon();
-          },
-        )
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'orders' },
-          (payload) => {
-            const updated = payload.new as Order;
-            if (updated.restaurant_id !== restaurantId) return;
-            announce(updated);
-            refreshSoon();
-          },
-        )
-        .subscribe();
-    })();
+  async function actuar({ pedido, accion, lineas = [], marca = null }: Comando) {
+    if (!online || enCurso.current.has(pedido.id)) return;
+    enCurso.current.add(pedido.id);
+    setPendientes((antes) => [...antes, pedido.id]);
+    try {
+      const r = await transicionCocina(restaurantId, pedido.id, accion, lineas, marca);
+      if ('error' in r) { setAviso({ texto: r.error, error: true }); refreshSoon(); return; }
+      const mensajes = {
+        aceptar: 'Comanda aceptada. Comenzó el tiempo de preparación.',
+        preparar: r.estado === 'READY' ? 'Pedido listo para salir.' : 'Parte lista. Otras líneas siguen pendientes.',
+        reabrir: 'Se reabrió la preparación.',
+        salida: 'Salida confirmada para Servicio.',
+        anulacion: r.estado === 'READY' ? 'Anulación confirmada. Pedido listo para salir.' : 'Anulación confirmada.',
+      };
+      setAviso({
+        texto: nombrePedido(pedido) + ' · ' + mensajes[accion],
+        deshacer: accion === 'preparar' && r.marca && r.lineas?.length
+          ? { pedido, accion: 'reabrir', lineas: r.lineas, marca: r.marca } : undefined,
+      });
+      refreshSoon();
+    } catch {
+      setAviso({ texto: 'Se perdió la conexión. Revisa la comanda antes de volver a marcarla.', error: true });
+      refreshSoon();
+    } finally {
+      enCurso.current.delete(pedido.id);
+      setPendientes((antes) => antes.filter((id) => id !== pedido.id));
+    }
+  }
 
-    return () => { cancelled = true; channel?.unsubscribe(); stopAuthSync(); };
-  }, [restaurantId, announce, refreshSoon]);
+  const visibles = ordenes.filter((o) =>
+    (filtro === 'todas' || etapaDe(o) === filtro) &&
+    (estacion === PASE || o.items.some((l) => estacionDe(l) === estacion)));
+  const abiertas = ordenes.filter((o) => ['espera', 'preparacion', 'pase'].includes(etapaDe(o)));
+  const anulaciones = ordenes.flatMap((o) => {
+    const marca = ultimaAnulacion(o);
+    return marca && (!o.cocina_anulacion_vista_at || o.cocina_anulacion_vista_at < marca) ? [{ o, marca }] : [];
+  });
+  const grupos = useMemo(() => agruparPreparaciones(ordenes, estacion), [ordenes, estacion]);
 
-  const nuevos = orders.filter((o) => o.status === 'NEW').length;
-  const clock = now == null ? '—' : new Date(now).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' });
-
-  // Sin header propio ni `position: fixed`: vive dentro del panel como
-  // cualquier otra pantalla (sidebar + topbar, sin envoltorio propio — igual
-  // que /admin/pedidos). El botón "Pantalla completa" del panel (shell.tsx)
-  // recrea, opcionalmente, el tablero a pantalla entera de antes.
   return (
-    <div style={{ color: C.text, fontFamily: 'var(--ui-font, system-ui, sans-serif)', padding: 16 }}>
-      {/* Franja de estado */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '10px 16px', marginBottom: 16, borderRadius: 'var(--radius-lg)', border: `1px solid ${C.hair}`, background: C.panel }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-          <Icon name="flame" size={18} style={{ color: C.amber, flexShrink: 0 }} />
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontWeight: 700, fontSize: 14 }}>
-            <span style={{ color: orders.length > 0 ? C.green : C.dim }}>{orders.length}</span>
-            <span style={{ color: C.dim, fontSize: 12, fontWeight: 600 }}>en cocina</span>
-          </span>
-          {nuevos > 0 && (
-            <span style={{ padding: '2px 8px', borderRadius: 'var(--radius-full)', background: `color-mix(in srgb, ${C.blue} 13%, transparent)`, color: C.blue, fontSize: 12, fontWeight: 800 }}>
-              {nuevos} nuevo{nuevos !== 1 ? 's' : ''}
-            </span>
-          )}
+    <section className={styles.cocina} data-esquema={scheme} aria-label="Tablero de Cocina">
+      <header className={styles.barra}>
+        <div>
+          <h1>Cocina</h1>
+          <p className={styles.menor}><strong data-tono={online && vivo ? 'ok' : 'aviso'}>
+            {online ? vivo ? 'En línea' : 'Actualización de respaldo' : 'Sin conexión'}
+          </strong> · {abiertas.length} {abiertas.length === 1 ? 'comanda activa' : 'comandas activas'}</p>
         </div>
-        <span style={{ fontFamily: 'var(--ui-font-mono, monospace)', fontSize: 14, fontWeight: 700, color: C.dim, minWidth: 46, textAlign: 'right' }}>{clock}</span>
+        <div className={styles.acciones}>
+          <button type="button" className={styles.boton} onClick={() => void probarSonido()}>Probar sonido</button>
+          <button type="button" className={styles.boton} aria-pressed={silencio} onClick={() => {
+            setSilencio(!silencio);
+            try { localStorage.setItem(muteKey, silencio ? '0' : '1'); } catch { /* preferencia opcional */ }
+          }}>{silencio ? 'Reactivar avisos' : 'Silenciar avisos'}</button>
+          {modo && !modo.active && <button type="button" className={styles.boton} onClick={modo.toggle}>Modo servicio</button>}
+        </div>
+      </header>
+      <div className={styles.franja}>
+        {porPuesto && <nav className={styles.acciones} aria-label="Pase y estaciones">
+          <button type="button" className={styles.boton} aria-pressed={estacion === PASE}
+            onClick={() => { setSeleccion(PASE); setFiltro('todas'); }}>Pase · {abiertas.length}</button>
+          {[...porEstacion].map(([id, nombre]) => (
+            <button key={id} type="button" className={styles.boton} aria-pressed={estacion === id}
+              onClick={() => { setSeleccion(id); setFiltro('todas'); }}>
+              {nombre} · {abiertas.filter((o) => lineasVivas(o, id).some((l) => !l.cocina_preparada_at)).length}
+            </button>
+          ))}
+        </nav>}
+        <span className={styles.menor} role="status">{silencio ? 'Avisos sonoros en silencio.' : sonido}</span>
       </div>
-
-      {/* Tablero */}
-      <div>
-        {orders.length === 0 ? (
-          <div style={{ minHeight: '50vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, color: C.dim }}>
-            <Icon name="checkCircle" size={52} style={{ color: C.green }} />
-            <p style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Todo al día</p>
-            <p style={{ fontSize: 14 }}>{confirmFirst ? 'Los pedidos aparecen aquí al ser confirmados desde el panel.' : 'No hay pedidos pendientes en cocina.'}</p>
+      {!online && <div className={styles.aviso} data-tono="aviso" role="status">Última vista conservada. Reconecta para actualizar el tablero.</div>}
+      {anulaciones.map(({ o, marca }) => (
+        <div key={o.id} className={styles.aviso} data-tono="alerta">
+          <div><strong>{o.status === 'CANCEL' ? 'Comanda cancelada' : 'Se anuló parte de la comanda'} · {nombrePedido(o)} · {shortOrderNumber(o.order_number)}</strong>
+            {o.voids.at(-1)?.reason && <p>{o.voids.at(-1)?.reason}</p>}
           </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14, alignItems: 'start' }}>
-            {orders.map((order) => {
-              /* El semáforo se resuelve AQUÍ, a color y booleano ya cocidos.
-                 Así KitchenCard (memo) recibe primitivas que casi nunca
-                 cambian y solo se vuelve a pintar cuando el pedido de verdad
-                 cambia de tramo — no 60 veces por minuto. */
-              const elapsedMin = now == null ? 0 : (now - new Date(order.created_at).getTime()) / 60000;
-              const mounted = now != null;
-              return (
-                <KitchenCard
-                  key={order.id}
-                  order={order}
-                  color={mounted ? semaforo(elapsedMin, yellowMin, redMin, C) : C.green}
-                  urgente={mounted && elapsedMin >= redMin}
-                  C={C}
-                />
-              );
-            })}
-          </div>
-        )}
+          <button type="button" className={styles.boton} disabled={!online || pendientes.includes(o.id)}
+            onClick={() => void actuar({ pedido: o, accion: 'anulacion', marca })}>Confirmar anulación</button>
+        </div>
+      ))}
+      {aviso && <div className={styles.aviso} data-tono={aviso.error ? 'alerta' : 'ok'}>
+        <span role="status">{aviso.texto}</span>
+        {aviso.deshacer && <button type="button" className={styles.boton} disabled={!online || pendientes.includes(aviso.deshacer.pedido.id)}
+          onClick={() => { if (aviso.deshacer) void actuar(aviso.deshacer); }}>Deshacer marcado</button>}
+        <button type="button" className={styles.boton} onClick={() => setAviso(null)}>Cerrar aviso</button>
+      </div>}
+      <div className={styles.encabezado}>
+        <div><h2>{estacion === PASE ? porPuesto ? 'Pase' : 'Comandas' : porEstacion.get(estacion)}</h2>
+          <p className={styles.menor}>{estacion === PASE ? 'Coordina la salida de cada comanda.' : 'Prepara las líneas de tu estación.'}</p></div>
+        <nav className={styles.acciones} aria-label="Filtrar por etapa">
+          {(Object.keys(etapas) as Filtro[]).map((f) => <button key={f} type="button" className={styles.boton}
+            aria-pressed={filtro === f} onClick={() => setFiltro(f)}>{etapas[f]}</button>)}
+        </nav>
       </div>
-    </div>
+      {visibles.length === 0 ? <p className={styles.vacio}>{confirmFirst && filtro === 'todas'
+        ? 'Los pedidos aparecen aquí cuando se aceptan.' : 'No hay comandas en esta etapa.'}</p> : (
+        <div className={styles.tablero}>
+          {visibles.map((o) => <TarjetaCocina key={o.id} pedido={o} estacion={estacion} nombres={porEstacion}
+            porPuesto={porPuesto} ronda={rondas[o.id]} amarillo={yellowMin} rojo={redMin}
+            anulacionPendiente={anulaciones.some(({ o: pendiente }) => pendiente.id === o.id)}
+            fallos={fallos[o.id]} onCopia={(fallo) => setCopia({ pedido: o, fallo })}
+            bloqueado={!online || pendientes.includes(o.id)} actuar={actuar} />)}
+        </div>
+      )}
+      <details className={styles.detalles}>
+        <summary>Preparaciones iguales por estación</summary>
+        {grupos.length ? <ul>{grupos.map((g, i) => <li key={i}>
+          <strong>{g.cantidad}× {g.plato}</strong> · {porEstacion.get(g.estacion)} · {[...g.pedidos].map(shortOrderNumber).join(', ')}
+          {(g.opciones || g.nota || g.alergias.length > 0) && <small>{[g.opciones, g.nota, ...g.alergias].filter(Boolean).join(' · ')}</small>}
+        </li>)}</ul> : <p className={styles.menor}>Sin preparaciones pendientes.</p>}
+      </details>
+      <details className={styles.detalles}>
+        <summary>Demora por estación</summary>
+        <ul>{[...porEstacion].map(([id, nombre]) => {
+          const pendientes = abiertas.filter((o) => o.status === 'PREP' && lineasVivas(o, id).some((l) => !l.cocina_preparada_at));
+          const tiempos = ordenes.flatMap((o) => {
+            if (!o.accepted_at || o.status === 'CANCEL') return [];
+            const parte = lineasVivas(o, id);
+            if (!parte.length || parte.some((l) => !l.cocina_preparada_at)) return [];
+            const ultima = Math.max(...parte.map((l) => Date.parse(l.cocina_preparada_at!)));
+            const tiempo = ultima - Date.parse(o.accepted_at);
+            return tiempo > 0 ? [tiempo] : [];
+          });
+          const antigua = pendientes.flatMap((o) => o.accepted_at ? [o.accepted_at] : []).sort()[0];
+          return <li key={id}><strong>{nombre}</strong> · {pendientes.length} pendientes
+            {antigua && <small>Preparación más antigua desde las {new Date(antigua).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })}</small>}
+            <small>{tiempos.length >= 3 ? 'Promedio observado ' + minutos(tiempos.reduce((s, t) => s + t, 0) / tiempos.length) +
+              ' en ' + tiempos.length + ' partes' : 'Aún no hay suficientes partes medidas.'}</small>
+          </li>;
+        })}</ul>
+        <p className={styles.menor}>El tiempo observado orienta al encargado. La capacidad por hora se confirma en un turno real.</p>
+      </details>
+      {copia && <DialogoCopia restaurantId={restaurantId} copia={copia} onClose={() => setCopia(null)}
+        onEncolada={() => { setCopia(null); setAviso({ texto: 'Copia en cola. Falta confirmación de la impresora.' }); refreshSoon(); }} />}
+    </section>
   );
 }
 
-/* ── Tarjeta de pedido ──────────────────────────────────────── */
+function TarjetaCocina({ pedido, estacion, nombres, porPuesto, ronda, amarillo, rojo, bloqueado, anulacionPendiente, fallos, onCopia, actuar }: {
+  pedido: OrderWithItems; estacion: string; nombres: Map<string, string>; porPuesto: boolean; ronda?: number;
+  amarillo: number; rojo: number; bloqueado: boolean; anulacionPendiente: boolean;
+  fallos?: FalloDeImpresion[]; onCopia: (f: FalloDeImpresion) => void; actuar: (c: Comando) => Promise<void>;
+}) {
+  const etapa = etapaDe(pedido);
+  const lineas = pedido.items.filter((l) => estacion === PASE || estacionDe(l) === estacion);
+  const porHacer = lineasVivas(pedido, estacion).filter((l) => !l.cocina_preparada_at);
+  const partes = [...new Set(lineasVivas(pedido).map(estacionDe))];
+  const desde = etapa === 'pase' ? pedido.ready_at : etapa === 'espera' ? pedido.created_at : pedido.accepted_at;
+  const cerrada = etapa === 'salida' || etapa === 'cancelada';
+  const hayAccion = etapa === 'preparacion' && porHacer.length > 0 && (estacion !== PASE || !porPuesto);
+  const ejecutar = (accion: AccionCocina, items?: string[], marca?: string | null) =>
+    void actuar({ pedido, accion, lineas: items, marca });
+  return (
+    <article className={styles.comanda} aria-label={'Comanda ' + shortOrderNumber(pedido.order_number) + ' · ' + nombrePedido(pedido)}>
+      <header className={styles.cabecera}>
+        <div><h3>{nombrePedido(pedido)}</h3><p className={styles.menor}>
+          {shortOrderNumber(pedido.order_number)}{ronda ? ' · ' + (ronda > 1 ? 'Ronda ' + ronda : 'Primera ronda') : ''}
+        </p></div>
+        {cerrada ? <strong className={styles.estado} data-tono={etapa === 'cancelada' ? 'alerta' : 'ok'}>
+          {etapa === 'cancelada' ? 'Cancelada' : 'Salida confirmada'}
+        </strong> : <Reloj desde={desde} etapa={etapa} amarillo={amarillo} rojo={rojo} />}
+      </header>
+      <ul className={styles.lineas}>
+        {lineas.map((l) => {
+          const cantidad = remainingQuantity(l, pedido.voids);
+          const baja = etapa === 'cancelada' || cantidad === 0;
+          const lista = l.cocina_preparada_at || etapa === 'pase' || etapa === 'salida';
+          const opciones = opcionesDe(l);
+          const alergias = alergenosDe(l);
+          return <li className={styles.linea} key={l.id}>
+            <strong className={styles.cantidad}>{baja ? l.quantity : cantidad}×</strong>
+            <div>
+              <strong className={styles.plato}>{l.name_snapshot}</strong>
+              {opciones && <span className={styles.menor}>{opciones}</span>}
+              {l.note && <span className={styles.nota}>{l.note}</span>}
+              {alergias.length > 0 && <span className={styles.nota}>{alergias.join(' · ')}</span>}
+              <span className={styles.menor} data-tono={baja ? 'alerta' : lista ? 'ok' : undefined}>
+                {porPuesto ? (nombres.get(estacionDe(l)) ?? 'Cocina general') + ' · ' : ''}
+                {baja ? 'Anulado · no preparar' : l.served_at ? 'Entregado' : lista ? 'Listo' : 'Pendiente'}
+                {!baja && cantidad < l.quantity && ' · ' + (l.quantity - cantidad) + ' anuladas'}
+              </span>
+              {hayAccion && porHacer.length > 1 && !baja && !lista && (
+                <button type="button" className={styles.enlace} disabled={bloqueado}
+                  onClick={() => ejecutar('preparar', [l.id])}>Marcar {l.name_snapshot} listo</button>
+              )}
+              {!cerrada && !baja && l.cocina_preparada_at && !l.served_at && (estacion !== PASE || !porPuesto) && (
+                <button type="button" className={styles.enlace} disabled={bloqueado}
+                  onClick={() => ejecutar('reabrir', [l.id], l.cocina_preparada_at)}>Reabrir {l.name_snapshot}</button>
+              )}
+            </div>
+          </li>;
+        })}
+      </ul>
+      {pedido.notes && <p className={styles.notaPedido}>Nota · {pedido.notes}</p>}
+      {pedido.waiter_name && <p className={styles.mesero}>Mesero · {pedido.waiter_name}</p>}
+      {estacion === PASE && porPuesto && !cerrada && partes.length > 0 && <ul className={styles.partes}>
+        {partes.map((id) => {
+          const lista = lineasVivas(pedido, id).every((l) => l.cocina_preparada_at || etapa === 'pase');
+          return <li key={id} data-tono={lista ? 'ok' : undefined}>{nombres.get(id)} · {lista ? 'lista' : 'pendiente'}</li>;
+        })}
+      </ul>}
+      {fallos?.map((fallo) => <div className={styles.impresion} data-tono="aviso" key={fallo.stationId}>
+        <span>Falló la impresión en {fallo.stationName}. La comanda está en Cocina.</span>
+        <button type="button" className={styles.boton} disabled={bloqueado} onClick={() => onCopia(fallo)}>Reimprimir copia</button>
+      </div>)}
+      <footer className={styles.pie}>
+        {etapa === 'espera' ? <button type="button" className={styles.principal} disabled={bloqueado}
+          onClick={() => ejecutar('aceptar')}>Aceptar para preparar</button>
+          : hayAccion ? <button type="button" className={styles.principal} disabled={bloqueado}
+            onClick={() => ejecutar('preparar', porHacer.map((l) => l.id))}>{porPuesto ? 'Marcar mi parte lista' : 'Marcar pedido listo'}</button>
+          : etapa === 'pase' && estacion === PASE ? <button type="button" className={styles.principal}
+            disabled={bloqueado || anulacionPendiente} onClick={() => ejecutar('salida')}>Confirmar salida</button>
+          : <p className={styles.menor}>
+            {etapa === 'cancelada' ? anulacionPendiente ? 'Confirma la anulación en el aviso.' : 'Anulación confirmada por Cocina.'
+              : etapa === 'salida' ? 'Salida confirmada para Servicio.'
+              : etapa === 'pase' || estacion !== PASE ? 'Parte lista. Pase coordina la salida.'
+              : 'Faltan líneas por terminar en las estaciones.'}
+          </p>}
+      </footer>
+    </article>
+  );
+}
+function DialogoCopia({ restaurantId, copia, onClose, onEncolada }: {
+  restaurantId: string; copia: Copia; onClose: () => void; onEncolada: () => void;
+}) {
+  const dialogo = useRef<HTMLDialogElement>(null);
+  const [motivo, setMotivo] = useState('');
+  const [error, setError] = useState('');
+  const [ocupado, setOcupado] = useState(false);
+  useEffect(() => { dialogo.current?.showModal(); }, []);
 
-/**
- * Memoizada a propósito. Sus props son ahora todas estables o primitivas:
- * `order` conserva identidad entre renders del padre (viene tal cual del
- * server component), `C` es una constante de módulo y `color`/`urgente` ya
- * vienen resueltos. Resultado: el tablero
- * puede actualizar su reloj sin tocar una sola tarjeta, y cada tarjeta solo
- * se vuelve a pintar cuando cambia su pedido o su tramo de semáforo.
- */
-const KitchenCard = memo(function KitchenCard({ order, color, urgente, C }: { order: OrderWithItems; color: string; urgente: boolean; C: Palette }) {
-  const [isPending, start] = useTransition();
-  const createdMs = new Date(order.created_at).getTime();
-  const isNew = order.status === 'NEW';
-  const label = orderLabel(order);
-
-  function advance() {
-    const next = isNew ? 'PREP' : 'READY';
-    /* Sin router.refresh(): updateOrderStatus llama a revalidarSalon() y la
-       respuesta de la acción ya trae la cocina nueva (REN-02). */
-    start(async () => {
-      await updateOrderStatus(order.id, next);
-    });
+  async function enviar(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (ocupado) return;
+    setOcupado(true);
+    try {
+      const res = await reimprimirCopiaCocina(restaurantId, copia.pedido.id, motivo, copia.fallo.stationId || undefined);
+      if (res.error) setError(res.error);
+      else onEncolada();
+    } catch {
+      setError('No se pudo confirmar la copia. Revisa la cola de impresión.');
+    } finally {
+      setOcupado(false);
+    }
   }
 
-  return (
-    <div style={{
-      borderRadius: 'var(--radius-lg)',
-      background: C.panel,
-      border: `1px solid ${C.hair}`,
-      borderTop: `4px solid ${color}`,
-      boxShadow: urgente ? `0 0 0 1px color-mix(in srgb, ${color} 33%, transparent), 0 6px 24px color-mix(in srgb, ${color} 13%, transparent)` : 'none',
-      display: 'flex', flexDirection: 'column',
-      opacity: isPending ? 0.55 : 1,
-      transition: 'opacity 150ms',
-    }}>
-      {/* Encabezado */}
-      <div style={{ padding: '12px 14px 10px', borderBottom: `1px solid ${C.hair}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em' }} title={order.order_number}>{shortOrderNumber(order.order_number)}</span>
-            {isNew && (
-              <span style={{ padding: '2px 8px', borderRadius: 'var(--radius-full)', background: `color-mix(in srgb, ${C.blue} 13%, transparent)`, color: C.blue, fontSize: 11, fontWeight: 800, animation: 'kdsPulse 1.6s ease-in-out infinite' }}>
-                NUEVO
-              </span>
-            )}
-          </div>
-          <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 6, color: C.dim, fontSize: 13, fontWeight: 600 }}>
-            <Icon name={label.icon} size={14} /> <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label.text}</span>
-          </div>
-        </div>
-        {/* Temporizador con semáforo */}
-        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 'var(--radius-full)', background: `color-mix(in srgb, ${color} 10%, transparent)`, color, fontWeight: 800 }}>
-          <Icon name="clock" size={14} />
-          <span style={{ fontFamily: 'var(--ui-font-mono, monospace)', fontSize: 15, minWidth: 44, textAlign: 'right' }}><Cronometro createdMs={createdMs} /></span>
-        </div>
-      </div>
-
-      {/* Ítems */}
-      <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 9, flex: 1 }}>
-        {order.items.map((item) => {
-          const remaining = remainingQuantity(item, order.voids ?? []);
-          const voidedQty = item.quantity - remaining;
-          const fullyVoided = remaining === 0;
-          return (
-            <div key={item.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', opacity: fullyVoided ? 0.45 : 1 }}>
-              <span style={{ fontSize: 18, fontWeight: 800, color: C.text, minWidth: 32, lineHeight: 1.2, textDecoration: fullyVoided ? 'line-through' : 'none' }}>
-                {fullyVoided ? item.quantity : remaining}×
-              </span>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: C.text, lineHeight: 1.25, textDecoration: fullyVoided ? 'line-through' : 'none' }}>
-                  {item.name_snapshot}
-                </div>
-                {voidedQty > 0 && (
-                  <div style={{ fontSize: 12, color: C.red, marginTop: 2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                    {fullyVoided ? 'Anulado — no preparar' : `${voidedQty} anulada${voidedQty === 1 ? '' : 's'}`}
-                  </div>
-                )}
-                {item.options_snapshot && item.options_snapshot.length > 0 && (
-                  <div style={{ fontSize: 13, color: C.amber, marginTop: 2, fontWeight: 600 }}>
-                    {item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(' · ')}
-                  </div>
-                )}
-                {item.note && (
-                  <div style={{ fontSize: 13, color: C.red, marginTop: 2, fontWeight: 800 }}>
-                    ⚠ {item.note}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-
-        {order.notes && (
-          <div style={{ marginTop: 2, padding: '8px 10px', borderRadius: 'var(--radius-sm)', background: `color-mix(in srgb, ${C.amber} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${C.amber} 25%, transparent)` }}>
-            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.05em', color: C.amber, textTransform: 'uppercase', marginBottom: 2 }}>Nota</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: C.text, lineHeight: 1.35 }}>{order.notes}</div>
-          </div>
-        )}
-
-        {order.waiter_name && (
-          <div style={{ fontSize: 12, color: C.dim, display: 'flex', alignItems: 'center', gap: 5 }}>
-            <Icon name="userPlus" size={12} /> Mesero: <strong style={{ color: C.text }}>{order.waiter_name}</strong>
-          </div>
-        )}
-      </div>
-
-      {/* Acción táctil */}
-      <div style={{ padding: '0 14px 14px' }}>
-        <button
-          onClick={advance}
-          disabled={isPending}
-          style={{
-            width: '100%',
-            padding: '14px 12px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
-            cursor: isPending ? 'wait' : 'pointer',
-            fontSize: 16,
-            fontWeight: 800,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            background: isNew ? C.fillBlue : C.fillGreen,
-            color: '#fff',
-            letterSpacing: '0.01em',
-          }}
-        >
-          {isPending ? (
-            '…'
-          ) : isNew ? (
-            <><Icon name="flame" size={18} /> Comenzar</>
-          ) : (
-            <><Icon name="check" size={18} /> Marcar listo</>
-          )}
-        </button>
-      </div>
-
-      <style>{`@keyframes kdsPulse { 0%,100% { opacity: 1 } 50% { opacity: 0.45 } }`}</style>
-    </div>
-  );
-});
+  return <dialog ref={dialogo} className={styles.dialogo} aria-labelledby="kds-copia-titulo" onCancel={onClose}>
+    <form onSubmit={(e) => void enviar(e)}>
+      <h2 id="kds-copia-titulo">Reimprimir {shortOrderNumber(copia.pedido.order_number)}</h2>
+      <p className={styles.menor}>{copia.fallo.stationName} · El papel se marca como copia.</p>
+      <label htmlFor="kds-copia-motivo">Motivo de la copia</label>
+      <textarea id="kds-copia-motivo" rows={3} required maxLength={120} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+      {error && <p role="status" data-tono="alerta">{error}</p>}
+      <button type="submit" className={styles.principal} disabled={ocupado || !motivo.trim()}>{ocupado ? 'Encolando…' : 'Encolar copia'}</button>
+      <button type="button" className={styles.boton} onClick={onClose}>Volver a Cocina</button>
+    </form>
+  </dialog>;
+}
