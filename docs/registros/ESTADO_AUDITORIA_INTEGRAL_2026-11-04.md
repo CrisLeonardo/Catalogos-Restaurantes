@@ -2,6 +2,10 @@
 
 Documento de traspaso para retomar el trabajo en otra sesión o cuenta sin perder el contexto. Resume qué se logró, qué está en curso y qué falta, con listas para marcar.
 
+> **Estado vigente al 2026-11-07:** implementación de Ola 0 y fichas **1.0–1.6** disponibles en sus ramas; navegación aprobada en **PR #101**, CI correcto sobre `0f523f4` (1,353 unitarias, 90 Postgres, 19 E2E). Siguiente: **1.7 · Permisos por trabajo**. Quedan seis fichas de implementación de Ola 1. Continúa desde la rama `codex/navegacion-capsula`, sin fusionar ni desplegar hasta indicación del usuario. Lee el [traspaso para Claude Code](TRASPASO_CLAUDE_CODE_2026-11-07.md) antes de usar instrucciones históricas de este registro. Las pruebas de campo y la integración siguen pendientes.
+
+### Nota histórica del 5 de noviembre
+
 > **Actualización del 2026-11-05:** hay **14 fichas implementadas en sus ramas**, incluidas las 13 originales y la **0.14** (§11). El doble cobro concurrente D03 ya pasa; quedan **cinco defectos monetarios, 0.15–0.19**, antes de cerrar la ola 0. La 0.13 está en [#84](https://github.com/CrisLeonardo/Catalogos-Restaurantes/pull/84); su CI se vio en curso al empezar esta continuación. La 0.14 usa migración **160 antes del código** y conserva el resto de la matriz como fallos explícitos. No se fusionó ni se desplegó. Siguiente ficha: **0.15**, con el «sí, sigue» del dueño.
 
 ---
@@ -16,7 +20,7 @@ Documento de traspaso para retomar el trabajo en otra sesión o cuenta sin perde
    - [`AUDITORIA_INICIAL_2026-11-02.md`](../auditorias/AUDITORIA_INICIAL_2026-11-02.md): IDs F01–F22.
    - [`DIRECCION_VISUAL_2026-11-03.html`](../diseno/DIRECCION_VISUAL_2026-11-03.html): la propuesta visual «hospitalidad precisa».
 4. Este documento vive en la rama `docs/plan-auditoria-integral` (PR #71). **Cada rama de ficha marca solo su propia casilla del tablero**; el estado completo está aquí.
-5. Para seguir con la siguiente ficha: `git fetch`, crea la rama desde `origin/docs/plan-auditoria-integral` (así lo hicieron todas las fichas) y abre el PR contra `main` con la nota «Va encima de #71».
+5. Para las fichas actuales, consulta la base apilada del traspaso vigente. La instrucción inicial de crear todas las ramas desde `origin/docs/plan-auditoria-integral` dejó de aplicar a esta cadena; no la uses para 1.7.
 
 ---
 
