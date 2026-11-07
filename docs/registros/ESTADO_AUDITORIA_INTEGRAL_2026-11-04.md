@@ -621,6 +621,7 @@ La siguiente ficha es **1.7 · Permisos por trabajo**. Quedan seis fichas de imp
 - **Panel del restaurante.** Se conserva la navegación operativa actual, una de las dos opciones autorizadas por el usuario, por sus destinos y accesos según el trabajo y los permisos de cada operador. No se añade una fila auxiliar.
 - **Verificación.** Tipos, lint y compilación pasan. Chromium comprueba carrito con teclado, cierre, creación y anulación de pedido, aislamiento entre restaurantes y los destinos de superadmin con una sesión de segundo factor real. Las variantes de tres y cuatro destinos caben sin desbordamiento en 320, 390, 768 y 1280 px, con botones de 48 px. Las capturas usan datos locales; no se versionan.
 - **Alcance de auditoría.** Este complemento no cierra 1.11 ni 1.12: quedan la revisión integral de temas, accesibilidad, entrada, checkout y seguimiento. La siguiente ficha continúa siendo **1.7**. No requiere migración ni modifica producción.
+- **CI.** La primera corrida detectó un peso de letra 650 fuera de la escala del panel en el destino activo de Más. Se reprodujo con `type-scale.test.ts` y se ajustó a 600, conservando la prueba y el diseño de la cápsula.
 
 ---
 
