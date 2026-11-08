@@ -417,6 +417,18 @@ describe('el panel por ruta (origen único)', () => {
     expect(tenantQueVeElRender(res)).toBe('rincon502');
   });
 
+  it.each(['GET', 'POST'])('conserva tenant, ruta y cookie rotada en %s', async (method) => {
+    h.behaviour = rotaElToken;
+    const res = await proxy(new NextRequest('https://distleogin.com/panel/sucursal-b/categorias', {
+      method,
+      headers: { cookie: `${STAFF}=TOKEN-VIEJO`, 'x-tenant-slug': 'sucursal-a' },
+    }));
+    expect(rewriteA(res)).toBe('/admin/categorias');
+    expect(tenantQueVeElRender(res)).toBe('sucursal-b');
+    expect(res.headers.get('x-middleware-request-x-pathname')).toBe('/panel/sucursal-b/categorias');
+    expect(cookiesQueVeElRender(res)).toContain(`${STAFF}=TOKEN-NUEVO`);
+  });
+
   it('marca área de personal: el panel usa sus 2 temas fijos, no el del restaurante', async () => {
     const res = await proxy(raiz('/panel/rincon502/caja'));
 

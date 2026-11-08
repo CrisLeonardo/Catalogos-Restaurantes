@@ -1,6 +1,7 @@
 import 'server-only';
 import { myOrganizationId } from '@/lib/db/admin';
 import { getRestaurantSlugById } from '@/lib/db/restaurants';
+import { getMyMemberships } from '@/lib/db/membership';
 
 import { cookies, headers } from 'next/headers';
 import { createClient, getStaffUser } from '@/lib/supabase/server';
@@ -122,7 +123,8 @@ export async function getResumeSession(
   const name = (profile.full_name as string | null) || user.email || 'tu cuenta';
   // Sin restaurante propio solo siguen el super admin y quien administra una
   // cadena (que entra por su organización, no por su restaurant_id).
-  if (!profile.restaurant_id && profile.role !== 'SUPER_ADMIN' && !(await myOrganizationId())) return null;
+  if (!profile.restaurant_id && profile.role !== 'SUPER_ADMIN'
+      && !(await myOrganizationId()) && (await getMyMemberships()).length === 0) return null;
 
   const tenantSlug = (await headers()).get('x-tenant-slug');
   const url = await resolveStaffDestination(

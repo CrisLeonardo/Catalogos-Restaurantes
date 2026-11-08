@@ -1,6 +1,7 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, getStaffUser } from '@/lib/supabase/server';
+import { puedeEnSeccion } from '@/lib/auth/seccion';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId, canActOnGroupBranch, getAdminMenu } from '@/lib/db/admin';
 import { resolveOwnRestaurantId, resolveEffectiveRole } from '@/lib/db/membership';
@@ -26,7 +27,7 @@ export type ProductState = { error: string } | null;
 
 async function resolveContext(formData: FormData) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return null;
 
   const { data: profile } = await supabase
@@ -36,10 +37,6 @@ async function resolveContext(formData: FormData) {
     .single();
 
   if (!profile) return null;
-
-  // Permisos por sección: un staff sin "catalogo" no puede tocar el menú,
-  // aunque la UI esté oculta (la verificación de UI no basta como candado).
-  if (!can(profile.role, profile.permissions as string[] | null, 'catalogo')) return null;
 
   // Quien administra un grupo trabaja sobre una sucursal suya (subdominio verificado);
   // SUPER_ADMIN, cualquiera por el id del form. Ambos usan el cliente elevado.
@@ -54,6 +51,7 @@ async function resolveContext(formData: FormData) {
     : (groupBranchId ?? (await resolveOwnRestaurantId(profile.restaurant_id)));
 
   if (!restaurantId) return null;
+  if (!(await puedeEnSeccion(restaurantId, 'catalogo'))) return null;
 
   const db = elevated ? createServiceClient() : supabase;
   return { db, restaurantId, role: profile.role, userId: user.id };
@@ -452,7 +450,7 @@ async function authAndBuildProductsExport(restaurantId: string): Promise<Product
   if (!UUID_RE.test(restaurantId)) return { error: 'Restaurante inválido.' };
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return { error: 'No autorizado.' };
 
   const { data: profile } = await supabase

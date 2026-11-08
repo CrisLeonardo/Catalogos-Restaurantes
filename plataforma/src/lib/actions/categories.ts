@@ -1,17 +1,17 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { resolveOwnRestaurantId } from '@/lib/db/membership';
-import { can } from '@/lib/permissions';
+import { puedeEnSeccion } from '@/lib/auth/seccion';
 import { revalidatePath, updateTag } from 'next/cache';
 import type { DayKey, WeeklyHours } from '@/lib/hours';
 import { logActivity } from '@/lib/activity';
 
 async function resolveContext(formData: FormData) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return null;
 
   const { data: profile } = await supabase
@@ -21,9 +21,6 @@ async function resolveContext(formData: FormData) {
     .single();
 
   if (!profile) return null;
-
-  // Un staff sin permiso "categorias" no puede modificarlas (candado server-side).
-  if (!can(profile.role, profile.permissions as string[] | null, 'categorias')) return null;
 
   // El super admin y quien administra un grupo trabajan sobre una sucursal que no es su
   // restaurant_id: el primero por el id del form, el segundo por el subdominio
@@ -39,6 +36,7 @@ async function resolveContext(formData: FormData) {
     : (groupBranchId ?? (await resolveOwnRestaurantId(profile.restaurant_id)));
 
   if (!restaurantId) return null;
+  if (!(await puedeEnSeccion(restaurantId, 'categorias'))) return null;
 
   const db = elevated ? createServiceClient() : supabase;
   return { db, restaurantId, role: profile.role, userId: user.id };

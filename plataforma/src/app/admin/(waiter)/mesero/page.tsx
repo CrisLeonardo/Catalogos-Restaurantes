@@ -16,6 +16,7 @@ import { getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { resolveOwnRestaurantId, resolveEffectiveRole } from '@/lib/db/membership';
+import { resolveGroupBranchId } from '@/lib/db/admin';
 import { can } from '@/lib/permissions';
 import { getActiveTableNumbers, getPendingTableCalls, getWaiterActiveOrders } from '@/lib/db/orders';
 import { getOpenTableSessions } from '@/lib/db/table-sessions';
@@ -49,7 +50,7 @@ export default async function MeseroPage() {
   // registró desde el modelo de membresías (migración 113) no tiene
   // `restaurant_id` en el perfil, y sin esto la pantalla salía en blanco.
   // SUPER_ADMIN no tiene restaurant_id propio: lo resolvemos del slug de tenant.
-  let restaurantId = await resolveOwnRestaurantId(profile?.restaurant_id as string | null);
+  let restaurantId = await resolveGroupBranchId() ?? await resolveOwnRestaurantId(profile?.restaurant_id as string | null);
   if (!restaurantId && profile?.role === 'SUPER_ADMIN' && slug) {
     const tenantData = await getRestaurantBySlug(slug);
     if (tenantData) restaurantId = tenantData.restaurant.id;

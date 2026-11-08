@@ -51,10 +51,6 @@ export type TenantGuardInput = {
    * `organizationId` solo importa para el dueño de grupo.
    */
   tenant: { id: string; organizationId: string | null } | null;
-  /** Slug del restaurante propio, para poder mandarlo a SU panel. */
-  ownSlug: string | null | undefined;
-  /** Cómo construir la URL absoluta del panel de un slug (adminUrl en la app). */
-  adminUrlFor: (slug: string) => string;
 };
 
 /**
@@ -65,17 +61,14 @@ export type TenantGuardInput = {
 export function decideTenantAccess(input: TenantGuardInput): TenantDecision {
   const {
     role, isMember, profileRestaurantId, profileOrganizationId,
-    tenantSlug, tenant, ownSlug, adminUrlFor,
+    tenantSlug, tenant,
   } = input;
 
   if (!tenantSlug) return { allow: true };
 
-  // El subdominio no corresponde a ningún restaurante legible: si tiene un
-  // restaurante propio, a SU panel; si no (dueño de grupo sin restaurante
-  // personal, o una lectura que falló justo ahora), a Mi cuenta — nunca a la
-  // portada de mercadeo. Ya está autenticado: mandarlo a la portada pública
-  // se lee como si la sesión se hubiera perdido, cuando sigue viva.
-  if (!tenant) return { allow: false, redirectTo: ownSlug ? `${adminUrlFor(ownSlug)}/menu` : '/mi-cuenta' };
+  // Mi cuenta explica el resultado. Nunca cambiar silenciosamente de sucursal
+  // ni presentar una lectura fallida como pérdida de sesión.
+  if (!tenant) return { allow: false, redirectTo: '/mi-cuenta?acceso=no-disponible' };
 
   // Su propio restaurante: el caso normal, sin importar el rol.
   if (profileRestaurantId && profileRestaurantId === tenant.id) {
@@ -97,12 +90,8 @@ export function decideTenantAccess(input: TenantGuardInput): TenantDecision {
   // organización del perfil, no por un rol.
   if (profileOrganizationId) {
     if (tenant.organizationId === profileOrganizationId) return { allow: true };
-    return { allow: false, redirectTo: '/mi-cuenta' };
+    return { allow: false, redirectTo: '/mi-cuenta?acceso=sin-permiso' };
   }
 
-  // Dueño/staff/mesero/cocina en el subdominio de OTRO restaurante: a SU panel.
-  // Nunca al menú público del restaurante equivocado — eso se leía como "tu
-  // cuenta no existe" cuando la cuenta estaba perfectamente bien.
-  if (ownSlug) return { allow: false, redirectTo: `${adminUrlFor(ownSlug)}/menu` };
-  return { allow: false, redirectTo: '/admin/login' };
+  return { allow: false, redirectTo: '/mi-cuenta?acceso=sin-permiso' };
 }

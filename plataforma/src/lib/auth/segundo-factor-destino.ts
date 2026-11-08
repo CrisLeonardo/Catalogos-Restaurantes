@@ -3,6 +3,7 @@ import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveStaffDestination } from '@/lib/auth/destination';
+import { destinoDePanel } from '@/lib/auth/panel-destino';
 
 /**
  * A dónde va quien acaba de escribir su código (ACC-01).
@@ -15,7 +16,9 @@ import { resolveStaffDestination } from '@/lib/auth/destination';
  * El rol se lee con el cliente de servicio porque la petición empezó sin
  * `aal2` y el cliente de sesión se armó antes de subir de nivel.
  */
-export async function destinoTrasSegundoFactor(userId: string): Promise<string> {
+export async function destinoTrasSegundoFactor(userId: string, requested?: unknown): Promise<string> {
+  const next = destinoDePanel(requested);
+  if (next) return next;
   const { data: profile } = await createServiceClient()
     .from('profiles')
     .select('role, permissions, restaurant_id')

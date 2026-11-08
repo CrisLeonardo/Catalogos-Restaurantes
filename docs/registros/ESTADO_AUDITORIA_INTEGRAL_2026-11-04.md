@@ -627,6 +627,15 @@ La siguiente ficha es **1.7 · Permisos por trabajo**. Quedan seis fichas de imp
 - **Alcance de auditoría.** Este complemento no cierra 1.11 ni 1.12: quedan la revisión integral de temas, accesibilidad, entrada, checkout y seguimiento. La siguiente ficha continúa siendo **1.7**. No requiere migración ni modifica producción.
 - **CI.** La primera corrida detectó un peso de letra 650 fuera de la escala del panel en el destino activo de Más. Se reprodujo con `type-scale.test.ts` y se ajustó a 600, conservando la prueba y el diseño de la cápsula.
 
+## 28. Base de la ficha 1.7 · se incorpora 0.12 (2026-11-08)
+
+**Rama** `feat/permisos-por-trabajo`, desde `origin/codex/navegacion-capsula` (`4d9036d`); PR contra esa rama.
+
+- **Hallazgo al retomar con Claude Code.** La cadena apilada #85 → #101 parte de `main` y **no contiene** las fichas 0.1–0.13 (PR #72–#84), ni por historia ni como parches equivalentes; tampoco las migraciones 154–159. Era una decisión de integración posterior, pero 1.7 trabaja sobre los mismos resolutores de permisos que **0.12** (PR #82: `tenant-guard`, `membership`, destino tras acceso/MFA y seis resolutores de acciones).
+- **Decisión del usuario.** 1.7 parte con 0.12 incorporada: se fusionó `origin/fix/acceso-sucursal-membresias` en esta rama. El código entró sin conflictos; sólo chocaron este registro y el plan, y se conservó la versión de la cadena, que ya documenta 0.12 en §8. Al integrar, #82 queda contenido en este PR.
+- **Resto de la ola 0.** #72–#81, #83 y #84 siguen fuera de la cadena. La fusión de prueba (`git merge-tree`) contra `4d9036d` anticipa conflictos en `verificar_migraciones.sql` (154–159), Caja (`cash-close.tsx`, `finanzas.ts`), Servicio (`servicio-panel.tsx`, `order-queue.ts`, `hoja-cobro.tsx`), lista de espera y reservaciones, y en el arnés de dinero. Los números de migración no se repiten (154–159 frente a 160–176).
+- **CI.** Todos los PR #72–#101 tenían el último CI en verde el 2026-11-08.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*
