@@ -8,7 +8,7 @@ Responde y escribe documentación en **español**.
 
 Para retomar la auditoría del 3 de noviembre, lee primero [`TRASPASO_CLAUDE_CODE_2026-11-07.md`](docs/registros/TRASPASO_CLAUDE_CODE_2026-11-07.md). El siguiente pendiente es **1.7 · Permisos por trabajo**, sobre el PR #101 (`codex/navegacion-capsula`). Las fichas actuales están apiladas: no reinicies su implementación desde `main` ni desde el antiguo PR #71. Terminar la Ola 1 antes del despliegue es una decisión vigente del usuario.
 
-Las skills de diseño instaladas están en `.agents/skills/` y, en esta máquina, enlazadas desde `.claude/skills/`: `frontend-design`, `impeccable` y `web-design-guidelines`. Úsalas para trabajo visual, conserva las maquetas aprobadas y comprueba el resultado real en pantalla. La ubicación de referencias, agentes de revisión y pruebas está en el traspaso.
+Para cualquier trabajo visual usa primero la skill del proyecto **`leogin-diseno`** (`.claude/skills/leogin-diseno/`): tokens reales, componentes, decisiones aprobadas y cómo comprobar en pantalla. La acompañan, versionadas en `.claude/skills/` con su licencia y origen, `emil-design-eng` (movimiento y sensación al tocar), `better-interface` con sus dominios `better-*` (revisión con evidencia) e `interface-review` (revisión de rama o PR). Las skills que instaló Codex (`frontend-design`, `impeccable`, `web-design-guidelines`) quedan locales en `.agents/skills/`, sin enlazar. Conserva las maquetas aprobadas y comprueba el resultado real en pantalla. La ubicación de referencias, agentes de revisión y pruebas está en el traspaso.
 
 ## Git: nada directo a `main`
 
