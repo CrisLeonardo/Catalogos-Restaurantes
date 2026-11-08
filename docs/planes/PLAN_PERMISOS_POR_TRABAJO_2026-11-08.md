@@ -2,7 +2,7 @@
 
 Ficha **1.7** del [plan de la auditoría integral](PLAN_AUDITORIA_INTEGRAL_2026-11-04.md). Hallazgos: **E12, N18, N19, F14, C05, R35**. Rama `feat/permisos-por-trabajo`, con la ficha 0.12 incorporada (ver [registro §28](../registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md#28-base-de-la-ficha-17--se-incorpora-012-2026-11-08)). Siguiente migración libre: **177**, comprobada en todas las ramas remotas.
 
-> **Estado:** inventario hecho; modelo propuesto; **faltan las decisiones del dueño de §4** antes de la maqueta y el código.
+> **Estado:** inventario hecho, modelo propuesto y decisiones del dueño tomadas (§4). [Maqueta de Personal y «Así verá el panel»](../diseno/MAQUETA_PERMISOS_POR_TRABAJO_2026-11-08.html) **pendiente de aprobación**; después, migración y código.
 
 ## 1. Inventario: cómo se decide hoy quién puede qué
 
@@ -64,7 +64,7 @@ Una plantilla rellena capacidades; el dueño puede añadir o quitar excepciones 
 
 | Plantilla | Capacidades (propuesta) |
 |---|---|
-| Mesero | `mesero` |
+| Mesero | `mesero`, `caja.cobrar` |
 | Cocina | `cocina` |
 | Caja | `caja.cobrar`, `caja.abrir`, `caja.salida`, `caja.cerrar`, `pedidos`, `mesas` |
 | Recepción | `mesas`, `lista_espera`, `pedidos` |
@@ -90,12 +90,12 @@ En la ficha de cada persona: los destinos que verá, las acciones delicadas que 
 4. **Después, el código nuevo** deja de leer `null` como todo. Si el código llegara antes que la migración, el personal con `null` perdería el acceso: el orden es obligatorio y va en el PR.
 5. Los dueños y el superadmin no dependen de la lista; el último dueño sigue protegido.
 
-## 4. Decisiones del dueño (pendientes)
+## 4. Decisiones del dueño (2026-11-08)
 
-1. **¿El mesero cobra?** Hoy cobrar una mesa sólo exige `mesero`. ¿La plantilla Mesero incluye `caja.cobrar`, o el cobro queda para Caja y Encargado?
-2. **Arqueo ciego.** ¿Lo ofrecemos como opción por restaurante (la caja no ve el esperado hasta contar) o se deja para después?
-3. **Gerente con usuario.** ¿Un acceso con usuario y contraseña debe poder ser cualquier plantilla (recomendado), o sólo Encargado?
-4. **Soporte temporal (R35.5).** ¿Se incorpora ahora o se descarta para esta ficha?
+1. **El mesero cobra.** La plantilla Mesero incluye `caja.cobrar`; el dueño puede quitarlo como excepción. La migración da `caja.cobrar` a quien hoy tiene `mesero`, para no cambiar el trabajo de nadie.
+2. **Arqueo ciego como opción del local.** Interruptor en Ajustes, apagado por defecto. Con él encendido, quien no tiene `caja.ver_esperado` cuenta sin ver lo esperado y la diferencia aparece al confirmar el conteo.
+3. **El puesto lo decide la plantilla, no la forma de entrar.** Usuario o PIN es sólo el acceso. Administrar personal es la capacidad `personal`, que da la plantilla Encargado o una excepción del dueño.
+4. **Sin acceso de soporte temporal en 1.7.** Queda anotado como pendiente; no se abre ningún acceso nuevo.
 
 ## 5. Pruebas previstas
 

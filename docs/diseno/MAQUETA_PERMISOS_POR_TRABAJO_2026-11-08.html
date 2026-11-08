@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Permisos por trabajo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Maqueta de la ficha 1.7 · Identidad actual depurada (docs/diseno/SISTEMA_VISUAL_2026-11-05.md).
+   Datos ficticios. Superficies sólidas, coral para la acción principal. */
+:root{
+  --bg:#F2F1EE; --bg2:#FFFFFF; --card:#FFFFFF; --card-h:#FAF9F7;
+  --ink:#17161A; --ink2:#55524E; --ink3:#7A7671;
+  --line:rgba(28,22,16,.12); --line2:rgba(28,22,16,.20);
+  --accent:#C2542F; --accent-h:#AD4826; --on-accent:#FFFFFF; --accent-ink:#A9461F; --accent-bg:#FBEEE8;
+  --ok:#1F7A45; --ok-bg:#E8F4EC; --warn:#8A5A00; --warn-bg:#FBF1DC; --danger:#B42318; --danger-bg:#FDECEA;
+  --info:#2F5C9E; --info-bg:#EAF0FA;
+  --sh-xs:0 1px 0 rgba(28,22,16,.06); --sh-md:0 1px 0 rgba(28,22,16,.06),0 8px 24px -12px rgba(28,22,16,.22);
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+:root[data-theme="dark"]{
+  --bg:#0C0B0A; --bg2:#141311; --card:#1A1917; --card-h:#211F1C;
+  --ink:#F5F3EF; --ink2:#C9C5BF; --ink3:#9A958E;
+  --line:rgba(255,245,235,.11); --line2:rgba(255,245,235,.18);
+  --accent:#C2542F; --accent-h:#D0613A; --accent-ink:#F08C66; --accent-bg:#2A1A13;
+  --ok:#6BD49A; --ok-bg:#14251B; --warn:#F2C36B; --warn-bg:#2A2110; --danger:#FF8A80; --danger-bg:#2C1514;
+  --info:#8FB4F0; --info-bg:#151E2C;
+  --sh-xs:0 1px 0 rgba(0,0,0,.4); --sh-md:0 1px 0 rgba(0,0,0,.4),0 10px 28px -12px rgba(0,0,0,.7);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 14px/1.45 Geist,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent-ink);outline-offset:2px}
+
+/* Controles de la maqueta (no son parte del producto) */
+.demo{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;background:#202020;color:#eee;font-size:13px}
+.demo strong{margin-right:auto;font-weight:600}
+.demo button{background:#2c2c2c;border:1px solid #3a3a3a;border-radius:999px;padding:6px 12px;color:#eee;cursor:pointer}
+.demo button[aria-pressed="true"]{background:#eee;color:#202020}
+
+.stage{display:flex;justify-content:center;padding:24px 16px 64px}
+.app{width:100%;max-width:1180px;display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:20px;align-items:start}
+.stage[data-w="390"] .app{max-width:390px;grid-template-columns:1fr}
+.stage[data-w="390"] .side-preview{display:none}
+
+h1{font-size:28px;font-weight:700;letter-spacing:-.02em;margin:0 0 4px}
+h2{font-size:16px;font-weight:600;margin:0}
+.sub{color:var(--ink2);margin:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh-xs)}
+
+/* Lista de personal */
+.head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:8px 16px;border-radius:12px;border:1px solid transparent;font-weight:600;font-size:14px;cursor:pointer;transition:background-color .15s,transform .15s var(--ease)}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--accent);color:var(--on-accent)}
+.btn-primary:hover{background:var(--accent-h)}
+.btn-secondary{background:var(--card);border-color:var(--line2);color:var(--ink)}
+.btn-secondary:hover{background:var(--card-h)}
+.btn-action{min-height:56px;font-size:16px;width:100%}
+.aviso{display:flex;gap:10px;padding:12px 14px;border-radius:14px;background:var(--warn-bg);color:var(--ink);border:1px solid color-mix(in srgb,var(--warn) 30%,var(--line));margin-bottom:12px}
+.aviso b{color:var(--warn)}
+.aviso p{margin:2px 0 0;color:var(--ink2);font-size:13px}
+.lista{list-style:none;margin:0;padding:0}
+.lista li+li{border-top:1px solid var(--line)}
+.persona{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:none;border:0;padding:14px 16px;cursor:pointer;min-height:64px}
+.persona:hover{background:var(--card-h)}
+.persona[aria-current="true"]{background:var(--accent-bg)}
+.lista li:first-child .persona{border-radius:18px 18px 0 0}
+.lista li:last-child .persona{border-radius:0 0 18px 18px}
+.av{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:600;background:var(--bg);border:1px solid var(--line);color:var(--ink2)}
+.p-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.p-name{font-weight:600;font-size:15px}
+.p-meta{color:var(--ink3);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{display:inline-block;align-self:flex-start;padding:2px 8px;border-radius:999px;font-size:12px;line-height:18px;font-weight:600;border:1px solid var(--line2);background:var(--card);color:var(--ink2);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.chip.puesto{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip.exc{background:var(--info-bg);color:var(--info);border-color:color-mix(in srgb,var(--info) 30%,var(--line))}
+.chip.warn{background:var(--warn-bg);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 30%,var(--line))}
+.chips{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:2px 0}
+
+/* Ficha */
+.ficha{padding:20px}
+.ficha-head{display:flex;justify-content:space-between;align-items:start;gap:12px;margin-bottom:16px}
+.paso{margin-top:22px}
+.paso-t{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px}
+.paso-t h2 small{color:var(--ink3);font-weight:500;font-size:13px;margin-left:6px}
+.field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--ink2)}
+.input{width:100%;min-height:48px;padding:10px 14px;border-radius:12px;border:1px solid var(--line2);background:var(--bg2)}
+
+.jobs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stage[data-w="390"] .jobs{grid-template-columns:repeat(2,minmax(0,1fr))}
+.job{position:relative;text-align:left;padding:12px;border-radius:14px;border:1px solid var(--line2);background:var(--card);cursor:pointer;min-height:76px;transition:border-color .15s,background-color .15s}
+.job:hover{background:var(--card-h)}
+.job b{display:block;font-size:15px;font-weight:600}
+.job span{display:block;font-size:12px;color:var(--ink3);margin-top:2px;line-height:1.35}
+.job[aria-checked="true"]{border:2px solid var(--ink);padding:11px;background:var(--card)}
+.job[aria-checked="true"]::after{content:"";position:absolute;top:10px;right:10px;width:18px;height:18px;border-radius:50%;background:var(--ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E") center/12px no-repeat}
+:root[data-theme="dark"] .job[aria-checked="true"]::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230C0B0A' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E")}
+
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px;border-radius:14px;background:var(--bg);border:1px solid var(--line)}
+.seg button{min-height:48px;border:0;border-radius:10px;background:transparent;cursor:pointer;font-weight:600;color:var(--ink2);text-align:left;padding:6px 12px}
+.seg button small{display:block;font-weight:400;font-size:12px;color:var(--ink3)}
+.seg button[aria-checked="true"]{background:var(--card);color:var(--ink);box-shadow:var(--sh-md)}
+
+.area{border:1px solid var(--line);border-radius:14px;margin-top:8px;background:var(--card)}
+.area summary{list-style:none;display:flex;align-items:center;gap:10px;padding:12px 14px;min-height:52px;cursor:pointer}
+.area summary::-webkit-details-marker{display:none}
+.area summary .cnt{margin-left:auto;color:var(--ink3);font-size:13px}
+.area summary .car{width:16px;height:16px;transition:transform .2s var(--ease);color:var(--ink3)}
+.area[open] summary .car{transform:rotate(90deg)}
+.area .items{border-top:1px solid var(--line)}
+.tarea{display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:56px}
+.tarea+.tarea{border-top:1px solid var(--line)}
+.tarea .tx{flex:1;min-width:0}
+.tarea .tx b{display:block;font-weight:500}
+.tarea .tx span{display:block;font-size:12px;color:var(--ink3)}
+.tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
+.sw{flex:none;position:relative;width:48px;height:28px;border-radius:999px;border:1px solid var(--line2);background:var(--bg);cursor:pointer;transition:background-color .18s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--card);border:1px solid var(--line2);box-shadow:var(--sh-xs);transition:transform .2s var(--ease)}
+.sw[aria-checked="true"]{background:var(--ink);border-color:var(--ink)}
+.sw[aria-checked="true"]::after{transform:translateX(20px);border-color:transparent}
+.sw:disabled{opacity:.5;cursor:not-allowed}
+
+/* Así verá el panel */
+.preview{padding:18px}
+.pv-grupos{list-style:none;margin:12px 0 16px;padding:0;border:1px solid var(--line);border-radius:14px;background:var(--bg)}
+.pv-grupos li{display:flex;flex-direction:column;gap:1px;padding:9px 12px}
+.pv-grupos li+li{border-top:1px solid var(--line)}
+.pv-grupos b{font-weight:600;font-size:14px}
+.pv-grupos span{font-size:12px;color:var(--ink2)}
+.pv-grupos li.off b{color:var(--ink3);font-weight:500}
+.pv-grupos li.off span{color:var(--ink3)}
+.pv-cols{display:grid;grid-template-columns:1fr;gap:12px}
+.stage[data-w="390"] .pv-cols{grid-template-columns:1fr}
+.pv-cols h3{font-size:13px;font-weight:600;margin:0 0 6px;color:var(--ink2)}
+.pv-cols ul{margin:0;padding:0;list-style:none}
+.pv-cols li{display:flex;gap:8px;padding:5px 0;font-size:13px;align-items:baseline}
+.pv-cols li::before{flex:none;font-weight:700;width:14px}
+.si li::before{content:"✓";color:var(--ok)}
+.no li::before{content:"–";color:var(--ink3)}
+.delicadas{margin-top:14px;padding:12px;border-radius:12px;background:var(--danger-bg);border:1px solid color-mix(in srgb,var(--danger) 25%,var(--line))}
+.delicadas h3{margin:0 0 4px;font-size:13px;color:var(--danger)}
+.delicadas p{margin:0;font-size:13px;color:var(--ink2)}
+.derecha{display:grid;gap:20px;grid-template-columns:minmax(0,1fr) 300px;align-items:start}
+.derecha .side-preview{position:sticky;top:64px}
+.stage[data-w="390"] .derecha{grid-template-columns:minmax(0,1fr)}
+.inline-preview{margin-top:22px}
+.stage:not([data-w="390"]) .inline-preview{display:none}
+
+.foot{position:sticky;bottom:0;margin:20px -20px -20px;padding:12px 20px 20px;background:var(--card);border-top:1px solid var(--line);border-radius:0 0 18px 18px}
+.foot p{margin:0 0 8px;font-size:13px;color:var(--ink2);text-align:center}
+
+.ajuste{display:flex;gap:12px;align-items:center;padding:14px 16px;margin-top:20px}
+.ajuste .tx{flex:1}
+.ajuste .tx b{display:block;font-weight:600}
+.ajuste .tx span{font-size:13px;color:var(--ink3)}
+.nota{font-size:12px;color:var(--ink3);margin-top:28px;text-align:center}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="demo" role="toolbar" aria-label="Controles de la maqueta">
+  <strong>Maqueta · Permisos por trabajo (1.7)</strong>
+  <button data-w="390" aria-pressed="false">Móvil 390</button>
+  <button data-w="1280" aria-pressed="true">Escritorio 1280</button>
+  <button id="tema" aria-pressed="false">Tema oscuro</button>
+</div>
+
+<div class="stage" id="stage" data-w="1280">
+ <div class="app">
+  <!-- Columna izquierda: personal + ajuste de arqueo -->
+  <section aria-labelledby="t-personal">
+    <div class="head">
+      <div><h1 id="t-personal">Personal</h1><p class="sub">Quién trabaja aquí y qué puede hacer.</p></div>
+      <button class="btn btn-primary" id="nuevo">+ Agregar</button>
+    </div>
+
+    <div class="aviso" role="status">
+      <span aria-hidden="true">⚠</span>
+      <div><b>Revisa 1 acceso heredado</b>
+        <p>Rosa tenía acceso a todo sin que se eligiera. Lo conservamos igual; confirma su trabajo cuando puedas.</p></div>
+    </div>
+
+    <div class="card">
+      <ul class="lista" id="lista"></ul>
+    </div>
+
+    <div class="card ajuste">
+      <div class="tx"><b>Arqueo ciego</b><span>Quien no puede «ver cuánto debería haber» cuenta el efectivo sin verlo. La diferencia aparece al confirmar.</span></div>
+      <button class="sw" role="switch" aria-checked="false" aria-label="Arqueo ciego" id="ciego"></button>
+    </div>
+    <p class="nota">Datos ficticios · Identidad actual depurada · claro y oscuro</p>
+  </section>
+
+  <!-- Columna derecha: ficha + vista previa -->
+  <div class="derecha">
+   <section class="card ficha" aria-labelledby="t-ficha">
+    <div class="ficha-head">
+      <div><h2 id="t-ficha" style="font-size:22px;font-weight:700">Carlos Méndez</h2>
+        <p class="sub" id="ficha-resumen">Caja · entra con PIN</p></div>
+      <button class="btn btn-secondary" style="min-height:40px" aria-label="Cerrar la ficha">✕</button>
+    </div>
+
+    <div class="field"><label for="nombre">Nombre</label><input class="input" id="nombre" value="Carlos Méndez"></div>
+
+    <div class="paso">
+      <div class="paso-t"><h2>¿Qué trabajo hace?</h2></div>
+      <div class="jobs" role="radiogroup" aria-label="Trabajo" id="jobs"></div>
+    </div>
+
+    <div class="paso">
+      <div class="paso-t"><h2>¿Cómo entra?</h2></div>
+      <div class="seg" role="radiogroup" aria-label="Cómo entra" id="entra">
+        <button role="radio" aria-checked="true" data-v="pin">Con PIN<small>En el aparato del local</small></button>
+        <button role="radio" aria-checked="false" data-v="usuario">Con usuario<small>Desde su propio teléfono</small></button>
+      </div>
+    </div>
+
+    <div class="paso">
+      <div class="paso-t" style="align-items:center"><div><h2>Qué puede hacer</h2><p class="sub" style="font-size:13px" id="exc-count"></p></div>
+        <button class="btn btn-secondary" style="min-height:44px;padding:4px 14px;font-size:13px" id="restaurar">Restaurar plantilla</button></div>
+      <div id="areas"></div>
+    </div>
+
+    <div class="inline-preview" id="inline-preview"></div>
+
+    <div class="foot">
+      <p id="foot-txt">Los cambios surten efecto en su siguiente acción.</p>
+      <button class="btn btn-primary btn-action" id="guardar">Guardar a Carlos como Caja</button>
+    </div>
+   </section>
+
+   <section class="card preview side-preview" aria-labelledby="t-prev" id="side-preview"></section>
+  </div>
+ </div>
+</div>
+
+<script>
+const AREAS = [
+  {k:'salon', t:'Salón y servicio', dest:'Pedidos', items:[
+    ['mesero','Tomar pedidos y atender mesas','Tomar pedidos en su teléfono'],
+    ['mesas','Sentar y repartir mesas','Puesto de la entrada'],
+    ['lista_espera','Lista de espera y reservaciones',''],
+    ['pedidos','Ver pedidos en vivo','Incluye avisos de cocina y entregas'],
+  ]},
+  {k:'cocina', t:'Cocina', dest:'Cocina', items:[
+    ['cocina','Pantalla de cocina','Preparar y marcar listo'],
+  ]},
+  {k:'caja', t:'Caja', dest:'Caja', items:[
+    ['caja.cobrar','Cobrar cuentas','Efectivo, tarjeta y pago mixto'],
+    ['caja.abrir','Abrir la caja',''],
+    ['caja.salida','Registrar salidas de efectivo','Compras pequeñas, retiros'],
+    ['caja.cerrar','Cerrar la caja y entregar el turno',''],
+    ['caja.ver_esperado','Ver cuánto debería haber','Sin esto, cuenta a ciegas si el local lo activa', 1],
+    ['caja.corregir','Corregir cobros ya registrados','', 1],
+    ['caja.devolver','Hacer devoluciones','', 1],
+  ]},
+  {k:'finanzas', t:'Ganancias y reportes', dest:'Negocio', items:[
+    ['finanzas','Ver ventas, costos y utilidades','Resumen, analítica y finanzas', 1],
+    ['respaldo','Descargar copia de los datos','Clientes, ventas y catálogo', 1],
+    ['fel','Facturación electrónica (FEL)','', 1],
+  ]},
+  {k:'menu', t:'Carta e inventario', dest:'Menú', items:[
+    ['catalogo','Platillos y precios','', 1],
+    ['categorias','Categorías',''],
+    ['inventario','Inventario y agotados',''],
+    ['ingredientes','Ingredientes y recetas',''],
+    ['proveedores','Proveedores y compras',''],
+  ]},
+  {k:'clientes', t:'Clientes', dest:'Clientes', items:[
+    ['clientes','Lista de clientes','', ],
+    ['loyalty','Puntos y lealtad',''],
+    ['cupones','Cupones y descuentos','', 1],
+    ['whatsapp','WhatsApp',''],
+  ]},
+  {k:'local', t:'Ajustes del local', dest:'Ajustes', items:[
+    ['ajustes','Horarios, zonas y forma de cobro','', 1],
+    ['personalizar','Diseño del sitio y la carta',''],
+    ['perfil','Perfil del negocio',''],
+    ['modulos','Encender o apagar funciones','', 1],
+    ['impresion','La PC del local e impresoras',''],
+    ['qr','Códigos QR',''],
+    ['repartidores','Repartidores',''],
+  ]},
+  {k:'equipo', t:'Equipo', dest:'Ajustes', items:[
+    ['personal','Agregar personal y cambiar sus permisos','Sólo puede dar lo que él mismo tiene', 1],
+  ]},
+  {k:'reparto', t:'Reparto', dest:'Reparto', items:[
+    ['reparto','Pantalla del repartidor','Recoger y entregar pedidos'],
+  ]},
+];
+const ALL = AREAS.flatMap(a=>a.items.map(i=>i[0]));
+const CAJA = ['caja.cobrar','caja.abrir','caja.salida','caja.cerrar'];
+const JOBS = [
+  {k:'mesero', t:'Mesero', d:'Toma pedidos, atiende y cobra', c:['mesero','caja.cobrar']},
+  {k:'cocina', t:'Cocina', d:'Prepara en la pantalla de cocina', c:['cocina']},
+  {k:'caja', t:'Caja', d:'Cobra, abre y cierra caja', c:[...CAJA,'pedidos','mesas']},
+  {k:'recepcion', t:'Recepción', d:'Sienta grupos y lleva la espera', c:['mesas','lista_espera','pedidos']},
+  {k:'reparto', t:'Reparto', d:'Recoge y entrega a domicilio', c:['reparto']},
+  {k:'encargado', t:'Encargado', d:'Lleva el turno y el equipo', c:['mesero','mesas','lista_espera','pedidos','cocina',...CAJA,'caja.ver_esperado','caja.corregir','caja.devolver','catalogo','categorias','inventario','clientes','personal']},
+];
+const PEOPLE = [
+  {n:'Carlos Méndez', job:'caja', entra:'pin', extra:[], quita:[], act:'Cerró caja ayer 23:10'},
+  {n:'Ana López', job:'mesero', entra:'pin', extra:[], quita:[], act:'Atendió 14 mesas hoy'},
+  {n:'Luis Pérez', job:'cocina', entra:'pin', extra:['inventario'], quita:[], act:'En turno desde 16:00'},
+  {n:'Rosa Ajú', job:'encargado', entra:'usuario', extra:['finanzas','respaldo'], quita:[], act:'Acceso heredado', heredado:true},
+];
+const DELICADAS = {'caja.corregir':'corregir cobros','caja.devolver':'hacer devoluciones','finanzas':'ver utilidades','respaldo':'descargar datos','fel':'emitir facturas','catalogo':'cambiar precios','cupones':'crear descuentos','ajustes':'cambiar la forma de cobro','modulos':'apagar funciones','personal':'dar permisos'};
+const DEST = ['Hoy','Pedidos','Cocina','Caja','Menú','Clientes','Negocio','Ajustes','Reparto'];
+
+let sel = 0;
+let st = load(0);
+function load(i){const p=PEOPLE[i];const base=JOBS.find(j=>j.k===p.job).c;return {i,job:p.job,entra:p.entra,on:new Set([...base,...p.extra].filter(x=>!p.quita.includes(x)))};}
+function base(){return new Set(JOBS.find(j=>j.k===st.job).c);}
+function label(k){for(const a of AREAS)for(const it of a.items)if(it[0]===k)return it[1];return k;}
+function first(){return PEOPLE[st.i].n.split(' ')[0];}
+
+function renderLista(){
+  const ul=document.getElementById('lista');ul.innerHTML='';
+  PEOPLE.forEach((p,i)=>{
+    const job=JOBS.find(j=>j.k===p.job);
+    const li=document.createElement('li');
+    const ex=[...p.extra.map(e=>`<span class="chip exc">+ ${label(e)}</span>`)];
+    li.innerHTML=`<button class="persona" aria-current="${i===sel}">
+      <span class="av" aria-hidden="true">${p.n.split(' ').map(s=>s[0]).join('')}</span>
+      <span class="p-main"><span class="p-name">${p.n}</span>
+        <span class="chips"><span class="chip puesto">${job.t}</span>${ex.join('')}${p.heredado?'<span class="chip warn">Revisar</span>':''}</span>
+        <span class="p-meta">${p.entra==='pin'?'PIN':'Usuario'} · ${p.act}</span></span>
+    </button>`;
+    li.querySelector('button').onclick=()=>{sel=i;st=load(i);renderAll();};
+    ul.appendChild(li);
+  });
+}
+function renderJobs(){
+  const box=document.getElementById('jobs');box.innerHTML='';
+  JOBS.forEach(j=>{
+    const b=document.createElement('button');b.className='job';b.setAttribute('role','radio');
+    b.setAttribute('aria-checked',st.job===j.k);b.innerHTML=`<b>${j.t}</b><span>${j.d}</span>`;
+    b.onclick=()=>{st.job=j.k;st.on=new Set(j.c);renderAll();};
+    box.appendChild(b);
+  });
+}
+function renderEntra(){
+  document.querySelectorAll('#entra button').forEach(b=>{
+    b.setAttribute('aria-checked',b.dataset.v===st.entra);
+    b.onclick=()=>{st.entra=b.dataset.v;renderAll();};
+  });
+}
+function renderAreas(){
+  const box=document.getElementById('areas');
+  const openNow=new Set([...box.querySelectorAll('details[open]')].map(d=>d.dataset.k));
+  if(!box.dataset.init){AREAS.forEach(a=>{if(a.items.some(i=>st.on.has(i[0])))openNow.add(a.k)});box.dataset.init=1;}
+  box.innerHTML='';const b=base();
+  AREAS.forEach(a=>{
+    const n=a.items.filter(i=>st.on.has(i[0])).length;
+    const d=document.createElement('details');d.className='area';d.dataset.k=a.k;if(openNow.has(a.k))d.open=true;
+    d.innerHTML=`<summary><svg class="car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg><b>${a.t}</b><span class="cnt num">${n?`${n} de ${a.items.length}`:'Sin acceso'}</span></summary><div class="items"></div>`;
+    const items=d.querySelector('.items');
+    a.items.forEach(([k,t,s,del])=>{
+      const on=st.on.has(k), exc=on!==b.has(k);
+      const row=document.createElement('div');row.className='tarea';
+      const tags=[del?'<span class="chip warn">Delicada</span>':'',exc?`<span class="chip exc">${on?'Añadido':'Quitado'} · excepción</span>`:''].join('');
+      row.innerHTML=`<div class="tx"><b>${t}</b>${s?`<span>${s}</span>`:''}${tags?`<div class="tags">${tags}</div>`:''}</div>
+        <button class="sw" role="switch" aria-checked="${on}" aria-label="${t}"></button>`;
+      row.querySelector('.sw').onclick=()=>{on?st.on.delete(k):st.on.add(k);renderAll();};
+      items.appendChild(row);
+    });
+    box.appendChild(d);
+  });
+  const nExc=[...ALL].filter(k=>st.on.has(k)!==b.has(k)).length;
+  document.getElementById('exc-count').textContent=nExc?`${nExc} ${nExc===1?'excepción':'excepciones'} a la plantilla`:'Igual a la plantilla';
+}
+/* Mismos grupos y páginas que la navegación real del panel (lib/admin-nav.ts). */
+const NAV = [
+  ['Hoy', [['Hoy', null]]],
+  ['Pedidos', [['En vivo','pedidos'],['Cocina','cocina'],['Mesas','mesas'],['Tomar pedidos','mesero']]],
+  ['Menú', [['Platillos','catalogo'],['Categorías','categorias'],['Ingredientes','ingredientes'],['Inventario','inventario'],['Proveedores','proveedores']]],
+  ['Clientes', [['Clientes','clientes'],['Lealtad','loyalty'],['Cupones','cupones'],['Reservaciones','lista_espera'],['Lista de espera','lista_espera']]],
+  ['Negocio', [['Caja',CAJA],['Resumen y finanzas','finanzas'],['Facturación','fel']]],
+  ['Ajustes', [['Perfil','perfil'],['Horarios y cobro','ajustes'],['Personalizar','personalizar'],['QR','qr'],['La PC del local','impresion'],['Repartidores','repartidores'],['WhatsApp','whatsapp'],['Funciones','modulos'],['Personal y permisos','personal'],['Copia de tus datos','respaldo']]],
+];
+function pageOn(req){return req===null||(Array.isArray(req)?req.some(k=>st.on.has(k)):st.on.has(req));}
+function navHTML(){
+  const grupos=NAV.map(([g,pages])=>{const vis=pages.filter(([,r])=>pageOn(r)).map(([p])=>p);return [g,[...new Set(vis)]];});
+  const reparto=st.on.has('reparto');
+  return `<ul class="pv-grupos" aria-label="Destinos que verá">${grupos.map(([g,v])=>`<li class="${v.length?'':'off'}"><b>${g}</b><span>${v.length?(g==='Hoy'?'Inicio del turno':v.join(' · ')):'No lo verá'}</span></li>`).join('')}${reparto?'<li><b>Reparto</b><span>Pantalla del repartidor, fuera del panel</span></li>':''}</ul>`;
+}
+function previewHTML(){
+  const si=[], no=[];
+  AREAS.forEach(a=>a.items.forEach(([k,t])=>{(st.on.has(k)?si:no).push(t)}));
+  const del=Object.keys(DELICADAS).filter(k=>st.on.has(k)).map(k=>DELICADAS[k]);
+  const ciego=document.getElementById('ciego').getAttribute('aria-checked')==='true';
+  const cuentaCiego=ciego&&st.on.has('caja.cerrar')&&!st.on.has('caja.ver_esperado');
+  return `<h2 id="t-prev">Así verá ${first()} el panel</h2>
+    <p class="sub" style="font-size:13px;margin-top:2px">Se calcula con la misma regla que usa el servidor.</p>
+    ${navHTML()}
+    <div class="pv-cols">
+      <div class="si"><h3>Podrá</h3><ul>${si.slice(0,9).map(t=>`<li>${t}</li>`).join('')}${si.length>9?`<li>y ${si.length-9} más</li>`:''}</ul></div>
+      <div class="no"><h3>No podrá</h3><ul>${no.slice(0,6).map(t=>`<li>${t}</li>`).join('')}${no.length>6?`<li>y ${no.length-6} más</li>`:''}<li>Suscripción, propiedad del local y dueños</li></ul></div>
+    </div>
+    ${cuentaCiego?`<div class="aviso" style="margin:14px 0 0;background:var(--info-bg);border-color:color-mix(in srgb,var(--info) 30%,var(--line))"><span aria-hidden="true">ⓘ</span><div><b style="color:var(--info)">Contará la caja a ciegas</b><p>El arqueo ciego está activo y no puede ver cuánto debería haber.</p></div></div>`:''}
+    ${del.length?`<div class="delicadas"><h3>Acciones delicadas (${del.length})</h3><p>Podrá ${del.join(', ')}. Quedan en la bitácora con su nombre.</p></div>`:''}`;
+}
+function renderAll(){
+  renderLista();renderJobs();renderEntra();renderAreas();
+  const job=JOBS.find(j=>j.k===st.job).t;
+  document.getElementById('t-ficha').textContent=PEOPLE[st.i].n;
+  document.getElementById('ficha-resumen').textContent=`${job} · entra con ${st.entra==='pin'?'PIN':'usuario'}`;
+  document.getElementById('nombre').value=PEOPLE[st.i].n;
+  document.getElementById('guardar').textContent=`Guardar a ${first()} como ${job}`;
+  document.getElementById('side-preview').innerHTML=previewHTML();
+  document.getElementById('inline-preview').innerHTML=`<div class="card preview" style="box-shadow:none">${previewHTML()}</div>`;
+}
+document.getElementById('restaurar').onclick=()=>{st.on=base();renderAll();};
+document.getElementById('ciego').onclick=e=>{const b=e.currentTarget;b.setAttribute('aria-checked',b.getAttribute('aria-checked')!=='true');renderAll();};
+document.querySelectorAll('.demo [data-w]').forEach(b=>b.onclick=()=>{
+  document.getElementById('stage').dataset.w=b.dataset.w;
+  document.querySelectorAll('.demo [data-w]').forEach(x=>x.setAttribute('aria-pressed',x===b));
+});
+document.getElementById('tema').onclick=e=>{const d=document.documentElement;const dark=d.dataset.theme!=='dark';d.dataset.theme=dark?'dark':'light';e.currentTarget.setAttribute('aria-pressed',dark);};
+renderAll();
+</script>
+</body>
+</html>
