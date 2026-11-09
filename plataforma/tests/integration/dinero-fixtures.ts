@@ -49,7 +49,8 @@ export function currentActor() {
 export function cajaContext(restaurantId: string) {
   if (restaurantId !== state.restaurantId) throw new Error('El caso intentó operar fuera de su fixture.');
   return { db, tz: 'America/Guatemala', corte: 300, slug: state.slug,
-    userId: currentActor(), cashierName: 'AUD Dinero', firmaSola: true };
+    userId: currentActor(), cashierName: 'AUD Dinero', firmaSola: true,
+    puede: () => true, ciego: false };
 }
 
 export function checked<T>(result: { data: T; error: { message: string } | null }): T {

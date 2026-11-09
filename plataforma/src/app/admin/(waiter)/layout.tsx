@@ -69,7 +69,10 @@ export default async function WaiterLayout({ children }: { children: React.React
     { role: profile.role as string, permissions: profile.permissions as string[] | null },
     tenantData?.restaurant.id ?? null,
   );
-  if (!can(effective.role, effective.permissions, 'mesero')) redirect(authPathFor('/admin/login', tenantSlug));
+  // Entra quien toma pedidos y quien cobra (el puesto Caja, auditoría 1.7).
+  if (!can(effective.role, effective.permissions, 'mesero') && !can(effective.role, effective.permissions, 'caja.cobrar')) {
+    redirect(authPathFor('/admin/login', tenantSlug));
+  }
 
   // ── Candado de tenant ──────────────────────────────────────────────
   // Misma regla que el resto del panel (lib/auth/tenant-guard.ts). Antes esta
@@ -142,11 +145,7 @@ export default async function WaiterLayout({ children }: { children: React.React
       role={profile.role}
       permissions={profile.permissions}
       userName={profile.full_name}
-      canManageStaff={
-        effective.memberRole === 'MANAGER'
-        || profile.role === 'RESTAURANT_OWNER'
-        || profile.role === 'SUPER_ADMIN'
-      }
+      canManageStaff={profile.role === 'SUPER_ADMIN' || can(effective.role, effective.permissions, 'personal')}
       isOperatorSession={isOperatorSession}
     >
       {isOperatorSession && <OperatorHeartbeat profileId={user.id} />}

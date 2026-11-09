@@ -103,6 +103,18 @@ function queHizo(r: ActivityLike): string {
       if (m.password_reset) return `cambió la contraseña de ${nombre || 'un miembro del personal'}`;
       return `editó ${nombre ? `a ${nombre}` : 'el personal'}`;
     }
+    case 'permisos': {
+      // Auditoría 1.7: la migración 177 deja constancia sin actor; el dueño
+      // o un encargado, con el suyo.
+      const nombre = esUuid(e) ? 'un miembro del personal' : e;
+      if (m.motivo === 'migracion_177') {
+        return m.heredado ? `se conservó el acceso completo de ${nombre}; revisa su trabajo` : `se separaron las tareas de Caja para ${nombre}`;
+      }
+      return `cambió lo que puede hacer ${nombre}`;
+    }
+    case 'ajuste':
+      if (typeof m.arqueo_ciego === 'boolean') return m.arqueo_ciego ? 'activó el arqueo ciego' : 'desactivó el arqueo ciego';
+      return `cambió un ajuste${e ? ` — ${e}` : ''}`;
     case 'staff_pin_login':
       return 'entró con su PIN';
     case 'channel_toggle':

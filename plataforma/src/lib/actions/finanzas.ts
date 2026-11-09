@@ -87,7 +87,8 @@ function resumen(l: LecturaDelTurno): CashSummary {
 export async function getCashSummary(restaurantId: string): Promise<CashSummary> {
   const ctx = await authRestaurant(restaurantId);
   if (!ctx) return EMPTY_SUMMARY(new Date().toISOString().slice(0, 10));
-  return resumen(await lectura(ctx, restaurantId));
+  const r = resumen(await lectura(ctx, restaurantId));
+  return ctx.ciego ? { ...r, expectedCash: 0, byMethod: {}, totalSales: 0 } : r;
 }
 
 export type CashCount = {
@@ -119,7 +120,7 @@ export async function getCashHistory(
   restaurantId: string,
   limit = 30,
 ): Promise<CashCount[]> {
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'caja.ver_esperado', 'finanzas');
   if (!ctx) return [];
   const base = 'id, business_date, opening_float, expected_cash, counted_cash, difference, by_method, denomination_breakdown, shift_label, cashier_name, notes, created_at, created_by';
   const nuevas = ', status, expenses_total, opened_at, opened_by_name, period_start, closed_at, void_reason, voided_at';
@@ -165,7 +166,7 @@ export async function getCajaApproval(restaurantId: string): Promise<{ selfAppro
   const ctx = await authRestaurant(restaurantId);
   if (!ctx) return { selfApproves: false, approvers: [] };
   if (ctx.firmaSola) return { selfApproves: true, approvers: [] };
-  return { selfApproves: false, approvers: await listarAprobadores(ctx.db, restaurantId) };
+  return { selfApproves: false, approvers: await listarAprobadores(ctx.db, restaurantId, 'caja.corregir') };
 }
 
 export async function anularCorte(input: FirmaInput & {
@@ -262,7 +263,7 @@ export async function getSalesReportData(
   from: string,
   to: string,
 ): Promise<{ report?: SalesReport; branding?: DocumentBranding; error?: string }> {
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'finanzas');
   if (!ctx) return { error: 'No autorizado.' };
   const [report, branding] = await Promise.all([
     getSalesReport(restaurantId, from, to, ctx.tz, ctx.corte),
@@ -276,7 +277,7 @@ export async function exportSalesReportXlsx(
   from: string,
   to: string,
 ): Promise<{ xlsx?: string; filename?: string; error?: string }> {
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'finanzas');
   if (!ctx) return { error: 'No autorizado.' };
 
   const [report, branding] = await Promise.all([
@@ -381,7 +382,7 @@ export async function getCashHistoryPdfData(
   restaurantId: string,
   limit = 200,
 ): Promise<{ rows?: CashCount[]; branding?: DocumentBranding; slug?: string; error?: string }> {
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'caja.ver_esperado', 'finanzas');
   if (!ctx) return { error: 'No autorizado.' };
   const [rows, branding] = await Promise.all([
     getCashHistory(restaurantId, limit),
@@ -395,7 +396,7 @@ export async function exportCashHistoryXlsx(
   restaurantId: string,
   limit = 200,
 ): Promise<{ xlsx?: string; filename?: string; error?: string }> {
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'caja.ver_esperado', 'finanzas');
   if (!ctx) return { error: 'No autorizado.' };
 
   const [rows, branding] = await Promise.all([
@@ -520,6 +521,23 @@ export interface CajaState {
   selfApproves: boolean;
   /** La migración 145 no ha corrido: sin turnos ni correcciones. */
   needsMigration: boolean;
+  /** Arqueo ciego (177): quien mira cuenta sin ver lo esperado ni los cobros. */
+  ciego?: boolean;
+}
+
+/**
+ * Arqueo ciego: lo que dejaría calcular lo esperado no sale del servidor.
+ * La diferencia se conoce al cerrar, cuando el servidor la calcula.
+ */
+function aCiegas(e: CajaState): CajaState {
+  return {
+    ...e,
+    ciego: true,
+    summary: { ...e.summary, expectedCash: 0, byMethod: {}, totalSales: 0 },
+    refunds: 0,
+    refundsCash: 0,
+    payments: [],
+  };
 }
 
 const EMPTY_CAJA = (date: string): CajaState => ({
@@ -585,8 +603,9 @@ export async function getCajaState(restaurantId: string): Promise<CajaState> {
   if (!ctx) return EMPTY_CAJA(new Date().toISOString().slice(0, 10));
   const turno = await lectura(ctx, restaurantId);
   const { data, error } = await leerBorradorCaja(ctx, restaurantId, turno.desde);
+  const estado = estadoDeCaja(ctx, turno);
   return {
-    ...estadoDeCaja(ctx, turno),
+    ...(ctx.ciego ? aCiegas(estado) : estado),
     cloudDraft: data ? {
       ...data.payload as ConteoCaja, revision: data.revision as string,
       savedAt: data.saved_at as string, actorName: data.actor_name as string | null,
@@ -603,7 +622,7 @@ export async function abrirTurno(input: {
   openingFloat: number;
   shiftLabel?: string | null;
 }): Promise<{ ok?: true; error?: string }> {
-  const ctx = await authRestaurant(input.restaurantId);
+  const ctx = await authRestaurant(input.restaurantId, 'caja.abrir');
   if (!ctx) return { error: 'No autorizado.' };
 
   const fondo = Math.round((Number(input.openingFloat) || 0) * 100) / 100;
@@ -661,7 +680,7 @@ export async function addCashExpense(input: {
   paidBy?: string | null;
   notes?: string | null;
 }): Promise<{ ok?: true; error?: string }> {
-  const ctx = await authRestaurant(input.restaurantId);
+  const ctx = await authRestaurant(input.restaurantId, 'caja.salida');
   if (!ctx) return { error: 'No autorizado.' };
 
   const concept = (input.concept ?? '').trim();
@@ -706,7 +725,7 @@ export async function deleteCashExpense(
   id: string,
 ): Promise<{ ok?: true; error?: string }> {
   if (!UUID_RE.test(id)) return { error: 'Gasto no encontrado.' };
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'caja.salida');
   if (!ctx) return { error: 'No autorizado.' };
 
   // Un gasto ya atado a un corte cerrado no se toca: cambiaría un cuadre
@@ -766,7 +785,7 @@ function leerBorradorCaja(ctx: Ctx, restaurantId: string, periodo: string) {
 export async function guardarBorradorCaja(input: {
   restaurantId: string; turno: AlcanceCaja; revision: string | null; conteo: ConteoCaja;
 }): Promise<{ guardado?: { revision: string; savedAt: string }; conflicto?: boolean; error?: string }> {
-  const ctx = await authRestaurant(input.restaurantId);
+  const ctx = await authRestaurant(input.restaurantId, 'caja.cerrar');
   if (!ctx) return { error: 'No autorizado.' };
   if (input.revision != null && !identidadCobroValida(input.revision)) return { error: 'Revisión inválida.' };
   const l = await lectura(ctx, input.restaurantId);
@@ -822,7 +841,7 @@ async function cuadre(ctx: Ctx, input: CajaPayload, conteo = conteoCaja(input.co
  * guarda en el turno abierto; si no había, nace uno sin apertura.
  */
 export async function saveCajaDraft(input: CajaPayload): Promise<{ ok?: true; error?: string }> {
-  const ctx = await authRestaurant(input.restaurantId);
+  const ctx = await authRestaurant(input.restaurantId, 'caja.cerrar');
   if (!ctx) return { error: 'No autorizado.' };
 
   const c = await cuadre(ctx, input);
@@ -867,7 +886,7 @@ export async function saveCajaDraft(input: CajaPayload): Promise<{ ok?: true; er
  * fondo. Un turno que solo existía por el conteo guardado sí se va.
  */
 export async function discardCajaDraft(restaurantId: string): Promise<{ ok?: true; error?: string }> {
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'caja.cerrar');
   if (!ctx) return { error: 'No autorizado.' };
   const l = await lectura(ctx, restaurantId);
   if (!l.abierto) return { ok: true };
@@ -932,7 +951,7 @@ const SIN_170 = 'Falta la migración 170 para conservar el recibo del cierre de 
 export async function getCajaReceipt(restaurantId: string, corteId: string):
   Promise<{ receipt?: CajaReceipt; error?: string }> {
   if (!identidadCobroValida(corteId)) return { error: 'Corte inválido.' };
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'caja.cerrar', 'caja.ver_esperado', 'finanzas');
   if (!ctx) return { error: 'No autorizado.' };
   const { data, error } = await ctx.db.from('caja_recibos').select('recibo')
     .eq('restaurant_id', restaurantId).eq('corte_id', corteId).maybeSingle();
@@ -953,7 +972,7 @@ export async function getCajaReceipt(restaurantId: string, corteId: string):
 export async function closeCaja(
   input: SolicitudCierre,
 ): Promise<RespuestaCierre> {
-  const ctx = await authRestaurant(input.restaurantId);
+  const ctx = await authRestaurant(input.restaurantId, 'caja.cerrar');
   if (!ctx) return input.intentoId ? { error: 'Vuelve a iniciar sesión para recuperar el cierre.', incierto: true } : { error: 'No autorizado.' };
 
   const intentoId = input.intentoId ?? crypto.randomUUID();

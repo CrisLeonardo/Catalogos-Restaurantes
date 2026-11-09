@@ -584,7 +584,8 @@ describe('1.2 · traspaso entre responsables', () => {
 
     checked(await db.from('restaurant_members').insert({ restaurant_id: rid(), user_id: state.users[1], role: 'STAFF', permissions: ['mesero'] }));
     expect((await solicitar()).error?.code).toBe('42501');
-    checked(await db.from('restaurant_members').update({ permissions: ['finanzas'] }).eq('restaurant_id', rid()).eq('user_id', state.users[1]));
+    // Desde la 177 recibir una caja es abrir el turno siguiente: `caja.abrir`, no `finanzas`.
+    checked(await db.from('restaurant_members').update({ permissions: ['caja.abrir'] }).eq('restaurant_id', rid()).eq('user_id', state.users[1]));
     expect((await solicitar(state.users[0])).error?.code).toBe('22023');
     expect((await solicitar(state.users[0], 'AUD', state.users[1])).error?.code).toBe('42501');
     expect((await solicitar(state.users[1], '  ')).error?.code).toBe('22023');

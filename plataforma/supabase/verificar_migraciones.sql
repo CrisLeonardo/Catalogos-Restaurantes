@@ -246,7 +246,16 @@ huellas(n, que, ok, cuando) as (values
      to_regprocedure('public.leogin_operar_pedido(uuid,uuid,uuid,uuid,text,timestamptz,text,uuid,integer,text,uuid)') is not null
      and to_regprocedure('public.leogin_resumen_pedidos_vivos(uuid,uuid[])') is not null
      and to_regclass('public.activity_log_intento_pedido_idx') is not null,
-     'ANTES de desplegar; después de la 175')
+     'ANTES de desplegar; después de la 175'),
+  ('177', 'permisos por trabajo: capacidades de Caja, sin null en el personal y arqueo ciego',
+     to_regprocedure('public.leogin_permisos_por_trabajo(text,jsonb)') is not null
+     and exists (select 1 from information_schema.columns
+       where table_schema='public' and table_name='restaurants' and column_name='arqueo_ciego')
+     and exists (select 1 from pg_trigger where tgrelid='public.restaurant_members'::regclass
+       and tgname='leogin_miembro_sin_null')
+     and not exists (select 1 from public.restaurant_members
+       where role in ('STAFF','MANAGER') and jsonb_typeof(permissions) is distinct from 'array'),
+     'ANTES de desplegar; después de la 176')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

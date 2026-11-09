@@ -260,7 +260,7 @@ export async function cobrarParteDeMesa(
     return { error: 'Importe de pago inválido.' };
   }
 
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['caja.cobrar']);
   if ('error' in acceso) return acceso;
 
   const db = createServiceClient();
@@ -294,7 +294,7 @@ export async function cobradoDeMesa(
 ): Promise<{ error?: string; total?: number; lineasPagadas?: string[]; lineasPendientes?: Record<string, number>; avisoCuotas?: string | null; needsMigration?: boolean }> {
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
 
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['mesero', 'caja.cobrar']);
   if ('error' in acceso) return acceso;
 
   const db = createServiceClient();
@@ -322,7 +322,7 @@ export async function transicionDeMesa(
     return { error: 'Datos de mesa inválidos.' };
   }
   const acceso = await assertTableAccess(restaurantId,
-    accion === 'sin_cobro' || accion === 'reabrir' ? ['finanzas'] : ['mesero', 'mesas']);
+    accion === 'sin_cobro' || accion === 'reabrir' ? ['caja.corregir'] : ['mesero', 'mesas', 'caja.cobrar']);
   if ('error' in acceso) return acceso;
   const { data, error } = await createServiceClient().rpc('leogin_transicion_mesa', {
     p_restaurant: restaurantId, p_mesa: mesa, p_turno: turno, p_cuenta: cuenta,
@@ -341,7 +341,7 @@ export async function transicionDeMesa(
 
 export async function leerContextoCobroMesa(restaurantId: string, mesa: number):
   Promise<{ contexto: ContextoCobroMesa } | { error: string; needsMigration?: boolean }> {
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['mesero', 'caja.cobrar']);
   if ('error' in acceso) return acceso;
   const { data, error } = await createServiceClient().rpc('leogin_contexto_pago_mesa', {
     p_restaurant: restaurantId, p_mesa: mesa,
@@ -354,7 +354,7 @@ export async function leerContextoCobroMesa(restaurantId: string, mesa: number):
 export async function guardarPartesMesa(
   restaurantId: string, mesa: number, cuenta: string, anterior: string | null, cantidad: number,
 ): Promise<{ reparto: RepartoCobro } | { error: string }> {
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['mesero', 'caja.cobrar']);
   if ('error' in acceso) return acceso;
   const { data, error } = await createServiceClient().rpc('leogin_guardar_partes_mesa', {
     p_restaurant: restaurantId, p_mesa: mesa, p_cuenta: cuenta, p_anterior: anterior, p_n: cantidad,
@@ -372,7 +372,7 @@ export async function ejecutarAbonoMesa(
       || !/^[a-f0-9]{32}$/.test(solicitud.cuenta)) {
     return { error: 'Datos de cobro inválidos.', incierto: false };
   }
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['caja.cobrar']);
   if ('error' in acceso) return acceso;
   const db = createServiceClient();
   const args = { p_restaurant: restaurantId, p_mesa: solicitud.mesa, p_cuenta: solicitud.cuenta,
@@ -486,7 +486,7 @@ export async function cobrarPedidoParaLlevar(
   if (!restaurantId || !orderId) return { error: 'Datos inválidos.' };
   if (!isPaymentMethod(pago?.method)) return { error: 'Forma de pago inválida.' };
 
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['caja.cobrar']);
   if ('error' in acceso) return acceso;
 
   const db = createServiceClient();

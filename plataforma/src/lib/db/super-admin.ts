@@ -28,6 +28,8 @@ export type RestaurantUser = {
    * camino viejo, y por tanto no hay fila que cambiarle ni quitarle.
    */
   memberRole: MemberRole | null;
+  /** Su puesto aquí (177), para enseñar el papel exacto. */
+  memberPuesto: string | null;
 };
 
 export type GlobalMetrics = {
@@ -90,13 +92,17 @@ export const getRestaurantUsers = cache(
     const db = createServiceClient();
     const [{ data: profiles }, { data: members }] = await Promise.all([
       db.from('profiles').select('id, role, full_name').eq('restaurant_id', restaurantId),
-      db.from('restaurant_members').select('user_id, role').eq('restaurant_id', restaurantId).eq('status', 'active'),
+      db.from('restaurant_members').select('user_id, role, puesto').eq('restaurant_id', restaurantId).eq('status', 'active'),
     ]);
 
     // Su papel aquí según la membresía. Es lo que decide qué se le puede
     // cambiar y qué se le puede quitar: sin fila, no hay nada que tocar.
     const rolDeMembresia = new Map<string, MemberRole>(
       (members ?? []).map((m) => [m.user_id as string, m.role as MemberRole]),
+    );
+
+    const puestoDe = new Map<string, string | null>(
+      (members ?? []).map((m) => [m.user_id as string, (m.puesto as string | null) ?? null]),
     );
 
     const porPerfil = new Set((profiles ?? []).map((p) => p.id as string));
@@ -127,6 +133,7 @@ export const getRestaurantUsers = cache(
           full_name: (p.full_name as string | null) ?? null,
           viaMembership,
           memberRole: rolDeMembresia.get(p.id as string) ?? null,
+          memberPuesto: puestoDe.get(p.id as string) ?? null,
         };
       }),
     );

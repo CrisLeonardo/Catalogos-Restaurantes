@@ -135,7 +135,7 @@ export function buildNav(ctx: NavContext): NavGroup[] {
             { href: '/admin/pedidos', label: 'En vivo', key: 'pedidos' },
             { href: '/admin/cocina', label: 'Cocina', key: 'cocina' },
             ...salon(mesasAccessible, mesasAccessible, { href: '/admin/mesas', label: 'Mesas', key: 'mesas' }),
-            ...salon(hasWaiterPanel, hasWaiterPanel, { href: '/admin/mesero', label: 'Tomar pedidos', key: 'mesero' }),
+            ...salon(hasWaiterPanel, hasWaiterPanel, { href: '/admin/mesero', label: 'Tomar pedidos', key: 'servicio' }),
           ]
         : [],
     },
@@ -159,10 +159,10 @@ export function buildNav(ctx: NavContext): NavGroup[] {
       href: '/admin/clientes',
       items: [
         ...(on(ctx.ordersEnabled) ? [{ href: '/admin/clientes', label: 'Clientes', key: 'clientes' }] : []),
-        ...(on(ctx.loyaltyActive) ? [{ href: '/admin/lealtad', label: 'Lealtad', key: 'lealtad' }] : []),
+        ...(on(ctx.loyaltyActive) ? [{ href: '/admin/lealtad', label: 'Lealtad', key: 'loyalty' }] : []),
         ...(on(ctx.cuponesActive) ? [{ href: '/admin/cupones', label: 'Cupones', key: 'cupones' }] : []),
         ...(on(ctx.encuestasActive) ? [{ href: '/admin/encuestas', label: 'Encuestas', key: 'encuestas' }] : []),
-        ...(on(ctx.reservacionesActive) ? [{ href: '/admin/reservaciones', label: 'Reservaciones', key: 'reservaciones' }] : []),
+        ...(on(ctx.reservacionesActive) ? [{ href: '/admin/reservaciones', label: 'Reservaciones', key: 'lista_espera' }] : []),
         ...(on(ctx.listaEsperaActive) ? [{ href: '/admin/lista-espera', label: 'Lista de espera', key: 'lista_espera' }] : []),
       ],
     },
@@ -179,9 +179,9 @@ export function buildNav(ctx: NavContext): NavGroup[] {
            vivía al final del scroll de Finanzas, y cerrar caja no es un
            apéndice de un reporte: es la última tarea de todas las noches, la
            hace el cajero y no el dueño, y tiene su propio ritmo. Comparte la
-           llave 'finanzas' a propósito: quien puede ver el dinero puede
-           cuadrarlo, sin tocar el modelo de permisos. */
-        ...lockable(ctx, ctx.finanzasEnabled, plan.hasFinance, { href: '/admin/caja', label: 'Caja', key: 'finanzas' }),
+           llave propia desde la 1.7: la ve quien tiene alguna tarea de Caja,
+           sin que eso le enseñe las utilidades de Finanzas. */
+        ...lockable(ctx, ctx.finanzasEnabled, plan.hasFinance, { href: '/admin/caja', label: 'Caja', key: 'caja' }),
         ...(on(ctx.felActive) ? [{ href: '/admin/facturacion', label: 'Facturación', key: 'fel' }] : []),
         // Apps de delivery (Canales, Fase 5A): deshabilitado, sigue en pruebas.
         /* "Copia de datos" ESTABA aquí y también en la portada de Ajustes, y
@@ -245,11 +245,10 @@ export function buildNav(ctx: NavContext): NavGroup[] {
      «Pedidos» (auditoría de navegación 2026-10-14). */
   const veHoy = !isMeseroOnly(ctx.role, ctx.permissions);
 
-  // 'personal' NO es delegable (no está en ADMIN_SECTIONS a propósito: así un
-  // gerente no puede darse permisos a sí mismo repartiéndola), su llave es el
-  // ROL y ya se aplicó arriba.
+  // 'personal' es una capacidad desde la 1.7 (la da el puesto Encargado); un
+  // encargado sólo reparte lo que él tiene y nunca «personal» (staff.ts).
   const allowed = (key: string) =>
-    key === 'personal' || (key === 'hoy' ? veHoy : can(ctx.role ?? 'RESTAURANT_OWNER', ctx.permissions ?? null, key));
+    key === 'hoy' ? veHoy : can(ctx.role ?? 'RESTAURANT_OWNER', ctx.permissions ?? null, key);
 
   return groups
     .map((g) => ({ ...g, items: g.items.filter((it) => allowed(it.key)) }))

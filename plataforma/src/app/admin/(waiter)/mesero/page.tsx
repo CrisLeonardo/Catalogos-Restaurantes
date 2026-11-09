@@ -153,7 +153,9 @@ export default async function MeseroPage() {
       hubUrl={hubInfo.hubUrl}
       hubToken={hubInfo.hubToken}
       puedeAgotar={puedeAgotar}
-      puedeGestionarCuenta={profile?.role === 'SUPER_ADMIN' || can(efectivo.role, efectivo.permissions, 'finanzas')}
+      puedeGestionarCuenta={profile?.role === 'SUPER_ADMIN' || can(efectivo.role, efectivo.permissions, 'caja.corregir')}
+      puedeTomarPedidos={profile?.role === 'SUPER_ADMIN' || can(efectivo.role, efectivo.permissions, 'mesero')}
+      puedeCobrarCuentas={profile?.role === 'SUPER_ADMIN' || can(efectivo.role, efectivo.permissions, 'caja.cobrar')}
     />
   );
 }

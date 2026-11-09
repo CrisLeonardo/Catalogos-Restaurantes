@@ -17,7 +17,7 @@ import { resolveStaffDestination } from '@/lib/auth/destination';
 import { writeOperatorCookie } from '@/lib/auth/operator-session';
 import { logPanelAccess } from '@/lib/auth/access-log';
 import { getPinAccess, readDeviceId, rememberDevice } from '@/lib/auth/trusted-device';
-import { ownerCtx, assertStaffOfRestaurant } from '@/lib/actions/staff';
+import { ownerCtx, assertStaffOfRestaurant } from '@/lib/auth/personal';
 import {
   isValidPin, newPinSalt, hashPin, verifyPin,
   PIN_LENGTH, PIN_LOCK_AFTER_ATTEMPTS, PIN_LOCK_MS,

@@ -133,11 +133,7 @@ export default async function KitchenLayout({ children }: { children: React.Reac
       role={profile.role}
       permissions={profile.permissions}
       userName={profile.full_name}
-      canManageStaff={
-        effective.memberRole === 'MANAGER'
-        || profile.role === 'RESTAURANT_OWNER'
-        || profile.role === 'SUPER_ADMIN'
-      }
+      canManageStaff={profile.role === 'SUPER_ADMIN' || can(effective.role, effective.permissions, 'personal')}
       isOperatorSession={isOperatorSession}
     >
       <OfflineSupport />

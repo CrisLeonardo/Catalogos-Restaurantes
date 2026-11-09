@@ -169,6 +169,10 @@ export interface ServicioPanelProps {
   /** Tiene permiso de carta: puede marcar un plato agotado desde aquí. */
   puedeAgotar?: boolean;
   puedeGestionarCuenta?: boolean;
+  /** Toma pedidos (`mesero`). El puesto Caja entra sólo a cobrar. */
+  puedeTomarPedidos?: boolean;
+  /** Cobra cuentas (`caja.cobrar`). El dueño se lo puede quitar a un mesero. */
+  puedeCobrarCuentas?: boolean;
 }
 
 export default function ServicioPanel({
@@ -177,6 +181,7 @@ export default function ServicioPanel({
   occupancy, calls, seatings, reservas, tableCount,
   pickupEnabled, tipEnabled, tipEnabledPickup, currency, floorPlan, hubUrl, hubToken,
   puedeAgotar = false, puedeGestionarCuenta = false,
+  puedeTomarPedidos = true, puedeCobrarCuentas = true,
 }: ServicioPanelProps) {
   const servicio = useServiceMode();
   const now = useReloj();
@@ -584,7 +589,7 @@ export default function ServicioPanel({
   const totalMesa = Math.round((valorEnviado + resumen.totalNuevo) * 100) / 100;
   const porCobrarReal = Math.max(0, contextoCobro?.saldo ?? Math.round((valorEnviado - cobrado) * 100) / 100);
   const enLimpieza = mesaSel?.estado === 'limpieza';
-  const puedeCobrar = !enLimpieza && (sel.kind === 'pedido' || !!contextoCobro)
+  const puedeCobrar = puedeCobrarCuentas && !enLimpieza && (sel.kind === 'pedido' || !!contextoCobro)
     && resumen.nNuevas === 0 && !envioPendiente
     && (porCobrarReal > 0 || !!contextoCobro?.saldada);
   const etiquetaCobro = contextoCobro?.saldada ? 'Ver pagos' : 'Cobrar mesa';
@@ -1429,7 +1434,7 @@ export default function ServicioPanel({
             <button type="button" className="sv-cta" data-tone="quiet" disabled={trabajando}
               onClick={reimprimirRecibos}>Reimprimir recibos</button>
           )}
-          {!enLimpieza && (movil || planoVisible) && (
+          {!enLimpieza && puedeTomarPedidos && (movil || planoVisible) && (
             <button type="button" className="sv-cta" data-tone="quiet"
               onClick={() => { setVistaCarta(true); setPantalla('comanda'); }}>
               <Icon name="plus" size={17} aria-hidden /> Agregar platos
@@ -1666,7 +1671,14 @@ export default function ServicioPanel({
                 ))}
               </nav>
             )}
-            <Carta {...cartaProps} />
+            {puedeTomarPedidos ? <Carta {...cartaProps} /> : (
+              <div role="note" style={{ padding: 24, display: 'grid', gap: 6, alignContent: 'start' }}>
+                <strong style={{ fontSize: 16, fontWeight: 600 }}>Tu puesto cobra, no toma pedidos</strong>
+                <span style={{ fontSize: 14, color: 'var(--u-text-3)', lineHeight: 1.45 }}>
+                  Elige una mesa para cobrarla. Para tomar pedidos, pide al dueño el permiso «Tomar pedidos y atender mesas».
+                </span>
+              </div>
+            )}
             {movil && (
               <div className="sv-m-foot">
                 <button type="button" className="sv-m-resumen" onClick={() => setPantalla('ticket')}>

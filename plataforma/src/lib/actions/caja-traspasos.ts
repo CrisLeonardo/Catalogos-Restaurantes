@@ -29,7 +29,7 @@ export async function getTraspasoDeCorte(restaurantId: string, corteId: string):
   error?: string;
 }> {
   if (!identidadCobroValida(corteId)) return { error: 'Corte inválido.' };
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'caja.cerrar', 'caja.abrir');
   if (!ctx) return { error: 'No autorizado.' };
   const [corte, entrega] = await Promise.all([
     ctx.db.from('caja_recibos').select('actor_id, cash_counts!inner(status)')
@@ -52,7 +52,7 @@ export async function getTraspasoDeCorte(restaurantId: string, corteId: string):
 }
 
 export async function getRecepcionesCaja(restaurantId: string): Promise<{ pendientes: RecepcionCaja[]; error?: string }> {
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'caja.abrir');
   if (!ctx) return { pendientes: [], error: 'No autorizado.' };
   const { data, error } = await ctx.db.from('caja_traspasos')
     .select(`${CAMPOS}, caja_recibos!inner(recibo, cash_counts!inner(status))`)
@@ -71,7 +71,7 @@ export async function solicitarTraspasoCaja(restaurantId: string, corteId: strin
   if (!identidadCobroValida(corteId) || !identidadCobroValida(receptor) || typeof nota !== 'string') {
     return { error: 'Datos de entrega inválidos.' };
   }
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'caja.cerrar');
   if (!ctx) return { error: 'No autorizado.' };
   const { data, error } = await ctx.db.rpc('leogin_solicitar_traspaso_caja', {
     p_restaurant: restaurantId, p_corte: corteId, p_entrega: ctx.userId, p_recibe: receptor, p_nota: nota.trim(),
@@ -83,7 +83,7 @@ export async function solicitarTraspasoCaja(restaurantId: string, corteId: strin
 export async function confirmarTraspasoCaja(restaurantId: string, corteId: string):
   Promise<{ registro?: TraspasoCaja; error?: string }> {
   if (!identidadCobroValida(corteId)) return { error: 'Corte inválido.' };
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'caja.abrir');
   if (!ctx) return { error: 'No autorizado.' };
   const { data, error } = await ctx.db.rpc('leogin_confirmar_traspaso_caja', {
     p_restaurant: restaurantId, p_corte: corteId, p_recibe: ctx.userId,

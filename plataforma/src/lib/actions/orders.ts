@@ -1127,7 +1127,7 @@ export async function freeTable(
     return { error: 'Importe de pago inválido.' };
   }
 
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['caja.cobrar']);
   if ('error' in acceso) return acceso;
 
   const db = createServiceClient();
@@ -1553,7 +1553,7 @@ export async function getTableBill(
 ): Promise<{ orders: OrderWithItems[] } | { error: string }> {
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
 
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['mesero', 'caja.cobrar']);
   if ('error' in acceso) return acceso;
 
   return { orders: await getOrdersForTable(restaurantId, tableNumber) };
@@ -1878,7 +1878,7 @@ export async function getTableSplit(
 ): Promise<{ split: TableSplit | null } | { error: string }> {
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
 
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['mesero', 'caja.cobrar']);
   if ('error' in acceso) return acceso;
 
   const db = createServiceClient();
@@ -1918,7 +1918,7 @@ export async function saveTableSplit(
   const split = sanitizeSplit(raw);
   if (!split) return { error: 'Reparto inválido.' };
 
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['mesero', 'caja.cobrar']);
   if ('error' in acceso) return acceso;
 
   const db = createServiceClient();
@@ -2008,7 +2008,7 @@ export async function printTableBillShare(
   const { restaurantId, tableNumber, mode, peopleIds, names, assignment, personId } = input;
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
 
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['mesero', 'caja.cobrar']);
   if ('error' in acceso) return acceso;
 
   const orders = await getOrdersForTable(restaurantId, tableNumber);

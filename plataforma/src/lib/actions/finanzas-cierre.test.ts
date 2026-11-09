@@ -28,7 +28,7 @@ function lectura(): LecturaDelTurno {
 beforeEach(() => {
   vi.clearAllMocks();
   h.auth.mockResolvedValue({ db: { rpc: h.rpc }, tz: 'America/Guatemala', corte: 300,
-    userId: ACTOR, cashierName: 'AUD Caja', firmaSola: true });
+    userId: ACTOR, cashierName: 'AUD Caja', firmaSola: true, puede: () => true, ciego: false });
   h.leer.mockResolvedValue(lectura());
   h.rpc.mockResolvedValue({ data: { recibo: { id: CUT, closedAt: hasta }, repetido: false }, error: null });
 });

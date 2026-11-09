@@ -5,6 +5,11 @@ import { createServerClient } from '@supabase/ssr';
 import { readFileSync } from 'node:fs';
 import { diaDeNegocio, inicioDelDia } from '../../src/lib/caja/dia';
 
+/* Permisos por trabajo (1.7, migración 177): el mesero cobra con `caja.cobrar`
+   y operar la Caja ya no cuelga de `finanzas`. Equivale a la conversión de
+   la 177 para los permisos que estos casos usaban antes. */
+const CAJA_COMPLETA = ['caja.cobrar', 'caja.abrir', 'caja.salida', 'caja.cerrar', 'caja.ver_esperado', 'caja.corregir', 'caja.devolver'];
+
 try {
   for (const line of readFileSync('.env.local', 'utf8').split('\n')) {
     const match = line.trim().match(/^([A-Z_]+)=(.*)$/);
@@ -196,7 +201,7 @@ test.beforeAll(async () => {
     const created = await db.auth.admin.createUser({ email, email_confirm: true });
     if (created.error) throw created.error;
     users.push({ id: created.data.user!.id, email });
-    check(await db.from('profiles').upsert({ id: created.data.user!.id, full_name: `AUD Caja ${i}`, restaurant_id: restaurantId, role: 'RESTAURANT_STAFF', permissions: ['mesero'] }));
+    check(await db.from('profiles').upsert({ id: created.data.user!.id, full_name: `AUD Caja ${i}`, restaurant_id: restaurantId, role: 'RESTAURANT_STAFF', permissions: ['mesero', 'caja.cobrar'] }));
   }
   const o = check(await db.from('orders').insert({ restaurant_id: restaurantId, order_number: `AUD-${suffix}`, customer_name: 'AUD Mesa', customer_phone: '00000000',
     order_type: 'DINE_IN', table_number: 1, address: 'Mesa 1', status: 'SERVED', subtotal: 70, total: 70 }).select('id').single());
@@ -224,7 +229,7 @@ test('1.6 · conserva el historial abierto y revela una incidencia fuera del fil
   }).select('id').single())!;
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   try {
-    check(await db.from('profiles').update({ permissions: ['mesero', 'pedidos'] }).eq('id', users[0].id));
+    check(await db.from('profiles').update({ permissions: ['mesero', 'caja.cobrar', 'pedidos'] }).eq('id', users[0].id));
     await login(context, users[0].email);
     const page = await context.newPage();
     await expect(async () => {
@@ -262,7 +267,7 @@ test('1.6 · conserva el historial abierto y revela una incidencia fuera del fil
     await expect(tarjeta.getByRole('button', { name: 'Entregado', exact: true })).toBeEnabled();
   } finally {
     await context.close();
-    check(await db.from('profiles').update({ permissions: ['mesero'] }).eq('id', users[0].id));
+    check(await db.from('profiles').update({ permissions: ['mesero', 'caja.cobrar'] }).eq('id', users[0].id));
     check(await db.from('orders').delete().eq('id', pedido.id));
   }
 });
@@ -289,7 +294,7 @@ test('1.5 · prepara por puesto y conserva el orden de 30 comandas', async ({ br
       ...lista.map((p) => ({ order_id: p.id, product_id: null, name_snapshot: 'Tostadas', price_snapshot: 20, quantity: 1, subtotal: 20 })),
       { order_id: id, product_id: bebida.id, name_snapshot: 'Horchata de prueba', price_snapshot: 15, quantity: 1, subtotal: 15 },
     ]));
-    check(await db.from('profiles').update({ permissions: ['mesero', 'cocina'] }).eq('id', users[0].id));
+    check(await db.from('profiles').update({ permissions: ['mesero', 'caja.cobrar', 'cocina'] }).eq('id', users[0].id));
     await login(context, users[0].email);
     const page = await context.newPage();
     await page.goto(`${origin}/panel/${slug}/cocina`, { waitUntil: 'domcontentloaded' });
@@ -328,7 +333,7 @@ test('1.5 · prepara por puesto y conserva el orden de 30 comandas', async ({ br
     expect(check(await db.from('orders').select('status,served_at').eq('id', id).single())).toEqual({ status: 'READY', served_at: null });
   } finally {
     await context.close();
-    check(await db.from('profiles').update({ permissions: ['mesero'] }).eq('id', users[0].id));
+    check(await db.from('profiles').update({ permissions: ['mesero', 'caja.cobrar'] }).eq('id', users[0].id));
     check(await db.from('orders').delete().in('id', (pedidos as { id: string }[]).map((p) => p.id)));
     check(await db.from('products').delete().eq('id', bebida.id));
     check(await db.from('print_stations').delete().in('id', [cocina.id, barra.id]));
@@ -390,7 +395,7 @@ test('1.1 · un abono libre mixto deja la mesa abierta y registra los dos métod
     if (user.error) throw user.error;
     userId = user.data.user!.id;
     check(await db.from('profiles').upsert({ id: userId, full_name: 'AUD Caja Mixto', restaurant_id: rest.id,
-      role: 'RESTAURANT_STAFF', permissions: ['mesero'] }));
+      role: 'RESTAURANT_STAFF', permissions: ['mesero', 'caja.cobrar'] }));
     await login(context, email);
     const page = await context.newPage();
     const order = check(await db.from('orders').insert({ restaurant_id: rest.id, order_number: `AUD-mixto-${suffix}`,
@@ -640,7 +645,7 @@ test('0.17 · el botón y Postgres conservan Q33.34 + Q33.33 + Q33.33', async ({
 test('0.18 · caja conserva el primer recibo y cuenta el pago posterior una vez en el siguiente', async ({ browser }) => {
   test.setTimeout(180_000);
   check(await db.from('restaurants').update({ modules: { orders: true } }).eq('id', restaurantId));
-  check(await db.from('profiles').update({ permissions: ['mesero', 'finanzas'] }).eq('id', users[0].id));
+  check(await db.from('profiles').update({ permissions: ['mesero', 'caja.cobrar', 'finanzas', ...CAJA_COMPLETA] }).eq('id', users[0].id));
   const o = check(await db.from('orders').insert({ restaurant_id: restaurantId, order_number: `AUD-caja-${suffix}`,
     customer_name: 'AUD Caja', customer_phone: '00000000', order_type: 'DINE_IN', table_number: 4,
     address: 'Mesa 4', status: 'SERVED', subtotal: 20, total: 20 }).select('id').single())!;
@@ -700,7 +705,7 @@ test('0.19 · el cierre incluye el cobro del inicio exacto del día una sola vez
     if (user.error) throw user.error;
     userId = user.data.user!.id;
     check(await db.from('profiles').upsert({ id: userId, full_name: 'AUD Caja día', restaurant_id: rest.id,
-      role: 'RESTAURANT_STAFF', permissions: ['finanzas'] }));
+      role: 'RESTAURANT_STAFF', permissions: ['finanzas', ...CAJA_COMPLETA] }));
     const reloj = check(await db.rpc('leogin_contexto_caja', { p_restaurant: rest.id, p_cambio: false }));
     const dia = diaDeNegocio(new Date(reloj.hasta), 'America/Guatemala', 300);
     const inicio = inicioDelDia(dia, 'America/Guatemala', 300).getTime();
@@ -754,7 +759,7 @@ test('0.19 · el cierre incluye el cobro del inicio exacto del día una sola vez
 test('1.2 · Caja móvil cuenta billetes y monedas y retoma el borrador guardado', async ({ browser }) => {
   test.setTimeout(180_000);
   check(await db.from('restaurants').update({ modules: { orders: true } }).eq('id', restaurantId));
-  check(await db.from('profiles').update({ permissions: ['mesero', 'finanzas'] }).eq('id', users[0].id));
+  check(await db.from('profiles').update({ permissions: ['mesero', 'caja.cobrar', 'finanzas', ...CAJA_COMPLETA] }).eq('id', users[0].id));
   const context = await browser.newContext({ viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true });
   try {
     await login(context, users[0].email);
@@ -793,7 +798,7 @@ test('1.2 · el traspaso queda pendiente hasta que confirma la otra sesión', as
     localId = local.id;
     check(await db.from('restaurant_themes').insert({ restaurant_id: local.id, brand_name: 'AUD Traspaso',
       config: { orderTypes: ['dine_in'] } }));
-    check(await db.from('profiles').update({ restaurant_id: local.id, permissions: ['finanzas'] }).in('id', operadores));
+    check(await db.from('profiles').update({ restaurant_id: local.id, permissions: ['finanzas', ...CAJA_COMPLETA] }).in('id', operadores));
     await login(saliente, users[0].email);
     const caja = await saliente.newPage();
     await caja.goto(url, { waitUntil: 'domcontentloaded' });

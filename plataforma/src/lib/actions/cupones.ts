@@ -2,10 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
-import { createClient } from '@/lib/supabase/server';
-import { canActOnRestaurant } from '@/lib/db/membership';
+import { actorEn, tiene } from '@/lib/auth/capacidades';
 import { createServiceClient } from '@/lib/supabase/service';
-import { canActOnGroupBranch } from '@/lib/db/admin';
 import { resolveCoupon, type DiscountType } from '@/lib/db/cupones';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { logActivity } from '@/lib/activity';
@@ -43,28 +41,13 @@ export async function validateCoupon(
 }
 
 async function getAuthorized(restaurantId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { ok: false as const, error: 'No autenticado.' };
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, restaurant_id')
-    .eq('id', user.id)
-    .single();
-  if (!profile) return { ok: false as const, error: 'Perfil no encontrado.' };
-
-  const isSuper = profile.role === 'SUPER_ADMIN';
-  const isOwner = profile.role === 'RESTAURANT_OWNER';
-  // Administrar el grupo de esta sucursal vale igual que ser su dueño
-  // (migración 116: el grupo se lee de la organización, no de un rol).
-  const enSuGrupo = await canActOnGroupBranch(restaurantId);
-  if (!isSuper && !isOwner && !enSuGrupo) return { ok: false as const, error: 'Solo el propietario puede gestionar cupones.' };
-  if (!isSuper && !enSuGrupo && !(await canActOnRestaurant(profile.restaurant_id, restaurantId))) {
-    return { ok: false as const, error: 'No autorizado.' };
-  }
-
-  return { ok: true as const, userId: user.id };
+  // Misma regla que el resto del panel (1.7): dueño, dueño de grupo, super
+  // admin o quien tenga «cupones» en ESTA sucursal. Antes miraba sólo
+  // `profiles.role`, y dejaba fuera al dueño con membresía y al encargado.
+  const actor = await actorEn(restaurantId);
+  if (!actor) return { ok: false as const, error: 'No autorizado.' };
+  if (!tiene(actor, 'cupones')) return { ok: false as const, error: 'No tienes permiso para gestionar cupones.' };
+  return { ok: true as const, userId: actor.userId };
 }
 
 /* Bitácora antifraude (PROD-10): un cupón del 100 % para un amigo es

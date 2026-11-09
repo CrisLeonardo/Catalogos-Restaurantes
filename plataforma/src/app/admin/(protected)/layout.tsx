@@ -243,11 +243,7 @@ export default async function AdminProtectedLayout({
       role={profile.role}
       permissions={profile.permissions}
       userName={profile.full_name}
-      canManageStaff={
-        ctx.memberRole === 'MANAGER'
-        || profile.role === 'RESTAURANT_OWNER'
-        || profile.role === 'SUPER_ADMIN'
-      }
+      canManageStaff={can(profile.role, profile.permissions, 'personal')}
       hasMultipleRestaurants={memberships.length > 1}
       tourEnEspera={tourEnEspera}
       isOperatorSession={isOperatorSession}

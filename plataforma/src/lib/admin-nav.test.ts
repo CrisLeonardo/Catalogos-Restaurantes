@@ -94,7 +94,8 @@ describe('el grupo Ajustes siempre lleva a su portada', () => {
 describe('seccionDeRuta (SEC-06)', () => {
   it('cada pantalla del menú exige su llave', () => {
     expect(seccionDeRuta('/admin/finanzas')).toBe('finanzas');
-    expect(seccionDeRuta('/admin/caja')).toBe('finanzas');
+    // Desde la 1.7 Caja tiene llave propia: operar el cajón no enseña utilidades.
+    expect(seccionDeRuta('/admin/caja')).toBe('caja');
     expect(seccionDeRuta('/admin/menu')).toBe('catalogo');
     expect(seccionDeRuta('/admin/categorias')).toBe('categorias');
     expect(seccionDeRuta('/admin/ajustes/salon')).toBe('mesas');

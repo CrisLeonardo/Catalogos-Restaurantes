@@ -1,5 +1,6 @@
 'use server';
 
+import { leerPapel } from '@/lib/permisos-trabajo';
 import { createServiceClient } from '@/lib/supabase/service';
 import { verifySuperAdmin, currentSuperAdmin } from '@/lib/auth/super-admin-guard';
 import { logSuper } from '@/lib/super-admin-log';
@@ -523,10 +524,9 @@ export async function createRestaurantUser(
   const email = (formData.get('email') as string)?.trim().toLowerCase();
   const password = (formData.get('password') as string) ?? '';
   const fullName = (formData.get('full_name') as string)?.trim() || null;
-  const role =
-    (formData.get('role') as string) === 'RESTAURANT_STAFF'
-      ? 'RESTAURANT_STAFF'
-      : 'RESTAURANT_OWNER';
+  const papel = leerPapel(formData.get('role'));
+  if (!papel) return { error: 'Elige su papel: dueño o el trabajo que hace.' };
+  const role = papel.memberRole === 'OWNER' ? 'RESTAURANT_OWNER' : 'RESTAURANT_STAFF';
 
   if (!restaurantId) return { error: 'Restaurante inválido.' };
   if (!email || !email.includes('@')) return { error: 'Email inválido.' };
@@ -557,6 +557,7 @@ export async function createRestaurantUser(
     restaurant_id: restaurantId,
     role,
     full_name: fullName,
+    permissions: papel.permissions,
   });
 
   if (profErr) {
@@ -579,7 +580,9 @@ export async function createRestaurantUser(
     {
       user_id: created.user.id,
       restaurant_id: restaurantId,
-      role: role === 'RESTAURANT_OWNER' ? 'OWNER' : 'STAFF',
+      role: papel.memberRole,
+      permissions: papel.permissions,
+      puesto: papel.puesto,
       status: 'active',
     },
     { onConflict: 'user_id,restaurant_id' },

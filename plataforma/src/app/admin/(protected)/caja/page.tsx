@@ -46,7 +46,7 @@ function fechaLarga(dia: string): string {
 export default async function AdminCajaPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'finanzas')) redirect(await panelLink('/admin'));
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'caja')) redirect(await panelLink('/admin'));
 
   let restaurantId: string | null = null;
   let timezone = 'America/Guatemala';

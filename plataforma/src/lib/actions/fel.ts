@@ -1,10 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@/lib/supabase/server';
-import { canActOnRestaurant } from '@/lib/db/membership';
+import { actorEn, tiene } from '@/lib/auth/capacidades';
 import { createServiceClient } from '@/lib/supabase/service';
-import { canActOnGroupBranch } from '@/lib/db/admin';
 import { isModuleActive, FEL_DISPONIBLE, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import {
   armarDocumento,
@@ -40,34 +38,10 @@ const UNIQUE_VIOLATION = '23505';
 async function authorizeFel(
   restaurantId: string,
 ): Promise<{ error: string } | { ok: true; userId: string; esDueno: boolean }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: 'No autenticado.' };
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, restaurant_id, permissions')
-    .eq('id', user.id)
-    .single();
-  if (!profile) return { error: 'Perfil no encontrado.' };
-
-  const isSuper = profile.role === 'SUPER_ADMIN';
-  let esDueno = isSuper;
-
-  if (!isSuper) {
-    // Quien administra el grupo de esta sucursal entra por ahí; el resto,
-    // por su propio restaurante (migración 116).
-    if (await canActOnGroupBranch(restaurantId)) {
-      esDueno = true;
-    } else {
-      if (!(await canActOnRestaurant(profile.restaurant_id, restaurantId))) return { error: 'No autorizado.' };
-      const role = profile.role as string;
-      const perms = profile.permissions as string[] | null;
-      esDueno = role === 'RESTAURANT_OWNER';
-      const allowed = esDueno || (role === 'RESTAURANT_STAFF' && (perms == null || perms.includes('fel')));
-      if (!allowed) return { error: 'No autorizado.' };
-    }
-  }
+  // Rol efectivo en ESTA sucursal (1.7): antes se leían los permisos del perfil.
+  const actor = await actorEn(restaurantId);
+  if (!actor) return { error: 'No autorizado.' };
+  if (!tiene(actor, 'fel')) return { error: 'No autorizado.' };
 
   const db = createServiceClient();
   const { data: rest } = await db
@@ -78,7 +52,7 @@ async function authorizeFel(
   if (!rest || !isModuleActive(rest.modules as ModulesMap, rest.module_settings as ModuleSettings, 'fel')) {
     return { error: 'El módulo de Facturación no está activo.' };
   }
-  return { ok: true, userId: user.id, esDueno };
+  return { ok: true, userId: actor.userId, esDueno: actor.esDueno };
 }
 
 async function leerSettings(restaurantId: string): Promise<FelSettings | null> {
