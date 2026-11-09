@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catálogo del panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Maqueta de la ficha 1.9 · Identidad actual depurada. Datos ficticios. */
+:root{--bg:#F2F1EE;--card:#FFFFFF;--card-h:#FAF9F7;--ink:#17161A;--ink2:#55524E;--ink3:#7A7671;--line:rgba(28,22,16,.12);--line2:rgba(28,22,16,.20);
+--accent:#C2542F;--accent-h:#AD4826;--accent-ink:#A9461F;--ok:#1F7A45;--ok-bg:#E8F4EC;--ok-line:#B9DCC6;--warn:#8A5A00;--warn-bg:#FBF1DC;--warn-line:#EBD39C;--danger:#B42318;--danger-bg:#FDECEA;--info:#2F5C9E;--info-bg:#EAF0FA;--info-line:#C3D3EE;--sh:0 1px 0 rgba(28,22,16,.06)}
+:root[data-theme="dark"]{--bg:#0C0B0A;--card:#1A1917;--card-h:#211F1C;--ink:#F5F3EF;--ink2:#C9C5BF;--ink3:#9A958E;--line:rgba(255,245,235,.11);--line2:rgba(255,245,235,.18);--accent-ink:#F08C66;--ok:#6BD49A;--ok-bg:#14251B;--ok-line:#24563A;--warn:#F2C36B;--warn-bg:#2A2110;--warn-line:#5A4517;--danger:#FF8A80;--danger-bg:#2C1514;--info:#8FB4F0;--info-bg:#151E2C;--info-line:#2A3E61;--sh:0 1px 0 rgba(0,0,0,.4)}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 14px/1.45 Geist,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent-ink);outline-offset:2px}
+.demo{position:sticky;top:0;z-index:30;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;background:#202020;color:#eee;font-size:13px}
+.demo strong{margin-right:auto;font-weight:600}
+.demo button{background:#2c2c2c;border:1px solid #3a3a3a;border-radius:999px;padding:6px 12px;color:#eee;cursor:pointer}
+.demo button[aria-pressed="true"]{background:#eee;color:#202020}
+.stage{display:flex;justify-content:center;padding:20px 16px 120px}
+.app{width:100%;max-width:1100px}.stage[data-w="390"] .app{max-width:390px}
+h1{font-size:28px;font-weight:700;letter-spacing:-.02em;margin:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:8px 14px;border-radius:12px;border:1px solid transparent;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}.btn-sec{background:var(--card);border-color:var(--line2)}.btn-quiet{background:transparent;color:var(--ink2)}
+.btn-sm{min-height:36px;padding:4px 12px;font-size:13px}
+.chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;line-height:18px;border:1px solid var(--line2);background:var(--card);color:var(--ink2);white-space:nowrap}
+.c-warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}.c-info{background:var(--info-bg);border-color:var(--info-line);color:var(--info)}.c-ok{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok)}
+.head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px}
+.oculto{display:none!important}
+/* catálogo */
+.agotados{display:flex;align-items:center;gap:10px;padding:10px 14px;margin-top:14px;border-radius:14px;background:var(--warn-bg);border:1px solid var(--warn-line);font-size:13px}
+.agotados b{color:var(--warn)}.agotados .btn{margin-left:auto}
+.barra{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.buscar{flex:1;min-width:200px;min-height:44px;padding:8px 14px;border-radius:12px;border:1px solid var(--line2);background:var(--card);display:flex;align-items:center;color:var(--ink3)}
+.filtros{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.filtro{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:4px 12px;border-radius:999px;border:1px solid var(--line2);background:var(--card);font-size:13px;font-weight:600;cursor:pointer}
+.filtro[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.filtro .n{font-weight:500;color:var(--ink3)}.filtro[aria-pressed="true"] .n{color:var(--card);opacity:.8}
+.orden{display:flex;justify-content:space-between;align-items:center;margin:14px 2px 8px;font-size:13px;color:var(--ink2)}
+.orden select{min-height:36px;border-radius:10px;border:1px solid var(--line2);background:var(--card);padding:0 8px}
+.lista{list-style:none;margin:0;padding:0}.lista>li+li{border-top:1px solid var(--line)}
+.prod{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:64px}
+.prod input[type=checkbox]{width:20px;height:20px;accent-color:var(--ink);flex:none}
+.foto{flex:none;width:44px;height:44px;border-radius:10px;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink3);font-size:11px}
+.txt{flex:1;min-width:0}.txt b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.txt span{font-size:13px;color:var(--ink3)}
+.precio{font-weight:700;font-variant-numeric:tabular-nums}
+.lote{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:25;width:min(560px,calc(100% - 32px));padding:12px;border-radius:18px;background:var(--ink);color:var(--card);box-shadow:0 12px 32px -12px rgba(0,0,0,.5)}
+.lote .acc{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.lote .btn{background:#2c2c2c;color:#eee;border-color:#3a3a3a}
+:root[data-theme="dark"] .lote .btn{background:#e8e6e2;color:#17161a;border-color:#d0cdc8}
+.previa{padding:16px;margin-top:16px}
+.previa table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+.previa th{text-align:left;font-weight:600;color:var(--ink2);padding:6px 4px;border-bottom:1px solid var(--line)}
+.previa td{padding:8px 4px;border-bottom:1px solid var(--line)}
+.previa td.n{text-align:right;font-variant-numeric:tabular-nums}
+.previa .ant{color:var(--ink3);text-decoration:line-through}
+/* ficha */
+.ficha{padding:18px}
+.basico{display:grid;grid-template-columns:1fr 140px;gap:12px;margin-top:14px}
+.campo label{display:block;font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:6px}
+.in{min-height:48px;padding:10px 14px;border-radius:12px;border:1px solid var(--line2);background:var(--card);display:flex;align-items:center;gap:6px}
+.full{grid-column:1/-1}
+.nueva-cat{font-size:13px;font-weight:600;color:var(--accent-ink);background:none;border:0;padding:6px 0;cursor:pointer}
+details.sec{border:1px solid var(--line);border-radius:14px;margin-top:8px;background:var(--card)}
+details.sec summary{list-style:none;display:flex;align-items:center;gap:10px;min-height:52px;padding:12px 14px;cursor:pointer;font-weight:600}
+details.sec summary::-webkit-details-marker{display:none}
+details.sec summary .res{margin-left:auto;font-weight:500;font-size:13px;color:var(--ink3);text-align:right}
+details.sec .cuerpo{border-top:1px solid var(--line);padding:14px}
+.grupo{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.grupo .reglas{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.opcion{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.opcion .pre{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--ink2)}
+.dietas{display:flex;flex-wrap:wrap;gap:6px}
+.sugiere{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--info-bg);border:1px solid var(--info-line);font-size:13px}
+.sugiere b{color:var(--info)}
+.pie{position:sticky;bottom:0;margin:16px -18px -18px;padding:12px 18px 18px;background:var(--card);border-top:1px solid var(--line);border-radius:0 0 18px 18px;display:flex;flex-wrap:wrap;gap:8px}
+.pie .btn-primary{flex:1}
+.nota{font-size:12px;color:var(--ink3);margin-top:24px;text-align:center}
+</style>
+</head>
+<body>
+<div class="demo" role="toolbar" aria-label="Controles de la maqueta">
+  <strong>Maqueta · Catálogo (1.9)</strong>
+  <button data-v="lista" aria-pressed="true">Catálogo</button>
+  <button data-v="ficha" aria-pressed="false">Nuevo platillo</button>
+  <button data-w="390" aria-pressed="true">Móvil 390</button>
+  <button data-w="1280" aria-pressed="false">Escritorio</button>
+  <button id="tema" aria-pressed="false">Oscuro</button>
+</div>
+<div class="stage" id="stage" data-w="390"><div class="app">
+
+<!-- ═════ CATÁLOGO ═════ -->
+<section id="v-lista">
+  <div class="head"><div><h1>Platillos</h1><p style="margin:2px 0 0;color:var(--ink2)">42 publicados · 6 por revisar</p></div><button class="btn btn-primary">+ Nuevo platillo</button></div>
+  <div class="agotados" role="status"><b>3 agotados ahora</b><span>Horchata, Ravioles, Aros de cebolla</span><button class="btn btn-quiet btn-sm">Ver</button></div>
+  <div class="barra"><div class="buscar">Buscar platillo…</div><button class="btn btn-sec">Exportar</button></div>
+  <div class="filtros" role="group" aria-label="Filtros">
+    <button class="filtro" aria-pressed="false">Agotado <span class="n">3</span></button>
+    <button class="filtro" aria-pressed="false">Oculto <span class="n">2</span></button>
+    <button class="filtro" aria-pressed="true">Sin foto <span class="n">9</span></button>
+    <button class="filtro" aria-pressed="false">Sin costo <span class="n">14</span></button>
+    <button class="filtro" aria-pressed="false">Sin categoría <span class="n">1</span></button>
+    <button class="btn btn-quiet btn-sm">Limpiar</button>
+  </div>
+  <div class="orden"><span>9 platillos sin foto</span><label>Orden <select><option>Como en la carta</option><option>Nombre</option><option>Última edición</option></select></label></div>
+  <div class="card"><ul class="lista" id="prods"></ul></div>
+
+  <div class="card previa oculto" id="previa">
+    <div class="head"><b style="font-size:16px">Subir 10 % a 3 platillos</b><span class="chip">Vista previa</span></div>
+    <table><thead><tr><th>Platillo</th><th style="text-align:right">Antes</th><th style="text-align:right">Después</th></tr></thead><tbody id="filas-previa"></tbody></table>
+    <p style="font-size:13px;color:var(--ink2);margin:10px 0 0">Se aplica todo junto: si uno no se puede cambiar, no cambia ninguno y te decimos cuál.</p>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn btn-primary">Aplicar a 3 platillos</button><button class="btn btn-quiet" id="cerrar-previa">Volver</button></div>
+  </div>
+
+  <div class="lote oculto" id="lote" role="region" aria-label="Cambios en lote">
+    <b id="n-sel">3 seleccionados</b>
+    <div class="acc"><button class="btn btn-sm" id="b-precio">Precio…</button><button class="btn btn-sm">Agotar</button><button class="btn btn-sm">Ocultar</button><button class="btn btn-sm">Mover a…</button><button class="btn btn-sm" id="b-quitar">Quitar selección</button></div>
+  </div>
+</section>
+
+<!-- ═════ FICHA ═════ -->
+<section id="v-ficha" class="oculto">
+  <div class="head"><h1>Nuevo platillo</h1><button class="btn btn-quiet btn-sm">← Volver al catálogo</button></div>
+  <div class="card ficha">
+    <b style="font-size:16px">Lo básico</b>
+    <div class="basico">
+      <div class="campo"><label>Nombre *</label><div class="in">Pepián de pollo</div></div>
+      <div class="campo"><label>Precio *</label><div class="in num">Q 68.00</div></div>
+      <div class="campo full"><label>Categoría</label><div class="in">Platos fuertes</div><button class="nueva-cat">+ Nueva categoría</button></div>
+    </div>
+
+    <details class="sec"><summary>Foto <span class="res">Sin foto</span></summary><div class="cuerpo">Toca para añadir foto · se recorta cuadrada.</div></details>
+    <details class="sec"><summary>Descripción <span class="res">Vacía</span></summary><div class="cuerpo">Recado de tomate y miltomate…</div></details>
+    <details class="sec" open><summary>Opciones <span class="res">1 grupo</span></summary><div class="cuerpo">
+      <div class="grupo"><b>Acompañamiento</b>
+        <div class="reglas"><span class="chip c-info">Obligatorio</span><span class="chip">Elige 1</span><span class="chip">Predeterminada: Arroz</span></div>
+        <div class="opcion"><input type="radio" checked aria-label="Predeterminada"> Arroz <span class="pre">incluido</span></div>
+        <div class="opcion"><input type="radio" aria-label="Predeterminada"> Tamalitos <span class="pre">+Q 5.00</span></div>
+        <div class="opcion"><input type="radio" aria-label="Predeterminada"> Ensalada <span class="pre">incluido</span></div>
+      </div>
+      <button class="btn btn-sec btn-sm">+ Agregar grupo</button>
+    </div></details>
+    <details class="sec" open><summary>Dietas y alérgenos <span class="res">Picante</span></summary><div class="cuerpo">
+      <div class="dietas"><span class="chip">Vegetariano</span><span class="chip">Vegano</span><span class="chip">Sin gluten</span><span class="chip c-ok">✓ Picante</span><span class="chip">Contiene lácteos</span><span class="chip">Contiene frutos secos</span></div>
+    </div></details>
+    <details class="sec" open><summary>Sellos <span class="res">Nuevo</span></summary><div class="cuerpo">
+      <div class="dietas"><span class="chip c-ok">✓ Nuevo</span><span class="chip">Favorito</span><span class="chip">Especial</span><span class="chip">+ Otro</span></div>
+      <div class="sugiere"><b>«Vegano» es una dieta.</b> Márcala en Dietas para que el menú la muestre con su ícono y no se repita. <button class="btn btn-quiet btn-sm">Marcar dieta Vegano</button></div>
+    </div></details>
+    <details class="sec"><summary>Costo y puntos <span class="res">Sin costo</span></summary><div class="cuerpo">Costo · Puntos de lealtad</div></details>
+    <details class="sec"><summary>Disponibilidad <span class="res">Disponible · visible</span></summary><div class="cuerpo">Hay existencias · Mostrar en el menú</div></details>
+    <p style="font-size:12px;color:var(--ink3);margin:10px 0 0">El nombre en inglés aparece aquí cuando actives el menú bilingüe en Ajustes.</p>
+
+    <div class="pie"><button class="btn btn-primary">Crear platillo</button><button class="btn btn-sec">Crear y agregar otro</button></div>
+  </div>
+</section>
+<p class="nota">Datos ficticios · selecciona platillos y toca «Precio…» para ver la vista previa</p>
+</div></div>
+
+<script>
+const prods=[['Papas a la francesa con queso','Entradas','35.00','foto'],['Fettuccine Alfredo','Pastas','65.00',''],['Ensalada César','Ensaladas','48.00',''],['Pepián de pollo','Platos fuertes','68.00',''],['Limonada con hierbabuena','Bebidas','18.00','']];
+const ul=document.getElementById('prods');
+ul.innerHTML=prods.map(([n,c,p],i)=>`<li><label class="prod"><input type="checkbox" data-i="${i}" aria-label="Seleccionar ${n}"><span class="foto">sin foto</span><span class="txt"><b>${n}</b><span>${c}${i===1?' · <span class="chip c-warn">Agotado</span>':''}</span></span><span class="precio">Q${p}</span></label></li>`).join('');
+const lote=document.getElementById('lote');
+function sel(){return [...ul.querySelectorAll('input:checked')].map(x=>+x.dataset.i);}
+ul.addEventListener('change',()=>{const s=sel();lote.classList.toggle('oculto',s.length===0);document.getElementById('n-sel').textContent=`${s.length} ${s.length===1?'seleccionado':'seleccionados'}`;});
+document.getElementById('b-precio').onclick=()=>{const s=sel();document.getElementById('filas-previa').innerHTML=s.map(i=>{const p=+prods[i][2];return `<tr><td>${prods[i][0]}</td><td class="n ant">Q${p.toFixed(2)}</td><td class="n"><b>Q${(Math.round(p*1.1*2)/2).toFixed(2)}</b></td></tr>`}).join('');document.querySelector('#previa b').textContent=`Subir 10 % a ${s.length} platillos`;document.querySelector('#previa .btn-primary').textContent=`Aplicar a ${s.length} platillos`;document.getElementById('previa').classList.remove('oculto');lote.classList.add('oculto');document.getElementById('previa').scrollIntoView({block:'start'});};
+document.getElementById('cerrar-previa').onclick=()=>{document.getElementById('previa').classList.add('oculto');lote.classList.toggle('oculto',sel().length===0);};
+document.getElementById('b-quitar').onclick=()=>{ul.querySelectorAll('input').forEach(x=>x.checked=false);lote.classList.add('oculto');};
+document.querySelectorAll('.filtro').forEach(f=>f.onclick=()=>f.setAttribute('aria-pressed',f.getAttribute('aria-pressed')!=='true'));
+document.querySelectorAll('.demo [data-v]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.demo [data-v]').forEach(x=>x.setAttribute('aria-pressed',x===b));document.getElementById('v-lista').classList.toggle('oculto',b.dataset.v!=='lista');document.getElementById('v-ficha').classList.toggle('oculto',b.dataset.v!=='ficha');lote.classList.add('oculto');});
+document.querySelectorAll('.demo [data-w]').forEach(b=>b.onclick=()=>{document.getElementById('stage').dataset.w=b.dataset.w;document.querySelectorAll('.demo [data-w]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
+document.getElementById('tema').onclick=e=>{const d=document.documentElement;const dark=d.dataset.theme!=='dark';d.dataset.theme=dark?'dark':'light';e.currentTarget.setAttribute('aria-pressed',dark);};
+</script>
+</body>
+</html>
