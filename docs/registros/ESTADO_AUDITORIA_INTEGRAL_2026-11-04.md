@@ -2,6 +2,8 @@
 
 Documento de traspaso para retomar el trabajo en otra sesión o cuenta sin perder el contexto. Resume qué se logró, qué está en curso y qué falta, con listas para marcar.
 
+> **Actualización del 2026-11-08:** ficha **1.7** implementada en `feat/permisos-por-trabajo` (migración 177, §29); la cadena no contenía 0.1–0.13 y se incorporó 0.12 (§28). Siguiente: **1.8 · Recepción**.
+>
 > **Estado vigente al 2026-11-07:** implementación de Ola 0 y fichas **1.0–1.6** disponibles en sus ramas; navegación aprobada en **PR #101**, CI correcto sobre `0f523f4` (1,353 unitarias, 90 Postgres, 19 E2E). Siguiente: **1.7 · Permisos por trabajo**. Quedan seis fichas de implementación de Ola 1. Continúa desde la rama `codex/navegacion-capsula`, sin fusionar ni desplegar hasta indicación del usuario. Lee el [traspaso para Claude Code](TRASPASO_CLAUDE_CODE_2026-11-07.md) antes de usar instrucciones históricas de este registro. Las pruebas de campo y la integración siguen pendientes.
 
 ### Nota histórica del 5 de noviembre
@@ -635,6 +637,18 @@ La siguiente ficha es **1.7 · Permisos por trabajo**. Quedan seis fichas de imp
 - **Decisión del usuario.** 1.7 parte con 0.12 incorporada: se fusionó `origin/fix/acceso-sucursal-membresias` en esta rama. El código entró sin conflictos; sólo chocaron este registro y el plan, y se conservó la versión de la cadena, que ya documenta 0.12 en §8. Al integrar, #82 queda contenido en este PR.
 - **Resto de la ola 0.** #72–#81, #83 y #84 siguen fuera de la cadena. La fusión de prueba (`git merge-tree`) contra `4d9036d` anticipa conflictos en `verificar_migraciones.sql` (154–159), Caja (`cash-close.tsx`, `finanzas.ts`), Servicio (`servicio-panel.tsx`, `order-queue.ts`, `hoja-cobro.tsx`), lista de espera y reservaciones, y en el arnés de dinero. Los números de migración no se repiten (154–159 frente a 160–176).
 - **CI.** Todos los PR #72–#101 tenían el último CI en verde el 2026-11-08.
+
+## 29. Permisos por trabajo · ficha 1.7 (2026-11-08)
+
+**Rama** `feat/permisos-por-trabajo` (con 0.12 incorporada, §28); PR contra `codex/navegacion-capsula`. Detalle en el [plan de la ficha](../planes/PLAN_PERMISOS_POR_TRABAJO_2026-11-08.md).
+
+- **Decisiones del dueño:** el mesero cobra; arqueo ciego como opción del local, apagado por defecto; el puesto lo decide la plantilla y no la forma de entrar; sin acceso de soporte temporal. Maqueta aprobada antes del código.
+- **Migración 177, ANTES del código y después de la 176.** Convierte cada `null` del personal en lista explícita (nadie pierde acceso), separa Caja en siete capacidades, deja constancia en la bitácora y bloquea futuros `null`. Idempotente y con huella en el verificador.
+- **Regla única** en app y base: `can()`/`leogin_puede` ya no leen `null` como todo; las acciones resuelven el rol efectivo de la sucursal con `actorEn`. Cupones, FEL y módulos dejaron de leer el perfil.
+- **Pantallas:** Personal por trabajo con excepciones, tareas delicadas y «Así verá el panel» calculado con `buildNav`; superadmin elige papel sin valor por defecto; Caja en modo ciego; Servicio admite al puesto Caja sólo para cobrar.
+- **Verificación local:** 1,426 unitarias, 101 de Postgres, auditorías con cero hallazgos y revisión en navegador en 1024/375 px, claro y oscuro. Ver el plan §6 para el detalle y §7 para lo pendiente.
+
+La siguiente ficha es **1.8 · Recepción**. Quedan cinco fichas de implementación de la Ola 1.
 
 ---
 

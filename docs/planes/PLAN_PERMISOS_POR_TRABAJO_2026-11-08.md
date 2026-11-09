@@ -2,7 +2,7 @@
 
 Ficha **1.7** del [plan de la auditoría integral](PLAN_AUDITORIA_INTEGRAL_2026-11-04.md). Hallazgos: **E12, N18, N19, F14, C05, R35**. Rama `feat/permisos-por-trabajo`, con la ficha 0.12 incorporada (ver [registro §28](../registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md#28-base-de-la-ficha-17--se-incorpora-012-2026-11-08)). Siguiente migración libre: **177**, comprobada en todas las ramas remotas.
 
-> **Estado:** inventario hecho, modelo propuesto y decisiones del dueño tomadas (§4). [Maqueta de Personal y «Así verá el panel»](../diseno/MAQUETA_PERMISOS_POR_TRABAJO_2026-11-08.html) **pendiente de aprobación**; después, migración y código.
+> **Estado (2026-11-08):** **implementada** en `feat/permisos-por-trabajo`. Maqueta aprobada por el dueño: [Personal y «Así verá el panel»](../diseno/MAQUETA_PERMISOS_POR_TRABAJO_2026-11-08.html). Implementación y verificación en §6; pendientes en §7. Registro: [§29](../registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md#29-permisos-por-trabajo--ficha-17-2026-11-08).
 
 ## 1. Inventario: cómo se decide hoy quién puede qué
 
@@ -104,3 +104,27 @@ En la ficha de cada persona: los destinos que verá, las acciones delicadas que 
 - Multi-restaurante: misma persona con plantillas distintas en A y B.
 - Revocación en la siguiente acción; último dueño; MFA de superadmin.
 - Visual: ficha de Personal y «Así verá el panel» en 390 y 1280 px, claro y oscuro, tras aprobar la maqueta.
+
+## 6. Implementación
+
+**Orden de despliegue: migración 177 ANTES del código, después de la 176.** Con el código nuevo y sin la 177, el personal que tenía `null` se quedaría sin acceso. La 177 es idempotente y el verificador tiene su huella.
+
+| Pieza | Archivos |
+|---|---|
+| Migración | `supabase/migrations/177_permisos_por_trabajo.sql`: `puesto`, `acceso_heredado`, `restaurants.arqueo_ciego`; conversión de `null`, `finanzas` → Caja completa, `mesero` → `caja.cobrar`, gerente → `personal`; bitácora `migracion_177`; disparadores que impiden un `null` nuevo; `leogin_puede` y `leogin_receptores_caja` sin `null` = todo |
+| Regla única | `lib/permissions.ts` (`can()` sin `null` = todo, llaves `caja` y `servicio`, suscripción indelegable), `lib/permisos-trabajo.ts` (puestos, áreas, excepciones, techo, papeles), `lib/auth/capacidades.ts` (`actorEn`, `tiene`) |
+| Guardas del servidor | `lib/caja/acceso.ts` (cada acción de Caja pide su capacidad; firma con PIN de quien la tenga; arqueo ciego), `lib/auth/seccion.ts`, `lib/module-auth.ts`, cupones, FEL, cobros de Servicio (`caja.cobrar`), salida sin cobro y reabrir (`caja.corregir`) |
+| Personal | `lib/auth/personal.ts` (guardas fuera del archivo `'use server'`), `lib/actions/staff.ts` (puesto, techo, papel por trabajo y no por forma de entrar, bitácora con antes/después, `setArqueoCiego`), `components/admin/staff-panel.tsx` + `.module.css` |
+| Superadmin (N19) | Selector «Papel» sin valor por defecto: dueño o puesto (`lib/actions/memberships.ts`, `super-admin.ts`, `components/super/restaurant-users.tsx`) |
+| Caja y Servicio | `cash-close.tsx` en modo ciego (sin esperado ni cobros); Servicio admite el puesto Caja para cobrar y muestra «Tu puesto cobra, no toma pedidos» |
+
+**Verificación (local, 2026-11-08):** tipos y lint sin errores; 1,426 unitarias (nuevas: regla y puestos, matriz de Caja por puesto, quién administra personal); 101 de Postgres (11 nuevas de la 177: conversión, idempotencia, disparadores, `leogin_puede`, receptores); auditorías de `security definer` y RLS con cero hallazgos. La 177 se aplicó dos veces sobre datos con `null`, `finanzas`, `mesero` y perfil sin membresía: misma conversión, una sola entrada de bitácora por cambio y ningún `null` en el personal. En el navegador: Personal en 1024 px y 375 px, claro y oscuro; guardar una excepción escribe membresía, perfil y bitácora; el arqueo ciego oculta lo esperado y los cobros al puesto Caja; Finanzas lo devuelve a Hoy; Servicio le permite cobrar sin tomar pedidos.
+
+## 7. Pendientes y límites
+
+- **Validación de campo:** revisar con un dueño real los accesos heredados tras desplegar (el aviso de Personal los lista) y confirmar con un cajero el arqueo ciego.
+- **Sesiones activas:** los permisos se leen en cada acción, así que quitar una tarea surte efecto en la siguiente. Una pantalla ya abierta puede seguir mostrando botones hasta recargar; el servidor los rechaza.
+- **Soporte temporal (R35.5):** descartado en esta ficha por decisión del dueño.
+- **Anulaciones de platos y descuentos:** siguen con la regla «no es mesero puro» (`puedeAprobar`); no se separaron en capacidades porque no estaban en el alcance de C05.
+- **Encuestas** no tiene llave delegable: el personal no la ve (como antes).
+- **1024 px exactos:** el panel reserva la barra inferior aunque muestra la lateral (comportamiento anterior a esta ficha).

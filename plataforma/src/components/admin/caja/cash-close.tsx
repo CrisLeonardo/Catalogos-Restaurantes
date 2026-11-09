@@ -331,13 +331,22 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
         </div>
       )}
 
+      {/* Arqueo ciego (177): sin lo esperado ni la diferencia mientras se
+          cuenta. El servidor ni siquiera los manda; la diferencia aparece en
+          el recibo al cerrar. */}
       <div className="caja-metricas" aria-label="Resumen del cuadre">
         <div><span>Total contado</span><strong className="t-mono" data-caja-contado>{hayConteo ? money(contado) : '—'}</strong></div>
-        <div><span>Efectivo esperado</span><strong className="t-mono">{money(esperadoEnCaja)}</strong></div>
-        <div data-cuadra={hayConteo && cuadra ? '1' : undefined}>
-          <span>{!hayConteo ? 'Sin contar' : cuadra ? 'Cuadra' : diferencia > 0 ? 'Sobran' : 'Faltan'}</span>
-          <strong className="t-mono">{hayConteo ? money(Math.abs(diferencia)) : '—'}</strong>
-        </div>
+        {state.ciego ? (
+          <div><span>Conteo a ciegas</span><strong style={{ fontSize: 14 }}>Se compara al cerrar</strong></div>
+        ) : (
+          <>
+            <div><span>Efectivo esperado</span><strong className="t-mono">{money(esperadoEnCaja)}</strong></div>
+            <div data-cuadra={hayConteo && cuadra ? '1' : undefined}>
+              <span>{!hayConteo ? 'Sin contar' : cuadra ? 'Cuadra' : diferencia > 0 ? 'Sobran' : 'Faltan'}</span>
+              <strong className="t-mono">{hayConteo ? money(Math.abs(diferencia)) : '—'}</strong>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="caja-body">
@@ -375,7 +384,7 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
         {/* La columna derecha no cambia entre pasos a propósito: el cuadre
             es la pregunta que se está contestando toda la noche. */}
         <div className="caja-side">
-          <TarjetaCuadre
+          {state.ciego ? <TarjetaCiega contado={contado} hayConteo={hayConteo} gastos={gastos} /> : <TarjetaCuadre
             ventasEfectivo={ventasEfectivo}
             devoluciones={state.refundsCash}
             desde={desde}
@@ -385,7 +394,7 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
             diferencia={diferencia}
             cuadra={cuadra}
             hayConteo={hayConteo}
-          />
+          />}
 
           <TarjetaPendientes pending={state.pending} liberadas={state.releasedUnpaid} />
 
@@ -420,14 +429,14 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
             )}
           </div>
 
-      <div id="caja-movimientos">
-      <CobrosDelTurno
+      <div id="caja-movimientos" hidden={state.ciego}>
+      {!state.ciego && <CobrosDelTurno
         restaurantId={restaurantId}
         cobros={state.payments}
         timezone={timezone}
         selfApproves={state.selfApproves}
         onAviso={(a) => { setAviso(a); if (!a.bad) refrescar(); }}
-      />
+      />}
       </div>
 
       <p style={{ margin: 0, fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
@@ -1018,6 +1027,28 @@ function PasoPropinas({ tips, setTips, total, notes, setNotes }: {
 }
 
 /* ── La tarjeta del cuadre ────────────────────────────────────── */
+/** Arqueo ciego: lo que se cuenta, sin lo que debería haber. */
+function TarjetaCiega({ contado, hayConteo, gastos }: { contado: number; hayConteo: boolean; gastos: number }) {
+  return (
+    <div style={tarjeta}>
+      <div>
+        <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: 'var(--u-text)' }}>Arqueo ciego</span>
+        <span style={{ display: 'block', fontSize: 13, color: 'var(--u-text-3)', marginTop: 2, lineHeight: 1.45 }}>
+          Cuenta el efectivo del cajón con calma. Al cerrar, el sistema lo compara con lo cobrado y te dice si cuadra.
+        </span>
+      </div>
+      {gastos > 0 && <Linea label="Gastos pagados de caja" value={`−${money(gastos)}`} />}
+      <div style={{ height: 1, background: 'var(--u-hair)' }} />
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)' }}>Total contado</span>
+        <span className="t-mono" style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--u-text)' }}>
+          {hayConteo ? money(contado) : '—'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function TarjetaCuadre({ ventasEfectivo, devoluciones, desde, gastos, opening, contado, diferencia, cuadra, hayConteo }: {
   ventasEfectivo: number; devoluciones: number; desde: string; gastos: number; opening: number; contado: number;
   diferencia: number; cuadra: boolean; hayConteo: boolean;
