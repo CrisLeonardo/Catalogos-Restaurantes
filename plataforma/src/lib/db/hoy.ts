@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/service';
+import { diaDeRecepcion } from '@/lib/recepcion/dia';
 import { getActiveTableNumbers, getDayPace, type DayPace } from '@/lib/db/orders';
 import { getReservations } from '@/lib/db/reservaciones';
 
@@ -84,11 +85,14 @@ async function loadTables(restaurantId: string, total: number): Promise<HouseDat
 /** Cuánta gente espera mesa y desde cuándo el primero de la fila. */
 async function loadWaitlist(restaurantId: string): Promise<HouseData['waiting']> {
   const db = createServiceClient();
+  // Sólo la cola de HOY (1.8): un grupo de hace dos semanas no «espera desde hace 323 h».
+  const { desde } = await diaDeRecepcion(restaurantId);
   const { data } = await db
     .from('waitlist_entries')
     .select('created_at')
     .eq('restaurant_id', restaurantId)
     .in('status', ['WAITING', 'NOTIFIED'])
+    .gte('created_at', desde.toISOString())
     .order('created_at', { ascending: true })
     .limit(100);
 
@@ -98,8 +102,9 @@ async function loadWaitlist(restaurantId: string): Promise<HouseData['waiting']>
 }
 
 /** La siguiente reserva de HOY que todavía no se sentó. */
-async function loadReservation(restaurantId: string, timezone: string): Promise<HouseData['reservation']> {
-  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: timezone });
+async function loadReservation(restaurantId: string): Promise<HouseData['reservation']> {
+  // El día de negocio del local, con su hora de corte (1.8), como Recepción.
+  const { hoy } = await diaDeRecepcion(restaurantId);
   const reservas = await getReservations(restaurantId, hoy, hoy);
   const pendientes = reservas.filter((r) => r.status === 'PENDING' || r.status === 'CONFIRMED');
   if (pendientes.length === 0) return null;
@@ -219,7 +224,7 @@ export async function getHoyWidgets(
     flags.orders ? getDayPace(restaurantId, timezone) : null,
     flags.dineIn ? loadTables(restaurantId, opts.tableCount) : null,
     flags.waitlist ? loadWaitlist(restaurantId) : null,
-    flags.reservations ? loadReservation(restaurantId, timezone) : null,
+    flags.reservations ? loadReservation(restaurantId) : null,
     flags.inventory ? loadStock(restaurantId) : null,
     flags.surveys ? loadRatings(restaurantId) : null,
   ]);

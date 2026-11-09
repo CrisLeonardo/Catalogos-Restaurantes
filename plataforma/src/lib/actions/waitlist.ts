@@ -1,141 +1,133 @@
 'use server';
 
 /* ============================================================
-   LISTA DE ESPERA PARA WALK-INS (Fase 3 auditoría de lanzamiento)
+   LISTA DE ESPERA (Fase 3 de lanzamiento; recepción honesta en la 1.8)
    ------------------------------------------------------------
-   Cola en vivo para el comensal que llega SIN reservar: el host/mesero
-   anota grupo + tamaño al llegar, avisa cuando hay mesa, y marca sentado.
-   A diferencia de `reservations` (fecha/hora futura), aquí solo hay
-   "cuándo llegó" — el orden de la cola. Delegable como permiso propio
-   ("lista_espera" en ADMIN_SECTIONS) para que el dueño pueda dárselo a un
-   host/mesero sin abrirle el resto del panel.
+   Cola en vivo para quien llega sin reservar: se anota el grupo, se le
+   avisa cuando hay mesa y se le sienta.
+
+   Aviso honesto (R18.2, PA-T20): abrir WhatsApp sólo deja constancia de que
+   se abrió el chat (`aviso_abierto_at`). «Avisado» lo decide el host al
+   confirmarlo, por WhatsApp o en persona (`notified_via`). Nada de esto
+   prueba que el mensaje llegara, y la pantalla no lo dice.
    ============================================================ */
 
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@/lib/supabase/server';
-import { canActOnRestaurant } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
-import { canActOnGroupBranch } from '@/lib/db/admin';
-import { can } from '@/lib/permissions';
+import { actorEn, tiene } from '@/lib/auth/capacidades';
+import { SIN_SECCION } from '@/lib/auth/seccion';
 import { sentarDesdeRecepcion } from '@/lib/actions/table-sessions';
+import { logActivity } from '@/lib/activity';
 
 export type WaitlistResult = { error?: string; ok?: boolean };
 
-async function getAuthorizedRestaurantId(restaurantId: string): Promise<{ ok: true; restaurantId: string } | { ok: false; error: string }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: 'No autenticado.' };
+/** La misma regla del panel (1.7), con el rol efectivo de ESTA sucursal. */
+async function autorizar(restaurantId: string): Promise<{ ok: true; userId: string } | { ok: false; error: string }> {
+  const actor = await actorEn(restaurantId);
+  if (!actor) return { ok: false, error: 'No autorizado.' };
+  if (!tiene(actor, 'lista_espera', 'mesas')) return { ok: false, error: SIN_SECCION };
+  return { ok: true, userId: actor.userId };
+}
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, restaurant_id, permissions')
-    .eq('id', user.id)
-    .single();
-  if (!profile) return { ok: false, error: 'Perfil no encontrado.' };
+const EN_COLA = ['WAITING', 'NOTIFIED'];
 
-  // Administrar el grupo de esta sucursal basta (migración 116).
-  if (await canActOnGroupBranch(restaurantId)) return { ok: true, restaurantId };
-  if (profile.role !== 'SUPER_ADMIN' && !(await canActOnRestaurant(profile.restaurant_id, restaurantId))) {
-    return { ok: false, error: 'No autorizado.' };
-  }
-  if (!can(profile.role, profile.permissions as string[] | null, 'lista_espera')) {
-    return { ok: false, error: 'No autorizado.' };
-  }
+function refrescar() {
+  revalidatePath('/admin/lista-espera');
+}
 
-  return { ok: true, restaurantId };
+/** Cambia una fila que siga en la cola; si ya no estaba, lo dice. */
+async function cambiar(
+  restaurantId: string, id: string, cols: Record<string, unknown>, desde = EN_COLA,
+): Promise<WaitlistResult & { nombre?: string }> {
+  const { data, error } = await createServiceClient().from('waitlist_entries')
+    .update(cols).eq('id', id).eq('restaurant_id', restaurantId).in('status', desde).select('id, customer_name');
+  if (error) return { error: 'No se pudo actualizar la lista. Intenta de nuevo.' };
+  if (!data?.length) return { error: 'Ese grupo ya no está en la cola. Actualiza la página.' };
+  refrescar();
+  return { ok: true, nombre: data[0].customer_name as string };
 }
 
 export async function addToWaitlist(
   restaurantId: string,
   data: { customer_name: string; party_size: number; phone?: string; notes?: string },
 ): Promise<WaitlistResult> {
-  const auth = await getAuthorizedRestaurantId(restaurantId);
+  const auth = await autorizar(restaurantId);
   if (!auth.ok) return { error: auth.error };
 
-  if (!data.customer_name?.trim()) return { error: 'El nombre es requerido.' };
-  if (!data.party_size || data.party_size < 1) return { error: 'El número de personas debe ser al menos 1.' };
+  if (!data.customer_name?.trim()) return { error: 'Escribe el nombre del grupo.' };
+  const pax = Number(data.party_size);
+  if (!Number.isInteger(pax) || pax < 1 || pax > 100) return { error: 'Personas: entre 1 y 100.' };
 
-  const db = createServiceClient();
-  const { error } = await db.from('waitlist_entries').insert({
+  const { error } = await createServiceClient().from('waitlist_entries').insert({
     restaurant_id: restaurantId,
-    customer_name: data.customer_name.trim(),
-    party_size: data.party_size,
+    customer_name: data.customer_name.trim().slice(0, 120),
+    party_size: pax,
     phone: data.phone?.trim() || null,
     notes: data.notes?.trim() || null,
     status: 'WAITING',
   });
-  if (error) return { error: error.message };
-
-  revalidatePath('/admin/lista-espera');
+  if (error) return { error: 'No se pudo agregar a la lista. Intenta de nuevo.' };
+  refrescar();
   return { ok: true };
 }
 
-/** Avisa al grupo que ya hay mesa (marca notified_at para medir el tiempo de espera real). */
-export async function markWaitlistNotified(restaurantId: string, id: string): Promise<WaitlistResult> {
-  const auth = await getAuthorizedRestaurantId(restaurantId);
+/** Se abrió WhatsApp para avisar. No cambia el estado: no prueba nada (PA-T20). */
+export async function markWaitlistAvisoAbierto(restaurantId: string, id: string): Promise<WaitlistResult> {
+  const auth = await autorizar(restaurantId);
   if (!auth.ok) return { error: auth.error };
+  return cambiar(restaurantId, id, { aviso_abierto_at: new Date().toISOString() }, ['WAITING']);
+}
 
-  const db = createServiceClient();
-  const { error } = await db
-    .from('waitlist_entries')
-    .update({ status: 'NOTIFIED', notified_at: new Date().toISOString() })
-    .eq('id', id)
-    .eq('restaurant_id', restaurantId);
-  if (error) return { error: error.message };
+/** El host confirma que avisó: por WhatsApp o en persona. */
+export async function markWaitlistNotified(
+  restaurantId: string, id: string, via: 'whatsapp' | 'en_persona' = 'en_persona',
+): Promise<WaitlistResult> {
+  const auth = await autorizar(restaurantId);
+  if (!auth.ok) return { error: auth.error };
+  if (via !== 'whatsapp' && via !== 'en_persona') return { error: 'Forma de aviso inválida.' };
+  return cambiar(restaurantId, id, { status: 'NOTIFIED', notified_at: new Date().toISOString(), notified_via: via }, ['WAITING']);
+}
 
-  revalidatePath('/admin/lista-espera');
-  return { ok: true };
+/** «No se envió»: se deshace la marca de WhatsApp abierto. */
+export async function retirarAvisoAbierto(restaurantId: string, id: string): Promise<WaitlistResult> {
+  const auth = await autorizar(restaurantId);
+  if (!auth.ok) return { error: auth.error };
+  return cambiar(restaurantId, id, { aviso_abierto_at: null }, ['WAITING']);
 }
 
 /**
- * Los sienta, y desde la migración 128 dice EN QUÉ MESA.
- *
- * Antes esto solo cambiaba el estado a 'SEATED': la cola marcaba «sentados»
- * y el salón no se enteraba de nada, así que la mesa seguía saliendo libre y
- * el mensaje de WhatsApp prometía «ya tenemos mesa lista» sin saber cuál
- * (hallazgo M-04). Ahora el mismo toque abre el turno de esa mesa, con la
- * gente que decía la ficha de la cola.
- *
- * `tableNumber` sigue siendo opcional: sentar sin anotar mesa era lo único
- * que se podía hacer hasta hoy y hay locales que trabajan así.
+ * Los sienta; con mesa, en una sola transacción con el salón
+ * (`leogin_sentar_desde_recepcion`, migración 173).
  */
 export async function markWaitlistSeated(
   restaurantId: string,
   id: string,
   tableNumber?: number | null,
 ): Promise<WaitlistResult> {
-  const auth = await getAuthorizedRestaurantId(restaurantId);
+  const auth = await autorizar(restaurantId);
   if (!auth.ok) return { error: auth.error };
 
   const mesa = tableNumber != null && Number.isInteger(tableNumber) && tableNumber >= 1 && tableNumber <= 999
     ? tableNumber
     : null;
-
   if (mesa != null) return sentarDesdeRecepcion(restaurantId, mesa, id, 'waitlist');
 
-  const { error } = await createServiceClient().from('waitlist_entries')
-    .update({ status: 'SEATED', seated_at: new Date().toISOString() })
-    .eq('id', id)
-    .eq('restaurant_id', restaurantId);
-  if (error) return { error: error.message };
-
-  revalidatePath('/admin/lista-espera');
+  const res = await cambiar(restaurantId, id, { status: 'SEATED', seated_at: new Date().toISOString() });
   revalidatePath('/admin/mesas');
-  return { ok: true };
+  return res;
+}
+
+/** «No llegó»: queda en el historial, no se borra (R18.5). */
+export async function markWaitlistNoShow(restaurantId: string, id: string): Promise<WaitlistResult> {
+  const auth = await autorizar(restaurantId);
+  if (!auth.ok) return { error: auth.error };
+  const res = await cambiar(restaurantId, id, { status: 'NO_SHOW', cancelled_at: new Date().toISOString() });
+  if (res.ok) await logActivity({ restaurantId, actorId: auth.userId, action: 'espera_no_llego', entity: res.nombre ?? null });
+  return { ok: res.ok, error: res.error };
 }
 
 export async function cancelWaitlistEntry(restaurantId: string, id: string): Promise<WaitlistResult> {
-  const auth = await getAuthorizedRestaurantId(restaurantId);
+  const auth = await autorizar(restaurantId);
   if (!auth.ok) return { error: auth.error };
-
-  const db = createServiceClient();
-  const { error } = await db
-    .from('waitlist_entries')
-    .update({ status: 'CANCELLED', cancelled_at: new Date().toISOString() })
-    .eq('id', id)
-    .eq('restaurant_id', restaurantId);
-  if (error) return { error: error.message };
-
-  revalidatePath('/admin/lista-espera');
-  return { ok: true };
+  return cambiar(restaurantId, id, { status: 'CANCELLED', cancelled_at: new Date().toISOString() });
 }

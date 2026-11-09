@@ -112,8 +112,15 @@ function queHizo(r: ActivityLike): string {
       }
       return `cambió lo que puede hacer ${nombre}`;
     }
+    case 'reserva_sobrecupo':
+      return `reservó por encima del aforo${e ? ` — ${e}` : ''}${num(m.personas) != null ? ` (${m.personas} personas, ${m.ocupadas} de ${m.aforo} ya ocupados)` : ''}`;
+    case 'reserva_no_asistio':
+      return `marcó que no asistió la reserva de ${e || 'un cliente'}`;
+    case 'espera_no_llego':
+      return `marcó que no llegó ${e || 'un grupo de la lista de espera'}`;
     case 'ajuste':
       if (typeof m.arqueo_ciego === 'boolean') return m.arqueo_ciego ? 'activó el arqueo ciego' : 'desactivó el arqueo ciego';
+      if (num(m.duracion_reserva_min) != null) return `fijó la duración de las reservas en ${m.duracion_reserva_min} min`;
       return `cambió un ajuste${e ? ` — ${e}` : ''}`;
     case 'staff_pin_login':
       return 'entró con su PIN';

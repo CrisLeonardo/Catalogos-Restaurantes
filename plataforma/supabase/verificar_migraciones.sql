@@ -255,7 +255,14 @@ huellas(n, que, ok, cuando) as (values
        and tgname='leogin_miembro_sin_null')
      and not exists (select 1 from public.restaurant_members
        where role in ('STAFF','MANAGER') and jsonb_typeof(permissions) is distinct from 'array'),
-     'ANTES de desplegar; después de la 176')
+     'ANTES de desplegar; después de la 176'),
+  ('178', 'recepción: capacidad por franja, «no asistió» y aviso honesto',
+     to_regprocedure('public.leogin_guardar_reserva(uuid,uuid,text,text,integer,date,time,text,integer,boolean,uuid)') is not null
+     and exists (select 1 from information_schema.columns
+       where table_schema='public' and table_name='waitlist_entries' and column_name='aviso_abierto_at')
+     and exists (select 1 from information_schema.columns
+       where table_schema='public' and table_name='restaurants' and column_name='duracion_reserva_min'),
+     'ANTES de desplegar; después de la 177')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

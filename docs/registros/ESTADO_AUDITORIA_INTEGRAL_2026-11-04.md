@@ -2,6 +2,8 @@
 
 Documento de traspaso para retomar el trabajo en otra sesión o cuenta sin perder el contexto. Resume qué se logró, qué está en curso y qué falta, con listas para marcar.
 
+> **Actualización del 2026-11-09:** ficha **1.8** implementada en `feat/recepcion` (migración 178, §30). Siguiente: **1.9 · Catálogo**.
+>
 > **Actualización del 2026-11-08:** ficha **1.7** implementada en `feat/permisos-por-trabajo` (migración 177, §29); la cadena no contenía 0.1–0.13 y se incorporó 0.12 (§28). Siguiente: **1.8 · Recepción**.
 >
 > **Estado vigente al 2026-11-07:** implementación de Ola 0 y fichas **1.0–1.6** disponibles en sus ramas; navegación aprobada en **PR #101**, CI correcto sobre `0f523f4` (1,353 unitarias, 90 Postgres, 19 E2E). Siguiente: **1.7 · Permisos por trabajo**. Quedan seis fichas de implementación de Ola 1. Continúa desde la rama `codex/navegacion-capsula`, sin fusionar ni desplegar hasta indicación del usuario. Lee el [traspaso para Claude Code](TRASPASO_CLAUDE_CODE_2026-11-07.md) antes de usar instrucciones históricas de este registro. Las pruebas de campo y la integración siguen pendientes.
@@ -649,6 +651,18 @@ La siguiente ficha es **1.7 · Permisos por trabajo**. Quedan seis fichas de imp
 - **Verificación local:** 1,426 unitarias, 101 de Postgres, auditorías con cero hallazgos y revisión en navegador en 1024/375 px, claro y oscuro. Ver el plan §6 para el detalle y §7 para lo pendiente.
 
 La siguiente ficha es **1.8 · Recepción**. Quedan cinco fichas de implementación de la Ola 1.
+
+## 30. Recepción · ficha 1.8 (2026-11-09)
+
+**Rama** `feat/recepcion`, sobre `feat/permisos-por-trabajo` (PR #102). Detalle en el [plan de la ficha](../planes/PLAN_RECEPCION_2026-11-09.md).
+
+- **Base:** se incorporó la ficha 0.9 (PR #79). Sus conflictos se resolvieron con la versión de la cadena: la 1.3 ya sienta y actualiza la recepción en una sola transacción (migración 173).
+- **Decisiones del dueño:** reservas de 90 min por defecto; exceder el aforo se avisa y se permite con «Reservar de todas formas», que queda en la bitácora; maqueta aprobada.
+- **Migración 178, ANTES del código y después de la 177:** «no asistió», aviso honesto y capacidad por franja bajo bloqueo.
+- **Arreglos comprobados:** «hoy» es el día de negocio del local (X13, PA-T19); abrir WhatsApp ya no cuenta como aviso (R18.2, PA-T20); lo no resuelto de días anteriores pasa a «Por revisar»; la agenda muestra ocupación frente al aforo; se sugiere mesa y se estima la espera como rango.
+- **Verificación local:** 1,438 unitarias, 110 de Postgres y revisión en navegador con datos de prueba que se retiraron. Ver el plan §6–7.
+
+La siguiente ficha es **1.9 · Catálogo**. Quedan cuatro fichas de implementación de la Ola 1.
 
 ---
 

@@ -1,0 +1,93 @@
+/* Recepción: reservas y lista de espera (auditoría 1.8).
+   Maqueta aprobada: docs/diseno/MAQUETA_RECEPCION_2026-11-09.html
+   Superficies sólidas con los tokens del panel; coral sólo en la acción
+   principal de cada fila; verde WhatsApp como excepción de marca. */
+
+.raiz { display: flex; flex-direction: column; gap: 20px; }
+.cabecera { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.cabecera h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+.cabecera p { margin: 2px 0 0; font-size: 14px; color: var(--u-text-2); }
+
+.columnas { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 1024px) {
+  .columnas { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+.columna { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+
+.card { background: var(--adm-card); border: 1px solid var(--adm-border); border-radius: 18px; box-shadow: var(--adm-shadow-xs); }
+.seccion h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 16px; font-weight: 600; }
+.seccion h3 small { font-size: 13px; font-weight: 500; color: var(--u-text-3); }
+
+.chip {
+  display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--adm-border-2);
+  background: var(--adm-card); color: var(--u-text-2); font-size: 12px; font-weight: 600; line-height: 18px; white-space: nowrap;
+}
+.ok { background: var(--c-ok-bg); border-color: var(--c-ok-line); color: var(--c-ok); }
+.warn { background: var(--c-warn-bg); border-color: var(--c-warn-line); color: var(--c-warn); }
+.info { background: var(--c-info-bg); border-color: var(--c-info-line); color: var(--c-info); }
+.danger { background: var(--c-danger-bg); border-color: var(--c-danger-line); color: var(--c-danger); }
+
+/* ── Filas ──────────────────────────────────────────────── */
+.lista { list-style: none; margin: 0; padding: 0; }
+.lista > li { padding: 14px 16px; }
+.lista > li + li { border-top: 1px solid var(--adm-border); }
+.fila { display: flex; gap: 12px; align-items: flex-start; }
+.hora { flex: none; width: 76px; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hora small { display: block; font-size: 12px; font-weight: 500; color: var(--u-text-3); white-space: nowrap; }
+.quien { flex: 1; min-width: 0; }
+.nombre { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.nombre b { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.meta { font-size: 13px; color: var(--u-text-3); overflow-wrap: anywhere; }
+.notas { font-size: 13px; color: var(--u-text-2); margin-top: 2px; }
+.acciones { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.efecto { font-size: 12px; color: var(--u-text-3); margin-top: 6px; line-height: 1.45; }
+.vacio { padding: 16px; font-size: 13px; color: var(--u-text-3); }
+
+/* ── Agenda ─────────────────────────────────────────────── */
+.agenda { padding: 16px; }
+.agendaHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+.agendaHead h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.franja { display: grid; grid-template-columns: 52px minmax(0, 1fr) 72px; gap: 10px; align-items: center; min-height: 32px; }
+.franja + .franja { margin-top: 6px; }
+.franja span:first-child { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.franja span:last-child { text-align: right; font-size: 13px; color: var(--u-text-2); font-variant-numeric: tabular-nums; }
+.barra { height: 12px; border-radius: 999px; background: var(--adm-bg); border: 1px solid var(--adm-border); overflow: hidden; }
+.barra i { display: block; height: 100%; border-radius: 999px; background: var(--u-text); }
+.barra i[data-alta] { background: var(--c-warn-solid, var(--c-warn)); }
+.leyenda { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; margin-top: 12px; font-size: 12px; color: var(--u-text-3); }
+.duracion { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--u-text-2); }
+.duracion select { min-height: 32px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--adm-border-2); background: var(--adm-card); color: var(--u-text); font-size: 12px; }
+
+/* ── Cajas de apoyo ─────────────────────────────────────── */
+.caja { margin-top: 10px; padding: 10px 12px; border-radius: 12px; font-size: 13px; line-height: 1.45; }
+.caja b { display: block; font-size: 14px; font-weight: 600; }
+.caja.neutra { background: var(--adm-bg); border: 1px solid var(--adm-border); }
+.caja.alerta { background: var(--c-warn-bg); border: 1px solid var(--c-warn-line); }
+.caja.alerta b { color: var(--c-warn); }
+.caja.bien { background: var(--c-ok-bg); border: 1px solid var(--c-ok-line); }
+.caja.bien b { color: var(--c-ok); }
+.caja .acciones { margin-top: 8px; }
+.sugerida { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.sugerida > div { flex: 1; min-width: 160px; }
+
+/* ── Estadísticas ───────────────────────────────────────── */
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stat { padding: 14px 16px; }
+.stat span { display: block; font-size: 13px; color: var(--u-text-2); }
+.stat strong { display: block; margin-top: 2px; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat small { display: block; font-size: 12px; color: var(--u-text-3); }
+
+/* ── Formulario ─────────────────────────────────────────── */
+.form { padding: 18px; }
+.form h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.campos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+.campos .completo { grid-column: 1 / -1; }
+.campos label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--u-text-2); }
+.error { padding: 10px 14px; border-radius: 12px; background: var(--c-danger-bg); border: 1px solid var(--c-danger-line); color: var(--c-danger); font-size: 13px; }
+
+.wa {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 4px 12px;
+  border-radius: 12px; border: 0; background: #25D366; color: #0b2914; font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer;
+}
+.wa:focus-visible { outline: 2px solid var(--brand-accent-ink, var(--adm-accent-500)); outline-offset: 2px; }
+.mesaSelect { min-height: 36px; padding: 0 10px; border-radius: 12px; border: 1px solid var(--adm-border-2); background: var(--adm-card); color: var(--u-text); font-size: 13px; }

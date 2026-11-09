@@ -60,8 +60,8 @@ export async function sentarDesdeRecepcion(
   restaurantId: string, mesa: number, origen: string, fuente: 'reservation' | 'waitlist',
 ): Promise<SeatResult> {
   if (!numeroValido(mesa) || !['reservation', 'waitlist'].includes(fuente)) return { error: 'Mesa inválida.' };
-  const acceso = await assertTableAccess(restaurantId, fuente === 'waitlist'
-    ? ['lista_espera'] : ['reservaciones', 'mesas', 'mesero']);
+  // Recepción (1.7/1.8): «Lista de espera y reservaciones» o el salón.
+  const acceso = await assertTableAccess(restaurantId, ['lista_espera', 'mesas']);
   if ('error' in acceso) return acceso;
   let elegida;
   try {

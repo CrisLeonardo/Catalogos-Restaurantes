@@ -2,7 +2,7 @@
 
 Ficha **1.8** del [plan de la auditoría integral](PLAN_AUDITORIA_INTEGRAL_2026-11-04.md). Hallazgos: **R17, R18, O07, X13** (filtro real), **PA-T19** y **PA-T20**. Rama `feat/recepcion`, apilada sobre la 1.7 (`feat/permisos-por-trabajo`, PR #102).
 
-> **Estado:** diagnóstico hecho; propuesta y [maqueta](../diseno/MAQUETA_RECEPCION_2026-11-09.html) **pendientes de aprobación**.
+> **Estado:** diagnóstico hecho; propuesta, decisiones y [maqueta](../diseno/MAQUETA_RECEPCION_2026-11-09.html) **aprobadas por el dueño (2026-11-09)**. **Implementada** en `feat/recepcion` (§6); pendientes en §7.
 
 ## 0. Base: la ficha 0.9 ya está incorporada
 
@@ -54,10 +54,13 @@ Recordatorios automáticos (requieren un canal de WhatsApp conectado, R17.4) · 
 - `reservations.duracion_min` (por reserva) y `restaurants.duracion_reserva_min` (90 por defecto).
 - Función de capacidad por franja con bloqueo por restaurante, para que dos reservas simultáneas no superen el aforo sin la autorización explícita.
 
-## 4. Decisiones del dueño (pendientes)
+## 4. Decisiones del dueño (2026-11-09)
 
-1. **Duración por defecto** de una reserva (propuesta: 90 min).
-2. **Exceder el aforo:** ¿se permite con «Reservar de todas formas» (propuesta) o se bloquea siempre?
+1. **Duración por defecto: 90 minutos**, configurable por restaurante.
+2. **Exceder el aforo se avisa y se permite** con «Reservar de todas formas», que queda en la bitácora con quién lo hizo.
+3. **Maqueta aprobada.** Recepción mantiene sus dos rutas (Reservaciones y Lista de espera, bajo Clientes) y ambas se presentan como una sola pantalla con el selector de la maqueta.
+
+**Aforo.** La capacidad de cada mesa vive en el plano del salón y muchas mesas no la tienen. El aforo es la suma de las plazas conocidas; las mesas sin plazas se cuentan de 4 y la pantalla lo dice. Sin mesas configuradas no se comprueba capacidad y se explica por qué.
 
 ## 5. Pruebas previstas
 
@@ -66,3 +69,31 @@ Recordatorios automáticos (requieren un canal de WhatsApp conectado, R17.4) · 
 - Dos reservas simultáneas en Postgres no superan el aforo sin autorización.
 - Reservas y grupos de días anteriores aparecen en «Por revisar»; «No asistió» libera la mesa prevista.
 - Visual: 390, 768 y 1280 px, claro y oscuro, tras aprobar la maqueta.
+
+## 6. Implementación
+
+**Orden de despliegue: migración 178 ANTES del código, después de la 177.** Idempotente; huella en `verificar_migraciones.sql`.
+
+| Pieza | Archivos |
+|---|---|
+| Migración | `178_recepcion_capacidad_y_aviso.sql`: estado `NO_SHOW` en reservas y espera; `aviso_abierto_at` y `notified_via`; `restaurants.duracion_reserva_min` (90); `leogin_ocupacion_reservas` y `leogin_guardar_reserva` (capacidad bajo bloqueo por restaurante, sobrecupo forzado en bitácora) |
+| Día de negocio | `lib/recepcion/dia.ts` (zona, corte, minutos desde el inicio del día); también en los avisos de Hoy (`lib/db/hoy.ts`) |
+| Cálculos | `lib/recepcion/agenda.ts`: aforo (mesas sin plazas se cuentan de 4), ocupación igual a la SQL, franjas, horas con lugar, mesa sugerida, rango de espera y estado del aviso |
+| Consultas | `getReservasDeRecepcion` (día, próximas, por revisar) y `getEsperaDeRecepcion` (cola de hoy, por revisar, historial de hoy); un error de lectura ya no se pinta como vacío |
+| Acciones | `lib/actions/reservaciones.ts` (crear y reprogramar con capacidad, transiciones permitidas, «no asistió», duración) y `lib/actions/waitlist.ts` (aviso abierto, confirmado o retirado, «no llegó»); ambas con la regla única de 1.7 (`lista_espera` o `mesas`) |
+| Pantallas | `reservaciones-panel.tsx` y `waitlist-panel.tsx` con `recepcion.module.css`, según la maqueta |
+
+**Diferencia con la maqueta:** el panel ya tiene las pestañas «Reservaciones» y «Lista de espera» en la fila de Clientes; no se repitió el selector interno para no mostrar dos navegaciones iguales.
+
+**Verificación (local, 2026-11-09):** tipos y lint sin errores (tres avisos anteriores); 1,438 unitarias (12 nuevas de Recepción); 110 de Postgres (9 nuevas de la 178, incluida la de dos reservas simultáneas); auditorías de `security definer` y RLS con cero hallazgos. En el navegador, a las 00:38 con corte a las 5:00:
+- «Hoy» es el domingo 8; la reserva de las 13:00 aparece en «Pasó su hora» y las de días anteriores en «Por revisar» (PA-T19).
+- Abrir WhatsApp deja al grupo en `WAITING` y pregunta «¿Se envió?»; sólo «Sí, les avisé» lo marca avisado por WhatsApp (PA-T20).
+- Sentar en la mesa sugerida abre su turno en la misma transacción y el grupo pasa al historial de hoy con su espera.
+- Un grupo de 50 a las 20:00 muestra «Quedan 44 lugares», sugiere 21:00 y 19:00; forzarlo guarda y deja la bitácora; «No asistió» confirma y registra; cambiar hora lo mueve a «Próximos días».
+
+## 7. Pendientes y límites
+
+- **Validación de campo** con un host real: lectura de la agenda en tablet y uso del aviso por WhatsApp.
+- **Reservas después de medianoche** (por ejemplo 00:30 con corte a las 5:00) se guardan con su fecha de calendario y no aparecen en la agenda del día de negocio anterior.
+- Recordatorios automáticos, depósitos, mesas unidas y bloqueo manual de mesa siguen fuera (ver §2).
+- La integración del resto de la ola 0 (0.1–0.13 salvo 0.9 y 0.12) sigue pendiente; 0.1 vuelve a tocar el historial de espera y chocará con este panel.

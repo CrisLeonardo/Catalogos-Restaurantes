@@ -10,7 +10,7 @@ export default defineConfig({
   resolve: { tsconfigPaths: true },
   test: {
     environment: 'node',
-    include: ['tests/integration/dinero.test.ts', 'tests/integration/permisos.test.ts'],
+    include: ['tests/integration/dinero.test.ts', 'tests/integration/permisos.test.ts', 'tests/integration/recepcion.test.ts'],
     fileParallelism: false,
     testTimeout: 30_000,
     hookTimeout: 30_000,

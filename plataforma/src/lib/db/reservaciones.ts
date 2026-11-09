@@ -1,6 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/service';
 
-export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'SEATED' | 'COMPLETED' | 'CANCELLED';
+export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'SEATED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
 
 export interface Reservation {
   id: string;
@@ -16,6 +16,7 @@ export interface Reservation {
   /** Mesa donde se sentaron (migración 128). `null` mientras no llegan, y
       también en una base donde la 128 todavía no corrió. */
   table_number?: number | null;
+  updated_at?: string;
 }
 
 export interface ReservationSummary {
@@ -99,5 +100,37 @@ export async function getReservationSummary(restaurantId: string): Promise<Reser
     pending: rows.filter((r) => r.status === 'PENDING').length,
     confirmed: rows.filter((r) => r.status === 'CONFIRMED').length,
     today: rows.filter((r) => r.date === today).length,
+  };
+}
+
+/* ── Recepción por día de negocio (auditoría 1.8) ─────────────────────
+   Tres grupos que antes se mezclaban o desaparecían: las del día, las de
+   los próximos días y las de días anteriores que nunca se resolvieron
+   (pendientes o confirmadas: «Por revisar»). Un error de lectura se lanza
+   en vez de convertirse en una lista vacía. */
+
+export type ReservasDeRecepcion = {
+  delDia: Reservation[];
+  proximas: Reservation[];
+  porRevisar: Reservation[];
+};
+
+export async function getReservasDeRecepcion(restaurantId: string, hoy: string): Promise<ReservasDeRecepcion> {
+  const db = createServiceClient();
+  const base = () => db.from('reservations').select('*').eq('restaurant_id', restaurantId);
+  const [dia, proximas, revisar] = await Promise.all([
+    base().eq('date', hoy).in('status', ['PENDING', 'CONFIRMED', 'SEATED'])
+      .order('time', { ascending: true }).limit(300),
+    base().gt('date', hoy).in('status', ['PENDING', 'CONFIRMED'])
+      .order('date', { ascending: true }).order('time', { ascending: true }).limit(100),
+    base().lt('date', hoy).in('status', ['PENDING', 'CONFIRMED'])
+      .order('date', { ascending: false }).order('time', { ascending: false }).limit(50),
+  ]);
+  const error = dia.error ?? proximas.error ?? revisar.error;
+  if (error) throw new Error('No se pudieron leer las reservas. Actualiza la página.');
+  return {
+    delDia: (dia.data ?? []) as Reservation[],
+    proximas: (proximas.data ?? []) as Reservation[],
+    porRevisar: (revisar.data ?? []) as Reservation[],
   };
 }
