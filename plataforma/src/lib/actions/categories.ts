@@ -96,56 +96,35 @@ export async function toggleCategoryActive(formData: FormData) {
   revalidateAll(ctx.restaurantId);
 }
 
-export async function moveCategoryUp(formData: FormData) {
+/* Subir/bajar una categoría (migración 156, auditoría 2026-11-03 X12).
+   Antes eran dos UPDATE sueltos con la posición que mandaba el navegador
+   y sin filtrar el segundo por restaurante: con dos categorías en la misma
+   posición «subir» no encontraba vecina. La función bloquea, renumera sin
+   huecos ni repetidos y cambia de lugar, todo junto. Ya no hace falta el
+   `sort_order` del formulario. */
+async function moverCategoria(formData: FormData, direccion: -1 | 1) {
   const ctx = await resolveContext(formData);
   if (!ctx) return;
 
   const id = formData.get('id') as string;
-  const currentOrder = parseInt(formData.get('sort_order') as string, 10);
+  if (!/^[0-9a-f-]{36}$/i.test(id ?? '')) return;
 
-  const { data: prev } = await ctx.db
-    .from('categories')
-    .select('id, sort_order')
-    .eq('restaurant_id', ctx.restaurantId)
-    .lt('sort_order', currentOrder)
-    .order('sort_order', { ascending: false })
-    .limit(1)
-    .single();
-
-  if (!prev) return;
-
-  await Promise.all([
-    ctx.db.from('categories').update({ sort_order: prev.sort_order }).eq('id', id),
-    ctx.db.from('categories').update({ sort_order: currentOrder }).eq('id', prev.id),
-  ]);
+  const { error } = await createServiceClient().rpc('leogin_mover_categoria', {
+    p_restaurant_id: ctx.restaurantId,
+    p_category_id: id,
+    p_direccion: direccion,
+  });
+  if (error) console.error('[moverCategoria]', error.code ?? '', error.message ?? '');
 
   revalidateAll(ctx.restaurantId);
 }
 
+export async function moveCategoryUp(formData: FormData) {
+  await moverCategoria(formData, -1);
+}
+
 export async function moveCategoryDown(formData: FormData) {
-  const ctx = await resolveContext(formData);
-  if (!ctx) return;
-
-  const id = formData.get('id') as string;
-  const currentOrder = parseInt(formData.get('sort_order') as string, 10);
-
-  const { data: next } = await ctx.db
-    .from('categories')
-    .select('id, sort_order')
-    .eq('restaurant_id', ctx.restaurantId)
-    .gt('sort_order', currentOrder)
-    .order('sort_order', { ascending: true })
-    .limit(1)
-    .single();
-
-  if (!next) return;
-
-  await Promise.all([
-    ctx.db.from('categories').update({ sort_order: next.sort_order }).eq('id', id),
-    ctx.db.from('categories').update({ sort_order: currentOrder }).eq('id', next.id),
-  ]);
-
-  revalidateAll(ctx.restaurantId);
+  await moverCategoria(formData, 1);
 }
 
 /* ── Modal actions (sin redirect, para CategoriesPanel en /admin/categorias) ─ */

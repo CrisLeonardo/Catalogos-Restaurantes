@@ -158,6 +158,11 @@ huellas(n, que, ok, cuando) as (values
      and not exists (select 1 from information_schema.columns
                       where table_schema = 'public' and table_name = 'orders' and column_name = 'transfer_status'),
      'DESPUÉS de desplegar (o a la vez)'),
+  ('156', 'receta y orden de categorías atómicos + candados entre restaurantes',
+     to_regprocedure('public.leogin_reemplazar_receta(uuid,uuid,jsonb)') is not null
+     and to_regprocedure('public.leogin_mover_categoria(uuid,uuid,integer)') is not null
+     and exists (select 1 from pg_trigger where tgname = 'candado_receta_mismo_restaurante'),
+     'ANTES de desplegar'),
   ('160', 'cobro parcial y cierre de mesa transaccionales',
      exists (select 1 from information_schema.columns where table_schema='public' and table_name='order_payments' and column_name='item_amounts')
      and to_regprocedure('public.leogin_cobrar_parte_mesa(uuid,integer,uuid[],jsonb,uuid)') is not null
