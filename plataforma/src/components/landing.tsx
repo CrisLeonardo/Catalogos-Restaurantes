@@ -33,7 +33,7 @@ const PROOF = [
 const FOR_OWNER = [
   { icon: 'bell',    title: 'Los pedidos no se te escapan', body: 'Cada pedido suena y aparece al instante en tu panel, en la cocina y en la impresora de comandas.' },
   { icon: 'wallet',  title: 'Tu dinero, cuadrado',          body: 'Corte de caja, costo por plato, margen real y reportes que puedes exportar. Sin hojas de cálculo a mano.' },
-  { icon: 'box',     title: 'Sabes qué tienes y qué falta', body: 'Inventario con recetas y kardex: cada venta descuenta insumos y te avisa antes de quedarte sin nada.' },
+  { icon: 'box',     title: 'Sabes qué tienes y qué falta', body: 'Existencias con kardex: cada venta descuenta del platillo y te avisa al llegar al mínimo. Las recetas calculan tu costo.' },
   { icon: 'sparkle', title: 'Tu marca, no la nuestra',      body: 'Colores, logo, fotos y tipografía propios. Tus clientes ven tu restaurante, no “otra app” con tu comida adentro.' },
 ];
 const FOR_DINER = [

@@ -127,7 +127,7 @@ export default async function MeseroPage() {
       logoUrl={resolvedConfig?.logoUrl ?? null}
       categories={catalogo.categories}
       /* Con la disponibilidad que ve el comensal: antes el mesero tenía
-         «Agotado» un platillo que el menú ya había devuelto a las 12 h
+         «Agotado» un platillo que el menú ya había devuelto a su hora
          (auditoría 2026-10-02, CAT-01). */
       products={withEffectiveAvailability(catalogo.products)}
       masPedidos={masPedidos}

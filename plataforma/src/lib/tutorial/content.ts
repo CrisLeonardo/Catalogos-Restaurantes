@@ -224,7 +224,7 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
         id: 'disponibilidad',
         title: 'Agotado por hoy',
         description:
-          'El interruptor de cada platillo en la lista lo marca agotado: tus clientes lo ven pero no lo pueden pedir, y vuelve solo a las 12 horas. Si quieres sacarlo del menú del todo, entra a la ficha y apaga «Mostrar en el menú».',
+          'El interruptor de cada platillo en la lista lo marca agotado y te pregunta hasta cuándo: hasta mañana (vuelve a la hora de corte), hasta reponer o hasta que lo actives. Tus clientes lo ven pero no lo pueden pedir. Si quieres sacarlo del menú del todo, entra a la ficha y apaga «Mostrar en el menú».',
         route: 'Menú → Platillos → interruptor «Disponible»',
         tip: 'Si llevas control de inventario, el platillo se marca agotado solo al llegar a cero y vuelve cuando repones existencias.',
       },

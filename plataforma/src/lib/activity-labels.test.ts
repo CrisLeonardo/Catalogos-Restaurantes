@@ -64,6 +64,11 @@ describe('describirActividad · antifraude (PROD-10)', () => {
     expect(describirActividad(fila('catalogo_lote', '5 platillos', { productos: 5, cambio: { disponible: false, visible: false } })))
       .toBe('Cambió 5 platillos a la vez: los marcó agotados, los ocultó del menú');
     expect(describirActividad(fila('platillo_duplicado', 'Pepián'))).toBe('Duplicó el platillo «Pepián» (la copia quedó oculta)');
+    expect(describirActividad(fila('stock', 'Pepián', { delta: -2, motivo: 'merma', nota: 'se quemó' })))
+      .toBe('Ajustó las existencias de «Pepián» (−2 · merma) — «se quemó»');
+    expect(describirActividad(fila('agotado', 'Horchata', { hasta: 'manana' }))).toBe('Agotó «Horchata» hasta mañana');
+    expect(describirActividad(fila('ingrediente_agotado', 'Aguacate', { platillos: 2 }))).toBe('Marcó que se acabó Aguacate (2 platillos agotados)');
+    expect(describirActividad(fila('inventario_activado', '3 platillos'))).toBe('Activó el control de existencias de 3 platillos');
     expect(describirActividad(fila('cupon', 'AMIGO', { evento: 'creado', tipo: 'PERCENT', valor: 100 }, 'Luis')))
       .toBe('Luis creó el cupón AMIGO (100 % de descuento)');
     expect(describirActividad(fila('cupon', 'VERANO', { evento: 'editado', tipo: 'FIXED', valor: 30, antes: { tipo: 'FIXED', valor: 10 } })))

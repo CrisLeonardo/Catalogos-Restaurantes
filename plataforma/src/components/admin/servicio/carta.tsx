@@ -225,7 +225,7 @@ export default function Carta({
                  «⋯» abre opciones y nota. Cada uno detiene el toque para que
                  no agregue un plato por error. Van sobre la foto o, sin
                  fotos, en el pie. */
-              const mandos = agotado ? (onReponer ? (
+              const mandos = agotado ? (onReponer && !p.sin_existencias ? (
                 <span className="sv-dish-tools">
                   <button
                     type="button"
@@ -262,7 +262,7 @@ export default function Carta({
                 </span>
               );
               const aviso = agotado
-                ? <span className="sv-dish-out">Agotado</span>
+                ? <span className="sv-dish-out">{p.sin_existencias ? 'Sin existencias' : 'Agotado'}</span>
                 : quedan != null ? <span className="sv-dish-left">Quedan {quedan}</span> : null;
               return (
                 <div

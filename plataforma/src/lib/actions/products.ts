@@ -23,6 +23,9 @@ import { EVENTOS } from '@/lib/analytics';
 import { logActivity } from '@/lib/activity';
 import { cambiosDePrecio, hayCambioDePrecio } from '@/lib/activity-diff';
 import { validarPrecio, separarSellos, problemaDeGrupo, type CambioDePrecio } from '@/lib/catalogo/reglas';
+import { AGOTADO_POR_OMISION, type AgotadoHasta } from '@/lib/product-availability';
+
+const esHasta = (v: unknown): v is AgotadoHasta => v === 'manana' || v === 'reponer' || v === 'manual';
 
 export type ProductState = { error: string } | null;
 
@@ -264,7 +267,7 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
   // El precio de antes, para la bitácora (PROD-10): «¿quién bajó el precio?».
   const { data: previo } = await ctx.db
     .from('products')
-    .select('price, options')
+    .select('price, options, is_available, agotado_motivo')
     .eq('id', id)
     .eq('restaurant_id', ctx.restaurantId)
     .maybeSingle();
@@ -287,13 +290,19 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
       dietary_tags: marcas.dietas,
       options,
       is_available: newAvailable,
-      unavailable_at: newAvailable ? null : new Date().toISOString(),
+      ...(newAvailable ? { unavailable_at: null } : {}),
       is_active: formData.get('is_active') !== 'false',
     })
     .eq('id', id)
     .eq('restaurant_id', ctx.restaurantId);
 
   if (error) return { error: mensajeDeError(error) };
+
+  // Agotado con intención (auditoría 1.10): lo que se eligió en Disponibilidad.
+  const hasta = formData.get('agotado_hasta');
+  if (!newAvailable && esHasta(hasta) && (previo?.is_available !== false || previo?.agotado_motivo !== hasta)) {
+    await createServiceClient().rpc('leogin_marcar_agotado', { p_restaurant: ctx.restaurantId, p_ids: [id], p_hasta: hasta, p_actor: ctx.userId });
+  }
 
   if (previo) {
     const cambios = cambiosDePrecio(
@@ -347,24 +356,32 @@ export async function deleteProduct(formData: FormData) {
   updateTag(`menu:${ctx.restaurantId}`);
 }
 
-export async function toggleProductAvailability(formData: FormData) {
+/** Disponible / agotado desde la lista. Agotar dice hasta cuándo (1.10, O04). */
+export async function toggleProductAvailability(formData: FormData): Promise<{ error?: string; vuelve?: string | null }> {
   const ctx = await resolveContext(formData);
-  if (!ctx) return;
+  if (!ctx) return { error: 'No autorizado.' };
 
   const id = formData.get('id') as string;
   const is_available = formData.get('is_available') === 'true';
 
-  await ctx.db
-    .from('products')
-    .update({
-      is_available,
-      unavailable_at: is_available ? null : new Date().toISOString(),
-    })
-    .eq('id', id)
-    .eq('restaurant_id', ctx.restaurantId);
+  if (is_available) {
+    const { error } = await ctx.db.from('products').update({ is_available: true, unavailable_at: null })
+      .eq('id', id).eq('restaurant_id', ctx.restaurantId);
+    if (error) return { error: 'No se pudo marcar disponible.' };
+  } else {
+    const hasta = formData.get('agotado_hasta');
+    const { data, error } = await createServiceClient().rpc('leogin_marcar_agotado', {
+      p_restaurant: ctx.restaurantId, p_ids: [id], p_hasta: esHasta(hasta) ? hasta : AGOTADO_POR_OMISION, p_actor: ctx.userId,
+    });
+    if (error) return { error: error.code === 'LGD01' ? error.message : 'No se pudo marcar agotado.' };
+    revalidatePath('/admin/menu');
+    updateTag(`menu:${ctx.restaurantId}`);
+    return { vuelve: (data as { vuelve?: string | null })?.vuelve ?? null };
+  }
 
   revalidatePath('/admin/menu');
   updateTag(`menu:${ctx.restaurantId}`);
+  return {};
 }
 
 export async function toggleProductActive(formData: FormData) {
@@ -639,4 +656,23 @@ export async function aplicarLoteCatalogo(restaurantIdForm: string, ids: string[
   revalidatePath('/admin/menu');
   updateTag(`menu:${ctx.restaurantId}`);
   return { ok: true, cambiados: (data as { cambiados?: number })?.cambiados ?? ids.length };
+}
+
+
+/* ── Agotar varios con intención (auditoría 1.10, O04) ────────────── */
+export async function agotarPlatillos(restaurantIdForm: string, ids: string[], hasta: AgotadoHasta): Promise<{ ok?: true; vuelve?: string | null; error?: string }> {
+  const fd = new FormData();
+  fd.set('restaurantId', restaurantIdForm);
+  const ctx = await resolveContext(fd);
+  if (!ctx) return { error: 'No autorizado.' };
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 500 || !ids.every((x) => /^[0-9a-f-]{36}$/i.test(x))) {
+    return { error: 'Elige entre 1 y 500 platillos.' };
+  }
+  const { data, error } = await createServiceClient().rpc('leogin_marcar_agotado', {
+    p_restaurant: ctx.restaurantId, p_ids: ids, p_hasta: esHasta(hasta) ? hasta : AGOTADO_POR_OMISION, p_actor: ctx.userId,
+  });
+  if (error) return { error: error.code === 'LGD01' ? error.message : 'No se pudieron agotar. No cambió ninguno.' };
+  revalidatePath('/admin/menu');
+  updateTag(`menu:${ctx.restaurantId}`);
+  return { ok: true, vuelve: (data as { vuelve?: string | null })?.vuelve ?? null };
 }

@@ -24,13 +24,14 @@ import Link from '@/components/admin/panel-link';
 import AssetImage from '@/components/asset-image';
 import { Icon } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
-import { aplicarLoteCatalogo, toggleProductAvailability, type LoteCambio } from '@/lib/actions/products';
+import { agotarPlatillos, aplicarLoteCatalogo, toggleProductAvailability, type LoteCambio } from '@/lib/actions/products';
+import HojaAgotar from '@/components/admin/hoja-agotar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useToastManager } from '@/components/ui/toast';
 import { Switch } from '@/components/ui/switch';
-import { isOutOfStock } from '@/lib/product-availability';
+import { cuandoVuelveTexto, isOutOfStock, razonDeAgotado, type AgotadoHasta } from '@/lib/product-availability';
 import { normalizar } from '@/lib/servicio/comanda';
 import { fmtMoney } from '@/lib/money';
 import {
@@ -97,9 +98,12 @@ interface Props {
   inicial?: EstadoInicial;
   /** «Exportar» (lo arma la página): va en la fila de herramientas (MEN-11). */
   exportSlot?: React.ReactNode;
+  /** Zona y hora de corte del local, para decir cuándo vuelve lo agotado (1.10). */
+  timezone?: string;
+  horaCorte?: string;
 }
 
-export default function CatalogPanel({ restaurantId, categories, products, maxProducts, inicial = {}, exportSlot }: Props) {
+export default function CatalogPanel({ restaurantId, categories, products, maxProducts, inicial = {}, exportSlot, timezone, horaCorte }: Props) {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = panelBaseFrom(useRutaNavegador());
   const router = useRouter();
@@ -115,6 +119,8 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [previa, setPrevia] = useState<{ sentido: 1 | -1; modo: CambioDePrecio['modo']; valor: string } | null>(null);
   const [errorLote, setErrorLote] = useState<string | null>(null);
+  /* Agotar dice hasta cuándo (1.10): un platillo desde su interruptor o los del lote. */
+  const [hojaAgotar, setHojaAgotar] = useState<{ ids: string[]; titulo: string; nombre?: string } | null>(null);
 
   /* La dirección guarda lo elegido: al volver de un platillo, la lista sigue igual. */
   function cadena(next: { q?: string; cat?: string; filtros?: FiltroCatalogo[]; orden?: OrdenCatalogo }) {
@@ -148,6 +154,8 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
    * así que se hace y se deja deshacer. `silent` corta la cadena.
    */
   function setAvailability(id: string, name: string, next: boolean, silent = false) {
+    // Agotar pregunta hasta cuándo; volver a disponible es directo.
+    if (!next && !silent) { setHojaAgotar({ ids: [id], titulo: `Agotar «${name}»`, nombre: name }); return; }
     const fd = new FormData();
     fd.set('restaurantId', restaurantId);
     fd.set('id', id);
@@ -156,12 +164,29 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
       await toggleProductAvailability(fd);
       if (silent) return;
       toast({
-        title: next ? `${name} vuelve a estar disponible` : `${name} quedó marcado como agotado`,
-        description: next ? undefined : 'Tus clientes lo ven agotado y no lo pueden pedir. Vuelve solo en 12 h.',
+        title: `${name} vuelve a estar disponible`,
         type: 'success',
-        actionProps: { children: 'Deshacer', onClick: () => setAvailability(id, name, !next, true) },
+        actionProps: { children: 'Deshacer', onClick: () => setHojaAgotar({ ids: [id], titulo: `Agotar «${name}»`, nombre: name }) },
       });
     });
+  }
+
+  async function confirmarAgotar(hasta: AgotadoHasta): Promise<string | void> {
+    if (!hojaAgotar) return;
+    const { ids, nombre } = hojaAgotar;
+    const r = await agotarPlatillos(restaurantId, ids, hasta);
+    if (r.error) return r.error;
+    setHojaAgotar(null);
+    const cuando = hasta === 'manana' && r.vuelve ? `Vuelve ${cuandoVuelveTexto(r.vuelve, timezone)}.`
+      : hasta === 'reponer' ? 'Vuelve al reponer.' : 'No vuelve solo.';
+    toast({
+      title: ids.length === 1 && nombre ? `${nombre} quedó agotado` : `${ids.length} platillos agotados`,
+      description: `Tus clientes lo ven pero no lo pueden pedir. ${cuando}`,
+      type: 'success',
+      ...(ids.length === 1 && nombre ? { actionProps: { children: 'Deshacer', onClick: () => setAvailability(ids[0], nombre, true, true) } } : {}),
+    });
+    if (ids.length > 1) setSeleccion(new Set());
+    router.refresh();
   }
 
   const atProductLimit = maxProducts != null && products.length >= maxProducts;
@@ -502,8 +527,11 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                     <>
                       <Switch checked={p.is_available} onCheckedChange={(next) => setAvailability(p.id, p.name, next)}
                         aria-label={p.is_available ? `Marcar ${p.name} agotado` : `Marcar ${p.name} disponible`} />
-                      <span style={{ fontSize: 12, fontWeight: p.is_available ? 400 : 600, color: p.is_available ? 'var(--u-text-2)' : 'var(--c-warn)' }}>
-                        {p.is_available ? 'Disponible' : 'Agotado'}
+                      <span style={{ fontSize: 12, fontWeight: p.is_available ? 400 : 600, color: p.is_available ? 'var(--u-text-2)' : 'var(--c-warn)' }}
+                        title={p.is_available ? undefined : razonDeAgotado(p, timezone)}>
+                        {p.is_available ? 'Disponible' : p.agotado_motivo === 'manana' && p.vuelve_at
+                          ? `Agotado · vuelve ${cuandoVuelveTexto(p.vuelve_at, timezone).replace(' a las ', ' ')}`
+                          : 'Agotado'}
                       </span>
                     </>
                   )}
@@ -520,6 +548,10 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
         </Card>
       )}
 
+      {hojaAgotar && (
+        <HojaAgotar titulo={hojaAgotar.titulo} horaCorte={horaCorte} onConfirmar={confirmarAgotar} onClose={() => setHojaAgotar(null)} />
+      )}
+
       {/* Barra del lote: aparece al seleccionar (R06.4). */}
       {n > 0 && !previa && (
         <div className={`adm-savebar ${s.lote}`} role="region" aria-label="Cambios en lote">
@@ -528,7 +560,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
             <Button type="button" size="sm" onClick={() => { setPrevia({ sentido: 1, modo: 'porcentaje', valor: '' }); setErrorLote(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
               Precio…
             </Button>
-            <Button type="button" size="sm" variant="secondary" disabled={aplicando} onClick={() => aplicar({ disponible: false }, dicho('marcado como agotado', 'marcados como agotados'))}>Agotar</Button>
+            <Button type="button" size="sm" variant="secondary" disabled={aplicando} onClick={() => setHojaAgotar({ ids: [...seleccion], titulo: `Agotar ${nPlatillos}` })}>Agotar…</Button>
             <Button type="button" size="sm" variant="secondary" disabled={aplicando} onClick={() => aplicar({ disponible: true }, dicho('disponible', 'disponibles'))}>Disponible</Button>
             <Button type="button" size="sm" variant="secondary" disabled={aplicando} onClick={() => aplicar({ visible: false }, dicho('oculto del menú', 'ocultos del menú'))}>Ocultar</Button>
             <Button type="button" size="sm" variant="secondary" disabled={aplicando} onClick={() => aplicar({ visible: true }, dicho('visible en el menú', 'visibles en el menú'))}>Mostrar</Button>

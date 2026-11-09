@@ -32,6 +32,7 @@
    dos platos quemados.
    ════════════════════════════════════════════════════════════ */
 
+import type { AgotadoHasta } from '@/lib/product-availability';
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import { Icon } from '@/components/icons';
@@ -697,16 +698,18 @@ export default function ServicioPanel({
   }, [sel]);
 
   /** El 86 de Toast: se acabó, se apaga en todo el local (y «Ya hay» lo devuelve). */
-  const agotar = useCallback(async (p: Product, agotado: boolean) => {
+  const agotar = useCallback(async (p: Product, agotado: boolean, hasta: AgotadoHasta = 'manana') => {
     setAgotadosLocal((prev) => ({ ...prev, [p.id]: agotado }));
     setHoja(null);
-    const res = await marcarAgotado(restaurantId, p.id, agotado);
+    const res = await marcarAgotado(restaurantId, p.id, agotado, hasta);
     if (res.error) {
       setAgotadosLocal((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => id !== p.id)));
       setAviso({ text: res.error, bad: true });
       return;
     }
-    setAviso({ text: agotado ? `${p.name} · agotado en todo el local` : `${p.name} · disponible otra vez` });
+    setAviso({ text: agotado
+      ? `${p.name} · agotado ${hasta === 'manana' ? 'hasta mañana' : hasta === 'reponer' ? 'hasta reponer' : 'hasta que lo actives'}`
+      : `${p.name} · disponible otra vez` });
   }, [restaurantId]);
 
   /** Copia la última ronda al carrito contra la carta de hoy y dice qué no se pudo. */
@@ -1793,7 +1796,7 @@ export default function ServicioPanel({
           currency={currency}
           initialLine={hoja.line}
           initialQty={hoja.qty}
-          onAgotar={puedeAgotar ? () => { void agotar(hoja.product, true); } : undefined}
+          onAgotar={puedeAgotar ? (hasta) => { void agotar(hoja.product, true, hasta); } : undefined}
           onAdd={(linea) => { empujar(linea); setHoja(null); }}
           onSave={(lineId, linea) => {
             const k = cartKey(sel);

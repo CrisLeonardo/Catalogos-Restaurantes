@@ -272,7 +272,13 @@ huellas(n, que, ok, cuando) as (values
      to_regprocedure('public.leogin_aplicar_lote_catalogo(uuid,uuid[],jsonb,uuid)') is not null
      and to_regprocedure('public.leogin_borrar_categoria(uuid,uuid,uuid,uuid)') is not null
      and exists (select 1 from pg_trigger where tgname='candado_categoria_producto'),
-     'ANTES de desplegar; después de la 178')
+     'ANTES de desplegar; después de la 178'),
+  ('180', 'inventario: agotados con intención, por ingrediente, ajustes con motivo y activar en lote',
+     exists (select 1 from information_schema.columns where table_schema='public' and table_name='products' and column_name='vuelve_at')
+     and exists (select 1 from pg_trigger where tgname='leogin_agotado_coherente')
+     and to_regprocedure('public.leogin_ajustar_existencias(uuid,uuid,text,integer,text,text,uuid)') is not null
+     and to_regprocedure('public.leogin_agotar_ingrediente(uuid,uuid,boolean,uuid)') is not null,
+     'ANTES de desplegar; después de la 179')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

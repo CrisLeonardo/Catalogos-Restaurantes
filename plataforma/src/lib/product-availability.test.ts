@@ -7,39 +7,37 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
-  AUTO_RESTORE_MS,
+  cuandoVuelveTexto,
   isAutoRestored,
   isOutOfStock,
   isUnavailable,
+  razonDeAgotado,
   withEffectiveAvailability,
 } from './product-availability';
 
 const AHORA = Date.parse('2026-10-02T18:00:00Z');
-const hace = (ms: number) => new Date(AHORA - ms).toISOString();
+const en = (ms: number) => new Date(AHORA + ms).toISOString();
+const HORA = 60 * 60_000;
 
-describe('isUnavailable', () => {
+describe('isUnavailable (auditoría 1.10: agotado con intención)', () => {
   it('disponible es disponible', () => {
     expect(isUnavailable({ is_available: true }, AHORA)).toBe(false);
   });
 
-  it('agotado hace una hora sigue agotado', () => {
-    expect(isUnavailable({ is_available: false, unavailable_at: hace(60 * 60_000) }, AHORA)).toBe(true);
+  it('«hasta mañana» sigue agotado hasta su hora y luego vuelve', () => {
+    const p = { is_available: false, agotado_motivo: 'manana', vuelve_at: en(2 * HORA) };
+    expect(isUnavailable(p, AHORA)).toBe(true);
+    expect(isUnavailable(p, AHORA + 2 * HORA)).toBe(false);
+    expect(isAutoRestored(p, AHORA + 2 * HORA)).toBe(true);
   });
 
-  it('agotado hace más de 12 h ya volvió solo', () => {
-    const p = { is_available: false, unavailable_at: hace(AUTO_RESTORE_MS + 1) };
-    expect(isUnavailable(p, AHORA)).toBe(false);
-    expect(isAutoRestored(p, AHORA)).toBe(true);
+  it('ya no hay reloj de 12 h: sin `vuelve_at` no vuelve solo', () => {
+    const p = { is_available: false, agotado_motivo: 'manual', unavailable_at: new Date(AHORA - 48 * HORA).toISOString(), vuelve_at: null };
+    expect(isUnavailable(p, AHORA)).toBe(true);
   });
 
-  it('agotado sin hora no tiene reloj: se queda fuera', () => {
-    expect(isUnavailable({ is_available: false, unavailable_at: null }, AHORA)).toBe(true);
-  });
-
-  it('sin existencias manda sobre el reloj de 12 h', () => {
-    // place_order lo marca agotado CON hora al llegar a cero: sin esta regla,
-    // a las 12 h volvía al menú aunque el inventario siguiera en cero.
-    const p = { is_available: false, unavailable_at: hace(AUTO_RESTORE_MS * 3), track_stock: true, stock: 0 };
+  it('sin existencias manda sobre la hora de vuelta', () => {
+    const p = { is_available: false, vuelve_at: en(-HORA), track_stock: true, stock: 0 };
     expect(isUnavailable(p, AHORA)).toBe(true);
     expect(isAutoRestored(p, AHORA)).toBe(false);
   });
@@ -57,9 +55,23 @@ describe('isUnavailable', () => {
   });
 });
 
+describe('cuándo vuelve, en palabras', () => {
+  // 18:00 UTC = 12:00 en Guatemala.
+  it('mañana a la hora de corte', () => {
+    expect(cuandoVuelveTexto('2026-10-03T11:00:00Z', 'America/Guatemala', AHORA)).toBe('mañana a las 05:00');
+  });
+  it('razón de cada agotado', () => {
+    expect(razonDeAgotado({ is_available: false, agotado_motivo: 'manana', vuelve_at: '2026-10-03T11:00:00Z' }, 'America/Guatemala', AHORA))
+      .toBe('Agotado · vuelve mañana a las 05:00');
+    expect(razonDeAgotado({ is_available: false, agotado_motivo: 'ingrediente' }, undefined, AHORA)).toMatch(/ingrediente/);
+    expect(razonDeAgotado({ is_available: true, track_stock: true, stock: 0 }, undefined, AHORA)).toBe('Sin existencias · vuelve al reponer');
+    expect(razonDeAgotado({ is_available: false, agotado_motivo: 'manual' }, undefined, AHORA)).toBe('Agotado · hasta que lo actives');
+  });
+});
+
 describe('withEffectiveAvailability', () => {
   it('reescribe is_available con la respuesta y no toca lo que ya cuadra', () => {
-    const vuelto = { id: 'a', is_available: false, unavailable_at: hace(AUTO_RESTORE_MS + 1) };
+    const vuelto = { id: 'a', is_available: false, agotado_motivo: 'manana', vuelve_at: en(-1) };
     const sinStock = { id: 'b', is_available: true, track_stock: true, stock: 0 };
     const normal = { id: 'c', is_available: true };
     const [a, b, c] = withEffectiveAvailability([vuelto, sinStock, normal], AHORA);

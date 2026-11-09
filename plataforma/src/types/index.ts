@@ -187,6 +187,12 @@ export interface Product {
   is_available: boolean;
   /** Timestamp de cuando se marcó no-disponible; NULL si está disponible. */
   unavailable_at: string | null;
+  /** Agotado «hasta mañana»: cuándo vuelve. null = no vuelve por reloj (migración 180). */
+  vuelve_at?: string | null;
+  /** Por qué está agotado: 'manana' | 'reponer' | 'manual' | 'ingrediente' (migración 180). */
+  agotado_motivo?: string | null;
+  /** Sólo en la carta pública/Servicio: agotado por no tener existencias. */
+  sin_existencias?: boolean;
   /** false = oculto permanentemente del menú hasta que el restaurante lo reactive. */
   is_active: boolean;
   // Inventario (migración 021)

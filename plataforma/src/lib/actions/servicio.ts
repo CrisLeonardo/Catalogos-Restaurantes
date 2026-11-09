@@ -555,28 +555,39 @@ export async function marcarAgotado(
   restaurantId: string,
   productId: string,
   agotado: boolean,
-): Promise<{ error?: string }> {
+  hasta: 'manana' | 'reponer' | 'manual' = 'manana',
+): Promise<{ error?: string; vuelve?: string | null }> {
   if (!restaurantId || !productId) return { error: 'Datos inválidos.' };
 
   const acceso = await assertTableAccess(restaurantId, ['catalogo']);
   if ('error' in acceso) return { error: 'Solo quien administra la carta puede marcar un plato como agotado.' };
 
   const db = createServiceClient();
-  const { data, error } = await db
-    .from('products')
-    .update({ is_available: !agotado, unavailable_at: agotado ? new Date().toISOString() : null })
-    .eq('id', productId)
-    .eq('restaurant_id', restaurantId)
-    .select('id');
-  if (error) return { error: error.message };
-  if (!data || data.length === 0) return { error: 'Ese plato no es de este restaurante.' };
+  let vuelve: string | null = null;
+  if (agotado) {
+    // Con intención (auditoría 1.10): por omisión «hasta mañana».
+    const { data: r, error } = await db.rpc('leogin_marcar_agotado', {
+      p_restaurant: restaurantId, p_ids: [productId], p_hasta: ['manana', 'reponer', 'manual'].includes(hasta) ? hasta : 'manana', p_actor: acceso.actor.userId,
+    });
+    if (error) return { error: error.code === 'LGD01' ? 'Ese plato no es de este restaurante.' : 'No se pudo marcar agotado.' };
+    vuelve = (r as { vuelve?: string | null })?.vuelve ?? null;
+  } else {
+    const { data, error } = await db
+      .from('products')
+      .update({ is_available: true, unavailable_at: null })
+      .eq('id', productId)
+      .eq('restaurant_id', restaurantId)
+      .select('id');
+    if (error) return { error: 'No se pudo marcar disponible.' };
+    if (!data || data.length === 0) return { error: 'Ese plato no es de este restaurante.' };
+  }
 
   // La misma etiqueta que invalida Menú: el catálogo del mesero está en
   // caché con ella (getWaiterCatalogCached) y el menú público también.
   updateTag(`menu:${restaurantId}`);
   revalidatePath('/admin/menu');
   revalidarSalon();
-  return {};
+  return { vuelve };
 }
 
 /* ────────────────────────────────────────────────────────────

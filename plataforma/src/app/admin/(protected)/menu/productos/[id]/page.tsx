@@ -11,6 +11,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getIngredients, getProductRecipe } from '@/lib/db/recipes';
 import { can } from '@/lib/permissions';
 import ProductForm from '@/components/admin/product-form';
+import { corteAHora } from '@/lib/caja/dia';
 import DeleteButton from '@/components/admin/delete-button';
 import { deleteProduct } from '@/lib/actions/products';
 import { withEffectiveAvailability } from '@/lib/product-availability';
@@ -65,7 +66,7 @@ export default async function EditProductPage({
     getAdminMenu(restaurantId),
     canIngredientes ? getIngredients(restaurantId) : Promise.resolve(undefined),
     canIngredientes ? getProductRecipe(id) : Promise.resolve(undefined),
-    createServiceClient().from('restaurants').select('menu_languages').eq('id', restaurantId).maybeSingle(),
+    createServiceClient().from('restaurants').select('menu_languages, timezone, day_cutoff_minutes').eq('id', restaurantId).maybeSingle(),
   ]);
   const bilingue = ((idiomas.data?.menu_languages as string[] | null) ?? []).includes('en');
 
@@ -118,11 +119,13 @@ export default async function EditProductPage({
         restaurantId={restaurantId}
         categories={categories}
         /* «Disponible» arranca con lo que de verdad ve el comensal: lo agotado
-           hace más de 12 h ya volvió al menú (auditoría 2026-10-02, CAT-01). */
+           «hasta mañana» cuya hora ya pasó volvió al menú (auditoría 1.10). */
         product={withEffectiveAvailability([product])[0]}
         ingredients={ingredients}
         initialRecipe={recipe}
         bilingue={bilingue}
+        timezone={(idiomas.data?.timezone as string | null) ?? undefined}
+        horaCorte={corteAHora(Number(idiomas.data?.day_cutoff_minutes ?? 300))}
         duplicado={duplicado === '1'}
         volver={volverAlCatalogo(desde)}
       />

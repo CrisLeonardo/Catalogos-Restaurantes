@@ -457,7 +457,8 @@
    En móvil las columnas Unidad/Costo/Platillos se ocultan y esa info se
    muestra como línea "meta" bajo el nombre (.ing-meta-mobile). */
 .ing-head, .ing-row {
-  display: grid; grid-template-columns: minmax(0, 1.6fr) 90px 130px 110px 88px;
+  /* La última columna cabe «Se acabó» + historial + editar + borrar (1.10). */
+  display: grid; grid-template-columns: minmax(0, 1.6fr) 90px 130px 110px auto;
   column-gap: 14px; align-items: center;
 }
 .ing-meta-mobile { display: none; }

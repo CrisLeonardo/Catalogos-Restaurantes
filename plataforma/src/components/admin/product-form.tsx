@@ -41,6 +41,8 @@ import { usePathname as useRutaNavegador } from 'next/navigation';
 import { panelBaseFrom, panelHref } from '@/lib/panel-links';
 import { fmtMoney } from '@/lib/money';
 import s from './product-form.module.css';
+import { OpcionesAgotado } from '@/components/admin/hoja-agotar';
+import { AGOTADO_POR_OMISION, razonDeAgotado, type AgotadoHasta } from '@/lib/product-availability';
 
 interface ProductFormProps {
   restaurantId: string;
@@ -57,6 +59,9 @@ interface ProductFormProps {
   duplicado?: boolean;
   /** A dónde vuelve al guardar (la lista con sus filtros). */
   volver?: string;
+  /** Hora de corte del local («05:00»), para decir cuándo vuelve lo agotado. */
+  horaCorte?: string;
+  timezone?: string;
 }
 
 const emptyState: ProductState = null;
@@ -136,7 +141,7 @@ function Seccion({ titulo, resumen, abierta = false, children }: {
 }
 
 export default function ProductForm({
-  restaurantId, categories, product, defaultCategoryId, ingredients, initialRecipe, bilingue = false, creado, duplicado = false, volver,
+  restaurantId, categories, product, defaultCategoryId, ingredients, initialRecipe, bilingue = false, creado, duplicado = false, volver, horaCorte, timezone,
 }: ProductFormProps) {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = panelBaseFrom(useRutaNavegador());
@@ -151,6 +156,11 @@ export default function ProductForm({
 
   const [imageUrl, setImageUrl] = useState<string>(product?.image_url ?? '');
   const [isAvailable, setIsAvailable] = useState(product?.is_available ?? true);
+  /* Hasta cuándo queda agotado (1.10): lo guardado, o «hasta mañana». */
+  const [agotadoHasta, setAgotadoHasta] = useState<AgotadoHasta>(
+    product?.agotado_motivo === 'reponer' || product?.agotado_motivo === 'manual' || product?.agotado_motivo === 'manana'
+      ? product.agotado_motivo : AGOTADO_POR_OMISION,
+  );
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
   const [priceVal, setPriceVal] = useState<string>(product?.price != null ? Number(product.price).toFixed(2) : '');
   const [costVal, setCostVal] = useState<string>(product?.cost != null ? String(product.cost) : '');
@@ -250,6 +260,7 @@ export default function ProductForm({
       <input type="hidden" name="category_id" value={catId} />
       <input type="hidden" name="siguiente" ref={siguienteRef} defaultValue="" />
       {volver && <input type="hidden" name="volver" value={volver} />}
+      {!isAvailable && <input type="hidden" name="agotado_hasta" value={agotadoHasta} />}
 
       {creado && (
         <div className={s.aviso} role="status">
@@ -493,7 +504,7 @@ export default function ProductForm({
       {/* ── Receta (sólo en edición) ── */}
       {product && ingredients && (
         <Seccion titulo="Receta" resumen={hasRecipe ? `Costo ${fmtMoney(recipeCost!)}` : 'Sin receta'}>
-          <p className={s.nota}>Ingredientes y cantidades: el costo se calcula solo y descuenta inventario.</p>
+          <p className={s.nota}>Ingredientes y cantidades: el costo del platillo se calcula solo. Si se acaba un ingrediente, en Ingredientes «Se acabó» agota los platillos que lo llevan.</p>
           <RecipeEditor
             productId={product.id} restaurantId={restaurantId} ingredients={ingredients}
             initialRecipe={initialRecipe ?? []} onCostChange={(cc) => setRecipeCost(cc)}
@@ -513,11 +524,18 @@ export default function ProductForm({
           <div>
             <div id="ficha-disponible" style={{ fontSize: 14, fontWeight: 600 }}>{isAvailable ? 'Hay existencias' : 'Agotado'}</div>
             <div className={s.nota}>
-              {isAvailable ? 'Se puede pedir. Apágalo si se acabó por hoy.' : 'Se ve en el menú pero no se puede pedir. Vuelve solo en 12 h.'}
+              {isAvailable
+                ? 'Se puede pedir. Apágalo si se acabó.'
+                : product && product.is_available === false && product.agotado_motivo === agotadoHasta
+                  ? `${razonDeAgotado(product, timezone)}. Se ve en el menú pero no se puede pedir.`
+                  : 'Se ve en el menú pero no se puede pedir. ¿Hasta cuándo?'}
             </div>
           </div>
           <Switch checked={isAvailable} onCheckedChange={setIsAvailable} aria-labelledby="ficha-disponible" />
         </div>
+        {!isAvailable && (
+          <OpcionesAgotado value={agotadoHasta} onChange={setAgotadoHasta} name="ficha-agotado-hasta" horaCorte={horaCorte} />
+        )}
         <div className={s.estado}>
           <div>
             <div id="ficha-visible" style={{ fontSize: 14, fontWeight: 600, color: isActive ? 'var(--u-text)' : 'var(--c-danger)' }}>

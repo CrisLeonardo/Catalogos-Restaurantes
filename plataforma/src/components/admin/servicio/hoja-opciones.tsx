@@ -22,6 +22,7 @@
      · un grupo OBLIGATORIO sin responder, señalado en la propia hoja (y
        no con un `alert()` del sistema operativo, como se llegó a hacer). */
 
+import { OPCIONES_AGOTADO, type AgotadoHasta } from '@/lib/product-availability';
 import { useMemo, useState } from 'react';
 import { Icon } from '@/components/icons';
 import { Hoja, HojaHead, Kicker, Mono } from '@/components/admin/servicio/pieces';
@@ -69,7 +70,7 @@ export interface HojaOpcionesProps {
   onSave: (lineId: string, line: Omit<CartLine, 'lineId'>) => void;
   onClose: () => void;
   /** «Marcar agotado» (el 86 de Toast). Solo llega si quien mira tiene permiso de carta. */
-  onAgotar?: () => void;
+  onAgotar?: (hasta: AgotadoHasta) => void;
 }
 
 export default function HojaOpciones({
@@ -290,17 +291,31 @@ export default function HojaOpciones({
         </div>
 
         {/* Dos toques, como «Liberar mesa»: agotar un plato lo apaga en
-            todas las tablets y en el menú del comensal. */}
+            todas las tablets y en el menú del comensal. El segundo toque
+            dice hasta cuándo (auditoría 1.10, O04); el primero de la lista
+            es la opción por omisión, «Hasta mañana». */}
         {onAgotar && !initialLine && (
-          <button
-            type="button"
-            className="sv-cta"
-            data-tone={confirmarAgotado ? 'danger' : 'quiet'}
-            style={confirmarAgotado ? { height: 46 } : { height: 46, color: 'var(--c-danger)' }}
-            onClick={() => (confirmarAgotado ? onAgotar() : setConfirmarAgotado(true))}
-          >
-            {confirmarAgotado ? 'Toca otra vez: se apaga en todo el local' : 'Se acabó · marcar agotado'}
-          </button>
+          confirmarAgotado ? (
+            <div role="group" aria-label="Agotar: hasta cuándo" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-2)' }}>Se apaga en todo el local. ¿Hasta cuándo?</p>
+              {OPCIONES_AGOTADO.map((o, i) => (
+                <button key={o.key} type="button" className="sv-cta" data-tone={i === 0 ? 'danger' : 'quiet'}
+                  style={{ height: 48 }} onClick={() => onAgotar(o.key)}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="sv-cta"
+              data-tone="quiet"
+              style={{ height: 46, color: 'var(--c-danger)' }}
+              onClick={() => setConfirmarAgotado(true)}
+            >
+              Se acabó · marcar agotado
+            </button>
+          )
         )}
       </div>
     </Hoja>

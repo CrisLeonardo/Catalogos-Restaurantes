@@ -1,5 +1,6 @@
 'use client';
 
+import IngredienteAgotado from '@/components/admin/ingrediente-agotado';
 import { Fragment, useState, useTransition } from 'react';
 import { Icon } from '@/components/icons';
 import { saveIngredient, deleteIngredient, getIngredientMovements } from '@/lib/actions/recipes';
@@ -270,6 +271,11 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
               <div className="ing-row" style={{ padding: '12px 0', borderBottom: ing.id in historyMap ? 'none' : borderBottom }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ing.name}</div>
+                  {ing.agotado_at && (
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-warn)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', padding: '1px 8px', borderRadius: 999 }}>
+                      Se acabó · sus platillos están agotados
+                    </span>
+                  )}
                   {/* Línea meta — solo visible en móvil (las columnas se ocultan) */}
                   <div className="ing-meta-mobile" style={{ color: 'var(--u-text-3)', fontSize: 12 }}>
                     <span>{ing.unit}</span>
@@ -280,7 +286,9 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
                 <div className="ing-col-desk" style={{ color: 'var(--u-text-3)' }}>{ing.unit}</div>
                 <div className="ing-col-desk" style={{ fontFamily: 'var(--ui-font-mono)' }}>Q {Number(ing.cost_per_unit).toFixed(4)}</div>
                 <div className="ing-col-desk" style={{ color: 'var(--u-text-3)' }}>{usageChip ?? '—'}</div>
-                <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignSelf: 'start' }}>
+                <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignSelf: 'center', alignItems: 'center' }}>
+                  <IngredienteAgotado restaurantId={restaurantId} ingredientId={ing.id} nombre={ing.name}
+                    agotado={!!ing.agotado_at} usos={usage} />
                   <Button
                     type="button"
                     variant="outline"

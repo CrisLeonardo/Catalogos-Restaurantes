@@ -41,6 +41,7 @@ type CatItem = Pick<Category, 'id' | 'name' | 'icon' | 'name_en'> & { availabili
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'> & {
   is_available?: boolean | null;
   unavailable_at?: string | null;
+  vuelve_at?: string | null;
 };
 
 interface Props {

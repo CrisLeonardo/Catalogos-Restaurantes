@@ -43,6 +43,10 @@ const num = (v: unknown): number | null => {
 
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
 
+const MOTIVO_AJUSTE: Record<string, string> = {
+  reposicion: 'reposición', merma: 'merma', conteo: 'conteo físico', correccion: 'corrección', consumo: 'consumo del personal', otro: 'otro',
+};
+
 /** Importe de una opción: «+Q5.00», «−Q2.00», «Q0.00». */
 const signo = (n: number) => (n > 0 ? `+${fmtMoney(n)}` : n < 0 ? `−${fmtMoney(-n)}` : fmtMoney(0));
 
@@ -143,11 +147,32 @@ function queHizo(r: ActivityLike): string {
     case 'whatsapp_disconnect':
       return 'desconectó WhatsApp';
     case 'stock': {
+      // Desde la 180 la entidad es el nombre del platillo y lleva motivo (1.10).
       const delta = num(m.delta);
+      const quien = e && !esUuid(e) ? ` de «${e}»` : '';
+      const por = typeof m.motivo === 'string' && MOTIVO_AJUSTE[m.motivo] ? ` · ${MOTIVO_AJUSTE[m.motivo]}` : '';
+      const nota = typeof m.nota === 'string' && m.nota ? ` — «${m.nota}»` : '';
       return delta != null && delta !== 0
-        ? `ajustó el inventario (${delta > 0 ? '+' : ''}${delta})`
-        : 'ajustó el inventario';
+        ? `ajustó las existencias${quien} (${delta > 0 ? '+' : '−'}${Math.abs(delta)}${por})${nota}`
+        : `ajustó las existencias${quien}`;
     }
+    /* ── Inventario y agotados (auditoría 1.10) ── */
+    case 'agotado': {
+      const hasta = m.hasta === 'manana' ? 'hasta mañana' : m.hasta === 'reponer' ? 'hasta reponer' : 'hasta que lo active';
+      return `agotó «${e}» ${hasta}`;
+    }
+    case 'ingrediente_agotado': {
+      const n = num(m.platillos) ?? 0;
+      return `marcó que se acabó ${e}${n > 0 ? ` (${plural(n, 'platillo agotado', 'platillos agotados')})` : ''}`;
+    }
+    case 'ingrediente_repuesto': {
+      const n = num(m.platillos) ?? 0;
+      return `marcó que ya hay ${e}${n > 0 ? ` (${plural(n, 'platillo vuelve', 'platillos vuelven')})` : ''}`;
+    }
+    case 'inventario_activado':
+      return `activó el control de existencias de ${e}`;
+    case 'inventario_desactivado':
+      return `dejó de contar las existencias de «${e}»`;
     case 'promo':
       return `cambió la promoción «${e}»`;
     /* ── Antifraude (PROD-10): precios, borrados, cupones, gastos,

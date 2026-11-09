@@ -112,15 +112,15 @@ async function verifyAndPriceItems(
   const productIds = [...new Set(items.map((i) => i.productId))];
   const { data: dbProducts, error: productsError } = await db
     .from('products')
-    .select('id, name, price, cost, is_available, unavailable_at, track_stock, stock, options')
+    .select('id, name, price, cost, is_available, unavailable_at, vuelve_at, track_stock, stock, options')
     .eq('restaurant_id', restaurantId)
     .in('id', productIds);
 
   if (productsError) return { error: productsError.message };
 
   // La MISMA regla con la que el menú decide qué enseña como pedible
-  // (lib/product-availability.ts): lo marcado agotado vuelve solo a las
-  // 12 h. Antes aquí se leía `is_available` crudo y el comensal se
+  // (lib/product-availability.ts): lo agotado «hasta mañana» vuelve a su
+  // hora (`vuelve_at`). Antes aquí se leía `is_available` crudo y el comensal se
   // encontraba con «ya no está disponible» al confirmar un platillo que el
   // menú le ofrecía (auditoría 2026-10-02, CAT-01).
   const ahora = Date.now();

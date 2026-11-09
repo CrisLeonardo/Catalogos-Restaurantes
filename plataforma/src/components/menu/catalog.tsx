@@ -44,6 +44,7 @@ type CatItem = Pick<Category, 'id' | 'name' | 'icon' | 'name_en'> & { availabili
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'> & {
   is_available?: boolean | null;
   unavailable_at?: string | null;
+  vuelve_at?: string | null;
   /** Unidades que quedan, solo si el dueño encendió «Quedan pocas» y son
       pocas (lo pega `withStockLeft` en el servidor; ver lib/db/menu.ts). */
   stock_left?: number | null;

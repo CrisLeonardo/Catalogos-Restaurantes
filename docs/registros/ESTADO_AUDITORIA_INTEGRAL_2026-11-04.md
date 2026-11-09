@@ -2,7 +2,7 @@
 
 Documento de traspaso para retomar el trabajo en otra sesión o cuenta sin perder el contexto. Resume qué se logró, qué está en curso y qué falta, con listas para marcar.
 
-> **Actualización del 2026-11-09:** fichas **1.8** (`feat/recepcion`, migración 178, §30) y **1.9** (`feat/catalogo`, migración 179, con 0.7 incorporada, §31) implementadas. Siguiente: **1.10 · Inventario y agotados**.
+> **Actualización del 2026-11-09:** fichas **1.8** (`feat/recepcion`, migración 178, §30), **1.9** (`feat/catalogo`, migración 179, con 0.7 incorporada, §31) y **1.10** (`feat/inventario`, migración 180, §32) implementadas. Siguiente: **1.11 · Comensal: ficha, carrito, temas y accesibilidad**.
 >
 > **Actualización del 2026-11-08:** ficha **1.7** implementada en `feat/permisos-por-trabajo` (migración 177, §29); la cadena no contenía 0.1–0.13 y se incorporó 0.12 (§28). Siguiente: **1.8 · Recepción**.
 >
@@ -675,6 +675,18 @@ La siguiente ficha es **1.9 · Catálogo**. Quedan cuatro fichas de implementaci
 - **Verificación local:** 1,447 unitarias, 118 de Postgres, auditorías con cero hallazgos y revisión en navegador con datos de prueba que se retiraron. Ver el plan §6–7.
 
 La siguiente ficha es **1.10 · Inventario y agotados**. Quedan tres fichas de implementación de la Ola 1.
+
+## 32. Inventario y agotados · ficha 1.10 (2026-11-09)
+
+**Rama** `feat/inventario`, sobre `feat/catalogo` (PR #105). Detalle en el [plan de la ficha](../planes/PLAN_INVENTARIO_2026-11-09.md).
+
+- **Decisiones del dueño:** agotar «hasta mañana» por omisión (vuelve a la hora de corte); los agotados de hoy conservan sus 12 h; motivo obligatorio al restar o fijar; maqueta aprobada.
+- **Migración 180, ANTES del código y después de la 179:** agotados con intención y un disparador que la mantiene coherente en cualquier escritura; agotar por ingrediente; ajustar existencias bajo bloqueo con motivo; activar el control en lote.
+- **Pantallas:** Inventario con cobertura, «Por revisar hoy», filtros, activación en lote y ajuste con motivo; hoja «Agotar» en Catálogo y lote; opciones en la ficha y en Servicio; «Se acabó» en Ingredientes.
+- **Promesas corregidas:** la ficha y la web pública ya no dicen que las recetas descuentan inventario.
+- **Verificación local:** 1,448 unitarias, 128 de Postgres (incluida la última unidad en dos aparatos), auditorías con cero hallazgos y revisión en navegador con datos de prueba retirados.
+
+La siguiente ficha es **1.11 · Comensal: ficha, carrito, temas y accesibilidad**. Quedan dos fichas de implementación de la Ola 1.
 
 ---
 

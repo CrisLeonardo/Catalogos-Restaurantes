@@ -10,6 +10,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getIngredients } from '@/lib/db/recipes';
 import { can } from '@/lib/permissions';
 import ProductForm from '@/components/admin/product-form';
+import { corteAHora } from '@/lib/caja/dia';
 import { createServiceClient } from '@/lib/supabase/service';
 
 export const metadata = { title: 'Nuevo platillo – Panel admin' };
@@ -42,7 +43,7 @@ export default async function NewProductPage({
   const [{ categories }, ingredients, idiomas] = await Promise.all([
     getAdminMenu(restaurantId),
     canIngredientes ? getIngredients(restaurantId) : Promise.resolve(undefined),
-    createServiceClient().from('restaurants').select('menu_languages').eq('id', restaurantId).maybeSingle(),
+    createServiceClient().from('restaurants').select('menu_languages, timezone, day_cutoff_minutes').eq('id', restaurantId).maybeSingle(),
   ]);
   const sp = await searchParams;
   const bilingue = ((idiomas.data?.menu_languages as string[] | null) ?? []).includes('en');
@@ -75,6 +76,8 @@ export default async function NewProductPage({
         defaultCategoryId={sp.cat}
         ingredients={ingredients}
         bilingue={bilingue}
+        timezone={(idiomas.data?.timezone as string | null) ?? undefined}
+        horaCorte={corteAHora(Number(idiomas.data?.day_cutoff_minutes ?? 300))}
         creado={sp.creado?.slice(0, 120)}
         /* Cada alta es un formulario nuevo: sin `key`, «Crear y agregar otro»
            conservaría lo escrito en el anterior. */

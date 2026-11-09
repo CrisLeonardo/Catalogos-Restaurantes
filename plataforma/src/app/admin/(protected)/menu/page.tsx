@@ -7,6 +7,7 @@ import { PLANS, type PlanCode } from '@/lib/plans';
 import CatalogPanel from '@/components/admin/catalog-panel';
 import ProductosExportButton from '@/components/admin/productos-export-button';
 import { withEffectiveAvailability } from '@/lib/product-availability';
+import { corteAHora } from '@/lib/caja/dia';
 
 export const metadata = { title: 'Catálogo – Panel admin' };
 
@@ -40,7 +41,7 @@ export default async function AdminMenuPage({
     getAdminMenu(restaurantId),
     db
       .from('restaurants')
-      .select('plan_actual')
+      .select('plan_actual, timezone, day_cutoff_minutes')
       .eq('id', restaurantId)
       .single(),
   ]);
@@ -65,6 +66,8 @@ export default async function AdminMenuPage({
         categories={categories}
         products={withEffectiveAvailability(products, ahora)}
         maxProducts={maxProducts}
+        timezone={(rest?.timezone as string | null) ?? undefined}
+        horaCorte={corteAHora(Number(rest?.day_cutoff_minutes ?? 300))}
       />
     </div>
   );
