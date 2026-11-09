@@ -1,0 +1,198 @@
+/* Lista del catálogo (auditoría 1.9 · maqueta MAQUETA_CATALOGO_2026-11-09).
+   Superficies sólidas; la barra del lote reutiliza la posición de `.adm-savebar`. */
+
+.agotados {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-height: 48px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--c-warn-line);
+  background: var(--c-warn-bg);
+  color: var(--u-text);
+  font-size: 14px;
+}
+
+.enlace {
+  border: none;
+  background: transparent;
+  padding: 0 4px;
+  min-height: 40px;
+  color: var(--brand-accent-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.enlace:focus-visible,
+.filtro:focus-visible,
+.marca:focus-visible {
+  outline: 2px solid var(--brand-accent-ink);
+  outline-offset: 2px;
+}
+
+.herramientas {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filtros {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  align-items: center;
+  scrollbar-width: none;
+}
+
+.filtros::-webkit-scrollbar {
+  display: none;
+}
+
+.filtro {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--adm-border-2);
+  background: var(--adm-card);
+  color: var(--u-text-2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.filtro[aria-pressed='true'] {
+  border-color: var(--u-text);
+  background: var(--u-text);
+  color: var(--adm-card);
+  font-weight: 600;
+}
+
+.cuenta {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+.orden {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--u-text-3);
+}
+
+.orden select {
+  width: auto;
+}
+
+.marca {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--u-text);
+  cursor: pointer;
+}
+
+/* Área de toque de 44 px alrededor de la casilla. */
+.marcaZona {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: -12px -6px -12px -12px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.lote {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+.loteCuenta {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--u-text);
+  margin-right: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.loteAcciones {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.previa {
+  background: var(--adm-card);
+  border: 1px solid var(--adm-border);
+  border-radius: 18px;
+  box-shadow: var(--adm-shadow-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.previaControles {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.previaControles input {
+  width: 110px;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.tabla th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--u-text-3);
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--adm-border);
+}
+
+.tabla td {
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--adm-border);
+  color: var(--u-text);
+}
+
+.tabla .n {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.antes {
+  color: var(--u-text-3);
+  text-decoration: line-through;
+}
+
+.negativo td {
+  color: var(--c-danger);
+  font-weight: 600;
+}
+
+.scroll {
+  max-height: 320px;
+  overflow: auto;
+}

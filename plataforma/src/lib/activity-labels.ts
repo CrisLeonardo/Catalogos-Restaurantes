@@ -173,8 +173,36 @@ function queHizo(r: ActivityLike): string {
       const precio = num(m.precio);
       return `borró el platillo «${e}»${precio != null ? ` de ${fmtMoney(precio)}` : ''}`;
     }
-    case 'categoria_borrada':
-      return `borró la categoría «${e}»`;
+    case 'categoria_borrada': {
+      // Desde la 179 dice a dónde pasaron sus platillos (auditoría 1.9, R09.4).
+      const movidos = num(m.movidos) ?? 0;
+      return movidos > 0 && typeof m.destino === 'string'
+        ? `borró la categoría «${e}» y pasó ${plural(movidos, 'platillo', 'platillos')} a «${m.destino}»`
+        : `borró la categoría «${e}»`;
+    }
+    /* ── Catálogo (auditoría 1.9) ── */
+    case 'catalogo_lote': {
+      const n = num(m.productos) ?? 0;
+      const c = (m.cambio ?? {}) as { disponible?: boolean; visible?: boolean; categoria?: string; precio?: { modo?: string; valor?: unknown } };
+      const que: string[] = [];
+      if (c.precio) {
+        const v = num(c.precio.valor) ?? 0;
+        const cuanto = c.precio.modo === 'porcentaje' ? `${Math.abs(v)} %` : fmtMoney(Math.abs(v));
+        que.push(`${v >= 0 ? 'subió' : 'bajó'} el precio ${cuanto}`);
+      }
+      if (c.disponible === false) que.push('los marcó agotados');
+      if (c.disponible === true) que.push('los marcó disponibles');
+      if (c.visible === false) que.push('los ocultó del menú');
+      if (c.visible === true) que.push('los mostró en el menú');
+      if (c.categoria) que.push('los cambió de categoría');
+      return `cambió ${plural(n, 'platillo', 'platillos')} a la vez${que.length ? `: ${que.join(', ')}` : ''}`;
+    }
+    case 'catalogo_sellos_a_dietas': {
+      const n = num(m.productos);
+      return `pasó a dietas los sellos repetidos${n != null ? ` de ${plural(n, 'platillo', 'platillos')}` : ''}`;
+    }
+    case 'platillo_duplicado':
+      return `duplicó el platillo «${e}» (la copia quedó oculta)`;
     case 'cupon': {
       const cuanto = descuentoDeCupon(m.tipo, m.valor);
       switch (m.evento) {

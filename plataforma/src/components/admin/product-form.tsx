@@ -1,26 +1,35 @@
 'use client';
 
 /* ============================================================
-   FORMULARIO DE PLATILLO (crear / editar)
+   FICHA DEL PLATILLO (crear / editar) · auditoría 1.9
    ------------------------------------------------------------
-   Reorganizado en secciones con propósito claro (antes era una
-   pila de 9 tarjetas sueltas — confuso en móvil y desperdiciado
-   en PC):
-     · Columna principal: Lo básico → Precio y ganancia →
-       Opciones y combos → Receta.
-     · Columna lateral (PC) / arriba (móvil): Foto + Disponible.
-     · Barra de guardar fija abajo: siempre a un toque, sin
-       perseguir el botón al final de un formulario largo.
+   Maqueta aprobada: docs/diseno/MAQUETA_CATALOGO_2026-11-09.html.
+     · «Lo básico» siempre a la vista: nombre, precio con «Q» y
+       categoría, con «+ Nueva categoría» sin salir de la ficha.
+     · El resto en secciones plegables que dicen su contenido
+       cerradas («Opciones · 1 grupo», «Dietas · Picante»). Al crear,
+       sólo «Lo básico» abierto: un platillo de nombre y precio no
+       recorre doce casillas.
+     · Sellos (comerciales) separados de dietas (seguridad
+       alimentaria): escribir «Vegano» como sello ofrece marcar la
+       dieta y no se guarda repetido.
+     · Inglés sólo con el menú bilingüe activo o si ya hay traducción.
+     · «Crear y agregar otro» conserva la categoría.
+   Los campos de una sección cerrada siguen en el formulario: cerrar
+   no borra nada.
    ============================================================ */
 
-import { useActionState, useState } from 'react';
-import { Glass } from '@/components/glass';
+import { useActionState, useRef, useState, useTransition } from 'react';
 import { Icon } from '@/components/icons';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import ImageUpload from './image-upload';
 import OptionsEditor, { cleanOptions } from '@/components/admin/options-editor';
 import RecipeEditor from '@/components/admin/recipe-editor';
 import { createProduct, updateProduct, type ProductState } from '@/lib/actions/products';
-import { DIETARY_TAG_OPTIONS } from '@/lib/dietary-tags';
+import { crearCategoriaEnLinea } from '@/lib/actions/categories';
+import { DIETARY_TAG_OPTIONS, DIETARY_TAG_MAP } from '@/lib/dietary-tags';
+import { dietaDeSello, separarSellos } from '@/lib/catalogo/reglas';
 import type { Category, Product, ProductOptionGroup } from '@/types';
 import type { Ingredient, RecipeItem } from '@/lib/db/recipes';
 import { FIELD_LABEL } from '@/components/admin/field-label';
@@ -31,6 +40,7 @@ import { useFormDirty } from '@/lib/use-form-dirty';
 import { usePathname as useRutaNavegador } from 'next/navigation';
 import { panelBaseFrom, panelHref } from '@/lib/panel-links';
 import { fmtMoney } from '@/lib/money';
+import s from './product-form.module.css';
 
 interface ProductFormProps {
   restaurantId: string;
@@ -39,28 +49,35 @@ interface ProductFormProps {
   defaultCategoryId?: string;
   ingredients?: Ingredient[];
   initialRecipe?: RecipeItem[];
+  /** «Menú también en inglés» encendido en Ajustes. */
+  bilingue?: boolean;
+  /** Nombre del platillo recién creado con «Crear y agregar otro». */
+  creado?: string;
+  /** La ficha viene de «Duplicar»: la copia nace oculta. */
+  duplicado?: boolean;
+  /** A dónde vuelve al guardar (la lista con sus filtros). */
+  volver?: string;
 }
 
 const emptyState: ProductState = null;
 
-/** Etiquetas rápidas — el resto se agrega como texto libre. */
 const moneyPrefix: React.CSSProperties = {
   position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)',
   fontSize: 14, color: 'var(--u-text-3)', pointerEvents: 'none',
 };
 
+/** Sellos comerciales sugeridos. «Picante» y «Vegano» ya no: son dietas. */
 const PRESET_TAGS = [
-  { id: 'hot',  label: 'Picante',   icon: 'flame'   },
-  { id: 'new',  label: 'Nuevo',     icon: 'sparkle' },
-  { id: 'fav',  label: 'Favorito',  icon: 'star'    },
-  { id: 'veg',  label: 'Vegano',    icon: 'leaf'    },
+  { id: 'new', label: 'Nuevo', icon: 'sparkle' },
+  { id: 'fav', label: 'Favorito', icon: 'star' },
+  { id: 'Especial', label: 'Especial', icon: 'tag' },
 ] as const;
 
-const foldTag = (s: string) => s.trim().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
-/** Si el texto es el nombre de una etiqueta sugerida, su id («Nuevo» → 'new'). */
+const foldTag = (t: string) => t.trim().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+/** Si el texto es el nombre de un sello sugerido, su id («Nuevo» → 'new'). */
 function presetIdFor(text: string): string | null {
   const f = foldTag(text);
-  return PRESET_TAGS.find((p) => foldTag(p.label) === f || p.id === f)?.id ?? null;
+  return PRESET_TAGS.find((p) => foldTag(p.label) === f || foldTag(p.id) === f)?.id ?? null;
 }
 function normalizeTags(list: string[]): string[] {
   const out: string[] = [];
@@ -70,6 +87,7 @@ function normalizeTags(list: string[]): string[] {
   }
   return out;
 }
+const etiquetaDeSello = (t: string) => PRESET_TAGS.find((p) => p.id === t)?.label ?? t;
 
 /** Ícono del patrón de marca cuando el platillo no tiene foto. */
 const PRODUCT_ICONS = [
@@ -87,8 +105,8 @@ const PRODUCT_ICONS = [
   { id: 'sparkle',   label: 'Especial',  keywords: ['nuevo', 'new', 'novedad', 'fresh', 'especial', 'destacado', 'temporada', 'seasonal'] },
 ];
 
-function fold(s: string) {
-  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+function fold(t: string) {
+  return t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
 function suggestIconFromName(name: string): string {
@@ -99,52 +117,27 @@ function suggestIconFromName(name: string): string {
   return 'utensils';
 }
 
-/** Encabezado de sección: título + explicación corta de para qué sirve. */
-function SectionHead({ title, hint }: { title: string; hint?: string }) {
+const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+
+/** Sección plegable: cerrada dice lo que contiene. */
+function Seccion({ titulo, resumen, abierta = false, children }: {
+  titulo: string; resumen: string; abierta?: boolean; children: React.ReactNode;
+}) {
   return (
-    <div style={{ marginBottom: 14 }}>
-      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>{title}</div>
-      {hint && <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 3, lineHeight: 1.5 }}>{hint}</div>}
-    </div>
+    <details className={s.sec} open={abierta || undefined}>
+      <summary>
+        {titulo}
+        <span className={s.res} title={resumen}>{resumen}</span>
+        <Icon name="chevronDown" size={16} className={s.chev} />
+      </summary>
+      <div className={s.cuerpo}>{children}</div>
+    </details>
   );
 }
 
-/** Interruptor visual compartido por "Disponible" y "Platillo activo". */
-function ToggleSwitch({ checked, onChange, ariaLabel }: { checked: boolean; onChange: () => void; ariaLabel: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onChange}
-      style={{
-        width: 44,
-        height: 26,
-        borderRadius: 'var(--radius-full)',
-        border: 'none',
-        cursor: 'pointer',
-        background: checked ? 'var(--brand-accent)' : 'var(--u-hair-2)',
-        position: 'relative',
-        transition: 'background 200ms',
-        flexShrink: 0,
-      }}
-      aria-label={ariaLabel}
-    >
-      <span
-        style={{
-          position: 'absolute',
-          top: 3,
-          left: checked ? 21 : 3,
-          width: 20,
-          height: 20,
-          borderRadius: '50%',
-          background: '#fff',
-          transition: 'left 200ms',
-        }}
-      />
-    </button>
-  );
-}
-
-export default function ProductForm({ restaurantId, categories, product, defaultCategoryId, ingredients, initialRecipe }: ProductFormProps) {
+export default function ProductForm({
+  restaurantId, categories, product, defaultCategoryId, ingredients, initialRecipe, bilingue = false, creado, duplicado = false, volver,
+}: ProductFormProps) {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = panelBaseFrom(useRutaNavegador());
   const isEdit = Boolean(product);
@@ -152,33 +145,65 @@ export default function ProductForm({ restaurantId, categories, product, default
 
   const [state, formAction, isPending] = useActionState(action, emptyState);
   /* Al editar, la barra de guardar es la del resto del panel: sale con
-     cambios y avisa si te vas sin guardar. Al crear se queda el botón ancho
-     «Crear platillo», que es el final natural del formulario. */
+     cambios y avisa si te vas sin guardar. */
   const { ref: formRef, dirty } = useFormDirty();
+  const siguienteRef = useRef<HTMLInputElement>(null);
+
   const [imageUrl, setImageUrl] = useState<string>(product?.image_url ?? '');
   const [isAvailable, setIsAvailable] = useState(product?.is_available ?? true);
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
-  const [priceVal, setPriceVal] = useState<string>(product?.price != null ? String(product.price) : '');
+  const [priceVal, setPriceVal] = useState<string>(product?.price != null ? Number(product.price).toFixed(2) : '');
   const [costVal, setCostVal] = useState<string>(product?.cost != null ? String(product.cost) : '');
   const [loyaltyPtsVal, setLoyaltyPtsVal] = useState<string>(product?.loyalty_points != null ? String(product.loyalty_points) : '');
-  /* «Nuevo» escrito a mano y la sugerida «Nuevo» eran dos etiquetas
-     distintas y salían las dos (auditoría 2026-10-02, MEN-06). Lo que
-     coincide con una sugerida —sin tildes ni mayúsculas— se guarda como la
-     sugerida, también lo que ya venía guardado así. */
-  const [tags, setTags] = useState<string[]>(() => normalizeTags(product?.tags ?? []));
+  const [descripcion, setDescripcion] = useState(product?.description ?? '');
+
+  /* Sellos y dietas separados desde que se abre la ficha: un «Vegano»
+     guardado como sello pasa a su dieta (N17). */
+  const [inicio] = useState(() => separarSellos(normalizeTags(product?.tags ?? []), product?.dietary_tags ?? []));
+  const [tags, setTags] = useState<string[]>(inicio.sellos);
+  const [dietaryTags, setDietaryTags] = useState<string[]>(inicio.dietas);
   const [customTagInput, setCustomTagInput] = useState('');
+  const [sugerencia, setSugerencia] = useState<{ texto: string; dieta: string } | null>(null);
+
   const [icon, setIcon] = useState<string>(product?.icon ?? '');
   const [iconSearch, setIconSearch] = useState('');
+
+  /* Categoría con alta en línea (E10). */
+  const [cats, setCats] = useState<Category[]>(categories);
+  const [catId, setCatId] = useState<string>(product?.category_id ?? defaultCategoryId ?? '');
+  const [nuevaCat, setNuevaCat] = useState<string | null>(null);
+  const [errorCat, setErrorCat] = useState<string | null>(null);
+  const [creandoCat, startCat] = useTransition();
+
+  function crearCategoria() {
+    const nombre = (nuevaCat ?? '').trim();
+    if (!nombre) { setErrorCat('Escribe el nombre de la categoría.'); return; }
+    startCat(async () => {
+      const r = await crearCategoriaEnLinea(restaurantId, nombre);
+      if (r.error || !r.id) { setErrorCat(r.error ?? 'No se pudo crear la categoría.'); return; }
+      setCats((prev) => [...prev, { id: r.id!, name: r.name ?? nombre } as Category]);
+      setCatId(r.id);
+      setNuevaCat(null);
+      setErrorCat(null);
+    });
+  }
 
   function toggleTag(id: string) {
     setTags((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
   function addCustomTag() {
-    const t = presetIdFor(customTagInput.trim()) ?? customTagInput.trim();
-    if (!t || tags.some((x) => foldTag(x) === foldTag(t))) { setCustomTagInput(''); return; }
-    setTags((prev) => [...prev, t]);
+    const texto = customTagInput.trim();
     setCustomTagInput('');
+    if (!texto) return;
+    const dieta = dietaDeSello(texto);
+    if (dieta) { setSugerencia({ texto, dieta }); return; }
+    const t = presetIdFor(texto) ?? texto.slice(0, 30);
+    if (!tags.some((x) => foldTag(x) === foldTag(t))) setTags((prev) => [...prev, t]);
   }
+  function toggleDietaryTag(key: string) {
+    setDietaryTags((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  }
+
   // Si hay receta → costo auto; null = usar manual
   const [recipeCost, setRecipeCost] = useState<number | null>(
     initialRecipe && initialRecipe.length > 0
@@ -190,16 +215,28 @@ export default function ProductForm({ restaurantId, categories, product, default
   const [options, setOptions] = useState<ProductOptionGroup[]>(
     Array.isArray(product?.options) ? product!.options! : [],
   );
-  const [dietaryTags, setDietaryTags] = useState<string[]>(product?.dietary_tags ?? []);
-  function toggleDietaryTag(key: string) {
-    setDietaryTags((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
-  }
 
-
+  const conIngles = bilingue || Boolean(product?.name_en || product?.description_en);
   const labelStyle: React.CSSProperties = FIELD_LABEL;
 
+  /* Resúmenes de las secciones cerradas. */
+  const p = parseFloat(priceVal);
+  const c = hasRecipe ? recipeCost : parseFloat(costVal);
+  const conCosto = !isNaN(c) && (hasRecipe || costVal.trim() !== '');
+  const margen = conCosto && !isNaN(p) && p > 0 ? Math.round(((p - c) / p) * 100) : null;
+  const gruposUtiles = cleanOptions(options).length;
+  const resumen = {
+    foto: imageUrl ? 'Con foto' : `Sin foto · ícono ${PRODUCT_ICONS.find((o) => o.id === (icon || 'utensils'))?.label ?? 'General'}`,
+    descripcion: descripcion.trim() ? descripcion.trim() : 'Vacía',
+    opciones: gruposUtiles ? plural(gruposUtiles, 'grupo', 'grupos') : 'Ninguna',
+    dietas: dietaryTags.length ? dietaryTags.map((k) => DIETARY_TAG_MAP[k]?.label ?? k).join(', ') : 'Ninguna',
+    sellos: tags.length ? tags.map(etiquetaDeSello).join(', ') : 'Ninguno',
+    costo: conCosto ? `${fmtMoney(c)}${margen != null ? ` · margen ${margen} %` : ''}` : 'Sin costo',
+    estado: `${isAvailable ? 'Disponible' : 'Agotado'} · ${isActive ? 'visible' : 'oculto'}`,
+  };
+
   return (
-    <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <form ref={formRef} action={formAction} className={s.ficha}>
       {/* Campos ocultos */}
       <input type="hidden" name="restaurantId" value={restaurantId} />
       {isEdit && <input type="hidden" name="id" value={product!.id} />}
@@ -210,484 +247,313 @@ export default function ProductForm({ restaurantId, categories, product, default
       <input type="hidden" name="options" value={JSON.stringify(cleanOptions(options))} />
       <input type="hidden" name="dietary_tags" value={dietaryTags.join(',')} />
       <input type="hidden" name="tags" value={tags.join(',')} />
+      <input type="hidden" name="category_id" value={catId} />
+      <input type="hidden" name="siguiente" ref={siguienteRef} defaultValue="" />
+      {volver && <input type="hidden" name="volver" value={volver} />}
 
-      <div className="pform-grid">
-        {/* ══ Columna principal ══ */}
-        <div className="pform-col">
-          {/* ── Lo básico ── */}
-          <Glass variant="quiet" className="pform-o-basico" style={{ padding: 18 }}>
-            <SectionHead title="Lo básico" hint="Nombre, precio y dónde aparece en tu menú." />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(110px, 1fr)', gap: 12 }}>
-                <div>
-                  <label htmlFor="name" style={labelStyle}>Nombre *</label>
-                  <input
-                    id="name"
-                    name="name"
-                    type="text"
-                    required
-                    defaultValue={product?.name ?? ''}
-                    placeholder="Ej: Café Latte"
-                    className="adm-field"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="price" style={labelStyle}>Precio *</label>
-                  {/* Con la «Q» dentro: un número suelto no dice que es dinero (MEN-05). */}
-                  <div style={{ position: 'relative' }}>
-                    <span aria-hidden style={moneyPrefix}>Q</span>
-                    <input
-                      id="price"
-                      name="price"
-                      type="number" inputMode="decimal"
-                      required
-                      min="0"
-                      step="0.01"
-                      value={priceVal}
-                      onChange={(e) => setPriceVal(e.target.value)}
-                      placeholder="0.00"
-                      className="adm-field" style={{ paddingLeft: 30 }}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label htmlFor="category_id" style={labelStyle}>Categoría</label>
-                <select
-                  id="category_id"
-                  name="category_id"
-                  defaultValue={product?.category_id ?? defaultCategoryId ?? ''}
-                  className="adm-field"
-                >
-                  <option value="">Sin categoría</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="description" style={labelStyle}>Descripción</label>
-                <textarea
-                  id="description"
-                  name="description"
-                  rows={3}
-                  defaultValue={product?.description ?? ''}
-                  placeholder="Describe el platillo: ingredientes, tamaño, qué lo hace especial…"
-                  className="adm-field" style={{ resize: 'vertical', lineHeight: 1.5 }}
-                />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label htmlFor="name_en" style={labelStyle}>Nombre (inglés)</label>
-                  <input
-                    id="name_en"
-                    name="name_en"
-                    type="text"
-                    defaultValue={product?.name_en ?? ''}
-                    placeholder="Opcional"
-                    className="adm-field"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="description_en" style={labelStyle}>Descripción (inglés)</label>
-                  <input
-                    id="description_en"
-                    name="description_en"
-                    type="text"
-                    defaultValue={product?.description_en ?? ''}
-                    placeholder="Opcional"
-                    className="adm-field"
-                  />
-                </div>
-              </div>
-              <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: -6, display: 'block' }}>
-                Se muestran solo si activas «Menú también en inglés» en Ajustes. Sin traducción, el comensal ve el español.
-              </span>
-              <div>
-                <label style={labelStyle}>Etiquetas</label>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-                  {PRESET_TAGS.map((t) => {
-                    const on = tags.includes(t.id);
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        className="press"
-                        onClick={() => toggleTag(t.id)}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 5,
-                          padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
-                          border: `1px solid ${on ? 'transparent' : 'var(--u-hair-2)'}`,
-                          background: on ? 'var(--u-text)' : 'transparent',
-                          color: on ? 'var(--brand-bg)' : 'var(--u-text)',
-                          fontWeight: 600, fontSize: 12,
-                        }}
-                      >
-                        <Icon name={t.icon} size={12} /> {t.label}
-                      </button>
-                    );
-                  })}
-                  {tags.filter((t) => !PRESET_TAGS.some((p) => p.id === t)).map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      className="press"
-                      onClick={() => setTags((prev) => prev.filter((x) => x !== t))}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 5,
-                        padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
-                        border: '1px solid transparent',
-                        background: 'var(--u-text)', color: 'var(--brand-bg)',
-                        fontWeight: 600, fontSize: 12,
-                      }}
-                    >
-                      {t} <Icon name="x" size={10} />
-                    </button>
-                  ))}
-                </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <input
-                    type="text"
-                    value={customTagInput}
-                    onChange={(e) => setCustomTagInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag(); } }}
-                    placeholder="Etiqueta personalizada…"
-                    maxLength={30}
-                    className="adm-field" style={{ flex: 1 }}
-                  />
-                  <button
-                    type="button"
-                    onClick={addCustomTag}
-                    className="press"
-                    style={{
-                      padding: '8px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)',
-                      background: 'transparent', color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-                    }}
-                  >
-                    +
-                  </button>
-                </div>
-                <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 6, display: 'block' }}>
-                  Aparecen como sellos sobre la foto del platillo.
-                </span>
-              </div>
-            </div>
-          </Glass>
-
-          {/* ── Alérgenos y dietas ── */}
-          <Glass variant="quiet" style={{ padding: 18 }}>
-            <SectionHead
-              title="Alérgenos y dietas"
-              hint="Se muestran con ícono en el menú del comensal — a diferencia de las etiquetas, no se pueden ocultar (es información de seguridad alimentaria)."
-            />
-            {(['diet', 'allergen'] as const).map((kind) => (
-              <div key={kind} style={{ marginBottom: kind === 'diet' ? 14 : 0 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--u-text-4)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
-                  {kind === 'diet' ? 'Apto para' : 'Contiene'}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {DIETARY_TAG_OPTIONS.filter((o) => o.kind === kind).map((o) => {
-                    const active = dietaryTags.includes(o.key);
-                    return (
-                      <button
-                        key={o.key}
-                        type="button"
-                        onClick={() => toggleDietaryTag(o.key)}
-                        className="press"
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '7px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
-                          border: `1px solid ${active ? 'var(--brand-accent)' : 'var(--u-hair-2)'}`,
-                          background: active ? 'color-mix(in srgb, var(--brand-accent) 16%, transparent)' : 'transparent',
-                          color: 'var(--u-text)', fontSize: 12, fontWeight: 500,
-                        }}
-                      >
-                        <span aria-hidden>{o.icon}</span> {o.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </Glass>
-
-          {/* ── Costo y ganancia ── */}
-          <Glass variant="quiet" style={{ padding: 18 }}>
-            <SectionHead title="Costo y ganancia" hint="Opcional: captura tu costo para ver cuánto ganas por venta." />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div>
-                <label htmlFor="cost" style={labelStyle}>
-                  Costo{hasRecipe && <span style={{ color: 'var(--brand-accent-ink)', marginLeft: 6, fontSize: 11, fontWeight: 400 }}>desde receta</span>}
-                </label>
-                <div style={{ position: 'relative' }}>
-                <span aria-hidden style={moneyPrefix}>Q</span>
-                <input
-                  id="cost"
-                  name="cost"
-                  type="number" inputMode="decimal"
-                  min="0"
-                  step="0.0001"
-                  value={hasRecipe ? displayCost : costVal}
-                  onChange={hasRecipe ? undefined : (e) => setCostVal(e.target.value)}
-                  readOnly={hasRecipe}
-                  placeholder="0.00"
-                  className="adm-field" style={{ paddingLeft: 30, opacity: hasRecipe ? 0.65 : 1, cursor: hasRecipe ? 'not-allowed' : 'text' }}
-                  title={hasRecipe ? 'Calculado automáticamente desde la receta' : undefined}
-                />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="loyalty_points" style={labelStyle}>Puntos de lealtad</label>
-                <input
-                  id="loyalty_points"
-                  name="loyalty_points"
-                  type="number" inputMode="decimal"
-                  min="0"
-                  step="1"
-                  value={loyaltyPtsVal}
-                  onChange={(e) => setLoyaltyPtsVal(e.target.value)}
-                  placeholder="Regla general"
-                  className="adm-field"
-                />
-              </div>
-            </div>
-            {(() => {
-              const p = parseFloat(priceVal);
-              const c = hasRecipe ? recipeCost : parseFloat(costVal);
-              if (isNaN(p) || isNaN(c) || (!hasRecipe && costVal.trim() === '')) {
-                return (
-                  <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 10, display: 'block' }}>
-                    Con el costo capturado verás aquí tu utilidad y margen por venta. Los puntos de lealtad
-                    vacíos usan la regla general del programa; 0 = este platillo no otorga puntos.
-                  </span>
-                );
-              }
-              const profit = p - c;
-              const margin = p > 0 ? (profit / p) * 100 : 0;
-              const good = profit >= 0;
-              return (
-                <div style={{ display: 'flex', gap: 16, marginTop: 12, fontSize: 12 }}>
-                  <span style={{ color: 'var(--u-text-3)' }}>
-                    Utilidad:{' '}
-                    <strong style={{ color: good ? 'var(--u-text)' : 'var(--c-danger, #f87171)' }}>
-                      {fmtMoney(profit)}
-                    </strong>
-                  </span>
-                  <span style={{ color: 'var(--u-text-3)' }}>
-                    Margen:{' '}
-                    <strong style={{ color: good ? 'var(--brand-accent)' : 'var(--c-danger, #f87171)' }}>
-                      {margin.toFixed(0)}%
-                    </strong>
-                  </span>
-                </div>
-              );
-            })()}
-          </Glass>
-
-          {/* ── Opciones y combos ── */}
-          <Glass variant="quiet" style={{ padding: 18 }}>
-            <SectionHead
-              title="Opciones y combos"
-              hint="Lo que el cliente elige al pedir: tamaños, extras con precio, o los componentes de un combo (con sus variantes, ej. sabor de bebida)."
-            />
-            <OptionsEditor value={options} onChange={setOptions} />
-          </Glass>
-
-          {/* ── Receta / costeo por ingrediente (solo en edición) ── */}
-          {product && ingredients && (
-            <Glass variant="quiet" style={{ padding: 18 }}>
-              <SectionHead
-                title="Receta"
-                hint="Define ingredientes y cantidades — el costo del platillo se calcula solo y descuenta inventario."
-              />
-              <RecipeEditor
-                productId={product.id}
-                restaurantId={restaurantId}
-                ingredients={ingredients}
-                initialRecipe={initialRecipe ?? []}
-                onCostChange={(c) => setRecipeCost(c)}
-              />
-            </Glass>
-          )}
-          {product && !ingredients && (
-            <Glass variant="quiet" style={{ padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
-              <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0 }}>
-                Activa el módulo <strong style={{ color: 'var(--u-text-2)' }}>Recetas e ingredientes</strong> desde tu{' '}
-                <a href={panelHref(base, '/admin/modulos')} style={{ color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
-                  panel de Módulos
-                </a>{' '}
-                para llevar el costo de tus platillos.
-              </p>
-            </Glass>
-          )}
-          {!product && ingredients !== undefined && (
-            <Glass variant="quiet" style={{ padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
-              <span style={{ fontSize: 16, flexShrink: 0 }}>📋</span>
-              <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-                Después de guardar el platillo podrás asignarle su <strong style={{ color: 'var(--u-text-2)' }}>receta</strong> e ingredientes para calcular su costo automáticamente.
-              </p>
-            </Glass>
-          )}
+      {creado && (
+        <div className={s.aviso} role="status">
+          <Icon name="check" size={18} />
+          <span><strong>«{creado}»</strong> quedó en tu menú. Escribe el siguiente; la categoría se conserva.</span>
         </div>
+      )}
+      {duplicado && (
+        <div className={`${s.aviso} ${s.avisoInfo}`} role="status">
+          <Icon name="eyeOff" size={18} />
+          <span>
+            Es una copia: trae opciones, dietas, sellos, foto y receta, pero <strong>está oculta</strong> hasta que la revises.
+            Cambia el nombre y enciende «Mostrar en el menú» en Disponibilidad.
+          </span>
+        </div>
+      )}
 
-        {/* ══ Columna lateral: foto + disponibilidad ══ */}
-        <div className="pform-col pform-side">
-          <Glass variant="quiet" className="pform-o-foto" style={{ padding: 18 }}>
-            <SectionHead title="Foto del platillo" hint="Una buena foto vende más — se muestra en el menú y al abrir el platillo." />
-            <ImageUpload
-              restaurantId={restaurantId}
-              currentUrl={product?.image_url}
-              folder="products"
-              onUpload={setImageUrl}
-            />
-          </Glass>
+      {/* ── Lo básico ── */}
+      <section className={s.basico} aria-labelledby="ficha-basico">
+        <h2 id="ficha-basico" className={s.titulo}>Lo básico</h2>
+        <div className={s.basicoGrid}>
+          <div>
+            <label htmlFor="name" style={labelStyle}>Nombre *</label>
+            <input id="name" name="name" type="text" required maxLength={120}
+              defaultValue={product?.name ?? ''} placeholder="Ej: Pepián de pollo" className="adm-field" autoFocus={!isEdit} />
+          </div>
+          <div>
+            <label htmlFor="price" style={labelStyle}>Precio *</label>
+            {/* Con la «Q» dentro: un número suelto no dice que es dinero (MEN-05). */}
+            <div style={{ position: 'relative' }}>
+              <span aria-hidden style={moneyPrefix}>Q</span>
+              <input id="price" name="price" type="number" inputMode="decimal" required min="0" step="0.01"
+                value={priceVal} onChange={(e) => setPriceVal(e.target.value)} placeholder="0.00"
+                className="adm-field tabular-nums" style={{ paddingLeft: 30 }} />
+            </div>
+          </div>
+        </div>
+        <div>
+          <label htmlFor="category_select" style={labelStyle}>Categoría</label>
+          <div className={s.categoria}>
+            <select id="category_select" value={catId} onChange={(e) => setCatId(e.target.value)} className="adm-field">
+              <option value="">Sin categoría</option>
+              {cats.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+            </select>
+            {nuevaCat === null && (
+              <button type="button" className={s.enlace} onClick={() => { setNuevaCat(''); setErrorCat(null); }}>
+                + Nueva categoría
+              </button>
+            )}
+          </div>
+          {nuevaCat !== null && (
+            <div className={s.nuevaCat} style={{ marginTop: 8 }}>
+              <input
+                type="text" value={nuevaCat} onChange={(e) => setNuevaCat(e.target.value)} maxLength={60} autoFocus
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); crearCategoria(); } if (e.key === 'Escape') setNuevaCat(null); }}
+                placeholder="Nombre de la categoría" aria-label="Nombre de la nueva categoría" className="adm-field"
+              />
+              <Button type="button" size="touch" onClick={crearCategoria} disabled={creandoCat}>
+                {creandoCat ? 'Creando…' : 'Crear categoría'}
+              </Button>
+              <Button type="button" size="touch" variant="ghost" onClick={() => { setNuevaCat(null); setErrorCat(null); }}>Cancelar</Button>
+            </div>
+          )}
+          {errorCat && <p role="alert" style={{ fontSize: 13, color: 'var(--c-danger)', margin: '6px 0 0' }}>{errorCat}</p>}
+        </div>
+      </section>
 
-          {/* ── Ícono del patrón (fallback sin foto) ── */}
-          <Glass variant="quiet" style={{ padding: 18 }}>
-            <SectionHead title="Ícono del patrón" hint="Se usa como fondo si el platillo no tiene foto." />
-            <input
-              type="text"
-              value={iconSearch}
-              onChange={(e) => {
-                const v = e.target.value;
-                setIconSearch(v);
-                const suggested = v.trim() ? suggestIconFromName(v) : '';
-                if (suggested && v.trim()) setIcon(suggested);
-              }}
-              placeholder="Buscar (ej: pizza, café, helado…)"
-              className="adm-field" style={{ marginBottom: 10 }}
-            />
-            <div className="u-noscroll" style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
-              {PRODUCT_ICONS.filter((opt) => {
-                if (!iconSearch.trim()) return true;
-                const q = fold(iconSearch);
-                return fold(opt.label).includes(q) || opt.keywords.some((kw) => kw.includes(q));
-              }).map((opt) => {
-                const on = icon === opt.id || (!icon && opt.id === 'utensils');
+      {/* ── Foto e ícono ── */}
+      <Seccion titulo="Foto" resumen={resumen.foto}>
+        <p className={s.nota}>Una buena foto vende más: se muestra en el menú y al abrir el platillo.</p>
+        <ImageUpload restaurantId={restaurantId} currentUrl={product?.image_url} folder="products" onUpload={setImageUrl} />
+        <div>
+          <div className={s.subtitulo}>Ícono si no hay foto</div>
+          <input
+            type="text" value={iconSearch}
+            onChange={(e) => {
+              const v = e.target.value;
+              setIconSearch(v);
+              if (v.trim()) setIcon(suggestIconFromName(v));
+            }}
+            placeholder="Buscar (ej: pizza, café, helado…)" aria-label="Buscar ícono" className="adm-field" style={{ marginBottom: 10 }}
+          />
+          <div className="u-noscroll" style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
+            {PRODUCT_ICONS.filter((opt) => {
+              if (!iconSearch.trim()) return true;
+              const q = fold(iconSearch);
+              return fold(opt.label).includes(q) || opt.keywords.some((kw) => kw.includes(q));
+            }).map((opt) => {
+              const on = icon === opt.id || (!icon && opt.id === 'utensils');
+              return (
+                <button
+                  key={opt.id} type="button" title={opt.label} className="press" aria-pressed={on}
+                  onClick={() => { setIcon(icon === opt.id ? '' : opt.id); setIconSearch(''); }}
+                  style={{
+                    flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                    padding: '8px 10px', borderRadius: 'var(--radius-lg)', cursor: 'pointer', minWidth: 56,
+                    border: `1.5px solid ${on ? 'var(--u-text)' : 'var(--adm-border-2)'}`,
+                    background: on ? 'var(--u-text)' : 'var(--adm-card)',
+                    color: on ? 'var(--adm-card)' : 'var(--u-text-3)',
+                  }}
+                >
+                  <Icon name={opt.id} size={18} />
+                  <span style={{ fontSize: 11, fontWeight: 600 }}>{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </Seccion>
+
+      {/* ── Descripción (e inglés si aplica) ── */}
+      <Seccion titulo="Descripción" resumen={resumen.descripcion}>
+        <div>
+          <label htmlFor="description" style={labelStyle}>Descripción</label>
+          <textarea
+            id="description" name="description" rows={3} value={descripcion} onChange={(e) => setDescripcion(e.target.value)}
+            placeholder="Qué lleva, tamaño, qué lo hace especial…" className="adm-field" style={{ resize: 'vertical', lineHeight: 1.5 }}
+          />
+        </div>
+        {conIngles ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+            <div>
+              <label htmlFor="name_en" style={labelStyle}>Nombre en inglés</label>
+              <input id="name_en" name="name_en" type="text" defaultValue={product?.name_en ?? ''} placeholder="Opcional" className="adm-field" />
+            </div>
+            <div>
+              <label htmlFor="description_en" style={labelStyle}>Descripción en inglés</label>
+              <input id="description_en" name="description_en" type="text" defaultValue={product?.description_en ?? ''} placeholder="Opcional" className="adm-field" />
+            </div>
+          </div>
+        ) : (
+          <p className={s.nota}>El nombre en inglés aparece aquí cuando actives «Menú también en inglés» en Ajustes.</p>
+        )}
+      </Seccion>
+
+      {/* ── Opciones ── */}
+      <Seccion titulo="Opciones" resumen={resumen.opciones}>
+        <p className={s.nota}>
+          Lo que el cliente elige al pedir: tamaños, extras con precio o los componentes de un combo. En «elegir 1» marca
+          la opción predeterminada; en «varios», cuántas como mínimo y como máximo.
+        </p>
+        <OptionsEditor value={options} onChange={setOptions} />
+      </Seccion>
+
+      {/* ── Dietas y alérgenos ── */}
+      <Seccion titulo="Dietas y alérgenos" resumen={resumen.dietas}>
+        <p className={s.nota}>Información de seguridad alimentaria: el comensal la ve con su ícono y no se puede ocultar.</p>
+        {(['diet', 'allergen'] as const).map((kind) => (
+          <div key={kind}>
+            <div className={s.subtitulo}>{kind === 'diet' ? 'Apto para' : 'Contiene'}</div>
+            <div className={s.chips}>
+              {DIETARY_TAG_OPTIONS.filter((o) => o.kind === kind).map((o) => {
+                const on = dietaryTags.includes(o.key);
                 return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => { setIcon(icon === opt.id ? '' : opt.id); setIconSearch(''); }}
-                    title={opt.label}
-                    className="press"
-                    style={{
-                      flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                      padding: '8px 10px', borderRadius: 'var(--radius-lg)', cursor: 'pointer', minWidth: 56,
-                      border: `1.5px solid ${on ? 'var(--u-text)' : 'var(--u-hair-2)'}`,
-                      background: on ? 'var(--u-text)' : 'transparent',
-                      color: on ? 'var(--brand-bg)' : 'var(--u-text-3)',
-                      transition: 'all 140ms',
-                    }}
-                  >
-                    <Icon name={opt.id} size={18} />
-                    <span style={{ fontSize: 11, fontWeight: 600 }}>{opt.label}</span>
+                  <button key={o.key} type="button" className={`${s.chip} press`} aria-pressed={on} onClick={() => toggleDietaryTag(o.key)}>
+                    <span aria-hidden>{o.icon}</span> {o.label}
+                    {on && <Icon name="check" size={13} />}
                   </button>
                 );
               })}
             </div>
-          </Glass>
+          </div>
+        ))}
+      </Seccion>
 
-          {/* «Disponible» decía «Oculto en el menú» al apagarlo, y lo agotado NO
-              se oculta: se ve tachado y vuelve solo a las 12 h. Lo que de verdad
-              oculta es el interruptor de abajo. Dos interruptores que decían lo
-              mismo con palabras distintas (auditoría 2026-10-02, MEN-03). */}
-          <Glass variant="quiet" className="pform-o-estado" style={{ padding: '14px 18px' }}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 12,
-              }}
-            >
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>{isAvailable ? 'Hay existencias' : 'Agotado'}</div>
-                <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
-                  {isAvailable
-                    ? 'Se puede pedir. Apágalo si se acabó por hoy.'
-                    : 'Se ve en el menú pero no se puede pedir. Vuelve solo en 12 h.'}
-                </div>
-              </div>
-              <ToggleSwitch checked={isAvailable} onChange={() => setIsAvailable(!isAvailable)} ariaLabel="Hay existencias" />
-            </div>
-          </Glass>
-
-          {/* ── Activar / desactivar (oculto permanente, distinto de "Disponible") ── */}
-          <Glass
-            variant="quiet"
-            className="pform-o-estado"
-            style={{ padding: '14px 18px', borderColor: !isActive ? 'var(--c-danger-line)' : undefined }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: isActive ? 'var(--u-text)' : 'var(--c-danger)' }}>
-                  {isActive ? 'Mostrar en el menú' : 'Oculto del menú'}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
-                  {isActive
-                    ? 'Tus clientes lo ven en tu menú.'
-                    : 'No aparece en el menú hasta que lo vuelvas a encender.'}
-                </div>
-              </div>
-              <ToggleSwitch checked={isActive} onChange={() => setIsActive(!isActive)} ariaLabel="Mostrar en el menú" />
-            </div>
-          </Glass>
+      {/* ── Sellos ── */}
+      <Seccion titulo="Sellos" resumen={resumen.sellos}>
+        <p className={s.nota}>Sellos comerciales sobre la foto del platillo. Las dietas («Vegano», «Picante»…) van en su sección.</p>
+        <div className={s.chips}>
+          {PRESET_TAGS.map((t) => {
+            const on = tags.includes(t.id);
+            return (
+              <button key={t.id} type="button" className={`${s.chip} press`} aria-pressed={on} onClick={() => toggleTag(t.id)}>
+                <Icon name={t.icon} size={13} /> {t.label}
+              </button>
+            );
+          })}
+          {tags.filter((t) => !PRESET_TAGS.some((p2) => p2.id === t)).map((t) => (
+            <button key={t} type="button" className={`${s.chip} press`} aria-pressed onClick={() => setTags((prev) => prev.filter((x) => x !== t))}
+              aria-label={`Quitar el sello ${t}`}>
+              {t} <Icon name="x" size={12} />
+            </button>
+          ))}
         </div>
-      </div>
-
-      {/* ── Barra de guardar fija: el botón nunca queda fuera de alcance ──
-          Vive en globals.css (`.pform-savebar`) y no aquí en línea, porque
-          en el teléfono tiene que esquivar la barra de destinos y el hueco
-          de la muesca cambia de sitio al hacerlo: eso es una media query, y
-          una media query no cabe en un atributo `style`. */}
-      {isEdit ? (
-        <SaveBar
-          dirty={dirty}
-          pending={isPending}
-          status={state?.error ? { error: state.error } : null}
-          label="Guardar cambios"
-        />
-      ) : (
-      <div className="pform-savebar">
-        {state?.error && (
-          <div
-            style={{
-              padding: '10px 14px',
-              borderRadius: 'var(--radius-md)',
-              background: 'color-mix(in srgb, var(--c-danger, #f87171) 12%, transparent)',
-              border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)',
-              color: 'var(--c-danger)',
-              fontSize: 14,
-            }}
-          >
-            {state.error}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="text" value={customTagInput} onChange={(e) => setCustomTagInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag(); } }}
+            placeholder="Otro sello…" aria-label="Otro sello" maxLength={30} className="adm-field" style={{ flex: 1 }}
+          />
+          <Button type="button" variant="secondary" size="touch" onClick={addCustomTag}>Agregar</Button>
+        </div>
+        {sugerencia && (
+          <div className={s.sugiere} role="status">
+            <span><strong>«{sugerencia.texto}» es una dieta.</strong> Márcala en Dietas para que el menú la muestre con su ícono y no se repita.</span>
+            <Button type="button" size="sm" variant="secondary" onClick={() => {
+              setDietaryTags((prev) => (prev.includes(sugerencia.dieta) ? prev : [...prev, sugerencia.dieta]));
+              setSugerencia(null);
+            }}>
+              Marcar dieta {DIETARY_TAG_MAP[sugerencia.dieta]?.label ?? sugerencia.texto}
+            </Button>
           </div>
         )}
-        <button
-          type="submit"
-          disabled={isPending}
-          className="press btn-accent"
-          style={{
-            width: '100%',
-            padding: '14px',
-            borderRadius: 'var(--radius-full)',
-            fontWeight: 600,
-            fontSize: 15,
-            border: 'none',
-            cursor: isPending ? 'not-allowed' : 'pointer',
-            opacity: isPending ? 0.7 : 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-          }}
-        >
-          {isPending ? 'Guardando…' : (<><Icon name="check" size={16} /> Crear platillo</>)}
-        </button>
-      </div>
+      </Seccion>
+
+      {/* ── Costo y puntos ── */}
+      <Seccion titulo="Costo y puntos" resumen={resumen.costo}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+          <div>
+            <label htmlFor="cost" style={labelStyle}>
+              Costo{hasRecipe && <span style={{ color: 'var(--brand-accent-ink)', marginLeft: 6, fontSize: 12, fontWeight: 400 }}>desde receta</span>}
+            </label>
+            <div style={{ position: 'relative' }}>
+              <span aria-hidden style={moneyPrefix}>Q</span>
+              <input
+                id="cost" name="cost" type="number" inputMode="decimal" min="0" step="0.0001"
+                value={hasRecipe ? displayCost : costVal}
+                onChange={hasRecipe ? undefined : (e) => setCostVal(e.target.value)}
+                readOnly={hasRecipe} placeholder="0.00"
+                className="adm-field tabular-nums" style={{ paddingLeft: 30, opacity: hasRecipe ? 0.65 : 1 }}
+                title={hasRecipe ? 'Calculado automáticamente desde la receta' : undefined}
+              />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="loyalty_points" style={labelStyle}>Puntos de lealtad</label>
+            <input id="loyalty_points" name="loyalty_points" type="number" inputMode="numeric" min="0" step="1"
+              value={loyaltyPtsVal} onChange={(e) => setLoyaltyPtsVal(e.target.value)} placeholder="Regla general" className="adm-field" />
+          </div>
+        </div>
+        {conCosto && !isNaN(p) ? (
+          <p className={s.nota}>
+            Utilidad <strong style={{ color: p - c >= 0 ? 'var(--u-text)' : 'var(--c-danger)' }}>{fmtMoney(p - c)}</strong>
+            {margen != null && <> · margen <strong style={{ color: p - c >= 0 ? 'var(--u-text)' : 'var(--c-danger)' }}>{margen} %</strong></>} por venta.
+          </p>
+        ) : (
+          <p className={s.nota}>Con el costo verás tu utilidad y margen. Puntos vacíos usan la regla general; 0 = no da puntos.</p>
+        )}
+      </Seccion>
+
+      {/* ── Receta (sólo en edición) ── */}
+      {product && ingredients && (
+        <Seccion titulo="Receta" resumen={hasRecipe ? `Costo ${fmtMoney(recipeCost!)}` : 'Sin receta'}>
+          <p className={s.nota}>Ingredientes y cantidades: el costo se calcula solo y descuenta inventario.</p>
+          <RecipeEditor
+            productId={product.id} restaurantId={restaurantId} ingredients={ingredients}
+            initialRecipe={initialRecipe ?? []} onCostChange={(cc) => setRecipeCost(cc)}
+          />
+        </Seccion>
+      )}
+      {product && !ingredients && (
+        <p className={s.nota}>
+          Para llevar el costo por receta activa <strong>Recetas e ingredientes</strong> en{' '}
+          <a href={panelHref(base, '/admin/modulos')} style={{ color: 'var(--brand-accent-ink)', fontWeight: 600 }}>Funciones</a>.
+        </p>
+      )}
+
+      {/* ── Disponibilidad ── */}
+      <Seccion titulo="Disponibilidad" resumen={resumen.estado} abierta={duplicado}>
+        <div className={s.estado}>
+          <div>
+            <div id="ficha-disponible" style={{ fontSize: 14, fontWeight: 600 }}>{isAvailable ? 'Hay existencias' : 'Agotado'}</div>
+            <div className={s.nota}>
+              {isAvailable ? 'Se puede pedir. Apágalo si se acabó por hoy.' : 'Se ve en el menú pero no se puede pedir. Vuelve solo en 12 h.'}
+            </div>
+          </div>
+          <Switch checked={isAvailable} onCheckedChange={setIsAvailable} aria-labelledby="ficha-disponible" />
+        </div>
+        <div className={s.estado}>
+          <div>
+            <div id="ficha-visible" style={{ fontSize: 14, fontWeight: 600, color: isActive ? 'var(--u-text)' : 'var(--c-danger)' }}>
+              {isActive ? 'Mostrar en el menú' : 'Oculto del menú'}
+            </div>
+            <div className={s.nota}>
+              {isActive ? 'Tus clientes lo ven en tu menú.' : 'No aparece en el menú hasta que lo vuelvas a encender.'}
+            </div>
+          </div>
+          <Switch checked={isActive} onCheckedChange={setIsActive} aria-labelledby="ficha-visible" />
+        </div>
+      </Seccion>
+
+      {/* ── Guardar ── */}
+      {isEdit ? (
+        <SaveBar dirty={dirty} pending={isPending} status={state?.error ? { error: state.error } : null} label="Guardar cambios" />
+      ) : (
+        <div className="pform-savebar">
+          {state?.error && (
+            <div role="alert" style={{
+              padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)',
+              border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 14,
+            }}>
+              {state.error}
+            </div>
+          )}
+          <div className={s.pie}>
+            <Button type="submit" size="touch" disabled={isPending} onClick={() => { if (siguienteRef.current) siguienteRef.current.value = ''; }}>
+              {isPending ? 'Guardando…' : (<><Icon name="check" size={16} /> Crear platillo</>)}
+            </Button>
+            <Button type="submit" size="touch" variant="secondary" disabled={isPending}
+              onClick={() => { if (siguienteRef.current) siguienteRef.current.value = 'otro'; }}>
+              Crear y agregar otro
+            </Button>
+          </div>
+        </div>
       )}
     </form>
   );

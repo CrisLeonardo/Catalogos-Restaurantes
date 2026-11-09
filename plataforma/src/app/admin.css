@@ -205,8 +205,8 @@
   display: flex; flex-direction: column; gap: 10px;
   margin: 4px -4px 0;
   padding: 10px 4px calc(10px + env(safe-area-inset-bottom, 0px));
-  background: color-mix(in srgb, var(--admin-content-bg-solid, var(--brand-bg)) 88%, transparent);
-  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  /* Sólida: nada translúcido en el panel (auditoría 1.9, sistema visual). */
+  background: var(--admin-content-bg-solid, var(--brand-bg));
   border-top: 1px solid var(--u-hair);
 }
 .admin-kiosk { --adm-nav-h: 0px; }

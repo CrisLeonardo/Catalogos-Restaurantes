@@ -7,7 +7,6 @@ import { resolveOwnRestaurantId } from '@/lib/db/membership';
 import { puedeEnSeccion } from '@/lib/auth/seccion';
 import { revalidatePath, updateTag } from 'next/cache';
 import type { DayKey, WeeklyHours } from '@/lib/hours';
-import { logActivity } from '@/lib/activity';
 
 async function resolveContext(formData: FormData) {
   const supabase = await createClient();
@@ -193,29 +192,41 @@ export async function updateCategoryModal(
   return { success: true };
 }
 
-export async function deleteCategoryModal(formData: FormData) {
+/**
+ * Borrar una categoría (auditoría 1.9, R09.4). Si tiene platillos hay que
+ * decir a dónde pasan: antes quedaban «sin categoría» y en las cartas por
+ * secciones o acordeón desaparecían del menú. Lo decide
+ * `leogin_borrar_categoria` (migración 179), que también deja la bitácora.
+ */
+export async function deleteCategoryModal(formData: FormData): Promise<{ error?: string; ok?: true; movidos?: number }> {
   const ctx = await resolveContext(formData);
-  if (!ctx) return;
+  if (!ctx) return { error: 'No autorizado.' };
 
   const id = formData.get('id') as string;
-
-  const { data: borradas } = await ctx.db
-    .from('categories')
-    .delete()
-    .eq('id', id)
-    .eq('restaurant_id', ctx.restaurantId)
-    .select('name');
-
-  // Borrado definitivo: que quede quién y qué (PROD-10).
-  if (borradas?.[0]) {
-    await logActivity({
-      restaurantId: ctx.restaurantId,
-      actorId: ctx.userId,
-      action: 'categoria_borrada',
-      entity: borradas[0].name as string,
-      meta: { categoryId: id },
-    });
-  }
+  const destino = (formData.get('destino') as string) || null;
+  const { data, error } = await createServiceClient().rpc('leogin_borrar_categoria', {
+    p_restaurant: ctx.restaurantId, p_categoria: id, p_destino: destino, p_actor: ctx.userId,
+  });
+  if (error) return { error: error.code === 'LGD01' ? error.message : 'No se pudo borrar la categoría.' };
 
   revalidateAll(ctx.restaurantId);
+  return { ok: true, movidos: (data as { movidos?: number })?.movidos ?? 0 };
+}
+
+/** «+ Nueva categoría» desde la ficha del platillo (E10): crea y devuelve su id. */
+export async function crearCategoriaEnLinea(restaurantIdForm: string, nombre: string): Promise<{ id?: string; name?: string; error?: string }> {
+  const fd = new FormData();
+  fd.set('restaurantId', restaurantIdForm);
+  const ctx = await resolveContext(fd);
+  if (!ctx) return { error: 'No tienes permiso para crear categorías.' };
+  const name = nombre.trim().slice(0, 60);
+  if (!name) return { error: 'Escribe el nombre de la categoría.' };
+  const { data: existing } = await ctx.db.from('categories').select('sort_order')
+    .eq('restaurant_id', ctx.restaurantId).order('sort_order', { ascending: false }).limit(1);
+  const { data, error } = await ctx.db.from('categories').insert({
+    restaurant_id: ctx.restaurantId, name, sort_order: (existing?.[0]?.sort_order ?? -1) + 1,
+  }).select('id, name').single();
+  if (error || !data) return { error: 'No se pudo crear la categoría.' };
+  revalidateAll(ctx.restaurantId);
+  return { id: data.id as string, name: data.name as string };
 }

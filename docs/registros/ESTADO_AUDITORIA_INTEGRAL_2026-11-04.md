@@ -2,7 +2,7 @@
 
 Documento de traspaso para retomar el trabajo en otra sesión o cuenta sin perder el contexto. Resume qué se logró, qué está en curso y qué falta, con listas para marcar.
 
-> **Actualización del 2026-11-09:** ficha **1.8** implementada en `feat/recepcion` (migración 178, §30). Siguiente: **1.9 · Catálogo**.
+> **Actualización del 2026-11-09:** fichas **1.8** (`feat/recepcion`, migración 178, §30) y **1.9** (`feat/catalogo`, migración 179, con 0.7 incorporada, §31) implementadas. Siguiente: **1.10 · Inventario y agotados**.
 >
 > **Actualización del 2026-11-08:** ficha **1.7** implementada en `feat/permisos-por-trabajo` (migración 177, §29); la cadena no contenía 0.1–0.13 y se incorporó 0.12 (§28). Siguiente: **1.8 · Recepción**.
 >
@@ -663,6 +663,18 @@ La siguiente ficha es **1.8 · Recepción**. Quedan cinco fichas de implementaci
 - **Verificación local:** 1,438 unitarias, 110 de Postgres y revisión en navegador con datos de prueba que se retiraron. Ver el plan §6–7.
 
 La siguiente ficha es **1.9 · Catálogo**. Quedan cuatro fichas de implementación de la Ola 1.
+
+## 31. Catálogo y alta de platillo · ficha 1.9 (2026-11-09)
+
+**Rama** `feat/catalogo`, sobre `feat/recepcion` (PR #103). Detalle en el [plan de la ficha](../planes/PLAN_CATALOGO_2026-11-09.md).
+
+- **Base:** se incorporó la ficha 0.7 (PR #76, migración 156: receta y orden de categorías atómicos y candados entre restaurantes). Sólo chocó el verificador. En producción la 156 va con 154–159, antes de la 177.
+- **Decisiones del dueño:** precio en lote sí, con vista previa y todo o nada; el platillo duplicado nace oculto; maqueta aprobada.
+- **Migración 179, ANTES del código y después de la 178:** lote todo o nada con bitácora, borrar categoría exigiendo destino, candado de categoría del mismo restaurante, sellos que eran dietas pasados a dieta y `updated_at` para ordenar.
+- **Pantallas:** ficha progresiva con un solo título, categoría en línea, «Crear y agregar otro», sellos separados de dietas, inglés sólo si aplica, opción predeterminada y mínimo/máximo, «Duplicar»; catálogo con lo agotado en una línea, filtros combinables, orden, estado en la dirección y cambios en lote con vista previa; borrar categoría con destino.
+- **Verificación local:** 1,447 unitarias, 118 de Postgres, auditorías con cero hallazgos y revisión en navegador con datos de prueba que se retiraron. Ver el plan §6–7.
+
+La siguiente ficha es **1.10 · Inventario y agotados**. Quedan tres fichas de implementación de la Ola 1.
 
 ---
 

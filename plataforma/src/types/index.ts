@@ -155,6 +155,14 @@ export interface ProductOptionGroup {
   required?: boolean;
   /** Solo multi: máximo de opciones (0/ausente = sin límite). */
   max?: number;
+  /** Solo multi: mínimo de opciones (0/ausente = ninguna obligatoria). Auditoría 1.9, M03. */
+  min?: number;
+  /**
+   * Solo single: la opción que viene marcada, decidida por el restaurante
+   * (auditoría 1.9, M03). Ausente = ninguna: el comensal elige. Antes se
+   * asumía siempre la primera.
+   */
+  defaultChoiceId?: string;
   choices: ProductOptionChoice[];
 }
 
@@ -186,6 +194,8 @@ export interface Product {
   stock: number | null;
   low_stock_threshold: number;
   sort_order: number;
+  /** Última edición (migración 179): para ordenar el catálogo por lo reciente. */
+  updated_at?: string | null;
   /**
    * Puntos de lealtad que otorga UNA unidad de este producto (migración 058).
    * NULL = usar la regla general del restaurante (earn_rate × subtotal). 0 = ninguno.

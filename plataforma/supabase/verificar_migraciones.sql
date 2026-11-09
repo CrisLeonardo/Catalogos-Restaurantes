@@ -267,7 +267,12 @@ huellas(n, que, ok, cuando) as (values
        where table_schema='public' and table_name='waitlist_entries' and column_name='aviso_abierto_at')
      and exists (select 1 from information_schema.columns
        where table_schema='public' and table_name='restaurants' and column_name='duracion_reserva_min'),
-     'ANTES de desplegar; después de la 177')
+     'ANTES de desplegar; después de la 177'),
+  ('179', 'catálogo: lote todo o nada, borrar categoría con destino y sellos sin duplicar',
+     to_regprocedure('public.leogin_aplicar_lote_catalogo(uuid,uuid[],jsonb,uuid)') is not null
+     and to_regprocedure('public.leogin_borrar_categoria(uuid,uuid,uuid,uuid)') is not null
+     and exists (select 1 from pg_trigger where tgname='candado_categoria_producto'),
+     'ANTES de desplegar; después de la 178')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

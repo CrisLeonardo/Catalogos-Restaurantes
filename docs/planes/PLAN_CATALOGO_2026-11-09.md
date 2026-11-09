@@ -2,7 +2,7 @@
 
 Ficha **1.9** del [plan de la auditoría integral](PLAN_AUDITORIA_INTEGRAL_2026-11-04.md). Hallazgos: **E10, N17, R06, R07, R08, R09, M03** (lado del panel), **O10** y **PA-T24**. Rama `feat/catalogo`, apilada sobre la 1.8 (`feat/recepcion`, PR #103).
 
-> **Estado:** diagnóstico hecho; propuesta y [maqueta](../diseno/MAQUETA_CATALOGO_2026-11-09.html) **pendientes de aprobación**.
+> **Estado:** **implementada** (2026-11-09) en `feat/catalogo`, con la [maqueta](../diseno/MAQUETA_CATALOGO_2026-11-09.html) aprobada y la migración 179. Detalle en §6; lo que queda, en §7.
 
 ## 0. Base: la ficha 0.7 ya está incorporada
 
@@ -59,13 +59,46 @@ Biblioteca de grupos reutilizables y simulador de pedidos (R08.3–4) · version
 - Corrige los duplicados sello/dieta existentes (mueve el sello a la dieta equivalente) con constancia en la bitácora. Idempotente.
 - Función de lote `leogin_aplicar_lote_catalogo` que aplica los cambios de varios platillos en una sola transacción (todo o nada) y deja constancia en la bitácora.
 
-## 4. Decisiones del dueño (pendientes)
+## 4. Decisiones del dueño (2026-11-09)
 
-1. **Precio en lote:** ¿se permite subir o bajar precios en lote (propuesta), o sólo disponibilidad, visibilidad y categoría?
-2. **Platillo duplicado:** ¿nace **oculto** hasta revisarlo (propuesta) o visible?
+1. **Precio en lote: sí, con vista previa.** Se sube o baja por porcentaje o por monto; antes de aplicar se ve cada precio antes → después. Todo o nada, con bitácora.
+2. **Platillo duplicado: nace oculto** hasta revisarlo.
+3. **Maqueta aprobada** tal como se presentó («Aprobada, implementa»).
 
 ## 5. Pruebas previstas
 
 - Unitarias de la regla sello/dieta, de la vista previa del lote y de la validación de opciones.
 - Postgres: lote transaccional con fallo parcial, migración 179 idempotente, borrar categoría con reasignación.
 - Pantalla: 390, 768 y 1280 px, claro y oscuro; nombre largo y traducción incompleta (PA-T24).
+
+## 6. Implementación (2026-11-09)
+
+**Migración `179_catalogo_lote_y_categorias.sql`**: aplicar **ANTES** del código y **después de la 178**. Idempotente y con huella en `verificar_migraciones.sql`.
+
+- `products.updated_at` con disparador, para ordenar por «última edición».
+- Candado: la categoría de un platillo es de su mismo restaurante (`LGD01`).
+- Sellos que son dietas («Vegano», «Picante», y las claves `hot`/`veg` que guardaba el formulario anterior) pasan a la dieta y salen de los sellos; queda constancia por local (`catalogo_sellos_a_dietas`).
+- `leogin_aplicar_lote_catalogo`: disponible, visible, categoría y precio (`porcentaje` o `monto`, redondeo a centavos), todo o nada; si un precio quedaría negativo no cambia ninguno y dice cuál. Bitácora `catalogo_lote` con el antes → después de hasta 100 precios.
+- `leogin_borrar_categoria`: con platillos exige destino, los mueve y borra en una transacción; bitácora `categoria_borrada` con cuántos y a dónde.
+- Ambas funciones sólo para `service_role`.
+
+**Código**
+
+- `lib/catalogo/reglas.ts`: validación de precio, sellos frente a dietas, reglas de grupos de opciones (mínimo ≤ máximo, predeterminada dentro del grupo), vista previa del lote con la misma aritmética que la 179, filtros combinables y orden.
+- Acciones: alta y edición validan precio y opciones en el servidor y separan sellos de dietas; «Crear y agregar otro» conserva la categoría; `duplicateProduct` copia opciones, dietas, sellos, foto, costo y receta (con `leogin_reemplazar_receta`) y deja la copia oculta; `aplicarLoteCatalogo`; `crearCategoriaEnLinea`; `deleteCategoryModal` con destino.
+- Ficha del platillo (`product-form.tsx`): un solo título; «Lo básico» siempre a la vista con «+ Nueva categoría»; secciones plegables con resumen; sellos comerciales separados de dietas con sugerencia «Marcar dieta»; inglés sólo con el menú bilingüe activo o traducción guardada; opción predeterminada y mínimo/máximo en el editor de opciones; «Duplicar» en la ficha con confirmación. La barra de guardar del alta es sólida.
+- Catálogo (`catalog-panel.tsx`): lo agotado en una línea (se retiró la tarjeta «No se puede pedir ahora»); filtros combinables con contador y «Limpiar»; orden como en la carta, por nombre o por última edición; búsqueda, categoría, filtros y orden en la dirección, y «Volver»/«Guardar» regresan a la lista tal como estaba; selección con barra de lote (Precio…, Agotar, Disponible, Ocultar, Mostrar, Mover a…) y vista previa de precios.
+- Categorías: borrar una categoría con platillos pide el destino debajo de la fila.
+- Bitácora en palabras para `catalogo_lote`, `catalogo_sellos_a_dietas`, `platillo_duplicado` y `categoria_borrada` con destino.
+
+**Verificación local**
+
+- 1,447 unitarias, 118 de Postgres (8 nuevas de la 179), tipos y lint sin errores; auditorías de `security definer` y candados RLS con cero hallazgos; el verificador reconoce 156 y 177–179.
+- Navegador con datos «AUD 1.9» (retirados al terminar): lote +10 % y la vista previa que bloquea un precio negativo; filtros combinados desde la dirección y «Volver» que los conserva; sello «Vegano» que pasa a dieta y sugerencia al escribir «Picante»; duplicado oculto; alta en serie con categoría creada en línea; borrar categoría moviendo su platillo. A 1280 px en claro y a 390 px en claro y oscuro.
+
+## 7. Pendientes
+
+- **Comensal (1.11):** usar la opción predeterminada y el mínimo en la ficha del platillo, y mostrar «Otros» para lo que quede sin categoría en las cartas por secciones o acordeón.
+- **768 px** no se revisó por separado (sí 390 y 1280).
+- Filas compactas de Categorías con horario en una línea: no se tocaron; el borrado con destino sí.
+- Fuera de esta ficha, como se dijo en §2: biblioteca de grupos, simulador, versionado de precio y receta, archivar con historial, importación por lote, recorte de fotos y cobertura de traducción.
