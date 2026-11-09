@@ -196,6 +196,13 @@ Orden recomendado: primero lo de más riesgo y menor tamaño, y lo que destraba 
 **Hacer:** decidir la política (el comentario de `waitlist.ts` defiende marcar «sentado» aunque la mesa falle). Propuesta: primero ocupar la mesa y después marcar al grupo; si la mesa está ocupada, el grupo queda «pendiente de mesa» con la causa y no desaparece de la cola. Reservaciones igual. Dar etiqueta accesible a los campos del formulario de reserva (N22).
 **Aceptación:** con la mesa ocupada, el grupo sigue a la vista con un aviso; repetir la acción no abre otra sesión.
 
+**Estado (2026-11-04): hecha.** Política elegida: primero la mesa, después el grupo (la propuesta).
+- **Orden nuevo:** `lib/mesa/sentar-desde-origen.ts` ocupa la mesa y solo entonces la lista de espera o la reserva pasan a «sentados» / «En mesa». Si la mesa ya es de otro grupo, nada cambia y se dice: «La mesa 11 ya está ocupada por otro grupo. La reserva de … sigue pendiente: elige otra mesa o libera la 11.».
+- **Repetir es seguro:** una mesa abierta por ESE grupo (`origin_id`) se reconoce y no se abre otra. Si un intento ocupó la mesa pero no alcanzó a marcar al grupo, «Sentar» sin mesa la retoma.
+- **Paneles:** se repintan tras cada acción (la ruta reescrita no lo hacía sola), el error anterior se borra al reintentar y una mesa elegida que dejó de estar libre ya no queda en el botón. Los campos de los formularios de reserva y de espera tienen etiqueta asociada (N22).
+- **Probado en el navegador:** espera y reserva con la mesa ocupada desde «otro aparato» (aviso, el grupo sigue pendiente, la mesa intacta) y con mesa libre (un solo turno, lista al día). Los datos de prueba se borraron. Sin migración.
+- **Integración en la cadena (2026-11-09, ficha 1.8):** se fusionó en `feat/recepcion`. La lógica de las acciones y de los paneles quedó reemplazada por la transacción de la ficha 1.3 (`leogin_sentar_desde_recepcion`, migración 173), que sienta y actualiza la recepción en una sola operación de la base; `lib/mesa/sentar-desde-origen.ts` se retiró. Las etiquetas de los formularios y el refresco tras cada acción se reaplican en el rediseño de 1.8.
+
 ### 0.10 · Caja honesta — M · requiere maqueta
 
 **Cubre:** N05 (con la decisión tomada), N06, N07, C08 (la parte de cierre), R22.1–2 y R22.5.
@@ -376,7 +383,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 - [ ] 0.6 Pedido, cupón y puntos en una sola operación
 - [ ] 0.7 Receta atómica y referencias entre restaurantes
 - [ ] 0.8 Compras: creación atómica y estados válidos
-- [ ] 0.9 Sentar desde espera o reserva sin estados partidos
+- [x] 0.9 Sentar desde espera o reserva sin estados partidos (rama `fix/sentar-sin-estados-partidos`, sin migración, 2026-11-04)
 - [ ] 0.10 Caja honesta
 - [ ] 0.11 Cola offline que no promete de más
 - [ ] 0.12 Acceso por sucursal con membresías
