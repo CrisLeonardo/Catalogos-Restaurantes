@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inventario del panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Maqueta de la ficha 1.10 · Identidad actual depurada. Datos ficticios. */
+:root{--bg:#F2F1EE;--card:#FFFFFF;--ink:#17161A;--ink2:#55524E;--ink3:#7A7671;--line:rgba(28,22,16,.12);--line2:rgba(28,22,16,.20);
+--accent:#C2542F;--accent-ink:#A9461F;--ok:#1F7A45;--ok-bg:#E8F4EC;--ok-line:#B9DCC6;--warn:#8A5A00;--warn-bg:#FBF1DC;--warn-line:#EBD39C;--danger:#B42318;--danger-bg:#FDECEA;--danger-line:#F3C3BE;--info:#2F5C9E;--info-bg:#EAF0FA;--info-line:#C3D3EE;--sh:0 1px 0 rgba(28,22,16,.06)}
+:root[data-theme="dark"]{--bg:#0C0B0A;--card:#1A1917;--ink:#F5F3EF;--ink2:#C9C5BF;--ink3:#9A958E;--line:rgba(255,245,235,.11);--line2:rgba(255,245,235,.18);--accent-ink:#F08C66;--ok:#6BD49A;--ok-bg:#14251B;--ok-line:#24563A;--warn:#F2C36B;--warn-bg:#2A2110;--warn-line:#5A4517;--danger:#FF8A80;--danger-bg:#2C1514;--danger-line:#5C2723;--info:#8FB4F0;--info-bg:#151E2C;--info-line:#2A3E61;--sh:0 1px 0 rgba(0,0,0,.4)}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 14px/1.45 Geist,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent-ink);outline-offset:2px}
+.demo{position:sticky;top:0;z-index:30;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;background:#202020;color:#eee;font-size:13px}
+.demo strong{margin-right:auto;font-weight:600}
+.demo button{background:#2c2c2c;border:1px solid #3a3a3a;border-radius:999px;padding:6px 12px;color:#eee;cursor:pointer}
+.demo button[aria-pressed="true"]{background:#eee;color:#202020}
+.stage{display:flex;justify-content:center;padding:20px 16px 120px}
+.app{width:100%;max-width:1100px}.stage[data-w="390"] .app{max-width:390px}
+h1{font-size:28px;font-weight:700;letter-spacing:-.02em;margin:0}
+h2{font-size:16px;font-weight:700;margin:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:8px 14px;border-radius:12px;border:1px solid transparent;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}.btn-sec{background:var(--card);border-color:var(--line2)}.btn-quiet{background:transparent;color:var(--ink2)}
+.btn-danger{background:var(--danger-bg);border-color:var(--danger-line);color:var(--danger)}
+.btn-sm{min-height:36px;padding:4px 12px;font-size:13px}
+.chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;line-height:18px;border:1px solid var(--line2);background:var(--card);color:var(--ink2);white-space:nowrap}
+.c-warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}.c-info{background:var(--info-bg);border-color:var(--info-line);color:var(--info)}.c-ok{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok)}.c-bad{background:var(--danger-bg);border-color:var(--danger-line);color:var(--danger)}
+.head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px}
+.oculto{display:none!important}
+.sub{margin:2px 0 0;color:var(--ink2)}
+/* cobertura */
+.cob{padding:16px;margin-top:14px}
+.cob .fila{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.cob .big{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.barra-cob{height:8px;border-radius:999px;background:var(--bg);border:1px solid var(--line);margin-top:10px;overflow:hidden}
+.barra-cob i{display:block;height:100%;background:var(--ok)}
+/* por revisar */
+.revisar{margin-top:14px}
+.revisar h2{padding:14px 16px 6px}
+.rv{list-style:none;margin:0;padding:0}.rv li{display:flex;align-items:center;gap:10px;padding:10px 16px;min-height:56px;border-top:1px solid var(--line)}
+.rv .t{flex:1;min-width:0}.rv .t b{display:block;font-weight:600}.rv .t span{font-size:13px;color:var(--ink3)}
+/* barra */
+.barra{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.buscar{flex:1;min-width:200px;min-height:44px;padding:8px 14px;border-radius:12px;border:1px solid var(--line2);background:var(--card);display:flex;align-items:center;color:var(--ink3)}
+.filtros{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.filtro{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:4px 12px;border-radius:999px;border:1px solid var(--line2);background:var(--card);font-size:13px;font-weight:600;cursor:pointer}
+.filtro[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.filtro .n{font-weight:500;opacity:.75}
+.lista{list-style:none;margin:10px 0 0;padding:0}
+.prod{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:64px;border-top:1px solid var(--line)}
+.lista li:first-child .prod{border-top:0}
+.prod input[type=checkbox]{width:20px;height:20px;accent-color:var(--ink);flex:none}
+.txt{flex:1;min-width:0}.txt b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.txt span{font-size:13px;color:var(--ink3)}
+.paso{display:flex;align-items:center;gap:6px}
+.paso .v{min-width:36px;text-align:center;font-weight:700;font-size:16px;font-variant-numeric:tabular-nums}
+.ic{width:40px;height:40px;border-radius:12px;border:1px solid var(--line2);background:var(--card);display:grid;place-items:center;font-weight:700;cursor:pointer}
+/* lote de activación */
+.activar{padding:16px;margin-top:14px}
+.activar table{width:100%;border-collapse:collapse;font-size:14px;margin-top:10px}
+.activar th{text-align:left;font-size:12px;font-weight:600;color:var(--ink3);padding:6px 4px;border-bottom:1px solid var(--line)}
+.activar td{padding:8px 4px;border-bottom:1px solid var(--line)}
+.activar input{width:72px;min-height:40px;border-radius:10px;border:1px solid var(--line2);background:var(--card);padding:0 8px;text-align:right}
+.todos{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-top:10px;padding:12px;border-radius:14px;background:var(--bg)}
+.todos label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--ink2)}
+/* hojas */
+.hoja{padding:18px;margin-top:16px;max-width:480px}
+.op{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--line2);border-radius:14px;margin-top:8px;cursor:pointer}
+.op input{width:20px;height:20px;accent-color:var(--ink);margin-top:2px;flex:none}
+.op b{display:block}.op span{font-size:13px;color:var(--ink2)}
+.op.sel{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.motivos{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.nota{font-size:12px;color:var(--ink3);margin-top:24px;text-align:center}
+.afecta{margin:10px 0 0;padding:0;list-style:none;border:1px solid var(--line);border-radius:12px}
+.afecta li{padding:10px 12px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:8px}
+.afecta li:first-child{border-top:0}
+.pie{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.pie .btn-primary{flex:1}
+</style>
+</head>
+<body>
+<div class="demo" role="toolbar" aria-label="Controles de la maqueta">
+  <strong>Maqueta · Inventario (1.10)</strong>
+  <button data-v="inv" aria-pressed="true">Inventario</button>
+  <button data-v="agotar" aria-pressed="false">Agotar</button>
+  <button data-v="ajustar" aria-pressed="false">Ajustar</button>
+  <button data-v="ingrediente" aria-pressed="false">Ingrediente</button>
+  <button data-w="390" aria-pressed="true">Móvil 390</button>
+  <button data-w="1280" aria-pressed="false">Escritorio</button>
+  <button id="tema" aria-pressed="false">Oscuro</button>
+</div>
+<div class="stage" id="stage" data-w="390"><div class="app">
+
+<!-- ═════ INVENTARIO ═════ -->
+<section id="v-inv">
+  <div class="head"><div><h1>Inventario</h1><p class="sub">Existencias de los platillos que cuentas</p></div></div>
+
+  <div class="card cob">
+    <div class="fila"><span class="big">12 de 39</span><span>platillos con control de existencias</span></div>
+    <div class="barra-cob" aria-hidden="true"><i style="width:31%"></i></div>
+    <p style="margin:10px 0 0;font-size:13px;color:var(--ink2)">Los otros 27 se venden sin límite: no sabemos cuántos quedan.</p>
+  </div>
+
+  <div class="card revisar">
+    <h2>Por revisar hoy <span class="chip c-warn">4</span></h2>
+    <ul class="rv">
+      <li><div class="t"><b>Ravioles de queso</b><span>Sin existencias · vuelve al reponer</span></div><button class="btn btn-sec btn-sm">Reponer</button></li>
+      <li><div class="t"><b>Horchata</b><span>Agotado a mano · vuelve mañana a las 05:00</span></div><span class="chip c-warn">Agotado</span></li>
+      <li><div class="t"><b>Guacamole · Tacos al pastor</b><span>Se acabó el aguacate · 2 platillos fuera</span></div><button class="btn btn-sec btn-sm">Ya hay</button></li>
+      <li><div class="t"><b>Pepián de pollo</b><span>Quedan 3 · mínimo 5</span></div><span class="chip c-warn">Bajo mínimo</span></li>
+    </ul>
+  </div>
+
+  <div class="barra"><div class="buscar">Buscar platillo…</div><button class="btn btn-sec" id="b-activar">Activar control…</button></div>
+  <div class="filtros" role="group" aria-label="Filtros">
+    <button class="filtro" aria-pressed="false">Sin control <span class="n">27</span></button>
+    <button class="filtro" aria-pressed="false">Con control <span class="n">12</span></button>
+    <button class="filtro" aria-pressed="true">Bajo mínimo <span class="n">1</span></button>
+    <button class="filtro" aria-pressed="false">Agotado <span class="n">4</span></button>
+  </div>
+
+  <div class="card"><ul class="lista">
+    <li><div class="prod"><div class="txt"><b>Pepián de pollo</b><span><span class="chip c-warn">Bajo mínimo</span> mínimo 5</span></div>
+      <div class="paso"><button class="ic" aria-label="Restar">−</button><span class="v">3</span><button class="ic" aria-label="Sumar">+</button><button class="btn btn-quiet btn-sm">Historial</button></div></div></li>
+  </ul></div>
+
+  <!-- Activar control en lote -->
+  <div class="card activar oculto" id="activar">
+    <div class="head"><h2>Activar control · Bebidas</h2><span class="chip">Vista previa</span></div>
+    <div class="todos">
+      <label>Existencias para todos<input value="24" class="num" aria-label="Existencias para todos"></label>
+      <label>Avisar al llegar a<input value="6" class="num" aria-label="Mínimo para todos"></label>
+      <button class="btn btn-sec btn-sm">Aplicar a las filas</button>
+    </div>
+    <table><thead><tr><th>Platillo</th><th style="text-align:right">Existencias</th><th style="text-align:right">Mínimo</th></tr></thead>
+      <tbody>
+        <tr><td>Limonada con hierbabuena</td><td style="text-align:right"><input value="24" class="num" aria-label="Existencias Limonada"></td><td style="text-align:right"><input value="6" class="num" aria-label="Mínimo Limonada"></td></tr>
+        <tr><td>Horchata</td><td style="text-align:right"><input value="0" class="num" aria-label="Existencias Horchata"></td><td style="text-align:right"><input value="6" class="num" aria-label="Mínimo Horchata"></td></tr>
+        <tr><td>Agua pura</td><td style="text-align:right"><input value="48" class="num" aria-label="Existencias Agua"></td><td style="text-align:right"><input value="12" class="num" aria-label="Mínimo Agua"></td></tr>
+      </tbody></table>
+    <p style="font-size:13px;color:var(--ink2);margin:10px 0 0"><b>Horchata</b> empieza en 0: queda agotada hasta reponer. Se activan los 3 juntos o ninguno.</p>
+    <div class="pie"><button class="btn btn-primary">Activar 3 platillos</button><button class="btn btn-quiet" id="cerrar-activar">Cancelar</button></div>
+  </div>
+</section>
+
+<!-- ═════ AGOTAR ═════ -->
+<section id="v-agotar" class="oculto">
+  <div class="card hoja" role="dialog" aria-labelledby="t-agotar">
+    <h2 id="t-agotar">Agotar «Horchata»</h2>
+    <p class="sub" style="font-size:13px">Se ve en el menú pero no se puede pedir. ¿Hasta cuándo?</p>
+    <label class="op sel"><input type="radio" name="hasta" checked><div><b>Hasta mañana</b><span>Vuelve mañana a las 05:00, al empezar el día.</span></div></label>
+    <label class="op"><input type="radio" name="hasta"><div><b>Hasta reponer</b><span>Vuelve cuando registres existencias o lo marques disponible.</span></div></label>
+    <label class="op"><input type="radio" name="hasta"><div><b>Hasta que lo active</b><span>No vuelve solo.</span></div></label>
+    <div class="pie"><button class="btn btn-primary">Agotar hasta mañana</button><button class="btn btn-quiet">Cancelar</button></div>
+  </div>
+  <p class="nota">La misma hoja sale en Catálogo, en la ficha del platillo, en «Agotar» del lote y en Servicio (el 86).</p>
+</section>
+
+<!-- ═════ AJUSTAR ═════ -->
+<section id="v-ajustar" class="oculto">
+  <div class="card hoja" role="dialog" aria-labelledby="t-ajustar">
+    <h2 id="t-ajustar">Pepián de pollo · quedan 3</h2>
+    <div class="paso" style="margin-top:12px"><button class="ic" aria-label="Restar">−</button><span class="v">−2</span><button class="ic" aria-label="Sumar">+</button><span style="margin-left:8px;color:var(--ink2)">quedarían <b class="num">1</b></span></div>
+    <p style="margin:14px 0 0;font-weight:600">¿Por qué?</p>
+    <div class="motivos">
+      <button class="filtro" aria-pressed="true">Merma</button><button class="filtro" aria-pressed="false">Conteo físico</button><button class="filtro" aria-pressed="false">Corrección</button><button class="filtro" aria-pressed="false">Consumo del personal</button><button class="filtro" aria-pressed="false">Otro</button>
+    </div>
+    <div class="buscar" style="margin-top:10px">Nota (opcional): se quemó una olla</div>
+    <div class="pie"><button class="btn btn-primary">Restar 2 · Merma</button><button class="btn btn-quiet">Cancelar</button></div>
+    <p style="font-size:12px;color:var(--ink3);margin:10px 0 0">Queda en el historial con tu nombre y la hora.</p>
+  </div>
+</section>
+
+<!-- ═════ INGREDIENTE ═════ -->
+<section id="v-ingrediente" class="oculto">
+  <div class="card hoja" role="dialog" aria-labelledby="t-ing">
+    <h2 id="t-ing">¿Se acabó el aguacate?</h2>
+    <p class="sub" style="font-size:13px">Estos platillos lo llevan en su receta y quedarán agotados hasta que digas «Ya hay»:</p>
+    <ul class="afecta"><li><span>Guacamole</span><span class="chip">Entradas</span></li><li><span>Tacos al pastor</span><span class="chip">Platos fuertes</span></li><li><span>Ensalada César</span><span class="chip c-warn">Ya agotado</span></li></ul>
+    <div class="pie"><button class="btn btn-danger" style="flex:1">Agotar 2 platillos</button><button class="btn btn-quiet">Cancelar</button></div>
+    <p style="font-size:12px;color:var(--ink3);margin:10px 0 0">Al decir «Ya hay» vuelven los dos, salvo que les falte otro ingrediente o los hayas agotado aparte.</p>
+  </div>
+</section>
+
+<p class="nota">Datos ficticios · toca «Activar control…» para ver la vista previa</p>
+</div></div>
+<script>
+const vistas=['inv','agotar','ajustar','ingrediente'];
+document.querySelectorAll('.demo [data-v]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.demo [data-v]').forEach(x=>x.setAttribute('aria-pressed',x===b));vistas.forEach(v=>document.getElementById('v-'+v).classList.toggle('oculto',v!==b.dataset.v));});
+document.querySelectorAll('.demo [data-w]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.demo [data-w]').forEach(x=>x.setAttribute('aria-pressed',x===b));document.getElementById('stage').dataset.w=b.dataset.w;});
+document.getElementById('tema').onclick=e=>{const o=document.documentElement.dataset.theme!=='dark';document.documentElement.dataset.theme=o?'dark':'light';e.target.setAttribute('aria-pressed',o);};
+document.getElementById('b-activar').onclick=()=>document.getElementById('activar').classList.remove('oculto');
+document.getElementById('cerrar-activar').onclick=()=>document.getElementById('activar').classList.add('oculto');
+document.querySelectorAll('.op input').forEach(r=>r.onchange=()=>{document.querySelectorAll('.op').forEach(o=>o.classList.toggle('sel',o.contains(r)&&r.checked));const t=r.closest('.op').querySelector('b').textContent;document.querySelector('#v-agotar .btn-primary').textContent='Agotar '+t.toLowerCase();});
+document.querySelectorAll('.motivos .filtro').forEach(f=>f.onclick=()=>{document.querySelectorAll('.motivos .filtro').forEach(x=>x.setAttribute('aria-pressed',x===f));document.querySelector('#v-ajustar .btn-primary').textContent='Restar 2 · '+f.textContent;});
+</script>
+</body>
+</html>
