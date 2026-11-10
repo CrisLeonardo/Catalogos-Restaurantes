@@ -124,6 +124,10 @@ test('1.4 · conserva puestos, borradores y la guarnición al recuperar un enví
     // Desde la 1.10 el segundo toque dice hasta cuándo; la primera es la omisión.
     await agotado.getByRole('group', { name: 'Agotar: hasta cuándo' }).getByRole('button', { name: 'Hasta mañana' }).click();
     await expect(puesto(2)).toBeDisabled();
+    // El botón se deshabilita al instante (optimista); recargar antes de que
+    // el servidor confirme dejaba el agotado sin guardar y la prueba fallaba
+    // a veces. Se espera el aviso que solo sale con la respuesta.
+    await expect(page.getByText('Limonada · agotado hasta mañana', { exact: true })).toBeVisible();
     await abrirCarta();
     await expect(puesto(2)).toHaveAccessibleName('Puesto 2 · Limonada · Agotado');
     await expect(puesto(3)).toHaveAccessibleName('Puesto 3 · Pollo a la plancha');
