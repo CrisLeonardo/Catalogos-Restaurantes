@@ -117,7 +117,10 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
   const [porConfirmar, setPorConfirmar] = useState<Pendientes | null>(null);
 
   useEffect(() => {
-    if (!aviso) return;
+    /* Solo se van solos los avisos buenos. Un error de dinero —«este turno
+       ya se cerró», «no se pudo cerrar»— se queda hasta la siguiente acción:
+       a los 4,5 s el cajero podía no haberlo leído (auditoría 0.10). */
+    if (!aviso || aviso.bad) return;
     const t = setTimeout(() => setAviso(null), 4500);
     return () => clearTimeout(t);
   }, [aviso]);
@@ -478,6 +481,8 @@ function AbrirTurno({ restaurantId, shift, cobradoEnEfectivo, desde, onAviso }: 
         <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
           Ábrelo con el fondo que hay en el cajón: queda escrito quién lo abrió y con cuánto, y el cierre
           ya no lo puede cambiar.
+          {/* Decisión del dueño (2026-11-04): cerrar sin abrir se permite, pero se dice y se marca. */}
+          {' '}Si lo cierras sin abrirlo, el corte quedará marcado «sin apertura» y el fondo será el que declares al cerrar.
           {cobradoEnEfectivo > 0 && ` Ya van ${money(cobradoEnEfectivo)} cobrados en efectivo ${desde}.`}
         </p>
       </div>

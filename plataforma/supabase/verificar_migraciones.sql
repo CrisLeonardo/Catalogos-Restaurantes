@@ -177,6 +177,9 @@ huellas(n, que, ok, cuando) as (values
   ('157', 'pedido, cupón y puntos en una sola operación (leogin_crear_pedido)',
      to_regprocedure('public.leogin_crear_pedido(uuid,text,text,text,text,text,double precision,double precision,uuid,numeric,numeric,numeric,text,jsonb,text,numeric,numeric,uuid,uuid,numeric,uuid,uuid[])') is not null,
      'ANTES de desplegar'),
+  ('158', 'un solo corte de caja por periodo (índice cash_counts_un_corte_por_periodo)',
+     exists (select 1 from pg_indexes where indexname = 'cash_counts_un_corte_por_periodo'),
+     'ANTES de desplegar (o a la vez); si dice NO, hay cortes repetidos que revisar a mano'),
   ('159', 'compras: creación atómica (leogin_crear_compra) y estados que no retroceden',
      to_regprocedure('public.leogin_crear_compra(uuid,uuid,text,jsonb)') is not null
      and exists (select 1 from pg_trigger where tgname = 'candado_estado_compra'),
