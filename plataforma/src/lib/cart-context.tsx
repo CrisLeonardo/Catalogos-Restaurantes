@@ -22,9 +22,30 @@ export function buildLineId(productId: string, options?: CartItemOption[], rewar
   return `${productId}__${sig}`;
 }
 
+/**
+ * «Cambiar» una línea del carrito (auditoría 1.11, M04): la reemplaza en su
+ * lugar con las opciones nuevas, sin borrarla ni rearmarla. Si con el cambio
+ * queda igual a otra línea, se juntan (es el mismo platillo).
+ */
+export function reemplazarLinea(
+  prev: readonly CartItem[], lineId: string, item: Omit<CartItem, 'quantity' | 'lineId'>, quantity: number,
+): CartItem[] {
+  const nuevo = buildLineId(item.productId, item.options, item.rewardId);
+  const i = prev.findIndex((x) => x.lineId === lineId);
+  const q = Math.max(1, Math.trunc(quantity) || 1);
+  if (i < 0) return [...prev, { ...item, lineId: nuevo, quantity: q }];
+  const igual = prev.findIndex((x, j) => j !== i && x.lineId === nuevo);
+  if (igual >= 0) {
+    return prev.filter((_, j) => j !== i).map((x) => (x.lineId === nuevo ? { ...x, quantity: x.quantity + q } : x));
+  }
+  return prev.map((x, j) => (j === i ? { ...item, lineId: nuevo, quantity: q } : x));
+}
+
 interface CartContextValue {
   items: CartItem[];
   addItem: (item: Omit<CartItem, 'quantity' | 'lineId'>, quantity?: number) => void;
+  /** Cambia una línea en su lugar (opciones y cantidad). */
+  replaceItem: (lineId: string, item: Omit<CartItem, 'quantity' | 'lineId'>, quantity: number) => void;
   removeItem: (lineId: string) => void;
   updateQuantity: (lineId: string, quantity: number) => void;
   clearCart: () => void;
@@ -120,6 +141,11 @@ export function CartProvider({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
+  const replaceItem = useCallback((lineId: string, item: Omit<CartItem, 'quantity' | 'lineId'>, quantity: number) => {
+    setItems((prev) => save(reemplazarLinea(prev, lineId, item, quantity)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
   const removeItem = useCallback((lineId: string) => {
     setItems((prev) => save(prev.filter((i) => i.lineId !== lineId)));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -156,7 +182,7 @@ export function CartProvider({
 
   return (
     <CartContext.Provider
-      value={{ items, addItem, removeItem, updateQuantity, clearCart, total, count, qtyOfProduct, pointsToRedeem, hasRewards }}
+      value={{ items, addItem, replaceItem, removeItem, updateQuantity, clearCart, total, count, qtyOfProduct, pointsToRedeem, hasRewards }}
     >
       {children}
     </CartContext.Provider>

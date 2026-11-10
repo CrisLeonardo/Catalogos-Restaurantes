@@ -1,8 +1,18 @@
 'use client';
 
 /* Detalle de producto en bottom-sheet. Arte (foto o BrandPattern), tags,
-   tiempo de preparación, grupos de opciones (variantes/extras), stepper y
-   botón agregar. El precio del botón refleja base + opciones en vivo. */
+   grupos de opciones (variantes/extras), stepper y botón agregar. El precio
+   del botón refleja base + opciones en vivo.
+
+   Auditoría 1.11 (M03, M04, M08, D04, D08):
+     · Lo obligatorio sin predeterminada empieza vacío; la predeterminada del
+       restaurante viene puesta y lo dice. Se respeta el mínimo.
+     · El botón dice qué falta («Elige término») en vez de aclararse.
+     · Cada grupo es un grupo de radios o de casillas para el lector.
+     · Sin alérgenos indicados, se dice; nunca parece «no contiene».
+     · Con `linea`, la ficha cambia esa línea del carrito («Cambiar»).
+     · Sin las tarjetas fijas «8–12 min» / «Recién hecho» (decisión del
+       dueño, 2026-11-09): eran iguales para todo y nadie las midió. */
 
 import AssetImage from '@/components/asset-image';
 import { PRODUCT_ART_SIZES } from '@/lib/asset-image';
@@ -19,24 +29,12 @@ import { edicionPermitePedir, fechaCorta } from '@/lib/vitrina/edicion';
 import { DIETARY_TAG_MAP } from '@/lib/dietary-tags';
 import { useLocale, useLocalized } from '@/lib/locale/context';
 import { Acompanantes, type Sugerencia } from '@/components/menu/pairings';
-import type { CartItemOption, Product, ProductOptionGroup } from '@/types';
+import type { CartItem, CartItemOption, Product, ProductOptionGroup } from '@/types';
+import {
+  cabeOtra, grupoEsObligatorio, grupoPendiente, reglaDeGrupo, seleccionDeLinea, seleccionInicial, textoPendiente, variantesDeLinea,
+} from '@/lib/menu/opciones';
 
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'>;
-
-/** Selección inicial: single requeridos arrancan con su primera opción; combo arranca con todas. */
-function initialSelection(groups: ProductOptionGroup[]): Record<string, string[]> {
-  const sel: Record<string, string[]> = {};
-  for (const g of groups) {
-    if (g.type === 'combo') {
-      sel[g.id] = g.choices.map((c) => c.id);
-    } else if (g.type === 'single' && g.required && g.choices.length > 0) {
-      sel[g.id] = [g.choices[0].id];
-    } else {
-      sel[g.id] = [];
-    }
-  }
-  return sel;
-}
 
 /** Variante inicial de cada componente con variantes: la primera. El precio
     SIEMPRE usó la primera como fallback — sin esto, la píldora no se veía
@@ -52,7 +50,7 @@ function initialVariants(groups: ProductOptionGroup[]): Record<string, string> {
 }
 
 export default function ProductSheet({
-  product, icon, ordersEnabled, onClose, acompanantes = [],
+  product, icon, ordersEnabled, onClose, acompanantes = [], linea, onGuardado,
 }: {
   product: ProdItem;
   icon: string;
@@ -60,14 +58,17 @@ export default function ProductSheet({
   onClose: () => void;
   /** «Acompáñalo con…» (CAT-13): se suman al carrito al pulsar «Agregar». */
   acompanantes?: Sugerencia[];
+  /** «Cambiar» desde el carrito (1.11, M04): esta línea se reemplaza en su lugar. */
+  linea?: CartItem;
+  onGuardado?: () => void;
 }) {
   const config = useThemeConfig();
   const content = useThemeContent();
   // Vitrina en lanzamiento: fuera de la edición no se agrega (ver useEdicion).
   const edicion = useEdicion();
   const titleT = useText('heading', 'productTitle');
-  const { addItem } = useCart();
-  const [qty, setQty] = useState(1);
+  const { addItem, replaceItem } = useCart();
+  const [qty, setQty] = useState(linea?.quantity ?? 1);
   const [heroReady, setHeroReady] = useState(false);
   const { locale } = useLocale();
   const name = useLocalized(product.name, product.name_en);
@@ -77,9 +78,14 @@ export default function ProductSheet({
     () => (Array.isArray(product.options) ? product.options.filter((g) => g.choices?.length > 0) : []),
     [product.options],
   );
-  const [selected, setSelected] = useState<Record<string, string[]>>(() => initialSelection(groups));
+  const [selected, setSelected] = useState<Record<string, string[]>>(
+    () => (linea ? seleccionDeLinea(groups, linea.options) : seleccionInicial(groups)),
+  );
   /** choiceId -> variantId elegida (solo choices de combo con variantes). */
-  const [variantSelected, setVariantSelected] = useState<Record<string, string>>(() => initialVariants(groups));
+  const [variantSelected, setVariantSelected] = useState<Record<string, string>>(
+    () => ({ ...initialVariants(groups), ...(linea ? variantesDeLinea(linea.options) : {}) }),
+  );
+  const es = locale !== 'en';
   /** Grupo obligatorio sin responder que hay que señalar. Antes el botón
       "Agregar" simplemente no hacía nada (solo bajaba de opacidad) y el
       comensal se quedaba tocándolo sin saber qué le faltaba. */
@@ -102,7 +108,7 @@ export default function ProductSheet({
         return { ...prev, [group.id]: current.filter((c) => c !== choiceId) };
       }
       // solo multi tiene límite máximo
-      if (group.type === 'multi' && group.max && group.max > 0 && current.length >= group.max) return prev;
+      if (!cabeOtra(group, prev)) return prev;
       return { ...prev, [group.id]: [...current, choiceId] };
     });
     // Al incluir un componente con variantes por primera vez, preselecciona la
@@ -148,9 +154,7 @@ export default function ProductSheet({
       return next;
     });
   }
-  const firstMissing = groups.find(
-    (g) => g.type === 'single' && g.required && (selected[g.id] ?? []).length === 0,
-  ) ?? null;
+  const firstMissing = grupoPendiente(groups, selected);
   const missingRequired = firstMissing !== null;
 
   function add() {
@@ -160,16 +164,20 @@ export default function ProductSheet({
       document.getElementById(`optgrp-${firstMissing.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
-    addItem(
-      {
-        productId: product.id,
-        name: product.name,
-        price: unitPrice,
-        image_url: product.image_url,
-        options: chosenOptions.length > 0 ? chosenOptions : undefined,
-      },
-      qty,
-    );
+    const item = {
+      productId: product.id,
+      name: product.name,
+      price: unitPrice,
+      image_url: product.image_url,
+      options: chosenOptions.length > 0 ? chosenOptions : undefined,
+    };
+    if (linea) {
+      replaceItem(linea.lineId, item, qty);
+      onClose();
+      onGuardado?.();
+      return;
+    }
+    addItem(item, qty);
     for (const a of elegidos) {
       addItem({ productId: a.id, name: a.name, price: a.price, image_url: a.image_url ?? null });
     }
@@ -187,8 +195,13 @@ export default function ProductSheet({
       ) : ordersEnabled ? (
         <>
           <QtyStepper value={qty} size="lg" onMinus={() => setQty(Math.max(1, qty - 1))} onPlus={() => setQty(qty + 1)} />
-          <PrimaryButton size="lg" full onClick={add} style={{ flex: 1, opacity: missingRequired ? 0.55 : 1 }}>
-            {content.product.add} · <span className="t-mono" style={{ fontWeight: 700, color: 'inherit' }}>{formatPrice(unitPrice * qty + extrasTotal, config)}</span>
+          {/* Con algo pendiente el botón lo dice («Elige término») y lleva
+              al grupo; antes sólo se aclaraba (D04). */}
+          <PrimaryButton size="lg" full onClick={add} aria-describedby={firstMissing ? `optgrp-h-${firstMissing.id}` : undefined}
+            style={{ flex: 1, ...(missingRequired ? { background: 'var(--surface-2)', color: 'var(--u-text)', boxShadow: 'inset 0 0 0 1px var(--u-hair-2)' } : {}) }}>
+            {firstMissing
+              ? textoPendiente(firstMissing, selected, es ? 'es' : 'en')
+              : <>{linea ? (es ? 'Guardar cambios' : 'Save changes') : content.product.add} · <span className="t-mono" style={{ fontWeight: 700, color: 'inherit' }}>{formatPrice(unitPrice * qty + (linea ? 0 : extrasTotal), config)}</span></>}
           </PrimaryButton>
         </>
       ) : (
@@ -265,28 +278,28 @@ export default function ProductSheet({
             })}
           </div>
         )}
-        <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
-          {[{ i: 'clock', t: content.product.prepTime }, { i: 'flame', t: content.product.fresh }].map((x, k) => (
-            <div key={k} className="m-surface" style={{ borderRadius: 'var(--m-r-md)', padding: 'var(--m-sp-3)', display: 'flex', alignItems: 'center', gap: 'var(--m-sp-2)', flex: 1 }}>
-              <Icon name={x.i} size={16} style={{ color: 'var(--u-text-2)' }} />
-              <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)', fontWeight: 500 }}>{x.t}</span>
-            </div>
-          ))}
-        </div>
+        {!(product.dietary_tags && product.dietary_tags.some((k) => DIETARY_TAG_MAP[k]?.kind === 'allergen')) && (
+          /* Sin alérgenos indicados no se calla: callar parece «no contiene» (M08). */
+          <p style={{ margin: 0, fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)', padding: '10px 12px', borderRadius: 'var(--m-r-md)', border: '1px dashed var(--u-hair-2)' }}>
+            {es
+              ? 'Alérgenos: el restaurante no los ha indicado. Pregunta antes de pedir.'
+              : 'Allergens: not provided by the restaurant. Ask before ordering.'}
+          </p>
+        )}
 
         {/* ── Variantes / extras / combo ── */}
         {groups.map((group) => {
           const picked = selected[group.id] ?? [];
           const isCombo = group.type === 'combo';
-          const hint = isCombo
-            ? 'Personaliza tu combo'
-            : group.type === 'single'
-              ? group.required ? content.product.chooseOne : content.product.optional
-              : group.max && group.max > 0
-                ? `${content.product.optional} · máx ${group.max}`
-                : content.product.optional;
-          const required = group.type === 'single' && !!group.required;
+          // Los textos del tema («Elige uno», «Opcional») mandan donde existen;
+          // la regla de varios se dice completa: «Elige de 1 a 2» (M03).
+          const hint = group.type === 'single'
+            ? group.required ? content.product.chooseOne : content.product.optional
+            : reglaDeGrupo(group, es ? 'es' : 'en');
+          const required = grupoEsObligatorio(group);
           const missing = missingGroupId === group.id;
+          const tituloId = `optgrp-t-${group.id}`;
+          const reglaId = `optgrp-h-${group.id}`;
           return (
             /* Mismas clases que el modal del mesero (ver .opt-* en globals.css):
                una sola definición del selector de opciones para las dos caras
@@ -294,20 +307,20 @@ export default function ProductSheet({
                no un verde suelto ni una píldora negra. */
             <div key={group.id} id={`optgrp-${group.id}`} className="opt-group" style={{ marginTop: 4 }}>
               <div className="opt-head">
-                <span className="opt-title">{group.name}</span>
-                <span className="opt-hint" data-required={required ? '1' : '0'}>{hint}</span>
+                <span className="opt-title" id={tituloId}>{group.name}</span>
+                <span className="opt-hint" id={reglaId} data-required={required ? '1' : '0'}>{hint}</span>
               </div>
 
               {missing && (
-                <div className="note note-warn" style={{ marginBottom: 10 }}>
+                <div className="note note-warn" role="alert" style={{ marginBottom: 10 }}>
                   <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
-                  {content.product.chooseOne}: {group.name}
+                  {textoPendiente(group, selected, es ? 'es' : 'en')}
                 </div>
               )}
 
               {isCombo ? (
                 /* ── Combo: filas con checkmark, precio visible como ahorro al quitar ── */
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                <div role="group" aria-labelledby={tituloId} aria-describedby={reglaId} style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                   {group.choices.map((choice) => {
                     const included = picked.includes(choice.id);
                     const delta = Number(choice.priceDelta) || 0;
@@ -317,7 +330,8 @@ export default function ProductSheet({
                           type="button"
                           onClick={() => toggleChoice(group, choice.id)}
                           className="press opt-row"
-                          aria-pressed={included}
+                          role="checkbox"
+                          aria-checked={included}
                         >
                           <span className="opt-check">
                             {included && <Icon name="check" size={12} strokeWidth={3} />}
@@ -362,22 +376,28 @@ export default function ProductSheet({
                 </div>
               ) : (
                 /* ── Single / Multi: píldoras ── */
-                <div className="opt-pills">
+                <div className="opt-pills" role={group.type === 'single' ? 'radiogroup' : 'group'} aria-labelledby={tituloId} aria-describedby={reglaId}>
                   {group.choices.map((choice) => {
                     const on = picked.includes(choice.id);
                     const delta = Number(choice.priceDelta) || 0;
+                    const predeterminada = group.type === 'single' && group.defaultChoiceId === choice.id;
                     return (
                       <button
                         key={choice.id}
                         type="button"
                         onClick={() => toggleChoice(group, choice.id)}
                         className="press opt-pill"
-                        aria-pressed={on}
+                        role={group.type === 'single' ? 'radio' : 'checkbox'}
+                        aria-checked={on}
                       >
                         {on && <Icon name="check" size={13} strokeWidth={3} />}
                         {choice.name}
+                        {/* Con espacio: el lector oía «Papas· predeterminada» y «Tocino+Q10.00». */}
+                        {predeterminada && (
+                          <span style={{ fontSize: '0.85em', fontWeight: 500, opacity: 0.85 }}>{' '}· {es ? 'predeterminada' : 'default'}</span>
+                        )}
                         {delta !== 0 && (
-                          <span className="opt-delta">
+                          <span className="opt-delta">{' '}
                             {delta > 0 ? '+' : '−'}{formatPrice(Math.abs(delta), config)}
                           </span>
                         )}
@@ -390,7 +410,7 @@ export default function ProductSheet({
           );
         })}
 
-        {ordersEnabled && (
+        {ordersEnabled && !linea && (
           <Acompanantes
             items={acompanantes}
             elegidos={extras}

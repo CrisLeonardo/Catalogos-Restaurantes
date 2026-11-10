@@ -26,7 +26,7 @@ import { volarAlCarrito } from '@/lib/volar-al-carrito';
 import { isVitrina } from '@/lib/theme/defaults';
 import { sugerirAcompanantes } from '@/lib/menu-pairings';
 import type { Sugerencia } from '@/components/menu/pairings';
-import type { Category, Product } from '@/types';
+import type { CartItem, Category, Product } from '@/types';
 import type { MenuReward } from '@/components/menu/rewards-section';
 
 /* Pantallas que solo existen cuando el comensal las abre (Mi cuenta, Mis
@@ -93,6 +93,8 @@ export default function MenuClient({
 }: Props) {
   const { items, addItem, qtyOfProduct } = useCart();
   const [selected, setSelected] = useState<ProdItem | null>(null);
+  /** «Cambiar» desde el carrito (1.11, M04): la línea que se está corrigiendo. */
+  const [editando, setEditando] = useState<CartItem | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [rewardsOpen, setRewardsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -288,12 +290,17 @@ export default function MenuClient({
 
       {selected && (
         <ProductSheet
-          key={selected.id}
+          key={editando ? `${selected.id}:${editando.lineId}` : selected.id}
           product={selected}
           icon={selected.icon || catIcon.get(selected.category_id ?? '') || 'utensils'}
           ordersEnabled={ordersEnabled}
-          acompanantes={sheetPairings}
-          onClose={() => setSelected(null)}
+          acompanantes={editando ? [] : sheetPairings}
+          linea={editando ?? undefined}
+          onClose={() => {
+            setSelected(null);
+            // Al cambiar una línea, se vuelve al carrito (guardando o no).
+            if (editando) { setEditando(null); setCartOpen(true); }
+          }}
         />
       )}
 
@@ -315,6 +322,13 @@ export default function MenuClient({
         <CartPanel
           sugerencias={cartPairings}
           onClose={() => setCartOpen(false)}
+          onEditar={(item) => {
+            const producto = products.find((p) => p.id === item.productId);
+            if (!producto) return;
+            setCartOpen(false);
+            setEditando(item);
+            setSelected(producto);
+          }}
           onPedirDemo={demo ? () => { setCartOpen(false); setDemoOpen(true); } : undefined}
         />
       )}

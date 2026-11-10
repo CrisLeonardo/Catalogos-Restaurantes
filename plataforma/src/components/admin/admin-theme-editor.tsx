@@ -677,8 +677,6 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               ['product', 'Producto', [
                 ['add', 'Botón "Agregar"'],
                 ['soldOut', 'Agotado'],
-                ['prepTime', 'Tiempo de preparación'],
-                ['fresh', 'Etiqueta "recién hecho"'],
                 ['chooseOne', 'Opción obligatoria'],
                 ['optional', 'Opción opcional'],
               ]],

@@ -17,7 +17,7 @@
    plantillas compartían un único esqueleto y se sentían primas entre sí:
    cambiaban de ropa, no de cuerpo. */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import AssetImage from '@/components/asset-image';
 import { FEATURED_ART_SIZES, PRODUCT_ART_SIZES } from '@/lib/asset-image';
 import { Icon, ICON_PATHS } from '@/components/icons';
@@ -35,7 +35,7 @@ import { useScreenTier } from '@/lib/theme/use-screen-tier';
 import { isOpenNow, nextOpenLabel, hasAnyHours, todayWindowLabel, type WeeklyHours } from '@/lib/hours';
 import { DIETARY_TAG_MAP } from '@/lib/dietary-tags';
 import { useLocale, useLocalized } from '@/lib/locale/context';
-import { isUnavailable } from '@/lib/product-availability';
+import { cuandoVuelveTexto, isUnavailable } from '@/lib/product-availability';
 import { esDestacado } from '@/lib/menu-pairings';
 import type { Category, Product } from '@/types';
 import { suggestIcon } from '@/lib/category-icon';
@@ -183,6 +183,27 @@ function pickIcon(icon: string | null | undefined): string {
 
 /** Un bloque de platillos que se dibuja junto. Con navegación por chips hay uno
     solo (sin encabezado); con secciones/acordeón hay uno por categoría. */
+/* Zona del local para decir cuándo vuelve lo agotado (auditoría 1.11). */
+const ZonaCatalogo = createContext('America/Guatemala');
+
+/**
+ * El mismo aviso en todas las tarjetas (auditoría 1.11, M02): con palabras,
+ * no sólo tachado, y diciendo cuándo vuelve lo agotado «hasta mañana».
+ * Fuera de horario es otra cosa: «No disponible ahora».
+ */
+function useAvisoNoDisponible(p: ProdItem, forceUnavailable: boolean): string | null {
+  const content = useThemeContent();
+  const zona = useContext(ZonaCatalogo);
+  const { locale } = useLocale();
+  if (isUnavailable(p)) {
+    if (p.vuelve_at && locale !== 'en') {
+      return `${content.product.soldOut} · vuelve ${cuandoVuelveTexto(p.vuelve_at, zona).replace(/ a las .*$/, '')}`;
+    }
+    return content.product.soldOut;
+  }
+  return forceUnavailable ? (locale === 'en' ? 'Not available now' : 'No disponible ahora') : null;
+}
+
 interface Group {
   key: string;
   cat: CatItem | null;
@@ -307,6 +328,18 @@ export default function Catalog({
           locked: catAvail.get(c.id) === false,
         }))
         .filter((g) => g.items.length > 0);
+      /* Lo que no tiene categoría (o la perdió) también se ve: va al final
+         como «Otros» (auditoría 1.11, R09). Antes desaparecía de la carta. */
+      const conCategoria = new Set(categories.map((c) => c.id));
+      const sueltos = searched.filter((p) => !p.category_id || !conCategoria.has(p.category_id));
+      if (sueltos.length > 0) {
+        withItems.push({
+          key: '_otros',
+          cat: { id: '_otros', name: 'Otros', name_en: 'Other', icon: null } as CatItem,
+          items: sueltos,
+          locked: false,
+        });
+      }
       const isSection = nav === 'secciones' || nav === 'acordeon';
       return isSection
         ? [...withItems.filter((g) => !g.locked), ...withItems.filter((g) => g.locked)]
@@ -444,6 +477,7 @@ export default function Catalog({
   };
 
   return (
+    <ZonaCatalogo.Provider value={timezone}>
     <div ref={rootRef}>
       {/* Vitrina: ni «El menú», ni buscador, ni píldoras. La carta empieza con
           su primer rótulo de cartel (o con «La alineación» en lanzamiento);
@@ -691,6 +725,7 @@ export default function Catalog({
         </div>
       )}
     </div>
+    </ZonaCatalogo.Provider>
   );
 }
 
@@ -1303,6 +1338,7 @@ function ProductTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, on
   const config = useThemeConfig();
   const name = useLocalized(p.name, p.name_en);
   const unavail = forceUnavailable || isUnavailable(p);
+  const aviso = useAvisoNoDisponible(p, forceUnavailable);
   return (
     <MenuSurface className="m-tile" unavailable={unavail} onClick={() => onOpen(p)} ariaLabel={`Ver ${name}`}>
       <div className="m-tile-art" style={{ aspectRatio: '1.25' }}>
@@ -1314,7 +1350,7 @@ function ProductTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, on
         )}
         <StockLeftBadge p={p} hidden={unavail} />
         {unavail && (
-          <div className="m-art-corner"><span className="m-badge">No disponible</span></div>
+          <div className="m-art-corner"><span className="m-badge">{aviso}</span></div>
         )}
       </div>
       <div className="m-tile-body">
@@ -1344,6 +1380,7 @@ function MosaicTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
   const name = useLocalized(p.name, p.name_en);
   const description = useLocalized(p.description ?? '', p.description_en);
   const unavail = forceUnavailable || isUnavailable(p);
+  const aviso = useAvisoNoDisponible(p, forceUnavailable);
   const ratio = mosaicRatio(p);
   return (
     <MenuSurface className="m-tile" unavailable={unavail} onClick={() => onOpen(p)} ariaLabel={`Ver ${name}`}>
@@ -1354,7 +1391,7 @@ function MosaicTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
         )}
         <StockLeftBadge p={p} hidden={unavail} />
         {unavail && (
-          <div className="m-art-corner"><span className="m-badge">No disponible</span></div>
+          <div className="m-art-corner"><span className="m-badge">{aviso}</span></div>
         )}
       </div>
       <div className="m-tile-body">
@@ -1387,6 +1424,7 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, w
   const name = useLocalized(p.name, p.name_en);
   const description = useLocalized(p.description ?? '', p.description_en);
   const unavail = forceUnavailable || isUnavailable(p);
+  const aviso = useAvisoNoDisponible(p, forceUnavailable);
   const wideFeat = width !== 'movil';
   return (
     <MenuSurface
@@ -1427,6 +1465,9 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, w
             >
               {name}
             </div>
+            {aviso && (
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.6)', marginTop: 3 }}>{aviso}</div>
+            )}
             {description && (
               <div className="line-clamp-2" style={{ fontSize: (wideFeat ? 13.5 : 12) * roleSize(config, 'productDesc'), color: 'rgba(255,255,255,0.85)', marginTop: 3, lineHeight: 1.4, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
                 {description}
@@ -1459,6 +1500,7 @@ function PiezaTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAd
   // Agotado de verdad (sello) ≠ fuera de horario (la sección entera espera).
   const soldOut = isUnavailable(p);
   const unavail = forceUnavailable || soldOut;
+  const aviso = useAvisoNoDisponible(p, forceUnavailable);
   const left = unavail ? null : stockLeftOf(p, config);
   const two = (n: number) => String(n).padStart(2, '0');
   const { items, updateQuantity } = useCart();
@@ -1515,7 +1557,7 @@ function PiezaTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAd
         <PrecioCartel amount={displayPrice(p)} muted={unavail} />
         {ordersEnabled && (
           soldOut ? (
-            <span className="m-pieza-cta" data-off="1">{content.product.soldOut}</span>
+            <span className="m-pieza-cta" data-off="1">{aviso ?? content.product.soldOut}</span>
           ) : fueraDeEdicion ? (
             <span className="m-pieza-cta" data-off="1">
               {edicionVitrina.estado === 'proxima' && edicionVitrina.abre !== null ? `Abre ${fechaCorta(edicionVitrina.abre)}` : 'Edición cerrada'}
@@ -1551,6 +1593,7 @@ function ProductRow({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
   const name = useLocalized(p.name, p.name_en);
   const description = useLocalized(p.description ?? '', p.description_en);
   const unavail = forceUnavailable || isUnavailable(p);
+  const aviso = useAvisoNoDisponible(p, forceUnavailable);
   return (
     <MenuSurface className="m-row" unavailable={unavail} onClick={() => onOpen(p)} ariaLabel={`Ver ${name}`}>
       <div className="m-row-art">
@@ -1559,7 +1602,7 @@ function ProductRow({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
       <div className="m-row-body">
         <div style={{ display: 'flex', gap: 'var(--m-sp-2)', alignItems: 'center', flexWrap: 'wrap' }}>
           <div className={`ct-product-name m-name ${unavail ? 'm-strike' : ''}`}>{name}</div>
-          {unavail && <span className="m-badge m-badge-quiet">No disponible</span>}
+          {unavail && <span className="m-badge m-badge-quiet">{aviso}</span>}
           {config.showTags && !unavail && p.tags?.[0] && <Tag label={p.tags[0]} small />}
           {!unavail && stockLeftOf(p, config) !== null && (
             <span className="m-left-badge" data-inline="1">{stockLeftLabel(stockLeftOf(p, config)!)}</span>
@@ -1583,6 +1626,7 @@ function TextRow({ p, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpe
   const name = useLocalized(p.name, p.name_en);
   const description = useLocalized(p.description ?? '', p.description_en);
   const unavail = forceUnavailable || isUnavailable(p);
+  const aviso = useAvisoNoDisponible(p, forceUnavailable);
   return (
     <div
       role={unavail ? undefined : 'button'}
@@ -1624,7 +1668,7 @@ function TextRow({ p, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpe
           {config.showTags && !unavail && p.tags?.[0] && <Tag label={p.tags[0]} small />}
           {unavail && (
             <span className="m-badge m-badge-quiet">
-              No disponible
+              {aviso}
             </span>
           )}
         </div>

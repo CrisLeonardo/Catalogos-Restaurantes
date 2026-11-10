@@ -2,7 +2,7 @@
 
 Ficha **1.11** del [plan de la auditoría integral](PLAN_AUDITORIA_INTEGRAL_2026-11-04.md). Hallazgos: **E08, N11, F09, F10, D04, D08, M02, M03, M04, M08, PA-T25, PA-T26**, más lo que dejaron pendiente la 1.9 (opción predeterminada, mínimo y «Otros») y la 1.10 (decir cuándo vuelve lo agotado). Rama `feat/comensal`, apilada sobre la 1.10 (`feat/inventario`, PR #106).
 
-> **Estado:** diagnóstico hecho; propuesta y [maqueta](../diseno/MAQUETA_COMENSAL_2026-11-09.html) **pendientes de aprobación**.
+> **Estado:** **implementada** (2026-11-09) en `feat/comensal`, con la [maqueta](../diseno/MAQUETA_COMENSAL_2026-11-09.html) aprobada. Sin migración. Detalle en §6; lo que queda, en §7.
 
 ## 1. Diagnóstico (comprobado en código y en pantalla a 390 px, carta de Rincón 502)
 
@@ -66,13 +66,53 @@ Entrada por QR, checkout y seguimiento (1.12) · lealtad después de pedir (M07,
 
 **No hace falta.** La predeterminada y el mínimo ya se guardan desde la 1.9 (dentro de `options`) y `vuelve_at` ya llega a la carta desde la 1.10.
 
-## 4. Decisiones del dueño (pendientes)
+## 4. Decisiones del dueño (2026-11-09)
 
-1. **Grupo obligatorio sin predeterminada:** empieza vacío y el comensal elige (propuesta), o se sigue marcando la primera opción.
-2. **Tarjetas «8–12 min» y «Recién hecho»:** quitarlas de la ficha (propuesta), o dejarlas.
-3. **Aviso de lealtad:** sigue saliendo en la primera visita, pero sólido y accesible (propuesta), o se deja de mostrar hasta rediseñarlo en la 3.3.
+1. **Un grupo obligatorio sin predeterminada empieza vacío** y el comensal elige.
+2. **Se quitan las tarjetas «8–12 min» y «Recién hecho»** de la ficha y de los editores de tema.
+3. **El aviso de lealtad sigue** en la primera visita, sólido y accesible.
+4. **Maqueta aprobada** tal como se presentó («Aprobada, implementa»).
 
 ## 5. Pruebas previstas
 
 - Unitarias: selección inicial con y sin predeterminada; mínimo y máximo; texto del botón; editar una línea del carrito conserva su lugar y suma bien.
 - Navegador: 390 y 1280 px, claro y oscuro, en las 8 estructuras; teclado (Tab, Escape, foco devuelto) en ficha, carrito y aviso; contraste medido del aviso y del carrito.
+
+## 6. Implementación (2026-11-09)
+
+- `lib/menu/opciones.ts`: reglas puras con sus pruebas:
+  - selección inicial: la predeterminada del restaurante o vacío; los combos empiezan completos;
+  - regla de cada grupo («Elige de 1 a 2», «Opcional · hasta 2»), qué falta y texto del botón;
+  - selección reconstruida desde una línea del carrito.
+- **Ficha** (`menu/product-sheet.tsx`):
+  - lo obligatorio sin predeterminada empieza vacío; la predeterminada dice «· predeterminada»; se respeta el mínimo;
+  - el botón dice «Elige término» o «Elige 1 más en extras» y lleva al grupo pendiente;
+  - cada grupo es `radiogroup` o `group` con su nombre y su regla, y cada opción un `radio` o `checkbox` con `aria-checked`;
+  - sin alérgenos indicados, dice «Alérgenos: el restaurante no los ha indicado. Pregunta antes de pedir.»;
+  - ya no tiene las tarjetas fijas, que también salen de los editores de tema.
+- **Carrito** (`menu/cart.tsx`):
+  - usa `HojaOperativa` (foco, Escape y foco devuelto) sobre la superficie sólida del tema;
+  - cada opción dice lo que suma;
+  - «Cambiar» abre la ficha con lo elegido y «Guardar cambios» reemplaza la línea en su lugar (`replaceItem`/`reemplazarLinea`). Si la línea queda igual a otra, se juntan. Al terminar vuelve al carrito.
+- **Aviso de lealtad**: tarjeta sólida con el fondo y el texto del tema (contraste del párrafo ≈ 8.6:1 en Rincón 502, antes 50 % de opacidad sobre vidrio). Recibe el foco, se cierra con Escape y devuelve el foco. Sigue sin bloquear la carta.
+- **Carta** (`menu/catalog.tsx`):
+  - el mismo aviso en todas las tarjetas: «Agotado · vuelve mañana» con la zona del local, o «No disponible ahora» fuera de horario; antes algunas sólo tachaban;
+  - «Otros» al final de las cartas por secciones o acordeón para lo que no tiene categoría.
+
+**Verificación**
+
+- 1,455 unitarias (7 nuevas), tipos y lint sin errores.
+- Navegador a 390 px con datos «AUD 1.11» (retirados), en Rincón 502 (oscuro) y en Tacos del Norte de prueba (otra paleta oscura):
+  - «Término» vacío y «Papas · predeterminada»;
+  - el botón pasa de «Elige término» a «Elige 1 más en extras» y luego a «Agregar · Q72.00»;
+  - en el carrito, «Cambiar» de Papas a Ensalada en la misma línea;
+  - aviso de lealtad sólido, con foco y Escape;
+  - «Agotado · vuelve mañana»;
+  - «Otros» al cambiar temporalmente la carta a secciones (se devolvió a «chips»).
+- Las pruebas E2E del comensal siguen encontrando el diálogo «Carrito» y su botón «Cerrar».
+
+## 7. Pendientes
+
+- **Revisión completa de temas (PA-T25):** se comprobaron dos paletas oscuras. Faltan las 8 estructuras con una paleta clara, en 1280 px.
+- **Teclado del teléfono abierto (PA-T26):** se comprobará con el checkout en la 1.12.
+- Revalidar el carrito cuando cambia un precio (4.6) y la lealtad después de pedir (3.3).
