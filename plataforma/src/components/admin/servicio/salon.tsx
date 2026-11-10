@@ -38,6 +38,15 @@ export interface SalonProps {
   money: (n: number) => string;
 }
 
+/** La mesa dicha entera, para quien no la ve: la misma frase en el plano y
+    en las fichas, que antes se anunciaban «12 Libre» a secas. */
+function descripcionDeMesa(m: MesaServicio, money: (n: number) => string): string {
+  const estado = m.estado === 'cocina' && m.pagada ? 'Por entregar · Pagada' : ESTADO_LABEL[m.estado];
+  return [`Mesa ${m.n}`, estado, subtituloDeMesa(m), m.saldo > 0 ? `Saldo ${money(m.saldo)}` : null,
+    m.reserva ? `Reserva a las ${m.reserva.hora}` : null]
+    .filter(Boolean).join(' · ');
+}
+
 /* ════════════════════════════════════════════════════════════
    RIEL (tablet y PC)
    ════════════════════════════════════════════════════════════ */
@@ -97,6 +106,7 @@ export function SalonFichas({ mesas, sel, onPick, money }: SalonProps) {
           className="sv-card"
           data-st={m.estado}
           data-on={m.n === sel ? '1' : '0'}
+          aria-label={descripcionDeMesa(m, money)}
           aria-pressed={m.n === sel}
           onClick={() => onPick(m.n)}
         >
@@ -195,12 +205,9 @@ export function SalonPlano({
         renderMesa={(n, geo) => {
           const m = porNumero.get(n);
           if (!m) return null;
-          const estado = m.estado === 'cocina' && m.pagada ? 'Por entregar · Pagada' : ESTADO_LABEL[m.estado];
           const sub = [m.personas ? `${m.personas} p.` : null, m.minutos != null ? fmtMinShort(m.minutos) : null]
             .filter(Boolean).join(' · ');
-          const descripcion = [`Mesa ${m.n}`, estado, subtituloDeMesa(m), m.saldo > 0 ? `Saldo ${money(m.saldo)}` : null,
-            m.reserva ? `Reserva a las ${m.reserva.hora}` : null]
-            .filter(Boolean).join(' · ');
+          const descripcion = descripcionDeMesa(m, money);
           return (
             <button
               type="button"
@@ -244,6 +251,7 @@ export function SalonPlano({
                 className="sv-card"
                 data-st={m.estado}
                 data-on={m.n === sel ? '1' : '0'}
+                aria-label={descripcionDeMesa(m, money)}
                 aria-pressed={m.n === sel}
                 onClick={() => onPick(m.n)}
               >

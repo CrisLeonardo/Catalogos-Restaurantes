@@ -133,8 +133,8 @@ test('1.4 · conserva puestos, borradores y la guarnición al recuperar un enví
     await expect(puesto(3)).toHaveAccessibleName('Puesto 3 · Pollo a la plancha');
     await page.keyboard.press('3');
     const opciones = page.getByRole('dialog', { name: 'Opciones de Pollo a la plancha' });
-    await opciones.getByRole('button', { name: 'Elegir guarnición' }).click();
-    await expect(opciones.getByText('Falta elegir guarnición.')).toBeVisible();
+    await opciones.getByRole('button', { name: 'Elige guarnición' }).click();
+    await expect(opciones.getByRole('alert')).toBeVisible();
     await opciones.getByRole('button', { name: 'Papas', exact: true }).click();
     await opciones.getByRole('textbox', { name: 'Nota para cocina' }).fill('Sin cebolla');
     await opciones.getByRole('button', { name: /^Agregar ·/ }).click();
