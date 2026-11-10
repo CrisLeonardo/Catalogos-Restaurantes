@@ -10,6 +10,7 @@ import { setRestaurantStatusSuper } from '@/lib/actions/super-admin';
 import { fmtMoney } from '@/lib/money';
 import GenerateMonthlyButton from '@/components/super/generate-monthly-button';
 import { contarComprobantesPorRevisar } from '@/lib/db/comprobantes';
+import AvisoLectura from '@/components/admin/aviso-lectura';
 
 export const metadata = { title: 'Cobranza — Super Admin' };
 export const dynamic = 'force-dynamic';
@@ -21,7 +22,8 @@ function periodLabel(period: string): string {
 }
 
 export default async function CobranzaPage() {
-  const [{ rows, stats, period }, porRevisar] = await Promise.all([getBillingDashboard(), contarComprobantesPorRevisar()]);
+  const [{ rows, stats, period }, lecturaPorRevisar] = await Promise.all([getBillingDashboard(), contarComprobantesPorRevisar()]);
+  const porRevisar = lecturaPorRevisar.datos;
 
   // Ordena por urgencia: vencidos → pendientes del mes → con cobro activo → resto.
   const rank = (r: (typeof rows)[number]) => {
@@ -48,6 +50,13 @@ export default async function CobranzaPage() {
         </p>
         <GenerateMonthlyButton />
       </div>
+
+      {/* Si el conteo falló no se calla: puede haber comprobantes esperando. */}
+      <AvisoLectura
+        estado={lecturaPorRevisar.estado === 'error' ? 'error' : 'ok'}
+        que="los comprobantes por revisar"
+        noConcluir="Puede haber pagos esperando revisión."
+      />
 
       {porRevisar > 0 && (
         <Card className="flex flex-wrap items-center justify-between gap-3 p-3.5" style={{ border: '1px solid var(--c-warn-line)' }}>

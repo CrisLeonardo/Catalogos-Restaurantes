@@ -28,27 +28,28 @@ export const STOCK_LEFT_CAP = 50;
 // navegador del comensal (visibles en el payload de red). is_active lo filtra
 // la política RLS `products_select_available`, no hace falta pedirlo.
 export const PUBLIC_PRODUCT_COLUMNS =
-  'id, category_id, name, name_en, description, description_en, price, image_url, icon, tags, dietary_tags, options, is_available, unavailable_at, sort_order';
+  'id, category_id, name, name_en, description, description_en, price, image_url, icon, tags, dietary_tags, options, is_available, unavailable_at, vuelve_at, sort_order';
 
 /**
  * Lo que se le PIDE a la base para el menú público: lo de arriba más el
  * inventario, que se usa aquí dentro y NO sale hacia el navegador.
  *
- * Hace falta porque `place_order` marca un platillo agotado CON hora al
- * llegar a cero de existencias, y el menú lo devuelve solo a las 12 h
- * (lib/product-availability.ts). Sin saber del stock, el comensal volvía a
- * ver con su «+» algo que el servidor iba a rechazar por falta de
- * existencias (auditoría 2026-10-02, CAT-01).
+ * Hace falta porque sin existencias manda sobre cualquier hora de vuelta
+ * (lib/product-availability.ts). Sin saber del stock, el comensal veía con
+ * su «+» algo que el servidor iba a rechazar por falta de existencias
+ * (auditoría 2026-10-02, CAT-01).
  */
 const MENU_QUERY_COLUMNS = `${PUBLIC_PRODUCT_COLUMNS}, track_stock, stock`;
 
 /** Quita el inventario de cada fila y, si no hay existencias, la deja
- *  «agotada sin reloj» (sin `unavailable_at` no vuelve sola). */
+ *  «agotada sin vuelta» (sin `vuelve_at` no vuelve sola). */
 function toPublicProducts(rows: Record<string, unknown>[] | null): Product[] {
   return (rows ?? []).map((row) => {
     const { track_stock, stock, ...p } = row;
     if (isOutOfStock({ track_stock: track_stock as boolean | null, stock: stock as number | null })) {
-      return { ...p, is_available: false, unavailable_at: null } as unknown as Product;
+      // `sin_existencias` dice sólo eso (no cuántas hay): Servicio no ofrece
+      // «Ya hay» en algo que no se arregla sin reponer (auditoría 1.10).
+      return { ...p, is_available: false, unavailable_at: null, vuelve_at: null, sin_existencias: true } as unknown as Product;
     }
     return p as unknown as Product;
   });

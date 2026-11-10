@@ -9,11 +9,11 @@
    cuál es, jamás el token.
    ============================================================ */
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { resolveOwnRestaurantId } from '@/lib/db/membership';
-import { can } from '@/lib/permissions';
+import { puedeEnSeccion } from '@/lib/auth/seccion';
 import { revalidatePath } from 'next/cache';
 import { logActivity } from '@/lib/activity';
 import { encryptToken, isTokenKeyConfigured } from '@/lib/whatsapp/crypto';
@@ -22,7 +22,7 @@ export type WhatsAppState = { error: string } | { ok: true } | null;
 
 async function resolveContext(formData: FormData) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return null;
 
   const { data: profile } = await supabase
@@ -32,14 +32,13 @@ async function resolveContext(formData: FormData) {
     .single();
   if (!profile) return null;
 
-  if (!can(profile.role, profile.permissions as string[] | null, 'whatsapp')) return null;
-
   // La sucursal del grupo manda si administra uno; si no, el suyo (mig. 116).
   const restaurantId = profile.role === 'SUPER_ADMIN'
     ? (formData.get('restaurantId') as string)
     : ((await resolveGroupBranchId()) ?? (await resolveOwnRestaurantId(profile.restaurant_id)));
 
   if (!restaurantId) return null;
+  if (!(await puedeEnSeccion(restaurantId, 'whatsapp'))) return null;
   return { db: createServiceClient(), restaurantId, userId: user.id };
 }
 

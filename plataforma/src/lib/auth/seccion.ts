@@ -1,11 +1,6 @@
 import 'server-only';
 
-import { getStaffUser } from '@/lib/supabase/server';
-import { createServiceClient } from '@/lib/supabase/service';
-import { canActOnGroupBranch } from '@/lib/db/admin';
-import { resolveEffectiveRole } from '@/lib/db/membership';
-import { can } from '@/lib/permissions';
-
+import { actorEn, tiene } from '@/lib/auth/capacidades';
 /* ============================================================
    ¿TIENE ESTA SECCIÓN? — para las acciones del panel (SEC-06)
    ------------------------------------------------------------
@@ -22,23 +17,8 @@ import { can } from '@/lib/permissions';
    ============================================================ */
 
 export async function puedeEnSeccion(restaurantId: string, ...secciones: string[]): Promise<boolean> {
-  const { data: { user } } = await getStaffUser();
-  if (!user) return false;
-
-  const { data: perfil } = await createServiceClient()
-    .from('profiles')
-    .select('role, permissions')
-    .eq('id', user.id)
-    .maybeSingle();
-  if (!perfil) return false;
-  if (perfil.role === 'SUPER_ADMIN') return true;
-  if (await canActOnGroupBranch(restaurantId)) return true;
-
-  const efectivo = await resolveEffectiveRole(
-    { role: (perfil.role as string | null) ?? null, permissions: (perfil.permissions as string[] | null) ?? null },
-    restaurantId,
-  );
-  return secciones.some((s) => can(efectivo.role, efectivo.permissions, s));
+  const actor = await actorEn(restaurantId);
+  return !!actor && tiene(actor, ...secciones);
 }
 
 /** El error de siempre cuando falta la sección. */

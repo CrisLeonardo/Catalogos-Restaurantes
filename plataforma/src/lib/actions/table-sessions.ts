@@ -18,7 +18,7 @@
 
 import { createServiceClient } from '@/lib/supabase/service';
 import { assertTableAccess } from '@/lib/auth/table-access';
-import { hayTurnosDeMesa } from '@/lib/db/table-sessions';
+import { getMesasConfiguradas, hayTurnosDeMesa } from '@/lib/db/table-sessions';
 import { hayColumnaMesa } from '@/lib/db/mesa-columna';
 import { logActivity } from '@/lib/activity';
 import { revalidarSalon } from '@/lib/salon-cache';
@@ -54,6 +54,29 @@ function paxLimpio(v: number | null | undefined): number | null {
   const n = Math.trunc(Number(v));
   if (!Number.isFinite(n) || n < 1) return null;
   return Math.min(n, 100);
+}
+
+export async function sentarDesdeRecepcion(
+  restaurantId: string, mesa: number, origen: string, fuente: 'reservation' | 'waitlist',
+): Promise<SeatResult> {
+  if (!numeroValido(mesa) || !['reservation', 'waitlist'].includes(fuente)) return { error: 'Mesa inválida.' };
+  // Recepción (1.7/1.8): «Lista de espera y reservaciones» o el salón.
+  const acceso = await assertTableAccess(restaurantId, ['lista_espera', 'mesas']);
+  if ('error' in acceso) return acceso;
+  let elegida;
+  try {
+    elegida = (await getMesasConfiguradas(restaurantId)).find(({ n }) => n === mesa);
+  } catch {
+    return { error: 'No se pudo leer la capacidad del salón. Actualiza la recepción.' };
+  }
+  if (!elegida) return { error: 'La mesa ya no está en el salón.' };
+  const { error } = await createServiceClient().rpc('leogin_sentar_desde_recepcion', {
+    p_restaurant: restaurantId, p_mesa: mesa, p_origen: origen,
+    p_fuente: fuente, p_capacidad: elegida.capacidad, p_actor: acceso.actor.userId,
+  });
+  if (error) return { error: error.message };
+  revalidarSalon();
+  return { ok: true };
 }
 
 /* ── Sentar ────────────────────────────────────────────────── */

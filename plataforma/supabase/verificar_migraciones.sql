@@ -157,7 +157,149 @@ huellas(n, que, ok, cuando) as (values
      to_regclass('public.encargo_fechas') is null
      and not exists (select 1 from information_schema.columns
                       where table_schema = 'public' and table_name = 'orders' and column_name = 'transfer_status'),
-     'DESPUÉS de desplegar (o a la vez)')
+     'DESPUÉS de desplegar (o a la vez)'),
+  ('154', 'cupones: «válido hasta» vale el día completo en la zona del local',
+     not exists (select 1 from coupons c join restaurants r on r.id = c.restaurant_id
+                  where c.valid_until is not null
+                    and (c.valid_until at time zone 'UTC')::time = time '00:00:00'
+                    and (((c.valid_until at time zone 'UTC')::date)::timestamp
+                           at time zone coalesce(r.timezone, 'America/Guatemala')) <> c.valid_until),
+     'DESPUÉS de desplegar'),
+  ('155', 'pausa de pedidos con hora de fin (restaurants.orders_paused_until)',
+     exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'restaurants' and column_name = 'orders_paused_until'),
+     'ANTES de desplegar'),
+  ('156', 'receta y orden de categorías atómicos + candados entre restaurantes',
+     to_regprocedure('public.leogin_reemplazar_receta(uuid,uuid,jsonb)') is not null
+     and to_regprocedure('public.leogin_mover_categoria(uuid,uuid,integer)') is not null
+     and exists (select 1 from pg_trigger where tgname = 'candado_receta_mismo_restaurante'),
+     'ANTES de desplegar'),
+  ('157', 'pedido, cupón y puntos en una sola operación (leogin_crear_pedido)',
+     to_regprocedure('public.leogin_crear_pedido(uuid,text,text,text,text,text,double precision,double precision,uuid,numeric,numeric,numeric,text,jsonb,text,numeric,numeric,uuid,uuid,numeric,uuid,uuid[])') is not null,
+     'ANTES de desplegar'),
+  ('158', 'un solo corte de caja por periodo (índice cash_counts_un_corte_por_periodo)',
+     exists (select 1 from pg_indexes where indexname = 'cash_counts_un_corte_por_periodo'),
+     'ANTES de desplegar (o a la vez); si dice NO, hay cortes repetidos que revisar a mano'),
+  ('159', 'compras: creación atómica (leogin_crear_compra) y estados que no retroceden',
+     to_regprocedure('public.leogin_crear_compra(uuid,uuid,text,jsonb)') is not null
+     and exists (select 1 from pg_trigger where tgname = 'candado_estado_compra'),
+     'ANTES de desplegar (o a la vez)'),
+  ('160', 'cobro parcial y cierre de mesa transaccionales',
+     exists (select 1 from information_schema.columns where table_schema='public' and table_name='order_payments' and column_name='item_amounts')
+     and to_regprocedure('public.leogin_cobrar_parte_mesa(uuid,integer,uuid[],jsonb,uuid)') is not null
+     and to_regprocedure('public.leogin_confirmar_cierre_mesa(uuid,integer,uuid[],jsonb,uuid)') is not null,
+     'ANTES de desplegar; después de 001–159'),
+  ('161', 'identidad durable y recuperación del resultado del cobro',
+     to_regclass('public.cobro_intentos') is not null
+     and to_regprocedure('public.leogin_cobrar_parte_mesa_idempotente(uuid,integer,uuid[],jsonb,uuid,uuid)') is not null
+     and to_regprocedure('public.leogin_cerrar_mesa_idempotente(uuid,integer,uuid[],jsonb,uuid,uuid,jsonb)') is not null,
+     'ANTES de desplegar; después de la 160'),
+  ('162', 'segundo factor restrictivo en cobro_intentos',
+     exists (select 1 from pg_policy where polrelid=to_regclass('public.cobro_intentos')
+       and polname='super_admin_segundo_factor' and not polpermissive),
+     'ANTES de desplegar; después de la 161'),
+  ('163', 'cierre sobre el saldo neto de cada pedido',
+     to_regprocedure('public.leogin_cerrar_saldo_mesa(uuid,integer,uuid[],jsonb,uuid,uuid)') is not null,
+     'ANTES de desplegar; después de la 162'),
+  ('164', 'centavos exactos comunes al cobro y a la pantalla por platos',
+     to_regprocedure('public.leogin_cuotas_platos_pedido(uuid,jsonb,jsonb)') is not null
+     and to_regprocedure('public.leogin_saldos_platos_mesa(uuid,integer)') is not null,
+     'ANTES de desplegar; después de la 163'),
+  ('165', 'conserva el total al advertir cuotas no verificables',
+     exists (select 1 from pg_proc where oid=to_regprocedure('public.leogin_saldos_platos_mesa(uuid,integer)')
+       and prosrc like '%avisoCuotas%'),
+     'ANTES de desplegar; después de la 164'),
+  ('166', 'registro y cierre de caja coordinados por revisión',
+     to_regclass('public.caja_control') is not null
+     and to_regprocedure('public.leogin_confirmar_cierre_caja(uuid,bigint,uuid,timestamptz,uuid,jsonb,uuid[],uuid)') is not null
+     and exists(select 1 from pg_trigger where tgname='registro_caja_pago' and not tgisinternal)
+     and exists(select 1 from information_schema.columns where table_schema='public' and table_name='order_payments' and column_name='caja_registrado_en'),
+     'ANTES de desplegar; después de la 165'),
+  ('167', 'ventana de negocio de los registros de caja',
+     exists(select 1 from pg_proc where oid=to_regprocedure('public.leogin_leer_periodo_caja(uuid,timestamptz,timestamptz,timestamptz)')
+       and prosrc like '%g.caja_registrado_en>coalesce(p_gestion_desde%'),
+     'ANTES de desplegar; después de la 166'),
+  ('168', 'inicio del día inclusivo y último corte exclusivo en caja',
+     to_regprocedure('public.leogin_leer_periodo_caja_limites(uuid,timestamptz,timestamptz,timestamptz,boolean)') is not null,
+     'ANTES de desplegar; después de la 167'),
+  ('169', 'abonos y partes de mesa persistentes',
+     exists (select 1 from pg_class c join pg_policy p on p.polrelid=c.oid
+       where c.oid=to_regclass('public.cobro_repartos_mesa') and c.relrowsecurity
+         and p.polname='super_admin_segundo_factor' and not p.polpermissive)
+     and to_regprocedure('public.leogin_contexto_pago_mesa(uuid,integer)') is not null
+     and to_regprocedure('public.leogin_guardar_partes_mesa(uuid,integer,text,uuid,integer)') is not null
+     and to_regprocedure('public.leogin_registrar_abono_mesa(uuid,integer,text,uuid,uuid[],jsonb,uuid,uuid)') is not null
+     and to_regprocedure('public.leogin_cerrar_cuenta_pagada(uuid,integer,text,uuid,uuid)') is not null,
+     'ANTES de desplegar; después de la 168'),
+  ('170', 'identidad de cierre y recibo durable de caja',
+     exists (select 1 from pg_class c join pg_policy p on p.polrelid=c.oid
+       where c.oid=to_regclass('public.caja_recibos') and c.relrowsecurity
+         and p.polname='super_admin_segundo_factor' and not p.polpermissive)
+     and to_regprocedure('public.leogin_recuperar_cierre_caja(uuid,uuid,uuid,jsonb)') is not null
+     and to_regprocedure('public.leogin_confirmar_cierre_caja_con_recibo(uuid,bigint,uuid,timestamptz,uuid,jsonb,uuid[],uuid,uuid,jsonb,jsonb)') is not null,
+     'ANTES de desplegar; después de la 169'),
+  ('171', 'borradores de Caja versionados por periodo',
+     exists (select 1 from pg_class c join pg_policy p on p.polrelid=c.oid
+       where c.oid=to_regclass('public.caja_borradores') and c.relrowsecurity
+         and p.polname='super_admin_segundo_factor' and not p.polpermissive)
+     and to_regprocedure('public.leogin_guardar_borrador_caja(uuid,timestamptz,uuid,uuid,uuid,uuid,text,jsonb)') is not null,
+     'ANTES de desplegar; después de la 170'),
+  ('172', 'traspaso formal entre responsables de Caja',
+     exists (select 1 from pg_class c join pg_policy p on p.polrelid=c.oid
+       where c.oid=to_regclass('public.caja_traspasos') and c.relrowsecurity
+         and p.polname='super_admin_segundo_factor' and not p.polpermissive)
+     and to_regprocedure('public.leogin_receptores_caja(uuid)') is not null
+     and to_regprocedure('public.leogin_solicitar_traspaso_caja(uuid,uuid,uuid,uuid,text)') is not null
+     and to_regprocedure('public.leogin_confirmar_traspaso_caja(uuid,uuid,uuid)') is not null,
+     'ANTES de desplegar; después de la 171'),
+  ('173', 'ciclo operativo de las mesas y protección durante la limpieza',
+     to_regprocedure('public.leogin_transicion_mesa(uuid,integer,uuid,text,text,uuid)') is not null
+     and exists (select 1 from pg_trigger where tgrelid='public.orders'::regclass
+       and tgname='leogin_proteger_mesa_en_limpieza'),
+     'ANTES de desplegar; después de la 172'),
+  ('174', 'preferencias privadas de Servicio por perfil y alias de trabajo',
+     exists (select 1 from pg_class c join pg_policy p on p.polrelid=c.oid
+       where c.oid=to_regclass('public.servicio_preferencias') and c.relrowsecurity
+         and p.polname='super_admin_segundo_factor' and not p.polpermissive),
+     'ANTES de desplegar; después de la 173'),
+  ('175', 'avance de Cocina por renglón, estación y pase',
+     to_regprocedure('public.leogin_transicion_cocina(uuid,uuid,text,uuid,uuid[],timestamptz)') is not null
+     and to_regprocedure('public.leogin_rondas_cocina(uuid,uuid[])') is not null
+     and exists (select 1 from pg_trigger where tgrelid='public.orders'::regclass
+       and tgname='leogin_proteger_pase_cocina'),
+     'ANTES de desplegar; después de la 174'),
+  ('176', 'transiciones recuperables y resumen de cobro y avisos de Pedidos',
+     to_regprocedure('public.leogin_operar_pedido(uuid,uuid,uuid,uuid,text,timestamptz,text,uuid,integer,text,uuid)') is not null
+     and to_regprocedure('public.leogin_resumen_pedidos_vivos(uuid,uuid[])') is not null
+     and to_regclass('public.activity_log_intento_pedido_idx') is not null,
+     'ANTES de desplegar; después de la 175'),
+  ('177', 'permisos por trabajo: capacidades de Caja, sin null en el personal y arqueo ciego',
+     to_regprocedure('public.leogin_permisos_por_trabajo(text,jsonb)') is not null
+     and exists (select 1 from information_schema.columns
+       where table_schema='public' and table_name='restaurants' and column_name='arqueo_ciego')
+     and exists (select 1 from pg_trigger where tgrelid='public.restaurant_members'::regclass
+       and tgname='leogin_miembro_sin_null')
+     and not exists (select 1 from public.restaurant_members
+       where role in ('STAFF','MANAGER') and jsonb_typeof(permissions) is distinct from 'array'),
+     'ANTES de desplegar; después de la 176'),
+  ('178', 'recepción: capacidad por franja, «no asistió» y aviso honesto',
+     to_regprocedure('public.leogin_guardar_reserva(uuid,uuid,text,text,integer,date,time,text,integer,boolean,uuid)') is not null
+     and exists (select 1 from information_schema.columns
+       where table_schema='public' and table_name='waitlist_entries' and column_name='aviso_abierto_at')
+     and exists (select 1 from information_schema.columns
+       where table_schema='public' and table_name='restaurants' and column_name='duracion_reserva_min'),
+     'ANTES de desplegar; después de la 177'),
+  ('179', 'catálogo: lote todo o nada, borrar categoría con destino y sellos sin duplicar',
+     to_regprocedure('public.leogin_aplicar_lote_catalogo(uuid,uuid[],jsonb,uuid)') is not null
+     and to_regprocedure('public.leogin_borrar_categoria(uuid,uuid,uuid,uuid)') is not null
+     and exists (select 1 from pg_trigger where tgname='candado_categoria_producto'),
+     'ANTES de desplegar; después de la 178'),
+  ('180', 'inventario: agotados con intención, por ingrediente, ajustes con motivo y activar en lote',
+     exists (select 1 from information_schema.columns where table_schema='public' and table_name='products' and column_name='vuelve_at')
+     and exists (select 1 from pg_trigger where tgname='leogin_agotado_coherente')
+     and to_regprocedure('public.leogin_ajustar_existencias(uuid,uuid,text,integer,text,text,uuid)') is not null
+     and to_regprocedure('public.leogin_agotar_ingrediente(uuid,uuid,boolean,uuid)') is not null,
+     'ANTES de desplegar; después de la 179')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

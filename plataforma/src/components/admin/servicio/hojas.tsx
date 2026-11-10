@@ -38,7 +38,7 @@ export interface HojaMesaProps {
   onAlergia: (alergia: string) => void;
   onMover: (n: number) => void;
   onJuntar: (n: number) => void;
-  onLiberar: () => void;
+  onLiberar: (() => void) | null;
   /** Cobrar algo que no está en la carta (M-09). */
   onArticuloLibre: () => void;
   /** Sale solo si la mesa tiene algo: no hay cuenta que imprimir sin pedido. */
@@ -52,6 +52,7 @@ export function HojaMesa({
   const [nombre, setNombre] = useState(mesa.nombre);
   const [alergia, setAlergia] = useState(mesa.alergia ?? '');
   const [accion, setAccion] = useState<'mover' | 'juntar' | 'liberar' | null>(null);
+  const [destino, setDestino] = useState<MesaServicio | null>(null);
 
   /* La confirmación en dos toques CADUCA. El prototipo la dejaba armada
      para siempre: quien tocaba «Liberar» y se iba, al volver encontraba
@@ -100,7 +101,7 @@ export function HojaMesa({
             className="sv-choice"
             data-on={accion === 'mover' ? '1' : '0'}
             style={{ minWidth: 150 }}
-            onClick={() => setAccion(accion === 'mover' ? null : 'mover')}
+            onClick={() => { setDestino(null); setAccion(accion === 'mover' ? null : 'mover'); }}
           >
             Mover a otra mesa
           </button>
@@ -109,7 +110,7 @@ export function HojaMesa({
             className="sv-choice"
             data-on={accion === 'juntar' ? '1' : '0'}
             style={{ minWidth: 150 }}
-            onClick={() => setAccion(accion === 'juntar' ? null : 'juntar')}
+            onClick={() => { setDestino(null); setAccion(accion === 'juntar' ? null : 'juntar'); }}
           >
             Juntar con otra
           </button>
@@ -133,7 +134,8 @@ export function HojaMesa({
                     key={m.n}
                     type="button"
                     disabled={busy}
-                    onClick={() => (accion === 'mover' ? onMover(m.n) : onJuntar(m.n))}
+                    aria-pressed={destino?.n === m.n}
+                    onClick={() => setDestino(m)}
                   >
                     <span className="sv-pick-n">{m.n}</span>
                     <span className="sv-pick-sub">
@@ -144,6 +146,21 @@ export function HojaMesa({
                   </button>
                 ))}
               </div>
+            )}
+            {destino && (
+              <>
+                {[mesa, destino].map((m) => (
+                  <p key={m.n} className="sv-foot-note">
+                    {m.n === mesa.n ? 'Origen' : 'Destino'} · Mesa {m.n} · Consumo {money(m.total)}
+                    {m.personas ? ` · ${m.personas} personas` : ''}
+                    {m.mesero ? ` · Atiende ${m.mesero}` : ''}
+                  </p>
+                ))}
+                <button type="button" className="sv-cta" disabled={busy}
+                  onClick={() => accion === 'mover' ? onMover(destino.n) : onJuntar(destino.n)}>
+                  {accion === 'mover' ? 'Confirmar traslado' : 'Confirmar unión'}
+                </button>
+              </>
             )}
           </div>
         )}
@@ -163,7 +180,13 @@ export function HojaMesa({
           </button>
         )}
 
-        <button
+        {onLiberar && accion === 'liberar' && (
+          <p className="sv-foot-note">
+            Se registrará una salida con {money(mesa.saldo)} pendientes.
+            {mesa.sinEnviar > 0 && ` Se descartarán ${mesa.sinEnviar} productos sin enviar en este dispositivo.`}
+          </p>
+        )}
+        {onLiberar && <button
           type="button"
           className="sv-cta"
           data-tone={accion === 'liberar' ? 'danger' : 'quiet'}
@@ -171,8 +194,8 @@ export function HojaMesa({
           onClick={() => (accion === 'liberar' ? onLiberar() : setAccion('liberar'))}
           disabled={busy}
         >
-          {accion === 'liberar' ? 'Toca otra vez para confirmar' : 'Liberar mesa sin cobrar'}
-        </button>
+          {accion === 'liberar' ? 'Confirmar salida sin cobrar' : 'Pasar a limpieza sin cobrar'}
+        </button>}
       </div>
     </Hoja>
   );
@@ -332,7 +355,7 @@ export const ATAJOS: { k: string; d: string }[] = [
   { k: '1 – 9', d: 'Agregar el más pedido número N' },
   { k: 'Alt 1 – 9', d: 'Saltar a la mesa abierta N' },
   { k: '⌘⏎ / Ctrl ⏎', d: 'Enviar a cocina' },
-  { k: 'Alt C', d: 'Cobrar y cerrar mesa' },
+  { k: 'Alt C', d: 'Abrir la cuenta de la mesa' },
   { k: '2 pepián ⏎', d: 'Teclear cantidad + plato en el buscador' },
   { k: '/', d: 'Volver al buscador' },
   { k: 'Esc', d: 'Cerrar o volver' },
@@ -399,7 +422,7 @@ export function HojaLinea({
       <div className="sv-sheet-pad">
         <HojaHead
           title={`${linea.cantidad}× ${linea.nombre}`}
-          sub={[linea.detalle, `${money(importeLinea(linea))} en la cuenta`].filter(Boolean).join(' · ')}
+          sub={[linea.detalle, linea.nota, `${money(importeLinea(linea))} en la cuenta`].filter(Boolean).join(' · ')}
           onClose={onClose}
         />
 

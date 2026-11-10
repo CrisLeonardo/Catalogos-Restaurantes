@@ -18,17 +18,16 @@ import {
 } from '@/lib/actions/memberships';
 import type { RestaurantUser } from '@/lib/db/super-admin';
 import type { MemberRole } from '@/lib/membership-roles';
+import { PAPELES, papelActual } from '@/lib/permisos-trabajo';
 import { FIELD_LABEL } from '@/components/admin/field-label';
 
 const empty: SuperState = null;
 const emptyMembership: MembershipState = null;
 
-const PAPEL: { v: MemberRole; l: string }[] = [
-  { v: 'OWNER',   l: 'Dueño' },
-  { v: 'MANAGER', l: 'Gerente' },
-  { v: 'STAFF',   l: 'Personal' },
-  { v: 'WAITER',  l: 'Mesero' },
-];
+/* Papel = dueño o el trabajo que hace (auditoría 1.7, N19). Ninguno viene
+   elegido: dar un acceso de dueño tiene que ser una decisión, no el valor
+   por defecto. */
+const PAPEL = PAPELES;
 
 
 /* El rótulo de campo del panel (D-8): en minúscula, no en mayúsculas de cartel. */
@@ -136,7 +135,7 @@ function UserRow({
           )}
         </div>
         {user.memberRole ? (
-          <RoleSelect restaurantId={restaurantId} userId={user.id} role={user.memberRole} />
+          <RoleSelect restaurantId={restaurantId} userId={user.id} role={user.memberRole} puesto={user.memberPuesto} />
         ) : (
           <RoleBadge role={user.role} />
         )}
@@ -285,10 +284,12 @@ function RoleSelect({
   restaurantId,
   userId,
   role,
+  puesto,
 }: {
   restaurantId: string;
   userId: string;
   role: MemberRole;
+  puesto: string | null;
 }) {
   const [state, formAction, isPending] = useActionState(changeMembershipRole, emptyMembership);
 
@@ -298,7 +299,7 @@ function RoleSelect({
       <input type="hidden" name="userId" value={userId} />
       <select
         name="role"
-        defaultValue={role}
+        defaultValue={papelActual(role, puesto)}
         disabled={isPending}
         aria-label="Papel en este restaurante"
         onChange={(e) => e.currentTarget.form?.requestSubmit()}
@@ -310,8 +311,9 @@ function RoleSelect({
           border: '1px solid var(--u-hair)', cursor: 'pointer',
         }}
       >
+        {papelActual(role, puesto) === '' && <option value="" disabled>A medida</option>}
         {PAPEL.map((p) => (
-          <option key={p.v} value={p.v} style={{ color: 'var(--u-text)' }}>{p.l}</option>
+          <option key={p.value} value={p.value} style={{ color: 'var(--u-text)' }}>{p.label}</option>
         ))}
       </select>
       {/* El único caso que importa es el candado del último dueño, y hay que
@@ -356,9 +358,10 @@ function GrantAccessForm({ restaurantId }: { restaurantId: string }) {
         </div>
         <div>
           <label htmlFor="grant_role" style={labelStyle}>Papel</label>
-          <select id="grant_role" name="role" defaultValue="OWNER" className="adm-field" style={{ cursor: 'pointer' }}>
+          <select id="grant_role" name="role" defaultValue="" required className="adm-field" style={{ cursor: 'pointer' }}>
+            <option value="" disabled>Elige su papel</option>
             {PAPEL.map((p) => (
-              <option key={p.v} value={p.v} style={{ color: 'var(--u-text)' }}>{p.l}</option>
+              <option key={p.value} value={p.value} style={{ color: 'var(--u-text)' }}>{p.label}</option>
             ))}
           </select>
         </div>
@@ -395,9 +398,6 @@ function AddUserForm({
     createRestaurantUser,
     empty,
   );
-  const [role, setRole] = useState<'RESTAURANT_OWNER' | 'RESTAURANT_STAFF'>(
-    'RESTAURANT_OWNER',
-  );
   const [password, setPassword] = useState('');
 
   return (
@@ -409,7 +409,6 @@ function AddUserForm({
         style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
       >
         <input type="hidden" name="restaurantId" value={restaurantId} />
-        <input type="hidden" name="role" value={role} />
 
         <div>
           <label htmlFor="u_email" style={labelStyle}>Email *</label>
@@ -435,50 +434,13 @@ function AddUserForm({
         </div>
 
         <div>
-          <label style={labelStyle}>Rol</label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {(
-              [
-                { v: 'RESTAURANT_OWNER', l: 'Dueño', d: 'Gestiona todo el menú' },
-                { v: 'RESTAURANT_STAFF', l: 'Staff', d: 'Apoyo (ej. pedidos)' },
-              ] as const
-            ).map((opt) => {
-              const active = role === opt.v;
-              return (
-                <button
-                  key={opt.v}
-                  type="button"
-                  onClick={() => setRole(opt.v)}
-                  className="press"
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid',
-                    borderColor: active ? 'var(--brand-accent)' : 'var(--u-hair)',
-                    background: active
-                      ? 'rgba(217,119,87,0.10)'
-                      : 'transparent',
-                    cursor: 'pointer',
-                    textAlign: 'center',
-                  }}
-                >
-                  <div
-                    style={{
-                      fontWeight: 600,
-                      fontSize: 14,
-                      color: active ? 'var(--brand-accent)' : 'var(--u-text-3)',
-                    }}
-                  >
-                    {opt.l}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 1 }}>
-                    {opt.d}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          <label htmlFor="u_role" style={labelStyle}>Papel *</label>
+          <select id="u_role" name="role" defaultValue="" required className="adm-field" style={{ cursor: 'pointer' }}>
+            <option value="" disabled>Elige su papel</option>
+            {PAPEL.map((p) => (
+              <option key={p.value} value={p.value} style={{ color: 'var(--u-text)' }}>{p.label}</option>
+            ))}
+          </select>
         </div>
 
         <div>

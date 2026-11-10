@@ -397,6 +397,28 @@ mensaje amable.
 
 ---
 
+# PARTE 7d — Migraciones 154 a 180 en un solo script (v0.18.0)
+
+Son 27 migraciones de la auditoría integral. En vez de pegarlas una por una, se arman en **un script transaccional**: si una falla, Postgres deshace todo y la base queda como estaba.
+
+1. **Comprueba el punto de partida.** En el SQL Editor de Supabase corre `plataforma/supabase/verificar_migraciones.sql`. De la 148 a la 153 debe decir «sí» (la 149 sale «—»: no hace falta), y de la 154 en adelante «NO».
+2. **Haz un respaldo** antes de tocar nada: Supabase → Database → Backups (o `pg_dump` si tienes la cadena de conexión).
+3. **Arma los scripts** desde `plataforma/`:
+   ```powershell
+   node scripts/armar-migraciones-produccion.mjs 155 180 --previa=153
+   node scripts/armar-migraciones-produccion.mjs 154 154 --sin-guarda
+   ```
+   Quedan en `plataforma/supabase/.produccion/` (ignorada por git).
+4. **ANTES de desplegar:** pega `migraciones_155_a_180.sql` completo en el SQL Editor y ejecútalo. Al final deben salir las filas «aplicada 155» … «aplicada 180». Si sale un error, no se aplicó nada: corrige y vuelve a correrlo. Su guarda se niega a correr si falta la 153 o si la 155 ya está.
+5. **Despliega:** fusiona el PR a `main`; Render compila solo (comprueba que el deploy termine en «Live»).
+6. **DESPUÉS de desplegar:** pega y ejecuta `migraciones_154_a_154.sql` (corrige los cupones guardados con el formulario viejo; es idempotente).
+7. **Verifica:** vuelve a correr `verificar_migraciones.sql`; de la 148 a la 180 todo debe decir «sí». Si la 158 dice «NO», hay dos cortes de caja vivos del mismo periodo: revísalos a mano antes de crear su índice.
+8. Etiqueta lo desplegado con `prod-AAAA-MM-DD`.
+
+El ensayo del 2026-11-10 se hizo sobre una copia local con 001–153 y datos demo (registro de la auditoría, §35).
+
+---
+
 # PARTE 8 — Poner la nube al día (módulos, recetas, llamada al mesero)
 
 El esquema fue creciendo. Si tu Supabase de producción está **atrasado**, aplica

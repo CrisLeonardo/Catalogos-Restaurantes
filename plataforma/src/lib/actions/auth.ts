@@ -11,6 +11,7 @@ import { logPanelAccess } from '@/lib/auth/access-log';
 import { writeSessionActivity } from '@/lib/auth/session-activity';
 import { authPathFor } from '@/lib/tenant';
 import { aalDelToken, pasoSegundoFactor } from '@/lib/auth/segundo-factor-policy';
+import { destinoDePanel, segundoFactorPara } from '@/lib/auth/panel-destino';
 
 /**
  * `url` = entra aquí con una navegación de DOCUMENTO desde el cliente
@@ -104,7 +105,7 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
   // pantalla antes de leer nada más; la contraseña sola no abre el panel.
   if (pasoSegundoFactor(signInData.user, aalDelToken(signInData.session?.access_token)) !== 'listo') {
     await writeSessionActivity(signInData.user.id);
-    return { url: '/admin/dos-pasos' };
+    return { url: segundoFactorPara(formData.get('next')) };
   }
 
   // Redirigir según rol
@@ -140,7 +141,7 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
   // desktop, porque ahí es común arrancar ya posicionado en el subdominio de
   // un restaurante distinto al de la cuenta que se está probando).
   return {
-    url: await resolveStaffDestination(
+    url: destinoDePanel(formData.get('next')) ?? await resolveStaffDestination(
       supabase,
       profile as { role: string; permissions: string[] | null; restaurant_id: string | null },
       tenantSlug,

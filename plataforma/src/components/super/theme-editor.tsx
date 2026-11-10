@@ -526,7 +526,7 @@ const CONTENT_FIELDS: Record<keyof ThemeContent, [string, string][]> = {
   portada: [['title', 'Título (vacío = nombre)'], ['subtitle', 'Subtítulo (vacío = tagline)'], ['cta', 'Botón'], ['badgeOpen', 'Badge abierto'], ['badgeClosed', 'Badge cerrado'], ['posterKicker', 'Kicker (poster)']],
   vitrina: [['ticker', 'Cinta de anuncios (frases con «·»)'], ['launchTitle', 'Lanzamiento: nombre de la edición'], ['launchKicker', 'Lanzamiento: línea de arriba'], ['launchClosed', 'Lanzamiento: texto al cerrar']],
   catalog: [['kicker', 'Kicker'], ['heading', 'Título del menú'], ['searchPlaceholder', 'Placeholder búsqueda'], ['allLabel', 'Etiqueta "Todo"'], ['empty', 'Mensaje vacío']],
-  product: [['add', 'Botón agregar'], ['soldOut', 'Agotado'], ['prepTime', 'Tiempo de prep.'], ['fresh', 'Etiqueta "fresco"'], ['chooseOne', 'Opción obligatoria'], ['optional', 'Opción opcional']],
+  product: [['add', 'Botón agregar'], ['soldOut', 'Agotado'], ['chooseOne', 'Opción obligatoria'], ['optional', 'Opción opcional']],
   cart: [['title', 'Título'], ['empty', 'Vacío'], ['emptyCta', 'Botón vacío'], ['subtotal', 'Subtotal'], ['shipping', 'Envío'], ['free', 'Gratis'], ['total', 'Total'], ['checkout', 'Botón pagar'], ['barCta', 'Barra: ver carrito'], ['itemsOne', '"producto"'], ['itemsMany', '"productos"']],
   checkout: [
     ['title', 'Título'], ['typeLabel', 'Tipo de pedido'],
@@ -548,7 +548,7 @@ const CONTENT_FIELDS: Record<keyof ThemeContent, [string, string][]> = {
     ['closedTitle', 'Cerrado: título'], ['closedMsg', 'Cerrado: mensaje'],
     ['pausedTitle', 'Pausa: título'], ['pausedMsg', 'Pausa: mensaje (vacío = del restaurante)'],
   ],
-  confirmation: [['title', 'Título'], ['subtitle', 'Subtítulo'], ['orderNo', 'N° de pedido'], ['type', 'Tipo'], ['eta', 'Tiempo estimado'], ['etaValue', 'Valor tiempo'], ['payment', 'Pago'], ['notified', 'Notificado'], ['track', 'Botón seguimiento'], ['again', 'Otro pedido']],
+  confirmation: [['title', 'Título'], ['orderNo', 'N° de pedido'], ['type', 'Tipo'], ['payment', 'Pago'], ['track', 'Botón seguimiento'], ['again', 'Otro pedido']],
   tracking: [['title', 'Título'], ['subtitle', 'Subtítulo'], ['statusNew', 'Recibido'], ['statusPrep', 'En preparación'], ['statusReady', 'Listo'], ['statusReadyPickup', 'Listo (pickup)'], ['statusTransit', 'En camino'], ['statusDelivered', 'Entregado'], ['statusCancel', 'Cancelado'], ['back', 'Volver al menú']],
   tags: [['hot', 'Picante'], ['new', 'Nuevo'], ['fav', 'Favorito'], ['veg', 'Veggie']],
 };

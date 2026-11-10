@@ -7,3 +7,6 @@ __pycache__/
 *.pyc
 # (mismo prototipo si se mueve a docs/diseno/)
 docs/diseno/nuevo-diseno-admin/Cambio UI/UX V1/
+
+# Scripts de migración armados para pegar en producción (derivados, se regeneran)
+plataforma/supabase/.produccion/

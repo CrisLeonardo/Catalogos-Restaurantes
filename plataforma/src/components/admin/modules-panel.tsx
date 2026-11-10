@@ -48,14 +48,11 @@ import {
   type ModulesMap,
   type ModuleSettings,
 } from '@/lib/modules';
-import { ESTANDAR_MAX_ORDER_TYPES, INCLUDED_MODULES, PLANS, PUBLIC_PLANS, planPriceLabel, type PlanCode } from '@/lib/plans';
+import { ESTANDAR_MAX_ORDER_TYPES, INCLUDED_MODULES, PLANS, PUBLIC_PLANS, planPriceLabel, planPresentation, capabilityStateLabel, withPlanFloor, formatPlanAmount, type PlanCode } from '@/lib/plans';
 import { usePlanPricing } from '@/components/plan-pricing-context';
 import type { OrderType } from '@/lib/theme/defaults';
 import { usePathname as useRutaNavegador } from 'next/navigation';
 import { panelBaseFrom, panelHref } from '@/lib/panel-links';
-import { fmtMoney } from '@/lib/money';
-
-const q = (n: number) => fmtMoney(Math.round(n), 'GTQ', 0);
 
 /** ¿El plan incluye este módulo? (si no, solo está activo por excepción manual de Leogin). */
 function includedInPlan(plan: string | null | undefined, key: ActivatableModuleKey): boolean {
@@ -71,21 +68,21 @@ const CHANNEL_META: { id: OrderType; label: string; description: string; icon: s
     label: 'Comer en el local',
     description: 'El cliente pide desde la mesa escaneando el QR. Requiere configurar el número de mesas.',
     icon: 'utensils',
-    configHref: '/admin/mesas',
+    configHref: '/admin/ajustes/salon',
   },
   {
     id: 'pickup',
     label: 'Para llevar',
     description: 'El cliente hace su pedido en línea y lo retira en el mostrador de tu local.',
     icon: 'bag',
-    configHref: '/admin/personalizacion',
+    configHref: '/admin/ajustes/pedidos',
   },
   {
     id: 'delivery',
     label: 'A domicilio',
     description: 'El cliente ingresa su dirección y el pedido se entrega donde está. Puedes definir zonas y costo de envío.',
     icon: 'truck',
-    configHref: '/admin/personalizacion',
+    configHref: '/admin/ajustes/entrega',
   },
 ];
 
@@ -100,6 +97,7 @@ interface Props {
   planActual?: string | null;
   /** Mensualidad que se está facturando (precio fijo del plan). */
   billedNow?: number | null;
+  billedCurrency?: string;
 }
 
 const BADGE_COLOR: Record<string, string> = { POPULAR: 'chip-warn', NUEVO: 'chip-alt' };
@@ -156,7 +154,7 @@ function LockedRow({ icon, label, description, lockLabel }: {
   );
 }
 
-export default function ModulesPanel({ restaurantId, modules, settings, orderTypes, supportWhatsapp, planActual, billedNow = null }: Props) {
+export default function ModulesPanel({ restaurantId, modules: rawModules, settings, orderTypes, supportWhatsapp, planActual, billedNow = null, billedCurrency = 'GTQ' }: Props) {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = panelBaseFrom(useRutaNavegador());
   const pricing = usePlanPricing();
@@ -168,6 +166,8 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
   const [localOrderTypes, setLocalOrderTypes] = useState<OrderType[]>(orderTypes);
   const [orderBusy, setOrderBusy] = useState<OrderType | null>(null);
   const [localSettings, setLocalSettings] = useState<ModuleSettings>(settings);
+  const contract = planPresentation({ plan: planActual, pricing, modules: rawModules ?? {}, settings: localSettings, orderTypes: localOrderTypes });
+  const modules = withPlanFloor(contract.code, rawModules ?? {});
 
   // Estándar: el dueño elige libremente sus modos de pedido, con tope de
   // ESTANDAR_MAX_ORDER_TYPES (2 de 3) — el 3ero requiere subir a Premium.
@@ -225,7 +225,6 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
 
   // Módulos visibles en el panel (oculta los gestionados que no requieren setup).
   const visible = ACTIVATABLE_MODULES.filter((m) => showsInPanel(modules, m.key));
-  const activeCount = ACTIVATABLE_MODULES.filter((m) => isModuleActive(modules, localSettings, m.key)).length;
 
   const currentPlan = (planActual ?? 'BASICO') as PlanCode;
   const planFeatures = PLANS[currentPlan];
@@ -263,6 +262,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
           desc={
             <>
               {m.description}
+              {' '}{capabilityStateLabel(contract.capabilities.find((item) => item.key === m.key)!)}.
               {m.hint && <> {m.hint}</>}
               {on && m.href && (
                 <>
@@ -422,10 +422,10 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
             <RowIcon name="wallet" on />
             <ListText
               title={`Plan ${PLANS[currentPlan].name}`}
-              desc={activeCount === 1 ? '1 función activa' : `${activeCount} funciones activas`}
+              desc={`${contract.moduleCounts.included} módulos incluidos · ${contract.moduleCounts.enabled} habilitados · ${contract.moduleCounts.active} encendidos · ${contract.moduleCounts.configured} con configuración comprobada`}
             />
             <span className="t-mono shrink-0 text-[13px]" style={{ color: 'var(--u-text-2)' }}>
-              {q(amount)}/mes
+              {`${formatPlanAmount(amount, billedCurrency)}${billedCurrency === 'GTQ' ? '' : ` ${billedCurrency}`} / mes`}
             </span>
             <Icon name="chevronRight" size={15} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
           </ListLink>

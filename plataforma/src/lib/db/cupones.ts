@@ -1,4 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/service';
+import { lecturaDe, type Lectura } from '@/lib/db/lectura';
+import { estadoDelCupon, type CuponVigencia } from '@/lib/cupones/vigencia';
 
 export type DiscountType = 'PERCENT' | 'FIXED';
 
@@ -18,14 +20,15 @@ export interface Coupon {
   created_at: string;
 }
 
-export async function getCoupons(restaurantId: string): Promise<Coupon[]> {
+/** Un error ya no se pinta «Aún no tienes cupones» (auditoría 2026-11-03, X20). */
+export async function getCoupons(restaurantId: string): Promise<Lectura<Coupon[]>> {
   const db = createServiceClient();
-  const { data } = await db
+  const { data, error } = await db
     .from('coupons')
     .select('*')
     .eq('restaurant_id', restaurantId)
     .order('created_at', { ascending: false });
-  return (data ?? []) as Coupon[];
+  return lecturaDe(error, data as Coupon[] | null, [], { contexto: 'getCoupons' });
 }
 
 export async function getCouponByCode(restaurantId: string, code: string): Promise<Coupon | null> {
@@ -48,12 +51,9 @@ export function computeCouponDiscount(coupon: Coupon, subtotal: number): number 
   return Math.max(0, Math.min(d, subtotal));
 }
 
+/** Mismo estado que ve el dueño en su panel (lib/cupones/vigencia) + el mínimo de compra. */
 export function isCouponLive(c: Coupon, subtotal: number): boolean {
-  if (!c.is_active) return false;
-  const now = Date.now();
-  if (c.valid_from && now < new Date(c.valid_from).getTime()) return false;
-  if (c.valid_until && now > new Date(c.valid_until).getTime()) return false;
-  if (c.max_uses != null && c.uses >= c.max_uses) return false;
+  if (estadoDelCupon(c) !== 'vigente') return false;
   if (c.min_order != null && subtotal < Number(c.min_order)) return false;
   return true;
 }
@@ -76,21 +76,25 @@ export async function resolveCoupon(
   return { coupon, discount };
 }
 
-/** Devuelve true si el restaurante tiene al menos un cupón activo y vigente (para mostrar el campo en el checkout). */
+/**
+ * ¿Tiene el restaurante al menos un cupón vigente? (para mostrar el campo
+ * en el checkout).
+ *
+ * Antes traía 20 cupones activos y filtraba fechas después: con veinte
+ * vencidos por delante, uno válido no habilitaba el campo (auditoría
+ * 2026-11-03, X06). Ahora las fechas se filtran en la base y no hay tope;
+ * los usos se miran aquí porque PostgREST no compara dos columnas.
+ */
 export async function hasActiveCoupons(restaurantId: string): Promise<boolean> {
   const db = createServiceClient();
+  const ahora = new Date().toISOString();
   const { data } = await db
     .from('coupons')
-    .select('id, valid_from, valid_until, max_uses, uses')
+    .select('is_active, valid_from, valid_until, max_uses, uses')
     .eq('restaurant_id', restaurantId)
     .eq('is_active', true)
-    .limit(20);
+    .or(`valid_from.is.null,valid_from.lte.${ahora}`)
+    .or(`valid_until.is.null,valid_until.gt.${ahora}`);
 
-  const now = Date.now();
-  return (data ?? []).some((c) => {
-    if (c.valid_from && now < new Date(c.valid_from).getTime()) return false;
-    if (c.valid_until && now > new Date(c.valid_until).getTime()) return false;
-    if (c.max_uses != null && c.uses >= c.max_uses) return false;
-    return true;
-  });
+  return (data ?? []).some((c) => estadoDelCupon(c as CuponVigencia) === 'vigente');
 }

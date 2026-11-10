@@ -26,7 +26,7 @@ import { Icon } from '@/components/icons';
 import { ChipEstado, ChipMano, Mono } from '@/components/admin/servicio/pieces';
 import { FIXTURE_META, fixtureLabel } from '@/components/admin/salon/fixtures';
 import PlanoVisor from '@/components/admin/salon/plano-visor';
-import { subtituloDeMesa, type MesaServicio } from '@/lib/servicio/estado';
+import { ESTADO_LABEL, subtituloDeMesa, type MesaServicio } from '@/lib/servicio/estado';
 import { fmtMinShort } from '@/lib/table-state';
 import type { FloorPlan } from '@/lib/theme/defaults';
 
@@ -57,6 +57,7 @@ export function SalonRiel({ mesas, sel, onPick, money, estrecho }: SalonProps & 
           className="sv-mesa"
           data-st={m.estado}
           data-on={m.n === sel ? '1' : '0'}
+          aria-pressed={m.n === sel}
           onClick={() => onPick(m.n)}
         >
           <span className="sv-mesa-n">{m.n}</span>
@@ -73,7 +74,7 @@ export function SalonRiel({ mesas, sel, onPick, money, estrecho }: SalonProps & 
             </span>
             <span className="sv-mesa-row">
               <span className="sv-mesa-sub">{subtituloDeMesa(m, estrecho)}</span>
-              {m.total > 0 && <span className="sv-mesa-total">{money(m.total)}</span>}
+              {m.saldo > 0 && <span className="sv-mesa-total">{money(m.saldo)}</span>}
             </span>
           </span>
         </button>
@@ -96,6 +97,7 @@ export function SalonFichas({ mesas, sel, onPick, money }: SalonProps) {
           className="sv-card"
           data-st={m.estado}
           data-on={m.n === sel ? '1' : '0'}
+          aria-pressed={m.n === sel}
           onClick={() => onPick(m.n)}
         >
           <span className="sv-card-top">
@@ -111,8 +113,10 @@ export function SalonFichas({ mesas, sel, onPick, money }: SalonProps) {
               <span className="sv-card-name">{m.nombre || m.alias}</span>
             )}
             <span className="sv-card-sub">{subtituloDeMesa(m)}</span>
+            {m.estado === 'cocina' && m.pagada && <span className="sv-card-sub">Pagada</span>}
+            {m.reserva && <span className="sv-card-sub">Reserva {m.reserva.hora}</span>}
           </span>
-          {m.total > 0 && <span className="sv-card-total">{money(m.total)}</span>}
+          {m.saldo > 0 && <span className="sv-card-total">{money(m.saldo)}</span>}
         </button>
       ))}
     </div>
@@ -191,9 +195,12 @@ export function SalonPlano({
         renderMesa={(n, geo) => {
           const m = porNumero.get(n);
           if (!m) return null;
-          const sub = m.total > 0
-            ? money(m.total)
-            : m.estado !== 'libre' && m.minutos != null ? fmtMinShort(m.minutos) : (m.sillas ? `${m.sillas} p.` : '');
+          const estado = m.estado === 'cocina' && m.pagada ? 'Por entregar · Pagada' : ESTADO_LABEL[m.estado];
+          const sub = [m.personas ? `${m.personas} p.` : null, m.minutos != null ? fmtMinShort(m.minutos) : null]
+            .filter(Boolean).join(' · ');
+          const descripcion = [`Mesa ${m.n}`, estado, subtituloDeMesa(m), m.saldo > 0 ? `Saldo ${money(m.saldo)}` : null,
+            m.reserva ? `Reserva a las ${m.reserva.hora}` : null]
+            .filter(Boolean).join(' · ');
           return (
             <button
               type="button"
@@ -202,13 +209,20 @@ export function SalonPlano({
               data-shape={forma.get(n)}
               data-dens={geo.densidad}
               data-on={m.n === sel ? '1' : '0'}
-              title={`${m.etiqueta} · ${subtituloDeMesa(m)}`}
-              aria-label={`${m.etiqueta} · ${subtituloDeMesa(m)}`}
+              title={descripcion}
+              aria-label={descripcion}
+              aria-pressed={m.n === sel}
               onClick={() => onPick(m.n)}
             >
               <span className="sv-plano-n">{m.n}</span>
-              {geo.densidad !== 'mini' && sub && (
-                <span className={m.total > 0 ? 'sv-plano-total' : 'sv-plano-sub'}>{sub}</span>
+              {geo.densidad !== 'mini' && (
+                <>
+                  <span className="sv-plano-sub">{ESTADO_LABEL[m.estado]}</span>
+                  {m.estado === 'cocina' && m.pagada && <span className="sv-plano-sub">Pagada</span>}
+                  {sub && <span className="sv-plano-total">{sub}</span>}
+                  {m.saldo > 0 && <span className="sv-plano-total">{money(m.saldo)}</span>}
+                  {m.reserva && <span className="sv-plano-sub">Reserva {m.reserva.hora}</span>}
+                </>
               )}
               {m.atencion && <span className="sv-plano-mano" aria-hidden />}
             </button>
@@ -230,6 +244,7 @@ export function SalonPlano({
                 className="sv-card"
                 data-st={m.estado}
                 data-on={m.n === sel ? '1' : '0'}
+                aria-pressed={m.n === sel}
                 onClick={() => onPick(m.n)}
               >
                 <span className="sv-card-top">
@@ -237,7 +252,7 @@ export function SalonPlano({
                   {m.atencion ? <ChipMano atencion={m.atencion} corto /> : <ChipEstado estado={m.estado} big />}
                 </span>
                 <span className="sv-card-sub">{subtituloDeMesa(m)}</span>
-                {m.total > 0 && <Mono size={15} className="sv-card-total">{money(m.total)}</Mono>}
+                {m.saldo > 0 && <Mono size={15} className="sv-card-total">{money(m.saldo)}</Mono>}
               </button>
             ))}
           </div>

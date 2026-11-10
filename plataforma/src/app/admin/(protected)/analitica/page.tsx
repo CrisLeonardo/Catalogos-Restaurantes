@@ -1,3 +1,4 @@
+import AvisoLectura from '@/components/admin/aviso-lectura';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { getAdminContext } from '@/lib/db/admin';
@@ -86,17 +87,42 @@ export default async function AdminAnaliticaPage({
   // Mapa de calor → lookup rápido por "day-hour".
   const heatLookup = new Map(a.heat.map((c) => [`${c.day}-${c.hour}`, c.count]));
 
+  /* Con la consulta caída, los ceros de abajo dirían «0 pedidos»: no se
+     pintan (auditoría 2026-11-03, X20/PA-T16). Se conserva el rango para
+     reintentar el mismo. */
+  if (a.estado === 'error') {
+    return (
+      <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <Card className="p-4">
+          <DateRangeForm from={from} to={to} basePath="/admin/analitica" />
+        </Card>
+        <AvisoLectura
+          estado="error"
+          que="los pedidos de este rango"
+          noConcluir="No significa que no hayas vendido."
+          sinDatos
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <Card className="p-4">
         <DateRangeForm from={from} to={to} basePath="/admin/analitica" />
       </Card>
 
+      <AvisoLectura
+        estado={a.estado}
+        que="pedidos"
+        parcial="El rango tiene más pedidos de los que esta pantalla alcanza a contar. Achica el rango para ver números completos."
+      />
+
       <Section title="Resumen del rango">
         <StatGroup>
           {/* Sin paréntesis en los rótulos: el dato de apoyo va debajo de la
               cifra (auditoría 2026-10-02, NEG-03). */}
-          <Stat label="Pedidos válidos" value={String(a.validOrders)} sub={`de ${a.totalOrders} en total`} />
+          <Stat label="Pedidos válidos" value={String(a.validOrders)} sub={`de ${a.totalOrders}${a.estado === 'parcial' ? '+' : ''} en total`} />
           <Stat label="Cancelados" value={`${a.cancelRate.toFixed(0)}%`} sub={a.cancelled === 1 ? '1 pedido' : `${a.cancelled} pedidos`} />
           <Stat label="Prep. promedio" value={a.prepSamples > 0 ? fmtMin(a.avgPrepMin) : 'Sin datos aún'} />
           <Stat label="Entrega promedio" value={a.deliverySamples > 0 ? fmtMin(a.avgDeliveryMin) : 'Sin datos aún'} />

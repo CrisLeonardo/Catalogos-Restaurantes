@@ -4,21 +4,26 @@
    motivo obligatorio. Componente compartido entre order-card.tsx (panel de
    pedidos) y waiter-panel.tsx (mesero). */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/icons';
-import { voidOrder, getVoidApproval, type VoidApproval } from '@/lib/actions/orders';
+import { voidOrder, getVoidApproval, type IntentoPedido, type VoidApproval } from '@/lib/actions/orders';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { PIN_LENGTH } from '@/lib/staff-pin-constants';
 import type { OrderStatus } from '@/types';
 
 export default function VoidOrderDialog({
   orderId,
   orderStatus,
+  version,
+  cobro,
   item = null,
   onClose,
   onDone,
 }: {
   orderId: string;
   orderStatus: OrderStatus;
+  version?: string;
+  cobro?: string;
   /** null = anular el pedido completo; con valor = solo ese ítem. */
   item?: { id: string; name: string; remainingQty: number } | null;
   onClose: () => void;
@@ -28,6 +33,9 @@ export default function VoidOrderDialog({
   const [qty, setQty] = useState(item?.remainingQty ?? 1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const enviando = useRef(false);
+  const original = useRef({ estado: orderStatus, version });
+  const ultimo = useRef<{ contenido: string; intento: IntentoPedido } | null>(null);
 
   /* Quién puede firmar esto. Se pregunta al servidor porque la respuesta
      depende de los permisos de quien está mirando y de quién tiene PIN
@@ -50,24 +58,25 @@ export default function VoidOrderDialog({
   const listo = !pidePin || (!!firmante && pin.length === PIN_LENGTH);
 
   async function handleSubmit() {
+    if (enviando.current) return;
     setError(null);
     if (!reason.trim()) { setError('Escribe el motivo de la anulación.'); return; }
     if (pidePin && !firmante) { setError('Elige quién autoriza.'); return; }
     if (pidePin && pin.length !== PIN_LENGTH) { setError(`El PIN son ${PIN_LENGTH} dígitos.`); return; }
+    enviando.current = true;
+    const contenido = JSON.stringify([item?.id, qty, reason.trim()]);
+    if (original.current.version && ultimo.current?.contenido !== contenido) {
+      ultimo.current = { contenido, intento: { id: crypto.randomUUID(), estado: original.current.estado, version: original.current.version } };
+    }
     setSubmitting(true);
-    const res = await voidOrder({
-      orderId,
-      itemId: item?.id ?? null,
-      quantity: item ? qty : null,
-      reason: reason.trim(),
-      approverId: pidePin ? firmante : null,
-      approverPin: pidePin ? pin : null,
-    });
-    setSubmitting(false);
-    // El PIN no se queda escrito tras un fallo: en una tablet compartida
-    // eso es dejarlo a la vista del siguiente que la agarre.
-    if (res.error) { setError(res.error); setPin(''); return; }
-    onDone();
+    try {
+      const res = await voidOrder({ orderId, itemId: item?.id ?? null, quantity: item ? qty : null,
+        reason: reason.trim(), approverId: pidePin ? firmante : null, approverPin: pidePin ? pin : null,
+        intento: ultimo.current?.intento });
+      if (res.error) { setError(res.error); return; }
+      onDone();
+    } catch { setError('Se perdió la respuesta. Vuelve a confirmar para recuperar el resultado.'); }
+    finally { enviando.current = false; setSubmitting(false); setPin(''); }
   }
 
   const fieldLabelStyle: React.CSSProperties = {
@@ -76,40 +85,26 @@ export default function VoidOrderDialog({
   };
 
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.55)',
-        backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="glass anim-slide-up"
-        style={{ width: '100%', maxWidth: 460, borderRadius: '20px 20px 0 0', padding: '20px 20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <Dialog open onOpenChange={(open) => { if (!open && !enviando.current) onClose(); }}>
+      <DialogContent className="flex max-h-[calc(100dvh-32px)] flex-col gap-3 overflow-y-auto">
+        <div className="pr-10">
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--u-text)' }}>
+            <DialogTitle>
               {item ? `Anular ${item.name}` : 'Anular pedido'}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
+            </DialogTitle>
+            <DialogDescription>
               {orderStatus === 'NEW'
                 ? 'Todavía no se ha enviado a cocina.'
-                : pidePin
+                : !aprob ? 'Consultando quién puede autorizar.' : pidePin
                   ? 'Ya se envió a cocina: tiene que autorizarlo un encargado.'
                   : 'Ya se envió a cocina. Queda firmado a tu nombre.'}
-            </div>
+            </DialogDescription>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="press glass-quiet"
-            style={{ width: 32, height: 32, borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}
-          >
-            <Icon name="x" size={16} />
-          </button>
         </div>
+        <p className="note note-warn">
+          <span>Se repone el inventario de los productos con control de stock. {cobro ? `Hay ${cobro} netos registrados. ` : ''}
+            Si ya recibiste dinero, revisa el cobro y registra cualquier devolución por separado en Caja.</span>
+        </p>
 
         {item && item.remainingQty > 1 && (
           <div>
@@ -140,10 +135,12 @@ export default function VoidOrderDialog({
         <div>
           <div style={fieldLabelStyle}>Motivo (obligatorio)</div>
           <textarea
+            aria-label="Motivo de la anulación"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Ej. el cliente lo devolvió, error al tomar el pedido…"
             rows={2}
+            maxLength={500}
             className="adm-field" style={{ resize: 'none' }}
           />
         </div>
@@ -203,7 +200,7 @@ export default function VoidOrderDialog({
         )}
 
         {sinEncargados && (
-          <div className="note note-danger">
+          <div className="note note-danger" role="status">
             <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
             <span>
               Esto ya salió a cocina y nadie con permiso de encargado tiene PIN puesto,
@@ -229,7 +226,7 @@ export default function VoidOrderDialog({
         >
           {submitting ? 'Anulando…' : item ? `Anular ${qty}× ${item.name}` : 'Anular pedido completo'}
         </button>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

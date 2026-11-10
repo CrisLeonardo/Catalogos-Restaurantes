@@ -39,6 +39,17 @@
   --radius-2xl: calc(28px * var(--admin-panel-radius, 1));
 }
 
+.super-mobile-destinations { display: grid; gap: 6px; }
+.super-mobile-destinations a {
+  display: flex; align-items: center; gap: 12px; min-height: 48px;
+  padding: 10px 12px; border-radius: 12px; color: var(--u-text); text-decoration: none;
+}
+.super-mobile-destinations a[aria-current='page'] { background: var(--surface-2); font-weight: 600; }
+@media (max-width: 820px) {
+  .super-shell { --adm-nav-h: 84px; }
+  .super-shell .super-desktop-nav { display: none; }
+}
+
 .admin-sidebar {
   width: 244px; flex-shrink: 0;
   display: flex; flex-direction: column; gap: 4px; padding: 18px 12px;
@@ -194,8 +205,8 @@
   display: flex; flex-direction: column; gap: 10px;
   margin: 4px -4px 0;
   padding: 10px 4px calc(10px + env(safe-area-inset-bottom, 0px));
-  background: color-mix(in srgb, var(--admin-content-bg-solid, var(--brand-bg)) 88%, transparent);
-  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  /* Sólida: nada translúcido en el panel (auditoría 1.9, sistema visual). */
+  background: var(--admin-content-bg-solid, var(--brand-bg));
   border-top: 1px solid var(--u-hair);
 }
 .admin-kiosk { --adm-nav-h: 0px; }
@@ -446,7 +457,8 @@
    En móvil las columnas Unidad/Costo/Platillos se ocultan y esa info se
    muestra como línea "meta" bajo el nombre (.ing-meta-mobile). */
 .ing-head, .ing-row {
-  display: grid; grid-template-columns: minmax(0, 1.6fr) 90px 130px 110px 88px;
+  /* La última columna cabe «Se acabó» + historial + editar + borrar (1.10). */
+  display: grid; grid-template-columns: minmax(0, 1.6fr) 90px 130px 110px auto;
   column-gap: 14px; align-items: center;
 }
 .ing-meta-mobile { display: none; }
@@ -735,7 +747,7 @@
      "Nuevo" y "Autorizar" de Personal. 40 px es el punto donde el dedo deja
      de fallar sin que las filas densas se hinchen (44 dejaría filas de 72 px
      en listas que ya son largas). */
-  .admin-content [data-slot="button"] { min-height: 40px; }
+  .admin-content [data-slot="button"]:not([data-size="touch"], [data-size="action"]) { min-height: 40px; }
   .admin-live { display: none !important; }
   .admin-kiosk .waiter-cart-bar { bottom: 0 !important; }
 
@@ -1730,18 +1742,61 @@
 .order-void-x { position: relative; }
 .order-void-x::after { content: ''; position: absolute; inset: -7px -11px; }
 
-.caja-denom { display: grid; grid-template-columns: 58px 1fr 84px; gap: 8px; align-items: center; }
+.caja-metricas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.caja-metricas > div {
+  display: grid; gap: 4px; min-width: 0; padding: 12px;
+  border: 1px solid var(--u-hair); border-radius: var(--radius-lg); background: var(--adm-card);
+}
+.caja-metricas > div:first-child { background: color-mix(in srgb, var(--brand-accent) 11%, var(--adm-card)); }
+.caja-metricas span, .caja-pie-total span { font-size: 12px; color: var(--u-text-3); }
+.caja-metricas strong { font-size: clamp(14px, 2.2vw, 20px); overflow-wrap: anywhere; }
+.caja-metricas [data-cuadra] strong { color: var(--c-ok); }
+.caja-guardado { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.caja-guardado > span {
+  padding: 5px 10px; border-radius: var(--radius-full); font-size: 12px;
+  color: var(--u-text-2); background: var(--adm-card-hover);
+}
+.caja-guardado[data-estado="nube"] > span { color: var(--c-ok); background: var(--c-ok-bg); }
+.caja-guardado:is([data-estado="error"],[data-estado="conflicto"]) > span { color: var(--c-danger); background: var(--c-danger-bg); }
+.caja-grupo {
+  padding: 12px; min-width: 0; border: 1px solid var(--u-hair);
+  border-radius: var(--radius-lg); background: var(--adm-card); box-shadow: var(--adm-shadow-xs);
+}
+.caja-grupo > header {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  border-bottom: 1px solid var(--u-hair); padding-bottom: 9px;
+}
+.caja-grupo h3 { margin: 0; font-size: 16px; font-weight: 700; }
+.caja-grupo > header > span { color: var(--u-text-3); font-size: 12px; }
+.caja-grupo-selector { display: none; }
+.caja-confirmar-cero { min-height: 44px; align-self: flex-start; }
+.caja-denom {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(145px, 56%); gap: 6px;
+  align-items: center; min-height: 62px; border-bottom: 1px solid var(--u-hair);
+}
+.caja-denom:last-child { border-bottom: 0; }
 .caja-denom-label {
-  font-family: var(--ui-font-mono); font-size: 14px; font-weight: 600; color: var(--u-text-2);
+  display: grid; gap: 2px; font-size: 15px; font-weight: 700; color: var(--u-text);
   cursor: pointer;
 }
+.caja-cantidad { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 5px; }
+.caja-cantidad button {
+  display: grid; place-items: center; min-width: 44px; min-height: 44px; border-radius: 50%;
+  border: 1px solid var(--u-hair-2); background: var(--adm-card); color: var(--u-text);
+  font-size: 20px; line-height: 1;
+}
+.caja-cantidad button:last-child {
+  color: var(--brand-accent-ink); border-color: transparent;
+  background: color-mix(in srgb, var(--brand-accent) 13%, var(--adm-card));
+}
+.caja-cantidad button:disabled { opacity: .45; cursor: not-allowed; }
 .caja-denom input {
-  width: 100%; height: 44px; padding: 0 12px; text-align: right;
+  width: 100%; min-width: 0; height: 44px; padding: 0 2px; text-align: center;
   border-radius: 10px; outline: none;
   border: 1px solid var(--u-hair-2);
   background: color-mix(in srgb, var(--u-text) 4%, transparent);
   color: var(--u-text-4);
-  font-family: var(--ui-font-mono); font-size: 18px; font-weight: 600;
+  font-family: var(--ui-font-mono); font-size: 16px; font-weight: 600;
 }
 .caja-denom input[data-filled="1"] {
   border: 1.5px solid var(--brand-accent);
@@ -1749,7 +1804,7 @@
   color: var(--u-text);
 }
 .caja-denom input:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 1px; }
-.caja-denom-sub { font-family: var(--ui-font-mono); font-size: 13px; text-align: right; color: var(--u-text-4); }
+.caja-denom-sub { font-family: var(--ui-font-mono); font-size: 11px; color: var(--u-text-3); overflow-wrap: anywhere; }
 .caja-denom-sub[data-filled="1"] { color: var(--u-text); }
 /* Las flechitas del input numérico roban 20 px justo donde va la cifra. */
 .caja-denom input::-webkit-outer-spin-button,
@@ -1757,10 +1812,17 @@
 .caja-denom input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 
 @media (max-width: 767px) {
-  .caja-denom { grid-template-columns: 62px 1fr 86px; gap: 10px; }
-  .caja-denom-label { font-size: 15px; }
-  .caja-denom input { height: 56px; padding: 0 14px; border-radius: 12px; font-size: 20px; }
-  .caja-denom-sub { font-size: 14px; }}
+  .caja-metricas > div { padding: 8px; }
+  .caja-grupo-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .caja-grupo-selector button {
+    min-height: 44px; border: 1px solid var(--u-hair); border-radius: var(--radius-md); background: var(--adm-card);
+  }
+  .caja-grupo-selector button[aria-pressed="true"] {
+    color: var(--brand-accent-ink); background: color-mix(in srgb, var(--brand-accent) 12%, var(--adm-card));
+  }
+  .caja-grupo:not([data-grupo-activo]) { display: none; }
+  .caja-cantidad :is(button, input) { scroll-margin-block-end: 85px; }
+}
 
 /* Pie fijo del cierre en el teléfono: el total contado y el paso
    siguiente, siempre bajo el pulgar. */
@@ -1773,6 +1835,27 @@
 }
 @media (min-width: 768px) {
   .caja-foot { position: static; margin: 0; padding: 0; border-top: none; border-radius: 0; background: none; }}
+.caja-pie-conteo { flex-flow: row wrap; justify-content: space-between; align-items: center; }
+.caja-pie-conteo > p { flex-basis: 100%; }
+.caja-pie-conteo > .caja-cta { width: auto; padding-inline: 12px; }
+.caja-pie-total { display: grid; gap: 1px; }
+.caja-recibo dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px 12px; margin: 0; }
+.caja-recibo dd { margin: 0; text-align: right; font-family: var(--ui-font-mono); }
+
+.caja-traspaso h2 { margin: 0; font-size: 18px; font-weight: 600; }
+.caja-traspaso-detalle, .caja-traspaso label, .caja-traspaso-receptor { display: grid; gap: 10px; min-width: 0; }
+.caja-traspaso-detalle > button { justify-self: end; }
+.caja-traspaso-personas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 10px; }
+.caja-traspaso-personas > p { display: grid; align-content: start; gap: 8px; }
+.caja-traspaso p { margin: 0; overflow-wrap: anywhere; }
+.caja-traspaso dl { display: flex; flex-wrap: wrap; gap: 8px 12px; margin: 0; }
+.caja-traspaso dl > div { flex: 1 1 85px; display: grid; gap: 4px; min-width: 0; }
+.caja-traspaso dt { font-size: 12px; color: var(--u-text-2); }
+.caja-traspaso dd { margin: 0; text-align: start; overflow-wrap: anywhere; }
+.caja-traspaso-importes > div { padding: 8px; border: 1px solid var(--u-hair-2); border-radius: var(--radius-md); }
+.caja-traspaso-importes dd { font: 600 14px/1.25 var(--ui-font-mono); }
+.caja-traspaso :is(select, textarea) { min-width: 0; }
+.caja-traspaso-error { color: var(--c-danger); }
 
 /* ── Turnos de caja y cobros corregibles (migración 145) ─────────
    Superficies sólidas como el resto del panel: el dinero no se lee
@@ -1784,6 +1867,18 @@
 }
 .caja-abrir { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 14px 20px;
   border-color: color-mix(in srgb, var(--brand-accent) 38%, var(--u-hair)); }
+.caja-abrir-toggle { display: none; }
+.caja-abrir-controles { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 767px) {
+  .caja-abrir { gap: 8px; padding: 4px 12px; }
+  .caja-abrir-toggle {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%;
+    min-height: 44px; border: 0; background: transparent; color: var(--u-text); font-size: 13px; font-weight: 600;
+  }
+  .caja-abrir-toggle span:last-child { color: var(--brand-accent-ink); }
+  .caja-abrir:not([data-expandido]) :is(.caja-abrir-info, .caja-abrir-controles) { display: none; }
+  .caja-abrir[data-expandido] { padding-bottom: 12px; }
+}
 .caja-aviso {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   padding: 10px 14px; border-radius: var(--radius-lg); font-size: 13px;
@@ -2284,6 +2379,23 @@
   flex: 0 0 264px; min-width: 0; display: flex; flex-direction: column;
   background: var(--wp-side, var(--adm-bg-2)); border-right: 1px solid var(--u-hair);
 }
+.sv-rail-plano { flex: 1 1 0; background: var(--adm-card); }
+.sv-body[data-plano="1"] > .sv-ticket { flex-basis: clamp(288px, 34%, 416px); }
+.sv-body[data-plano="1"] .sv-plano-wrap { min-height: clamp(360px, 58dvh, 680px); padding-inline: 0; }
+.sv-body[data-plano="1"] .sv-plano-mesa { background: var(--adm-card); }
+.sv-body[data-plano="1"] .sv-plano-mesa[data-st="cocina"],
+.sv-body[data-plano="1"] .sv-plano-mesa[data-st="borrador"] { background: var(--sv-bg); }
+.sv-body[data-plano="1"] .sv-rail-title { font-size: 22px; }
+.sv-body[data-plano="1"] .sv-foot > .sv-cta { min-height: 56px; }
+.sv-mesa-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.sv-mesa-acciones:empty { display: none; }
+.sv-mesa-acciones .sv-cta {
+  flex: 1 1 120px; min-height: 48px; height: auto; padding: 6px 8px; font-size: 13px;
+}
+.sv-reserva {
+  margin: 12px 16px 0; padding: 8px 12px; border: 1px solid var(--u-hair);
+  border-radius: var(--radius-md); font-size: 13px; color: var(--u-text-2);
+}
 .sv-carta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .sv-ticket {
   flex: 0 0 344px; min-width: 0; display: flex; flex-direction: column;
@@ -2426,23 +2538,54 @@
 
 .sv-carta-bars { padding: 0 18px 12px; display: flex; flex-direction: column; gap: 10px; }
 
-/* Los más pedidos: un toque y está en la comanda. */
+/* Los puestos mantienen el tamaño aunque cambien nombre, precio o disponibilidad. */
+.sv-favoritos { display: grid; gap: 10px; margin: 4px 0 14px; }
+.sv-favoritos-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sv-favoritos-head h2, .sv-carta-titulo {
+  margin: 0; color: var(--u-text); font-size: 18px; font-weight: 700; letter-spacing: -.02em;
+}
+.sv-carta-titulo { margin-top: 9px; }
+.sv-favoritos-editar {
+  min-height: 44px; flex-shrink: 0; padding: 6px 10px; border-radius: var(--radius-md);
+  border: 1px solid var(--u-hair); color: var(--u-text); background: var(--adm-card);
+  font: inherit; font-size: 13px; cursor: pointer;
+}
+.sv-favoritos-editar:hover { background: var(--surface-2); }
+.sv-fav-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
 .sv-fav {
-  display: inline-flex; align-items: center; gap: 9px;
-  height: var(--m-tap); padding: 0 14px; border-radius: var(--radius-lg);
+  display: grid; grid-template-columns: 24px minmax(0,1fr); align-content: start; column-gap: 7px;
+  min-height: 82px; padding: 9px; border-radius: var(--radius-lg); text-align: start;
   border: 1px solid var(--u-hair); background: var(--adm-card); color: var(--u-text);
-  font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
   transition: border-color 120ms var(--ease-out), background 120ms var(--ease-out);
 }
-.sv-fav:hover {
+.sv-fav:hover:not(:disabled) {
   border-color: var(--brand-accent);
   background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
 }
-.sv-fav-key {
-  font-family: var(--ui-font-mono); font-size: 11px; font-weight: 600;
-  color: var(--u-text-2); background: var(--surface-3); padding: 2px 6px; border-radius: 6px;
+.sv-fav:disabled { background: var(--surface-2); color: var(--u-text-2); cursor: default; }
+.sv-fav-name {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  line-height: 1.24; overflow: hidden; overflow-wrap: anywhere;
 }
-.sv-fav-price { font-family: var(--ui-font-mono); font-size: 12px; font-weight: 500; color: var(--u-text-3); }
+.sv-fav-key {
+  display: grid; place-items: center; grid-row: span 2; align-self: start; min-height: 23px;
+  font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600;
+  color: var(--u-text-2); background: var(--surface-2); border: 1px solid var(--u-hair); border-radius: 6px;
+}
+.sv-fav-price { font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 500; color: var(--u-text-2); }
+.sv-turno-puestos { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.sv-turno-campo { display: grid; min-width: 0; gap: 4px; font-size: 13px; }
+.sv-turno-campo .sv-field { min-width: 0; min-height: 44px; }
+.sv-m-mesas { flex-shrink: 0; padding: 6px 12px; }
+.sv-m-resumen-label { text-align: start; }
+.sv-m-resumen-label small { display: block; color: var(--u-text-2); }
+.sv-line-note { display: block; color: var(--c-warn); font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+.sv-line-error { font-size: 12px; color: var(--c-danger); overflow-wrap: anywhere; }
+.sv-line-done-name .sv-line-mods { display: block; }
+@container sv (max-width: 680px) {
+  .sv-fav-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
 
 /* ── Rejilla de platos (regla 1: nunca menos de dos columnas) ──
    Con la FOTO de cada plato arriba (carta.tsx). Si el restaurante no
@@ -2812,6 +2955,26 @@
   font-family: var(--ui-font-mono); font-size: 28px; font-weight: 600;
   letter-spacing: -0.03em; margin-top: 4px;
 }
+
+.hoja-cobro { --hoja-superficie: var(--adm-overlay, var(--adm-card)); }
+.sv-cobro-contenido, .sv-cobro-modo, .sv-cobro-pie { display: flex; flex-direction: column; gap: 12px; }
+.sv-cobro-modo { margin-top: 12px; }
+.sv-cobro-metodos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.sv-cobro-metodos .sv-choice { flex: 1 1 auto; min-width: 0; padding-inline: 12px; overflow-wrap: anywhere; }
+.sv-cobro-fila { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.sv-cobro-fila > :first-child { color: var(--u-text-2); font-size: 14px; }
+.sv-cobro-fila[data-destacada] { padding: 8px 12px; border-radius: var(--radius-md); background: var(--adm-card); }
+.sv-cobro-importe { margin-inline-start: auto; text-align: right; font-variant-numeric: tabular-nums; }
+.hoja-cobro .sv-seg { flex-wrap: wrap; }
+.hoja-cobro .sv-seg > button { flex: 1 1 5.5rem; min-height: 48px; overflow-wrap: anywhere; }
+.hoja-cobro .sv-seg > button[aria-selected="true"] { background: var(--adm-card); color: var(--u-text); box-shadow: var(--adm-shadow-xs); }
+@media (max-width: 479px) {
+  .hoja-cobro .sv-seg[data-mixto] > button { flex-basis: calc(50% - 3px); }
+  .hoja-cobro .sv-cobro-metodos[data-mixto] .sv-choice { flex-basis: calc(50% - 4px); }
+}
+.hoja-cobro .sv-step { min-width: 48px; min-height: 48px; }
+.hoja-cobro .sv-pay { flex-wrap: wrap; }
+.hoja-cobro button:disabled { cursor: not-allowed; opacity: .55; }
 .sv-x {
   width: 38px; height: 38px; flex-shrink: 0; border: none; border-radius: var(--radius-lg);
   background: var(--surface-2); color: var(--u-text); display: grid; place-items: center;
@@ -2864,14 +3027,6 @@
   background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
 }
 .sv-choice[data-mono="1"] { font-family: var(--ui-font-mono); }
-
-.sv-vuelto {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 14px; border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
-  color: var(--brand-accent-ink);
-}
-.sv-vuelto-n { font-family: var(--ui-font-mono); font-size: 22px; font-weight: 600; }
 
 /* Fila de «por platos»: toca lo que paga esta persona. */
 .sv-pay {
@@ -3085,8 +3240,8 @@
    MÓVIL Y TABLET — ajustes de tamaño
    ══════════════════════════════════════════════════════════════ */
 @container sv (max-width: 899px) {
-  /* Una cosa a la vez: ni riel ni comanda al lado. */
-  .sv-body { flex-direction: column; }
+  .sv-body:not([data-plano="1"]) > .sv-rail { flex-basis: 145px; }
+  .sv-body:not([data-plano="1"]) > .sv-ticket { flex-basis: 254px; }
   .sv-dish { min-height: 118px; padding: 14px; border-radius: var(--radius-xl); border-width: 1.5px; }
   .sv-dish-name { font-size: 15px; }
   .sv-dish-price { font-size: 14px; }
@@ -3151,13 +3306,19 @@
    sitio en una tablet. Se decide por el PUNTERO y no por el ancho —una
    tablet de 1280 px sigue siendo un dedo. */
 @media (pointer: coarse) {
-  .sv-kbd, .sv-fav-key, .sv-cta-key, .sv-foot-keys, .sv-tab-key, .sv-palette-foot { display: none; }}
+  .sv-kbd, .sv-cta-key, .sv-foot-keys, .sv-tab-key, .sv-palette-foot { display: none; }}
 @keyframes fade-in  { from { transform: translateY(7px); }  to { transform: translateY(0); } }
 
 @keyframes adm-nav-spin { to { transform: rotate(360deg); } }
 
 @keyframes adm-shimmer {
   100% { transform: translateX(100%); }
+}
+@container sv (max-width: 680px) {
+  .sv-body:not([data-plano="1"]) { flex-direction: column; }
+}
+@container sv (max-width: 620px) {
+  .sv-body[data-plano="1"] { flex-direction: column; }
 }
 
 /* Tablet apretada: mismo módulo, columnas más estrechas. */
@@ -3268,6 +3429,28 @@ html[data-admin-area] .glass-solid {
    línea base de una caja con overflow. */
 .rodillo-cifra { line-height: 1.2; white-space: nowrap; }
 .rodillo-cifra > span { display: inline-block; height: 1.2em; vertical-align: top; }
+
+/* Hoy da la primera posición a ventas. Se escala por el ancho de su
+   propia celda para conservar los importes completos al ampliar la página. */
+.hoy-cifras > [data-slot="stat"] { container-type: inline-size; }
+.hoy-cifras [data-slot="stat-value"] {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: clamp(13px, 11cqi, 28px);
+}
+@media (min-width: 768px) {
+  .hoy-cifras { grid-template-columns: minmax(0, 1.35fr) repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .hoy-cifras > [data-slot="stat"]:first-child { grid-column: 1 / -1; }
+  .hoy-cifras > [data-slot="stat"]:nth-child(2) { border-left: 0; border-top-width: 1px; }
+  .hoy-cifras > [data-slot="stat"]:nth-child(3) { grid-column: auto; border-left-width: 1px; }
+}
+@media (max-width: 350px) {
+  .hoy-cifras { grid-template-columns: minmax(0, 1fr); }
+  .hoy-cifras > [data-slot="stat"]:nth-child(3) { border-left: 0; }
+}
 .rodillo-col { overflow: hidden; }
 .rodillo-tira { display: block; transform: translate3d(0, calc(var(--d) * -1.2em), 0); }
 .rodillo-tira > span { display: block; height: 1.2em; }

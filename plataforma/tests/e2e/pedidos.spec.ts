@@ -116,6 +116,51 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
     await cleanupTenant(tenantB);
   });
 
+  test('1.0 · la ficha del platillo conserva la acción y devuelve el foco', async ({ page }) => {
+    test.setTimeout(180_000);
+    await page.setViewportSize({ width: 390, height: 560 });
+    await page.goto(tenantUrl(tenantA.slug));
+    const verMenu = page.getByRole('button', { name: 'Ver el menú' });
+    if (await verMenu.isVisible()) await verMenu.click();
+    const omitir = page.getByRole('button', { name: 'Ahora no' });
+    await omitir.waitFor({ state: 'visible', timeout: 5_000 }).catch(() => {});
+    if (await omitir.isVisible()) await omitir.click();
+
+    const tarjeta = page.getByRole('button', { name: `Ver ${tenantA.productName}`, exact: true }).first();
+    const ficha = page.getByRole('dialog', { name: tenantA.productName, exact: true });
+    await expect(async () => {
+      await tarjeta.focus();
+      await tarjeta.press('Enter');
+      await expect(ficha).toBeVisible({ timeout: 3_000 });
+    }).toPass({ timeout: 60_000 });
+    const agregar = ficha.getByRole('button', { name: /Agregar.*42\.00/ });
+    await expect(agregar).toBeInViewport({ ratio: 1 });
+    await page.keyboard.press('Escape');
+    await expect(ficha).toBeHidden();
+    await expect(tarjeta).toBeFocused();
+
+    await tarjeta.press('Enter');
+    await expect(ficha).toBeVisible();
+    await agregar.click();
+    await expect(ficha).toBeHidden();
+    const carrito = page.getByRole('button', { name: /^Ver carrito/ });
+    await expect(carrito).toBeVisible();
+    await expect(carrito).toContainText(tenantA.productName);
+    await expect(carrito).toContainText('42.00');
+    const navegacion = page.getByRole('navigation', { name: 'Navegación principal' });
+    await expect(navegacion.getByRole('button')).toHaveCount(4);
+    await expect(navegacion.getByRole('button', { name: 'Menú', exact: true })).toHaveAttribute('aria-current', 'page');
+    const barra = await navegacion.boundingBox();
+    const resumen = await carrito.boundingBox();
+    expect(resumen!.y + resumen!.height).toBeLessThan(barra!.y);
+    await carrito.focus();
+    await carrito.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Carrito' })).toBeVisible();
+    await expect(navegacion).toBeHidden();
+    await page.getByRole('dialog', { name: 'Carrito' }).getByRole('button', { name: 'Cerrar', exact: true }).click();
+    await expect(navegacion).toBeVisible();
+  });
+
   test('crear pedido desde el menú público y anularlo desde el panel admin', async ({ page }) => {
     // En CI corre contra `next dev`: cada pantalla se compila la primera vez
     // que se pide (menú, checkout, login, pedidos), y eso solo ya se comía
@@ -159,7 +204,7 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
     const agregar = page.getByRole('button', { name: `Agregar ${tenantA.productName}` });
     await expect(async () => {
       await agregar.click();
-      await expect(page.getByText('Ver carrito')).toBeVisible({ timeout: 3_000 });
+      await expect(page.getByRole('button', { name: /^Ver carrito/ })).toBeVisible({ timeout: 3_000 });
     }).toPass({ timeout: 60_000 });
     await page.goto(tenantUrl(tenantA.slug, '/checkout'));
 
@@ -244,7 +289,7 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
       page.waitForTimeout(15_000).then(() => 'timeout' as const),
     ]);
     if (result !== 'closed') {
-      const dialogText = await page.locator('.glass.anim-slide-up').innerText().catch(() => '(no se encontró el diálogo)');
+      const dialogText = await page.getByRole('dialog', { name: 'Anular pedido' }).innerText().catch(() => '(no se encontró el diálogo)');
       throw new Error(`El diálogo de anulación no cerró a tiempo. Contenido visible: ${dialogText}`);
     }
 

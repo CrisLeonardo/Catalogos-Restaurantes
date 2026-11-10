@@ -54,9 +54,6 @@ function dobleDeSupabase(responder: Responder) {
   return { cliente: { from, rpc }, consultas };
 }
 
-const filtro = (c: Consulta, tipo: string, col: string) =>
-  c.filtros.find(([t, k]) => t === tipo && k === col)?.[2];
-
 /* ── Dobles de los módulos con efectos ───────────────────────────── */
 const h = vi.hoisted(() => ({
   sesion: null as unknown as ReturnType<typeof dobleDeSupabase>,
@@ -100,11 +97,12 @@ vi.mock('@/lib/db/mesa-columna', () => ({
 }));
 
 import { cancelPublicOrder, freeTable, updateOrderStatus } from './orders';
+import { cobrarParteDeMesa, cobradoDeMesa } from './servicio';
+import { assertTableAccess } from '@/lib/auth/table-access';
 import { logActivity } from '@/lib/activity';
 import { enqueueKitchenForOrder } from '@/lib/print-agent';
 import { awardLoyaltyForOrder } from '@/lib/actions/loyalty';
 import { emitirFacturaAutomatica } from '@/lib/actions/fel';
-import { cerrarTurnoDeMesa } from '@/lib/db/table-sessions';
 
 const RID = '11111111-1111-4111-8111-111111111111';
 const CASA = '99999999-9999-4999-8999-999999999999';
@@ -160,44 +158,99 @@ describe('updateOrderStatus usa el restaurante del pedido (PROD-08)', () => {
   });
 });
 
-describe('freeTable cierra solo lo que leyó y cobra una vez (PROD-07)', () => {
-  /** Mesa con dos pedidos abiertos al leer; `cierra` = lo que devuelve el update. */
-  function montar(cierra: string[]) {
+describe('freeTable confirma el snapshot en una transacción (0.14)', () => {
+  function montar(rpc: { data?: unknown; error?: unknown }) {
     h.sesion = dobleDeSupabase(() => undefined);
     h.servicio = dobleDeSupabase((c) => {
-      if (c.tabla !== 'orders') return;
-      if (c.op === 'select') return { data: [{ id: 'o-1', total: 60 }, { id: 'o-2', total: 40 }] };
-      if (c.op === 'update' && (c.valores as { status?: string }).status === 'DELIVERED') {
-        return { data: cierra.map((id) => ({ id })) };
-      }
+      if (c.tabla === 'orders' && c.op === 'select') return { data: [{ id: 'o-1', total: 60 }, { id: 'o-2', total: 40 }] };
+      if (c.tabla === 'leogin_cerrar_saldo_mesa') return rpc;
     });
   }
-  const cierre = () => h.servicio.consultas.find((c) => c.op === 'update' && (c.valores as { status?: string }).status === 'DELIVERED')!;
-  const pagos = () => h.servicio.consultas.filter((c) => c.tabla === 'order_payments' && c.op === 'insert');
-
-  it('el cierre va por los ids leídos: una ronda que llega mientras se cobra queda abierta', async () => {
-    montar(['o-1', 'o-2']);
-    expect(await freeTable(RID, 4, { method: 'CASH' })).toEqual({});
-    expect(filtro(cierre(), 'in', 'id')).toEqual(['o-1', 'o-2']);
-    const filas = pagos()[0].valores as { order_id: string; amount: number }[];
-    expect(filas.map((f) => f.order_id).sort()).toEqual(['o-1', 'o-2']);
-    expect(filas.reduce((s, f) => s + f.amount, 0)).toBe(100);
+  it('envía únicamente los pedidos leídos y difiere FEL para los confirmados', async () => {
+    montar({ data: { intentoId: TOKEN, cobrado: 100, paymentIds: ['p-1'], orderIds: ['o-1', 'o-2'] } });
+    expect(await freeTable(RID, 4, { method: 'CASH' }, TOKEN)).toMatchObject({ intentoId: TOKEN, cobrado: 100 });
+    const args = h.servicio.consultas.find((c) => c.tabla === 'leogin_cerrar_saldo_mesa')!.valores as {
+      p_orders: string[]; p_pagos: { method: string }[];
+    };
+    expect(args.p_orders).toEqual(['o-1', 'o-2']);
+    expect(args.p_pagos).toEqual([{ method: 'CASH' }]);
+    await correrPendientes();
+    expect(emitirFacturaAutomatica).toHaveBeenCalledWith(RID, 'o-1');
+    expect(emitirFacturaAutomatica).toHaveBeenCalledWith(RID, 'o-2');
   });
-
-  it('si otro aparato ya la cobró: «Esta mesa ya se cobró» y ningún pago', async () => {
-    montar([]);
-    expect(await freeTable(RID, 4, { method: 'CASH' })).toEqual({ error: 'Esta mesa ya se cobró.' });
-    expect(pagos()).toHaveLength(0);
-    expect(cerrarTurnoDeMesa).not.toHaveBeenCalled();
+  it('un conflicto no escribe dinero fuera del RPC ni programa facturación', async () => {
+    montar({ error: { code: 'LGD01', message: 'La cuenta cambió.' } });
+    expect(await freeTable(RID, 4, { method: 'CASH' }, TOKEN)).toEqual({ error: 'La cuenta cambió.', incierto: false });
+    expect(h.servicio.consultas.some((c) => c.op === 'insert' || c.op === 'update')).toBe(false);
+    expect(h.pendientes).toEqual([]);
   });
+  it('sin la migración 163 no vuelve al cierre inseguro anterior', async () => {
+    montar({ error: { code: 'PGRST202', message: 'Could not find the function' } });
+    expect((await freeTable(RID, 4, { method: 'CARD' }, TOKEN)).error).toMatch(/migración 163/);
+    expect(h.servicio.consultas.some((c) => c.op === 'insert' || c.op === 'update')).toBe(false);
+  });
+  it('recupera antes de leer una mesa reutilizada y devuelve el resultado guardado', async () => {
+    const original = { intentoId: TOKEN, cobrado: 100, paymentIds: ['p-original'], orderIds: ['o-original'] };
+    h.servicio = dobleDeSupabase((c) => c.tabla === 'leogin_recuperar_intento_cobro' ? { data: original } : undefined);
+    expect(await freeTable(RID, 4, { method: 'CARD', amount: 100 }, TOKEN)).toEqual(original);
+    expect(h.servicio.consultas.map((c) => c.tabla)).toEqual(['leogin_recuperar_intento_cobro']);
+    expect(h.pendientes).toEqual([]);
+  });
+  it('sin la recuperación de la 161 no vuelve a leer ni intenta cobrar', async () => {
+    h.servicio = dobleDeSupabase(() => ({ error: { code: 'PGRST202', message: 'Could not find the function' } }));
+    expect((await freeTable(RID, 4, { method: 'CARD', amount: 100 }, TOKEN)).error).toMatch(/migración 161/);
+    expect(h.servicio.consultas.map((c) => c.tabla)).toEqual(['leogin_recuperar_intento_cobro']);
+  });
+});
 
-  it('solo registra el pago de las filas que esta llamada cerró', async () => {
-    montar(['o-1']);
-    expect(await freeTable(RID, 4, { method: 'CARD' })).toEqual({});
-    const filas = pagos()[0].valores as { order_id: string }[];
-    expect(filas.map((f) => f.order_id)).toEqual(['o-1']);
-    const metodos = h.servicio.consultas.filter((c) => c.op === 'update' && 'payment_method' in (c.valores as object));
-    expect(metodos.map((c) => filtro(c, 'eq', 'id'))).toEqual(['o-1']);
+describe('cobro parcial conserva el límite de autorización (0.14)', () => {
+  it('una petición sin identidad se rechaza sin tocar la base', async () => {
+    h.servicio = dobleDeSupabase(() => undefined);
+    expect((await cobrarParteDeMesa(RID, 1, ['i-1'], [{ method: 'CARD', amount: 10 }], '')).error).toMatch(/identidad/);
+    expect((await freeTable(RID, 1, { method: 'CARD', amount: 10 })).error).toMatch(/identidad/);
+    expect(h.servicio.consultas).toEqual([]);
+  });
+  it('una respuesta de transporte incierta conserva la identidad para recuperarla', async () => {
+    h.servicio = dobleDeSupabase(() => ({ error: { code: '', message: 'Failed to fetch' } }));
+    expect(await cobrarParteDeMesa(RID, 1, ['i-1'], [{ method: 'CARD', amount: 10 }], TOKEN))
+      .toEqual({ error: 'Failed to fetch', incierto: true });
+    expect(h.servicio.consultas[0]).toMatchObject({ tabla: 'leogin_cobrar_parte_mesa_idempotente', valores: { p_intento: TOKEN } });
+  });
+  it('sin sesión autorizada no invoca la base ni el RPC', async () => {
+    vi.mocked(assertTableAccess).mockResolvedValueOnce({ error: 'No autorizado.' });
+    h.servicio = dobleDeSupabase(() => undefined);
+    expect(await cobrarParteDeMesa(RID, 1, ['i-1'], [{ method: 'CASH', amount: 10 }], TOKEN)).toEqual({ error: 'No autorizado.' });
+    expect(h.servicio.consultas).toEqual([]);
+  });
+  it('sin la migración 161 rechaza antes de recurrir a escrituras separadas', async () => {
+    h.servicio = dobleDeSupabase((c) => c.op === 'rpc'
+      ? { error: { code: 'PGRST202', message: 'Could not find the function' } } : undefined);
+    const result = await cobrarParteDeMesa(RID, 1, ['i-1'], [{ method: 'CARD', amount: 10 }], TOKEN);
+    expect(result).toMatchObject({ needsMigration: true });
+    expect(result.error).toMatch(/migración 161/);
+    expect(h.servicio.consultas.some((c) => c.op === 'insert' || c.op === 'update')).toBe(false);
+  });
+});
+
+describe('cuotas de pantalla y cobro comparten SQL (0.17)', () => {
+  it('una lectura sin autorización no consulta las cuotas', async () => {
+    vi.mocked(assertTableAccess).mockResolvedValueOnce({ error: 'No autorizado.' });
+    h.servicio = dobleDeSupabase(() => undefined);
+    expect(await cobradoDeMesa(RID, 1)).toEqual({ error: 'No autorizado.' });
+    expect(h.servicio.consultas).toEqual([]);
+  });
+  it('sin la 164 no inventa cuotas con el prorrateo anterior', async () => {
+    h.servicio = dobleDeSupabase(() => ({ error: { code: 'PGRST202', message: 'Could not find the function' } }));
+    const result = await cobradoDeMesa(RID, 1);
+    expect(result.needsMigration).toBe(true);
+    expect(result.error).toMatch(/migración 164/);
+    expect(h.servicio.consultas.map((c) => c.tabla)).toEqual(['leogin_saldos_platos_mesa']);
+  });
+  it('devuelve las cuotas exactas y los pagos de la lectura transaccional', async () => {
+    const original = { total: 33.33, lineasPagadas: ['i-1'], lineasPendientes: { 'i-1': 0, 'i-2': 33.34, 'i-3': 33.33 } };
+    h.servicio = dobleDeSupabase(() => ({ data: original }));
+    expect(await cobradoDeMesa(RID, 1)).toEqual(original);
+    expect(h.servicio.consultas[0]).toMatchObject({ tabla: 'leogin_saldos_platos_mesa', valores: { p_restaurant: RID, p_mesa: 1 } });
   });
 });
 

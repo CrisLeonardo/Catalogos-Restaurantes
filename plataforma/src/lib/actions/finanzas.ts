@@ -17,7 +17,7 @@ import { revalidatePath } from 'next/cache';
 import { getSalesReport } from '@/lib/db/reports';
 import type { SalesReport, Split } from '@/lib/db/reports';
 import { DENOM_FIELDS } from '@/lib/finanzas-constants';
-import { faltaLaMigracion } from '@/lib/db/migracion-ausente';
+import { faltaLaMigracion, faltaLaFuncion } from '@/lib/db/migracion-ausente';
 import { resolveRestaurantBranding } from '@/lib/documents/branding';
 import {
   createBrandedWorkbook, addBrandedHeader, styleTableHeaderRow, freezeHeaderRow,
@@ -39,6 +39,7 @@ import { getTuDia } from '@/lib/db/momentos';
 import type { RecordDelDia } from '@/lib/momentos';
 import { sendPushToRestaurant } from '@/lib/push';
 import { fmtMoney } from '@/lib/money';
+import { identidadCobroValida } from '@/lib/cobro-intento';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
@@ -86,7 +87,8 @@ function resumen(l: LecturaDelTurno): CashSummary {
 export async function getCashSummary(restaurantId: string): Promise<CashSummary> {
   const ctx = await authRestaurant(restaurantId);
   if (!ctx) return EMPTY_SUMMARY(new Date().toISOString().slice(0, 10));
-  return resumen(await lectura(ctx, restaurantId));
+  const r = resumen(await lectura(ctx, restaurantId));
+  return ctx.ciego ? { ...r, expectedCash: 0, byMethod: {}, totalSales: 0 } : r;
 }
 
 export type CashCount = {
@@ -118,7 +120,7 @@ export async function getCashHistory(
   restaurantId: string,
   limit = 30,
 ): Promise<CashCount[]> {
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'caja.ver_esperado', 'finanzas');
   if (!ctx) return [];
   const base = 'id, business_date, opening_float, expected_cash, counted_cash, difference, by_method, denomination_breakdown, shift_label, cashier_name, notes, created_at, created_by';
   const nuevas = ', status, expenses_total, opened_at, opened_by_name, period_start, closed_at, void_reason, voided_at';
@@ -164,7 +166,7 @@ export async function getCajaApproval(restaurantId: string): Promise<{ selfAppro
   const ctx = await authRestaurant(restaurantId);
   if (!ctx) return { selfApproves: false, approvers: [] };
   if (ctx.firmaSola) return { selfApproves: true, approvers: [] };
-  return { selfApproves: false, approvers: await listarAprobadores(ctx.db, restaurantId) };
+  return { selfApproves: false, approvers: await listarAprobadores(ctx.db, restaurantId, 'caja.corregir') };
 }
 
 export async function anularCorte(input: FirmaInput & {
@@ -261,7 +263,7 @@ export async function getSalesReportData(
   from: string,
   to: string,
 ): Promise<{ report?: SalesReport; branding?: DocumentBranding; error?: string }> {
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'finanzas');
   if (!ctx) return { error: 'No autorizado.' };
   const [report, branding] = await Promise.all([
     getSalesReport(restaurantId, from, to, ctx.tz, ctx.corte),
@@ -275,7 +277,7 @@ export async function exportSalesReportXlsx(
   from: string,
   to: string,
 ): Promise<{ xlsx?: string; filename?: string; error?: string }> {
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'finanzas');
   if (!ctx) return { error: 'No autorizado.' };
 
   const [report, branding] = await Promise.all([
@@ -380,7 +382,7 @@ export async function getCashHistoryPdfData(
   restaurantId: string,
   limit = 200,
 ): Promise<{ rows?: CashCount[]; branding?: DocumentBranding; slug?: string; error?: string }> {
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'caja.ver_esperado', 'finanzas');
   if (!ctx) return { error: 'No autorizado.' };
   const [rows, branding] = await Promise.all([
     getCashHistory(restaurantId, limit),
@@ -394,7 +396,7 @@ export async function exportCashHistoryXlsx(
   restaurantId: string,
   limit = 200,
 ): Promise<{ xlsx?: string; filename?: string; error?: string }> {
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'caja.ver_esperado', 'finanzas');
   if (!ctx) return { error: 'No autorizado.' };
 
   const [rows, branding] = await Promise.all([
@@ -474,6 +476,12 @@ export interface CajaDraft {
   savedAt: string;
 }
 
+export interface BorradorCaja extends ConteoCaja {
+  revision: string;
+  savedAt: string;
+  actorName: string | null;
+}
+
 /** El turno abierto, tal como lo enseña la pantalla. */
 export interface CajaShift {
   id: string;
@@ -505,12 +513,31 @@ export interface CajaState {
   tips: TipShare[];
   tipsTotal: number;
   draft: CajaDraft | null;
+  cloudDraft?: BorradorCaja | null;
+  draftUnavailable?: boolean;
   /** Hora de corte del día (minutos), para enseñarla. */
   dayCutoff: number;
   /** Quien mira puede firmar sola las correcciones. */
   selfApproves: boolean;
   /** La migración 145 no ha corrido: sin turnos ni correcciones. */
   needsMigration: boolean;
+  /** Arqueo ciego (177): quien mira cuenta sin ver lo esperado ni los cobros. */
+  ciego?: boolean;
+}
+
+/**
+ * Arqueo ciego: lo que dejaría calcular lo esperado no sale del servidor.
+ * La diferencia se conoce al cerrar, cuando el servidor la calcula.
+ */
+function aCiegas(e: CajaState): CajaState {
+  return {
+    ...e,
+    ciego: true,
+    summary: { ...e.summary, expectedCash: 0, byMethod: {}, totalSales: 0 },
+    refunds: 0,
+    refundsCash: 0,
+    payments: [],
+  };
 }
 
 const EMPTY_CAJA = (date: string): CajaState => ({
@@ -574,7 +601,17 @@ function estadoDeCaja(ctx: Ctx, l: LecturaDelTurno): CajaState {
 export async function getCajaState(restaurantId: string): Promise<CajaState> {
   const ctx = await authRestaurant(restaurantId);
   if (!ctx) return EMPTY_CAJA(new Date().toISOString().slice(0, 10));
-  return estadoDeCaja(ctx, await lectura(ctx, restaurantId));
+  const turno = await lectura(ctx, restaurantId);
+  const { data, error } = await leerBorradorCaja(ctx, restaurantId, turno.desde);
+  const estado = estadoDeCaja(ctx, turno);
+  return {
+    ...(ctx.ciego ? aCiegas(estado) : estado),
+    cloudDraft: data ? {
+      ...data.payload as ConteoCaja, revision: data.revision as string,
+      savedAt: data.saved_at as string, actorName: data.actor_name as string | null,
+    } : null,
+    draftUnavailable: !!error,
+  };
 }
 
 const SIN_145 = 'Falta la migración 145 en esta base para poder abrir y cerrar turnos.';
@@ -585,7 +622,7 @@ export async function abrirTurno(input: {
   openingFloat: number;
   shiftLabel?: string | null;
 }): Promise<{ ok?: true; error?: string }> {
-  const ctx = await authRestaurant(input.restaurantId);
+  const ctx = await authRestaurant(input.restaurantId, 'caja.abrir');
   if (!ctx) return { error: 'No autorizado.' };
 
   const fondo = Math.round((Number(input.openingFloat) || 0) * 100) / 100;
@@ -601,11 +638,12 @@ export async function abrirTurno(input: {
      abrir—, abrirlo es ponerle quién y fondo, no crear otro. */
   if (l.abierto) {
     if (l.abierto.openedAt) return { error: 'Ya hay un turno abierto.' };
-    const { error } = await ctx.db.from('cash_counts').update({
+    const { data, error } = await ctx.db.from('cash_counts').update({
       opened_at: ahora, opened_by: ctx.userId, opened_by_name: ctx.cashierName,
       opening_float: fondo, shift_label: etiqueta ?? l.abierto.shiftLabel,
-    }).eq('id', l.abierto.id);
+    }).eq('id', l.abierto.id).eq('restaurant_id', input.restaurantId).in('status', ['OPEN', 'DRAFT']).is('opened_at', null).select('id');
     if (error) return { error: error.message };
+    if (!data?.length) return { error: 'Este turno ya se cerró o se abrió desde otro aparato.' };
   } else {
     const { error } = await ctx.db.from('cash_counts').insert({
       restaurant_id: input.restaurantId,
@@ -642,7 +680,7 @@ export async function addCashExpense(input: {
   paidBy?: string | null;
   notes?: string | null;
 }): Promise<{ ok?: true; error?: string }> {
-  const ctx = await authRestaurant(input.restaurantId);
+  const ctx = await authRestaurant(input.restaurantId, 'caja.salida');
   if (!ctx) return { error: 'No autorizado.' };
 
   const concept = (input.concept ?? '').trim();
@@ -687,7 +725,7 @@ export async function deleteCashExpense(
   id: string,
 ): Promise<{ ok?: true; error?: string }> {
   if (!UUID_RE.test(id)) return { error: 'Gasto no encontrado.' };
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'caja.salida');
   if (!ctx) return { error: 'No autorizado.' };
 
   // Un gasto ya atado a un corte cerrado no se toca: cambiaría un cuadre
@@ -727,17 +765,61 @@ export interface CajaPayload {
   tips?: TipShare[] | null;
 }
 
-/** Lee el payload y calcula el cuadre desde el SERVIDOR, nunca del cliente. */
-async function cuadre(ctx: Ctx, input: CajaPayload) {
+export interface ConteoCaja extends Omit<CajaPayload, 'restaurantId'> {
+  cashCounted: boolean;
+  paso: 1 | 2 | 3;
+}
+
+export interface AlcanceCaja {
+  desde: string;
+  id: string | null;
+}
+
+const SIN_171 = 'La sincronización de Caja requiere la migración 171.';
+
+function leerBorradorCaja(ctx: Ctx, restaurantId: string, periodo: string) {
+  return ctx.db.from('caja_borradores').select('revision,saved_at,actor_name,payload')
+    .eq('restaurant_id', restaurantId).eq('period_start', periodo).maybeSingle();
+}
+
+export async function guardarBorradorCaja(input: {
+  restaurantId: string; turno: AlcanceCaja; revision: string | null; conteo: ConteoCaja;
+}): Promise<{ guardado?: { revision: string; savedAt: string }; conflicto?: boolean; error?: string }> {
+  const ctx = await authRestaurant(input.restaurantId, 'caja.cerrar');
+  if (!ctx) return { error: 'No autorizado.' };
+  if (input.revision != null && !identidadCobroValida(input.revision)) return { error: 'Revisión inválida.' };
+  const l = await lectura(ctx, input.restaurantId);
+  if (!l.controlCaja || l.sinMigracion) return { error: SIN_171 };
+  if (input.turno.desde !== l.desde || input.turno.id !== (l.abierto?.id ?? null)) {
+    return { conflicto: true, error: 'El turno cambió. Revisa el conteo antes de seguir.' };
+  }
+  const conteo = input.conteo;
+  const { breakdown, counted } = conteoCaja(conteo.counts);
+  const { data, error } = await ctx.db.rpc('leogin_guardar_borrador_caja', {
+    p_restaurant: input.restaurantId, p_periodo: l.desde, p_turno: input.turno.id,
+    p_revision: input.revision, p_corte: l.controlCaja.ultimoCierreId,
+    p_actor: ctx.userId, p_nombre: ctx.cashierName,
+    p_payload: { ...conteo, counts: breakdown, cashCounted: conteo.cashCounted === true || counted > 0 },
+  });
+  if (error) return { error: faltaLaFuncion(error) ? SIN_171 : error.message, conflicto: /^LGD0[45]$/.test(error.code ?? '') };
+  if (!data?.revision) return { error: 'No se confirmó el borrador.' };
+  return { guardado: data };
+}
+
+function conteoCaja(counts: CajaPayload['counts']) {
   const breakdown: Record<string, number> = {};
   let centavos = 0;
   for (const { field, centavos: c } of DENOM_FIELDS) {
-    const n = Math.max(0, Math.floor(Number(input.counts?.[field]) || 0));
+    const n = Math.max(0, Math.floor(Number(counts?.[field]) || 0));
     breakdown[field] = n;
     centavos += n * c;
   }
-  const counted = Math.round(centavos) / 100;
+  return { breakdown, counted: centavos / 100 };
+}
 
+/** Lee el payload y calcula el cuadre desde el SERVIDOR, nunca del cliente. */
+async function cuadre(ctx: Ctx, input: CajaPayload, conteo = conteoCaja(input.counts)) {
+  const { breakdown, counted } = conteo;
   const l = await lectura(ctx, input.restaurantId);
   /* El fondo de un turno abierto es el que se escribió AL ABRIR: dejar que
      el cierre lo cambie sería la forma más fácil de «cuadrar» un faltante. */
@@ -759,7 +841,7 @@ async function cuadre(ctx: Ctx, input: CajaPayload) {
  * guarda en el turno abierto; si no había, nace uno sin apertura.
  */
 export async function saveCajaDraft(input: CajaPayload): Promise<{ ok?: true; error?: string }> {
-  const ctx = await authRestaurant(input.restaurantId);
+  const ctx = await authRestaurant(input.restaurantId, 'caja.cerrar');
   if (!ctx) return { error: 'No autorizado.' };
 
   const c = await cuadre(ctx, input);
@@ -781,17 +863,18 @@ export async function saveCajaDraft(input: CajaPayload): Promise<{ ok?: true; er
     draft_saved_at:         new Date().toISOString(),
   };
 
-  const { error } = c.l.abierto
-    ? await ctx.db.from('cash_counts').update({ ...fila, status: 'OPEN' }).eq('id', c.l.abierto.id)
+  const { data, error } = c.l.abierto
+    ? await ctx.db.from('cash_counts').update({ ...fila, status: 'OPEN' }).eq('id', c.l.abierto.id).eq('restaurant_id', input.restaurantId).in('status', ['OPEN', 'DRAFT']).select('id')
     : await ctx.db.from('cash_counts').insert({
         ...fila,
         restaurant_id: input.restaurantId,
         business_date: c.l.dia,
         status: 'OPEN',
         created_by: ctx.userId,
-      });
+      }).select('id');
 
   if (error) return { error: error.message };
+  if (c.l.abierto && !data?.length) return { error: 'Este turno ya se cerró desde otro aparato.' };
 
   revalidatePath('/admin/caja');
   return { ok: true };
@@ -803,27 +886,29 @@ export async function saveCajaDraft(input: CajaPayload): Promise<{ ok?: true; er
  * fondo. Un turno que solo existía por el conteo guardado sí se va.
  */
 export async function discardCajaDraft(restaurantId: string): Promise<{ ok?: true; error?: string }> {
-  const ctx = await authRestaurant(restaurantId);
+  const ctx = await authRestaurant(restaurantId, 'caja.cerrar');
   if (!ctx) return { error: 'No autorizado.' };
   const l = await lectura(ctx, restaurantId);
   if (!l.abierto) return { ok: true };
 
-  const { error } = l.abierto.openedAt
+  const { data, error } = l.abierto.openedAt
     ? await ctx.db.from('cash_counts').update({
         denomination_breakdown: null, counted_cash: 0, difference: 0, notes: null,
         tips_distribution: null, tips_total: 0, draft_saved_at: null,
-      }).eq('id', l.abierto.id)
-    : await ctx.db.from('cash_counts').delete().eq('id', l.abierto.id).in('status', ['OPEN', 'DRAFT']);
+      }).eq('id', l.abierto.id).eq('restaurant_id', restaurantId).in('status', ['OPEN', 'DRAFT']).select('id')
+    : await ctx.db.from('cash_counts').delete().eq('id', l.abierto.id).eq('restaurant_id', restaurantId).in('status', ['OPEN', 'DRAFT']).select('id');
   if (error) return { error: error.message };
+  if (!data?.length) return { error: 'Este turno ya se cerró desde otro aparato.' };
   revalidatePath('/admin/caja');
   return { ok: true };
 }
 
-/** El resultado del cierre, para la pantalla final e imprimir. */
-export interface CajaCloseResult {
+/** Los importes y movimientos confirmados en el corte. */
+export interface CajaReceipt {
   id: string;
   date: string;
   counted: number;
+  cashCounted?: boolean;
   expected: number;
   opening: number;
   expensesTotal: number;
@@ -836,9 +921,43 @@ export interface CajaCloseResult {
   openedByName: string | null;
   /** Lo que quedó sin cobrar y pasa al turno siguiente. */
   pendingTotal: number;
+  expectedDrawer: number;
+  byMethod: CashSummary['byMethod'];
+  counts: Record<string, number>;
+  expenses: { id: string; concept: string; amount: number; at: string }[];
+  tips: TipShare[] | null;
+  openedAt: string | null;
+  shiftLabel: string | null;
+  cashierName: string | null;
+  notes: string | null;
+}
+
+export interface CajaCloseResult extends CajaReceipt {
   /** Cómo va el día del turno (PLAN_MOMENTOS_PICO P5): lo vendido en TODO
    *  el día, no solo en efectivo, y el récord si de verdad lo es. */
   dia: { ventas: number; pedidos: number; record: RecordDelDia | null } | null;
+}
+
+export type SolicitudCierre = CajaPayload & { confirmPending?: boolean; cashCounted?: boolean; borradorRevision?: string | null } & (
+  | { intentoId: string; turno: AlcanceCaja }
+  | { intentoId?: never; turno?: never }
+);
+
+type RespuestaCierre = { result?: CajaCloseResult; pending?: Pendientes; error?: string; incierto?: boolean };
+
+const SIN_170 = 'Falta la migración 170 para conservar el recibo del cierre de caja.';
+
+/** Lee un recibo ya confirmado sin volver a calcular el turno. */
+export async function getCajaReceipt(restaurantId: string, corteId: string):
+  Promise<{ receipt?: CajaReceipt; error?: string }> {
+  if (!identidadCobroValida(corteId)) return { error: 'Corte inválido.' };
+  const ctx = await authRestaurant(restaurantId, 'caja.cerrar', 'caja.ver_esperado', 'finanzas');
+  if (!ctx) return { error: 'No autorizado.' };
+  const { data, error } = await ctx.db.from('caja_recibos').select('recibo')
+    .eq('restaurant_id', restaurantId).eq('corte_id', corteId).maybeSingle();
+  if (error) return { error: faltaLaMigracion(error) ? SIN_170 : error.message };
+  if (!data) return { error: 'Ese corte no tiene un recibo detallado disponible.' };
+  return { receipt: data.recibo as CajaReceipt };
 }
 
 /**
@@ -851,19 +970,59 @@ export interface CajaCloseResult {
  * cobrado— y contará en el turno en que se cobre (PROD-02).
  */
 export async function closeCaja(
-  input: CajaPayload & { confirmPending?: boolean },
-): Promise<{ result?: CajaCloseResult; pending?: Pendientes; error?: string }> {
-  const ctx = await authRestaurant(input.restaurantId);
-  if (!ctx) return { error: 'No autorizado.' };
+  input: SolicitudCierre,
+): Promise<RespuestaCierre> {
+  const ctx = await authRestaurant(input.restaurantId, 'caja.cerrar');
+  if (!ctx) return input.intentoId ? { error: 'Vuelve a iniciar sesión para recuperar el cierre.', incierto: true } : { error: 'No autorizado.' };
 
-  const c = await cuadre(ctx, input);
+  const intentoId = input.intentoId ?? crypto.randomUUID();
+  if (!identidadCobroValida(intentoId) || (input.intentoId && !input.turno?.desde)) {
+    return { error: 'Identidad o turno de cierre inválidos.' };
+  }
+  const conteo = conteoCaja(input.counts);
+  const etiqueta = (input.shiftLabel ?? '').trim() || null;
+  const notas = (input.notes ?? '').trim() || null;
+  const tips = input.tips ?? null;
+  const solicitud = { counts: conteo.breakdown, openingFloat: input.openingFloat,
+    shiftLabel: etiqueta, notes: notas, tips, turno: input.turno ?? null, confirmPending: input.confirmPending === true,
+    ...(input.cashCounted === undefined ? {} : { cashCounted: input.cashCounted }),
+    ...(input.borradorRevision === undefined ? {} : { borradorRevision: input.borradorRevision }) };
+  const recuperar = async (): Promise<RespuestaCierre | null> => {
+    const { data, error } = await ctx.db.rpc('leogin_recuperar_cierre_caja', {
+      p_restaurant: input.restaurantId, p_intento: intentoId, p_actor: ctx.userId, p_solicitud: solicitud,
+    });
+    if (error) return { error: faltaLaFuncion(error) ? SIN_170 : error.message, incierto: !/^LGD03$/.test(error.code ?? '') };
+    return data ? { result: { ...data as CajaReceipt, dia: null } } : null;
+  };
+  if (input.intentoId) {
+    const previo = await recuperar();
+    if (previo) return previo;
+  }
+
+  let c: Awaited<ReturnType<typeof cuadre>>;
+  try { c = await cuadre(ctx, input, conteo); }
+  catch (error) { return { error: error instanceof Error ? error.message : 'No se pudo leer la caja.' }; }
+  if (!c.l.controlCaja) return { error: 'Falta la migración 166 para cerrar caja con los cobros protegidos.' };
   if (c.l.sinMigracion) return { error: SIN_145 };
-  if (c.counted <= 0 && c.esperadoEnCaja > 0) return { error: 'Cuenta el efectivo antes de cerrar el turno.' };
+  if (input.turno && (input.turno.desde !== c.l.desde || input.turno.id !== (c.l.abierto?.id ?? null))) {
+    // Otra petición del mismo intento puede haber confirmado entre las dos lecturas.
+    return (await recuperar()) ?? { error: 'El turno cambió. Revisa el cuadre antes de cerrar.' };
+  }
+  if (input.borradorRevision !== undefined) {
+    const { data, error } = await leerBorradorCaja(ctx, input.restaurantId, c.l.desde);
+    if (error) return { error: faltaLaMigracion(error) ? SIN_171 : error.message };
+    if ((data?.revision ?? null) !== input.borradorRevision) {
+      return (await recuperar()) ?? { error: 'Otro aparato guardó un borrador más reciente. Revisa el conteo antes de cerrar.' };
+    }
+  }
+  if (c.counted <= 0 && (input.cashCounted === false || (input.cashCounted === undefined && c.esperadoEnCaja > 0))) {
+    return { error: 'Cuenta el efectivo o confirma el conteo en cero antes de cerrar.' };
+  }
   if (hayPendientes(c.l.pendientes) && !input.confirmPending) return { pending: c.l.pendientes };
 
-  const tips = input.tips ?? null;
   const tipsTotal = round2((tips ?? []).reduce((s, t) => s + (Number(t.amount) || 0), 0));
   const cerradoEn = c.l.hasta;
+  const shiftLabel = etiqueta ?? c.l.abierto?.shiftLabel ?? null;
 
   const fila: Record<string, unknown> = {
     business_date:          c.l.dia,
@@ -873,9 +1032,9 @@ export async function closeCaja(
     difference:             c.difference,
     by_method:              c.summary.byMethod,
     denomination_breakdown: c.breakdown,
-    shift_label:            (input.shiftLabel ?? '').trim() || c.l.abierto?.shiftLabel || null,
+    shift_label:            shiftLabel,
     cashier_name:           ctx.cashierName,
-    notes:                  (input.notes ?? '').trim() || null,
+    notes:                  notas,
     status:                 'CLOSED',
     expenses_total:         c.expensesTotal,
     tips_total:             tipsTotal,
@@ -885,43 +1044,38 @@ export async function closeCaja(
     draft_saved_at:         null,
   };
 
-  let id: string;
-  if (c.l.abierto) {
-    /* Solo si sigue abierto: dos aparatos cerrando a la vez no pueden
-       escribir dos cortes del mismo turno. */
-    const { data, error } = await ctx.db
-      .from('cash_counts')
-      .update(fila)
-      .eq('id', c.l.abierto.id)
-      .in('status', ['OPEN', 'DRAFT'])
-      .select('id');
-    if (error) return { error: error.message };
-    if (!data || data.length === 0) return { error: 'Este turno ya se cerró desde otro aparato.' };
-    id = data[0].id as string;
-  } else {
-    const { data, error } = await ctx.db
-      .from('cash_counts')
-      .insert({ ...fila, restaurant_id: input.restaurantId, created_by: ctx.userId })
-      .select('id')
-      .single();
-    if (error || !data) return { error: error?.message ?? 'No se pudo cerrar la caja.' };
-    id = data.id as string;
+  const recibo: Omit<CajaReceipt, 'id'> = {
+    date: c.l.dia, counted: c.counted, expected: c.summary.expectedCash, opening: c.opening,
+    ...(input.cashCounted === undefined ? {} : { cashCounted: c.counted > 0 || input.cashCounted }),
+    expensesTotal: c.expensesTotal, tipsTotal, difference: c.difference,
+    refunds: c.l.cuadre.devoluciones, refundsCash: c.l.cuadre.devolucionesEfectivo,
+    periodStart: c.l.desde, closedAt: cerradoEn, openedByName: c.l.abierto?.openedByName ?? null,
+    pendingTotal: c.l.pendientes.total, expectedDrawer: c.esperadoEnCaja, byMethod: c.summary.byMethod,
+    counts: c.breakdown, expenses: c.l.gastos.map((g) => ({ id: g.id, concept: g.concept, amount: g.amount, at: g.created_at })),
+    tips, openedAt: c.l.abierto?.openedAt ?? null, shiftLabel, cashierName: ctx.cashierName, notes: notas,
+  };
+  const { data, error: errCierre } = await ctx.db.rpc('leogin_confirmar_cierre_caja_con_recibo', {
+    p_restaurant: input.restaurantId, p_revision: c.l.controlCaja.revision,
+    p_ultimo: c.l.controlCaja.ultimoCierreId, p_hasta: cerradoEn,
+    p_abierto: c.l.abierto?.id ?? null, p_fila: fila,
+    p_gastos: c.l.gastos.map((g) => g.id), p_actor: ctx.userId,
+    p_intento: intentoId, p_solicitud: solicitud, p_recibo: recibo,
+  });
+  if (errCierre) {
+    const error = faltaLaFuncion(errCierre) ? SIN_170 : errCierre.message;
+    return input.intentoId ? { error, incierto: !/^(LGD0[34]|22023)$/.test(errCierre.code ?? '') } : { error };
   }
-
-  // Los gastos que se contaron, y solo esos: uno anotado un segundo después
-  // ya es del turno siguiente.
-  const gastos = c.l.gastos.map((g) => g.id);
-  if (gastos.length > 0) {
-    await ctx.db.from('cash_expenses').update({ cash_count_id: id }).in('id', gastos).is('cash_count_id', null);
-  }
+  const confirmado = data as { recibo: CajaReceipt; repetido: boolean } | null;
+  if (!identidadCobroValida(confirmado?.recibo?.id)) return { error: 'No se pudo confirmar el cierre de caja.' };
+  if (confirmado.repetido) return { result: { ...confirmado.recibo, dia: null } };
 
   await logActivity({
     restaurantId: input.restaurantId,
     actorId: ctx.userId,
     action: 'turno_cerrado',
-    entity: (fila.shift_label as string | null) ?? null,
+    entity: shiftLabel,
     meta: {
-      corteId: id,
+      corteId: confirmado.recibo.id,
       esperado: c.esperadoEnCaja,
       contado: c.counted,
       diferencia: c.difference,
@@ -951,23 +1105,7 @@ export async function closeCaja(
     }).catch(() => { /* sin aviso */ });
   }
 
-  return {
-    result: {
-      dia,
-      id,
-      date: c.l.dia,
-      counted: c.counted,
-      expected: c.summary.expectedCash,
-      opening: c.opening,
-      expensesTotal: c.expensesTotal,
-      tipsTotal,
-      difference: c.difference,
-      refunds: c.l.cuadre.devoluciones,
-      refundsCash: c.l.cuadre.devolucionesEfectivo,
-      periodStart: c.l.desde,
-      closedAt: cerradoEn,
-      openedByName: c.l.abierto?.openedByName ?? null,
-      pendingTotal: c.l.pendientes.total,
-    },
-  };
+  // La celebración del día es de la pantalla anterior al identificador durable.
+  // El contrato con identidad devuelve el mismo resultado en cada recuperación.
+  return { result: { ...confirmado.recibo, dia: input.intentoId ? null : dia } };
 }

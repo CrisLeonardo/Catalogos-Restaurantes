@@ -1,6 +1,7 @@
 import { headers, cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getStaffUser } from '@/lib/supabase/server';
+import { accesoAlPanel } from '@/lib/auth/panel-destino';
 import { getAdminContext, myOrganizationId } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import AdminShell from '@/components/admin/shell';
@@ -15,7 +16,7 @@ import { seccionDeRuta } from '@/lib/admin-nav';
 import { internalPanelPath } from '@/lib/panel-links';
 import { isModuleActive } from '@/lib/modules';
 import { withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
-import { adminUrl, authPathFor } from '@/lib/tenant';
+import { authPathFor } from '@/lib/tenant';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import { isSessionStale, SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
 import { CAMBIO_OBLIGATORIO, debeCambiarContrasena } from '@/lib/auth/password-change-rules';
@@ -45,7 +46,7 @@ export default async function AdminProtectedLayout({
   const tenantSlug  = headersList.get('x-tenant-slug');
 
   const { data: { user } } = await getStaffUser();
-  if (!user) redirect(authPathFor('/admin/login', tenantSlug));
+  if (!user) redirect(accesoAlPanel(tenantSlug, headersList.get('x-pathname')));
   // ACC-05: contraseña que eligió otro (el dueño, o Leogin en un rescate) →
   // primero la cambia por una suya.
   if (debeCambiarContrasena(user)) redirect(CAMBIO_OBLIGATORIO);
@@ -98,8 +99,6 @@ export default async function AdminProtectedLayout({
     tenant: tenantData
       ? { id: tenantData.restaurant.id, organizationId: tenantData.restaurant.organization_id ?? null }
       : null,
-    ownSlug: ctx.restaurant?.slug ?? null,
-    adminUrlFor: adminUrl,
   });
   if (!access.allow) redirect(access.redirectTo);
 
@@ -244,11 +243,7 @@ export default async function AdminProtectedLayout({
       role={profile.role}
       permissions={profile.permissions}
       userName={profile.full_name}
-      canManageStaff={
-        ctx.memberRole === 'MANAGER'
-        || profile.role === 'RESTAURANT_OWNER'
-        || profile.role === 'SUPER_ADMIN'
-      }
+      canManageStaff={can(profile.role, profile.permissions, 'personal')}
       hasMultipleRestaurants={memberships.length > 1}
       tourEnEspera={tourEnEspera}
       isOperatorSession={isOperatorSession}

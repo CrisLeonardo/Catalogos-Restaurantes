@@ -11,7 +11,7 @@ import { reauthRequerida } from '@/lib/auth/reauth-policy';
    ============================================================ */
 
 import { revalidatePath } from 'next/cache';
-import { ownerCtx } from '@/lib/actions/staff';
+import { ownerCtx } from '@/lib/auth/personal';
 import { logActivity } from '@/lib/activity';
 import { readDeviceId, rememberDevice } from '@/lib/auth/trusted-device';
 

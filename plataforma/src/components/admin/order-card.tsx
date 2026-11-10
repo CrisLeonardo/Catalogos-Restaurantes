@@ -1,10 +1,10 @@
 'use client';
 
-import { useTransition, useState } from 'react';
+import { useRef, useTransition, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Icon } from '@/components/icons';
 import { labelOf, countsAsCash } from '@/lib/payment-method';
-import { updateOrderStatus, printReceiptViaAgent, reprintKitchenTicket } from '@/lib/actions/orders';
+import { updateOrderStatus, printReceiptViaAgent, reprintKitchenTicket, type IntentoPedido } from '@/lib/actions/orders';
 import { remainingQuantity, type OrderWithItems } from '@/lib/db/orders';
 import { printTicket, isKitchenAutoPrintEnabled, markKitchenPrinted, hasPrinterConfigured } from '@/lib/printing';
 import { buildKitchenEscPos, buildReceiptEscPos, ticketTime, ticketDateTime, type TicketFormat } from '@/lib/escpos';
@@ -21,6 +21,9 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { fmtCurrency, type PanelCurrency } from '@/lib/money';
+import { estadoDelCobro, type ResumenPedidoVivo } from '@/lib/pedidos-en-vivo';
+import styles from './pedidos-en-vivo.module.css';
+import { estacionDe, lineasVivas } from '@/lib/cocina/tablero';
 
 const OrderLocationMap = dynamic(() => import('./order-location-map'), { ssr: false });
 
@@ -304,6 +307,11 @@ export default function OrderCard({
   fallosDeImpresion = {},
   drivers = [],
   restaurantId,
+  resumenPorPedido,
+  onHistorial,
+  onCambios,
+  onError,
+  online,
 }: {
   order: OrderWithItems;
   currency: PanelCurrency;
@@ -325,14 +333,23 @@ export default function OrderCard({
    *  no se reparte nada. */
   drivers?: { id: string; nombre: string }[];
   restaurantId?: string;
+  resumenPorPedido: Record<string, ResumenPedidoVivo>;
+  onHistorial: (id: string) => void;
+  onCambios: () => void;
+  onError: (texto: string) => void;
+  online: boolean;
 }) {
   const [isPending, start] = useTransition();
   const [mapOpen, setMapOpen] = useState(false);
   const [voidTarget, setVoidTarget] = useState<'order' | { id: string; name: string; remainingQty: number } | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
   const [printMsg, setPrintMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [printing, setPrinting] = useState<'receipt' | 'kitchen' | null>(null);
+  const enviando = useRef(false);
+  const ultimoIntento = useRef<IntentoPedido | null>(null);
+  const resumen = resumenPorPedido[order.id];
   const next = nextStatus(order.status, order.order_type);
+  const lineasEnCocina = order.status === 'PREP' ? lineasVivas(order) : [];
+  const esperaEstaciones = new Set(lineasEnCocina.map(estacionDe)).size > 1 && lineasEnCocina.some((l) => !l.cocina_preparada_at);
 
   function flashPrint(text: string, ok: boolean) {
     setPrintMsg({ text, ok });
@@ -381,14 +398,22 @@ export default function OrderCard({
   const fallos = fallosDeImpresion[order.id] ?? [];
 
   async function handleAdvance() {
-    if (!next) return;
-    setActionError(null);
+    if (!next || !online || enviando.current) return;
+    enviando.current = true;
+    if (ultimoIntento.current?.version !== order.updated_at) {
+      ultimoIntento.current = { id: crypto.randomUUID(), estado: order.status, version: order.updated_at };
+    }
+    const intento = ultimoIntento.current;
+    onError('');
     // La comanda por navegador NO se dispara aquí: la imprime el panel al ver
     // que el pedido entró a cocina, venga de donde venga (este botón, la
     // pantalla de cocina, un mesero o la cola offline). Ver OrdersPanel.
     start(async () => {
-      const res = await updateOrderStatus(order.id, next);
-      if (res.error) setActionError(res.error);
+      try {
+        const res = await updateOrderStatus(order.id, next, intento);
+        if (res.error) onError(res.error);
+      } catch { onError('Se perdió la respuesta. Revisa el estado. Si la acción sigue disponible, vuelve a pulsarla para recuperar el resultado.'); }
+      finally { enviando.current = false; onCambios(); }
     });
   }
 
@@ -409,10 +434,6 @@ export default function OrderCard({
 
   const origin = originLabel(order);
   const type = typeLabel(order);
-  /* El estado lo dice el grupo en el que está la tarjeta («Por enviar a
-     cocina», «En cocina», «Listos»): repetido en un chip era ruido. Se
-     queda donde el grupo no lo dice: en camino, servido, cerrado. */
-  const showStatus = !['NEW', 'PREP', 'READY'].includes(order.status);
   /* En un pedido de mesa sin nombre, nombre y dirección son los dos
      «Mesa 4»: se dice una vez. */
   const showAddress = !!order.address && (order.order_type === 'DELIVERY' || order.address !== order.customer_name);
@@ -421,7 +442,8 @@ export default function OrderCard({
     : `entró el ${ticketDateTime(order.created_at, ticketFormat)}`;
 
   return (
-    <div
+    <article
+      aria-label={`Pedido ${shortOrderNumber(order.order_number)}`}
       // Cae con un rebote al llegar y, si es nuevo, se ilumina un instante
       // (`.adm-pedido` en admin.css).
       className="adm-pedido"
@@ -431,27 +453,21 @@ export default function OrderCard({
         /* La misma ficha que el resto del panel (T-12): el gris al 4 % del
            texto se veía apagado sobre el fondo gris en modo claro. */
         background: 'var(--adm-card, color-mix(in srgb, var(--u-text) 4%, transparent))',
-        border: '1px solid var(--adm-border, var(--u-hair))',
-        // Un pedido que se pasó del tiempo se ve distinto DESDE LEJOS: el borde
-        // completo se tiñe. En una barra llena, nadie lee un chip pequeño.
-        boxShadow: isAlarm ? '0 0 0 1.5px var(--c-danger-line)' : 'var(--adm-shadow-xs, none)',
+        border: `1px solid ${isAlarm ? 'var(--c-danger-line)' : 'var(--adm-border, var(--u-hair))'}`,
         padding: 14,
         display: 'flex', flexDirection: 'column', gap: 10,
-        opacity: isTerminal ? 0.72 : 1,
-        transition: 'opacity 200ms, box-shadow 200ms',
+        transition: 'border-color 200ms',
       }}
     >
       {/* Encabezado */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--u-text)', margin: 0, lineHeight: 1.2 }}>
-              {order.customer_name}
+            <h3 className={styles.numero}>
+              <button type="button" className={styles.accion} onClick={() => onHistorial(order.id)}
+                aria-label={`Historial de ${shortOrderNumber(order.order_number)}`}>{shortOrderNumber(order.order_number)}</button>
             </h3>
-            <span className="t-mono" style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text-4)' }} title={order.order_number}>
-              {shortOrderNumber(order.order_number)}
-            </span>
-            {showStatus && <span className={`chip ${STATUS_CHIP[order.status]}`}>{STATUS_LABEL[order.status]}</span>}
+            <span className={`chip ${STATUS_CHIP[order.status]}`}>{STATUS_LABEL[order.status]}</span>
             {/* Cronómetro de la etapa actual: en el renglón del título, así
                 los datos de abajo usan todo el ancho de la tarjeta. */}
             {clock && (
@@ -461,7 +477,7 @@ export default function OrderCard({
                 style={{ flexShrink: 0, marginLeft: 'auto', alignSelf: 'center', fontVariantNumeric: 'tabular-nums' }}
               >
                 <Icon name="clock" size={11} />
-                {now == null ? '—' : fmtElapsed(elapsedMs)}
+                {now == null ? '—' : `${elapsedMin >= clock.redMin ? 'Demora · ' : ''}${fmtElapsed(elapsedMs)}`}
               </span>
             )}
           </div>
@@ -476,17 +492,6 @@ export default function OrderCard({
               <Icon name={origin.icon} size={12} style={{ display: 'inline' }} />
               {origin.text}
             </span>
-            {order.customer_phone && order.customer_phone !== '00000000' && (
-              <>
-                <a
-                  href={`tel:${order.customer_phone}`}
-                  className="tap44"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'inherit', textDecoration: 'none' }}
-                >
-                  <Icon name="phone" size={12} style={{ display: 'inline' }} /> {order.customer_phone}
-                </a>
-              </>
-            )}
             <span style={{ whiteSpace: 'nowrap' }}>{entro}</span>
           </p>
           {showAddress && (
@@ -522,6 +527,7 @@ export default function OrderCard({
                 id={`drv-${order.id}`}
                 name="driverId"
                 defaultValue={order.driver_id ?? ''}
+                disabled={!online}
                 onChange={(e) => e.currentTarget.form?.requestSubmit()}
                 className="adm-field adm-field-sm adm-field-auto"
                 style={{ maxWidth: '100%' }}
@@ -537,12 +543,9 @@ export default function OrderCard({
 
       </div>
 
-      {clock && isAlarm && (
-        <div className="note note-danger">
-          <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
-          <span>Lleva {fmtElapsed(elapsedMs)} {clock.label}: el doble de lo normal.</span>
-        </div>
-      )}
+      {order.notes && <p className="note note-warn"><Icon name="edit" size={14} /> {order.notes}</p>}
+      <p className={styles.estadoCobro}>{estadoDelCobro(resumen, Number(order.total), order.cash_collected)}</p>
+      {resumen?.avisoFallido && <p className="note note-danger">Falló un aviso al cliente. Revisa el historial.</p>}
 
       {/* Items */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, borderTop: '1px solid var(--u-hair)', paddingTop: 8 }}>
@@ -578,7 +581,7 @@ export default function OrderCard({
                   <button
                     type="button"
                     onClick={() => setVoidTarget({ id: item.id, name: item.name_snapshot, remainingQty: remaining })}
-                    disabled={isPending}
+                    disabled={isPending || !online}
                     title="Anular este plato"
                     aria-label={`Anular ${item.name_snapshot}`}
                     className="press chip-danger order-void-x tap44"
@@ -645,9 +648,9 @@ export default function OrderCard({
             que solo se enseña una vez cerrada (ver freeTable). */}
         {showsPayment(order) && (
           <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <span className={`chip ${countsAsCash(order.payment_method) ? 'chip-ok' : 'chip-alt'}`} style={{ alignSelf: 'flex-start' }}>
+            <span className="chip chip-neutral" style={{ alignSelf: 'flex-start' }}>
               <Icon name={countsAsCash(order.payment_method) ? 'banknote' : 'creditCard'} size={12} />
-              {labelOf(order.payment_method)}
+              Método indicado · {labelOf(order.payment_method)}
             </span>
             {countsAsCash(order.payment_method) && order.cash_amount != null && order.cash_amount > 0 && (
               <p style={{ fontSize: 11, color: 'var(--u-text-3)', margin: 0 }}>
@@ -657,12 +660,9 @@ export default function OrderCard({
             )}
           </div>
         )}
-        {order.notes && (
-          <div className="note note-warn" style={{ marginTop: 4 }}>
-            <Icon name="edit" size={13} style={{ flexShrink: 0, marginTop: 1 }} />
-            <span>{order.notes}</span>
-          </div>
-        )}
+        <p className={styles.contacto}>{order.customer_name}
+          {order.customer_phone && order.customer_phone !== '00000000' && <a href={`tel:${order.customer_phone}`} className={styles.accion}>{order.customer_phone}</a>}
+        </p>
         {/* La sorpresa de la casa (PLAN_MOMENTOS_PICO M4): el cliente la ve
             al enviar su pedido; aquí el personal sabe qué regalar. */}
         {order.sorpresa && (
@@ -692,11 +692,6 @@ export default function OrderCard({
         </div>
       )}
 
-      {actionError && (
-        <div className="note note-danger">
-          <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} /> {actionError}
-        </div>
-      )}
       {printMsg && (
         <div className={`note ${printMsg.ok ? 'note-ok' : 'note-danger'}`}>
           <Icon name={printMsg.ok ? 'check' : 'alertCircle'} size={14} style={{ flexShrink: 0, marginTop: 1 }} /> {printMsg.text}
@@ -708,10 +703,11 @@ export default function OrderCard({
           que es destructivo y no debe estar a un dedo del principal. */}
       {!isTerminal && (
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          {next && (
+          {esperaEstaciones && <a href="./cocina" className={styles.accion}>Completar estaciones en Cocina</a>}
+          {next && !esperaEstaciones && (
             <button
               onClick={handleAdvance}
-              disabled={isPending}
+              disabled={isPending || !online}
               className="press btn-accent"
               style={{
                 flex: 1, minHeight: 44, padding: '0 12px',
@@ -729,7 +725,7 @@ export default function OrderCard({
             <DropdownMenuTrigger
               aria-label={`Más acciones del pedido ${shortOrderNumber(order.order_number)}`}
               className="press"
-              disabled={isPending}
+              disabled={isPending || !online}
               style={{
                 width: 44, height: 44, flexShrink: 0, borderRadius: 'var(--radius-lg)',
                 display: 'grid', placeItems: 'center', cursor: 'pointer',
@@ -775,7 +771,7 @@ export default function OrderCard({
               <span style={{ flex: 1, minWidth: 0 }}>{f.stationName}: no imprimió</span>
               <button
                 type="button"
-                onClick={() => handleReprintKitchen(f.stationId, f.stationName)}
+                onClick={() => handleReprintKitchen(f.stationId || undefined, f.stationName)}
                 disabled={printing !== null}
                 className="press"
                 style={{
@@ -842,11 +838,13 @@ export default function OrderCard({
         <VoidOrderDialog
           orderId={order.id}
           orderStatus={order.status}
+          version={order.updated_at}
+          cobro={resumen && resumen.movimientos > 0 ? money(resumen.cobrado, currency) : undefined}
           item={voidTarget === 'order' ? null : voidTarget}
           onClose={() => setVoidTarget(null)}
-          onDone={() => setVoidTarget(null)}
+          onDone={() => { setVoidTarget(null); onCambios(); }}
         />
       )}
-    </div>
+    </article>
   );
 }

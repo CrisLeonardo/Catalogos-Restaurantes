@@ -5,7 +5,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import { listStaff, getActivityLog } from '@/lib/actions/staff';
-import { ADMIN_SECTIONS, type SectionKey } from '@/lib/permissions';
+import { ADMIN_SECTIONS, CAJA_CAPACIDADES, can, type SectionKey } from '@/lib/permissions';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import { PLANS, type PlanCode } from '@/lib/plans';
 import StaffPanel from '@/components/admin/staff-panel';
@@ -28,8 +28,11 @@ export default async function AdminPersonalPage() {
   // sucursal, que es quien da de alta a su propio equipo. Lo que el gerente
   // no puede hacer se corta en las acciones (lib/actions/staff.ts), no
   // escondiendo la pantalla.
-  const isManager = ctx.memberRole === 'MANAGER';
-  if (!isManager && ctx.profile.role !== 'RESTAURANT_OWNER' && ctx.profile.role !== 'SUPER_ADMIN') {
+  // Desde la 1.7 lo decide la capacidad «personal» (la tiene el puesto
+  // Encargado), no el rol de gerente ni la forma de entrar.
+  const esDueno = ctx.profile.role === 'RESTAURANT_OWNER' || ctx.profile.role === 'SUPER_ADMIN';
+  const isManager = !esDueno;
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'personal')) {
     redirect(await panelLink('/admin'));
   }
 
@@ -65,6 +68,12 @@ export default async function AdminPersonalPage() {
   // y el resto de Personal funciona igual.
   let requiresTrustedDevice = false;
   let hasEntryPin = false;
+  // Arqueo ciego (177), con la misma tolerancia: sin la migración no se ofrece.
+  let arqueoCiego: boolean | null = null;
+  {
+    const { data, error } = await db.from('restaurants').select('arqueo_ciego').eq('id', restaurantId).maybeSingle();
+    if (!error) arqueoCiego = data?.arqueo_ciego === true;
+  }
   try {
     const { data: locks } = await db
       .from('restaurants')
@@ -104,7 +113,33 @@ export default async function AdminPersonalPage() {
     analitica: mod?.['analitica'] === true,
     finanzas: mod?.['finanzas'] === true,
   };
-  const enabledSections = ADMIN_SECTIONS.map((s) => s.key).filter((k) => GATES[k] ?? true);
+  const enabledSections: string[] = ADMIN_SECTIONS.map((s) => s.key).filter((k) => GATES[k] ?? true);
+  // Las tareas de Caja viven con el módulo de Finanzas; cupones, con el suyo.
+  const enabledKeys = [
+    ...enabledSections.filter((k) => k !== 'cupones' || isModuleActive(mod, modSettings, 'cupones')),
+    ...(GATES.finanzas ? CAJA_CAPACIDADES : []),
+  ];
+  const deliveryEnabled = resolveTheme((themeRow as ThemeRow) ?? null).config.orderTypes.includes('delivery');
+  // Lo que el panel real usa para armar su navegación: «Así verá el panel»
+  // pasa por la misma función (`buildNav`) con la lista que se edita.
+  const navBase = {
+    ordersEnabled,
+    analiticaEnabled: mod?.['analitica'] === true,
+    inventarioEnabled: mod?.['inventario'] === true,
+    ingredientesEnabled: isModuleActive(mod, modSettings, 'recetas'),
+    personalEnabled: mod?.['personal'] === true,
+    finanzasEnabled: mod?.['finanzas'] === true,
+    felActive: isModuleActive(mod, modSettings, 'fel'),
+    proveedoresActive: isModuleActive(mod, modSettings, 'proveedores'),
+    loyaltyActive: isModuleActive(mod, modSettings, 'loyalty'),
+    reservacionesActive: isModuleActive(mod, modSettings, 'reservaciones'),
+    listaEsperaActive: isModuleActive(mod, modSettings, 'lista_espera'),
+    encuestasActive: isModuleActive(mod, modSettings, 'encuestas'),
+    cuponesActive: isModuleActive(mod, modSettings, 'cupones'),
+    dineInEnabled,
+    deliveryEnabled,
+    planActual,
+  };
 
   return (
     /* El espaciado entre bloques vive AQUÍ, no en un `marginTop: 16` que cada
@@ -116,8 +151,11 @@ export default async function AdminPersonalPage() {
         slug={(restaurant?.slug as string | null) ?? null}
         staff={staff}
         activity={activity}
-        enabledSections={enabledSections}
+        enabledKeys={enabledKeys}
         isOwner={!isManager}
+        techo={isManager ? (ctx.profile.permissions ?? []) : null}
+        navBase={navBase}
+        arqueoCiego={arqueoCiego}
       />
       {/* Invitaciones por correo: se retiraron de la pantalla. El acceso del
           administrador se crea aquí mismo, con usuario y contraseña, que es

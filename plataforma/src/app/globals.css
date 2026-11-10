@@ -179,7 +179,7 @@
      pantallas, así que cualquier cosa que quiera medirse «hasta abajo» tiene
      que descontarlos. Sin este token, `100svh` en el héroe significaba una
      pantalla entera menos una barra que nadie estaba restando. */
-  --m-nav-h: 68px;
+  --m-nav-h: 84px;
 
   /* ── Panel admin (sobreescritos por buildThemeVars) ──────── */
   --admin-panel-bg:      #0c0c0e;
@@ -2279,6 +2279,68 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
   align-items: flex-end;
   justify-content: center;
 }
+
+/* Compartida por Cobro y Carta. La hoja conserva sus variables de tema al
+   entrar en la capa modal. Solo el contenido central se desplaza. */
+.hoja-operativa {
+  --hoja-superficie: var(--brand-bg);
+  --hoja-foco: var(--brand-accent-ink);
+  position: fixed;
+  inset: auto 0 0;
+  margin: 0 auto;
+  padding: 0;
+  width: min(100%, var(--hoja-ancho, 560px));
+  max-width: 100%;
+  max-height: 92dvh;
+  overflow: hidden;
+  border: 1px solid var(--u-hair);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background: var(--hoja-superficie);
+  color: var(--u-text);
+}
+.hoja-operativa[open] { display: flex; flex-direction: column; }
+.hoja-operativa::backdrop { background: var(--scrim, rgb(0 0 0 / 55%)); }
+.hoja-operativa-cabecera, .hoja-operativa-pie { flex: none; padding: 12px 16px; }
+.hoja-operativa-cabecera {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  border-bottom: 1px solid var(--u-hair);
+}
+.hoja-operativa-cabecera h2 { margin: 0; font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
+.hoja-operativa-cabecera h2:focus { outline: none; }
+.hoja-operativa-resumen { grid-column: 1 / -1; min-width: 0; }
+.hoja-operativa-cerrar {
+  display: grid;
+  place-items: center;
+  min-width: 48px;
+  min-height: 48px;
+  border: 1px solid var(--u-hair);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--u-text);
+  cursor: pointer;
+}
+.hoja-operativa-cerrar:hover { background: var(--surface-3); }
+.hoja-operativa-cuerpo { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px; }
+.hoja-operativa-pie {
+  border-top: 1px solid var(--u-hair);
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+}
+.hoja-operativa :is(button, input, select, textarea, a):focus-visible {
+  outline: 2px solid var(--hoja-foco);
+  outline-offset: 2px;
+}
+.hoja-platillo { --hoja-ancho: 520px; }
+.hoja-platillo-accion { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.hoja-platillo-accion .ct-button { min-height: 56px; min-width: min(155px, 100%); flex-wrap: wrap; }
+.hoja-platillo .opt-pill { min-height: 48px; }
+.hoja-platillo .opt-pill-sm { min-height: 40px; }
+.hoja-platillo-descripcion { font-size: var(--m-fs-lg); line-height: 1.5; }
+@media (min-width: 768px) {
+  .hoja-operativa { inset: 0; margin: auto; max-height: min(88dvh, 780px); border-radius: var(--radius-xl); }
+}
 .menu-sheet {
   position: relative;
   width: 100%;
@@ -3934,6 +3996,8 @@ html:has(.lp-intro-dialog[open]) { overflow: hidden; }
 [data-st="borrador"] { --sv-bg: var(--c-warn-bg); --sv-line: var(--c-warn-line); --sv-ink: var(--c-warn); }
 [data-st="cocina"]   { --sv-bg: var(--c-info-bg); --sv-line: var(--c-info-line); --sv-ink: var(--c-info); }
 [data-st="listo"]    { --sv-bg: var(--c-ok-bg);   --sv-line: var(--c-ok-line);   --sv-ink: var(--c-ok); }
+[data-st="pagada"]   { --sv-bg: var(--c-ok-bg);   --sv-line: var(--c-ok-line);   --sv-ink: var(--c-ok); }
+[data-st="limpieza"] { --sv-bg: var(--c-warn-bg); --sv-line: var(--c-warn-line); --sv-ink: var(--c-warn); }
 /* «Sentada» es el quinto estado que el diseño no traía: la mesa está
    ocupada y todavía no ha pedido. No lleva color de alarma —no hay nada
    que se enfríe— pero tampoco puede verse libre, que era el bug. */

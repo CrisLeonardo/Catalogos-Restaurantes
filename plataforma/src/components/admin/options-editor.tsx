@@ -43,6 +43,8 @@ export function cleanOptions(groups: ProductOptionGroup[]): ProductOptionGroup[]
         })
         .filter((c) => c.name.length > 0),
     }))
+    // La predeterminada sólo vale si su opción sigue en el grupo (1.9, M03).
+    .map((g) => (g.defaultChoiceId && !g.choices.some((c) => c.id === g.defaultChoiceId) ? { ...g, defaultChoiceId: undefined } : g))
     .filter((g) => g.name.length > 0 && g.choices.length > 0);
 }
 
@@ -122,6 +124,8 @@ export default function OptionsEditor({
                         type: t,
                         required: t === 'single' ? group.required ?? true : undefined,
                         max: t === 'multi' ? group.max ?? 0 : undefined,
+                        min: t === 'multi' ? group.min : undefined,
+                        defaultChoiceId: t === 'single' ? group.defaultChoiceId : undefined,
                       })
                     }
                     className="press"
@@ -168,18 +172,47 @@ export default function OptionsEditor({
               Todos los componentes aparecen <strong>incluidos por defecto</strong>. El precio base del producto es el plato principal; el precio de cada componente se suma automáticamente al total que ve el cliente en el menú.
             </p>
           ) : (
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--u-text-3)' }}>
-              Máximo de opciones
-              <input
-                type="number" inputMode="decimal"
-                min={0}
-                max={20}
-                value={group.max ?? 0}
-                onChange={(e) => setGroup(group.id, { max: Math.max(0, Math.min(20, Number(e.target.value) || 0)) })}
-                className="adm-field adm-field-sm adm-field-auto" style={{ width: 64, fontFamily: 'var(--ui-font-mono)' }}
-              />
-              <span style={{ color: 'var(--u-text-4)' }}>(0 = sin límite)</span>
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--u-text-3)' }}>
+              {/* Mínimo y máximo dichos, para que el comensal sepa cuántos
+                  le tocan (auditoría 1.9, M03). */}
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                Mínimo
+                <input
+                  type="number" inputMode="numeric"
+                  min={0}
+                  max={20}
+                  value={group.min ?? 0}
+                  onChange={(e) => setGroup(group.id, { min: Math.max(0, Math.min(20, Number(e.target.value) || 0)) || undefined })}
+                  className="adm-field adm-field-sm adm-field-auto" style={{ width: 64, fontFamily: 'var(--ui-font-mono)' }}
+                />
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                Máximo
+                <input
+                  type="number" inputMode="numeric"
+                  min={0}
+                  max={20}
+                  value={group.max ?? 0}
+                  onChange={(e) => setGroup(group.id, { max: Math.max(0, Math.min(20, Number(e.target.value) || 0)) })}
+                  className="adm-field adm-field-sm adm-field-auto" style={{ width: 64, fontFamily: 'var(--ui-font-mono)' }}
+                />
+              </label>
+              <span style={{ color: 'var(--u-text-4)' }}>0 = sin mínimo / sin límite</span>
+              {(group.min ?? 0) > 0 && (group.max ?? 0) > 0 && (group.min ?? 0) > (group.max ?? 0) && (
+                <span role="alert" style={{ color: 'var(--c-danger)', fontWeight: 600 }}>El mínimo es mayor que el máximo.</span>
+              )}
+            </div>
+          )}
+          {group.type === 'single' && (
+            <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: 0, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              {group.defaultChoiceId
+                ? <>Predeterminada: <strong style={{ color: 'var(--u-text-2)' }}>{group.choices.find((c) => c.id === group.defaultChoiceId)?.name || 'sin nombre'}</strong>
+                    <button type="button" onClick={() => setGroup(group.id, { defaultChoiceId: undefined })} className="press"
+                      style={{ border: 'none', background: 'transparent', color: 'var(--brand-accent-ink)', fontWeight: 600, fontSize: 12, cursor: 'pointer', padding: 0 }}>
+                      Quitar
+                    </button></>
+                : 'Sin predeterminada: marca el círculo de la opción que viene puesta.'}
+            </p>
           )}
 
           {/* Opciones */}
@@ -190,6 +223,17 @@ export default function OptionsEditor({
               return (
               <div key={choice.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  {group.type === 'single' && (
+                    <input
+                      type="radio"
+                      name={`pred-${group.id}`}
+                      checked={group.defaultChoiceId === choice.id}
+                      onChange={() => setGroup(group.id, { defaultChoiceId: choice.id })}
+                      aria-label={`Predeterminada: ${choice.name || 'esta opción'}`}
+                      title="Opción predeterminada"
+                      style={{ accentColor: 'var(--brand-accent)', width: 18, height: 18, flexShrink: 0, margin: 0 }}
+                    />
+                  )}
                   <input
                     type="text"
                     value={choice.name}
@@ -228,7 +272,10 @@ export default function OptionsEditor({
                   <button
                     type="button"
                     onClick={() =>
-                      setGroup(group.id, { choices: group.choices.filter((c) => c.id !== choice.id) })
+                      setGroup(group.id, {
+                        choices: group.choices.filter((c) => c.id !== choice.id),
+                        ...(group.defaultChoiceId === choice.id ? { defaultChoiceId: undefined } : {}),
+                      })
                     }
                     className="press"
                     aria-label="Quitar opción"

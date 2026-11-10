@@ -1,0 +1,73 @@
+/* Hoja «Agotar» y sus opciones (auditoría 1.10). Superficies sólidas. */
+
+.resumen {
+  margin: 0;
+  font-size: 14px;
+  color: var(--u-text-2);
+}
+
+.opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.op {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  min-height: 56px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--adm-border-2);
+  background: var(--adm-card);
+  cursor: pointer;
+}
+
+.op[data-sel] {
+  border-color: var(--u-text);
+  box-shadow: inset 0 0 0 1px var(--u-text);
+}
+
+.op input {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  flex-shrink: 0;
+  accent-color: var(--u-text);
+}
+
+.op b {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--u-text);
+}
+
+.op span span {
+  display: block;
+  font-size: 13px;
+  color: var(--u-text-3);
+  line-height: 1.4;
+}
+
+.op:focus-within {
+  outline: 2px solid var(--brand-accent-ink);
+  outline-offset: 2px;
+}
+
+.pie {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pie > :first-child {
+  flex: 1 1 200px;
+}
+
+.error {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--c-danger);
+}

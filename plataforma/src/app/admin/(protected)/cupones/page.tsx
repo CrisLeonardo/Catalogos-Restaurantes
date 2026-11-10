@@ -14,12 +14,12 @@ export default async function CuponesPage() {
   const db = createServiceClient();
   const { data: rest } = await db
     .from('restaurants')
-    .select('modules')
+    .select('modules, timezone')
     .eq('id', mc.restaurantId)
     .single();
   const ordersEnabled = (rest?.modules as { orders?: boolean } | null)?.orders === true;
 
-  const coupons = await getCoupons(mc.restaurantId);
+  const lectura = await getCoupons(mc.restaurantId);
 
   return (
     <div className="anim-fade-up">
@@ -28,7 +28,13 @@ export default async function CuponesPage() {
           Los cupones se aplican en los pedidos en línea. Activa el módulo <strong>Pedidos</strong> (plan Estándar) para que tus clientes los usen al pagar.
         </div>
       )}
-      <CuponesPanel restaurantId={mc.restaurantId} coupons={coupons} />
+      <CuponesPanel
+        restaurantId={mc.restaurantId}
+        coupons={lectura.datos}
+        estado={lectura.estado}
+        leidoEn={lectura.leidoEn}
+        timezone={(rest as { timezone?: string | null } | null)?.timezone || 'America/Guatemala'}
+      />
     </div>
   );
 }

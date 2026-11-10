@@ -32,7 +32,8 @@
    Para reactivar: agrega 'PRO' de vuelta a PUBLIC_PLANS.
    ============================================================ */
 
-import type { ActivatableModuleKey } from './modules';
+import { ACTIVATABLE_MODULES, isModuleActive, type ActivatableModuleKey, type ModuleSettings } from './modules';
+import { fmtMoney } from './money';
 
 export type PlanCode = 'BASICO' | 'EN_LINEA' | 'ESTANDAR' | 'PREMIUM' | 'PRO';
 
@@ -236,6 +237,8 @@ export interface PlanPricing {
   groupPanelFee: number;
   /** Días de prueba gratis del registro self-serve. */
   trialDays: number;
+  /** Tarifas de configuración asistida; opcional para conservar consumidores anteriores. */
+  setupFees?: Record<PlanCode, number>;
 }
 
 /** Precios de fábrica (fallback cuando no hay override cargado). */
@@ -249,9 +252,9 @@ export function defaultPlanPricing(): PlanPricing {
   };
 }
 
-/** "Q349" — precio vigente del plan, sin decimales. */
+/** "Q349" o "Q349.50" — precio vigente del plan, conservando centavos. */
 export function planPriceQ(pricing: PlanPricing, code: PlanCode): string {
-  return 'Q' + pricing.prices[code].toLocaleString('es-GT', { maximumFractionDigits: 0 });
+  return formatPlanAmount(pricing.prices[code]);
 }
 
 /** "Q349 / mes" — etiqueta de precio vigente (reemplaza a PLANS[x].priceLabel). "Gratis" si el precio vigente es Q0. */
@@ -409,7 +412,7 @@ export const GROUP_PANEL_FEE = 299;
 export const PLAN_POINTS: Record<PlanCode, { text: string; positive: boolean }[]> = {
   BASICO: [
     { text: 'Menú digital con código QR', positive: true },
-    { text: 'Hasta 150 productos · 1 usuario', positive: true },
+    { text: `Hasta ${PLANS.BASICO.maxProducts} productos · ${PLANS.BASICO.users} usuario`, positive: true },
     { text: 'Tu logo y color de marca', positive: true },
     { text: 'Sin pedidos en línea', positive: false },
   ],
@@ -417,12 +420,12 @@ export const PLAN_POINTS: Record<PlanCode, { text: string; positive: boolean }[]
     { text: 'Para llevar y a domicilio', positive: true },
     { text: 'Zonas de reparto y seguimiento del pedido', positive: true },
     { text: 'Avisos en tiempo real y WhatsApp', positive: true },
-    { text: 'Hasta 300 pedidos al mes · 150 productos · 1 usuario', positive: true },
+    { text: `Hasta ${PLANS.EN_LINEA.monthlyOrderCap} pedidos/mes sin cortar pedidos · ${PLANS.EN_LINEA.maxProducts} productos · ${PLANS.EN_LINEA.users} usuario`, positive: true },
   ],
   ESTANDAR: [
-    { text: 'Elige 2 de 3 modos de pedido', positive: true },
+    { text: `Elige ${ESTANDAR_MAX_ORDER_TYPES} de 3 modos de pedido`, positive: true },
     { text: 'Avisos en tiempo real y WhatsApp', positive: true },
-    { text: 'Productos ilimitados · 2 usuarios', positive: true },
+    { text: `Productos ilimitados · ${PLANS.ESTANDAR.users} usuarios`, positive: true },
     { text: 'Reportes financieros y corte de caja', positive: true },
   ],
   PREMIUM: [
@@ -438,6 +441,167 @@ export const PLAN_POINTS: Record<PlanCode, { text: string; positive: boolean }[]
     { text: 'Soporte prioritario', positive: true },
   ],
 };
+
+/* Contrato de presentación 0.2. Solo lectura: no recalcula cobros ni facturas.
+   La tarifa pública es GTQ; el acuerdo particular solo viaja al panel autorizado. */
+export const PLAN_CONTRACT_VERSION = '2026-11-05';
+
+type BooleanPlanFeature = 'hasOrders' | 'hasWhatsapp' | 'hasRealtime' | 'hasFullTheme'
+  | 'hasWaiterPanel' | 'hasPrinting' | 'hasFinance' | 'hasAnalytics';
+export type PlanCapability = {
+  key: string;
+  label: string;
+  feature?: BooleanPlanFeature;
+  flag?: PlanFeatureFlag;
+  module?: ActivatableModuleKey;
+  always?: boolean;
+};
+
+/** La comparativa y la suscripción muestran el mismo catálogo y cuentan sus filas. */
+export const PLAN_CAPABILITIES: PlanCapability[] = [
+  { key: 'catalogue', label: 'Menú digital con código QR', always: true },
+  { key: 'orders', label: 'Pedidos en línea', feature: 'hasOrders', flag: 'orders' },
+  { key: 'whatsapp', label: 'Avisos por WhatsApp', feature: 'hasWhatsapp', flag: 'whatsapp_notify' },
+  { key: 'realtime', label: 'Alertas en tiempo real', feature: 'hasRealtime', flag: 'orders' },
+  { key: 'theme', label: 'Personalización completa', feature: 'hasFullTheme' },
+  { key: 'waiter', label: 'Panel de mesero y mesas', feature: 'hasWaiterPanel' },
+  { key: 'printing', label: 'Impresión de comandas', feature: 'hasPrinting' },
+  { key: 'finance', label: 'Reportes financieros y corte de caja', feature: 'hasFinance', flag: 'finanzas' },
+  { key: 'analytics', label: 'Analítica', feature: 'hasAnalytics', flag: 'analitica' },
+  { key: 'inventory', label: 'Inventario', feature: 'hasAnalytics', flag: 'inventario' },
+  { key: 'staff', label: 'Personal', feature: 'hasAnalytics', flag: 'personal' },
+  ...ACTIVATABLE_MODULES.map((m) => ({ key: m.key, label: m.label, module: m.key })),
+];
+
+export function publicPlanCapabilities(): PlanCapability[] {
+  return PLAN_CAPABILITIES.filter((item) => PUBLIC_PLANS.some((code) =>
+    item.module ? isModuleIncluded(code, item.module) : !!(item.always || (item.feature && PLANS[code][item.feature]))));
+}
+
+export type PlanOrderType = 'dine_in' | 'pickup' | 'delivery';
+export const PLAN_ORDER_TYPE_LABELS: Record<PlanOrderType, string> = {
+  dine_in: 'Comer en local', pickup: 'Para llevar', delivery: 'A domicilio',
+};
+export const ALL_PLAN_ORDER_TYPES: PlanOrderType[] = ['dine_in', 'pickup', 'delivery'];
+
+export function validPlanCode(value: string | null | undefined): PlanCode {
+  return PLAN_ORDER.includes(value as PlanCode) ? value as PlanCode : 'BASICO';
+}
+
+export function formatPlanAmount(amount: number, currency = 'GTQ'): string {
+  return fmtMoney(amount, currency, Number.isInteger(amount) ? 0 : 2);
+}
+
+export type PlanBillingSnapshot = {
+  monthly_fee: number;
+  auto_price: boolean;
+  currency?: string;
+  started_at?: string | null;
+};
+
+export type PlanPresentationInput = {
+  plan?: string | null;
+  pricing: PlanPricing;
+  modules?: Record<string, boolean> | null;
+  settings?: ModuleSettings | null;
+  orderTypes?: PlanOrderType[];
+  /** Solo el llamador que comprobó la configuración puede afirmar que está lista. */
+  configured?: Record<string, boolean | null>;
+  billing?: PlanBillingSnapshot | null;
+  /** Importe del motor existente de facturación, nunca calculado de nuevo aquí. */
+  computedFee?: number | null;
+};
+
+export function planPresentation(input: PlanPresentationInput) {
+  const code = validPlanCode(input.plan);
+  const plan = PLANS[code];
+  const modules = withPlanFloor(code, input.modules ?? {});
+  const publicKeys = new Set(publicPlanCapabilities().map((item) => item.key));
+  const capabilities = PLAN_CAPABILITIES.map((item) => {
+    const included = item.module ? isModuleIncluded(code, item.module) : !!(item.always || (item.feature && plan[item.feature]));
+    const enabled = included || (item.module ? modules[item.module] === true : !!(item.flag && modules[item.flag]));
+    const configured = input.configured?.[item.key] ?? null;
+    const active = enabled && (item.module ? isModuleActive(modules, input.settings, item.module) : true);
+    return { ...item, included, enabled, configured, active };
+  }).filter((item) => item.enabled || publicKeys.has(item.key));
+  const availableOrderTypes = plan.hasOrders ? orderTypesForPlan(code, ALL_PLAN_ORDER_TYPES) : [];
+  const selectedOrderTypes = (input.orderTypes ?? []).filter((type) => availableOrderTypes.includes(type));
+  const maxOrderTypes = code === 'ESTANDAR' ? ESTANDAR_MAX_ORDER_TYPES : availableOrderTypes.length;
+  const publicAmount = input.pricing.prices[code];
+  const billing = input.billing;
+  const manual = billing?.auto_price === false;
+  const monthlyAmount = manual ? billing.monthly_fee
+    : billing ? input.computedFee ?? billing.monthly_fee : publicAmount;
+  const currency = billing?.currency ?? 'GTQ';
+  const monthlyLabel = monthlyAmount === 0 ? 'Gratis' : `${formatPlanAmount(monthlyAmount, currency)}${currency === 'GTQ' ? '' : ` ${currency}`} / mes`;
+  const policy = plan.monthlyOrderCap
+    ? `Hasta ${plan.monthlyOrderCap} pedidos al mes · límite blando: ningún pedido se corta`
+    : plan.hasOrders ? 'Sin tope de pedidos ni comisión por venta' : 'Menú digital · sin pedidos';
+  const orderScope = !plan.hasOrders ? 'Menú digital · sin pedidos'
+    : code === 'ESTANDAR' ? `Elige ${maxOrderTypes} de ${availableOrderTypes.length} modalidades de pedido`
+      : availableOrderTypes.map((type) => PLAN_ORDER_TYPE_LABELS[type]).join(' · ');
+  const selectedScope = selectedOrderTypes.length
+    ? `Modalidades activas: ${selectedOrderTypes.map((type) => PLAN_ORDER_TYPE_LABELS[type]).join(' · ')}`
+    : 'Modalidades activas: sin comprobar';
+  return {
+    version: PLAN_CONTRACT_VERSION, code, name: plan.name, tagline: plan.tagline,
+    points: PLAN_POINTS[code], capabilities,
+    includedCount: capabilities.filter((item) => item.included).length,
+    enabledCount: capabilities.filter((item) => item.enabled).length,
+    activeCount: capabilities.filter((item) => item.active).length,
+    moduleCounts: {
+      included: capabilities.filter((item) => item.module && item.included).length,
+      enabled: capabilities.filter((item) => item.module && item.enabled).length,
+      active: capabilities.filter((item) => item.module && item.active).length,
+      configured: capabilities.filter((item) => item.module && item.enabled && item.configured === true).length,
+    },
+    availableOrderTypes, selectedOrderTypes, maxOrderTypes, orderScope, selectedScope, policy,
+    publicAmount, publicLabel: planPriceLabel(input.pricing, code),
+    setupAmount: input.pricing.setupFees?.[code] ?? plan.setupFee,
+    monthlyAmount, monthlyLabel, currency, manual,
+    billingConfigured: !!billing,
+    priceExplanation: manual ? 'Precio acordado para este restaurante. La tarifa pública es una referencia.'
+      : billing && input.computedFee == null ? 'Mensualidad guardada; no se pudo comprobar el cálculo actual.'
+      : billing ? 'Mensualidad automática del plan; encender o apagar funciones no cambia la tarifa.'
+        : 'Tarifa pública de referencia; el cobro de este restaurante aún no está configurado.',
+    billingStartedAt: billing?.started_at ?? null,
+    usersLabel: plan.users === 'unlimited' ? 'Usuarios ilimitados' : `${plan.users} ${plan.users === 1 ? 'usuario' : 'usuarios'} del panel`,
+    productsLabel: plan.maxProducts ? `Hasta ${plan.maxProducts} productos` : 'Productos ilimitados',
+  };
+}
+
+/** Resumen de operación para Hoy, sin confundir lo permitido con lo encendido. */
+export function planOperationCopy(presentation: ReturnType<typeof planPresentation>): string {
+  return `Tu plan ${presentation.name}: ${presentation.orderScope}. ${presentation.selectedScope}.`;
+}
+
+/** Una selección de plan no elimina un acuerdo manual: el motor solo aplica auto_price. */
+export function planChangePresentation(current: ReturnType<typeof planPresentation> | null | undefined, target: PlanCode, pricing: PlanPricing) {
+  return planPresentation({
+    plan: target, pricing,
+    billing: current?.manual ? { auto_price: false, monthly_fee: current.monthlyAmount, currency: current.currency } : null,
+  });
+}
+
+export function capabilityStateLabel(item: ReturnType<typeof planPresentation>['capabilities'][number]): string {
+  if (!item.enabled) return 'No incluido ni habilitado';
+  const origin = item.included ? 'Incluido en tu plan' : 'Habilitado por excepción';
+  const config = item.configured === null ? 'configuración sin comprobar' : item.configured ? 'configurado' : 'sin configurar';
+  return `${origin} · ${item.active ? 'encendido' : 'apagado'} · ${config}`;
+}
+
+/** La misma política se utiliza en las tarjetas y en la FAQ; no promete pedidos ilimitados en En línea. */
+export function planGrowthCopy(pricing: PlanPricing): string {
+  const online = planPresentation({ plan: 'EN_LINEA', pricing });
+  return `No cobramos un porcentaje de tus ventas. En línea: ${online.policy}. Si superas ese límite, te avisamos para pasar a Estándar el siguiente mes. Estándar y Premium no tienen tope de pedidos. Encender o apagar canales no cambia el precio del plan.`;
+}
+
+export function planComparisonCopy(pricing: PlanPricing): string {
+  return PUBLIC_PLANS.map((code) => {
+    const c = planPresentation({ plan: code, pricing });
+    return `${c.name} (${c.publicLabel}): ${c.orderScope}. ${c.productsLabel}; ${c.usersLabel}. ${c.policy}. Configuración asistida: ${formatPlanAmount(c.setupAmount)}.`;
+  }).join(' ');
+}
 
 /* ============================================================
    CAMBIAR DE PLAN (desde el panel del dueño, 2026-10-28)

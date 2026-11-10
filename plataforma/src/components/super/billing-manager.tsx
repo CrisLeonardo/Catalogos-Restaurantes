@@ -168,9 +168,9 @@ function ConfigCard({
             padding: '9px 12px', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 600,
             background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)',
           }}>
-            ⚠ Precio manual desincronizado: cobra {fmtMoney(config?.monthly_fee ?? 0, currency)}/mes pero el precio
-            vigente del plan {planName} sería {fmtMoney(suggestedFee, currency)}/mes. Si no es un descuento
-            acordado a propósito, activa &quot;Precio automático&quot; abajo para sincronizarlo.
+            Precio acordado: {fmtMoney(config?.monthly_fee ?? 0, currency)}/mes. La referencia automática
+            del plan {planName} es {fmtMoney(suggestedFee, 'GTQ')}/mes. El acuerdo se conserva;
+            activa &quot;Precio automático&quot; solo si deseas reemplazarlo.
           </div>
         )}
 

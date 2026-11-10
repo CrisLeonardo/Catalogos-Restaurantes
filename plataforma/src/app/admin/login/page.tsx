@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getStaffSessionRaw } from '@/lib/supabase/server';
+import { destinoDePanel, segundoFactorPara } from '@/lib/auth/panel-destino';
 import { DEMO_SLUG, authPathFor } from '@/lib/tenant';
 import { getBareLoginSlug, getResumeSession } from '@/lib/auth/resume';
 import { getAgentHubInfo } from '@/lib/print-agent';
@@ -27,13 +28,14 @@ export const metadata = {
 export default async function AdminLoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ auth_error?: string }>;
+  searchParams: Promise<{ auth_error?: string; next?: string }>;
 }) {
   // Segundo factor (ACC-01): quien ya dio su contraseña o su Google pero
   // debe el código de su app no tiene nada que hacer en un login — vuelve a
   // esa pantalla (desde ahí puede salir y entrar con otra cuenta). Es por
   // donde llega el Super Admin cuando /super lo rebota sin sesión.
-  if ((await getStaffSessionRaw()).paso !== 'listo') redirect('/admin/dos-pasos');
+  const next = destinoDePanel((await searchParams).next);
+  if ((await getStaffSessionRaw()).paso !== 'listo') redirect(segundoFactorPara(next));
 
   const cabeceras = await headers();
   const slug = cabeceras.get('x-tenant-slug');
@@ -117,6 +119,7 @@ export default async function AdminLoginPage({
       logoUrl={logoUrl}
       slug={slug}
       resume={resume}
+      next={next}
       hubUrl={hubUrl}
       hubToken={hubToken}
       googleEnabled={isGoogleAuthEnabled()}

@@ -1,265 +1,351 @@
 'use client';
 
-/* WaitlistPanel — cola en vivo de walk-ins sin reserva (Fase 3 auditoría de
-   lanzamiento). Anotar → Avisar (con WhatsApp si hay teléfono) → Sentar. */
+/* WaitlistPanel — la cola de quien llega sin reservar (recepción, 1.8).
+   Maqueta aprobada: docs/diseno/MAQUETA_RECEPCION_2026-11-09.html
 
-import { useEffect, useState, useTransition } from 'react';
+   · La cola es la de HOY (día de negocio del local); lo que quedó de días
+     anteriores pasa a «Por revisar» y el historial es el de hoy (X13, PA-T19).
+   · Abrir WhatsApp no es avisar: la fila pregunta «¿se envió?» y sólo la
+     confirmación del host cuenta (R18.2, PA-T20).
+   · Sugiere la mesa más justa y estima la espera como rango con evidencia. */
+
+import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
-import { Card } from '@/components/ui/card';
-import { Stat, StatGroup } from '@/components/ui/stat';
 import { Button } from '@/components/ui/button';
-import {
-  addToWaitlist,
-  markWaitlistNotified,
-  markWaitlistSeated,
-  cancelWaitlistEntry,
-} from '@/lib/actions/waitlist';
-import type { WaitlistEntry, WaitlistSummary } from '@/lib/db/waitlist';
-import { FIELD_LABEL } from '@/components/admin/field-label';
 import { EmptyState } from '@/components/ui/empty-state';
+import {
+  addToWaitlist, markWaitlistAvisoAbierto, markWaitlistNotified, retirarAvisoAbierto,
+  markWaitlistSeated, markWaitlistNoShow, cancelWaitlistEntry, type WaitlistResult,
+} from '@/lib/actions/waitlist';
+import type { WaitlistEntry } from '@/lib/db/waitlist';
+import type { MesaRecepcion } from '@/lib/db/table-sessions';
+import { estadoDeAviso, mesaSugerida, rangoDeEspera } from '@/lib/recepcion/agenda';
+import s from './recepcion.module.css';
 
 interface Props {
   restaurantId: string;
-  entries: WaitlistEntry[];
-  recent: WaitlistEntry[];
-  summary: WaitlistSummary;
-  /** Mesas sin gente ni turno abierto, para sentar ahí a quien esperaba
-      (migración 128, M-04). Vacío = el local no usa mesas numeradas, o no
-      queda ninguna: entonces «Sentar» funciona como siempre, sin mesa. */
-  freeTables: number[];
+  restaurantName: string;
+  timezone: string;
+  /** «domingo 9 de noviembre», el día de negocio. */
+  etiquetaHoy: string;
+  cola: WaitlistEntry[];
+  porRevisar: WaitlistEntry[];
+  historial: WaitlistEntry[];
+  esperasDeHoy: number[];
+  /** Mesas sin gente ni turno abierto. Vacío = el local no usa mesas numeradas o no queda ninguna. */
+  freeTables: MesaRecepcion[];
 }
 
-const labelStyle: React.CSSProperties = FIELD_LABEL;
+function horaLocal(iso: string | null | undefined, tz: string): string {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleTimeString('es-GT', { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  } catch {
+    return new Date(iso).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' });
+  }
+}
 
-/** "hace 12 min" / "hace 1h 5min" — se recalcula solo con el reloj vivo. */
-function elapsedLabel(from: string, now: number): string {
+function fechaCorta(iso: string, tz: string): string {
+  try {
+    return new Date(iso).toLocaleDateString('es-GT', { timeZone: tz, weekday: 'short', day: 'numeric', month: 'short' });
+  } catch {
+    return iso.slice(0, 10);
+  }
+}
+
+function esperando(from: string, now: number): string {
   const mins = Math.max(0, Math.round((now - new Date(from).getTime()) / 60000));
   if (mins < 1) return 'recién llegó';
-  if (mins < 60) return `hace ${mins} min`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return `hace ${h}h${m > 0 ? ` ${m}min` : ''}`;
+  if (mins < 60) return `${mins} min`;
+  return `${Math.floor(mins / 60)} h ${mins % 60} min`;
 }
 
 function whatsappHref(phone: string, restaurantName: string): string {
   const digits = phone.replace(/[^\d]/g, '');
-  const msg = encodeURIComponent(`¡Hola! Ya tenemos mesa lista para ustedes en ${restaurantName || 'el restaurante'}. Te esperamos 🙂`);
+  const msg = encodeURIComponent(`¡Hola! Ya tenemos mesa lista para ustedes en ${restaurantName || 'el restaurante'}. Te esperamos.`);
   return `https://wa.me/${digits}?text=${msg}`;
 }
 
-export default function WaitlistPanel({ restaurantId, entries, recent, summary, freeTables }: Props) {
-  const [tab, setTab] = useState<'cola' | 'nueva'>('cola');
+const personas = (n: number) => `${n} ${n === 1 ? 'persona' : 'personas'}`;
+
+export default function WaitlistPanel({
+  restaurantId, restaurantName, timezone, etiquetaHoy, cola, porRevisar, historial, esperasDeHoy, freeTables,
+}: Props) {
+  const router = useRouter();
+  const [agregando, setAgregando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [otraMesa, setOtraMesa] = useState<Record<string, string>>({});
+  const [form, setForm] = useState({ customer_name: '', party_size: 2, phone: '', notes: '' });
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(id);
   }, []);
 
-  /* La mesa elegida para cada quien, mientras no se les sienta. Por entrada
-     y no una sola: el host puede tener dos grupos a punto de entrar. */
-  const [mesaDe, setMesaDe] = useState<Record<string, string>>({});
+  const rango = useMemo(() => rangoDeEspera(esperasDeHoy), [esperasDeHoy]);
+  const personasEnCola = cola.reduce((n, w) => n + w.party_size, 0);
 
-  const [form, setForm] = useState({ customer_name: '', party_size: 2, phone: '', notes: '' });
-  function setField(k: string, v: string | number) {
-    setForm((prev) => ({ ...prev, [k]: v }));
-  }
-
-  function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
+  /** Corre una acción, muestra su error y vuelve a pedir la página (la ruta reescrita no siempre se repinta sola). */
+  function correr(id: string | null, accion: () => Promise<WaitlistResult>, despues?: () => void) {
+    setBusyId(id);
     setError(null);
     startTransition(async () => {
-      const res = await addToWaitlist(restaurantId, form);
-      if (res.error) { setError(res.error); return; }
+      const res = await accion();
+      setBusyId(null);
+      if (res.error) setError(res.error);
+      else despues?.();
+      router.refresh();
+    });
+  }
+
+  function agregar(e: React.FormEvent) {
+    e.preventDefault();
+    correr(null, () => addToWaitlist(restaurantId, form), () => {
       setForm({ customer_name: '', party_size: 2, phone: '', notes: '' });
-      setTab('cola');
-    });
-  }
-
-  function handleAction(id: string, action: (restaurantId: string, id: string) => Promise<{ error?: string }>) {
-    setBusyId(id);
-    startTransition(async () => {
-      const res = await action(restaurantId, id);
-      setBusyId(null);
-      if (res.error) { setError(res.error); return; }
-    });
-  }
-
-  /** Sentarlos, con mesa si se eligió una. */
-  function handleSeat(id: string) {
-    const mesa = Number(mesaDe[id]);
-    setBusyId(id);
-    startTransition(async () => {
-      const res = await markWaitlistSeated(restaurantId, id, Number.isFinite(mesa) && mesa > 0 ? mesa : null);
-      setBusyId(null);
-      if (res.error) { setError(res.error); return; }
-      setMesaDe((prev) => { const next = { ...prev }; delete next[id]; return next; });
+      setAgregando(false);
     });
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* KPIs */}
-      <StatGroup>
-        <Stat label="Esperando" value={String(summary.waiting)} />
-        <Stat label="Avisados" value={String(summary.notified)} />
-        <Stat
-          label="Espera promedio hoy"
-          value={summary.avgWaitMinutesToday != null ? `${summary.avgWaitMinutesToday} min` : '—'}
-        />
-      </StatGroup>
-
-      {error && (
-        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 13 }}>
-          {error}
-        </div>
-      )}
-
-      {/* «+ Agregar grupo» arriba a la derecha en vez de una pestaña (T-09). */}
-      {tab === 'cola' && entries.length > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button type="button" onClick={() => setTab('nueva')} className="rounded-adm-full">
-            <Icon name="plus" size={15} /> Agregar grupo
-          </Button>
-        </div>
-      )}
-
-      {tab === 'nueva' ? (
-        <Card className="p-5" style={{ maxWidth: 480 }}>
-          <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 14 }}>Agregar a la lista de espera</p>
-          <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div>
-              <label style={labelStyle}>Nombre del grupo *</label>
-              <input className="adm-field" value={form.customer_name} onChange={(e) => setField('customer_name', e.target.value)} required placeholder="Familia Pérez" autoFocus />
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div>
-                <label style={labelStyle}>Personas *</label>
-                <input className="adm-field" type="number" inputMode="decimal" min={1} max={100} value={form.party_size} onChange={(e) => setField('party_size', parseInt(e.target.value) || 1)} required />
-              </div>
-              <div>
-                <label style={labelStyle}>Teléfono</label>
-                <input className="adm-field" value={form.phone} onChange={(e) => setField('phone', e.target.value)} placeholder="Opcional — para avisar por WhatsApp" />
-              </div>
-            </div>
-            <div>
-              <label style={labelStyle}>Notas</label>
-              <textarea className="adm-field" style={{ resize: 'vertical', minHeight: 60 }} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Preferencia de mesa, ocasión especial…" />
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Button type="submit" disabled={isPending}>
-                {isPending ? 'Agregando…' : 'Agregar a la lista'}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => setTab('cola')}>
-                Cancelar
-              </Button>
-            </div>
-          </form>
-        </Card>
-      ) : entries.length === 0 ? (
-        <EmptyState
-          icon="users"
-          title="Nadie está esperando mesa"
-          desc="Cuando el local se llene, anota aquí a cada grupo y avísales en cuanto su mesa esté lista."
-          action={{ label: 'Agregar un grupo', onClick: () => setTab('nueva') }}
-        />
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {entries.map((w) => {
-            const busy = busyId === w.id && isPending;
-            return (
-              <Card key={w.id} className="flex flex-wrap items-center gap-3 p-3.5">
-                <div style={{ width: 8, height: 8, borderRadius: 'var(--radius-full)', background: w.status === 'NOTIFIED' ? 'var(--c-ok)' : 'var(--c-warn)', flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 160 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>{w.customer_name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
-                    {w.party_size} {w.party_size === 1 ? 'persona' : 'personas'} · {elapsedLabel(w.created_at, now)}
-                    {w.phone ? ` · ${w.phone}` : ''}
-                  </div>
-                  {w.notes && <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 3, fontStyle: 'italic' }}>{w.notes}</div>}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: w.status === 'NOTIFIED' ? 'var(--c-ok)' : 'var(--c-warn)' }}>
-                    {w.status === 'NOTIFIED' ? 'Avisado' : 'Esperando'}
-                  </span>
-                  {w.status === 'WAITING' && w.phone && (
-                    <a
-                      href={whatsappHref(w.phone, '')}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() => handleAction(w.id, markWaitlistNotified)}
-                      className="press"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 'var(--radius-full)', background: '#25D366', color: '#fff', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}
-                    >
-                      <Icon name="whatsapp" size={13} /> Avisar
-                    </a>
-                  )}
-                  {w.status === 'WAITING' && !w.phone && (
-                    <Button type="button" onClick={() => handleAction(w.id, markWaitlistNotified)} disabled={busy} variant="secondary" size="sm" className="rounded-adm-full">
-                      Avisar
-                    </Button>
-                  )}
-                  {/* En qué mesa (M-04). Antes «Sentar» marcaba la ficha y el
-                      salón no se enteraba: la mesa seguía saliendo libre. */}
-                  {freeTables.length > 0 && (
-                    <select
-                      value={mesaDe[w.id] ?? ''}
-                      onChange={(e) => setMesaDe((prev) => ({ ...prev, [w.id]: e.target.value }))}
-                      aria-label={`Mesa para ${w.customer_name}`}
-                      style={{
-                        height: 32, borderRadius: 'var(--radius-full)', padding: '0 10px',
-                        border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
-                        color: 'var(--u-text)', fontSize: 12, cursor: 'pointer',
-                      }}
-                    >
-                      <option value="" style={{ color: 'var(--u-text)' }}>Sin mesa</option>
-                      {freeTables.map((n) => (
-                        <option key={n} value={n} style={{ color: 'var(--u-text)' }}>Mesa {n}</option>
-                      ))}
-                    </select>
-                  )}
-                  <Button
-                    type="button"
-                    onClick={() => handleSeat(w.id)}
-                    disabled={busy}
-                    size="sm"
-                    className="rounded-adm-full"
-                  >
-                    {mesaDe[w.id] ? `Sentar en ${mesaDe[w.id]}` : 'Sentar'}
-                  </Button>
-                  <Button type="button" onClick={() => handleAction(w.id, cancelWaitlistEntry)} disabled={busy} variant="outline" size="sm"
-                    className="rounded-adm-full border-[var(--c-danger-line)] text-[var(--c-danger)]">
-                    Cancelar
-                  </Button>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {tab === 'cola' && recent.length > 0 && (
+    <div className={s.raiz}>
+      <div className={s.cabecera}>
         <div>
-          <div className="adm-label" style={{ marginBottom: 10 }}>Hoy más temprano</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {recent.slice(0, 8).map((w) => (
-              <div key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', fontSize: 12, color: 'var(--u-text-3)' }}>
-                <span style={{ width: 6, height: 6, borderRadius: 'var(--radius-full)', background: w.status === 'SEATED' ? 'var(--c-ok)' : 'var(--c-danger)', flexShrink: 0 }} />
-                <span style={{ color: 'var(--u-text-2)', fontWeight: 600 }}>{w.customer_name}</span>
-                <span>{w.party_size} {w.party_size === 1 ? 'persona' : 'personas'}</span>
-                <span>
-                  · {w.status === 'SEATED'
-                    ? `sentados${w.table_number ? ` en la mesa ${w.table_number}` : ''}`
-                    : 'cancelado'}
-                </span>
-              </div>
-            ))}
-          </div>
+          <h2>Lista de espera</h2>
+          <p>Hoy, {etiquetaHoy}</p>
         </div>
+        {!agregando && (
+          <Button type="button" size="touch" onClick={() => setAgregando(true)}>
+            <Icon name="plus" size={16} /> Agregar grupo
+          </Button>
+        )}
+      </div>
+
+      <div className={s.stats}>
+        <div className={`${s.card} ${s.stat}`}>
+          <span>Esperando</span>
+          <strong>{cola.length}</strong>
+          <small>{personas(personasEnCola)}</small>
+        </div>
+        <div className={`${s.card} ${s.stat}`}>
+          <span>Espera estimada</span>
+          <strong>{rango ? `${rango.desde}–${rango.hasta} min` : '—'}</strong>
+          <small>{rango ? `según ${rango.grupos} grupos de hoy` : 'Se estima con 3 grupos sentados hoy'}</small>
+        </div>
+      </div>
+
+      {error && <div className={s.error} role="alert">{error}</div>}
+
+      {agregando && (
+        <form className={`${s.card} ${s.form}`} onSubmit={agregar} aria-labelledby="espera-form-t">
+          <h3 id="espera-form-t">Agregar a la lista</h3>
+          <div className={s.campos}>
+            <div className={s.completo}>
+              <label htmlFor="espera-nombre">Nombre del grupo *</label>
+              <input id="espera-nombre" autoComplete="off" className="adm-field" required autoFocus placeholder="Familia Pérez"
+                value={form.customer_name} onChange={(e) => setForm((f) => ({ ...f, customer_name: e.target.value }))} />
+            </div>
+            <div>
+              <label htmlFor="espera-personas">Personas *</label>
+              <input id="espera-personas" className="adm-field" type="number" inputMode="numeric" min={1} max={100} required
+                value={form.party_size} onChange={(e) => setForm((f) => ({ ...f, party_size: parseInt(e.target.value) || 1 }))} />
+            </div>
+            <div>
+              <label htmlFor="espera-telefono">Teléfono</label>
+              <input id="espera-telefono" type="tel" inputMode="tel" autoComplete="off" className="adm-field" placeholder="Para avisar por WhatsApp"
+                value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+            </div>
+            <div className={s.completo}>
+              <label htmlFor="espera-notas">Notas</label>
+              <textarea id="espera-notas" className="adm-field" style={{ resize: 'vertical', minHeight: 60 }} placeholder="Silla para bebé, terraza…"
+                value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
+            </div>
+          </div>
+          <div className={s.acciones} style={{ marginTop: 14 }}>
+            <Button type="submit" size="touch" disabled={isPending}>{isPending && busyId === null ? 'Agregando…' : 'Agregar a la lista'}</Button>
+            <Button type="button" size="touch" variant="ghost" onClick={() => setAgregando(false)}>Cancelar</Button>
+          </div>
+        </form>
       )}
+
+      <div className={s.columnas}>
+        <section className={s.seccion} aria-labelledby="cola-t">
+          <h3 id="cola-t">En la cola</h3>
+          {cola.length === 0 ? (
+            <EmptyState
+              icon="users"
+              title="Nadie está esperando mesa"
+              desc="Cuando el local se llene, anota aquí a cada grupo y avísales en cuanto su mesa esté lista."
+              action={{ label: 'Agregar un grupo', onClick: () => setAgregando(true) }}
+            />
+          ) : (
+            <div className={s.card}>
+              <ul className={s.lista}>
+                {cola.map((w) => {
+                  const busy = busyId === w.id && isPending;
+                  const aviso = estadoDeAviso(w);
+                  const sugerida = mesaSugerida(freeTables, w.party_size);
+                  const elegida = otraMesa[w.id] ?? '';
+                  const compatibles = freeTables.filter((m) => m.capacidad == null || m.capacidad >= w.party_size);
+                  return (
+                    <li key={w.id}>
+                      <div className={s.fila}>
+                        <div className={s.hora}>{horaLocal(w.created_at, timezone)}<small>{esperando(w.created_at, now)}</small></div>
+                        <div className={s.quien}>
+                          <div className={s.nombre}>
+                            <b>{w.customer_name}</b>
+                            {aviso === 'avisado' && (
+                              <span className={`${s.chip} ${s.ok}`}>
+                                Avisados por ti · {horaLocal(w.notified_at, timezone)}
+                              </span>
+                            )}
+                            {aviso === 'abierto' && <span className={`${s.chip} ${s.warn}`}>WhatsApp abierto · ¿se envió?</span>}
+                            {aviso === 'sin_avisar' && <span className={s.chip}>Sin avisar</span>}
+                          </div>
+                          <div className={s.meta}>
+                            {personas(w.party_size)}{w.phone ? ` · ${w.phone}` : ' · sin teléfono'}
+                            {aviso === 'avisado' && w.notified_via ? ` · ${w.notified_via === 'whatsapp' ? 'por WhatsApp' : 'en persona'}` : ''}
+                          </div>
+                          {w.notes && <div className={s.notas}>{w.notes}</div>}
+
+                          {/* Mesa: la sugerida con su porqué, o elegir otra. */}
+                          {freeTables.length > 0 && (
+                            <div className={`${s.caja} ${s.neutra} ${s.sugerida}`}>
+                              <div>
+                                {sugerida && !elegida
+                                  ? <><b>Mesa {sugerida.mesa} está libre</b>{sugerida.motivo}</>
+                                  : elegida ? <b>Mesa {elegida}</b>
+                                    : <><b>Ninguna mesa libre para {w.party_size}</b>Puedes sentarlos sin mesa o esperar a que se libere una.</>}
+                              </div>
+                              {(sugerida || elegida) && (
+                                <Button type="button" size="sm" disabled={busy}
+                                  onClick={() => correr(w.id, () => markWaitlistSeated(restaurantId, w.id, Number(elegida || sugerida!.mesa)))}>
+                                  Sentar en {elegida || sugerida!.mesa}
+                                </Button>
+                              )}
+                              {compatibles.length > 1 && (
+                                <select className={s.mesaSelect} aria-label={`Otra mesa para ${w.customer_name}`} value={elegida}
+                                  onChange={(e) => setOtraMesa((p) => ({ ...p, [w.id]: e.target.value }))}>
+                                  <option value="">Otra mesa…</option>
+                                  {compatibles.map(({ n, capacidad }) => (
+                                    <option key={n} value={n}>Mesa {n}{capacidad ? ` · ${capacidad} plazas` : ''}</option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                          )}
+
+                          {aviso === 'abierto' ? (
+                            <div className={`${s.caja} ${s.alerta}`} role="status">
+                              <b>¿Se envió el mensaje?</b>
+                              Abrir WhatsApp no confirma que lo recibieron.
+                              <div className={s.acciones}>
+                                <Button type="button" size="sm" variant="secondary" disabled={busy}
+                                  onClick={() => correr(w.id, () => markWaitlistNotified(restaurantId, w.id, 'whatsapp'))}>Sí, les avisé</Button>
+                                <Button type="button" size="sm" variant="ghost" disabled={busy}
+                                  onClick={() => correr(w.id, () => retirarAvisoAbierto(restaurantId, w.id))}>No se envió</Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className={s.acciones}>
+                              {aviso === 'sin_avisar' && w.phone && (
+                                <a className={s.wa} href={whatsappHref(w.phone, restaurantName)} target="_blank" rel="noopener noreferrer"
+                                  onClick={() => correr(w.id, () => markWaitlistAvisoAbierto(restaurantId, w.id))}>
+                                  <Icon name="whatsapp" size={14} /> Abrir WhatsApp
+                                </a>
+                              )}
+                              {aviso === 'sin_avisar' && (
+                                <Button type="button" size="sm" variant="ghost" disabled={busy}
+                                  onClick={() => correr(w.id, () => markWaitlistNotified(restaurantId, w.id, 'en_persona'))}>Avisé en persona</Button>
+                              )}
+                              {freeTables.length === 0 && (
+                                <Button type="button" size="sm" variant="secondary" disabled={busy}
+                                  onClick={() => correr(w.id, () => markWaitlistSeated(restaurantId, w.id, null))}>Sentar</Button>
+                              )}
+                              <Button type="button" size="sm" variant="ghost" disabled={busy}
+                                onClick={() => correr(w.id, () => markWaitlistNoShow(restaurantId, w.id))}>No llegó</Button>
+                              <Button type="button" size="sm" variant="ghost" disabled={busy}
+                                onClick={() => correr(w.id, () => cancelWaitlistEntry(restaurantId, w.id))}>Quitar</Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+          {cola.length > 1 && (
+            <p className={s.efecto}>Un grupo posterior puede sentarse antes si su mesa se libera primero: el orden lo decides tú.</p>
+          )}
+        </section>
+
+        <div className={s.columna}>
+          {porRevisar.length > 0 && (
+            <section className={s.seccion} aria-labelledby="revisar-t">
+              <h3 id="revisar-t">Por revisar <small>· días anteriores</small> <span className={`${s.chip} ${s.warn}`}>{porRevisar.length}</span></h3>
+              <div className={s.card}>
+                <ul className={s.lista}>
+                  {porRevisar.map((w) => (
+                    <li key={w.id}>
+                      <div className={s.fila}>
+                        <div className={s.hora}>{horaLocal(w.created_at, timezone)}<small>{fechaCorta(w.created_at, timezone)}</small></div>
+                        <div className={s.quien}>
+                          <div className={s.nombre}><b>{w.customer_name}</b></div>
+                          <div className={s.meta}>{personas(w.party_size)} · {w.status === 'NOTIFIED' ? 'avisado, nunca se sentó' : 'quedó esperando'}</div>
+                          <div className={s.acciones}>
+                            <Button type="button" size="sm" variant="secondary" disabled={busyId === w.id && isPending}
+                              onClick={() => correr(w.id, () => markWaitlistNoShow(restaurantId, w.id))}>No llegó</Button>
+                            <Button type="button" size="sm" variant="ghost" disabled={busyId === w.id && isPending}
+                              onClick={() => correr(w.id, () => cancelWaitlistEntry(restaurantId, w.id))}>Quitar de la lista</Button>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+          )}
+
+          <section className={s.seccion} aria-labelledby="historial-t">
+            <h3 id="historial-t">Hoy <small>· ya atendidos</small></h3>
+            <div className={s.card}>
+              {historial.length === 0 ? (
+                <p className={s.vacio}>Todavía nadie de la lista se ha sentado ni ido hoy.</p>
+              ) : (
+                <ul className={s.lista}>
+                  {historial.slice(0, 20).map((w) => (
+                    <li key={w.id}>
+                      <div className={s.fila}>
+                        <div className={s.hora}>{horaLocal(w.created_at, timezone)}</div>
+                        <div className={s.quien}>
+                          <div className={s.nombre}>
+                            <b>{w.customer_name}</b>
+                            {w.status === 'SEATED' && <span className={`${s.chip} ${s.ok}`}>Sentados{w.table_number ? ` en la ${w.table_number}` : ''}</span>}
+                            {w.status === 'NO_SHOW' && <span className={s.chip}>No llegó</span>}
+                            {w.status === 'CANCELLED' && <span className={s.chip}>Quitado</span>}
+                          </div>
+                          <div className={s.meta}>
+                            {personas(w.party_size)}
+                            {w.status === 'SEATED' && w.seated_at
+                              ? ` · esperó ${Math.max(0, Math.round((new Date(w.seated_at).getTime() - new Date(w.created_at).getTime()) / 60000))} min`
+                              : ''}
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

@@ -141,7 +141,7 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
         {lista.map((c, i) => (
           <Card
             key={c.id}
-            className="flex items-center gap-3 p-4"
+            className="flex flex-wrap items-center gap-3 p-4"
             style={{ opacity: c.is_active ? 1 : 0.6, transition: 'opacity 160ms' }}
           >
             {/* Reordenar ↑↓ */}
@@ -150,7 +150,6 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
                 <form action={async (fd) => { mover({ id: c.id, dir: -1 }); await moveCategoryUp(fd); }}>
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="id"           value={c.id} />
-                  <input type="hidden" name="sort_order"   value={String(c.sort_order)} />
                   <button type="submit" className="press tap44" style={reorderBtn} title="Subir">
                     <Icon name="arrowUp" size={12} />
                   </button>
@@ -162,7 +161,6 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
                 <form action={async (fd) => { mover({ id: c.id, dir: 1 }); await moveCategoryDown(fd); }}>
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="id"           value={c.id} />
-                  <input type="hidden" name="sort_order"   value={String(c.sort_order)} />
                   <button type="submit" className="press tap44" style={reorderBtn} title="Bajar">
                     <Icon name="arrowDown" size={12} />
                   </button>
@@ -238,9 +236,10 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
               </Button>
             )}
 
-            {/* Eliminar (solo si no tiene platillos) */}
-            {editingId !== c.id && count(c.id) === 0 && (
-              <DeleteCatButton restaurantId={restaurantId} categoryId={c.id} name={c.name} />
+            {/* Eliminar: con platillos pide a dónde pasan (auditoría 1.9, R09.4). */}
+            {editingId !== c.id && (count(c.id) === 0 || lista.length > 1) && (
+              <DeleteCatButton restaurantId={restaurantId} categoryId={c.id} name={c.name}
+                platillos={count(c.id)} destinos={lista.filter((o) => o.id !== c.id)} />
             )}
           </Card>
         ))}
@@ -395,39 +394,72 @@ function InlineEditForm({
 /* ── DeleteCatButton ──────────────────────────────────────── */
 
 function DeleteCatButton({
-  restaurantId,
-  categoryId,
-  name,
+  restaurantId, categoryId, name, platillos, destinos,
 }: {
-  restaurantId: string;
-  categoryId: string;
-  name: string;
+  restaurantId: string; categoryId: string; name: string; platillos: number; destinos: Category[];
 }) {
   const { confirmSubmit, dialog } = useConfirm();
+  const [eligiendo, setEligiendo] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pendiente, setPendiente] = useState(false);
 
+  async function borrar(fd: FormData) {
+    setPendiente(true);
+    setError(null);
+    const r = await deleteCategoryModal(fd);
+    setPendiente(false);
+    if (r.error) setError(r.error);
+    else setEligiendo(false);
+  }
+
+  const boton = (
+    <Button type={platillos > 0 ? 'button' : 'submit'} variant="outline" size="icon"
+      className="size-8.5 text-[var(--u-text-4)]" title="Eliminar categoría"
+      aria-label={`Eliminar la categoría ${name}`}
+      onClick={platillos > 0 ? () => setEligiendo((v) => !v) : undefined}>
+      <Icon name="trash" size={14} />
+    </Button>
+  );
+
+  if (platillos === 0) {
+    return (
+      <>
+      {dialog}
+      <form action={borrar} onSubmit={confirmSubmit({ title: `¿Eliminar la categoría «${name}»?` })} style={{ flexShrink: 0 }}>
+        <input type="hidden" name="restaurantId" value={restaurantId} />
+        <input type="hidden" name="id" value={categoryId} />
+        {boton}
+      </form>
+      </>
+    );
+  }
+
+  /* Debajo de la fila y a todo el ancho: como globo se salía de la
+     pantalla en la última categoría. */
   return (
     <>
-    {dialog}
-    <form
-      action={deleteCategoryModal}
-      // Este botón solo sale en categorías sin platillos, así que no hay
-      // nada más que advertir que el borrado mismo.
-      onSubmit={confirmSubmit({ title: `¿Eliminar la categoría «${name}»?` })}
-      style={{ flexShrink: 0 }}
-    >
-      <input type="hidden" name="restaurantId" value={restaurantId} />
-      <input type="hidden" name="id"           value={categoryId} />
-      <Button
-        type="submit"
-        variant="outline"
-        size="icon"
-        className="size-8.5 text-[var(--u-text-4)]"
-        title="Eliminar categoría"
-        aria-label={`Eliminar la categoría ${name}`}
-      >
-        <Icon name="trash" size={14} />
-      </Button>
-    </form>
+      <div style={{ flexShrink: 0 }}>{boton}</div>
+      {eligiendo && (
+        <form action={borrar}
+          style={{ order: 10, flexBasis: '100%', paddingTop: 12, borderTop: '1px solid var(--adm-border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <input type="hidden" name="restaurantId" value={restaurantId} />
+          <input type="hidden" name="id" value={categoryId} />
+          <label htmlFor={`destino-${categoryId}`} style={{ fontSize: 14, color: 'var(--u-text)' }}>
+            «{name}» tiene {platillos} platillo{platillos !== 1 ? 's' : ''}. ¿A qué categoría pasan?
+          </label>
+          <select id={`destino-${categoryId}`} name="destino" required className="adm-field adm-field-auto" defaultValue="">
+            <option value="" disabled>Elige una categoría</option>
+            {destinos.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+          {error && <span role="alert" style={{ fontSize: 12, color: 'var(--c-danger)' }}>{error}</span>}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Button type="submit" size="touch" variant="destructive" disabled={pendiente}>
+              {pendiente ? 'Moviendo…' : `Mover ${platillos === 1 ? 'el platillo' : `los ${platillos}`} y eliminar`}
+            </Button>
+            <Button type="button" size="touch" variant="ghost" onClick={() => setEligiendo(false)}>Cancelar</Button>
+          </div>
+        </form>
+      )}
     </>
   );
 }

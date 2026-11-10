@@ -1,81 +1,46 @@
 'use client';
 
-/* COBRAR LA MESA.
-   ------------------------------------------------------------------
-   Tres formas de cobrar, un segmentado y nada más:
-
-     · CUENTA COMPLETA — el caso de siempre, y por eso es el primero.
-     · PARTES IGUALES  — cuántos son y cuánto le toca a cada uno.
-     · POR PLATOS      — se marca lo que paga esta persona. Esa parte se
-                         cobra y LA MESA SIGUE ABIERTA.
-
-   Dos cosas del handoff que aquí se hacen distinto, y por qué:
-
-   1. LA PROPINA SE QUEDA. El diseño la eliminaba («la cuenta es
-      subtotal → total»), pero la propina de este sistema se calcula al
-      CREAR el pedido y ya está dentro de `orders.total`. Esconderla no
-      la quitaría: haría que la hoja enseñara un número distinto del que
-      se cobra. Así que se enseña el desglose de verdad —consumo,
-      propina, descuento— y el total sigue siendo el total.
-
-   2. POR PLATOS NO BORRA NADA. El prototipo decía «cobrar una parte
-      quita esas líneas». Quitarlas de verdad sería ANULARLAS, con motivo
-      y PIN, y esa venta desaparecería del arqueo. Aquí la parte cobrada
-      se escribe en `order_payments` (migración 129) y las líneas se
-      quedan a la vista, marcadas «Pagado».
-
-   Y tres métodos de pago, no dos: este sistema cobra también por
-   transferencia, y el arqueo de la noche los cuenta por separado. */
-
-import { useMemo, useState } from 'react';
-import { Hoja, HojaHead, Kicker, Mono } from '@/components/admin/servicio/pieces';
+import { useState } from 'react';
+import { Tabs } from '@base-ui/react/tabs';
+import { HojaOperativa } from '@/components/ui/hoja-operativa';
+import { Button } from '@/components/ui/button';
+import { Kicker, Mono } from '@/components/admin/servicio/pieces';
 import { importeLinea, type LineaServicio, type ResumenComanda } from '@/lib/servicio/comanda';
 import { PAYMENT_LABEL, PAYMENT_METHODS, type PaymentMethod } from '@/lib/payment-method';
 import type { BillBreakdown } from '@/lib/bill-split';
-import type { Product } from '@/types';
+import type { ContextoCobroMesa, PagoCobro, RepartoCobro } from '@/lib/cobro-intento';
 
-export type ModoCobro = 'todo' | 'iguales' | 'platos';
+type ModoCobro = 'todo' | 'iguales' | 'libre' | 'platos';
+const LABEL_APLICADO = { CASH: 'Efectivo aplicado', CARD: 'Tarjeta aplicada', TRANSFER: 'Transferencia aplicada' };
 
-export interface PagoElegido {
-  method: PaymentMethod;
-  amount?: number | null;
-  cashReceived?: number | null;
-}
-
-export interface HojaCobroProps {
+interface HojaCobroProps {
   titulo: string;
   resumen: ResumenComanda;
-  /** El desglose real de los pedidos de la mesa (consumo, propina, descuento). */
   desglose: BillBreakdown | null;
-  /**
-   * Lo que de verdad falta por cobrar, propina incluida.
-   *
-   * NO es `resumen.porCobrar`, que suma líneas y por tanto se queda en el
-   * consumo. `freeTable` cierra la mesa cobrando `orders.total`, así que si
-   * el botón dijera la suma de las líneas prometería un número y cobraría
-   * otro: visto en pantalla con una mesa de Q174 de consumo y Q12 de
-   * propina.
-   */
   porCobrar: number;
-  /** El dinero que esta mesa ya pagó en cobros parciales. */
   yaCobrado: number;
+  saldosPlatos: Record<string, number> | null;
+  contexto: ContextoCobroMesa | null;
   money: (n: number) => string;
-  /** Símbolo de moneda, para los importes rápidos en efectivo. */
   redondear: (n: number) => string;
-  /** Qué ofrecer antes de cerrar: postre si no hay, bebida si no hay. */
-  sugerencias: { label: string; items: Product[] } | null;
-  onSugerir: (p: Product) => void;
   busy: boolean;
   onClose: () => void;
-  /** Cobra TODO y cierra la mesa. */
-  onCobrarTodo: (pagos: PagoElegido[]) => void;
-  /** Cobra solo estas líneas y deja la mesa abierta. */
-  onCobrarParte: (lineas: LineaServicio[], pagos: PagoElegido[]) => void;
+  onCobrarTodo: (pagos: PagoCobro[]) => void;
+  onCobrarParte: (lineas: LineaServicio[], pagos: PagoCobro[]) => void;
+  onAbonar: (pagos: PagoCobro[], reparto: string | null, partes: string[]) => void;
+  onGuardarPartes: (cantidad: number) => void;
+  mantieneMesa: boolean;
 }
 
-/** Los billetes con los que de verdad se paga una cuenta de este tamaño. */
+const centavos = (n: number) => Math.round(n * 100);
+
+function leerCentavos(valor: string) {
+  if (!/^\d{1,8}(?:[.,]\d{1,2})?$/.test(valor)) return null;
+  const [entero, decimales = ''] = valor.replace(',', '.').split('.');
+  return Number(entero) * 100 + Number(decimales.padEnd(2, '0'));
+}
+
 function billetes(total: number): number[] {
-  if (total <= 0) return [];
   const out = new Set<number>();
   for (const paso of [50, 100, 200, 500]) {
     const arriba = Math.ceil(total / paso) * paso;
@@ -84,274 +49,329 @@ function billetes(total: number): number[] {
   return [...out].sort((a, b) => a - b).slice(0, 3);
 }
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
-
 export default function HojaCobro({
-  titulo, resumen, desglose, porCobrar, yaCobrado, money, redondear, sugerencias, onSugerir,
-  busy, onClose, onCobrarTodo, onCobrarParte,
+  titulo, resumen, desglose, porCobrar, yaCobrado, saldosPlatos, contexto, money, redondear,
+  busy, onClose, onCobrarTodo, onCobrarParte, onAbonar, onGuardarPartes, mantieneMesa,
 }: HojaCobroProps) {
   const [modo, setModo] = useState<ModoCobro>('todo');
   const [personas, setPersonas] = useState(2);
+  const [redividir, setRedividir] = useState(false);
   const [marcadas, setMarcadas] = useState<string[]>([]);
-  const [metodo, setMetodo] = useState<PaymentMethod>('CASH');
-  const [recibido, setRecibido] = useState<number | null>(null);
+  const [seleccion, setSeleccion] = useState<string[]>([]);
+  const [importe, setImporte] = useState('');
+  const [metodo, setMetodo] = useState<PaymentMethod | 'mixto'>('CASH');
+  const [mixto, setMixto] = useState<Record<PaymentMethod, string>>({ CASH: '', CARD: '', TRANSFER: '' });
+  const [recibido, setRecibido] = useState('');
 
-  /* Solo se puede cobrar lo que YA SALIÓ a cocina: una línea sin enviar
-     no la ha hecho nadie. El pie de la comanda ya impide llegar aquí con
-     algo sin enviar, pero la regla vive también aquí porque de aquí sale
-     el dinero. */
-  const cobrables = useMemo(
-    () => [...resumen.cocina, ...resumen.servidas].filter((l) => !l.pagada && !l.enviando),
-    [resumen],
-  );
-
-  const pendiente = porCobrar;
-
-  const parte = useMemo(() => {
-    const set = new Set(marcadas);
-    return cobrables.filter((l) => set.has(l.id));
-  }, [cobrables, marcadas]);
-
-  /* Una parte paga su trozo de propina y de descuento, no solo sus platos.
-     Si no, la última persona en pagar cargaría con toda la propina de la
-     mesa —y la suma de las partes no daría el total—. Es el mismo reparto
-     proporcional que hace `lib/bill-split.ts`. */
-  const factorExtras = desglose && desglose.items > 0
-    ? desglose.grandTotal / desglose.items
-    : 1;
-
-  const importeParte = useMemo(
-    () => r2(parte.reduce((s, l) => s + importeLinea(l), 0) * factorExtras),
-    [parte, factorExtras],
-  );
-
-  /* Qué se está cobrando AHORA. En «partes iguales» se cobra la cuenta
-     entera igual —el reparto es una cuenta que el mesero hace en voz
-     alta, no tres cobros— y por eso el CTA dice el total y no la parte.
-     El prototipo decía «Cobrar {total}» estando en partes iguales pero
-     calculaba sobre otra base: dos números distintos para el mismo acto. */
-  const base = modo === 'platos' ? importeParte : pendiente;
-  const esParcial = modo === 'platos' && parte.length > 0 && parte.length < cobrables.length;
-
-  const esEfectivo = metodo === 'CASH';
-  const vuelto = recibido != null ? Math.max(0, r2(recibido - base)) : null;
-  /* Con un «recibí» menor que la cuenta no se cierra: o es un teclazo a
-     medias o falta cobrar, y en los dos casos cerrar es peor que esperar. */
-  const faltaEfectivo = esEfectivo && recibido != null && recibido < base - 0.004;
-
-  const opciones = useMemo(() => {
-    const out = [base, ...billetes(base)];
-    return [...new Set(out.map(r2))].filter((v) => v > 0);
-  }, [base]);
-
-  const puede = base > 0.004 && !faltaEfectivo && !busy
-    && (modo !== 'platos' || parte.length > 0);
+  const reparto = contexto?.reparto;
+  const saldada = contexto?.saldada ?? false;
+  const puedeAbonar = !!contexto && !contexto.avisoCuotas;
+  const cobrables = [...resumen.cocina, ...resumen.servidas].filter((l) =>
+    !l.pagada && !l.enviando && (!saldosPlatos || (saldosPlatos[l.id] ?? 0) > 0));
+  const platos = cobrables.filter((l) => marcadas.includes(l.id));
+  const partes = reparto && !reparto.desactualizado
+    ? reparto.partes.filter((p) => !p.recibo && seleccion.includes(p.id))
+    : [];
+  const saldo = centavos(porCobrar);
+  const basePorModo = {
+    todo: saldo,
+    platos: platos.reduce((s, l) => s + centavos(saldosPlatos?.[l.id] ?? importeLinea(l)), 0),
+    iguales: partes.reduce((s, p) => s + centavos(p.importe), 0),
+    libre: leerCentavos(importe) ?? 0,
+  };
+  const base = basePorModo[modo];
+  const abono = modo === 'libre' || modo === 'iguales';
+  const parcialPlatos = modo === 'platos' && base < saldo;
+  const quedaAbierta = mantieneMesa || abono || parcialPlatos;
+  const montos = PAYMENT_METHODS.map((m) => metodo === 'mixto'
+    ? leerCentavos(mixto[m] || '0')
+    : (metodo === m ? base : 0));
+  const efectivo = montos[PAYMENT_METHODS.indexOf('CASH')] ?? 0;
+  const recibidoCent = leerCentavos(recibido);
+  const faltante = efectivo - (recibidoCent ?? 0);
+  const efectivoInvalido = efectivo > 0 && recibido !== '' && (recibidoCent == null || faltante > 0);
+  const aplicado = montos.reduce<number>((s, m) => s + (m ?? 0), 0);
+  const mixtoValido = montos.every((m) => m != null)
+    && montos.filter((m) => (m ?? 0) > 0).length >= 2
+    && aplicado === base;
+  const puede = !busy && base > 0 && base <= saldo && (!(abono || (mantieneMesa && !parcialPlatos)) || puedeAbonar)
+    && (metodo !== 'mixto' || mixtoValido) && !efectivoInvalido;
+  const mostrarEditor = !reparto || reparto.desactualizado || redividir;
+  const mostrarPago = !saldada && (modo !== 'iguales' || (!mostrarEditor && partes.length > 0));
 
   function cobrar() {
     if (!puede) return;
-    /* EL IMPORTE VIAJA SIEMPRE, también al cerrar la mesa entera.
-       ------------------------------------------------------------
-       Sin él, `freeTable` entiende «lo que quede» y aplica el total del
-       pedido — que incluye lo que esta mesa YA pagó en un cobro parcial.
-       Visto contra la base: una cuenta de Q114 con Q24 ya cobrados se
-       cerró con un movimiento de Q114 más, o sea Q138 en el arqueo de la
-       noche. Mandando lo que dice el botón, lo escrito y lo prometido son
-       el mismo número. */
-    const pagos: PagoElegido[] = [{
-      method: metodo,
-      amount: base,
-      ...(esEfectivo && recibido != null ? { cashReceived: recibido } : {}),
-    }];
-    if (modo === 'platos' && parte.length > 0 && esParcial) {
-      onCobrarParte(parte, pagos);
-      return;
-    }
-    onCobrarTodo(pagos);
+    const pagos = PAYMENT_METHODS.flatMap((m, i) => {
+      const cantidad = montos[i] ?? 0;
+      return cantidad > 0 ? [{
+        method: m, amount: cantidad / 100,
+        ...(m === 'CASH' && recibidoCent != null ? { cashReceived: recibidoCent / 100 } : {}),
+      }] : [];
+    });
+    if (abono) onAbonar(pagos, modo === 'iguales' ? reparto?.id ?? null : null, partes.map((p) => p.id));
+    else if (parcialPlatos) onCobrarParte(platos, pagos);
+    else onCobrarTodo(pagos);
   }
 
-  /* Sin nada marcado en «por platos» el botón no puede prometer
-     «Cobrar Q0.00 y cerrar»: dice lo que falta por hacer. */
-  const cta = modo === 'platos' && parte.length === 0
+  const cta = modo === 'platos' && platos.length === 0
     ? 'Marca lo que paga esta persona'
-    : esParcial
-      ? `Cobrar ${money(importeParte)} de esta parte`
-      : `Cobrar ${money(base)} y cerrar`;
+    : abono ? `Registrar ${money(base / 100)}`
+      : parcialPlatos ? `Cobrar ${money(base / 100)} de esta parte`
+        : `Cobrar ${money(base / 100)}${mantieneMesa ? '' : ' y cerrar'}`;
 
   return (
-    <Hoja onClose={onClose} label={`Cobrar ${titulo}`}>
-      <div className="sv-sheet-pad">
-        <HojaHead title={`Cobrar ${titulo}`} total={money(pendiente)} onClose={onClose} />
-
-        {/* El desglose de verdad. Solo sale cuando hay algo que desglosar:
-            una mesa sin propina ni descuento no necesita tres renglones
-            para decir que el total es el total. */}
-        {desglose && (desglose.tip > 0 || desglose.discount > 0 || yaCobrado > 0) && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <HojaOperativa
+      label={`Cobrar ${titulo}`}
+      className="hoja-cobro"
+      onClose={onClose}
+      resumen={<Fila label="Por cobrar" valor={money(porCobrar)} destacada />}
+      footer={
+        <div className="sv-cobro-pie">
+          {saldada ? (
+            <p className="sv-foot-note">Cuenta pagada. La mesa sigue ocupada hasta que pase a limpieza.</p>
+          ) : mostrarPago && (
+            <>
+              {efectivo > 0 && (
+                <div role="status">
+                  <Fila label="Vuelto" valor={recibidoCent == null || efectivoInvalido
+                    ? '—' : money((recibidoCent - efectivo) / 100)} tone="ok" />
+                </div>
+              )}
+              {quedaAbierta && base > 0 && base <= saldo && (
+                <p className="sv-foot-note">{base === saldo
+                  ? 'La cuenta queda pagada y la mesa sigue abierta.'
+                  : `La mesa sigue abierta con ${money((saldo - base) / 100)} pendientes.`}</p>
+              )}
+              <Button type="button" size="action" onClick={cobrar} disabled={!puede} aria-busy={busy}>
+                {busy ? 'Cobrando…' : cta}
+              </Button>
+            </>
+          )}
+        </div>
+      }
+    >
+      <div className="sv-cobro-contenido">
+        {desglose && (
+          <div className="grid gap-1">
             <Fila label="Consumo" valor={money(desglose.items)} />
             {desglose.delivery > 0 && <Fila label="Envío" valor={money(desglose.delivery)} />}
             {desglose.tip > 0 && <Fila label="Propina" valor={money(desglose.tip)} />}
             {desglose.discount > 0 && <Fila label="Descuento" valor={`− ${money(desglose.discount)}`} />}
-            {yaCobrado > 0 && (
-              <Fila label="Ya cobrado" valor={`− ${money(yaCobrado)}`} tone="ok" />
-            )}
+            <Fila label="Ya cobrado" valor={money(yaCobrado)} tone="ok" />
           </div>
         )}
-
-        {sugerencias && modo !== 'platos' && (
-          <div style={{
-            border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', padding: 12,
-            display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--surface-1)',
-          }}>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>{sugerencias.label}</div>
-            <div className="sv-opts-row">
-              {sugerencias.items.map((p) => (
-                <button key={p.id} type="button" className="sv-fav" onClick={() => onSugerir(p)}>
-                  + {p.name}
-                  <span className="sv-fav-price">{money(p.price)}</span>
+        {saldada ? (
+          <>
+            <p className="sv-foot-note">Cuenta pagada. Confirma el cierre cuando hayas servido todos los pedidos.</p>
+            {reparto?.partes.filter((p) => p.recibo).map((p) => <PartePagada key={p.id} parte={p} money={money} />)}
+          </>
+        ) : (
+          <Tabs.Root
+            value={modo}
+            onValueChange={(value) => {
+              if (busy || (value !== 'todo' && value !== 'iguales' && value !== 'platos' && value !== 'libre')) return;
+              setModo(value);
+              setRecibido('');
+            }}
+          >
+            <Tabs.List className="sv-seg" data-mixto={!!contexto || undefined} aria-label="Alcance del cobro">
+              <Tabs.Tab value="todo" disabled={busy}>Cuenta completa</Tabs.Tab>
+              {contexto && <Tabs.Tab value="iguales" disabled={busy || !puedeAbonar}>Partes iguales</Tabs.Tab>}
+              {contexto && <Tabs.Tab value="libre" disabled={busy || !puedeAbonar}>Importe libre</Tabs.Tab>}
+              {saldosPlatos && <Tabs.Tab value="platos" disabled={busy}>Por platos</Tabs.Tab>}
+            </Tabs.List>
+            <Tabs.Panel value="todo" />
+            <Tabs.Panel value="libre" className="sv-cobro-modo">
+              <CampoImporte label="Importe a registrar" value={importe} onChange={setImporte} disabled={busy} />
+              {importe !== '' && leerCentavos(importe) == null && (
+                <p role="alert" className="sv-foot-note">Ingresa un importe con hasta dos decimales.</p>
+              )}
+              {base > saldo && <p role="alert" className="sv-foot-note">El importe supera el saldo de la cuenta.</p>}
+            </Tabs.Panel>
+            <Tabs.Panel value="iguales" className="sv-cobro-modo">
+              {reparto?.desactualizado && (
+                <p role="status" className="sv-foot-note">El saldo cambió. Vuelve a repartir el saldo pendiente. Las partes pagadas se conservan.</p>
+              )}
+              {mostrarEditor && (
+                <div className="grid gap-2">
+                  <div className="flex items-center gap-2">
+                    <button type="button" className="sv-step" disabled={busy || personas <= 1} aria-label="Una parte menos" onClick={() => setPersonas(personas - 1)}>−</button>
+                    <Mono size={18}>{personas} partes pendientes</Mono>
+                    <button type="button" className="sv-step" disabled={busy || personas >= 20} aria-label="Una parte más" onClick={() => setPersonas(personas + 1)}>+</button>
+                  </div>
+                  <Button type="button" variant="outline" disabled={busy || saldo < personas} onClick={() => {
+                    onGuardarPartes(personas);
+                    setRedividir(false);
+                    setSeleccion([]);
+                    setRecibido('');
+                  }}>Guardar reparto</Button>
+                </div>
+              )}
+              {reparto?.partes.filter((p) => p.recibo || !mostrarEditor).map((p) => p.recibo ? (
+                <PartePagada key={p.id} parte={p} money={money} />
+              ) : (
+                <button type="button" className="sv-pay" key={p.id} aria-pressed={seleccion.includes(p.id)}
+                  data-on={seleccion.includes(p.id) ? '1' : '0'} disabled={busy}
+                  onClick={() => setSeleccion((prev) => alternar(prev, p.id))}>
+                  <span className="min-w-0 flex-1 text-left">Parte {p.numero}</span>
+                  <Mono size={14}>{money(p.importe)}</Mono>
+                  <span className="sv-pay-box" aria-hidden>{seleccion.includes(p.id) ? '✓' : ''}</span>
                 </button>
               ))}
-            </div>
-          </div>
-        )}
-
-        <div className="sv-seg" role="tablist">
-          <button type="button" role="tab" data-on={modo === 'todo' ? '1' : '0'} aria-selected={modo === 'todo'} onClick={() => { setModo('todo'); setMarcadas([]); setRecibido(null); }}>
-            Cuenta completa
-          </button>
-          <button type="button" role="tab" data-on={modo === 'iguales' ? '1' : '0'} aria-selected={modo === 'iguales'} onClick={() => { setModo('iguales'); setMarcadas([]); setRecibido(null); }}>
-            Partes iguales
-          </button>
-          <button type="button" role="tab" data-on={modo === 'platos' ? '1' : '0'} aria-selected={modo === 'platos'} onClick={() => { setModo('platos'); setRecibido(null); }}>
-            Por platos
-          </button>
-        </div>
-
-        {modo === 'iguales' && (
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-            padding: 14, borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair)',
-            background: 'var(--adm-card)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button type="button" className="sv-step" style={{ width: 46, height: 46 }} onClick={() => setPersonas((n) => Math.max(1, n - 1))} aria-label="Una persona menos">−</button>
-              <div style={{ minWidth: 76, textAlign: 'center' }}>
-                <Mono size={20}>{personas}</Mono>
-                <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500 }}>personas</div>
-              </div>
-              <button type="button" className="sv-step" style={{ width: 46, height: 46 }} onClick={() => setPersonas((n) => Math.min(20, n + 1))} aria-label="Una persona más">+</button>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <Mono size={22}>{money(r2(pendiente / Math.max(1, personas)))}</Mono>
-              <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500 }}>cada uno</div>
-            </div>
-          </div>
-        )}
-
-        {modo === 'platos' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ fontSize: 13, color: 'var(--u-text-3)', fontWeight: 500, lineHeight: 1.45 }}>
-              Toca lo que paga esta persona. Lo demás queda abierto en la mesa.
-            </div>
-            {cobrables.map((l) => {
-              const on = marcadas.includes(l.id);
-              return (
-                <button
-                  key={l.id}
-                  type="button"
-                  className="sv-pay"
-                  data-on={on ? '1' : '0'}
-                  onClick={() => setMarcadas((prev) => (on ? prev.filter((x) => x !== l.id) : [...prev, l.id]))}
-                >
-                  <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                    <span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>
-                      {l.cantidad}× {l.nombre}
-                    </span>
-                    <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)', marginTop: 1 }}>
-                      {money(l.unidad)} c/u
-                    </span>
+              {!mostrarEditor && (
+                <Button type="button" variant="outline" disabled={busy} onClick={() => setRedividir(true)}>
+                  Volver a repartir el saldo
+                </Button>
+              )}
+            </Tabs.Panel>
+            <Tabs.Panel value="platos" className="sv-cobro-modo">
+              <p className="sv-foot-note">Marca los platos que paga esta persona.</p>
+              {cobrables.map((l) => (
+                <button type="button" className="sv-pay" key={l.id} aria-pressed={marcadas.includes(l.id)}
+                  data-on={marcadas.includes(l.id) ? '1' : '0'} disabled={busy}
+                  onClick={() => setMarcadas((prev) => alternar(prev, l.id))}>
+                  <span className="min-w-0 flex-1 text-left">
+                    <span className="block font-semibold">{l.cantidad}× {l.nombre}</span>
+                    <span className="sv-foot-note">{money(l.unidad)} c/u</span>
                   </span>
-                  <Mono size={14}>{money(importeLinea(l))}</Mono>
-                  <span className="sv-pay-box">{on ? '✓' : ''}</span>
-                </button>
-              );
-            })}
-            {cobrables.length === 0 && (
-              <div className="sv-vacio" style={{ padding: '18px 0' }}>Ya está todo cobrado.</div>
-            )}
-          </div>
-        )}
-
-        <div>
-          <Kicker>¿Cómo pagan?</Kicker>
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            {PAYMENT_METHODS.map((m) => (
-              <button
-                key={m}
-                type="button"
-                className="sv-choice"
-                data-on={metodo === m ? '1' : '0'}
-                onClick={() => { setMetodo(m); setRecibido(null); }}
-              >
-                {PAYMENT_LABEL[m]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {esEfectivo && opciones.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div className="sv-opts-row">
-              {opciones.map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  className="sv-choice"
-                  data-mono="1"
-                  data-on={recibido === v ? '1' : '0'}
-                  style={{ flex: '0 0 auto', minWidth: 0 }}
-                  onClick={() => setRecibido(recibido === v ? null : v)}
-                >
-                  {/* «Justo» es el importe EXACTO: redondeado, una cuenta de
-                      Q48.50 decía «Justo Q49» y apuntaba 48.50. Los billetes
-                      sí van sin decimales. */}
-                  {v === base ? `Justo ${money(v)}` : redondear(v)}
+                  <Mono size={14}>{money(saldosPlatos?.[l.id] ?? importeLinea(l))}</Mono>
+                  <span className="sv-pay-box" aria-hidden>{marcadas.includes(l.id) ? '✓' : ''}</span>
                 </button>
               ))}
+              {cobrables.length === 0 && <p className="sv-foot-note">No hay platos con cuotas disponibles para cobrar.</p>}
+            </Tabs.Panel>
+          </Tabs.Root>
+        )}
+        {mostrarPago && (
+          <>
+            <div>
+              <Kicker>¿Cómo pagan?</Kicker>
+              <div className="sv-cobro-metodos" data-mixto={!!contexto || undefined} role="group" aria-label="Método de pago">
+                {[...PAYMENT_METHODS, ...(contexto ? ['mixto' as const] : [])].map((m) => (
+                  <button key={m} type="button" className="sv-choice" data-on={metodo === m ? '1' : '0'}
+                    aria-pressed={metodo === m} disabled={busy} onClick={() => { setMetodo(m); setRecibido(''); }}>
+                    {m === 'mixto' ? 'Pago mixto' : PAYMENT_LABEL[m]}
+                  </button>
+                ))}
+              </div>
             </div>
-            {vuelto != null && (
-              <div className="sv-vuelto">
-                <span style={{ fontSize: 14, fontWeight: 600 }}>Vuelto</span>
-                <span className="sv-vuelto-n">{money(vuelto)}</span>
+            {metodo === 'mixto' && (
+              <div className="grid gap-2">
+                {PAYMENT_METHODS.map((m) => (
+                  <CampoImporte key={m} label={LABEL_APLICADO[m]} value={mixto[m]} disabled={busy}
+                    onChange={(v) => setMixto((prev) => ({ ...prev, [m]: v }))} />
+                ))}
+                <p className="sv-foot-note" role="status">
+                  Aplicado {money(aplicado / 100)} de {money(base / 100)}. Usa al menos dos métodos.
+                </p>
               </div>
             )}
-          </div>
+            {efectivo > 0 && (
+              <div className="grid gap-2">
+                <CampoImporte label="Efectivo recibido" value={recibido} onChange={setRecibido} disabled={busy} />
+                <div className="sv-opts-row">
+                  {[efectivo / 100, ...billetes(efectivo / 100)].map((v) => (
+                    <button key={v} type="button" className="sv-choice" data-mono="1"
+                      data-on={recibidoCent === centavos(v) ? '1' : '0'} aria-pressed={recibidoCent === centavos(v)}
+                      disabled={busy} onClick={() => setRecibido(String(v))}>
+                      {centavos(v) === efectivo ? `Justo ${money(v)}` : redondear(v)}
+                    </button>
+                  ))}
+                </div>
+                {efectivoInvalido && (
+                  <p className="sv-hint" role="alert">{recibidoCent == null
+                    ? 'Ingresa un importe con hasta dos decimales.'
+                    : `Faltan ${money(faltante / 100)} en efectivo.`}</p>
+                )}
+              </div>
+            )}
+            {metodo === 'CARD' || (metodo === 'mixto' && (leerCentavos(mixto.CARD) ?? 0) > 0)
+              ? <p className="sv-foot-note">Registra aquí el pago que ya hiciste en la terminal.</p>
+              : null}
+          </>
         )}
-
-        {faltaEfectivo && (
-          <div className="sv-hint" style={{ background: 'var(--c-danger-bg)', color: 'var(--c-danger)' }}>
-            Con {money(recibido ?? 0)} no alcanza: faltan {money(r2(base - (recibido ?? 0)))}.
-          </div>
+        {!!contexto?.recibos.length && (
+          <details>
+            <summary className="cursor-pointer text-sm font-semibold">Recibos de abonos</summary>
+            <ul className="mt-2 grid gap-3">
+              {contexto.recibos.map((r) => (
+                <li key={r.intentoId}>
+                  <Fila label={`Recibo ${r.intentoId.slice(0, 8)}`} valor={money(r.cobrado)} />
+                  <p className="sv-foot-note"><FechaCobro at={r.at} /></p>
+                  {r.pagos.map((p) => (
+                    <div key={p.method}>
+                      <Fila label={PAYMENT_LABEL[p.method]} valor={money(p.amount)} />
+                      {p.cashReceived != null && (
+                        <p className="sv-foot-note">Recibido {money(p.cashReceived)} · vuelto {money(p.cashReceived - p.amount)}</p>
+                      )}
+                    </div>
+                  ))}
+                </li>
+              ))}
+            </ul>
+          </details>
         )}
-
-        <button type="button" className="sv-cta" data-tone="ok" style={{ height: 58, fontSize: 16 }} onClick={cobrar} disabled={!puede}>
-          {busy ? 'Cobrando…' : cta}
-        </button>
-
-        {esParcial && (
-          <div className="sv-foot-note">
-            Se cobra solo esta parte. La mesa sigue abierta con {money(r2(pendiente - importeParte))} pendientes.
-          </div>
+        {!!contexto?.historial.length && (
+          <details>
+            <summary className="cursor-pointer text-sm font-semibold">Historial de cobros</summary>
+            <ul className="mt-2 grid gap-2">
+              {contexto.historial.map((p) => (
+                <li key={p.id}>
+                  <Fila label={`${p.kind === 'REFUND' ? 'Devolución · ' : ''}${PAYMENT_LABEL[p.method]}`} valor={money(p.amount)} />
+                  <p className="sv-foot-note">
+                    <FechaCobro at={p.at} />
+                    {p.cashReceived != null && ` · Recibido ${money(p.cashReceived)}`}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </details>
         )}
       </div>
-    </Hoja>
+    </HojaOperativa>
   );
 }
 
-function Fila({ label, valor, tone }: { label: string; valor: string; tone?: 'ok' }) {
+function alternar(valores: string[], id: string) {
+  return valores.includes(id) ? valores.filter((v) => v !== id) : [...valores, id];
+}
+
+function FechaCobro({ at }: { at: string }) {
+  return <time dateTime={at}>{new Date(at).toLocaleString('es-GT', { dateStyle: 'short', timeStyle: 'short' })}</time>;
+}
+
+function PartePagada({ parte, money }: { parte: RepartoCobro['partes'][number]; money: (n: number) => string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
-      <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{label}</span>
-      <Mono size={14} weight={500} color={tone === 'ok' ? 'var(--c-ok)' : 'var(--u-text-2)'}>{valor}</Mono>
+    <div className="grid gap-1">
+      <Fila label={`Parte ${parte.numero} · Pagada`} valor={money(parte.importe)} tone="ok" />
+      <p className="sv-foot-note">
+        {parte.recibo?.pagos?.map((pago) => PAYMENT_LABEL[pago.method]).join(' + ')}
+        {parte.recibo?.intentoId && ` · Recibo ${parte.recibo.intentoId.slice(0, 8)}`}
+      </p>
+    </div>
+  );
+}
+
+function CampoImporte({ label, value, onChange, disabled }: {
+  label: string; value: string; onChange: (value: string) => void; disabled: boolean;
+}) {
+  return (
+    <label className="grid gap-1 text-sm font-semibold">
+      {label}
+      <input className="sv-field" inputMode="decimal" autoComplete="off" maxLength={11}
+        value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
+    </label>
+  );
+}
+
+function Fila({ label, valor, tone, destacada = false }: {
+  label: string; valor: string; tone?: 'ok'; destacada?: boolean;
+}) {
+  return (
+    <div className="sv-cobro-fila" data-destacada={destacada || undefined}>
+      <span>{label}</span>
+      <Mono className="sv-cobro-importe" size={destacada ? 21 : 14} weight={destacada ? 600 : 500}
+        color={tone === 'ok' ? 'var(--c-ok)' : undefined}>{valor}</Mono>
     </div>
   );
 }

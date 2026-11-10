@@ -1,5 +1,6 @@
 import { debeRecordarCandado } from '@/lib/device-lock-reminder';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { createServiceClient } from '@/lib/supabase/service';
@@ -7,7 +8,7 @@ import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getOrderStats, getActiveOrdersPreview, type ActiveOrderPreview } from '@/lib/db/orders';
 import { getHoyWidgets } from '@/lib/db/hoy';
-import { getBillingConfig, getInvoices, isOnTrial, isOverdue, trialDaysLeft } from '@/lib/db/billing';
+import { getBillingConfig, getInvoices, isOnTrial, isOverdue, trialDaysLeft, getRestaurantPlanPresentation } from '@/lib/db/billing';
 import { ultimoComprobante } from '@/lib/db/comprobantes';
 import { getVisitStats } from '@/lib/actions/metrics';
 import { subdomainUrl } from '@/lib/tenant';
@@ -187,6 +188,7 @@ export default async function AdminHomePage() {
 
   // ── Prueba gratis ───────────────────────────────────────────
   const billing = restaurantId ? await getBillingConfig(restaurantId) : null;
+  const planContract = restaurantId && allow('suscripcion') ? await getRestaurantPlanPresentation(restaurantId) : null;
   const onTrial = isOnTrial(billing);
   const trialLeft = onTrial ? trialDaysLeft(billing) : 0;
 
@@ -202,7 +204,7 @@ export default async function AdminHomePage() {
           total: pendientes.reduce((s, i) => s + i.amount, 0),
           currency: billing.currency,
           vencido: pendientes.some((i) => isOverdue(i)),
-          enRevision: comprobante?.status === 'SUBMITTED',
+          enRevision: comprobante.datos?.status === 'SUBMITTED',
         };
       })()
     : null;
@@ -494,8 +496,8 @@ export default async function AdminHomePage() {
         {/* «Hoy» ya lo dice la barra de arriba; aquí se repetía en letra de
             portada a diez píxeles (auditoría 2026-10-02, T-10/HOY-02). La
             cabecera dice ahora lo que la barra no: qué día es y de qué local. */}
-        <div className="min-w-[190px] flex-1">
-          <h2 style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.25, color: 'var(--u-text)', margin: 0 }}>
+        <div className="min-w-[min(100%,190px)] flex-1">
+          <h2 className="text-xl font-semibold leading-tight break-words text-adm-text">
             {today}
           </h2>
           <p style={{ fontSize: 14, color: 'var(--u-text-3)', marginTop: 3 }}>
@@ -503,28 +505,15 @@ export default async function AdminHomePage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
-          <a
-            href={menuUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="press inline-flex items-center gap-2 rounded-adm-md px-3.5 py-2 no-underline"
-            style={{
-              border: '1px solid var(--u-hair-2)', color: 'var(--u-text-2)',
-              fontSize: 13, fontWeight: 500,
-            }}
-          >
+          <Button size="touch" variant="secondary" render={<a href={menuUrl} target="_blank" rel="noopener noreferrer" />}>
             <Icon name="eye" size={15} />
             Ver mi menú
-          </a>
+          </Button>
           {allow('catalogo') && (
-            <Link
-              href={panelHref(base, "/admin/menu/productos/new")}
-              className="btn-accent press inline-flex items-center gap-2 rounded-adm-md px-3.5 py-2 no-underline"
-              style={{ fontSize: 13, fontWeight: 600 }}
-            >
+            <Button size="touch" render={<Link href={panelHref(base, '/admin/menu/productos/new')} />}>
               <Icon name="plus" size={15} />
               Agregar platillo
-            </Link>
+            </Button>
           )}
         </div>
       </div>
@@ -573,7 +562,7 @@ export default async function AdminHomePage() {
           title="Resumen del día"
           action={allow('metricas') ? { href: panelHref(base, '/admin/metricas'), label: 'Ver el mes' } : undefined}
         >
-          <StatGroup>
+          <StatGroup className="hoy-cifras">
             <Stat label="Ventas" value={fmt(stats.todaySales)} sub={ventasVs} />
             <Stat label="Pedidos" value={String(stats.todayOrders)} />
             <Stat label="Ticket promedio" value={fmt(stats.todayTicket)} />
@@ -606,7 +595,7 @@ export default async function AdminHomePage() {
                 <StatusPill tone={STATUS_TONE[o.status]} className="shrink-0 sm:w-29">
                   {STATUS_LABEL_SHORT[o.status]}
                 </StatusPill>
-                <span className="t-mono shrink-0 text-right text-[14px] text-adm-text sm:w-24">
+                <span className="t-mono shrink-0 whitespace-nowrap text-right text-[14px] text-adm-text sm:min-w-24">
                   {fmt(Number(o.total))}
                 </span>
               </ListLink>
@@ -674,10 +663,16 @@ export default async function AdminHomePage() {
 
       {/* Qué incluye subir de plan. Vive al FINAL a propósito: es una oferta,
           no una tarea del día, y no debe competir con lo de arriba. */}
+      {planContract && (
+        <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0 }}>
+          Plan {planContract.name} · {planContract.monthlyLabel}. {planContract.orderScope}. {planContract.selectedScope}.{' '}
+          <Link href={panelHref(base, '/admin/suscripcion')} style={{ color: 'var(--brand-accent-ink)' }}>Mi suscripción →</Link>
+        </p>
+      )}
       {(restaurant?.plan_actual === 'BASICO' || restaurant?.plan_actual === 'EN_LINEA' || restaurant?.plan_actual === 'ESTANDAR') && (
         <Card>
           <CardContent className="pt-5">
-            <LockedFeatureSection restaurantName={brandName} planActual={restaurant.plan_actual} />
+            <LockedFeatureSection restaurantName={brandName} planActual={restaurant.plan_actual} presentation={planContract} />
           </CardContent>
         </Card>
       )}

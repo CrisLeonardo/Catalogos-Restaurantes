@@ -4,14 +4,20 @@ Estas reglas aplican a todo el repo. El detalle y los ejemplos están en [`docs/
 
 Responde y escribe documentación en **español**.
 
+## Continuidad de la auditoría (2026-11-07)
+
+Para retomar la auditoría del 3 de noviembre, lee primero [`TRASPASO_CLAUDE_CODE_2026-11-07.md`](docs/registros/TRASPASO_CLAUDE_CODE_2026-11-07.md) y los §28–34 del [registro](docs/registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md). La ficha 1.7 está en `feat/permisos-por-trabajo` (PR #102, migración 177), la 1.8 en `feat/recepcion` (apilada sobre la 1.7, migración 178), la 1.9 en `feat/catalogo` (apilada sobre la 1.8, migración 179) la 1.10 en `feat/inventario` (apilada sobre la 1.9, migración 180), la 1.11 en `feat/comensal` (apilada sobre la 1.10) y la 1.12 en `feat/checkout-seguimiento` (apilada sobre la 1.11, PR #108). **La Ola 1 está terminada**; lo siguiente es integrar la Ola 0 que falta y preparar el despliegue, cuando el usuario lo decida. Las fichas están apiladas: no reinicies su implementación desde `main` ni desde el antiguo PR #71. La cadena no contiene las fichas 0.1–0.13 salvo 0.7, 0.9 y 0.12: su integración es un paso aparte. Terminar la Ola 1 antes del despliegue es una decisión vigente del usuario.
+
+Para cualquier trabajo visual usa primero la skill del proyecto **`leogin-diseno`** (`.claude/skills/leogin-diseno/`): tokens reales, componentes, decisiones aprobadas y cómo comprobar en pantalla. La acompañan, versionadas en `.claude/skills/` con su licencia y origen, `emil-design-eng` (movimiento y sensación al tocar), `better-interface` con sus dominios `better-*` (revisión con evidencia) e `interface-review` (revisión de rama o PR). Las skills que instaló Codex (`frontend-design`, `impeccable`, `web-design-guidelines`) quedan locales en `.agents/skills/`, sin enlazar. Conserva las maquetas aprobadas y comprueba el resultado real en pantalla. La ubicación de referencias, agentes de revisión y pruebas está en el traspaso.
+
 ## Git: nada directo a `main`
 
-1. Antes de tocar archivos: `git switch main && git pull`, y crea una rama `tipo/descripcion-corta` (`feat/`, `fix/`, `audit/`, `docs/`, `chore/`).
+1. Antes de tocar archivos, comprueba la rama y los cambios locales. Para trabajo independiente: actualiza `main` y crea una rama `tipo/descripcion-corta` (`feat/`, `fix/`, `audit/`, `docs/`, `chore/`). Para una continuación apilada, crea la rama desde la base indicada en el traspaso vigente y abre el PR contra esa base.
 2. **Nunca** hagas commit ni push a `main`. El hook `.githooks/pre-push` lo rechaza; **no uses `PERMITIR_PUSH_MAIN=1`** salvo que el usuario diga explícitamente que es una emergencia.
 3. Commits con el formato `tipo(ámbito): qué cambió` en presente y sin punto final. Un commit = una idea. Prohibidos los mensajes vagos (`fix`, `mejoras`, `cambios`, `fase 4`). Si toca SQL, nombra la migración.
 4. La nota de estado de un plan o tablero va **en el mismo commit** que el cambio, no en un commit aparte.
 5. Al terminar: `git push -u origin <rama>` y abre un Pull Request (`gh pr create`) con la plantilla de `.github/pull_request_template.md`.
-6. Después de abrir el PR, usa las herramientas `ccd_pr` (`get_status`, `bind_pr`) para ver el CI. No hagas polling del CI.
+6. Después de abrir el PR, revisa el CI con `gh`, incluyendo `--repo github.com/CrisLeonardo/Catalogos-Restaurantes`. Para fallos, lee corridas, anotaciones y logs antes de modificar código. Puedes esperar una corrida con `gh run watch`; no dependas de herramientas `ccd_pr` que no estén disponibles en la sesión.
 7. **No fusiones un PR sin que el usuario lo pida**, y solo con el CI en verde. Al fusionar, borra la rama (remota y local).
 8. No hagas `git push --force`, `reset --hard` ni borres ramas, etiquetas o worktrees sin comprobar antes que no hay trabajo sin guardar. Si hay cambios sin commitear, respáldalos como parche antes de retirar nada.
 9. Para volver a `main` después de fusionar: `git switch main && git pull`. Si algo sale mal en producción, `git revert`, no `reset`.
@@ -27,7 +33,7 @@ Responde y escribe documentación en **español**.
 
 ## Migraciones SQL
 
-- En `plataforma/supabase/migrations/NNN_nombre.sql`, con número consecutivo (la última hoy es la 141).
+- En `plataforma/supabase/migrations/NNN_nombre.sql`, con número consecutivo; verifica el último número en el repositorio y los remotos antes de asignar uno nuevo.
 - **Una migración ya aplicada en producción no se edita nunca**; se crea otra.
 - Comprueba lo aplicado con `plataforma/supabase/verificar_migraciones.sql`. Un PR con migración debe decir en qué orden se aplica respecto al despliegue del código.
 

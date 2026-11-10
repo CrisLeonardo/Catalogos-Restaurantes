@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Icon } from '@/components/icons';
-import { planPriceLabel, planPriceQ } from '@/lib/plans';
+import { planPriceLabel, planPriceQ, formatPlanAmount, planPresentation, planOperationCopy } from '@/lib/plans';
 import { usePlanPricing } from '@/components/plan-pricing-context';
 /* El prefijo del origen unico para un `<a>` suelto (PanelLink solo cubre
    `<Link>`). Fuera del panel devuelve la ruta tal cual. */
@@ -88,21 +88,29 @@ const CONTACT_EMAIL = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_C
 interface Props {
   restaurantName?: string;
   planActual?: string;
+  presentation?: ReturnType<typeof planPresentation> | null;
 }
 
-export default function LockedFeatureSection({ restaurantName, planActual = 'BASICO' }: Props) {
+export default function LockedFeatureSection({ restaurantName, planActual = 'BASICO', presentation }: Props) {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = panelBaseFrom(useRutaNavegador());
   const [selected, setSelected] = useState<UpgradeFeature | null>(null);
   const pricing = usePlanPricing();
+  const contract = presentation ?? planPresentation({ plan: planActual, pricing });
 
   const isEstandar = planActual === 'ESTANDAR';
   const isEnLinea = planActual === 'EN_LINEA';
-  const currentPrice = planPriceQ(pricing, isEstandar ? 'ESTANDAR' : isEnLinea ? 'EN_LINEA' : 'BASICO');
-  const currentPlanLabel = isEstandar ? 'Estándar' : isEnLinea ? 'En línea' : 'Básico';
+  const currentPrice = formatPlanAmount(contract.monthlyAmount, contract.currency);
+  const currentPlanLabel = contract.name;
   const fromPlanLabel = isEstandar ? 'de Estándar' : isEnLinea ? 'En línea' : 'de Básico';
 
-  const features = ALL_UPGRADE_FEATURES.filter(f => !f.excludeFor?.includes(planActual));
+  const keys: Record<string, string> = {
+    'Panel de mesero y mapa de mesas': 'waiter', 'Aviso por WhatsApp': 'whatsapp',
+    'Programa de lealtad': 'loyalty', 'Cupones y descuentos': 'cupones',
+    'Reservaciones': 'reservaciones', 'Estadísticas avanzadas': 'analytics',
+  };
+  const features = ALL_UPGRADE_FEATURES.filter(f => !f.excludeFor?.includes(planActual)
+    && !contract.capabilities.find((item) => item.key === keys[f.name])?.enabled);
 
   const waMsg = `Hola, quiero actualizar mi plan ${fromPlanLabel} a Premium para ${restaurantName ?? 'mi restaurante'}`;
   const ctaHref = CONTACT_WA
@@ -115,11 +123,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
       ? 'Para cuando tu negocio crezca'
       : `${features.length} herramientas que tu competencia ya usa`;
 
-  const headerDesc = isEstandar
-    ? 'Tu plan Estándar incluye pedidos para llevar. Con Premium desbloqueas entregas a domicilio, comer en local y todo lo siguiente.'
-    : isEnLinea
-      ? `Tu plan En línea ya recibe pedidos para llevar y a domicilio. Con Premium (${planPriceLabel(pricing, 'PREMIUM')}) sumas esto:`
-      : `Están incluidas en Premium (${planPriceLabel(pricing, 'PREMIUM')}). Toca cualquiera para ver cómo impacta tu negocio.`;
+  const headerDesc = `${planOperationCopy(contract)} ${contract.policy}. Las siguientes funciones están incluidas en Premium (${planPriceLabel(pricing, 'PREMIUM')}).`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -280,7 +284,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
                 </div>
                 <div style={{ display: 'flex', gap: 7, alignItems: 'flex-start', fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.4 }}>
                   <Icon name="x" size={13} style={{ color: 'var(--u-text-4)', flexShrink: 0, marginTop: 1 }} />
-                  <span>{selected.currentLabel}</span>
+                  <span>{selected.name === 'Usuarios ilimitados' ? contract.usersLabel : selected.currentLabel}</span>
                 </div>
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--u-text-3)', marginTop: 12, lineHeight: 1 }}>
                   {currentPrice}

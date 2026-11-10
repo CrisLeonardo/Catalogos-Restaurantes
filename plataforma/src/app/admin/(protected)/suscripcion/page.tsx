@@ -6,10 +6,10 @@ import { can } from '@/lib/permissions';
 import { getMyBilling } from '@/lib/actions/billing';
 import {
   isOverdue, isOnTrial, trialDaysLeft, planLabel,
-  getFeeBreakdown, type Invoice, type FeeBreakdown,
+  type Invoice,
 } from '@/lib/db/billing';
-import { PLANS, INCLUDED_MODULES, isModuleIncluded, planPriceLabel, type PlanCode } from '@/lib/plans';
-import { getEffectivePlanPricing } from '@/lib/db/billing';
+import { PLANS, capabilityStateLabel, type PlanCode, type planPresentation } from '@/lib/plans';
+import { getEffectivePlanPricing, getRestaurantPlanPresentation } from '@/lib/db/billing';
 import { rootDomainForUrls } from '@/lib/tenant';
 import { fmtMoney } from '@/lib/money';
 import { Icon } from '@/components/icons';
@@ -31,6 +31,7 @@ import CambiarPlan from '@/components/admin/cambiar-plan';
 import { duenoDelRestaurante } from '@/lib/auth/acceso-cobro';
 import { estadoDelTope } from '@/lib/tope-pedidos';
 import { pedidosDelMes } from '@/lib/db/tope-pedidos';
+import AvisoLectura from '@/components/admin/aviso-lectura';
 
 export const metadata = { title: 'Mi suscripción – Panel admin' };
 export const dynamic = 'force-dynamic';
@@ -80,9 +81,9 @@ export default async function SuscripcionPage() {
   }
   if (!restaurantId) redirect('/admin/login');
 
-  const [billingResult, feeBreakdown, pricing, contacto, comprobante, dueno] = await Promise.all([
+  const [billingResult, contract, pricing, contacto, comprobante, dueno] = await Promise.all([
     getMyBilling(restaurantId),
-    getFeeBreakdown(restaurantId),
+    getRestaurantPlanPresentation(restaurantId),
     getEffectivePlanPricing(),
     getPlatformContactSettings(),
     ultimoComprobante(restaurantId),
@@ -90,13 +91,13 @@ export default async function SuscripcionPage() {
   ]);
   const esDueno = !!dueno;
   const { config, invoices, pendingTotal, currency } = billingResult;
+  if (!contract) throw new Error('No se pudo leer la información del plan. Intenta de nuevo.');
 
   // La "Mensualidad" mostrada debe reflejar siempre el precio real vigente.
   // `config.monthly_fee` es una foto guardada que solo se resincroniza en el
   // próximo corte de cobro; si el restaurante está en auto_price, usamos el
   // precio fijo del plan (getFeeBreakdown) para que nunca discrepen.
-  const displayedMonthlyFee =
-    config && config.auto_price !== false && feeBreakdown ? feeBreakdown.final : config?.monthly_fee ?? 0;
+  const displayedMonthlyFee = contract.monthlyAmount;
 
   // Get current plan
   const db = createServiceClient();
@@ -124,19 +125,8 @@ export default async function SuscripcionPage() {
     ? `https://wa.me/${waPago}?text=${encodeURIComponent(`Hola, soy de ${restaurantName}. Te envío el comprobante de pago de ${fmtMoney(pendingTotal, currency)}.`)}`
     : null;
 
-  const includedCount = INCLUDED_MODULES[currentPlan].length;
-
-  // Plan feature highlights
-  const planFeatures = planInfo ? [
-    { label: 'Pedidos online',           active: planInfo.hasOrders },
-    { label: 'Notificación WhatsApp',    active: planInfo.hasWhatsapp },
-    { label: 'Alertas en tiempo real',   active: planInfo.hasRealtime },
-    { label: 'Personalización completa', active: planInfo.hasFullTheme },
-    { label: 'Llamar al mesero',         active: isModuleIncluded(currentPlan, 'llamada_mesero') },
-    { label: 'Reportes financieros',     active: planInfo.hasFinance },
-    { label: 'Estadísticas y reportes',  active: planInfo.hasAnalytics },
-    { label: 'Puntos de lealtad',        active: isModuleIncluded(currentPlan, 'loyalty') },
-  ] : [];
+  const includedCount = contract.includedCount;
+  const planFeatures = contract.capabilities;
 
   const rootDomain = rootDomainForUrls();
   const isLocalDev = rootDomain.includes('localhost');
@@ -180,6 +170,17 @@ export default async function SuscripcionPage() {
       {/* ── Paga tu mensualidad ──────────────────────────────────
           Arriba de todo: si hay algo que pagar, es lo primero que el dueño
           viene a hacer aquí, y antes ni sabía cómo (plan 2026-10-28, §3). */}
+      {/* Si no se pudo consultar el último comprobante, «no has mandado
+          ninguno» sería falso: el dueño volvería a mandarlo (auditoría
+          2026-11-03, N13). */}
+      {pendingTotal > 0 && comprobante.estado === 'error' && (
+        <AvisoLectura
+          estado="error"
+          que="tu último comprobante"
+          noConcluir="Si ya lo mandaste, no hace falta volver a enviarlo."
+          leidoEn={comprobante.leidoEn}
+        />
+      )}
       {pendingTotal > 0 && (
         <PagaTuPlan
           restaurantId={restaurantId}
@@ -195,8 +196,8 @@ export default async function SuscripcionPage() {
           }}
           notas={contacto.payment_instructions}
           waHref={comprobanteHref}
-          ultimo={comprobante
-            ? { status: comprobante.status, createdAt: comprobante.createdAt, reviewNote: comprobante.reviewNote }
+          ultimo={comprobante.datos
+            ? { status: comprobante.datos.status, createdAt: comprobante.datos.createdAt, reviewNote: comprobante.datos.reviewNote }
             : null}
         />
       )}
@@ -213,12 +214,12 @@ export default async function SuscripcionPage() {
               <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 3 }}>{planInfo.tagline}</div>
             )}
           </div>
-          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div style={{ textAlign: 'right', flexShrink: 0, maxWidth: '100%' }}>
             <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 20, color: 'var(--u-text)' }}>
-              {planInfo ? planPriceLabel(pricing, currentPlan) : '—'}
+              {contract.monthlyLabel}
             </div>
             <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>
-              {planInfo?.hasOrders ? 'Sin límite de ventas' : 'Menú digital · sin pedidos'}
+              {contract.policy}
               {includedCount > 0 ? ` · ${includedCount} ${includedCount === 1 ? 'función incluida' : 'funciones incluidas'}` : ''}
             </div>
           </div>
@@ -226,17 +227,21 @@ export default async function SuscripcionPage() {
 
         {/* Feature list */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '6px 14px', marginTop: 16 }}>
-          {planFeatures.map(({ label, active }) => (
-            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13 }}>
+          {planFeatures.map((feature) => (
+            <div key={feature.key} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13 }}>
               <Icon
-                name={active ? 'check' : 'x'}
+                name={feature.enabled ? 'check' : 'x'}
                 size={14}
-                style={{ color: active ? 'var(--c-ok)' : 'var(--u-text-4)', flexShrink: 0 }}
+                style={{ color: feature.enabled ? 'var(--c-ok)' : 'var(--u-text-4)', flexShrink: 0 }}
               />
-              <span style={{ color: active ? 'var(--u-text-2)' : 'var(--u-text-4)' }}>{label}</span>
+              <span style={{ color: feature.enabled ? 'var(--u-text-2)' : 'var(--u-text-4)' }} title={capabilityStateLabel(feature)}>{feature.label}</span>
             </div>
           ))}
         </div>
+
+        <p style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 10 }}>
+          {contract.priceExplanation} {contract.orderScope}. {contract.selectedScope}.
+        </p>
 
         <a
           href={planesUrl}
@@ -250,9 +255,7 @@ export default async function SuscripcionPage() {
       </Card>
 
       {/* ── Lo que pagarás este mes ───────────────────────────── */}
-      {feeBreakdown && (
-        <MeasureCard b={feeBreakdown} currency={currency} autoPrice={config?.auto_price !== false} />
-      )}
+      <MeasureCard contract={contract} />
 
       {/* ── Cambiar de plan (fase 3 del plan 2026-10-28) ─────────
           Antes: una tarjeta de Premium para el Básico, otra con el
@@ -262,6 +265,7 @@ export default async function SuscripcionPage() {
         restaurantId={restaurantId}
         planActual={currentPlan}
         pricing={pricing}
+        currentPresentation={contract}
         esDueno={esDueno}
         enPrueba={onTrial}
         proximoCorte={config ? nextChargeLabel(config.billing_day) : null}
@@ -341,7 +345,7 @@ export default async function SuscripcionPage() {
       )}
 
       {/* If no billing config yet */}
-      {(!config || (config.monthly_fee <= 0 && invoices.length === 0)) && (
+      {!config && (
         <Card className="p-3.5" style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
           <Icon name="helpCircle" size={14} style={{ verticalAlign: 'middle', marginRight: 6, color: 'var(--u-text-4)' }} />
           Cuando se configure tu cobro, aquí verás tu mensualidad, fechas de pago y el historial completo.
@@ -403,36 +407,36 @@ function InvoiceRow({ inv, currency, restaurantName }: { inv: Invoice; currency:
   );
 }
 
-async function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: string; autoPrice: boolean }) {
+async function MeasureCard({ contract }: { contract: ReturnType<typeof planPresentation> }) {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = await panelBase();
   return (
     <Card className="p-5" style={{ border: '1px solid var(--u-hair-2)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Icon name="sparkle" size={15} style={{ color: 'var(--brand-accent)' }} />
-        <div className="adm-label">Lo que pagarás este mes</div>
+        <div className="adm-label">{contract.billingConfigured ? 'Tu mensualidad' : 'Tarifa pública de referencia'}</div>
       </div>
       <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5 }}>
-        Precio fijo de tu plan: prender o apagar funciones y modos de pedido desde{' '}
+        {contract.priceExplanation} Prender o apagar funciones y modos de pedido desde{' '}
         <a href={panelHref(base, '/admin/modulos')} style={{ color: 'var(--brand-accent-ink)', fontWeight: 600 }}>Funciones</a> no cambia tu mensualidad.
       </div>
 
       <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <LineItem label={`Plan ${planLabel(b.plan)}`} value={fmtMoney(b.base, currency)} />
+        <LineItem label={`Tarifa pública de ${contract.name}`} value={fmtMoney(contract.publicAmount, 'GTQ')} />
         <div style={{ height: 1, background: 'var(--u-hair)', margin: '2px 0' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>
-            {autoPrice ? 'Tu mensualidad' : 'Mensualidad sugerida'}
+            {contract.billingConfigured ? 'Tu mensualidad' : 'Tarifa pública'}
           </span>
           <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 800, fontSize: 20, color: 'var(--u-text)' }}>
-            {fmtMoney(b.final, currency)}
+            {fmtMoney(contract.monthlyAmount, contract.currency)}
           </span>
         </div>
       </div>
 
-      {!autoPrice && (
+      {contract.manual && (
         <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 8, lineHeight: 1.45 }}>
-          Tienes un precio acordado con nosotros; este desglose es informativo.
+          Se conserva tu precio acordado. Las facturas ya emitidas mantienen su importe.
         </div>
       )}
 

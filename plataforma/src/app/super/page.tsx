@@ -88,7 +88,22 @@ export default async function SuperHomePage() {
      (PC caída en servicio, comandas sin imprimir) va primero; luego lo que
      avisa de que un cliente se está yendo o se trabó en el alta. */
   const orden = { danger: 0, warn: 1, info: 2 } as const;
+  /* Si la revisión de salud falló, eso es lo primero que hay que saber:
+     antes salía «Todo en orden» con las listas vacías (auditoría
+     2026-11-03, N12). */
+  const saludCaida: Alert[] = salud.estado === 'error'
+    ? [{
+        key: 'salud-no-consultada',
+        tone: 'danger',
+        icon: 'alertCircle',
+        title: 'No se pudo revisar la salud de los clientes',
+        body: 'PCs caídas, restaurantes sin vender o altas a medias pueden no estar en esta lista.',
+        href: '/super',
+        cta: 'Reintentar',
+      }]
+    : [];
   const alerts: Alert[] = [
+    ...saludCaida,
     ...alertasDeSalud(salud.restaurantes, salud.cuentas),
     ...buildAlerts(rows),
   ].sort((a, b) => orden[a.tone] - orden[b.tone]);
@@ -146,7 +161,7 @@ export default async function SuperHomePage() {
             <div>
               <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>Todo en orden</div>
               <div className="t-mute" style={{ fontSize: 12, marginTop: 2 }}>
-                {salud.faltaMigracion
+                {salud.estado === 'falta-migracion'
                   ? 'Sin avisos de cobro. Los de salud de los clientes aparecen al aplicar la migración 138.'
                   : 'Sin pagos vencidos, PCs caídas, restaurantes sin vender ni altas a medias.'}
               </div>

@@ -1,0 +1,191 @@
+# Circuito del dinero en Postgres — fichas 0.13–0.19, 1.1 y 1.2
+
+La suite ejecuta las acciones de producción `cobrarParteDeMesa`, `freeTable`, `devolverCobro`, `abrirTurno` y `closeCaja`, la lectura `leerTurno` y el RPC SQL `leogin_sales_report` contra Supabase local. No reemplaza consultas, respuestas, aritmética ni restricciones de Postgres por simulaciones.
+
+Se sustituyen los límites que necesitan una petición Next (sesión autorizada y caché), la firma de prueba y los efectos externos (notificaciones, impresión, FEL y tareas posteriores). Dos identidades de caja distintas se propagan con `AsyncLocalStorage`. La matriz comprueba dinero y persistencia después de autorizar. Playwright cubre por separado la interfaz de cobro con sesiones reales del Supabase local.
+
+## Ejecutar
+
+Desde `plataforma/`, con dependencias instaladas y Supabase local arrancado:
+
+```powershell
+npm run test:dinero -- --reporter=verbose
+```
+
+Lee `.env.local`/`.env.test` sin sobrescribir variables ya exportadas. Requiere `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` de **la base local**. Para los bloqueos usa `DINERO_DATABASE_URL`; por omisión, la conexión de desarrollo del `supabase/config.toml` de este repo: `postgresql://postgres:postgres@127.0.0.1:54601/postgres`. Son las credenciales estándar del stack local. Si usas otro puerto, exporta esa variable antes de ejecutar.
+
+Ambas direcciones deben ser loopback; la suite rechaza destinos externos y comprueba que SQL y PostgREST ven el mismo restaurante temporal. No necesita servidor Next ni navegador. La versión original de 0.13 usaba el esquema 001–153. **Esta rama necesita las migraciones 160–171 en orden y antes del código**, con los cambios anteriores de la ola 0 cuando correspondan. La suite opera sobre sus restaurantes temporales y espera un esquema ya preparado.
+
+Cada caso crea su propio restaurante `aud-dinero-<uuid>`, pedidos y movimientos. La suite crea dos usuarios temporales `aud-dinero-…@test.local`. `afterEach` elimina exclusivamente el restaurante creado, con sus filas en cascada, aun cuando una aserción falla; `afterAll` elimina los usuarios. Un fallo de limpieza también hace fallar el comando. Si se mata el proceso, revisa exclusivamente los identificadores AUD de esa corrida antes de limpiar manualmente.
+
+`npm test` mantiene las unitarias sin depender de una base. La integración usa `vitest.dinero.config.mts`. CI ejecuta la matriz completa desde 0.19. Abajo se conservan los resultados históricos de 0.13–0.19.
+
+## Recibo durable 1.2 · migración 170
+
+Aplicar la 170 después de la 169 y antes de desplegar el código. La primera prueba reproduce un cierre Q70 que, al repetir su solicitud después de un cobro de Q10, antes escribía un segundo corte. La nueva ruta conserva la identidad, el corte y el recibo en una sola transacción. Las pruebas recuperan el recibo tras perder la respuesta, hacen competir dos llamadas de la misma identidad y verifican el enlace del gasto y los permisos. También comprueban que una solicitud sin confirmar de un turno anterior se rechaza.
+
+La 171 se aplica después de la 170 y antes de desplegar el código. La prueba de denominaciones reproducía Q7.00 al contar un billete de Q5, un billete de Q1, dos monedas de Q1 y tres monedas de un centavo. Ahora exige Q8.03 y verifica el recibo. La prueba del borrador hace competir dos operadores con la misma revisión, comprueba que solo un guardado prevalece y verifica el cierre explícito con efectivo contado en cero.
+
+## Cobro completo 1.1 · migración 169
+
+Aplicar `169_abonos_y_partes_de_mesa.sql` después de la 168 y antes de desplegar. La lectura toma las cuotas de 164/165 y los movimientos de la cuenta activa. La escritura verifica el saldo y la revisión bajo el bloqueo de mesa de la 160. La solicitud y el resultado se guardan con la identidad de la 161 en la misma transacción que los movimientos y las partes pagadas. Los cuatro RPC y el reparto quedan restringidos a `service_role`.
+
+Los cinco casos nuevos comprueban el reparto Q100/3, el recibo compartido por dos partes, el reintento después de cerrar y volver a usar la mesa, el conflicto entre dos cajas, una ronda nueva, un abono mixto Q130 de Q200 con acuse perdido, el cierre con saldo cero y servicio pendiente, y el cuadre por método con propina, descuento, más de 120 platos y devolución parcial. Playwright verifica el abono en un teléfono y las partes tras recargar en escritorio. La primera corrida contra el código anterior falla al buscar la pestaña «Importe libre».
+
+## Resultado original de 0.13 · 2026-11-05
+
+Código ejecutado: base `2348339` del PR #71 más esta suite; acciones monetarias sin modificar respecto a esa base. Verifica el hash de la base con `git merge-base HEAD origin/docs/plan-auditoria-integral`. Base local con cambios SQL de 154–159, algunos aplicados manualmente (el historial del CLI llega a 154); se comprobaron las funciones de recetas/pedidos/compras, las columnas de pausa y el índice de cortes. Zona `America/Guatemala`, corte 300 minutos. Esos cambios adicionales no sustituyen las acciones bajo prueba ni el RPC de reportes de la 145.
+
+**9 casos ejecutados: 3 pasan y 6 reproducen defectos. No es una certificación aprobada del circuito monetario.**
+
+| Caso | Datos y pasos | Esperado | Resultado real | Ficha |
+|---|---|---|---|---|
+| D01 · Q100 entre tres | Pedido Q100; `computeSplit(equal)`; tres llamadas independientes con Q33.34, Q33.33 y Q33.33 | Tres movimientos, libro Q100 y saldo cero | Pasa; importes persistidos exactos, caja Q100 | — |
+| D02 · Q200 mixtos | Cerrar cuenta con Q80 tarjeta, Q50 efectivo y Q70 tarjeta | Tres movimientos, tarjeta Q150, efectivo Q50, sin pendientes | Pasa; pedido entregado y libro reconciliado | — |
+| D03 · Dos empleados | Ambos leen los mismos platos/totales antes de insertar el cobro Q10 | Un solo saldo Q10 cobrado | Dos filas, neto Q20 para consumo Q10 | 0.14 |
+| D04 · Acuse perdido | PostgREST confirma el INSERT Q10; se pierde su respuesta; mismo intento repetido | Recuperar cobro original sin duplicar dinero | Dos filas, neto Q20 | 0.15 |
+| D05 · Parcial y nueva ronda | Primer pedido Q100, pago previo Q40; pedido nuevo Q20; cerrar saldo Q80 tarjeta | Neto por pedido Q100 y Q20; total Q120 | Total Q120, pero Q120 quedan en el primero y Q0 en el segundo, ambos cerrados | 0.16 |
+| D06 · Devolución posterior | Cobro Q50 de turno previo; corte guardado; devolver Q50 en el actual | Corte previo estable; salida trazable Q50 actual | Pasa; original conservado y REFUND −Q50 con firmante y motivo | — |
+| D07 · Descuento y propina | Tres platos Q30; descuento Q10; propina Q20; cobrar cada línea con el reparto de Q100 | Q33.34 + Q33.33 + Q33.33 persistidos | Cada línea recorta a Q33.33: total Q99.99 | 0.17 |
+| D08 · Cobro durante cierre | Bloquear fila del pedido; arrancar pago Q10; observar INSERT esperando en Postgres; cerrar; liberar bloqueo y confirmar pago | Q10 pertenece a uno y solo un periodo | Fila Q10 confirmada con fecha anterior al corte; cierre Q0 y siguiente periodo Q0 | 0.18 |
+| D09 · Corte 05:00 | Tres pedidos/pagos: Q1 a 04:59:59.999, Q2 a 05:00:00.000, Q3 a 05:00:00.001 | Día previo Q1; nuevo día Q5, igual que el reporte | Día previo Q1; reporte nuevo Q5, caja nueva Q3 | 0.19 |
+
+La prueba D02 compara un conjunto de movimientos: un INSERT por lote comparte `created_at` y SQL no garantiza orden entre empates. No confunde ese orden con un defecto de dinero.
+
+## Cómo se reproducen las carreras
+
+En D03, una barrera retiene las dos respuestas reales de lectura hasta que ambos empleados llegaron al mismo punto. No se inventa su contenido. En D04, la respuesta real exitosa del INSERT se pierde después de confirmar la transacción; no se reintenta ninguna escritura en el arnés por debajo de la acción.
+
+En D08, una conexión SQL toma `FOR UPDATE` sobre **el pedido del fixture**. El INSERT real de PostgREST espera por la comprobación de su clave foránea. Una segunda conexión observa `pg_blocking_pids`, y solo entonces se ejecuta `closeCaja`. Se libera el bloqueo en `finally` y se espera la acción de cobro antes de limpiar. Así se reproduce una transacción empezada antes del corte pero confirmada después. No se usa una pausa fija para afirmar que hubo concurrencia.
+
+Los puntos de control tienen límite de espera. Si una corrección cambia el camino de consulta, un error «no se alcanzó el punto previsto» exige adaptar la programación de la carrera: no significa que la invariante ya pase. Los resultados monetarios esperados se mantienen.
+
+## Correcciones que bloquean la ola 1
+
+El [plan](../../docs/planes/PLAN_AUDITORIA_INTEGRAL_2026-11-04.md) registra una ficha propia por fallo, 0.14–0.19. Cada arreglo requiere rama y PR, sus pruebas de fallo antes/después y migración nueva si necesita cambiar SQL; no se edita una migración aplicada. Las fichas no autorizan reconstruir ni sobrescribir cobros o cortes históricos: si hace falta reconciliar datos existentes, se debe diseñar y revisar ese paso por separado.
+
+## Corrección 0.14 · migración 160
+
+Aplicar `160_cobro_parcial_atomico.sql` **antes de desplegar el código**, después de las migraciones anteriores. La acción comprueba la sesión y el permiso como antes; los nuevos RPC solo se conceden a `service_role`. Si falta la 160, cobrar/cerrar devuelve una explicación y no vuelve a las escrituras separadas anteriores.
+
+Pago parcial y cierre comparten un bloqueo transaccional por restaurante/mesa, seguido del bloqueo ordenado de sus pedidos. Se comprueban otra vez estado, mesa, importe y saldo. `order_payments.item_amounts` conserva la asignación monetaria nueva por plato. El movimiento y el reparto se guardan en la misma transacción; una línea parcialmente pagada se marca saldada al completar su cuota. Los pagos antiguos permanecen intactos: se acepta su asignación si el reparto guardado permite verificarla, y se rechaza inventarla si falta.
+
+El cierre confirma únicamente los pedidos leídos y rechaza una propuesta que no coincide con el saldo por pedido, sin entregar pedidos ni escribir pagos. Una nueva ronda que no estaba en ese snapshot permanece abierta con su sesión.
+
+Comando que también corre en CI contra el Supabase efímero:
+
+```powershell
+npm run test:dinero -- -t '0.14|D03'
+```
+
+Son **12 comprobaciones**: el D03 original y once garantías de líneas distintas, saldo restante, asignaciones concurrentes, rollback si falla el reparto, métodos/efectivo entre pedidos, legado verificable/desconocido, rechazo de otra mesa, cruce parcial/cierre con bloqueo observado en Postgres, rechazo sin efectos de un cierre desactualizado y privilegios de los tres RPC. El filtro selecciona estos casos; no se agrega ningún `skip` a la suite completa.
+
+La barrera de D03 ahora libera juntas las dos peticiones reales al RPC. D08 sigue observando el bloqueo en Postgres y reconoce el nuevo nombre de RPC: cambiar el transporte no elimina ni oculta la carrera con el corte de caja.
+
+| Caso original | Estado después de 0.14 |
+|---|---|
+| D01, D02, D06 | Siguen pasando |
+| D03 | Pasa; un empleado cobra, el otro recibe rechazo por saldo/plato ya pagado |
+| D04 → 0.15 | No duplica el saldo ya completo, pero rechaza el reintento en vez de recuperar su resultado original; sigue pendiente la identidad durable |
+| D05 → 0.16 | Rechaza la asignación incorrecta antes de cerrar o escribir más dinero; sigue pendiente distribuir correctamente el saldo entre pedidos |
+| D07 → 0.17 | Rechaza Q33.34 cuando el prorrateo de esa línea todavía da Q33.33; sigue pendiente distribuir el centavo del total |
+| D08 → 0.18 | Sigue reproduciendo dinero fuera de ambos periodos al cerrar caja |
+| D09 → 0.19 | Sigue reproduciendo la omisión del instante exacto de las 05:00 |
+
+Los nueve casos originales siguen ejecutándose con el comando completo: **20 ejecutadas, 15 pasan y 5 fallan** al sumar las once garantías adicionales. Los cinco pendientes mantienen el código de salida 1. No se da por terminada ninguna de las fichas 0.15–0.19.
+
+
+## Corrección 0.15 · migración 161
+
+Aplicar `161_identidad_intento_cobro.sql` y después `162_cobro_intentos_segundo_factor.sql`, **después de la 160 y antes de desplegar**. La 162 incorpora a la tabla nueva el candado restrictivo de segundo factor de la 137, cuya ausencia hizo fallar el primer CI de #86. La 161 ya aplicada permanece intacta. No se edita ni sustituye la 160: los nuevos RPC envuelven su cobro/cierre transaccional. La tabla `cobro_intentos` confirma solicitud y resultado junto con el dinero. El bloqueo por restaurante/intento se toma antes del bloqueo de cuenta. Sin migración no hay fallback sin identidad.
+
+La identidad viaja desde el aparato y persiste antes de la petición, sin TTL. Se conservan el UUID y toda la solicitud tras un error de transporte, una sesión no autorizada o una recarga. Solo el éxito o un rechazo transaccional definitivo permiten retirar el pendiente. Un intento nuevo recibe otro UUID, aunque coincidan los platos, métodos e importes; una identidad ya confirmada con contenido distinto se rechaza. No se reconstruye el resultado desde el saldo actual.
+
+D04 captura el JSON real del RPC confirmado, pierde su respuesta y reenvía **el mismo UUID**. Exige igualdad exacta con aquel JSON, incluidos `paymentIds`, importe e identidad, y compara todas las filas originales del libro. También se prueba el cierre perdido y recuperación después de reutilizar la mesa, sin cerrar la ronda nueva.
+
+Comando de regresión que corre en CI:
+
+```powershell
+npm run test:dinero -- -t '0.14|0.15|D03|D04'
+```
+
+**22 comprobaciones pasan:** las doce de 0.14, D04 y nueve garantías de 0.15: aislamiento de identidad por restaurante, concurrencia del mismo parcial, pagos idénticos legítimos con otra identidad hasta el saldo, rechazo de colisiones de solicitud/actor/mesa/operación, rollback sin identidad tras fallo de reparto, cierre perdido con ronda nueva, cierre simultáneo con igual identidad, recuperación después de cerrar/devolver y privilegios de RPC/tabla. El filtro deja fuera los otros siete casos; la matriz completa no contiene omisiones.
+
+Un desfase observado de 8 ms entre Windows y el contenedor podía dejar un movimiento reciente fuera de una lectura del arnés por parecer futuro. Para las lecturas sin fecha explícita se consulta el reloj real de Postgres. No se modifica el reloj de producción, no se introducen esperas y se conservan los tiempos explícitos de D09 y la carrera observada de D08.
+
+**Resultado completo después de 0.15: 29 ejecutadas, 25 pasan, 4 fallan; código de salida 1.** D04 pasa. D05/0.16, D07/0.17, D08/0.18 y D09/0.19 siguen fallando con sus aserciones monetarias originales. No se declara certificada la matriz completa.
+
+El E2E de 0.15 ejecuta la acción Next real y espera su respuesta antes de abortar la entrega al navegador; verifica que Q52 ya están confirmados, recarga Servicio y comprueba el mismo intento/recibo, sin cambios en los movimientos. Se limpia el fixture al terminar. La recuperación vuelve a autorizar al empleado antes de acceder al registro; ni clientes anónimos ni autenticados pueden leerlo directamente. FEL e impresión continúan fuera del alcance certificado por esta suite.
+
+
+El comando `node scripts/audit-rls-candados.mjs` reproduce el fallo previo (un hallazgo por la política ausente) y después de la 162 devuelve cero hallazgos. La prueba de privilegios de 0.15 exige además la política restrictiva `super_admin_segundo_factor`, sin políticas permisivas, con filtro y condición de escritura de segundo factor. Se mantiene el acceso exclusivo del servicio y el resultado de la matriz monetaria.
+
+
+## Corrección 0.16 · migración 163
+
+Aplicar `163_cierre_saldo_por_pedido.sql` **después de la 162 y antes del código**. Conserva intactas las migraciones anteriores. El cierre recupera primero su identidad durable; después calcula en Postgres, bajo el bloqueo de cuenta, el saldo neto de cada pedido del snapshot y reparte únicamente ese saldo. La confirmación de dinero, cierre y resultado sigue usando la transacción de 160–161.
+
+**Antes:** D05 rechazó el cierre Q80 de un pedido Q100 con Q40 previos y una ronda nueva Q20. **Después:** confirma Q60 nuevos en el primero y Q20 en el segundo, conservando exactamente las filas anteriores y entregando ambos pedidos. Las correcciones de método y devoluciones posteriores conservan la asignación y no sacan dinero de otra ronda.
+
+```powershell
+npm run test:dinero -- -t '0.14|0.15|0.16|D03|D04|D05'
+```
+
+**31 comprobaciones seleccionadas pasan:** las 22 anteriores, D05 y ocho garantías nuevas. Se prueban correcciones/devoluciones por pedido, rondas saldadas, métodos mixtos y efectivo sin repetir, un método sin importe que cubre solo saldo, rechazo del importe incorrecto sin escrituras, ronda ajena al snapshot sin cerrar, 1.200 pagos previos sumados completos y privilegios del RPC. Los puntos de pérdida de respuesta y bloqueo observado reconocen el transporte nuevo del cierre, sin modificar las invariantes.
+
+**Matriz completa después de 0.16: 37 ejecutadas, 34 pasan, 3 fallan; salida 1.** Permanecen D07/0.17, D08/0.18 y D09/0.19 con sus valores esperados originales. El cierre sigue sin certificar el centavo por línea, los periodos simultáneos de caja ni el límite exacto del día.
+
+El nuevo E2E cobra Q40, agrega una ronda Q20 y cierra el saldo Q80 desde la pantalla real. Verifica Q100/Q20 por pedido y el movimiento previo idéntico. No se reconstruyen movimientos históricos, no se hace reset y los fixtures se limpian al terminar.
+
+
+## Corrección 0.17 · migraciones 164 y 165
+
+Aplicar `164_centavos_reparto_platos.sql` y después `165_saldo_mesa_con_cuotas_no_verificables.sql`, **después de la 163 y antes del código**. Solo se aplicaron localmente; las migraciones previas permanecen intactas. La 165 conserva los totales del legado sin reparto sin editar la 164 ya aplicada.
+
+D07 falla antes del arreglo al intentar Q33.34 frente a la cuota independiente Q33.33. Después verifica **Q33.34 + Q33.33 + Q33.33**, neto y asignaciones `item_amounts` Q100. El desempate por línea usa UUID, no el orden de la petición; el fixture elige el mismo orden sin modificar los importes esperados.
+
+Una sola función SQL determina las cuotas del pedido. Las cantidades vivas ponderan los extras (positivos o negativos), el resto mayor distribuye los centavos y las líneas históricas saldadas verificables conservan su importe exacto. La lectura y el cobro usan esa función bajo el bloqueo de cuenta de 0.14; la pantalla recibe las cuotas pendientes, sin volver a prorratearlas. La identidad durable y el cierre por saldo se conservan.
+
+La 164 por sí sola devolvía error sin total en un legado Q40 sin reparto. Se reprodujo esa regresión con una aserción que esperaba Q40. La 165 devuelve el total y `avisoCuotas`: bloquea la asignación por platos no verificable, pero mantiene el cierre completo Q60/Q20 de 0.16. Ni las filas anteriores ni una cuenta histórica Q99.99 se reescriben automáticamente.
+
+```powershell
+npm run test:dinero -- -t '0.14|0.15|0.16|0.17|D03|D04|D05|D07'
+```
+
+**42 comprobaciones seleccionadas pasan:** las 31 anteriores, D07 y diez garantías nuevas de cuotas, legado, cantidades, descuentos, fracciones, concurrencia y privilegios. Las pruebas de lectura verifican sesión autorizada y migración ausente sin volver al cálculo anterior. El E2E comprueba los tres importes del botón contra los tres movimientos reales, total Q100 y cierre del pedido.
+
+**Matriz completa después de 0.17: 47 ejecutadas, 45 pasan y 2 fallan; salida 1.** D08/0.18 y D09/0.19 permanecen visibles. Con 164 D08 reprodujo dinero fuera de ambos periodos; en la última corrida con 165 falló en la guarda temporal previa, con una diferencia de 3 ms entre Postgres y el cierre de Windows. La guarda no se elimina ni relaja: 0.18 debe certificar la carrera con ambos relojes controlados. D09 sigue dando Q3 frente a Q5 esperado. No se declara certificada la matriz completa ni se toca el código de caja para ocultar esos casos.
+
+
+## Corrección 0.18 · migraciones 166 y 167
+
+Aplicar `166_cobros_y_cierre_caja_coordinados.sql` y después `167_ventana_negocio_registro_caja.sql`, **después de 165 y antes del código**. La 167 conserva la ventana de negocio sin editar la 166 ya aplicada. Solo se aplicaron localmente, sin reset ni backfill monetario.
+
+La reproducción previa de D08 conserva el bloqueo real observado y las mismas escrituras. Para evitar que una diferencia de unos milisegundos entre Windows y Postgres corte la prueba en la guarda temporal, se fija únicamente `Date` del proceso que invoca la acción al reloj real de Postgres leído después de observar el bloqueo; los temporizadores y Postgres siguen siendo reales. Antes del arreglo la guarda pasa y el dinero Q10 no pertenece al corte Q0 ni al siguiente Q0.
+
+Después, los movimientos operativos con timestamp por defecto reciben `caja_registrado_en` y `caja_corte_previo`, conservando su `created_at`. El registro y el cierre comparten bloqueo por restaurante; la marca SQL es monótona y conserva microsegundos. Si el corte gana, el movimiento espera y se registra después; si el pago gana, el contexto del cierre espera su commit. La revisión del libro evita firmar una lectura que perdió un movimiento entre la lectura y el guardado. El RPC confirma corte y gastos juntos y no reconstruye recibos históricos.
+
+También se registra la entrega nueva sin filas de pago, conservando esa segunda fuente del libro. Las escrituras autorizadas por RLS invalidan la revisión mediante un trigger restringido. Las inserciones explícitamente fechadas conservan su tratamiento legado; no se recrean cobros históricos como dinero nuevo. Los límites de negocio se mantienen y el instante exacto inicial se deja a 0.19.
+
+Guardar, descartar o abrir un borrador que otro aparato ya cerró devuelve rechazo sin modificar el corte. Se prueban las tres carreras y el rollback de una asignación de gastos fallida. Los agregados de caja no quedan recortados por el límite de PostgREST; se comprueban 1.200 movimientos y se pagina el detalle.
+
+```powershell
+npm run test:dinero -- -t '0.14|0.15|0.16|0.17|0.18|D03|D04|D05|D07|D08'
+```
+
+**56 comprobaciones seleccionadas pasan:** las 42 anteriores, D08 y trece garantías de esta ficha. Las dos órdenes de la carrera usan bloqueos observados por `pg_blocking_pids`; no se usa una pausa fija para declararlas concurrentes. El E2E cierra dos periodos de Q10 y comprueba el primer recibo intacto y el enlace del pago posterior.
+
+**Matriz completa después de 0.18: 60 ejecutadas, 59 pasan y 1 falla; salida 1.** D09/0.19 sigue dando Q3 frente a Q5 esperado, con los mismos tres timestamps y las mismas aserciones. La certificación completa permanece pendiente. Los cuatro casos fuera del filtro se ejecutan en el comando completo, sin omisiones ni aserciones invertidas.
+
+
+## Corrección 0.19 · migración 168
+
+Aplicar `168_limites_periodo_caja.sql` **después de 167 y antes del código**. Solo se aplicó localmente, sin reset ni escrituras de datos. Conserva el RPC anterior para el despliegue por etapas y añade `leogin_leer_periodo_caja_limites`, `security invoker`, exclusivo del servicio. Si falta el lector nuevo, la acción rechaza sin firmar un cero ni volver al lector de límites incorrectos.
+
+Antes del arreglo, D09 reprodujo Q3 en caja frente a Q5 en el reporte, con los mismos tres instantes originales. Ahora el inicio del día se incluye; el último corte se excluye porque ya contabilizó su instante. Un corte exactamente a las 05:00 también es exclusivo. La frontera enviada a Postgres conserva los seis decimales del corte tanto para registros SQL como para filas legadas. No se actualizan importes, fechas ni recibos históricos. Se mantiene el día de apertura del turno y el corte configurado por el local.
+
+La regla se aplica a pagos, entregas sin movimientos, gastos y propinas. El listado de pedidos cerrados usa la misma selección para decidir si una mesa es reabrible. El camino de compatibilidad sin la 166 también respeta los límites, pero sigue sin permitir cerrar sin la revisión protegida.
+
+**Resultado completo: 69 casos pasan, salida 0.** D09 y nueve garantías adicionales cubren ambas fuentes del libro en el inicio y hasta final, microsegundos a ambos lados de un corte, unión de periodos sin pérdida ni duplicados, corte exactamente al inicio, corte previo de otro día, turno abierto del día anterior, otra zona/corte a medianoche y privilegios del nuevo lector. CI reemplaza el filtro por `npm run test:dinero`; también ejecuta D01, D02 y D06.
+
+La prueba nueva del navegador usa restaurante y empleado propios: Q1 antes de las 05:00, Q2 exactos y Q3 después. El primer corte espera y cuenta Q5; el siguiente espera Q0, conservando íntegro el primer recibo. La regresión de 0.18 conserva dos cortes Q10/Q10; su corrección de hidratación ya tiene CI verde en #89. FEL e impresión siguen fuera de esta certificación.

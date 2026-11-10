@@ -108,6 +108,11 @@ jobs:
       - name: Candados de RLS (migraciones 136 y 137) — audit-rls-candados.mjs
         run: node scripts/audit-rls-candados.mjs
 
+      # Las seis correcciones de dinero ya pasan: ejecutar la matriz completa,
+      # incluidas las tres comprobaciones originales que el filtro omitía.
+      - name: Dinero en Postgres — matriz completa (0.13–0.19)
+        run: npm run test:dinero
+
       - name: Instalar Chromium de Playwright
         run: npx playwright install --with-deps chromium
 

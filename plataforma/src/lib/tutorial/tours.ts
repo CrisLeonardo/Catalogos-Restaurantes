@@ -55,7 +55,7 @@ export const GUIDED_TOURS: GuidedTourDef[] = [
         target: null,
         path: '/admin/menu',
         title: 'Disponibilidad y orden',
-        desc: 'En la lista, el interruptor de cada platillo lo marca agotado por hoy: se ve pero no se puede pedir, y vuelve solo a las 12 horas. Para sacarlo del menú del todo, entra a Editar y apaga «Mostrar en el menú».',
+        desc: 'En la lista, el interruptor de cada platillo lo marca agotado y eliges hasta cuándo (por omisión, hasta mañana): se ve pero no se puede pedir. Para sacarlo del menú del todo, entra a Editar y apaga «Mostrar en el menú».',
       },
     ],
   },

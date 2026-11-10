@@ -8,9 +8,8 @@
         levantar las manos del teclado. Lo interpretado se enseña SIEMPRE
         en un chip antes de pulsar nada: si el sistema entendió otra cosa
         tiene que verse antes, no después;
-     2. LOS MÁS PEDIDOS, seis platos a un toque, numerados del 1 al 9 en
-        PC. Salen de las ventas reales del restaurante, no de una lista
-        que alguien mantiene a mano;
+     2. FAVORITOS DEL TURNO, puestos fijos en este dispositivo. Una
+        reposición cambia la disponibilidad, pero conserva el número;
      3. la REJILLA, para quien prefiere tocar, con la FOTO de cada plato
         (el mesero reconoce el plato antes de leer el nombre). Funciona
         como cualquier POS: un toque agrega uno —o abre la hoja si el plato
@@ -26,13 +25,11 @@
 import { useMemo, useRef, type CSSProperties, type KeyboardEvent } from 'react';
 import AssetImage from '@/components/asset-image';
 import { Icon } from '@/components/icons';
-import { Kicker, Pill } from '@/components/admin/servicio/pieces';
-import { coincide, leerComanda, normalizar } from '@/lib/servicio/comanda';
+import { Pill } from '@/components/admin/servicio/pieces';
+import { coincide, leerComanda } from '@/lib/servicio/comanda';
+import { buscarPlato } from '@/lib/servicio/turno';
 import { iniciales, quedanPocos, tinteDe } from '@/lib/servicio/carta';
 import type { Category, Product } from '@/types';
-
-/** Cuántos platos lleva la fila de «los más pedidos». */
-export const MAX_FAVS = 6;
 
 /** Tres columnas en el teléfono; unos 150 px en tablet y PC. */
 const FOTO_SIZES = '(max-width: 640px) 34vw, 160px';
@@ -40,8 +37,9 @@ const FOTO_SIZES = '(max-width: 640px) 34vw, 160px';
 export interface CartaProps {
   products: Product[];
   categories: Category[];
-  /** Los ids más vendidos del restaurante, en orden. */
-  masPedidos: string[];
+  favs: (Product | null)[];
+  alias: Record<string, string>;
+  onTurno: () => void;
   q: string;
   setQ: (v: string) => void;
   cat: string | null;
@@ -65,29 +63,21 @@ export interface CartaProps {
   /** El dictado por voz solo se ofrece donde el navegador lo tiene. */
   hayVoz: boolean;
   money: (n: number) => string;
-  /** Ancho: en móvil los favoritos solo salen sin búsqueda ni categoría. */
-  movil: boolean;
 }
 
 export default function Carta({
-  products, categories, masPedidos, q, setQ, cat, setCat,
-  qtyOf, onAdd, onOpts, onRemove, onReponer, onOpenItem, onVoz, conTeclado, aprendiz, hayVoz, money, movil,
+  products, categories, favs, alias, onTurno, q, setQ, cat, setCat,
+  qtyOf, onAdd, onOpts, onRemove, onReponer, onOpenItem, onVoz, conTeclado, aprendiz, hayVoz, money,
 }: CartaProps) {
   const input = useRef<HTMLInputElement | null>(null);
 
   const { qty, term } = useMemo(() => leerComanda(q), [q]);
 
   const activos = useMemo(() => products.filter((p) => p.is_active), [products]);
+  const porCat = useMemo(() => cat ? activos.filter((p) => p.category_id === cat) : activos, [activos, cat]);
 
   /** El plato que Enter agregaría. */
-  const interpretado = useMemo(() => {
-    if (!term) return null;
-    const disponibles = activos.filter((p) => p.is_available);
-    // Lo que EMPIEZA por lo tecleado gana: quien escribe «car» quiere
-    // Carne asada, no «Tacos de carnitas».
-    const empieza = disponibles.find((p) => coincide(p.name, term) && normalizar(p.name).startsWith(normalizar(term)));
-    return empieza ?? disponibles.find((p) => coincide(p.name, term)) ?? null;
-  }, [activos, term]);
+  const interpretado = useMemo(() => buscarPlato(porCat, term, alias), [porCat, term, alias]);
 
   const catName = useMemo(() => {
     const m = new Map<string, string>();
@@ -101,29 +91,9 @@ export default function Carta({
      ya dice qué agrega Enter, la rejilla debe seguir enseñando todo lo
      que se parece a lo que estás escribiendo. */
   const dishes = useMemo(() => {
-    const porCat = cat ? activos.filter((p) => p.category_id === cat) : activos;
-    const lista = term
-      ? porCat.filter((p) => coincide(`${p.name} ${catName.get(p.category_id ?? '') ?? ''}`, term))
-      : porCat.filter((p) => p.is_available || p.is_active);
-    // Lo que se puede pedir primero; lo agotado después, pero visible. Sin
-    // buscar también (PED-13): antes, sin término, la rejilla seguía el
-    // orden de la base y un agotado podía salir el primero.
-    return [
-      ...lista.filter((p) => p.is_available),
-      ...lista.filter((p) => !p.is_available),
-    ];
-  }, [activos, cat, term, catName]);
-
-  const favs = useMemo(() => {
-    const porId = new Map(activos.map((p) => [p.id, p]));
-    const out: Product[] = [];
-    for (const id of masPedidos) {
-      const p = porId.get(id);
-      if (p?.is_available) out.push(p);
-      if (out.length >= MAX_FAVS) break;
-    }
-    return out;
-  }, [activos, masPedidos]);
+    return term ? porCat.filter((p) =>
+      coincide(`${p.name} ${alias[p.id] ?? ''} ${catName.get(p.category_id ?? '') ?? ''}`, term)) : porCat;
+  }, [porCat, term, catName, alias]);
 
   function onKey(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') {
@@ -142,7 +112,7 @@ export default function Carta({
     }
   }
 
-  const mostrarFavs = favs.length > 0 && (!movil || (!term && !cat));
+  const mostrarFavs = !term && !cat;
 
   /* Si ningún plato tiene foto, una rejilla de iniciales sería una pared de
      cuadros de colores ocupando el doble que hoy: la carta se queda con las
@@ -159,7 +129,7 @@ export default function Carta({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={onKey}
-            placeholder={conTeclado ? 'Teclea «2 pepián» y Enter, o busca un plato' : 'Buscar plato'}
+            placeholder="Buscar plato o alias…"
             aria-label="Buscar un plato para agregar"
             autoComplete="off"
             enterKeyHint="done"
@@ -188,23 +158,6 @@ export default function Carta({
       </div>
 
       <div className="sv-carta-bars">
-        {mostrarFavs && (
-          <>
-            <Kicker aside={aprendiz ? <span className="sv-hint-inline">Un toque = se agrega 1</span> : undefined}>
-              Los más pedidos
-            </Kicker>
-            <div className="sv-hs">
-              {favs.map((p, i) => (
-                <button key={p.id} type="button" className="sv-fav" onClick={() => onAdd(p, 1)}>
-                  {conTeclado && i < 9 && <span className="sv-fav-key">{i + 1}</span>}
-                  {p.name}
-                  <span className="sv-fav-price">{money(p.price)}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-
         <div className="sv-hs">
           <Pill on={cat == null} onClick={() => setCat(null)}>Todos</Pill>
           {categories.map((c) => (
@@ -214,6 +167,32 @@ export default function Carta({
       </div>
 
       <div className="sv-vs sv-carta-list">
+        {mostrarFavs && (
+          <section className="sv-favoritos" aria-labelledby="sv-favoritos-titulo">
+            <div className="sv-favoritos-head">
+              <div>
+                <h2 id="sv-favoritos-titulo">Favoritos del turno</h2>
+                <p className="sv-foot-note">{conTeclado ? 'Puestos fijos · teclas 1–9' : 'Puestos fijos durante el turno'}</p>
+              </div>
+              <button type="button" className="sv-favoritos-editar" onClick={onTurno}>Preparar turno</button>
+            </div>
+            {aprendiz && <p className="sv-foot-note">Toca un favorito para agregar un plato.</p>}
+            {favs.length > 0 && (
+              <div className="sv-fav-grid">
+                {favs.map((p, i) => (
+                  <button key={i} type="button" className="sv-fav" disabled={!p?.is_available}
+                    aria-label={`Puesto ${i + 1} · ${p?.name ?? 'Sin plato'}${p && !p.is_available ? ' · Agotado' : ''}`}
+                    onClick={() => { if (p) onAdd(p, 1); }}>
+                    <span className="sv-fav-key" aria-hidden>{i + 1}</span>
+                    <span className="sv-fav-name">{p?.name ?? 'Sin plato'}</span>
+                    <span className="sv-fav-price">{p ? p.is_available ? money(p.price) : 'Agotado' : 'Puesto reservado'}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <h2 className="sv-carta-titulo">Carta completa</h2>
+          </section>
+        )}
         {dishes.length === 0 ? (
           <div className="sv-vacio">
             {term
@@ -246,7 +225,7 @@ export default function Carta({
                  «⋯» abre opciones y nota. Cada uno detiene el toque para que
                  no agregue un plato por error. Van sobre la foto o, sin
                  fotos, en el pie. */
-              const mandos = agotado ? (onReponer ? (
+              const mandos = agotado ? (onReponer && !p.sin_existencias ? (
                 <span className="sv-dish-tools">
                   <button
                     type="button"
@@ -283,7 +262,7 @@ export default function Carta({
                 </span>
               );
               const aviso = agotado
-                ? <span className="sv-dish-out">Agotado</span>
+                ? <span className="sv-dish-out">{p.sin_existencias ? 'Sin existencias' : 'Agotado'}</span>
                 : quedan != null ? <span className="sv-dish-left">Quedan {quedan}</span> : null;
               return (
                 <div
@@ -297,7 +276,7 @@ export default function Carta({
                   aria-label={`${p.name}, ${money(p.price)}${agotado ? ', agotado' : ''}${enComanda > 0 ? `, ${enComanda} en la comanda` : ''}`}
                   onClick={() => { if (!agotado) onAdd(p, 1); }}
                   onKeyDown={(e) => {
-                    if (agotado) return;
+                    if (agotado || e.target !== e.currentTarget) return;
                     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAdd(p, 1); }
                   }}
                 >

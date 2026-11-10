@@ -5,7 +5,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-adm-lg text-[13px] font-semibold transition-all outline-none select-none active:translate-y-px disabled:pointer-events-none disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-adm-accent-500/50 [&_svg]:pointer-events-none [&_svg]:shrink-0',
+  'inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-adm-lg text-[13px] font-semibold transition-all outline-none select-none active:translate-y-px disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-adm-accent-ink [&_svg]:pointer-events-none [&_svg]:shrink-0',
   {
     variants: {
       variant: {
@@ -26,6 +26,8 @@ const buttonVariants = cva(
         sm: 'h-8 px-3 text-[12px]',
         md: 'h-10 px-4',
         lg: 'h-11 px-5 text-[14px]',
+        touch: 'min-h-12 whitespace-normal px-4 py-2 text-[14px]',
+        action: 'min-h-14 whitespace-normal px-5 py-2 text-[16px]',
         icon: 'size-10',
       },
     },
@@ -41,6 +43,7 @@ function Button({ className, variant, size, render, ...props }: ButtonProps) {
   return (
     <BaseButton
       data-slot="button"
+      data-size={size ?? 'md'}
       // render a un elemento no-<button> (p. ej. <a> para CTAs que navegan):
       // sin esto Base UI asume `nativeButton` y tira un warning en consola
       // porque espera un <button> real detrás del render prop.

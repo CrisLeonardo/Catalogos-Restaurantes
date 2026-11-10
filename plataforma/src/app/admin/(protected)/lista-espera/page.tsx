@@ -2,8 +2,9 @@ import { redirect } from 'next/navigation';
 import { getAdminContext } from '@/lib/db/admin';
 import { resolveModuleContext } from '@/lib/modules-server';
 import { can } from '@/lib/permissions';
-import { getActiveWaitlist, getRecentWaitlist, getWaitlistSummary } from '@/lib/db/waitlist';
-import { getFreeTableNumbers } from '@/lib/db/table-sessions';
+import { getEsperaDeRecepcion } from '@/lib/db/waitlist';
+import { getMesasLibres } from '@/lib/db/table-sessions';
+import { diaDeRecepcion } from '@/lib/recepcion/dia';
 import WaitlistPanel from '@/components/admin/waitlist-panel';
 import { panelLink } from '@/lib/panel-links-server';
 
@@ -12,26 +13,34 @@ export const metadata = { title: 'Lista de espera – Panel admin' };
 export default async function AdminListaEsperaPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  // Delegable como permiso propio (ver PLAN_AUDITORIA_LANZAMIENTO.md Fase 3):
-  // a diferencia de otros módulos activables, este SÍ respeta permissions[]
-  // para que el dueño pueda dárselo a un host/mesero sin abrir el resto del panel.
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'lista_espera')) redirect(await panelLink('/admin'));
+  // «Lista de espera y reservaciones» o el salón: la recepción (1.7/1.8).
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'lista_espera') && !can(ctx.profile.role, ctx.profile.permissions, 'mesas')) {
+    redirect(await panelLink('/admin'));
+  }
 
   const mc = await resolveModuleContext('lista_espera');
   if (!mc.ok) redirect(await panelLink('/admin/modulos'));
 
-  const [entries, recent, summary, freeTables] = await Promise.all([
-    getActiveWaitlist(mc.restaurantId),
-    getRecentWaitlist(mc.restaurantId),
-    getWaitlistSummary(mc.restaurantId),
-    /* Dónde se puede sentar a quien lleva media hora esperando (M-04).
-       Hasta la migración 128 esta pantalla no tenía forma de decirlo. */
-    getFreeTableNumbers(mc.restaurantId),
+  // «Hoy» es el día de negocio del local, no la fecha UTC del servidor (X13).
+  const dia = await diaDeRecepcion(mc.restaurantId);
+  const [espera, freeTables] = await Promise.all([
+    getEsperaDeRecepcion(mc.restaurantId, dia.desde),
+    getMesasLibres(mc.restaurantId),
   ]);
 
   return (
     <div className="anim-fade-up">
-      <WaitlistPanel restaurantId={mc.restaurantId} entries={entries} recent={recent} summary={summary} freeTables={freeTables} />
+      <WaitlistPanel
+        restaurantId={mc.restaurantId}
+        restaurantName={dia.nombre}
+        timezone={dia.timezone}
+        etiquetaHoy={dia.etiquetaHoy}
+        cola={espera.cola}
+        porRevisar={espera.porRevisar}
+        historial={espera.historial}
+        esperasDeHoy={espera.esperasDeHoy}
+        freeTables={freeTables}
+      />
     </div>
   );
 }

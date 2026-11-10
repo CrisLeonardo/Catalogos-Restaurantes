@@ -1,0 +1,18 @@
+import { defineConfig } from 'vitest/config';
+import { loadEnv } from 'vite';
+
+// Solo este comando carga el entorno local; npm test sigue sin depender de BD.
+for (const [key, value] of Object.entries(loadEnv('test', process.cwd(), ''))) {
+  process.env[key] ??= value;
+}
+
+export default defineConfig({
+  resolve: { tsconfigPaths: true },
+  test: {
+    environment: 'node',
+    include: ['tests/integration/dinero.test.ts', 'tests/integration/permisos.test.ts', 'tests/integration/recepcion.test.ts', 'tests/integration/catalogo.test.ts', 'tests/integration/inventario.test.ts'],
+    fileParallelism: false,
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
+  },
+});

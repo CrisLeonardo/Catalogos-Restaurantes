@@ -266,6 +266,9 @@ export function tableState(
   const abierta = (label: string, short = label): TableState => ({
     kind: 'abierta', reason: null, level: null, label, short, since: desde, priority: 50,
   });
+  if (seat?.limpiezaDesde) return abierta('Por limpiar');
+  if (occ?.status === 'SERVED' && occ.paid != null
+      && Math.round((occ.total - occ.paid) * 100) === 0 && !call) return abierta('Pagada');
   /** `level` va explícito en cada llamada: es la decisión de si esto grita. */
   const atencion = (
     reason: TableReason, level: TableLevel, label: string, since: string | null, short = SHORT[reason],

@@ -19,6 +19,9 @@ import { panelLink } from '@/lib/panel-links-server';
 import { puedeEnSeccion, SIN_SECCION } from '@/lib/auth/seccion';
 import { horaACorte } from '@/lib/caja/dia';
 import { faltaLaColumna } from '@/lib/db/migracion-ausente';
+import {
+  esDuracionPausa, estadoDePausa, extenderPausa, finDePausa, type PausaGuardada,
+} from '@/lib/pausa-pedidos';
 
 export type RestaurantState = { error: string } | null;
 
@@ -409,7 +412,7 @@ export async function updateRestaurantOps(
   // (PROD-10): pausar los pedidos o mover el horario cambia lo que se vende.
   const { data: previo } = await ctx.db
     .from('restaurants')
-    .select('hours, hour_exceptions, timezone, orders_paused')
+    .select('hours, hour_exceptions, timezone')
     .eq('id', ctx.restaurantId)
     .maybeSingle();
 
@@ -423,13 +426,14 @@ export async function updateRestaurantOps(
     corte = c;
   }
 
-  const ordersPaused = formData.get('orders_paused') === 'true';
+  /* La pausa de pedidos YA NO se guarda aquí (auditoría 2026-11-03, X01):
+     es una acción inmediata, pausarPedidos/reanudarPedidos. Guardar el
+     horario con la página abierta desde antes podía quitar una pausa que
+     otro aparato acababa de poner. */
   const cambios: Record<string, unknown> = {
     hours: parsed.hours,
     hour_exceptions: parsedExceptions.exceptions,
     timezone,
-    orders_paused: ordersPaused,
-    pause_message: (formData.get('pause_message') as string)?.trim() || null,
     ...(corte != null ? { day_cutoff_minutes: corte } : {}),
   };
   let { error } = await ctx.db.from('restaurants').update(cambios).eq('id', ctx.restaurantId);
@@ -443,12 +447,6 @@ export async function updateRestaurantOps(
   revalidatePath('/admin/caja');
 
   if (previo) {
-    if (Boolean(previo.orders_paused) !== ordersPaused) {
-      await logActivity({
-        restaurantId: ctx.restaurantId, actorId: ctx.userId,
-        action: 'pausa_pedidos', meta: { pausado: ordersPaused },
-      });
-    }
     const horarioIgual = mismoJson(
       [previo.hours, previo.hour_exceptions, previo.timezone],
       [parsed.hours, parsedExceptions.exceptions, timezone],
@@ -469,6 +467,101 @@ export async function updateRestaurantOps(
   revalidatePath('/');
   updateTag(`restaurant:${ctx.restaurantId}`);
   return { saved: true };
+}
+
+/* ── Pausa de pedidos (auditoría 2026-11-03, ficha 0.4) ────────────────
+   Acciones INMEDIATAS: el panel solo cambia de estado cuando una de estas
+   responde bien. Antes la pausa era un interruptor del formulario de
+   horario que decía «Pedidos en pausa» sin haber pausado nada. */
+
+export type PausaResult =
+  | { ok: true; orders_paused: boolean; orders_paused_until: string | null; pause_message: string | null }
+  | { error: string };
+
+const MAX_MENSAJE_PAUSA = 160;
+const FALTA_155 = 'Para pausar por un tiempo hace falta aplicar la migración 155. Mientras tanto, usa «Hasta reactivar».';
+
+async function guardarPausa(
+  restaurantId: string,
+  cambios: { orders_paused: boolean; orders_paused_until: string | null; pause_message?: string | null },
+  meta: Record<string, unknown>,
+): Promise<PausaResult> {
+  const fd = new FormData();
+  fd.set('restaurantId', restaurantId);
+  const ctx = await resolveContext(fd, 'ajustes');
+  if (!ctx) return { error: 'No autorizado.' };
+
+  let { data, error } = await ctx.db
+    .from('restaurants')
+    .update(cambios)
+    .eq('id', ctx.restaurantId)
+    .select('orders_paused, orders_paused_until, pause_message')
+    .maybeSingle();
+  if (error && faltaLaColumna(error)) {
+    // Sin la 155 solo se puede pausar sin fecha (o reanudar).
+    if (cambios.orders_paused_until) return { error: FALTA_155 };
+    const { orders_paused_until: _sinColumna, ...resto } = cambios;
+    void _sinColumna;
+    ({ data, error } = await ctx.db
+      .from('restaurants')
+      .update(resto)
+      .eq('id', ctx.restaurantId)
+      .select('orders_paused, pause_message')
+      .maybeSingle());
+  }
+  if (error) return { error: 'No se pudo guardar. Revisa tu conexión e intenta de nuevo.' };
+  if (!data) return { error: 'No autorizado.' };
+
+  await logActivity({ restaurantId: ctx.restaurantId, actorId: ctx.userId, action: 'pausa_pedidos', meta });
+
+  updateTag(`restaurant:${ctx.restaurantId}`);
+  revalidatePath('/admin/ajustes/restaurante');
+  revalidatePath('/');
+  const fila = data as { orders_paused: boolean; orders_paused_until?: string | null; pause_message: string | null };
+  return {
+    ok: true,
+    orders_paused: fila.orders_paused === true,
+    orders_paused_until: fila.orders_paused_until ?? null,
+    pause_message: fila.pause_message ?? null,
+  };
+}
+
+/** Pausa ya. `minutos` 0 = hasta reactivar. */
+export async function pausarPedidos(restaurantId: string, minutos: number, mensaje: string | null): Promise<PausaResult> {
+  if (!esDuracionPausa(minutos)) return { error: 'Duración inválida.' };
+  const texto = (mensaje ?? '').trim().slice(0, MAX_MENSAJE_PAUSA) || null;
+  const hasta = finDePausa(minutos);
+  return guardarPausa(
+    restaurantId,
+    { orders_paused: true, orders_paused_until: hasta, pause_message: texto },
+    { pausado: true, minutos: minutos || null, hasta },
+  );
+}
+
+/** +15 min a una pausa con fin. Se lee lo guardado: el panel puede estar viejo. */
+export async function extenderPausaPedidos(restaurantId: string): Promise<PausaResult> {
+  const fd = new FormData();
+  fd.set('restaurantId', restaurantId);
+  const ctx = await resolveContext(fd, 'ajustes');
+  if (!ctx) return { error: 'No autorizado.' };
+  const { data, error } = await ctx.db
+    .from('restaurants')
+    .select('orders_paused, orders_paused_until')
+    .eq('id', ctx.restaurantId)
+    .maybeSingle();
+  if (error || !data) return { error: 'No se pudo leer la pausa. Intenta de nuevo.' };
+  const fila = data as PausaGuardada;
+  const estado = estadoDePausa(fila);
+  if (estado.tipo !== 'pausa' || !estado.hasta) {
+    return { error: 'Esta pausa ya terminó o no tiene hora de fin. Vuelve a pausar si hace falta.' };
+  }
+  const hasta = extenderPausa(estado.hasta);
+  return guardarPausa(restaurantId, { orders_paused: true, orders_paused_until: hasta }, { pausado: true, extendida: true, hasta });
+}
+
+/** Vuelve a recibir pedidos ya. */
+export async function reanudarPedidos(restaurantId: string): Promise<PausaResult> {
+  return guardarPausa(restaurantId, { orders_paused: false, orders_paused_until: null }, { pausado: false });
 }
 
 /** Idiomas de menú soportados hoy además del español (siempre disponible). */

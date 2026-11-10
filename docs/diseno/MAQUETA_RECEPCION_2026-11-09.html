@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recepción por turno</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Maqueta de la ficha 1.8 · Identidad actual depurada. Datos ficticios. */
+:root{
+  --bg:#F2F1EE; --card:#FFFFFF; --card-h:#FAF9F7; --ink:#17161A; --ink2:#55524E; --ink3:#7A7671;
+  --line:rgba(28,22,16,.12); --line2:rgba(28,22,16,.20);
+  --accent:#C2542F; --accent-h:#AD4826; --on-accent:#fff; --accent-ink:#A9461F;
+  --ok:#1F7A45; --ok-bg:#E8F4EC; --ok-line:#B9DCC6; --warn:#8A5A00; --warn-bg:#FBF1DC; --warn-line:#EBD39C;
+  --danger:#B42318; --danger-bg:#FDECEA; --danger-line:#F2C2BC; --info:#2F5C9E; --info-bg:#EAF0FA; --info-line:#C3D3EE;
+  --sh:0 1px 0 rgba(28,22,16,.06); --wa:#25D366;
+}
+:root[data-theme="dark"]{
+  --bg:#0C0B0A; --card:#1A1917; --card-h:#211F1C; --ink:#F5F3EF; --ink2:#C9C5BF; --ink3:#9A958E;
+  --line:rgba(255,245,235,.11); --line2:rgba(255,245,235,.18); --accent-ink:#F08C66;
+  --ok:#6BD49A; --ok-bg:#14251B; --ok-line:#24563A; --warn:#F2C36B; --warn-bg:#2A2110; --warn-line:#5A4517;
+  --danger:#FF8A80; --danger-bg:#2C1514; --danger-line:#5E2722; --info:#8FB4F0; --info-bg:#151E2C; --info-line:#2A3E61;
+  --sh:0 1px 0 rgba(0,0,0,.4);
+}
+*{box-sizing:border-box} html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 14px/1.45 Geist,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit} .num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent-ink);outline-offset:2px}
+.demo{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;background:#202020;color:#eee;font-size:13px}
+.demo strong{margin-right:auto;font-weight:600}
+.demo button{background:#2c2c2c;border:1px solid #3a3a3a;border-radius:999px;padding:6px 12px;color:#eee;cursor:pointer}
+.demo button[aria-pressed="true"]{background:#eee;color:#202020}
+.stage{display:flex;justify-content:center;padding:20px 16px 64px}
+.app{width:100%;max-width:1100px}
+.stage[data-w="390"] .app{max-width:390px}
+h1{font-size:28px;font-weight:700;letter-spacing:-.02em;margin:0}
+.sub{color:var(--ink2);margin:2px 0 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh)}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px;border-radius:14px;background:var(--card);border:1px solid var(--line);margin:16px 0}
+.seg button{min-height:44px;border:0;border-radius:10px;background:transparent;font-weight:600;color:var(--ink2);cursor:pointer}
+.seg button[aria-selected="true"]{background:var(--ink);color:var(--card)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:8px 14px;border-radius:12px;border:1px solid transparent;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-primary{background:var(--accent);color:var(--on-accent)} .btn-primary:hover{background:var(--accent-h)}
+.btn-sec{background:var(--card);border-color:var(--line2)} .btn-sec:hover{background:var(--card-h)}
+.btn-quiet{background:transparent;color:var(--ink2)}
+.btn-wa{background:var(--wa);color:#0b2914}
+.btn-sm{min-height:36px;padding:4px 12px;font-size:13px}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.sec{margin-top:22px}
+.sec h2{font-size:16px;font-weight:600;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.sec h2 small{font-size:13px;font-weight:500;color:var(--ink3)}
+.chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;line-height:18px;border:1px solid var(--line2);background:var(--card);color:var(--ink2);white-space:nowrap}
+.c-ok{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok)}
+.c-warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+.c-info{background:var(--info-bg);border-color:var(--info-line);color:var(--info)}
+.c-danger{background:var(--danger-bg);border-color:var(--danger-line);color:var(--danger)}
+.lista{list-style:none;margin:0;padding:0}
+.lista>li{padding:14px 16px}
+.lista>li+li{border-top:1px solid var(--line)}
+.fila{display:flex;gap:12px;align-items:flex-start}
+.hora{flex:none;width:56px;font-weight:700;font-size:15px}
+.hora small{display:block;font-size:12px;font-weight:500;color:var(--ink3)}
+.quien{flex:1;min-width:0}
+.quien b{font-size:15px;font-weight:600}
+.meta{font-size:13px;color:var(--ink3)}
+.acciones{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.efecto{font-size:12px;color:var(--ink3);margin-top:6px}
+/* agenda */
+.agenda{padding:16px}
+.franja{display:grid;grid-template-columns:56px 1fr 74px;gap:10px;align-items:center;min-height:32px}
+.franja+.franja{margin-top:8px}
+.franja .h{font-weight:600;font-size:13px}
+.barra{height:12px;border-radius:999px;background:var(--bg);border:1px solid var(--line);overflow:hidden}
+.barra i{display:block;height:100%;border-radius:999px;background:var(--ink)}
+.barra i.alta{background:var(--warn)}
+.franja .n{text-align:right;font-size:13px;color:var(--ink2)}
+.leyenda{display:flex;justify-content:space-between;font-size:12px;color:var(--ink3);margin-top:12px}
+/* espera */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.stat{padding:14px 16px}
+.stat span{display:block;font-size:13px;color:var(--ink2)}
+.stat strong{display:block;font-size:24px;font-weight:700;margin-top:2px}
+.stat small{display:block;font-size:12px;color:var(--ink3)}
+.aviso{margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--warn-line);background:var(--warn-bg);font-size:13px}
+.aviso b{color:var(--warn)}
+.sugerida{margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sugerida .txt{flex:1;min-width:160px;font-size:13px}
+.sugerida .txt b{display:block;font-size:14px}
+/* hoja nueva */
+.hoja{padding:18px;margin-top:22px}
+.campos{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.campo label{display:block;font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:6px}
+.campo .in{min-height:48px;padding:10px 14px;border-radius:12px;border:1px solid var(--line2);background:var(--card);display:flex;align-items:center}
+.full{grid-column:1/-1}
+.capacidad{margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid var(--warn-line);background:var(--warn-bg)}
+.capacidad b{display:block;color:var(--warn)}
+.capacidad p{margin:2px 0 10px;font-size:13px;color:var(--ink2)}
+.ok{margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid var(--ok-line);background:var(--ok-bg);font-size:13px}
+.ok b{color:var(--ok)}
+.grid2{display:grid;gap:20px;grid-template-columns:1fr}
+@media (min-width:900px){.stage:not([data-w="390"]) .grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.oculto{display:none}
+.nota{font-size:12px;color:var(--ink3);margin-top:28px;text-align:center}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="demo" role="toolbar" aria-label="Controles de la maqueta">
+  <strong>Maqueta · Recepción (1.8)</strong>
+  <button data-w="390" aria-pressed="true">Móvil 390</button>
+  <button data-w="1280" aria-pressed="false">Escritorio 1280</button>
+  <button id="tema" aria-pressed="false">Tema oscuro</button>
+</div>
+
+<div class="stage" id="stage" data-w="390">
+<div class="app">
+  <div class="head">
+    <div><h1>Recepción</h1><p class="sub">Hoy, domingo 9 de noviembre · día de 5:00 a 5:00</p></div>
+  </div>
+
+  <div class="seg" role="tablist" aria-label="Recepción">
+    <button role="tab" aria-selected="true" data-v="reservas">Reservas</button>
+    <button role="tab" aria-selected="false" data-v="espera">Lista de espera · 3</button>
+  </div>
+
+  <!-- ═══════════ RESERVAS ═══════════ -->
+  <section id="v-reservas" aria-label="Reservas">
+    <div class="grid2">
+    <div>
+      <div class="card agenda" aria-label="Ocupación prevista de hoy">
+        <div class="head" style="align-items:center">
+          <h2 style="margin:0;font-size:16px">Agenda de hoy</h2>
+          <span class="chip">Aforo 40 · reservas de 90 min</span>
+        </div>
+        <div style="margin-top:14px" id="franjas"></div>
+        <div class="leyenda"><span>Personas previstas</span><span><span class="chip c-warn">80 % o más</span></span></div>
+      </div>
+
+      <div class="sec">
+        <h2>Llegan pronto <small>· próximas 2 horas</small></h2>
+        <div class="card"><ul class="lista">
+          <li><div class="fila"><div class="hora num">19:30<small>en 12 min</small></div><div class="quien"><b>Familia Juárez</b> <span class="chip c-info">Confirmada</span><div class="meta">6 personas · Mesa 12 prevista · +502 5555 0101</div>
+            <div class="acciones"><button class="btn btn-primary btn-sm">Llegó · sentar en 12</button><button class="btn btn-sec btn-sm">Otra mesa</button><button class="btn btn-quiet btn-sm">Cambiar hora</button></div></div></div></li>
+          <li><div class="fila"><div class="hora num">20:00<small>en 42 min</small></div><div class="quien"><b>Andrea López</b> <span class="chip c-warn">Pendiente</span><div class="meta">2 personas · sin mesa prevista</div>
+            <div class="acciones"><button class="btn btn-sec btn-sm">Confirmar</button><button class="btn btn-quiet btn-sm">Cambiar hora</button></div>
+            <div class="efecto">Confirmar aparta su lugar en la agenda; la mesa se elige al llegar.</div></div></div></li>
+          <li><div class="fila"><div class="hora num">20:30<small>en 1 h 12</small></div><div class="quien"><b>Cumpleaños Rivas</b> <span class="chip c-info">Confirmada</span><div class="meta">10 personas · Mesas 4+5 previstas · «pastel propio»</div></div></div></li>
+        </ul></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec" style="margin-top:0">
+        <h2>Por revisar <small>· días anteriores</small> <span class="chip c-warn">2</span></h2>
+        <div class="card"><ul class="lista">
+          <li><div class="fila"><div class="hora num">20:00<small>sáb 8</small></div><div class="quien"><b>Carlos Méndez</b> <span class="chip c-info">Confirmada</span><div class="meta">4 personas · nunca se marcó su llegada</div>
+            <div class="acciones"><button class="btn btn-sec btn-sm">Llegó</button><button class="btn btn-sec btn-sm">No asistió</button><button class="btn btn-quiet btn-sm">Cancelar</button></div>
+            <div class="efecto">«No asistió» queda en el historial del cliente; no se borra.</div></div></div></li>
+          <li><div class="fila"><div class="hora num">13:00<small>jue 6</small></div><div class="quien"><b>Lucía Pérez</b> <span class="chip c-warn">Pendiente</span><div class="meta">3 personas</div>
+            <div class="acciones"><button class="btn btn-sec btn-sm">Llegó</button><button class="btn btn-sec btn-sm">No asistió</button><button class="btn btn-quiet btn-sm">Cancelar</button></div></div></div></li>
+        </ul></div>
+      </div>
+
+      <div class="card hoja" aria-labelledby="nueva-t">
+        <h2 id="nueva-t" style="margin:0;font-size:16px;font-weight:600">Nueva reserva</h2>
+        <div class="campos">
+          <div class="campo full"><label>Nombre</label><div class="in">Grupo Morales</div></div>
+          <div class="campo"><label>Personas</label><div class="in num">8</div></div>
+          <div class="campo"><label>Teléfono</label><div class="in num">+502 5555 0199</div></div>
+          <div class="campo"><label>Fecha</label><div class="in">Hoy, dom 9</div></div>
+          <div class="campo"><label>Hora</label><div class="in num" id="hora-nueva">20:00</div></div>
+        </div>
+        <div class="capacidad" id="cap-mal" role="status">
+          <b>A las 20:00 quedan 6 lugares; este grupo es de 8</b>
+          <p>Entre 19:30 y 21:30 ya hay 34 personas reservadas de un aforo de 40.</p>
+          <div class="acciones" style="margin-top:0">
+            <button class="btn btn-sec btn-sm" data-hora="21:30">21:30 · quedan 18</button>
+            <button class="btn btn-sec btn-sm" data-hora="19:00">19:00 · quedan 12</button>
+            <button class="btn btn-quiet btn-sm">Reservar de todas formas</button>
+          </div>
+        </div>
+        <div class="ok oculto" id="cap-bien" role="status"><b>Hay lugar a las <span id="hora-ok">21:30</span>.</b> Quedan 18 de 40 en esa franja.</div>
+        <div class="acciones" style="margin-top:14px"><button class="btn btn-primary" id="guardar" disabled style="opacity:.5">Guardar reserva</button></div>
+      </div>
+    </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ LISTA DE ESPERA ═══════════ -->
+  <section id="v-espera" class="oculto" aria-label="Lista de espera">
+    <div class="stats">
+      <div class="card stat"><span>Esperando</span><strong class="num">3</strong><small>12 personas</small></div>
+      <div class="card stat"><span>Espera estimada</span><strong class="num">15–25 min</strong><small>según 6 grupos de hoy</small></div>
+    </div>
+
+    <div class="grid2">
+    <div class="sec">
+      <h2>En la cola</h2>
+      <div class="card"><ul class="lista" id="cola">
+        <li><div class="fila"><div class="hora num">19:12<small>18 min</small></div><div class="quien"><b>Familia Pérez</b> <span class="chip" id="estado-perez">Sin avisar</span><div class="meta">4 personas · +502 5700 1122</div>
+          <div class="sugerida"><div class="txt"><b>Mesa 7 está libre</b>La más justa para 4: no ocupa una de 6.</div><button class="btn btn-primary btn-sm">Sentar en 7</button><button class="btn btn-quiet btn-sm">Otra mesa</button></div>
+          <div class="acciones" id="acc-perez"><button class="btn btn-wa btn-sm" id="abrir-wa">Abrir WhatsApp</button><button class="btn btn-quiet btn-sm">Avisé en persona</button><button class="btn btn-quiet btn-sm">No llegó</button></div>
+          <div class="aviso oculto" id="pregunta"><b>¿Se envió el mensaje?</b> Abrir WhatsApp no confirma que lo recibieron.
+            <div class="acciones" style="margin-top:8px"><button class="btn btn-sec btn-sm" id="si-envie">Sí, le avisé</button><button class="btn btn-quiet btn-sm" id="no-envie">No se envió</button></div></div>
+        </div></div></li>
+        <li><div class="fila"><div class="hora num">19:20<small>10 min</small></div><div class="quien"><b>Diego y Ana</b> <span class="chip c-ok">Avisados por ti · 19:28</span><div class="meta">2 personas · por WhatsApp</div>
+          <div class="sugerida"><div class="txt"><b>Ninguna mesa de 2 libre</b>La 3 se libera pronto: está por cobrar.</div><button class="btn btn-sec btn-sm">Elegir mesa</button></div></div></div></li>
+        <li><div class="fila"><div class="hora num">19:26<small>4 min</small></div><div class="quien"><b>Sofía R.</b> <span class="chip">Sin avisar</span><div class="meta">6 personas · sin teléfono</div>
+          <div class="efecto">Un grupo posterior puede sentarse antes si su mesa se libera primero: el orden lo decides tú.</div></div></div></li>
+      </ul></div>
+    </div>
+
+    <div>
+      <div class="sec">
+        <h2>Por revisar <small>· días anteriores</small> <span class="chip c-warn">2</span></h2>
+        <div class="card"><ul class="lista">
+          <li><div class="fila"><div class="hora num">20:05<small>dom 26 oct</small></div><div class="quien"><b>Cristina Alvarado</b><div class="meta">4 personas · quedó esperando</div>
+            <div class="acciones"><button class="btn btn-sec btn-sm">No llegó</button><button class="btn btn-quiet btn-sm">Quitar de la lista</button></div></div></div></li>
+          <li><div class="fila"><div class="hora num">19:40<small>dom 26 oct</small></div><div class="quien"><b>Óscar Sandoval</b><div class="meta">2 personas · avisado, nunca se sentó</div>
+            <div class="acciones"><button class="btn btn-sec btn-sm">No llegó</button><button class="btn btn-quiet btn-sm">Quitar de la lista</button></div></div></div></li>
+        </ul></div>
+      </div>
+      <div class="sec">
+        <h2>Hoy <small>· ya atendidos</small></h2>
+        <div class="card"><ul class="lista">
+          <li><div class="fila"><div class="hora num">18:40</div><div class="quien"><b>Marco Barrios</b> <span class="chip c-ok">Sentados en la 9</span><div class="meta">2 personas · esperó 22 min</div></div></div></li>
+          <li><div class="fila"><div class="hora num">18:15</div><div class="quien"><b>Ana Cruz</b> <span class="chip">No llegó</span><div class="meta">3 personas · avisada 18:31</div></div></div></li>
+        </ul></div>
+      </div>
+    </div>
+    </div>
+  </section>
+  <p class="nota">Datos ficticios · Identidad actual depurada · prueba «Abrir WhatsApp» y las horas sugeridas</p>
+</div>
+</div>
+
+<script>
+const franjas=[['18:00',12],['19:00',28],['20:00',34],['21:00',22],['22:00',8]];
+document.getElementById('franjas').innerHTML=franjas.map(([h,n])=>`<div class="franja"><span class="h num">${h}</span><span class="barra" role="img" aria-label="${n} de 40 personas"><i class="${n>=32?'alta':''}" style="width:${n/40*100}%"></i></span><span class="n num">${n} / 40</span></div>`).join('');
+document.querySelectorAll('.seg [role=tab]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.seg [role=tab]').forEach(x=>x.setAttribute('aria-selected',x===b));
+  document.getElementById('v-reservas').classList.toggle('oculto',b.dataset.v!=='reservas');
+  document.getElementById('v-espera').classList.toggle('oculto',b.dataset.v!=='espera');
+});
+const estado=document.getElementById('estado-perez');
+document.getElementById('abrir-wa').onclick=()=>{estado.className='chip c-warn';estado.textContent='WhatsApp abierto · ¿se envió?';document.getElementById('pregunta').classList.remove('oculto');};
+document.getElementById('si-envie').onclick=()=>{estado.className='chip c-ok';estado.textContent='Avisados por ti · 19:31';document.getElementById('pregunta').classList.add('oculto');};
+document.getElementById('no-envie').onclick=()=>{estado.className='chip';estado.textContent='Sin avisar';document.getElementById('pregunta').classList.add('oculto');};
+document.querySelectorAll('[data-hora]').forEach(b=>b.onclick=()=>{
+  document.getElementById('hora-nueva').textContent=b.dataset.hora;document.getElementById('hora-ok').textContent=b.dataset.hora;
+  document.getElementById('cap-mal').classList.add('oculto');document.getElementById('cap-bien').classList.remove('oculto');
+  const g=document.getElementById('guardar');g.disabled=false;g.style.opacity=1;
+});
+document.querySelectorAll('.demo [data-w]').forEach(b=>b.onclick=()=>{document.getElementById('stage').dataset.w=b.dataset.w;document.querySelectorAll('.demo [data-w]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
+document.getElementById('tema').onclick=e=>{const d=document.documentElement;const dark=d.dataset.theme!=='dark';d.dataset.theme=dark?'dark':'light';e.currentTarget.setAttribute('aria-pressed',dark);};
+</script>
+</body>
+</html>

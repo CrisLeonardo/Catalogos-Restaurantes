@@ -6,6 +6,45 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+## v0.18.0 — 2026-11-10 · Auditoría integral: olas 0 y 1
+PR de integración `release/integracion-2026-11-09` (#72–#108) · migraciones 154–180. En producción: 155–180 en un solo script ANTES del despliegue y la 154 DESPUÉS ([guía, parte 7d](docs/guias/GUIA_DESPLIEGUE.md)).
+- **Correcciones de la Ola 0 que faltaban** (fichas 0.1–0.6, 0.8, 0.10, 0.11 y 0.13):
+  - textos y enlaces que prometían otra cosa (0.1);
+  - una sola fuente para precio y alcance de cada plan (0.2);
+  - un error de consulta ya no se muestra como vacío ni como cero (0.3);
+  - pausa de pedidos inmediata, confirmada y con fin automático (0.4, migración 155);
+  - cupones que valen el día completo en la zona del local, programados y con estado único (0.5, migración 154);
+  - pedido, cupón y puntos en una sola operación (0.6, migración 157);
+  - compras creadas en una transacción y sin reabrir una recibida (0.8, migración 159);
+  - un solo corte de caja por periodo y «sin apertura» marcado en el historial (0.10, migración 158);
+  - la cola offline dice si guardó y la del mesero se reenvía sola (0.11);
+  - pruebas del circuito del dinero en Postgres (0.13).
+- **Lo ya descrito abajo** de las fichas 0.7, 0.9, 0.12, 0.14–0.19 y 1.0–1.12.
+- **Herramienta:** `scripts/armar-migraciones-produccion.mjs` junta un rango de migraciones en un script transaccional con guarda contra doble aplicación.
+
+- **Pedido y seguimiento honestos del comensal** (auditoría 1.12):
+  - la confirmación dice «lo recibió; te avisamos cuando lo acepte», sin el «20–30 min» ni el «notificado al instante» fijos;
+  - el seguimiento muestra Recibido, Aceptado, En preparación (platos listos), Listo y Entregado con su hora real;
+  - si en 10 minutos no lo aceptan, lo dice y da el WhatsApp del local;
+  - la carta confirma la mesa del QR, y una mesa que no existe no recibe pedidos.
+- **Ficha y carrito del comensal** (auditoría 1.11):
+  - opciones inequívocas: lo obligatorio sin predeterminada empieza vacío y se respeta el mínimo;
+  - carrito accesible con «Cambiar» por línea;
+  - aviso de lealtad legible en oscuro;
+  - «Agotado · vuelve mañana» y «Otros» para lo que no tiene categoría.
+- **Inventario y agotados con intención** (auditoría 1.10, migración 180):
+  - agotar «hasta mañana», «hasta reponer» o «hasta que lo active», y agotar por ingrediente;
+  - cobertura «N de M» y «Por revisar hoy»;
+  - ajustes con motivo bajo bloqueo y activación del control en lote.
+- **Catálogo** (auditoría 1.9, migración 179): ficha progresiva, filtros combinables, cambios en lote con vista previa, duplicar y borrar categoría con destino.
+- **Recepción** (auditoría 1.8, migración 178): agenda con capacidad, «no asistió», aviso honesto y día de negocio.
+- **Permisos por trabajo** (auditoría 1.7, migración 177): plantillas por puesto, Caja separada en capacidades y arqueo ciego opcional.
+- **Navegación inferior del comensal y superadmin.** La cápsula sigue la referencia aprobada: gris claro, bisel elevado, selección negra e iconos junto al texto. El comensal muestra cantidad, producto e importe sobre la barra cuando tiene un carrito. Superadmin conserva tres accesos visibles y reúne los otros cuatro en «Más». El panel del restaurante conserva sus accesos operativos.
+- **Pedidos en vivo** (auditoría 1.6, migración 176). El tablero avisa cuando un filtro oculta una incidencia. Cada pedido tiene un historial de estados, anulaciones, cobros y avisos fallidos. Los avances y anulaciones del tablero recuperan el resultado de un reintento y detectan cambios hechos desde otro dispositivo.
+- **Cocina por etapa y estación** (auditoría 1.5, migración 175): cada puesto marca sus platos y Pase confirma cuándo los recoge Servicio. El tablero separa los tiempos de preparación y espera de salida, y muestra variantes, alérgenos, anulaciones y fallos de impresión en la comanda.
+- **Servicio estable por turno** (auditoría 1.4, migración 174): los favoritos tienen puestos fijos en cada dispositivo. Tomar pedidos busca por nombre o alias y conserva los borradores al cambiar de mesa. La comanda distingue saldo enviado, platos por enviar y notas para cocina.
+- **Salón y comanda** (auditoría 1.3, migración 173): el plano permanece junto a la comanda en escritorio y el teléfono abre cada mesa por separado. Cobrar conserva los pedidos pendientes de entrega. El personal confirma la limpieza antes de volver a sentar a un grupo. Traslados y llegadas desde Recepción actualizan la ocupación en una transacción.
+
 ## v0.17.0 — 2026-11-02 · Tomar pedidos como un POS y En línea con tope
 PR #63-#69 · migraciones 151-153 (en producción: la 152 ANTES del despliegue, la 151 cuando sea, la 153 DESPUÉS; la 149 ya no hace falta)
 - **El plano cabe en cualquier pantalla** (PR #63): en el teléfono el plano de Mesas medía 620 px de ancho mínimo y el de Tomar pedidos 460 px en 4:3 (el editor guarda 16:10), así que la página entera se corría de lado y las mesas se encimaban. Ahora los dos usan un visor común: se encuadra en lo dibujado, se gira 90° solo en pantalla vertical (con botón para girarlo a mano), las mesas miden lo que permite su vecina más cercana con 44 px de mínimo, y se acerca con dos dedos, Ctrl + rueda o botones; al acercar, cada mesa enseña más. Las zonas son pestañas tocables con cuántas mesas tienen gente («Salón 3/14»). «Fuera del plano» ya no cuenta las mesas colocadas en otra zona.

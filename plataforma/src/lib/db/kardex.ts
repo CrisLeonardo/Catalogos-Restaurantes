@@ -8,9 +8,22 @@ export type StockMovement = {
   unit_cost: number | null;
   avg_cost_after: number | null;
   created_at: string;
+  /** Nota del ajuste (migración 180). */
+  nota?: string | null;
+  /** Quién lo hizo, ya con nombre; null en ventas y movimientos automáticos. */
+  quien?: string | null;
 };
 
-const MOVEMENT_COLUMNS = 'id, delta, reason, balance_after, unit_cost, avg_cost_after, created_at';
+const MOVEMENT_COLUMNS = 'id, delta, reason, balance_after, unit_cost, avg_cost_after, created_at, nota, created_by';
+
+/** Pone el nombre de quien hizo cada movimiento (auditoría 1.10, R11.4). */
+async function conNombres(rows: (StockMovement & { created_by?: string | null })[]): Promise<StockMovement[]> {
+  const ids = [...new Set(rows.map((r) => r.created_by).filter((x): x is string => !!x))];
+  if (ids.length === 0) return rows.map(({ created_by: _c, ...r }) => ({ ...r, quien: null }));
+  const { data } = await createServiceClient().from('profiles').select('id, full_name').in('id', ids);
+  const nombres = new Map((data ?? []).map((p) => [p.id as string, (p.full_name as string | null) ?? null]));
+  return rows.map(({ created_by, ...r }) => ({ ...r, quien: created_by ? nombres.get(created_by) ?? 'Alguien del equipo' : null }));
+}
 
 export async function getProductMovements(restaurantId: string, productId: string, limit = 50): Promise<StockMovement[]> {
   const db = createServiceClient();
@@ -21,7 +34,7 @@ export async function getProductMovements(restaurantId: string, productId: strin
     .eq('product_id', productId)
     .order('created_at', { ascending: false })
     .limit(limit);
-  return (data ?? []) as StockMovement[];
+  return conNombres((data ?? []) as StockMovement[]);
 }
 
 export async function getIngredientMovements(restaurantId: string, ingredientId: string, limit = 50): Promise<StockMovement[]> {

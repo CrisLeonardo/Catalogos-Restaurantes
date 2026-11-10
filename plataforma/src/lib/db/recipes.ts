@@ -8,6 +8,8 @@ export type Ingredient = {
   cost_per_unit: number;
   created_at: string;
   updated_at: string;
+  /** «Se acabó»: sus platillos están agotados hasta decir «Ya hay» (migración 180). */
+  agotado_at?: string | null;
 };
 
 export type RecipeItem = {

@@ -41,6 +41,7 @@ export function orderClosedAt(o: Pick<Order, 'delivered_at' | 'cancelled_at' | '
 }
 
 export interface PanelOrders {
+  incompleto: boolean;
   /** Todo lo que sigue en curso, del más viejo al más nuevo (FIFO). */
   active: OrderWithItems[];
   /** Cerrados HOY según la hora del restaurante, del cierre más reciente atrás. */
@@ -97,7 +98,7 @@ export async function getPanelOrders(
     .filter((o) => diaDeNegocio(new Date(orderClosedAt(o)), timezone, corte) === todayKey)
     .sort((a, b) => orderClosedAt(b).localeCompare(orderClosedAt(a)));
 
-  return { active: mapOrderRows(activeRes.data), closedToday };
+  return { active: mapOrderRows(activeRes.data), closedToday, incompleto: !!(activeRes.error || closedRes.error) };
 }
 
 /** Una fila de "En curso" en la pantalla Hoy: lo justo para pintarla. */
@@ -211,22 +212,26 @@ export async function getKitchenOrders(
   confirmFirst = false,
 ): Promise<OrderWithItems[]> {
   const db = createServiceClient();
-  const statuses = confirmFirst ? ['PREP'] : ['NEW', 'PREP'];
-  const { data } = await db
+  const statuses = confirmFirst ? ['PREP', 'READY'] : ['NEW', 'PREP', 'READY'];
+  const desde = new Date(Date.now() - 60 * 60_000).toISOString();
+  const consulta = () => db
     .from('orders')
-    .select('*, items:order_items(*), voids:order_voids(*), waiter:profiles!orders_waiter_id_fkey(full_name)')
-    .eq('restaurant_id', restaurantId)
-    .in('status', statuses)
-    .order('created_at', { ascending: true })
-    .limit(60);
-
-  return ((data ?? []) as (Record<string, unknown>)[]).map((row) => {
-    const { waiter, ...order } = row as Record<string, unknown> & { waiter?: { full_name: string | null } | null };
-    return {
-      ...order,
-      waiter_name: waiter?.full_name ?? null,
-    } as OrderWithItems;
-  });
+    .select(ORDER_SELECT)
+    .eq('restaurant_id', restaurantId);
+  const [abiertas, recientes] = await Promise.all([
+    consulta().in('status', statuses).is('cocina_salida_at', null).order('created_at').order('id').limit(120),
+    consulta().or(`and(status.eq.CANCEL,cancelled_at.gte.${desde},auto_archived_at.is.null),cocina_salida_at.gte.${desde}`)
+      .order('created_at', { ascending: false }).order('id').limit(60),
+  ]);
+  if (abiertas.error && faltaLaColumna(abiertas.error)) {
+    const anterior = await consulta().in('status', statuses).order('created_at').order('id').limit(120);
+    if (anterior.error) throw new Error(anterior.error.message);
+    return mapOrderRows(anterior.data);
+  }
+  if (abiertas.error || recientes.error) throw new Error(abiertas.error?.message ?? recientes.error?.message);
+  const recordadas = mapOrderRows(recientes.data).filter((o) => o.status !== 'CANCEL' || !confirmFirst || !!o.accepted_at);
+  return [...mapOrderRows(abiertas.data), ...recordadas].sort((a, b) =>
+    a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
 }
 
 /** Mesa ocupada. Además del "desde cuándo" y el "quién atiende" de siempre,

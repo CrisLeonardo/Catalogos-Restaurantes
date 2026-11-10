@@ -14,7 +14,6 @@ import { decideTenantAccess, type TenantGuardInput } from './tenant-guard';
    un `x-tenant-slug` mandado por el cliente cambiaba el tenant que veía
    el servidor. */
 
-const ADMIN_URL = (slug: string) => `https://${slug}-admin.leogin.online`;
 
 const REST_A = { id: 'rest-a', organizationId: null };
 const REST_B = { id: 'rest-b', organizationId: null };
@@ -26,8 +25,6 @@ function input(over: Partial<TenantGuardInput> = {}): TenantGuardInput {
     profileOrganizationId: null,
     tenantSlug: 'restaurante-a',
     tenant: REST_A,
-    ownSlug: 'restaurante-a',
-    adminUrlFor: ADMIN_URL,
     ...over,
   };
 }
@@ -37,11 +34,11 @@ describe('dueño / staff de un restaurante', () => {
     expect(decideTenantAccess(input())).toEqual({ allow: true });
   });
 
-  it('en el subdominio de OTRO restaurante lo manda a su panel, no al ajeno', () => {
+  it('en un restaurante ajeno explica la denegación en Mi cuenta', () => {
     const d = decideTenantAccess(input({ tenantSlug: 'restaurante-b', tenant: REST_B }));
     expect(d).toEqual({
       allow: false,
-      redirectTo: 'https://restaurante-a-admin.leogin.online/menu',
+      redirectTo: '/mi-cuenta?acceso=sin-permiso',
     });
   });
 
@@ -52,16 +49,16 @@ describe('dueño / staff de un restaurante', () => {
     }
   });
 
-  it('sin restaurante propio al que volver, al login', () => {
+  it('sin restaurante propio también explica la denegación', () => {
     const d = decideTenantAccess(
-      input({ tenantSlug: 'restaurante-b', tenant: REST_B, ownSlug: null, profileRestaurantId: null }),
+      input({ tenantSlug: 'restaurante-b', tenant: REST_B, profileRestaurantId: null }),
     );
-    expect(d).toEqual({ allow: false, redirectTo: '/admin/login' });
+    expect(d).toEqual({ allow: false, redirectTo: '/mi-cuenta?acceso=sin-permiso' });
   });
 });
 
 describe('super admin', () => {
-  const sa = { role: 'SUPER_ADMIN', profileRestaurantId: null, ownSlug: null };
+  const sa = { role: 'SUPER_ADMIN', profileRestaurantId: null };
 
   it('entra directo a cualquier restaurante, sin pedir nada extra', () => {
     const d = decideTenantAccess(input({ ...sa, tenantSlug: 'restaurante-b', tenant: REST_B }));
@@ -71,7 +68,7 @@ describe('super admin', () => {
 
 describe('quien administra un grupo', () => {
   // Desde la migración 116 no hay rol que lo diga: lo dice tener organización.
-  const go = { role: 'RESTAURANT_OWNER', profileRestaurantId: null, profileOrganizationId: 'org-1', ownSlug: null };
+  const go = { role: 'RESTAURANT_OWNER', profileRestaurantId: null, profileOrganizationId: 'org-1' };
 
   it('entra a una sucursal de su grupo', () => {
     const d = decideTenantAccess(
@@ -86,7 +83,7 @@ describe('quien administra un grupo', () => {
     const d = decideTenantAccess(
       input({ ...go, tenantSlug: 'ajeno', tenant: { id: 'rest-b', organizationId: 'org-2' } }),
     );
-    expect(d).toEqual({ allow: false, redirectTo: '/mi-cuenta' });
+    expect(d).toEqual({ allow: false, redirectTo: '/mi-cuenta?acceso=sin-permiso' });
   });
 
   it('sin organización en su perfil tampoco entra', () => {
@@ -117,21 +114,20 @@ describe('varios restaurantes con una sola cuenta (migración 113)', () => {
         role: 'RESTAURANT_STAFF',
         isMember: true,
         profileRestaurantId: null,
-        ownSlug: null,
         tenantSlug: 'restaurante-b',
         tenant: REST_B,
       })),
     ).toEqual({ allow: true });
   });
 
-  it('sin membresía sigue rebotando al panel propio', () => {
+  it('sin membresía explica la denegación', () => {
     expect(
       decideTenantAccess(input({
         isMember: false,
         tenantSlug: 'restaurante-b',
         tenant: REST_B,
       })),
-    ).toEqual({ allow: false, redirectTo: `${ADMIN_URL('restaurante-a')}/menu` });
+    ).toEqual({ allow: false, redirectTo: '/mi-cuenta?acceso=sin-permiso' });
   });
 
   it('una membresía no cambia nada si el grupo es ajeno', () => {
@@ -144,11 +140,10 @@ describe('varios restaurantes con una sola cuenta (migración 113)', () => {
         isMember: false,
         profileRestaurantId: null,
         profileOrganizationId: 'org-1',
-        ownSlug: null,
         tenantSlug: 'ajeno',
         tenant: { id: 'rest-b', organizationId: 'org-2' },
       })),
-    ).toEqual({ allow: false, redirectTo: '/mi-cuenta' });
+    ).toEqual({ allow: false, redirectTo: '/mi-cuenta?acceso=sin-permiso' });
   });
 });
 
@@ -161,7 +156,7 @@ describe('casos borde', () => {
     const d = decideTenantAccess(input({ tenantSlug: 'no-existe', tenant: null }));
     expect(d).toEqual({
       allow: false,
-      redirectTo: 'https://restaurante-a-admin.leogin.online/menu',
+      redirectTo: '/mi-cuenta?acceso=no-disponible',
     });
   });
 
@@ -171,8 +166,8 @@ describe('casos borde', () => {
     // se leía como sesión perdida (y en el subdominio admin, "/" ni siquiera
     // es la portada: el proxy lo reescribe de vuelta a este mismo panel).
     const d = decideTenantAccess(
-      input({ tenantSlug: 'no-existe', tenant: null, ownSlug: null, profileRestaurantId: null }),
+      input({ tenantSlug: 'no-existe', tenant: null, profileRestaurantId: null }),
     );
-    expect(d).toEqual({ allow: false, redirectTo: '/mi-cuenta' });
+    expect(d).toEqual({ allow: false, redirectTo: '/mi-cuenta?acceso=no-disponible' });
   });
 });

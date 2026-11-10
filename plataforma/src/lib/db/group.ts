@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { getMyMemberships } from '@/lib/db/membership';
 import { withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
 import { adminUrl } from '@/lib/tenant';
+import { pausaVigente } from '@/lib/pausa-pedidos';
 import { getOrderStats } from '@/lib/db/orders';
 import { getSalesReport, type SalesReport } from '@/lib/db/reports';
 import type { Organization, Restaurant } from '@/types';
@@ -187,7 +188,7 @@ export async function getGroupDashboard(branches: Restaurant[]): Promise<GroupDa
       id: b.id, name: b.name, slug: b.slug,
       todaySales: st.todaySales, todayOrders: st.todayOrders, todayTicket: st.todayTicket,
       sales14: st.totalLast14,
-      paused: b.orders_paused === true,
+      paused: pausaVigente(b),
       lowStock: ls.low, outStock: ls.out,
     };
   });
@@ -225,6 +226,9 @@ export type BranchFigures = {
   cost: number;
   /** Ingreso de los platillos con costo: la base del margen. */
   costedRevenue: number;
+  /** Ingreso de platillos (sin envío ni propina): contra esto se mide
+      cuánto de lo vendido tiene costo (auditoría 2026-11-03, X21). */
+  productRevenue: number;
   marginPct: number | null;
 };
 
@@ -234,6 +238,7 @@ export type GroupReport = {
   totalProfit: number;
   totalCost: number;
   totalCostedRevenue: number;
+  totalProductRevenue: number;
   /** null si ningún platillo vendido tiene costo cargado. */
   totalMarginPct: number | null;
   perBranch: BranchFigures[];
@@ -252,6 +257,7 @@ export async function getGroupReport(branches: Restaurant[], from: string, to: s
     id: b.id, name: b.name,
     revenue: reports[i].revenue, orders: reports[i].orders, profit: reports[i].profit,
     cost: reports[i].cost, costedRevenue: reports[i].costedRevenue,
+    productRevenue: reports[i].productRevenue,
     marginPct: marginOf(reports[i].profit, reports[i].costedRevenue),
   })).sort((a, b) => b.revenue - a.revenue);
 
@@ -276,6 +282,7 @@ export async function getGroupReport(branches: Restaurant[], from: string, to: s
     totalProfit,
     totalCost: perBranch.reduce((s, b) => s + b.cost, 0),
     totalCostedRevenue,
+    totalProductRevenue: perBranch.reduce((s, b) => s + b.productRevenue, 0),
     totalMarginPct: marginOf(totalProfit, totalCostedRevenue),
     perBranch,
     combinedSeries,

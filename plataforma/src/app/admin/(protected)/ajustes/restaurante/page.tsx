@@ -51,13 +51,18 @@ export default async function AdminHorariosPage() {
 
   if (!restaurant) redirect('/admin/login');
 
+  // Hora de este pintado: la tarjeta de pausa la usa en su primer render para
+  // que «faltan N min» salga igual en el servidor y en el navegador.
+  // eslint-disable-next-line react-hooks/purity
+  const pintadoEn = Date.now();
+
   return (
     <div className="anim-fade-up adm-w-read">
       <p className="mb-5 text-[14px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
-        Cuándo abres cada día, y el interruptor para dejar de recibir pedidos
-        sin cerrar tu menú.
+        Cuándo abres cada día, y la pausa para dejar de recibir pedidos un
+        rato sin cerrar tu menú.
       </p>
-      <HoursEditor restaurant={restaurant as Restaurant} />
+      <HoursEditor restaurant={restaurant as Restaurant} pintadoEn={pintadoEn} />
     </div>
   );
 }

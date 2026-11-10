@@ -22,6 +22,7 @@
      · un grupo OBLIGATORIO sin responder, señalado en la propia hoja (y
        no con un `alert()` del sistema operativo, como se llegó a hacer). */
 
+import { OPCIONES_AGOTADO, type AgotadoHasta } from '@/lib/product-availability';
 import { useMemo, useState } from 'react';
 import { Icon } from '@/components/icons';
 import { Hoja, HojaHead, Kicker, Mono } from '@/components/admin/servicio/pieces';
@@ -29,8 +30,7 @@ import { money as fmtMoney, newLineId, type CartLine } from '@/components/admin/
 import type { PanelCurrency } from '@/components/admin/order-card';
 import type { Product, ProductOptionGroup } from '@/types';
 
-/** Sin `line`: los valores por omisión (single obligatorio → la primera;
-    combo → todo incluido). Con `line`: la selección exacta que tenía. */
+/** Un combo empieza completo. Los grupos obligatorios esperan una elección. */
 function seleccionInicial(groups: ProductOptionGroup[], line?: CartLine): Record<string, string[]> {
   const sel: Record<string, string[]> = {};
   for (const g of groups) {
@@ -39,7 +39,6 @@ function seleccionInicial(groups: ProductOptionGroup[], line?: CartLine): Record
       continue;
     }
     if (g.type === 'combo') sel[g.id] = g.choices.map((c) => c.id);
-    else if (g.type === 'single' && g.required && g.choices.length > 0) sel[g.id] = [g.choices[0].id];
     else sel[g.id] = [];
   }
   return sel;
@@ -71,7 +70,7 @@ export interface HojaOpcionesProps {
   onSave: (lineId: string, line: Omit<CartLine, 'lineId'>) => void;
   onClose: () => void;
   /** «Marcar agotado» (el 86 de Toast). Solo llega si quien mira tiene permiso de carta. */
-  onAgotar?: () => void;
+  onAgotar?: (hasta: AgotadoHasta) => void;
 }
 
 export default function HojaOpciones({
@@ -134,11 +133,9 @@ export default function HojaOpciones({
   }, [groups, selected, variantes]);
 
   const unidad = product.price + opciones.reduce((s, o) => s + o.priceDelta, 0);
+  const sinResponder = groups.find((g) => g.type === 'single' && g.required && !(selected[g.id]?.length));
 
   function confirmar() {
-    const sinResponder = groups.find(
-      (g) => g.type === 'single' && g.required && !(selected[g.id]?.length),
-    );
     if (sinResponder) {
       setFalta(sinResponder.id);
       document.getElementById(`sv-grupo-${sinResponder.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -147,7 +144,7 @@ export default function HojaOpciones({
     const limpia = nota.trim() || undefined;
     if (initialLine) {
       onSave(initialLine.lineId, {
-        productId: product.id, name: product.name, price: unidad,
+        productId: product.id, name: product.name, price: product.price,
         quantity: qty, options: opciones, note: limpia,
       });
       return;
@@ -157,7 +154,7 @@ export default function HojaOpciones({
        del mismo plato con las mismas opciones. */
     onAdd({
       lineId: newLineId(product.id),
-      productId: product.id, name: product.name, price: unidad,
+      productId: product.id, name: product.name, price: product.price,
       quantity: qty, options: opciones, note: limpia,
     });
   }
@@ -260,6 +257,7 @@ export default function HojaOpciones({
             value={nota}
             onChange={(e) => setNota(e.target.value.slice(0, 140))}
             placeholder="Ej. la salsa aparte"
+            aria-label="Nota para cocina"
           />
         </div>
 
@@ -288,22 +286,36 @@ export default function HojaOpciones({
             </button>
           </div>
           <button type="button" className="sv-cta" onClick={confirmar}>
-            {initialLine ? 'Guardar' : 'Agregar'} · {money(unidad * qty)}
+            {sinResponder ? `Elegir ${sinResponder.name.toLowerCase()}` : `${initialLine ? 'Guardar' : 'Agregar'} · ${money(unidad * qty)}`}
           </button>
         </div>
 
         {/* Dos toques, como «Liberar mesa»: agotar un plato lo apaga en
-            todas las tablets y en el menú del comensal. */}
+            todas las tablets y en el menú del comensal. El segundo toque
+            dice hasta cuándo (auditoría 1.10, O04); el primero de la lista
+            es la opción por omisión, «Hasta mañana». */}
         {onAgotar && !initialLine && (
-          <button
-            type="button"
-            className="sv-cta"
-            data-tone={confirmarAgotado ? 'danger' : 'quiet'}
-            style={confirmarAgotado ? { height: 46 } : { height: 46, color: 'var(--c-danger)' }}
-            onClick={() => (confirmarAgotado ? onAgotar() : setConfirmarAgotado(true))}
-          >
-            {confirmarAgotado ? 'Toca otra vez: se apaga en todo el local' : 'Se acabó · marcar agotado'}
-          </button>
+          confirmarAgotado ? (
+            <div role="group" aria-label="Agotar: hasta cuándo" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-2)' }}>Se apaga en todo el local. ¿Hasta cuándo?</p>
+              {OPCIONES_AGOTADO.map((o, i) => (
+                <button key={o.key} type="button" className="sv-cta" data-tone={i === 0 ? 'danger' : 'quiet'}
+                  style={{ height: 48 }} onClick={() => onAgotar(o.key)}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="sv-cta"
+              data-tone="quiet"
+              style={{ height: 46, color: 'var(--c-danger)' }}
+              onClick={() => setConfirmarAgotado(true)}
+            >
+              Se acabó · marcar agotado
+            </button>
+          )
         )}
       </div>
     </Hoja>

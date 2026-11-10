@@ -1,11 +1,12 @@
 import { redirect } from 'next/navigation';
 import { cookies, headers } from 'next/headers';
 import { getStaffUser } from '@/lib/supabase/server';
+import { accesoAlPanel } from '@/lib/auth/panel-destino';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { can } from '@/lib/permissions';
 import type { ModulesMap } from '@/lib/modules';
-import { adminUrl, authPathFor } from '@/lib/tenant';
+import { authPathFor } from '@/lib/tenant';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import { isSessionStale, SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
 import { CAMBIO_OBLIGATORIO, debeCambiarContrasena } from '@/lib/auth/password-change-rules';
@@ -38,7 +39,7 @@ export default async function KitchenLayout({ children }: { children: React.Reac
   const tenantSlug = headersList.get('x-tenant-slug');
 
   const { data: { user } } = await getStaffUser();
-  if (!user) redirect(authPathFor('/admin/login', tenantSlug));
+  if (!user) redirect(accesoAlPanel(tenantSlug, headersList.get('x-pathname')));
 
   const db = createServiceClient();
   const { data: profile } = await db
@@ -71,9 +72,6 @@ export default async function KitchenLayout({ children }: { children: React.Reac
   if (debeCambiarContrasena(user)) redirect(CAMBIO_OBLIGATORIO);
 
   const tenant = tenantSlug ? await getRestaurantBySlug(tenantSlug) : null;
-  const own = profile.restaurant_id
-    ? await db.from('restaurants').select('slug').eq('id', profile.restaurant_id).maybeSingle()
-    : null;
 
   // Qué es esta persona EN ESTE restaurante (migración 113) — mismo criterio
   // que el panel de mesero: el permiso se comprueba con lo que es AQUÍ.
@@ -92,14 +90,12 @@ export default async function KitchenLayout({ children }: { children: React.Reac
     tenant: tenant
       ? { id: tenant.restaurant.id, organizationId: tenant.restaurant.organization_id ?? null }
       : null,
-    ownSlug: (own?.data?.slug as string | null) ?? null,
-    adminUrlFor: adminUrl,
   });
   if (!access.allow) redirect(access.redirectTo);
 
   // SUPER_ADMIN no tiene restaurant_id propio: lo resuelve el subdominio (que
   // el candado de arriba ya validó).
-  const restaurantId = (profile.restaurant_id as string | null) ?? tenant?.restaurant.id ?? null;
+  const restaurantId = tenant?.restaurant.id ?? (profile.restaurant_id as string | null);
   if (!restaurantId) redirect(profile.role === 'SUPER_ADMIN' ? '/super/restaurantes' : '/admin/login');
 
   let restaurantName = 'Restaurante';
@@ -137,11 +133,7 @@ export default async function KitchenLayout({ children }: { children: React.Reac
       role={profile.role}
       permissions={profile.permissions}
       userName={profile.full_name}
-      canManageStaff={
-        effective.memberRole === 'MANAGER'
-        || profile.role === 'RESTAURANT_OWNER'
-        || profile.role === 'SUPER_ADMIN'
-      }
+      canManageStaff={profile.role === 'SUPER_ADMIN' || can(effective.role, effective.permissions, 'personal')}
       isOperatorSession={isOperatorSession}
     >
       <OfflineSupport />

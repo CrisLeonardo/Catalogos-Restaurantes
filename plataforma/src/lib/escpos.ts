@@ -168,6 +168,7 @@ export interface KitchenTicketOptions {
   /** Copia pedida a mano ("Reimprimir comanda"): la cocina NO debe cocinarlo
       otra vez. Sin este aviso, un papel repetido es un plato repetido. */
   reprint?: boolean;
+  copyReason?: string;
   /** De qué estación es este papel (migración 130, M-07). Sin esto la
       cabecera decía «COCINA» fija, y en un local con barra el cantinero
       recibía un papel que se anunciaba como de cocina. */
@@ -197,6 +198,7 @@ export function buildKitchenEscPos(
 
   if (reprint) {
     b.bold(true).line('** COPIA - NO COCINAR **').bold(false);
+    if (opts.copyReason) b.line(`Motivo: ${opts.copyReason}`);
   }
 
   // El nombre de la estación, no «COCINA» a secas: en un local con barra
@@ -359,6 +361,7 @@ export function buildReceiptEscPos(
   restaurantName: string,
   format: TicketFormat = DEFAULT_TICKET_FORMAT,
   fel?: FelTicket | null,
+  pagosMesa?: { method: string; amount: number }[],
 ): Uint8Array {
   const b = new EscPosBuilder();
   const fm = (n: number) => fmtMoney(n, currency);
@@ -407,7 +410,9 @@ export function buildReceiptEscPos(
    .bold(true).row('TOTAL', fm(Number(order.total))).bold(false)
    .sep('-');
 
-  if (order.order_type !== 'DINE_IN' || order.status === 'DELIVERED') {
+  if (pagosMesa?.length) {
+    for (const pago of pagosMesa) b.row(labelOf(pago.method), fm(pago.amount));
+  } else if (order.order_type !== 'DINE_IN' || order.status === 'DELIVERED') {
     b.line(labelOf(order.payment_method));
     if (countsAsCash(order.payment_method) && order.cash_amount && order.cash_amount > 0) {
       const change = Number(order.cash_amount) - Number(order.total);

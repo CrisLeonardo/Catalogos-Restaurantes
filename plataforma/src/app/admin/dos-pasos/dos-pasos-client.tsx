@@ -35,9 +35,11 @@ function agrupar(secreto: string): string {
 export default function DosPasosClient({
   paso,
   correo,
+  next,
 }: {
   paso: 'inscribir' | 'verificar';
   correo: string | null;
+  next: string | null;
 }) {
   const [state, formAction, isPending] = useActionState(confirmarCodigo, empty);
   // Navegación de DOCUMENTO, no `redirect()` del servidor: mismo motivo que
@@ -158,6 +160,7 @@ export default function DosPasosClient({
 
       {pedirCodigo && (
         <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {next && <input type="hidden" name="next" value={next} />}
           {lista && <input type="hidden" name="factorId" value={lista.factorId} />}
           <div>
             <label htmlFor="codigo" style={labelStyle}>Código de 6 cifras</label>

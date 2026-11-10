@@ -37,6 +37,7 @@ export type TableSeating = {
   note: string | null;
   /** Alergias de la mesa (migración 151). Salen en cada comanda. */
   allergies?: string | null;
+  limpiezaDesde?: string | null;
 };
 
 /**
@@ -128,7 +129,8 @@ export async function getOpenTableSessions(
   /* `allergies` es de la 151. Donde no ha corrido, pedirla tumbaría la
      consulta entera y TODAS las mesas sentadas se verían libres: se
      reintenta sin ella, como `party_size` en la ocupación. */
-  let { data, error } = await pedir(', allergies');
+  let { data, error } = await pedir(', allergies, limpieza_desde');
+  if (error && faltaLaColumna(error)) ({ data, error } = await pedir(', allergies'));
   if (error && faltaLaColumna(error)) ({ data, error } = await pedir(''));
 
   if (error) return {};
@@ -153,6 +155,7 @@ export async function getOpenTableSessions(
       source: (row.source as TableSeating['source']) ?? 'walk_in',
       note: (row.note as string | null) ?? null,
       allergies: (row.allergies as string | null | undefined) ?? null,
+      limpiezaDesde: (row.limpieza_desde as string | null | undefined) ?? null,
     };
   }
   return out;
@@ -167,25 +170,27 @@ export async function getOpenTableSessions(
  * mesa está libre si no tiene ni pedido vivo ni turno abierto — las dos
  * mitades de la ocupación, igual que en el salón.
  */
-export async function getFreeTableNumbers(restaurantId: string): Promise<number[]> {
-  if (!restaurantId) return [];
-  const db = createServiceClient();
+export type MesaRecepcion = { n: number; capacidad: number | null };
 
-  const [{ data: themeRow }, ocupadas, sentadas] = await Promise.all([
-    db.from('restaurant_themes').select('*').eq('restaurant_id', restaurantId).maybeSingle(),
+export async function getMesasConfiguradas(restaurantId: string): Promise<MesaRecepcion[]> {
+  const { data, error } = await createServiceClient().from('restaurant_themes').select('*')
+    .eq('restaurant_id', restaurantId).maybeSingle();
+  if (error) throw new Error(error.message);
+  const { dineInTableCount, floorPlan } = resolveTheme((data as ThemeRow) ?? null).config;
+  const capacidades = new Map(floorPlan.enabled ? floorPlan.tables.map((t) => [t.n, t.seats ?? null]) : []);
+  return Array.from({ length: dineInTableCount }, (_, i) => ({ n: i + 1, capacidad: capacidades.get(i + 1) ?? null }));
+}
+
+export async function getMesasLibres(restaurantId: string): Promise<MesaRecepcion[]> {
+  if (!restaurantId) return [];
+
+  const [mesas, ocupadas, sentadas] = await Promise.all([
+    getMesasConfiguradas(restaurantId),
     getActiveTableNumbers(restaurantId),
     getOpenTableSessions(restaurantId),
   ]);
 
-  const total = resolveTheme((themeRow as ThemeRow) ?? null).config.dineInTableCount;
-  const tomadas = new Set([
-    ...Object.keys(ocupadas).map(Number),
-    ...Object.keys(sentadas).map(Number),
-  ]);
-
-  const libres: number[] = [];
-  for (let n = 1; n <= total; n++) if (!tomadas.has(n)) libres.push(n);
-  return libres;
+  return mesas.filter(({ n }) => !ocupadas[n] && !sentadas[n]);
 }
 
 /**

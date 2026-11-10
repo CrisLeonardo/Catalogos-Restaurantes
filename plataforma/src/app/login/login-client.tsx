@@ -30,9 +30,10 @@ interface Props {
   pinAllowed?: boolean;
   /** ¿Es este uno de los aparatos del local? Si lo es, se abre en la grilla. */
   pinTrusted?: boolean;
+  next?: string | null;
 }
 
-export default function LoginClient({ restaurantName, restaurantId, logoUrl, slug, resume, hubUrl, hubToken, googleEnabled, authError, pinAllowed = true, pinTrusted = false }: Props) {
+export default function LoginClient({ restaurantName, restaurantId, logoUrl, slug, resume, hubUrl, hubToken, googleEnabled, authError, pinAllowed = true, pinTrusted = false, next }: Props) {
   // En el aparato del local se abre DIRECTO en la grilla de PIN. Antes había
   // que pulsar "Soy personal del restaurante" antes de ver los nombres, cada
   // vez, todo el día: en el mostrador ese toque se paga quince veces por
@@ -130,7 +131,7 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
         {resume && (
           <Glass style={{ padding: '18px 20px', marginBottom: 14 }}>
             <a
-              href={resume.url}
+              href={next ?? resume.url}
               className="press btn-accent"
               style={{
                 display: 'block',
@@ -196,7 +197,7 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
               el orden que espera el mercado (Shopify, Square, Toast). */}
           {googleEnabled && (
             <div style={{ marginBottom: 18 }}>
-              <GoogleStaffButton />
+              <GoogleStaffButton next={next ?? undefined} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18 }}>
                 <span style={{ flex: 1, height: 1, background: 'var(--u-hair-2)' }} />
                 <span style={{ fontSize: 11, color: 'var(--u-text-4)', whiteSpace: 'nowrap' }}>o con tu correo</span>
@@ -206,6 +207,7 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
           )}
 
           <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {next && <input type="hidden" name="next" value={next} />}
             <div>
               <label
                 htmlFor="email"

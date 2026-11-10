@@ -209,10 +209,11 @@ export interface FalloDeImpresion {
 export async function getFallosDeImpresion(
   restaurantId: string,
   orderIds: readonly string[],
+  incluirCocinaGeneral = false,
 ): Promise<Record<string, FalloDeImpresion[]>> {
   if (orderIds.length === 0) return {};
   const estaciones = await getPrintStations(restaurantId);
-  if (estaciones.length === 0) return {};
+  if (estaciones.length === 0 && !incluirCocinaGeneral) return {};
 
   const db = createServiceClient();
   const { data } = await db
@@ -225,6 +226,7 @@ export async function getFallosDeImpresion(
 
   const porDefecto = estaciones.find((e) => e.isDefault) ?? null;
   const nombre = new Map(estaciones.map((e) => [e.id, e.name]));
+  if (incluirCocinaGeneral) nombre.set('', 'Cocina');
 
   // Último estado conocido de cada par (pedido, estación). Como la consulta
   // viene ordenada por fecha, el último que se escribe gana.
@@ -232,8 +234,8 @@ export async function getFallosDeImpresion(
   for (const job of data ?? []) {
     // Un trabajo anterior a la migración 130 no tiene estación: es de la de
     // por defecto, igual que para el candado anti-duplicado.
-    const stationId = (job.station_id as string | null) ?? porDefecto?.id ?? null;
-    if (!stationId || !nombre.has(stationId)) continue;
+    const stationId = (job.station_id as string | null) ?? porDefecto?.id ?? (incluirCocinaGeneral ? '' : null);
+    if (stationId == null || !nombre.has(stationId)) continue;
     const orderId = job.order_id as string;
     ultimo.set(`${orderId}|${stationId}`, { orderId, stationId, status: job.status as string });
   }

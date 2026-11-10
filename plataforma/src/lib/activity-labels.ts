@@ -43,6 +43,10 @@ const num = (v: unknown): number | null => {
 
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
 
+const MOTIVO_AJUSTE: Record<string, string> = {
+  reposicion: 'reposición', merma: 'merma', conteo: 'conteo físico', correccion: 'corrección', consumo: 'consumo del personal', otro: 'otro',
+};
+
 /** Importe de una opción: «+Q5.00», «−Q2.00», «Q0.00». */
 const signo = (n: number) => (n > 0 ? `+${fmtMoney(n)}` : n < 0 ? `−${fmtMoney(-n)}` : fmtMoney(0));
 
@@ -103,6 +107,25 @@ function queHizo(r: ActivityLike): string {
       if (m.password_reset) return `cambió la contraseña de ${nombre || 'un miembro del personal'}`;
       return `editó ${nombre ? `a ${nombre}` : 'el personal'}`;
     }
+    case 'permisos': {
+      // Auditoría 1.7: la migración 177 deja constancia sin actor; el dueño
+      // o un encargado, con el suyo.
+      const nombre = esUuid(e) ? 'un miembro del personal' : e;
+      if (m.motivo === 'migracion_177') {
+        return m.heredado ? `se conservó el acceso completo de ${nombre}; revisa su trabajo` : `se separaron las tareas de Caja para ${nombre}`;
+      }
+      return `cambió lo que puede hacer ${nombre}`;
+    }
+    case 'reserva_sobrecupo':
+      return `reservó por encima del aforo${e ? ` — ${e}` : ''}${num(m.personas) != null ? ` (${m.personas} personas, ${m.ocupadas} de ${m.aforo} ya ocupados)` : ''}`;
+    case 'reserva_no_asistio':
+      return `marcó que no asistió la reserva de ${e || 'un cliente'}`;
+    case 'espera_no_llego':
+      return `marcó que no llegó ${e || 'un grupo de la lista de espera'}`;
+    case 'ajuste':
+      if (typeof m.arqueo_ciego === 'boolean') return m.arqueo_ciego ? 'activó el arqueo ciego' : 'desactivó el arqueo ciego';
+      if (num(m.duracion_reserva_min) != null) return `fijó la duración de las reservas en ${m.duracion_reserva_min} min`;
+      return `cambió un ajuste${e ? ` — ${e}` : ''}`;
     case 'staff_pin_login':
       return 'entró con su PIN';
     case 'channel_toggle':
@@ -124,11 +147,32 @@ function queHizo(r: ActivityLike): string {
     case 'whatsapp_disconnect':
       return 'desconectó WhatsApp';
     case 'stock': {
+      // Desde la 180 la entidad es el nombre del platillo y lleva motivo (1.10).
       const delta = num(m.delta);
+      const quien = e && !esUuid(e) ? ` de «${e}»` : '';
+      const por = typeof m.motivo === 'string' && MOTIVO_AJUSTE[m.motivo] ? ` · ${MOTIVO_AJUSTE[m.motivo]}` : '';
+      const nota = typeof m.nota === 'string' && m.nota ? ` — «${m.nota}»` : '';
       return delta != null && delta !== 0
-        ? `ajustó el inventario (${delta > 0 ? '+' : ''}${delta})`
-        : 'ajustó el inventario';
+        ? `ajustó las existencias${quien} (${delta > 0 ? '+' : '−'}${Math.abs(delta)}${por})${nota}`
+        : `ajustó las existencias${quien}`;
     }
+    /* ── Inventario y agotados (auditoría 1.10) ── */
+    case 'agotado': {
+      const hasta = m.hasta === 'manana' ? 'hasta mañana' : m.hasta === 'reponer' ? 'hasta reponer' : 'hasta que lo active';
+      return `agotó «${e}» ${hasta}`;
+    }
+    case 'ingrediente_agotado': {
+      const n = num(m.platillos) ?? 0;
+      return `marcó que se acabó ${e}${n > 0 ? ` (${plural(n, 'platillo agotado', 'platillos agotados')})` : ''}`;
+    }
+    case 'ingrediente_repuesto': {
+      const n = num(m.platillos) ?? 0;
+      return `marcó que ya hay ${e}${n > 0 ? ` (${plural(n, 'platillo vuelve', 'platillos vuelven')})` : ''}`;
+    }
+    case 'inventario_activado':
+      return `activó el control de existencias de ${e}`;
+    case 'inventario_desactivado':
+      return `dejó de contar las existencias de «${e}»`;
     case 'promo':
       return `cambió la promoción «${e}»`;
     /* ── Antifraude (PROD-10): precios, borrados, cupones, gastos,
@@ -154,8 +198,36 @@ function queHizo(r: ActivityLike): string {
       const precio = num(m.precio);
       return `borró el platillo «${e}»${precio != null ? ` de ${fmtMoney(precio)}` : ''}`;
     }
-    case 'categoria_borrada':
-      return `borró la categoría «${e}»`;
+    case 'categoria_borrada': {
+      // Desde la 179 dice a dónde pasaron sus platillos (auditoría 1.9, R09.4).
+      const movidos = num(m.movidos) ?? 0;
+      return movidos > 0 && typeof m.destino === 'string'
+        ? `borró la categoría «${e}» y pasó ${plural(movidos, 'platillo', 'platillos')} a «${m.destino}»`
+        : `borró la categoría «${e}»`;
+    }
+    /* ── Catálogo (auditoría 1.9) ── */
+    case 'catalogo_lote': {
+      const n = num(m.productos) ?? 0;
+      const c = (m.cambio ?? {}) as { disponible?: boolean; visible?: boolean; categoria?: string; precio?: { modo?: string; valor?: unknown } };
+      const que: string[] = [];
+      if (c.precio) {
+        const v = num(c.precio.valor) ?? 0;
+        const cuanto = c.precio.modo === 'porcentaje' ? `${Math.abs(v)} %` : fmtMoney(Math.abs(v));
+        que.push(`${v >= 0 ? 'subió' : 'bajó'} el precio ${cuanto}`);
+      }
+      if (c.disponible === false) que.push('los marcó agotados');
+      if (c.disponible === true) que.push('los marcó disponibles');
+      if (c.visible === false) que.push('los ocultó del menú');
+      if (c.visible === true) que.push('los mostró en el menú');
+      if (c.categoria) que.push('los cambió de categoría');
+      return `cambió ${plural(n, 'platillo', 'platillos')} a la vez${que.length ? `: ${que.join(', ')}` : ''}`;
+    }
+    case 'catalogo_sellos_a_dietas': {
+      const n = num(m.productos);
+      return `pasó a dietas los sellos repetidos${n != null ? ` de ${plural(n, 'platillo', 'platillos')}` : ''}`;
+    }
+    case 'platillo_duplicado':
+      return `duplicó el platillo «${e}» (la copia quedó oculta)`;
     case 'cupon': {
       const cuanto = descuentoDeCupon(m.tipo, m.valor);
       switch (m.evento) {

@@ -5,6 +5,8 @@ import { headers } from 'next/headers';
 import { getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { LEGACY_ROLE, type MemberRole, type Membership, type MembershipCard } from '@/lib/membership-roles';
+import { faltaLaColumna } from '@/lib/db/migracion-ausente';
+import { pausaVigente, type PausaGuardada } from '@/lib/pausa-pedidos';
 
 /* ============================================================
    MEMBRESÍAS — una persona, varios restaurantes (migración 113)
@@ -92,15 +94,14 @@ export async function resolveOwnRestaurantId(
     .select('id')
     .eq('slug', tenantSlug)
     .maybeSingle();
-  if (!tenant) return profileRestaurantId ?? null;
+  if (!tenant) return null;
 
   const tenantId = tenant.id as string;
   if (tenantId === profileRestaurantId) return tenantId;
 
-  // Solo se acepta el restaurante del subdominio si de verdad es suyo. Sin
-  // membresía se devuelve el de siempre, y el candado de tenant (que corre
-  // en el layout) ya habrá impedido que esta persona esté viendo esa página.
-  return (await getMyMembership(tenantId)) ? tenantId : (profileRestaurantId ?? null);
+  // Una Server Action puede invocarse sin pasar por el layout. Si la ruta
+  // pide B y no tiene acceso, se rechaza: nunca se escribe en A como respaldo.
+  return (await getMyMembership(tenantId)) ? tenantId : null;
 }
 
 /**
@@ -178,11 +179,17 @@ export async function getMyRestaurantCards(): Promise<MembershipCard[]> {
   const db = createServiceClient();
   const ids = memberships.map((m) => m.restaurantId);
 
+  // `entry_pin_hash` (migración 113) va aquí porque esta pantalla no existe
+  // sin esa misma migración: si no hay membresías, no hay tarjetas que
+  // pintar y no se llega hasta aquí. `orders_paused_until` (155) sí puede
+  // faltar: sin ella se pide lo de antes y la pausa vale hasta reactivar.
+  const COLUMNAS = 'id, name, slug, orders_paused, entry_pin_hash';
+  const leerLocales = async () => {
+    const conFin = await db.from('restaurants').select(`${COLUMNAS}, orders_paused_until`).in('id', ids);
+    return faltaLaColumna(conFin.error) ? db.from('restaurants').select(COLUMNAS).in('id', ids) : conFin;
+  };
   const [{ data: restaurants }, { data: themes }] = await Promise.all([
-    // `entry_pin_hash` (migración 113) va aquí porque esta pantalla no existe
-    // sin esa misma migración: si no hay membresías, no hay tarjetas que
-    // pintar y no se llega hasta aquí.
-    db.from('restaurants').select('id, name, slug, orders_paused, entry_pin_hash').in('id', ids),
+    leerLocales(),
     db.from('restaurant_themes').select('restaurant_id, logo_url').in('restaurant_id', ids),
   ]);
 
@@ -199,7 +206,7 @@ export async function getMyRestaurantCards(): Promise<MembershipCard[]> {
       name: r.name as string,
       slug: r.slug as string,
       logoUrl: logoById.get(m.restaurantId) ?? null,
-      paused: r.orders_paused === true,
+      paused: pausaVigente(r as PausaGuardada),
       locked: !!r.entry_pin_hash,
     });
   }

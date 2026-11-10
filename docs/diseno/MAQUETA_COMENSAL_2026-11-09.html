@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comensal: ficha y carrito</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* Maqueta de la ficha 1.11 · Modo «Pedir»: manda la marca del restaurante.
+   Paleta oscura tipo Rincón 502 y una clara para comprobar los dos temas. Datos ficticios. */
+:root{--bg:#0A1220;--s1:#141D2D;--s2:#1C2638;--line:rgba(231,238,252,.14);--line2:rgba(231,238,252,.24);--ink:#F1F4FA;--ink2:#C3CBD9;--ink3:#93A0B5;--accent:#5B8DEF;--on-accent:#0A1220;--cta:#F4F1EA;--on-cta:#141414;--warn:#F2C36B;--warn-bg:#2A2110;--warn-line:#5A4517;--ok:#6BD49A}
+:root[data-theme="light"]{--bg:#F6F3EE;--s1:#FFFFFF;--s2:#F1ECE4;--line:rgba(40,30,20,.12);--line2:rgba(40,30,20,.22);--ink:#1B1712;--ink2:#4A433A;--ink3:#6E665B;--accent:#B5452A;--on-accent:#FFFFFF;--cta:#B5452A;--on-cta:#FFFFFF;--warn:#8A5A00;--warn-bg:#FBF1DC;--warn-line:#EBD39C;--ok:#1F7A45}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.45 Geist,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}.mono{font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.demo{position:sticky;top:0;z-index:30;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;background:#202020;color:#eee;font-size:13px}
+.demo strong{margin-right:auto;font-weight:600}
+.demo button{background:#2c2c2c;border:1px solid #3a3a3a;border-radius:999px;padding:6px 12px;color:#eee;cursor:pointer}
+.demo button[aria-pressed="true"]{background:#eee;color:#202020}
+.stage{display:flex;justify-content:center;padding:20px 16px 60px}
+.phone{width:390px;max-width:100%;min-height:760px;background:var(--bg);border:1px solid var(--line2);border-radius:28px;overflow:hidden;position:relative;display:flex;flex-direction:column}
+.oculto{display:none!important}
+/* hoja */
+.hoja{background:var(--s1);border-top:1px solid var(--line2);border-radius:22px 22px 0 0;margin-top:auto;display:flex;flex-direction:column;max-height:760px}
+.cab{display:flex;align-items:flex-start;gap:12px;padding:18px 18px 12px;border-bottom:1px solid var(--line)}
+.cab h2{margin:0;font-size:21px;font-weight:700;flex:1}
+.x{width:44px;height:44px;border-radius:12px;border:1px solid var(--line2);background:var(--s2);display:grid;place-items:center;cursor:pointer;flex:none}
+.cuerpo{padding:14px 18px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.foto{aspect-ratio:1.7;border-radius:16px;background:var(--s2);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink3);font-size:13px}
+.desc{margin:0;color:var(--ink2)}
+.precio{font-size:22px;font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:999px;background:var(--s2);border:1px solid var(--line);font-size:13px;color:var(--ink2)}
+.alerg{font-size:13px;color:var(--ink2);padding:10px 12px;border-radius:12px;border:1px dashed var(--line2)}
+.grupo{border-top:1px solid var(--line);padding-top:12px}
+.ghead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px}
+.ghead b{font-size:16px}
+.regla{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3)}
+.regla.req{color:var(--warn)}
+.ops{display:flex;flex-wrap:wrap;gap:8px}
+.op{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border-radius:999px;border:1px solid var(--line2);background:var(--s2);cursor:pointer;font-weight:600;font-size:14px}
+.op[aria-checked="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.op small{font-family:'Geist Mono',monospace;font-weight:500;opacity:.8}
+.pred{font-size:12px;font-weight:500;opacity:.85}
+.pie{display:flex;gap:10px;padding:12px 18px 18px;border-top:1px solid var(--line);background:var(--s1)}
+.qty{display:flex;align-items:center;gap:4px;padding:4px;border-radius:14px;border:1px solid var(--line2);background:var(--s2)}
+.qty button{width:40px;height:40px;border-radius:10px;border:0;background:transparent;cursor:pointer;font-size:20px}
+.qty span{min-width:22px;text-align:center;font-weight:700}
+.cta{flex:1;min-height:52px;border-radius:14px;border:0;background:var(--cta);color:var(--on-cta);font-weight:700;font-size:16px;cursor:pointer}
+.cta.falta{background:var(--s2);color:var(--ink);border:1px solid var(--warn-line)}
+.agotado{flex:1;min-height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--warn);font-weight:600}
+/* carrito */
+.linea{display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:14px;background:var(--s2);border:1px solid var(--line)}
+.linea .t{flex:1;min-width:0}.linea .t b{display:block}
+.linea .t span{display:block;font-size:13px;color:var(--ink3)}
+.cambiar{background:none;border:0;padding:6px 0 0;color:var(--accent);font-weight:600;cursor:pointer;font-size:14px}
+.total{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;font-size:17px}
+/* lealtad */
+.leal{margin:auto 14px 14px;background:var(--s1);border:1px solid var(--line2);border-radius:22px;padding:22px}
+.leal h2{margin:12px 0 6px;font-size:20px}
+.leal p{margin:0 0 16px;color:var(--ink2);font-size:14px}
+.ico{width:48px;height:48px;border-radius:14px;background:var(--s2);border:1px solid var(--line);display:grid;place-items:center;font-size:22px}
+.g{width:100%;min-height:48px;border-radius:14px;border:1px solid var(--line2);background:#fff;color:#1f1f1f;font-weight:600;cursor:pointer}
+.no{display:block;width:100%;margin-top:8px;min-height:44px;background:none;border:0;color:var(--ink2);cursor:pointer;font-weight:600}
+/* carta */
+.carta{padding:16px;display:flex;flex-direction:column;gap:10px}
+.carta h3{margin:12px 0 2px;font-size:18px}
+.plato{display:flex;gap:12px;align-items:center;padding:12px;border-radius:16px;background:var(--s1);border:1px solid var(--line)}
+.plato .ft{width:56px;height:56px;border-radius:12px;background:var(--s2);flex:none}
+.plato .t{flex:1;min-width:0}.plato b{display:block}
+.plato .agot{font-size:13px;color:var(--warn);font-weight:600}
+.plato.off b{text-decoration:line-through;color:var(--ink3)}
+.nota{font-size:12px;color:var(--ink3);text-align:center;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="demo" role="toolbar" aria-label="Controles de la maqueta">
+  <strong>Maqueta · Comensal (1.11)</strong>
+  <button data-v="ficha" aria-pressed="true">Ficha</button>
+  <button data-v="carrito" aria-pressed="false">Carrito</button>
+  <button data-v="editar" aria-pressed="false">Cambiar línea</button>
+  <button data-v="lealtad" aria-pressed="false">Lealtad</button>
+  <button data-v="carta" aria-pressed="false">Carta</button>
+  <button id="tema" aria-pressed="false">Tema claro</button>
+</div>
+<div class="stage"><div class="phone">
+
+<!-- ═════ FICHA ═════ -->
+<section id="v-ficha" class="hoja" role="dialog" aria-labelledby="t-ficha">
+  <div class="cab"><h2 id="t-ficha">Hamburguesa de la casa</h2><button class="x" aria-label="Cerrar">✕</button></div>
+  <div class="cuerpo">
+    <div class="foto">foto del platillo</div>
+    <p class="desc">Carne de res, queso cheddar, cebolla caramelizada y salsa de la casa en pan brioche.</p>
+    <div class="precio mono">Q62.00</div>
+    <div class="chips"><span class="chip">🌾 Contiene gluten</span><span class="chip">🥛 Contiene lácteos</span></div>
+
+    <div class="grupo" role="radiogroup" aria-labelledby="g1">
+      <div class="ghead"><b id="g1">Término</b><span class="regla req">Elige uno</span></div>
+      <div class="ops"><button class="op" role="radio" aria-checked="false" data-g="t">Tres cuartos</button><button class="op" role="radio" aria-checked="false" data-g="t">Bien cocida</button></div>
+    </div>
+    <div class="grupo" role="radiogroup" aria-labelledby="g2">
+      <div class="ghead"><b id="g2">Acompañamiento</b><span class="regla req">Elige uno</span></div>
+      <div class="ops"><button class="op" role="radio" aria-checked="true" data-g="a">✓ Papas <span class="pred">· predeterminada</span></button><button class="op" role="radio" aria-checked="false" data-g="a">Ensalada</button><button class="op" role="radio" aria-checked="false" data-g="a">Aros de cebolla <small>+Q8.00</small></button></div>
+    </div>
+    <div class="grupo" role="group" aria-labelledby="g3">
+      <div class="ghead"><b id="g3">Extras</b><span class="regla req">Elige de 1 a 2</span></div>
+      <div class="ops"><button class="op" role="checkbox" aria-checked="false" data-g="e">Tocino <small>+Q10.00</small></button><button class="op" role="checkbox" aria-checked="false" data-g="e">Huevo <small>+Q6.00</small></button><button class="op" role="checkbox" aria-checked="false" data-g="e">Aguacate <small>+Q8.00</small></button></div>
+    </div>
+  </div>
+  <div class="pie"><div class="qty"><button aria-label="Uno menos">−</button><span>1</span><button aria-label="Uno más">+</button></div><button class="cta falta" id="cta">Elige término</button></div>
+</section>
+
+<!-- ═════ CARRITO ═════ -->
+<section id="v-carrito" class="hoja oculto" role="dialog" aria-labelledby="t-car">
+  <div class="cab"><h2 id="t-car">Tu pedido</h2><button class="x" aria-label="Cerrar">✕</button></div>
+  <div class="cuerpo">
+    <div class="linea"><div class="t"><b>Hamburguesa de la casa</b><span>Tres cuartos · Papas · Tocino +Q10.00</span><span class="mono" style="color:var(--ink);font-weight:600">Q72.00</span><button class="cambiar">Cambiar</button></div><div class="qty"><button aria-label="Uno menos">−</button><span>1</span><button aria-label="Uno más">+</button></div></div>
+    <div class="linea"><div class="t"><b>Hamburguesa de la casa</b><span>Bien cocida · Ensalada · Huevo +Q6.00</span><span class="mono" style="color:var(--ink);font-weight:600">Q68.00</span><button class="cambiar">Cambiar</button></div><div class="qty"><button aria-label="Uno menos">−</button><span>1</span><button aria-label="Uno más">+</button></div></div>
+    <div class="linea"><div class="t"><b>Limonada con menta</b><span class="mono" style="color:var(--ink);font-weight:600">Q36.00</span></div><div class="qty"><button aria-label="Uno menos">−</button><span>2</span><button aria-label="Uno más">+</button></div></div>
+  </div>
+  <div class="pie" style="flex-direction:column"><div class="total"><span>Total</span><span class="mono">Q176.00</span></div><button class="cta">Ir a pagar →</button></div>
+</section>
+
+<!-- ═════ CAMBIAR LÍNEA ═════ -->
+<section id="v-editar" class="hoja oculto" role="dialog" aria-labelledby="t-ed">
+  <div class="cab"><h2 id="t-ed">Hamburguesa de la casa</h2><button class="x" aria-label="Cerrar">✕</button></div>
+  <div class="cuerpo">
+    <p class="desc" style="font-size:13px">Cambias el platillo que ya está en tu pedido; no se agrega otro.</p>
+    <div class="grupo"><div class="ghead"><b>Término</b><span class="regla">Elige uno</span></div>
+      <div class="ops"><button class="op" role="radio" aria-checked="true">✓ Tres cuartos</button><button class="op" role="radio" aria-checked="false">Bien cocida</button></div></div>
+    <div class="grupo"><div class="ghead"><b>Acompañamiento</b><span class="regla">Elige uno</span></div>
+      <div class="ops"><button class="op" role="radio" aria-checked="false">Papas <span class="pred">· predeterminada</span></button><button class="op" role="radio" aria-checked="true">✓ Ensalada</button><button class="op" role="radio" aria-checked="false">Aros de cebolla <small>+Q8.00</small></button></div></div>
+    <div class="grupo"><div class="ghead"><b>Extras</b><span class="regla">Elige de 1 a 2</span></div>
+      <div class="ops"><button class="op" role="checkbox" aria-checked="true">✓ Tocino <small>+Q10.00</small></button><button class="op" role="checkbox" aria-checked="false">Huevo <small>+Q6.00</small></button><button class="op" role="checkbox" aria-checked="false">Aguacate <small>+Q8.00</small></button></div></div>
+  </div>
+  <div class="pie"><div class="qty"><button aria-label="Uno menos">−</button><span>1</span><button aria-label="Uno más">+</button></div><button class="cta">Guardar cambios · <span class="mono">Q72.00</span></button></div>
+</section>
+
+<!-- ═════ LEALTAD ═════ -->
+<section id="v-lealtad" class="oculto" style="display:flex;flex-direction:column;flex:1">
+  <div class="carta" style="opacity:.55"><h3>Hamburguesas</h3><div class="plato"><div class="ft"></div><div class="t"><b>Hamburguesa de la casa</b><span class="mono">Q62.00</span></div></div></div>
+  <div class="leal" role="dialog" aria-labelledby="t-leal">
+    <div class="ico">☆</div>
+    <h2 id="t-leal">Gana puntos con cada pedido</h2>
+    <p>Para acumular y usar tus puntos en Rincón 502 inicia sesión con Google. Así te reconocemos en cualquier teléfono, sin otra contraseña.</p>
+    <button class="g">Continuar con Google</button>
+    <button class="no">Ahora no</button>
+  </div>
+</section>
+
+<!-- ═════ CARTA ═════ -->
+<section id="v-carta" class="oculto">
+  <div class="carta">
+    <h3>Bebidas</h3>
+    <div class="plato off" aria-label="Limonada con menta, Q18.00, agotado, vuelve mañana"><div class="ft"></div><div class="t"><b>Limonada con menta</b><span class="agot">Agotado · vuelve mañana</span></div><span class="mono">Q18.00</span></div>
+    <div class="plato"><div class="ft"></div><div class="t"><b>Refresco de Jamaica</b></div><span class="mono">Q15.00</span></div>
+    <h3>Otros</h3>
+    <div class="plato"><div class="ft"></div><div class="t"><b>Salsa extra de la casa</b></div><span class="mono">Q5.00</span></div>
+    <p class="nota">«Otros» reúne lo que no tiene categoría, en todas las estructuras.</p>
+  </div>
+</section>
+
+</div></div>
+<p class="nota">Datos ficticios · en «Ficha» elige término y extras para ver el botón completarse</p>
+<script>
+const vistas=['ficha','carrito','editar','lealtad','carta'];
+document.querySelectorAll('.demo [data-v]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.demo [data-v]').forEach(x=>x.setAttribute('aria-pressed',x===b));vistas.forEach(v=>document.getElementById('v-'+v).classList.toggle('oculto',v!==b.dataset.v));});
+document.getElementById('tema').onclick=e=>{const c=document.documentElement.dataset.theme!=='light';document.documentElement.dataset.theme=c?'light':'dark';e.target.setAttribute('aria-pressed',c);};
+const precio={'Aros de cebolla':8,'Tocino':10,'Huevo':6,'Aguacate':8};
+function estado(){
+  const f=document.getElementById('v-ficha');
+  const t=f.querySelector('[data-g="t"][aria-checked="true"]');
+  const ex=[...f.querySelectorAll('[data-g="e"][aria-checked="true"]')];
+  const a=f.querySelector('[data-g="a"][aria-checked="true"]');
+  const cta=document.getElementById('cta');
+  if(!t){cta.textContent='Elige término';cta.classList.add('falta');return;}
+  if(ex.length<1){cta.textContent='Elige al menos 1 extra';cta.classList.add('falta');return;}
+  let total=62;[a,...ex].forEach(x=>{const n=x.textContent.replace(/[✓+].*$/,'').replace('· predeterminada','').trim();Object.keys(precio).forEach(k=>{if(x.textContent.includes(k))total+=precio[k];});});
+  cta.classList.remove('falta');cta.innerHTML='Agregar · <span class="mono">Q'+total.toFixed(2)+'</span>';
+}
+document.querySelectorAll('#v-ficha .op').forEach(o=>o.onclick=()=>{
+  const g=o.dataset.g;
+  if(o.getAttribute('role')==='radio'){document.querySelectorAll('#v-ficha [data-g="'+g+'"]').forEach(x=>{x.setAttribute('aria-checked',x===o);x.firstChild.textContent=x.firstChild.textContent.replace('✓ ','');});o.firstChild.textContent='✓ '+o.firstChild.textContent;}
+  else{const on=o.getAttribute('aria-checked')==='true';const n=document.querySelectorAll('#v-ficha [data-g="e"][aria-checked="true"]').length;if(!on&&n>=2)return;o.setAttribute('aria-checked',!on);o.firstChild.textContent=on?o.firstChild.textContent.replace('✓ ',''):'✓ '+o.firstChild.textContent;}
+  estado();
+});
+</script>
+</body>
+</html>

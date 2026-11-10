@@ -16,6 +16,14 @@ import { headers } from 'next/headers';
 import { createServiceClient } from '@/lib/supabase/service';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { puedeAprobar, type Aprobador } from '@/lib/void-approval';
+import { can } from '@/lib/permissions';
+
+/** ¿Puede firmar? Además de no ser mesero puro, si se pide una capacidad
+ *  concreta (por ejemplo `caja.devolver`), tiene que tenerla. */
+function firmaValida(role: string | null, permissions: string[] | null, llave?: string): boolean {
+  if (!puedeAprobar(role, permissions)) return false;
+  return !llave || can(role, permissions, llave);
+}
 import { isValidPin, verifyPin, PIN_LOCK_AFTER_ATTEMPTS, PIN_LOCK_MS } from '@/lib/staff-pin-crypto';
 
 /**
@@ -32,6 +40,7 @@ import { isValidPin, verifyPin, PIN_LOCK_AFTER_ATTEMPTS, PIN_LOCK_MS } from '@/l
 export async function listarAprobadores(
   db: ReturnType<typeof createServiceClient>,
   restaurantId: string,
+  llave?: string,
 ): Promise<Aprobador[]> {
   const { data: pins } = await db
     .from('staff_pins').select('profile_id').eq('restaurant_id', restaurantId);
@@ -45,7 +54,7 @@ export async function listarAprobadores(
 
   return (perfiles ?? [])
     .filter((p) => conPin.has(p.id as string))
-    .filter((p) => puedeAprobar(p.role as string | null, p.permissions as string[] | null))
+    .filter((p) => firmaValida(p.role as string | null, p.permissions as string[] | null, llave))
     .map((p) => ({
       id: p.id as string,
       name: (p.full_name as string | null)?.trim() || 'Sin nombre',
@@ -66,6 +75,7 @@ export async function verificarAprobador(
   restaurantId: string,
   approverId: string,
   pin: string,
+  llave?: string,
 ): Promise<{ id: string } | { error: string }> {
   if (!isValidPin(pin)) return { error: 'El PIN son 4 dígitos.' };
 
@@ -80,8 +90,8 @@ export async function verificarAprobador(
   const { data: perfil } = await db
     .from('profiles').select('id, role, permissions, restaurant_id').eq('id', approverId).maybeSingle();
   if (!perfil || perfil.restaurant_id !== restaurantId) return { error: 'PIN incorrecto.' };
-  if (!puedeAprobar(perfil.role as string | null, perfil.permissions as string[] | null)) {
-    return { error: 'Esa persona ya no puede autorizar anulaciones.' };
+  if (!firmaValida(perfil.role as string | null, perfil.permissions as string[] | null, llave)) {
+    return { error: 'Esa persona no puede autorizar esto.' };
   }
 
   const { data: row } = await db

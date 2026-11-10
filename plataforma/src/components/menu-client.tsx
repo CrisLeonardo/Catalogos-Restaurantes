@@ -18,6 +18,7 @@ import OverlayBackground from '@/components/menu/overlay-background';
 import { useHojaEnHistorial, leerHojaGuardada, olvidarHojaGuardada } from '@/components/menu/use-hoja-en-historial';
 import { useCart, carritoGuardadoTieneAlgo } from '@/lib/cart-context';
 import { getScannedTable, watchScannedTable, isStandaloneLaunch } from '@/lib/table-session';
+import { mesaExiste } from '@/lib/mesa-valida';
 import { isKioskMode } from '@/lib/kiosk';
 import { getMyAccount } from '@/lib/actions/loyalty';
 import { hasAnyHours, isOpenNow, type WeeklyHours } from '@/lib/hours';
@@ -26,7 +27,7 @@ import { volarAlCarrito } from '@/lib/volar-al-carrito';
 import { isVitrina } from '@/lib/theme/defaults';
 import { sugerirAcompanantes } from '@/lib/menu-pairings';
 import type { Sugerencia } from '@/components/menu/pairings';
-import type { Category, Product } from '@/types';
+import type { CartItem, Category, Product } from '@/types';
 import type { MenuReward } from '@/components/menu/rewards-section';
 
 /* Pantallas que solo existen cuando el comensal las abre (Mi cuenta, Mis
@@ -41,6 +42,7 @@ type CatItem = Pick<Category, 'id' | 'name' | 'icon' | 'name_en'> & { availabili
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'> & {
   is_available?: boolean | null;
   unavailable_at?: string | null;
+  vuelve_at?: string | null;
 };
 
 interface Props {
@@ -51,6 +53,8 @@ interface Props {
   timezone?: string;
   llamadaMeseroEnabled?: boolean;
   initialMesa?: number;
+  /** QR de una mesa que no existe en el local (1.12, M01): se avisa y no se guarda. */
+  mesaInvalida?: number | null;
   /** Módulo de lealtad activo (independiente de si el catálogo de canje está habilitado). */
   loyaltyOn?: boolean;
   /** Catálogo de recompensas canjeables (null = canje deshabilitado). */
@@ -86,17 +90,22 @@ function hasOptions(p: ProdItem): boolean {
 
 export default function MenuClient({
   categories, products, ordersEnabled = false, restaurantId, timezone = 'America/Guatemala',
-  llamadaMeseroEnabled = false, initialMesa, loyaltyOn = false, rewardsCatalog = null,
+  llamadaMeseroEnabled = false, initialMesa, mesaInvalida = null, loyaltyOn = false, rewardsCatalog = null,
   googleAuthEnabled = false, whatsappNumber = null,
   restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null,
 }: Props) {
   const { items, addItem, qtyOfProduct } = useCart();
   const [selected, setSelected] = useState<ProdItem | null>(null);
+  /** «Cambiar» desde el carrito (1.11, M04): la línea que se está corrigiendo. */
+  const [editando, setEditando] = useState<CartItem | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [rewardsOpen, setRewardsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [pedidosOpen, setPedidosOpen] = useState(false);
   const [tableScanned, setTableScanned] = useState(false);
+  /** La mesa en la que está el comensal, para decírsela (1.12, M01). */
+  const [mesaActual, setMesaActual] = useState<number | null>(null);
+  const config = useThemeConfig();
   const [authError, setAuthError] = useState(false);
   const [googleIntroOpen, setGoogleIntroOpen] = useState(false);
   // MODO KIOSKO (autoservicio): dispositivo compartido del local. Se ocultan
@@ -119,13 +128,21 @@ export default function MenuClient({
     // ("Añadir a inicio"), donde ?mesa= puede ser un valor viejo congelado en
     // el ícono y NO debe asumirse como mesa vigente (ver isStandaloneLaunch).
     const trustInitialMesa = initialMesa != null && initialMesa > 0 && !isStandaloneLaunch();
-    setTableScanned(trustInitialMesa || getScannedTable(restaurantId) !== null);
+    // Una mesa guardada que no existe (QR viejo o de antes de validar) se ignora.
+    const leida = getScannedTable(restaurantId);
+    const guardada = mesaExiste(leida, config.dineInTableCount) ? leida : null;
+    setTableScanned(trustInitialMesa || guardada !== null);
+    setMesaActual(trustInitialMesa ? initialMesa! : guardada);
     // Después, la fuente de verdad es localStorage + TTL: watchScannedTable
     // re-valida al volver a primer plano y al vencer el TTL — sin esto, una
     // PWA que quedó viva en memoria seguía ofreciendo "comer en local" y
     // "llamar al mesero" días después de escanear la mesa.
-    return watchScannedTable(restaurantId, (t) => setTableScanned(t !== null));
-  }, [initialMesa, restaurantId]);
+    return watchScannedTable(restaurantId, (t) => {
+      const valida = mesaExiste(t, config.dineInTableCount) ? t : null;
+      setTableScanned(valida !== null);
+      setMesaActual(valida);
+    });
+  }, [initialMesa, restaurantId, config.dineInTableCount]);
 
   // El login con Google es una redirección de página completa (/auth/callback),
   // así que cualquier sheet abierto se pierde en la vuelta. GoogleSignInButton
@@ -179,7 +196,6 @@ export default function MenuClient({
   /* «Acompáñalo con…» (CAT-13). Se calcula con la carta que ya está en la
      página: ni una consulta más. En la ficha, contra el platillo abierto y
      lo que ya hay en el carrito; en el carrito, contra lo que lleva. */
-  const config = useThemeConfig();
   const pairingsOn = ordersEnabled && config.suggestPairings !== false;
   // Vitrina: barra arriba con la bolsa, y abajo solo la bolsa (ver vitrina-bar.tsx).
   const vitrina = isVitrina(config);
@@ -273,6 +289,21 @@ export default function MenuClient({
         />
       )}
 
+      {/* La mesa, dicha (M01): en qué mesa está o que el QR no corresponde. */}
+      {ordersEnabled && !demo && !kiosk && (mesaInvalida || (tableScanned && mesaActual)) && (
+        <div role={mesaInvalida ? 'alert' : 'status'} style={{
+          display: 'flex', alignItems: 'flex-start', gap: 10, margin: '12px 0', padding: '10px 14px',
+          borderRadius: 'var(--m-r-lg)', fontSize: 'var(--m-fs-sm)', lineHeight: 1.45, color: 'var(--u-text)',
+          background: mesaInvalida ? 'var(--c-warn-bg)' : 'color-mix(in srgb, var(--u-text) 6%, var(--brand-bg))',
+          border: `1px solid ${mesaInvalida ? 'var(--c-warn-line)' : 'var(--u-hair-2)'}`,
+        }}>
+          <Icon name={mesaInvalida ? 'alertCircle' : 'utensils'} size={18} style={{ flexShrink: 0, marginTop: 1, color: mesaInvalida ? 'var(--c-warn)' : 'var(--u-text-2)' }} />
+          {mesaInvalida
+            ? <span><strong>La mesa {mesaInvalida} no existe en {config.brandName || 'este local'}.</strong> Escanea el QR de tu mesa o pide ayuda al personal. Puedes ver el menú mientras tanto.</span>
+            : <span><strong>Mesa {mesaActual}</strong> · tu pedido llega a esta mesa</span>}
+        </div>
+      )}
+
       <Catalog
         categories={categories}
         products={products}
@@ -287,12 +318,17 @@ export default function MenuClient({
 
       {selected && (
         <ProductSheet
-          key={selected.id}
+          key={editando ? `${selected.id}:${editando.lineId}` : selected.id}
           product={selected}
           icon={selected.icon || catIcon.get(selected.category_id ?? '') || 'utensils'}
           ordersEnabled={ordersEnabled}
-          acompanantes={sheetPairings}
-          onClose={() => setSelected(null)}
+          acompanantes={editando ? [] : sheetPairings}
+          linea={editando ?? undefined}
+          onClose={() => {
+            setSelected(null);
+            // Al cambiar una línea, se vuelve al carrito (guardando o no).
+            if (editando) { setEditando(null); setCartOpen(true); }
+          }}
         />
       )}
 
@@ -309,11 +345,18 @@ export default function MenuClient({
       )}
       {ordersEnabled && (vitrina
         ? !selected && !cartOpen && <VitrinaBag onOpen={() => setCartOpen(true)} />
-        : <CartBar onOpen={() => setCartOpen(true)} />)}
+        : !selected && !cartOpen && <CartBar onOpen={() => setCartOpen(true)} navigationVisible={!demo && !kiosk} />)}
       {ordersEnabled && cartOpen && (
         <CartPanel
           sugerencias={cartPairings}
           onClose={() => setCartOpen(false)}
+          onEditar={(item) => {
+            const producto = products.find((p) => p.id === item.productId);
+            if (!producto) return;
+            setCartOpen(false);
+            setEditando(item);
+            setSelected(producto);
+          }}
           onPedirDemo={demo ? () => { setCartOpen(false); setDemoOpen(true); } : undefined}
         />
       )}

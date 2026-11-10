@@ -12,7 +12,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
-import { ownerCtx } from '@/lib/actions/staff';
+import { ownerCtx } from '@/lib/auth/personal';
 import { logActivity } from '@/lib/activity';
 import { STAFF_ASSIGNABLE } from '@/lib/permissions';
 import { isSyntheticStaffEmail } from '@/lib/staff-email';

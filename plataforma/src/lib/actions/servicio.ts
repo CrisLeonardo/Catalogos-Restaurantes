@@ -28,15 +28,49 @@
    leen juntas o no se entienden.
    ════════════════════════════════════════════════════════════ */
 
+import {
+  identidadCobroValida, type ContextoCobroMesa, type PagoCobro, type RepartoCobro,
+  type ResultadoCobro, type SolicitudCobro,
+} from '@/lib/cobro-intento';
 import { createServiceClient } from '@/lib/supabase/service';
 import { assertTableAccess } from '@/lib/auth/table-access';
 import { revalidarSalon } from '@/lib/salon-cache';
-import { hayColumnaMesa, direccionDeMesa } from '@/lib/db/mesa-columna';
 import { hayTurnosDeMesa, hayPagosDeMesa } from '@/lib/db/table-sessions';
-import { faltaLaColumna, faltaLaTabla } from '@/lib/db/migracion-ausente';
-import { isPaymentMethod, type PaymentMethod } from '@/lib/payment-method';
+import { faltaLaColumna, faltaLaTabla, faltaLaFuncion } from '@/lib/db/migracion-ausente';
+import { isPaymentMethod } from '@/lib/payment-method';
 import { updateOrderStatus } from '@/lib/actions/orders';
+import { emitirFacturaAutomatica } from '@/lib/actions/fel';
 import { revalidatePath, updateTag } from 'next/cache';
+import { after } from 'next/server';
+import { leerPuestos, ROLES_SERVICIO, type PuestosServicio } from '@/lib/servicio/turno';
+
+export async function guardarPreferenciaServicio(
+  restaurantId: string, tipo: 'favoritos' | 'alias', clave: string, valor: PuestosServicio | string,
+): Promise<{ error?: string }> {
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
+  if (acceso.actor.role !== 'SUPER_ADMIN' && acceso.actor.effectiveRole !== 'RESTAURANT_OWNER') {
+    return { error: 'Solo el dueño puede publicar los favoritos y alias del local.' };
+  }
+  const puestos = tipo === 'favoritos' && Object.hasOwn(ROLES_SERVICIO, clave) ? leerPuestos(valor) : null;
+  const alias = tipo === 'alias' && typeof valor === 'string' ? valor.trim() : null;
+  if (!puestos && (alias === null || alias.length > 40 || !identidadCobroValida(clave))) {
+    return { error: 'Revisa los puestos o escribe un alias de hasta 40 caracteres.' };
+  }
+  const ids = puestos ? puestos.filter((id): id is string => id !== null) : [clave];
+  const db = createServiceClient();
+  if (ids.length > 0) {
+    if (!ids.every(identidadCobroValida)) return { error: 'Selecciona platos del catálogo.' };
+    const { count, error } = await db.from('products').select('id', { head: true, count: 'exact' })
+      .eq('restaurant_id', restaurantId).eq('is_active', true).in('id', ids);
+    if (error || count !== ids.length) return { error: 'Un plato ya no está activo en este local. Actualiza la carta.' };
+  }
+  const { error } = await db.from('servicio_preferencias')
+    .upsert({ restaurant_id: restaurantId, tipo, clave, valor: puestos ?? alias });
+  if (error) return { error: 'No se pudo guardar la preferencia. Vuelve a intentar.' };
+  revalidatePath('/admin/mesero');
+  return {};
+}
 
 /** Tope de líneas que una llamada puede tocar. Una mesa no acumula más. */
 const MAX_LINEAS = 120;
@@ -45,26 +79,6 @@ const MAX_LINEAS = 120;
 const SIN_COLUMNA =
   'Falta la migración 133 para poder marcar los platos uno a uno. '
   + 'Mientras tanto, «Servido» marca la ronda entera.';
-
-function campoMesa(porNumero: boolean, tableNumber: number): [string, string | number] {
-  return porNumero ? ['table_number', tableNumber] : ['address', direccionDeMesa(tableNumber)];
-}
-
-/** Los pedidos vivos de una mesa, con sus líneas. Lo comparten las tres. */
-async function pedidosDeMesa(
-  db: ReturnType<typeof createServiceClient>,
-  restaurantId: string,
-  tableNumber: number,
-) {
-  const [colMesa, valMesa] = campoMesa(await hayColumnaMesa(), tableNumber);
-  return db
-    .from('orders')
-    .select('id, status, total')
-    .eq('restaurant_id', restaurantId)
-    .eq('order_type', 'DINE_IN')
-    .eq(colMesa, valMesa)
-    .not('status', 'in', '("DELIVERED","CANCEL")');
-}
 
 /* ────────────────────────────────────────────────────────────
    1 · SERVIR PLATO A PLATO
@@ -215,19 +229,9 @@ export async function deshacerServirLineas(
    2 · COBRAR UNA PARTE SIN CERRAR LA MESA
    ──────────────────────────────────────────────────────────── */
 
-export interface CobroParcial {
-  method: PaymentMethod;
-  amount: number;
-  cashReceived?: number | null;
-}
+export type CobroParcial = PagoCobro;
 
-export interface CobroParcialResult {
-  error?: string;
-  /** Lo que de verdad se apuntó. */
-  cobrado?: number;
-  /** La 129 no ha corrido aquí. */
-  needsMigration?: boolean;
-}
+export type CobroParcialResult = ResultadoCobro;
 
 /**
  * Cobra unas líneas de la mesa y la deja abierta.
@@ -242,8 +246,10 @@ export async function cobrarParteDeMesa(
   tableNumber: number,
   itemIds: string[],
   pagos: CobroParcial[],
+  intentoId: string,
 ): Promise<CobroParcialResult> {
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
+  if (!identidadCobroValida(intentoId)) return { error: 'Falta la identidad del intento de cobro.' };
   if (!Array.isArray(itemIds) || itemIds.length === 0) {
     return { error: 'No hay nada marcado que cobrar.' };
   }
@@ -254,172 +260,26 @@ export async function cobrarParteDeMesa(
     return { error: 'Importe de pago inválido.' };
   }
 
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['caja.cobrar']);
   if ('error' in acceso) return acceso;
 
   const db = createServiceClient();
 
-  /* Las líneas, con su pedido y su importe. El importe sale de la BASE y
-     no de lo que mandó el navegador: es dinero. */
-  const { data: lineas, error: errLeer } = await db
-    .from('order_items')
-    .select('id, order_id, subtotal, order:orders!inner(restaurant_id, status)')
-    .in('id', itemIds);
-
-  if (errLeer) return { error: errLeer.message };
-
-  type Fila = {
-    id: string; order_id: string; subtotal: number;
-    order?: { restaurant_id: string; status: string } | null;
-  };
-  const propias = ((lineas ?? []) as unknown as Fila[]).filter(
-    (l) => l.order?.restaurant_id === restaurantId
-      && l.order.status !== 'DELIVERED' && l.order.status !== 'CANCEL',
-  );
-  if (propias.length === 0) return { error: 'Esos platos ya no están en la mesa.' };
-
-  /* Cuánto le toca a cada pedido.
-     ------------------------------------------------------------
-     No es la suma de sus líneas marcadas: eso es CONSUMO, y el pedido
-     cobra `orders.total`, que además lleva propina y descuentos. Una
-     parte tiene que pagar su trozo de esos extras — si no, quien pague
-     el último carga con toda la propina de la mesa y la suma de las
-     partes no da el total.
-
-     Así que se reparte en proporción DENTRO DE CADA PEDIDO: lo marcado
-     sobre lo que ese pedido consumió, aplicado a lo que ese pedido
-     cobra. Mismo criterio que `lib/bill-split.ts`. */
-  const marcadoPorPedido = new Map<string, number>();
-  for (const l of propias) {
-    marcadoPorPedido.set(l.order_id, (marcadoPorPedido.get(l.order_id) ?? 0) + Number(l.subtotal ?? 0));
+  const { data, error } = await db.rpc('leogin_cobrar_parte_mesa_idempotente', {
+    p_restaurant: restaurantId,
+    p_mesa: tableNumber,
+    p_intento: intentoId,
+    p_items: itemIds,
+    p_pagos: pagos,
+    p_actor: acceso.actor.userId,
+  });
+  if (error) {
+    if (faltaLaFuncion(error)) return { error: 'Falta la migración 161 para recuperar los intentos de cobro.', needsMigration: true };
+    return { error: error.message, incierto: !/^(LGD0[12]|22023)$/.test(error.code ?? '') };
   }
-
-  const { data: todasLasLineas } = await db
-    .from('order_items')
-    .select('order_id, subtotal')
-    .in('order_id', [...marcadoPorPedido.keys()]);
-
-  const consumoPorPedido = new Map<string, number>();
-  for (const l of (todasLasLineas ?? []) as { order_id: string; subtotal: number }[]) {
-    consumoPorPedido.set(l.order_id, (consumoPorPedido.get(l.order_id) ?? 0) + Number(l.subtotal ?? 0));
-  }
-
-  const { data: totales } = await db
-    .from('orders')
-    .select('id, total')
-    .in('id', [...marcadoPorPedido.keys()]);
-  const totalPorPedido = new Map(
-    ((totales ?? []) as { id: string; total: number }[]).map((o) => [o.id, Number(o.total ?? 0)]),
-  );
-
-  const porPedido = new Map<string, number>();
-  for (const [orderId, marcado] of marcadoPorPedido) {
-    const consumoPedido = consumoPorPedido.get(orderId) ?? marcado;
-    const totalPedido = totalPorPedido.get(orderId) ?? consumoPedido;
-    const factor = consumoPedido > 0 ? totalPedido / consumoPedido : 1;
-    porPedido.set(orderId, Math.round(marcado * factor * 100) / 100);
-  }
-
-  const consumo = Math.round([...porPedido.values()].reduce((s, v) => s + v, 0) * 100) / 100;
-  if (consumo <= 0) return { error: 'Esa parte no suma nada.' };
-
-  /* El dinero que entró, repartido por pedido y por método. Se recorta a
-     lo que esa parte vale: si alguien puso de más en efectivo, el exceso
-     es vuelto y no una venta. */
-  const filas: {
-    restaurant_id: string; order_id: string; method: string;
-    amount: number; cash_received: number | null; taken_by: string;
-  }[] = [];
-
-  let restante = Math.min(
-    consumo,
-    Math.round(pagos.reduce((s, p) => s + p.amount, 0) * 100) / 100,
-  );
-
-  for (const [orderId, tocaRaw] of porPedido) {
-    if (restante <= 0.004) break;
-    let toca = Math.min(Math.round(tocaRaw * 100) / 100, restante);
-    for (const pago of pagos) {
-      if (toca <= 0.004) break;
-      const aplica = Math.min(Math.round(pago.amount * 100) / 100, toca);
-      if (aplica <= 0.004) continue;
-      filas.push({
-        restaurant_id: restaurantId,
-        order_id: orderId,
-        method: pago.method,
-        amount: aplica,
-        /* Solo se deja escrito el «recibí» cuando de verdad cubre lo que
-           se le aplicó: un recibí menor es un teclazo a medias y haría
-           que el ticket prometiera un vuelto que nadie dio. Mismo
-           criterio que `freeTable`. */
-        cash_received: pago.method === 'CASH' && pago.cashReceived != null
-          && pago.cashReceived >= aplica ? pago.cashReceived : null,
-        taken_by: acceso.actor.userId,
-      });
-      toca = Math.round((toca - aplica) * 100) / 100;
-      restante = Math.round((restante - aplica) * 100) / 100;
-    }
-  }
-
-  if (filas.length === 0) return { error: 'Ese pago no cubre nada de la parte marcada.' };
-
-  const { error: errPago } = await db.from('order_payments').insert(filas);
-  if (errPago) {
-    if (faltaLaTabla(errPago)) {
-      return {
-        error: 'Falta la migración 129 para poder cobrar por partes sin cerrar la mesa.',
-        needsMigration: true,
-      };
-    }
-    return { error: errPago.message };
-  }
-
-  /* Y la línea queda marcada como saldada en el reparto compartido, para
-     que la siguiente persona que abra la mesa —en otra tablet— vea qué
-     falta por cobrar y no vuelva a cobrarlo. La 125 puede no estar: eso
-     no invalida el dinero que ya entró, así que se degrada en silencio. */
-  await marcarLineasPagadas(db, restaurantId, tableNumber, propias.map((l) => l.id));
-
+  if (!data || !(Number(data.cobrado) > 0)) return { error: 'No se pudo confirmar el cobro. Reintenta para recuperar el resultado.', incierto: true };
   revalidarSalon();
-  return { cobrado: Math.round(filas.reduce((s, f) => s + f.amount, 0) * 100) / 100 };
-}
-
-/** Apunta en `table_splits` qué líneas ya están saldadas. */
-async function marcarLineasPagadas(
-  db: ReturnType<typeof createServiceClient>,
-  restaurantId: string,
-  tableNumber: number,
-  itemIds: string[],
-): Promise<void> {
-  const { data, error } = await db
-    .from('table_splits')
-    .select('mode, people, assignment, paid')
-    .eq('restaurant_id', restaurantId)
-    .eq('table_number', tableNumber)
-    .maybeSingle();
-  if (error && faltaLaTabla(error)) return;
-
-  /* Una persona por cobro parcial. No se reutiliza «la misma persona»
-     porque cada parte la paga alguien distinto: eso es lo que significa
-     cobrar por platos. */
-  const people = Array.isArray(data?.people) ? (data!.people as { id: string; name?: string }[]) : [];
-  const assignment = (data?.assignment as Record<string, string[]> | null) ?? {};
-  const paid = Array.isArray(data?.paid) ? (data!.paid as string[]) : [];
-
-  const id = `p${people.length + 1}`;
-  const siguiente = {
-    mode: 'byItem' as const,
-    people: [...people, { id, name: `Parte ${people.length + 1}` }].slice(0, 30),
-    assignment: { ...assignment, ...Object.fromEntries(itemIds.map((i) => [i, [id]])) },
-    paid: [...new Set([...paid, id])].slice(0, 31),
-    updated_at: new Date().toISOString(),
-  };
-
-  await db.from('table_splits').upsert({
-    restaurant_id: restaurantId,
-    table_number: tableNumber,
-    ...siguiente,
-  }, { onConflict: 'restaurant_id,table_number' });
+  return data as CobroParcialResult;
 }
 
 /**
@@ -431,42 +291,111 @@ async function marcarLineasPagadas(
 export async function cobradoDeMesa(
   restaurantId: string,
   tableNumber: number,
-): Promise<{ error?: string; total?: number; lineasPagadas?: string[] }> {
+): Promise<{ error?: string; total?: number; lineasPagadas?: string[]; lineasPendientes?: Record<string, number>; avisoCuotas?: string | null; needsMigration?: boolean }> {
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
 
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['mesero', 'caja.cobrar']);
   if ('error' in acceso) return acceso;
 
   const db = createServiceClient();
-  const { data: ordenes, error } = await pedidosDeMesa(db, restaurantId, tableNumber);
-  if (error) return { error: error.message };
-  const ids = (ordenes ?? []).map((o) => o.id as string);
-  if (ids.length === 0) return { total: 0, lineasPagadas: [] };
+  const { data, error } = await db.rpc('leogin_saldos_platos_mesa', {
+    p_restaurant: restaurantId, p_mesa: tableNumber,
+  });
+  if (error) {
+    if (faltaLaFuncion(error)) return { error: 'Falta la migración 164 para consultar las cuotas exactas por plato.', needsMigration: true };
+    return { error: error.message };
+  }
+  if (!data) return { error: 'No se pudo leer el saldo por plato.' };
+  return data;
 
-  const { data: pagos, error: errPagos } = await db
-    .from('order_payments')
-    .select('amount')
-    .in('order_id', ids);
-  if (errPagos && !faltaLaTabla(errPagos)) return { error: errPagos.message };
+}
 
-  const total = Math.round(
-    ((pagos ?? []) as { amount: number }[]).reduce((s, p) => s + Number(p.amount ?? 0), 0) * 100,
-  ) / 100;
+const SIN_ABONOS = 'Falta la migración 169 para consultar y registrar abonos y partes.';
 
-  const { data: split } = await db
-    .from('table_splits')
-    .select('assignment, paid')
-    .eq('restaurant_id', restaurantId)
-    .eq('table_number', tableNumber)
-    .maybeSingle();
+export async function transicionDeMesa(
+  restaurantId: string, mesa: number, turno: string | null, cuenta: string,
+  accion: 'limpiar' | 'liberar' | 'reabrir' | 'sin_cobro',
+): Promise<{ error?: string }> {
+  if (!Number.isInteger(mesa) || mesa < 1 || !/^[a-f0-9]{32}$/.test(cuenta)
+      || (turno !== null && !identidadCobroValida(turno))
+      || !['limpiar', 'liberar', 'reabrir', 'sin_cobro'].includes(accion)) {
+    return { error: 'Datos de mesa inválidos.' };
+  }
+  const acceso = await assertTableAccess(restaurantId,
+    accion === 'sin_cobro' || accion === 'reabrir' ? ['caja.corregir'] : ['mesero', 'mesas', 'caja.cobrar']);
+  if ('error' in acceso) return acceso;
+  const { data, error } = await createServiceClient().rpc('leogin_transicion_mesa', {
+    p_restaurant: restaurantId, p_mesa: mesa, p_turno: turno, p_cuenta: cuenta,
+    p_accion: accion, p_actor: acceso.actor.userId,
+  });
+  if (error || !data) return { error: error?.message ?? 'No se pudo actualizar la mesa.' };
+  const { orderIds, saldada } = data as { orderIds: string[]; saldada: boolean };
+  if (accion === 'liberar' && saldada && orderIds.length) {
+    after(async () => {
+      for (const id of orderIds) await emitirFacturaAutomatica(restaurantId, id);
+    });
+  }
+  revalidarSalon();
+  return {};
+}
 
-  const assignment = (split?.assignment as Record<string, string[]> | null) ?? {};
-  const paid = new Set(Array.isArray(split?.paid) ? (split!.paid as string[]) : []);
-  const lineasPagadas = Object.entries(assignment)
-    .filter(([, quienes]) => quienes.some((q) => paid.has(q)))
-    .map(([itemId]) => itemId);
+export async function leerContextoCobroMesa(restaurantId: string, mesa: number):
+  Promise<{ contexto: ContextoCobroMesa } | { error: string; needsMigration?: boolean }> {
+  const acceso = await assertTableAccess(restaurantId, ['mesero', 'caja.cobrar']);
+  if ('error' in acceso) return acceso;
+  const { data, error } = await createServiceClient().rpc('leogin_contexto_pago_mesa', {
+    p_restaurant: restaurantId, p_mesa: mesa,
+  });
+  if (error && faltaLaFuncion(error)) return { error: SIN_ABONOS, needsMigration: true };
+  if (error || !data) return { error: error?.message ?? 'No se pudo leer la cuenta de la mesa.' };
+  return { contexto: data as ContextoCobroMesa };
+}
 
-  return { total, lineasPagadas };
+export async function guardarPartesMesa(
+  restaurantId: string, mesa: number, cuenta: string, anterior: string | null, cantidad: number,
+): Promise<{ reparto: RepartoCobro } | { error: string }> {
+  const acceso = await assertTableAccess(restaurantId, ['mesero', 'caja.cobrar']);
+  if ('error' in acceso) return acceso;
+  const { data, error } = await createServiceClient().rpc('leogin_guardar_partes_mesa', {
+    p_restaurant: restaurantId, p_mesa: mesa, p_cuenta: cuenta, p_anterior: anterior, p_n: cantidad,
+  });
+  if (error || !data) return { error: error?.message ?? 'No se pudo guardar el reparto.' };
+  return { reparto: data as RepartoCobro };
+}
+
+export async function ejecutarAbonoMesa(
+  restaurantId: string,
+  solicitud: Extract<SolicitudCobro, { operacion: 'abono' | 'pagada' }>,
+  intentoId: string,
+): Promise<ResultadoCobro> {
+  if (!identidadCobroValida(intentoId) || !Number.isInteger(solicitud.mesa) || solicitud.mesa <= 0
+      || !/^[a-f0-9]{32}$/.test(solicitud.cuenta)) {
+    return { error: 'Datos de cobro inválidos.', incierto: false };
+  }
+  const acceso = await assertTableAccess(restaurantId, ['caja.cobrar']);
+  if ('error' in acceso) return acceso;
+  const db = createServiceClient();
+  const args = { p_restaurant: restaurantId, p_mesa: solicitud.mesa, p_cuenta: solicitud.cuenta,
+    p_actor: acceso.actor.userId, p_intento: intentoId };
+  const { data, error } = solicitud.operacion === 'abono'
+    ? await db.rpc('leogin_registrar_abono_mesa', {
+      ...args, p_reparto: solicitud.reparto, p_partes: solicitud.partes, p_pagos: solicitud.pagos,
+    })
+    : await db.rpc('leogin_cerrar_cuenta_pagada', args);
+  if (error) {
+    if (faltaLaFuncion(error)) return { error: SIN_ABONOS, needsMigration: true, incierto: true };
+    return { error: error.message, incierto: !/^(LGD0[12]|22\d{3})$/.test(error.code ?? '') };
+  }
+  const resultado = data as ResultadoCobro | null;
+  if (resultado?.intentoId !== intentoId) return { error: 'No se pudo confirmar el cobro.', incierto: true };
+  if (solicitud.operacion === 'pagada' && !resultado.repetido && resultado.orderIds?.length) {
+    const ids = resultado.orderIds;
+    after(async () => {
+      for (const id of ids) await emitirFacturaAutomatica(restaurantId, id);
+    });
+  }
+  revalidarSalon();
+  return resultado;
 }
 
 /* ────────────────────────────────────────────────────────────
@@ -557,7 +486,7 @@ export async function cobrarPedidoParaLlevar(
   if (!restaurantId || !orderId) return { error: 'Datos inválidos.' };
   if (!isPaymentMethod(pago?.method)) return { error: 'Forma de pago inválida.' };
 
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['caja.cobrar']);
   if ('error' in acceso) return acceso;
 
   const db = createServiceClient();
@@ -626,28 +555,39 @@ export async function marcarAgotado(
   restaurantId: string,
   productId: string,
   agotado: boolean,
-): Promise<{ error?: string }> {
+  hasta: 'manana' | 'reponer' | 'manual' = 'manana',
+): Promise<{ error?: string; vuelve?: string | null }> {
   if (!restaurantId || !productId) return { error: 'Datos inválidos.' };
 
   const acceso = await assertTableAccess(restaurantId, ['catalogo']);
   if ('error' in acceso) return { error: 'Solo quien administra la carta puede marcar un plato como agotado.' };
 
   const db = createServiceClient();
-  const { data, error } = await db
-    .from('products')
-    .update({ is_available: !agotado, unavailable_at: agotado ? new Date().toISOString() : null })
-    .eq('id', productId)
-    .eq('restaurant_id', restaurantId)
-    .select('id');
-  if (error) return { error: error.message };
-  if (!data || data.length === 0) return { error: 'Ese plato no es de este restaurante.' };
+  let vuelve: string | null = null;
+  if (agotado) {
+    // Con intención (auditoría 1.10): por omisión «hasta mañana».
+    const { data: r, error } = await db.rpc('leogin_marcar_agotado', {
+      p_restaurant: restaurantId, p_ids: [productId], p_hasta: ['manana', 'reponer', 'manual'].includes(hasta) ? hasta : 'manana', p_actor: acceso.actor.userId,
+    });
+    if (error) return { error: error.code === 'LGD01' ? 'Ese plato no es de este restaurante.' : 'No se pudo marcar agotado.' };
+    vuelve = (r as { vuelve?: string | null })?.vuelve ?? null;
+  } else {
+    const { data, error } = await db
+      .from('products')
+      .update({ is_available: true, unavailable_at: null })
+      .eq('id', productId)
+      .eq('restaurant_id', restaurantId)
+      .select('id');
+    if (error) return { error: 'No se pudo marcar disponible.' };
+    if (!data || data.length === 0) return { error: 'Ese plato no es de este restaurante.' };
+  }
 
   // La misma etiqueta que invalida Menú: el catálogo del mesero está en
   // caché con ella (getWaiterCatalogCached) y el menú público también.
   updateTag(`menu:${restaurantId}`);
   revalidatePath('/admin/menu');
   revalidarSalon();
-  return {};
+  return { vuelve };
 }
 
 /* ────────────────────────────────────────────────────────────

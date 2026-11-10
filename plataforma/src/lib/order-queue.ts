@@ -9,6 +9,13 @@
    idempotente por ese id, así que reintentar nunca duplica el pedido.
    Igual que customer-local.ts: tolerante a fallos, nunca rompe si
    localStorage no existe.
+
+   PERO no promete lo que no logró (auditoría 2026-11-03, ficha 0.11 /
+   T02). `saveQueuedOrder` antes se tragaba el fallo: con el
+   almacenamiento lleno o bloqueado, la pantalla decía «tu pedido se
+   guardó» y el pedido solo vivía en memoria. Ahora devuelve si de verdad
+   quedó escrito (y lo comprueba leyéndolo de vuelta), para que quien lo
+   llama diga «No se guardó en este aparato» y ofrezca qué hacer.
    ============================================================ */
 
 export interface QueuedOrder {
@@ -43,14 +50,44 @@ export function getQueuedOrders(restaurantId: string, scope: QueueScope = 'custo
   }
 }
 
-export function saveQueuedOrder(restaurantId: string, order: QueuedOrder, scope: QueueScope = 'customer'): void {
+/** Por qué no se pudo guardar: lleno (cuota) o bloqueado (modo privado,
+    permisos, sin almacenamiento). Cambia lo que se le dice a la persona. */
+export type MotivoNoGuardado = 'lleno' | 'bloqueado';
+
+export type GuardadoEnCola = { ok: true } | { ok: false; motivo: MotivoNoGuardado };
+
+function motivoDelFallo(e: unknown): MotivoNoGuardado {
+  const { name, code } = (e ?? {}) as { name?: string; code?: number };
+  // Chrome/Safari: QuotaExceededError (código 22); Firefox antiguo: 1014.
+  if (name === 'QuotaExceededError' || name === 'NS_ERROR_DOM_QUOTA_REACHED' || code === 22 || code === 1014) {
+    return 'lleno';
+  }
+  return 'bloqueado';
+}
+
+/**
+ * Guarda (o reemplaza, por `clientId`) el pedido en la cola del aparato.
+ * `ok: true` solo si al leerla de vuelta el pedido está ahí.
+ */
+export function saveQueuedOrder(restaurantId: string, order: QueuedOrder, scope: QueueScope = 'customer'): GuardadoEnCola {
   try {
     const list = [
       order,
       ...getQueuedOrders(restaurantId, scope).filter((o) => o.clientId !== order.clientId),
     ];
     localStorage.setItem(queueKey(restaurantId, scope), JSON.stringify(list));
-  } catch {}
+    const quedo = getQueuedOrders(restaurantId, scope).some((o) => o.clientId === order.clientId);
+    return quedo ? { ok: true } : { ok: false, motivo: 'bloqueado' };
+  } catch (e) {
+    return { ok: false, motivo: motivoDelFallo(e) };
+  }
+}
+
+/** La causa, dicha para quien la lee (comensal o mesero). */
+export function causaNoGuardado(motivo: MotivoNoGuardado): string {
+  return motivo === 'lleno'
+    ? 'la memoria del navegador está llena'
+    : 'este navegador no deja guardar datos (modo privado o permisos)';
 }
 
 export function removeQueuedOrder(restaurantId: string, clientId: string, scope: QueueScope = 'customer'): void {

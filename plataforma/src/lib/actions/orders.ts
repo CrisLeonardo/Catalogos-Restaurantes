@@ -1,5 +1,6 @@
 'use server';
 
+import { identidadCobroValida, type ResultadoCobro } from '@/lib/cobro-intento';
 import { createClient, createDinerClient, getStaffUser } from '@/lib/supabase/server';
 import { canActOnRestaurant, resolveEffectiveRole } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
@@ -11,6 +12,7 @@ import { createOrderSchema, waiterOrderSchema, type CreateOrderInput } from '@/l
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { sendPushToRestaurant } from '@/lib/push';
 import { resolveTheme, computeTip, type ThemeRow } from '@/lib/theme/resolve';
+import { mesaExiste } from '@/lib/mesa-valida';
 import type { ThemeConfig } from '@/lib/theme/defaults';
 import { edicionPermitePedir, estadoEdicion, motivoSinPedidos } from '@/lib/vitrina/edicion';
 import { isOpenNow, type WeeklyHours, type HourExceptions } from '@/lib/hours';
@@ -31,10 +33,9 @@ import { getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalt
 import { resolveItemOptions } from '@/lib/order-options';
 import { isUnavailable } from '@/lib/product-availability';
 import { isPaymentMethod, type PaymentMethod } from '@/lib/payment-method';
-import { repartirPagos, metodoDominante, type PagoEntrada } from '@/lib/table-payments';
 import { hayColumnaMesa, direccionDeMesa } from '@/lib/db/mesa-columna';
 import { assertTableAccess } from '@/lib/auth/table-access';
-import { cerrarTurnoDeMesa, hayPagosDeMesa } from '@/lib/db/table-sessions';
+import { STATUS_LABEL } from '@/lib/order-status';
 import { faltaLaColumna, faltaLaFuncion, faltaLaTabla } from '@/lib/db/migracion-ausente';
 
 /**
@@ -63,6 +64,7 @@ import {
 } from '@/lib/documents/excel';
 import { longDate } from '@/lib/documents/format';
 import { orderTypesForPlan } from '@/lib/plans';
+import { conPunto, fraseDeRegreso, pausaVigente } from '@/lib/pausa-pedidos';
 import type { DocumentBranding } from '@/lib/documents/types';
 import type {
   OrderItemOption,
@@ -112,15 +114,15 @@ async function verifyAndPriceItems(
   const productIds = [...new Set(items.map((i) => i.productId))];
   const { data: dbProducts, error: productsError } = await db
     .from('products')
-    .select('id, name, price, cost, is_available, unavailable_at, track_stock, stock, options')
+    .select('id, name, price, cost, is_available, unavailable_at, vuelve_at, track_stock, stock, options')
     .eq('restaurant_id', restaurantId)
     .in('id', productIds);
 
   if (productsError) return { error: productsError.message };
 
   // La MISMA regla con la que el menú decide qué enseña como pedible
-  // (lib/product-availability.ts): lo marcado agotado vuelve solo a las
-  // 12 h. Antes aquí se leía `is_available` crudo y el comensal se
+  // (lib/product-availability.ts): lo agotado «hasta mañana» vuelve a su
+  // hora (`vuelve_at`). Antes aquí se leía `is_available` crudo y el comensal se
   // encontraba con «ya no está disponible» al confirmar un platillo que el
   // menú le ofrecía (auditoría 2026-10-02, CAT-01).
   const ahora = Date.now();
@@ -237,6 +239,26 @@ async function computeOrderPricing(
   const total = Math.max(0, subtotal + fee - discount + tip);
 
   return { subtotal, fee, discount, tip, total, applied };
+}
+
+/**
+ * Lo que dijo la base al crear el pedido → algo que el comensal entiende.
+ * El pedido NO se creó en ningún caso: el carrito sigue intacto y el
+ * comensal decide (nunca se le cambia el total en silencio).
+ */
+function mensajeAlCrearPedido(error: { code?: string | null; message?: string | null } | null): string {
+  switch (error?.code) {
+    case 'LGC01':
+      return 'El cupón ya no está disponible (se agotó, venció o ya no aplica a tu pedido). Tu pedido no se envió: quita el cupón para continuar.';
+    case 'LGC02':
+      return 'El descuento del cupón cambió mientras pagabas. Tu pedido no se envió: vuelve a aplicar el cupón.';
+    case 'P0001':
+      // Mensajes en español de place_order (stock) y del canje (puntos, recompensa).
+      return error.message ?? 'No se pudo crear el pedido.';
+    default:
+      if (error) console.error('[createOrder]', error.code ?? '', error.message ?? '');
+      return 'No se pudo crear el pedido. Intenta de nuevo.';
+  }
 }
 
 /** Sesión de Google del comensal (si la hay) y su cliente de lealtad. */
@@ -380,11 +402,23 @@ export async function createOrder(
   // Operación: pausa manual y horario real también se validan AQUÍ
   // (el cliente puede tener la página abierta desde antes del cierre).
   if (restaurant.orders_paused) {
-    return {
-      error:
-        (restaurant.pause_message as string | null)?.trim() ||
-        'Los pedidos están pausados por el momento. Intenta más tarde.',
-    };
+    /* La hora de fin (migración 155) va en su propia consulta y solo cuando
+       hay pausa: si la columna aún no existe, la consulta de arriba no se
+       cae y la pausa vale hasta reactivar, como antes. Una pausa con fin
+       termina sola (lib/pausa-pedidos). */
+    const { data: fin } = await db
+      .from('restaurants')
+      .select('orders_paused_until')
+      .eq('id', restaurantId)
+      .maybeSingle();
+    const hasta = (fin as { orders_paused_until?: string | null } | null)?.orders_paused_until ?? null;
+    if (pausaVigente({ orders_paused: true, orders_paused_until: hasta })) {
+      const mensaje = conPunto(
+        (restaurant.pause_message as string | null)?.trim() || 'Los pedidos están pausados por el momento.',
+      );
+      const regreso = fraseDeRegreso(hasta, (restaurant.timezone as string | null) || 'America/Guatemala');
+      return { error: `${mensaje} ${regreso ?? 'Intenta más tarde.'}` };
+    }
   }
 
   // Auto-pausa sin agente (mig. 069, OPCIONAL por restaurante): si el local
@@ -535,11 +569,25 @@ export async function createOrder(
 
   const themeConfig = resolveTheme((themeRow as ThemeRow) ?? null).config;
 
+  // Una mesa que no existe en el local no recibe pedidos (auditoría 1.12, M01).
+  if (customer.type === 'DINE_IN' && customer.tableNumber !== undefined
+      && !mesaExiste(customer.tableNumber, themeConfig.dineInTableCount)) {
+    return { error: `La mesa ${customer.tableNumber} no existe en este local. Escanea el QR de tu mesa o pide ayuda al personal.` };
+  }
+
   const { subtotal, fee, discount, tip, total, applied } = await computeOrderPricing(
     restaurantId, themeConfig, customer.type, tipAccepted, parsed.data.couponCode, verifiedItems,
     customer.type === 'DELIVERY' ? customer.zone : null,
     zones,
   );
+
+  /* El checkout solo manda el código de un cupón que ya validó y cuyo
+     descuento le mostró al comensal. Si aquí ya no aplica (se agotó o venció
+     mientras pagaba), antes se creaba el pedido a precio completo sin avisar.
+     Ahora no se crea y se le dice (auditoría 2026-11-03, F21/M04). */
+  if (parsed.data.couponCode && !applied) {
+    return { error: mensajeAlCrearPedido({ code: 'LGC01' }) };
+  }
 
   // Registro automático del cliente (clave: teléfono normalizado por
   // restaurante). Si la migración 010 no corrió aún, el pedido sigue sin
@@ -577,10 +625,12 @@ export async function createOrder(
       ? `[Servicio: ${customer.coursePreference}]${customer.notes ? ` · ${customer.notes}` : ''}`
       : (customer.notes ?? null);
 
-  // Numeración atómica + pedido + ítems en UNA transacción (RPC place_order):
-  // evita el número duplicado por carrera (count(*)+1) y los pedidos huérfanos
-  // si la inserción de ítems fallara a mitad. Ver migración 016.
-  const { data: placed, error: orderError } = await db.rpc('place_order', {
+  // Numeración atómica + pedido + ítems + cupón + canjes en UNA transacción
+  // (migración 157, auditoría 2026-11-03 F21). Antes el cupón y los puntos
+  // se aplicaban DESPUÉS del pedido, aparte y sin revisar errores: el tope
+  // del cupón se pasaba con dos pedidos a la vez y un canje sin saldo dejaba
+  // el premio gratis. Ahora, si un paso falla, no queda nada.
+  const pedidoArgs = {
     p_restaurant_id:  restaurantId,
     p_customer_name:  customer.name,
     p_customer_phone: customer.phone,
@@ -609,37 +659,59 @@ export async function createOrder(
       note:             i.note || null,
       ...(i.is_reward ? { is_reward: true, reward_id: i.reward_id } : {}),
     })),
+  };
+  const conCupon = applied && discount > 0 ? applied.coupon : null;
+
+  let { data: placed, error: orderError } = await db.rpc('leogin_crear_pedido', {
+    ...pedidoArgs,
+    p_coupon_id:          conCupon?.id ?? null,
+    p_discount:           conCupon ? discount : 0,
+    p_reward_customer_id: rewardRedeemIds.length > 0 ? loyaltyCustomerId : null,
+    p_reward_ids:         rewardRedeemIds,
   });
+
+  /* Sin la migración 157 se sigue por el camino anterior (pasos separados)
+     para no romper el checkout entre el despliegue y la migración. */
+  const sinOperacionUnica = faltaLaFuncion(orderError);
+  if (sinOperacionUnica) {
+    ({ data: placed, error: orderError } = await db.rpc('place_order', pedidoArgs));
+  }
 
   const order = placed as { id: string; order_number: string; public_token: string } | null;
   if (orderError || !order) {
-    return { error: orderError?.message ?? 'Error al crear el pedido.' };
+    // Un reintento del mismo pedido que chocó con el primero (client_id
+    // único): no es un error, es el mismo pedido.
+    if (orderError?.code === '23505' && clientId) {
+      const { data: mismo } = await db
+        .from('orders')
+        .select('id, order_number, public_token')
+        .eq('restaurant_id', restaurantId)
+        .eq('client_id', clientId)
+        .maybeSingle();
+      if (mismo) {
+        return { success: true, orderId: mismo.id as string, orderNumber: mismo.order_number as string, publicToken: mismo.public_token as string };
+      }
+    }
+    return { error: mensajeAlCrearPedido(orderError) };
   }
 
-  // Persistir el cupón aplicado (metadata para recibos/reportes) y contar su
-  // uso. Las dos escrituras son independientes: van a la vez.
-  if (applied && discount > 0) {
-    await Promise.all([
-      db.from('orders').update({
-        discount,
-        coupon_id: applied.coupon.id,
-        coupon_code: applied.coupon.code,
-      }).eq('id', order.id),
-      db.rpc('increment_coupon_usage', { p_id: applied.coupon.id }),
-    ]);
-  }
-
-  // Canje de recompensas (productos): descuenta los puntos de cada una de forma
-  // atómica. Ya validamos saldo arriba; el RPC re-valida y nunca deja negativo.
-  // En fila A PROPÓSITO: cada canje re-lee el saldo que dejó el anterior.
-  if (rewardRedeemIds.length > 0 && loyaltyCustomerId) {
-    for (const rid of rewardRedeemIds) {
-      await db.rpc('leogin_loyalty_redeem_reward', {
-        p_restaurant_id: restaurantId,
-        p_customer_id:   loyaltyCustomerId,
-        p_reward_id:     rid,
-        p_order_id:      order.id,
-      });
+  if (sinOperacionUnica) {
+    // Camino anterior a la 157, tal cual era.
+    if (conCupon) {
+      await Promise.all([
+        db.from('orders').update({ discount, coupon_id: conCupon.id, coupon_code: conCupon.code }).eq('id', order.id),
+        db.rpc('increment_coupon_usage', { p_id: conCupon.id }),
+      ]);
+    }
+    if (rewardRedeemIds.length > 0 && loyaltyCustomerId) {
+      for (const rid of rewardRedeemIds) {
+        await db.rpc('leogin_loyalty_redeem_reward', {
+          p_restaurant_id: restaurantId,
+          p_customer_id:   loyaltyCustomerId,
+          p_reward_id:     rid,
+          p_order_id:      order.id,
+        });
+      }
     }
   }
 
@@ -1112,28 +1184,40 @@ export async function freeTable(
   restaurantId: string,
   tableNumber: number,
   payment?: TablePayment | TablePayment[],
-): Promise<{ error?: string }> {
+  intentoId?: string,
+): Promise<ResultadoCobro> {
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
 
   /* Uno o varios. Se admite el valor suelto de siempre porque media
      aplicación llama así —el salón, la caja, el cierre rápido— y M-11 no
      tiene por qué obligarlas a cambiar para cobrar de una sola forma. */
   const pagos = payment == null ? [] : Array.isArray(payment) ? payment : [payment];
+  if (!pagos.length) return { error: 'Registra la salida sin cobrar desde las opciones de la mesa.' };
+  if (!identidadCobroValida(intentoId)) return { error: 'Falta la identidad del intento de cobro.' };
   if (pagos.some((p) => !isPaymentMethod(p.method))) return { error: 'Forma de pago inválida.' };
   if (pagos.some((p) => p.amount != null && !(Number.isFinite(p.amount) && p.amount > 0))) {
     return { error: 'Importe de pago inválido.' };
   }
 
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['caja.cobrar']);
   if ('error' in acceso) return acceso;
 
   const db = createServiceClient();
+  // Recuperar ANTES de releer pedidos: puede ser una mesa ya cerrada o reutilizada.
+  const { data: previo, error } = await db.rpc('leogin_recuperar_intento_cobro', {
+    p_restaurant: restaurantId, p_mesa: tableNumber, p_intento: intentoId,
+    p_operacion: 'cierre', p_solicitud: { pagos }, p_actor: acceso.actor.userId,
+  });
+  if (error) {
+    if (faltaLaFuncion(error)) return { error: 'Falta la migración 161 para recuperar los intentos de cobro.', needsMigration: true };
+    return { error: error.message, incierto: !/^(LGD0[12]|22023)$/.test(error.code ?? '') };
+  }
+  if (previo) { revalidarSalon(); return previo as ResultadoCobro; }
   const porNumero = await hayColumnaMesa();
   const [colMesa, valMesa] = campoMesa(porNumero, tableNumber);
 
-  /* Los pedidos ANTES de cerrarlos: hace falta el total de cada uno para
-     repartir el dinero entre ellos, y después del UPDATE ya no se pueden
-     distinguir de los que se cerraron esta noche por otra vía. */
+  /* Conservar el snapshot: una ronda que llegue después debe seguir abierta.
+     SQL calcula el saldo neto de estos pedidos bajo el bloqueo de cuenta. */
   const { data: vivos, error: errLeer } = await db
     .from('orders')
     .select('id, total, created_at')
@@ -1144,115 +1228,18 @@ export async function freeTable(
     .order('created_at', { ascending: true });
 
   if (errLeer) return { error: errLeer.message };
-  const ordenes = (vivos ?? []).map((o) => ({ id: o.id as string, total: Number(o.total ?? 0) }));
+  const idsLeidos = (vivos ?? []).map((o) => o.id as string);
 
-  /* Cómo se reparte el dinero entre los pedidos de la mesa (M-11).
-     ------------------------------------------------------------
-     Sin importe, un pago cubre lo que quede: es el caso de siempre —«toda
-     la mesa en efectivo»— y así una sola llamada sigue significando lo
-     mismo que antes de esta migración. Con importes, cada uno pone lo
-     suyo y la aritmética vive en `lib/table-payments.ts`, probada aparte
-     porque de aquí sale lo que el dueño cuenta en el cajón. */
-  const totalMesa = ordenes.reduce((s, o) => s + o.total, 0);
-  const puesto = pagos.reduce((s, p) => s + (p.amount ?? 0), 0);
-  const entradas: PagoEntrada[] = pagos.map((p) => ({
-    method: p.method,
-    amount: p.amount ?? Math.max(0, totalMesa - puesto),
-    cashReceived: p.method === 'CASH' ? p.cashReceived ?? null : null,
-  }));
-  const filas = repartirPagos(ordenes, entradas);
-
-  /* Qué método se escribe en cada pedido. Sigue siendo UNA palabra por
-     pedido —el ticket, los informes y analítica la leen así desde
-     siempre— y es la del método que más puso. El detalle exacto está en
-     `order_payments`. */
-  const metodoDe = new Map<string, string>();
-  const recibidoDe = new Map<string, number | null>();
-  for (const o of ordenes) {
-    const suyas = filas.filter((f) => f.orderId === o.id);
-    if (suyas.length === 0) continue;
-    metodoDe.set(o.id, metodoDominante(suyas));
-    /* El efectivo recibido se guarda SOLO cuando de verdad cubre lo que
-       se le aplicó: un "recibí" menor es un teclazo a medias, y dejarlo
-       escrito haría que el ticket prometiera un vuelto que nadie dio. */
-    const enEfectivo = suyas.filter((f) => f.method === 'CASH');
-    const recibido = enEfectivo.find((f) => f.cashReceived != null)?.cashReceived ?? null;
-    const aplicado = enEfectivo.reduce((s, f) => s + f.amount, 0);
-    recibidoDe.set(o.id, recibido != null && recibido >= aplicado ? recibido : null);
+  const { data: confirmados, error: errCierre } = await db.rpc('leogin_cerrar_saldo_mesa', {
+    p_restaurant: restaurantId, p_mesa: tableNumber, p_orders: idsLeidos,
+    p_actor: acceso.actor.userId, p_intento: intentoId, p_pagos: pagos,
+  });
+  if (errCierre) {
+    if (faltaLaFuncion(errCierre)) return { error: 'Falta la migración 163 para cerrar la cuenta con el saldo protegido.', needsMigration: true };
+    return { error: errCierre.message, incierto: !/^(LGD0[12]|22023)$/.test(errCierre.code ?? '') };
   }
-
-  const cierre: Record<string, unknown> = {
-    status: 'DELIVERED',
-    delivered_at: new Date().toISOString(),
-  };
-
-  /* Se cierran SOLO los pedidos que se leyeron arriba, y solo si siguen
-     abiertos (PROD-07, auditoría de salida a producción). Antes se cerraba
-     «todo lo abierto en la mesa en este momento»: una ronda que el mesero
-     mandaba justo mientras caja cobraba quedaba cerrada sin pago, y dos
-     aparatos cobrando a la vez registraban el pago dos veces. Lo que
-     devuelve el `update` es lo que ESTA llamada cerró de verdad, y solo
-     de eso se escribe el método y el detalle del pago. */
-  let ids: string[] = [];
-  if (ordenes.length > 0) {
-    const { data: cerrados, error } = await db
-      .from('orders')
-      .update(cierre)
-      .eq('restaurant_id', restaurantId)
-      .in('id', ordenes.map((o) => o.id))
-      .not('status', 'in', '("DELIVERED","CANCEL")')
-      .select('id');
-
-    if (error) return { error: error.message };
-    ids = (cerrados ?? []).map((r) => r.id as string);
-    // Otro aparato cobró la mesa entre la lectura y el cierre.
-    if (ids.length === 0) return { error: 'Esta mesa ya se cobró.' };
-  }
-  const cerradosAqui = new Set(ids);
-
-  for (const [orderId, metodo] of metodoDe) {
-    if (!cerradosAqui.has(orderId)) continue;
-    await db
-      .from('orders')
-      .update({ payment_method: metodo, cash_amount: recibidoDe.get(orderId) ?? null })
-      .eq('id', orderId);
-  }
-
-  /* Y el detalle, fila por fila. Si la 129 todavía no corrió aquí, el
-     cobro NO se cae: la mesa se cierra igual con su método dominante,
-     que es exactamente lo que hacía antes de esta migración. */
-  const filasCerradas = filas.filter((f) => cerradosAqui.has(f.orderId));
-  if (filasCerradas.length > 0 && (await hayPagosDeMesa())) {
-    const pagosDeCierre = filasCerradas.map((f) => ({
-      restaurant_id: restaurantId,
-      order_id: f.orderId,
-      method: f.method,
-      amount: f.amount,
-      cash_received: f.cashReceived,
-      taken_by: acceso.actor.userId,
-      /* El cobro que CIERRA la mesa, distinto de los cobros por partes: es
-         el que se compensa si la mesa se reabre por error (migración 145). */
-      kind: 'TABLE_CLOSE',
-    }));
-    const { error: errPagos } = await db.from('order_payments').insert(pagosDeCierre);
-    // Sin la 145 la columna no existe: el cobro se escribe como antes.
-    if (errPagos && faltaLaColumna(errPagos)) {
-      await db.from('order_payments').insert(pagosDeCierre.map(({ kind: _kind, ...resto }) => resto));
-    }
-  }
-
-  /* El reparto era de la gente que se acaba de ir: heredarlo a los
-     próximos comensales mezclaría dos cuentas que no tienen nada que
-     ver (migración 125). Si la tabla no existe todavía, no pasa nada. */
-  await db.from('table_splits')
-    .delete()
-    .eq('restaurant_id', restaurantId)
-    .eq('table_number', tableNumber);
-
-  /* Y el turno se cierra aquí (migración 128). Cobrar es lo que vacía una
-     mesa: si el turno siguiera abierto, la mesa quedaría «sentada» para
-     siempre y el salón no se vaciaría nunca. */
-  await cerrarTurnoDeMesa(restaurantId, tableNumber);
+  const ids = confirmados?.orderIds as string[];
+  if (!Array.isArray(ids)) return { error: 'No se pudo confirmar el cierre. Reintenta para recuperar el resultado.', incierto: true };
 
   // Una factura por pedido cerrado. En `after` para no dejar al mesero
   // esperando al certificador con la mesa ocupada en pantalla.
@@ -1263,12 +1250,38 @@ export async function freeTable(
   }
 
   revalidarSalon();
-  return {};
+  return confirmados as ResultadoCobro;
+}
+
+export type IntentoPedido = { id: string; estado: OrderStatus; version: string };
+
+function intentoPedidoValido(intento: IntentoPedido) {
+  return identidadCobroValida(intento.id) && Object.hasOwn(STATUS_LABEL, intento.estado)
+    && typeof intento.version === 'string' && Number.isFinite(Date.parse(intento.version));
+}
+
+async function operarPedido(
+  db: ReturnType<typeof createServiceClient>, restaurante: string, pedido: string, actor: string,
+  intento: IntentoPedido, destino: OrderStatus, anulacion?: { item: string | null; cantidad: number | null; motivo: string; firma: string | null },
+): Promise<{ cambio: boolean; error?: string }> {
+  const { data, error } = await db.rpc('leogin_operar_pedido', {
+    p_restaurante: restaurante, p_pedido: pedido, p_actor: actor, p_intento: intento.id,
+    p_estado: intento.estado, p_version: intento.version, p_destino: destino,
+    ...(anulacion && { p_item: anulacion.item, p_cantidad: anulacion.cantidad, p_motivo: anulacion.motivo, p_firma: anulacion.firma }),
+  });
+  if (error || !data) return { cambio: false, error: error && ['LGD01', 'P0001'].includes(error.code)
+    ? error.message : 'No se pudo confirmar el cambio. Actualiza el pedido antes de intentarlo de nuevo.' };
+  const resultado = data as { estado: OrderStatus; cambio: boolean; conflicto?: boolean };
+  if (resultado.conflicto) {
+    return { cambio: false, error: `El pedido cambió mientras lo atendías. Estado actual: ${STATUS_LABEL[resultado.estado]}.` };
+  }
+  return { cambio: resultado.cambio };
 }
 
 export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus,
+  intento?: IntentoPedido,
 ): Promise<{ error?: string }> {
   if (!orderId) return { error: 'ID de pedido requerido.' };
 
@@ -1282,6 +1295,19 @@ export async function updateOrderStatus(
   // botón nuevo podía reintroducir la cancelación silenciosa sin auditoría.
   if (status === 'CANCEL') {
     return { error: 'Para anular un pedido usa el flujo de anulación (requiere motivo).' };
+  }
+
+  if (intento) {
+    if (!identidadCobroValida(orderId) || !intentoPedidoValido(intento)) return { error: 'Operación de pedido inválida.' };
+    const db = createServiceClient();
+    const { data: pedido } = await db.from('orders').select('restaurant_id').eq('id', orderId).maybeSingle();
+    if (!pedido) return { error: 'Pedido no disponible.' };
+    const acceso = await assertTableAccess(pedido.restaurant_id, ['pedidos']);
+    if ('error' in acceso) return { error: 'Pedido no disponible.' };
+    const resultado = await operarPedido(db, pedido.restaurant_id, orderId, acceso.actor.userId, intento, status);
+    if (resultado.cambio) await efectosEstadoPedido(pedido.restaurant_id, orderId, status);
+    revalidarSalon();
+    return resultado.error ? { error: resultado.error } : {};
   }
 
   const supabase = await createClient();
@@ -1339,13 +1365,22 @@ export async function updateOrderStatus(
      (PROD-08, auditoría de salida a producción). */
   const rowRestaurantId = (changedRows?.[0]?.restaurant_id as string | undefined) ?? null;
 
+  if (changed && rowRestaurantId) {
+    await efectosEstadoPedido(rowRestaurantId, orderId, status);
+    logActivity({ restaurantId: rowRestaurantId, actorId: user.id, action: 'order_status', entity: status, meta: { orderId } });
+  }
+  revalidarSalon();
+  return {};
+}
+
+async function efectosEstadoPedido(restaurantId: string, orderId: string, status: OrderStatus) {
   // Al enviar a cocina (→PREP): encola la comanda al agente de impresión del
   // restaurante (funciona desde cualquier dispositivo, incl. móvil). Solo si la
   // fila REALMENTE cambió de estado en esta llamada. No-op si no hay agente
   // configurado; best-effort, no debe romper el cambio de estado.
-  if (status === 'PREP' && changed && rowRestaurantId) {
+  if (status === 'PREP') {
     try {
-      await enqueueKitchenForOrder(rowRestaurantId, orderId);
+      await enqueueKitchenForOrder(restaurantId, orderId);
     } catch {
       /* impresión es best-effort */
     }
@@ -1355,9 +1390,9 @@ export async function updateOrderStatus(
   // inactivo o el pedido no tiene cliente). No debe romper el cambio de estado.
   // SERVED cuenta aquí porque freeTable() (cierre manual de mesa DINE_IN) bypasea
   // esta función y nunca llega a otorgar puntos vía DELIVERED.
-  if ((status === 'DELIVERED' || status === 'SERVED') && changed && rowRestaurantId) {
+  if (status === 'DELIVERED' || status === 'SERVED') {
     try {
-      await awardLoyaltyForOrder(rowRestaurantId, orderId);
+      await awardLoyaltyForOrder(restaurantId, orderId);
     } catch {
       /* best-effort */
     }
@@ -1372,8 +1407,8 @@ export async function updateOrderStatus(
   // No-op si el módulo está inactivo, si el dueño apagó la emisión
   // automática o si faltan datos fiscales. Nunca lanza: una venta ya
   // cobrada no se revierte porque el certificador tuviera un mal día.
-  if ((status === 'DELIVERED' || status === 'SERVED') && changed && rowRestaurantId) {
-    after(() => emitirFacturaAutomatica(rowRestaurantId, orderId));
+  if (status === 'DELIVERED' || status === 'SERVED') {
+    after(() => emitirFacturaAutomatica(restaurantId, orderId));
   }
 
   // Aviso al comensal por WhatsApp (Fase 1A). Con `after` y no await: el
@@ -1382,22 +1417,7 @@ export async function updateOrderStatus(
   // sirve dispararlo y olvidarlo: una promesa suelta puede morir cuando
   // termina la request. `after` corre el trabajo DESPUÉS de responder.
   // No-op si el restaurante no tiene número conectado.
-  if (changed) {
-    after(() => notifyOrderStatus(orderId, status));
-  }
-
-  if (changed && rowRestaurantId) {
-    logActivity({
-      restaurantId: rowRestaurantId,
-      actorId: user.id,
-      action: 'order_status',
-      entity: status,
-      meta: { orderId },
-    });
-  }
-
-  revalidarSalon();
-  return {};
+  after(() => notifyOrderStatus(orderId, status));
 }
 
 export interface VoidOrderInput {
@@ -1410,6 +1430,7 @@ export interface VoidOrderInput {
   /** El encargado que autoriza, cuando quien anula no puede firmar solo. */
   approverId?: string | null;
   approverPin?: string | null;
+  intento?: IntentoPedido;
 }
 
 /** Lo que el diálogo de anulación necesita saber antes de pintarse. */
@@ -1465,7 +1486,7 @@ export async function getVoidApproval(orderId: string): Promise<VoidApproval> {
   }
 
   const required = necesitaAprobacion(order.status as string);
-  const selfApproves = puedeAprobar(quien.role as string | null, quien.permissions as string[] | null);
+  const selfApproves = puedeAprobar(suyo.role, suyo.permissions);
   if (!required || selfApproves) return { required, selfApproves, approvers: [] };
 
   return { required, selfApproves, approvers: await listarAprobadores(db, restaurantId) };
@@ -1484,7 +1505,7 @@ export async function getVoidApproval(orderId: string): Promise<VoidApproval> {
 export async function voidOrder(input: VoidOrderInput): Promise<{ error?: string; success?: boolean }> {
   const reason = input.reason?.trim();
   if (!reason) return { error: 'El motivo es obligatorio.' };
-  if (!input.orderId) return { error: 'Pedido inválido.' };
+  if (!input.orderId || (input.intento && !intentoPedidoValido(input.intento))) return { error: 'Pedido inválido.' };
 
   const { data: { user } } = await getStaffUser();
   if (!user) return { error: 'No autorizado.' };
@@ -1513,11 +1534,11 @@ export async function voidOrder(input: VoidOrderInput): Promise<{ error?: string
     || requester.restaurant_id === order.restaurant_id;
   if (
     !ownsBranch ||
-    !can(efectivo.role, efectivo.permissions, 'mesero')
+    (!can(efectivo.role, efectivo.permissions, 'mesero') && !(input.intento && can(efectivo.role, efectivo.permissions, 'pedidos')))
   ) {
     return { error: 'No autorizado.' };
   }
-  if (order.status === 'CANCEL' || order.status === 'DELIVERED') {
+  if (!input.intento && (order.status === 'CANCEL' || order.status === 'DELIVERED')) {
     return { error: 'Este pedido ya está cerrado.' };
   }
 
@@ -1534,8 +1555,8 @@ export async function voidOrder(input: VoidOrderInput): Promise<{ error?: string
      es lo que faltaba. */
   let approvedBy: string | null = null;
 
-  if (necesitaAprobacion(order.status as string)) {
-    if (puedeAprobar(requester.role as string | null, requester.permissions as string[] | null)) {
+  if (necesitaAprobacion(input.intento?.estado ?? order.status as string)) {
+    if (puedeAprobar(efectivo.role, efectivo.permissions)) {
       approvedBy = user.id;
     } else if (input.approverId && input.approverPin) {
       const firma = await verificarAprobador(
@@ -1546,6 +1567,15 @@ export async function voidOrder(input: VoidOrderInput): Promise<{ error?: string
     } else {
       return { error: 'Esto ya salió a cocina: hace falta que lo autorice un encargado con su PIN.' };
     }
+  }
+
+  if (input.intento) {
+    const cantidad = input.itemId ? Math.trunc(input.quantity ?? 0) : null;
+    const res = await operarPedido(db, order.restaurant_id, order.id, user.id, input.intento, 'CANCEL', {
+      item: input.itemId ?? null, cantidad, motivo: reason, firma: approvedBy,
+    });
+    revalidarSalon();
+    return res.error ? { error: res.error } : { success: true };
   }
 
   if (input.itemId) {
@@ -1595,7 +1625,7 @@ export async function getTableBill(
 ): Promise<{ orders: OrderWithItems[] } | { error: string }> {
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
 
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['mesero', 'caja.cobrar']);
   if ('error' in acceso) return acceso;
 
   return { orders: await getOrdersForTable(restaurantId, tableNumber) };
@@ -1835,51 +1865,13 @@ export async function moveTableOrders(
   const acceso = await assertTableAccess(restaurantId);
   if ('error' in acceso) return acceso;
 
-  const db = createServiceClient();
-  const activos = '("DELIVERED","CANCEL")';
-
-  const porNumero = await hayColumnaMesa();
-  const [colDestino, valDestino] = campoMesa(porNumero, to);
-  const { count: ocupada } = await db
-    .from('orders')
-    .select('id', { count: 'exact', head: true })
-    .eq('restaurant_id', restaurantId)
-    .eq('order_type', 'DINE_IN')
-    .eq(colDestino, valDestino)
-    .not('status', 'in', activos);
-
-  if ((ocupada ?? 0) > 0 && !merge) {
-    return { error: `La mesa ${to} ya tiene gente. Usa «Juntar mesas» si quieres una sola cuenta.` };
-  }
-
-  /* Se escriben LAS DOS: el número es la identidad y la dirección es lo
-     que se imprime en el ticket. Dejar solo una las descuadraría. */
-  const mudanza: Record<string, unknown> = { address: direccionDeMesa(to) };
-  if (porNumero) mudanza.table_number = to;
-  const [colOrigen, valOrigen] = campoMesa(porNumero, from);
-  const { data, error } = await db
-    .from('orders')
-    .update(mudanza)
-    .eq('restaurant_id', restaurantId)
-    .eq('order_type', 'DINE_IN')
-    .eq(colOrigen, valOrigen)
-    .not('status', 'in', activos)
-    .select('id');
-
+  const { data, error } = await createServiceClient().rpc('leogin_trasladar_mesa', {
+    p_restaurant: restaurantId, p_origen: from, p_destino: to, p_unir: merge,
+    p_actor: acceso.actor.userId,
+  });
   if (error) return { error: error.message };
-  if ((data?.length ?? 0) === 0) return { error: `La mesa ${from} no tiene nada que mover.` };
-
-  /* Las llamadas pendientes se van con la mesa: si pidieron la cuenta en
-     la 3 y se pasaron a la 7, el aviso tiene que seguirlos. */
-  await db
-    .from('waiter_calls')
-    .update({ table_number: to })
-    .eq('restaurant_id', restaurantId)
-    .eq('table_number', from)
-    .is('resolved_at', null);
-
   revalidarSalon();
-  return { moved: data?.length ?? 0 };
+  return { moved: Number(data) };
 }
 
 /* ════════════════ EL REPARTO DE LA CUENTA ════════════════
@@ -1958,7 +1950,7 @@ export async function getTableSplit(
 ): Promise<{ split: TableSplit | null } | { error: string }> {
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
 
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['mesero', 'caja.cobrar']);
   if ('error' in acceso) return acceso;
 
   const db = createServiceClient();
@@ -1998,7 +1990,7 @@ export async function saveTableSplit(
   const split = sanitizeSplit(raw);
   if (!split) return { error: 'Reparto inválido.' };
 
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['mesero', 'caja.cobrar']);
   if ('error' in acceso) return acceso;
 
   const db = createServiceClient();
@@ -2088,7 +2080,7 @@ export async function printTableBillShare(
   const { restaurantId, tableNumber, mode, peopleIds, names, assignment, personId } = input;
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
 
-  const acceso = await assertTableAccess(restaurantId);
+  const acceso = await assertTableAccess(restaurantId, ['mesero', 'caja.cobrar']);
   if ('error' in acceso) return acceso;
 
   const orders = await getOrdersForTable(restaurantId, tableNumber);
@@ -2563,6 +2555,12 @@ export interface PublicOrder {
   loyaltyDiscount: number;
   total: number;
   createdAt: string;
+  /** Horas reales de cada paso (auditoría 1.12, M06). */
+  acceptedAt: string | null;
+  readyAt: string | null;
+  finishedAt: string | null;
+  /** Platos que pasan por cocina y cuántos ya marcó preparados (1.5). */
+  platos: { listos: number; total: number } | null;
   items: PublicOrderItem[];
 }
 
@@ -2636,7 +2634,7 @@ export async function getPublicOrder(
   const { data } = await db
     .from('orders')
     .select(
-      'order_number, status, order_type, customer_name, subtotal, delivery_fee, discount, loyalty_points_redeemed, loyalty_discount, total, created_at, restaurant_id, items:order_items(name_snapshot, quantity, subtotal, options_snapshot)',
+      'order_number, status, order_type, customer_name, subtotal, delivery_fee, discount, loyalty_points_redeemed, loyalty_discount, total, created_at, accepted_at, ready_at, served_at, delivered_at, restaurant_id, items:order_items(name_snapshot, quantity, subtotal, options_snapshot, cocina_estacion_id, cocina_preparada_at)',
     )
     .eq('public_token', token)
     .single();
@@ -2656,6 +2654,13 @@ export async function getPublicOrder(
     loyaltyDiscount: Number(data.loyalty_discount ?? 0),
     total: Number(data.total),
     createdAt: data.created_at as string,
+    acceptedAt: (data.accepted_at as string | null) ?? null,
+    readyAt: (data.ready_at as string | null) ?? null,
+    finishedAt: ((data.served_at ?? data.delivered_at) as string | null) ?? null,
+    platos: (() => {
+      const deCocina = ((data.items as Record<string, unknown>[] | null) ?? []).filter((it) => it.cocina_estacion_id);
+      return deCocina.length ? { listos: deCocina.filter((it) => it.cocina_preparada_at).length, total: deCocina.length } : null;
+    })(),
     items: ((data.items as Record<string, unknown>[] | null) ?? []).map((it) => ({
       name: it.name_snapshot as string,
       quantity: Number(it.quantity),

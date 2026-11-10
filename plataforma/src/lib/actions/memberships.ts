@@ -32,16 +32,11 @@ import { revalidatePath } from 'next/cache';
 import { currentSuperAdmin, type SuperAdminSession } from '@/lib/auth/super-admin-guard';
 import { logSuper } from '@/lib/super-admin-log';
 import { findAccountIdByEmail, getAccountById } from '@/lib/db/accounts';
-import { LEGACY_ROLE, type MemberRole } from '@/lib/membership-roles';
+import { LEGACY_ROLE } from '@/lib/membership-roles';
 import { dejariaSinDueño } from '@/lib/membership-rules';
+import { leerPapel } from '@/lib/permisos-trabajo';
 
 export type MembershipState = { error: string } | { ok: string } | null;
-
-const ROLES: MemberRole[] = ['OWNER', 'MANAGER', 'STAFF', 'WAITER'];
-
-function leerRol(raw: unknown): MemberRole | null {
-  return ROLES.includes(raw as MemberRole) ? (raw as MemberRole) : null;
-}
 
 /**
  * ¿Quedaría el local sin ningún dueño si esta persona deja de serlo?
@@ -76,10 +71,11 @@ export async function grantMembership(
 
   const restaurantId = (formData.get('restaurantId') as string)?.trim();
   const email = (formData.get('email') as string)?.trim().toLowerCase() ?? '';
-  const role = leerRol(formData.get('role'));
+  const papel = leerPapel(formData.get('role'));
 
   if (!restaurantId) return { error: 'Restaurante inválido.' };
-  if (!role) return { error: 'Elige un papel.' };
+  if (!papel) return { error: 'Elige su papel: dueño o el trabajo que hace.' };
+  const role = papel.memberRole;
   if (!email) return { error: 'Escribe el correo de la persona.' };
 
   const userId = await findAccountIdByEmail(email);
@@ -110,7 +106,8 @@ export async function grantMembership(
   const { error } = await db
     .from('restaurant_members')
     .upsert(
-      { user_id: userId, restaurant_id: restaurantId, role, status: 'active' },
+      { user_id: userId, restaurant_id: restaurantId, role, status: 'active',
+        permissions: papel.permissions, puesto: papel.puesto, acceso_heredado: false },
       { onConflict: 'user_id,restaurant_id' },
     );
   if (error) return { error: error.message };
@@ -120,12 +117,12 @@ export async function grantMembership(
     targetUserId: userId,
     targetRestaurantId: restaurantId,
     targetLabel: email,
-    meta: { rol: role },
+    meta: { rol: role, puesto: papel.puesto },
   });
 
   revalidatePath(`/super/restaurantes/${restaurantId}`, 'layout');
   revalidatePath(`/super/cuentas/${userId}`);
-  return { ok: `${email} ya administra este restaurante.` };
+  return { ok: role === 'OWNER' ? `${email} ya es dueño de este restaurante.` : `${email} ya tiene acceso a este restaurante.` };
 }
 
 /* ── Cambiar el papel de alguien ────────────────────────────── */
@@ -140,9 +137,10 @@ export async function changeMembershipRole(
 
   const restaurantId = (formData.get('restaurantId') as string)?.trim();
   const userId = (formData.get('userId') as string)?.trim();
-  const role = leerRol(formData.get('role'));
+  const papel = leerPapel(formData.get('role'));
   if (!restaurantId || !userId) return { error: 'Datos incompletos.' };
-  if (!role) return { error: 'Papel inválido.' };
+  if (!papel) return { error: 'Papel inválido.' };
+  const role = papel.memberRole;
 
   const detalle = await getAccountById(userId);
   if (detalle.estado !== 'ok') return { error: 'Esa cuenta ya no existe.' };
@@ -150,7 +148,7 @@ export async function changeMembershipRole(
 
   const actual = detalle.cuenta.locales.find((l) => l.restaurantId === restaurantId && !l.legacy);
   if (!actual) return { error: 'Esta persona no tiene membresía en este restaurante.' };
-  if (actual.role === role) return { error: 'Ya tiene ese papel.' };
+
 
   // Bajar de rango al único dueño deja el local sin dueño igual que quitarlo.
   if (actual.role === 'OWNER' && role !== 'OWNER' && (await seQuedaSinDueño(db, restaurantId, userId))) {
@@ -161,7 +159,7 @@ export async function changeMembershipRole(
 
   const { error } = await db
     .from('restaurant_members')
-    .update({ role })
+    .update({ role, permissions: papel.permissions, puesto: papel.puesto, acceso_heredado: false })
     .eq('user_id', userId)
     .eq('restaurant_id', restaurantId);
   if (error) return { error: error.message };
@@ -172,7 +170,7 @@ export async function changeMembershipRole(
   // negocio que no es este.
   const { data: perfil } = await db.from('profiles').select('restaurant_id').eq('id', userId).maybeSingle();
   if ((perfil?.restaurant_id as string | null) === restaurantId) {
-    await db.from('profiles').update({ role: LEGACY_ROLE[role] }).eq('id', userId);
+    await db.from('profiles').update({ role: LEGACY_ROLE[role], permissions: papel.permissions }).eq('id', userId);
   }
 
   await logSuper(sesion, {
@@ -180,7 +178,7 @@ export async function changeMembershipRole(
     targetUserId: userId,
     targetRestaurantId: restaurantId,
     targetLabel: detalle.cuenta.email,
-    meta: { antes: actual.role, despues: role },
+    meta: { antes: actual.role, despues: role, puesto: papel.puesto },
   });
 
   revalidatePath(`/super/restaurantes/${restaurantId}`, 'layout');

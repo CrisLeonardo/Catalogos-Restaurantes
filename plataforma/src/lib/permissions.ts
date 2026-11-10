@@ -1,11 +1,14 @@
 /* ============================================================
-   PERMISOS del panel admin (Fase D)
-   El dueño puede dar a su staff acceso solo a ciertas secciones.
+   PERMISOS del panel admin (Fase D; por trabajo desde la 1.7)
+   El dueño reparte a su personal SECCIONES (pantallas) y CAPACIDADES
+   (tareas finas, como `caja.cerrar`). Ambas viven en la misma lista.
    Reglas:
    · SUPER_ADMIN y RESTAURANT_OWNER → todo.
-   · RESTAURANT_STAFF con permissions = null → todo (sin restringir aún).
-   · RESTAURANT_STAFF con permissions = [..] → solo esas secciones.
-   · "personal" (gestión de staff) es exclusivo del dueño (ver layout).
+   · RESTAURANT_STAFF → solo lo que dice su lista. Una lista `null` ya NO
+     significa todo: la migración 177 convirtió las antiguas en listas
+     explícitas y la base impide guardar otra (`leogin_miembro_sin_null`).
+   · RESTAURANT_WAITER (obsoleto) → tomar pedidos y cobrar.
+   · La suscripción, la propiedad y los dueños no se delegan.
    ============================================================ */
 
 export const ADMIN_SECTIONS = [
@@ -21,7 +24,7 @@ export const ADMIN_SECTIONS = [
   { key: 'metricas',     label: 'Métricas' },
   { key: 'analitica',    label: 'Analítica' },
   { key: 'finanzas',     label: 'Finanzas' },
-  { key: 'respaldo',     label: 'Respaldo de datos' },
+  { key: 'respaldo',     label: 'Exportar datos' },
   { key: 'fel',          label: 'Facturación (FEL)' },
   { key: 'proveedores',  label: 'Proveedores' },
   { key: 'loyalty',      label: 'Lealtad' },
@@ -32,6 +35,8 @@ export const ADMIN_SECTIONS = [
   { key: 'reparto',      label: 'Reparto (pantalla del repartidor)' },
   { key: 'repartidores', label: 'Repartidores' },
   { key: 'modulos',      label: 'Módulos' },
+  { key: 'cupones',      label: 'Cupones' },
+  { key: 'personal',     label: 'Personal y permisos' },
   { key: 'suscripcion',  label: 'Mi suscripción' },
   { key: 'personalizar', label: 'Personalizar' },
   { key: 'perfil',       label: 'Perfil' },
@@ -49,8 +54,39 @@ export const ADMIN_SECTIONS = [
 
 export type SectionKey = (typeof ADMIN_SECTIONS)[number]['key'];
 
-/** Secciones que un staff puede tener asignadas (las que el dueño puede delegar). */
-export const STAFF_ASSIGNABLE: SectionKey[] = ADMIN_SECTIONS.map((s) => s.key);
+/**
+ * La Caja, separada en tareas (auditoría C05). Antes todo colgaba de
+ * `finanzas`, y para que alguien cerrara caja había que enseñarle también
+ * las utilidades.
+ */
+export const CAJA_CAPACIDADES = [
+  'caja.cobrar', 'caja.abrir', 'caja.salida', 'caja.cerrar',
+  'caja.ver_esperado', 'caja.corregir', 'caja.devolver',
+] as const;
+export type CajaCapacidad = (typeof CAJA_CAPACIDADES)[number];
+
+/** Lo que nunca se reparte con una casilla: sólo el dueño. */
+export const SOLO_DUENO: string[] = ['suscripcion'];
+
+/** Llaves que un staff puede tener asignadas (las que el dueño puede delegar). */
+export const STAFF_ASSIGNABLE: string[] = [
+  ...ADMIN_SECTIONS.map((s) => s.key as string).filter((k) => !SOLO_DUENO.includes(k)),
+  ...CAJA_CAPACIDADES,
+];
+
+/**
+ * Llaves de PANTALLA que agrupan tareas:
+ *  · `caja`     = alguna tarea del cajón (abrir, salidas, cerrar, corregir…):
+ *    ver la pestaña Caja. Cobrar SOLO no basta: el mesero cobra en Servicio
+ *    y no tiene por qué ver el cajón ni lo esperado;
+ *  · `servicio` = tomar pedidos o cobrar (entrar a Servicio: el puesto Caja
+ *    entra a cobrar sin tomar pedidos).
+ */
+function tieneLlave(permissions: string[], section: string): boolean {
+  if (section === 'caja') return permissions.some((p) => p.startsWith('caja.') && p !== 'caja.cobrar');
+  if (section === 'servicio') return permissions.includes('mesero') || permissions.includes('caja.cobrar');
+  return permissions.includes(section);
+}
 
 /** ¿Puede el perfil ver/usar esta sección del panel admin? */
 export function can(
@@ -62,11 +98,13 @@ export function can(
   // igual que un dueño de restaurante (alcance acotado por RLS a su grupo).
   if (role === 'SUPER_ADMIN' || role === 'RESTAURANT_OWNER') return true;
   if (role === 'RESTAURANT_STAFF') {
-    if (permissions == null) return true; // aún sin restringir
-    return permissions.includes(section);
+    // Sin lista no hay acceso: desde la 177 un `null` ya no significa todo.
+    if (!Array.isArray(permissions)) return false;
+    if (SOLO_DUENO.includes(section)) return false;
+    return tieneLlave(permissions, section);
   }
-  // RESTAURANT_WAITER (deprecado): solo conserva acceso a la sección "mesero".
-  if (role === 'RESTAURANT_WAITER') return section === 'mesero';
+  // RESTAURANT_WAITER (deprecado): toma pedidos y cobra, como el mesero.
+  if (role === 'RESTAURANT_WAITER') return ['mesero', 'caja.cobrar', 'servicio'].includes(section);
   return false;
 }
 

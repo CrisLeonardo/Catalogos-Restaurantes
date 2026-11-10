@@ -469,7 +469,7 @@ export async function devolverCobro(input: FirmaInput & {
   }
   if (!(monto > 0)) return { error: 'No hay nada que devolver.' };
 
-  const firma = await firmar(ctx, input.restaurantId, input);
+  const firma = await firmar(ctx, input.restaurantId, input, 'caja.devolver');
   if ('error' in firma) return firma;
 
   const o = await leerPedido(db, input.restaurantId, p.orderId);

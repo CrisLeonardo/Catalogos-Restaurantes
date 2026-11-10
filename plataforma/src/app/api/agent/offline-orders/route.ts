@@ -91,7 +91,7 @@ async function syncOne(db: Db, agent: AgentIdentity, rawOrder: unknown): Promise
   const productIds = [...new Set(items.map((i) => i.productId))];
   const { data: dbProducts, error: productsError } = await db
     .from('products')
-    .select('id, name, price, cost, is_available, unavailable_at, track_stock, stock, options')
+    .select('id, name, price, cost, is_available, unavailable_at, vuelve_at, track_stock, stock, options')
     .eq('restaurant_id', restaurantId)
     .in('id', productIds);
   if (productsError) return { clientId, ok: false, error: productsError.message };

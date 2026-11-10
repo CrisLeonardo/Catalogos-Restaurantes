@@ -1,17 +1,16 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { resolveOwnRestaurantId } from '@/lib/db/membership';
-import { can } from '@/lib/permissions';
+import { puedeEnSeccion } from '@/lib/auth/seccion';
 import { revalidatePath, updateTag } from 'next/cache';
 import type { DayKey, WeeklyHours } from '@/lib/hours';
-import { logActivity } from '@/lib/activity';
 
 async function resolveContext(formData: FormData) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return null;
 
   const { data: profile } = await supabase
@@ -21,9 +20,6 @@ async function resolveContext(formData: FormData) {
     .single();
 
   if (!profile) return null;
-
-  // Un staff sin permiso "categorias" no puede modificarlas (candado server-side).
-  if (!can(profile.role, profile.permissions as string[] | null, 'categorias')) return null;
 
   // El super admin y quien administra un grupo trabajan sobre una sucursal que no es su
   // restaurant_id: el primero por el id del form, el segundo por el subdominio
@@ -39,6 +35,7 @@ async function resolveContext(formData: FormData) {
     : (groupBranchId ?? (await resolveOwnRestaurantId(profile.restaurant_id)));
 
   if (!restaurantId) return null;
+  if (!(await puedeEnSeccion(restaurantId, 'categorias'))) return null;
 
   const db = elevated ? createServiceClient() : supabase;
   return { db, restaurantId, role: profile.role, userId: user.id };
@@ -98,56 +95,35 @@ export async function toggleCategoryActive(formData: FormData) {
   revalidateAll(ctx.restaurantId);
 }
 
-export async function moveCategoryUp(formData: FormData) {
+/* Subir/bajar una categoría (migración 156, auditoría 2026-11-03 X12).
+   Antes eran dos UPDATE sueltos con la posición que mandaba el navegador
+   y sin filtrar el segundo por restaurante: con dos categorías en la misma
+   posición «subir» no encontraba vecina. La función bloquea, renumera sin
+   huecos ni repetidos y cambia de lugar, todo junto. Ya no hace falta el
+   `sort_order` del formulario. */
+async function moverCategoria(formData: FormData, direccion: -1 | 1) {
   const ctx = await resolveContext(formData);
   if (!ctx) return;
 
   const id = formData.get('id') as string;
-  const currentOrder = parseInt(formData.get('sort_order') as string, 10);
+  if (!/^[0-9a-f-]{36}$/i.test(id ?? '')) return;
 
-  const { data: prev } = await ctx.db
-    .from('categories')
-    .select('id, sort_order')
-    .eq('restaurant_id', ctx.restaurantId)
-    .lt('sort_order', currentOrder)
-    .order('sort_order', { ascending: false })
-    .limit(1)
-    .single();
-
-  if (!prev) return;
-
-  await Promise.all([
-    ctx.db.from('categories').update({ sort_order: prev.sort_order }).eq('id', id),
-    ctx.db.from('categories').update({ sort_order: currentOrder }).eq('id', prev.id),
-  ]);
+  const { error } = await createServiceClient().rpc('leogin_mover_categoria', {
+    p_restaurant_id: ctx.restaurantId,
+    p_category_id: id,
+    p_direccion: direccion,
+  });
+  if (error) console.error('[moverCategoria]', error.code ?? '', error.message ?? '');
 
   revalidateAll(ctx.restaurantId);
 }
 
+export async function moveCategoryUp(formData: FormData) {
+  await moverCategoria(formData, -1);
+}
+
 export async function moveCategoryDown(formData: FormData) {
-  const ctx = await resolveContext(formData);
-  if (!ctx) return;
-
-  const id = formData.get('id') as string;
-  const currentOrder = parseInt(formData.get('sort_order') as string, 10);
-
-  const { data: next } = await ctx.db
-    .from('categories')
-    .select('id, sort_order')
-    .eq('restaurant_id', ctx.restaurantId)
-    .gt('sort_order', currentOrder)
-    .order('sort_order', { ascending: true })
-    .limit(1)
-    .single();
-
-  if (!next) return;
-
-  await Promise.all([
-    ctx.db.from('categories').update({ sort_order: next.sort_order }).eq('id', id),
-    ctx.db.from('categories').update({ sort_order: currentOrder }).eq('id', next.id),
-  ]);
-
-  revalidateAll(ctx.restaurantId);
+  await moverCategoria(formData, 1);
 }
 
 /* ── Modal actions (sin redirect, para CategoriesPanel en /admin/categorias) ─ */
@@ -216,29 +192,41 @@ export async function updateCategoryModal(
   return { success: true };
 }
 
-export async function deleteCategoryModal(formData: FormData) {
+/**
+ * Borrar una categoría (auditoría 1.9, R09.4). Si tiene platillos hay que
+ * decir a dónde pasan: antes quedaban «sin categoría» y en las cartas por
+ * secciones o acordeón desaparecían del menú. Lo decide
+ * `leogin_borrar_categoria` (migración 179), que también deja la bitácora.
+ */
+export async function deleteCategoryModal(formData: FormData): Promise<{ error?: string; ok?: true; movidos?: number }> {
   const ctx = await resolveContext(formData);
-  if (!ctx) return;
+  if (!ctx) return { error: 'No autorizado.' };
 
   const id = formData.get('id') as string;
-
-  const { data: borradas } = await ctx.db
-    .from('categories')
-    .delete()
-    .eq('id', id)
-    .eq('restaurant_id', ctx.restaurantId)
-    .select('name');
-
-  // Borrado definitivo: que quede quién y qué (PROD-10).
-  if (borradas?.[0]) {
-    await logActivity({
-      restaurantId: ctx.restaurantId,
-      actorId: ctx.userId,
-      action: 'categoria_borrada',
-      entity: borradas[0].name as string,
-      meta: { categoryId: id },
-    });
-  }
+  const destino = (formData.get('destino') as string) || null;
+  const { data, error } = await createServiceClient().rpc('leogin_borrar_categoria', {
+    p_restaurant: ctx.restaurantId, p_categoria: id, p_destino: destino, p_actor: ctx.userId,
+  });
+  if (error) return { error: error.code === 'LGD01' ? error.message : 'No se pudo borrar la categoría.' };
 
   revalidateAll(ctx.restaurantId);
+  return { ok: true, movidos: (data as { movidos?: number })?.movidos ?? 0 };
+}
+
+/** «+ Nueva categoría» desde la ficha del platillo (E10): crea y devuelve su id. */
+export async function crearCategoriaEnLinea(restaurantIdForm: string, nombre: string): Promise<{ id?: string; name?: string; error?: string }> {
+  const fd = new FormData();
+  fd.set('restaurantId', restaurantIdForm);
+  const ctx = await resolveContext(fd);
+  if (!ctx) return { error: 'No tienes permiso para crear categorías.' };
+  const name = nombre.trim().slice(0, 60);
+  if (!name) return { error: 'Escribe el nombre de la categoría.' };
+  const { data: existing } = await ctx.db.from('categories').select('sort_order')
+    .eq('restaurant_id', ctx.restaurantId).order('sort_order', { ascending: false }).limit(1);
+  const { data, error } = await ctx.db.from('categories').insert({
+    restaurant_id: ctx.restaurantId, name, sort_order: (existing?.[0]?.sort_order ?? -1) + 1,
+  }).select('id, name').single();
+  if (error || !data) return { error: 'No se pudo crear la categoría.' };
+  revalidateAll(ctx.restaurantId);
+  return { id: data.id as string, name: data.name as string };
 }

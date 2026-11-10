@@ -21,6 +21,8 @@ export interface CartLine {
   /** Nota libre para ESTE plato ("sin cebolla"), distinta de la nota
       general del pedido. */
   note?: string;
+  /** Último rechazo de cocina. El plato sigue en el borrador. */
+  errorEnvio?: string;
   /**
    * Asiento al que se le apunta (migración 123). `null`/ausente = de la
    * mesa, sin dueño.

@@ -50,6 +50,9 @@ export interface Restaurant {
   /** Excepciones puntuales por fecha (feriados) — migración 083. */
   hour_exceptions: HourExceptions | null;
   orders_paused: boolean;
+  /** Fin de la pausa (migración 155). null = hasta reactivar; ausente en una
+      base sin la 155. Leerla siempre con lib/pausa-pedidos. */
+  orders_paused_until?: string | null;
   pause_message: string | null;
   // Pedidos por WhatsApp + cobertura de delivery (migración 010)
   orders_whatsapp: string | null;
@@ -155,6 +158,14 @@ export interface ProductOptionGroup {
   required?: boolean;
   /** Solo multi: máximo de opciones (0/ausente = sin límite). */
   max?: number;
+  /** Solo multi: mínimo de opciones (0/ausente = ninguna obligatoria). Auditoría 1.9, M03. */
+  min?: number;
+  /**
+   * Solo single: la opción que viene marcada, decidida por el restaurante
+   * (auditoría 1.9, M03). Ausente = ninguna: el comensal elige. Antes se
+   * asumía siempre la primera.
+   */
+  defaultChoiceId?: string;
   choices: ProductOptionChoice[];
 }
 
@@ -179,6 +190,12 @@ export interface Product {
   is_available: boolean;
   /** Timestamp de cuando se marcó no-disponible; NULL si está disponible. */
   unavailable_at: string | null;
+  /** Agotado «hasta mañana»: cuándo vuelve. null = no vuelve por reloj (migración 180). */
+  vuelve_at?: string | null;
+  /** Por qué está agotado: 'manana' | 'reponer' | 'manual' | 'ingrediente' (migración 180). */
+  agotado_motivo?: string | null;
+  /** Sólo en la carta pública/Servicio: agotado por no tener existencias. */
+  sin_existencias?: boolean;
   /** false = oculto permanentemente del menú hasta que el restaurante lo reactive. */
   is_active: boolean;
   // Inventario (migración 021)
@@ -186,6 +203,8 @@ export interface Product {
   stock: number | null;
   low_stock_threshold: number;
   sort_order: number;
+  /** Última edición (migración 179): para ordenar el catálogo por lo reciente. */
+  updated_at?: string | null;
   /**
    * Puntos de lealtad que otorga UNA unidad de este producto (migración 058).
    * NULL = usar la regla general del restaurante (earn_rate × subtotal). 0 = ninguno.
@@ -269,6 +288,8 @@ export interface Order {
   // Marcas de tiempo de estado (migración 020) — analítica de tiempos.
   accepted_at: string | null;
   ready_at: string | null;
+  cocina_salida_at?: string | null;
+  cocina_anulacion_vista_at?: string | null;
   /** Plato servido en mesa, sin cerrar la mesa todavía (migración 071). */
   served_at: string | null;
   delivered_at: string | null;
@@ -348,6 +369,9 @@ export interface OrderItem {
       todavía no, o pedido anterior a la migración — y ahí manda
       `orders.status`. La regla completa vive en `lib/servicio/comanda.ts`. */
   served_at?: string | null;
+  cocina_estacion_id?: string | null;
+  cocina_alergenos?: string[] | null;
+  cocina_preparada_at?: string | null;
 }
 
 /* ── Carrito ──────────────────────────────────────────────── */

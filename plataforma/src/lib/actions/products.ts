@@ -1,6 +1,7 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, getStaffUser } from '@/lib/supabase/server';
+import { puedeEnSeccion } from '@/lib/auth/seccion';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId, canActOnGroupBranch, getAdminMenu } from '@/lib/db/admin';
 import { resolveOwnRestaurantId, resolveEffectiveRole } from '@/lib/db/membership';
@@ -21,12 +22,16 @@ import { registrarEvento } from '@/lib/analytics-server';
 import { EVENTOS } from '@/lib/analytics';
 import { logActivity } from '@/lib/activity';
 import { cambiosDePrecio, hayCambioDePrecio } from '@/lib/activity-diff';
+import { validarPrecio, separarSellos, problemaDeGrupo, type CambioDePrecio } from '@/lib/catalogo/reglas';
+import { AGOTADO_POR_OMISION, type AgotadoHasta } from '@/lib/product-availability';
+
+const esHasta = (v: unknown): v is AgotadoHasta => v === 'manana' || v === 'reponer' || v === 'manual';
 
 export type ProductState = { error: string } | null;
 
 async function resolveContext(formData: FormData) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return null;
 
   const { data: profile } = await supabase
@@ -36,10 +41,6 @@ async function resolveContext(formData: FormData) {
     .single();
 
   if (!profile) return null;
-
-  // Permisos por sección: un staff sin "catalogo" no puede tocar el menú,
-  // aunque la UI esté oculta (la verificación de UI no basta como candado).
-  if (!can(profile.role, profile.permissions as string[] | null, 'catalogo')) return null;
 
   // Quien administra un grupo trabaja sobre una sucursal suya (subdominio verificado);
   // SUPER_ADMIN, cualquiera por el id del form. Ambos usan el cliente elevado.
@@ -54,6 +55,7 @@ async function resolveContext(formData: FormData) {
     : (groupBranchId ?? (await resolveOwnRestaurantId(profile.restaurant_id)));
 
   if (!restaurantId) return null;
+  if (!(await puedeEnSeccion(restaurantId, 'catalogo'))) return null;
 
   const db = elevated ? createServiceClient() : supabase;
   return { db, restaurantId, role: profile.role, userId: user.id };
@@ -87,6 +89,11 @@ async function checkProductLimit(
     return `Llegaste al límite de ${maxProducts} productos de tu plan. Sube de plan para agregar productos ilimitados.`;
   }
   return null;
+}
+
+/** Los errores que la base explica (candados LGD01) se dicen tal cual; el resto, genérico. */
+function mensajeDeError(error: { code?: string; message: string }): string {
+  return error.code === 'LGD01' ? error.message : 'No se pudo guardar el platillo. Intenta de nuevo.';
 }
 
 function parseTags(raw: string | null): string[] | null {
@@ -163,14 +170,20 @@ function parseOptions(raw: string | null): ProductOptionGroup[] | null | { error
       .filter((c) => c.name.length > 0);
     if (choices.length === 0) continue;
 
-    out.push({
+    const grupo: ProductOptionGroup = {
       id,
       name,
       type,
       ...(type === 'single' ? { required: g.required === true } : {}),
       ...(type === 'multi' ? { max: Math.max(0, Math.min(20, Number(g.max) || 0)) } : {}),
+      // Auditoría 1.9 (M03): mínimo en «varios» y predeterminada explícita en «elegir 1».
+      ...(type === 'multi' && Number(g.min) > 0 ? { min: Math.min(20, Math.floor(Number(g.min))) } : {}),
+      ...(type === 'single' && typeof g.defaultChoiceId === 'string' && g.defaultChoiceId ? { defaultChoiceId: g.defaultChoiceId.slice(0, 60) } : {}),
       choices,
-    });
+    };
+    const problema = problemaDeGrupo(grupo);
+    if (problema) return { error: problema };
+    out.push(grupo);
   }
   return out.length > 0 ? out : null;
 }
@@ -182,10 +195,11 @@ export async function createProduct(prevState: ProductState, formData: FormData)
   const limitError = await checkProductLimit(ctx);
   if (limitError) return { error: limitError };
 
-  const name = (formData.get('name') as string)?.trim();
-  const priceRaw = formData.get('price') as string;
-  if (!name) return { error: 'El nombre es requerido.' };
-  if (!priceRaw || isNaN(parseFloat(priceRaw))) return { error: 'El precio es requerido.' };
+  const name = (formData.get('name') as string)?.trim().slice(0, 120);
+  if (!name) return { error: 'Escribe el nombre del platillo.' };
+  const precio = validarPrecio(formData.get('price'));
+  if ('error' in precio) return { error: precio.error };
+  const marcas = separarSellos(parseTags(formData.get('tags') as string) ?? [], parseDietaryTags(formData.get('dietary_tags') as string));
 
   const options = parseOptions(formData.get('options') as string | null);
   if (options && 'error' in options) return options;
@@ -206,20 +220,20 @@ export async function createProduct(prevState: ProductState, formData: FormData)
     description: (formData.get('description') as string)?.trim() || null,
     name_en: (formData.get('name_en') as string)?.trim() || null,
     description_en: (formData.get('description_en') as string)?.trim() || null,
-    price: parseFloat(priceRaw),
+    price: precio.valor,
     cost: parseCost(formData.get('cost') as string),
     loyalty_points: parseLoyaltyPoints(formData.get('loyalty_points') as string),
     image_url: (formData.get('image_url') as string) || null,
     icon: (formData.get('icon') as string) || null,
-    tags: parseTags(formData.get('tags') as string),
-    dietary_tags: parseDietaryTags(formData.get('dietary_tags') as string),
+    tags: marcas.sellos.length ? marcas.sellos : null,
+    dietary_tags: marcas.dietas,
     options,
     is_available: formData.get('is_available') === 'true',
     is_active: formData.get('is_active') !== 'false',
     sort_order,
   }).select('id').single();
 
-  if (error) return { error: error.message };
+  if (error) return { error: mensajeDeError(error) };
 
   // Embudo de la web (WEB-01): el primer platillo es la señal de que el
   // alta se convirtió en un restaurante de verdad. Sin datos del platillo.
@@ -227,6 +241,11 @@ export async function createProduct(prevState: ProductState, formData: FormData)
 
   revalidatePath('/admin/menu');
   updateTag(`menu:${ctx.restaurantId}`);
+  // «Crear y agregar otro» (E10): vuelve a un alta vacía con la misma categoría.
+  if (formData.get('siguiente') === 'otro') {
+    const cat = (formData.get('category_id') as string) || '';
+    redirect(await panelLink(`/admin/menu/productos/new?creado=${encodeURIComponent(name)}${cat ? `&cat=${cat}` : ''}`));
+  }
   redirect(await panelLink(`/admin/menu/productos/${created.id}`));
 }
 
@@ -235,10 +254,12 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
   if (!ctx) return { error: 'No autorizado.' };
 
   const id = formData.get('id') as string;
-  const name = (formData.get('name') as string)?.trim();
-  const priceRaw = formData.get('price') as string;
-  if (!name) return { error: 'El nombre es requerido.' };
-  if (!priceRaw || isNaN(parseFloat(priceRaw))) return { error: 'El precio es requerido.' };
+  const name = (formData.get('name') as string)?.trim().slice(0, 120);
+  if (!name) return { error: 'Escribe el nombre del platillo.' };
+  const precio = validarPrecio(formData.get('price'));
+  if ('error' in precio) return { error: precio.error };
+  const priceRaw = String(precio.valor);
+  const marcas = separarSellos(parseTags(formData.get('tags') as string) ?? [], parseDietaryTags(formData.get('dietary_tags') as string));
 
   const options = parseOptions(formData.get('options') as string | null);
   if (options && 'error' in options) return options;
@@ -246,7 +267,7 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
   // El precio de antes, para la bitácora (PROD-10): «¿quién bajó el precio?».
   const { data: previo } = await ctx.db
     .from('products')
-    .select('price, options')
+    .select('price, options, is_available, agotado_motivo')
     .eq('id', id)
     .eq('restaurant_id', ctx.restaurantId)
     .maybeSingle();
@@ -265,17 +286,23 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
     loyalty_points: parseLoyaltyPoints(formData.get('loyalty_points') as string),
       image_url: (formData.get('image_url') as string) || null,
       icon: (formData.get('icon') as string) || null,
-      tags: parseTags(formData.get('tags') as string),
-    dietary_tags: parseDietaryTags(formData.get('dietary_tags') as string),
+      tags: marcas.sellos.length ? marcas.sellos : null,
+      dietary_tags: marcas.dietas,
       options,
       is_available: newAvailable,
-      unavailable_at: newAvailable ? null : new Date().toISOString(),
+      ...(newAvailable ? { unavailable_at: null } : {}),
       is_active: formData.get('is_active') !== 'false',
     })
     .eq('id', id)
     .eq('restaurant_id', ctx.restaurantId);
 
-  if (error) return { error: error.message };
+  if (error) return { error: mensajeDeError(error) };
+
+  // Agotado con intención (auditoría 1.10): lo que se eligió en Disponibilidad.
+  const hasta = formData.get('agotado_hasta');
+  if (!newAvailable && esHasta(hasta) && (previo?.is_available !== false || previo?.agotado_motivo !== hasta)) {
+    await createServiceClient().rpc('leogin_marcar_agotado', { p_restaurant: ctx.restaurantId, p_ids: [id], p_hasta: hasta, p_actor: ctx.userId });
+  }
 
   if (previo) {
     const cambios = cambiosDePrecio(
@@ -295,7 +322,9 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
 
   revalidatePath('/admin/menu');
   updateTag(`menu:${ctx.restaurantId}`);
-  redirect(await panelLink('/admin/menu'));
+  // Vuelve a la lista con la búsqueda y filtros con que se abrió (1.9, R06).
+  const volver = String(formData.get('volver') ?? '');
+  redirect(await panelLink(/^\/admin\/menu(\?[\w\-=&%.,+]*)?$/.test(volver) ? volver : '/admin/menu'));
 }
 
 export async function deleteProduct(formData: FormData) {
@@ -327,24 +356,32 @@ export async function deleteProduct(formData: FormData) {
   updateTag(`menu:${ctx.restaurantId}`);
 }
 
-export async function toggleProductAvailability(formData: FormData) {
+/** Disponible / agotado desde la lista. Agotar dice hasta cuándo (1.10, O04). */
+export async function toggleProductAvailability(formData: FormData): Promise<{ error?: string; vuelve?: string | null }> {
   const ctx = await resolveContext(formData);
-  if (!ctx) return;
+  if (!ctx) return { error: 'No autorizado.' };
 
   const id = formData.get('id') as string;
   const is_available = formData.get('is_available') === 'true';
 
-  await ctx.db
-    .from('products')
-    .update({
-      is_available,
-      unavailable_at: is_available ? null : new Date().toISOString(),
-    })
-    .eq('id', id)
-    .eq('restaurant_id', ctx.restaurantId);
+  if (is_available) {
+    const { error } = await ctx.db.from('products').update({ is_available: true, unavailable_at: null })
+      .eq('id', id).eq('restaurant_id', ctx.restaurantId);
+    if (error) return { error: 'No se pudo marcar disponible.' };
+  } else {
+    const hasta = formData.get('agotado_hasta');
+    const { data, error } = await createServiceClient().rpc('leogin_marcar_agotado', {
+      p_restaurant: ctx.restaurantId, p_ids: [id], p_hasta: esHasta(hasta) ? hasta : AGOTADO_POR_OMISION, p_actor: ctx.userId,
+    });
+    if (error) return { error: error.code === 'LGD01' ? error.message : 'No se pudo marcar agotado.' };
+    revalidatePath('/admin/menu');
+    updateTag(`menu:${ctx.restaurantId}`);
+    return { vuelve: (data as { vuelve?: string | null })?.vuelve ?? null };
+  }
 
   revalidatePath('/admin/menu');
   updateTag(`menu:${ctx.restaurantId}`);
+  return {};
 }
 
 export async function toggleProductActive(formData: FormData) {
@@ -452,7 +489,7 @@ async function authAndBuildProductsExport(restaurantId: string): Promise<Product
   if (!UUID_RE.test(restaurantId)) return { error: 'Restaurante inválido.' };
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return { error: 'No autorizado.' };
 
   const { data: profile } = await supabase
@@ -542,4 +579,100 @@ export async function exportProductsXlsx(
 
   const xlsx = await workbookToBase64(wb);
   return { xlsx, filename: `productos-${slug}-${new Date().toISOString().slice(0, 10)}.xlsx` };
+}
+
+
+/* ── Duplicar (auditoría 1.9, R07.3) ─────────────────────────────────
+   Copia opciones, dietas, sellos, foto, ícono, costo y receta. No copia
+   existencias: la copia nace disponible y OCULTA hasta revisarla
+   (decisión del dueño, 2026-11-09). */
+export async function duplicateProduct(formData: FormData): Promise<ProductState> {
+  const ctx = await resolveContext(formData);
+  if (!ctx) return { error: 'No autorizado.' };
+  const limitError = await checkProductLimit(ctx);
+  if (limitError) return { error: limitError };
+
+  const id = formData.get('id') as string;
+  const { data: o, error: errLeer } = await ctx.db.from('products').select('*')
+    .eq('id', id).eq('restaurant_id', ctx.restaurantId).maybeSingle();
+  if (errLeer || !o) return { error: 'Ese platillo ya no existe.' };
+
+  const { data: ultimo } = await ctx.db.from('products').select('sort_order')
+    .eq('restaurant_id', ctx.restaurantId).order('sort_order', { ascending: false }).limit(1);
+  const { data: copia, error } = await ctx.db.from('products').insert({
+    restaurant_id: ctx.restaurantId,
+    category_id: o.category_id,
+    name: `${String(o.name).slice(0, 110)} (copia)`,
+    description: o.description, name_en: o.name_en, description_en: o.description_en,
+    price: o.price, cost: o.cost, loyalty_points: o.loyalty_points,
+    image_url: o.image_url, icon: o.icon, tags: o.tags, dietary_tags: o.dietary_tags, options: o.options,
+    station_id: o.station_id,
+    is_available: true, is_active: false, track_stock: false, stock: null,
+    sort_order: (ultimo?.[0]?.sort_order ?? 0) + 1,
+  }).select('id').single();
+  if (error || !copia) return { error: 'No se pudo duplicar el platillo.' };
+
+  // La receta, con la misma operación atómica que la ficha (0.7, migración 156).
+  const service = createServiceClient();
+  const { data: receta } = await service.from('recipe_items').select('ingredient_id, quantity').eq('product_id', id);
+  if (receta?.length) {
+    await service.rpc('leogin_reemplazar_receta', {
+      p_restaurant: ctx.restaurantId, p_product: copia.id,
+      p_items: receta.map((r) => ({ ingredient_id: r.ingredient_id, quantity: r.quantity })),
+    });
+  }
+  await logActivity({ restaurantId: ctx.restaurantId, actorId: ctx.userId, action: 'platillo_duplicado', entity: String(o.name), meta: { desde: id, copia: copia.id } });
+
+  revalidatePath('/admin/menu');
+  updateTag(`menu:${ctx.restaurantId}`);
+  redirect(await panelLink(`/admin/menu/productos/${copia.id}?duplicado=1`));
+}
+
+/* ── Cambios en lote (auditoría 1.9, R06.4) ──────────────────────────
+   Todo o nada en `leogin_aplicar_lote_catalogo` (migración 179). */
+export type LoteCambio = { disponible?: boolean; visible?: boolean; categoria?: string; precio?: CambioDePrecio };
+export type LoteResult = { ok?: true; cambiados?: number; error?: string };
+
+export async function aplicarLoteCatalogo(restaurantIdForm: string, ids: string[], cambio: LoteCambio): Promise<LoteResult> {
+  const fd = new FormData();
+  fd.set('restaurantId', restaurantIdForm);
+  const ctx = await resolveContext(fd);
+  if (!ctx) return { error: 'No autorizado.' };
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 500) return { error: 'Elige entre 1 y 500 platillos.' };
+  if (!ids.every((x) => /^[0-9a-f-]{36}$/i.test(x))) return { error: 'Selección inválida.' };
+  const limpio: LoteCambio = {};
+  if (typeof cambio.disponible === 'boolean') limpio.disponible = cambio.disponible;
+  if (typeof cambio.visible === 'boolean') limpio.visible = cambio.visible;
+  if (typeof cambio.categoria === 'string' && cambio.categoria) limpio.categoria = cambio.categoria;
+  if (cambio.precio && (cambio.precio.modo === 'porcentaje' || cambio.precio.modo === 'monto') && Number.isFinite(cambio.precio.valor)) {
+    limpio.precio = { modo: cambio.precio.modo, valor: Number(cambio.precio.valor) };
+  }
+  if (Object.keys(limpio).length === 0) return { error: 'No hay nada que cambiar.' };
+
+  const { data, error } = await createServiceClient().rpc('leogin_aplicar_lote_catalogo', {
+    p_restaurant: ctx.restaurantId, p_ids: ids, p_cambio: limpio, p_actor: ctx.userId,
+  });
+  if (error) return { error: /LGD01|22023/.test(error.code ?? '') ? error.message : 'No se pudieron aplicar los cambios. No se cambió ninguno.' };
+  revalidatePath('/admin/menu');
+  updateTag(`menu:${ctx.restaurantId}`);
+  return { ok: true, cambiados: (data as { cambiados?: number })?.cambiados ?? ids.length };
+}
+
+
+/* ── Agotar varios con intención (auditoría 1.10, O04) ────────────── */
+export async function agotarPlatillos(restaurantIdForm: string, ids: string[], hasta: AgotadoHasta): Promise<{ ok?: true; vuelve?: string | null; error?: string }> {
+  const fd = new FormData();
+  fd.set('restaurantId', restaurantIdForm);
+  const ctx = await resolveContext(fd);
+  if (!ctx) return { error: 'No autorizado.' };
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 500 || !ids.every((x) => /^[0-9a-f-]{36}$/i.test(x))) {
+    return { error: 'Elige entre 1 y 500 platillos.' };
+  }
+  const { data, error } = await createServiceClient().rpc('leogin_marcar_agotado', {
+    p_restaurant: ctx.restaurantId, p_ids: ids, p_hasta: esHasta(hasta) ? hasta : AGOTADO_POR_OMISION, p_actor: ctx.userId,
+  });
+  if (error) return { error: error.code === 'LGD01' ? error.message : 'No se pudieron agotar. No cambió ninguno.' };
+  revalidatePath('/admin/menu');
+  updateTag(`menu:${ctx.restaurantId}`);
+  return { ok: true, vuelve: (data as { vuelve?: string | null })?.vuelve ?? null };
 }

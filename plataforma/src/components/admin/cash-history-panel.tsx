@@ -10,13 +10,14 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { anularCorte, type CashCount } from '@/lib/actions/finanzas';
+import { anularCorte, getCajaReceipt, type CajaReceipt, type CashCount } from '@/lib/actions/finanzas';
 import { DENOM_FIELDS } from '@/lib/finanzas-constants';
 import CashHistoryExportButton from '@/components/admin/cash-history-export-button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/icons';
 import { useFirmaEncargado } from '@/components/admin/caja/firma-encargado';
+import { TraspasoDeRecibo } from '@/components/admin/caja/traspaso-caja';
 import { fmtMoney } from '@/lib/money';
 
 const money = (n: number) => fmtMoney(n);
@@ -80,8 +81,8 @@ function DenomBreakdown({ breakdown }: { breakdown: Record<string, number> }) {
 }
 
 function CashCountCard({
-  entry, timezone, canVoid, onVoid,
-}: { entry: CashCount; timezone: string; canVoid: boolean; onVoid: () => void }) {
+  entry, timezone, canVoid, onVoid, onReceipt,
+}: { entry: CashCount; timezone: string; canVoid: boolean; onVoid: () => void; onReceipt: () => void }) {
   const [expanded, setExpanded] = useState(false);
 
   const diff = Number(entry.difference);
@@ -92,8 +93,13 @@ function CashCountCard({
   /* El periodo que cubrió: «14:02 – 22:40». Los cortes de antes de la 145
      solo saben cuándo se cerraron. */
   const periodo = entry.period_start
-    ? `${formatTime(entry.opened_at ?? entry.period_start, timezone)} – ${formatTime(cerradoEn(entry), timezone)}`
+    /* La hora de la fila es la del PERIODO de cobros. Antes se usaba la de
+       apertura y una caja abierta tarde salía «10:48 – 10:48» (N07). */
+    ? `${formatTime(entry.period_start ?? entry.opened_at, timezone)} – ${formatTime(cerradoEn(entry), timezone)}`
     : formatTime(cerradoEn(entry), timezone);
+  /* Turno cerrado sin haberse abierto (permitido, pero se marca). Solo se
+     sabe en cortes de la 145 en adelante, que traen period_start. */
+  const sinApertura = !!entry.period_start && !entry.opened_at;
 
   return (
     <div className="caja-corte" data-void={esAnulado ? '1' : '0'}>
@@ -104,12 +110,19 @@ function CashCountCard({
               {periodo}
             </span>
             {entry.shift_label && <span className="caja-marca">{entry.shift_label}</span>}
+            {sinApertura && (
+              <span style={{ fontSize: 11, fontWeight: 600, borderRadius: 'var(--radius-full)', padding: '1px 8px', background: 'var(--c-warn-bg)', color: 'var(--c-warn)' }}>
+                Sin apertura
+              </span>
+            )}
           </div>
           {(entry.cashier_name || entry.opened_by_name) && (
             <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>
-              {entry.opened_by_name && entry.opened_by_name !== entry.cashier_name
-                ? `Abrió ${entry.opened_by_name.split(' ')[0]} · cerró ${entry.cashier_name?.split(' ')[0] ?? '—'}`
-                : entry.cashier_name}
+              {sinApertura
+                ? `Cerró ${entry.cashier_name?.split(' ')[0] ?? '—'} · fondo declarado ${money(Number(entry.opening_float))}`
+                : entry.opened_at
+                  ? `Abrió ${formatTime(entry.opened_at, timezone)}${entry.opened_by_name ? ` (${entry.opened_by_name.split(' ')[0]})` : ''} · cerró ${entry.cashier_name?.split(' ')[0] ?? '—'}`
+                  : entry.cashier_name}
             </div>
           )}
         </div>
@@ -144,8 +157,8 @@ function CashCountCard({
         <DenomBreakdown breakdown={entry.denomination_breakdown as Record<string, number>} />
       )}
 
-      {(hasBreakdown || canVoid) && (
         <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
+          <button type="button" onClick={onReceipt} className="caja-link">Ver recibo</button>
           {hasBreakdown && (
             <button type="button" onClick={() => setExpanded((v) => !v)} className="caja-link">
               {expanded ? 'Ocultar desglose' : 'Ver desglose'}
@@ -159,7 +172,6 @@ function CashCountCard({
             </button>
           )}
         </div>
-      )}
     </div>
   );
 }
@@ -241,6 +253,22 @@ export default function CashHistoryPanel({
   shiftOpen?: boolean;
 }) {
   const [anulando, setAnulando] = useState<CashCount | null>(null);
+  const [corteRecibo, setCorteRecibo] = useState<string | null>(null);
+  const [recibo, setRecibo] = useState<CajaReceipt | null>(null);
+  const [errorRecibo, setErrorRecibo] = useState<string | null>(null);
+  const [cargandoRecibo, cargarRecibo] = useTransition();
+  function abrirRecibo(id: string) {
+    setCorteRecibo(id);
+    setRecibo(null);
+    setErrorRecibo(null);
+    cargarRecibo(async () => {
+      try {
+        const res = await getCajaReceipt(restaurantId, id);
+        setRecibo(res.receipt ?? null);
+        setErrorRecibo(res.error ?? null);
+      } catch { setErrorRecibo('No se pudo leer el recibo. Inténtalo de nuevo.'); }
+    });
+  }
   // Solo el último corte vivo, de las últimas 24 h y sin otro turno encima.
   const ultimoVivo = history.find((c) => !anulado(c));
   const anulable = ultimoVivo && !shiftOpen && isWithin24h(cerradoEn(ultimoVivo)) ? ultimoVivo.id : null;
@@ -280,7 +308,7 @@ export default function CashHistoryPanel({
               </div>
               {cortes.map((c) => (
                 <CashCountCard key={c.id} entry={c} timezone={timezone}
-                  canVoid={c.id === anulable} onVoid={() => setAnulando(c)} />
+                  canVoid={c.id === anulable} onVoid={() => setAnulando(c)} onReceipt={() => abrirRecibo(c.id)} />
               ))}
             </div>
           );
@@ -290,6 +318,35 @@ export default function CashHistoryPanel({
         <AnularCorte entry={anulando} restaurantId={restaurantId} timezone={timezone}
           selfApproves={selfApproves} onClose={() => setAnulando(null)} />
       )}
+      <Dialog open={!!corteRecibo} onOpenChange={(open) => { if (!open) setCorteRecibo(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Recibo del cierre</DialogTitle>
+            <DialogDescription>
+              {recibo ? `${formatDay(recibo.date)} · ${formatTime(recibo.closedAt, timezone)} · ${recibo.cashierName ?? 'Caja'}`
+                : cargandoRecibo ? 'Leyendo el corte…' : errorRecibo ?? 'Corte de Caja'}
+            </DialogDescription>
+          </DialogHeader>
+          {recibo && (
+            <div className="caja-recibo">
+              <dl>
+                <dt>Fondo inicial</dt><dd>{money(recibo.opening)}</dd>
+                <dt>Cobros en efectivo</dt><dd>{money(recibo.expected + recibo.refundsCash)}</dd>
+                <dt>Devoluciones en efectivo</dt><dd>{money(recibo.refundsCash)}</dd>
+                <dt>Gastos del turno</dt><dd>{money(recibo.expensesTotal)}</dd>
+                <dt>Efectivo esperado</dt><dd>{money(recibo.expectedDrawer)}</dd>
+                <dt>Total contado</dt><dd>{money(recibo.counted)}</dd>
+                <dt>Diferencia</dt><dd>{money(recibo.difference)}</dd>
+                <dt>Propinas</dt><dd>{money(recibo.tipsTotal)}</dd>
+              </dl>
+              <DenomBreakdown breakdown={recibo.counts} />
+              {recibo.expenses.map((gasto) => <div key={gasto.id}>{gasto.concept} · {money(gasto.amount)}</div>)}
+              {recibo.notes && <p>{recibo.notes}</p>}
+              <TraspasoDeRecibo key={recibo.id} restaurantId={restaurantId} timezone={timezone} recibo={recibo} />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

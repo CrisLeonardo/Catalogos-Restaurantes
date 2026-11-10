@@ -157,7 +157,7 @@ export const ACTIVATABLE_MODULES: ModuleMeta[] = [
   {
     key: 'recetas',
     label: 'Recetas e ingredientes',
-    description: 'Define los ingredientes de cada platillo y descuenta tu stock por receta. Para cocinas que controlan costos a fondo.',
+    description: 'Define los ingredientes de cada platillo y calcula su costo automáticamente. Para cocinas que controlan costos a fondo.',
     icon: 'flask',
     href: '/admin/ingredientes',
     navLabel: 'Ingredientes',

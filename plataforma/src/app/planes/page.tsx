@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { conEvento, EVENTOS } from '@/lib/analytics';
-import { SiteHeader, SiteFooter, SectionHead } from '@/components/site-chrome';
-import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceLabel, PLAN_ACCENT, PLAN_ACCENT_INK } from '@/lib/plans';
+import { SiteHeader, SiteFooter, SectionHead, contactHref, CONTACT_ICON } from '@/components/site-chrome';
+import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceLabel, PLAN_ACCENT, PLAN_ACCENT_INK, publicPlanCapabilities, planPresentation, planGrowthCopy, planComparisonCopy } from '@/lib/plans';
 import type { PlanPricing } from '@/lib/plans';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
@@ -18,35 +18,19 @@ export const metadata = {
 // regenera sola (ISR) y además savePricingSettings la revalida al guardar.
 export const revalidate = 600;
 
-const CONTACT_WA = process.env.NEXT_PUBLIC_CONTACT_WHATSAPP;
-const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'crisleonardo100@gmail.com';
-
-function waLink(msg: string) {
-  if (CONTACT_WA) return `https://wa.me/${CONTACT_WA}?text=${encodeURIComponent(msg)}`;
-  return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(msg)}`;
-}
 
 
-const FEATURE_ROWS: { label: string; key: keyof typeof PLANS.BASICO }[] = [
-  { label: 'Pedidos online', key: 'hasOrders' },
-  { label: 'Notificación WhatsApp', key: 'hasWhatsapp' },
-  { label: 'Alertas en tiempo real', key: 'hasRealtime' },
-  { label: 'Personalización completa', key: 'hasFullTheme' },
-  { label: 'Panel mesero (tablet)', key: 'hasWaiterPanel' },
-  { label: 'Impresión de comandas', key: 'hasPrinting' },
-  { label: 'Reportes financieros y corte de caja', key: 'hasFinance' },
-  { label: 'Analítica, inventario y personal', key: 'hasAnalytics' },
-];
+const FEATURE_ROWS = publicPlanCapabilities();
 
 function buildFaqs(pricing: PlanPricing) {
   return [
     {
       q: '¿Por qué no cobran según lo que vendo?',
-      a: 'Porque no queremos ser un costo que crece cuando te va mejor. Pagas un precio fijo por el plan y los módulos que usas — igual en un mes flojo que en tu mejor mes. Es la misma razón por la que existimos: reemplazar el modelo de comisión de las apps de delivery (18-30% por pedido) por algo predecible.',
+      a: 'Porque no queremos ser un costo que crece cuando te va mejor. Pagas un precio fijo por el plan, con sus funciones incluidas — igual en un mes flojo que en tu mejor mes. Es la misma razón por la que existimos: reemplazar el modelo de comisión de las apps de delivery por algo predecible.',
     },
     {
       q: '¿Qué pasa si mi restaurante crece mucho?',
-      a: 'Nada cambia en tu cobro. No hay tope de ventas ni de pedidos en ningún plan. Solo subes de plan cuando necesitas más funciones (más usuarios, panel de mesero, facturación electrónica) — nunca porque vendiste más.',
+      a: planGrowthCopy(pricing),
     },
     {
       q: '¿Qué incluye cada plan?',
@@ -54,7 +38,7 @@ function buildFaqs(pricing: PlanPricing) {
     },
     {
       q: '¿Cuál es la diferencia entre los planes?',
-      a: `Básico (${planPriceLabel(pricing, 'BASICO')}) es solo menú digital: tu carta con fotos, precios y QR imprimible, sin pedidos en línea. En línea (${planPriceLabel(pricing, 'EN_LINEA')}, sin alta) es para quien vende por WhatsApp o Instagram: pedidos para llevar y a domicilio con zonas de reparto y seguimiento del pedido, hasta ${PLANS.EN_LINEA.monthlyOrderCap} pedidos al mes, 1 usuario y hasta ${PLANS.EN_LINEA.maxProducts} productos. Si un mes pasas los ${PLANS.EN_LINEA.monthlyOrderCap} pedidos no se corta ninguno: te avisamos y al mes siguiente pasas a Estándar. Estándar (${planPriceLabel(pricing, 'ESTANDAR')}) agrega pedidos en línea con avisos en tiempo real, reportes financieros y corte de caja, eligiendo 2 de los 3 modos (comer en local, para llevar, a domicilio). Premium (${planPriceLabel(pricing, 'PREMIUM')}) incluye los 3 modos de pedido a la vez, panel de mesero, personalización completa, analítica/inventario/personal y todos los módulos disponibles.`,
+      a: planComparisonCopy(pricing),
     },
     {
       q: '¿Cómo funciona Multisucursal / Franquicias?',
@@ -140,7 +124,7 @@ export default async function PlanesPage() {
           {PUBLIC_PLANS.map((code) => {
             const p = PLANS[code];
             const accent = PLAN_ACCENT[code];
-            const included = INCLUDED_MODULES[code];
+            const contract = planPresentation({ plan: code, pricing });
             return (
               <div
                 key={code}
@@ -177,43 +161,12 @@ export default async function PlanesPage() {
                     {planPriceLabel(pricing, code)}
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 5 }}>
-                    {p.hasOrders ? 'Sin límite de ventas' : 'Menú digital · sin pedidos'}
+                    {contract.policy}
                   </div>
                 </div>
 
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 9 }}>
-                  {(code === 'BASICO' ? [
-                    { label: 'Menú digital con QR imprimible', ok: true },
-                    { label: `Hasta ${PLANS.BASICO.maxProducts} productos`, ok: true },
-                    { label: 'Tu logo y color de marca', ok: true },
-                    { label: 'Pedidos en línea', ok: false },
-                  ] : code === 'EN_LINEA' ? [
-                    { label: 'Todo lo del Básico', ok: true },
-                    { label: 'Pedidos para llevar y a domicilio', ok: true },
-                    { label: 'Zonas de reparto y seguimiento del pedido', ok: true },
-                    { label: 'WhatsApp y panel en tiempo real', ok: true },
-                    { label: `Hasta ${PLANS.EN_LINEA.monthlyOrderCap} pedidos al mes`, ok: true },
-                    { label: 'Sin costo de alta', ok: true },
-                    { label: 'Comer en local, reportes y corte de caja', ok: false },
-                  ] : code === 'ESTANDAR' ? [
-                    { label: 'Todo lo del Básico', ok: true },
-                    { label: 'Elige 2 de 3 modos de pedido', ok: true },
-                    { label: 'WhatsApp y panel en tiempo real', ok: true },
-                    { label: 'Hasta 2 usuarios del panel', ok: true },
-                    { label: 'Comer en local, para llevar y a domicilio juntos', ok: false },
-                  ] : code === 'PREMIUM' ? [
-                    { label: 'Todo lo del Estándar', ok: true },
-                    { label: 'Para llevar, comer en local y delivery', ok: true },
-                    { label: 'Panel de mesero, mesas e impresión', ok: true },
-                    { label: `Reservaciones, lealtad, cupones y ${included.length - 3} más incluidos`, ok: true },
-                    { label: 'Usuarios ilimitados', ok: true },
-                  ] : [
-                    { label: 'Todo lo de Premium', ok: true },
-                    { label: 'Facturación electrónica y proveedores incluidos', ok: true },
-                    { label: 'Soporte prioritario', ok: true },
-                    { label: 'Configuración asistida sin costo', ok: true },
-                    { label: 'Usuarios ilimitados', ok: true },
-                  ]).map(({ label, ok }) => (
+                  {contract.points.map(({ text: label, positive: ok }) => (
                     <li key={label} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13.5 }}>
                       <span style={{ color: ok ? 'var(--c-ok)' : 'var(--u-text-4)', flexShrink: 0 }}>
                         <Icon name={ok ? 'check' : 'x'} size={15} />
@@ -325,11 +278,19 @@ export default async function PlanesPage() {
               </tr>
             </thead>
             <tbody>
+              {(['orderScope', 'productsLabel', 'policy'] as const).map((key) => (
+                <tr key={key} style={{ borderBottom: '1px solid var(--u-hair)' }}>
+                  <td style={{ padding: '10px 16px', fontSize: 13, color: 'var(--u-text-3)' }}>
+                    {key === 'orderScope' ? 'Modalidades de pedido' : key === 'productsLabel' ? 'Productos' : 'Límite de pedidos'}
+                  </td>
+                  {PUBLIC_PLANS.map((code) => <td key={code} style={{ padding: '10px 8px', textAlign: 'center', fontSize: 12 }}>{planPresentation({ plan: code, pricing })[key]}</td>)}
+                </tr>
+              ))}
               {FEATURE_ROWS.map(({ label, key }, i) => (
                 <tr key={key} style={{ borderBottom: i < FEATURE_ROWS.length - 1 ? '1px solid var(--u-hair)' : 'none', background: i % 2 === 0 ? 'color-mix(in srgb, var(--u-text) 2.5%, transparent)' : 'transparent' }}>
                   <td style={{ padding: '10px 16px', fontSize: 13, color: 'var(--u-text-3)' }}>{label}</td>
                   {PUBLIC_PLANS.map((code) => {
-                    const val = PLANS[code][key];
+                    const val = planPresentation({ plan: code, pricing }).capabilities.find((item) => item.key === key)!.included;
                     return (
                       <td key={code} style={{ padding: '10px 8px', textAlign: 'center' }}>
                         <PlanFeatureRow value={val as boolean | number | string} />
@@ -356,7 +317,7 @@ export default async function PlanesPage() {
           Para grupos grandes, escríbenos: armamos un plan a medida.
         </p>
         <a
-          href={waLink('Hola, quiero información sobre planes para mi grupo de restaurantes / franquicia')}
+          href={contactHref('Hola, quiero información sobre planes para mi grupo de restaurantes / franquicia')}
           target="_blank"
           rel="noopener noreferrer"
           className="lp-btn lp-btn-soft"
@@ -398,11 +359,11 @@ export default async function PlanesPage() {
               Crear mi restaurante gratis
             </Link>
             <a
-              href={waLink('Hola, quiero una demo de Leogin para mi restaurante')}
+              href={contactHref('Hola, quiero una demo de Leogin para mi restaurante')}
               target="_blank" rel="noopener noreferrer"
               className="lp-btn lp-btn-soft"
             >
-              <Icon name="whatsapp" size={16} /> Hablar con ventas
+              <Icon name={CONTACT_ICON} size={16} /> Hablar con ventas
             </a>
           </div>
         </div>
