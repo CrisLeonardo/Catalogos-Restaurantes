@@ -179,7 +179,7 @@
      pantallas, así que cualquier cosa que quiera medirse «hasta abajo» tiene
      que descontarlos. Sin este token, `100svh` en el héroe significaba una
      pantalla entera menos una barra que nadie estaba restando. */
-  --m-nav-h: 84px;
+  --m-nav-h: 76px;
 
   /* ── Panel admin (sobreescritos por buildThemeVars) ──────── */
   --admin-panel-bg:      #0c0c0e;

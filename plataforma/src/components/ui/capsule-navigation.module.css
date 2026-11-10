@@ -89,59 +89,16 @@
 .item svg { width: 24px; height: 24px; flex-shrink: 0; }
 .cutout { fill: var(--capsule-face); }
 .item[aria-current='page'] .cutout { fill: var(--capsule-selected); }
-.item:focus-visible, .cartTray:focus-visible {
+.item:focus-visible {
   outline: 2px solid var(--capsule-focus);
   outline-offset: -3px;
 }
 .rail[data-count='4'] .item { padding-inline: 5px; gap: 5px; font-size: clamp(12px, 3.3vw, 15px); }
 .rail[data-count='4'] .item svg { width: 20px; height: 20px; }
 .mobileOnly { display: none; }
-.cartDock {
-  position: fixed;
-  bottom: calc(var(--m-nav-h) + env(safe-area-inset-bottom, 0px));
-  left: 0;
-  right: 0;
-  z-index: 40;
-  display: flex;
-  justify-content: center;
-  padding: 0 12px 8px;
-  pointer-events: none;
-}
-.cartDock[data-without-nav='true'] { bottom: env(safe-area-inset-bottom, 0px); padding-bottom: 12px; }
-.cartTray {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) 44px;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-  max-width: 460px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--capsule-ink);
-  pointer-events: auto;
-  cursor: pointer;
-  border-radius: 999px;
-}
-.cartCount, .cartProduct, .cartBag {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  border-radius: 999px;
-  background: var(--capsule-face);
-  box-shadow: 2px 4px 6px var(--capsule-shadow), -2px -2px 5px var(--capsule-light), inset 1px 1px 1px var(--capsule-light);
-}
-.cartCount { padding: 0 11px; font-size: 12px; font-weight: 550; white-space: nowrap; }
-.cartProduct { justify-content: flex-start; padding: 0 14px; gap: 5px; min-width: 0; font-size: 14px; }
-.cartName { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cartPrice { white-space: nowrap; font-variant-numeric: tabular-nums; }
-.cartBag svg { width: 24px; height: 24px; }
 @media (max-width: 359px) {
   .rail[data-count='4'] .item { padding-inline: 3px; gap: 4px; font-size: 12px; }
   .rail[data-count='4'] .item svg { width: 18px; height: 18px; }
-  .cartCount { padding-inline: 8px; }
-  .cartProduct { padding-inline: 10px; font-size: 13px; }
 }
 @media (max-width: 820px) { .mobileOnly { display: flex; } }
 @media (prefers-reduced-motion: reduce) { .selection { transition: none; } }

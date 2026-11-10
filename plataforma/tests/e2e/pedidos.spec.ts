@@ -145,7 +145,7 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
     await expect(ficha).toBeHidden();
     const carrito = page.getByRole('button', { name: /^Ver carrito/ });
     await expect(carrito).toBeVisible();
-    await expect(carrito).toContainText(tenantA.productName);
+    await expect(carrito).toContainText('Ver carrito');
     await expect(carrito).toContainText('42.00');
     const navegacion = page.getByRole('navigation', { name: 'Navegación principal' });
     await expect(navegacion.getByRole('button')).toHaveCount(4);
