@@ -142,6 +142,12 @@ Orden recomendado: primero lo de más riesgo y menor tamaño, y lo que destraba 
 
 **Aceptación:** una búsqueda en el repo no encuentra ninguna de las frases retiradas; capturas antes/después de cada texto.
 
+**Estado (2026-11-04): hecha**, con tres matices:
+- **Contacto (F02):** no hizo falta esperar el número. Los botones toman el ícono y el texto del canal real (`CONTACT_ICON` y `CONTACT_VIA` en `site-chrome.tsx`): dicen WhatsApp solo si `NEXT_PUBLIC_CONTACT_WHATSAPP` está configurada y, si no, correo. `/planes` usaba una copia propia del enlace; ahora usa el común.
+- **CTA «Crear mi menú gratis» (F01):** se dejó igual a propósito. Es la estrategia del «sí chico primero» y el subtítulo ya explica qué es gratis y qué es prueba. Cambiarlo es decisión comercial de V.1.
+- **Título de acceso (F22):** `/admin/login` ya tenía título; faltaba en `/login`.
+- **Enlaces de Funciones (X15):** Local → Ajustes › Salón, Para llevar → Ajustes › Pedidos y cobro, Domicilio → Ajustes › Entrega. Se comprobó que abren con un dueño por membresía (`getAdminContext` fija el local en memoria).
+
 ### 0.2 · Una sola fuente para plan, precio y alcance — M
 
 **Cubre:** E01, N15, N23, R36.1–2, R37.2, W01 (en las superficies).
@@ -385,7 +391,7 @@ Elegir una o dos de M§9: turno guiado (A), capacidad de cocina (B), menú renta
 Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 
 **Ola 0**
-- [ ] 0.1 Textos y enlaces que prometen otra cosa
+- [x] 0.1 Textos y enlaces que prometen otra cosa (rama `fix/textos-que-prometen-otra-cosa`, 2026-11-04)
 - [ ] 0.2 Una sola fuente para plan, precio y alcance
 - [ ] 0.3 Error no es vacío ni cero
 - [ ] 0.4 Pausa de pedidos real

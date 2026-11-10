@@ -233,7 +233,7 @@ export function buildNav(ctx: NavContext): NavGroup[] {
           : []),
         { href: '/admin/suscripcion', label: 'Mi suscripción', key: 'suscripcion' },
         ...(ctx.showStaff ? [{ href: '/admin/modulos', label: 'Funciones', key: 'modulos' }] : []),
-        { href: '/admin/respaldo', label: 'Copia de tus datos', key: 'respaldo' },
+        { href: '/admin/respaldo', label: 'Exportar tus datos', key: 'respaldo' },
         { href: '/admin/ayuda', label: 'Ayuda y tutoriales', key: 'ayuda' },
       ],
     },

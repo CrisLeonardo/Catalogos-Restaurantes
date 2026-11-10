@@ -5,10 +5,10 @@ import { Glass } from '@/components/glass';
 import { updateOrderTypes } from '@/lib/actions/super-admin';
 import type { OrderType } from '@/lib/theme/defaults';
 
-/* Cada modo de pedido es su propio canal independiente. Nota de billing: para
-   el descuento "Plan a tu medida" (Premium+, ver mig. 070) "comer en local" y
-   "para llevar" cuentan como un solo canal si CUALQUIERA de los dos está
-   activo — el descuento solo aplica cuando ambos están apagados a la vez. */
+/* Cada modo de pedido es su propio canal independiente. Los planes son de
+   precio fijo (lib/plans.ts): apagar un canal NO cambia la mensualidad. El
+   descuento por canal de la mig. 070 se retiró; el texto de abajo lo seguía
+   prometiendo (auditoría 2026-11-03, N01). */
 const OPTIONS: { id: OrderType; label: string; desc: string }[] = [
   { id: 'dine_in', label: 'Comer en local', desc: 'Pedidos en mesa con QR' },
   { id: 'pickup',  label: 'Para llevar',    desc: 'Retiro en el mostrador' },
@@ -45,9 +45,8 @@ export default function OrderTypesEditor({
         Tipos de pedido
       </p>
       <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: '-4px 0 0', lineHeight: 1.45 }}>
-        En planes Premium+, cada método de pedido apagado descuenta Q50 de la mensualidad
-        automática (máx. 2 de los 3 — siempre se paga al menos un método). En Estándar el dueño
-        puede elegir hasta 2 de los 3 modos desde su panel — aquí puedes fijar cualquier
+        Los planes tienen precio fijo: apagar un modo no cambia la mensualidad. En Estándar el
+        dueño puede elegir hasta 2 de los 3 modos desde su panel; aquí puedes fijar cualquier
         combinación. Mínimo un modo activo.
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

@@ -6,7 +6,7 @@ import { Leo } from '@/components/leo';
 import { LandingDemo } from '@/components/landing-demo';
 import { LandingIntro } from '@/components/landing-intro';
 import { CtaEnLinea } from '@/components/en-linea/cta-en-linea';
-import { SiteHeader, SiteFooter, SectionHead, contactHref } from '@/components/site-chrome';
+import { SiteHeader, SiteFooter, SectionHead, contactHref, CONTACT_ICON } from '@/components/site-chrome';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { planPriceLabel, PLANS } from '@/lib/plans';
 
@@ -374,7 +374,7 @@ export default async function VendeEnLinea() {
                   className="lp-btn lp-btn-lg"
                   style={{ background: 'rgba(245,243,239,0.10)', color: '#F5F3EF', borderColor: 'rgba(245,243,239,0.22)' }}
                 >
-                  <Icon name="whatsapp" size={17} /> Escríbenos
+                  <Icon name={CONTACT_ICON} size={17} /> Escríbenos
                 </a>
               </div>
             </div>

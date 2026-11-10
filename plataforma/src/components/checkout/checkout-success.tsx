@@ -287,6 +287,14 @@ function RatingBox({ restaurantId, orderId, customerName }: { restaurantId: stri
           }}
         />
       )}
+      {/* La encuesta NO es anónima: el restaurante ve el nombre del pedido
+          junto a la calificación. Se dice antes de enviar, no después
+          (auditoría 2026-11-03, X02; decisión del dueño 2026-11-04). */}
+      {value > 0 && customerName && (
+        <p style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-3)', margin: 0, textAlign: 'center', lineHeight: 1.45 }}>
+          El restaurante verá tu nombre junto a tu calificación.
+        </p>
+      )}
       {value > 0 && (
         <button
           type="button"

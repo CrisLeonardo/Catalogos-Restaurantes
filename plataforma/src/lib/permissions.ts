@@ -24,7 +24,7 @@ export const ADMIN_SECTIONS = [
   { key: 'metricas',     label: 'Métricas' },
   { key: 'analitica',    label: 'Analítica' },
   { key: 'finanzas',     label: 'Finanzas' },
-  { key: 'respaldo',     label: 'Respaldo de datos' },
+  { key: 'respaldo',     label: 'Exportar datos' },
   { key: 'fel',          label: 'Facturación (FEL)' },
   { key: 'proveedores',  label: 'Proveedores' },
   { key: 'loyalty',      label: 'Lealtad' },

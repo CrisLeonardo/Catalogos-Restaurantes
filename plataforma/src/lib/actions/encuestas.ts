@@ -10,7 +10,8 @@ const MAX_COMMENT = 500;
 const MAX_NAME = 80;
 
 /**
- * El comensal califica su pedido (público, anónimo).
+ * El comensal califica su pedido (público, sin sesión). No es anónima: guarda
+ * el nombre del pedido y el comensal lo sabe antes de enviar.
  *
  * Es una acción sin sesión: el único dato que hace falta para invocarla es el
  * restaurantId, que está a la vista en el menú público. Antes no validaba
