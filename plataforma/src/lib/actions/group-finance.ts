@@ -20,6 +20,7 @@ import {
 } from '@/lib/documents/excel';
 import { formatDateRangeLabel, longDate } from '@/lib/documents/format';
 import type { DocumentBranding } from '@/lib/documents/types';
+import { cifrasDeCosto } from '@/lib/finanzas-cobertura';
 
 type GroupFinanceData = {
   report: GroupReport;
@@ -84,22 +85,25 @@ export async function exportGroupFinanceXlsx(
   const headers = ['Sucursal', 'Ingreso', 'Costo', 'Utilidad', 'Margen %', 'Pedidos', 'Ticket promedio'];
   addBrandedHeader(ws, { branding, title, subtitle, columnsSpan: headers.length });
 
+  // Costo desconocido no es Q0 ni margen 0 % (auditoría 2026-11-03, X21).
   const rows = report.perBranch.map((b) => {
-    const cost = b.cost;
-    const margin = b.marginPct ?? 0;
+    const c = cifrasDeCosto(b);
     const ticket = b.orders > 0 ? b.revenue / b.orders : 0;
-    return [b.name, b.revenue, cost, b.profit, margin, b.orders, ticket];
+    return [b.name, b.revenue, c.costo ?? 'Sin datos', c.utilidad ?? 'Sin datos', c.margen ?? null, b.orders, ticket];
   });
 
   const { headerRow } = writeStyledTable(ws, branding, headers, rows, { currencyCols: [2, 3, 4, 7] });
   ws.getColumn(5).numFmt = PERCENT_NUM_FMT;
 
-  const totalCost = report.totalCost;
-  const totalMargin = report.totalMarginPct ?? 0;
+  const total = cifrasDeCosto({
+    productRevenue: report.totalProductRevenue, costedRevenue: report.totalCostedRevenue,
+    cost: report.totalCost, profit: report.totalProfit, marginPct: report.totalMarginPct,
+  });
   const totalTicket = report.totalOrders > 0 ? report.totalRevenue / report.totalOrders : 0;
   const totalsRow = ws.addRow([
     report.perBranch.length > 1 ? 'TOTAL GRUPO' : 'TOTAL',
-    report.totalRevenue, totalCost, report.totalProfit, totalMargin, report.totalOrders, totalTicket,
+    report.totalRevenue, total.costo ?? 'Sin datos', total.utilidad ?? 'Sin datos', total.margen ?? null,
+    report.totalOrders, totalTicket,
   ]);
   styleTotalsRow(totalsRow);
   [2, 3, 4, 7].forEach((c) => setCurrencyCell(totalsRow.getCell(c), branding));

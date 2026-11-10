@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/service';
+import { lecturaDe, type Lectura } from '@/lib/db/lectura';
 
 export type WaitlistStatus = 'WAITING' | 'NOTIFIED' | 'SEATED' | 'CANCELLED' | 'NO_SHOW';
 
@@ -31,40 +32,47 @@ export interface WaitlistSummary {
 }
 
 /** Grupos en cola ahora mismo (esperando o ya avisados), del más antiguo al más nuevo. */
-export async function getActiveWaitlist(restaurantId: string): Promise<WaitlistEntry[]> {
+/* Un error ya no se pinta «No hay nadie esperando» (auditoría 2026-11-03, X20):
+   el host podría dejar de atender a quien sí está en la cola. */
+export async function getActiveWaitlist(restaurantId: string): Promise<Lectura<WaitlistEntry[]>> {
   const db = createServiceClient();
-  const { data } = await db
+  const { data, error } = await db
     .from('waitlist_entries')
     .select('*')
     .eq('restaurant_id', restaurantId)
     .in('status', ['WAITING', 'NOTIFIED'])
     .order('created_at', { ascending: true })
     .limit(200);
-  return (data ?? []) as WaitlistEntry[];
+  return lecturaDe(error, data as WaitlistEntry[] | null, [], {
+    contexto: 'getActiveWaitlist', parcial: (data?.length ?? 0) >= 200,
+  });
 }
 
 /** Historial reciente (sentados/cancelados) — para referencia del día. */
-export async function getRecentWaitlist(restaurantId: string, limit = 30): Promise<WaitlistEntry[]> {
+export async function getRecentWaitlist(restaurantId: string, limit = 30): Promise<Lectura<WaitlistEntry[]>> {
   const db = createServiceClient();
-  const { data } = await db
+  const { data, error } = await db
     .from('waitlist_entries')
     .select('*')
     .eq('restaurant_id', restaurantId)
     .in('status', ['SEATED', 'CANCELLED'])
     .order('created_at', { ascending: false })
     .limit(limit);
-  return (data ?? []) as WaitlistEntry[];
+  return lecturaDe(error, data as WaitlistEntry[] | null, [], { contexto: 'getRecentWaitlist' });
 }
 
-export async function getWaitlistSummary(restaurantId: string): Promise<WaitlistSummary> {
+export async function getWaitlistSummary(restaurantId: string): Promise<Lectura<WaitlistSummary>> {
   const db = createServiceClient();
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  const [{ data: active }, { data: seatedToday }] = await Promise.all([
+  const [{ data: active, error: e1 }, { data: seatedToday, error: e2 }] = await Promise.all([
     db.from('waitlist_entries').select('status').eq('restaurant_id', restaurantId).in('status', ['WAITING', 'NOTIFIED']),
     db.from('waitlist_entries').select('created_at, seated_at').eq('restaurant_id', restaurantId).eq('status', 'SEATED').gte('created_at', todayStart.toISOString()),
   ]);
+  if (e1 || e2) {
+    return lecturaDe(e1 ?? e2, null, { waiting: 0, notified: 0, avgWaitMinutesToday: null }, { contexto: 'getWaitlistSummary' });
+  }
 
   const waiting = (active ?? []).filter((r) => r.status === 'WAITING').length;
   const notified = (active ?? []).filter((r) => r.status === 'NOTIFIED').length;
@@ -74,7 +82,7 @@ export async function getWaitlistSummary(restaurantId: string): Promise<Waitlist
     .map((r) => (new Date(r.seated_at as string).getTime() - new Date(r.created_at).getTime()) / 60000);
   const avgWaitMinutesToday = waits.length > 0 ? Math.round(waits.reduce((a, b) => a + b, 0) / waits.length) : null;
 
-  return { waiting, notified, avgWaitMinutesToday };
+  return lecturaDe(null, { waiting, notified, avgWaitMinutesToday }, { waiting: 0, notified: 0, avgWaitMinutesToday: null });
 }
 
 /* ── Recepción por día de negocio (auditoría 1.8, X13 y R18.5) ─────────

@@ -12,6 +12,7 @@ import { useToastManager } from '@/components/ui/toast';
 import { exportGroupFinanceXlsx, getGroupFinancePdfData } from '@/lib/actions/group-finance';
 import { createDoc, drawPdfHeader, brandedAutoTable, getLastAutoTableFinalY, finalizePdf } from '@/lib/documents/pdf';
 import { formatDocMoney, formatDateRangeLabel, longDate } from '@/lib/documents/format';
+import { cifrasDeCosto } from '@/lib/finanzas-cobertura';
 
 export default function GroupFinanceExport({ from, to }: { from: string; to: string }) {
   const [pendingXlsx, startXlsx] = useTransition();
@@ -55,25 +56,35 @@ export default function GroupFinanceExport({ from, to }: { from: string; to: str
       await brandedAutoTable(doc, branding, {
         startY: y,
         head: [['Sucursal', 'Ingreso', 'Costo', 'Utilidad', 'Margen %', 'Pedidos', 'Ticket promedio']],
+        // Costo desconocido no es Q0 ni margen 0 % (auditoría 2026-11-03, X21).
         body: report.perBranch.map((b) => {
-          const cost = b.cost;
-          const margin = b.marginPct ?? 0;
+          const c = cifrasDeCosto(b);
           const ticket = b.orders > 0 ? b.revenue / b.orders : 0;
-          return [b.name, money(b.revenue), money(cost), money(b.profit), `${margin.toFixed(1)}%`, String(b.orders), money(ticket)];
+          return [
+            b.name, money(b.revenue),
+            c.costo == null ? 'Sin datos' : money(c.costo),
+            c.utilidad == null ? 'Sin datos' : money(c.utilidad),
+            c.margen == null ? '—' : `${c.margen.toFixed(1)}%`,
+            String(b.orders), money(ticket),
+          ];
         }),
         columnStyles: rightAlign,
       });
 
-      const totalCost = report.totalCost;
-      const totalMargin = report.totalMarginPct ?? 0;
+      const total = cifrasDeCosto({
+        productRevenue: report.totalProductRevenue, costedRevenue: report.totalCostedRevenue,
+        cost: report.totalCost, profit: report.totalProfit, marginPct: report.totalMarginPct,
+      });
       const totalTicket = report.totalOrders > 0 ? report.totalRevenue / report.totalOrders : 0;
 
       await brandedAutoTable(doc, branding, {
         startY: getLastAutoTableFinalY(doc),
         showHead: 'never',
         body: [[
-          report.perBranch.length > 1 ? 'TOTAL GRUPO' : 'TOTAL', money(report.totalRevenue), money(totalCost), money(report.totalProfit),
-          `${totalMargin.toFixed(1)}%`, String(report.totalOrders), money(totalTicket),
+          report.perBranch.length > 1 ? 'TOTAL GRUPO' : 'TOTAL', money(report.totalRevenue),
+          total.costo == null ? 'Sin datos' : money(total.costo),
+          total.utilidad == null ? 'Sin datos' : money(total.utilidad),
+          total.margen == null ? '—' : `${total.margen.toFixed(1)}%`, String(report.totalOrders), money(totalTicket),
         ]],
         styles: { fontStyle: 'bold' },
         columnStyles: rightAlign,

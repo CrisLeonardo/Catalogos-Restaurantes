@@ -160,6 +160,15 @@ Orden recomendado: primero lo de más riesgo y menor tamaño, y lo que destraba 
 **Hacer:** un tipo de lectura común (`ok`, `vacío`, `error`, `parcial` y `falta migración`, con fecha del último dato). Aplicarlo a la salud de clientes, comprobantes, cupones, encuestas, lista de espera y analítica. Recompensas: mostrar el error al eliminar o pausar y no aparentar éxito (X07). Mi cuenta y Finanzas: «Margen no disponible: faltan costos», con el porcentaje de ventas que sí tienen costo, en vez de utilidad Q0 (X21). Reutilizar `lib/db/migracion-ausente.ts`.
 **Aceptación:** una prueba por módulo que fuerza el error y comprueba que no aparecen «Todo en orden», «No hay comprobantes» ni un cero. Al reintentar se conserva el filtro.
 
+**Estado (2026-11-04): hecha**, según la [maqueta aprobada](https://claude.ai/artifact/FxT8MLXqic1YJk3xvuE7xF).
+- **`lib/db/lectura.ts`** (8 pruebas): estados ok, parcial, error y falta-migracion. El error se registra en el servidor y nunca se le muestra SQL al usuario.
+- **Capa de datos:** cupones, encuestas, lista de espera (el tope de 200 cuenta como parcial), analítica (tope de 20.000 pedidos o 2.000 productos, parcial), salud de clientes y comprobantes devuelven su estado. 7 pruebas con la base simulada cubren salud y comprobantes.
+- **Pantallas:** un aviso común (`components/admin/aviso-lectura.tsx`) con «Reintentar» que conserva el rango. Con error no se pintan estados vacíos ni ceros. El inicio del super agrega «No se pudo revisar la salud de los clientes» en lugar de «Todo en orden». El aviso nocturno responde 503. Comprobantes, Cobranza y Mi suscripción también avisan.
+- **X07:** borrar u ocultar una recompensa revisa la respuesta y avisa bajo la recompensa.
+- **X21 / PA-T17:** `lib/finanzas-cobertura.ts` (7 pruebas). Mi cuenta › Finanzas, su PDF y su Excel dicen «Sin datos» o «No disponible · faltan costos» en lugar de Q0 o margen 0 %, y muestran qué parte de lo vendido tiene costo.
+- **Probado en el navegador:** quité temporalmente la lectura a la cuenta de servicio en la base local (cupones, encuestas, lista de espera, productos, actualizar recompensas) y después la restauré. El super admin pide segundo factor y no se abrió en el navegador; sus pantallas quedan cubiertas por las pruebas.
+- **Pendiente:** «último dato válido con fecha» necesita guardar la última lectura buena; queda para cuando haya dónde guardarla (4.12). Visto de paso: en Mi cuenta, una cifra como «Q5,388.30» se parte en dos líneas con cinco tarjetas a 800 px (D02, ficha 1.0).
+
 ### 0.4 · Pausa de pedidos real — S/M · requiere maqueta
 
 **Cubre:** X01, R26.1–2, PA-T01.
@@ -393,7 +402,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 **Ola 0**
 - [x] 0.1 Textos y enlaces que prometen otra cosa (rama `fix/textos-que-prometen-otra-cosa`, 2026-11-04)
 - [ ] 0.2 Una sola fuente para plan, precio y alcance
-- [ ] 0.3 Error no es vacío ni cero
+- [x] 0.3 Error no es vacío ni cero (rama `fix/error-no-es-vacio`, 2026-11-04)
 - [ ] 0.4 Pausa de pedidos real
 - [ ] 0.5 Cupones: vigencia, programación y límites
 - [ ] 0.6 Pedido, cupón y puntos en una sola operación

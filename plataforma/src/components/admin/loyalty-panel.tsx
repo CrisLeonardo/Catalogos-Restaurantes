@@ -248,15 +248,39 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
     });
   }
 
-  function remove(id: string) {
+  /* Borrar y mostrar/ocultar revisan la respuesta. Antes la ignoraban: si
+     fallaba, la recompensa seguía igual y nada lo decía (auditoría
+     2026-11-03, X07). El aviso queda bajo la recompensa afectada. */
+  const [fallo, setFallo] = useState<{ id: string; texto: string } | null>(null);
+
+  function remove(r: RewardRow) {
+    setFallo(null);
     start(async () => {
-      await deleteReward(restaurantId, id);
-      if (editingId === id) reset();
+      let res: { error?: string } = {};
+      try { res = await deleteReward(restaurantId, r.id); } catch { res = { error: 'sin conexión' }; }
+      if (res.error) {
+        setFallo({ id: r.id, texto: `No se pudo borrar «${r.title}». Sigue en la lista; inténtalo de nuevo.` });
+        return;
+      }
+      if (editingId === r.id) reset();
     });
   }
 
-  function toggle(id: string, active: boolean) {
-    start(async () => { await toggleReward(restaurantId, id, active); });
+  function toggle(r: RewardRow) {
+    setFallo(null);
+    const mostrar = !r.active;
+    start(async () => {
+      let res: { error?: string } = {};
+      try { res = await toggleReward(restaurantId, r.id, mostrar); } catch { res = { error: 'sin conexión' }; }
+      if (res.error) {
+        setFallo({
+          id: r.id,
+          texto: mostrar
+            ? `No se pudo mostrar «${r.title}». Sigue oculta para tus clientes; inténtalo de nuevo.`
+            : `No se pudo ocultar «${r.title}». Tus clientes la siguen viendo; inténtalo de nuevo.`,
+        });
+      }
+    });
   }
 
   return (
@@ -298,7 +322,8 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {rewards.map((r) => (
-            <Card key={r.id} className="flex items-center gap-3 p-3" style={{ opacity: r.active ? 1 : 0.6 }}>
+            <div key={r.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <Card className="flex items-center gap-3 p-3" style={{ opacity: r.active ? 1 : 0.6 }}>
               <div style={{ width: 46, height: 46, borderRadius: 'var(--radius-md)', overflow: 'hidden', flexShrink: 0, background: 'var(--surface-2)', display: 'grid', placeItems: 'center', fontSize: 18 }}>
                 {r.image_url
                   /* eslint-disable-next-line @next/next/no-img-element */
@@ -315,11 +340,15 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
               </div>
               <div style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'var(--ui-font-mono)', color: 'var(--brand-accent-ink)', fontSize: 14, whiteSpace: 'nowrap' }}>{r.points_cost.toLocaleString('es-GT')} pts</div>
               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                <Button onClick={() => toggle(r.id, !r.active)} disabled={isPending} variant="outline" size="sm" title={r.active ? 'Desactivar' : 'Activar'}>{r.active ? 'Ocultar' : 'Mostrar'}</Button>
+                <Button onClick={() => toggle(r)} disabled={isPending} variant="outline" size="sm" title={r.active ? 'Desactivar' : 'Activar'}>{r.active ? 'Ocultar' : 'Mostrar'}</Button>
                 <Button onClick={() => startEdit(r)} variant="outline" size="sm">Editar</Button>
-                <Button onClick={() => remove(r.id)} disabled={isPending} variant="outline" size="sm" className="border-[var(--c-danger-line)] text-[var(--c-danger)]">Borrar</Button>
+                <Button onClick={() => remove(r)} disabled={isPending} variant="outline" size="sm" className="border-[var(--c-danger-line)] text-[var(--c-danger)]">Borrar</Button>
               </div>
             </Card>
+            {fallo?.id === r.id && (
+              <div role="alert" style={{ fontSize: 13, color: 'var(--c-danger)', padding: '0 4px', lineHeight: 1.45 }}>{fallo.texto}</div>
+            )}
+            </div>
           ))}
         </div>
       )}
