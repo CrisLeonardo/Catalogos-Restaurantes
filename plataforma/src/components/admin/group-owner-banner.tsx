@@ -1,9 +1,13 @@
 import { Icon } from '@/components/icons';
 
 /**
- * Aviso para quien tiene VARIOS restaurantes y está dentro de uno. Le
- * recuerda en cuál está y le da una salida de un toque al consolidado de
- * todos, que vive en Mi cuenta.
+ * Para quien tiene VARIOS restaurantes y está dentro de uno: en cuál está y
+ * una salida de un toque al consolidado de todos, que vive en Mi cuenta.
+ *
+ * Es UNA línea y no una caja: sale en todas las pantallas del panel, y como
+ * tarjeta de color con botón se comía cien píxeles del teléfono en cada una
+ * para decir algo que el dueño ya sabe. El nombre del restaurante lo repite
+ * a propósito: es lo único que distingue un panel de otro.
  */
 export default function GroupOwnerBanner({
   branchName,
@@ -13,32 +17,20 @@ export default function GroupOwnerBanner({
   returnUrl: string;
 }) {
   return (
-    <div
-      className="glass-quiet"
+    <a
+      href={returnUrl}
+      className="press"
       style={{
-        display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-        borderRadius: 'var(--radius-lg)', padding: '11px 15px', marginBottom: 16,
-        border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)',
-        background: 'color-mix(in srgb, var(--brand-accent) 8%, transparent)',
+        display: 'inline-flex', alignItems: 'center', gap: 6, maxWidth: '100%',
+        minHeight: 44, marginTop: -8, marginBottom: 4, fontSize: 13,
+        color: 'var(--u-text-2)', textDecoration: 'none',
       }}
     >
-      <span style={{ color: 'var(--brand-accent-ink)', flexShrink: 0, display: 'grid', placeItems: 'center' }}>
-        <Icon name="box" size={17} />
-      </span>
-      <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--u-text-2)' }}>
-        Estás administrando <strong style={{ color: 'var(--u-text)' }}>{branchName}</strong>, uno de tus restaurantes.
-      </div>
-      <a
-        href={returnUrl}
-        className="press"
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
-          padding: '8px 14px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600,
-          background: 'var(--u-text)', color: 'var(--brand-bg)', textDecoration: 'none',
-        }}
-      >
-        <Icon name="chevronLeft" size={15} /> Ver todos juntos
-      </a>
-    </div>
+      <Icon name="chevronLeft" size={15} />
+      <strong style={{ color: 'var(--u-text)', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {branchName}
+      </strong>
+      <span style={{ whiteSpace: 'nowrap' }}>· Ver todos</span>
+    </a>
   );
 }
