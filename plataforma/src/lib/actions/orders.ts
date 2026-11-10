@@ -64,6 +64,7 @@ import {
 } from '@/lib/documents/excel';
 import { longDate } from '@/lib/documents/format';
 import { orderTypesForPlan } from '@/lib/plans';
+import { conPunto, fraseDeRegreso, pausaVigente } from '@/lib/pausa-pedidos';
 import type { DocumentBranding } from '@/lib/documents/types';
 import type {
   OrderItemOption,
@@ -381,11 +382,23 @@ export async function createOrder(
   // Operación: pausa manual y horario real también se validan AQUÍ
   // (el cliente puede tener la página abierta desde antes del cierre).
   if (restaurant.orders_paused) {
-    return {
-      error:
-        (restaurant.pause_message as string | null)?.trim() ||
-        'Los pedidos están pausados por el momento. Intenta más tarde.',
-    };
+    /* La hora de fin (migración 155) va en su propia consulta y solo cuando
+       hay pausa: si la columna aún no existe, la consulta de arriba no se
+       cae y la pausa vale hasta reactivar, como antes. Una pausa con fin
+       termina sola (lib/pausa-pedidos). */
+    const { data: fin } = await db
+      .from('restaurants')
+      .select('orders_paused_until')
+      .eq('id', restaurantId)
+      .maybeSingle();
+    const hasta = (fin as { orders_paused_until?: string | null } | null)?.orders_paused_until ?? null;
+    if (pausaVigente({ orders_paused: true, orders_paused_until: hasta })) {
+      const mensaje = conPunto(
+        (restaurant.pause_message as string | null)?.trim() || 'Los pedidos están pausados por el momento.',
+      );
+      const regreso = fraseDeRegreso(hasta, (restaurant.timezone as string | null) || 'America/Guatemala');
+      return { error: `${mensaje} ${regreso ?? 'Intenta más tarde.'}` };
+    }
   }
 
   // Auto-pausa sin agente (mig. 069, OPCIONAL por restaurante): si el local

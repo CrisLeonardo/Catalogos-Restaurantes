@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { getMyMemberships } from '@/lib/db/membership';
 import { withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
 import { adminUrl } from '@/lib/tenant';
+import { pausaVigente } from '@/lib/pausa-pedidos';
 import { getOrderStats } from '@/lib/db/orders';
 import { getSalesReport, type SalesReport } from '@/lib/db/reports';
 import type { Organization, Restaurant } from '@/types';
@@ -187,7 +188,7 @@ export async function getGroupDashboard(branches: Restaurant[]): Promise<GroupDa
       id: b.id, name: b.name, slug: b.slug,
       todaySales: st.todaySales, todayOrders: st.todayOrders, todayTicket: st.todayTicket,
       sales14: st.totalLast14,
-      paused: b.orders_paused === true,
+      paused: pausaVigente(b),
       lowStock: ls.low, outStock: ls.out,
     };
   });

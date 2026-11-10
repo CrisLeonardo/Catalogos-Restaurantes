@@ -50,6 +50,9 @@ export interface Restaurant {
   /** Excepciones puntuales por fecha (feriados) — migración 083. */
   hour_exceptions: HourExceptions | null;
   orders_paused: boolean;
+  /** Fin de la pausa (migración 155). null = hasta reactivar; ausente en una
+      base sin la 155. Leerla siempre con lib/pausa-pedidos. */
+  orders_paused_until?: string | null;
   pause_message: string | null;
   // Pedidos por WhatsApp + cobertura de delivery (migración 010)
   orders_whatsapp: string | null;
