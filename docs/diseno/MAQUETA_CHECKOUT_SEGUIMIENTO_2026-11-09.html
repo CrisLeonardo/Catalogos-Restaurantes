@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comensal: pedido y seguimiento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* Maqueta de la ficha 1.12 · Modo «Pedir»: manda la marca del restaurante. Datos ficticios. */
+:root{--bg:#0A1220;--s1:#141D2D;--s2:#1C2638;--line:rgba(231,238,252,.14);--line2:rgba(231,238,252,.24);--ink:#F1F4FA;--ink2:#C3CBD9;--ink3:#93A0B5;--accent:#5B8DEF;--on-accent:#0A1220;--cta:#F4F1EA;--on-cta:#141414;--warn:#F2C36B;--warn-bg:#2A2110;--warn-line:#5A4517;--ok:#6BD49A;--ok-bg:#14251B;--info:#8FB4F0;--info-bg:#151E2C;--info-line:#2A3E61}
+:root[data-theme="light"]{--bg:#F6F3EE;--s1:#FFFFFF;--s2:#F1ECE4;--line:rgba(40,30,20,.12);--line2:rgba(40,30,20,.22);--ink:#1B1712;--ink2:#4A433A;--ink3:#6E665B;--accent:#B5452A;--on-accent:#FFFFFF;--cta:#B5452A;--on-cta:#FFFFFF;--warn:#8A5A00;--warn-bg:#FBF1DC;--warn-line:#EBD39C;--ok:#1F7A45;--ok-bg:#E8F4EC;--info:#2F5C9E;--info-bg:#EAF0FA;--info-line:#C3D3EE}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.45 Geist,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}.mono{font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.demo{position:sticky;top:0;z-index:30;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;background:#202020;color:#eee;font-size:13px}
+.demo strong{margin-right:auto;font-weight:600}
+.demo button{background:#2c2c2c;border:1px solid #3a3a3a;border-radius:999px;padding:6px 12px;color:#eee;cursor:pointer}
+.demo button[aria-pressed="true"]{background:#eee;color:#202020}
+.stage{display:flex;justify-content:center;padding:20px 16px 60px}
+.phone{width:390px;max-width:100%;min-height:760px;background:var(--bg);border:1px solid var(--line2);border-radius:28px;overflow:hidden;padding:18px 16px;display:flex;flex-direction:column;gap:14px}
+.oculto{display:none!important}
+h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.01em}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:18px;padding:16px}
+.mesa{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:14px;background:var(--s2);border:1px solid var(--line2);font-size:14px}
+.mesa b{font-size:15px}
+.aviso{padding:12px 14px;border-radius:14px;font-size:14px;line-height:1.45}
+.aviso.warn{background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--ink)}
+.aviso.warn b{color:var(--warn)}
+.aviso.info{background:var(--info-bg);border:1px solid var(--info-line)}
+.plato{display:flex;justify-content:space-between;padding:12px 14px;border-radius:14px;background:var(--s1);border:1px solid var(--line)}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;border-radius:14px;border:0;font-weight:700;cursor:pointer;width:100%}
+.btn.cta{background:var(--cta);color:var(--on-cta)}
+.btn.sec{background:var(--s2);border:1px solid var(--line2);color:var(--ink)}
+.btn.wa{background:#25D366;color:#fff}
+.fila{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:6px 0}
+.fila span:first-child{color:var(--ink2)}
+.check{width:64px;height:64px;border-radius:50%;background:var(--ok-bg);color:var(--ok);display:grid;place-items:center;font-size:30px;margin:8px auto 0}
+.centro{text-align:center}
+.sub{color:var(--ink2);margin:6px 0 0}
+.pasos{list-style:none;margin:0;padding:0}
+.paso{display:flex;gap:12px;padding:10px 0;position:relative}
+.paso .pt{width:28px;height:28px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:13px;font-weight:700;border:2px solid var(--line2);color:var(--ink3);background:var(--bg)}
+.paso.hecho .pt{background:var(--ok);border-color:var(--ok);color:#0A1220}
+.paso.activo .pt{border-color:var(--accent);color:var(--accent)}
+.paso .t{flex:1}.paso .t b{display:block;font-size:15px}
+.paso.pend .t b{color:var(--ink3);font-weight:500}
+.paso .t span{font-size:13px;color:var(--ink2)}
+.hora{font-size:13px;color:var(--ink3)}
+.barra{height:6px;border-radius:999px;background:var(--s2);margin-top:6px;overflow:hidden}.barra i{display:block;height:100%;background:var(--accent)}
+.campo label{display:block;font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:6px}
+.in{min-height:48px;padding:12px 14px;border-radius:12px;border:1px solid var(--line2);background:var(--s1)}
+.nota{font-size:12px;color:var(--ink3);text-align:center;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="demo" role="toolbar" aria-label="Controles de la maqueta">
+  <strong>Maqueta · Pedido y seguimiento (1.12)</strong>
+  <button data-v="carta" aria-pressed="true">Carta con mesa</button>
+  <button data-v="mala" aria-pressed="false">Mesa que no existe</button>
+  <button data-v="checkout" aria-pressed="false">Checkout</button>
+  <button data-v="enviado" aria-pressed="false">Enviado</button>
+  <button data-v="seguir" aria-pressed="false">Seguimiento</button>
+  <button data-v="tarda" aria-pressed="false">Tarda en aceptarse</button>
+  <button data-v="cola" aria-pressed="false">Sin conexión</button>
+  <button id="tema" aria-pressed="false">Tema claro</button>
+</div>
+<div class="stage"><div class="phone">
+
+<section id="v-carta">
+  <div class="mesa" role="status"><span aria-hidden>🍽️</span><span><b>Mesa 4</b> · tu pedido llega a esta mesa</span></div>
+  <h1 style="margin-top:14px">El menú</h1>
+  <div class="plato" style="margin-top:12px"><span>Pepián de pollo</span><span class="mono">Q68.00</span></div>
+  <div class="plato" style="margin-top:8px"><span>Limonada con menta</span><span class="mono">Q18.00</span></div>
+</section>
+
+<section id="v-mala" class="oculto">
+  <div class="aviso warn" role="alert"><b>La mesa 999 no existe en Rincón 502.</b><br>Escanea el QR de tu mesa o pide ayuda al personal. Puedes ver el menú mientras tanto.</div>
+  <h1 style="margin-top:14px">El menú</h1>
+  <div class="plato" style="margin-top:12px"><span>Pepián de pollo</span><span class="mono">Q68.00</span></div>
+</section>
+
+<section id="v-checkout" class="oculto">
+  <h1>Tu pedido</h1>
+  <div class="mesa"><span aria-hidden>🍽️</span><span><b>Mesa 4</b> · se sirve en tu mesa</span></div>
+  <div class="card">
+    <div class="fila"><span>1× Pepián de pollo</span><span class="mono">Q68.00</span></div>
+    <div class="fila"><span>2× Limonada con menta</span><span class="mono">Q36.00</span></div>
+    <div class="fila" style="border-top:1px solid var(--line);margin-top:6px;padding-top:10px;font-weight:700"><span style="color:var(--ink)">Total</span><span class="mono">Q104.00</span></div>
+  </div>
+  <div class="campo"><label>Tu nombre</label><div class="in">Ana</div></div>
+  <div class="campo"><label>Teléfono (opcional)</label><div class="in" style="color:var(--ink3)">5xxx xxxx</div></div>
+  <button class="btn cta" style="margin-top:auto">Confirmar pedido · <span class="mono">Q104.00</span></button>
+  <p class="nota">Con el teclado abierto, el botón sigue visible encima de él.</p>
+</section>
+
+<section id="v-enviado" class="oculto">
+  <div class="check">✓</div>
+  <div class="centro"><h1>Pedido enviado</h1><p class="sub">Rincón 502 lo recibió. Te avisamos aquí cuando lo acepte.</p></div>
+  <div class="card">
+    <div class="fila"><span>Número</span><span class="mono">ORD-2026-00121</span></div>
+    <div class="fila"><span>Mesa</span><span>4</span></div>
+    <div class="fila"><span>Suele tardar</span><span>15–25 min</span></div>
+  </div>
+  <p class="nota" style="margin:0">«Suele tardar» sale de sus últimos pedidos; si no hay datos suficientes, no se muestra.</p>
+  <button class="btn cta">Seguir mi pedido →</button>
+</section>
+
+<section id="v-seguir" class="oculto">
+  <div style="display:flex;justify-content:space-between;align-items:baseline"><h1>Tu pedido</h1><span class="mono hora">ORD-2026-00121</span></div>
+  <div class="card">
+    <ol class="pasos">
+      <li class="paso hecho"><span class="pt">✓</span><div class="t"><b>Recibido</b></div><span class="hora">19:02</span></li>
+      <li class="paso hecho"><span class="pt">✓</span><div class="t"><b>Aceptado</b><span>El restaurante lo confirmó</span></div><span class="hora">19:04</span></li>
+      <li class="paso activo" aria-current="step"><span class="pt">3</span><div class="t"><b>Preparando</b><span>2 de 3 platos listos</span><div class="barra"><i style="width:66%"></i></div></div></li>
+      <li class="paso pend"><span class="pt">4</span><div class="t"><b>Listo</b></div></li>
+      <li class="paso pend"><span class="pt">5</span><div class="t"><b>Servido en tu mesa</b></div></li>
+    </ol>
+  </div>
+  <p class="sub" style="font-size:13px">Suele tardar 15–25 min · se actualiza solo.</p>
+</section>
+
+<section id="v-tarda" class="oculto">
+  <div style="display:flex;justify-content:space-between;align-items:baseline"><h1>Tu pedido</h1><span class="mono hora">ORD-2026-00122</span></div>
+  <div class="aviso info" role="status"><b>El restaurante aún no lo acepta</b> (hace 6 min). Si tienes prisa, escríbele:</div>
+  <button class="btn wa">WhatsApp a Rincón 502</button>
+  <div class="card">
+    <ol class="pasos">
+      <li class="paso activo" aria-current="step"><span class="pt">1</span><div class="t"><b>Recibido</b><span>Esperando que lo acepte</span></div><span class="hora">19:02</span></li>
+      <li class="paso pend"><span class="pt">2</span><div class="t"><b>Aceptado</b></div></li>
+      <li class="paso pend"><span class="pt">3</span><div class="t"><b>Preparando</b></div></li>
+      <li class="paso pend"><span class="pt">4</span><div class="t"><b>Listo para recoger</b></div></li>
+    </ol>
+  </div>
+  <button class="btn sec">Cancelar pedido</button>
+</section>
+
+<section id="v-cola" class="oculto">
+  <div class="centro"><div class="check" style="background:var(--warn-bg);color:var(--warn)">↻</div><h1 style="margin-top:10px">Aún no se envía</h1>
+  <p class="sub">Tu pedido está guardado en este teléfono y se enviará solo cuando vuelva la señal. El restaurante todavía no lo tiene.</p></div>
+  <button class="btn cta">Reintentar ahora</button>
+  <p class="nota">No se duplica: si ya llegó, al reintentar sólo se confirma.</p>
+</section>
+
+</div></div>
+<script>
+const vistas=['carta','mala','checkout','enviado','seguir','tarda','cola'];
+document.querySelectorAll('.demo [data-v]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.demo [data-v]').forEach(x=>x.setAttribute('aria-pressed',x===b));vistas.forEach(v=>document.getElementById('v-'+v).classList.toggle('oculto',v!==b.dataset.v));});
+document.getElementById('tema').onclick=e=>{const c=document.documentElement.dataset.theme!=='light';document.documentElement.dataset.theme=c?'light':'dark';e.target.setAttribute('aria-pressed',c);};
+</script>
+</body>
+</html>
