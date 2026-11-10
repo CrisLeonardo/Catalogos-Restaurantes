@@ -168,29 +168,33 @@ export default function Carta({
 
       <div className="sv-vs sv-carta-list">
         {mostrarFavs && (
-          <section className="sv-favoritos" aria-labelledby="sv-favoritos-titulo">
+          /* Con dedo, los favoritos son UNA tira que se desliza: nueve
+             tarjetas con su tecla «1–9» llenaban la pantalla entera del
+             teléfono antes del primer plato de la carta, y esas teclas ahí
+             no existen. Con teclado sigue la rejilla numerada. */
+          <section className="sv-favoritos" data-tira={conTeclado ? undefined : '1'} aria-labelledby="sv-favoritos-titulo">
             <div className="sv-favoritos-head">
               <div>
-                <h2 id="sv-favoritos-titulo">Favoritos del turno</h2>
-                <p className="sv-foot-note">{conTeclado ? 'Puestos fijos · teclas 1–9' : 'Puestos fijos durante el turno'}</p>
+                <h2 id="sv-favoritos-titulo">{conTeclado ? 'Favoritos del turno' : 'Favoritos'}</h2>
+                {conTeclado && <p className="sv-foot-note">Puestos fijos · teclas 1–9</p>}
               </div>
-              <button type="button" className="sv-favoritos-editar" onClick={onTurno}>Preparar turno</button>
+              <button type="button" className="sv-favoritos-editar" onClick={onTurno}>{conTeclado ? 'Preparar turno' : 'Editar'}</button>
             </div>
             {aprendiz && <p className="sv-foot-note">Toca un favorito para agregar un plato.</p>}
             {favs.length > 0 && (
               <div className="sv-fav-grid">
-                {favs.map((p, i) => (
+                {favs.map((p, i) => (!p && !conTeclado ? null :
                   <button key={i} type="button" className="sv-fav" disabled={!p?.is_available}
                     aria-label={`Puesto ${i + 1} · ${p?.name ?? 'Sin plato'}${p && !p.is_available ? ' · Agotado' : ''}`}
                     onClick={() => { if (p) onAdd(p, 1); }}>
-                    <span className="sv-fav-key" aria-hidden>{i + 1}</span>
+                    {conTeclado && <span className="sv-fav-key" aria-hidden>{i + 1}</span>}
                     <span className="sv-fav-name">{p?.name ?? 'Sin plato'}</span>
                     <span className="sv-fav-price">{p ? p.is_available ? money(p.price) : 'Agotado' : 'Puesto reservado'}</span>
                   </button>
                 ))}
               </div>
             )}
-            <h2 className="sv-carta-titulo">Carta completa</h2>
+            <h2 className="sv-carta-titulo">{conTeclado ? 'Carta completa' : 'Carta'}</h2>
           </section>
         )}
         {dishes.length === 0 ? (

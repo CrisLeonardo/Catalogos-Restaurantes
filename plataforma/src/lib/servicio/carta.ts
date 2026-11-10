@@ -43,3 +43,8 @@ export function quedanPocos(p: Pick<Product, 'track_stock' | 'stock' | 'low_stoc
   if (p.stock <= 0) return null;   // en cero lo dice «Agotado»
   return p.stock <= (p.low_stock_threshold ?? 0) ? p.stock : null;
 }
+
+/** ¿El plato tiene algo que elegir (tamaño, extras, combo)? Entonces un toque abre su hoja. */
+export function esPersonalizable(p: Pick<Product, 'options'>): boolean {
+  return Array.isArray(p.options) && p.options.some((g) => g.choices?.length > 0);
+}

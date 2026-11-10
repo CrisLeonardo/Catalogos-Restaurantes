@@ -29,18 +29,19 @@ import { Hoja, HojaHead, Kicker, Mono } from '@/components/admin/servicio/pieces
 import { money as fmtMoney, newLineId, type CartLine } from '@/components/admin/waiter/cart';
 import type { PanelCurrency } from '@/components/admin/order-card';
 import type { Product, ProductOptionGroup } from '@/types';
+import {
+  cabeOtra, grupoEsObligatorio, grupoPendiente, reglaDeGrupo, seleccionInicial, textoPendiente, type Seleccion,
+} from '@/lib/menu/opciones';
 
-/** Un combo empieza completo. Los grupos obligatorios esperan una elección. */
-function seleccionInicial(groups: ProductOptionGroup[], line?: CartLine): Record<string, string[]> {
-  const sel: Record<string, string[]> = {};
-  for (const g of groups) {
-    if (line) {
-      sel[g.id] = line.options.filter((o) => o.groupId === g.id).map((o) => o.choiceId);
-      continue;
-    }
-    if (g.type === 'combo') sel[g.id] = g.choices.map((c) => c.id);
-    else sel[g.id] = [];
-  }
+/* Las REGLAS son las de la ficha del comensal (`lib/menu/opciones`): qué
+   viene marcado, cuántas caben, qué falta. Esta hoja tenía las suyas y se
+   quedó atrás: no conocía la opción por omisión ni el mínimo de un grupo,
+   así que el mesero podía mandar a cocina un plato que el comensal, desde
+   su teléfono, no habría podido pedir así. */
+function seleccionAlAbrir(groups: ProductOptionGroup[], line?: CartLine): Seleccion {
+  if (!line) return seleccionInicial(groups);
+  const sel: Seleccion = {};
+  for (const g of groups) sel[g.id] = line.options.filter((o) => o.groupId === g.id).map((o) => o.choiceId);
   return sel;
 }
 
@@ -81,11 +82,11 @@ export default function HojaOpciones({
      render, y con él dentro de las dependencias el precio de la línea se
      recalculaba en todos. */
   const groups: ProductOptionGroup[] = useMemo(
-    () => (product.options as ProductOptionGroup[] | null) ?? [],
+    () => ((product.options as ProductOptionGroup[] | null) ?? []).filter((g) => g.choices?.length > 0),
     [product.options],
   );
 
-  const [selected, setSelected] = useState(() => seleccionInicial(groups, initialLine));
+  const [selected, setSelected] = useState(() => seleccionAlAbrir(groups, initialLine));
   const [variantes, setVariantes] = useState(() => variantesIniciales(groups, initialLine));
   const [qty, setQty] = useState(initialLine?.quantity ?? initialQty);
   const [nota, setNota] = useState(initialLine?.note ?? '');
@@ -103,7 +104,7 @@ export default function HojaOpciones({
         return { ...prev, [group.id]: siguiente };
       }
       if (actual.includes(choiceId)) return { ...prev, [group.id]: actual.filter((c) => c !== choiceId) };
-      if (group.type === 'multi' && group.max && group.max > 0 && actual.length >= group.max) return prev;
+      if (!cabeOtra(group, prev)) return prev;
       return { ...prev, [group.id]: [...actual, choiceId] };
     });
     const choice = group.choices.find((c) => c.id === choiceId);
@@ -133,7 +134,7 @@ export default function HojaOpciones({
   }, [groups, selected, variantes]);
 
   const unidad = product.price + opciones.reduce((s, o) => s + o.priceDelta, 0);
-  const sinResponder = groups.find((g) => g.type === 'single' && g.required && !(selected[g.id]?.length));
+  const sinResponder = grupoPendiente(groups, selected);
 
   function confirmar() {
     if (sinResponder) {
@@ -171,19 +172,16 @@ export default function HojaOpciones({
         {groups.map((group) => {
           const marcadas = selected[group.id] ?? [];
           const combo = group.type === 'combo';
-          const obligatorio = group.type === 'single' && !!group.required;
-          const pista = combo ? 'quita lo que no lleve'
-            : obligatorio ? 'elige uno'
-            : group.max && group.max > 0 ? `máx. ${group.max}` : 'opcional';
+          const pista = combo ? 'quita lo que no lleve' : reglaDeGrupo(group).toLowerCase();
 
           return (
             <div key={group.id} id={`sv-grupo-${group.id}`} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <Kicker tone={falta === group.id ? 'warn' : undefined}>
+              <Kicker tone={falta === group.id ? 'warn' : grupoEsObligatorio(group) ? 'accent' : undefined}>
                 {group.name} · {pista}
               </Kicker>
 
               {falta === group.id && (
-                <div className="sv-hint">Falta elegir {group.name.toLowerCase()}.</div>
+                <div className="sv-hint" role="alert">{textoPendiente(group, selected)}.</div>
               )}
 
               <div className="sv-opts-row">
@@ -286,7 +284,7 @@ export default function HojaOpciones({
             </button>
           </div>
           <button type="button" className="sv-cta" onClick={confirmar}>
-            {sinResponder ? `Elegir ${sinResponder.name.toLowerCase()}` : `${initialLine ? 'Guardar' : 'Agregar'} · ${money(unidad * qty)}`}
+            {sinResponder ? textoPendiente(sinResponder, selected) : `${initialLine ? 'Guardar' : 'Agregar'} · ${money(unidad * qty)}`}
           </button>
         </div>
 
@@ -308,12 +306,16 @@ export default function HojaOpciones({
           ) : (
             <button
               type="button"
-              className="sv-cta"
-              data-tone="quiet"
-              style={{ height: 46, color: 'var(--c-danger)' }}
+              /* Se usa una vez por turno, si acaso: un enlace discreto, no un
+                 botón rojo del ancho de la hoja compitiendo con «Agregar». */
+              style={{
+                alignSelf: 'center', minHeight: 44, padding: '0 12px', border: 'none', background: 'none',
+                font: 'inherit', fontSize: 13, fontWeight: 500, color: 'var(--u-text-3)', cursor: 'pointer',
+                textDecoration: 'underline', textUnderlineOffset: 3,
+              }}
               onClick={() => setConfirmarAgotado(true)}
             >
-              Se acabó · marcar agotado
+              Se acabó: marcar agotado
             </button>
           )
         )}

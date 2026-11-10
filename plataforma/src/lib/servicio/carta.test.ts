@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { iniciales, quedanPocos, tinteDe } from './carta';
+import { esPersonalizable, iniciales, quedanPocos, tinteDe } from './carta';
 
 describe('iniciales', () => {
   it('dos iniciales sin contar «de» ni lo que va entre paréntesis', () => {
@@ -42,5 +42,20 @@ describe('quedanPocos', () => {
   it('en cero o agotado no dice «quedan»: lo dice «Agotado»', () => {
     expect(quedanPocos({ ...base, stock: 0 })).toBeNull();
     expect(quedanPocos({ ...base, is_available: false })).toBeNull();
+  });
+});
+
+describe('esPersonalizable', () => {
+  const grupo = { id: 'g', name: 'Extras', type: 'multi' as const, choices: [{ id: 'c', name: 'Queso', priceDelta: 5 }] };
+
+  it('un plato con algo que elegir abre su hoja, aunque nada sea obligatorio', () => {
+    expect(esPersonalizable({ options: [grupo] })).toBe(true);
+    expect(esPersonalizable({ options: [{ ...grupo, type: 'combo' }] })).toBe(true);
+  });
+
+  it('sin opciones, o con grupos vacíos, sigue siendo un toque', () => {
+    expect(esPersonalizable({ options: null })).toBe(false);
+    expect(esPersonalizable({ options: [] })).toBe(false);
+    expect(esPersonalizable({ options: [{ ...grupo, choices: [] }] })).toBe(false);
   });
 });
