@@ -53,7 +53,10 @@ export default function CheckoutSuccess({
   // Kiosko: sin WhatsApp ni seguimiento en el aparato compartido — solo el
   // número de pedido grande y el regreso al menú para el siguiente cliente.
   const waUrl = kiosk ? null : done.waUrl;
-  const subtitle = content.confirmation.subtitle || `${config.brandName} ya recibió tu pedido y lo está preparando.`;
+  /* Sólo lo que se sabe: llegó, todavía nadie lo aceptó (auditoría 1.12,
+     M06/X23). Antes decía «…y lo está preparando», y el texto se podía
+     cambiar desde el tema como si fuera un acuse real. */
+  const subtitle = `${config.brandName} lo recibió. Te avisamos aquí cuando lo acepte.`;
   const typeLabel = done.orderType === 'DINE_IN'
     ? `Mesa ${done.tableNumber ?? '?'}`
     : done.orderType === 'PICKUP'
@@ -80,7 +83,7 @@ export default function CheckoutSuccess({
           {done.orderType === 'DINE_IN' && done.coursePreference && (
             <Row k="Servicio" v={done.coursePreference} />
           )}
-          <Row k={content.confirmation.eta} v={content.confirmation.etaValue} />
+          {/* Sin «Tiempo estimado» fijo (decisión del dueño, 2026-11-09). */}
           {done.orderType !== 'DINE_IN' && (
             <Row
               k={content.confirmation.payment}

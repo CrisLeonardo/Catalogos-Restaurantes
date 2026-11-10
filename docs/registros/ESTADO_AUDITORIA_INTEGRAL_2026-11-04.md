@@ -2,7 +2,7 @@
 
 Documento de traspaso para retomar el trabajo en otra sesión o cuenta sin perder el contexto. Resume qué se logró, qué está en curso y qué falta, con listas para marcar.
 
-> **Actualización del 2026-11-09:** fichas **1.8** (`feat/recepcion`, migración 178, §30), **1.9** (`feat/catalogo`, migración 179, con 0.7 incorporada, §31), **1.10** (`feat/inventario`, migración 180, §32) y **1.11** (`feat/comensal`, sin migración, §33) implementadas. Siguiente: **1.12 · Comensal: entrada, checkout y seguimiento**, la última de la Ola 1.
+> **Actualización del 2026-11-09:** fichas **1.8** (`feat/recepcion`, migración 178, §30), **1.9** (`feat/catalogo`, migración 179, con 0.7 incorporada, §31), **1.10** (`feat/inventario`, migración 180, §32) , **1.11** (`feat/comensal`, sin migración, §33) y **1.12** (`feat/checkout-seguimiento`, sin migración, §34) implementadas: **la Ola 1 queda terminada**. Siguiente: integrar la Ola 0 que falta en la cadena y preparar el despliegue, cuando el dueño lo decida.
 >
 > **Actualización del 2026-11-08:** ficha **1.7** implementada en `feat/permisos-por-trabajo` (migración 177, §29); la cadena no contenía 0.1–0.13 y se incorporó 0.12 (§28). Siguiente: **1.8 · Recepción**.
 >
@@ -703,6 +703,23 @@ La siguiente ficha es **1.11 · Comensal: ficha, carrito, temas y accesibilidad*
 - **Entorno:** durante la verificación, la falta de memoria del equipo detuvo Supabase local y rompió el reenvío de puertos de Docker. Se arrancó de nuevo sin Studio ni el buzón de correo, y los datos y las migraciones quedaron intactos.
 
 La siguiente ficha es **1.12 · Comensal: entrada, checkout y seguimiento**. Queda una ficha de implementación de la Ola 1.
+
+## 34. Comensal: entrada, checkout y seguimiento · ficha 1.12 (2026-11-09)
+
+**Rama** `feat/checkout-seguimiento`, sobre `feat/comensal` (PR #107). Detalle en el [plan de la ficha](../planes/PLAN_COMENSAL_CHECKOUT_SEGUIMIENTO_2026-11-09.md).
+
+- **Decisiones del dueño:** ningún tiempo estimado; aviso a los 10 minutos sin aceptar; una mesa que no existe no recibe pedidos; maqueta aprobada sin la fila de tiempo.
+- **Sin migración.**
+- **Pantallas:**
+  - confirmación sin promesas;
+  - seguimiento con Recibido, Aceptado, En preparación (platos listos), Listo y Entregado con hora real, y aviso con WhatsApp a los 10 minutos;
+  - la carta confirma o rechaza la mesa del QR, y el servidor también la valida;
+  - «Aún no se envía» sin conexión;
+  - fuera los textos fijos del tema.
+- **Verificación local:** 1,461 unitarias y revisión en navegador con pedidos de prueba retirados. El teclado del teléfono queda por comprobar en un aparato real (plan §7).
+- **CHANGELOG:** «Sin publicar» recoge las fichas 1.7–1.12.
+
+**La Ola 1 está terminada** (1.0–1.12), apilada en #85 → #107. Pendiente, por decisión del dueño: integrar las fichas 0.1–0.13 que no están en la cadena (salvo 0.7, 0.9 y 0.12), revisar el despliegue con sus migraciones en orden y proponer la etiqueta de versión.
 
 ---
 

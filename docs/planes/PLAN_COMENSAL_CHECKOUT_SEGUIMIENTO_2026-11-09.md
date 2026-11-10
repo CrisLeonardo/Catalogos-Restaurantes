@@ -2,7 +2,7 @@
 
 Ficha **1.12** del [plan de la auditoría integral](PLAN_AUDITORIA_INTEGRAL_2026-11-04.md), la última de la Ola 1. Hallazgos: **M01, M05, M06, X23**, más **PA-T26** (teclado abierto en el checkout) que dejó pendiente la 1.11. Rama `feat/checkout-seguimiento`, apilada sobre la 1.11 (`feat/comensal`, PR #107).
 
-> **Estado:** diagnóstico hecho; propuesta y [maqueta](../diseno/MAQUETA_CHECKOUT_SEGUIMIENTO_2026-11-09.html) **pendientes de aprobación**.
+> **Estado:** **implementada** (2026-11-09) en `feat/checkout-seguimiento`, con la [maqueta](../diseno/MAQUETA_CHECKOUT_SEGUIMIENTO_2026-11-09.html) aprobada y sin migración. Cierra la Ola 1. Detalle en §6; lo que queda, en §7.
 
 ## 1. Diagnóstico (comprobado en código y en pantalla a 390 px, Rincón 502)
 
@@ -63,13 +63,49 @@ Programar pedidos según capacidad real (2.x) · revalidar precios cambiados ant
 
 **No hace falta.** Las horas (`accepted_at`, `ready_at`, `cocina_preparada_at`) y el WhatsApp del local ya existen. El rango de tiempo se calcula al leer el pedido.
 
-## 4. Decisiones del dueño (pendientes)
+## 4. Decisiones del dueño (2026-11-09)
 
-1. **Tiempo estimado:** un rango calculado con los pedidos recientes del local, sólo con datos suficientes (propuesta), o no mostrar ningún tiempo.
-2. **Aviso si no lo aceptan:** a los 5 minutos (propuesta) o a los 10.
-3. **Mesa que no existe:** avisar y no dejar pedir a esa mesa (propuesta), o avisar pero permitirlo.
+1. **Ningún tiempo estimado.** Sólo los pasos con su hora real; la fila «Suele tardar» de la maqueta no se implementa.
+2. **Aviso a los 10 minutos** si sigue «Recibido».
+3. **Mesa que no existe:** se avisa y no se deja pedir a esa mesa.
+4. **Maqueta aprobada** («Aprobada, implementa»), sin la fila de tiempo.
 
 ## 5. Pruebas previstas
 
 - Unitarias: rango de tiempo con pocos y muchos datos; pasos del seguimiento por estado y tipo; mesa válida o inválida.
 - Navegador: 390 px con teclado abierto; seguimiento que pasa de recibido a aceptado, preparando y listo; QR con mesa inválida; sin conexión.
+
+## 6. Implementación (2026-11-09)
+
+- `lib/pedido/seguimiento.ts`: pasos por estado y tipo de pedido, con la hora de cada uno y los platos listos, y los minutos sin aceptar (avisa a los 10). Tiene sus pruebas.
+- `getPublicOrder` devuelve `acceptedAt`, `readyAt`, `finishedAt` y los platos de cocina preparados (1.5).
+- **Seguimiento** (`order-tracker.tsx`):
+  - Recibido → Aceptado → En preparación («0 de 1 plato listo», con barra) → Listo → En camino → Servido/Entregado, con la hora real;
+  - si sigue «Recibido» 10 minutos, «El restaurante aún no lo acepta» con WhatsApp al local (en mesa, «Pregunta al personal»);
+  - superficies sólidas del tema.
+- **Confirmación**:
+  - «Rincón 502 lo recibió. Te avisamos aquí cuando lo acepte.», sin tiempo estimado;
+  - «Subtítulo», «Tiempo estimado», «Valor del tiempo» y «Notificado» salen de los dos editores de tema.
+- **Mesa del QR** (`lib/mesa-valida.ts`, con sus pruebas):
+  - la carta dice «Mesa 4 · tu pedido llega a esta mesa»;
+  - una mesa fuera de `dineInTableCount` muestra «La mesa 999 no existe…», no se guarda, no ofrece «Llamar al mesero» y el servidor rechaza el pedido;
+  - una mesa guardada que ya no existe se ignora.
+- **Sin conexión**: «Aún no se envía … El restaurante todavía no lo tiene».
+- `CHANGELOG.md`: «Sin publicar» con las fichas 1.7–1.12.
+
+**Verificación**
+
+- 1,461 unitarias (10 nuevas), tipos y lint sin errores.
+- Navegador a 390 px en Rincón 502, con pedidos «AUD 1.12» que se retiraron:
+  - un pedido con más de 10 min en «Recibido» muestra el aviso con WhatsApp;
+  - al aceptarlo, la pantalla se actualizó sola a «Aceptado 23:28 · En preparación 0 de 1 plato listo»;
+  - con `?mesa=999`, el aviso aparece y no se guarda la mesa;
+  - con `?mesa=4`, la carta confirma la mesa;
+  - un pedido real en la mesa 4 llega a la confirmación honesta.
+- Para ver el código nuevo hubo que desregistrar el *service worker* de la carta, que servía piezas viejas en desarrollo.
+
+## 7. Pendientes
+
+- **PA-T26 (teclado abierto):** el navegador del panel no simula el teclado del teléfono. El botón de confirmar está al final del formulario, no fijo; queda comprobarlo en un teléfono real.
+- La hora de cada paso se muestra en la zona del teléfono del comensal, no en la del local (coinciden para el comensal que está en el local).
+- Programar pedidos según capacidad (2.x) y revalidar precios cambiados (4.6).

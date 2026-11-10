@@ -5,13 +5,16 @@
    ------------------------------------------------------------
    Timeline del estado del pedido que se actualiza solo: hace
    polling de getPublicOrder cada pocos segundos mientras el
-   pedido siga activo y la pestaña esté visible. El comensal ve
-   "En preparación → Listo → En camino → Entregado" sin recargar.
+   pedido siga activo y la pestaña esté visible.
+
+   Auditoría 1.12 (M06, X23): Recibido → Aceptado → En preparación
+   (platos listos) → Listo → … con la hora real de cada paso, sin
+   tiempo estimado fijo. Si sigue «Recibido» 10 minutos, se dice y se
+   da el WhatsApp del local. Superficies sólidas del tema.
    ============================================================ */
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { Price, PrimaryButton } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
@@ -20,27 +23,23 @@ import { getPublicOrder, cancelPublicOrder, type PublicOrder } from '@/lib/actio
 import { useTenantPrefix } from '@/lib/tenant-client';
 import type { OrderStatus } from '@/types';
 import { waDigits } from '@/lib/reminder';
+import { minutosSinAceptar, pasosDelSeguimiento } from '@/lib/pedido/seguimiento';
+
+/* Superficie sólida del tema: el texto del tema mezclado con su fondo, sin
+   transparencia ni desenfoque (antes era vidrio). */
+const SOLIDA: React.CSSProperties = {
+  background: 'color-mix(in srgb, var(--u-text) 6%, var(--brand-bg))',
+  border: '1px solid var(--u-hair-2)',
+  borderRadius: 18,
+};
+
+const hhmm = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', hour12: false }) : null);
 
 const POLL_MS = 8000;
 // SERVED es terminal para el seguimiento del comensal: una vez servida la
 // comida en mesa no hay más que mostrarle (cerrar la mesa es cosa del
 // mesero, potencialmente horas después), así que dejamos de sondear ahí.
 const TERMINAL: OrderStatus[] = ['SERVED', 'DELIVERED', 'CANCEL'];
-
-interface Step {
-  status: OrderStatus;
-  icon: string;
-  label: (c: ReturnType<typeof useThemeContent>, pickup: boolean) => string;
-}
-
-const STEPS: Step[] = [
-  { status: 'NEW',       icon: 'receipt', label: (c) => c.tracking.statusNew },
-  { status: 'PREP',      icon: 'flame',   label: (c) => c.tracking.statusPrep },
-  { status: 'READY',     icon: 'bag',     label: (c, pickup) => (pickup ? c.tracking.statusReadyPickup : c.tracking.statusReady) },
-  { status: 'TRANSIT',   icon: 'truck',   label: (c) => c.tracking.statusTransit },
-  { status: 'SERVED',    icon: 'check',   label: (c) => c.tracking.statusServed },
-  { status: 'DELIVERED', icon: 'check',   label: (c) => c.tracking.statusDelivered },
-];
 
 export default function OrderTracker({
   token,
@@ -63,6 +62,13 @@ export default function OrderTracker({
   useEffect(() => {
     orderRef.current = order;
   }, [order]);
+
+  /* Reloj para el aviso de «aún no lo aceptan»: cada 30 s basta. */
+  const [ahora, setAhora] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setAhora(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -159,20 +165,20 @@ export default function OrderTracker({
     } catch {}
   }
 
-  const pickup = order.orderType === 'PICKUP';
   const dineIn = order.orderType === 'DINE_IN';
-  // DINE_IN y PICKUP no tienen reparto: el paso "En camino" no aplica
-  // (al comensal sentado en su mesa no se le muestra TRANSIT).
-  const noTransit = pickup || dineIn;
-  // DINE_IN termina en "servido" (SERVED), no en "entregado" (DELIVERED) —
-  // ese último paso es el cierre de mesa del mesero, no algo que le importe
-  // al comensal. Los demás tipos nunca alcanzan SERVED, así que se oculta.
-  const steps = STEPS.filter((s) =>
-    !(noTransit && s.status === 'TRANSIT') &&
-    !(dineIn && s.status === 'DELIVERED') &&
-    !(!dineIn && s.status === 'SERVED'));
   const cancelled = order.status === 'CANCEL';
-  const activeIdx = cancelled ? -1 : steps.findIndex((s) => s.status === order.status);
+  const pasos = pasosDelSeguimiento(order, {
+    recibido: content.tracking.statusNew,
+    preparando: content.tracking.statusPrep,
+    listo: content.tracking.statusReady,
+    listoRecoger: content.tracking.statusReadyPickup,
+    camino: content.tracking.statusTransit,
+    servido: content.tracking.statusServed,
+    entregado: content.tracking.statusDelivered,
+  });
+  const ICONO: Record<string, string> = { recibido: 'receipt', aceptado: 'thumbsUp', preparando: 'flame', listo: 'bag', camino: 'truck', final: 'check' };
+  const sinAceptar = minutosSinAceptar(order, ahora);
+  const wa = waDigits(whatsapp);
   const subtitle = content.tracking.subtitle || 'El estado se actualiza solo, en vivo.';
 
   return (
@@ -206,6 +212,25 @@ export default function OrderTracker({
           </button>
         )}
 
+        {/* Aún no lo aceptan a los 10 minutos: se dice y se da cómo contactar (M06). */}
+        {sinAceptar !== null && (
+          <div role="status" style={{ ...SOLIDA, padding: '12px 14px', marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <p style={{ margin: 0, fontSize: 'var(--m-fs-sm)', color: 'var(--u-text)', lineHeight: 1.45 }}>
+              <strong>El restaurante aún no lo acepta</strong> (hace {sinAceptar} min).{' '}
+              {dineIn ? 'Pregunta al personal de tu mesa' : wa ? 'Si tienes prisa, escríbele:' : 'Si tienes prisa, comunícate con el restaurante.'}
+            </p>
+            {wa && (
+              <a
+                href={`https://wa.me/${wa}?text=${encodeURIComponent(`Hola, hice el pedido ${order.orderNumber} hace ${sinAceptar} min y aún aparece como recibido. ¿Me ayudan?`)}`}
+                target="_blank" rel="noopener noreferrer" className="press"
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 46, borderRadius: 'var(--radius-lg)', fontWeight: 700, textDecoration: 'none', color: '#fff', background: '#25D366' }}
+              >
+                <Icon name="whatsapp" size={17} /> WhatsApp al restaurante
+              </a>
+            )}
+          </div>
+        )}
+
         {/* Botón cancelar — solo disponible cuando el pedido está en NEW */}
         {order.status === 'NEW' && (
           <div style={{ marginTop: 14 }}>
@@ -213,7 +238,7 @@ export default function OrderTracker({
               <p style={{ fontSize: 12.5, color: 'var(--c-danger)', marginBottom: 8 }}>{cancelError}</p>
             )}
             {showCancelConfirm ? (
-              <Glass variant="quiet" style={{ borderRadius: 14, padding: '14px 16px' }}>
+              <div style={{ ...SOLIDA, borderRadius: 14, padding: '14px 16px' }}>
                 <p style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text)', marginBottom: 12 }}>
                   ¿Seguro que quieres cancelar tu pedido?
                 </p>
@@ -254,7 +279,7 @@ export default function OrderTracker({
                     {isCancelling ? 'Cancelando...' : 'Sí, cancelar'}
                   </button>
                 </div>
-              </Glass>
+              </div>
             ) : (
               <button
                 type="button"
@@ -278,7 +303,7 @@ export default function OrderTracker({
 
       {/* Cancelado */}
       {cancelled ? (
-        <Glass style={{ padding: '22px 20px', textAlign: 'center', marginBottom: 18 }}>
+        <div style={{ ...SOLIDA, padding: '22px 20px', textAlign: 'center', marginBottom: 18 }}>
           <div style={{ width: 56, height: 56, borderRadius: '50%', margin: '0 auto 12px', display: 'grid', placeItems: 'center', background: 'var(--c-danger-bg)', color: 'var(--c-danger)' }}>
             <Icon name="x" size={26} strokeWidth={2.4} />
           </div>
@@ -307,57 +332,59 @@ export default function OrderTracker({
             )}
           </div>
           )}
-        </Glass>
+        </div>
       ) : (
         /* Timeline */
-        <Glass style={{ padding: '20px 18px', marginBottom: 18 }}>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {steps.map((step, i) => {
-              const done = i < activeIdx;
-              const active = i === activeIdx;
-              const last = i === steps.length - 1;
-              const color = done || active ? 'var(--u-text)' : 'var(--u-text-4)';
-              return (
-                <div key={step.status} style={{ display: 'flex', gap: 14 }}>
-                  {/* Columna del punto + línea */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <div
-                      style={{
-                        width: 38, height: 38, borderRadius: 13, display: 'grid', placeItems: 'center', flexShrink: 0,
-                        background: active ? 'var(--u-text)' : done ? 'var(--surface-strong)' : 'var(--surface-1)',
-                        color: active ? 'var(--brand-bg)' : color,
-                        border: `1px solid ${active ? 'transparent' : 'var(--u-hair)'}`,
-                        boxShadow: active && config.animations ? '0 0 0 0 rgba(var(--pulse-ink, 255,255,255), 0.4)' : undefined,
-                        animation: active && config.animations ? 'pulse-ring 2.2s infinite' : undefined,
-                        transition: 'all 300ms var(--ease-entry)',
-                      }}
-                    >
-                      <Icon name={done ? 'check' : step.icon} size={17} strokeWidth={done ? 2.8 : 2} />
-                    </div>
-                    {!last && (
-                      <div style={{ width: 2, flex: 1, minHeight: 22, margin: '4px 0', borderRadius: 2, background: done ? 'var(--u-text-3)' : 'var(--u-hair)', transition: 'background 300ms' }} />
-                    )}
+        <ol style={{ ...SOLIDA, listStyle: 'none', margin: '0 0 18px', padding: '20px 18px', display: 'flex', flexDirection: 'column' }} aria-label="Estado del pedido">
+          {pasos.map((paso, i) => {
+            const done = paso.estado === 'hecho';
+            const active = paso.estado === 'activo';
+            const last = i === pasos.length - 1;
+            const color = done || active ? 'var(--u-text)' : 'var(--u-text-4)';
+            const hora = hhmm(paso.hora);
+            return (
+              <li key={paso.clave} aria-current={active ? 'step' : undefined} style={{ display: 'flex', gap: 14 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div
+                    style={{
+                      width: 38, height: 38, borderRadius: 13, display: 'grid', placeItems: 'center', flexShrink: 0,
+                      background: active ? 'var(--u-text)' : done ? 'var(--surface-strong)' : 'var(--brand-bg)',
+                      color: active ? 'var(--brand-bg)' : color,
+                      border: `1px solid ${active ? 'transparent' : 'var(--u-hair)'}`,
+                      animation: active && config.animations ? 'pulse-ring 2.2s infinite' : undefined,
+                      transition: 'all 300ms var(--ease-entry)',
+                    }}
+                  >
+                    <Icon name={done ? 'check' : ICONO[paso.clave] ?? 'check'} size={17} strokeWidth={done ? 2.8 : 2} />
                   </div>
-                  {/* Etiqueta */}
-                  <div style={{ paddingTop: 8, paddingBottom: last ? 0 : 14 }}>
-                    <div style={{ fontWeight: active ? 700 : 600, fontSize: 14.5, color: active ? 'var(--u-text)' : done ? 'var(--u-text-2)' : 'var(--u-text-4)', transition: 'color 300ms' }}>
-                      {step.label(content, pickup)}
-                    </div>
-                    {active && step.status === 'NEW' && (
-                      <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
-                        {content.confirmation.eta}: {content.confirmation.etaValue}
-                      </div>
-                    )}
-                  </div>
+                  {!last && (
+                    <div style={{ width: 2, flex: 1, minHeight: 22, margin: '4px 0', borderRadius: 2, background: done ? 'var(--u-text-3)' : 'var(--u-hair)', transition: 'background 300ms' }} />
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        </Glass>
+                <div style={{ paddingTop: 8, paddingBottom: last ? 0 : 14, flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                    <span style={{ fontWeight: active ? 700 : 600, fontSize: 14.5, color: active ? 'var(--u-text)' : done ? 'var(--u-text-2)' : 'var(--u-text-4)' }}>
+                      {paso.label}
+                    </span>
+                    {hora && <span className="t-mono" style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>{hora}</span>}
+                  </div>
+                  {paso.detalle && (
+                    <div style={{ fontSize: 12.5, color: 'var(--u-text-2)', marginTop: 2 }}>{paso.detalle}</div>
+                  )}
+                  {active && paso.clave === 'preparando' && order.platos && order.platos.total > 0 && (
+                    <div aria-hidden style={{ height: 6, borderRadius: 999, background: 'var(--u-hair)', marginTop: 6, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${Math.round((order.platos.listos / order.platos.total) * 100)}%`, background: 'var(--brand-accent)' }} />
+                    </div>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
       )}
 
       {/* Resumen del pedido */}
-      <Glass variant="quiet" style={{ borderRadius: 18, padding: '16px 18px', marginBottom: 18 }}>
+      <div style={{ ...SOLIDA, padding: '16px 18px', marginBottom: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {order.items.map((item, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
@@ -403,7 +430,7 @@ export default function OrderTracker({
             </div>
           </div>
         </div>
-      </Glass>
+      </div>
 
       <PrimaryButton href={backHref} full>{content.tracking.back}</PrimaryButton>
     </main>

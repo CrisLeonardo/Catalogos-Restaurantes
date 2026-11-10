@@ -64,10 +64,12 @@ export function CheckoutQueued({ error, pending, onRetry }: { error: string; pen
           <Icon name="clock" size={34} strokeWidth={1.6} />
         </div>
         <div>
-          <h1 className="t-display" style={{ fontSize: 'var(--fs-h1)', marginBottom: 8 }}>Sin conexión</h1>
+          {/* «Aún no se envía»: que nadie lo confunda con recibido (1.12, M06). */}
+          <h1 className="t-display" style={{ fontSize: 'var(--fs-h1)', marginBottom: 8 }}>Aún no se envía</h1>
           <p style={{ fontSize: 'var(--m-fs-md)', color: 'var(--u-text-2)', lineHeight: 1.5 }}>
-            Tu pedido se guardó. Se enviará solo en cuanto vuelva la señal —
-            no cierres esta pantalla.
+            Tu pedido está guardado en este teléfono y se enviará solo cuando
+            vuelva la señal. El restaurante todavía no lo tiene — no cierres
+            esta pantalla.
           </p>
         </div>
         {error && (

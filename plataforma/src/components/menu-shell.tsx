@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo } from 'react';
 import { setScannedTable, isStandaloneLaunch } from '@/lib/table-session';
+import { mesaExiste } from '@/lib/mesa-valida';
 import { CartProvider } from '@/lib/cart-context';
 import { ThemeProvider } from '@/lib/theme/context';
 import { LocaleProvider } from '@/lib/locale/context';
@@ -64,12 +65,15 @@ interface Props {
 }
 
 export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, timezone = 'America/Guatemala', initialMesa, llamadaMeseroEnabled = false, loyaltyOn = false, rewardsCatalog = null, googleAuthEnabled = false, whatsappNumber = null, restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null, menuLanguages = [], archivo = [], muestra = false }: Props) {
+  /* Una mesa que no existe en el local no se guarda: la carta lo dice y no
+     deja pedir a esa mesa (auditoría 1.12, M01). */
+  const mesaInvalida = initialMesa && initialMesa > 0 && !mesaExiste(initialMesa, config.dineInTableCount) ? initialMesa : null;
   useEffect(() => {
     if (initialMesa && initialMesa > 0) {
       // "Añadir a inicio" guarda la URL con ?mesa= para siempre (ver
       // isStandaloneLaunch) — si se abre así, NO se re-marca la mesa: se deja
       // que localStorage + TTL decidan si la sesión de mesa sigue vigente.
-      if (!isStandaloneLaunch()) {
+      if (!isStandaloneLaunch() && mesaExiste(initialMesa, config.dineInTableCount)) {
         setScannedTable(restaurantId, initialMesa);
       }
       // Se borra el ?mesa= de la URL tras leerlo: si no, cada vez que el
@@ -81,7 +85,7 @@ export default function MenuShell({ config, content, categories, products, resta
       const qs = params.toString();
       window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
     }
-  }, [initialMesa, restaurantId]);
+  }, [initialMesa, restaurantId, config.dineInTableCount]);
 
   /* QR de mesa → directo a la carta (auditoría 2026-10-02, D-7). El
      comensal ya está sentado: la portada a pantalla completa le pedía un
@@ -161,7 +165,8 @@ export default function MenuShell({ config, content, categories, products, resta
                 </div>
               </div>
             )}
-            <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} timezone={timezone} llamadaMeseroEnabled={llamadaMeseroEnabled} initialMesa={initialMesa} loyaltyOn={loyaltyOn} rewardsCatalog={rewardsCatalog} googleAuthEnabled={googleAuthEnabled} whatsappNumber={whatsappNumber} restaurantLat={restaurantLat} restaurantLng={restaurantLng} deliveryRadiusKm={deliveryRadiusKm} />
+            <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} timezone={timezone} llamadaMeseroEnabled={llamadaMeseroEnabled} initialMesa={mesaInvalida ? undefined : initialMesa}
+          mesaInvalida={mesaInvalida} loyaltyOn={loyaltyOn} rewardsCatalog={rewardsCatalog} googleAuthEnabled={googleAuthEnabled} whatsappNumber={whatsappNumber} restaurantLat={restaurantLat} restaurantLng={restaurantLng} deliveryRadiusKm={deliveryRadiusKm} />
           </div>
           {vitrina && cfg.launchMode && (
             <VitrinaArchivo

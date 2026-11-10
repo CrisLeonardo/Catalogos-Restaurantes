@@ -6,6 +6,23 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+- **Pedido y seguimiento honestos del comensal** (auditoría 1.12):
+  - la confirmación dice «lo recibió; te avisamos cuando lo acepte», sin el «20–30 min» ni el «notificado al instante» fijos;
+  - el seguimiento muestra Recibido, Aceptado, En preparación (platos listos), Listo y Entregado con su hora real;
+  - si en 10 minutos no lo aceptan, lo dice y da el WhatsApp del local;
+  - la carta confirma la mesa del QR, y una mesa que no existe no recibe pedidos.
+- **Ficha y carrito del comensal** (auditoría 1.11):
+  - opciones inequívocas: lo obligatorio sin predeterminada empieza vacío y se respeta el mínimo;
+  - carrito accesible con «Cambiar» por línea;
+  - aviso de lealtad legible en oscuro;
+  - «Agotado · vuelve mañana» y «Otros» para lo que no tiene categoría.
+- **Inventario y agotados con intención** (auditoría 1.10, migración 180):
+  - agotar «hasta mañana», «hasta reponer» o «hasta que lo active», y agotar por ingrediente;
+  - cobertura «N de M» y «Por revisar hoy»;
+  - ajustes con motivo bajo bloqueo y activación del control en lote.
+- **Catálogo** (auditoría 1.9, migración 179): ficha progresiva, filtros combinables, cambios en lote con vista previa, duplicar y borrar categoría con destino.
+- **Recepción** (auditoría 1.8, migración 178): agenda con capacidad, «no asistió», aviso honesto y día de negocio.
+- **Permisos por trabajo** (auditoría 1.7, migración 177): plantillas por puesto, Caja separada en capacidades y arqueo ciego opcional.
 - **Navegación inferior del comensal y superadmin.** La cápsula sigue la referencia aprobada: gris claro, bisel elevado, selección negra e iconos junto al texto. El comensal muestra cantidad, producto e importe sobre la barra cuando tiene un carrito. Superadmin conserva tres accesos visibles y reúne los otros cuatro en «Más». El panel del restaurante conserva sus accesos operativos.
 - **Pedidos en vivo** (auditoría 1.6, migración 176). El tablero avisa cuando un filtro oculta una incidencia. Cada pedido tiene un historial de estados, anulaciones, cobros y avisos fallidos. Los avances y anulaciones del tablero recuperan el resultado de un reintento y detectan cambios hechos desde otro dispositivo.
 - **Cocina por etapa y estación** (auditoría 1.5, migración 175): cada puesto marca sus platos y Pase confirma cuándo los recoge Servicio. El tablero separa los tiempos de preparación y espera de salida, y muestra variantes, alérgenos, anulaciones y fallos de impresión en la comanda.

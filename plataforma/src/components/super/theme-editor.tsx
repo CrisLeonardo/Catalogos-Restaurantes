@@ -548,7 +548,7 @@ const CONTENT_FIELDS: Record<keyof ThemeContent, [string, string][]> = {
     ['closedTitle', 'Cerrado: título'], ['closedMsg', 'Cerrado: mensaje'],
     ['pausedTitle', 'Pausa: título'], ['pausedMsg', 'Pausa: mensaje (vacío = del restaurante)'],
   ],
-  confirmation: [['title', 'Título'], ['subtitle', 'Subtítulo'], ['orderNo', 'N° de pedido'], ['type', 'Tipo'], ['eta', 'Tiempo estimado'], ['etaValue', 'Valor tiempo'], ['payment', 'Pago'], ['notified', 'Notificado'], ['track', 'Botón seguimiento'], ['again', 'Otro pedido']],
+  confirmation: [['title', 'Título'], ['orderNo', 'N° de pedido'], ['type', 'Tipo'], ['payment', 'Pago'], ['track', 'Botón seguimiento'], ['again', 'Otro pedido']],
   tracking: [['title', 'Título'], ['subtitle', 'Subtítulo'], ['statusNew', 'Recibido'], ['statusPrep', 'En preparación'], ['statusReady', 'Listo'], ['statusReadyPickup', 'Listo (pickup)'], ['statusTransit', 'En camino'], ['statusDelivered', 'Entregado'], ['statusCancel', 'Cancelado'], ['back', 'Volver al menú']],
   tags: [['hot', 'Picante'], ['new', 'Nuevo'], ['fav', 'Favorito'], ['veg', 'Veggie']],
 };

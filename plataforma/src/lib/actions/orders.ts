@@ -12,6 +12,7 @@ import { createOrderSchema, waiterOrderSchema, type CreateOrderInput } from '@/l
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { sendPushToRestaurant } from '@/lib/push';
 import { resolveTheme, computeTip, type ThemeRow } from '@/lib/theme/resolve';
+import { mesaExiste } from '@/lib/mesa-valida';
 import type { ThemeConfig } from '@/lib/theme/defaults';
 import { edicionPermitePedir, estadoEdicion, motivoSinPedidos } from '@/lib/vitrina/edicion';
 import { isOpenNow, type WeeklyHours, type HourExceptions } from '@/lib/hours';
@@ -534,6 +535,12 @@ export async function createOrder(
   }
 
   const themeConfig = resolveTheme((themeRow as ThemeRow) ?? null).config;
+
+  // Una mesa que no existe en el local no recibe pedidos (auditoría 1.12, M01).
+  if (customer.type === 'DINE_IN' && customer.tableNumber !== undefined
+      && !mesaExiste(customer.tableNumber, themeConfig.dineInTableCount)) {
+    return { error: `La mesa ${customer.tableNumber} no existe en este local. Escanea el QR de tu mesa o pide ayuda al personal.` };
+  }
 
   const { subtotal, fee, discount, tip, total, applied } = await computeOrderPricing(
     restaurantId, themeConfig, customer.type, tipAccepted, parsed.data.couponCode, verifiedItems,
@@ -2483,6 +2490,12 @@ export interface PublicOrder {
   loyaltyDiscount: number;
   total: number;
   createdAt: string;
+  /** Horas reales de cada paso (auditoría 1.12, M06). */
+  acceptedAt: string | null;
+  readyAt: string | null;
+  finishedAt: string | null;
+  /** Platos que pasan por cocina y cuántos ya marcó preparados (1.5). */
+  platos: { listos: number; total: number } | null;
   items: PublicOrderItem[];
 }
 
@@ -2556,7 +2569,7 @@ export async function getPublicOrder(
   const { data } = await db
     .from('orders')
     .select(
-      'order_number, status, order_type, customer_name, subtotal, delivery_fee, discount, loyalty_points_redeemed, loyalty_discount, total, created_at, restaurant_id, items:order_items(name_snapshot, quantity, subtotal, options_snapshot)',
+      'order_number, status, order_type, customer_name, subtotal, delivery_fee, discount, loyalty_points_redeemed, loyalty_discount, total, created_at, accepted_at, ready_at, served_at, delivered_at, restaurant_id, items:order_items(name_snapshot, quantity, subtotal, options_snapshot, cocina_estacion_id, cocina_preparada_at)',
     )
     .eq('public_token', token)
     .single();
@@ -2576,6 +2589,13 @@ export async function getPublicOrder(
     loyaltyDiscount: Number(data.loyalty_discount ?? 0),
     total: Number(data.total),
     createdAt: data.created_at as string,
+    acceptedAt: (data.accepted_at as string | null) ?? null,
+    readyAt: (data.ready_at as string | null) ?? null,
+    finishedAt: ((data.served_at ?? data.delivered_at) as string | null) ?? null,
+    platos: (() => {
+      const deCocina = ((data.items as Record<string, unknown>[] | null) ?? []).filter((it) => it.cocina_estacion_id);
+      return deCocina.length ? { listos: deCocina.filter((it) => it.cocina_preparada_at).length, total: deCocina.length } : null;
+    })(),
     items: ((data.items as Record<string, unknown>[] | null) ?? []).map((it) => ({
       name: it.name_snapshot as string,
       quantity: Number(it.quantity),
