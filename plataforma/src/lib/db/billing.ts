@@ -1,7 +1,9 @@
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service';
-import { PLANS, type PlanCode, type PlanPricing } from '@/lib/plans';
+import { PLANS, planPresentation, type PlanCode, type PlanPricing } from '@/lib/plans';
+import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
+import type { ModuleSettings } from '@/lib/modules';
 
 /**
  * Tag de caché de la configuración de precios de la plataforma.
@@ -252,6 +254,7 @@ export const getEffectivePlanPricing = cache(async (): Promise<PlanPricing> => {
     },
     groupPanelFee: s.groupPanelFee,
     trialDays: s.trialDays,
+    setupFees: { BASICO: s.setupFeeBasico, EN_LINEA: s.setupFeeEnLinea, ESTANDAR: s.setupFeeEstandar, PREMIUM: s.setupFeePremium, PRO: s.setupFeePro },
   };
 });
 
@@ -307,6 +310,26 @@ export async function getFeeBreakdown(restaurantId: string): Promise<FeeBreakdow
     final: Number(d.final ?? 0),
   };
 }
+
+/** Contrato de solo lectura compartido por Hoy, Suscripción, Funciones y Super.
+ * Los llamadores autorizan el restaurante. No aplica precios ni modifica historia. */
+export const getRestaurantPlanPresentation = cache(async (restaurantId: string) => {
+  const [{ data: restaurant }, billing, fee, pricing] = await Promise.all([
+    createServiceClient().from('restaurants')
+      .select('plan_actual, modules, module_settings, restaurant_themes(*)').eq('id', restaurantId).maybeSingle(),
+    getBillingConfig(restaurantId), getFeeBreakdown(restaurantId), getEffectivePlanPricing(),
+  ]);
+  if (!restaurant) return null;
+  const embedded = restaurant.restaurant_themes;
+  const theme = (Array.isArray(embedded) ? embedded[0] : embedded) as ThemeRow | null;
+  return planPresentation({
+    plan: restaurant.plan_actual as string | null,
+    pricing, billing, computedFee: fee?.final,
+    modules: restaurant.modules as Record<string, boolean> | null,
+    settings: restaurant.module_settings as ModuleSettings | null,
+    orderTypes: resolveTheme(theme).config.orderTypes,
+  });
+});
 
 export const getInvoices = cache(
   async (restaurantId: string, limit = 100): Promise<Invoice[]> => {

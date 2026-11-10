@@ -8,7 +8,7 @@ import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getOrderStats, getActiveOrdersPreview, type ActiveOrderPreview } from '@/lib/db/orders';
 import { getHoyWidgets } from '@/lib/db/hoy';
-import { getBillingConfig, getInvoices, isOnTrial, isOverdue, trialDaysLeft } from '@/lib/db/billing';
+import { getBillingConfig, getInvoices, isOnTrial, isOverdue, trialDaysLeft, getRestaurantPlanPresentation } from '@/lib/db/billing';
 import { ultimoComprobante } from '@/lib/db/comprobantes';
 import { getVisitStats } from '@/lib/actions/metrics';
 import { subdomainUrl } from '@/lib/tenant';
@@ -188,6 +188,7 @@ export default async function AdminHomePage() {
 
   // ── Prueba gratis ───────────────────────────────────────────
   const billing = restaurantId ? await getBillingConfig(restaurantId) : null;
+  const planContract = restaurantId && allow('suscripcion') ? await getRestaurantPlanPresentation(restaurantId) : null;
   const onTrial = isOnTrial(billing);
   const trialLeft = onTrial ? trialDaysLeft(billing) : 0;
 
@@ -662,10 +663,16 @@ export default async function AdminHomePage() {
 
       {/* Qué incluye subir de plan. Vive al FINAL a propósito: es una oferta,
           no una tarea del día, y no debe competir con lo de arriba. */}
+      {planContract && (
+        <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0 }}>
+          Plan {planContract.name} · {planContract.monthlyLabel}. {planContract.orderScope}. {planContract.selectedScope}.{' '}
+          <Link href={panelHref(base, '/admin/suscripcion')} style={{ color: 'var(--brand-accent-ink)' }}>Mi suscripción →</Link>
+        </p>
+      )}
       {(restaurant?.plan_actual === 'BASICO' || restaurant?.plan_actual === 'EN_LINEA' || restaurant?.plan_actual === 'ESTANDAR') && (
         <Card>
           <CardContent className="pt-5">
-            <LockedFeatureSection restaurantName={brandName} planActual={restaurant.plan_actual} />
+            <LockedFeatureSection restaurantName={brandName} planActual={restaurant.plan_actual} presentation={planContract} />
           </CardContent>
         </Card>
       )}

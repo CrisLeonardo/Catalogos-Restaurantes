@@ -8,7 +8,7 @@ import {
   type SuperState,
 } from '@/lib/actions/super-admin';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
-import { PLANS, PLAN_ORDER, PUBLIC_PLANS, INCLUDED_MODULES, defaultPlanPricing, type PlanPricing } from '@/lib/plans';
+import { PLANS, PLAN_ORDER, PUBLIC_PLANS, INCLUDED_MODULES, defaultPlanPricing, planFeatureFloor, planPresentation, withPlanFloor, formatPlanAmount, type PlanPricing } from '@/lib/plans';
 import type { Restaurant } from '@/types';
 import type { PlanCode } from '@/lib/plans';
 
@@ -32,13 +32,9 @@ const FEATURE_KEYS: (keyof PlanFeatures)[] = [
 // Flags legacy (restaurants.modules.{orders,whatsapp_notify,...}) — sin GMV
 // desde mig. 072. Se mantienen porque otras partes del código ya los leen;
 // el precio real ahora sale de plans.ts (planes de precio fijo), no de aquí.
-const PLAN_PRESETS: Record<PlanCode, PlanFeatures> = {
-  BASICO:   { orders: false, whatsapp_notify: false, analitica: false, inventario: false, personal: false, finanzas: false, multi_branch: false },
-  EN_LINEA: { orders: true,  whatsapp_notify: true,  analitica: false, inventario: false, personal: false, finanzas: false, multi_branch: false },
-  ESTANDAR: { orders: true,  whatsapp_notify: true,  analitica: false, inventario: false, personal: false, finanzas: true,  multi_branch: false },
-  PREMIUM:  { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  personal: true,  finanzas: true,  multi_branch: false },
-  PRO:      { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  personal: true,  finanzas: true,  multi_branch: false },
-};
+const PLAN_PRESETS = Object.fromEntries(PLAN_ORDER.map((code) => [code, {
+  ...planFeatureFloor(code), multi_branch: false,
+}])) as Record<PlanCode, PlanFeatures>;
 
 // Qué módulos vienen incluidos con cada plan — misma fuente que la página
 // pública /planes (INCLUDED_MODULES en plans.ts). BASICO/ESTANDAR no incluyen
@@ -54,7 +50,7 @@ const MANAGED_PRESETS: Record<PlanCode, Record<string, boolean>> = Object.fromEn
 ) as Record<PlanCode, Record<string, boolean>>;
 
 function fmtQ0(n: number) {
-  return 'Q' + n.toLocaleString('es-GT', { maximumFractionDigits: 0 });
+  return formatPlanAmount(n);
 }
 
 /** ¿Este plan se ofrece a clientes? Si no, solo tú puedes asignarlo aquí. */
@@ -68,7 +64,8 @@ function buildPlanMeta(pricing: PlanPricing): Record<PlanCode, { label: string; 
   return Object.fromEntries(
     PLAN_ORDER.map((code) => {
       const p = PLANS[code];
-      return [code, { label: p.name, price: fmtQ0(pricing.prices[code]), sub: p.tagline, badge: p.badge }];
+      const contract = planPresentation({ plan: code, pricing });
+      return [code, { label: contract.name, price: fmtQ0(contract.publicAmount), sub: contract.orderScope, badge: p.badge }];
     }),
   ) as Record<PlanCode, { label: string; price: string; sub: string; badge?: string }>;
 }
@@ -109,7 +106,7 @@ export default function PlanEditor({
 
   const [plan, setPlan] = useState<PlanCode>(initialPlan);
 
-  const mod = restaurant.modules as Record<string, boolean | undefined>;
+  const mod = withPlanFloor(initialPlan, (restaurant.modules as Record<string, boolean> | null) ?? {});
   const [feats, setFeats] = useState<PlanFeatures>({
     orders:          mod.orders === true,
     whatsapp_notify: mod.whatsapp_notify === true,
