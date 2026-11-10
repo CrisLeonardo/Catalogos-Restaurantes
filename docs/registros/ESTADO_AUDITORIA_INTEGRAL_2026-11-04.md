@@ -721,6 +721,27 @@ La siguiente ficha es **1.12 · Comensal: entrada, checkout y seguimiento**. Que
 
 **La Ola 1 está terminada** (1.0–1.12), apilada en #85 → #107. Pendiente, por decisión del dueño: integrar las fichas 0.1–0.13 que no están en la cadena (salvo 0.7, 0.9 y 0.12), revisar el despliegue con sus migraciones en orden y proponer la etiqueta de versión.
 
+## 35. Integración de las olas 0 y 1 para producción (2026-11-10)
+
+**Rama** `release/integracion-2026-11-09`, desde `feat/checkout-seguimiento` (`2627b50`); PR contra `main`. Pedido explícito del dueño: integrar todo, fusionarlo y llevarlo a producción.
+
+- **Qué entra:** la cadena #85 → #108 completa (0.7, 0.9, 0.12, 0.14–0.19, 1.0–1.12 y la navegación de Codex, #101) más las diez fichas de la Ola 0 que estaban fuera: 0.1 (#72), 0.2 (#83), 0.3 (#75), 0.4 (#74), 0.5 (#73), 0.6 (#77), 0.8 (#80), 0.10 (#78), 0.11 (#81) y 0.13 (#84). Una fusión por ficha, sin reescribir historia.
+- **Conflictos y cómo se resolvieron:**
+  - lista de espera (0.1, 0.3): se conserva la de la 1.8, que ya usa el día de negocio, enseña fecha y hora en la zona del local y lanza el error de lectura en vez de pintar vacío;
+  - receta en la ficha del platillo (0.1) y «Partes iguales» en la hoja de cobro (0.1): la cadena ya no promete descontar inventario y la 1.1 cobra partes de verdad; se conserva la cadena;
+  - landing (0.1): se conserva el texto de inventario de la 1.10;
+  - planes (0.1 + 0.2): se suman el contacto de la 0.1 y la fuente única de precio y alcance de la 0.2;
+  - cupones (0.3 + 0.5): el panel recibe a la vez el estado de lectura y la zona del local;
+  - Caja (0.10): la 1.2 ya cierra en una transacción con recibo durable, revisa que el turno no haya cambiado y distingue «contado en cero» de «sin contar». Se conserva ese cierre y se portan dos detalles de la 0.10: los errores de dinero no se ocultan solos y la tarjeta de turno sin abrir avisa que el corte quedará «sin apertura». El historial «Sin apertura» y el periodo de cobros (N07) entran sin conflicto. Queda fuera el paso «ámbar» del indicador de pasos de la 0.10;
+  - cola offline (0.11): se queda el tipo con motivo (`lleno`/`bloqueado`). En Servicio sigue sin enviarse una comanda que el aparato no pudo guardar, como en la 1.4, ahora con la causa; la cola del mesero se reenvía sola al abrir el panel, al volver la señal y cada 15 s (0.11). La pantalla del comensal conserva «Aún no se envía» de la 1.12 y suma el aviso de «no se guardó en este teléfono»;
+  - arnés de dinero (0.13): la cadena ya lo contiene ampliado (85 escenarios frente a 9); se conserva;
+  - `verificar_migraciones.sql`: se unen las huellas 154–159 con las 156 y 160–180, en orden.
+- **Migraciones:** 154, 155, 157, 158 y 159 vivían en las ramas de la Ola 0; por eso la cadena saltaba de la 153 a la 156. No hay números repetidos ni huecos entre 148 y 180.
+- **Ensayo de producción:** una segunda base local con solo 001–153 y la carta demo de Rincón 502 (110 pedidos, 4 cupones). El script armado 155–180 se aplicó en una sola transacción sin errores, luego la 154, y el verificador marcó «sí» de 148 a 180. Volver a correr el script se rechaza por su guarda.
+- **Verificación local:** `typecheck` y `lint` sin errores (tres avisos previos); 1,548 unitarias y una omisión previa. Las pruebas de Postgres, seguridad y E2E corren en el CI del PR.
+- **Despliegue:** procedimiento en la [guía de despliegue](../guias/GUIA_DESPLIEGUE.md), parte 7d.
+- **Sigue pendiente** ([observaciones](OBSERVACIONES_AUDITORIA_2026-11-09.md)): pruebas con personas, en el local y con impresora; revisión independiente de dinero y permisos; ensayo de restauración del respaldo.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

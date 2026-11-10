@@ -6,6 +6,22 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+## v0.18.0 — 2026-11-10 · Auditoría integral: olas 0 y 1
+PR de integración `release/integracion-2026-11-09` (#72–#108) · migraciones 154–180. En producción: 155–180 en un solo script ANTES del despliegue y la 154 DESPUÉS ([guía, parte 7d](docs/guias/GUIA_DESPLIEGUE.md)).
+- **Correcciones de la Ola 0 que faltaban** (fichas 0.1–0.6, 0.8, 0.10, 0.11 y 0.13):
+  - textos y enlaces que prometían otra cosa (0.1);
+  - una sola fuente para precio y alcance de cada plan (0.2);
+  - un error de consulta ya no se muestra como vacío ni como cero (0.3);
+  - pausa de pedidos inmediata, confirmada y con fin automático (0.4, migración 155);
+  - cupones que valen el día completo en la zona del local, programados y con estado único (0.5, migración 154);
+  - pedido, cupón y puntos en una sola operación (0.6, migración 157);
+  - compras creadas en una transacción y sin reabrir una recibida (0.8, migración 159);
+  - un solo corte de caja por periodo y «sin apertura» marcado en el historial (0.10, migración 158);
+  - la cola offline dice si guardó y la del mesero se reenvía sola (0.11);
+  - pruebas del circuito del dinero en Postgres (0.13).
+- **Lo ya descrito abajo** de las fichas 0.7, 0.9, 0.12, 0.14–0.19 y 1.0–1.12.
+- **Herramienta:** `scripts/armar-migraciones-produccion.mjs` junta un rango de migraciones en un script transaccional con guarda contra doble aplicación.
+
 - **Pedido y seguimiento honestos del comensal** (auditoría 1.12):
   - la confirmación dice «lo recibió; te avisamos cuando lo acepte», sin el «20–30 min» ni el «notificado al instante» fijos;
   - el seguimiento muestra Recibido, Aceptado, En preparación (platos listos), Listo y Entregado con su hora real;

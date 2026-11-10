@@ -428,24 +428,26 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 
 **Ola 0**
 - [x] 0.1 Textos y enlaces que prometen otra cosa (rama `fix/textos-que-prometen-otra-cosa`, 2026-11-04)
-- [ ] 0.2 Una sola fuente para plan, precio y alcance
+- [x] 0.2 Una sola fuente para plan, precio y alcance (PR #83, integrada en `release/integracion-2026-11-09`)
 - [x] 0.3 Error no es vacío ni cero (rama `fix/error-no-es-vacio`, 2026-11-04)
-- [ ] 0.4 Pausa de pedidos real
+- [x] 0.4 Pausa de pedidos real (PR #74, mig 155, integrada en `release/integracion-2026-11-09`)
 - [x] 0.5 Cupones: vigencia, programación y límites (rama `fix/cupones-vigencia`, mig 154, 2026-11-04)
-- [ ] 0.6 Pedido, cupón y puntos en una sola operación
+- [x] 0.6 Pedido, cupón y puntos en una sola operación (PR #77, mig 157, integrada en `release/integracion-2026-11-09`)
 - [x] 0.7 Receta atómica y referencias entre restaurantes (rama `fix/receta-atomica-y-referencias`, mig 156, 2026-11-04)
-- [ ] 0.8 Compras: creación atómica y estados válidos
+- [x] 0.8 Compras: creación atómica y estados válidos (PR #80, mig 159, integrada en `release/integracion-2026-11-09`)
 - [x] 0.9 Sentar desde espera o reserva sin estados partidos (rama `fix/sentar-sin-estados-partidos`, sin migración, 2026-11-04)
-- [ ] 0.10 Caja honesta
+- [x] 0.10 Caja honesta (PR #78, mig 158, integrada en `release/integracion-2026-11-09`; el cierre usa el de la 1.2)
 - [x] 0.11 Cola offline que no promete de más (rama `fix/cola-offline-honesta`, sin migración, 2026-11-04)
-- [ ] 0.12 Acceso por sucursal con membresías
-- [ ] 0.13 Probar el circuito del dinero en Postgres real — entregada en su rama #84; conserva su marca al fusionar
+- [x] 0.12 Acceso por sucursal con membresías (PR #82, incorporada a la cadena en la 1.7)
+- [x] 0.13 Probar el circuito del dinero en Postgres real (PR #84; el arnés vive ampliado en la cadena)
 - [x] 0.14 Cobro parcial concurrente sin sobrecobro (D03) — migración 160 y garantías en CI
 - [x] 0.15 Identidad durable del intento de cobro (D04) — migraciones 161/162 y recuperación del resultado original
 - [x] 0.16 Cerrar cobrando solo el saldo de cada pedido (D05) — migración 163 y saldo neto bajo bloqueo
 - [x] 0.17 Centavos del reparto persistido (D07) — cuotas comunes en SQL, migraciones 164/165
 - [x] 0.18 Cobros en tránsito al cerrar un turno (D08) — revisión y registro SQL, migraciones 166/167
 - [x] 0.19 Incluir el instante exacto del inicio del día (D09) — migración 168; matriz completa en CI
+
+**Integración:** las olas 0 y 1 quedan juntas en `release/integracion-2026-11-09` (registro §35). Implementadas; las pruebas con personas y en el local siguen pendientes.
 
 **Ola 1**: [x] 1.0 (base visual, PR #91) · [x] 1.1 (cobro completo, PR #92) · [x] 1.2 (recibo, borrador y traspaso formal; migraciones 170–172) · [x] 1.3 (ciclo de mesa, migración 173) · [x] 1.4 (Servicio, migración 174) · [x] 1.5 (Cocina, migración 175, prueba física pendiente) · [x] 1.6 (Pedidos en vivo, migración 176) · [x] 1.7 (permisos por trabajo, migración 177; [plan](PLAN_PERMISOS_POR_TRABAJO_2026-11-08.md)) · [x] 1.8 (recepción, migración 178; [plan](PLAN_RECEPCION_2026-11-09.md)) · [x] 1.9 (catálogo, migración 179; [plan](PLAN_CATALOGO_2026-11-09.md)) · [x] 1.10 (inventario y agotados, migración 180; [plan](PLAN_INVENTARIO_2026-11-09.md)) · [x] 1.11 (comensal: ficha, carrito, lealtad y carta; [plan](PLAN_COMENSAL_FICHA_CARRITO_2026-11-09.md)) · [x] 1.12 (comensal: entrada, confirmación y seguimiento; [plan](PLAN_COMENSAL_CHECKOUT_SEGUIMIENTO_2026-11-09.md))
 **Ola 2**: [ ] 2.1 · [ ] 2.2 · [ ] 2.3 · [ ] 2.4 · [ ] 2.5 · [ ] 2.6 · [ ] 2.7 · [ ] 2.8 · [ ] 2.9 · [ ] 2.10 · [ ] 2.11 · [ ] 2.12
