@@ -186,6 +186,16 @@ Orden recomendado: primero lo de más riesgo y menor tamaño, y lo que destraba 
 
 **Aceptación:** PA-T04, T05 (23:59 y 00:00 en Guatemala) y T06 (21 cupones con el último vigente) pasan; la fecha mostrada es la misma que se eligió.
 
+**Estado (2026-11-04): hecha.**
+- **X05 confirmado en Postgres:** `'2026-11-10'::timestamptz` = `2026-11-10 00:00+00`, es decir, las 18:00 del 9 en Guatemala.
+- **Fuente única:** `lib/cupones/vigencia.ts` (sin base de datos, 21 pruebas) define el estado (pausado, programado, vencido, agotado, vigente) y la conversión de días del calendario del local a instantes. La usan el panel, `isCouponLive` y el checkout.
+- **Formulario:** se agregó «Válido desde» (antes el inicio no se podía poner y editar lo borraba). «Válido hasta (incluido)» vale el día completo y se guarda como límite exclusivo. Si el día no cambió, se conserva el instante guardado.
+- **Checkout:** filtra las fechas en la base, sin `limit(20)`.
+- **Migración 154:** corrige los cupones guardados por el formulario viejo (solo los que están en medianoche UTC exacta). Es idempotente; se aplica **después de desplegar**.
+- **Pruebas en la base real:** PA-T06 con un script (la consulta vieja no ofrecía el campo y la nueva sí); PA-T04 guardando MESA5 sin tocar nada (instantes idénticos al microsegundo); un cupón programado creado desde el formulario quedó en 00:00 de Guatemala.
+- **Visto de paso (es X03, ficha 3.4):** los botones de editar y borrar de cada cupón no tienen nombre accesible y el segundo es «Eliminar». Al automatizar la revisión abrí por error el diálogo de borrar; se canceló y no se borró nada.
+- **Queda para 0.6:** el contador de usos sigue sin ser atómico frente al tope (`increment_coupon_usage` va aparte del pedido).
+
 ### 0.6 · Pedido, cupón y puntos en una sola operación — L · migración
 
 **Cubre:** F21, T01 (la parte de pedido y promoción), E03 (la parte de pedido), PA-T07, PA-T08, M§8 «Cupón última unidad» y «Canje y cancelación».
@@ -404,7 +414,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 - [ ] 0.2 Una sola fuente para plan, precio y alcance
 - [x] 0.3 Error no es vacío ni cero (rama `fix/error-no-es-vacio`, 2026-11-04)
 - [ ] 0.4 Pausa de pedidos real
-- [ ] 0.5 Cupones: vigencia, programación y límites
+- [x] 0.5 Cupones: vigencia, programación y límites (rama `fix/cupones-vigencia`, mig 154, 2026-11-04)
 - [ ] 0.6 Pedido, cupón y puntos en una sola operación
 - [x] 0.7 Receta atómica y referencias entre restaurantes (rama `fix/receta-atomica-y-referencias`, mig 156, 2026-11-04)
 - [ ] 0.8 Compras: creación atómica y estados válidos

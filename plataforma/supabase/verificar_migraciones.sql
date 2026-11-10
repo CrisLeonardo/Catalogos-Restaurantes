@@ -158,6 +158,13 @@ huellas(n, que, ok, cuando) as (values
      and not exists (select 1 from information_schema.columns
                       where table_schema = 'public' and table_name = 'orders' and column_name = 'transfer_status'),
      'DESPUÉS de desplegar (o a la vez)'),
+  ('154', 'cupones: «válido hasta» vale el día completo en la zona del local',
+     not exists (select 1 from coupons c join restaurants r on r.id = c.restaurant_id
+                  where c.valid_until is not null
+                    and (c.valid_until at time zone 'UTC')::time = time '00:00:00'
+                    and (((c.valid_until at time zone 'UTC')::date)::timestamp
+                           at time zone coalesce(r.timezone, 'America/Guatemala')) <> c.valid_until),
+     'DESPUÉS de desplegar'),
   ('155', 'pausa de pedidos con hora de fin (restaurants.orders_paused_until)',
      exists (select 1 from information_schema.columns
               where table_schema = 'public' and table_name = 'restaurants' and column_name = 'orders_paused_until'),

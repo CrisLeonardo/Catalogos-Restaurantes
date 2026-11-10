@@ -15,6 +15,9 @@ import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Stat, StatGroup } from '@/components/ui/stat';
 import AvisoLectura from '@/components/admin/aviso-lectura';
 import type { EstadoLectura } from '@/lib/db/lectura';
+import {
+  estadoDelCupon, fechaDeFin, fechaDeInicio, fechaLegible, NOMBRE_ESTADO, type EstadoCupon,
+} from '@/lib/cupones/vigencia';
 
 interface Props {
   restaurantId: string;
@@ -22,24 +25,30 @@ interface Props {
   /** Si la consulta falló, la lista vacía NO significa «sin cupones». */
   estado: EstadoLectura;
   leidoEn: string;
+  /** Zona del restaurante: las fechas del cupón son días de SU calendario. */
+  timezone: string;
 }
 
 const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 const emptyForm = {
   code: '', description: '', discount_type: 'PERCENT' as 'PERCENT' | 'FIXED',
-  discount_value: '', min_order: '', max_uses: '', valid_until: '',
+  discount_value: '', min_order: '', max_uses: '', valid_from: '', valid_until: '',
 };
 
-function couponStatus(c: Coupon): { label: string; color: string } {
-  if (!c.is_active) return { label: 'Pausado', color: 'var(--u-text-4)' };
-  const now = new Date();
-  if (c.valid_until && new Date(c.valid_until) < now) return { label: 'Vencido', color: 'var(--c-danger)' };
-  if (c.max_uses && c.uses >= c.max_uses) return { label: 'Agotado', color: 'var(--c-warn)' };
-  return { label: 'Activo', color: 'var(--c-ok)' };
-}
+/* El estado sale de lib/cupones/vigencia, el mismo que usa el checkout.
+   Antes el panel tenía su propia cuenta, que no miraba la fecha de inicio:
+   un cupón programado salía «Activo» y el checkout lo rechazaba
+   (auditoría 2026-11-03, X04). */
+const COLOR_ESTADO: Record<EstadoCupon, string> = {
+  vigente: 'var(--c-ok)',
+  programado: 'var(--c-info)',
+  pausado: 'var(--u-text-4)',
+  agotado: 'var(--c-warn)',
+  vencido: 'var(--c-danger)',
+};
 
-export default function CuponesPanel({ restaurantId, coupons, estado, leidoEn }: Props) {
+export default function CuponesPanel({ restaurantId, coupons, estado, leidoEn, timezone }: Props) {
   const { confirm, dialog } = useConfirm();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -67,7 +76,8 @@ export default function CuponesPanel({ restaurantId, coupons, estado, leidoEn }:
       discount_value: String(c.discount_value),
       min_order: c.min_order != null ? String(c.min_order) : '',
       max_uses: c.max_uses != null ? String(c.max_uses) : '',
-      valid_until: c.valid_until ? c.valid_until.slice(0, 10) : '',
+      valid_from: c.valid_from ? fechaDeInicio(c.valid_from, timezone) : '',
+      valid_until: c.valid_until ? fechaDeFin(c.valid_until, timezone) : '',
     });
     setError(null);
     setShowForm(true);
@@ -84,7 +94,10 @@ export default function CuponesPanel({ restaurantId, coupons, estado, leidoEn }:
         discount_value: parseFloat(form.discount_value) || 0,
         min_order: form.min_order ? parseFloat(form.min_order) : undefined,
         max_uses: form.max_uses ? parseInt(form.max_uses) : undefined,
-        valid_until: form.valid_until || undefined,
+        // Siempre las dos: vacía = sin límite. El servidor conserva el
+        // instante guardado si el día no cambió.
+        valid_from: form.valid_from || null,
+        valid_until: form.valid_until || null,
       };
       const res = editingId
         ? await updateCoupon(restaurantId, editingId, payload)
@@ -116,10 +129,7 @@ export default function CuponesPanel({ restaurantId, coupons, estado, leidoEn }:
     });
   }
 
-  const active = coupons.filter((c) => {
-    const s = couponStatus(c);
-    return s.label === 'Activo';
-  }).length;
+  const active = coupons.filter((c) => estadoDelCupon(c) === 'vigente').length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -188,8 +198,12 @@ export default function CuponesPanel({ restaurantId, coupons, estado, leidoEn }:
                 <input className="adm-field" type="number" inputMode="decimal" min={1} value={form.max_uses} onChange={(e) => setField('max_uses', e.target.value)} placeholder="Ilimitado" />
               </div>
               <div>
-                <label style={labelStyle}>Válido hasta</label>
-                <input className="adm-field" type="date" value={form.valid_until} onChange={(e) => setField('valid_until', e.target.value)} />
+                <label style={labelStyle} htmlFor="cupon-desde">Válido desde</label>
+                <input id="cupon-desde" className="adm-field" type="date" value={form.valid_from} max={form.valid_until || undefined} onChange={(e) => setField('valid_from', e.target.value)} />
+              </div>
+              <div>
+                <label style={labelStyle} htmlFor="cupon-hasta">Válido hasta (incluido)</label>
+                <input id="cupon-hasta" className="adm-field" type="date" value={form.valid_until} min={form.valid_from || undefined} onChange={(e) => setField('valid_until', e.target.value)} />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Descripción interna</label>
@@ -219,12 +233,14 @@ export default function CuponesPanel({ restaurantId, coupons, estado, leidoEn }:
       ) : coupons.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {coupons.map((c) => {
-            const { label: statusLabel, color: statusColor } = couponStatus(c);
+            const estado = estadoDelCupon(c);
+            const statusLabel = NOMBRE_ESTADO[estado];
+            const statusColor = COLOR_ESTADO[estado];
             const busy = busyId === c.id && isPending;
             return (
               <Card key={c.id} className="flex flex-wrap items-center gap-3 p-3.5" style={{ opacity: busy ? 0.6 : 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 'var(--radius-md)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', flexShrink: 0 }}>
-                  <Icon name="ticket" size={18} style={{ color: statusLabel === 'Activo' ? 'var(--brand-accent)' : 'var(--u-text-4)' }} />
+                  <Icon name="ticket" size={18} style={{ color: estado === 'vigente' ? 'var(--brand-accent)' : 'var(--u-text-4)' }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 140 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -236,7 +252,8 @@ export default function CuponesPanel({ restaurantId, coupons, estado, leidoEn }:
                     {c.min_order && <span>Mín.: {fmtMoney(Number(c.min_order))}</span>}
                     {c.max_uses && <span>Usos: {c.uses}/{c.max_uses}</span>}
                     {!c.max_uses && c.uses > 0 && <span>Usos: {c.uses}</span>}
-                    {c.valid_until && <span>Vence: {new Date(c.valid_until).toLocaleDateString('es-GT', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
+                    {c.valid_from && estado === 'programado' && <span>Empieza: {fechaLegible(fechaDeInicio(c.valid_from, timezone))}</span>}
+                    {c.valid_until && <span>Vence: {fechaLegible(fechaDeFin(c.valid_until, timezone))}</span>}
                   </div>
                   {c.description && <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>{c.description}</div>}
                 </div>
