@@ -121,7 +121,8 @@ test('1.4 · conserva puestos, borradores y la guarnición al recuperar un enví
     await page.getByRole('button', { name: 'Opciones y nota de Limonada' }).click();
     const agotado = page.getByRole('dialog', { name: 'Opciones de Limonada' });
     await agotado.getByRole('button', { name: /marcar agotado/i }).click();
-    await agotado.getByRole('button', { name: /Toca otra vez/ }).click();
+    // Desde la 1.10 el segundo toque dice hasta cuándo; la primera es la omisión.
+    await agotado.getByRole('group', { name: 'Agotar: hasta cuándo' }).getByRole('button', { name: 'Hasta mañana' }).click();
     await expect(puesto(2)).toBeDisabled();
     await abrirCarta();
     await expect(puesto(2)).toHaveAccessibleName('Puesto 2 · Limonada · Agotado');
