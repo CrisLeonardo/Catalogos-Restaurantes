@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
+import { causaNoGuardado, type MotivoNoGuardado } from '@/lib/order-queue';
 
 /* Piezas pequeñas del formulario del checkout y la pantalla «sin conexión». */
 
@@ -52,8 +53,17 @@ export function FormSection({ glass, children }: { glass: boolean; children: Rea
   return <>{children}</>;
 }
 
-/** El pedido se guardó en el aparato y se enviará solo al volver la señal. */
-export function CheckoutQueued({ error, pending, onRetry }: { error: string; pending: boolean; onRetry: () => void }) {
+/**
+ * Sin conexión. Dos verdades distintas (auditoría 0.11):
+ *  · guardado en el teléfono → se enviará solo, pero el restaurante AÚN no
+ *    lo tiene;
+ *  · NO guardado (memoria llena, modo privado) → solo vive en esta
+ *    pantalla: cerrarla lo pierde. Nunca se dice «se guardó» si no fue así.
+ */
+export function CheckoutQueued({ error, pending, onRetry, noGuardado, onGuardar }: {
+  error: string; pending: boolean; onRetry: () => void;
+  noGuardado: MotivoNoGuardado | null; onGuardar: () => void;
+}) {
   return (
     <main className="anim-fade-up themed-type" style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
       <div style={{ textAlign: 'center', maxWidth: 360, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
@@ -66,11 +76,26 @@ export function CheckoutQueued({ error, pending, onRetry }: { error: string; pen
         <div>
           {/* «Aún no se envía»: que nadie lo confunda con recibido (1.12, M06). */}
           <h1 className="t-display" style={{ fontSize: 'var(--fs-h1)', marginBottom: 8 }}>Aún no se envía</h1>
-          <p style={{ fontSize: 'var(--m-fs-md)', color: 'var(--u-text-2)', lineHeight: 1.5 }}>
-            Tu pedido está guardado en este teléfono y se enviará solo cuando
-            vuelva la señal. El restaurante todavía no lo tiene — no cierres
-            esta pantalla.
-          </p>
+          {noGuardado ? (
+            <>
+              <p role="alert" style={{ fontSize: 'var(--m-fs-md)', color: 'var(--c-danger, #ff6b6b)', fontWeight: 700, lineHeight: 1.4, marginBottom: 8 }}>
+                No se guardó en este teléfono
+              </p>
+              <p style={{ fontSize: 'var(--m-fs-md)', color: 'var(--u-text-2)', lineHeight: 1.5 }}>
+                No se pudo porque {causaNoGuardado(noGuardado)}. Tu pedido
+                solo está en esta pantalla y el restaurante todavía no lo
+                recibió: <strong>no la cierres ni la recargues</strong>. Se
+                enviará en cuanto vuelva la señal; si tarda, avísale al
+                personal.
+              </p>
+            </>
+          ) : (
+            <p style={{ fontSize: 'var(--m-fs-md)', color: 'var(--u-text-2)', lineHeight: 1.5 }}>
+              Tu pedido está guardado en este teléfono y se enviará solo cuando
+              vuelva la señal. El restaurante todavía no lo tiene — no cierres
+              esta pantalla.
+            </p>
+          )}
         </div>
         {error && (
           <p style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--c-danger, #ff6b6b)' }}>{error}</p>
@@ -83,6 +108,16 @@ export function CheckoutQueued({ error, pending, onRetry }: { error: string; pen
         >
           {pending ? 'Reintentando…' : 'Reintentar ahora'}
         </button>
+        {noGuardado && (
+          <button
+            type="button"
+            onClick={onGuardar}
+            className="press"
+            style={{ padding: '10px 20px', minHeight: 'var(--m-tap)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--m-fs-sm)', fontWeight: 600, cursor: 'pointer', background: 'transparent', border: '1px solid var(--u-hair-2)', color: 'var(--u-text)' }}
+          >
+            Intentar guardar en el teléfono
+          </button>
+        )}
       </div>
     </main>
   );

@@ -256,6 +256,23 @@ Orden recomendado: primero lo de más riesgo y menor tamaño, y lo que destraba 
 **Hacer:** `saveQueuedOrder` devuelve un resultado; si el almacenamiento falla, el comensal y el mesero ven «No se guardó en este aparato» con una acción para resolverlo. Un pedido en cola nunca se presenta como «recibido por el restaurante». La migración a IndexedDB y la matriz completa sin internet, LAN o PC quedan en 4.6.
 **Aceptación:** con `localStorage` lleno o bloqueado no aparece «guardado».
 
+**Estado (2026-11-04): hecha.** Sin migración.
+- **Contrato:** `saveQueuedOrder` devuelve `{ ok }` o `{ ok: false, motivo: 'lleno' | 'bloqueado' }`. Solo dice `ok` si al leer la cola de vuelta el pedido está ahí. Tiene pruebas con un almacenamiento falso (lleno, bloqueado, ausente, mudo).
+- **Comensal, sin señal:**
+  - Si se guardó: «quedó guardado en este teléfono, pero el restaurante todavía no lo recibió».
+  - Si no: «**No se guardó en este teléfono**», la causa, «solo está en esta pantalla: no la cierres ni la recargues», y el botón «Intentar guardar en el teléfono» además de «Reintentar ahora».
+- **Mesero, sin señal:**
+  - Si se guardó: «… se enviará solo al volver la señal. Cocina aún no lo tiene · Mesa N».
+  - Si no: la comanda **vuelve al carrito** con la causa y «antes de reenviarla, mira en la mesa si llegó a cocina».
+- **Hallazgo más grave, corregido:** desde el rediseño de Tomar pedidos (669bbdd) la cola del mesero **solo se contaba y nadie la reenviaba**, aunque el aviso prometía «se enviará solo». `servicio-panel.tsx` vuelve a reenviarla al abrir, al volver la señal y cada 15 s, con el mismo `clientId`. Si el servidor la rechaza, lo dice.
+- **Probado en el navegador** (la falta de señal se simuló haciendo fallar las acciones, y la memoria llena con `QuotaExceededError`):
+  - Mesero: al volver la señal, el pedido de la mesa 2 llegó solo, una vez.
+  - Mesero con memoria llena: la comanda de la mesa 3 volvió al carrito con el aviso.
+  - Comensal: primero «No se guardó», luego guardado, y al volver la señal «¡Pedido enviado!».
+  - Los pedidos de prueba se borraron.
+- **Queda para 4.6:** IndexedDB, caducidad y revisión de precio de un pedido viejo, y la matriz sin internet / LAN / PC.
+- **Queda para 1.12:** el texto de éxito «lo está preparando» al recibirlo.
+
 ### 0.12 · Acceso por sucursal con membresías — M
 
 **Cubre:** N14, E04, T06, F20, PA-T29, M§8 «Dueño sin restaurant_id» y «Empleado sin permiso».
@@ -420,7 +437,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 - [ ] 0.8 Compras: creación atómica y estados válidos
 - [x] 0.9 Sentar desde espera o reserva sin estados partidos (rama `fix/sentar-sin-estados-partidos`, sin migración, 2026-11-04)
 - [ ] 0.10 Caja honesta
-- [ ] 0.11 Cola offline que no promete de más
+- [x] 0.11 Cola offline que no promete de más (rama `fix/cola-offline-honesta`, sin migración, 2026-11-04)
 - [ ] 0.12 Acceso por sucursal con membresías
 - [ ] 0.13 Probar el circuito del dinero en Postgres real — entregada en su rama #84; conserva su marca al fusionar
 - [x] 0.14 Cobro parcial concurrente sin sobrecobro (D03) — migración 160 y garantías en CI
