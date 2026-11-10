@@ -241,6 +241,26 @@ async function computeOrderPricing(
   return { subtotal, fee, discount, tip, total, applied };
 }
 
+/**
+ * Lo que dijo la base al crear el pedido → algo que el comensal entiende.
+ * El pedido NO se creó en ningún caso: el carrito sigue intacto y el
+ * comensal decide (nunca se le cambia el total en silencio).
+ */
+function mensajeAlCrearPedido(error: { code?: string | null; message?: string | null } | null): string {
+  switch (error?.code) {
+    case 'LGC01':
+      return 'El cupón ya no está disponible (se agotó, venció o ya no aplica a tu pedido). Tu pedido no se envió: quita el cupón para continuar.';
+    case 'LGC02':
+      return 'El descuento del cupón cambió mientras pagabas. Tu pedido no se envió: vuelve a aplicar el cupón.';
+    case 'P0001':
+      // Mensajes en español de place_order (stock) y del canje (puntos, recompensa).
+      return error.message ?? 'No se pudo crear el pedido.';
+    default:
+      if (error) console.error('[createOrder]', error.code ?? '', error.message ?? '');
+      return 'No se pudo crear el pedido. Intenta de nuevo.';
+  }
+}
+
 /** Sesión de Google del comensal (si la hay) y su cliente de lealtad. */
 async function resolveDinerForOrder(
   restaurantId: string,
@@ -561,6 +581,14 @@ export async function createOrder(
     zones,
   );
 
+  /* El checkout solo manda el código de un cupón que ya validó y cuyo
+     descuento le mostró al comensal. Si aquí ya no aplica (se agotó o venció
+     mientras pagaba), antes se creaba el pedido a precio completo sin avisar.
+     Ahora no se crea y se le dice (auditoría 2026-11-03, F21/M04). */
+  if (parsed.data.couponCode && !applied) {
+    return { error: mensajeAlCrearPedido({ code: 'LGC01' }) };
+  }
+
   // Registro automático del cliente (clave: teléfono normalizado por
   // restaurante). Si la migración 010 no corrió aún, el pedido sigue sin
   // romperse: customer_id queda en null.
@@ -597,10 +625,12 @@ export async function createOrder(
       ? `[Servicio: ${customer.coursePreference}]${customer.notes ? ` · ${customer.notes}` : ''}`
       : (customer.notes ?? null);
 
-  // Numeración atómica + pedido + ítems en UNA transacción (RPC place_order):
-  // evita el número duplicado por carrera (count(*)+1) y los pedidos huérfanos
-  // si la inserción de ítems fallara a mitad. Ver migración 016.
-  const { data: placed, error: orderError } = await db.rpc('place_order', {
+  // Numeración atómica + pedido + ítems + cupón + canjes en UNA transacción
+  // (migración 157, auditoría 2026-11-03 F21). Antes el cupón y los puntos
+  // se aplicaban DESPUÉS del pedido, aparte y sin revisar errores: el tope
+  // del cupón se pasaba con dos pedidos a la vez y un canje sin saldo dejaba
+  // el premio gratis. Ahora, si un paso falla, no queda nada.
+  const pedidoArgs = {
     p_restaurant_id:  restaurantId,
     p_customer_name:  customer.name,
     p_customer_phone: customer.phone,
@@ -629,37 +659,59 @@ export async function createOrder(
       note:             i.note || null,
       ...(i.is_reward ? { is_reward: true, reward_id: i.reward_id } : {}),
     })),
+  };
+  const conCupon = applied && discount > 0 ? applied.coupon : null;
+
+  let { data: placed, error: orderError } = await db.rpc('leogin_crear_pedido', {
+    ...pedidoArgs,
+    p_coupon_id:          conCupon?.id ?? null,
+    p_discount:           conCupon ? discount : 0,
+    p_reward_customer_id: rewardRedeemIds.length > 0 ? loyaltyCustomerId : null,
+    p_reward_ids:         rewardRedeemIds,
   });
+
+  /* Sin la migración 157 se sigue por el camino anterior (pasos separados)
+     para no romper el checkout entre el despliegue y la migración. */
+  const sinOperacionUnica = faltaLaFuncion(orderError);
+  if (sinOperacionUnica) {
+    ({ data: placed, error: orderError } = await db.rpc('place_order', pedidoArgs));
+  }
 
   const order = placed as { id: string; order_number: string; public_token: string } | null;
   if (orderError || !order) {
-    return { error: orderError?.message ?? 'Error al crear el pedido.' };
+    // Un reintento del mismo pedido que chocó con el primero (client_id
+    // único): no es un error, es el mismo pedido.
+    if (orderError?.code === '23505' && clientId) {
+      const { data: mismo } = await db
+        .from('orders')
+        .select('id, order_number, public_token')
+        .eq('restaurant_id', restaurantId)
+        .eq('client_id', clientId)
+        .maybeSingle();
+      if (mismo) {
+        return { success: true, orderId: mismo.id as string, orderNumber: mismo.order_number as string, publicToken: mismo.public_token as string };
+      }
+    }
+    return { error: mensajeAlCrearPedido(orderError) };
   }
 
-  // Persistir el cupón aplicado (metadata para recibos/reportes) y contar su
-  // uso. Las dos escrituras son independientes: van a la vez.
-  if (applied && discount > 0) {
-    await Promise.all([
-      db.from('orders').update({
-        discount,
-        coupon_id: applied.coupon.id,
-        coupon_code: applied.coupon.code,
-      }).eq('id', order.id),
-      db.rpc('increment_coupon_usage', { p_id: applied.coupon.id }),
-    ]);
-  }
-
-  // Canje de recompensas (productos): descuenta los puntos de cada una de forma
-  // atómica. Ya validamos saldo arriba; el RPC re-valida y nunca deja negativo.
-  // En fila A PROPÓSITO: cada canje re-lee el saldo que dejó el anterior.
-  if (rewardRedeemIds.length > 0 && loyaltyCustomerId) {
-    for (const rid of rewardRedeemIds) {
-      await db.rpc('leogin_loyalty_redeem_reward', {
-        p_restaurant_id: restaurantId,
-        p_customer_id:   loyaltyCustomerId,
-        p_reward_id:     rid,
-        p_order_id:      order.id,
-      });
+  if (sinOperacionUnica) {
+    // Camino anterior a la 157, tal cual era.
+    if (conCupon) {
+      await Promise.all([
+        db.from('orders').update({ discount, coupon_id: conCupon.id, coupon_code: conCupon.code }).eq('id', order.id),
+        db.rpc('increment_coupon_usage', { p_id: conCupon.id }),
+      ]);
+    }
+    if (rewardRedeemIds.length > 0 && loyaltyCustomerId) {
+      for (const rid of rewardRedeemIds) {
+        await db.rpc('leogin_loyalty_redeem_reward', {
+          p_restaurant_id: restaurantId,
+          p_customer_id:   loyaltyCustomerId,
+          p_reward_id:     rid,
+          p_order_id:      order.id,
+        });
+      }
     }
   }
 
