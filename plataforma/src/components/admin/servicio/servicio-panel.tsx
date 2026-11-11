@@ -47,6 +47,7 @@ import {
   HojaAtajos, HojaLibre, HojaLinea, HojaLlevar, HojaMesa, HojaVoz,
 } from '@/components/admin/servicio/hojas';
 import HojaOpciones from '@/components/admin/servicio/hoja-opciones';
+import { esPersonalizable } from '@/lib/servicio/carta';
 import { HojaTurno } from '@/components/admin/servicio/hoja-turno';
 import { leerPuestos, prepararPuestos, type PreferenciasServicio, type PuestosServicio, type RolServicio } from '@/lib/servicio/turno';
 import Paleta, { type AccionPaleta } from '@/components/admin/servicio/paleta';
@@ -128,6 +129,7 @@ function cartKey(sel: Sel): string {
 
 /** Las tres pantallas del teléfono. */
 type Pantalla = 'sala' | 'comanda' | 'ticket';
+type VistaSalon = 'plano' | 'mesas';
 
 type Hoja =
   | null
@@ -232,6 +234,20 @@ export default function ServicioPanel({
   }, []);
   const [vistaCarta, setVistaCarta] = useState(false);
   const [nivel, setNivel] = useState<string | null>(null);
+  /* PLANO o MESAS, a gusto de quien toma el pedido y recordado en el
+     aparato. Sin elección previa, el teléfono abre en mesas (caben todas y
+     no hay que encuadrar nada) y la tablet o la PC en el plano. */
+  const [vistaElegida, setVistaElegida] = useState<VistaSalon | null>(null);
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem('leogin:servicio-vista');
+      if (v === 'plano' || v === 'mesas') setVistaElegida(v);
+    } catch { /* sin almacenamiento */ }
+  }, []);
+  const elegirVista = useCallback((v: VistaSalon) => {
+    setVistaElegida(v);
+    try { localStorage.setItem('leogin:servicio-vista', v); } catch { /* sin almacenamiento */ }
+  }, []);
 
   /* ── El pedido que se está apuntando ──────────────────────── */
   const [carts, setCarts] = useState<CartMap>({});
@@ -647,12 +663,12 @@ export default function ServicioPanel({
       setAviso({ text: `${p.name} está agotado o retirado de la carta.`, bad: true });
       return;
     }
-    const grupos = (p.options as { id: string; required?: boolean; type?: string }[] | null) ?? [];
-    /* Si el plato tiene un grupo OBLIGATORIO, un toque no puede resolverlo:
-       se abre la hoja con la cantidad ya puesta. Lo demás entra directo,
-       que es lo que hace que tomar un pedido sea un toque por plato. */
-    const exige = grupos.some((g) => g.required && g.type !== 'combo');
-    if (exige) { setHoja({ k: 'mods', product: p, qty }); return; }
+    /* Un plato PERSONALIZABLE abre su hoja, igual que la ficha del comensal:
+       antes solo lo hacía si un grupo era obligatorio y lo demás entraba
+       «pelado», con los extras, el combo y los tamaños escondidos tras un
+       «⋯» de 28 px que en el teléfono nadie veía. Lo que no tiene nada que
+       elegir sigue siendo un toque por plato. */
+    if (esPersonalizable(p)) { setHoja({ k: 'mods', product: p, qty }); return; }
     empujar({
       lineId: newLineId(p.id),
       productId: p.id,
@@ -1272,10 +1288,14 @@ export default function ServicioPanel({
     setQ('');
     setCat(null);
     setHoja(null);
-    const conservarCarta = vistaCarta && !seatings[n]?.limpiezaDesde;
-    setVistaCarta(conservarCarta);
-    setPantalla(conservarCarta ? 'comanda' : 'ticket');
-  }, [seatings, vistaCarta]);
+    /* Una mesa LIBRE se toca para tomarle el pedido: va directo a la carta.
+       Antes caía en una comanda vacía («Mesa abierta y sin nada») y había
+       que tocar «Agregar platos»: un paso que no decidía nada. */
+    const libre = puedeTomarPedidos && mesas.find((m) => m.n === n)?.estado === 'libre';
+    const aLaCarta = (vistaCarta || libre) && !seatings[n]?.limpiezaDesde;
+    setVistaCarta(aLaCarta);
+    setPantalla(aLaCarta ? 'comanda' : 'ticket');
+  }, [seatings, vistaCarta, mesas, puedeTomarPedidos]);
 
   const abrirLlevar = useCallback((nombre: string) => {
     setNombreLlevar(nombre);
@@ -1386,6 +1406,9 @@ export default function ServicioPanel({
   );
   const conPlano = hayPlano(floorPlan);
   const planoVisible = !vistaCarta;
+  const vistaSalon: VistaSalon = vistaElegida ?? (movil ? 'mesas' : 'plano');
+  /* El selector solo existe donde hay algo que elegir. */
+  const eligeVista = conPlano && planoVisible;
   const sinEntrega = ordersVivos.some((pedido) => pedido.status !== 'SERVED') || !!pendientesQr;
   const puedeLimpiar = !!contextoCobro && !enLimpieza && !sinEntrega && !envioPendiente
     && resumen.nNuevas === 0 && (contextoCobro.saldada || (!!mesaSel?.desde && ordersVivos.length === 0));
@@ -1397,9 +1420,10 @@ export default function ServicioPanel({
     { label: 'Juntar o mover mesa', hint: 'la mesa abierta', run: () => { setPaleta(false); setHoja({ k: 'mesa' }); }, enabled: sel.kind === 'mesa' },
     { label: 'Cobrar algo que no está en la carta', hint: 'artículo libre', run: () => { setPaleta(false); setHoja({ k: 'libre', nombre: '' }); }, enabled: sel.kind !== 'none' },
     { label: 'Modo aprendiz', hint: aprendiz ? 'activo' : 'apagado', run: () => { setPaleta(false); cambiarAprendiz(); } },
+    { label: 'Modo servicio', hint: 'pantalla completa', run: () => { setPaleta(false); servicio?.toggle(); }, enabled: !!servicio && !servicio.active },
     { label: 'Atajos de teclado', hint: '?', run: () => { setPaleta(false); setHoja({ k: 'atajos' }); } },
     { label: 'Preparar turno', hint: 'favoritos', run: () => { setPaleta(false); setHoja({ k: 'turno' }); } },
-  ], [resumen.nNuevas, puedeCobrar, etiquetaCobro, pickupEnabled, sel.kind, aprendiz, enviar, cambiarAprendiz, mod]);
+  ], [resumen.nNuevas, puedeCobrar, etiquetaCobro, pickupEnabled, sel.kind, aprendiz, enviar, cambiarAprendiz, mod, servicio]);
 
   /* ══════════════════════════════════════════════════════════
      LO QUE SE DIBUJA
@@ -1577,25 +1601,40 @@ export default function ServicioPanel({
         {/* ══ RIEL / SALÓN ══ */}
         {(!movil || pantalla === 'sala') && (
           <div className={movil ? 'sv-pane' : planoVisible ? 'sv-rail sv-rail-plano' : 'sv-rail'}>
-            <div className="sv-rail-head" style={movil ? { padding: '16px 16px 10px' } : undefined}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <h1 className={movil ? 'sv-m-sala-title' : 'sv-rail-title'}>Salón</h1>
-                  <div className="sv-rail-sub">{resumenDelSalon(mesas)}</div>
-                  {enCola > 0 && (
-                    <div className="sv-chip" data-st="borrador" style={{ marginTop: 6 }}>
-                      {enCola} {enCola === 1 ? 'pedido espera' : 'pedidos esperan'} señal
-                    </div>
-                  )}
+            {/* UNA fila de mandos y UNA de filtros. El teléfono traía título,
+                contador, tres botones, filtros, zonas y un pie fijo: media
+                pantalla antes de la primera mesa. El título ya lo dice la
+                barra del panel; aprendiz y modo servicio viven en la búsqueda. */}
+            <div className="sv-rail-head" data-movil={movil ? '1' : undefined}>
+              <div className="sv-sala-bar">
+                {eligeVista ? (
+                  <div className="sv-seg" role="group" aria-label="Cómo ver el salón">
+                    {(['mesas', 'plano'] as const).map((v) => (
+                      <button key={v} type="button" className="sv-seg-b" data-on={vistaSalon === v ? '1' : '0'}
+                        aria-pressed={vistaSalon === v} onClick={() => elegirVista(v)}>
+                        {!movil && <Icon name={v === 'mesas' ? 'grid' : 'layout'} size={16} />}
+                        {v === 'mesas' ? 'Mesas' : 'Plano'}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                <div className="sv-sala-id" data-solo={eligeVista ? undefined : '1'}>
+                  <h1 className={eligeVista ? 'sr-only' : 'sv-rail-title'}>Salón</h1>
+                  {(!movil || !eligeVista) && <div className="sv-rail-sub">{resumenDelSalon(mesas)}</div>}
                 </div>
-                {movil && (
-                  <>
-                    <Ghost onClick={() => setPaleta(true)} icon="search" soloIcono title="Buscar" />
-                    {servicio && !servicio.active && <Ghost onClick={servicio.toggle} icon="monitor" soloIcono title="Entrar en modo servicio" />}
-                    <Ghost onClick={cambiarAprendiz} on={aprendiz} soloIcono icon="helpCircle" title="Modo aprendiz" />
-                  </>
+                {movil && <Ghost onClick={() => setPaleta(true)} icon="search" soloIcono title="Buscar plato, mesa o acción" />}
+                {pickupEnabled && (
+                  <button type="button" className="sv-ghost sv-llevar-b" aria-label="Para llevar" onClick={() => setHoja({ k: 'llevar' })}>
+                    <Icon name="bag" size={17} />
+                    <span>Para llevar</span>
+                  </button>
                 )}
               </div>
+              {enCola > 0 && (
+                <div className="sv-chip" data-st="borrador" style={{ alignSelf: 'flex-start' }}>
+                  {enCola} {enCola === 1 ? 'pedido espera' : 'pedidos esperan'} señal
+                </div>
+              )}
 
               <div className="sv-hs sv-hs-fade">
                 {FILTROS.map((f) => (
@@ -1617,15 +1656,6 @@ export default function ServicioPanel({
                   Toca una mesa para abrir su pedido. El color te dice qué le falta:
                   ámbar = sin enviar, azul = falta servir, verde = por cobrar.
                 </div>
-              )}
-
-              {!movil && pickupEnabled && (
-                <button type="button" className="sv-llevar" onClick={() => setHoja({ k: 'llevar' })}>
-                  <span className="sv-llevar-ico"><Icon name="bag" size={16} /></span>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
-                    Para llevar
-                  </span>
-                </button>
               )}
             </div>
 
@@ -1662,10 +1692,10 @@ export default function ServicioPanel({
                   </div>
                 )}
 
-                {planoVisible && conPlano && floorPlan && mesasVisibles.length > 0 ? (
+                {eligeVista && vistaSalon === 'plano' && floorPlan && mesasVisibles.length > 0 ? (
                   <>
                     {nivelesPlano.length > 1 && (
-                      <div className="sv-hs" aria-label="Zonas del salón">
+                      <div className="sv-hs sv-zonas" aria-label="Zonas del salón">
                         {nivelesPlano.map((l) => (
                           <Pill key={l.id} on={nivelActivo === l.id} onClick={() => setNivel(l.id)}>
                             {l.name} · {ocupacionNiveles.get(l.id)?.con ?? 0}/{ocupacionNiveles.get(l.id)?.total ?? 0}
@@ -1686,15 +1716,6 @@ export default function ServicioPanel({
                 )}
               </div>
             )}
-
-            {movil && pickupEnabled && (
-              <div className="sv-m-foot">
-                <button type="button" className="sv-cta sv-m-cta" data-tone="quiet" onClick={() => setHoja({ k: 'llevar' })}>
-                  <Icon name="bag" size={18} />
-                  Pedido para llevar
-                </button>
-              </div>
-            )}
           </div>
         )}
 
@@ -1704,9 +1725,11 @@ export default function ServicioPanel({
             {movil && (
               <div className="sv-m-head">
                 <button type="button" className="sv-m-back" onClick={() => {
-                  if (sel.kind === 'mesa') setPantalla('ticket');
+                  /* Con algo apuntado, atrás es la comanda; sin nada, el salón:
+                     nadie quiere pasar por una comanda vacía para salir. */
+                  if (sel.kind === 'mesa' && lineas.length > 0) setPantalla('ticket');
                   else { setVistaCarta(false); setPantalla('sala'); }
-                }} aria-label={sel.kind === 'mesa' ? 'Volver a la comanda' : 'Volver al salón'}>
+                }} aria-label={sel.kind === 'mesa' && lineas.length > 0 ? 'Volver a la comanda' : 'Volver al salón'}>
                   <Icon name="chevronLeft" size={20} />
                 </button>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1737,7 +1760,9 @@ export default function ServicioPanel({
                 </span>
               </div>
             )}
-            {movil && (
+            {/* Sin nada apuntado ni servido no hay nada que resumir: el pie
+                «0 por enviar · Q0.00» le quitaba una fila de platos a la carta. */}
+            {movil && (leyendo || lineas.length > 0) && (
               <div className="sv-m-foot">
                 <button type="button" className="sv-m-resumen" onClick={() => setPantalla('ticket')}>
                   {/* Mientras se lee la mesa no se afirma nada: al abrirla

@@ -14,9 +14,8 @@ import { formatDocMoney, longDate } from '@/lib/documents/format';
 import type { TicketFormat } from '@/lib/escpos';
 import { Card } from '@/components/ui/card';
 import { useToastManager } from '@/components/ui/toast';
-import { Stat, StatGroup, StatStrip } from '@/components/ui/stat';
 import type { OrderWithItems, OrderStats } from '@/lib/db/orders';
-import { TimesWidget, type TimesData } from '@/components/admin/times-widget';
+import type { TimesData } from '@/components/admin/times-widget';
 import ExportMenu from '@/components/admin/export-menu';
 import type { Order } from '@/types';
 import PedidoHistorial from '@/components/admin/pedido-historial';
@@ -405,24 +404,35 @@ function OrdersPanelInner({
   const ocultas = incidencias.filter(({ o }) => (typeFilter !== 'ALL' && o.order_type !== typeFilter)
     || (!showClosed && (o.status === 'CANCEL' || o.status === 'DELIVERED'))).length;
 
-  const enCocina = activeOrders.filter((o) => o.status === 'PREP').length;
-  const listos = activeOrders.filter((o) => o.status === 'READY' || o.status === 'TRANSIT').length;
+  const conexionViva = online && enVivo && !lecturaIncompleta;
+  const todoBien = conexionViva && incidencias.length === 0;
+  const horaLectura = new Intl.DateTimeFormat(currency.locale || 'es-GT', {
+    timeZone: timezone, hour: '2-digit', minute: '2-digit',
+  }).format(new Date(leidoEn));
 
   const countByType = (t: 'ALL' | ServiceType) =>
     t === 'ALL' ? activeOrders.length : activeOrders.filter((o) => o.order_type === t).length;
 
+  const exportar = (
+    <ExportMenu onExcel={downloadExcel} onPdf={downloadPdf}
+      busy={isExportingXls ? 'excel' : isExportingPdf ? 'pdf' : null} compact />
+  );
+
   return (
     <>
-      <section className={styles.operacion} aria-label="Estado de Pedidos en vivo">
+      {/* NADA SATURADO (2026-11-10): cuando todo va bien esta pantalla no lo
+          anuncia —una tarjeta «En línea · sin incidencias» antes del primer
+          pedido era un bloque entero para decir «nada»—. El estado solo toma
+          sitio cuando hay algo que atender: sin conexión, lectura a medias o
+          un pedido con incidencia. El título lo dice la barra del panel. */}
+      <section className={styles.operacion} data-calma={todoBien ? '1' : undefined} aria-label="Estado de Pedidos en vivo">
         <div className={styles.conexion}>
           <h1>Pedidos en vivo</h1>
-          <p role="status" data-conexion={online && enVivo && !lecturaIncompleta ? 'viva' : 'aviso'}>
+          <p role="status" data-conexion={conexionViva ? 'viva' : 'aviso'}>
             {!online ? 'Sin conexión · mostrando la última lectura' : lecturaIncompleta ? 'Lectura incompleta · esperando actualización'
               : enVivo ? 'En línea' : 'Actualización de respaldo'}
           </p>
-          <span className={styles.ultima}>Datos de las {new Intl.DateTimeFormat(currency.locale || 'es-GT', {
-            timeZone: timezone, hour: '2-digit', minute: '2-digit',
-          }).format(new Date(leidoEn))}</span>
+          <span className={styles.ultima}>Datos de las {horaLectura}</span>
         </div>
         {incidencias.length > 0 ? <details className={styles.incidencias}>
           <summary><strong>{incidencias.length} {incidencias.length === 1 ? 'pedido requiere atención' : 'pedidos requieren atención'}</strong>
@@ -438,87 +448,40 @@ function OrdersPanelInner({
           </li>)}</ul>
         </details> : <p className={styles.ultima}>Sin incidencias que requieran atención.</p>}
       </section>
+      {/* Lo único que queda de las cifras: un renglón. «En curso» ya lo dicen
+          los contadores de los filtros y los listos suben arriba del tablero. */}
+      <p className={styles.dato}>
+        <span><strong>{stats.todayOrders}</strong> {stats.todayOrders === 1 ? 'pedido hoy' : 'pedidos hoy'}</span>
+        {times && <span><strong>{times.avgTotal} min</strong> a la mesa</span>}
+        {times && times.slow > 0 && <span data-aviso="1"><strong>{times.slow}</strong> pasaron de 30 min</span>}
+        <span className={styles.datoHora}>{horaLectura}</span>
+      </p>
       {conflicto && <div className="note note-warn mb-4" role="status">
         <span>{conflicto}</span><button type="button" className={styles.accion} onClick={() => setConflicto('')}>Cerrar aviso</button>
       </div>}
       {seleccionado && <PedidoHistorial key={seleccionado.id} pedido={seleccionado} restaurante={restaurantId}
         resumen={resumenPorPedido[seleccionado.id]} moneda={currency} zona={timezone} leidoEn={leidoEn}
         cerrar={() => setPedidoAbierto(null)} />}
-      {/* Cifras de OPERACIÓN (D-3, auditoría 2026-10-02): cuántos van, dónde
-          están y cuánto se tarda. Lo que se vendió, el ticket y las gráficas
-          viven en Hoy y en Negocio › Resumen; aquí repetían esas pantallas.
-          En el teléfono, en una franja de una línea (PED-01). */}
-      <StatStrip
-        className="mb-4 md:hidden"
-        items={[
-          { value: String(stats.todayOrders), label: stats.todayOrders === 1 ? 'pedido hoy' : 'pedidos hoy' },
-          { value: String(activeOrders.length), label: 'en curso' },
-          { value: String(enCocina), label: 'en cocina' },
-          { value: String(listos), label: listos === 1 ? 'listo sin entregar' : 'listos sin entregar', tone: listos > 0 ? 'warn' as const : undefined },
-          ...(times
-            ? [
-                { value: `${times.avgTotal} min`, label: 'a la mesa' },
-                ...(times.slow > 0 ? [{ value: String(times.slow), label: 'pasaron de 30 min', tone: 'warn' as const }] : []),
-              ]
-            : []),
-        ]}
-      />
-      <StatGroup className="mb-4.5 max-md:hidden">
-        <Stat label="Pedidos hoy" value={String(stats.todayOrders)} />
-        <Stat label="En curso" value={String(activeOrders.length)} />
-        <Stat label="En cocina ahora" value={String(enCocina)} />
-        <Stat label="Listos sin entregar" value={String(listos)} />
-      </StatGroup>
-
-      {/* Cuánto se está tardando hoy: la otra mitad de la operación. */}
-      {times && (
-        <div className="mb-4.5 max-md:hidden">
-          <TimesWidget data={times} />
-        </div>
-      )}
-
       {/* Board + sidebar */}
       <div className="orders-grid">
         {/* Left: tablero de pedidos por etapa */}
         <div style={{ minWidth: 0 }}>
           {/* Filtro por tipo de servicio: un local con mucho domicilio necesita
               poder mirar SOLO domicilio sin que el resto le estorbe. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <div className="u-noscroll" style={{ display: 'flex', gap: 7, overflowX: 'auto', flex: 1, minWidth: 0 }}>
-            {TYPE_FILTERS.map((f) => {
-              const on = typeFilter === f.id;
-              const n = countByType(f.id);
-              return (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setTypeFilter(f.id)}
-                  aria-pressed={on}
-                  className="press"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, whiteSpace: 'nowrap',
-                    padding: '7px 13px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
-                    fontSize: 12, fontWeight: 600,
-                    border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
-                    background: on ? 'var(--adm-accent-fill, var(--brand-accent))' : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-                    color: on ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
-                  }}
-                >
-                  <Icon name={f.icon} size={13} />
+          <div className={styles.filtros}>
+            <div className={`u-noscroll ${styles.tipos}`}>
+              {TYPE_FILTERS.map((f) => (
+                <button key={f.id} type="button" className={styles.tipo} onClick={() => setTypeFilter(f.id)}
+                  aria-pressed={typeFilter === f.id}>
                   {f.label}
-                  <span style={{ opacity: 0.75, fontVariantNumeric: 'tabular-nums' }}>{n}</span>
+                  <span>{countByType(f.id)}</span>
                 </button>
-              );
-            })}
-          </div>
-          {/* Los pedidos del día en Excel o PDF: un menú en la fila de filtros
-              (antes, dos botones debajo de las gráficas que ya no están). */}
-          <ExportMenu
-            onExcel={downloadExcel}
-            onPdf={downloadPdf}
-            busy={isExportingXls ? 'excel' : isExportingPdf ? 'pdf' : null}
-            compact
-          />
+              ))}
+            </div>
+            {/* Exportar: nadie exporta en mitad del servicio. En escritorio
+                queda como icono al final de la fila; en el teléfono baja al
+                pie de la lista. */}
+            <div className="max-md:hidden">{exportar}</div>
           </div>
 
           {visibleActive.length === 0 ? (
@@ -602,6 +565,7 @@ function OrdersPanelInner({
               )}
             </section>
           )}
+          <div className="mt-5 flex justify-center md:hidden">{exportar}</div>
         </div>
 
       </div>

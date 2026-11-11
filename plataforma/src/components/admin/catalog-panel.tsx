@@ -28,6 +28,7 @@ import { agotarPlatillos, aplicarLoteCatalogo, toggleProductAvailability, type L
 import HojaAgotar from '@/components/admin/hoja-agotar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { HojaOperativa } from '@/components/ui/hoja-operativa';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useToastManager } from '@/components/ui/toast';
 import { Switch } from '@/components/ui/switch';
@@ -248,7 +249,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
       return next;
     });
   }
-  function quitarSeleccion() { setSeleccion(new Set()); setPrevia(null); setErrorLote(null); }
+  function quitarSeleccion() { setSeleccion(new Set()); setPrevia(null); setErrorLote(null); setEligiendo(false); }
 
   const cambioDePrecio: CambioDePrecio | null = previa && previa.valor.trim() !== '' && Number.isFinite(Number(previa.valor)) && Number(previa.valor) > 0
     ? { modo: previa.modo, valor: previa.sentido * Number(previa.valor) }
@@ -268,29 +269,26 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
       router.refresh();
     });
   }
+  /* NADA SATURADO (2026-11-10, maqueta MAQUETA_NADA_SATURADO): una fila de
+     mandos y una de categorías. Lo ocasional —calidad de la ficha, orden,
+     elegir varios— vive en la hoja de filtros; exportar, al pie en el teléfono. */
+  const [hojaFiltros, setHojaFiltros] = useState(false);
+  const [eligiendo, setEligiendo] = useState(false);
+  const otrosFiltros = FILTROS.filter((f) => f.key !== 'agotado');
+  const filtrosPuestos = filtros.filter((f) => f !== 'agotado').length + (orden !== ORDENES[0].key ? 1 : 0);
+  const nombreCategoria = new Map(categories.map((c) => [c.id, c.name]));
   const n = seleccion.size;
+  const conCasillas = eligiendo || n > 0;
   const nPlatillos = `${n} ${n === 1 ? 'platillo' : 'platillos'}`;
   /** «1 platillo agotado» / «3 platillos agotados». */
   const dicho = (uno: string, varios: string) => `${nPlatillos} ${n === 1 ? uno : varios}`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* Lo que no se puede pedir ahora, en una línea (R06.1). */}
-      {agotadosAhora.length > 0 && !filtros.includes('agotado') && (
-        <div className={s.agotados} role="status">
-          <Icon name="alertCircle" size={18} />
-          <span>
-            <strong>{agotadosAhora.length} {agotadosAhora.length === 1 ? 'agotado' : 'agotados'} ahora</strong>
-            {porInventario > 0 && <> · {porInventario} sin existencias en inventario</>}
-          </span>
-          <button type="button" className={s.enlace} onClick={() => setFiltros([...filtros, 'agotado'])}>Ver</button>
-        </div>
-      )}
-
-      {/* Buscador + botón nuevo */}
-      <div className={s.herramientas}>
+      {/* Buscar · filtros · nuevo */}
+      <div className={s.barra}>
         {products.length > 0 && (
-          <label className="adm-search" style={{ flex: '1 1 160px' }}>
+          <label className="adm-search" style={{ flex: '1 1 0', minWidth: 0 }}>
             <Icon name="search" size={16} aria-hidden />
             <input
               type="search" value={query} onChange={(e) => setQuery(e.target.value)}
@@ -298,65 +296,90 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
             />
           </label>
         )}
-        {maxProducts != null && (
-          <span className="shrink-0" style={{
-            fontSize: 12, fontWeight: 600,
-            color: atProductLimit ? 'var(--c-danger)' : nearProductLimit ? 'var(--c-warn)' : 'var(--u-text-4)',
-          }}>
-            {products.length}/{maxProducts} productos
-          </span>
+        {products.length > 0 && (
+          <Button type="button" variant="secondary" size="touch" className={s.cuadro} aria-label={filtrosPuestos > 0 ? `Filtros y orden · ${filtrosPuestos} puestos` : 'Filtros y orden'}
+            aria-haspopup="dialog" onClick={() => setHojaFiltros(true)}>
+            <Icon name="list" size={18} />
+            <span className="max-md:hidden">Filtros</span>
+            {filtrosPuestos > 0 && <span className={s.punto} aria-hidden />}
+          </Button>
         )}
-        {products.length > 0 && exportSlot && <div style={{ marginLeft: 'auto' }}>{exportSlot}</div>}
+        {/* Exportar: en escritorio, en la fila; en el teléfono, al pie de la
+            lista. No va dentro de la hoja: su menú se abre fuera del diálogo
+            y quedaría inerte debajo. */}
+        {products.length > 0 && exportSlot && <div className="max-md:hidden">{exportSlot}</div>}
         {atProductLimit ? (
           <Link href="/admin/suscripcion" className="shrink-0">
-            <Button variant="secondary" className="rounded-adm-full">
-              <Icon name="key" size={15} /> Sube de plan para más
+            <Button variant="secondary" size="touch">
+              <Icon name="key" size={15} /> Sube de plan
             </Button>
           </Link>
         ) : (
-          <Link href={newProductHref} className="shrink-0" style={{ marginLeft: 'auto' }}>
-            <Button data-tour-step="catalogo-nuevo" className="rounded-adm-full">
-              <Icon name="plus" size={15} /> Nuevo platillo
+          <Link href={newProductHref} className="shrink-0" style={{ marginLeft: products.length > 0 ? undefined : 'auto' }}>
+            <Button data-tour-step="catalogo-nuevo" size="touch" className={s.cuadro} aria-label="Nuevo platillo">
+              <Icon name="plus" size={18} /> <span className="max-md:hidden">Nuevo platillo</span>
             </Button>
           </Link>
         )}
       </div>
 
-      {/* Categorías */}
+      {/* El tope del plan solo se dice cuando está cerca. */}
+      {(atProductLimit || nearProductLimit) && (
+        <p style={{ margin: '-6px 0 0', fontSize: 13, fontWeight: 600, color: atProductLimit ? 'var(--c-danger)' : 'var(--c-warn)' }}>
+          {products.length}/{maxProducts} productos de tu plan
+        </p>
+      )}
+
+      {/* Categorías, con «Agotados» como una más cuando los hay (R06.1). */}
       {products.length > 0 && (
-        <div className="u-noscroll" style={{ display: 'flex', gap: 7, overflowX: 'auto', alignItems: 'center' }}>
-          {[{ id: 'todos', name: 'Todas' }, ...categories].map((c) => {
-            const on = c.id === activeCat;
-            return (
-              <Button key={c.id} variant={on ? 'primary' : 'secondary'} size="sm" className="shrink-0 rounded-adm-full"
-                aria-pressed={on} onClick={() => setActiveCat(c.id)}>
-                {c.name}
-              </Button>
-            );
-          })}
+        <div className={`u-noscroll ${s.categorias}`}>
+          <button type="button" className={s.pill} aria-pressed={activeCat === 'todos' && !filtros.includes('agotado')}
+            onClick={() => { setActiveCat('todos'); if (filtros.includes('agotado')) toggleFiltro('agotado'); }}>
+            Todas <span className={s.cuenta}>{products.length}</span>
+          </button>
+          {(agotadosAhora.length > 0 || filtros.includes('agotado')) && (
+            <button type="button" className={s.pill} data-aviso="1" aria-pressed={filtros.includes('agotado')}
+              title={porInventario > 0 ? `${porInventario} sin existencias en inventario` : undefined}
+              onClick={() => toggleFiltro('agotado')}>
+              Agotados <span className={s.cuenta}>{agotadosAhora.length}</span>
+            </button>
+          )}
+          {categories.map((c) => (
+            <button key={c.id} type="button" className={s.pill} aria-pressed={c.id === activeCat} onClick={() => setActiveCat(c.id)}>
+              {c.name}
+            </button>
+          ))}
         </div>
       )}
 
-      {/* Filtros combinables + orden (R06.2–3) */}
-      {products.length > 0 && (
-        <div className={s.herramientas}>
-          <div className={s.filtros} role="group" aria-label="Filtros">
-            {FILTROS.filter((f) => cuentas[f.key] > 0 || filtros.includes(f.key)).map((f) => (
-              <button key={f.key} type="button" className={`${s.filtro} press`} aria-pressed={filtros.includes(f.key)} onClick={() => toggleFiltro(f.key)}>
-                {f.label} <span className={s.cuenta}>{cuentas[f.key]}</span>
-              </button>
-            ))}
-            {filtering && (
-              <button type="button" className={s.enlace} onClick={clearFilters}>Limpiar</button>
-            )}
+      {hojaFiltros && (
+        <HojaOperativa label="Filtros y orden" title="Filtros y orden" onClose={() => setHojaFiltros(false)}
+          footer={<Button type="button" size="action" className="w-full" onClick={() => setHojaFiltros(false)}>
+            Ver {list.length === 1 ? '1 platillo' : `${list.length} platillos`}
+          </Button>}>
+          <div className={s.hoja}>
+            <div className={s.filtros} role="group" aria-label="Mostrar solo" style={{ flexWrap: 'wrap' }}>
+              {otrosFiltros.map((f) => (
+                <button key={f.key} type="button" className={`${s.filtro} press`} aria-pressed={filtros.includes(f.key)}
+                  disabled={cuentas[f.key] === 0 && !filtros.includes(f.key)} onClick={() => toggleFiltro(f.key)}>
+                  {f.label} <span className={s.cuenta}>{cuentas[f.key]}</span>
+                </button>
+              ))}
+            </div>
+            <label className={s.campo}>
+              Orden
+              <select value={orden} onChange={(e) => setOrden(e.target.value as OrdenCatalogo)} className="adm-field">
+                {ORDENES.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+              </select>
+            </label>
+            <div className={s.hojaAcciones}>
+              <Button type="button" variant="secondary" size="touch" onClick={() => { setEligiendo(true); setHojaFiltros(false); }}>
+                Seleccionar varios
+              </Button>
+              {filtering && <button type="button" className={s.enlace} onClick={clearFilters}>Limpiar filtros</button>}
+            </div>
           </div>
-          <label className={s.orden}>
-            Orden
-            <select value={orden} onChange={(e) => setOrden(e.target.value as OrdenCatalogo)} className="adm-field adm-field-sm adm-field-auto">
-              {ORDENES.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
-            </select>
-          </label>
-        </div>
+        </HojaOperativa>
       )}
 
       {filtering && list.length > 0 && (
@@ -445,107 +468,79 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
         )
       ) : (
         <Card className="overflow-hidden p-0">
-          <div className="catalog-head" style={{ padding: '10px 18px', borderBottom: '1px solid var(--u-hair)' }}>
-            <div className="adm-label" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <label className={s.marcaZona}>
+          {conCasillas && (
+            <div className={s.elegir}>
+              <label className={s.marcaZona} style={{ margin: 0 }}>
                 <input type="checkbox" className={s.marca} checked={todosMarcados} onChange={marcarTodos}
                   aria-label={todosMarcados ? 'Quitar la selección de la lista' : 'Seleccionar toda la lista'} />
               </label>
-              Platillo
+              <span>{n > 0 ? `${n} ${n === 1 ? 'seleccionado' : 'seleccionados'}` : 'Marca los platillos que quieres cambiar'}</span>
+              <button type="button" className={s.enlace} style={{ marginLeft: 'auto' }} onClick={quitarSeleccion}>Listo</button>
             </div>
-            <div className="adm-label" style={{ textAlign: 'right' }}>Precio</div>
-            <div className="adm-label">Disponible</div>
-            <div />
-          </div>
-
-          {list.map((p, i) => {
+          )}
+          {list.map((p) => {
             const icon = catIconMap.get(p.category_id ?? '') ?? 'utensils';
             const { total, hasCombo, hasSizes, hasExtras } = calcProductPrice(p);
-            const tags = p.tags ?? [];
-            const hasBadges = hasCombo || hasSizes || hasExtras || tags.length > 0;
             /* Se apaga lo que DESCRIBE el plato, no la fila entera. */
             const apagado = p.is_active ? (p.is_available ? 1 : 0.58) : 0.42;
             const marcado = seleccion.has(p.id);
+            const sinExistencias = p.is_active && isOutOfStock(p);
+            const agotado = p.is_active && !p.is_available && !sinExistencias;
+            /* Un renglón que dice dónde está y qué lo distingue; la
+               descripción se lee al abrirlo. */
+            const meta = [
+              nombreCategoria.get(p.category_id ?? '') ?? 'Sin categoría',
+              hasCombo ? 'Combo' : null,
+              hasSizes || hasExtras ? 'Con opciones' : null,
+              ...(p.tags ?? []).map((t) => SELLO[t] ?? t),
+            ].filter(Boolean).join(' · ');
             return (
-              <div key={p.id} className="catalog-row" style={{
-                padding: '12px 18px',
-                borderBottom: i < list.length - 1 ? '1px solid var(--u-hair)' : 'none',
-                background: marcado ? 'var(--adm-card-hover)' : undefined,
-              }}>
-                <div className="catalog-cell-dish" style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                  <label className={s.marcaZona}>
+              <div key={p.id} className={s.fila} data-marcado={marcado ? '1' : undefined}>
+                {conCasillas && (
+                  <label className={s.marcaZona} style={{ margin: '0 -4px 0 -8px' }}>
                     <input type="checkbox" className={s.marca} checked={marcado} onChange={() => marcar(p.id)} aria-label={`Seleccionar ${p.name}`} />
                   </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, opacity: apagado, transition: 'opacity 160ms' }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--adm-bg-2)', flexShrink: 0 }}>
-                      {p.image_url ? (
-                        <AssetImage src={p.image_url} alt={p.name} width={44} height={44} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
-                      ) : (
-                        <BrandPattern icon={icon} seed={seedFromString(p.id)} iconScale={0.85} />
-                      )}
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {p.name}
-                      </div>
-                      <div style={{ fontSize: 12, color: 'var(--u-text-4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 300 }}>
-                        {p.description ?? '—'}
-                      </div>
-                      {hasBadges && (
-                        <div style={{ display: 'flex', gap: 4, marginTop: 5, flexWrap: 'wrap' }}>
-                          {hasCombo  && <RowBadge label="Combo" color="var(--c-ok)" bg="var(--c-ok-bg)" />}
-                          {hasSizes  && <RowBadge label="Tamaños" color="var(--u-text-3)" bg="var(--adm-bg-2)" />}
-                          {hasExtras && <RowBadge label="Extras" color="var(--u-text-3)" bg="var(--adm-bg-2)" />}
-                          {tags.map((t) => <RowBadge key={t} label={SELLO[t] ?? t} color="var(--u-text-3)" bg="var(--adm-bg-2)" />)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="catalog-cell-price" style={{ textAlign: 'right', opacity: apagado, transition: 'opacity 160ms' }}>
-                  {hasSizes && (
-                    <div style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 600, letterSpacing: '0.04em', marginBottom: 1 }}>DESDE</div>
-                  )}
-                  <div className="tabular-nums" style={{ fontWeight: 600, fontSize: 14, color: 'var(--u-text)' }}>{fmtMoney(total)}</div>
-                  {hasCombo && total !== p.price && (
-                    <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 1 }}>base {fmtMoney(p.price)}</div>
-                  )}
-                </div>
-
-                <div className="catalog-cell-avail" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  {!p.is_active ? (
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-danger)', padding: '3px 8px', borderRadius: 'var(--radius-full)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)' }}>
-                      Oculto
-                    </span>
-                  ) : isOutOfStock(p) ? (
-                    <Link href={panelHref(base, '/admin/inventario')} title="Repón existencias en Inventario"
-                      style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-warn)', padding: '3px 8px', borderRadius: 'var(--radius-full)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', textDecoration: 'none' }}>
-                      Sin existencias
-                    </Link>
-                  ) : (
-                    <>
-                      <Switch checked={p.is_available} onCheckedChange={(next) => setAvailability(p.id, p.name, next)}
-                        aria-label={p.is_available ? `Marcar ${p.name} agotado` : `Marcar ${p.name} disponible`} />
-                      <span style={{ fontSize: 12, fontWeight: p.is_available ? 400 : 600, color: p.is_available ? 'var(--u-text-2)' : 'var(--c-warn)' }}
-                        title={p.is_available ? undefined : razonDeAgotado(p, timezone)}>
-                        {p.is_available ? 'Disponible' : p.agotado_motivo === 'manana' && p.vuelve_at
-                          ? `Agotado · vuelve ${cuandoVuelveTexto(p.vuelve_at, timezone).replace(' a las ', ' ')}`
-                          : 'Agotado'}
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                <div className="catalog-cell-actions" style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                  <Link href={fichaHref(p.id)}>
-                    <Button variant="secondary" size="sm"><Icon name="edit" size={13} /> Editar</Button>
-                  </Link>
-                </div>
+                )}
+                {/* La fila ENTERA abre el platillo: sobraba un botón «Editar». */}
+                <Link href={fichaHref(p.id)} className={s.platillo} aria-label={`Editar ${p.name}`}>
+                  <span className={s.foto} style={{ opacity: apagado }}>
+                    {p.image_url ? (
+                      <AssetImage src={p.image_url} alt="" width={44} height={44} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+                    ) : (
+                      <BrandPattern icon={icon} seed={seedFromString(p.id)} iconScale={0.85} />
+                    )}
+                  </span>
+                  <span className={s.nombre}>
+                    <strong style={{ opacity: apagado }}>{p.name}</strong>
+                    {!p.is_active ? <small data-tono="danger">Oculto del menú</small>
+                      : sinExistencias ? <small data-tono="warn">Sin existencias</small>
+                      : agotado ? <small data-tono="warn" title={razonDeAgotado(p, timezone)}>
+                          {p.agotado_motivo === 'manana' && p.vuelve_at
+                            ? `Agotado · vuelve ${cuandoVuelveTexto(p.vuelve_at, timezone).replace(' a las ', ' ')}`
+                            : 'Agotado'}
+                        </small>
+                      : <small>{meta}</small>}
+                  </span>
+                  <span className={s.precio} style={{ opacity: apagado }}>
+                    {hasSizes && <small>desde</small>}
+                    {fmtMoney(total)}
+                  </span>
+                </Link>
+                {p.is_active && !sinExistencias && (
+                  <Switch checked={p.is_available} onCheckedChange={(next) => setAvailability(p.id, p.name, next)}
+                    aria-label={p.is_available ? `Marcar ${p.name} agotado` : `Marcar ${p.name} disponible`} />
+                )}
+                {sinExistencias && (
+                  <Link href={panelHref(base, '/admin/inventario')} className={s.enlace} style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center' }}>Reponer</Link>
+                )}
               </div>
             );
           })}
         </Card>
+      )}
+
+      {list.length > 0 && exportSlot && (
+        <div className="flex justify-center md:hidden">{exportSlot}</div>
       )}
 
       {hojaAgotar && (
@@ -580,16 +575,5 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
         </div>
       )}
     </div>
-  );
-}
-
-function RowBadge({ label, color, bg }: { label: string; color: string; bg: string }) {
-  return (
-    <span style={{
-      display: 'inline-block', padding: '2px 7px', borderRadius: 'var(--radius-full)',
-      fontSize: 11, fontWeight: 600, background: bg, color, letterSpacing: '0.02em', whiteSpace: 'nowrap',
-    }}>
-      {label}
-    </span>
   );
 }

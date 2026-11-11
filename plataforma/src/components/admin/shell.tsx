@@ -734,8 +734,10 @@ export default function AdminShell({
               <span style={{ width: 7, height: 7, borderRadius: 'var(--radius-full)', background: 'var(--adm-accent-500, var(--u-text))', boxShadow: '0 0 8px var(--adm-accent-500, var(--u-text))', animation: 'pulse-ring 2s infinite' }} /> En vivo
             </Badge>
           )}
+          {/* Solo escritorio: en el teléfono no hay «pantalla completa» que
+              valga y el botón le robaba el sitio al título («Tomar pedid…»). */}
           {!preview && kioskEligible && (
-            <button
+            <span className="adm-desk-only"><button
               type="button"
               onClick={toggleKiosk}
               title="Pantalla completa"
@@ -744,7 +746,7 @@ export default function AdminShell({
               style={{ width: 42, height: 42, borderRadius: 'calc(12px * var(--admin-panel-radius, 1))', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', boxShadow: 'var(--adm-shadow-xs, none)' }}
             >
               <Icon name="grid" size={18} />
-            </button>
+            </button></span>
           )}
           {!preview && <span className="adm-desk-only"><AdminThemeToggle /></span>}
           {!preview && restaurantId && ordersEnabled ? (

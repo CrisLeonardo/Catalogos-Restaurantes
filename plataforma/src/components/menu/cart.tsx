@@ -10,7 +10,7 @@ import { useThemeContent, useThemeConfig, useText } from '@/lib/theme/context';
 import { useTenantPrefix } from '@/lib/tenant-client';
 import { Acompanantes, type Sugerencia } from '@/components/menu/pairings';
 import { formatPrice } from '@/lib/theme/resolve';
-import styles from '@/components/ui/capsule-navigation.module.css';
+import styles from '@/components/menu/bottom-nav.module.css';
 import { HojaOperativa } from '@/components/ui/hoja-operativa';
 import { useLocale } from '@/lib/locale/context';
 import type { CartItem } from '@/types';
@@ -19,27 +19,29 @@ import type { CartItem } from '@/types';
 export function CartBar({ onOpen, cartIconHidden, navigationVisible = true }: {
   onOpen: () => void; cartIconHidden?: boolean; navigationVisible?: boolean;
 }) {
-  const { count, total, items } = useCart();
+  const { count, total } = useCart();
   const content = useThemeContent();
   const config = useThemeConfig();
   if (count === 0 || cartIconHidden) return null;
 
-  const nombre = items.length === 1 ? items[0].name : content.cart.title;
   const importe = formatPrice(total, config);
+  /* Un solo botón que dice las tres cosas: cuántos llevas, qué hace y cuánto
+     va. El estilo «contorno» es translúcido y aquí flota sobre la carta, así
+     que cae al botón de tinta. */
+  const tono = config.ctaStyle === 'accent' ? 'btn-accent' : 'btn-white';
   return (
-    <div data-carrito-destino="" className={`${styles.surface} ${styles.cartDock}`} data-without-nav={!navigationVisible}>
+    // data-carrito-destino: aquí cae el platillo que vuela al agregar
+    // (lib/volar-al-carrito.ts).
+    <div data-carrito-destino="" className={styles.cartDock} data-without-nav={!navigationVisible}>
       <button
         type="button"
         onClick={onOpen}
-        className={styles.cartTray}
+        className={`press ${tono} ${styles.cart}`}
         aria-label={`${content.cart.barCta} · ${count} ${count === 1 ? content.cart.itemsOne : content.cart.itemsMany} · ${importe}`}
       >
-        <span className={styles.cartCount}>{count} {count === 1 ? content.cart.itemsOne : content.cart.itemsMany}</span>
-        <span className={styles.cartProduct}>
-          <span className={styles.cartName}>{nombre}</span>
-          <span className={styles.cartPrice}>{importe}</span>
-        </span>
-        <span className={styles.cartBag} aria-hidden="true"><Icon name="bag" size={24} /></span>
+        <span className={styles.cartCount}>{count}</span>
+        <span className={styles.cartLabel}>{content.cart.barCta}</span>
+        <span className={styles.cartTotal}>{importe}</span>
       </button>
     </div>
   );

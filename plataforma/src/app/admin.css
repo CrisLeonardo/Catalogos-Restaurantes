@@ -799,6 +799,10 @@
 .orders-col-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 .orders-col-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
 .orders-col-empty { display: none; }
+/* Teléfono y tablet: los listos van primero —se enfrían— y luego lo nuevo. */
+.orders-board { display: flex; flex-direction: column; }
+.orders-col:nth-child(3) { order: -2; }
+.orders-col:nth-child(1) { order: -1; }
 @media (min-width: 1280px) {
   .orders-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; margin-bottom: 26px; }
   .orders-col, .orders-col[data-empty="1"] {
@@ -2407,27 +2411,38 @@
   .sv-ticket { flex-basis: 288px; }}
 
 .sv-rail-head { padding: 14px 14px 10px; display: flex; flex-direction: column; gap: 10px; }
+.sv-rail-head[data-movil="1"] { padding: 12px 12px 10px; }
+/* La fila de mandos del salón: cómo lo veo · qué hay · buscar · para llevar. */
+.sv-sala-bar { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.sv-sala-id { flex: 1; min-width: 0; }
+.sv-sala-id .sv-rail-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sv-sala-id[data-solo="1"] .sv-rail-sub { white-space: normal; }
+.sv-llevar-b { color: var(--u-text); font-weight: 600; }
+/* Mesas | Plano: dos mitades de un mismo mando, la elegida en sólido. */
+.sv-seg {
+  display: inline-flex; flex-shrink: 0; padding: 3px; gap: 2px;
+  border-radius: var(--radius-md); background: var(--surface-2);
+}
+.sv-seg-b {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: calc(var(--m-tap) - 6px); padding: 0 12px; border: none;
+  border-radius: calc(var(--radius-md) - 3px); background: transparent;
+  color: var(--u-text-3); font: inherit; font-size: 13px; font-weight: 600;
+  white-space: nowrap; cursor: pointer;
+  transition: background 150ms var(--ease-out), color 150ms var(--ease-out);
+}
+.sv-seg-b[data-on="1"] { background: var(--adm-card); color: var(--u-text); box-shadow: var(--adm-shadow-xs); }
+.sv-seg-b:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: 1px; }
+/* En el teléfono la palabra basta: con icono, «Para llevar» no cabía. */
+@container sv (max-width: 620px) {
+  .sv-llevar-b { padding: 0 12px; }}
+@container sv (max-width: 339px) {
+  .sv-seg-b { padding: 0 9px; }
+  .sv-llevar-b { width: var(--m-tap); padding: 0; }
+  .sv-llevar-b span { display: none; }}
 .sv-rail-title { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
 .sv-rail-sub { font-size: 12px; font-weight: 500; color: var(--u-text-3); line-height: 1.35; }
 .sv-rail-list { padding: 0 14px 16px; display: flex; flex-direction: column; gap: 8px; }
-
-/* «Para llevar»: una acción, no una mesa. Por eso el borde es de trazos. */
-.sv-llevar {
-  display: flex; align-items: center; gap: 10px; width: 100%;
-  min-height: var(--m-tap); padding: 11px 12px; border-radius: var(--radius-lg);
-  border: 1px dashed var(--u-hair-2); background: var(--surface-1);
-  color: var(--u-text); font: inherit; text-align: left; cursor: pointer;
-  transition: border-color 120ms var(--ease-out), background 120ms var(--ease-out);
-}
-.sv-llevar:hover {
-  border-color: var(--brand-accent);
-  background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
-}
-.sv-llevar-ico {
-  width: 30px; height: 30px; flex-shrink: 0; border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
-  color: var(--brand-accent-ink); display: grid; place-items: center;
-}
 
 /* ── La mesa, en el riel (fila horizontal) ─────────────────── */
 .sv-mesa {
@@ -2483,7 +2498,7 @@
   .sv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }}
 .sv-card {
   position: relative; display: flex; flex-direction: column; justify-content: space-between;
-  gap: 8px; min-height: 118px; padding: 12px; border-radius: var(--radius-xl);
+  gap: 8px; min-height: 84px; padding: 12px; border-radius: var(--radius-xl);
   text-align: left; cursor: pointer; font: inherit; color: var(--u-text);
   background: var(--sv-bg); border: 1.5px solid var(--sv-line);
   box-shadow: var(--adm-shadow-xs, 0 1px 2px rgba(0,0,0,.06));
@@ -2574,6 +2589,19 @@
   color: var(--u-text-2); background: var(--surface-2); border: 1px solid var(--u-hair); border-radius: 6px;
 }
 .sv-fav-price { font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 500; color: var(--u-text-2); }
+/* Con dedo: una tira que se desliza, sin teclas. */
+.sv-favoritos[data-tira="1"] { gap: 6px; margin-bottom: 8px; }
+.sv-favoritos[data-tira="1"] .sv-favoritos-head h2, .sv-favoritos[data-tira="1"] .sv-carta-titulo { font-size: 16px; }
+.sv-favoritos[data-tira="1"] .sv-favoritos-editar { border-color: transparent; background: none; color: var(--u-text-2); font-weight: 500; }
+.sv-favoritos[data-tira="1"] .sv-fav-grid {
+  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+  scroll-snap-type: x proximity; margin-inline: -12px; padding-inline: 12px;
+}
+.sv-favoritos[data-tira="1"] .sv-fav-grid::-webkit-scrollbar { display: none; }
+.sv-favoritos[data-tira="1"] .sv-fav {
+  display: flex; flex-direction: column; justify-content: space-between; gap: 4px;
+  flex: 0 0 132px; min-height: 68px; scroll-snap-align: start;
+}
 .sv-turno-puestos { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
 .sv-turno-campo { display: grid; min-width: 0; gap: 4px; font-size: 13px; }
 .sv-turno-campo .sv-field { min-width: 0; min-height: 44px; }
@@ -2894,7 +2922,6 @@
   display: grid; place-items: center; cursor: pointer; font: inherit;
 }
 .sv-m-title { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
-.sv-m-sala-title { font-size: 22px; font-weight: 600; letter-spacing: -0.03em; }
 .sv-m-sub { font-size: 12px; font-weight: 500; color: var(--u-text-3); margin-top: 1px; }
 
 /* La barra de abajo del móvil: resumen + acción. Se pega al canto y
@@ -3319,6 +3346,9 @@
 }
 @container sv (max-width: 620px) {
   .sv-body[data-plano="1"] { flex-direction: column; }
+  /* En el teléfono las mesas sin colocar siguen la página: una caja con su
+     propio desplazamiento dentro de otra que ya se desplaza no se alcanza. */
+  .sv-plano-fuera { max-height: none; overflow: visible; padding: 0; border: none; }
 }
 
 /* Tablet apretada: mismo módulo, columnas más estrechas. */

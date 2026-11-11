@@ -50,6 +50,13 @@ export default function OnboardingChecklist({
   const allDone = doneCount >= total;
   const pct = Math.round((doneCount / total) * 100);
   const siguiente = steps.find((s) => !s.done && !s.optional)?.key ?? null;
+  const pasoSiguiente = steps.find((s) => s.key === siguiente) ?? null;
+  const faltan = total - doneCount;
+  /* NADA SATURADO (2026-11-10): con la guía ya empezada, en Hoy es UNA fila
+     —cuánto falta y qué sigue—; los pasos hechos no se enseñan hasta que el
+     dueño la abre. Recién creada la cuenta (solo el paso de cortesía) y al
+     terminar sale entera: ahí la guía ES lo que vino a ver. */
+  const [abierta, setAbierta] = useState(doneCount <= 1 || allDone);
 
   function dismiss() {
     startTransition(async () => {
@@ -59,6 +66,37 @@ export default function OnboardingChecklist({
   }
 
   if (hidden) return null;
+
+  if (!abierta) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAbierta(true)}
+        aria-expanded={false}
+        className="press flex min-h-14 w-full items-center gap-3 rounded-adm-xl border border-adm-border bg-adm-card px-4 py-2.5 text-left shadow-adm-xs"
+        style={{ cursor: 'pointer', font: 'inherit' }}
+      >
+        <span
+          aria-hidden
+          style={{
+            width: 36, height: 36, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center',
+            background: `conic-gradient(var(--brand-accent) ${pct}%, color-mix(in srgb, var(--u-text) 10%, transparent) 0)`,
+          }}
+        >
+          <span style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--adm-card)' }} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14px] font-semibold text-adm-text">
+            {faltan === 1 ? 'Te falta 1 paso' : `Te faltan ${faltan} pasos`} para armar tu restaurante
+          </span>
+          {pasoSiguiente && (
+            <span className="block truncate text-[13px] text-adm-text-3">Sigue: {pasoSiguiente.label}</span>
+          )}
+        </span>
+        <Icon name="chevronDown" size={16} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />
+      </button>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4 rounded-adm-xl border border-adm-border bg-adm-card p-5 shadow-adm-sm">

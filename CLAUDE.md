@@ -8,6 +8,10 @@ Responde y escribe documentación en **español**.
 
 Para retomar la auditoría del 3 de noviembre, lee primero [`TRASPASO_CLAUDE_CODE_2026-11-07.md`](docs/registros/TRASPASO_CLAUDE_CODE_2026-11-07.md) y los §28–34 del [registro](docs/registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md). La ficha 1.7 está en `feat/permisos-por-trabajo` (PR #102, migración 177), la 1.8 en `feat/recepcion` (apilada sobre la 1.7, migración 178), la 1.9 en `feat/catalogo` (apilada sobre la 1.8, migración 179) la 1.10 en `feat/inventario` (apilada sobre la 1.9, migración 180), la 1.11 en `feat/comensal` (apilada sobre la 1.10) y la 1.12 en `feat/checkout-seguimiento` (apilada sobre la 1.11, PR #108). **La Ola 1 está terminada**; lo siguiente es integrar la Ola 0 que falta y preparar el despliegue, cuando el usuario lo decida. Las fichas están apiladas: no reinicies su implementación desde `main` ni desde el antiguo PR #71. La cadena no contiene las fichas 0.1–0.13 salvo 0.7, 0.9 y 0.12: su integración es un paso aparte. Terminar la Ola 1 antes del despliegue es una decisión vigente del usuario.
 
+## Cómo se diseña: nada saturado (regla del dueño, 2026-11-10)
+
+Antes de implementar, agregar o mejorar **cualquier** pantalla sigue [`docs/guias/GUIA_DISENO_NADA_SATURADO.md`](docs/guias/GUIA_DISENO_NADA_SATURADO.md): ponte en el papel de quien la usa, cuenta cada toque, deja a la vista solo lo que se usa en cada visita, presenta maqueta (antes y propuesta) para todo cambio visual nuevo y comprueba en pantalla antes de decir «listo». Vale en teléfono y en PC, y para todo Leogin. [`AGENTS.md`](AGENTS.md) repite el puntero para ChatGPT/Codex.
+
 Para cualquier trabajo visual usa primero la skill del proyecto **`leogin-diseno`** (`.claude/skills/leogin-diseno/`): tokens reales, componentes, decisiones aprobadas y cómo comprobar en pantalla. La acompañan, versionadas en `.claude/skills/` con su licencia y origen, `emil-design-eng` (movimiento y sensación al tocar), `better-interface` con sus dominios `better-*` (revisión con evidencia) e `interface-review` (revisión de rama o PR). Las skills que instaló Codex (`frontend-design`, `impeccable`, `web-design-guidelines`) quedan locales en `.agents/skills/`, sin enlazar. Conserva las maquetas aprobadas y comprueba el resultado real en pantalla. La ubicación de referencias, agentes de revisión y pruebas está en el traspaso.
 
 ## Git: nada directo a `main`
@@ -24,7 +28,7 @@ Para cualquier trabajo visual usa primero la skill del proyecto **`leogin-diseno
 
 ## Dónde va cada archivo
 
-- **Nada de documentos sueltos en la raíz.** Solo `README.md`, `CHANGELOG.md`, `CLAUDE.md` y los archivos de configuración del repo.
+- **Nada de documentos sueltos en la raíz.** Solo `README.md`, `CHANGELOG.md`, `CLAUDE.md`, `AGENTS.md` y los archivos de configuración del repo.
 - Documentos nuevos en `docs/<tipo>/`: `guias/`, `planes/`, `registros/`, `auditorias/`, `negocio/`, `diseno/`. Nombres sin espacios ni acentos: `PLAN_TEMA_AAAA-MM-DD.md`, `AUDITORIA_TEMA_AAAA-MM-DD.md`, `GUIA_TEMA.md`.
 - Documentos técnicos pegados al código: `plataforma/docs/`.
 - Al terminar un plan: márcalo, anota el commit de cierre y muévelo con `git mv` a `docs/archivo/planes-cerrados/`. Lo pendiente pasa a `docs/registros/CHECKLIST_CORRECCIONES.md`.

@@ -63,3 +63,15 @@ El [comensal](../../plataforma/src/components/menu/bottom-nav.tsx) conserva la d
 La revisión independiente emitió **ship**, sin correcciones materiales, tras comparar la referencia y las 13 capturas finales locales: ocho del comensal (tres y cuatro destinos a 320, 390, 768 y 1280 px), cuatro de superadmin a esos anchos y una de «Más» a 390 px. Los archivos son `capsula-real-{tres,cuatro}-{ancho}.png`, `capsula-real-super-{ancho}.png` y `capsula-real-super-mas-390.png`, dentro de `.impeccable/review` de la muestra local; no se versionan. `capsula-real-medidas.json` registra en las ocho variantes del comensal una selección, etiquetas completas, altura de 48 px y ausencia de desborde; `capsula-detector.json` devuelve `[]`.
 
 La [verificación de integración](../registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md#27-navegación-inferior-aprobada--complemento-visual) registra tipos, lint, compilación y cuatro pruebas locales de consumidor y superadmin correctas, incluido segundo factor real. Este complemento **no cierra 1.11 ni 1.12** ni acredita una revisión integral de temas, accesibilidad, entrada, checkout o seguimiento.
+
+## Corrección del 2026-11-10: nada saturado y la cápsula sale del comensal
+
+El dueño rechazó la cápsula gris en el menú en línea («de mala calidad, nada profesional»): sus grises fijos ignoraban la paleta de cada restaurante. Desde hoy:
+
+- **Comensal**: barra inferior sólida derivada de la paleta (`--brand-bg` mezclado con `--brand-text`), icono arriba y nombre abajo, sección activa con pastilla de tinta; el resumen del carrito es un solo botón con cantidad, «Ver carrito» e importe. Vive en `plataforma/src/components/menu/bottom-nav.*`. `--m-nav-h` y `NAV_HEIGHT` valen 76 px.
+- **Superadmin**: conserva la cápsula (`ui/capsule-navigation.*`), sin las piezas del carrito.
+- **Principio rector para todo Leogin**: cada pantalla enseña en primer plano solo lo que su usuario usa en cada visita. Lo ocasional va a «⋯», a la búsqueda o desaparece en el teléfono; ningún título repite la barra superior, ningún pie fijo guarda una acción ocasional y ningún resumen se enseña en cero. Aplica también en PC.
+- **Paridad**: las reglas de opciones de un plato son las mismas para el comensal y para el mesero (`plataforma/src/lib/menu/opciones.ts`).
+
+Pendiente de la misma revisión, con maqueta antes de tocar: cabecera de «Pedidos en vivo» (tarjeta de estado + tira de cifras + filtros), filtros del catálogo (cuatro filas antes del primer platillo) y la lista de pendientes de «Hoy».
+

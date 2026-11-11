@@ -11,6 +11,7 @@ Esta skill manda sobre cualquier skill genérica de diseño. Si otra skill sugie
 
 ## 1 · Antes de tocar nada
 
+0. Sigue el método de [`docs/guias/GUIA_DISENO_NADA_SATURADO.md`](../../../docs/guias/GUIA_DISENO_NADA_SATURADO.md): quién usa la pantalla, cuántos toques, dónde empieza lo que vino a ver, y qué se usa en cada visita.
 1. Lee [`docs/diseno/SISTEMA_VISUAL_2026-11-05.md`](../../../docs/diseno/SISTEMA_VISUAL_2026-11-05.md) y la ficha de auditoría correspondiente (IDs en `docs/auditorias/`).
 2. Mira la pantalla **real** tal como está hoy (navegador, móvil 390 px y escritorio 1280 px). Ver el código no basta.
 3. Identifica el **modo** de la superficie:
@@ -24,7 +25,9 @@ Esta skill manda sobre cualquier skill genérica de diseño. Si otra skill sugie
 
 - Dirección global: **Identidad actual depurada**. «Hospitalidad precisa» quedó como alternativa, no como reemplazo.
 - **Superficies sólidas.** Nada de tarjetas, etiquetas o marcos translúcidos («chafas»). Tarjeta = `var(--adm-card)` + `--adm-border`/`--adm-border-2` + `--adm-shadow-*`. Nunca `color-mix(... transparent)` como fondo de tarjeta ni vidrio.
-- **Navegación inferior en cápsula** (comensal y superadmin): gris clara `#ebebeb`, borde `#f7f7f7` 3 px, selección carbón biselada `#202020`, Geist 550, 64 px de rail, destinos de 48 px, máximo 460 px, 220 ms `cubic-bezier(.22,1,.36,1)`. Vive en `ui/capsule-navigation.*`. **El panel del restaurante conserva su barra operativa**; no le copies la cápsula ni el resumen del carrito.
+- **Nada saturado (principio rector, dueño, 2026-11-10).** Cada pantalla enseña en primer plano solo lo que su usuario usa en cada visita. Por cada elemento fijo pregunta: ¿se toca siempre? Si no, va a «⋯», a la búsqueda o desaparece en el teléfono. Una fila de mandos sobre el contenido; ningún título que repita la barra superior; ningún pie fijo para una acción ocasional; ningún resumen en cero. Aplica igual en PC. Ponte en el papel de quien la usa y cuenta cada toque.
+- **Paridad comensal ↔ mesero.** Lo que el comensal puede elegir en la ficha de un plato, el mesero lo elige igual: las reglas viven en `lib/menu/opciones.ts` y un plato personalizable abre su hoja al tocarlo.
+- **Navegación inferior del comensal**: barra sólida con la paleta del restaurante, icono arriba y nombre abajo, sección activa con pastilla de tinta (`menu/bottom-nav.*`). El resumen del carrito es un solo botón encima. La cápsula gris (`ui/capsule-navigation.*`) fue **rechazada para el comensal** el 2026-11-10 y hoy solo la usa el superadmin. **El panel del restaurante conserva su barra operativa.**
 - Carta del comensal: ancho de columna fijo (techo de 460/760/1120 según `layoutWidth`); en PC se ve como en el teléfono. **No ensanchar** sin rediseñar antes las piezas.
 - 8 estructuras × 26 paletas de carta: no se sustituyen; un cambio debe funcionar en todas.
 
