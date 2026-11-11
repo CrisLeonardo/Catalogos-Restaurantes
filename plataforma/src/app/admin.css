@@ -449,8 +449,10 @@
 .customers-meta { display: none; }
 @media (max-width: 820px) {
   .customers-head { display: none; }
-  .customers-row { grid-template-columns: minmax(0, 1fr); }
-  .customers-row > div:not(:first-child) { display: none; }
+  /* Teléfono: quién es a la izquierda, cuánto ha gastado a la derecha. */
+  .customers-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .customers-row > div:not(:first-child):not(:nth-child(3)) { display: none; }
+  .customers-row > div:nth-child(3) { font-size: 14px !important; font-weight: 600; }
   .customers-meta { display: block; }}
 
 /* Tabla de insumos (admin/ingredientes): grid en escritorio, tarjeta en móvil.
@@ -1690,6 +1692,12 @@
    Tres pasos, el cuadre a la vista mientras se cuenta, y casillas
    de 56 px en el teléfono: esto se hace de noche, con prisa y con
    dinero en la mano. */
+.caja-fila-pasos { display: flex; align-items: center; gap: 8px; }
+.caja-fila-pasos > .caja-steps { flex: 1; min-width: 0; }
+.caja-mas-boton { width: 44px; height: 44px; padding: 0; flex-shrink: 0; display: grid; place-items: center; }
+.caja-guardado[data-calma="1"] {
+  position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
 .caja-steps { display: flex; align-items: center; gap: 0; flex-shrink: 0; }
 .caja-steps > div { flex: 1; min-width: 0; display: flex; align-items: center; gap: 11px; padding-right: 14px; }
 @media (max-width: 900px) {
@@ -3608,3 +3616,21 @@ html[data-admin-area] .glass-solid {
   background: linear-gradient(135deg, #1C1C1E 0%, #2B1A15 100%);
 }
 .tu-ano-enlace strong { color: #F5A030; }
+
+/* ── Caja en el teléfono (nada saturado, 2026-11-11). Va al final para
+   ganar a las reglas base de `.caja-metricas` y `.caja-pie-conteo`. ── */
+.caja-pie-cuadre { display: none; }
+@media (max-width: 767px) {
+  /* El cuadre acompaña al botón en vez de quedarse arriba fuera de la vista. */
+  .caja-metricas { display: none; }
+  .caja-pie-conteo > .caja-pie-total { display: none; }
+  .caja-pie-cuadre {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; flex: 1 1 100%;
+    font-size: 13px; color: var(--u-text-3);
+  }
+  .caja-pie-cuadre strong { color: var(--u-text); }
+  .caja-pie-cuadre [data-cuadra] { margin-left: auto; padding: 3px 8px; border-radius: 8px; font-weight: 600; }
+  .caja-pie-cuadre [data-cuadra="1"] { color: var(--c-ok); background: var(--c-ok-bg); }
+  .caja-pie-cuadre [data-cuadra="0"] { color: var(--c-warn); background: var(--c-warn-bg); }
+  .caja-pie-conteo > .caja-cta { width: 100%; }
+}
