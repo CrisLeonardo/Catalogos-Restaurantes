@@ -1,6 +1,4 @@
 import { debeRecordarCandado } from '@/lib/device-lock-reminder';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { createServiceClient } from '@/lib/supabase/service';
@@ -483,40 +481,39 @@ export default async function AdminHomePage() {
   return (
     <div className="anim-fade-up adm-w-overview flex flex-col gap-6">
 
-      {/* Cabecera: el título y las dos únicas acciones que no están en el menú.
-          El bloque del título lleva un mínimo (no min-w-0): sin él, flexbox
-          nunca manda los botones al siguiente renglón —los dos caben "a la
-          fuerza" en la misma línea— y en un teléfono el título y la fecha
-          terminan encogidos a una columna de ~50px, una palabra por renglón.
-          El mínimo obliga el salto ANTES de llegar a eso, igual que el truco
-          ya usado en sales-widgets.tsx. Los botones también envuelven
-          (flex-wrap) por si acaso en una pantalla muy angosta (~320px)
-          tampoco entran juntos. */}
-      <div className="flex flex-wrap items-end gap-4">
-        {/* «Hoy» ya lo dice la barra de arriba; aquí se repetía en letra de
-            portada a diez píxeles (auditoría 2026-10-02, T-10/HOY-02). La
-            cabecera dice ahora lo que la barra no: qué día es y de qué local. */}
-        <div className="min-w-[min(100%,190px)] flex-1">
-          <h2 className="text-xl font-semibold leading-tight break-words text-adm-text">
-            {today}
-          </h2>
-          <p style={{ fontSize: 14, color: 'var(--u-text-3)', marginTop: 3 }}>
-            {brandName}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Button size="touch" variant="secondary" render={<a href={menuUrl} target="_blank" rel="noopener noreferrer" />}>
-            <Icon name="eye" size={15} />
-            Ver mi menú
-          </Button>
-          {allow('catalogo') && (
-            <Button size="touch" render={<Link href={panelHref(base, '/admin/menu/productos/new')} />}>
-              <Icon name="plus" size={15} />
-              Agregar platillo
-            </Button>
-          )}
-        </div>
+      {/* NADA SATURADO (2026-11-10, maqueta MAQUETA_NADA_SATURADO): lo primero
+          que ve el dueño es cómo va el día. La cabecera es un renglón —qué día
+          es— y «Ver mi menú» un enlace; el nombre del local ya está en el
+          panel y «Agregar platillo» se hace desde Menú. */}
+      <div className="flex items-center gap-3">
+        <h2 className="min-w-0 flex-1 text-[14px] font-medium text-adm-text-3 first-letter:uppercase">{today}</h2>
+        <a href={menuUrl} target="_blank" rel="noopener noreferrer"
+          className="inline-flex min-h-11 shrink-0 items-center gap-1.5 text-[13px] font-semibold"
+          style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}>
+          <Icon name="eye" size={15} />
+          Ver mi menú
+        </a>
       </div>
+
+      {/* 2 · Resumen del día */}
+      {stats && (
+        <Section
+          title="Resumen del día"
+          action={allow('metricas') ? { href: panelHref(base, '/admin/metricas'), label: 'Ver el mes' } : undefined}
+        >
+          <StatGroup className="hoy-cifras">
+            <Stat label="Ventas" value={fmt(stats.todaySales)} sub={ventasVs} />
+            <Stat label="Pedidos" value={String(stats.todayOrders)} />
+            <Stat label="Ticket promedio" value={fmt(stats.todayTicket)} />
+          </StatGroup>
+          <TuDiaTira
+            estrella={stats.topToday[0] ?? null}
+            horaPico={tuDia?.horaPico ?? null}
+            record={tuDia?.record ?? null}
+            compartir={platoEstrella && marca ? <CompartirPlato marca={marca} plato={platoEstrella} /> : undefined}
+          />
+        </Section>
+      )}
 
       {/* Primeros pasos (solo la primera vez) */}
       {needsOnboarding && onboardingSteps.length > 0 && restaurantId && (
@@ -553,26 +550,6 @@ export default async function AdminHomePage() {
               </ListLink>
             ))}
           </List>
-        </Section>
-      )}
-
-      {/* 2 · Resumen del día */}
-      {stats && (
-        <Section
-          title="Resumen del día"
-          action={allow('metricas') ? { href: panelHref(base, '/admin/metricas'), label: 'Ver el mes' } : undefined}
-        >
-          <StatGroup className="hoy-cifras">
-            <Stat label="Ventas" value={fmt(stats.todaySales)} sub={ventasVs} />
-            <Stat label="Pedidos" value={String(stats.todayOrders)} />
-            <Stat label="Ticket promedio" value={fmt(stats.todayTicket)} />
-          </StatGroup>
-          <TuDiaTira
-            estrella={stats.topToday[0] ?? null}
-            horaPico={tuDia?.horaPico ?? null}
-            record={tuDia?.record ?? null}
-            compartir={platoEstrella && marca ? <CompartirPlato marca={marca} plato={platoEstrella} /> : undefined}
-          />
         </Section>
       )}
 
@@ -663,12 +640,6 @@ export default async function AdminHomePage() {
 
       {/* Qué incluye subir de plan. Vive al FINAL a propósito: es una oferta,
           no una tarea del día, y no debe competir con lo de arriba. */}
-      {planContract && (
-        <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0 }}>
-          Plan {planContract.name} · {planContract.monthlyLabel}. {planContract.orderScope}. {planContract.selectedScope}.{' '}
-          <Link href={panelHref(base, '/admin/suscripcion')} style={{ color: 'var(--brand-accent-ink)' }}>Mi suscripción →</Link>
-        </p>
-      )}
       {(restaurant?.plan_actual === 'BASICO' || restaurant?.plan_actual === 'EN_LINEA' || restaurant?.plan_actual === 'ESTANDAR') && (
         <Card>
           <CardContent className="pt-5">
