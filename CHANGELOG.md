@@ -12,7 +12,7 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
   - Menú en línea: vuelve la barra de icono y nombre, ahora sólida y con la paleta del restaurante; el carrito es un solo botón. La cápsula gris queda solo en superadmin.
   - Panel: el aviso «Estás administrando…» es una línea y no una tarjeta; «Pantalla completa» sale de la barra del teléfono.
   - Pedidos en vivo: el estado («En línea · sin incidencias») solo ocupa sitio cuando hay algo que atender; las cifras quedan en un renglón («N pedidos hoy»); los listos van primero; exportar baja al pie en el teléfono.
-  - Menú › Platillos: una fila (buscar, filtros, «+») y una de categorías con «Agotados» como píldora; los filtros ocasionales, el orden, exportar y «Seleccionar varios» van en una hoja; la fila entera abre el platillo.
+  - Menú › Platillos: una fila (buscar, filtros, «+») y una de categorías con «Agotados» como píldora; los filtros ocasionales, el orden y «Seleccionar varios» van en una hoja (exportar, al pie en el teléfono); la fila entera abre el platillo.
   - Hoy: primero el resumen del día; la guía de pasos empezada es una fila; salen «Agregar platillo», el nombre repetido y el pie del plan.
   - Método escrito para cualquier asistente: `docs/guias/GUIA_DISENO_NADA_SATURADO.md`, enlazado desde `CLAUDE.md` y el nuevo `AGENTS.md`. Maqueta aprobada: `docs/diseno/MAQUETA_NADA_SATURADO_2026-11-10.html`.
 

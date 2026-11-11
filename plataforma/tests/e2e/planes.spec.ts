@@ -141,8 +141,10 @@ test.describe('Auditoría 0.2 — cinco superficies del contrato', () => {
       await expect(page.getByRole('table').getByText('Facturación electrónica (FEL)', { exact: true })).toHaveCount(0);
       if (fixture.manual) await expect(page.getByText(contract.monthlyLabel, { exact: true })).toHaveCount(0);
       await login(context, fixture.email);
+      // Hoy ya no repite el plan al pie (nada saturado, 2026-11-10): vive en
+      // Suscripción. Aquí basta con que abra y no diga nada que lo contradiga.
       await visit(page, `/panel/${fixture.slug}`, async () => {
-        await expect(page.getByText(`Plan ${contract.name} · ${contract.monthlyLabel}`, { exact: false }).first()).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Ver mi menú' })).toBeVisible();
       });
       await expect(page.getByText('Tu plan Estándar incluye pedidos para llevar.', { exact: false })).toHaveCount(0);
       await visit(page, `/panel/${fixture.slug}/suscripcion`, async () => {

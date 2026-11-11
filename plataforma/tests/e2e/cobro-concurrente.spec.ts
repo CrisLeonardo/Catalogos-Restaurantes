@@ -836,8 +836,13 @@ test('1.2 · el traspaso queda pendiente hasta que confirma la otra sesión', as
     const bandeja = otraCaja.getByRole('region', { name: 'Recepciones de Caja' });
     await expect(bandeja.getByText('AUD diferencia anotada')).toBeVisible();
     await expect(bandeja.getByText('Q500.00', { exact: true }).first()).toBeVisible();
-    await bandeja.getByRole('button', { name: 'Confirmar recepción' }).click();
-    await expect(bandeja.getByRole('status')).toHaveText('Recepción confirmada');
+    // El botón ya se ve con el HTML del servidor; un toque antes de que la
+    // página termine de cargar se pierde. Se reintenta hasta que confirma.
+    await expect(async () => {
+      const confirmar = bandeja.getByRole('button', { name: 'Confirmar recepción' });
+      if (await confirmar.count()) await confirmar.click({ timeout: 3_000 });
+      await expect(bandeja.getByRole('status')).toHaveText('Recepción confirmada', { timeout: 5_000 });
+    }).toPass({ timeout: 45_000 });
     const confirmado = check(await db.from('caja_traspasos').select('confirmado_at')
       .eq('corte_id', registro.corte_id).single())!;
     expect(confirmado.confirmado_at).toBeTruthy();

@@ -565,7 +565,7 @@ function OrdersPanelInner({
               )}
             </section>
           )}
-          <div className="md:hidden" style={{ display: 'flex', justifyContent: 'center', marginTop: 20 }}>{exportar}</div>
+          <div className="mt-5 flex justify-center md:hidden">{exportar}</div>
         </div>
 
       </div>

@@ -271,7 +271,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
   }
   /* NADA SATURADO (2026-11-10, maqueta MAQUETA_NADA_SATURADO): una fila de
      mandos y una de categorías. Lo ocasional —calidad de la ficha, orden,
-     exportar, elegir varios— vive en la hoja de filtros. */
+     elegir varios— vive en la hoja de filtros; exportar, al pie en el teléfono. */
   const [hojaFiltros, setHojaFiltros] = useState(false);
   const [eligiendo, setEligiendo] = useState(false);
   const otrosFiltros = FILTROS.filter((f) => f.key !== 'agotado');
@@ -304,6 +304,10 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
             {filtrosPuestos > 0 && <span className={s.punto} aria-hidden />}
           </Button>
         )}
+        {/* Exportar: en escritorio, en la fila; en el teléfono, al pie de la
+            lista. No va dentro de la hoja: su menú se abre fuera del diálogo
+            y quedaría inerte debajo. */}
+        {products.length > 0 && exportSlot && <div className="max-md:hidden">{exportSlot}</div>}
         {atProductLimit ? (
           <Link href="/admin/suscripcion" className="shrink-0">
             <Button variant="secondary" size="touch">
@@ -372,7 +376,6 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
               <Button type="button" variant="secondary" size="touch" onClick={() => { setEligiendo(true); setHojaFiltros(false); }}>
                 Seleccionar varios
               </Button>
-              {exportSlot}
               {filtering && <button type="button" className={s.enlace} onClick={clearFilters}>Limpiar filtros</button>}
             </div>
           </div>
@@ -534,6 +537,10 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
             );
           })}
         </Card>
+      )}
+
+      {list.length > 0 && exportSlot && (
+        <div className="flex justify-center md:hidden">{exportSlot}</div>
       )}
 
       {hojaAgotar && (
