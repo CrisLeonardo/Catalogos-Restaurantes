@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import AjustesBuscador from '@/components/admin/ajustes-buscador';
 import { headers } from 'next/headers';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
@@ -214,20 +215,20 @@ export default async function AdminAjustesPage() {
 
   return (
     <div className="anim-fade-up adm-w-overview flex flex-col gap-6">
-      <p className="max-w-[52ch] text-[14px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
-        Todo lo que se configura una vez y se olvida, ordenado por tema.
-      </p>
+      {/* Sobraba la frase que explicaba la pantalla; con más de quince
+          destinos, lo que falta es poder buscar uno (nada saturado, 2026-11-11). */}
+      <AjustesBuscador alcance="ajustes-indice" />
 
       {/* Columnas CSS, no rejilla: las secciones tienen alturas muy distintas
           (7 filas, 4, 1, 4) y en tres columnas de rejilla quedaban dos
           tercios de pantalla vacíos abajo. Con `columns` se reparten por
           altura en dos (auditoría 2026-10-02, N-06). */}
-      <div className="adm-settings-index">
+      <div id="ajustes-indice" className="adm-settings-index">
         {groups.map((g) => (
-          <Section key={g.title} title={g.title}>
+          <Section key={g.title} title={g.title} data-ajuste-grupo="">
             <List>
               {g.rows.map((r) => (
-                <ListLink key={r.href} href={r.href}>
+                <ListLink key={r.href} href={r.href} data-ajuste={`${r.label} ${r.desc ?? ''} ${g.title}`}>
                   <span className="grid size-7 shrink-0 place-items-center rounded-adm-md" style={{ background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: 'var(--u-text-2)' }}>
                     <Icon name={r.icon} size={16} />
                   </span>
@@ -245,7 +246,7 @@ export default async function AdminAjustesPage() {
               ))}
               {/* Un interruptor no merece su propia pantalla. */}
               {g.extra === 'idiomas' && restaurant && canEditIdiomas && (
-                <ListRow>
+                <ListRow data-ajuste="Menú también en inglés idiomas traducción">
                   <span className="grid size-7 shrink-0 place-items-center rounded-adm-md" style={{ background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: 'var(--u-text-2)' }}>
                     <Icon name="globe" size={16} />
                   </span>
