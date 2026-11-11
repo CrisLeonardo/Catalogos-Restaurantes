@@ -5,6 +5,9 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
 ## Sin publicar
+
+## v0.19.0 · 2026-11-11 · Experiencia práctica y sin saturar
+PR #110 (merge `c9e7ce5`) · sin migraciones · en producción el 2026-11-11 (`prod-2026-11-11`).
 - **Experiencia práctica, sin saturar** (rama `feat/experiencia-practica-movil`; principio rector del dueño, 2026-11-10):
   - Tomar pedidos: el salón pasa de título + contador + tres botones + filtros + zonas + pie fijo a una fila de mandos (Mesas | Plano · buscar · Para llevar) y una de filtros. Quien toma el pedido elige plano o mesas y el aparato lo recuerda; el teléfono abre en mesas. Las mesas libres ocupan menos, las que están fuera del plano siguen la página, tocar una mesa libre abre la carta directo y «atrás» sin nada apuntado vuelve al salón.
   - Carta del mesero: con dedo, los favoritos son una tira deslizable sin teclas; el pie «0 por enviar · Q0.00» ya no sale vacío.
