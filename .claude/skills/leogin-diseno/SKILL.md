@@ -11,6 +11,7 @@ Esta skill manda sobre cualquier skill genérica de diseño. Si otra skill sugie
 
 ## 1 · Antes de tocar nada
 
+0. Sigue el método de [`docs/guias/GUIA_DISENO_NADA_SATURADO.md`](../../../docs/guias/GUIA_DISENO_NADA_SATURADO.md): quién usa la pantalla, cuántos toques, dónde empieza lo que vino a ver, y qué se usa en cada visita.
 1. Lee [`docs/diseno/SISTEMA_VISUAL_2026-11-05.md`](../../../docs/diseno/SISTEMA_VISUAL_2026-11-05.md) y la ficha de auditoría correspondiente (IDs en `docs/auditorias/`).
 2. Mira la pantalla **real** tal como está hoy (navegador, móvil 390 px y escritorio 1280 px). Ver el código no basta.
 3. Identifica el **modo** de la superficie:
