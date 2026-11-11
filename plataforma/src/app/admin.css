@@ -799,6 +799,10 @@
 .orders-col-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 .orders-col-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
 .orders-col-empty { display: none; }
+/* Teléfono y tablet: los listos van primero —se enfrían— y luego lo nuevo. */
+.orders-board { display: flex; flex-direction: column; }
+.orders-col:nth-child(3) { order: -2; }
+.orders-col:nth-child(1) { order: -1; }
 @media (min-width: 1280px) {
   .orders-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; margin-bottom: 26px; }
   .orders-col, .orders-col[data-empty="1"] {
