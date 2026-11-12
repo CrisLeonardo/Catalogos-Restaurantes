@@ -11,8 +11,6 @@ import { getCustomers, getCustomersSummary, getCustomerOrders } from '@/lib/db/c
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Section, SectionNote } from '@/components/ui/section';
-import { Stat, StatGroup } from '@/components/ui/stat';
 import { EmptyState } from '@/components/ui/empty-state';
 import ClientesExportButton from '@/components/admin/clientes-export-button';
 import ClientesFiltros from '@/components/admin/clientes-filtros';
@@ -61,6 +59,11 @@ const STATUS_ES: Record<string, string> = {
   TRANSIT: 'En camino', DELIVERED: 'Entregado', CANCEL: 'Cancelado',
 };
 
+/** Más de 30 días sin pedir: a quién vale la pena escribirle. */
+function sinVenir(ultimo: string | null | undefined): boolean {
+  return !!ultimo && Date.now() - new Date(ultimo).getTime() > 30 * 86_400_000;
+}
+
 export default async function AdminClientesPage({
   searchParams,
 }: {
@@ -104,7 +107,6 @@ export default async function AdminClientesPage({
     ? await getCustomerOrders(restaurantId, selected.id)
     : [];
 
-  const totalSpent = summary.totalSpent;
   const recurrent = summary.recurrentCount;
 
   /* Cuántos vuelven, en porcentaje, y cuánto más gasta el que vuelve.
@@ -133,23 +135,21 @@ export default async function AdminClientesPage({
 
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <Section title="Resumen">
-        <StatGroup>
-          <Stat label="Clientes registrados" value={String(summary.totalCustomers)} />
-          <Stat label="Recurrentes (2+ pedidos)" value={String(recurrent)} />
-          {vuelvenPct !== null && <Stat label="De los que piden, vuelven" value={`${vuelvenPct}%`} />}
-          <Stat label="Total histórico" value={fmtQ(totalSpent)} />
-        </StatGroup>
-        {avgTicketRecurrent !== null && avgTicketOneTime !== null && (
-          <SectionNote>
-            Quien vuelve gasta {fmtQ(avgTicketRecurrent)} por pedido; quien vino una sola vez,{' '}
-            {fmtQ(avgTicketOneTime)}.
-          </SectionNote>
-        )}
-      </Section>
-
+      {/* NADA SATURADO (2026-11-11, maqueta MAQUETA_NADA_SATURADO_2): quien
+          entra busca a una persona o quiere ver quién dejó de venir. Primero
+          el buscador; el resumen dejó de ser una tarjeta y es un renglón.
+          «Total histórico» es un dato de ventas: vive en Negocio. */}
       {summary.totalCustomers > 0 && (
-        <ClientesFiltros q={q} sort={sort} inactive={inactivos} exportSlot={<ClientesExportButton restaurantId={restaurantId} />} />
+        <ClientesFiltros q={q} sort={sort} inactive={inactivos} total={summary.totalCustomers}
+          exportSlot={<ClientesExportButton restaurantId={restaurantId} />} />
+      )}
+      {summary.totalCustomers > 0 && !buscando && recurrent > 0 && (
+        <p style={{ margin: '-6px 0 0', fontSize: 13, color: 'var(--u-text-3)' }}>
+          {recurrent === 1 ? '1 recurrente' : `${recurrent} recurrentes`}
+          {vuelvenPct !== null && ` · de los que piden, vuelve el ${vuelvenPct} %`}
+          {avgTicketRecurrent !== null && avgTicketOneTime !== null
+            && ` · quien vuelve gasta ${fmtQ(avgTicketRecurrent)} por pedido; quien vino una vez, ${fmtQ(avgTicketOneTime)}`}
+        </p>
       )}
 
       {customers.length === 0 && buscando ? (
@@ -196,8 +196,8 @@ export default async function AdminClientesPage({
                     {/* En el teléfono las columnas se esconden y quedaban dos
                         números sueltos («1  Q88.50»): aquí van con su palabra
                         (auditoría 2026-10-02, CLI-01). */}
-                    <div className="customers-meta" style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 4 }}>
-                      {c.total_orders === 1 ? '1 pedido' : `${c.total_orders} pedidos`} · {fmtQ(Number(c.total_spent))}
+                    <div className="customers-meta" style={{ fontSize: 12, marginTop: 4, color: sinVenir(c.last_order_at) ? 'var(--c-warn)' : 'var(--u-text-3)', fontWeight: sinVenir(c.last_order_at) ? 600 : 400 }}>
+                      {c.total_orders === 1 ? '1 pedido' : `${c.total_orders} pedidos`}
                       {c.last_order_at ? ` · último ${fmtDate(c.last_order_at, timezone)}` : ''}
                     </div>
                   </div>
@@ -271,6 +271,11 @@ export default async function AdminClientesPage({
             );
           })}
         </Card>
+      )}
+
+      {/* Exportar: en el teléfono, al pie; en escritorio va en la fila. */}
+      {customers.length > 0 && (
+        <div className="flex justify-center md:hidden"><ClientesExportButton restaurantId={restaurantId} /></div>
       )}
 
       {totalPages > 1 && (

@@ -29,13 +29,23 @@
 .franja { margin-block: 14px; }
 .encabezado { align-items: end; margin: 22px 0 12px; }
 .acciones { display: flex; flex-wrap: wrap; gap: 7px; }
+/* Una fila: estaciones que se deslizan y «⋯». */
+.fila { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.estaciones { display: flex; gap: 7px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; align-items: center; }
+.estaciones::-webkit-scrollbar { display: none; }
+.estaciones > * { flex-shrink: 0; white-space: nowrap; }
+.boton[data-cuadro="1"] { width: 46px; padding: 0; flex-shrink: 0; font-size: 20px; line-height: 1; }
+.boton[aria-pressed="true"] { background: var(--k-tinta); border-color: var(--k-tinta); color: var(--k-papel); }
+.mas {
+  display: grid; gap: 10px; margin-bottom: 12px; padding: 12px;
+  background: var(--k-papel); border: 1px solid var(--k-borde); border-radius: 12px;
+}
 .boton, .principal, .enlace {
   border: 1px solid var(--k-borde); border-radius: 9px; background: var(--k-papel);
   color: var(--k-tinta); min-height: 46px; padding: 7px 11px; font: inherit; font-size: 14px;
   cursor: pointer; touch-action: manipulation;
 }
 .boton:hover:not(:disabled), .enlace:hover:not(:disabled) { background: var(--k-banda); }
-.boton[aria-pressed="true"] { border-color: var(--k-acento); color: var(--k-acento); font-weight: 700; }
 .boton:disabled, .enlace:disabled, .principal:disabled { cursor: default; opacity: .65; }
 .principal { width: 100%; min-height: 54px; color: #fff; background: #ad4226; border-color: #ad4226; font-size: 16px; font-weight: 700; }
 .principal:hover:not(:disabled) { background: #96351e; }

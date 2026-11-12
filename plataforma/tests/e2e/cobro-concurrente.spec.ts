@@ -320,17 +320,18 @@ test('1.5 · prepara por puesto y conserva el orden de 30 comandas', async ({ br
     await expect(mesa.getByRole('button', { name: 'Marcar mi parte lista' })).toBeVisible();
     await mesa.getByRole('button', { name: 'Marcar mi parte lista' }).click();
     await expect(mesa).toContainText('Parte lista. Pase coordina la salida.');
-    await page.getByRole('button', { name: /^Pase ·/ }).click();
+    await page.getByRole('button', { name: /^Pase/ }).click();
     await expect(mesa).toContainText('Cocina caliente · pendiente');
     await expect(async () => expect(await orden()).toEqual(original)).toPass({ timeout: 10_000 });
-    await page.getByRole('button', { name: /^Cocina caliente ·/ }).click();
+    await page.getByRole('button', { name: /^Cocina caliente/ }).click();
     await mesa.getByRole('button', { name: 'Marcar mi parte lista' }).click();
-    await page.getByRole('button', { name: /^Pase ·/ }).click();
+    await page.getByRole('button', { name: /^Pase/ }).click();
     await expect(mesa).toContainText('Esperando salida');
     for (const width of [390, 768, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     }
+    await page.getByRole('button', { name: 'Más opciones de Cocina' }).click();
     await page.getByRole('button', { name: 'Probar sonido' }).click();
     await expect(page.getByText('Prueba de sonido reproducida.')).toBeVisible();
     await mesa.getByRole('button', { name: 'Confirmar salida' }).click();

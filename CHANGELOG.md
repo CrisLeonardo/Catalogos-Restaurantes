@@ -5,6 +5,11 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
 ## Sin publicar
+- **Nada saturado, segunda parte** (rama `feat/nada-saturado-2`; maqueta aprobada `docs/diseno/MAQUETA_NADA_SATURADO_2_2026-11-11.html`):
+  - Cocina: una fila con las estaciones y «⋯» (probar sonido, silenciar, modo servicio y filtro por etapa). Salen la tarjeta de estado y el título «Pase»; el sonido solo avisa cuando está apagado o en silencio, con su botón.
+  - Caja › Cierre del turno: los tres pasos y «⋯» (fecha, nombre del turno, «Guardar y seguir después»); en el teléfono el cuadre (esperado y diferencia) va en el pie junto a «Siguiente». Ningún cálculo ni paso cambia.
+  - Clientes: primero el buscador; «Todos N» y «Sin venir +30 días» como píldoras; el resumen queda en un renglón y sale «Total histórico»; en el teléfono cada fila enseña el gasto a la derecha.
+  - Negocio: «Tu año con Leogin» baja debajo de las cifras. Ajustes: sale la frase de arriba y entra un buscador de ajustes.
 
 ## v0.19.0 · 2026-11-11 · Experiencia práctica y sin saturar
 PR #110 (merge `c9e7ce5`) · sin migraciones · en producción el 2026-11-11 (`prod-2026-11-11`).

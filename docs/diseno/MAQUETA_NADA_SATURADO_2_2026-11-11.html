@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueta · Nada saturado 2 · Cocina, Caja, Clientes, Negocio y Ajustes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F2F1EE;--bg2:#E9E7E3;--card:#FFFFFF;--ink:#17161A;--ink2:rgba(23,22,26,.72);--ink3:rgba(23,22,26,.56);--line:rgba(23,22,26,.12);--line2:rgba(23,22,26,.2);--coral:#C2542F;--on:#fff;--ok:#1E7A46;--okbg:#E4F3E9;--warn:#8A5A00;--warnbg:#FBEFD2;--info:#1F5FA8;--infobg:#E3EEFB;--page:#DEDCD7;--sh:0 1px 2px rgba(0,0,0,.06)}
+[data-theme=dark]{--bg:#0C0B0A;--bg2:#141311;--card:#1A1917;--ink:#F5F3EF;--ink2:rgba(245,243,239,.74);--ink3:rgba(245,243,239,.56);--line:rgba(245,243,239,.12);--line2:rgba(245,243,239,.22);--coral:#D9683F;--on:#fff;--ok:#6FD49A;--okbg:#12301F;--warn:#F0C568;--warnbg:#33270B;--info:#8DBBF2;--infobg:#10243D;--page:#000;--sh:none}
+*{box-sizing:border-box;margin:0}
+body{font-family:Geist,system-ui,sans-serif;background:var(--page);color:var(--ink);padding:24px 16px 80px;-webkit-font-smoothing:antialiased}
+h1{font-size:28px;font-weight:800;letter-spacing:-.03em}
+h2{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:48px 0 6px}
+.lead{max-width:760px;color:var(--ink2);font-size:15px;line-height:1.5;margin-top:8px}
+.top{display:flex;align-items:flex-start;gap:16px;justify-content:space-between;max-width:1280px;margin:0 auto}
+.wrap{max-width:1280px;margin:0 auto}
+.tog{border:1px solid var(--line2);background:var(--card);color:var(--ink);font:inherit;font-size:14px;font-weight:600;height:44px;padding:0 16px;border-radius:12px;cursor:pointer;flex-shrink:0}
+.pair{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;margin-top:16px}
+.col{display:flex;flex-direction:column;gap:10px}
+.tag{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.tag b{color:var(--coral)}
+.note{font-size:13px;color:var(--ink2);max-width:375px;line-height:1.45}
+.notes{max-width:340px;font-size:14px;line-height:1.5;color:var(--ink2);padding-top:28px}
+.notes li{margin:0 0 10px 18px}
+.notes strong{color:var(--ink)}
+/* teléfono */
+.ph{width:375px;height:720px;background:var(--bg);border-radius:28px;border:1px solid var(--line2);overflow:hidden;position:relative;display:flex;flex-direction:column;font-size:14px}
+.ph.old{opacity:.92}
+.bar{height:54px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 12px 0 16px;border-bottom:1px solid var(--line);background:var(--bg)}
+.bar b{flex:1;font-size:18px;font-weight:800;letter-spacing:-.03em}
+.ib{width:42px;height:42px;border-radius:12px;background:var(--card);box-shadow:var(--sh);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink);flex-shrink:0}
+.ib svg,.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sub{display:flex;gap:2px;margin:6px 12px;padding:3px;background:var(--bg2);border-radius:12px;flex-shrink:0;overflow:hidden}
+.sub span{padding:7px 12px;border-radius:9px;font-size:13px;font-weight:500;color:var(--ink2);white-space:nowrap}
+.sub .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+.body{flex:1;overflow:hidden;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.nav{height:62px;flex-shrink:0;border-top:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:space-around;font-size:11px;color:var(--ink3);position:relative}
+.nav span{display:grid;justify-items:center;gap:3px}
+.nav .on{color:var(--coral);font-weight:600}
+.nav .plus{width:52px;height:52px;border-radius:50%;background:var(--coral);color:var(--on);display:grid;place-items:center;margin-top:-26px;box-shadow:0 6px 16px rgba(194,84,47,.35)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh)}
+.fold{position:absolute;left:0;right:0;border-top:2px dashed var(--coral);z-index:5}
+.fold i{display:none}
+.cap{font-size:13px;font-weight:600;color:var(--coral)}.cap.old{color:var(--ink2)}
+.row{display:flex;align-items:center;gap:8px}
+.hs{display:flex;gap:8px;overflow:hidden;flex-shrink:0}
+.pill{height:44px;padding:0 14px;border-radius:12px;background:var(--bg2);display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink2);white-space:nowrap;flex-shrink:0}
+.pill.on{background:var(--ink);color:var(--bg)}
+.pill small{font-weight:600;opacity:.7;font-variant-numeric:tabular-nums}
+.pill.warn{background:var(--warnbg);color:var(--warn)}
+.btn{height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--line2);background:var(--card);display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;white-space:nowrap;flex-shrink:0}
+.btn.p{background:var(--coral);border-color:var(--coral);color:var(--on)}
+.btn.sq{width:48px;height:48px;padding:0}
+.btn.t{height:48px}
+.mut{color:var(--ink3)}.s12{font-size:12px}.s13{font-size:13px}.num{font-variant-numeric:tabular-nums}
+.chip{font-size:11px;font-weight:600;padding:3px 8px;border-radius:8px;white-space:nowrap}
+.c-info{background:var(--infobg);color:var(--info)}.c-ok{background:var(--okbg);color:var(--ok)}.c-warn{background:var(--warnbg);color:var(--warn)}
+.search{flex:1;min-width:0;height:48px;border-radius:12px;border:1px solid var(--line2);background:var(--card);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--ink3);font-size:14px}
+/* pedido */
+.ord{padding:12px 14px;display:grid;gap:8px}
+.ord h4{font-size:15px;font-weight:600}
+.ord .act{height:48px;border-radius:12px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:600;font-size:14px}
+.ord .act.q{background:var(--bg2);color:var(--ink)}
+/* platillo */
+.dish{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);min-height:64px}
+.dish:last-child{border-bottom:0}
+.thumb{width:44px;height:44px;border-radius:10px;background:var(--bg2);flex-shrink:0;display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--ink3)}
+.dish .n{flex:1;min-width:0}
+.dish .n b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sw{width:44px;height:26px;border-radius:999px;background:var(--coral);position:relative;flex-shrink:0}
+.sw::after{content:"";position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:#fff}
+.sw.off{background:var(--line2)}.sw.off::after{right:auto;left:3px}
+/* hoy */
+.kpi{padding:16px}
+.kpi .big{font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1.05}
+.kpi .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.kpi .two b{display:block;font-size:20px;font-weight:600}
+.lrow{display:flex;align-items:center;gap:12px;padding:0 14px;min-height:56px;border-bottom:1px solid var(--line)}
+.lrow:last-child{border-bottom:0}
+.lrow .n{flex:1;min-width:0}
+.lrow .n b{display:block;font-weight:600}
+.ring{width:36px;height:36px;border-radius:50%;background:conic-gradient(var(--coral) 80%,var(--bg2) 0);display:grid;place-items:center;flex-shrink:0}
+.ring::after{content:"";width:26px;height:26px;border-radius:50%;background:var(--card)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--warn);flex-shrink:0;margin:0 14px}
+/* bloques «antes» */
+.blk{border-radius:14px;border:1px solid var(--line);background:var(--card);padding:12px 14px;flex-shrink:0}
+.tint{background:color-mix(in srgb,var(--coral) 9%,var(--card));border-color:color-mix(in srgb,var(--coral) 35%,transparent)}
+/* escritorio */
+.desk{width:100%;max-width:1180px;height:560px;background:var(--bg);border:1px solid var(--line2);border-radius:16px;overflow:hidden;display:flex;font-size:14px;margin-top:14px}
+.side{width:200px;flex-shrink:0;border-right:1px solid var(--line);padding:16px 12px;display:grid;gap:4px;align-content:start;font-size:14px;color:var(--ink2)}
+.side b{color:var(--ink);font-size:15px;margin-bottom:10px;padding:0 10px}
+.side span{padding:9px 10px;border-radius:10px}
+.side .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+.dmain{flex:1;min-width:0;display:flex;flex-direction:column}
+.dbar{height:60px;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--line);flex-shrink:0}
+.dbar b{font-size:22px;font-weight:800;letter-spacing:-.03em}
+.dbody{padding:16px 24px;display:flex;flex-direction:column;gap:14px;overflow:hidden;flex:1}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tabsd{display:flex;gap:4px;margin-left:16px}
+.tabsd span{padding:7px 12px;border-radius:9px;font-size:13px;color:var(--ink2)}
+.tabsd .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+table{width:100%;border-collapse:collapse}
+td,th{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line);font-size:14px}
+th{font-size:12px;font-weight:600;color:var(--ink3)}
+td.r,th.r{text-align:right}
+@media(max-width:820px){.notes{padding-top:0;max-width:375px}.desk{display:none}.nodesk{display:block!important}}
+.nodesk{display:none;font-size:13px;color:var(--ink3);margin-top:10px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0"/></symbol>
+<symbol id="more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+<symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+<symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
+<symbol id="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+<symbol id="dl" viewBox="0 0 24 24"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14"/></symbol>
+</defs></svg>
+
+<div class="top">
+  <div>
+    <div class="tag">Maqueta para aprobar · 2026-11-11</div>
+    <h1>Nada saturado, segunda parte: Cocina, Caja, Clientes, Negocio y Ajustes</h1>
+    <p class="lead">Mismo método: a qué entra la persona, cuántos toques, dónde empieza lo que vino a ver. Las medidas de «hoy» las tomé de la app real a 375 px; las de la propuesta son estimadas sobre esta maqueta. Datos de ejemplo (Rincón 502). Nada de esto está construido.</p>
+  </div>
+  <button class="tog" onclick="const h=document.documentElement;h.dataset.theme=h.dataset.theme==='dark'?'light':'dark'">Claro / oscuro</button>
+</div>
+
+<div class="wrap">
+
+<!-- ═════════ COCINA ═════════ -->
+<h2>1 · Cocina</h2>
+<p class="lead">El cocinero mira la pantalla de reojo, con las manos ocupadas, para saber qué preparar y avisar cuando sale. Hoy hay seis bloques antes de la primera comanda.</p>
+<div class="pair">
+  <div class="col">
+    <div class="tag">Hoy</div>
+    <div class="ph old">
+      <div class="bar"><b>Pedidos</b><span class="ib"><svg><use href="#bell"/></svg></span><span class="ib"><svg><use href="#more"/></svg></span></div>
+      <div class="sub"><span>En vivo</span><span class="on">Cocina</span><span>Mesas</span><span>Tomar pedidos</span></div>
+      <div class="body">
+        <div class="blk"><b style="font-size:22px">Cocina</b><div class="s13"><b style="color:var(--ok)">En línea</b> <span class="mut">· 2 comandas activas</span></div><div class="row" style="flex-wrap:wrap;margin-top:8px"><span class="btn">Probar sonido</span><span class="btn">Silenciar avisos</span><span class="btn">Modo servicio</span></div></div>
+        <div class="hs"><span class="btn" style="border-color:var(--coral);color:var(--coral)">Pase · 2</span><span class="btn">Cocina caliente · 2</span><span class="btn">Barra · 0</span></div>
+        <div class="s13 mut">Sonido pendiente de activar</div>
+        <div><b style="font-size:18px">Pase</b><div class="s13 mut">Coordina la salida de cada comanda.</div></div>
+        <div class="row" style="flex-wrap:wrap"><span class="btn" style="border-color:var(--coral);color:var(--coral)">Todas</span><span class="btn">Por aceptar</span><span class="btn">En preparación</span><span class="btn">Listas para salir</span></div>
+        <div class="card ord"><div class="row"><h4 style="flex:1;font-size:20px">Para llevar</h4><b>—</b></div><div class="s13 mut">MQ-202 · Sin hora de aceptación</div></div>
+      </div>
+      <div class="fold" style="top:608px"><i>primera comanda a 608 px</i></div>
+      <div class="nav"><span>Hoy</span><span class="on">Pedidos</span><span>Menú</span><span class="plus"><svg class="i"><use href="#plus"/></svg></span><span>Clientes</span><span>Negocio</span><span>Ajustes</span></div>
+    </div>
+    <div class="cap old">— — Primera comanda a 608 px</div>
+  </div>
+  <div class="col">
+    <div class="tag"><b>Propuesta</b></div>
+    <div class="ph">
+      <div class="bar"><b>Pedidos</b><span class="ib"><svg><use href="#bell"/></svg></span><span class="ib"><svg><use href="#more"/></svg></span></div>
+      <div class="sub"><span>En vivo</span><span class="on">Cocina</span><span>Mesas</span><span>Tomar pedidos</span></div>
+      <div class="body">
+        <div class="row"><div class="hs" style="flex:1"><span class="pill on">Pase <small>2</small></span><span class="pill">Caliente <small>2</small></span><span class="pill">Barra</span></div><span class="btn sq"><svg class="i"><use href="#more"/></svg></span></div>
+        <div class="blk c-warn row" style="border-color:transparent;min-height:48px"><b style="flex:1">El sonido está apagado</b><b>Activar</b></div>
+        <div class="card ord" style="border-color:var(--warn)"><div class="row"><h4 style="flex:1;font-size:20px">Mesa 4</h4><span class="chip c-warn" style="font-size:13px">12 min</span></div>
+          <div style="font-size:17px;font-weight:600;line-height:1.5"><span class="num" style="color:var(--coral)">2×</span> Rincón Clásica<div class="s13" style="color:var(--warn);font-weight:600;padding-left:28px">Sin cebolla · término medio</div><span class="num" style="color:var(--coral)">1×</span> Limonada con Menta</div>
+          <div class="act" style="height:56px;font-size:16px">Marcar lista</div></div>
+        <div class="card ord"><div class="row"><h4 style="flex:1;font-size:20px">Para llevar · Andrea</h4><span class="chip c-info" style="font-size:13px">3 min</span></div>
+          <div style="font-size:17px;font-weight:600;line-height:1.5"><span class="num" style="color:var(--coral)">1×</span> Pepperoni (mediana)<br><span class="num" style="color:var(--coral)">2×</span> Refresco de Jamaica</div>
+          <div class="act" style="height:56px;font-size:16px">Marcar lista</div></div>
+      </div>
+      <div class="fold" style="top:236px"><i>primera comanda a unos 236 px (176 sin el aviso de sonido)</i></div>
+      <div class="nav"><span>Hoy</span><span class="on">Pedidos</span><span>Menú</span><span class="plus"><svg class="i"><use href="#plus"/></svg></span><span>Clientes</span><span>Negocio</span><span>Ajustes</span></div>
+    </div>
+    <div class="cap">— — Primera comanda a unos 236 px (176 sin el aviso de sonido)</div>
+  </div>
+  <ul class="notes">
+    <li><strong>Una fila:</strong> las estaciones (Pase, Caliente, Barra) y un «⋯». La estación sin comandas no enseña «· 0».</li>
+    <li><strong>«⋯» guarda lo ocasional:</strong> Probar sonido, Silenciar avisos y Modo servicio.</li>
+    <li><strong>El sonido solo habla cuando está apagado</strong>, y como franja con su botón «Activar», no como texto gris.</li>
+    <li><strong>Salen</strong> la tarjeta «Cocina · En línea · 2 comandas activas», el título «Pase» y su explicación.</li>
+    <li><strong>Los filtros por estado salen de la vista:</strong> las comandas se ordenan solas (lo más atrasado arriba, en ámbar) y el filtro queda dentro de «⋯».</li>
+    <li><strong>La comanda se lee de lejos:</strong> mesa y minutos arriba, cantidades en color, notas en ámbar, y un solo botón de 56 px.</li>
+  </ul>
+</div>
+
+<!-- ═════════ CAJA ═════════ -->
+<h2>2 · Caja › Cierre del turno</h2>
+<p class="lead">El cajero entra a contar el efectivo. Hoy el primer billete está a unos 560 px. Aquí <strong>no cambia ningún cálculo ni ningún paso</strong>: solo el orden y el tamaño de lo que rodea al conteo.</p>
+<div class="pair">
+  <div class="col">
+    <div class="tag">Hoy</div>
+    <div class="ph old">
+      <div class="bar"><b>Negocio</b><span class="ib"><svg><use href="#bell"/></svg></span><span class="ib"><svg><use href="#more"/></svg></span></div>
+      <div class="sub"><span>Resumen</span><span>Analítica</span><span>Finanzas</span><span class="on">Caja</span></div>
+      <div class="body">
+        <div><b style="font-size:22px;font-weight:800">Cierre del turno</b><div class="s13 mut">Miércoles, 11 de noviembre · Dueño Rincón 502</div></div>
+        <div class="blk mut" style="background:var(--bg2)">turno (opcional)</div>
+        <div class="row"><span class="btn">Guardar y seguir después</span></div>
+        <div class="blk row"><b style="flex:1">Turno sin abrir</b><b style="color:var(--coral)">Registrar apertura</b></div>
+        <div class="row"><span class="chip" style="border:1px solid var(--line)">El conteo se guarda automáticamente</span></div>
+        <div class="row s13" style="gap:14px"><span><b style="color:var(--coral)">① Efectivo</b></span><span class="mut">② Gastos</span><span class="mut">③ Propinas</span></div>
+        <div class="g3" style="gap:6px"><div class="blk tint s12">Total contado<br><b>—</b></div><div class="blk s12">Efectivo esperado<br><b>Q0.00</b></div><div class="blk s12">Sin contar<br><b>—</b></div></div>
+        <div><b style="font-size:20px;font-weight:800">Billetes y monedas</b><div class="s13 mut">Ajusta con − y + o escribe la cantidad.</div></div>
+        <div class="row"><span class="btn" style="flex:1">Billetes</span><span class="btn" style="flex:1">Monedas</span></div>
+      </div>
+      <div class="fold" style="top:560px"><i>primer billete a unos 560 px</i></div>
+      <div class="nav"><span>Hoy</span><span>Pedidos</span><span>Menú</span><span class="plus"><svg class="i"><use href="#plus"/></svg></span><span>Clientes</span><span class="on">Negocio</span><span>Ajustes</span></div>
+    </div>
+    <div class="cap old">— — Primer billete a unos 560 px</div>
+  </div>
+  <div class="col">
+    <div class="tag"><b>Propuesta</b></div>
+    <div class="ph">
+      <div class="bar"><b>Negocio</b><span class="ib"><svg><use href="#bell"/></svg></span><span class="ib"><svg><use href="#more"/></svg></span></div>
+      <div class="sub"><span>Resumen</span><span>Analítica</span><span>Finanzas</span><span class="on">Caja</span></div>
+      <div class="body">
+        <div class="row s13"><span style="flex:1"><b style="color:var(--coral)">1 Efectivo</b> <span class="mut">· 2 Gastos · 3 Propinas</span></span><span class="btn sq" style="width:44px;height:44px"><svg class="i"><use href="#more"/></svg></span></div>
+        <div class="blk c-warn row" style="border-color:transparent;min-height:48px"><b style="flex:1">Turno sin abrir</b><b>Registrar apertura</b></div>
+        <div class="row"><span class="pill on" style="flex:1;justify-content:center">Billetes</span><span class="pill" style="flex:1;justify-content:center">Monedas</span></div>
+        <div class="card">
+          <div class="dish"><b class="num" style="width:54px">Q200</b><span class="btn sq">−</span><b class="num" style="flex:1;text-align:center;font-size:18px">2</b><span class="btn sq">+</span><b class="num" style="width:70px;text-align:right">Q400.00</b></div>
+          <div class="dish"><b class="num" style="width:54px">Q100</b><span class="btn sq">−</span><b class="num" style="flex:1;text-align:center;font-size:18px">5</b><span class="btn sq">+</span><b class="num" style="width:70px;text-align:right">Q500.00</b></div>
+          <div class="dish"><b class="num" style="width:54px">Q50</b><span class="btn sq">−</span><b class="num mut" style="flex:1;text-align:center;font-size:18px">—</b><span class="btn sq">+</span><b class="num mut" style="width:70px;text-align:right">—</b></div>
+          <div class="dish"><b class="num" style="width:54px">Q20</b><span class="btn sq">−</span><b class="num mut" style="flex:1;text-align:center;font-size:18px">—</b><span class="btn sq">+</span><b class="num mut" style="width:70px;text-align:right">—</b></div>
+        </div>
+      </div>
+      <div style="flex-shrink:0;border-top:1px solid var(--line);background:var(--card);padding:10px 12px;display:grid;gap:8px">
+        <div class="row s13"><span style="flex:1" class="mut">Contado <b class="num" style="color:var(--ink)">Q900.00</b></span><span class="mut">Esperado <b class="num" style="color:var(--ink)">Q940.00</b></span><span class="chip c-warn">Faltan Q40.00</span></div>
+        <div class="btn p" style="height:56px;font-size:16px">Siguiente: gastos</div>
+      </div>
+      <div class="fold" style="top:290px"><i>primer billete a unos 290 px (230 con el turno abierto)</i></div>
+      <div class="nav"><span>Hoy</span><span>Pedidos</span><span>Menú</span><span class="plus"><svg class="i"><use href="#plus"/></svg></span><span>Clientes</span><span class="on">Negocio</span><span>Ajustes</span></div>
+    </div>
+    <div class="cap">— — Primer billete a unos 290 px (230 con el turno abierto)</div>
+  </div>
+  <ul class="notes">
+    <li><strong>Los tres pasos caben en un renglón</strong> y dicen en cuál vas.</li>
+    <li><strong>Contado, esperado y diferencia bajan al pie</strong>, pegados al botón «Siguiente»: se ven siempre mientras cuentas, en vez de tres tarjetas arriba que se pierden al desplazar.</li>
+    <li><strong>«Turno sin abrir» sale solo si falta la apertura.</strong></li>
+    <li><strong>A «⋯» van:</strong> nombre del turno (opcional), «Guardar y seguir después» y la fecha y el cajero. El conteo ya se guarda solo, así que el aviso que lo dice sobra.</li>
+    <li><strong>Sale</strong> el título «Cierre del turno» y «Billetes y monedas» con su instrucción: la pestaña ya dice Caja y los botones − y + se explican solos.</li>
+    <li>Reglas de dinero, pasos y confirmaciones quedan igual.</li>
+  </ul>
+</div>
+
+<!-- ═════════ CLIENTES ═════════ -->
+<h2>3 · Clientes</h2>
+<p class="lead">Quien entra busca a una persona (por nombre o teléfono) o quiere ver quién dejó de venir. Hoy el primer cliente aparece a unos 640 px.</p>
+<div class="pair">
+  <div class="col">
+    <div class="tag">Hoy</div>
+    <div class="ph old">
+      <div class="bar"><b>Clientes</b><span class="ib"><svg><use href="#bell"/></svg></span><span class="ib"><svg><use href="#more"/></svg></span></div>
+      <div class="sub"><span class="on">Clientes</span><span>Lealtad</span><span>Cupones</span><span>Encuestas</span></div>
+      <div class="body">
+        <div class="s13 mut">Resumen</div>
+        <div class="card"><div style="display:grid;grid-template-columns:1fr 1fr"><div style="padding:14px;border-right:1px solid var(--line)"><span class="s13 mut">Clientes registrados</span><div style="font-size:24px" class="num">86</div></div><div style="padding:14px"><span class="s13 mut">Recurrentes (2+ pedidos)</span><div style="font-size:24px" class="num">31</div></div></div><div style="padding:14px;border-top:1px solid var(--line)"><span class="s13 mut">Total histórico</span><div style="font-size:24px" class="num">Q48,210.00</div></div></div>
+        <div class="search">Buscar por nombre o teléfono</div>
+        <div class="row"><span class="pill">Sin pedir hace +30 días</span></div>
+        <div class="row"><span class="btn">Última visita ▾</span><span class="btn"><svg class="i"><use href="#dl"/></svg>Exportar</span></div>
+        <div class="card" style="padding:14px"><b>María López</b><div class="s12 mut">5555 0142</div><div class="s12 mut">12 pedidos · Q1,560.00 · último 9 nov 26</div></div>
+      </div>
+      <div class="fold" style="top:640px"><i>primer cliente a unos 640 px</i></div>
+      <div class="nav"><span>Hoy</span><span>Pedidos</span><span>Menú</span><span class="plus"><svg class="i"><use href="#plus"/></svg></span><span class="on">Clientes</span><span>Negocio</span><span>Ajustes</span></div>
+    </div>
+    <div class="cap old">— — Primer cliente a unos 640 px</div>
+  </div>
+  <div class="col">
+    <div class="tag"><b>Propuesta</b></div>
+    <div class="ph">
+      <div class="bar"><b>Clientes</b><span class="ib"><svg><use href="#bell"/></svg></span><span class="ib"><svg><use href="#more"/></svg></span></div>
+      <div class="sub"><span class="on">Clientes</span><span>Lealtad</span><span>Cupones</span><span>Encuestas</span></div>
+      <div class="body">
+        <div class="row"><span class="search"><svg class="i"><use href="#search"/></svg>Nombre o teléfono</span><span class="btn sq"><svg class="i"><use href="#filter"/></svg></span></div>
+        <div class="hs"><span class="pill on">Todos <small>86</small></span><span class="pill">Recurrentes <small>31</small></span><span class="pill warn">Sin venir +30 días <small>14</small></span></div>
+        <div class="card">
+          <div class="dish"><div class="n"><b>María López</b><span class="s12 mut">5555 0142 · hace 2 días</span></div><div style="text-align:right"><b class="num">Q1,560.00</b><div class="s12 mut">12 pedidos</div></div></div>
+          <div class="dish"><div class="n"><b>Carlos Ajú</b><span class="s12 mut">5555 0987 · hace 5 días</span></div><div style="text-align:right"><b class="num">Q940.00</b><div class="s12 mut">8 pedidos</div></div></div>
+          <div class="dish"><div class="n"><b>Andrea Morales</b><span class="s12 mut">5555 0311 · ayer</span></div><div style="text-align:right"><b class="num">Q615.50</b><div class="s12 mut">5 pedidos</div></div></div>
+          <div class="dish"><div class="n"><b>Luis Méndez</b><span class="s12" style="color:var(--warn);font-weight:600">5555 0760 · hace 41 días</span></div><div style="text-align:right"><b class="num">Q480.00</b><div class="s12 mut">4 pedidos</div></div></div>
+          <div class="dish"><div class="n"><b>Sofía Chávez</b><span class="s12 mut">5555 0258 · hace 9 días</span></div><div style="text-align:right"><b class="num">Q352.00</b><div class="s12 mut">3 pedidos</div></div></div>
+          <div class="dish"><div class="n"><b>Diego Paz</b><span class="s12 mut">5555 0633 · hace 12 días</span></div><div style="text-align:right"><b class="num">Q118.00</b><div class="s12 mut">1 pedido</div></div></div>
+        </div>
+      </div>
+      <div class="fold" style="top:230px"><i>primer cliente a unos 230 px</i></div>
+      <div class="nav"><span>Hoy</span><span>Pedidos</span><span>Menú</span><span class="plus"><svg class="i"><use href="#plus"/></svg></span><span class="on">Clientes</span><span>Negocio</span><span>Ajustes</span></div>
+    </div>
+    <div class="cap">— — Primer cliente a unos 230 px</div>
+  </div>
+  <ul class="notes">
+    <li><strong>Primero el buscador</strong>, con el botón de filtros a su lado (orden y, al pie de la lista, exportar).</li>
+    <li><strong>El resumen se vuelve la fila de filtros:</strong> «Todos 86», «Recurrentes 31» y «Sin venir +30 días 14» son a la vez la cifra y el botón que los lista.</li>
+    <li><strong>«Total histórico» sale de aquí:</strong> es un dato de ventas y vive en Negocio.</li>
+    <li><strong>Cada fila</strong> dice quién es, cuándo vino por última vez y cuánto ha gastado; en ámbar quien lleva más de 30 días sin venir. La fila entera abre al cliente.</li>
+    <li>Caben seis clientes donde hoy cabe uno.</li>
+  </ul>
+</div>
+
+<!-- ═════════ NEGOCIO Y AJUSTES ═════════ -->
+<h2>4 · Negocio y Ajustes: solo un retoque</h2>
+<p class="lead">Estas dos ya cumplen: Negocio abre casi directo en las cifras y Ajustes es una lista limpia. Propongo dos cambios pequeños y dejar lo demás como está.</p>
+<div class="pair">
+  <div class="col">
+    <div class="tag"><b>Negocio · propuesta</b></div>
+    <div class="ph" style="height:520px">
+      <div class="bar"><b>Negocio</b><span class="ib"><svg><use href="#bell"/></svg></span><span class="ib"><svg><use href="#more"/></svg></span></div>
+      <div class="sub"><span class="on">Resumen</span><span>Analítica</span><span>Finanzas</span><span>Caja</span></div>
+      <div class="body">
+        <div class="row"><span class="pill on" style="flex:1;justify-content:center">7 días</span><span class="pill" style="flex:1;justify-content:center">30 días</span></div>
+        <div class="card kpi"><div class="s13 mut">Ventas · últimos 7 días</div><div class="big num">Q8,430.00</div><div class="s13" style="color:var(--ok);font-weight:600;margin-top:4px">↑ 9 % frente a los 7 anteriores</div><div class="two"><div><span class="s12 mut">Pedidos</span><b class="num">64</b></div><div><span class="s12 mut">Ticket promedio</span><b class="num">Q131.72</b></div></div></div>
+        <div class="card"><div class="lrow"><div class="n"><b>Tu año con Leogin</b><span class="s12 mut">Lo vendido, tu plato estrella y tu mejor día</span></div><svg class="i mut"><use href="#chev"/></svg></div></div>
+      </div>
+    </div>
+    <div class="cap">— — «Tu año con Leogin» baja debajo de las cifras</div>
+  </div>
+  <div class="col">
+    <div class="tag"><b>Ajustes · propuesta</b></div>
+    <div class="ph" style="height:520px">
+      <div class="bar"><b>Ajustes</b><span class="ib"><svg><use href="#bell"/></svg></span><span class="ib"><svg><use href="#more"/></svg></span></div>
+      <div class="body">
+        <div class="search"><svg class="i"><use href="#search"/></svg>Buscar un ajuste</div>
+        <div class="s13 mut" style="font-weight:600">Tu restaurante</div>
+        <div class="card">
+          <div class="lrow"><div class="n"><b>Perfil del negocio</b></div><svg class="i mut"><use href="#chev"/></svg></div>
+          <div class="lrow"><div class="n"><b>Horarios</b></div><span class="s13 mut">Abierto ahora</span><svg class="i mut"><use href="#chev"/></svg></div>
+          <div class="lrow"><div class="n"><b>Salón</b></div><span class="s13 mut">13 mesas</span><svg class="i mut"><use href="#chev"/></svg></div>
+          <div class="lrow"><div class="n"><b>Zona de entrega</b></div><svg class="i mut"><use href="#chev"/></svg></div>
+          <div class="lrow"><div class="n"><b>Personalizar el sitio</b></div><svg class="i mut"><use href="#chev"/></svg></div>
+        </div>
+      </div>
+    </div>
+    <div class="cap">— — Sale la frase de arriba; entra un buscador</div>
+  </div>
+  <ul class="notes">
+    <li><strong>Negocio:</strong> el aviso «Tu año con Leogin» hoy va encima de las ventas; baja debajo como una fila. Las cuatro cifras se agrupan como en Hoy (ventas grande, pedidos y ticket debajo). «Visitas al menú» se queda en su gráfica de más abajo.</li>
+    <li><strong>Ajustes:</strong> sale la frase «Todo lo que se configura una vez y se olvida…» y entra un buscador, porque son más de quince destinos. Donde ayuda, cada fila dice su estado («Abierto ahora», «13 mesas»), como ya hace «La PC del local · Sin configurar».</li>
+    <li>Si prefieres no tocar estas dos, las dejo como están.</li>
+  </ul>
+</div>
+
+<h2>Lo que necesito que decidas</h2>
+<ol class="lead" style="padding-left:20px">
+  <li><strong>Cocina:</strong> ¿te parece bien que los filtros por estado (Por aceptar, En preparación, Listas) pasen a «⋯» y las comandas se ordenen solas por atraso?</li>
+  <li><strong>Caja:</strong> ¿quito el botón «Guardar y seguir después» de la vista (el conteo ya se guarda solo) y lo dejo en «⋯»?</li>
+  <li><strong>Clientes:</strong> ¿saco «Total histórico» de esta pantalla?</li>
+  <li><strong>Negocio y Ajustes:</strong> ¿hago el retoque o las dejo como están?</li>
+</ol>
+</div>
+</body>
+</html>

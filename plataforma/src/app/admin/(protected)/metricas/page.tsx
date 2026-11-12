@@ -128,15 +128,6 @@ export default async function AdminNegocioPage({
         ))}
       </nav>
 
-      {/* «Tu año con Leogin» (PLAN_MOMENTOS_PICO P8): el resumen del año
-          para compartir. Solo si hay pedidos que contar. */}
-      {ordersEnabled && (
-        <Link href="/admin/tu-ano" className="tu-ano-enlace press">
-          <span><strong>Tu año con Leogin</strong> · lo vendido, tu plato estrella y tu mejor día</span>
-          <span aria-hidden>→</span>
-        </Link>
-      )}
-
       {/* 1 · Las cifras del periodo, cada una con su comparación. */}
       <Section
         title={periodo === 'semana' ? 'Esta semana' : 'Este mes'}
@@ -155,6 +146,16 @@ export default async function AdminNegocioPage({
           <Stat label="Visitas al menú" value={String(visitas)} sub={vs(visitas, visitasAntes)} />
         </StatGroup>
       </Section>
+
+      {/* «Tu año con Leogin» (PLAN_MOMENTOS_PICO P8): el resumen del año
+          para compartir. Solo si hay pedidos que contar. Va DEBAJO de
+          las cifras: es una invitación, no lo que el dueño vino a ver. */}
+      {ordersEnabled && (
+        <Link href="/admin/tu-ano" className="tu-ano-enlace press">
+          <span><strong>Tu año con Leogin</strong> · lo vendido, tu plato estrella y tu mejor día</span>
+          <span aria-hidden>→</span>
+        </Link>
+      )}
 
       {/* 2 · Ventas por día del periodo. Solo si vende en línea: sin pedidos
              esta gráfica sería una fila de ceros presumiendo de informe. */}

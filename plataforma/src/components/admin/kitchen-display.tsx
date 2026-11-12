@@ -92,7 +92,13 @@ export default function KitchenDisplay({
   const [online, setOnline] = useState(true);
   const [vivo, setVivo] = useState(false);
   const [silencio, setSilencio] = useState(false);
-  const [sonido, setSonido] = useState('Sonido pendiente de activar');
+  const [sonido, setSonido] = useState('');
+  /* ¿Este aparato ya puede sonar? El navegador lo bloquea hasta el primer
+     toque: mientras no, se dice en una franja con su botón, no en gris. */
+  const [audioListo, setAudioListo] = useState(true);
+  useEffect(() => { setAudioListo(isAudioUnlocked()); }, []);
+  /** «⋯»: lo que se toca una vez por turno (sonido, silencio, modo, etapas). */
+  const [mas, setMas] = useState(false);
   const ajustes = useRef(loadSoundSettings());
   const muteKey = 'leogin:cocina:silencio:' + restaurantId;
 
@@ -159,7 +165,7 @@ export default function KitchenDisplay({
   const sonar = useCallback((atencion = false) => {
     const { kitchenVolume, kitchenRepeat } = ajustes.current;
     if (silencioRef.current || kitchenVolume === 0) return;
-    if (!isAudioUnlocked()) { setSonido('Sonido bloqueado. Usa Probar sonido para activarlo.'); return; }
+    if (!isAudioUnlocked()) { setAudioListo(false); return; }
     if (atencion) playWaiterSound(kitchenVolume, 1);
     else playKitchenSound(kitchenVolume, kitchenRepeat);
   }, []);
@@ -200,12 +206,18 @@ export default function KitchenDisplay({
     return () => { terminado = true; if (canal) void supabase.removeChannel(canal); stopAuth(); };
   }, [restaurantId, confirmFirst, refreshSoon, sonar]);
 
+  function alternarSilencio() {
+    setSilencio(!silencio);
+    try { localStorage.setItem(muteKey, silencio ? '0' : '1'); } catch { /* preferencia opcional */ }
+  }
+
   async function probarSonido() {
     primeAudio();
     await new Promise((resolve) => setTimeout(resolve, 150));
-    if (!isAudioUnlocked()) { setSonido('Sonido bloqueado. Los avisos visuales siguen activos.'); return; }
+    if (!isAudioUnlocked()) { setAudioListo(false); setSonido('Sonido bloqueado. Los avisos visuales siguen activos.'); return; }
     const { kitchenVolume, kitchenRepeat } = ajustes.current;
     playKitchenSound(kitchenVolume || 0.5, kitchenRepeat, { force: true });
+    setAudioListo(true);
     setSonido('Prueba de sonido reproducida.');
   }
 
@@ -250,35 +262,57 @@ export default function KitchenDisplay({
 
   return (
     <section className={styles.cocina} data-esquema={scheme} aria-label="Tablero de Cocina">
-      <header className={styles.barra}>
-        <div>
-          <h1>Cocina</h1>
-          <p className={styles.menor}><strong data-tono={online && vivo ? 'ok' : 'aviso'}>
-            {online ? vivo ? 'En línea' : 'Actualización de respaldo' : 'Sin conexión'}
-          </strong> · {abiertas.length} {abiertas.length === 1 ? 'comanda activa' : 'comandas activas'}</p>
-        </div>
+      {/* NADA SATURADO (2026-11-11, maqueta MAQUETA_NADA_SATURADO_2): una fila
+          —estaciones y «⋯»— y las comandas. El cocinero mira de reojo con las
+          manos ocupadas: la tarjeta «Cocina · En línea · N comandas», el
+          título «Pase» y tres botones de sonido eran seis bloques antes de la
+          primera comanda. El estado solo habla cuando algo va mal. */}
+      <h1 className="sr-only">Cocina</h1>
+      <header className={styles.fila}>
+        <nav className={styles.estaciones} aria-label="Pase y estaciones">
+          {porPuesto ? <>
+            <button type="button" className={styles.boton} aria-pressed={estacion === PASE}
+              onClick={() => { setSeleccion(PASE); setFiltro('todas'); }}>Pase{abiertas.length > 0 ? ` · ${abiertas.length}` : ''}</button>
+            {[...porEstacion].map(([id, nombre]) => {
+              const n = abiertas.filter((o) => lineasVivas(o, id).some((l) => !l.cocina_preparada_at)).length;
+              return (
+                <button key={id} type="button" className={styles.boton} aria-pressed={estacion === id}
+                  onClick={() => { setSeleccion(id); setFiltro('todas'); }}>
+                  {nombre}{n > 0 ? ` · ${n}` : ''}
+                </button>
+              );
+            })}
+          </> : <span className={styles.menor}>{abiertas.length} {abiertas.length === 1 ? 'comanda activa' : 'comandas activas'}</span>}
+        </nav>
+        <button type="button" className={styles.boton} data-cuadro="1" aria-expanded={mas} aria-controls="cocina-mas"
+          aria-label="Más opciones de Cocina" onClick={() => setMas(!mas)}>
+          <span aria-hidden>⋯</span>
+        </button>
+      </header>
+      {mas && <div id="cocina-mas" className={styles.mas}>
+        <nav className={styles.acciones} aria-label="Filtrar por etapa">
+          {(Object.keys(etapas) as Filtro[]).map((f) => <button key={f} type="button" className={styles.boton}
+            aria-pressed={filtro === f} onClick={() => setFiltro(f)}>{etapas[f]}</button>)}
+        </nav>
         <div className={styles.acciones}>
           <button type="button" className={styles.boton} onClick={() => void probarSonido()}>Probar sonido</button>
-          <button type="button" className={styles.boton} aria-pressed={silencio} onClick={() => {
-            setSilencio(!silencio);
-            try { localStorage.setItem(muteKey, silencio ? '0' : '1'); } catch { /* preferencia opcional */ }
-          }}>{silencio ? 'Reactivar avisos' : 'Silenciar avisos'}</button>
+          <button type="button" className={styles.boton} aria-pressed={silencio} onClick={alternarSilencio}>
+            {silencio ? 'Reactivar avisos' : 'Silenciar avisos'}</button>
           {modo && !modo.active && <button type="button" className={styles.boton} onClick={modo.toggle}>Modo servicio</button>}
         </div>
-      </header>
-      <div className={styles.franja}>
-        {porPuesto && <nav className={styles.acciones} aria-label="Pase y estaciones">
-          <button type="button" className={styles.boton} aria-pressed={estacion === PASE}
-            onClick={() => { setSeleccion(PASE); setFiltro('todas'); }}>Pase · {abiertas.length}</button>
-          {[...porEstacion].map(([id, nombre]) => (
-            <button key={id} type="button" className={styles.boton} aria-pressed={estacion === id}
-              onClick={() => { setSeleccion(id); setFiltro('todas'); }}>
-              {nombre} · {abiertas.filter((o) => lineasVivas(o, id).some((l) => !l.cocina_preparada_at)).length}
-            </button>
-          ))}
-        </nav>}
-        <span className={styles.menor} role="status">{silencio ? 'Avisos sonoros en silencio.' : sonido}</span>
-      </div>
+      </div>}
+      {online && !vivo && <div className={styles.aviso} data-tono="aviso" role="status">Actualización de respaldo: las comandas pueden tardar unos segundos más.</div>}
+      {silencio ? <div className={styles.aviso} data-tono="aviso">
+        <strong role="status">Avisos sonoros en silencio.</strong>
+        <button type="button" className={styles.boton} onClick={alternarSilencio}>Reactivar avisos</button>
+      </div> : !audioListo ? <div className={styles.aviso} data-tono="aviso">
+        <strong role="status">{sonido || 'El sonido está apagado en este aparato.'}</strong>
+        <button type="button" className={styles.boton} onClick={() => void probarSonido()}>Activar sonido</button>
+      </div> : sonido ? <p className={styles.menor} role="status">{sonido}</p> : null}
+      {filtro !== 'todas' && <div className={styles.aviso}>
+        <span>Viendo solo: <strong>{etapas[filtro]}</strong></span>
+        <button type="button" className={styles.boton} onClick={() => setFiltro('todas')}>Ver todas</button>
+      </div>}
       {!online && <div className={styles.aviso} data-tono="aviso" role="status">Última vista conservada. Reconecta para actualizar el tablero.</div>}
       {anulaciones.map(({ o, marca }) => (
         <div key={o.id} className={styles.aviso} data-tono="alerta">
@@ -295,14 +329,7 @@ export default function KitchenDisplay({
           onClick={() => { if (aviso.deshacer) void actuar(aviso.deshacer); }}>Deshacer marcado</button>}
         <button type="button" className={styles.boton} onClick={() => setAviso(null)}>Cerrar aviso</button>
       </div>}
-      <div className={styles.encabezado}>
-        <div><h2>{estacion === PASE ? porPuesto ? 'Pase' : 'Comandas' : porEstacion.get(estacion)}</h2>
-          <p className={styles.menor}>{estacion === PASE ? 'Coordina la salida de cada comanda.' : 'Prepara las líneas de tu estación.'}</p></div>
-        <nav className={styles.acciones} aria-label="Filtrar por etapa">
-          {(Object.keys(etapas) as Filtro[]).map((f) => <button key={f} type="button" className={styles.boton}
-            aria-pressed={filtro === f} onClick={() => setFiltro(f)}>{etapas[f]}</button>)}
-        </nav>
-      </div>
+      <h2 className="sr-only">{estacion === PASE ? porPuesto ? 'Pase' : 'Comandas' : porEstacion.get(estacion)}</h2>
       {visibles.length === 0 ? <p className={styles.vacio}>{confirmFirst && filtro === 'todas'
         ? 'Los pedidos aparecen aquí cuando se aceptan.' : 'No hay comandas en esta etapa.'}</p> : (
         <div className={styles.tablero}>

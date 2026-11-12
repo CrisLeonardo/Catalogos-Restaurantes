@@ -108,6 +108,8 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
 
   const [aviso, setAviso] = useState<{ text: string; bad: boolean } | null>(null);
   const [guardando, setGuardando] = useState(false);
+  /** «⋯» del turno: fecha, nombre del turno y guardar a mano. */
+  const [masTurno, setMasTurno] = useState(false);
   const [cerrado, setCerrado] = useState<CajaCloseResult | null>(null);
   const [actualizandoCierre, actualizarCierre] = useTransition();
   const [recuperar, setRecuperar] = useState(false);
@@ -239,12 +241,31 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
     );
   }
 
+  /* Sin nada que avisar, el renglón de guardado no ocupa sitio. */
+  const guardadoEnCalma = guardado.estado === 'inicial' && !guardado.mensaje && !recuperar && !state.draftUnavailable;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* NADA SATURADO (2026-11-11, maqueta MAQUETA_NADA_SATURADO_2): el cajero
+          entra a CONTAR. Arriba quedan los tres pasos y «⋯»; la fecha, el
+          nombre del turno y «Guardar y seguir después» se abren desde ahí
+          (el conteo ya se guarda solo). Ningún cálculo ni paso cambia. */}
+      <h2 className="sr-only">Cierre del turno</h2>
+      <div className="caja-fila-pasos">
+        <div className="caja-steps">
+          <PasoChip n={1} titulo="Efectivo" detalle={hayConteo ? money(contado) : 'sin contar'} on={paso === 1} hecho={paso > 1 && hayConteo} onClick={() => irA(1)} />
+          <PasoChip n={2} titulo="Gastos" detalle={state.expenses.length === 0 ? 'ninguno' : `${state.expenses.length} anotado${state.expenses.length === 1 ? '' : 's'}`} on={paso === 2} hecho={paso > 2} onClick={() => irA(2)} />
+          <PasoChip n={3} titulo="Propinas" detalle={state.tipsTotal > 0 ? `${money(state.tipsTotal)} por repartir` : 'sin propinas'} on={paso === 3} hecho={false} onClick={() => irA(3)} ultimo />
+        </div>
+        <button type="button" className="press caja-boton-suave caja-mas-boton" aria-expanded={masTurno} aria-controls="caja-mas-turno"
+          aria-label="Datos del turno y guardar" onClick={() => setMasTurno(!masTurno)}>
+          <Icon name="more" size={18} />
+        </button>
+      </div>
+
       {/* ── Contexto: qué día, qué turno, quién ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <div id="caja-mas-turno" hidden={!masTurno} style={{ display: masTurno ? 'flex' : undefined, alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <div className="t-display" style={{ fontSize: 18, lineHeight: 1.15 }}>Cierre del turno</div>
           {/* La fecha, el turno y quién lo abrió, en una línea. El turno se
               escribe AQUÍ y no en una tarjeta aparte: es parte de decir de
               qué cierre estamos hablando, no un paso más que hacer. */}
@@ -306,7 +327,7 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
         />
       )}
 
-      <div className="caja-guardado" data-estado={guardado.estado}>
+      <div className="caja-guardado" data-estado={guardado.estado} data-calma={guardadoEnCalma ? '1' : undefined}>
         <span role="status">
           {guardado.estado === 'nube' ? `Guardado en la nube · ${hora(guardado.at, timezone)}`
             : guardado.estado === 'guardando' ? 'Guardando borrador…'
@@ -320,13 +341,6 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
         {recuperar && <Button type="button" variant="outline" disabled={guardando} onClick={() => { void recuperarCierre(); }}>Recuperar cierre</Button>}
       </div>
 
-      {/* ── Los tres pasos ── */}
-      <div className="caja-steps">
-        <PasoChip n={1} titulo="Efectivo" detalle={hayConteo ? money(contado) : 'sin contar'} on={paso === 1} hecho={paso > 1 && hayConteo} onClick={() => irA(1)} />
-        <PasoChip n={2} titulo="Gastos" detalle={state.expenses.length === 0 ? 'ninguno' : `${state.expenses.length} anotado${state.expenses.length === 1 ? '' : 's'}`} on={paso === 2} hecho={paso > 2} onClick={() => irA(2)} />
-        <PasoChip n={3} titulo="Propinas" detalle={state.tipsTotal > 0 ? `${money(state.tipsTotal)} por repartir` : 'sin propinas'} on={paso === 3} hecho={false} onClick={() => irA(3)} ultimo />
-      </div>
-
       {aviso && (
         <div role="status" className={aviso.bad ? 'note note-danger' : 'caja-aviso-ok'}>
           {aviso.bad && <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} />}
@@ -337,7 +351,7 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
       {/* Arqueo ciego (177): sin lo esperado ni la diferencia mientras se
           cuenta. El servidor ni siquiera los manda; la diferencia aparece en
           el recibo al cerrar. */}
-      <div className="caja-metricas" aria-label="Resumen del cuadre">
+      <div className="caja-metricas" aria-label="Resumen del cuadre">{/* En el teléfono vive en el pie, junto a «Siguiente». */}
         <div><span>Total contado</span><strong className="t-mono" data-caja-contado>{hayConteo ? money(contado) : '—'}</strong></div>
         {state.ciego ? (
           <div><span>Conteo a ciegas</span><strong style={{ fontSize: 14 }}>Se compara al cerrar</strong></div>
@@ -406,6 +420,13 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
       </div>
           <div className="caja-foot caja-pie-conteo">
             <div className="caja-pie-total"><span>Total contado</span><strong className="t-mono">{hayConteo ? money(contado) : '—'}</strong></div>
+            {/* Lo que antes eran tres tarjetas arriba: se ve mientras se cuenta. */}
+            <div className="caja-pie-cuadre" aria-hidden>
+              {state.ciego ? <span>Conteo a ciegas · se compara al cerrar</span> : <>
+                <span>Esperado <strong className="t-mono">{money(esperadoEnCaja)}</strong></span>
+                {hayConteo && <span data-cuadra={cuadra ? '1' : '0'}>{cuadra ? 'Cuadra' : `${diferencia > 0 ? 'Sobran' : 'Faltan'} ${money(Math.abs(diferencia))}`}</span>}
+              </>}
+            </div>
             {paso < 3 ? (
               <button
                 type="button"
@@ -666,12 +687,7 @@ function PasoEfectivo({ counts, setCount, opening, setOpening, fondoFijo, confir
   const [grupo, setGrupo] = useState<'Billetes' | 'Monedas'>('Billetes');
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-        <span className="t-display" style={{ flex: 1, minWidth: 160, fontSize: 18, lineHeight: 1.15 }}>
-          Billetes y monedas
-        </span>
-        <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Ajusta con − y + o escribe la cantidad.</span>
-      </div>
+      <h3 className="sr-only">Billetes y monedas</h3>
 
       <div className="caja-grupo-selector" role="group" aria-label="Denominaciones">
         {(['Billetes', 'Monedas'] as const).map((tipo) => (
