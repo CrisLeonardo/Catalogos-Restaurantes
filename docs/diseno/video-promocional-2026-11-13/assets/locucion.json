@@ -1,0 +1,42 @@
+[
+  {
+    "inicio": 0.0,
+    "duracion": 1.896,
+    "texto": "¿Otro pedido perdido?"
+  },
+  {
+    "inicio": 3.05,
+    "duracion": 3.183,
+    "texto": "Un chat. Un papel. Un enredo."
+  },
+  {
+    "inicio": 6.55,
+    "duracion": 2.231,
+    "texto": "Conecta tu restaurante con Leoguin."
+  },
+  {
+    "inicio": 9.1,
+    "duracion": 3.63,
+    "texto": "Tu cliente pide. Sin descargar aplicaciones."
+  },
+  {
+    "inicio": 13.1,
+    "duracion": 3.629,
+    "texto": "Cocina recibe la orden. Sin copiar a mano."
+  },
+  {
+    "inicio": 17.1,
+    "duracion": 3.634,
+    "texto": "Cada cobro queda registrado. Tus ventas, en tu celular."
+  },
+  {
+    "inicio": 21.1,
+    "duracion": 2.16,
+    "texto": "Cero comisión por pedido."
+  },
+  {
+    "inicio": 24.15,
+    "duracion": 5.532,
+    "texto": "Prueba Leoguin gratis. Treinta días, sin tarjeta. Entra a distleoguin punto com."
+  }
+]

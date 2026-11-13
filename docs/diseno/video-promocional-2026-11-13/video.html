@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es"><meta charset="utf-8"><title>Leogin · Del caos al control</title>
+<style>@font-face{font-family:Geist;src:url('assets/geist.woff2')}*{box-sizing:border-box}body{margin:0;background:#17161a;display:grid;place-items:center;min-height:100vh}canvas{display:block;width:min(100vw,56.25vh);height:auto}button{position:fixed;bottom:12px;right:12px;background:#c2542f;color:#fff;border:0;padding:12px 24px;border-radius:30px;font:16px Geist;cursor:pointer}</style>
+<canvas width="1080" height="1920" aria-label="Video promocional de Leogin"></canvas><button id="play">Reproducir</button>
+<script>
+const c=document.querySelector('canvas'),g=c.getContext('2d');
+const C={bg:'#F2F1EE',ink:'#17161A',coral:'#C2542F',white:'#FFFFFF',muted:'#716C68',green:'#22714B',line:'#E1DDD7'};
+const images={};
+window.ready=Promise.all(Object.entries({photo:'assets/cocina.png',logo:'../../../plataforma/public/logo-mark.svg',burger:'../../../plataforma/public/demo/rincon502/rincon-clasica.webp',shake:'../../../plataforma/public/demo/rincon502/malteada.webp'}).map(([k,url])=>new Promise((res,rej)=>{let i=new Image;i.onload=()=>{images[k]=i;res()};i.onerror=rej;i.src=url}))).then(()=>document.fonts.load('800 100px Geist')).then(()=>render(0));
+const clamp=x=>Math.max(0,Math.min(1,x)),ease=x=>1-Math.pow(1-clamp(x),3);
+function box(x,y,w,h,r=28,fill=C.white,stroke=null){g.beginPath();g.roundRect(x,y,w,h,r);g.fillStyle=fill;g.fill();if(stroke){g.strokeStyle=stroke;g.lineWidth=2;g.stroke()}}
+function txt(s,x,y,size=44,color=C.ink,weight=600,align='left'){g.font=`${weight} ${size}px Geist`;g.fillStyle=color;g.textAlign=align;g.textBaseline='top';g.fillText(s,x,y)}
+function lines(a,x,y,size,color=C.ink,weight=800,line=1.03){a.forEach((s,i)=>txt(s,x,y+i*size*line,size,color,weight))}
+function pill(s,x,y,w,color=C.coral,bg='#F9E5DC'){box(x,y,w,56,28,bg);txt(s,x+w/2,y+14,24,color,650,'center')}
+function enter(local,delay,fn,dy=70){let p=ease((local-delay)/.48);g.save();g.globalAlpha=p;g.translate(0,(1-p)*dy);fn();g.restore()}
+function check(x,y,r=38){g.beginPath();g.arc(x,y,r,0,Math.PI*2);g.fillStyle=C.green;g.fill();g.beginPath();g.moveTo(x-r*.43,y);g.lineTo(x-r*.1,y+r*.3);g.lineTo(x+r*.46,y-r*.35);g.strokeStyle='white';g.lineWidth=6;g.lineCap='round';g.stroke()}
+function arrow(x,y,color=C.coral){g.strokeStyle=color;g.lineWidth=7;g.lineCap='round';g.beginPath();g.moveTo(x,y);g.lineTo(x+65,y);g.lineTo(x+45,y-19);g.moveTo(x+65,y);g.lineTo(x+45,y+19);g.stroke()}
+function shadow(fn){g.save();g.shadowColor='#17161A1C';g.shadowBlur=65;g.shadowOffsetY=24;fn();g.restore()}
+function footer(dark=false){txt('LEOGIN  /  TU RESTAURANTE, BAJO CONTROL',88,1655,23,dark?'#D2C8BD':C.muted,600)}
+function demo(){txt('DEMO ILUSTRADA · DATOS DE EJEMPLO',88,1570,22,C.muted,500)}
+function brand(x,y,size=90,dark=false){g.drawImage(images.logo,x,y,size,size);txt('Leogin',x+size+25,y+size*.1,size*.8,dark?C.bg:C.ink,750)}
+function phone(x,y,w,h,fn){shadow(()=>box(x,y,w,h,65,C.ink));box(x+12,y+12,w-24,h-24,54,C.white);g.save();g.beginPath();g.roundRect(x+17,y+17,w-34,h-34,50);g.clip();fn(x+30,y+70,w-60,h-110);g.restore();box(x+w/2-70,y+22,140,27,16,C.ink);box(x+w/2-65,y+h-25,130,5,3,C.ink)}
+function imgCover(im,x,y,w,h,zoom=1){const s=Math.max(w/im.width,h/im.height)*zoom;g.drawImage(im,x+(w-im.width*s)/2,y+(h-im.height*s)/2,im.width*s,im.height*s)}
+function draw(t){
+ g.globalAlpha=1;g.setTransform(1,0,0,1,0,0);g.fillStyle=C.bg;g.fillRect(0,0,1080,1920);
+ if(t<3){
+  imgCover(images.photo,0,0,1080,1920,1.12-.035*t);let grad=g.createLinearGradient(0,0,0,1150);grad.addColorStop(0,'#080605A0');grad.addColorStop(1,'#08060500');g.fillStyle=grad;g.fillRect(0,0,1080,1300);
+  pill('DUEÑOS DE RESTAURANTES',88,170,470,C.bg,C.coral);
+  // El gancho está completo desde el primer cuadro.
+  lines(['¿Otro pedido','perdido?'],88,285,112,C.bg,850,1.02);
+  g.fillStyle=C.coral;g.fillRect(92,542,485*(.65+.35*ease(t/.4)),12);
+  enter(t,.4,()=>{shadow(()=>box(100,1320,850,174,25,C.white));pill('MESA 4',130,1348,150);txt('¿Y mi pedido?',315,1356,43);txt('El cliente ya está esperando.',140,1430,29,C.muted,500)});
+  txt('La comida está lista. El pedido, ¿dónde quedó?',88,1590,33,C.bg,550);
+ }else if(t<6.5){let s=t-3;
+  txt('¿TE SUENA?',88,180,28,C.coral,700);lines(['Un chat. Un papel.','Un enredo.'],88,250,91);
+  enter(s,0,()=>{shadow(()=>box(98,600,820,240,32));pill('WHATSAPP',132,636,230,C.green,'#E1F0E7');txt('2 hamburguesas, sin cebolla',140,724,42);txt('¿Era para llevar o para la mesa?',140,782,30,C.muted,450)});
+  enter(s,.25,()=>{g.save();g.translate(125,888);g.rotate(-.035);shadow(()=>box(0,0,830,245,10,'#FFFDF7'));txt('COMANDA #128',40,34,28,C.muted);txt('Mesa 4… ¿o era la 6?',40,100,49);g.strokeStyle=C.coral;g.lineWidth=4;g.beginPath();g.moveTo(45,170);g.lineTo(720,152);g.stroke();g.restore()});
+  enter(s,.5,()=>{box(100,1230,850,180,28,C.ink);txt('¡Falta una orden en cocina!',140,1280,44,C.bg);txt('Y tú, haciendo de mensajero.',140,1343,30,'#BFB9B1',450)});footer();
+ }else if(t<9){let s=t-6.5;g.fillStyle=C.coral;g.fillRect(0,0,1080,1920);
+  enter(s,0,()=>lines(['Que avance','el pedido.'],88,270,119,C.bg));enter(s,.24,()=>lines(['No el caos.'],88,562,112,'#241713'));
+  ['CLIENTE','COCINA','CAJA'].forEach((a,i)=>enter(s,.2+i*.15,()=>{box(90+i*310,1000,270,180,34,C.bg);txt(String(i+1).padStart(2,'0'),122+i*310,1027,36,C.coral);txt(a,122+i*310,1100,27,C.ink,750);if(i<2)arrow(370+i*310,1090,C.bg)}));
+  enter(s,.7,()=>brand(320,1390,95,true));
+ }else if(t<13){let s=t-9;
+  txt('01 / DEL MENÚ AL PEDIDO',88,170,27,C.coral,700);lines(['Tu cliente pide.','Sin descargar apps.'],88,246,83);
+  enter(s,0,()=>phone(275,510,530,995,(x,y,w)=>{txt('Rincón 502',x+18,y+12,42);txt('Tu mesa. Tu antojo.',x+18,y+70,25,C.muted,450);pill('Hamburguesas',x+18,y+130,260);g.drawImage(images.burger,x+20,y+205,w-40,300);txt('Rincón Clásica',x+18,y+530,35);txt('2 × Q48.00',x+18,y+584,28,C.muted);g.drawImage(images.shake,x+18,y+642,100,100);txt('Malteada',x+140,y+650,30);txt('1 × Q36.00',x+140,y+696,25,C.muted);box(x+8,y+800,w-16,83,22,C.coral);txt(s>2.8?'Pedido enviado ✓':'Enviar pedido · Q132.00',x+w/2,y+826,28,C.white,700,'center');
+  if(s>2.1&&s<3){let p=clamp((s-2.1)/.9);g.beginPath();g.arc(x+w*.73,y+842,35+55*p,0,2*Math.PI);g.strokeStyle=`rgba(194,84,47,${1-p})`;g.lineWidth=5;g.stroke()}}));demo();footer();
+ }else if(t<17){let s=t-13;
+  txt('02 / DIRECTO A COCINA',88,170,27,C.coral,700);lines(['Cocina lo recibe.','Todo queda claro.'],88,246,86);
+  enter(s,0,()=>{shadow(()=>box(90,572,900,740,38));box(90,572,900,130,38,C.ink);txt('PEDIDO #128',135,614,36,C.bg);txt('Mesa 4',940,614,36,C.bg,650,'right');pill(s<1.5?'RECIBIDO':s<2.8?'EN PREPARACIÓN':'LISTO PARA SERVIR',135,750,390,s<2.8?C.coral:C.green,s<2.8?'#F9E5DC':'#E1F0E7');txt('2 × Rincón Clásica',135,880,48);txt('Sin cebolla',135,950,34,C.coral,550);g.strokeStyle=C.line;g.lineWidth=2;g.beginPath();g.moveTo(135,1025);g.lineTo(940,1025);g.stroke();txt('1 × Malteada',135,1070,48);txt('Mesa 4 · Comer en el local',135,1195,30,C.muted,450)});
+  enter(s,1.6,()=>{check(145,1430,34);txt('La misma orden. Sin copiar a mano.',205,1409,35,C.ink,600)});demo();footer();
+ }else if(t<21){let s=t-17;
+  txt('03 / DEL COBRO A TUS NÚMEROS',88,170,27,C.coral,700);lines(['Cada cobro,','registrado.'],88,246,102);
+  enter(s,0,()=>{shadow(()=>box(90,580,900,390,38));txt('Pedido #128 · Mesa 4',135,628,36,C.muted,500);txt('Q132.00',135,715,109,C.ink,750);check(880,787,48);pill('COBRADO',135,867,250,C.green,'#E1F0E7')});
+  enter(s,.65,()=>{box(90,1030,900,385,38,C.ink);txt('Ventas de hoy',135,1080,35,'#C7C1B9',500);txt('Q1,240.00',135,1155,103,C.bg,750);txt('Tus ventas, desde el celular.',135,1310,35,C.bg,500)});demo();footer();
+ }else if(t<24){let s=t-21;g.fillStyle=C.ink;g.fillRect(0,0,1080,1920);
+  txt('LO QUE VENDES ES TUYO',88,180,28,'#E9A080',700);
+  g.save();let z=1+.1*(1-ease(s/.5));g.translate(540,790);g.scale(z,z);txt('0%',0,-285,390,C.bg,850,'center');g.restore();
+  lines(['De comisión','por pedido.'],88,1045,95,C.bg);txt('Una mensualidad fija según tu plan.',88,1310,38,'#C7C1B9',450);footer(true);
+ }else{let s=t-24;
+  brand(88,190,105);lines(['Menos vueltas.','Más control.'],88,410,108);
+  enter(s,0,()=>{txt('30',88,764,240,C.coral,850);txt('DÍAS',425,831,68,C.ink,750);txt('Sin tarjeta.',425,918,42,C.muted,500)});
+  enter(s,.2,()=>{box(88,1138,904,142,32,C.coral);txt('Prueba Leogin gratis',540,1182,54,C.white,750,'center');arrow(870,1210,C.white)});
+  txt('distleogin.com',540,1348,55,C.ink,700,'center');
+  txt('Planes con pedidos · 30 días de prueba.',88,1480,29,C.muted,450);txt('Después aplica la tarifa del plan que elijas.',88,1524,29,C.muted,450);
+  if(s>1.5){let p=(s-1.5)%1.8;g.save();g.globalAlpha=.65*(1-p/1.8);g.lineWidth=4;g.strokeStyle=C.coral;g.beginPath();g.roundRect(88-p*8,1138-p*8,904+p*16,142+p*16,32);g.stroke();g.restore()}footer();
+ }
+}
+window.render=t=>draw(Math.max(0,Math.min(29.999,t)));
+let playing=false,audios=[];document.querySelector('#play').onclick=async()=>{await ready;if(playing)return;playing=true;document.querySelector('#play').hidden=true;let audio=new Audio('videos/banda-sonora.wav');audio.play().catch(()=>{});let start=performance.now();function step(now){let t=(now-start)/1000;render(t);if(t<30)requestAnimationFrame(step);else{playing=false;document.querySelector('#play').hidden=false}}requestAnimationFrame(step)};
+</script></html>

@@ -14,6 +14,8 @@
 
 Documentos técnicos que viven pegados al código: [`../plataforma/docs/`](../plataforma/docs/) (offline, FEL, Google Auth, pagos, Leogin Desktop, estrategia instalable).
 
+Video promocional vertical de Leogin (30 segundos), archivo MP4 y fuente editable: [`Del caos al control · 2026-11-13`](diseno/video-promocional-2026-11-13/README.md).
+
 ## Convenciones de nombre
 
 - `PLAN_<TEMA>_<AAAA-MM-DD>.md` — planes. La fecha es la de creación.

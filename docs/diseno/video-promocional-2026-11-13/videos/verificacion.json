@@ -1,0 +1,17 @@
+{
+  "archivo": "Leogin-Promocional-30s-1080x1920.mp4",
+  "bytes": 3233888,
+  "resolucion": [
+    1080,
+    1920
+  ],
+  "fps": 30.0,
+  "duracion_segundos": 30.0,
+  "cuadros_decodificados": 900,
+  "codec_video": "h264",
+  "audio_estereo": true,
+  "sonoridad_LUFS": -15.96,
+  "pico_real_dBTP": -1.48,
+  "decodificacion_completa": "correcta",
+  "revision_visual": "11 encuadres del montaje y 3 cuadros del MP4 exportado"
+}
