@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leogin · El chat te come el día · Prueba creativa</title>
+<style>
+@font-face{font-family:Geist;src:url('../../../plataforma/node_modules/next/dist/next-devtools/server/font/geist-latin.woff2') format('woff2');font-weight:100 900;font-display:block}
+*{box-sizing:border-box}body{margin:0;background:#0c0b0a;color:#f5f3ef;font:15px Geist,Arial,sans-serif;display:grid;justify-items:center;gap:16px;padding:24px}header{width:min(100%,480px)}h1{font-size:20px;margin:0 0 8px}p{margin:0;line-height:1.5;color:#c6c1ba}canvas{display:block;width:auto;height:min(72vh,850px);max-width:100%;aspect-ratio:9/16;border-radius:12px}nav{display:flex;align-items:center;gap:12px;flex-wrap:wrap;max-width:480px}button,select{font:inherit;background:#f2f1ee;color:#17161a;border:0;padding:12px 16px;border-radius:10px;min-height:44px;cursor:pointer}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #f5a030;outline-offset:4px}input{width:210px}label{display:flex;align-items:center;gap:8px}label input{width:20px;height:20px}.render{padding:0;display:block}.render header,.render nav,.render footer{display:none}.render canvas{width:1080px;height:1920px;max-width:none;border-radius:0}
+</style>
+<header><h1>El chat te come el día</h1><p>Prueba de anuncio para quienes venden comida por WhatsApp o Instagram. 24 segundos. El menú es la demo real; las conversaciones y el pedido son ilustrativos.</p></header>
+<canvas id="video" width="1080" height="1920" aria-label="Video promocional de Leogin: convierte las preguntas del chat en un menú con enlace y pedidos en orden"></canvas>
+<nav><button id="play">Reproducir</button><input id="scrub" aria-label="Segundo del video" type="range" min="0" max="23.96" step="0.01" value="0"><output id="clock">0.0 / 24 s</output><select id="variant" aria-label="Gancho"><option value="a">A · El chat te come el día</option><option value="b">B · Otra vez el menú</option></select><label><input id="safe" type="checkbox">Zona segura</label></nav>
+<footer><p>Propuesta para revisar. Sin publicación ni inversión en anuncios. Para el MP4, usa render.mjs. El reproductor es silencioso; el exportador añade sonido original.</p></footer>
+<script>
+const canvas=document.querySelector('canvas'), ctx=canvas.getContext('2d');
+const C={night:'#0C0B0A',card:'#1A1917',paper:'#F2F1EE',ink:'#17161A',coral:'#C2542F',cream:'#F5F3EF',muted:'#BDB7AF',line:'#393630',green:'#2F9E6B'};
+const menu=new Image(),logo=new Image(),producto=new Image();
+menu.src='menu-demo.png';logo.src='../../../plataforma/public/logo-mark.svg';producto.src='producto-demo.png';
+let variant='a',safe=false,playing=false,position=0,started=0,raf=0;
+const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+const ease=t=>1-Math.pow(1-clamp(t),3);
+function box(x,y,w,h,r=24,fill=C.card,stroke=null){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke();}}
+function text(s,x,y,size=48,weight=600,color=C.cream){ctx.font=`${weight} ${size}px Geist,Arial,sans-serif`;ctx.fillStyle=color;ctx.fillText(s,x,y);}
+function lines(a,x,y,size=88,color=C.cream,leading=1.05){a.forEach((s,i)=>text(s,x,y+i*size*leading,size,780,color));}
+function brand(dark=false){ctx.drawImage(logo,180,232,54,54);text('leogin',250,274,40,700,dark?C.ink:C.cream);}
+function enter(t,start,fn,offset=50){const e=ease((t-start)/.45);ctx.save();ctx.globalAlpha=e;ctx.translate(0,(1-e)*offset);fn();ctx.restore();}
+function chat(s,x,y,w,angle,tag,t,start){const e=ease((t-start)/.28);ctx.save();ctx.globalAlpha=e;ctx.translate(x+(1-e)*120,y);ctx.rotate(angle);box(0,0,w,112,22,C.paper);text(s,28,69,36,600,C.ink);if(tag){box(w-50,-24,66,52,26,C.coral);text('1',w-26,13,30,800);}ctx.restore();}
+function bg(light=false){ctx.fillStyle=light?C.paper:C.night;ctx.fillRect(0,0,1080,1920);ctx.save();ctx.globalAlpha=.05;ctx.strokeStyle=light?C.ink:C.cream;ctx.lineWidth=1;for(let x=0;x<1080;x+=72){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,1920);ctx.stroke();}for(let y=0;y<1920;y+=72){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(1080,y);ctx.stroke();}ctx.restore();}
+function small(s,y=1390,color=C.muted){text(s,180,y,29,500,color);}
+function phone(t){const e=ease((t-6)/.6);ctx.save();ctx.translate(540,950+(1-e)*160);ctx.rotate((1-e)*.08);box(-230,-465,460,895,48,C.ink);ctx.save();ctx.beginPath();ctx.roundRect(-216,-450,432,864,35);ctx.clip();ctx.drawImage(menu,0,0,menu.width,menu.height,-216,-450,432,934);if(t>8.7){ctx.globalAlpha=ease((t-8.7)/.22);ctx.drawImage(producto,-216,-450,432,864);}ctx.restore();box(-65,-447,130,20,10,C.ink);if(t>8.2&&t<8.7){ctx.save();ctx.globalAlpha=1-clamp((t-8.2)/.5);ctx.strokeStyle=C.coral;ctx.lineWidth=6;ctx.beginPath();ctx.arc(105,-155,25+(t-8.2)*100,0,Math.PI*2);ctx.stroke();ctx.restore();}ctx.restore();}
+function receipt(t){const e=ease((t-11)/.5);ctx.save();ctx.translate(180,620+(1-e)*100);ctx.globalAlpha=e;box(0,0,720,650,26,C.paper);text('PEDIDO DE EJEMPLO',40,70,27,750,C.coral);text('Para llevar · #042',40,140,43,700,C.ink);ctx.strokeStyle='#D2CEC6';ctx.setLineDash([8,9]);ctx.beginPath();ctx.moveTo(40,185);ctx.lineTo(680,185);ctx.stroke();ctx.setLineDash([]);text('2 × Doble Bacon',40,263,36,650,C.ink);text('Q136',560,263,36,650,C.ink);text('1 × Papas con Queso',40,330,33,650,C.ink);text('Q35',578,330,36,650,C.ink);text('Sin cebolla en las hamburguesas',40,403,29,500,'#625D57');ctx.strokeStyle='#D2CEC6';ctx.beginPath();ctx.moveTo(40,450);ctx.lineTo(680,450);ctx.stroke();text('Total',40,535,42,600,C.ink);text('Q171',515,535,54,780,C.ink);box(40,572,640,43,12,'#DFEADF');text('Productos + cantidades + indicaciones',59,602,25,650,'#23583C');ctx.restore();}
+function draw(t){position=clamp(t,0,23.999);ctx.clearRect(0,0,1080,1920);const s=t<3?0:t<6?1:t<11?2:t<16?3:t<19.5?4:5;bg(s===1);brand(s===1);
+ if(s===0){text('SI VENDES COMIDA POR CHAT',180,370,29,700,C.muted);lines(variant==='b'?['¿Otra vez','enviando','el menú?']:['El chat te','come el día.'],180,510,88);const base=variant==='b'?810:735;chat('¿Me pasas el menú?',205,base,615,-.055,true,t,-.3);chat('¿Cuánto cuesta?',180,base+158,530,.045,true,t,.4);chat('¿Y qué incluye?',255,base+312,550,-.025,true,t,1);enter(t,1.9,()=>{text('Tu tiempo también vale.',180,1305,42,650);});small('Situación ilustrativa · mensajes de ejemplo');}
+ if(s===1){lines(['Pasa del chat','al pedido.'],180,500,88,C.ink);enter(t,3.1,()=>{box(180,760,720,152,28,C.coral);text('Tu menú en un enlace',225,853,49,700);});enter(t,3.6,()=>{text('Compartes.',180,1050,65,750,C.ink);text('Eligen.',180,1140,65,750,C.ink);text('Te llega el pedido.',180,1230,65,750,C.ink);});small('Así funciona Leogin.',1390,'#625D57');}
+ if(s===2){lines(t<8.7?['Comparte','tu menú.']:['Ellos','eligen.'],180,395,77);phone(t);small('Menú real · demo de Rincón 502');}
+ if(s===3){lines(['Recibe el pedido.','Todo junto.'],180,440,72);receipt(t);enter(t,11.7,()=>text('Menos preguntas. Más claridad.',180,1345,39,650));}
+ if(s===4){enter(t,16,()=>{lines(['Tu comida.','Tu marca.'],180,490,100);});const scale=1+.025*Math.sin((t-16)*2);ctx.save();ctx.translate(540,940);ctx.scale(scale,scale);text('0 %',-350,90,244,800,C.cream);ctx.restore();text('de comisión por pedido',180,1165,49,650);small('Los planes con pedidos tienen mensualidad.');}
+ if(s===5){lines(['Tu menú','en un enlace.','Tus pedidos,','en orden.'],180,470,84);enter(t,19.65,()=>{box(180,975,720,135,28,C.coral);text('Prueba la demo',225,1062,59,750);text('↗',792,1060,60,650);});text('distleogin.com',180,1225,54,700);small('Tu restaurante, bajo control.',1360);}
+ // Decoración fuera del área donde las redes colocan botones y subtítulos.
+ ctx.save();ctx.globalAlpha=.07;text('LEOGIN',160,1790,170,850,s===1?C.ink:C.cream);ctx.restore();
+ ctx.fillStyle=C.coral;ctx.fillRect(180,1450,720*clamp(t/24),5);
+ if(safe){ctx.save();ctx.fillStyle='#ff000022';ctx.fillRect(0,0,1080,220);ctx.fillRect(0,1420,1080,500);ctx.fillRect(0,220,180,1200);ctx.fillRect(900,220,180,1200);ctx.strokeStyle='#2F9E6B';ctx.lineWidth=3;ctx.strokeRect(180,220,720,1200);ctx.restore();}
+ document.querySelector('#scrub').value=t;document.querySelector('#clock').textContent=`${t.toFixed(1)} / 24 s`;
+}
+function tick(now){if(!playing)return;const t=(now-started)/1000;draw(Math.min(t,23.999));if(t>=24){playing=false;document.querySelector('#play').textContent='Repetir';return;}raf=requestAnimationFrame(tick);}
+document.querySelector('#play').onclick=()=>{playing=!playing;if(playing){if(position>23.9)position=0;started=performance.now()-position*1000;raf=requestAnimationFrame(tick);}else cancelAnimationFrame(raf);document.querySelector('#play').textContent=playing?'Pausar':'Reproducir';};
+document.querySelector('#scrub').oninput=e=>{playing=false;cancelAnimationFrame(raf);document.querySelector('#play').textContent='Reproducir';draw(+e.target.value);};
+document.querySelector('#variant').onchange=e=>{variant=e.target.value;draw(position);};document.querySelector('#safe').onchange=e=>{safe=e.target.checked;draw(position);};
+if(new URLSearchParams(location.search).has('render'))document.body.classList.add('render');
+window.ready=Promise.all([document.fonts.load('780 88px Geist'),menu.decode(),logo.decode(),producto.decode()]).then(()=>draw(0));
+window.seek=(t,v='a')=>{variant=v;draw(t);};window.duration=24;
+</script>
+</html>

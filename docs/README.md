@@ -16,6 +16,8 @@ Documentos técnicos que viven pegados al código: [`../plataforma/docs/`](../pl
 
 ## Convenciones de nombre
 
+Marketing: [estrategia y públicos de Leogin (2026-11-12)](negocio/ESTRATEGIA_MARKETING_2026-11-12.md) y [prueba de video promocional con dos ganchos](diseno/promocion-2026-11-12/README.md).
+
 - `PLAN_<TEMA>_<AAAA-MM-DD>.md` — planes. La fecha es la de creación.
 - `AUDITORIA_<TEMA>_<AAAA-MM-DD>.md` — auditorías.
 - `GUIA_<TEMA>.md` — guías; sin fecha porque se mantienen al día.
