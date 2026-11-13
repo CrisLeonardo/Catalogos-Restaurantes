@@ -5,6 +5,7 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
 ## Sin publicar
+- **Video promocional de Leogin.** Proyecto Remotion independiente en `promo-video/` para exportar el anuncio «¿Cobraste la limonada?» en vertical y horizontal, a 60 fps, con locución en español y registro por QR.
 - **Nada saturado, segunda parte** (rama `feat/nada-saturado-2`; maqueta aprobada `docs/diseno/MAQUETA_NADA_SATURADO_2_2026-11-11.html`):
   - Cocina: una fila con las estaciones y «⋯» (probar sonido, silenciar, modo servicio y filtro por etapa). Salen la tarjeta de estado y el título «Pase»; el sonido solo avisa cuando está apagado o en silencio, con su botón.
   - Caja › Cierre del turno: los tres pasos y «⋯» (fecha, nombre del turno, «Guardar y seguir después»); en el teléfono el cuadre (esperado y diferencia) va en el pie junto a «Siguiente». Ningún cálculo ni paso cambia.
