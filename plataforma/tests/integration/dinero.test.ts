@@ -39,7 +39,7 @@ vi.mock('@/lib/whatsapp/notify', () => ({ notifyOrderStatus: vi.fn() }));
 import {
   cobrarParteDeMesa, cobradoDeMesa, ejecutarAbonoMesa, guardarPartesMesa, leerContextoCobroMesa, transicionDeMesa,
 } from '@/lib/actions/servicio';
-import { freeTable, moveTableOrders } from '@/lib/actions/orders';
+import { freeTable, moveTableOrders, updateOrderStatus } from '@/lib/actions/orders';
 import { sentarDesdeRecepcion } from '@/lib/actions/table-sessions';
 import { transicionCocina } from '@/lib/actions/cocina';
 import { leerHistorialPedido } from '@/lib/actions/pedidos-en-vivo';
@@ -120,6 +120,35 @@ describe('1.6 · Pedidos en vivo', () => {
     return db.rpc('leogin_operar_pedido', { p_restaurante: rid(), p_pedido: o.id, p_actor: currentActor(),
       p_intento: randomUUID(), p_estado: o.status, p_version: o.updated_at, p_destino: destino, ...extras });
   }
+
+  it('181 · un pedido recién creado por place_order nace con versión y se envía a cocina', async () => {
+    // Sin la 181 nacía con updated_at NULL y el panel respondía
+    // «Operación de pedido inválida.» al primer «Enviar a cocina».
+    const creado = await sql.query(
+      `select public.place_order(p_restaurant_id => $1, p_customer_name => 'AUD 181', p_customer_phone => '00000000',
+         p_order_type => 'PICKUP', p_address => null, p_delivery_zone => null, p_delivery_lat => null, p_delivery_lng => null,
+         p_customer_id => null, p_subtotal => 10, p_delivery_fee => 0, p_total => 10, p_notes => null,
+         p_items => $2::jsonb, p_payment_method => 'CASH', p_cash_amount => null, p_tip => 0, p_waiter_id => null, p_client_id => null) as res`,
+      [rid(), JSON.stringify([{ product_id: null, name_snapshot: 'AUD Platillo', price_snapshot: 10, quantity: 1, subtotal: 10 }])]);
+    const id = (creado.rows[0].res as { id?: string }).id
+      ?? checked(await db.from('orders').select('id').eq('restaurant_id', rid()).single())!.id;
+    const o = checked(await db.from('orders').select('id,status,created_at,updated_at').eq('id', id).single())!;
+    expect(o.status).toBe('NEW');
+    expect(o.updated_at).not.toBeNull();
+    success(await updateOrderStatus(o.id, 'PREP', { id: randomUUID(), estado: 'NEW', version: o.updated_at }));
+    expect(checked(await db.from('orders').select('status').eq('id', o.id).single())?.status).toBe('PREP');
+  });
+
+  it('181 · la base no admite un pedido sin versión', async () => {
+    const o = await order([10]);
+    const { error } = await db.from('orders').update({ updated_at: null }).eq('id', o.id);
+    expect(error).toBeNull(); // el disparador BEFORE UPDATE pone la hora, no queda nula
+    const insertado = await db.from('orders').insert({
+      restaurant_id: rid(), order_number: `AUD-${randomUUID()}`, customer_name: 'AUD 181', customer_phone: '00000000',
+      order_type: 'PICKUP', status: 'NEW', subtotal: 0, total: 0, updated_at: null,
+    });
+    expect(insertado.error?.code).toBe('23502');
+  });
 
   it('recupera la respuesta del mismo intento y muestra el estado vigente al otro operador', async () => {
     const o = await pedidoNuevo();
