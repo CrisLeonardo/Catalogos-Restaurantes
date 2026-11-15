@@ -43,9 +43,9 @@ npm run verificar # fotogramas 0, 1, 3, 10, 20 s y final + ffprobe
 - **Música y efectos**: `scripts/musica.mjs` los sintetiza con código (marimba en Sol mayor, «ding», sello). No hay material de terceros. Para usar otra pista, ponla en `public/audio/` y cambia la prop `musica` en `src/datos.ts`.
 - **Marca**: paleta Brasa, Mango, Carbón y Masa, tipografías Unbounded y Geist, logo y Leo, tomados del propio proyecto (`src/marca.ts`).
 
-## Rodeo que usa la grabación (y que hay que arreglar en la app)
+## Rodeo que usa la grabación (ya corregido en la app)
 
-Un pedido recién creado nace con `orders.updated_at` vacío. El panel usa ese campo como versión al «Enviar a cocina», así que responde **«Operación de pedido inválida.»**. Para poder grabar, `grabar.mjs` le pone la hora de creación **solo en la base local**. Mientras no se corrija en la app, el flujo real no funciona como se ve en el video.
+Antes de la migración 181 (PR #118), un pedido recién creado nacía con `orders.updated_at` vacío. El panel usa ese campo como versión al «Enviar a cocina», así que respondía **«Operación de pedido inválida.»**. `grabar.mjs` todavía le pone la hora de creación **solo en la base local**, para poder grabar contra una base que aún no tenga la 181. Con la 181 aplicada, ese paso no cambia nada.
 
 ## Licencia de Remotion
 

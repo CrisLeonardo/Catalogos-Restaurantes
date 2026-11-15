@@ -68,5 +68,5 @@ Reglas que se cumplieron:
 
 ## Antes de publicarlo
 
-- **Arreglar «Enviar a cocina» en la app.** Hoy, en la base local, todo pedido recién creado responde «Operación de pedido inválida.» al mandarlo a cocina desde «Pedidos en vivo», porque `orders.updated_at` nace vacío. El video lo muestra funcionando gracias a un rodeo que solo se aplicó en la grabación. Ver [`promo-video/README.md`](../../promo-video/README.md).
+- **Correr la migración 181 en producción y desplegar.** Sin ella, todo pedido recién creado responde «Operación de pedido inválida.» al mandarlo a cocina desde «Pedidos en vivo», porque `orders.updated_at` nace vacío. El arreglo está en el PR #118 (fusionado el 2026-11-15). Ver [`promo-video/README.md`](../../promo-video/README.md).
 - Decidir si el CTA queda en distleogin.com o pasa a un número de WhatsApp. Se cambia en `promo-video/src/datos.ts`.
