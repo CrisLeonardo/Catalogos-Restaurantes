@@ -1,0 +1,11 @@
+node_modules
+dist
+.DS_Store
+.env
+
+# Videos exportados, tomas WebM y fotogramas de revisión
+out
+
+# Se generan: npm run grabar (capturas de la app local) y npm run musica
+public/capturas
+public/audio
