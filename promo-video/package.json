@@ -24,6 +24,7 @@
     "pg": "^8.23.1",
     "playwright": "1.64.0",
     "prettier": "3.8.1",
+    "qrcode": "^1.5.4",
     "typescript": "5.9.3"
   },
   "scripts": {
@@ -33,7 +34,10 @@
     "musica": "node scripts/musica.mjs",
     "render": "node scripts/render.mjs",
     "verificar": "node scripts/verificar.mjs",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "otra-vez:grabar": "node scripts/otra-vez/grabar.mjs",
+    "otra-vez:sonido": "node scripts/otra-vez/sonido.mjs",
+    "otra-vez:render": "node scripts/otra-vez/render.mjs"
   },
   "allowScripts": {
     "esbuild": false
