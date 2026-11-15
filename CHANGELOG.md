@@ -6,6 +6,11 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+## v0.21.0 · 2026-11-15 · Video promocional y pedido que llega a cocina
+PR #118 (merge `a6ca706`) y PR #117 (merge `0a1dbb5`) · migración 181. La 181 no depende del despliegue: corrige producción en cuanto se corre (fuera de la hora pico, porque bloquea `orders` un momento). Ningún cambio de la app pide desplegar.
+- **«Enviar a cocina» ya funciona con un pedido recién hecho** (migración 181): desde v0.18.0, todo pedido nuevo respondía «Operación de pedido inválida.» al mandarlo a cocina u operarlo desde Pedidos en vivo, porque nacía sin versión (`orders.updated_at` vacío). Ahora la versión nace con el pedido, los pedidos que ya existían la toman de su hora de creación y la columna no puede volver a quedar vacía.
+- **Video promocional «Bajo control»** (`promo-video/`, aparte de la app): anuncio vertical de 40 s para TikTok y Reels, dirigido a la cafetería o restaurante pequeño que empieza. Las pantallas son de la app real, con datos ficticios de Rincón 502. Lo graba Playwright y lo monta Remotion. Trae tres ganchos para pruebas A/B y música hecha con código, sin derechos de terceros. Se reproduce con `npm run seed`, `grabar`, `render` y `verificar`. Guion: [`docs/negocio/GUION_VIDEO_PROMO_2026-11-14.md`](docs/negocio/GUION_VIDEO_PROMO_2026-11-14.md).
+
 ## v0.20.0 · 2026-11-11 · Nada saturado, segunda parte
 PR #112 (merge `551a3f2`) · sin migraciones · en producción desde la noche del 2026-11-11 (`prod-2026-11-12`; `prod-2026-11-11` marca el despliegue anterior del mismo día).
 - **Nada saturado, segunda parte** (rama `feat/nada-saturado-2`; maqueta aprobada `docs/diseno/MAQUETA_NADA_SATURADO_2_2026-11-11.html`):
