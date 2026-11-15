@@ -49,7 +49,7 @@ Proveedores y FEL no se ofrecen a nadie todavía, sueltos ni en Pro — se react
 - **"Plan a tu medida"** (solo Premium y Pro): Q50 de descuento por cada canal de pedido que el restaurante **no** usa, hasta un máximo de **2 canales** desactivados — siempre se paga al menos 1 canal completo. Premium con 2 canales apagados queda en **Q249**.
 - **Grupos / franquicias** (a partir de la 2ª sucursal, sobre el precio del plan de cada una, no sobre módulos): 2–4 sucursales **−10%** · 5–9 sucursales **−15%** · 10+ sucursales **−20%**. La sucursal fundadora siempre paga el precio completo.
 - **Panel central de grupo**: Q299 /mes (métricas consolidadas de todas las sucursales).
-- **Prueba gratis**: 30 días en el registro self-serve.
+- **Prueba gratis**: **quitada el 2026-11-15** (migración 182, `trial_days = 0`). Los planes con pedidos se cobran desde el día uno; el gancho gratis es el plan Básico. Los restaurantes que ya estaban en prueba la terminan normal. Se puede reactivar en /super/configuracion.
 
 ## Dónde queda Leogin en el mercado guatemalteco
 

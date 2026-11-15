@@ -93,7 +93,7 @@ export default function MiCuentaClient({
               </span>
               <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)', marginTop: 1 }}>
                 {esElPrimero
-                  ? `Elige tu plan y su nombre · ${pricing.trialDays} días gratis`
+                  ? `Elige tu plan y su nombre${pricing.trialDays > 0 ? ` · ${pricing.trialDays} días gratis` : ''}`
                   : 'Su plan se suma a tu mensualidad actual'}
               </span>
             </span>

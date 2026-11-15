@@ -234,7 +234,7 @@ async function leerPricingSettings(): Promise<PricingSettings> {
     graceDays:          n('billing_grace_days',  10),
     autoSuspend:        b('billing_auto_suspend', true),
     autoGenerate:       b('billing_auto_generate', true),
-    trialDays:          n('trial_days',            30),
+    trialDays:          n('trial_days',            0),
   };
 }
 
