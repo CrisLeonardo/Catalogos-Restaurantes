@@ -1,6 +1,7 @@
-// Exporta «Una sola toma» en sus dos formatos (MP4 H.264, 30 fps).
-//   npm run render:una-toma          → vertical y horizontal
-//   npm run render:una-toma -- V     → solo vertical (o H)
+// Exporta la serie «Una sola toma» (MP4 H.264, 30 fps).
+//   npm run render:una-toma                     → los 3 videos, vertical y horizontal
+//   npm run render:una-toma -- comedor          → solo ese video (los dos formatos)
+//   npm run render:una-toma -- comedor V        → solo ese video en vertical (o H)
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -9,16 +10,19 @@ import { fileURLToPath } from 'node:url';
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 const opciones = { cwd: RAIZ, shell: process.platform === 'win32' };
-if (!existsSync(join(RAIZ, 'public', 'una-toma', 'banda.wav'))) {
-  execFileSync(process.execPath, [join(RAIZ, 'scripts', 'banda-una-toma.mjs')], { stdio: 'inherit' });
-}
-mkdirSync(join(RAIZ, 'out', 'una-toma'), { recursive: true });
+const VIDEOS = ['meseros', 'comedor', 'domicilio'];
+const [soloVideo, soloFormato] = process.argv.slice(2);
 const licencia = process.env.REMOTION_LICENSE_KEY ? [`--license-key=${process.env.REMOTION_LICENSE_KEY}`] : [];
-const pedido = process.argv[2];
-const TODOS = [['V', 'UnaToma-Vertical', 'leogin-una-toma-vertical.mp4'], ['H', 'UnaToma-Horizontal', 'leogin-una-toma-horizontal.mp4']];
-for (const [letra, id, archivo] of TODOS.filter(([l]) => !pedido || l === pedido)) {
-  const salida = `out/una-toma/${archivo}`;
-  execFileSync(npx, ['remotion', 'render', id, salida, '--codec=h264', '--crf=17', ...licencia], { ...opciones, stdio: 'inherit' });
-  const info = execFileSync(npx, ['remotion', 'ffprobe', '-v', 'error', '-show_entries', 'stream=codec_type,width,height,r_frame_rate:format=duration', '-of', 'default=nw=1', salida], { ...opciones, encoding: 'utf8' });
-  console.log(`\n${letra} · ${archivo}\n${info}`);
+mkdirSync(join(RAIZ, 'out', 'una-toma'), { recursive: true });
+
+for (const video of VIDEOS.filter((v) => !soloVideo || v === soloVideo)) {
+  if (!existsSync(join(RAIZ, 'public', 'una-toma', `banda-${video}.wav`))) {
+    execFileSync(process.execPath, [join(RAIZ, 'scripts', 'banda-una-toma.mjs'), video], { stdio: 'inherit' });
+  }
+  for (const [letra, formato] of [['V', 'vertical'], ['H', 'horizontal']].filter(([l]) => !soloFormato || l === soloFormato)) {
+    const salida = `out/una-toma/leogin-${video}-${formato}.mp4`;
+    execFileSync(npx, ['remotion', 'render', `UnaToma-${video}-${formato}`, salida, '--codec=h264', '--crf=17', '--log=error', ...licencia], { ...opciones, stdio: 'inherit' });
+    const info = execFileSync(npx, ['remotion', 'ffprobe', '-v', 'error', '-show_entries', 'stream=codec_type,width,height:format=duration', '-of', 'default=nw=1', salida], { ...opciones, encoding: 'utf8' });
+    console.log(`${letra} · ${salida} · ${info.replace(/\s+/g, ' ')}`);
+  }
 }

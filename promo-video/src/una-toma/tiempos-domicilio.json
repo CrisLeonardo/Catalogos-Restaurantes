@@ -1,0 +1,136 @@
+{
+  "_nota": "Línea de tiempo del video «a domicilio» (plan En línea), en cuadros a 30 fps. La leen el video y la banda sonora (scripts/banda-una-toma.mjs domicilio). «eventos»: [cuadro, tipo, ...].",
+  "fps": 30,
+  "total": 1020,
+  "gancho": {
+    "rasga": 90,
+    "chispa": 106,
+    "iris": 112
+  },
+  "drop": 120,
+  "revela": {
+    "riser": 690,
+    "inicio": 720,
+    "golpe": 750,
+    "aLogo": 836
+  },
+  "cierre": {
+    "inicio": 870,
+    "oferta": 894,
+    "url": 918,
+    "qr": 930
+  },
+  "cliente": {
+    "tapA": 140,
+    "tapCarrito": 160,
+    "hoja": 166,
+    "pin": 178,
+    "tapEnviar": 220,
+    "sale": 230
+  },
+  "mostrador": {
+    "llega": 274,
+    "acerca": 300,
+    "tapCocina": 318,
+    "tapSalio": 392,
+    "salio": 396,
+    "sale": 410
+  },
+  "vuelve": {
+    "llega": 450,
+    "sale": 540
+  },
+  "duenio": {
+    "llega": 580,
+    "suma": 598
+  },
+  "eventos": [
+    [
+      1,
+      "aviso"
+    ],
+    [
+      8,
+      "aviso"
+    ],
+    [
+      31,
+      "aviso"
+    ],
+    [
+      40,
+      "aviso"
+    ],
+    [
+      49,
+      "aviso"
+    ],
+    [
+      58,
+      "aviso"
+    ],
+    [
+      67,
+      "aviso"
+    ],
+    [
+      76,
+      "aviso"
+    ],
+    [
+      140,
+      "toque"
+    ],
+    [
+      160,
+      "toque"
+    ],
+    [
+      178,
+      "burbuja"
+    ],
+    [
+      220,
+      "toque"
+    ],
+    [
+      230,
+      "viaje",
+      274
+    ],
+    [
+      274,
+      "ding"
+    ],
+    [
+      318,
+      "toque"
+    ],
+    [
+      392,
+      "toque"
+    ],
+    [
+      396,
+      "exito"
+    ],
+    [
+      410,
+      "viaje",
+      450
+    ],
+    [
+      450,
+      "exito"
+    ],
+    [
+      540,
+      "viaje",
+      580
+    ],
+    [
+      598,
+      "suma"
+    ]
+  ]
+}

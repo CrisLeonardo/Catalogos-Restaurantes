@@ -3,11 +3,11 @@
 import React, { useMemo } from 'react';
 import { AbsoluteFill, useCurrentFrame } from 'remotion';
 import QRCode from 'qrcode';
-import { clamp, degradado, easeOut, lerp, marca, pop, prog, T, useFormato } from './base';
+import { clamp, degradado, easeOut, lerp, marca, pop, prog, useFormato } from './base';
 import { LogoMarca } from './mundo';
+import { useGuion } from './guion';
 import { fuente } from '../marca';
 
-export type PropsCierre = { oferta: string; ofertaAcento: string; detalle: string; url: string; qr: string };
 
 const Qr: React.FC<{ texto: string; tam: number }> = ({ texto, tam }) => {
   const m = useMemo(() => QRCode.create(texto, { errorCorrectionLevel: 'M' }).modules, [texto]);
@@ -27,8 +27,10 @@ const sube = (f: number, en: number) => {
   return { opacity: t, transform: `translateY(${(1 - t) * 40}px)`, filter: `blur(${(1 - t) * 8}px)` } as React.CSSProperties;
 };
 
-export const Cierre: React.FC<PropsCierre> = ({ oferta, ofertaAcento, detalle, url, qr }) => {
+export const Cierre: React.FC = () => {
   const f = useCurrentFrame();
+  const { T, cierre } = useGuion();
+  const { oferta, ofertaAcento, detalle, url, qr } = cierre;
   const { vertical } = useFormato();
   const c = T.cierre;
   // El logo entra gigante (viene del zoom de la toma) y se asienta
@@ -39,8 +41,8 @@ export const Cierre: React.FC<PropsCierre> = ({ oferta, ofertaAcento, detalle, u
   const qrIn = pop(prog(f, c.qr, c.qr + 14));
   const latido = 1 + 0.025 * Math.sin((f - c.qr) / 5) * clamp((f - c.qr - 14) / 10);
   const acento: React.CSSProperties = { background: degradado, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' };
-  // En vertical «30 días gratis» va en dos renglones a propósito.
-  const partes = vertical ? ofertaAcento.split(/ (?=\S+$)/) : [ofertaAcento];
+  // En vertical el precio va en los renglones que diga el guion.
+  const partes = vertical ? ofertaAcento : [ofertaAcento.join(' ')];
 
   const marcaBloque = (
     <div style={{ display: 'flex', flexDirection: vertical ? 'column' : 'row', alignItems: 'center', gap: vertical ? 22 : 30 }}>
@@ -52,9 +54,9 @@ export const Cierre: React.FC<PropsCierre> = ({ oferta, ofertaAcento, detalle, u
   );
   const ofertaBloque = (
     <div style={{ fontFamily: fuente.titular, fontWeight: 800, color: '#fff', lineHeight: 1.02, letterSpacing: -3, textAlign: vertical ? 'center' : 'left' }}>
-      <div style={{ fontSize: vertical ? 84 : 84, ...sube(f, c.oferta) }}>{oferta}</div>
+      <div style={{ whiteSpace: 'nowrap', fontSize: vertical ? (oferta.length > 16 ? 66 : 84) : 72, ...sube(f, c.oferta) }}>{oferta}</div>
       {partes.map((p, i) => (
-        <div key={p} style={{ fontSize: vertical ? 142 : 118, ...sube(f, c.oferta + 5 + i * 4) }}><span style={acento}>{p}</span></div>
+        <div key={p} style={{ whiteSpace: 'nowrap', fontSize: vertical ? 124 : Math.min(92, 1650 / p.length), ...sube(f, c.oferta + 5 + i * 4) }}><span style={acento}>{p}</span></div>
       ))}
       <div style={{ fontFamily: fuente.texto, fontWeight: 500, fontSize: vertical ? 40 : 38, color: 'rgba(255,255,255,.75)', letterSpacing: -0.3, marginTop: 20, ...sube(f, c.oferta + 14) }}>{detalle}</div>
     </div>

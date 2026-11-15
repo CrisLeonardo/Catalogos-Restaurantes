@@ -2,13 +2,14 @@
 // (panel claro, Geist, coral de acción) con los datos de Rincón 502.
 import React from 'react';
 import { Img, staticFile, useCurrentFrame } from 'remotion';
-import { app, clamp, dinero, easeIO, easeOut, lerp, pop, prog, T } from './base';
+import { app, clamp, dinero, easeIO, easeOut, lerp, pop, prog } from './base';
+import T from './tiempos-meseros.json';
 import { Check, Toque } from './dispositivos';
 import { fuente } from '../marca';
 
-const mono: React.CSSProperties = { fontFamily: fuente.cifras, fontVariantNumeric: 'tabular-nums' };
+export const mono: React.CSSProperties = { fontFamily: fuente.cifras, fontVariantNumeric: 'tabular-nums' };
 
-const Chevron: React.FC<{ size?: number }> = ({ size = 22 }) => (
+export const Chevron: React.FC<{ size?: number }> = ({ size = 22 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={app.tinta} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
 );
 
@@ -268,14 +269,15 @@ export const PantallaCaja: React.FC = () => {
   );
 };
 
-// ── 4 · Dueño: Hoy ───────────────────────────────────────────────────────
-export const PantallaDuenio: React.FC = () => {
+// ── 4 · Dueño: Hoy (lo usan los tres videos) ─────────────────────────────
+export type DatosHoy = { suma: number; antes: number; mas: number; pedidos: number; ticketAntes: string; ticketDespues: string; estrella: string };
+
+export const PantallaHoy: React.FC<DatosHoy> = ({ suma, antes, mas, pedidos, ticketAntes, ticketDespues, estrella }) => {
   const f = useCurrentFrame();
-  const d = T.duenio;
-  const s = easeOut(prog(f, d.suma, d.suma + 22));
-  const ventas = 2501.5 + 104 * s;
-  const sube = prog(f, d.suma, d.suma + 40);
-  const golpe = f >= d.suma ? 1 + 0.06 * Math.sin(Math.PI * prog(f, d.suma, d.suma + 10)) : 1;
+  const s = easeOut(prog(f, suma, suma + 22));
+  const ventas = antes + mas * s;
+  const sube = prog(f, suma, suma + 40);
+  const golpe = f >= suma ? 1 + 0.06 * Math.sin(Math.PI * prog(f, suma, suma + 10)) : 1;
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
       <div style={{ position: 'absolute', top: 58, left: 22, fontFamily: fuente.titular, fontSize: 30, fontWeight: 800 }}>Hoy</div>
@@ -287,32 +289,28 @@ export const PantallaDuenio: React.FC = () => {
       <div style={{ position: 'absolute', top: 196, left: 16, right: 16, background: app.tarjeta, borderRadius: 20, border: `1px solid ${app.borde}`, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,.05)' }}>
         <div style={{ padding: '18px 20px 16px' }}>
           <div style={{ fontSize: 16, color: app.tinta2 }}>Ventas</div>
-          <div style={{ ...mono, fontSize: 42, fontWeight: 600, letterSpacing: -1, marginTop: 4, transformOrigin: 'left center', transform: `scale(${golpe})`, color: f >= d.suma && sube < 0.6 ? app.ok : app.tinta }}>{dinero(ventas)}</div>
+          <div style={{ ...mono, fontSize: 42, fontWeight: 600, letterSpacing: -1, marginTop: 4, transformOrigin: 'left center', transform: `scale(${golpe})`, color: f >= suma && sube < 0.6 ? app.ok : app.tinta }}>{dinero(ventas)}</div>
           <div style={{ fontSize: 16, marginTop: 4 }}><span style={{ color: app.ok, fontWeight: 700 }}>↑ 30 %</span> <span style={{ color: app.tinta2 }}>vs. un sábado normal</span></div>
         </div>
         <div style={{ display: 'flex', borderTop: `1px solid ${app.borde}` }}>
           <div style={{ flex: 1, padding: '14px 20px', borderRight: `1px solid ${app.borde}` }}>
             <div style={{ fontSize: 15, color: app.tinta2 }}>Pedidos</div>
-            <div style={{ ...mono, fontSize: 24, fontWeight: 600, marginTop: 2 }}>{f >= d.suma + 6 ? 23 : 22}</div>
+            <div style={{ ...mono, fontSize: 24, fontWeight: 600, marginTop: 2 }}>{f >= suma + 6 ? pedidos + 1 : pedidos}</div>
           </div>
           <div style={{ flex: 1, padding: '14px 20px' }}>
             <div style={{ fontSize: 15, color: app.tinta2 }}>Ticket promedio</div>
-            <div style={{ ...mono, fontSize: 24, fontWeight: 600, marginTop: 2 }}>{f >= d.suma + 6 ? 'Q113.28' : 'Q113.70'}</div>
+            <div style={{ ...mono, fontSize: 24, fontWeight: 600, marginTop: 2 }}>{f >= suma + 6 ? ticketDespues : ticketAntes}</div>
           </div>
         </div>
       </div>
-      {f >= d.suma && sube < 1 && (
-        <div style={{ position: 'absolute', top: 236 - 40 * easeOut(sube), right: 30, height: 34, padding: '0 12px', borderRadius: 99, background: app.okSuave, color: app.ok, fontSize: 17, fontWeight: 800, display: 'flex', alignItems: 'center', opacity: 1 - prog(sube, 0.7, 1), ...mono }}>+Q104.00</div>
+      {f >= suma && sube < 1 && (
+        <div style={{ position: 'absolute', top: 236 - 40 * easeOut(sube), right: 30, height: 34, padding: '0 12px', borderRadius: 99, background: app.okSuave, color: app.ok, fontSize: 17, fontWeight: 800, display: 'flex', alignItems: 'center', opacity: 1 - prog(sube, 0.7, 1), ...mono }}>+{dinero(mas)}</div>
       )}
       <div style={{ position: 'absolute', top: 468, left: 16, right: 16, height: 58, background: app.tarjeta, borderRadius: 99, border: `1px solid ${app.borde}`, display: 'flex', alignItems: 'center', padding: '0 18px', gap: 10, fontSize: 16 }}>
-        <span style={{ color: app.coral, fontSize: 18 }}>★</span> Plato estrella: <b>Rincón Clásica</b>
+        <span style={{ color: app.coral, fontSize: 18 }}>★</span> Plato estrella: <b>{estrella}</b>
       </div>
       <div style={{ position: 'absolute', top: 540, left: 16, height: 52, background: app.tarjeta, borderRadius: 99, border: `1px solid ${app.borde}`, display: 'flex', alignItems: 'center', padding: '0 18px', gap: 10, fontSize: 16 }}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={app.tinta2} strokeWidth="2"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg> Hora pico: de 7 a 8 p. m.
-      </div>
-      <div style={{ position: 'absolute', top: 618, left: 22, fontSize: 15, fontWeight: 600, color: app.tinta2 }}>Ahora mismo</div>
-      <div style={{ position: 'absolute', top: 650, left: 16, right: 16, background: app.tarjeta, borderRadius: 18, border: `1px solid ${app.borde}`, padding: '12px 18px', display: 'flex', justifyContent: 'space-between', fontSize: 16 }}>
-        <span><b>6</b> mesas ocupadas</span><span><b>3</b> en cocina</span>
       </div>
       {/* Navegación inferior del panel */}
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 82, background: app.tarjeta, borderTop: `1px solid ${app.borde}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-around', paddingTop: 12, fontSize: 11 }}>
@@ -329,3 +327,7 @@ export const PantallaDuenio: React.FC = () => {
     </div>
   );
 };
+
+export const PantallaDuenio: React.FC = () => (
+  <PantallaHoy suma={T.duenio.suma} antes={2501.5} mas={104} pedidos={22} ticketAntes="Q113.70" ticketDespues="Q113.28" estrella="Rincón Clásica" />
+);

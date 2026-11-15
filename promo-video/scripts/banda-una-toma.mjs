@@ -1,16 +1,18 @@
 // Banda sonora de «Una sola toma»: latin house a 120 BPM + efectos, todo
 // sintetizado con código (sin muestras ni grabaciones de terceros).
-// Lee la línea de tiempo de src/una-toma/tiempos.json, así que cada toque,
+// Lee la línea de tiempo de src/una-toma/tiempos-<video>.json, así que cada toque,
 // campana y golpe cae en el mismo cuadro que el video.
 //
-//   node scripts/banda-una-toma.mjs   → public/una-toma/banda.wav
+//   node scripts/banda-una-toma.mjs meseros|comedor|domicilio
+//     → public/una-toma/banda-<video>.wav
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
-const T = JSON.parse(readFileSync(join(RAIZ, 'src', 'una-toma', 'tiempos.json'), 'utf8'));
+const VIDEO = process.argv[2] ?? 'meseros';
+const T = JSON.parse(readFileSync(join(RAIZ, 'src', 'una-toma', `tiempos-${VIDEO}.json`), 'utf8'));
 const SR = 44100;
 const DUR = T.total / T.fps;
 const N = Math.ceil(DUR * SR);
@@ -343,7 +345,7 @@ sumar(seco, FIN, golpe(0.9, 2.4), { rev: 0.3 });
 sumar(musica, FIN, colchon([57, 60, 64, 69], DUR - FIN, 0.2), { rev: 0.5 });
 for (const [d, m] of [[0.6, 81], [0.9, 84], [1.2, 88]]) sumar(seco, FIN + d, campana(m, 0.12, 0.9), { rev: 0.5, pan: 0.3 });
 
-// ── efectos del gancho ───────────────────────────────────────────────────
+// ── efectos del gancho (comunes) ─────────────────────────────────────────
 const g = T.gancho;
 sumar(seco, 0, golpe(1, 1.4), { rev: 0.2 });
 // Reloj de tensión antes del drop.
@@ -352,33 +354,70 @@ for (let k = 1; k * TIEMPO < seg(g.rasga); k++) {
   if (k % 2 === 0) sumar(seco, k * TIEMPO, bombo(0.4)); // latido de tensión
 }
 sumar(musica, 0, colchon([33, 45, 46], seg(g.rasga) + 0.2, 0.42));
-for (const [d, l] of [[0.12, 0.3], [0.5, 0.35], [0.95, 0.25], [1.9, 0.3], [2.4, 0.25]]) sumar(seco, d, garabato(l, 0.42), { pan: -0.2 });
-sumar(seco, seg(g.circulo), marcador(0.55, 0.32), { pan: 0.25 });
 sumar(seco, seg(g.rasga), rasgon(0.85), { rev: 0.15 });
 sumar(seco, seg(g.chispa), chispazo(0.35), { rev: 0.4 });
 sumar(seco, seg(g.rasga) + 0.05, riser(DROP - seg(g.rasga) - 0.05, 0.3));
 sumar(seco, DROP, golpe(0.95, 1.6), { rev: 0.25 });
 
-// ── efectos de la toma ───────────────────────────────────────────────────
-const me = T.mesero, co = T.cocina, ca = T.caja, du = T.duenio, re = T.revela;
-for (const f of [me.tapPlato, me.tapMedio, me.tapMas, me.tapAgregar, me.tapEnviar, co.tapListo, ca.tapCobrar]) sumar(seco, seg(f), toque(0.4));
-for (let f = me.notaDesde; f < me.notaHasta; f += 2) sumar(seco, seg(f), tecla(0.25), { pan: 0.1 });
+// Burbuja que revienta (gritos) y aviso de chat (genérico, no es el de ninguna app).
+function burbuja(vel = 1) {
+  const s = buf(0.12);
+  let fase = 0;
+  for (let i = 0; i < s.length; i++) {
+    const t = i / SR;
+    fase += (2 * Math.PI * (520 - 2600 * t)) / SR;
+    s[i] = vel * Math.exp(-t / 0.03) * (Math.sin(fase) + 0.3 * azar() * Math.exp(-t / 0.004));
+  }
+  return s;
+}
+function aviso(vel = 1) {
+  const s = buf(0.32);
+  for (let i = 0; i < s.length; i++) {
+    const t = i / SR;
+    const f = t < 0.09 ? 1320 : 1760;
+    const t0 = t < 0.09 ? t : t - 0.09;
+    s[i] = vel * Math.exp(-t0 / 0.07) * Math.sin(2 * Math.PI * f * t) * Math.min(1, t0 / 0.003);
+  }
+  return s;
+}
+
+// ── efectos de cada video: [cuadro, tipo, ...] en tiempos-<video>.json ───
 const viaje = (de, a) => sumar(seco, seg(de), zumbido(seg(a - de) + 0.15, 0.32, 250, 5000), { rev: 0.2 });
-viaje(me.sale, co.llega);
-viaje(co.sale, ca.llega);
-viaje(ca.sale, du.llega);
-sumar(seco, seg(co.llega), campana(84, 0.32, 1.1), { rev: 0.4 });
-sumar(seco, seg(co.llega) + 0.12, campana(91, 0.22, 0.9), { rev: 0.4 });
-sumar(seco, seg(co.listo), campana(79, 0.22, 0.6), { rev: 0.3 });
-sumar(seco, seg(co.listo) + 0.1, campana(84, 0.22, 0.8), { rev: 0.3 });
-// Caja registradora: campanita + monedas.
-sumar(seco, seg(ca.cobrado), campana(88, 0.3, 0.7), { rev: 0.35 });
-sumar(seco, seg(ca.cobrado) + 0.09, campana(93, 0.26, 0.9), { rev: 0.35 });
-for (let k = 0; k < 7; k++) sumar(seco, seg(ca.cobrado) + 0.05 + k * 0.035, campana(96 + (k % 3) * 2, 0.07, 0.15), { pan: (k % 2 ? 0.4 : -0.4) });
-for (let f = ca.cuentaDesde; f < ca.cuentaHasta; f += 2) sumar(seco, seg(f), toque(0.12), { pan: 0.2 });
-sumar(seco, seg(ca.cuadra), golpe(0.55, 0.6));
-sumar(seco, seg(ca.cuadra), campana(81, 0.25, 1), { rev: 0.4 });
-[76, 81, 84, 88].forEach((m, j) => sumar(seco, seg(du.suma) + j * 0.07, campana(m, 0.18, 0.6), { rev: 0.4, pan: -0.2 + j * 0.13 }));
+for (const [f, tipo, arg] of T.eventos) {
+  const t0 = seg(f);
+  switch (tipo) {
+    case 'toque': sumar(seco, t0, toque(0.4)); break;
+    case 'teclas': for (let k = f; k < arg; k += 2) sumar(seco, seg(k), tecla(0.25), { pan: 0.1 }); break;
+    case 'viaje': viaje(f, arg); break;
+    case 'garabato': sumar(seco, t0, garabato(seg(arg), 0.42), { pan: -0.2 }); break;
+    case 'marcador': sumar(seco, t0, marcador(seg(arg) + 0.02, 0.32), { pan: 0.25 }); break;
+    case 'burbuja': sumar(seco, t0, burbuja(0.5), { pan: (f % 3) / 2 - 0.5 }); sumar(seco, t0, bombo(0.25)); break;
+    case 'aviso': sumar(seco, t0, aviso(0.22), { pan: (f % 5) / 2.5 - 0.8, rev: 0.15 }); break;
+    case 'ding':
+      sumar(seco, t0, campana(84, 0.32, 1.1), { rev: 0.4 });
+      sumar(seco, t0 + 0.12, campana(91, 0.22, 0.9), { rev: 0.4 });
+      break;
+    case 'exito':
+      sumar(seco, t0, campana(79, 0.22, 0.6), { rev: 0.3 });
+      sumar(seco, t0 + 0.1, campana(84, 0.22, 0.8), { rev: 0.3 });
+      break;
+    case 'caja':
+      sumar(seco, t0, campana(88, 0.3, 0.7), { rev: 0.35 });
+      sumar(seco, t0 + 0.09, campana(93, 0.26, 0.9), { rev: 0.35 });
+      for (let k = 0; k < 7; k++) sumar(seco, t0 + 0.05 + k * 0.035, campana(96 + (k % 3) * 2, 0.07, 0.15), { pan: (k % 2 ? 0.4 : -0.4) });
+      break;
+    case 'conteo': for (let k = f; k < arg; k += 2) sumar(seco, seg(k), toque(0.12), { pan: 0.2 }); break;
+    case 'sello':
+      sumar(seco, t0, golpe(0.55, 0.6));
+      sumar(seco, t0, campana(81, 0.25, 1), { rev: 0.4 });
+      break;
+    case 'suma': [76, 81, 84, 88].forEach((m, j) => sumar(seco, t0 + j * 0.07, campana(m, 0.18, 0.6), { rev: 0.4, pan: -0.2 + j * 0.13 })); break;
+    default: throw new Error(`Efecto desconocido: ${tipo}`);
+  }
+}
+
+// ── efectos del final (comunes) ──────────────────────────────────────────
+const re = T.revela;
 sumar(seco, seg(re.riser), riser(seg(re.golpe - re.riser), 0.32));
 sumar(seco, seg(re.golpe), golpe(0.9, 1.8), { rev: 0.3 });
 sumar(seco, seg(re.aLogo), zumbido(seg(T.cierre.inicio - re.aLogo) + 0.1, 0.3, 300, 7000), { rev: 0.2 });
@@ -452,5 +491,5 @@ for (let i = 0; i < N; i++) {
 }
 const salida = join(RAIZ, 'public', 'una-toma');
 mkdirSync(salida, { recursive: true });
-writeFileSync(join(salida, 'banda.wav'), datos);
-console.log(`banda.wav · ${DUR.toFixed(1)} s · pico normalizado ×${norma.toFixed(2)}`);
+writeFileSync(join(salida, `banda-${VIDEO}.wav`), datos);
+console.log(`banda-${VIDEO}.wav · ${DUR.toFixed(1)} s · pico normalizado ×${norma.toFixed(2)}`);

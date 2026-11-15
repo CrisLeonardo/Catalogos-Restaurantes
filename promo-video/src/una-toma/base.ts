@@ -1,9 +1,6 @@
 // Piezas comunes de «Una sola toma»: formato, curvas, colores y la app.
 import { useVideoConfig } from 'remotion';
 import { loadFont as cargarCaveat } from '@remotion/google-fonts/Caveat';
-import TIEMPOS from './tiempos.json';
-
-export const T = TIEMPOS;
 
 export const mano = cargarCaveat('normal', { weights: ['500', '700'], subsets: ['latin', 'latin-ext'] }).fontFamily;
 

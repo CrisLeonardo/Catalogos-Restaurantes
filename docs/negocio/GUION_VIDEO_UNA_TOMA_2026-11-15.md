@@ -1,6 +1,8 @@
-# Video «Una sola toma» — guion y decisiones (2026-11-15)
+# Serie «Una sola toma» — guion y decisiones (2026-11-15)
 
-Segundo intento de video promocional. El dueño pidió algo que **enganche desde el segundo 0**, que **se venda solo**, único y nunca visto, en **dos formatos**: horizontal para enseñarlo en persona en los restaurantes (PC o tableta) y vertical para TikTok y Reels. Pidió ignorar los videos anteriores, así que este no reutiliza nada del estilo de «Bajo control» (papel stop-motion, capturas con zoom, marimba).
+Video promocional pensado para que Leogin se venda solo. Debe enganchar desde el segundo 0 y salir en **dos formatos**: horizontal para enseñarlo en persona en los restaurantes (PC o tableta) y vertical para TikTok y Reels. No reutiliza nada del estilo de «Bajo control» (papel stop-motion, capturas con zoom, marimba), que el dueño rechazó.
+
+El mismo día el dueño aprobó el primero y pidió **una serie de tres**, una por tipo de negocio, porque un solo video le habla mejor a uno que a todos. También **quitó la prueba gratis** de todo Leogin (PR de la migración 182), así que el cierre ya no ofrece «30 días gratis». Tampoco dice precios, para poder cambiarlos sin rehacer los videos: cierra con lo que gana el dueño, `distleogin.com` y el QR.
 
 Código: [`promo-video/src/una-toma/`](../../promo-video/src/una-toma/). Cómo se exporta: [`promo-video/README.md`](../../promo-video/README.md#una-sola-toma).
 
@@ -8,63 +10,68 @@ Código: [`promo-video/src/una-toma/`](../../promo-video/src/una-toma/). Cómo s
 
 **Un pedido cruza todo el restaurante sin un solo corte.**
 
-Todo el video es un único plano continuo. Una chispa de luz (el pedido) sale del teléfono del mesero y la cámara la persigue volando entre los aparatos del restaurante: cocina, caja y el teléfono del dueño. Al final la cámara se aleja y deja ver el camino completo que recorrió el pedido, con Leogin al centro conectando todo.
+Cada video es un único plano continuo. Una chispa de luz (el pedido) sale del aparato donde nace el pedido y la cámara la persigue volando entre los aparatos del restaurante. Al final la cámara se aleja y deja ver el camino completo, con Leogin al centro conectando todo.
 
-Por qué funciona:
+- **Nunca hay corte**: el ojo no encuentra un punto para irse.
+- **La chispa explica el producto sin palabras**: lo que pasa en un aparato llega solo a los demás.
+- **El gancho es un dolor que el dueño reconoce y da risa.** Esa «forma vieja» se rompe en dos y de ahí nace la chispa.
+- **Se entiende sin sonido**: una palabra grande cambia al ritmo de cada toque.
+- **Muestra la app real**: las pantallas reproducen el panel y la carta de Leogin con los datos de Rincón 502.
+- **Cierra sin precio**, con el beneficio, la dirección web y un QR.
 
-- **Nunca hay corte**: el ojo no encuentra un punto para irse. Es lo que mantiene a la gente mirando en TikTok.
-- **La chispa explica el producto sin palabras**: «lo que toca el mesero llega solo a cocina, a caja y a ti».
-- **El gancho es un dolor que todo dueño reconoce y da risa**: la comanda escrita a mano que nadie entiende («2 polo sin sebolla», «Mesa 4… ¿o 7?»).
-- **Se entiende sin sonido**: cada paso tiene una palabra grande que cambia al ritmo de los toques.
-- **Muestra la app real**: las pantallas reproducen el panel de Leogin con los datos de Rincón 502 y las ilustraciones de sus platos.
-- **Cierra el círculo**: abre con un papelito y termina con un QR que lleva directo al registro.
+## Los tres videos
 
-## Guion (34 s, 30 fps, 120 BPM)
-
-| Segundo | Imagen | Texto en pantalla | Sonido |
+| | 1 · Con meseros | 2 · Comedor | 3 · A domicilio |
 |---|---|---|---|
-| 0–3 | Comanda a mano, temblando. El «4» se tacha y se corrige a «7 ??». Un marcador rojo encierra la mesa y «(o pollo?)». | **¿Tu cocina también adivina?** | Golpe seco, reloj, lápiz, marcador |
-| 3–4 | La comanda se rompe en dos. Detrás, fondo brasa. Nace la chispa. | **Se acabaron los papelitos.** | Papel que se rompe, subida |
-| 4–8.5 | La cámara cae sobre el teléfono del mesero: toca la Rincón Clásica, elige término medio, escribe «Sin cebolla», sube a 2 y envía. | El mesero **toca. / elige. / anota. / envía.** | Entra el ritmo (latin house). Cada toque suena. |
-| 8.5–10 | La chispa sale disparada; la cámara vuela tras ella. | — | Barrido |
-| 10–14 | Aterriza en la tableta de cocina: aparece la tarjeta «Mesa 4 · 2× Rincón Clásica · Medio · Nota: Sin cebolla». La cocina marca «Listo». | Llega a cocina **al instante.** / Y se lee **clarito.** | Campana de cocina |
-| 14–19 | Vuela a caja: cobra Q104.00 con vuelto, pasa al corte de caja, cuenta y sale el sello **Cuadra**. | En caja **cobras.** / Y al cerrar **cuenta… cuadra.** | Caja registradora, monedas, sello |
-| 19–24 | Vuela al teléfono del dueño: en «Hoy» las ventas suben exactamente Q104.00 (el pedido que seguimos) y los pedidos de 22 a 23. | Y tú **lo ves todo.** desde donde estés. | Arpegio de subida |
-| 24–29 | La cámara se aleja: los cuatro aparatos unidos por el camino de luz, el logo al centro, etiquetas Mesero · Cocina · Caja · Tú. | **Nadie adivina. Todo cuadra.** | Corte, subida y golpe |
-| 29–34 | La cámara entra al logo. Oferta y QR. | Leogin · Pruébalo **30 días gratis** · Sin tarjeta. Tu restaurante listo en minutos. · **distleogin.com** · QR «Escanea y empieza» | Acorde final |
+| **Para quién** | Restaurante con meseros | Comedor, cafetería, sin meseros | Vende por WhatsApp o solo en línea |
+| **Plan que encaja** | Premium | Estándar | En línea |
+| **Gancho (0–3 s)** | Comanda a mano ilegible: «2 polo sin sebolla», «Mesa ~~4~~ 7 ??». **¿Tu cocina también adivina?** | Globos de gritos encimados: «¡DOS POLLOS!», «¿Ya pagó la 5?». **¿Todavía se gritan los pedidos?** | Notificaciones sin parar: «¿Hay pollo hoy?», «¿Ya viene mi pedido?», 40+ sin leer. **¿Tu WhatsApp ya no da abasto?** |
+| **Se rompe y dice** | Se acabaron los papelitos. | Que tus clientes pidan solos. | Que pidan solos, desde tu link. |
+| **Recorrido de la chispa** | Mesero → cocina → caja (cobra, «Cuadra») → dueño | Cliente pide desde el QR de la mesa → mostrador («Enviar a cocina», «Marcar listo») → el cliente ve «Listo» → dueño | Cliente pide desde el link y marca su casa en el mapa → tu cocina («Enviar a cocina», «Salió a entregar») → el cliente ve «En camino» → dueño |
+| **Remate** | Nadie adivina. Todo cuadra. | Nadie grita. Todo cuadra. | Menos chats. Más pedidos. |
+| **Cierre** | Todo tu restaurante **en un solo sistema.** Sin contrato y sin comisión por pedido. | Que tus clientes **pidan solos desde hoy.** Tu menú digital con QR, gratis para siempre. | Tu propio link **para vender en línea.** Sin comisión por pedido. Lo que vendes es tuyo. |
+| **QR lleva a** | distleogin.com/planes | distleogin.com/planes | distleogin.com/vende-en-linea |
+
+Los tres duran 34 s y usan la misma estructura: gancho (0–4 s), toma (4–24 s), revelación (24–29 s) y cierre (29–34 s).
 
 ## Lo que promete y dónde existe en la app
 
 Ningún texto promete algo que Leogin no haga (regla de la ficha 0.1):
 
-| Promesa en el video | Dónde está |
+| Promesa | Dónde está |
 |---|---|
-| El mesero toma el pedido con fotos, término, nota y cantidad | Servicio → Tomar pedidos (`components/admin/servicio/carta.tsx`, `hoja-opciones.tsx`); plan Premium |
-| Llega a cocina al instante | Cocina en tiempo real (`/admin/pedidos` pestaña Cocina) |
-| Cocina marca listo | `lib/actions/cocina.ts` (estado READY) |
-| Cobrar con vuelto | `components/admin/servicio/hoja-cobro.tsx` («Vuelto») |
-| Corte de caja que dice «Cuadra» | Caja por turnos (`components/admin/caja/`) |
+| El mesero toma el pedido con fotos, término, nota y cantidad | Servicio → Tomar pedidos (`components/admin/servicio/`); Premium |
+| El cliente pide solo desde el QR de la mesa o desde el link | Carta del comensal y checkout |
+| Marca su casa en el mapa, envío por zona | Checkout con mapa y zonas de reparto (plan En línea) |
+| Llega al instante, «Enviar a cocina» | Pedidos → En vivo |
+| Cocina marca listo; «Salió a entregar» | `lib/actions/cocina.ts` (READY), `pedidos-en-vivo.ts` (TRANSIT) |
+| El cliente ve el estado en vivo (Recibido → Listo / En camino) | Seguimiento del pedido |
+| Cobrar con vuelto; corte de caja que «Cuadra» | `hoja-cobro.tsx`; caja por turnos (Estándar y Premium) |
 | Ventas del día y «vs. un sábado normal» | Panel Hoy |
-| 30 días gratis, sin tarjeta | Registro (`/registro`, `pricing.trialDays`) |
+| Sin contrato, sin comisión por pedido, menú digital gratis para siempre | `PRECIOS_VIGENTES.md`, `/planes` |
+
+Los videos no dicen precios a propósito (decisión del dueño, 2026-11-15): el precio, la alta y el plan se hablan en la visita o en `/planes`. Los textos del cierre se cambian en `cierre` de `src/una-toma/guiones/*.tsx`.
 
 ## Formatos y uso
 
-| Archivo | Para qué |
+| Archivo (`promo-video/out/una-toma/`) | Para qué |
 |---|---|
-| `leogin-una-toma-vertical.mp4` (1080×1920) | TikTok, Reels, Shorts, estados de WhatsApp. Lo importante queda fuera de las franjas de botones de TikTok (arriba los textos, al centro el aparato). |
-| `leogin-una-toma-horizontal.mp4` (1920×1080) | La visita en persona (laptop o tableta) y YouTube. Textos a la izquierda, aparatos a la derecha; el QR se puede escanear desde la pantalla. |
+| `leogin-<video>-vertical.mp4` (1080×1920) | TikTok, Reels, Shorts, estados de WhatsApp. Lo importante queda fuera de las franjas de botones de TikTok. |
+| `leogin-<video>-horizontal.mp4` (1920×1080) | La visita en persona (laptop o tableta) y YouTube. El QR se puede escanear desde la pantalla. |
 
-En la visita: ponerlo al llegar, sin explicar antes. Al terminar, el dueño tiene el QR enfrente.
+**En la visita:** al entrar, sin explicar nada, se pone el video que corresponde al lugar: meseros, comedor o domicilio. Luego viene la demostración en vivo en el teléfono ([`GUION_DEMO_90S.md`](GUION_DEMO_90S.md)) y al final el QR.
+
+**En redes:** se publican los tres y se mide cuánta gente pasa de los primeros 3 s. Si se van rápido, lo que falla es el gancho.
 
 ## Decisiones
 
-- **Pantallas reconstruidas, no capturas**: así cada botón se puede animar y el texto sale nítido a cualquier zoom. Copian el panel real (tema claro, Geist, coral `#C2542F`, tarjetas sólidas) y los datos de Rincón 502.
-- **Música propia**: latin house a 120 BPM sintetizado con código (`scripts/banda-una-toma.mjs`): bombo, palmas, shaker, congas, bajo y cuerdas pulsadas. Sin derechos de terceros. Cada efecto lee la línea de tiempo de `tiempos.json`, así que si se mueve un toque, el sonido lo sigue.
-- **Sin voz**: el video se entiende en silencio (así se ve la mayoría de TikTok) y en la visita habla el vendedor.
-- **Un solo llamado a la acción**: probar gratis. Precios no, para no frenar la decisión.
+- **Pantallas reconstruidas, no capturas**: así cada botón se anima y el texto sale nítido a cualquier zoom. Copian la app real: el panel claro y la carta oscura de Rincón 502.
+- **Música propia**: latin house a 120 BPM sintetizado con código (`scripts/banda-una-toma.mjs <video>`), sin derechos de terceros. Los efectos de cada video están en `eventos` de su `tiempos-<video>.json`: si se mueve un toque, el sonido lo sigue.
+- **Sin voz**: se entiende en silencio y en la visita habla el vendedor.
+- **Chat genérico** en el gancho de domicilio: se nombra WhatsApp en el texto, pero no se usa su logo, sus colores ni su sonido.
 
 ## Pendientes
 
-- Que el dueño lo vea y apruebe (o diga qué cambiar) antes de publicar.
-- Si se publica con la app abierta para probar en vivo, confirmar que la migración 181 ya corre en producción (arregla «Enviar a cocina» en pedidos recién creados).
-- Opcional: versión de 15 s (gancho + toma + cierre) para anuncios pagados.
+- Publicar y medir los primeros 3 s en TikTok.
+- Si se hacen demos en vivo con la app, confirmar que la migración 181 ya corre en producción («Enviar a cocina» en pedidos recién creados).
+- Aplicar la migración 182 (sin prueba gratis) después de desplegar su PR, para que la web no siga ofreciendo 30 días.

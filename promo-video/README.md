@@ -55,21 +55,28 @@ Remotion es gratis para personas y empresas de hasta 3 personas. Si Leogin crece
 
 ## Una sola toma
 
-Un pedido cruza todo el restaurante sin un solo corte: una chispa sale del teléfono del mesero y la cámara la sigue a cocina, caja y al teléfono del dueño; al final se aleja y revela el recorrido completo. 34 s, en **vertical** (TikTok/Reels) y **horizontal** (PC, visita al restaurante). Guion y decisiones: [`docs/negocio/GUION_VIDEO_UNA_TOMA_2026-11-15.md`](../docs/negocio/GUION_VIDEO_UNA_TOMA_2026-11-15.md).
+Serie de tres videos de 34 s. En cada uno, un pedido cruza el restaurante sin un solo corte: una chispa sale del aparato donde nace el pedido, la cámara la sigue de uno a otro y al final se aleja para revelar el recorrido completo. Cada video sale en **vertical** (TikTok/Reels) y **horizontal** (PC, visita al restaurante). Guion y decisiones: [`docs/negocio/GUION_VIDEO_UNA_TOMA_2026-11-15.md`](../docs/negocio/GUION_VIDEO_UNA_TOMA_2026-11-15.md).
 
-No necesita la app local ni la base: las pantallas se dibujan en `src/una-toma/pantallas.tsx` copiando el panel real, y los platos son las ilustraciones de Rincón 502 (`public/una-toma/platos/`).
+| Video | Para quién | Recorrido |
+|---|---|---|
+| `meseros` | Restaurante con meseros (Premium) | Mesero → cocina → caja → dueño |
+| `comedor` | Comedor o cafetería (Estándar) | Cliente con QR → mostrador → cliente → dueño |
+| `domicilio` | Vende en línea (En línea) | Cliente con link y mapa → cocina → cliente → dueño |
+
+No necesita la app local ni la base: las pantallas se dibujan en código copiando la app real, y los platos son las ilustraciones de Rincón 502 (`public/una-toma/platos/`).
 
 ```bash
-npm run banda:una-toma    # banda sonora → public/una-toma/banda.wav
-npm run render:una-toma   # out/una-toma/leogin-una-toma-{vertical,horizontal}.mp4
-npm run fotos:una-toma -- V 0 120 300   # fotogramas sueltos para revisar (V o H)
+npm run banda:una-toma -- comedor       # banda sonora → public/una-toma/banda-comedor.wav
+npm run render:una-toma                 # los 6 MP4 → out/una-toma/leogin-<video>-<formato>.mp4
+npm run render:una-toma -- comedor V    # uno solo
+npm run fotos:una-toma -- comedor V 0 300 790   # fotogramas sueltos para revisar
 ```
 
 | Archivo | Qué hace |
 |---|---|
-| `src/una-toma/tiempos.json` | La línea de tiempo en cuadros. La leen el video **y** la banda sonora. |
-| `src/una-toma/gancho.tsx` | Segundos 0–4: la comanda ilegible que se rompe. |
-| `src/una-toma/mundo.tsx` | Los aparatos en un mismo espacio, la cámara continua y la chispa. |
-| `src/una-toma/pantallas.tsx` | Mesero, cocina, caja y «Hoy» del dueño. |
-| `src/una-toma/textos.tsx` | Los titulares que cambian al ritmo de los toques. |
-| `src/una-toma/cierre.tsx` | Logo, oferta, `distleogin.com` y QR al registro (props editables en Studio). |
+| `src/una-toma/guiones/*.tsx` | Cada video: gancho, aparatos, recorrido de la chispa, cámara, textos y cierre (precio, URL y QR). |
+| `src/una-toma/tiempos-<video>.json` | La línea de tiempo en cuadros y los efectos de sonido. La leen el video **y** la banda sonora. |
+| `src/una-toma/gancho.tsx`, `ganchos/` | Segundos 0–4: la «forma vieja» (comanda, gritos, chats) que se rompe. |
+| `src/una-toma/mundo.tsx` | Motor común: aparatos en un mismo espacio, cámara continua, chispa y revelación. |
+| `src/una-toma/pantallas.tsx`, `pantallas-cliente.tsx` | Pantallas: mesero, cocina, caja, Hoy; carta del cliente, carrito, seguimiento y «En vivo». |
+| `src/una-toma/textos.tsx`, `cierre.tsx` | Titulares al ritmo de los toques; logo, precio, `distleogin.com` y QR. |
