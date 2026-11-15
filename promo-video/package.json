@@ -18,12 +18,14 @@
   },
   "devDependencies": {
     "@remotion/eslint-config-flat": "4.0.543",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "19.3.0",
     "@types/web": "0.0.166",
     "eslint": "10.12.0",
     "pg": "^8.23.1",
     "playwright": "1.64.0",
     "prettier": "3.8.1",
+    "qrcode": "^1.5.4",
     "typescript": "5.9.3"
   },
   "scripts": {
@@ -33,7 +35,10 @@
     "musica": "node scripts/musica.mjs",
     "render": "node scripts/render.mjs",
     "verificar": "node scripts/verificar.mjs",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "banda:una-toma": "node scripts/banda-una-toma.mjs",
+    "render:una-toma": "node scripts/render-una-toma.mjs",
+    "fotos:una-toma": "node scripts/fotogramas-una-toma.mjs"
   },
   "allowScripts": {
     "esbuild": false

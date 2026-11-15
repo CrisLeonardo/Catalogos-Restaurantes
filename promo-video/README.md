@@ -1,5 +1,7 @@
 # Video promocional de Leogin
 
+> **Vigente: «Una sola toma» (2026-11-15)**, ver la [sección de abajo](#una-sola-toma). El video «Bajo control» que se describe primero se conserva como referencia técnica; al dueño no le gustó y no se usa.
+
 Anuncio vertical de 40 s (1080×1920, 30 fps, H.264) para TikTok y Reels, dirigido a la **cafetería o el restaurante pequeño que empieza**. Muestra la app de verdad: las pantallas se graban de la app local con Playwright y se montan con [Remotion](https://www.remotion.dev).
 
 El guion, los ganchos y las decisiones están en [`docs/negocio/GUION_VIDEO_PROMO_2026-11-14.md`](../docs/negocio/GUION_VIDEO_PROMO_2026-11-14.md).
@@ -50,3 +52,24 @@ Antes de la migración 181 (PR #118), un pedido recién creado nacía con `order
 ## Licencia de Remotion
 
 Remotion es gratis para personas y empresas de hasta 3 personas. Si Leogin crece por encima de eso, hace falta su licencia de empresa: pon la clave en `REMOTION_LICENSE_KEY` y `npm run render` la usa sola.
+
+## Una sola toma
+
+Un pedido cruza todo el restaurante sin un solo corte: una chispa sale del teléfono del mesero y la cámara la sigue a cocina, caja y al teléfono del dueño; al final se aleja y revela el recorrido completo. 34 s, en **vertical** (TikTok/Reels) y **horizontal** (PC, visita al restaurante). Guion y decisiones: [`docs/negocio/GUION_VIDEO_UNA_TOMA_2026-11-15.md`](../docs/negocio/GUION_VIDEO_UNA_TOMA_2026-11-15.md).
+
+No necesita la app local ni la base: las pantallas se dibujan en `src/una-toma/pantallas.tsx` copiando el panel real, y los platos son las ilustraciones de Rincón 502 (`public/una-toma/platos/`).
+
+```bash
+npm run banda:una-toma    # banda sonora → public/una-toma/banda.wav
+npm run render:una-toma   # out/una-toma/leogin-una-toma-{vertical,horizontal}.mp4
+npm run fotos:una-toma -- V 0 120 300   # fotogramas sueltos para revisar (V o H)
+```
+
+| Archivo | Qué hace |
+|---|---|
+| `src/una-toma/tiempos.json` | La línea de tiempo en cuadros. La leen el video **y** la banda sonora. |
+| `src/una-toma/gancho.tsx` | Segundos 0–4: la comanda ilegible que se rompe. |
+| `src/una-toma/mundo.tsx` | Los aparatos en un mismo espacio, la cámara continua y la chispa. |
+| `src/una-toma/pantallas.tsx` | Mesero, cocina, caja y «Hoy» del dueño. |
+| `src/una-toma/textos.tsx` | Los titulares que cambian al ritmo de los toques. |
+| `src/una-toma/cierre.tsx` | Logo, oferta, `distleogin.com` y QR al registro (props editables en Studio). |

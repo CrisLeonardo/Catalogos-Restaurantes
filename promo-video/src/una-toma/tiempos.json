@@ -1,0 +1,13 @@
+{
+  "_nota": "Línea de tiempo de «Una sola toma», en cuadros a 30 fps (120 BPM: un tiempo = 15 cuadros). La leen el video (src/una-toma) y la banda sonora (scripts/banda-una-toma.mjs): si mueves un número aquí, el sonido lo sigue.",
+  "fps": 30,
+  "total": 1020,
+  "gancho": { "circulo": 36, "rasga": 90, "chispa": 106, "iris": 112 },
+  "drop": 120,
+  "mesero": { "tapPlato": 140, "hoja": 146, "tapMedio": 166, "notaDesde": 178, "notaHasta": 200, "tapMas": 208, "tapAgregar": 226, "barra": 234, "tapEnviar": 250, "sale": 256 },
+  "cocina": { "llega": 300, "acerca": 330, "tapListo": 404, "listo": 408, "sale": 424 },
+  "caja": { "llega": 462, "tapCobrar": 486, "cobrado": 490, "corte": 508, "cuentaDesde": 514, "cuentaHasta": 538, "cuadra": 540, "sale": 568 },
+  "duenio": { "llega": 606, "suma": 624 },
+  "revela": { "riser": 690, "inicio": 720, "golpe": 750, "aLogo": 836 },
+  "cierre": { "inicio": 870, "oferta": 894, "url": 918, "qr": 930 }
+}
