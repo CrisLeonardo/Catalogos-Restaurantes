@@ -101,57 +101,6 @@ export async function getPanelOrders(
   return { active: mapOrderRows(activeRes.data), closedToday, incompleto: !!(activeRes.error || closedRes.error) };
 }
 
-/** Una fila de "En curso" en la pantalla Hoy: lo justo para pintarla. */
-export interface ActiveOrderPreview {
-  id: string;
-  order_number: string;
-  order_type: Order['order_type'];
-  /** En DINE_IN trae "Mesa N": el texto que se imprime. */
-  address: string | null;
-  /** La mesa de verdad (migración 127). Ausente donde no ha corrido. */
-  table_number?: number | null;
-  customer_name: string;
-  status: OrderStatus;
-  total: number;
-  created_at: string;
-}
-
-export interface ActiveOrdersPreview {
-  /** Los más viejos primero (FIFO, igual que el panel de pedidos). */
-  orders: ActiveOrderPreview[];
-  /** Cuántos hay en curso EN TOTAL, no cuántos vienen en `orders`. */
-  total: number;
-}
-
-/**
- * Vista corta de los pedidos en curso para la pantalla Hoy.
- *
- * Deliberadamente NO reusa getPanelOrders: ese trae hasta 500 pedidos con
- * todos sus ítems y anulaciones porque el panel los necesita para trabajar.
- * Hoy solo enseña cuatro renglones y un total, así que pide cuatro filas y
- * el conteo — la portada del panel no debe costar lo que cuesta el panel.
- */
-export async function getActiveOrdersPreview(
-  restaurantId: string,
-  limit = 4,
-): Promise<ActiveOrdersPreview> {
-  const db = createServiceClient();
-  const cols = `id, order_number, order_type, address, customer_name, status, total, created_at${
-    (await hayColumnaMesa()) ? ', table_number' : ''}`;
-  const { data, count } = await db
-    .from('orders')
-    .select(cols, { count: 'exact' })
-    .eq('restaurant_id', restaurantId)
-    .not('status', 'in', '("DELIVERED","CANCEL")')
-    .order('created_at', { ascending: true })
-    .limit(limit);
-
-  return {
-    orders: (data ?? []) as unknown as ActiveOrderPreview[],
-    total: count ?? (data?.length ?? 0),
-  };
-}
-
 /** Pedidos activos del mesero (para la interfaz /admin/mesero). */
 export async function getWaiterActiveOrders(
   restaurantId: string,
@@ -493,6 +442,9 @@ export interface OrderStats {
   todaySales: number;
   todayOrders: number;
   todayTicket: number;
+  /** Pedidos de hoy hechos desde la carta (sin mesero): la conversión del
+   *  menú en línea se mide con estos, no con los que tomó el personal. */
+  todayOnline: number;
 }
 
 /**
@@ -513,9 +465,11 @@ export async function getOrderStats(
 
   const { data } = await db
     .from('orders')
-    .select('id, created_at, total')
+    .select('id, created_at, total, waiter_id')
     .eq('restaurant_id', restaurantId)
     .neq('status', 'CANCEL')
+    // El pedido de prueba del dueño no es una venta (migración 183).
+    .eq('es_prueba', false)
     .gte('created_at', since.toISOString());
 
   const rawOrders = data ?? [];
@@ -527,12 +481,14 @@ export async function getOrderStats(
   const byDay = new Map<string, number>();
   const todayIds: string[] = [];
   let todaySales = 0;
+  let todayOnline = 0;
   for (const o of rawOrders) {
     const key = diaDeNegocio(new Date(o.created_at as string), timezone, corte);
     byDay.set(key, (byDay.get(key) ?? 0) + Number(o.total));
     if (key === todayKey) {
       todayIds.push(o.id as string);
       todaySales += Number(o.total);
+      if (!o.waiter_id) todayOnline += 1;
     }
   }
 
@@ -581,6 +537,7 @@ export async function getOrderStats(
     todaySales,
     todayOrders,
     todayTicket: todayOrders > 0 ? todaySales / todayOrders : 0,
+    todayOnline,
   };
 }
 

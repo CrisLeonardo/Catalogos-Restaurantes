@@ -6,6 +6,16 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+- **Sin prueba gratis** (PR #121, merge `fd9e728`) · **migración 182, justo después de desplegar**: los planes con pedidos (En línea, Estándar y Premium) se cobran desde el primer día; el gancho gratis sigue siendo el plan Básico. La 182 pone `trial_days = 0` y los textos de registro, planes, portada, Mi cuenta y términos dejan de prometer días gratis. Los restaurantes que ya estaban en prueba la terminan como estaba.
+- **Hoy por etapa y Primeros pasos por resultado** (fichas 2.1 y 2.2 de la auditoría; rama `feat/hoy-por-etapa`; maqueta aprobada `docs/diseno/MAQUETA_HOY_POR_ETAPA_2026-11-15.html`) · **migración 183, antes de desplegar**:
+  - Hoy elige sola su versión. **Nuevo:** la guía «Llega a tu primer pedido», sin cifras en cero. **Operando:** arriba, hasta tres cosas que piden acción (pedidos por aceptar, pedidos atascados en cocina, comida lista que espera, caja sin abrir…), con «Ver N más» para el resto. **Cerrado:** cuando la caja ya cerró y no queda nada vivo, lo cobrado del día, el cuadre y lo comprobable de la semana.
+  - La cifra grande es **«Cobrado hoy»**, el mismo libro de Caja, con «Por cobrar» y el estado de la caja al lado. Lo pedido queda en una línea debajo. Quien no tiene Caja ve «Pedido hoy».
+  - «En curso» y «La casa» se juntan en **«Servicio»**, con lo que está listo primero. Ya no repite «Mesa 7 · Mesa 7». El lema y los platillos sin foto pasan a «Mejora tu carta», al final. En la PC, la tendencia va en una segunda columna.
+  - **Primeros pasos por resultado:** publicar platillos, abrir la carta como cliente y recibir un pedido de prueba (sin pedidos en el plan, poner el QR). Si no hay categorías, el primer platillo crea «Platillos».
+  - **Pedido de prueba** (migración 183): el dueño lo pide desde su carta con un pase firmado y lo ve en Pedidos con la etiqueta «Prueba». Al estar listo, «Terminar la prueba» lo cierra sin cobro, repone existencias y devuelve canjes. No registra cliente ni cuenta en cifras, caja, puntos ni tope de pedidos.
+  - «Tu menú en línea» ya no dice «Piden 263 %»: cuenta solo los pedidos hechos desde la carta y los divide entre las personas distintas.
+  - La tarjeta «Funciones disponibles en Premium» sale de Hoy y pasa al final de Negocio › Resumen.
+
 ## v0.22.0 · 2026-11-15 · Video «Un solo lugar» en la portada y serie «Otra vez»
 PR #122 (merge `3a2046e`) · sin migraciones. Para que la portada cambie en producción basta desplegar el código.
 - **La portada abre el video «Un solo lugar»** en lugar de la animación «Las tres fugas»: en pantallas anchas se ve el horizontal y en las verticales (teléfono) el vertical, a pantalla completa. La tarjeta muestra el gancho —«Hoy tu restaurante vive en 8 lugares»— con un bucle sin sonido y la etiqueta «Qué es Leogin · 53 s»; el video (unos 3 MB) solo se descarga al tocar «play». `/vende-en-linea` no cambia y la ruta `/intro` queda sin enlace desde la portada.

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo } from 'react';
 import { setScannedTable, isStandaloneLaunch } from '@/lib/table-session';
+import { capturarPasePrueba } from '@/lib/pedido-prueba-cliente';
 import { mesaExiste } from '@/lib/mesa-valida';
 import { CartProvider } from '@/lib/cart-context';
 import { ThemeProvider } from '@/lib/theme/context';
@@ -67,6 +68,8 @@ interface Props {
 export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, timezone = 'America/Guatemala', initialMesa, llamadaMeseroEnabled = false, loyaltyOn = false, rewardsCatalog = null, googleAuthEnabled = false, whatsappNumber = null, restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null, menuLanguages = [], archivo = [], muestra = false }: Props) {
   /* Una mesa que no existe en el local no se guarda: la carta lo dice y no
      deja pedir a esa mesa (auditoría 1.12, M01). */
+  /* Pedido de prueba del dueño (ficha 2.2): guarda el pase de la URL. */
+  useEffect(() => { capturarPasePrueba(restaurantId); }, [restaurantId]);
   const mesaInvalida = initialMesa && initialMesa > 0 && !mesaExiste(initialMesa, config.dineInTableCount) ? initialMesa : null;
   useEffect(() => {
     if (initialMesa && initialMesa > 0) {

@@ -4,9 +4,9 @@ import { headers } from 'next/headers';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
-import { getOrderStats, getActiveOrdersPreview, type ActiveOrderPreview } from '@/lib/db/orders';
+import { getOrderStats } from '@/lib/db/orders';
 import { getHoyWidgets } from '@/lib/db/hoy';
-import { getBillingConfig, getInvoices, isOnTrial, isOverdue, trialDaysLeft, getRestaurantPlanPresentation } from '@/lib/db/billing';
+import { getBillingConfig, getInvoices, isOnTrial, isOverdue, trialDaysLeft } from '@/lib/db/billing';
 import { ultimoComprobante } from '@/lib/db/comprobantes';
 import { getVisitStats } from '@/lib/actions/metrics';
 import { subdomainUrl } from '@/lib/tenant';
@@ -16,27 +16,29 @@ import { pedidosDelMes } from '@/lib/db/tope-pedidos';
 import { isModuleActive } from '@/lib/modules';
 import { Icon } from '@/components/icons';
 import { can } from '@/lib/permissions';
-import { STATUS_LABEL_SHORT } from '@/lib/order-status';
 import { formatPrice } from '@/lib/theme/resolve';
-import OnboardingChecklist, { type OnboardingStep } from '@/components/admin/onboarding-checklist';
-import LockedFeatureSection from '@/components/admin/locked-feature-card';
-import { Card, CardContent } from '@/components/ui/card';
-import { List, ListLink, ListText, StatusDot, StatusPill, type Tone } from '@/components/ui/list';
+import { List, ListLink, ListText } from '@/components/ui/list';
 import { Section } from '@/components/ui/section';
-import { Stat, StatGroup } from '@/components/ui/stat';
-import {
-  agoLabel, HouseWidget, OnlineWidget, RatingsWidget, StockWidget,
-} from '@/components/admin/hoy-widgets';
+import { OnlineWidget, RatingsWidget, StockWidget } from '@/components/admin/hoy-widgets';
 import { SalesTrendWidget, TopTodayWidget } from '@/components/admin/sales-widgets';
 import HitoTarjeta from '@/components/admin/momentos/hito-tarjeta';
 import FiestaPrimerPedido from '@/components/admin/momentos/fiesta-primer-pedido';
 import { TuDiaTira } from '@/components/admin/momentos/tu-dia';
 import CompartirPlato from '@/components/admin/momentos/compartir-plato';
+import { Atender } from '@/components/admin/hoy/atender';
+import { DineroHoy, type Celda } from '@/components/admin/hoy/dinero-hoy';
+import { ServicioHoy } from '@/components/admin/hoy/servicio-hoy';
+import { PrimerPedido } from '@/components/admin/hoy/primer-pedido';
+import { getCajaState } from '@/lib/actions/finanzas';
+import { getPedidosVivos, getAvanceGuia, getCierresDelDia, getSemana } from '@/lib/db/hoy-etapa';
+import {
+  etapaDeHoy, excepcionesDeServicio, ordenarExcepciones, pasosPrimerPedido,
+  type Excepcion, type PasoPrimerPedido,
+} from '@/lib/hoy-etapa';
 import type { MarcaRestaurante, PlatoParaCompartir } from '@/lib/compartir/plato';
 import { getHitos, getTuDia } from '@/lib/db/momentos';
 import type { ResolvedTheme } from '@/lib/theme/resolve';
-import type { OrderStatus, Restaurant } from '@/types';
-import { mesaDeFila, direccionDeMesa } from '@/lib/mesa';
+import type { Restaurant } from '@/types';
 import { panelBase } from '@/lib/panel-links-server';
 import { panelHref } from '@/lib/panel-links';
 import { fmtMoney } from '@/lib/money';
@@ -45,70 +47,31 @@ import { ritmoDelDia } from '@/lib/ritmo-del-dia';
 export const metadata = { title: 'Hoy – Panel admin' };
 
 /* ============================================================
-   /admin — "Hoy"
+   /admin — "Hoy", por etapa (fichas 2.1 y 2.2, 2026-11-15)
    ------------------------------------------------------------
-   Fase 1 del rediseño (dirección Claridad). Antes esta pantalla
-   apilaba hasta seis bloques del mismo peso: aviso de prueba,
-   aviso de visitas, aviso de la PC, primeros pasos, números del
-   día y seis accesos rápidos que en su mayoría repetían el menú.
+   Maqueta aprobada: docs/diseno/MAQUETA_HOY_POR_ETAPA_2026-11-15.html
 
-   Ahora responde UNA pregunta —cómo va hoy— en tres bloques con
-   jerarquía real:
-     1. Necesita tu atención — TODOS los avisos juntos, ordenados
-        por urgencia, y el bloque entero desaparece si no hay nada.
-     2. Resumen del día — los tres números, sin adornos.
-     3. En curso — los pedidos que están pasando ahora mismo.
+   Hoy responde qué necesita atención, cuánto se cobró y cómo va el
+   servicio, y elige sola su versión (reglas en lib/hoy-etapa.ts):
 
-   Los accesos rápidos que sí hacían falta (agregar platillo, ver
-   el menú publicado) subieron a la cabecera como acciones; los
-   demás eran atajos a entradas que ya están en el menú lateral.
+     · nuevo     → «Llega a tu primer pedido», sin cifras en cero.
+     · operando  → Atender (hasta tres filas), el dinero —«Cobrado»,
+                   el libro de Caja, no lo pedido— y el servicio. En
+                   la PC, la tendencia va en una segunda columna.
+     · cerrado   → la caja se cerró hoy y no queda nada vivo: lo
+                   cobrado, el cuadre y lo comprobable de la semana.
+
+   Nada se anuncia cuando va bien: un bloque sin nada que decir no se
+   pinta. La oferta de subir de plan se fue a Negocio › Resumen.
    ============================================================ */
 
-/** Un renglón de "Necesita tu atención", ya resuelto y listo para pintar. */
-interface Alert {
-  key: string;
-  href: string;
-  /** Manda el orden y el color del punto: cuanto más arriba, más urgente. */
-  level: 'urgente' | 'aviso' | 'info';
-  title: string;
-  desc: string;
-  action: string;
-}
-
-const LEVEL_ORDER: Record<Alert['level'], number> = { urgente: 0, aviso: 1, info: 2 };
-const LEVEL_TONE: Record<Alert['level'], Tone> = {
-  urgente: 'danger',
-  aviso: 'warn',
-  info: 'neutral',
-};
-
-/** Tono del punto de estado de un pedido. Mismo criterio semántico que
- *  STATUS_CHIP: verde = actuar ya (está listo y se enfría), ámbar = está
- *  cocinándose, acento = acaba de entrar, gris = ya no hay nada que hacer. */
-const STATUS_TONE: Record<OrderStatus, Tone> = {
-  NEW: 'accent',
-  PREP: 'warn',
-  READY: 'ok',
-  TRANSIT: 'ok',
-  SERVED: 'neutral',
-  DELIVERED: 'neutral',
-  CANCEL: 'neutral',
-};
-
-/** Cómo se llama el pedido en una lista: la mesa si la hay, si no el canal.
- *  La mesa sale de `lib/mesa.ts`, igual que en el KDS y en el salón: antes
- *  cada pantalla traía su propia copia del regex sobre `address`. */
-function orderLabel(o: ActiveOrderPreview): string {
-  if (o.order_type === 'DINE_IN') {
-    const n = mesaDeFila(o);
-    return n != null ? direccionDeMesa(n) : 'En local';
-  }
-  return o.order_type === 'PICKUP' ? 'Para llevar' : 'Domicilio';
-}
+/** Un aviso de la cuenta (pago, PC, tope…), ya resuelto. */
+type AvisoCuenta = Excepcion;
 
 export default async function AdminHomePage() {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = await panelBase();
+  const href = (ruta: string) => panelHref(base, ruta);
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
   const { profile } = ctx;
@@ -124,13 +87,7 @@ export default async function AdminHomePage() {
 
   /* Módulos activos, con el MISMO criterio que el menú lateral: el plan manda
      sobre la bandera del jsonb (withPlanFloor) y un módulo activable necesita
-     además que el restaurante lo tenga encendido (isModuleActive).
-
-     Antes esta pantalla miraba `modules.orders` a pelo. Eso bastaba mientras
-     solo decidía si pintar tres cifras, pero con los widgets significa que un
-     restaurante cuyo plan incluye pedidos y tiene la bandera atrasada vería
-     media portada vacía — justo la incoherencia que withPlanFloor existe para
-     evitar en el nav. */
+     además que el restaurante lo tenga encendido (isModuleActive). */
   const planActual = (restaurant?.plan_actual as string | null) ?? null;
   const mod = withPlanFloor(
     ((PLAN_ORDER as string[]).includes(planActual ?? '') ? planActual : 'BASICO') as PlanCode,
@@ -141,29 +98,47 @@ export default async function AdminHomePage() {
   const timezone = restaurant?.timezone ?? 'America/Guatemala';
   const restaurantId = restaurant?.id ?? profile.restaurant_id ?? null;
   const allow = (key: string) => can(profile.role, profile.permissions, key);
+  const needsGuideCheck =
+    profile.role === 'RESTAURANT_OWNER' && restaurant?.onboarding_done === false && !!restaurantId;
 
-  /* Momentos pico (PLAN_MOMENTOS_PICO P4 y P6): el récord y la hora pico
-     de hoy, y el hito alcanzado. Van en paralelo con las cifras. */
-  const [stats, live, tuDia, hitos] = await Promise.all([
+  /* Todo lo que no depende de otra lectura sale junto. La caja solo para
+     quien tiene alguna tarea de Caja; getCajaState vuelve a comprobarlo. */
+  const [stats, vivos, tuDia, hitos, visitStats, caja, avance] = await Promise.all([
     ordersEnabled && restaurantId ? getOrderStats(restaurantId, timezone) : null,
-    ordersEnabled && restaurantId && allow('pedidos')
-      ? getActiveOrdersPreview(restaurantId, 4)
-      : null,
+    ordersEnabled && restaurantId && allow('pedidos') ? getPedidosVivos(restaurantId) : null,
     ordersEnabled && restaurantId ? getTuDia(restaurantId, timezone) : null,
     restaurantId ? getHitos(restaurantId) : null,
+    restaurantId ? getVisitStats(restaurantId, timezone) : null,
+    ordersEnabled && restaurantId && allow('caja') ? getCajaState(restaurantId) : null,
+    needsGuideCheck && restaurantId ? getAvanceGuia(restaurantId) : null,
   ]);
+  const cajaVisible = !!caja && !caja.ciego && !caja.needsMigration;
+  const cierres = cajaVisible && restaurantId ? await getCierresDelDia(restaurantId, caja.date) : null;
 
-  /* Visitas al menú. Se piden SIEMPRE y una sola vez: las usan el aviso del
-     plan gratuito (más abajo) y el widget "Tu menú en línea". Antes solo se
-     pedían en los planes con tope de visitas. */
-  const visitStats = restaurantId ? await getVisitStats(restaurantId, timezone) : null;
+  /* Primeros pasos por resultado (2.2). La guía se va sola al cumplirse los
+     tres pasos, o cuando el dueño toca «Omitir». */
+  const pasos: PasoPrimerPedido[] = avance
+    ? pasosPrimerPedido({
+        platillos: avance.platillos,
+        visitas: visitStats?.last30 ?? 0,
+        personasDistintas: visitStats?.unique30 ?? 0,
+        conPedidos: ordersEnabled,
+        pedidoRecorrido: avance.pedidoRecorrido,
+      })
+    : [];
+  const guiaPendiente = pasos.some((p) => !p.hecho);
+
+  const etapa = etapaDeHoy({
+    guiaPendiente,
+    cerroHoy: (cierres?.cierres ?? 0) > 0,
+    turnoAbierto: !!caja?.shift,
+    cobradoDesdeCierre: caja?.summary.totalSales ?? 0,
+    pedidosVivos: vivos?.length ?? 0,
+  });
 
   /* ── Los widgets ────────────────────────────────────────────
      Cada uno se pide solo si su módulo está activo Y quien mira tiene
-     permiso para esa sección: enseñarle a un cajero sin acceso a inventario
-     que se está acabando la carne es filtrarle datos por la portada.
-     getHoyWidgets lanza en paralelo lo que quede y devuelve null en lo que
-     no tenga nada que decir; abajo, un null es un bloque que no se pinta. */
+     permiso para esa sección. Un null es un bloque que no se pinta. */
   const widgets = restaurantId
     ? await getHoyWidgets(
         restaurantId,
@@ -178,21 +153,20 @@ export default async function AdminHomePage() {
         },
         {
           tableCount: resolved?.config.dineInTableCount ?? 0,
-          todayOrders: stats?.todayOrders ?? 0,
+          // La conversión del menú se mide con los pedidos de la carta.
+          todayOrders: stats?.todayOnline ?? 0,
           visits: visitStats,
         },
       )
     : null;
+  const semana = etapa === 'cerrado' && restaurantId ? await getSemana(restaurantId) : null;
 
   // ── Prueba gratis ───────────────────────────────────────────
   const billing = restaurantId ? await getBillingConfig(restaurantId) : null;
-  const planContract = restaurantId && allow('suscripcion') ? await getRestaurantPlanPresentation(restaurantId) : null;
   const onTrial = isOnTrial(billing);
   const trialLeft = onTrial ? trialDaysLeft(billing) : 0;
 
   // ── Cobro pendiente de la mensualidad (Paga tu plan) ────────
-  // Antes nada en el panel decía que había algo por pagar: el dueño se
-  // enteraba cuando lo suspendían. Solo quien puede ver Mi suscripción.
   const cobro = billing && restaurantId && allow('suscripcion')
     ? await (async () => {
         const [invoices, comprobante] = await Promise.all([getInvoices(restaurantId, 24), ultimoComprobante(restaurantId)]);
@@ -217,40 +191,10 @@ export default async function AdminHomePage() {
   const visitWarningLimit = restaurant?.plan_actual ? PLANS[restaurant.plan_actual].monthlyVisitWarning : undefined;
   const visitWarning = !!visitStats && !!visitWarningLimit && visitStats.last30 >= visitWarningLimit;
 
-  // ── Onboarding guiado (solo el dueño, primera vez) ──────────
-  const needsOnboarding =
-    profile.role === 'RESTAURANT_OWNER' && restaurant?.onboarding_done === false && !!restaurantId;
-  let onboardingSteps: OnboardingStep[] = [];
-  if (needsOnboarding && restaurantId) {
-    const db = createServiceClient();
-    const [{ count: catCount }, { count: prodCount }] = await Promise.all([
-      db.from('categories').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
-      db.from('products').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
-    ]);
-    const hasLogo = !!resolved?.config.logoUrl;
-    /* Progreso dotado (estrategia §2.8): el primer paso ya viene hecho y la
-       guía arranca en 20 %, nunca en 0 %. «Comparte tu menú» cuenta como
-       hecho en cuanto alguien abrió el menú: es la señal de que ya salió. */
-    onboardingSteps = [
-      { key: 'cuenta', label: 'Creaste tu cuenta', desc: 'Tu restaurante ya existe en Leogin', icon: 'user', href: panelHref(base, '/admin/perfil'), done: true },
-      { key: 'marca', label: 'Personaliza tu marca', desc: 'Logo, colores y estilo', icon: 'sparkle', href: panelHref(base, '/admin/personalizacion'), done: hasLogo },
-      { key: 'categoria', label: 'Crea una categoría', desc: 'Organiza tu menú', icon: 'tag', href: panelHref(base, '/admin/categorias'), done: (catCount ?? 0) > 0 },
-      { key: 'platillo', label: 'Agrega tu primer platillo', desc: 'Con foto, nombre y precio', icon: 'plus', href: panelHref(base, '/admin/menu/productos/new'), done: (prodCount ?? 0) > 0 },
-      { key: 'qr', label: 'Comparte tu menú', desc: 'Descarga tu código QR', icon: 'image', href: panelHref(base, '/admin/qr'), done: (visitStats?.last30 ?? 0) > 0 },
-      { key: 'escritorio', label: 'Elige la PC del local', desc: 'Para que imprima sola y no te frene un corte de internet', icon: 'monitor', href: panelHref(base, '/admin/mi-pc'), done: false, optional: true },
-    ];
-  }
-
   // ── Salud de la PC principal ────────────────────────────────
-  // Solo 'offline': la PC estaba encendida y dejó de reportar >10 min, que es
-  // un PROBLEMA (se fue la luz, la apagaron sin querer). Los casos "no hay
-  // ninguna" y "la apagué yo" ya los cubre el aviso del layout
-  // (components/admin/main-pc-banner.tsx) en todas las pantallas.
+  // 'offline' = estaba encendida y dejó de reportar >10 min. Durante la guía
+  // no se pide elegirla: la impresora aparece cuando entra el primer pedido.
   let agentOffline = false;
-  /* «Tu local no tiene PC principal» era un aviso en TODAS las pantallas del
-     panel (EV-14): ahora es una fila de aquí, solo para quien decide la
-     infraestructura y solo con pedidos (sin pedidos no hay comandas que
-     imprimir). Durante los primeros pasos no sale: ahí ya es un paso. */
   let pcState: 'missing' | 'off' | null = null;
   if (ordersEnabled && restaurantId && allow('impresion')) {
     const db = createServiceClient();
@@ -265,19 +209,16 @@ export default async function AdminHomePage() {
     const stale = !!lastSeen && Date.now() - new Date(lastSeen).getTime() > 10 * 60_000;
     if (stale && (agent?.is_active as boolean | null) !== false) agentOffline = true;
     const decide = profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN';
-    if (decide && !needsOnboarding) {
+    if (decide && etapa !== 'nuevo') {
       if (!agent) pcState = 'missing';
       else if ((agent.is_active as boolean | null) === false) pcState = 'off';
     }
   }
 
-  /* Platillos a la vista sin foto (auditoría 2026-10-02, MEN-12). Sin foto
-     la carta vende menos y el dueño no lo ve hasta que alguien se lo dice.
-     Una consulta de conteo, y solo para quien puede editar el catálogo. */
+  /* Platillos a la vista sin foto (MEN-12): va a «Mejora tu carta», al final. */
   let sinFoto = 0;
-  if (restaurantId && allow('catalogo') && !needsOnboarding) {
-    const db = createServiceClient();
-    const { count } = await db
+  if (restaurantId && allow('catalogo') && etapa !== 'nuevo') {
+    const { count } = await createServiceClient()
       .from('products')
       .select('id', { count: 'exact', head: true })
       .eq('restaurant_id', restaurantId)
@@ -286,11 +227,10 @@ export default async function AdminHomePage() {
     sinFoto = count ?? 0;
   }
 
-  /* ACC-06: el candado de aparatos nace apagado y la lista se llena sola con
-     cada PIN correcto; pasada una semana se le recuerda al DUEÑO que ya lo
-     puede encender (lib/device-lock-reminder.ts). Una consulta, solo para él. */
+  /* ACC-06: pasada una semana se le recuerda al DUEÑO que ya puede encender
+     el candado de aparatos (lib/device-lock-reminder.ts). */
   let recordarCandado = 0;
-  if (restaurantId && profile.role === 'RESTAURANT_OWNER' && !needsOnboarding
+  if (restaurantId && profile.role === 'RESTAURANT_OWNER' && etapa !== 'nuevo'
       && (restaurant as { pin_requires_trusted_device?: boolean } | null)?.pin_requires_trusted_device !== true) {
     const { data: primero, count } = await createServiceClient()
       .from('restaurant_devices')
@@ -308,14 +248,10 @@ export default async function AdminHomePage() {
   const fmt = (n: number) => (resolved ? formatPrice(n, resolved.config) : fmtMoney(n));
   const brandName = restaurant?.name ?? 'tu restaurante';
 
-  // El menú público vive en el subdominio SIN "-admin": un href="/" relativo
-  // se reescribe de vuelta a "/admin/" en ese subdominio (ver proxy.ts §3),
-  // así que "Ver mi menú" reabría el propio panel en vez del catálogo.
+  // El menú público vive en el subdominio SIN "-admin" (ver proxy.ts §3).
   const menuUrl = slug ? subdomainUrl(slug) : '/';
 
-  /* «Comparte tu plato del día» (PLAN_MOMENTOS_PICO P7): la foto y el
-     precio del plato estrella, buscados por su nombre. Si se renombró y ya
-     no coincide, la imagen sale con la inicial y sin precio. */
+  /* «Comparte tu plato del día» (PLAN_MOMENTOS_PICO P7). */
   let platoEstrella: PlatoParaCompartir | null = null;
   const estrella = stats?.topToday[0] ?? null;
   if (estrella && restaurantId && allow('catalogo')) {
@@ -344,130 +280,133 @@ export default async function AdminHomePage() {
       }
     : null;
 
-  // Fecha de hoy en la zona del restaurante, no en la del servidor.
+  // Fecha y horas en la zona del restaurante, no en la del servidor.
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
   let today: string;
+  let weekday = 'hoy';
   try {
     today = new Intl.DateTimeFormat('es-GT', {
       weekday: 'long', day: 'numeric', month: 'long', timeZone: timezone,
     }).format(new Date(now));
     today = today.charAt(0).toUpperCase() + today.slice(1);
+    weekday = new Intl.DateTimeFormat('es-GT', { weekday: 'long', timeZone: timezone }).format(new Date(now));
   } catch {
     today = brandName;
   }
+  const hora = (iso: string) => {
+    try {
+      return new Intl.DateTimeFormat('es-GT', { hour: 'numeric', minute: '2-digit', timeZone: timezone }).format(new Date(iso));
+    } catch { return ''; }
+  };
 
-  // ── Un solo bloque de avisos, ordenado por urgencia ─────────
-  const alerts: Alert[] = [];
+  // ── Avisos de la cuenta: misma forma que las excepciones del servicio ──
+  const avisos: AvisoCuenta[] = [];
   if (agentOffline) {
-    alerts.push({
-      key: 'pc', href: panelHref(base, '/admin/mi-pc'), level: 'urgente',
-      title: 'La PC del local dejó de responder',
-      desc: 'Revisa que esté encendida y con internet — mientras tanto no se imprimen comandas solas.',
-      action: 'Revisar',
-    });
-  }
-  if (pcState) {
-    alerts.push({
-      key: 'pc-principal', href: panelHref(base, '/admin/mi-pc'), level: 'info',
-      title: pcState === 'missing' ? 'Aún no eliges la PC del local' : 'La PC del local está apagada',
-      desc: pcState === 'missing'
-        ? 'Con ella las comandas se imprimen solas y un corte de internet no detiene el servicio.'
-        : 'Mientras siga apagada no se imprimen comandas solas ni hay respaldo si se cae el internet.',
-      action: pcState === 'missing' ? 'Elegirla' : 'Encenderla',
+    avisos.push({
+      key: 'pc', ruta: '/admin/mi-pc', nivel: 'urgente', accion: 'Revisar',
+      titulo: 'La PC del local dejó de responder',
+      detalle: 'Revisa que esté encendida y con internet; mientras tanto no se imprimen comandas solas.',
     });
   }
   if (cobro && !cobro.enRevision) {
-    alerts.push({
-      key: 'cobro', href: panelHref(base, '/admin/suscripcion'), level: cobro.vencido ? 'urgente' : 'aviso',
-      title: cobro.vencido
+    avisos.push({
+      key: 'cobro', ruta: '/admin/suscripcion', nivel: cobro.vencido ? 'urgente' : 'aviso', accion: 'Pagar',
+      titulo: cobro.vencido
         ? `Tu pago de ${fmtMoney(cobro.total, cobro.currency)} está vencido`
         : `Tienes ${fmtMoney(cobro.total, cobro.currency)} por pagar`,
-      desc: 'Transfiere, escribe tu código de pago y sube el comprobante. Te toma un minuto.',
-      action: 'Pagar',
+      detalle: 'Sube el comprobante de tu transferencia. Te toma un minuto.',
     });
   }
   if (onTrial && trialLeft <= 3) {
-    alerts.push({
-      key: 'trial', href: panelHref(base, '/admin/suscripcion'), level: 'urgente',
-      title: `Tu prueba termina en ${trialLeft} día${trialLeft !== 1 ? 's' : ''}`,
-      desc: 'Contáctanos para continuar sin interrupciones.',
-      action: 'Ver planes',
+    avisos.push({
+      key: 'trial', ruta: '/admin/suscripcion', nivel: 'urgente', accion: 'Ver planes',
+      titulo: `Tu prueba termina en ${trialLeft} día${trialLeft !== 1 ? 's' : ''}`,
+      detalle: 'Contáctanos para continuar sin interrupciones.',
+    });
+  }
+  /* Caja sin apertura con dinero ya cobrado (M§4.3): se puede cerrar sin
+     haber abierto, así que es un aviso suave y va al final. */
+  if (cajaVisible && caja && !caja.shift && caja.summary.totalSales > 0 && etapa === 'operando') {
+    avisos.push({
+      key: 'caja-sin-abrir', ruta: '/admin/caja', nivel: 'info', accion: 'Abrir caja',
+      titulo: 'La caja no se abrió',
+      detalle: `Ya hay ${fmt(caja.summary.totalSales)} cobrados sin turno`,
+    });
+  }
+  if (pcState) {
+    avisos.push({
+      key: 'pc-principal', ruta: '/admin/mi-pc', nivel: 'info', accion: pcState === 'missing' ? 'Elegirla' : 'Encenderla',
+      titulo: pcState === 'missing' ? 'Aún no eliges la PC del local' : 'La PC del local está apagada',
+      detalle: pcState === 'missing'
+        ? 'Con ella las comandas se imprimen solas y un corte de internet no detiene el servicio.'
+        : 'Mientras siga apagada no se imprimen comandas solas ni hay respaldo si se cae el internet.',
     });
   }
   if (tope && tope.nivel !== 'ok') {
-    alerts.push({
-      key: 'tope-pedidos', href: panelHref(base, '/admin/suscripcion'), level: tope.nivel === 'pasado' ? 'urgente' : 'aviso',
-      title: tope.nivel === 'pasado'
+    avisos.push({
+      key: 'tope-pedidos', ruta: '/admin/suscripcion', nivel: tope.nivel === 'pasado' ? 'urgente' : 'aviso', accion: 'Ver planes',
+      titulo: tope.nivel === 'pasado'
         ? `¡${tope.usados.toLocaleString('es-GT')} pedidos este mes! Pasaste los ${tope.tope} de En línea`
         : `Llevas ${tope.usados.toLocaleString('es-GT')} de ${tope.tope} pedidos este mes`,
-      desc: tope.nivel === 'pasado'
-        ? 'Tu menú sigue vendiendo: no se corta ningún pedido. Desde el próximo mes tu negocio necesita Estándar, con pedidos y productos sin tope.'
-        : 'Te va bien. Si pasas el tope tu menú sigue vendiendo, y el próximo mes te pediremos pasar a Estándar.',
-      action: 'Ver planes',
+      detalle: tope.nivel === 'pasado'
+        ? 'Tu menú sigue vendiendo: no se corta ningún pedido. Desde el próximo mes tu negocio necesita Estándar.'
+        : 'Si pasas el tope tu menú sigue vendiendo, y el próximo mes te pediremos pasar a Estándar.',
     });
   }
   if (visitWarning && visitStats) {
-    alerts.push({
-      key: 'visitas', href: panelHref(base, '/admin/suscripcion'), level: 'aviso',
-      title: `Tu menú va muy bien: ${visitStats.last30.toLocaleString('es-GT')} visitas este mes`,
-      desc: 'Pasaste el uso típico del plan gratuito. Sube de plan para pedidos en línea, WhatsApp y avisos en tiempo real.',
-      action: 'Ver planes',
+    avisos.push({
+      key: 'visitas', ruta: '/admin/suscripcion', nivel: 'aviso', accion: 'Ver planes',
+      titulo: `Tu menú va muy bien: ${visitStats.last30.toLocaleString('es-GT')} visitas este mes`,
+      detalle: 'Pasaste el uso típico del plan gratuito. Sube de plan para pedidos en línea y avisos en tiempo real.',
     });
   }
   if (onTrial && trialLeft > 3) {
-    alerts.push({
-      key: 'trial', href: panelHref(base, '/admin/suscripcion'), level: 'info',
-      title: trialLeft === 1 ? 'Te queda 1 día de prueba' : `Te quedan ${trialLeft} días de prueba`,
-      desc: 'Tu menú ya está en vivo. Aprovéchalo al máximo.',
-      action: 'Ver planes',
-    });
-  }
-  /* Sin lema, la portada del menú no tiene la frase bajo el nombre. Antes
-     salía «Sabor que enamora» de relleno; ahora se pide (CAT-03). */
-  if (resolved && !resolved.config.tagline && !resolved.content.portada.subtitle && allow('perfil') && !needsOnboarding) {
-    alerts.push({
-      key: 'lema', href: panelHref(base, '/admin/perfil'), level: 'info',
-      title: 'Tu menú no tiene lema',
-      desc: 'Una frase bajo tu nombre en la portada, como «Café de especialidad en la zona 10».',
-      action: 'Escribir lema',
-    });
-  }
-  if (sinFoto > 0) {
-    alerts.push({
-      key: 'sin-foto', href: panelHref(base, '/admin/menu?filtro=sin-foto'), level: 'info',
-      title: sinFoto === 1 ? '1 platillo sin foto' : `${sinFoto} platillos sin foto`,
-      desc: 'Con foto se piden más: en un menú digital la gente elige con los ojos.',
-      action: 'Agregar fotos',
+    avisos.push({
+      key: 'trial', ruta: '/admin/suscripcion', nivel: 'info', accion: 'Ver planes',
+      titulo: trialLeft === 1 ? 'Te queda 1 día de prueba' : `Te quedan ${trialLeft} días de prueba`,
+      detalle: 'Tu menú ya está en vivo. Aprovéchalo al máximo.',
     });
   }
   if (recordarCandado > 0) {
-    alerts.push({
-      key: 'candado-aparatos', href: panelHref(base, '/admin/personal'), level: 'aviso',
-      title: 'Ya puedes cerrar el PIN a tu local',
-      desc: `Reconocimos ${recordarCandado === 1 ? '1 aparato' : `${recordarCandado} aparatos`} de tu local. Enciende «El PIN solo funciona en estos aparatos» y nadie podrá probar el PIN de tu personal desde fuera.`,
-      action: 'Encender',
+    avisos.push({
+      key: 'candado-aparatos', ruta: '/admin/personal', nivel: 'aviso', accion: 'Encender',
+      titulo: 'Ya puedes cerrar el PIN a tu local',
+      detalle: `Reconocimos ${recordarCandado === 1 ? '1 aparato' : `${recordarCandado} aparatos`} de tu local. Enciende «El PIN solo funciona en estos aparatos».`,
     });
   }
-  alerts.sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]);
 
-  /* Con qué comparar las ventas de hoy, bajo la cifra (auditoría
-     2026-10-02, HOY-03): lo que un día igual —mismo día de la semana, las
-     cuatro semanas anteriores— llevaba A ESTA HORA (getDayPace). Con menos
-     de dos días de referencia no se dice nada: uno solo es casualidad. */
-  /* Antes de la primera venta no se compara (EV-15): «↓ 100 %» a media
-     mañana regañaba por no haber abierto. La regla, en lib/ritmo-del-dia.ts. */
-  const pace = widgets?.pace ?? null;
-  const ritmo = stats ? ritmoDelDia(stats.todaySales, pace) : null;
+  const atender = ordenarExcepciones([
+    ...(vivos ? excepcionesDeServicio(vivos, now, hora, fmt) : []),
+    ...avisos,
+  ]);
+
+  /* «Mejora tu carta»: lo que vende más pero no es del día (lema, fotos). */
+  const mejoras: { key: string; ruta: string; titulo: string; detalle: string; accion: string }[] = [];
+  if (resolved && !resolved.config.tagline && !resolved.content.portada.subtitle && allow('perfil') && etapa !== 'nuevo') {
+    mejoras.push({
+      key: 'lema', ruta: '/admin/perfil', accion: 'Escribir lema',
+      titulo: 'Tu menú no tiene lema',
+      detalle: 'Una frase bajo tu nombre en la portada, como «Café de especialidad en la zona 10».',
+    });
+  }
+  if (sinFoto > 0) {
+    mejoras.push({
+      key: 'sin-foto', ruta: '/admin/menu?filtro=sin-foto', accion: 'Agregar fotos',
+      titulo: sinFoto === 1 ? '1 platillo sin foto' : `${sinFoto} platillos sin foto`,
+      detalle: 'Con foto se piden más: en un menú digital la gente elige con los ojos.',
+    });
+  }
+
+  /* Con qué comparar lo pedido hoy (HOY-03, EV-15): lo que un día igual
+     llevaba a esta hora. Antes de la primera venta no se compara. */
+  const ritmo = stats ? ritmoDelDia(stats.todaySales, widgets?.pace ?? null) : null;
   let ventasVs: React.ReactNode = null;
   if (ritmo?.tipo === 'comparado') {
     const delta = ritmo.delta;
-    let dia = 'un día igual';
-    try {
-      dia = `un ${new Intl.DateTimeFormat('es-GT', { weekday: 'long', timeZone: timezone }).format(new Date(now))} normal`;
-    } catch { /* zona rara: se queda «un día igual» */ }
+    const dia = `un ${weekday} normal`;
     ventasVs = delta === 0
-      ? <>Igual que {dia}</>
+      ? <>igual que {dia}</>
       : (
         <>
           <span style={{ color: delta > 0 ? 'var(--c-ok)' : 'var(--c-warn)', fontWeight: 600 }}>
@@ -477,177 +416,211 @@ export default async function AdminHomePage() {
         </>
       );
   }
+  const lineaPedidos = stats && stats.todayOrders > 0
+    ? <>{stats.todayOrders} {stats.todayOrders === 1 ? 'pedido' : 'pedidos'} · ticket {fmt(stats.todayTicket)}{ventasVs ? <> · {ventasVs}</> : null}</>
+    : null;
 
-  return (
-    <div className="anim-fade-up adm-w-overview flex flex-col gap-6">
+  /* ── El dinero ── */
+  let dinero: React.ReactNode = null;
+  if (etapa === 'cerrado' && cierres) {
+    const dif = cierres.diferencia;
+    const cuadre = dif === 0 ? 'sin diferencia' : dif < 0 ? `faltan ${fmt(Math.abs(dif))}` : `sobran ${fmt(dif)}`;
+    const celdas: Celda[] = [
+      { etiqueta: 'Cuadre de caja', valor: fmt(Math.abs(dif)), nota: [cierres.ultimo?.cajero, cuadre].filter(Boolean).join(' · ') },
+    ];
+    if (stats && stats.todayOrders > 0) {
+      celdas.push({ etiqueta: 'Pedidos', valor: String(stats.todayOrders), nota: `ticket ${fmt(stats.todayTicket)}` });
+    }
+    dinero = (
+      <DineroHoy
+        etiqueta={`Cobrado el ${weekday}`}
+        valor={fmt(cierres.cobrado)}
+        celdas={celdas}
+        pie={ventasVs}
+        enlace={{ href: href('/admin/caja'), label: 'Ver los cierres' }}
+      />
+    );
+  } else if (cajaVisible && caja) {
+    const cobradoHoy = Math.round(((cierres?.cobrado ?? 0) + caja.summary.totalSales) * 100) / 100;
+    const abiertas = caja.pending.mesas.length + caja.pending.domicilios.length + caja.pending.paraLlevar.length;
+    if (cobradoHoy > 0 || caja.pending.total > 0 || (stats?.todayOrders ?? 0) > 0) {
+      const celdas: Celda[] = [
+        {
+          etiqueta: 'Por cobrar', valor: fmt(caja.pending.total),
+          nota: abiertas > 0 ? `${abiertas} ${abiertas === 1 ? 'cuenta abierta' : 'cuentas abiertas'}` : null,
+        },
+        caja.shift
+          ? {
+              etiqueta: 'Caja', texto: true,
+              valor: caja.shift.openedByName ? `Abierta · ${caja.shift.openedByName}` : 'Abierta',
+              nota: caja.shift.openedAt ? `desde las ${hora(caja.shift.openedAt)}` : null,
+            }
+          : {
+              etiqueta: 'Caja', texto: true,
+              valor: (cierres?.cierres ?? 0) > 0 ? 'Sin turno abierto' : 'Sin abrir',
+              nota: cierres?.ultimo ? `último cierre ${hora(cierres.ultimo.at)}` : null,
+            },
+      ];
+      dinero = (
+        <DineroHoy
+          etiqueta="Cobrado hoy"
+          valor={fmt(cobradoHoy)}
+          celdas={celdas}
+          pie={lineaPedidos}
+          enlace={allow('metricas') ? { href: href('/admin/metricas'), label: 'Ver el mes' } : null}
+        />
+      );
+    }
+  } else if (stats && stats.todayOrders > 0) {
+    /* Sin acceso a Caja: lo pedido, dicho como lo que es. */
+    dinero = (
+      <DineroHoy
+        etiqueta="Pedido hoy"
+        valor={fmt(stats.todaySales)}
+        celdas={[
+          { etiqueta: 'Pedidos', valor: String(stats.todayOrders) },
+          { etiqueta: 'Ticket promedio', valor: fmt(stats.todayTicket) },
+        ]}
+        pie={ventasVs}
+        enlace={allow('metricas') ? { href: href('/admin/metricas'), label: 'Ver el mes' } : null}
+      />
+    );
+  }
 
-      {/* NADA SATURADO (2026-11-10, maqueta MAQUETA_NADA_SATURADO): lo primero
-          que ve el dueño es cómo va el día. La cabecera es un renglón —qué día
-          es— y «Ver mi menú» un enlace; el nombre del local ya está en el
-          panel y «Agregar platillo» se hace desde Menú. */}
-      <div className="flex items-center gap-3">
-        <h2 className="min-w-0 flex-1 text-[14px] font-medium text-adm-text-3 first-letter:uppercase">{today}</h2>
-        <a href={menuUrl} target="_blank" rel="noopener noreferrer"
-          className="inline-flex min-h-11 shrink-0 items-center gap-1.5 text-[13px] font-semibold"
-          style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}>
-          <Icon name="eye" size={15} />
-          Ver mi menú
-        </a>
-      </div>
+  const encabezado = etapa === 'nuevo' ? null : (
+    <div className="flex items-center gap-3">
+      <h2 className="min-w-0 flex-1 text-[14px] font-medium text-adm-text-3">
+        {today}
+        {etapa === 'cerrado' && cierres?.ultimo ? ` · cerraste a las ${hora(cierres.ultimo.at)}` : ''}
+      </h2>
+      <a href={menuUrl} target="_blank" rel="noopener noreferrer"
+        className="inline-flex min-h-11 shrink-0 items-center gap-1.5 text-[13px] font-semibold text-adm-accent-ink no-underline">
+        <Icon name="eye" size={15} />
+        Ver mi menú
+      </a>
+    </div>
+  );
 
-      {/* 2 · Resumen del día */}
-      {stats && (
-        <Section
-          title="Resumen del día"
-          action={allow('metricas') ? { href: panelHref(base, '/admin/metricas'), label: 'Ver el mes' } : undefined}
-        >
-          <StatGroup className="hoy-cifras">
-            <Stat label="Ventas" value={fmt(stats.todaySales)} sub={ventasVs} />
-            <Stat label="Pedidos" value={String(stats.todayOrders)} />
-            <Stat label="Ticket promedio" value={fmt(stats.todayTicket)} />
-          </StatGroup>
+  const servicio = etapa === 'operando' && vivos ? (
+    <ServicioHoy
+      pedidos={vivos}
+      casa={widgets?.house ?? null}
+      ahora={now}
+      dinero={fmt}
+      href={href}
+      verMesas={allow('mesas')}
+    />
+  ) : null;
+
+  const tendencia = stats && ((stats.series.length > 0 && stats.totalLast14 > 0) || stats.topToday.length > 0) ? (
+    <>
+      {stats.series.length > 0 && stats.totalLast14 > 0 && (
+        <SalesTrendWidget
+          series={stats.series}
+          totalLast14={stats.totalLast14}
+          todaySales={stats.todaySales}
+          pace={widgets?.pace ?? null}
+          money={fmt}
+        />
+      )}
+      {stats.topToday.length > 0 && (
+        <div className="flex flex-col gap-2.5">
+          <TopTodayWidget items={stats.topToday} />
           <TuDiaTira
             estrella={stats.topToday[0] ?? null}
             horaPico={tuDia?.horaPico ?? null}
             record={tuDia?.record ?? null}
             compartir={platoEstrella && marca ? <CompartirPlato marca={marca} plato={platoEstrella} /> : undefined}
           />
-        </Section>
+        </div>
       )}
+    </>
+  ) : null;
 
-      {/* Primeros pasos (solo la primera vez) */}
-      {needsOnboarding && onboardingSteps.length > 0 && restaurantId && (
-        <OnboardingChecklist restaurantId={restaurantId} firstName={(profile.full_name || '').trim().split(' ')[0]} steps={onboardingSteps} />
-      )}
+  const mejoraCarta = mejoras.length > 0 ? (
+    <Section title="Mejora tu carta">
+      <List>
+        {mejoras.map((m) => (
+          <ListLink key={m.key} href={href(m.ruta)}>
+            <ListText title={m.titulo} desc={m.detalle} />
+            <span className="shrink-0 text-[13px] font-semibold text-adm-accent-ink">{m.accion}</span>
+          </ListLink>
+        ))}
+      </List>
+    </Section>
+  ) : null;
 
-      {/* El pedido número 1 del restaurante es una fiesta (P3). Solo aquí, en
-          Hoy: encima de Pedidos, Tomar pedidos o la caja taparía justo la
-          pantalla donde ese pedido se está atendiendo. */}
+  return (
+    <div className="anim-fade-up adm-w-overview flex flex-col gap-6" data-etapa={etapa}>
+      {encabezado}
+
+      {/* El pedido número 1 del restaurante es una fiesta (P3). */}
       {ordersEnabled && restaurantId && (
         <FiestaPrimerPedido restaurantId={restaurantId} restaurantName={brandName} />
       )}
 
-      {/* Un hito alcanzado: 100 pedidos, el primer mes, un año (P6). Sin
-          pedidos en el plan, solo cuentan los del tiempo. */}
-      {hitos?.hito && restaurantId && (ordersEnabled || !hitos.hito.clave.startsWith('pedidos')) && (
-        <HitoTarjeta restaurantId={restaurantId} hito={hitos.hito} />
-      )}
+      {etapa === 'nuevo' && restaurantId ? (
+        <>
+          <Atender lista={atender} href={href} />
+          <PrimerPedido
+            restaurantId={restaurantId}
+            pasos={pasos}
+            menuUrl={menuUrl}
+            platilloHref={href('/admin/menu/productos/new')}
+            qrHref={href('/admin/qr')}
+          />
+          {dinero}
+          {widgets?.online && <OnlineWidget data={widgets.online} showOrders={ordersEnabled} />}
+        </>
+      ) : (
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+          <div className="flex min-w-0 flex-col gap-6">
+            {etapa === 'cerrado' ? (
+              <>
+                {dinero}
+                <Atender lista={atender} href={href} />
+              </>
+            ) : (
+              <>
+                <Atender lista={atender} href={href} />
+                {dinero}
+              </>
+            )}
+            {servicio}
+            {/* Se está acabando: lo único de aquí que cuesta dinero si no se ve. */}
+            {widgets?.stock && <StockWidget data={widgets.stock} canSeeInventory={allow('inventario')} />}
+            {etapa === 'cerrado' && semana && semana.pedidos > 0 && (
+              <Section title="Esta semana">
+                <List>
+                  <ListLink href={href('/admin/metricas')}>
+                    <ListText
+                      title={`${semana.pedidos} ${semana.pedidos === 1 ? 'pedido atendido' : 'pedidos atendidos'}${
+                        semana.cierres > 0 ? ` · ${semana.cierres} ${semana.cierres === 1 ? 'cierre completo' : 'cierres completos'}` : ''}`}
+                      desc={semana.cocinaMin != null ? `Tiempo medio en cocina: ${semana.cocinaMin} min` : undefined}
+                    />
+                    <Icon name="chevronRight" size={15} className="shrink-0 text-adm-text-4" />
+                  </ListLink>
+                </List>
+              </Section>
+            )}
+            <div className="hidden lg:block">{mejoraCarta}</div>
+          </div>
 
-      {/* 1 · Necesita tu atención — desaparece entero cuando no hay nada */}
-      {alerts.length > 0 && (
-        <Section title="Necesita tu atención">
-          <List>
-            {alerts.map((a) => (
-              <ListLink key={a.key} href={a.href}>
-                <StatusDot tone={LEVEL_TONE[a.level]} size={9} />
-                <ListText title={a.title} desc={a.desc} />
-                <span
-                  className="shrink-0 text-[13px] font-semibold"
-                  style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}
-                >
-                  {a.action}
-                </span>
-              </ListLink>
-            ))}
-          </List>
-        </Section>
-      )}
-
-      {/* 3 · En curso */}
-      {live && live.total > 0 && (
-        <Section title="En curso">
-          <List>
-            {live.orders.map((o) => (
-              /* En el teléfono, dos renglones: las columnas de ancho fijo
-                 (104 + 116 + 96 px + huecos) no cabían en 358 px y el total
-                 se cortaba en «Q132.(» (auditoría 2026-10-02, HOY-01). Desde
-                 `sm` vuelve a ser la fila de cuatro columnas de siempre. */
-              <ListLink key={o.id} href={panelHref(base, "/admin/pedidos")} className="flex-wrap gap-y-1 sm:flex-nowrap">
-                <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-adm-text sm:w-26 sm:flex-none">
-                  {orderLabel(o)}
-                </span>
-                <span className="order-last min-w-0 basis-full truncate text-[13px] text-adm-text-3 sm:order-none sm:basis-auto sm:flex-1">
-                  {o.customer_name ? `${o.customer_name} · ` : ''}{agoLabel(o.created_at, now)}
-                </span>
-                <StatusPill tone={STATUS_TONE[o.status]} className="shrink-0 sm:w-29">
-                  {STATUS_LABEL_SHORT[o.status]}
-                </StatusPill>
-                <span className="t-mono shrink-0 whitespace-nowrap text-right text-[14px] text-adm-text sm:min-w-24">
-                  {fmt(Number(o.total))}
-                </span>
-              </ListLink>
-            ))}
-            <ListLink
-              href={panelHref(base, "/admin/pedidos")}
-              className="gap-2 text-[14px] font-semibold"
-              style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}
-            >
-              Ver {live.total === 1 ? 'el pedido' : `los ${live.total} pedidos`}
-              <Icon name="chevronRight" size={15} />
-            </ListLink>
-          </List>
-        </Section>
-      )}
-
-      {/* ── Los widgets ──────────────────────────────────────────
-          Van DEBAJO de los tres bloques de siempre y en orden fijo de
-          urgencia: lo que se rompe arriba, lo que sirve para decidir en
-          medio, lo que se mira una vez por semana abajo. El orden no cambia
-          entre restaurantes, así que se aprende una sola vez.
-
-          Cada uno se pinta solo si trae algo; el `null` lo decidió ya
-          lib/db/hoy.ts. Un martes a las diez de la mañana esta zona está
-          entera vacía, y así debe ser. */}
-
-      {/* 4 · Se está acabando — arriba del resto porque es lo único de aquí
-             que cuesta dinero si no se ve: un agotado sigue en el menú y el
-             pedido entra igual. */}
-      {widgets?.stock && (
-        <StockWidget data={widgets.stock} canSeeInventory={allow('inventario')} />
-      )}
-
-      {/* 5 · La casa */}
-      {widgets?.house && (
-        <HouseWidget data={widgets.house} now={now} canSeeTables={allow('mesas')} />
-      )}
-
-      {/* 6 y 7 · Cómo va el día y lo que más sale, lado a lado cuando hay
-          sitio: a lo ancho, la cifra quedaba a la izquierda y las barras
-          (con tope de 340 px) a la derecha, con media tarjeta en blanco en
-          medio (auditoría 2026-10-02, HOY-04). Si solo hay una, ocupa todo. */}
-      {stats && ((stats.series.length > 0 && stats.totalLast14 > 0) || stats.topToday.length > 0) && (
-        <div className="grid items-start gap-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))' }}>
-          {stats.series.length > 0 && stats.totalLast14 > 0 && (
-            <SalesTrendWidget
-              series={stats.series}
-              totalLast14={stats.totalLast14}
-              todaySales={stats.todaySales}
-              pace={widgets?.pace ?? null}
-              money={fmt}
-            />
-          )}
-          {stats.topToday.length > 0 && <TopTodayWidget items={stats.topToday} />}
+          <div className="flex min-w-0 flex-col gap-6">
+            {/* Un hito alcanzado: 100 pedidos, el primer mes, un año (P6). */}
+            {hitos?.hito && restaurantId && (ordersEnabled || !hitos.hito.clave.startsWith('pedidos')) && (
+              <HitoTarjeta restaurantId={restaurantId} hito={hitos.hito} />
+            )}
+            {tendencia}
+            {widgets?.online && <OnlineWidget data={widgets.online} showOrders={ordersEnabled} />}
+            {/* Lo que dicen tus clientes: semanal, no diario; por eso, al final. */}
+            {widgets?.ratings && (
+              <RatingsWidget data={widgets.ratings} now={now} canSeeSurveys={allow('encuestas')} />
+            )}
+            <div className="lg:hidden">{mejoraCarta}</div>
+          </div>
         </div>
-      )}
-
-      {/* 8 · Tu menú en línea */}
-      {widgets?.online && <OnlineWidget data={widgets.online} showOrders={ordersEnabled} />}
-
-      {/* 9 · Lo que dicen tus clientes — semanal, no diario: por eso, último. */}
-      {widgets?.ratings && (
-        <RatingsWidget data={widgets.ratings} now={now} canSeeSurveys={allow('encuestas')} />
-      )}
-
-      {/* Qué incluye subir de plan. Vive al FINAL a propósito: es una oferta,
-          no una tarea del día, y no debe competir con lo de arriba. */}
-      {(restaurant?.plan_actual === 'BASICO' || restaurant?.plan_actual === 'EN_LINEA' || restaurant?.plan_actual === 'ESTANDAR') && (
-        <Card>
-          <CardContent className="pt-5">
-            <LockedFeatureSection restaurantName={brandName} planActual={restaurant.plan_actual} presentation={planContract} />
-          </CardContent>
-        </Card>
       )}
     </div>
   );
 }
-

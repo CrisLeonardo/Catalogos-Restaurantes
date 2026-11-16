@@ -302,7 +302,11 @@ huellas(n, que, ok, cuando) as (values
      'ANTES de desplegar; después de la 179'),
   ('182', 'sin prueba gratis: trial_days = 0 (los planes con pedidos se cobran desde el día uno)',
      exists (select 1 from public.platform_settings where key='trial_days' and value='0'),
-     'antes o después de desplegar; independiente')
+     'antes o después de desplegar; independiente'),
+  ('183', 'primeros pasos: pedido de prueba que no cuenta en cifras, caja, puntos ni existencias',
+     exists (select 1 from information_schema.columns where table_schema='public' and table_name='orders' and column_name='es_prueba')
+     and to_regprocedure('public.leogin_terminar_pedido_prueba(uuid,uuid,uuid)') is not null,
+     'ANTES de desplegar; independiente de la 182')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

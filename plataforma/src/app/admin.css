@@ -3536,11 +3536,7 @@ html[data-admin-area] .glass-solid {
   }
 }
 
-/* ── Momentos pico (docs/planes/PLAN_MOMENTOS_PICO_2026-10-26.md) ──────
-   «Termina de armar»: la barra crece desde 0 al pintarse. */
-@media (prefers-reduced-motion: no-preference) {
-  .onb-barra { transition: transform 900ms cubic-bezier(0.16, 1, 0.3, 1) 150ms; }
-}
+/* ── Momentos pico (docs/planes/PLAN_MOMENTOS_PICO_2026-10-26.md) ────── */
 
 /* El primer pedido (fiesta-primer-pedido.tsx): una tarjeta sólida sobre
    un velo, Leo feliz y confeti que sale de detrás de él. */

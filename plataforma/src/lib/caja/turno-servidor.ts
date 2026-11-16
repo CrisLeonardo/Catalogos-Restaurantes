@@ -203,13 +203,16 @@ type FilaPedido = {
   table_number?: number | null; customer_name: string | null; waiter_id: string | null;
   waiter?: { full_name: string | null } | null;
   caja_registrado_en?: string | null;
+  /** Pedido de prueba del dueño (183): no queda por cobrar. */
+  es_prueba?: boolean;
 };
 
-const COLS_PEDIDO = 'id, order_number, order_type, status, payment_method, total, tip, delivered_at, created_at, address, table_number, customer_name, waiter_id, waiter:profiles!orders_waiter_id_fkey(full_name), caja_registrado_en';
+const COLS_PEDIDO = 'id, order_number, order_type, status, payment_method, total, tip, delivered_at, created_at, address, table_number, customer_name, waiter_id, waiter:profiles!orders_waiter_id_fkey(full_name), caja_registrado_en, es_prueba';
 
 async function pedidos(db: Db, q: (cols: string) => PromiseLike<{ data: unknown; error: { code?: string; message?: string } | null }>): Promise<FilaPedido[]> {
   let cols = COLS_PEDIDO;
   let res = await q(cols);
+  if (res.error && faltaLaColumna(res.error)) { cols = cols.replace(', es_prueba', ''); res = await q(cols); }
   if (res.error && faltaLaColumna(res.error)) { cols = cols.replace(', caja_registrado_en', ''); res = await q(cols); }
   if (res.error && faltaLaColumna(res.error)) res = await q(cols.replace(', table_number', ''));
   if (res.error) throw new Error('No se pudieron leer los pedidos de caja: ' + (res.error.message ?? 'consulta fallida'));
@@ -437,6 +440,7 @@ export async function leerTurno(db: Db, opts: {
   const domicilios: Pendientes['domicilios'] = [];
   const paraLlevar: Pendientes['paraLlevar'] = [];
   for (const o of vivos) {
+    if (o.es_prueba) continue;
     const total = Number(o.total ?? 0);
     if (o.order_type === 'DINE_IN') {
       const n = mesaDeFila(o);

@@ -147,6 +147,11 @@ const createOrderBase = z
      * mesero de la sesión real y lo ignora si viene en el payload.
      */
     waiterId: z.string().guid().optional(),
+    /**
+     * Pase firmado del pedido de prueba del dueño (lib/pedido-prueba.ts).
+     * El servidor lo verifica; sin firma válida el pedido es normal.
+     */
+    prueba: z.string().max(400).optional(),
   });
 
 /** A dónde va el pedido. Vale igual para el público y para el mesero. */

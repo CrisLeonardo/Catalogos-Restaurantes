@@ -18,6 +18,10 @@ import { diaSemana } from '@/lib/dates';
 import { diaDeNegocio } from '@/lib/caja/dia';
 import { corteDelRestaurante } from '@/lib/db/dia-negocio';
 import { PERIODOS, esPeriodo, rangoDePeriodo, comparacion, serieCompleta, type Periodo } from '@/lib/periodo';
+import LockedFeatureSection from '@/components/admin/locked-feature-card';
+import { getRestaurantPlanPresentation } from '@/lib/db/billing';
+import { can } from '@/lib/permissions';
+import type { PlanCode } from '@/lib/plans';
 
 export const metadata = { title: 'Negocio – Panel admin' };
 
@@ -50,6 +54,8 @@ export default async function AdminNegocioPage({
   let timezone = 'America/Guatemala';
   let ordersEnabled = false;
   let resolved: ResolvedTheme | null = null;
+  let planActual: PlanCode | null = null;
+  let restaurantName = 'tu restaurante';
 
   if (ctx.profile.role === 'SUPER_ADMIN') {
     const headersList = await headers();
@@ -60,6 +66,8 @@ export default async function AdminNegocioPage({
       timezone = tenantData?.restaurant.timezone ?? timezone;
       ordersEnabled = (tenantData?.restaurant.modules as { orders?: boolean } | null)?.orders === true;
       resolved = tenantData?.resolved ?? null;
+      planActual = (tenantData?.restaurant.plan_actual as PlanCode | null) ?? null;
+      restaurantName = tenantData?.restaurant.name ?? restaurantName;
     }
   } else {
     restaurantId = ctx.profile.restaurant_id;
@@ -67,6 +75,8 @@ export default async function AdminNegocioPage({
     ordersEnabled = (ctx.restaurant?.modules as { orders?: boolean } | null)?.orders === true;
     const slug = (await headers()).get('x-tenant-slug');
     if (slug) resolved = (await getRestaurantBySlug(slug))?.resolved ?? null;
+    planActual = (ctx.restaurant?.plan_actual as PlanCode | null) ?? null;
+    restaurantName = ctx.restaurant?.name ?? restaurantName;
   }
 
   if (!restaurantId) redirect('/admin/login');
@@ -108,6 +118,13 @@ export default async function AdminNegocioPage({
   const visitsTip = (d?: DayVisits) => (d ? `${d.isToday ? 'hoy' : diaSemana(d.date)} · ${d.visits} ${d.visits === 1 ? 'visita' : 'visitas'}` : undefined);
 
   const nada = visitas === 0 && visitasAntes === 0 && (!actual || actual.orders === 0);
+
+  /* Qué trae subir de plan (ficha 2.1): vivía al final de Hoy, pero es una
+     oferta, no una tarea del día. Aquí, al final de los números del
+     negocio, y solo para quien puede ver la suscripción. */
+  const ofertaPlan = (planActual === 'BASICO' || planActual === 'EN_LINEA' || planActual === 'ESTANDAR')
+    && can(ctx.profile.role, ctx.profile.permissions, 'suscripcion');
+  const presentacionPlan = ofertaPlan ? await getRestaurantPlanPresentation(restaurantId) : null;
 
   return (
     <div className="anim-fade-up adm-w-overview flex flex-col gap-6">
@@ -269,6 +286,12 @@ export default async function AdminNegocioPage({
           desc="En cuanto alguien abra tu menú o entre el primer pedido, este resumen se llena solo. Comparte tu código QR para empezar."
           action={{ href: '/admin/qr', label: 'Ver mi código QR' }}
         />
+      )}
+
+      {ofertaPlan && planActual && (
+        <Card className="p-5">
+          <LockedFeatureSection restaurantName={restaurantName} planActual={planActual} presentation={presentacionPlan} />
+        </Card>
       )}
     </div>
   );

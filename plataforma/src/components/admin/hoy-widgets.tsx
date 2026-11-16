@@ -2,7 +2,7 @@ import { Icon } from '@/components/icons';
 import { List, ListLink, ListRow, ListText, StatusDot } from '@/components/ui/list';
 import { Section } from '@/components/ui/section';
 import { Stat, StatGroup } from '@/components/ui/stat';
-import type { HouseData, OnlineData, RatingsData, StockData } from '@/lib/db/hoy';
+import type { OnlineData, RatingsData, StockData } from '@/lib/db/hoy';
 import { panelBase } from '@/lib/panel-links-server';
 import { panelHref } from '@/lib/panel-links';
 
@@ -64,114 +64,8 @@ function diffPercent(actual: number, referencia: number): number | null {
   return Math.round(((actual - referencia) / referencia) * 100);
 }
 
-/* ── 3 · La casa ─────────────────────────────────────────────── */
-
-/** Mapa mínimo de la sala: un cuadrito por mesa, lleno si está ocupada. */
-function TableDots({ occupied, total }: { occupied: number; total: number }) {
-  // Con más de veinticuatro mesas el mapa deja de leerse de un vistazo y se
-  // convierte en un código de barras: ahí manda solo la cifra. Y si hay más
-  // mesas ocupadas que configuradas —pasa: alguien abre la "Mesa 15" en un
-  // salón declarado de 12— el mapa mentiría, así que tampoco se dibuja.
-  if (total <= 0 || total > 24 || occupied > total) return null;
-  return (
-    <div className="grid shrink-0 grid-cols-6 gap-1" aria-hidden>
-      {Array.from({ length: total }, (_, i) => (
-        <span
-          key={i}
-          className="block size-2.5 rounded-[2px] border"
-          style={
-            i < occupied
-              ? { background: 'var(--adm-accent-500)', borderColor: 'var(--adm-accent-500)' }
-              : { borderColor: 'var(--adm-border-2)' }
-          }
-        />
-      ))}
-    </div>
-  );
-}
-
-/**
- * Mesas, cola y reservas en UN widget de tres filas.
- *
- * Tres módulos distintos, sí, pero una sola pregunta: ¿cómo está la sala?
- * Como tres widgets separados serían tres rótulos y tres tarjetas para tres
- * renglones de información. Cada fila desaparece por su cuenta si su módulo
- * está apagado o si hoy no tiene nada.
- */
-export async function HouseWidget({
-  data, now, canSeeTables,
-}: {
-  data: HouseData;
-  now: number;
-  canSeeTables: boolean;
-}) {
-  /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
-  const base = await panelBase();
-  const { tables, waiting, reservation } = data;
-
-  return (
-    <Section
-      title="La casa"
-      action={canSeeTables ? { href: panelHref(base, '/admin/mesas'), label: 'Ver mesas' } : undefined}
-    >
-      <List>
-        {tables && (
-          <ListLink href={panelHref(base, "/admin/mesas")}>
-            <TableDots occupied={tables.occupied} total={tables.total} />
-            <ListText
-              title={
-                tables.total >= tables.occupied && tables.total > 0
-                  ? `${tables.occupied} de ${tables.total} mesas ocupadas`
-                  : `${tables.occupied} ${tables.occupied === 1 ? 'mesa ocupada' : 'mesas ocupadas'}`
-              }
-              desc={
-                tables.oldest && durationLabel(tables.oldest.since, now)
-                  ? `La ${tables.oldest.n} lleva abierta ${durationLabel(tables.oldest.since, now)}.`
-                  : undefined
-              }
-            />
-            <Icon name="chevronRight" size={15} className="shrink-0 text-adm-text-4" />
-          </ListLink>
-        )}
-
-        {waiting && (
-          <ListLink href={panelHref(base, "/admin/lista-espera")}>
-            <span className="t-mono w-11 shrink-0 text-[18px] font-semibold text-adm-text">
-              {waiting.count}
-            </span>
-            <ListText
-              title={waiting.count === 1 ? 'Grupo esperando mesa' : 'Grupos esperando mesa'}
-              desc={`El primero de la fila llegó ${agoLabel(waiting.since, now)}.`}
-            />
-            <span
-              className="shrink-0 text-[13px] font-semibold"
-              style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}
-            >
-              Ver la fila
-            </span>
-          </ListLink>
-        )}
-
-        {reservation && (
-          <ListLink href={panelHref(base, "/admin/reservaciones")}>
-            <span className="t-mono w-11 shrink-0 text-[14px] font-semibold text-adm-text-2">
-              {reservation.time}
-            </span>
-            <ListText
-              title={`${reservation.name} · ${reservation.partySize} ${reservation.partySize === 1 ? 'persona' : 'personas'}`}
-              desc={
-                reservation.more > 0
-                  ? `Y ${reservation.more} ${reservation.more === 1 ? 'reserva más' : 'reservas más'} hoy.`
-                  : 'La única reserva de hoy.'
-              }
-            />
-            <Icon name="chevronRight" size={15} className="shrink-0 text-adm-text-4" />
-          </ListLink>
-        )}
-      </List>
-    </Section>
-  );
-}
+/* ── 3 · La casa: desde la ficha 2.1 vive dentro de «Servicio»
+   (components/admin/hoy/servicio-hoy.tsx). ── */
 
 /* ── 4 · Se está acabando ────────────────────────────────────── */
 
@@ -317,7 +211,10 @@ export async function RatingsWidget({ data, now, canSeeSurveys }: {
  * cuánta gente está mirando su menú.
  */
 export function OnlineWidget({ data, showOrders }: { data: OnlineData; showOrders: boolean }) {
-  const conversion = data.today > 0 ? Math.round((data.orders / data.today) * 100) : 0;
+  /* Pedidos desde la carta entre las personas que la abrieron. Antes dividía
+     TODOS los pedidos del día (también los del mesero) entre las visitas y
+     salía «Piden 263 %». */
+  const conversion = data.uniqueToday > 0 ? Math.min(100, Math.round((data.orders / data.uniqueToday) * 100)) : 0;
   const delta = diffPercent(data.today, data.typicalDay);
 
   return (

@@ -742,6 +742,19 @@ La siguiente ficha es **1.12 · Comensal: entrada, checkout y seguimiento**. Que
 - **Despliegue:** procedimiento en la [guía de despliegue](../guias/GUIA_DESPLIEGUE.md), parte 7d.
 - **Sigue pendiente** ([observaciones](OBSERVACIONES_AUDITORIA_2026-11-09.md)): pruebas con personas, en el local y con impresora; revisión independiente de dinero y permisos; ensayo de restauración del respaldo.
 
+## 36. Hoy por etapa y primeros pasos · fichas 2.1 y 2.2 (2026-11-16)
+
+**Rama** `feat/hoy-por-etapa`, desde `main` (`257e315`). Es la primera ficha de la Ola 2 y la primera en que la auditoría y el método «nada saturado» van juntos (decisión del dueño del 2026-11-15). Maqueta aprobada: [`MAQUETA_HOY_POR_ETAPA_2026-11-15.html`](../diseno/MAQUETA_HOY_POR_ETAPA_2026-11-15.html).
+
+- **Reglas puras** en `plataforma/src/lib/hoy-etapa.ts`, con 12 pruebas: la etapa (nuevo, operando o cerrado), los pasos por resultado, las excepciones del servicio (por aceptar, más de una hora en cocina, listo hace más de 10 min) y el orden por urgencia. Las lecturas están en `lib/db/hoy-etapa.ts`.
+- **Dinero:** «Cobrado hoy» suma los cierres del día de negocio y el periodo abierto, igual que Caja (comprobado en local: Q5,005.00 y Q467.00 por cobrar en las dos pantallas). Con arqueo ciego o sin Caja no se enseña.
+- **Pedido de prueba (migración 183):** `orders.es_prueba` protegido por el candado de columnas y `leogin_terminar_pedido_prueba`, que repone, devuelve canjes y deja CANCEL. Así lo excluyen sin cambios el informe de ventas, la caja y el tope. Hoy y lo pendiente de Caja lo excluyen también mientras está vivo. No pasa por DELIVERED, así que no da puntos. **Desviación de la maqueta:** decía «y cóbralo»; no se cobra, para no meter dinero ficticio en el cuadre.
+- **Recorrido probado en local** con Comedor Ana: el primer platillo creó «Platillos»; el pase quedó en la sesión de la pestaña y se borró de la URL; el pedido nació marcado y sin cliente; Hoy avisó «Un pedido espera que lo aceptes». Luego se aceptó, pasó a listo y «Terminar la prueba» lo dejó en CANCEL, con su registro en la bitácora y sin cobros. La guía desapareció sola.
+- **Comprobado en pantalla:** 375 y 1280 px en claro (Rincón 502 operando y Comedor Ana nuevo), y 1280 px en oscuro (Rincón 502).
+- **No comprobado en pantalla:** la versión «cerrado», que solo está cubierta por las pruebas de la regla. La 183 está aplicada en local, pero no en una base con solo 001–181.
+- **Validación:** `typecheck` y `lint` sin errores (los tres avisos de siempre); 1,562 unitarias pasan, con una omitida.
+- **Limpieza:** se quitaron la guía anterior (`onboarding-checklist.tsx`), el widget «La casa» y `getActiveOrdersPreview`, que ya no usaba nadie.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*
