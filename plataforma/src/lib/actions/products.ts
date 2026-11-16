@@ -213,9 +213,23 @@ export async function createProduct(prevState: ProductState, formData: FormData)
 
   const sort_order = existing?.[0]?.sort_order != null ? existing[0].sort_order + 1 : 0;
 
+  /* Primer platillo sin categorías (ficha 2.2): se crea «Platillos» para
+     que el plato salga en la carta sin pedir antes otro paso. */
+  let categoryId = (formData.get('category_id') as string) || null;
+  if (!categoryId) {
+    const { count } = await ctx.db.from('categories')
+      .select('id', { count: 'exact', head: true }).eq('restaurant_id', ctx.restaurantId);
+    if ((count ?? 0) === 0) {
+      const { data: cat } = await ctx.db.from('categories')
+        .insert({ restaurant_id: ctx.restaurantId, name: 'Platillos', sort_order: 0 })
+        .select('id').single();
+      categoryId = (cat?.id as string | undefined) ?? null;
+    }
+  }
+
   const { data: created, error } = await ctx.db.from('products').insert({
     restaurant_id: ctx.restaurantId,
-    category_id: (formData.get('category_id') as string) || null,
+    category_id: categoryId,
     name,
     description: (formData.get('description') as string)?.trim() || null,
     name_en: (formData.get('name_en') as string)?.trim() || null,
