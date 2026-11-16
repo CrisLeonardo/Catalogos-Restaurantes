@@ -767,6 +767,17 @@ La siguiente ficha es **1.12 · Comensal: entrada, checkout y seguimiento**. Que
 - **Comprobado en pantalla:** 375 px y 1280 px, en claro. **No comprobado:** el alta del primer restaurante de una cuenta nueva en pantalla (cambian la barra de pasos y los textos de cobro) ni el modo oscuro.
 - **Hallazgo:** el servidor de desarrollo volvió a servir JavaScript viejo; se arregló reiniciándolo sin `.next`.
 
+## 38. Importar una carta con revisión · ficha 2.4 (2026-11-16)
+
+**Rama** `feat/importar-carta`, apilada sobre `feat/alta-primer-valor` (PR #126). Maqueta aprobada: [`MAQUETA_IMPORTAR_CARTA_2026-11-16.html`](../diseno/MAQUETA_IMPORTAR_CARTA_2026-11-16.html). Sin migraciones.
+
+- **Decisiones del dueño:** lista pegada y hoja de cálculo ahora; foto y PDF después (le parecen lo más práctico, pero hoy implican IA de pago). Lo importado sale visible, porque ya pasó por la revisión. Si el platillo ya existe, se ofrece cambiarle el precio. «Pegar mi lista» también va en el alta.
+- **Reglas** en `plataforma/src/lib/importar-carta.ts` (12 pruebas). Lista: el último número es el precio; una línea sin precio abre categoría si va en mayúsculas, termina en «:» o va tras una línea en blanco; si no, es un platillo con duda. Hoja: columnas «Producto» y «Precio», más «Categoría» y «Descripción» opcionales, las mismas que la exportación; acepta .xlsx (`importar-carta-xlsx.ts`, probada con un libro real) y CSV con comas o punto y coma. Dudas: sin precio, precio de Q1,000 o más, repetido. La comparación ignora tildes y mayúsculas.
+- **Servidor** (`lib/actions/importar-carta.ts`): vuelve a comparar contra la base al publicar, respeta el tope de productos del plan, usa las categorías que existen y crea las que faltan («Platillos» si no hay). Anota el lote en `activity_log` (`importar_carta`). Deshacer borra lo creado que no se haya vendido, devuelve los precios que nadie volvió a cambiar y quita las categorías que quedaron vacías (`importar_carta_deshecha`). El control de acceso del catálogo pasó a `lib/catalogo/contexto.ts`, compartido con `products.ts`.
+- **Pantallas:** `/admin/menu/importar` (en el teléfono, lista con pie fijo; en la PC, tabla editable en la fila). Se entra desde «Importar o exportar» en Platillos y desde el catálogo vacío («O importa tu carta completa»). Al volver sale un aviso con «Deshacer».
+- **Recorrido probado en local** (Comedor Ana, PC y teléfono). Una lista de 9 líneas dio dos categorías y 5 platillos nuevos. «Pepian de pollo» encontró el «Pepián de pollo» existente y ofreció pasar de Q45.00 a Q48.00. «Caldo de res» quedó sin precio hasta escribirlo, y «Coca cola 1500» quedó en duda. Al publicar entró todo; «Deshacer» lo devolvió exacto (5 borrados, precio restaurado, categorías quitadas). En el alta, «Pegar mi lista» llenó las filas y avisa lo que no usó.
+- **No comprobado en pantalla:** subir un archivo desde el navegador (la lectura de Excel y CSV sí está probada) ni el aviso del catálogo vacío.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

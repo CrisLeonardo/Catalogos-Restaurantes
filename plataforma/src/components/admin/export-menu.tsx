@@ -2,7 +2,7 @@
 
 import { Icon } from '@/components/icons';
 import { buttonVariants } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
 /* ============================================================
@@ -18,6 +18,7 @@ export default function ExportMenu({
   onPdf,
   busy,
   compact = false,
+  onImportar,
 }: {
   onExcel: () => void;
   onPdf: () => void;
@@ -26,18 +27,30 @@ export default function ExportMenu({
   /** En el teléfono, solo el icono: en Pedidos comparte fila con los
    *  filtros y la palabra se comía dos de ellos. */
   compact?: boolean;
+  /** Platillos (ficha 2.4): importar va en el mismo menú, primero. El botón
+   *  pasa a decir «Importar o exportar». */
+  onImportar?: () => void;
 }) {
+  const etiqueta = onImportar ? 'Importar o exportar' : 'Exportar';
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(buttonVariants({ variant: 'secondary' }), 'shrink-0 rounded-adm-full', compact && 'max-md:size-10 max-md:px-0')}
         disabled={busy !== null}
-        aria-label="Exportar"
+        aria-label={etiqueta}
       >
         <Icon name="download" size={15} />
-        <span className={compact ? 'max-md:sr-only' : undefined}>{busy ? 'Generando…' : 'Exportar'}</span>
+        <span className={compact ? 'max-md:sr-only' : undefined}>{busy ? 'Generando…' : etiqueta}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        {onImportar && (
+          <>
+            <DropdownMenuItem onClick={onImportar} className="min-h-11">
+              <Icon name="upload" size={15} /> Importar carta
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
         <DropdownMenuItem onClick={onExcel} className="min-h-11">
           <Icon name="download" size={15} /> Excel (.xlsx)
         </DropdownMenuItem>

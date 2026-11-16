@@ -6,6 +6,13 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+- **Importar una carta con revisión** (ficha 2.4; rama `feat/importar-carta`; maqueta aprobada `docs/diseno/MAQUETA_IMPORTAR_CARTA_2026-11-16.html`) · sin migraciones:
+  - En Platillos › «Importar o exportar» › «Importar carta», la carta entra pegando la lista tal como está en WhatsApp o Word, o subiendo un Excel o CSV con las mismas columnas que la exportación. Hay una plantilla para descargar.
+  - Antes de publicar se revisa cada fila: lo dudoso (sin precio, precio sospechoso, repetido) queda sin marcar y se corrige en la misma fila. Si el platillo ya existe, no se duplica: se ofrece cambiarle el precio. El botón dice exactamente qué pasará.
+  - Lo importado sale visible y se puede **deshacer** el lote completo; lo que ya se vendió se conserva.
+  - En el alta, «Pegar mi lista» llena los primeros platillos.
+  - Foto y PDF de la carta quedan para una entrega aparte.
+
 - **Alta hasta el primer valor** (ficha 2.3; rama `feat/alta-primer-valor`; maqueta aprobada `docs/diseno/MAQUETA_ALTA_PRIMER_VALOR_2026-11-16.html`) · sin migraciones:
   - El alta pasa de 7 pantallas a 4: la cuenta en una sola, después el negocio con «¿Cómo te piden tus clientes?», «¿Qué vendes?» (nombre y precio de los primeros platillos) y «Así se ve tu carta», con la carta de verdad. Al crear, entra directo a Hoy.
   - El plan ya no viene en Premium para todos: se sugiere por cómo le piden (Básico, En línea o Premium) y se cambia antes de crear, con el precio a la vista. El estilo llega elegido y se cambia entre tres sugerencias; los demás están en Personalizar.

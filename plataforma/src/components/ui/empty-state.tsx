@@ -42,6 +42,8 @@ interface Props {
   title: string;
   desc: string;
   action: Action;
+  /** Un camino alterno, en texto debajo del botón (p. ej. «Importar mi carta»). */
+  secondary?: { href: string; label: string };
   className?: string;
 }
 
@@ -53,7 +55,7 @@ function leoId(title: string): string {
   return `leo-vacio-${(h >>> 0).toString(36)}`;
 }
 
-function EmptyState({ icon, title, desc, action, className }: Props) {
+function EmptyState({ icon, title, desc, action, secondary, className }: Props) {
   const actionClass =
     'btn-accent press mt-2 inline-flex min-h-11 items-center gap-2 rounded-adm-md border-0 px-4 text-[13px] font-semibold no-underline';
   return (
@@ -84,6 +86,11 @@ function EmptyState({ icon, title, desc, action, className }: Props) {
           {action.icon !== null && <Icon name={action.icon ?? 'plus'} size={15} />}
           {action.label}
         </button>
+      )}
+      {secondary && (
+        <Link href={secondary.href} className="inline-flex min-h-11 items-center text-[13px] font-semibold text-adm-accent-ink no-underline">
+          {secondary.label}
+        </Link>
       )}
     </div>
   );

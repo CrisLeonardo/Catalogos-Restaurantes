@@ -457,6 +457,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                 ? { href: '/admin/suscripcion', label: 'Sube de plan para agregar' }
                 : { href: newProductHref, label: 'Agregar el primero' }
             }
+            secondary={atProductLimit ? undefined : { href: '/admin/menu/importar', label: 'O importa tu carta completa' }}
           />
         ) : (
           <Card className="flex flex-col items-center gap-3 p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>

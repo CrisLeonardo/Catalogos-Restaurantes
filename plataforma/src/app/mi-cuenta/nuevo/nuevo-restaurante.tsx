@@ -14,6 +14,7 @@ import {
   type ComoTePiden, type ModoPedido, type PlanAlta,
 } from '@/lib/alta';
 import { ErrorBox, Field, Stepper, WizardNav, localSlugify } from '@/components/signup/wizard-ui';
+import { leerLista } from '@/lib/importar-carta';
 
 /* ============================================================
    CREAR UN RESTAURANTE — alta hasta el primer valor (ficha 2.3)
@@ -107,6 +108,27 @@ export default function NuevoRestaurante({
   const [estiloInicial, setEstiloInicial] = useState('lino-coral');
   const [filas, setFilas] = useState<Fila[]>(FILAS_VACIAS);
   const [cambiando, setCambiando] = useState<'estilo' | 'plan' | null>(null);
+  /* «Pegar mi lista» (ficha 2.4): la carta que ya tiene escrita llena las
+     filas, con el mismo lector que la importación del panel. */
+  const [pegando, setPegando] = useState(false);
+  const [lista, setLista] = useState('');
+  const [avisoLista, setAvisoLista] = useState<string | null>(null);
+
+  function usarLista() {
+    const todas = leerLista(lista);
+    const leidas = todas.filter((f) => f.precio !== null && f.precio > 0 && !f.duda);
+    if (leidas.length === 0) { setAvisoLista('No encontramos platillos con precio. Revisa que cada línea tenga nombre y precio.'); return; }
+    setFilas(leidas.slice(0, 20).map((f) => ({ nombre: f.nombre, precio: String(f.precio) })));
+    /* Lo que no se usó se dice, con nombre: nunca se descarta en silencio. */
+    const fuera = todas.filter((f) => !leidas.includes(f)).map((f) => f.nombre);
+    const avisos = [
+      fuera.length ? `No usamos ${fuera.length === 1 ? 'una línea' : `${fuera.length} líneas`} sin precio claro (${fuera.slice(0, 3).join(', ')}${fuera.length > 3 ? '…' : ''}); agrégalas a mano.` : null,
+      leidas.length > 20 ? 'Tomamos los primeros 20. El resto lo importas desde tu panel, en Menú › Importar carta.' : null,
+    ].filter(Boolean);
+    setAvisoLista(avisos.length ? avisos.join(' ') : null);
+    setPegando(false);
+    setLista('');
+  }
   const [stepError, setStepError] = useState<string | null>(null);
 
   // Lo que eligió en la vitrina de diseños de la portada llega puesto.
@@ -260,11 +282,38 @@ export default function NuevoRestaurante({
               </div>
             </div>
           ))}
-          {filas.length < 20 && (
-            <button type="button" onClick={() => setFilas((p) => [...p, { nombre: '', precio: '' }])} className="alta-enlace alta-agregar">
-              <Icon name="plus" size={16} /> Agregar otro
-            </button>
+          {pegando ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <label htmlFor="alta-lista" style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.45 }}>
+                Pega tu carta como la tienes: un platillo por línea con su precio.
+              </label>
+              <textarea
+                id="alta-lista"
+                value={lista}
+                onChange={(e) => setLista(e.target.value)}
+                rows={7}
+                placeholder={'Café americano Q15\nPan con frijol 12.50'}
+                className="adm-field"
+                style={{ fontFamily: 'ui-monospace, Menlo, Consolas, monospace', fontSize: 14, resize: 'vertical' }}
+              />
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                <button type="button" onClick={usarLista} className="alta-enlace alta-agregar" disabled={!lista.trim()}>Usar esta lista</button>
+                <button type="button" onClick={() => setPegando(false)} className="alta-enlace alta-agregar" style={{ color: 'var(--u-text-3)' }}>Cancelar</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+              {filas.length < 20 && (
+                <button type="button" onClick={() => setFilas((p) => [...p, { nombre: '', precio: '' }])} className="alta-enlace alta-agregar">
+                  <Icon name="plus" size={16} /> Agregar otro
+                </button>
+              )}
+              <button type="button" onClick={() => { setPegando(true); setAvisoLista(null); }} className="alta-enlace alta-agregar">
+                <Icon name="list" size={16} /> Pegar mi lista
+              </button>
+            </div>
           )}
+          {avisoLista && <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.45 }}>{avisoLista}</p>}
         </div>
         <div className="alta-solo-pc">
           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--u-text-3)', textAlign: 'center', marginBottom: 10 }}>
