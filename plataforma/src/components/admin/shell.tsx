@@ -332,6 +332,8 @@ export default function AdminShell({
   const enTomarPedido = pathname.startsWith('/admin/mesero');
 
   const TITLES: Record<string, string> = {
+    // Antes que '/admin/mesero': gana el primer prefijo que coincide.
+    '/admin/mesero/practica': 'Turno de práctica',
     '/admin/mesero': 'Tomar pedidos',
     '/admin/mesas': 'Mesas · Comer en local',
     '/admin/pedidos': 'Pedidos en vivo',
@@ -795,7 +797,8 @@ export default function AdminShell({
       {/* El tour enseña los seis destinos de la barra. Sin barra (el mesero
           puro) no hay nada que señalar: eran cinco pasos sobre Menú y
           Ajustes, pantallas que esa persona no puede abrir. */}
-      {!sinBarra && <WelcomeTour restaurantName={restaurantName} preview={preview} enEspera={tourEnEspera} />}
+      {!sinBarra && <WelcomeTour restaurantName={restaurantName} preview={preview} enEspera={tourEnEspera}
+        practicaHref={barra.conBoton ? enlace('/admin/mesero/practica') : null} />}
       {!preview && <LoginWelcomeToast restaurantName={restaurantName} userName={userName} roleLabel={roleLabel} />}
       {/* Tours guiados del centro de ayuda ("Ver en mi panel") — el host vive
           aquí para sobrevivir a las navegaciones entre páginas del panel. */}

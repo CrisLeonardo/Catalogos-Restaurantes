@@ -15,6 +15,10 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
   - **Pedido de prueba** (migración 183): el dueño lo pide desde su carta con un pase firmado y lo ve en Pedidos con la etiqueta «Prueba». Al estar listo, «Terminar la prueba» lo cierra sin cobro, repone existencias y devuelve canjes. No registra cliente ni cuenta en cifras, caja, puntos ni tope de pedidos.
   - «Tu menú en línea» ya no dice «Piden 263 %»: cuenta solo los pedidos hechos desde la carta y los divide entre las personas distintas.
   - La tarjeta «Funciones disponibles en Premium» sale de Hoy y pasa al final de Negocio › Resumen.
+- **Turno de práctica** (ficha 2.5 de la auditoría; rama `feat/turno-practica`; maqueta aprobada `docs/diseno/MAQUETA_TURNO_PRACTICA_2026-11-16.html`) · sin migraciones:
+  - Una «Mesa P» con tu carta real y las mismas pantallas de Tomar pedidos para practicar una mesa completa en seis pasos: abrir, pedir con un extra, enviar a cocina, marcar listo, anular un plato y cobrar con vuelto. La franja de arriba dice el paso y cómo salir.
+  - No cuenta en nada: no crea pedidos ni cobros, no mueve existencias, no imprime y anular no pide PIN (lo avisa). Al salir se olvida.
+  - Se ofrece al final del recorrido de bienvenida y en la búsqueda de Tomar pedidos. El dueño ve en Personal quién la hizo y en cuántos minutos.
 
 ## v0.22.0 · 2026-11-15 · Video «Un solo lugar» en la portada y serie «Otra vez»
 PR #122 (merge `3a2046e`) · sin migraciones. Para que la portada cambie en producción basta desplegar el código.

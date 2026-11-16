@@ -755,6 +755,19 @@ La siguiente ficha es **1.12 · Comensal: entrada, checkout y seguimiento**. Que
 - **Validación:** `typecheck` y `lint` sin errores (los tres avisos de siempre); 1,562 unitarias pasan, con una omitida.
 - **Limpieza:** se quitaron la guía anterior (`onboarding-checklist.tsx`), el widget «La casa» y `getActiveOrdersPreview`, que ya no usaba nadie.
 
+## 39. Turno de práctica · ficha 2.5 (2026-11-16)
+
+**Rama** `feat/turno-practica`, desde `main` (`a7a8040`). Los §37 y §38 (fichas 2.3 y 2.4) están en las ramas de los PR #126 y #127. Maqueta aprobada: [`MAQUETA_TURNO_PRACTICA_2026-11-16.html`](../diseno/MAQUETA_TURNO_PRACTICA_2026-11-16.html), con las cuatro recomendaciones.
+
+- **Cómo es:** `/admin/mesero/practica` atiende una «Mesa P» con la carta real y las mismas piezas de Tomar pedidos: carta, hoja de opciones, comanda, hoja del plato y hoja de cobro. Una franja azul dice «Paso N de 6» y tiene «Salir». Los seis pasos son abrir la mesa, pedir dos platillos (uno con extra, si la carta los tiene), enviar a cocina, marcarlo listo, anular un plato y cobrar con vuelto. Al final dice cuánto tardó, con «Empezar el servicio» y «Repetir la práctica».
+- **Nada cuenta:** todo vive en la memoria del aparato. No crea pedidos, cobros, movimientos de existencias ni comandas impresas, y al salir se olvida. Lo único que guarda es `activity_log` `turno_practica` con los minutos, que Personal muestra como «Ana hizo el turno de práctica en 4 minutos». Se comprobó en la base local: cero pedidos nuevos después de dos prácticas completas.
+- **Desviaciones de la maqueta:** (1) pantalla propia en vez del salón en vivo. Enganchar la Mesa P al módulo de servicio (más de 2,000 líneas) obligaba a esquivar, en cada envío, cobro, anulación, impresión y lectura del salón, que nada se escribiera, y un descuido ahí cobra de verdad. Además, la mesa del servidor va de 1 a 200 y la anulación exige firma. (2) La cocina se simula dentro de la práctica, con la etiqueta «Práctica»: no aparece en Pedidos ni en Cocina. (3) «Corregir» va antes de «cobrar»: en un turno real no se anula un plato ya cobrado. (4) No usa el pedido de prueba de la 2.2: no hace falta, porque nada llega a la base.
+- **Entradas:** último paso del recorrido de bienvenida («¿Practicamos una mesa?», solo si el restaurante tiene Tomar pedidos) y la búsqueda de Tomar pedidos («Turno de práctica»). Pueden practicar quienes tienen permiso de tomar pedidos o de cobrar.
+- **Cambios pequeños en piezas compartidas:** la hoja de cobro admite una `nota` («Cobro de práctica: no entra dinero a la caja.») y el armazón da el título «Turno de práctica».
+- **Comprobado en pantalla:** 375 px en claro y 1280 px en claro y oscuro (Rincón 502), del recorrido al final. También la entrada desde la búsqueda de Tomar pedidos y la línea en Personal.
+- **No comprobado:** la práctica con una carta sin platillos con opciones (cubierta por la prueba de la regla) ni con un rol de solo cobro.
+- **Validación:** `typecheck` y `lint` sin errores; 1,568 unitarias pasan, con una omitida (incluye `lib/turno-practica.test.ts` y la frase nueva de la bitácora).
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

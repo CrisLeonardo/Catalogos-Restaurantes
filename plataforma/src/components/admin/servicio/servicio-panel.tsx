@@ -86,6 +86,7 @@ import type { ReservaEnSalon } from '@/lib/db/reservaciones';
 import type { FloorPlan } from '@/lib/theme/defaults';
 import type { Category, OrderStatus, Product } from '@/types';
 import { assetSrc } from '@/lib/asset-image';
+import { panelBaseFrom, panelHref } from '@/lib/panel-links';
 import { shortOrderNumber } from '@/lib/order-number';
 
 /* ── Borrador del pedido en curso ──────────────────────────────
@@ -1423,6 +1424,11 @@ export default function ServicioPanel({
     { label: 'Modo servicio', hint: 'pantalla completa', run: () => { setPaleta(false); servicio?.toggle(); }, enabled: !!servicio && !servicio.active },
     { label: 'Atajos de teclado', hint: '?', run: () => { setPaleta(false); setHoja({ k: 'atajos' }); } },
     { label: 'Preparar turno', hint: 'favoritos', run: () => { setPaleta(false); setHoja({ k: 'turno' }); } },
+    /* Ficha 2.5: practicar una mesa completa sin que nada cuente. */
+    { label: 'Turno de práctica', hint: 'nada cuenta', run: () => {
+      setPaleta(false);
+      window.location.assign(panelHref(panelBaseFrom(window.location.pathname), '/admin/mesero/practica'));
+    } },
   ], [resumen.nNuevas, puedeCobrar, etiquetaCobro, pickupEnabled, sel.kind, aprendiz, enviar, cambiarAprendiz, mod, servicio]);
 
   /* ══════════════════════════════════════════════════════════
