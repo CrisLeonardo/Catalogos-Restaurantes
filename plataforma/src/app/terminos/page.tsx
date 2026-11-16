@@ -36,9 +36,9 @@ export default function TerminosPage() {
 
       <LegalSection n={3} title="Planes, prueba gratis y cobros">
         <LegalP>
-          Ofrecemos distintos planes con una mensualidad fija. Cada cuenta nueva incluye un período
-          de prueba gratuito de 30 días, sin necesidad de tarjeta. Concluida la prueba, aplica la
-          mensualidad del plan elegido.
+          Ofrecemos distintos planes con una mensualidad fija. El plan Básico es gratuito. Los planes
+          con pedidos se cobran desde su activación, salvo que al registrarte se te ofrezca un período
+          de prueba gratuito; en ese caso, concluida la prueba aplica la mensualidad del plan elegido.
         </LegalP>
         <LegalList items={[
           'No cobramos comisión por pedido: lo que vende el restaurante es del restaurante.',

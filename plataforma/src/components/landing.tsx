@@ -81,7 +81,7 @@ const fx = (i: number) => ({ '--fx-i': i }) as CSSProperties;
 const palabra = (i: number) => ({ '--i': i }) as CSSProperties;
 
 const steps = (trialDays: number) => [
-  { n: '1', title: 'Crea tu cuenta',       body: `Te registras y tu restaurante queda en línea al instante. Sin tarjeta y con ${trialDays} días de prueba en los planes con pedidos.` },
+  { n: '1', title: 'Crea tu cuenta',       body: trialDays > 0 ? `Te registras y tu restaurante queda en línea al instante. Sin tarjeta y con ${trialDays} días de prueba en los planes con pedidos.` : 'Te registras y tu restaurante queda en línea al instante. Tu menú digital es gratis; los pedidos los activas cuando quieras.' },
   { n: '2', title: 'Súbelo a tu estilo',   body: 'Un asistente te lleva paso a paso por colores, logo y tu primer menú. No necesitas saber nada de tecnología.' },
   { n: '3', title: 'Comparte tu QR',       body: 'Lo pones en las mesas o en el mostrador. Tus clientes escanean, ordenan, y tú recibes todo en tiempo real.' },
 ];
@@ -226,8 +226,8 @@ export default async function LeoginLanding() {
               </div>
 
               <p className="lp-body" style={{ fontSize: 13.5, marginTop: 16, color: 'var(--u-text-4)' }}>
-                Plan Básico gratis para siempre · {pricing.trialDays} días de prueba en los planes
-                con pedidos · sin tarjeta
+                Plan Básico gratis para siempre ·{' '}
+                {pricing.trialDays > 0 ? `${pricing.trialDays} días de prueba en los planes con pedidos · sin tarjeta` : 'sin contrato · sin comisión por pedido'}
               </p>
 
               {/* En el teléfono es una sola fila que se desliza: cuatro filas

@@ -248,7 +248,9 @@ export function defaultPlanPricing(): PlanPricing {
       PLAN_ORDER.map((code) => [code, PLANS[code].priceMonthly]),
     ) as Record<PlanCode, number>,
     groupPanelFee: GROUP_PANEL_FEE,
-    trialDays: 30,
+    // Sin prueba gratis de fábrica (dueño, 2026-11-15): los planes con
+    // pedidos se cobran desde el día uno. Se reactiva en /super/configuracion.
+    trialDays: 0,
   };
 }
 

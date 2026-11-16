@@ -46,7 +46,9 @@ function buildFaqs(pricing: PlanPricing) {
     },
     {
       q: '¿Hay periodo de prueba?',
-      a: `El plan Básico es gratis para siempre, sin necesidad de probarlo. Estándar y Premium tienen ${pricing.trialDays} días de prueba gratis, sin tarjeta — si decides no continuar, tu menú simplemente se pausa, no hay cobro ni compromiso.`,
+      a: pricing.trialDays > 0
+        ? `El plan Básico es gratis para siempre, sin necesidad de probarlo. Estándar y Premium tienen ${pricing.trialDays} días de prueba gratis, sin tarjeta — si decides no continuar, tu menú simplemente se pausa, no hay cobro ni compromiso.`
+        : 'El plan Básico es gratis para siempre: con él ya tienes tu menú digital con QR y puedes conocer Leogin sin pagar. Los planes con pedidos se cobran desde que los activas, sin contrato: puedes cancelar cuando quieras.',
     },
   ];
 }
@@ -351,8 +353,9 @@ export default async function PlanesPage() {
             ¿Listo para modernizar tu restaurante?
           </h2>
           <p className="lp-lead" style={{ fontSize: 15.5, margin: '14px auto 26px', maxWidth: 440 }}>
-            Empieza con {pricing.trialDays} días gratis. Sin tarjeta, sin compromiso, y tu menú
-            queda en vivo el mismo día.
+            {pricing.trialDays > 0
+              ? `Empieza con ${pricing.trialDays} días gratis. Sin tarjeta, sin compromiso, y tu menú queda en vivo el mismo día.`
+              : 'Empieza con tu menú digital gratis. Sin contrato, y tu restaurante queda en vivo el mismo día.'}
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
             <Link href="/registro" {...conEvento('lp-btn lp-btn-primary', EVENTOS.clicCrear, 'planes abajo')}>

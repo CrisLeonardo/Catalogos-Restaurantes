@@ -299,7 +299,10 @@ huellas(n, que, ok, cuando) as (values
      and exists (select 1 from pg_trigger where tgname='leogin_agotado_coherente')
      and to_regprocedure('public.leogin_ajustar_existencias(uuid,uuid,text,integer,text,text,uuid)') is not null
      and to_regprocedure('public.leogin_agotar_ingrediente(uuid,uuid,boolean,uuid)') is not null,
-     'ANTES de desplegar; después de la 179')
+     'ANTES de desplegar; después de la 179'),
+  ('182', 'sin prueba gratis: trial_days = 0 (los planes con pedidos se cobran desde el día uno)',
+     exists (select 1 from public.platform_settings where key='trial_days' and value='0'),
+     'antes o después de desplegar; independiente')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

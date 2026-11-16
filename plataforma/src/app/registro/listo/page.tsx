@@ -17,14 +17,20 @@ export const metadata: Metadata = {
    frente a plans.ts / platform_settings. */
 function buildPlanInfo(pricing: PlanPricing) {
   const trialDays = pricing.trialDays;
+  // Sin prueba (trial_days = 0) el plan queda activo y se cobra desde hoy.
+  const conPrueba = trialDays > 0;
+  const insignia = conPrueba ? `PRUEBA ${trialDays} DÍAS` : 'ACTIVO';
+  const inicio = conPrueba ? `Tu prueba de ${trialDays} días comienza hoy.` : 'Tu plan queda activo desde hoy.';
+  const detalle = (precio: string, extra = '') =>
+    conPrueba ? `luego ${precio} · ${extra}sin tarjeta ni compromiso` : `${precio} · ${extra}sin contrato, cancela cuando quieras`;
   return {
     PREMIUM: {
       name: 'Premium',
-      badge: `PRUEBA ${trialDays} DÍAS`,
+      badge: insignia,
       badgeColor: 'var(--brand-accent-ink)',
       badgeBg: 'color-mix(in srgb, var(--brand-accent) 13%, transparent)',
-      detail: `luego ${planPriceLabel(pricing, 'PREMIUM')} · sin tarjeta ni compromiso`,
-      subtitle: `Tu prueba de ${trialDays} días comienza hoy.`,
+      detail: detalle(planPriceLabel(pricing, 'PREMIUM')),
+      subtitle: inicio,
       features: [
         'Pedidos para llevar, en local y delivery',
         'Alerta WhatsApp al recibir pedido',
@@ -40,11 +46,11 @@ function buildPlanInfo(pricing: PlanPricing) {
     },
     EN_LINEA: {
       name: 'En línea',
-      badge: `PRUEBA ${trialDays} DÍAS`,
+      badge: insignia,
       badgeColor: 'var(--c-ok)',
       badgeBg: 'var(--c-ok-bg)',
-      detail: `luego ${planPriceLabel(pricing, 'EN_LINEA')} · sin alta, sin tarjeta ni compromiso`,
-      subtitle: `Tu prueba de ${trialDays} días comienza hoy.`,
+      detail: detalle(planPriceLabel(pricing, 'EN_LINEA'), 'sin alta, '),
+      subtitle: inicio,
       features: [
         'Pedidos para llevar y a domicilio en tu menú',
         'Zonas de reparto y seguimiento del pedido',
@@ -59,11 +65,11 @@ function buildPlanInfo(pricing: PlanPricing) {
     },
     ESTANDAR: {
       name: 'Estándar',
-      badge: `PRUEBA ${trialDays} DÍAS`,
+      badge: insignia,
       badgeColor: 'var(--c-ok)',
       badgeBg: 'var(--c-ok-bg)',
-      detail: `luego ${planPriceLabel(pricing, 'ESTANDAR')} · sin tarjeta ni compromiso`,
-      subtitle: `Tu prueba de ${trialDays} días comienza hoy.`,
+      detail: detalle(planPriceLabel(pricing, 'ESTANDAR')),
+      subtitle: inicio,
       features: [
         'Pedidos para llevar activos en tu menú',
         'Alerta WhatsApp al recibir pedido',
