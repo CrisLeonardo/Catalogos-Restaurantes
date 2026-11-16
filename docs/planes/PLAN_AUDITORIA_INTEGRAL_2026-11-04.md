@@ -372,6 +372,8 @@ Las fichas indican **qué cubren y dónde está la especificación**. El detalle
 
 **Estado de 2.3 (2026-11-16):** construida en la rama `feat/alta-primer-valor` según la [maqueta](../diseno/MAQUETA_ALTA_PRIMER_VALOR_2026-11-16.html) aprobada ese día, con sus cuatro recomendaciones: plan sugerido por «¿cómo te piden?», estilo preelegido, platillos dentro del alta y sin pantalla «listo». El alta pasa de 7 pantallas a 4 (cuenta, negocio, «¿Qué vendes?» y «Así se ve tu carta») y entra directo a Hoy. Sin migraciones. Detalle en el §37 del [registro](../registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md).
 
+**Estado de 2.4 (2026-11-16):** [maqueta](../diseno/MAQUETA_IMPORTAR_CARTA_2026-11-16.html) presentada al dueño en la rama `feat/importar-carta`, apilada sobre la 2.3. Propone dos caminos, pegar la lista o subir una hoja de cálculo (las mismas columnas que la exportación del catálogo), con revisión por fila antes de publicar, sin duplicar platillos y con «Deshacer» del lote. Foto y PDF quedan para una entrega aparte. Espera su visto bueno y cuatro decisiones. Todavía no se construye nada.
+
 ### Ola 3 · Números confiables y retención
 
 | Ficha | Tamaño | Cubre | Especificación |
@@ -456,7 +458,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 **Integración:** las olas 0 y 1 quedan juntas en `release/integracion-2026-11-09` (registro §35). Implementadas; las pruebas con personas y en el local siguen pendientes.
 
 **Ola 1**: [x] 1.0 (base visual, PR #91) · [x] 1.1 (cobro completo, PR #92) · [x] 1.2 (recibo, borrador y traspaso formal; migraciones 170–172) · [x] 1.3 (ciclo de mesa, migración 173) · [x] 1.4 (Servicio, migración 174) · [x] 1.5 (Cocina, migración 175, prueba física pendiente) · [x] 1.6 (Pedidos en vivo, migración 176) · [x] 1.7 (permisos por trabajo, migración 177; [plan](PLAN_PERMISOS_POR_TRABAJO_2026-11-08.md)) · [x] 1.8 (recepción, migración 178; [plan](PLAN_RECEPCION_2026-11-09.md)) · [x] 1.9 (catálogo, migración 179; [plan](PLAN_CATALOGO_2026-11-09.md)) · [x] 1.10 (inventario y agotados, migración 180; [plan](PLAN_INVENTARIO_2026-11-09.md)) · [x] 1.11 (comensal: ficha, carrito, lealtad y carta; [plan](PLAN_COMENSAL_FICHA_CARRITO_2026-11-09.md)) · [x] 1.12 (comensal: entrada, confirmación y seguimiento; [plan](PLAN_COMENSAL_CHECKOUT_SEGUIMIENTO_2026-11-09.md))
-**Ola 2**: [x] 2.1 (Hoy por etapa, `feat/hoy-por-etapa`) · [x] 2.2 (primeros pasos y pedido de prueba, migración 183) · [x] 2.3 (alta en 4 pantallas, `feat/alta-primer-valor`) · [ ] 2.4 · [ ] 2.5 · [ ] 2.6 · [ ] 2.7 · [ ] 2.8 · [ ] 2.9 · [ ] 2.10 · [ ] 2.11 · [ ] 2.12
+**Ola 2**: [x] 2.1 (Hoy por etapa, `feat/hoy-por-etapa`) · [x] 2.2 (primeros pasos y pedido de prueba, migración 183) · [x] 2.3 (alta en 4 pantallas, `feat/alta-primer-valor`) · [ ] 2.4 (maqueta presentada) · [ ] 2.5 · [ ] 2.6 · [ ] 2.7 · [ ] 2.8 · [ ] 2.9 · [ ] 2.10 · [ ] 2.11 · [ ] 2.12
 **Ola 3**: [ ] 3.1 · [ ] 3.2 · [ ] 3.3 · [ ] 3.4 · [ ] 3.5 · [ ] 3.6 · [ ] 3.7
 **Ola 4**: [ ] 4.1 · [ ] 4.2 · [ ] 4.3 · [ ] 4.4 · [ ] 4.5 · [ ] 4.6 · [ ] 4.7 · [ ] 4.8 · [ ] 4.9 · [ ] 4.10 · [ ] 4.11 · [ ] 4.12
 **Comercial**: [ ] V.1 · [ ] V.2 · [ ] V.3 · [ ] V.4 · [ ] V.5 · [ ] V.6
