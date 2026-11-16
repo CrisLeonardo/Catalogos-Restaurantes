@@ -37,13 +37,11 @@ const Pantalla: React.FC<{ paso: PasoGuion; ancho: number; dur?: number }> = ({ 
   const toma = paso.tomas[n];
   const tramo = tramos[n];
   const foco = centro(toma, toma.resalta);
-  const acerca = toma.acerca && foco ? 1 + (toma.acerca - 1) * av(f, tramo.desde + 14, tramo.desde + 50) : 1;
-  // al acercar, la pantalla se corre para dejar el foco al centro sin mostrar bordes vacíos
+  // Lo resaltado queda nítido y el resto de la pantalla se desenfoca y se
+  // apaga un poco. Sin acercar: la pantalla se ve entera, como en el aparato.
+  const destaca = foco ? av(f, tramo.desde + 8, tramo.desde + 24) : 0;
+  const M = 10; // aire alrededor de lo resaltado
   const alto = (ancho * captura(paso.tomas[0].captura).alto) / captura(paso.tomas[0].captura).ancho;
-  const limitar = (v: number, min: number) => Math.min(0, Math.max(min, v));
-  const corre = foco
-    ? { x: limitar(ancho / 2 - foco.x * acerca, ancho - ancho * acerca), y: limitar(alto / 2 - foco.y * acerca, alto - alto * acerca) }
-    : { x: 0, y: 0 };
 
   // el dedo viaja hacia lo que toca y aprieta justo antes del cambio
   const toque = centro(toma, toma.toca);
@@ -57,16 +55,23 @@ const Pantalla: React.FC<{ paso: PasoGuion; ancho: number; dur?: number }> = ({ 
 
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#000' }}>
-      <div style={{ position: 'absolute', inset: 0, translate: `${corre.x}px ${corre.y}px`, scale: String(acerca), transformOrigin: '0 0' }}>
+      <div style={{ position: 'absolute', inset: 0, filter: destaca ? `blur(${destaca * 3.5}px) brightness(${1 - destaca * 0.28})` : undefined }}>
         {paso.tomas.map((t, i) => {
           if (i > n || i < n - 1) return null;
           const entra = i === 0 ? 1 : av(f, tramos[i].desde - 2, tramos[i].desde + 5);
           return <Img key={t.captura} src={staticFile(`otra-vez/capturas/${captura(t.captura).archivo}`)} style={{ position: 'absolute', left: 0, top: 0, width: ancho, opacity: i === n ? entra : 1 }} />;
         })}
-        {foco ? (
-          <div style={{ position: 'absolute', left: foco.x - foco.w / 2 - 10, top: foco.y - foco.h / 2 - 10, width: foco.w + 20, height: foco.h + 20, borderRadius: 18, border: `5px solid ${color.brasa}`, boxShadow: `0 0 0 ${6 + 6 * Math.sin(f / 4)}px rgba(232,83,74,.25)`, opacity: av(f, tramo.desde + 8, tramo.desde + 18) }} />
-        ) : null}
       </div>
+      {foco ? (
+        <>
+          {/* la misma pantalla, nítida, recortada a lo resaltado */}
+          <Img
+            src={staticFile(`otra-vez/capturas/${captura(toma.captura).archivo}`)}
+            style={{ position: 'absolute', left: 0, top: 0, width: ancho, opacity: destaca, clipPath: `inset(${Math.max(0, foco.y - foco.h / 2 - M)}px ${Math.max(0, ancho - foco.x - foco.w / 2 - M)}px ${Math.max(0, alto - foco.y - foco.h / 2 - M)}px ${Math.max(0, foco.x - foco.w / 2 - M)}px round 18px)` }}
+          />
+          <div style={{ position: 'absolute', left: foco.x - foco.w / 2 - M, top: foco.y - foco.h / 2 - M, width: foco.w + M * 2, height: foco.h + M * 2, borderRadius: 18, boxSizing: 'border-box', border: `5px solid ${color.brasa}`, boxShadow: `0 0 0 ${6 + 6 * Math.sin(f / 4)}px rgba(232,83,74,.25)`, opacity: av(f, tramo.desde + 8, tramo.desde + 18) }} />
+        </>
+      ) : null}
       {toque && dedo ? (
         <>
           <div style={{ position: 'absolute', left: toque.x, top: toque.y, width: 150, height: 150, margin: -75, borderRadius: '50%', border: `5px solid ${color.brasa}`, scale: String(0.3 + onda), opacity: onda > 0 ? 1 - onda : 0 }} />

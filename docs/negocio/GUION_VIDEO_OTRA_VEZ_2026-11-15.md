@@ -41,6 +41,7 @@ Cada uno sale en vertical (redes) y horizontal (visitas con PC o tableta).
 - **Domingo y no sábado**: las pantallas grabadas muestran la fecha real del día de grabación (domingo 15 de noviembre); el guion se ajustó para que el video y las pantallas digan lo mismo.
 - **Sin voz**: el texto en pantalla basta para redes sin sonido, y en una visita quien habla es el vendedor. La música y los efectos se sintetizan con código.
 - **Un video por público** en vez de uno general: en una visita ya se sabe qué tipo de negocio es, y en redes un video que nombra el problema exacto retiene más que uno que intenta hablarle a todos.
+- **Sin acercamientos**: lo que se señala en una pantalla queda nítido dentro de un anillo y el resto se desenfoca; no se hace zoom (pedido del dueño al aprobarla).
 
 ## Estado
 

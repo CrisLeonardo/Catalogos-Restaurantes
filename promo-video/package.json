@@ -39,7 +39,8 @@
     "otra-vez:sonido": "node scripts/otra-vez/sonido.mjs",
     "otra-vez:render": "node scripts/otra-vez/render.mjs",
     "un-lugar:sonido": "node scripts/un-lugar/sonido.mjs",
-    "un-lugar:render": "node scripts/un-lugar/render.mjs"
+    "un-lugar:render": "node scripts/un-lugar/render.mjs",
+    "un-lugar:web": "node scripts/un-lugar/web.mjs"
   },
   "allowScripts": {
     "esbuild": false

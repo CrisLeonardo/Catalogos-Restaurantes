@@ -1,6 +1,6 @@
 # Guion: video general «Un solo lugar» (2026-11-15)
 
-El video que responde «¿qué es Leogin?» en menos de un minuto. Acompaña a la serie [«Otra vez»](GUION_VIDEO_OTRA_VEZ_2026-11-15.md) (un video por tipo de negocio, aprobada el mismo día) y es candidato a reemplazar la intro «Las tres fugas» de la portada. Código y forma de reproducirlo: [`promo-video/README.md`](../../promo-video/README.md).
+El video que responde «¿qué es Leogin?» en menos de un minuto. Acompaña a la serie [«Otra vez»](GUION_VIDEO_OTRA_VEZ_2026-11-15.md) (un video por tipo de negocio, aprobada el mismo día) y reemplaza en la portada a la intro «Las tres fugas». Código y forma de reproducirlo: [`promo-video/README.md`](../../promo-video/README.md).
 
 ## La idea
 
@@ -37,8 +37,12 @@ Sale en vertical (1080×1920) y horizontal (1920×1080).
 - **Sin voz**: se entiende sin sonido, que es como se reproduce en la portada y en redes.
 - **Mismas pantallas reales** de Rincón 502 que «Otra vez»; no se grabó nada nuevo.
 - **Sin marcas de terceros**: «los chats de pedidos» y «la hoja de cálculo», sin nombrar aplicaciones.
+- **Sin acercamientos**: lo que se señala en una pantalla queda nítido dentro de un anillo y el resto se desenfoca y se apaga un poco; la pantalla siempre se ve entera (pedido del dueño, vale también para «Otra vez»).
+
+## Estado
+
+**Aprobado por el dueño el 2026-11-15 y puesto en la portada** en lugar de la intro «Las tres fugas»: la tarjeta de `plataforma/src/components/landing-intro.tsx` (prop `pelicula`) abre `horizontal.mp4` en pantallas anchas y `vertical.mp4` en las verticales, desde `plataforma/public/un-lugar/`. Esos archivos (unos 3 MB por video, más portadas y bucles) salen de `npm run un-lugar:web`. La ruta `/intro` sigue existiendo, sin enlace desde la portada.
 
 ## Pendiente
 
-- Que el dueño lo vea y decida si reemplaza la intro de la portada. Ese cambio toca `plataforma/src/components/landing-intro.tsx` (hoy abre una animación HTML, no un MP4) y lleva su maqueta de antes y propuesta.
 - No se ha escuchado la banda sonora en un teléfono real.

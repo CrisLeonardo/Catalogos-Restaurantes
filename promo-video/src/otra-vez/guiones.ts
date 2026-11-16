@@ -10,12 +10,10 @@ export type Toma = {
   peso?: number;
   /** Caja que el dedo toca al final de la toma. */
   toca?: string;
-  /** Caja que se resalta con un anillo. */
+  /** Caja que se resalta: queda nítida con un anillo y el resto se desenfoca. */
   resalta?: string;
   /** Agranda la caja resaltada: píxeles de la captura a la izquierda, arriba, derecha y abajo. */
   ampliar?: [number, number, number, number];
-  /** Acerca la pantalla hacia la caja resaltada (1 = sin acercar). */
-  acerca?: number;
 };
 
 export type PasoGuion = {
@@ -39,7 +37,7 @@ const CUADRE: PasoGuion = {
   titulo: 'La caja cuadra al centavo.',
   detalle: 'Cuentas los billetes y Leogin te dice si falta algo.',
   aparato: 'telefono',
-  tomas: [{ captura: 'q0-caja', peso: 0.5 }, { captura: 'q1-cuadra', peso: 1.5, resalta: 'cuadra', acerca: 1.35 }],
+  tomas: [{ captura: 'q0-caja', peso: 0.5 }, { captura: 'q1-cuadra', peso: 1.5, resalta: 'cuadra', ampliar: [830, 20, 20, 20] }],
 };
 
 export const GUIONES: Record<Publico, Guion> = {
@@ -81,7 +79,7 @@ export const GUIONES: Record<Publico, Guion> = {
         titulo: 'Cocina lo lee al instante.',
         detalle: 'Por estación y con la nota clara. Sin gritos.',
         aparato: 'tableta',
-        tomas: [{ captura: 'k1-cocina', resalta: 'comanda', ampliar: [40, 40, 690, 270], acerca: 1.6 }],
+        tomas: [{ captura: 'k1-cocina', resalta: 'comanda', ampliar: [40, 40, 690, 270] }],
       },
       {
         minutos: 155,
@@ -100,7 +98,7 @@ export const GUIONES: Record<Publico, Guion> = {
         titulo: 'Y tú lo ves todo, estés donde estés.',
         detalle: 'Ventas, plato estrella y hora pico, en tu teléfono.',
         aparato: 'telefono',
-        tomas: [{ captura: 'h1-hoy', resalta: 'ventas', acerca: 1.25 }],
+        tomas: [{ captura: 'h1-hoy', resalta: 'ventas', ampliar: [20, 10, 20, 200] }],
       },
     ],
     cierre: 'Tu próximo domingo puede ser este.',
@@ -144,28 +142,28 @@ export const GUIONES: Record<Publico, Guion> = {
         titulo: 'Te llega completo: mesa, platos y nota.',
         detalle: 'Nadie apunta nada. Nada se pierde.',
         aparato: 'telefono',
-        tomas: [{ captura: 'p1-vivo', resalta: 'nota', acerca: 1.2 }],
+        tomas: [{ captura: 'p1-vivo', resalta: 'nota' }],
       },
       {
         minutos: 108,
         titulo: 'Cocina lo ve. Nadie grita.',
         detalle: 'Cada pedido con su reloj y su nota.',
         aparato: 'tableta',
-        tomas: [{ captura: 'k2-cocina', resalta: 'comanda', ampliar: [40, 40, 690, 270], acerca: 1.6 }],
+        tomas: [{ captura: 'k2-cocina', resalta: 'nota', ampliar: [87, 267, 26, 200] }],
       },
       {
         minutos: 119,
         titulo: 'Y él sabe cuándo está listo.',
         detalle: 'Sigue su pedido en vivo, desde su teléfono.',
         aparato: 'telefono',
-        tomas: [{ captura: 't1-en-cocina', resalta: 'estado' }, { captura: 't2-listo', resalta: 'estado', peso: 1.2 }],
+        tomas: [{ captura: 't1-en-cocina', resalta: 'estado' }, { captura: 't2-listo', resalta: 'estado', ampliar: [80, 14, 240, 14], peso: 1.2 }],
       },
       {
         minutos: 540,
         titulo: 'Cierras, y la caja cuadra.',
         detalle: 'Y ves cuánto vendiste hoy, sin sumar a mano.',
         aparato: 'telefono',
-        tomas: [{ captura: 'q1-cuadra', resalta: 'cuadra', acerca: 1.35 }, { captura: 'h1-hoy', resalta: 'ventas', acerca: 1.2 }],
+        tomas: [{ captura: 'q1-cuadra', resalta: 'cuadra', ampliar: [830, 20, 20, 20] }, { captura: 'h1-hoy', resalta: 'ventas', ampliar: [20, 10, 20, 200] }],
       },
     ],
     cierre: 'Tu próximo domingo puede ser este.',
@@ -219,21 +217,21 @@ export const GUIONES: Record<Publico, Guion> = {
         titulo: 'A ti solo te suena.',
         detalle: 'El pedido completo: qué, para quién y dónde.',
         aparato: 'telefono',
-        tomas: [{ captura: 'p0-aviso', resalta: 'aviso', acerca: 1.25 }, { captura: 'p2-vivo', peso: 1.1, resalta: 'pedido' }],
+        tomas: [{ captura: 'p0-aviso', resalta: 'aviso' }, { captura: 'p2-vivo', peso: 1.1, resalta: 'pedido', ampliar: [42, 1568, 903, -355] }],
       },
       {
         minutos: 125,
         titulo: 'Y él ve su pedido en camino.',
         detalle: 'Se acabó el «¿cuánto falta?».',
         aparato: 'telefono',
-        tomas: [{ captura: 't3-en-cocina' }, { captura: 't4-en-camino', peso: 1.3, resalta: 'estado' }],
+        tomas: [{ captura: 't3-en-cocina' }, { captura: 't4-en-camino', peso: 1.3, resalta: 'estado', ampliar: [80, 14, 240, 14] }],
       },
       {
         minutos: 540,
         titulo: 'Al cierre, sabes cuánto vendiste.',
         detalle: 'Sin sumar chats ni cuadernos.',
         aparato: 'telefono',
-        tomas: [{ captura: 'h1-hoy', resalta: 'ventas', acerca: 1.25 }, { captura: 'x-negocio', peso: 0.9 }],
+        tomas: [{ captura: 'h1-hoy', resalta: 'ventas', ampliar: [20, 10, 20, 200] }, { captura: 'x-negocio', peso: 0.9 }],
       },
     ],
     cierre: 'Tu próximo domingo puede ser este.',

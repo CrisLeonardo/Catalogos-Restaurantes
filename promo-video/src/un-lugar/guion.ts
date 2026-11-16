@@ -44,7 +44,7 @@ export const BLOQUES: Bloque[] = [
       { captura: 'd2-ficha', toca: 'agregar' },
       { captura: 'd4-mapa', peso: 1.2, resalta: 'mapa' },
       { captura: 'd6-enviado', peso: 0.8 },
-      { captura: 't4-en-camino', peso: 1.2, resalta: 'estado' },
+      { captura: 't4-en-camino', peso: 1.2, resalta: 'estado', ampliar: [80, 14, 240, 14] },
     ]),
   },
   {
@@ -54,7 +54,7 @@ export const BLOQUES: Bloque[] = [
       { captura: 'c2-ficha', toca: 'agregar' },
       { captura: 'c4-confirmar', toca: 'confirmar' },
       { captura: 'c5-enviado', peso: 0.8 },
-      { captura: 't2-listo', peso: 1.2, resalta: 'estado' },
+      { captura: 't2-listo', peso: 1.2, resalta: 'estado', ampliar: [80, 14, 240, 14] },
     ]),
   },
   {
@@ -73,14 +73,14 @@ export const BLOQUES: Bloque[] = [
 export const CENTROS: Bloque[] = [
   {
     etiqueta: 'Y todo llega a cocina',
-    paso: paso('Cocina lo ve al instante.', 'Por estación y con la nota clara.', [{ captura: 'k1-cocina', resalta: 'comanda', ampliar: [40, 40, 690, 270], acerca: 1.6 }], 'tableta'),
+    paso: paso('Cocina lo ve al instante.', 'Por estación y con la nota clara.', [{ captura: 'k1-cocina', resalta: 'comanda', ampliar: [40, 40, 690, 270] }], 'tableta'),
   },
   {
     etiqueta: 'A tu caja',
-    paso: paso('La caja cuadra al centavo.', 'Cuentas los billetes y Leogin te dice si falta algo.', [{ captura: 'q1-cuadra', resalta: 'cuadra', acerca: 1.35 }]),
+    paso: paso('La caja cuadra al centavo.', 'Cuentas los billetes y Leogin te dice si falta algo.', [{ captura: 'q1-cuadra', resalta: 'cuadra', ampliar: [830, 20, 20, 20] }]),
   },
   {
     etiqueta: 'Y a tu teléfono',
-    paso: paso('Ves tu día completo.', 'Ventas, plato estrella y hora pico, estés donde estés.', [{ captura: 'h1-hoy', resalta: 'ventas', acerca: 1.25 }]),
+    paso: paso('Ves tu día completo.', 'Ventas, plato estrella y hora pico, estés donde estés.', [{ captura: 'h1-hoy', resalta: 'ventas', ampliar: [20, 10, 20, 200] }]),
   },
 ];

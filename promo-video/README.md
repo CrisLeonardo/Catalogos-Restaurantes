@@ -80,7 +80,7 @@ npm run otra-vez:render   # los 6 MP4 en out/otra-vez/ (genera banda y QR si fal
 
 - **`src/otra-vez/guiones.ts`**: todo el texto de los tres videos (gancho, molestias del caos, los cinco pasos y qué pantalla muestra cada uno). Para otro público se agrega un guion; el motor no cambia.
 - **`src/otra-vez/Caos.tsx`**: el domingo sin Leogin. Depende solo del número de cuadro, por eso el rebobinado es la misma escena recorrida hacia atrás.
-- **`src/otra-vez/Pasos.tsx`**: las pantallas reales dentro del teléfono o la tableta, con el dedo, el resaltado y el acercamiento animados sobre las capturas.
+- **`src/otra-vez/Pasos.tsx`**: las pantallas reales dentro del teléfono o la tableta, con el dedo y el resaltado animados sobre las capturas (lo resaltado queda nítido y el resto se desenfoca; sin acercamientos).
 - **`scripts/otra-vez/sonido.mjs`**: la banda sonora, sintetizada con código (sin material de terceros), a 100 pulsos por minuto; el video corta en los mismos pulsos (`src/otra-vez/base.ts`).
 - **`scripts/otra-vez/qr.mjs`**: el QR del cierre. Para apuntarlo a otra dirección: `node scripts/otra-vez/qr.mjs https://…`.
 
@@ -92,6 +92,7 @@ Un video de 53,4 s que explica qué es Leogin: «Hoy tu restaurante vive en 8 lu
 
 ```bash
 npm run un-lugar:render   # los 2 MP4 en out/un-lugar/ (genera la banda si falta)
+npm run un-lugar:web      # los deja livianos en plataforma/public/un-lugar/ para la portada
 ```
 
 Usa las mismas capturas y el mismo QR de «Otra vez» (`npm run otra-vez:grabar` antes, si no existen). El texto y los tiempos están en `src/un-lugar/guion.ts`; las escenas, en `src/un-lugar/UnSoloLugar.tsx`, que reutiliza el aparato con pantallas (`Aparato`) y el tramo «además» de «Otra vez». La banda sale de `scripts/un-lugar/sonido.mjs`.
