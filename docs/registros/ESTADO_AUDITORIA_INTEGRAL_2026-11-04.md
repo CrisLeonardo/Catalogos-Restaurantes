@@ -2,6 +2,8 @@
 
 Documento de traspaso para retomar el trabajo en otra sesión o cuenta sin perder el contexto. Resume qué se logró, qué está en curso y qué falta, con listas para marcar.
 
+> **Propuesta comercial registrada el 2026-11-16:** [V.0 al principio del plan por olas](../planes/PLAN_AUDITORIA_INTEGRAL_2026-11-04.md#propuesta-comercial-prioritaria-2026-11-16) recoge En línea a Q49 como candidato frente a Q99, redistribución de funciones y demostración por segmento. Se integra con 0.2, V.2–V.6, 4.10–4.11 y las ventajas de la Ola 5; no sustituye la Ola 2 en curso. Es documentación para decisión e implementación posteriores: no cambió tarifas, contratos ni código. Mantiene fuera FEL, encargos y transferencia del comensal; no reactiva la prueba gratis. Ver el detalle y las discrepancias resueltas en la propuesta.
+
 > **Actualización del 2026-11-09:** fichas **1.8** (`feat/recepcion`, migración 178, §30), **1.9** (`feat/catalogo`, migración 179, con 0.7 incorporada, §31), **1.10** (`feat/inventario`, migración 180, §32) , **1.11** (`feat/comensal`, sin migración, §33) y **1.12** (`feat/checkout-seguimiento`, sin migración, §34) implementadas: **la Ola 1 queda terminada**. Siguiente: integrar la Ola 0 que falta en la cadena y preparar el despliegue, cuando el dueño lo decida.
 >
 > **Actualización del 2026-11-08:** ficha **1.7** implementada en `feat/permisos-por-trabajo` (migración 177, §29); la cadena no contenía 0.1–0.13 y se incorporó 0.12 (§28). Siguiente: **1.8 · Recepción**.

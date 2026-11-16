@@ -2,6 +2,76 @@
 
 **Creado el 2026-11-04 · base `876dd50` (v0.17.0) · rama del plan `docs/plan-auditoria-integral`.**
 
+## Propuesta comercial prioritaria (2026-11-16)
+
+**Ficha V.0 · Planes por necesidad y prueba de valor. Estado: propuesta registrada a petición del dueño para trabajar más adelante.** Va al principio para revisarla antes de cambiar la oferta en V.3; no interrumpe las fichas en curso de la Ola 2 ni autoriza modificar tarifas, contratos, funciones o producción. No es una ola nueva ni reabre como fallidas las fichas ya terminadas. Q49 sigue siendo un precio candidato, no la tarifa vigente.
+
+**Objetivo:** cuatro opciones que resuelvan un trabajo completo: mostrar un menú; vender desde casa; operar un comedor/local pequeño; coordinar una operación con más personal, estaciones y control. El tamaño del local orienta, pero la recomendación depende de cómo trabaja el negocio. Un negocio pequeño puede necesitar Premium y uno con muchas ventas puede seguir con una operación sencilla.
+
+### Qué ya estaba contemplado y qué se agrega
+
+| Tema | Ficha existente | Tratamiento de esta propuesta |
+|---|---|---|
+| Una sola definición de precio, límites y funciones | 0.2 / E01, terminada | Reutilizar el contrato existente; no crear otro cálculo de cobro ni presentar un override válido como fallo |
+| Vender por situaciones, elegir plan y mantener la demo/material coherentes | V.2, V.3 y V.6 / W04, W05 y W08 | Ampliar esas fichas con la matriz de abajo; no abrir trabajos duplicados |
+| Medir activación, renovación, soporte y rentabilidad por segmento | V.4, V.5 y 4.11 / S02–S03 | Añadir la comparación Q49 frente a Q99 y costos por cuenta; se puede comenzar con un registro manual en las visitas |
+| Alta, importación y práctica | 2.3, 2.4 y 2.5 | Aprovechar lo construido o en revisión; no anunciarlo como novedad pendiente sin comprobar su estado |
+| Ventajas propias | Ola 5 / M§9; importación en 2.4 y resumen del dueño en 3.6 | Elegir y validar una o dos ventajas; no multiplicar módulos para aparentar diferenciación |
+
+**Lo nuevo:** evaluar En línea a Q49; completar Estándar con mesero, cocina e impresión sencillos; revisar usuarios y restricciones por modalidad/volumen; concretar qué control adicional justifica Premium. No se encontró esta combinación en la auditoría consultada. El plan anterior de [En línea](PLAN_NECESIDAD_Y_PLAN_EN_LINEA_2026-10-28.md) ya propuso Q99 y conserva historial de funciones retiradas; no se toma su tabla inicial como oferta vigente.
+
+### Situación observada y matriz candidata
+
+Referencia comercial consultada el 2026-11-16: [web pública de planes](https://distleogin.com/planes), Gratis / Q99 / Q150 / Q299 y configuración asistida publicada en Q0. `plans.ts` conserva defaults Q199/Q349 y alta Q300 para Estándar/Premium; `platform_settings` puede sobrescribirlos. Reconsultar la configuración efectiva al implementar: no cambiar defaults, acuerdos históricos ni altas basándose solo en este documento. `PRECIOS_VIGENTES.md`, el cotizador, el documento de planes y el guion antiguo de 90 segundos requieren reconciliación en V.6; los módulos a la carta y descuentos por canal que describen documentos viejos no vuelven con esta propuesta.
+
+| Aspecto | Básico | En línea | Estándar | Premium |
+|---|---|---|---|---|
+| Mensualidad candidata | Gratis | **Q49 frente a Q99 actual, por validar** | Mantener Q150 público observado | Mantener Q299 público observado |
+| Trabajo principal | Mostrar el menú actualizado | Recibir pedidos mientras el dueño cocina/vende | Tomar pedidos, preparar, cobrar y cerrar un local pequeño | Coordinar equipo y estaciones, controlar costos y supervisar |
+| Productos / accesos | 150 / 1 | 150 / 1 operador | Ilimitados / **4 personas contando al dueño**, candidato | Ilimitados / ilimitados |
+| Modalidades | Sin pedidos | Para llevar y domicilio | **Las tres**, candidato a sustituir la elección actual de 2 de 3 | Las tres |
+| Mesero, cocina e impresión | Sin operación de pedidos | Operación sencilla desde el teléfono | **Mesero, una cola de cocina y una estación de impresión** | Varias estaciones y envío según área |
+| Números | Sin gestión de ventas | Resumen de ventas y pendientes, sin prometer utilidad | Caja, gastos, cierres y reportes básicos | Costos, márgenes con cobertura, diferencias y análisis |
+| Disponibilidad e inventario | Agotados manuales | Disponibilidad y unidades del día | Existencias sencillas de productos | Ingredientes, recetas, mermas y control avanzado, según capacidades realmente terminadas |
+| Clientes | Contacto del negocio | Historial y cupón sencillo, candidatos | Historial y cupón sencillo, candidatos | Lealtad, campañas medibles, reservas y espera |
+
+La tabla es **alcance deseado, no inventario de funciones desplegadas**. Antes de construir, clasificar cada capacidad con Q.1 y revisar lo existente en 1.5, 1.7, 1.9, 1.10 y 3.3–3.4. No reconstruir cocina, permisos, agotados o cupones que ya existen. El consumo automático de ingredientes depende de **4.1**; costear una receta no demuestra que la venta descuente insumos. Seguridad, respaldos y permisos mínimos no se reservan a Premium para forzar la compra.
+
+**Decisiones que deben quedar explícitas al retomar V.0:**
+
+- **Precio y atención de En línea:** probar Q49 frente a Q99 con prospectos comparables, misma oferta y seguimiento; registrar pago, uso real, renovación a 30/60/90 días y minutos de soporte. No decidir por registros o comentarios favorables solamente. Con Q49 hacen falta unas 2,02 veces más cuentas para igualar ingresos de Q99 antes de gastos; con costo variable hipotético de Q20 por cuenta, unas 2,72 veces para igualar contribución. Son escenarios, no costos medidos de Leogin. Cobro contratado y dinero recibido se miden separados.
+- **Autoservicio y servicios opcionales:** definir qué ayuda incluye Q49, cómo se configura sin intervención y quién asume mensajería/API. Carga completa de carta, visitas o capacitación individual pueden cotizarse como servicios opcionales con alcance claro. Esto no crea módulos funcionales a la carta ni convierte Q300 en alta obligatoria.
+- **Tope de pedidos:** hoy En línea avisa cerca de 300 pedidos/mes y al superarlos, sin cortar pedidos. Se propone evaluar quitar ese tope y diferenciar por operación/equipo/control. Es una revisión expresa de la decisión del 2026-11-02: no retirar el aviso ni anunciar pedidos ilimitados hasta resolverla. Si se conserva, explicar su alcance y el cambio de plan sin contradecir la promesa de elegir por funciones.
+- **Usuarios y modalidades:** confirmar cuatro personas en Estándar, qué cuenta como acceso activo y cómo encaja el repartidor con En línea sin otorgarle administración. Permisos básicos y alta de personas deben poder usarse dentro de los accesos vendidos. Revisar comprobaciones en UI, acciones, rutas y base; esconder una opción no aplica un límite.
+- **Cocina, impresión y continuidad:** definir con precisión cola, estación, impresora y puesto. Mantener una operación pequeña completa; reservar complejidad adicional para Premium. Probar recuperación, impresión y varios aparatos con 4.6/2.6 antes de anunciar garantías; operar por LAN sin internet no recibe pedidos remotos que no pueden llegar al local.
+- **Grupos:** revisar Q299/mes del panel consolidado. Dos sucursales Premium a Q299 sumarían Q897 con ese panel, un 50 % adicional sobre las dos mensualidades. Candidato: consolidación básica incluida con dos Premium; cobro adicional solo si existe gestión central de mayor alcance y se valida su valor. No modificar descuentos o acuerdos existentes automáticamente.
+- **Contratos y presentación:** decidir fecha de efecto, trato de clientes actuales, anualidades y prorrateo en 4.10 sin recalcular históricos silenciosamente. Pro sigue pausado. La prueba gratis retirada el 2026-11-15 no se reactiva. FEL/facturación se mantiene fuera de esta propuesta y conserva su ficha separada 4.7.
+- **Funciones retiradas:** encargos/preventa y comprobantes de transferencia del comensal siguen fuera, por decisión del 2026-11-02. No restaurarlos para justificar un plan. Pagar la suscripción por transferencia y registrar un cobro de caja son recorridos diferentes.
+
+### Comunicar y demostrar el valor (V.2, V.5 y V.6)
+
+1. **Reconocer la necesidad:** preguntar cómo recibe pedidos, coordina cocina o lleva cuentas; mostrar un recorrido correspondiente a su respuesta y al plan ofrecido.
+2. **Demostrar con una tarea:** En línea, pedido completo y seguimiento; Estándar, pedido a cocina y cobro; Premium, operación del equipo y supervisión. Hasta aprobar e implementar la redistribución, una demo de Estándar no promete mesero o impresión que el contrato actual reserva a Premium.
+3. **Aprovechar la serie de tres videos** del [guion vigente](../negocio/GUION_VIDEO_UNA_TOMA_2026-11-15.md) y la demo existente. Actualizar el guion antiguo de 90 segundos; distinguir menú gratis de pedidos de pago. Mostrar un precio candidato como oferta vigente o llamar caja cuadrada/ahorro a una cifra inventada no es aceptable.
+4. **Visitar y medir:** empezar a ofrecer el alcance desplegado que se haya comprobado, anotar necesidad, objeción, siguiente paso, activación, pago, soporte y renovación. Las visitas no esperan terminar la Ola 5. Conservan pendientes las pruebas de campo ya registradas: este apunte no certifica impresión, continuidad ni cierre del SaaS.
+5. **Prueba social:** documentar mejoras observables con autorización de clientes reales; no fabricar testimonios ni atribuir ventas nuevas o comisiones ahorradas a todos los pedidos que pasan por Leogin.
+
+### Qué podría hacer característico a Leogin (sin duplicar la Ola 5)
+
+Son hipótesis para seleccionar con pilotos, no promesas de exclusividad frente a competidores ni trabajo nuevo aprobado. La recomendación es combinar **arranque fácil** con **turno acompañado y resumen útil**, antes de añadir más módulos:
+
+| Ventaja candidata | Ya prevista en | Complemento concreto y cómo comprobarlo |
+|---|---|---|
+| **De tu carta al primer pedido** | 2.3, 2.4, 2.5 y 2.7; M§9.D | Unir importación revisada, marca del negocio, enlace/QR y práctica. Medir tiempo hasta menú útil y primera operación sin guía; una foto ambigua no publica precios inventados |
+| **Un turno que termina explicado** | Hoy 2.1–2.2, aparato 2.6, Caja 1.2 y Ola 5 / M§9.A | Conectar preparación, excepciones durante servicio y cierre trazable. Mostrar qué requiere acción y llevar al movimiento real, sin un nuevo tablero saturado. Medir tareas omitidas, pendientes sin atender y ayuda necesaria |
+| **El dueño recibe una decisión útil** | 3.1, 3.2 y 3.6; M§9.E | Resumen con cobrado, pendiente, diferencias y una observación accionable respaldada por registros. Si faltan costos o historial, explicarlo. Comparar utilidad percibida, decisiones tomadas y renovación |
+| **Cocina que ayuda a cumplir el tiempo** | Ola 5 / M§9.B, después de 1.5 y medición real | Estimar carga por estación con incertidumbre y sugerir ampliar tiempo o pausar, siempre con decisión del encargado. Medir demoras y cancelaciones; sin historial no prometer predicción exacta |
+| **Saber qué platillo conviene vender** | Ola 5 / M§9.C, después de 3.1–3.2 y costos fiables | Combinar popularidad y margen con cobertura, simular con supuestos y explicar la recomendación. No modificar carta o precios automáticamente |
+
+La mascota, el sonido y las piezas para compartir ya trabajados en [Momentos pico](PLAN_MOMENTOS_PICO_2026-10-26.md) pueden reforzar reconocimiento, pero no sustituyen utilidad, fiabilidad y recomendación real. Leo sigue fuera del menú del restaurante. No añadir red social, IA generalista, plantillas adicionales o una garantía de retorno inventada como atajo comercial.
+
+**Cierre de V.0:** matriz comercial y precios con decisión explícita; diferencias con el contrato vigente enumeradas; costos y validación definidos; asignación a fichas existentes y a las capacidades nuevas que resulten necesarias. Después, cada implementación tiene su rama/PR, maqueta aprobada si cambia interfaz, pruebas proporcionales y comprobación en pantalla. Web, alta, suscripción, superadmin, cobro y material deben coincidir **en el mismo lanzamiento**, no anunciar por anticipado una capacidad futura. Registrar esta propuesta no cierra V.0, V.3 ni las demás fichas.
+
 > **Avance y traspaso:** el estado de cada ficha, los PR abiertos y lo que falta están en [`registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md`](../registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md).
 
 Este plan convierte la auditoría del 2–3 de noviembre en trabajo ejecutable. **No repite el detalle de la auditoría**: cada ficha dice qué hallazgos cubre y dónde leer su especificación. Su aporte está en cuatro cosas:
@@ -401,11 +471,13 @@ Las fichas indican **qué cubren y dónde está la especificación**. El detalle
 
 ### V · Línea comercial (en paralelo desde la ola 1)
 
+**Antes de modificar la oferta:** resolver [V.0 · propuesta comercial prioritaria del 2026-11-16](#propuesta-comercial-prioritaria-2026-11-16). Es una ficha de decisión adicional a las 72 originales; amplía las siguientes sin duplicar sus implementaciones. La captación con la oferta comprobada puede avanzar en paralelo.
+
 | Ficha | Tamaño | Cubre | Especificación |
 |---|---|---|---|
 | V.1 Portada centrada en una demostración | M | W03, F05, E18, M§4.1 | M§4.1, W03, E18 |
 | V.2 Vender por situaciones | M | W04 | W04 |
-| V.3 Planes fáciles de elegir | M | W05, F04 | W05 |
+| V.3 Planes fáciles de elegir | M | W05, F04 y matriz resuelta en V.0 | W05 y propuesta comercial al principio del plan |
 | V.4 Medir el embudo de adquisición | M | W07, F06, M§10 | W07 |
 | V.5 Pilotos y prueba social verificable | L | W06, M§1 (pilotos), M§10 | W06 |
 | V.6 Material comercial consistente | M | W08 | W08 |
@@ -421,6 +493,8 @@ Las fichas indican **qué cubren y dónde está la especificación**. El detalle
 ### Ola 5 · Ventajas propias (después)
 
 Elegir una o dos de M§9: turno guiado (A), capacidad de cocina (B), menú rentable (C). Las otras dos ya tienen ficha: migración fácil (D) es 2.4 y el resumen del dueño (E) es 3.6. **No se hacen**: red social, más plantillas, contabilidad completa, IA generalista, integraciones que nadie pidió ni volver a poner encargos o transferencia del comensal (M§9, decisión del 2026-11-02).
+
+La [propuesta comercial del 2026-11-16](#propuesta-comercial-prioritaria-2026-11-16) concreta esas hipótesis y sus medidas de éxito, sin cambiar esta prioridad ni dar por aprobado su desarrollo. Importación y resumen permanecen en sus fichas; primero se comprueba qué ya existe.
 
 **Se conservan** (M§11): la validación de precios en el servidor, la identidad de los pedidos, los pagos parciales, los borradores de servicio, el MFA, la protección del último dueño, la auditoría de rescate y las pruebas existentes. Mejorar no es reescribir.
 
@@ -457,7 +531,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 **Ola 2**: [x] 2.1 (Hoy por etapa, `feat/hoy-por-etapa`) · [x] 2.2 (primeros pasos y pedido de prueba, migración 183) · [ ] 2.3 · [ ] 2.4 · [ ] 2.5 · [ ] 2.6 · [ ] 2.7 · [ ] 2.8 · [ ] 2.9 · [ ] 2.10 · [ ] 2.11 · [ ] 2.12
 **Ola 3**: [ ] 3.1 · [ ] 3.2 · [ ] 3.3 · [ ] 3.4 · [ ] 3.5 · [ ] 3.6 · [ ] 3.7
 **Ola 4**: [ ] 4.1 · [ ] 4.2 · [ ] 4.3 · [ ] 4.4 · [ ] 4.5 · [ ] 4.6 · [ ] 4.7 · [ ] 4.8 · [ ] 4.9 · [ ] 4.10 · [ ] 4.11 · [ ] 4.12
-**Comercial**: [ ] V.1 · [ ] V.2 · [ ] V.3 · [ ] V.4 · [ ] V.5 · [ ] V.6
+**Comercial**: [ ] V.0 (decidir planes y prueba de valor; propuesta del 2026-11-16 al principio) · [ ] V.1 · [ ] V.2 · [ ] V.3 · [ ] V.4 · [ ] V.5 · [ ] V.6
 **Calidad**: Q.1, Q.2 y Q.3 son continuas.
 **Línea N · nada saturado** (pantallas sin ficha propia que aún no pasan por el método; [guía](../guias/GUIA_DISENO_NADA_SATURADO.md)). Ya pasadas: Tomar pedidos, carta del comensal, Pedidos en vivo, Menú › Platillos y Hoy (#110), además de Cocina, Caja, Clientes, Negocio y Ajustes (#112). Pendientes: [ ] Recepción (reservas y espera) · [ ] Inventario · [ ] Cupones, lealtad y encuestas (con 3.3–3.5) · [ ] Analítica y finanzas (con 3.2) · [ ] Mi cuenta · [ ] Superadmin (con 4.9) · [ ] Web pública (con V.1–V.3)
 
