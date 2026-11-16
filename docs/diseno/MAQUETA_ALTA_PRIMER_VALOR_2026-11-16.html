@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueta · Alta hasta el primer valor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F2F1EE;--bg2:#E9E7E3;--card:#FFFFFF;--ink:#17161A;--ink2:rgba(23,22,26,.72);--ink3:rgba(23,22,26,.56);--line:rgba(23,22,26,.12);--line2:rgba(23,22,26,.2);--coral:#C2542F;--on:#fff;--ok:#1E7A46;--okbg:#E4F3E9;--warn:#8A5A00;--warnbg:#FBEFD2;--info:#1F5FA8;--infobg:#E3EEFB;--page:#DEDCD7;--sh:0 1px 2px rgba(0,0,0,.06)}
+[data-theme=dark]{--bg:#0C0B0A;--bg2:#141311;--card:#1A1917;--ink:#F5F3EF;--ink2:rgba(245,243,239,.74);--ink3:rgba(245,243,239,.56);--line:rgba(245,243,239,.12);--line2:rgba(245,243,239,.22);--coral:#D9683F;--on:#fff;--ok:#6FD49A;--okbg:#12301F;--warn:#F0C568;--warnbg:#33270B;--info:#8DBBF2;--infobg:#10243D;--page:#000;--sh:none}
+*{box-sizing:border-box;margin:0}
+body{font-family:Geist,system-ui,sans-serif;background:var(--page);color:var(--ink);padding:24px 16px 80px;-webkit-font-smoothing:antialiased}
+h1{font-size:28px;font-weight:800;letter-spacing:-.03em}
+h2{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:48px 0 6px}
+.lead{max-width:760px;color:var(--ink2);font-size:15px;line-height:1.5;margin-top:8px}
+.top{display:flex;align-items:flex-start;gap:16px;justify-content:space-between;max-width:1280px;margin:0 auto}
+.wrap{max-width:1280px;margin:0 auto}
+.tog{border:1px solid var(--line2);background:var(--card);color:var(--ink);font:inherit;font-size:14px;font-weight:600;height:44px;padding:0 16px;border-radius:12px;cursor:pointer;flex-shrink:0}
+.pair{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;margin-top:16px}
+.col{display:flex;flex-direction:column;gap:10px}
+.tag{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.tag b{color:var(--coral)}
+.note{font-size:13px;color:var(--ink2);max-width:375px;line-height:1.45}
+.notes{max-width:340px;font-size:14px;line-height:1.5;color:var(--ink2);padding-top:28px}
+.notes li{margin:0 0 10px 18px}
+.notes strong{color:var(--ink)}
+/* teléfono */
+.ph{width:375px;height:720px;background:var(--bg);border-radius:28px;border:1px solid var(--line2);overflow:hidden;position:relative;display:flex;flex-direction:column;font-size:14px}
+.ph.old{opacity:.92}
+.bar{height:54px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 12px 0 16px;border-bottom:1px solid var(--line);background:var(--bg)}
+.bar b{flex:1;font-size:18px;font-weight:800;letter-spacing:-.03em}
+.ib{width:42px;height:42px;border-radius:12px;background:var(--card);box-shadow:var(--sh);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink);flex-shrink:0}
+.ib svg,.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sub{display:flex;gap:2px;margin:6px 12px;padding:3px;background:var(--bg2);border-radius:12px;flex-shrink:0;overflow:hidden}
+.sub span{padding:7px 12px;border-radius:9px;font-size:13px;font-weight:500;color:var(--ink2);white-space:nowrap}
+.sub .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+.body{flex:1;overflow:hidden;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.nav{height:62px;flex-shrink:0;border-top:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:space-around;font-size:11px;color:var(--ink3);position:relative}
+.nav span{display:grid;justify-items:center;gap:3px}
+.nav .on{color:var(--coral);font-weight:600}
+.nav .plus{width:52px;height:52px;border-radius:50%;background:var(--coral);color:var(--on);display:grid;place-items:center;margin-top:-26px;box-shadow:0 6px 16px rgba(194,84,47,.35)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh)}
+.fold{position:absolute;left:0;right:0;border-top:2px dashed var(--coral);z-index:5}
+.fold i{display:none}
+.cap{font-size:13px;font-weight:600;color:var(--coral)}.cap.old{color:var(--ink2)}
+.row{display:flex;align-items:center;gap:8px}
+.hs{display:flex;gap:8px;overflow:hidden;flex-shrink:0}
+.pill{height:44px;padding:0 14px;border-radius:12px;background:var(--bg2);display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink2);white-space:nowrap;flex-shrink:0}
+.pill.on{background:var(--ink);color:var(--bg)}
+.pill small{font-weight:600;opacity:.7;font-variant-numeric:tabular-nums}
+.pill.warn{background:var(--warnbg);color:var(--warn)}
+.btn{height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--line2);background:var(--card);display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;white-space:nowrap;flex-shrink:0}
+.btn.p{background:var(--coral);border-color:var(--coral);color:var(--on)}
+.btn.sq{width:48px;height:48px;padding:0}
+.btn.t{height:48px}
+.mut{color:var(--ink3)}.s12{font-size:12px}.s13{font-size:13px}.num{font-variant-numeric:tabular-nums}
+.chip{font-size:11px;font-weight:600;padding:3px 8px;border-radius:8px;white-space:nowrap}
+.c-info{background:var(--infobg);color:var(--info)}.c-ok{background:var(--okbg);color:var(--ok)}.c-warn{background:var(--warnbg);color:var(--warn)}
+.search{flex:1;min-width:0;height:48px;border-radius:12px;border:1px solid var(--line2);background:var(--card);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--ink3);font-size:14px}
+/* pedido */
+.ord{padding:12px 14px;display:grid;gap:8px}
+.ord h4{font-size:15px;font-weight:600}
+.ord .act{height:48px;border-radius:12px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:600;font-size:14px}
+.ord .act.q{background:var(--bg2);color:var(--ink)}
+/* platillo */
+.dish{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);min-height:64px}
+.dish:last-child{border-bottom:0}
+.thumb{width:44px;height:44px;border-radius:10px;background:var(--bg2);flex-shrink:0;display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--ink3)}
+.dish .n{flex:1;min-width:0}
+.dish .n b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sw{width:44px;height:26px;border-radius:999px;background:var(--coral);position:relative;flex-shrink:0}
+.sw::after{content:"";position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:#fff}
+.sw.off{background:var(--line2)}.sw.off::after{right:auto;left:3px}
+/* hoy */
+.kpi{padding:16px}
+.kpi .big{font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1.05}
+.kpi .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.kpi .two b{display:block;font-size:20px;font-weight:600}
+.lrow{display:flex;align-items:center;gap:12px;padding:0 14px;min-height:56px;border-bottom:1px solid var(--line)}
+.lrow:last-child{border-bottom:0}
+.lrow .n{flex:1;min-width:0}
+.lrow .n b{display:block;font-weight:600}
+.ring{width:36px;height:36px;border-radius:50%;background:conic-gradient(var(--coral) 80%,var(--bg2) 0);display:grid;place-items:center;flex-shrink:0}
+.ring::after{content:"";width:26px;height:26px;border-radius:50%;background:var(--card)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--warn);flex-shrink:0;margin:0 14px}
+/* bloques «antes» */
+.blk{border-radius:14px;border:1px solid var(--line);background:var(--card);padding:12px 14px;flex-shrink:0}
+.tint{background:color-mix(in srgb,var(--coral) 9%,var(--card));border-color:color-mix(in srgb,var(--coral) 35%,transparent)}
+/* escritorio */
+.desk{width:100%;max-width:1180px;height:560px;background:var(--bg);border:1px solid var(--line2);border-radius:16px;overflow:hidden;display:flex;font-size:14px;margin-top:14px}
+.side{width:200px;flex-shrink:0;border-right:1px solid var(--line);padding:16px 12px;display:grid;gap:4px;align-content:start;font-size:14px;color:var(--ink2)}
+.side b{color:var(--ink);font-size:15px;margin-bottom:10px;padding:0 10px}
+.side span{padding:9px 10px;border-radius:10px}
+.side .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+.dmain{flex:1;min-width:0;display:flex;flex-direction:column}
+.dbar{height:60px;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--line);flex-shrink:0}
+.dbar b{font-size:22px;font-weight:800;letter-spacing:-.03em}
+.dbody{padding:16px 24px;display:flex;flex-direction:column;gap:14px;overflow:hidden;flex:1}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tabsd{display:flex;gap:4px;margin-left:16px}
+.tabsd span{padding:7px 12px;border-radius:9px;font-size:13px;color:var(--ink2)}
+.tabsd .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+table{width:100%;border-collapse:collapse}
+td,th{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line);font-size:14px}
+th{font-size:12px;font-weight:600;color:var(--ink3)}
+td.r,th.r{text-align:right}
+@media(max-width:820px){.notes{padding-top:0;max-width:375px}.desk{display:none}.nodesk{display:block!important}}
+.nodesk{display:none;font-size:13px;color:var(--ink3);margin-top:10px}
+/* propios de esta maqueta */
+.ex{display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:60px;border-bottom:1px solid var(--line)}
+.ex:last-child{border-bottom:0}
+.ex .n{flex:1;min-width:0}.ex .n b{display:block;font-weight:600;font-size:14px}
+.ex .go{font-size:13px;font-weight:600;color:var(--coral);white-space:nowrap}
+.sd{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.sd.d{background:#B3261E}.sd.w{background:#C98A0B}.sd.n{background:var(--ink3)}
+[data-theme=dark] .sd.d{background:#F2877E}
+.money{padding:14px 16px}
+.money .lab{font-size:13px;color:var(--ink3);font-weight:500}
+.money .big{font-size:36px;font-weight:700;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
+.money .split{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.money .split b{display:block;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.money .foot{margin-top:10px;font-size:13px;color:var(--ink3)}
+.up{color:var(--ok);font-weight:600}
+.step{display:flex;gap:12px;align-items:flex-start;padding:14px}
+.step .k{width:28px;height:28px;border-radius:50%;border:2px solid var(--line2);display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--ink3);flex-shrink:0}
+.step.now .k{border-color:var(--coral);color:var(--coral)}
+.step .n{flex:1;min-width:0}
+.step .n b{display:block;font-size:15px;font-weight:600}
+.step .n p{font-size:13px;color:var(--ink2);margin-top:3px;line-height:1.4}
+.step .btn{margin-top:10px}
+.hdr{display:flex;align-items:center;gap:8px;min-height:32px}
+.hdr .d{flex:1;font-size:14px;color:var(--ink3);font-weight:500}
+.hdr a{font-size:13px;font-weight:600;color:var(--coral)}
+.sec{font-size:13px;font-weight:600;color:var(--ink3);margin:2px 2px -2px}
+.bug{display:inline-block;font-size:11px;font-weight:700;color:#B3261E;background:#FBE4E2;border-radius:6px;padding:1px 6px;margin-left:4px}
+[data-theme=dark] .bug{color:#F2877E;background:#3A1512}
+.g2{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;align-items:start}
+.bars{display:flex;align-items:flex-end;gap:6px;height:90px;padding:0 16px 14px}
+.bars i{flex:1;background:var(--bg2);border-radius:4px 4px 0 0}
+.bars i.on{background:var(--coral)}
+@media(max-width:420px){.ph{width:100%}}
+/* propios de la maqueta del alta */
+.strip{display:flex;gap:14px;overflow-x:auto;padding:4px 2px 14px;margin-top:14px}
+.mini{flex-shrink:0;display:flex;flex-direction:column;gap:6px;width:206px}
+.mini .ph{zoom:.55;width:375px;height:720px}
+.mini .n{font-size:12px;font-weight:700;color:var(--ink3)}
+.mini .n b{color:var(--ink)}
+.mini .t{font-size:12px;color:var(--ink2);line-height:1.35}
+.hd{height:52px;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid var(--line);background:var(--card)}
+.hd .lg{width:26px;height:26px;border-radius:7px;background:var(--coral);color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px}
+.hd b{font-size:16px;font-weight:800;color:var(--coral)}
+.hd span{margin-left:auto;font-size:12px;color:var(--ink3)}
+.pg{flex:1;overflow:hidden;padding:16px;display:flex;flex-direction:column;gap:12px}
+.pg h3{font-size:24px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.pg p.s{font-size:13px;color:var(--ink2);line-height:1.4}
+.fld{display:grid;gap:5px}
+.fld label{font-size:12px;font-weight:600;color:var(--ink2)}
+.inp{height:48px;border-radius:12px;border:1px solid var(--line2);background:var(--card);display:flex;align-items:center;padding:0 12px;font-size:15px;color:var(--ink)}
+.inp.ph0{color:var(--ink3)}
+.inp small{margin-left:auto;font-size:12px;color:var(--ink3)}
+.opt{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line2);border-radius:14px;background:var(--card);min-height:60px}
+.opt.on{border:2px solid var(--coral);padding:11px 13px}
+.opt .n{flex:1;min-width:0}
+.opt .n b{display:block;font-size:14px;font-weight:600}
+.opt .n span{font-size:12px;color:var(--ink3)}
+.rad{width:20px;height:20px;border-radius:50%;border:2px solid var(--line2);flex-shrink:0}
+.opt.on .rad{border:6px solid var(--coral)}
+.dishrow{display:grid;grid-template-columns:1fr 92px;gap:8px}
+.foot{flex-shrink:0;padding:12px 16px 16px;border-top:1px solid var(--line);background:var(--card);display:grid;gap:8px}
+.cta{height:52px;border-radius:14px;background:var(--coral);color:#fff;display:grid;place-items:center;font-weight:700;font-size:15px}
+.ghost{height:44px;display:grid;place-items:center;font-size:13px;font-weight:600;color:var(--ink2)}
+.dots{display:flex;gap:6px;justify-content:center;padding:2px 0}
+.dots i{width:22px;height:4px;border-radius:2px;background:var(--line2)}
+.dots i.on{background:var(--coral)}
+.carta{border-radius:18px;overflow:hidden;border:1px solid var(--line2);background:#F6F1EA;color:#2A211B}
+.carta .por{height:92px;background:linear-gradient(160deg,#3B2A20,#6B4A35);color:#fff;display:flex;align-items:flex-end;padding:12px 14px;font-weight:800;font-size:20px;letter-spacing:-.02em}
+.carta .cat{padding:10px 14px 4px;font-size:11px;font-weight:800;letter-spacing:.08em}
+.carta .it{display:flex;justify-content:space-between;padding:9px 14px;border-top:1px solid rgba(42,33,27,.1);font-size:13px}
+.carta .it b{font-weight:600}
+.sumrow{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);font-size:13px}
+.sumrow:last-child{border-bottom:0}
+.sumrow .k{color:var(--ink3);width:62px;flex-shrink:0}
+.sumrow .v{flex:1;font-weight:600}
+.sumrow .a{color:var(--coral);font-weight:600;font-size:12px}
+.vs{display:flex;gap:28px;flex-wrap:wrap;margin-top:12px}
+.big{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.big small{font-size:14px;font-weight:600;color:var(--ink3);letter-spacing:0}
+.bad{color:#B3261E}[data-theme=dark] .bad{color:#F2877E}
+.good{color:var(--ok)}
+.dsk{display:grid;grid-template-columns:1fr 340px;gap:28px;padding:28px 36px;flex:1;overflow:hidden;background:var(--bg)}
+@media(max-width:420px){.mini{width:206px}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+<symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+</defs></svg>
+
+<div class="top">
+  <div>
+    <div class="tag">Maqueta para aprobar · 2026-11-16 · ficha 2.3 de la auditoría (A01, F07, M§4.2)</div>
+    <h1>Alta hasta el primer valor</h1>
+    <p class="lead">Quien se registra es el dueño, casi siempre en el teléfono, recién llegado desde la portada. Entra a una sola cosa: <strong>ver su carta funcionando</strong>. Hoy, antes de escribir su primer platillo, recorre 7 pantallas y elige entre 4 planes y 208 combinaciones de estilo. La propuesta lo lleva a su carta con sus platillos en 4 pantallas y lo deja en Hoy, en la guía «Llega a tu primer pedido» que ya está en producción. Las capturas de «hoy» salen de la app real a 375 px. Nada de esto está construido.</p>
+  </div>
+  <button class="tog" onclick="const h=document.documentElement;h.dataset.theme=h.dataset.theme==='dark'?'light':'dark'">Claro / oscuro</button>
+</div>
+
+<div class="wrap">
+
+<div class="vs">
+  <div><div class="tag">Hoy</div><div class="big bad">7 <small>pantallas antes del panel</small></div><p class="note" style="margin-top:6px">El primer platillo llega <strong>después</strong>, en el panel, como paso 1 de la guía.</p></div>
+  <div><div class="tag"><b>Propuesta</b></div><div class="big good">4 <small>pantallas hasta ver la carta con tus platillos</small></div><p class="note" style="margin-top:6px">El primer platillo va en la pantalla 3; la 4 ya es la carta de verdad.</p></div>
+</div>
+
+<!-- ═════════ HOY ═════════ -->
+<h2>1 · El recorrido de hoy</h2>
+<p class="lead">El registro crea la cuenta (dos pasos) y después se crea el restaurante (cuatro pasos más una pantalla de «listo»). Plan y estilo se deciden antes de tener nada que vender.</p>
+<div class="strip">
+  <div class="mini">
+    <div class="ph old"><div class="hd"><span class="lg">L</span><b>Leogin</b></div><div class="pg"><div class="dots"><i class="on"></i><i></i></div><h3>Crea tu cuenta</h3><div class="fld"><label>Tu nombre</label><div class="inp ph0">Ana López</div></div><div class="fld"><label>Correo</label><div class="inp ph0">ana@correo.com</div></div><div class="fld"><label>Contraseña</label><div class="inp ph0">••••••••</div></div><div class="fld"><label>Repite la contraseña</label><div class="inp ph0">••••••••</div></div></div><div class="foot"><div class="cta">Continuar</div></div></div>
+    <div class="n"><b>1</b> · Tu cuenta</div><div class="t">Nombre, correo y contraseña dos veces.</div>
+  </div>
+  <div class="mini">
+    <div class="ph old"><div class="hd"><span class="lg">L</span><b>Leogin</b></div><div class="pg"><div class="dots"><i class="on"></i><i class="on"></i></div><h3>Confirma tu correo</h3><div class="inp">ana@correo.com</div><div class="opt"><span class="rad"></span><div class="n"><b>Acepto los términos</b></div></div></div><div class="foot"><div class="cta">Crear cuenta</div></div></div>
+    <div class="n"><b>2</b> · Confirmar</div><div class="t">Solo vuelve a mostrar el correo y los términos.</div>
+  </div>
+  <div class="mini">
+    <div class="ph old"><div class="hd"><span class="lg">L</span><b>Leogin</b></div><div class="pg"><h3>Crea tu restaurante</h3><p class="s">Elige el plan de este restaurante. Se cobra desde hoy.</p><div class="opt"><span class="rad"></span><div class="n"><b>Básico · Gratis</b><span>Menú digital con QR</span></div></div><div class="opt"><span class="rad"></span><div class="n"><b>En línea · Q99/mes</b><span>Para llevar y a domicilio</span></div></div><div class="opt"><span class="rad"></span><div class="n"><b>Estándar · Q199/mes</b><span>2 de 3 modos de pedido</span></div></div><div class="opt on"><span class="rad"></span><div class="n"><b>Premium · Q349/mes</b><span>RECOMENDADO · viene marcado</span></div></div></div><div class="foot"><div class="cta">Continuar</div></div></div>
+    <div class="n"><b>3</b> · Tu plan</div><div class="t">Cuatro tarjetas largas; <strong>Premium viene marcado</strong> aunque no sepamos qué vende.</div>
+  </div>
+  <div class="mini">
+    <div class="ph old"><div class="hd"><span class="lg">L</span><b>Leogin</b></div><div class="pg"><h3>Tu restaurante</h3><div class="fld"><label>Nombre del restaurante</label><div class="inp ph0">Ej. Tu Restaurante</div></div><div class="fld"><label>Dirección de tu menú</label><div class="inp ph0">turestaurante<small>.distleogin.com</small></div></div><div class="fld"><label>WhatsApp del restaurante</label><div class="inp ph0">+502 0000 0000</div></div></div><div class="foot"><div class="cta">Continuar</div></div></div>
+    <div class="n"><b>4</b> · Tu restaurante</div><div class="t">Nombre, dirección y WhatsApp (opcional).</div>
+  </div>
+  <div class="mini">
+    <div class="ph old"><div class="hd"><span class="lg">L</span><b>Leogin</b></div><div class="pg"><h3>Tu estilo</h3><p class="s">1 · La estructura · 8 para elegir</p><div class="row" style="flex-wrap:wrap;gap:6px"><span class="pill on">Clásico</span><span class="pill">Carta de autor</span><span class="pill">Revista</span><span class="pill">Kiosco</span><span class="pill">Estantes</span><span class="pill">Pizarra</span></div><p class="s">2 · El estilo · 26 paletas</p><div class="row" style="gap:8px"><div class="carta" style="flex:1;height:120px"></div><div class="carta" style="flex:1;height:120px;background:#222"></div></div></div><div class="foot"><div class="cta">Continuar</div></div></div>
+    <div class="n"><b>5</b> · Tu estilo</div><div class="t">8 estructuras × 26 paletas, con una carta todavía vacía.</div>
+  </div>
+  <div class="mini">
+    <div class="ph old"><div class="hd"><span class="lg">L</span><b>Leogin</b></div><div class="pg"><h3>Confirmar</h3><div class="card"><div class="sumrow"><span class="k">Plan</span><span class="v">Premium · Q349/mes</span></div><div class="sumrow"><span class="k">Nombre</span><span class="v">Café Ana</span></div><div class="sumrow"><span class="k">Estilo</span><span class="v">Clásico · Lino &amp; Coral</span></div></div><div class="opt" style="border-color:var(--coral)"><div class="n"><b>Se cobra desde hoy</b><span>Entra a tu mensualidad desde hoy.</span></div></div></div><div class="foot"><div class="cta">Crear restaurante</div></div></div>
+    <div class="n"><b>6</b> · Confirmar</div><div class="t">Repite lo elegido; aquí se entera de que se cobra desde hoy.</div>
+  </div>
+  <div class="mini">
+    <div class="ph old"><div class="hd"><span class="lg">L</span><b>Leogin</b></div><div class="pg" style="align-items:center;text-align:center;justify-content:center"><h3>¡Tu restaurante está en vivo!</h3><p class="s">Lo primero: entra a tu panel y personaliza tu menú.</p><div class="cta" style="width:100%">Entrar a mi panel</div><div class="ghost">Ver mi menú</div><div class="ghost">Descargar Leogin para PC</div></div></div>
+    <div class="n"><b>7</b> · «Listo»</div><div class="t">«En vivo», pero con la carta vacía. Un toque más para llegar al panel.</div>
+  </div>
+</div>
+
+<!-- ═════════ PROPUESTA ═════════ -->
+<h2>2 · Propuesta: cuatro pantallas y directo a Hoy</h2>
+<p class="lead">Lo que se pregunta es lo que hace falta para que la carta sirva: quién eres, cómo se llama tu negocio, cómo te piden y qué vendes. El plan y el estilo llegan ya elegidos según lo que respondió, y se pueden cambiar en la pantalla 4 o después.</p>
+<div class="pair">
+  <div class="col">
+    <div class="tag"><b>1 · Tu cuenta</b></div>
+    <div class="ph"><div class="hd"><span class="lg">L</span><b>Leogin</b><span>1 de 4</span></div>
+      <div class="pg">
+        <h3>Crea tu cuenta</h3>
+        <div class="opt" style="justify-content:center;font-weight:600">G&nbsp; Continuar con Google</div>
+        <div class="s13 mut" style="text-align:center">o con tu correo</div>
+        <div class="fld"><label>Tu nombre</label><div class="inp">Ana López</div></div>
+        <div class="fld"><label>Correo</label><div class="inp">ana@correo.com</div></div>
+        <div class="fld"><label>Contraseña</label><div class="inp">••••••••<small>Ver</small></div></div>
+        <p class="s">Al crearla aceptas los <u>términos</u>. Revisa tu correo: con él entras y recuperas la cuenta.</p>
+      </div>
+      <div class="foot"><div class="cta">Crear cuenta</div></div>
+    </div>
+    <div class="cap">— — Una pantalla: «Confirmar» se va; la contraseña se escribe una vez, con «Ver»</div>
+  </div>
+
+  <div class="col">
+    <div class="tag"><b>2 · Tu negocio</b></div>
+    <div class="ph"><div class="hd"><span class="lg">L</span><b>Leogin</b><span>2 de 4</span></div>
+      <div class="pg">
+        <h3>¿Cómo se llama tu negocio?</h3>
+        <div class="fld"><div class="inp">Café Ana</div><span class="s12 mut">Tu carta: <b style="color:var(--ink)">cafe-ana.distleogin.com</b> · <span style="color:var(--coral);font-weight:600">Cambiar</span></span></div>
+        <div style="font-size:15px;font-weight:700;margin-top:4px">¿Cómo te piden tus clientes?</div>
+        <div class="opt"><span class="rad"></span><div class="n"><b>Solo ven la carta</b><span>La consultan con un QR y piden en persona</span></div></div>
+        <div class="opt on"><span class="rad"></span><div class="n"><b>Para llevar y a domicilio</b><span>Piden desde la carta en su teléfono</span></div></div>
+        <div class="opt"><span class="rad"></span><div class="n"><b>En mesas, con meseros</b><span>Toman pedidos en el salón y cobran en caja</span></div></div>
+      </div>
+      <div class="foot"><div class="cta">Continuar</div></div>
+    </div>
+    <div class="cap">— — Una pregunta de negocio en vez de cuatro tarjetas de planes</div>
+  </div>
+
+  <div class="col">
+    <div class="tag"><b>3 · Tus primeros platillos</b></div>
+    <div class="ph"><div class="hd"><span class="lg">L</span><b>Leogin</b><span>3 de 4</span></div>
+      <div class="pg">
+        <h3>¿Qué vendes?</h3>
+        <p class="s">Escribe tres o más. Con nombre y precio basta; la foto y la descripción, después.</p>
+        <div class="dishrow"><div class="inp">Café americano</div><div class="inp">Q 15</div></div>
+        <div class="dishrow"><div class="inp">Pan con frijol</div><div class="inp">Q 12</div></div>
+        <div class="dishrow"><div class="inp ph0">Otro platillo</div><div class="inp ph0">Q 0.00</div></div>
+        <div style="color:var(--coral);font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px;min-height:44px"><svg class="i"><use href="#plus"/></svg>Agregar otro</div>
+      </div>
+      <div class="foot"><div class="cta">Ver mi carta</div><div class="ghost">Lo hago después</div></div>
+    </div>
+    <div class="cap">— — El primer valor: lo que vende, antes de cualquier ajuste</div>
+  </div>
+
+  <div class="col">
+    <div class="tag"><b>4 · Así se ve tu carta</b></div>
+    <div class="ph"><div class="hd"><span class="lg">L</span><b>Leogin</b><span>4 de 4</span></div>
+      <div class="pg">
+        <div class="carta"><div class="por">Café Ana</div><div class="cat">PLATILLOS</div><div class="it"><b>Café americano</b><span>Q15.00</span></div><div class="it"><b>Pan con frijol</b><span>Q12.00</span></div></div>
+        <div class="card">
+          <div class="sumrow"><span class="k">Estilo</span><span class="v">Clásico · Lino &amp; Coral</span><span class="a">Cambiar</span></div>
+          <div class="sumrow"><span class="k">Plan</span><span class="v">En línea · Q99/mes</span><span class="a">Cambiar</span></div>
+        </div>
+        <p class="s">El plan se cobra desde hoy y lo puedes cambiar o dar de baja cuando quieras.</p>
+      </div>
+      <div class="foot"><div class="cta">Crear mi restaurante</div></div>
+    </div>
+    <div class="cap">— — La carta de verdad, con sus platillos; el precio se ve antes de crear</div>
+  </div>
+
+  <ul class="notes">
+    <li><strong>Plan según la respuesta de la pantalla 2:</strong> «Solo ven la carta» → Básico (gratis); «Para llevar y a domicilio» → En línea; «En mesas, con meseros» → Premium. Estándar se elige desde «Cambiar». Ya no viene Premium marcado para todos.</li>
+    <li><strong>Estilo preelegido</strong> (Clásico con una paleta clara). «Cambiar» abre tres sugerencias; las 208 combinaciones siguen en Personalizar. La ficha 2.7 se encarga después de «hazlo por mí» con el logo.</li>
+    <li><strong>WhatsApp, logo, horarios, entrega e impresora</strong> salen del alta. Aparecen cuando hacen falta: la zona de entrega con el primer pedido a domicilio, la impresora con el primero que entra (ficha 2.2).</li>
+    <li><strong>«Lo hago después»</strong> en la pantalla 3 deja crear el restaurante sin platillos; entonces la guía de Hoy empieza por «Publica tus primeros platillos».</li>
+    <li>Al crear, entra directo a <strong>Hoy</strong> (ficha 2.1, ya en producción). Si escribió platillos, la guía ya tiene el paso 1 hecho y le pide «Ábrelo como cliente». Sale la pantalla «¡Tu restaurante está en vivo!».</li>
+    <li>Para el segundo restaurante de la misma cuenta, el mismo recorrido sin la pantalla 1.</li>
+  </ul>
+</div>
+
+<!-- ═════════ PC ═════════ -->
+<h2>3 · En la PC (1280 px), pantalla 3</h2>
+<p class="lead">El mismo orden. En pantalla ancha, la carta se arma en vivo junto al formulario: cada platillo que escribe aparece al lado.</p>
+<div class="desk" style="height:470px">
+  <div class="dmain">
+    <div class="hd" style="height:56px"><span class="lg">L</span><b>Leogin</b><span>3 de 4</span></div>
+    <div class="dsk">
+      <div class="col" style="max-width:520px;gap:12px">
+        <h3 style="font-size:28px;font-weight:800;letter-spacing:-.03em">¿Qué vendes?</h3>
+        <p class="s13 mut">Escribe tres o más. Con nombre y precio basta; la foto y la descripción, después.</p>
+        <div class="dishrow" style="grid-template-columns:1fr 120px"><div class="inp">Café americano</div><div class="inp">Q 15</div></div>
+        <div class="dishrow" style="grid-template-columns:1fr 120px"><div class="inp">Pan con frijol</div><div class="inp">Q 12</div></div>
+        <div class="dishrow" style="grid-template-columns:1fr 120px"><div class="inp ph0">Otro platillo</div><div class="inp ph0">Q 0.00</div></div>
+        <div class="row" style="gap:12px;margin-top:6px"><div class="cta" style="width:200px">Ver mi carta</div><div class="ghost">Lo hago después</div></div>
+      </div>
+      <div class="col">
+        <div class="tag">Tu carta, en vivo</div>
+        <div class="carta"><div class="por">Café Ana</div><div class="cat">PLATILLOS</div><div class="it"><b>Café americano</b><span>Q15.00</span></div><div class="it"><b>Pan con frijol</b><span>Q12.00</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="nodesk">La vista de PC se ve en una pantalla ancha.</p>
+
+<h2>Fuera de esta ficha</h2>
+<ul class="lead" style="padding-left:20px">
+  <li><strong>Importar una carta</strong> (foto, PDF u hoja de cálculo) es la ficha 2.4. Cuando exista, la pantalla 3 sumará «Tengo mi carta en un archivo». Hoy no se ofrece, para no prometer lo que no hace.</li>
+  <li><strong>El turno de práctica</strong> (2.5) y <strong>el aparato por rol</strong> (2.6) van después de Hoy, no en el alta.</li>
+</ul>
+
+<h2>Lo que necesito que decidas</h2>
+<ol class="lead" style="padding-left:20px">
+  <li><strong>Plan según cómo te piden:</strong> ¿el plan se preelige por la respuesta de la pantalla 2 (Básico, En línea o Premium) en vez de venir siempre Premium? Lo recomiendo.</li>
+  <li><strong>Estilo preelegido:</strong> ¿el estilo deja de elegirse en el alta y se cambia después con «Cambiar» o en Personalizar?</li>
+  <li><strong>Platillos dentro del alta:</strong> ¿la pantalla 3 pide los primeros platillos, con «Lo hago después» para saltarla?</li>
+  <li><strong>Sin pantalla «listo»:</strong> ¿al crear entra directo a Hoy, en vez de pasar por «¡Tu restaurante está en vivo!»?</li>
+</ol>
+</div>
+</body>
+</html>
