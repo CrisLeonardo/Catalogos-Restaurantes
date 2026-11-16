@@ -7,6 +7,7 @@ import {
   MAX_FILAS, leerCsv, leerHoja, normalizar, revisar, type FilaImportada,
 } from '@/lib/importar-carta';
 import { celdasDeXlsx } from '@/lib/importar-carta-xlsx';
+import { textoDePdf } from '@/lib/importar-carta-pdf';
 
 /* ============================================================
    IMPORTAR UNA CARTA (ficha 2.4) — acciones del servidor
@@ -36,6 +37,27 @@ export async function leerHojaDeCalculo(formData: FormData): Promise<{ filas: Fi
     return leerHoja(celdas);
   } catch {
     return { error: 'No pudimos leer ese archivo. Revisa que sea una hoja de Excel o un CSV.' };
+  }
+}
+
+/**
+ * El texto de un PDF de carta (sin IA). Se devuelve como texto para que el
+ * dueño lo vea y lo corrija antes de la revisión, igual que la lista pegada.
+ */
+export async function leerPdfDeCarta(formData: FormData): Promise<{ texto: string } | { error: string }> {
+  const ctx = await contextoDeCatalogo((formData.get('restaurantId') as string | null) ?? null);
+  if (!ctx) return { error: 'No autorizado.' };
+  const archivo = formData.get('archivo');
+  if (!(archivo instanceof File) || archivo.size === 0) return { error: 'Elige un PDF.' };
+  if (archivo.size > 10 * 1024 * 1024) return { error: 'El PDF pasa de 10 MB.' };
+  try {
+    const texto = await textoDePdf(new Uint8Array(await archivo.arrayBuffer()));
+    if (texto.replace(/\s/g, '').length < 10) {
+      return { error: 'Este PDF es una imagen escaneada y no trae texto. Sube una foto o captura de cada página.' };
+    }
+    return { texto };
+  } catch {
+    return { error: 'No pudimos abrir ese PDF. Si tiene contraseña, quítasela y vuelve a subirlo.' };
   }
 }
 

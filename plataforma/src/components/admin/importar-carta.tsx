@@ -5,7 +5,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { panelBaseFrom, panelHref } from '@/lib/panel-links';
-import { importarCarta, leerHojaDeCalculo } from '@/lib/actions/importar-carta';
+import { importarCarta, leerHojaDeCalculo, leerPdfDeCarta } from '@/lib/actions/importar-carta';
+import { leerFotoDeCarta } from '@/lib/ocr-carta';
 import {
   leerLista, resumenDeImportacion, revisar, PRECIO_RARO,
   type FilaImportada, type FilaRevisada,
@@ -52,7 +53,14 @@ export default function ImportarCarta({
 }) {
   const router = useRouter();
   const base = panelBaseFrom(usePathname());
-  const [modo, setModo] = useState<'lista' | 'hoja'>('lista');
+  /* Foto o PDF primero: es lo que el dueño tiene a mano y lo que pidió
+     (2026-11-16). La lista pegada se queda como tercera vía. */
+  const [modo, setModo] = useState<'foto' | 'hoja' | 'lista'>('foto');
+  /* Lo leído de una foto o PDF llega a la lista como texto, para que el
+     dueño lo corrija antes de la revisión: el OCR se equivoca. */
+  const [notaLectura, setNotaLectura] = useState<string | null>(null);
+  const [progreso, setProgreso] = useState<{ porcentaje: number; que: string } | null>(null);
+  const fotoPdf = useRef<HTMLInputElement>(null);
   const [texto, setTexto] = useState('');
   const [filas, setFilas] = useState<FilaRevisada[] | null>(null);
   const [soloDudas, setSoloDudas] = useState(false);
@@ -77,6 +85,41 @@ export default function ImportarCarta({
       const r = await leerHojaDeCalculo(fd);
       if ('error' in r) { setError(r.error); return; }
       aRevision(r.filas);
+    });
+  }
+
+  function leerFotoOPdf(file: File) {
+    setError('');
+    const esPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    start(async () => {
+      try {
+        let leido: string;
+        if (esPdf) {
+          setProgreso({ porcentaje: 0, que: 'Leyendo tu PDF…' });
+          const fd = new FormData();
+          fd.set('archivo', file);
+          fd.set('restaurantId', restaurantId);
+          const r = await leerPdfDeCarta(fd);
+          if ('error' in r) { setError(r.error); return; }
+          leido = r.texto;
+        } else {
+          if (!file.type.startsWith('image/')) { setError('Sube una foto (JPG o PNG) o un PDF.'); return; }
+          leido = await leerFotoDeCarta(file, (porcentaje, que) => setProgreso({ porcentaje, que }));
+        }
+        if (leido.replace(/\s/g, '').length < 5) {
+          setError('No encontramos texto. Prueba con una foto más cerca, derecha y con buena luz.');
+          return;
+        }
+        setTexto(leido);
+        setNotaLectura(esPdf
+          ? 'Esto es lo que leímos de tu PDF. Corrige lo que haga falta y toca «Revisar».'
+          : 'Esto es lo que leímos de tu foto. Revisa nombres y precios: el lector puede confundir letras.');
+        setModo('lista');
+      } catch {
+        setError('No pudimos leer el archivo. Inténtalo de nuevo o usa una hoja de cálculo.');
+      } finally {
+        setProgreso(null);
+      }
     });
   }
 
@@ -215,15 +258,41 @@ export default function ImportarCarta({
   return (
     <div className={s.pagina}>
       <div className={s.pildoras} role="tablist" aria-label="Cómo traer la carta">
+        <button type="button" role="tab" aria-selected={modo === 'foto'} className={s.pildora} onClick={() => setModo('foto')}>Foto o PDF</button>
+        <button type="button" role="tab" aria-selected={modo === 'hoja'} className={s.pildora} onClick={() => setModo('hoja')}>Excel</button>
         <button type="button" role="tab" aria-selected={modo === 'lista'} className={s.pildora} onClick={() => setModo('lista')}>Pegar lista</button>
-        <button type="button" role="tab" aria-selected={modo === 'hoja'} className={s.pildora} onClick={() => setModo('hoja')}>Hoja de cálculo</button>
       </div>
 
-      {modo === 'lista' ? (
+      {modo === 'foto' ? (
         <div className={s.bloque}>
-          <label htmlFor="lista-carta" className={s.ayuda}>
-            Pega tu carta como la tienes: un platillo por línea con su precio. Una línea sin precio se toma como categoría.
-          </label>
+          <p className={s.ayuda}>
+            Sube una <strong>foto</strong> de tu carta o el <strong>PDF</strong>. Leemos el texto aquí mismo, sin mandarlo a
+            ningún lado, y te lo enseñamos para que lo corrijas antes de publicar.
+          </p>
+          <button type="button" className={s.soltar} onClick={() => fotoPdf.current?.click()} disabled={pending} aria-busy={pending}>
+            <Icon name="image" size={26} />
+            <strong>{progreso ? progreso.que : 'Elegir foto o PDF'}</strong>
+            <span>{progreso && progreso.porcentaje > 0 ? `${progreso.porcentaje} %` : 'JPG, PNG o PDF · una página por foto'}</span>
+          </button>
+          <input
+            ref={fotoPdf}
+            type="file"
+            accept="image/*,.pdf,application/pdf"
+            hidden
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) leerFotoOPdf(f); e.target.value = ''; }}
+          />
+          {error && <p role="alert" className={s.error}>{error}</p>}
+          <p className={s.nota}>Para que se lea bien: la foto derecha, de cerca y con buena luz. La primera vez descarga el lector (unos 6 MB).</p>
+        </div>
+      ) : modo === 'lista' ? (
+        <div className={s.bloque}>
+          {notaLectura ? (
+            <p role="status" className={s.leido}>{notaLectura}</p>
+          ) : (
+            <label htmlFor="lista-carta" className={s.ayuda}>
+              Pega tu carta como la tienes: un platillo por línea con su precio. Una línea sin precio se toma como categoría.
+            </label>
+          )}
           <textarea
             id="lista-carta"
             value={texto}

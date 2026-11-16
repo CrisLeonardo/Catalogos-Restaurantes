@@ -98,3 +98,9 @@
   .cPrecio { justify-self: end; width: 120px; }
   .encabezado .cPrecio { text-align: right; }
 }
+
+/* Lo leído de una foto o PDF (sin IA): aviso de que hay que revisarlo. */
+.leido {
+  margin: 0; padding: 10px 12px; border-radius: 12px; font-size: 14px; line-height: 1.45;
+  background: var(--c-info-bg); color: var(--c-info); border: 1px solid var(--c-info-line);
+}
