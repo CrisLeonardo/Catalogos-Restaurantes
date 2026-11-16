@@ -26,6 +26,7 @@ import CheckoutSuccess from '@/components/checkout/checkout-success';
 import { PayOption, FormSection, CheckoutQueued } from '@/components/checkout/form-parts';
 import EmptyCart from '@/components/checkout/empty-cart';
 import type { Sugerencia } from '@/components/menu/pairings';
+import { leerPasePrueba, olvidarPasePrueba } from '@/lib/pedido-prueba-cliente';
 
 const DeliveryMap = dynamic(() => import('./delivery-map'), {
   ssr: false,
@@ -386,6 +387,8 @@ export default function CheckoutForm({
     clientIdRef.current = null;
     pendingPayloadRef.current = null;
     pendingSnapshotRef.current = null;
+    // Un pase de prueba sirve para un solo pedido.
+    olvidarPasePrueba(restaurantId);
 
     // El pedido ya salió: cierra la sesión de mesa del comensal para que no
     // siga "detectándose" en ella si vuelve a abrir el mismo enlace después.
@@ -536,6 +539,7 @@ export default function CheckoutForm({
     const totalSnapshot = finalTotal;
 
     if (!clientIdRef.current) clientIdRef.current = crypto.randomUUID();
+    const pasePrueba = leerPasePrueba(restaurantId);
 
     const payload = {
       restaurantId,
@@ -563,6 +567,7 @@ export default function CheckoutForm({
       ...(needsCashAmount && cashAmountNum > 0 ? { cashAmount: cashAmountNum } : {}),
       tipAccepted: showTip,
       clientId: clientIdRef.current,
+      ...(pasePrueba ? { prueba: pasePrueba } : {}),
     };
     pendingPayloadRef.current = payload;
     pendingSnapshotRef.current = {

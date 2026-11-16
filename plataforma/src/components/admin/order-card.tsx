@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { Icon } from '@/components/icons';
 import { labelOf, countsAsCash } from '@/lib/payment-method';
 import { updateOrderStatus, printReceiptViaAgent, reprintKitchenTicket, type IntentoPedido } from '@/lib/actions/orders';
+import { terminarPedidoDePrueba } from '@/lib/actions/primeros-pasos';
 import { remainingQuantity, type OrderWithItems } from '@/lib/db/orders';
 import { printTicket, isKitchenAutoPrintEnabled, markKitchenPrinted, hasPrinterConfigured } from '@/lib/printing';
 import { buildKitchenEscPos, buildReceiptEscPos, ticketTime, ticketDateTime, type TicketFormat } from '@/lib/escpos';
@@ -348,6 +349,11 @@ export default function OrderCard({
   const ultimoIntento = useRef<IntentoPedido | null>(null);
   const resumen = resumenPorPedido[order.id];
   const next = nextStatus(order.status, order.order_type);
+  /* Pedido de prueba del dueño (ficha 2.2, migración 183): recorre aceptar,
+     cocina y listo como cualquiera; al final se TERMINA en vez de entregarse
+     y no cuenta en cifras, caja, puntos ni existencias. */
+  const esPrueba = order.es_prueba === true;
+  const terminaPrueba = esPrueba && !!restaurantId && (order.status === 'READY' || order.status === 'TRANSIT');
   const lineasEnCocina = order.status === 'PREP' ? lineasVivas(order) : [];
   const esperaEstaciones = new Set(lineasEnCocina.map(estacionDe)).size > 1 && lineasEnCocina.some((l) => !l.cocina_preparada_at);
 
@@ -417,6 +423,19 @@ export default function OrderCard({
     });
   }
 
+  function handleTerminarPrueba() {
+    if (!restaurantId || !online || enviando.current) return;
+    enviando.current = true;
+    onError('');
+    start(async () => {
+      try {
+        const res = await terminarPedidoDePrueba(restaurantId, order.id);
+        if ('error' in res) onError(res.error);
+      } catch { onError('Se perdió la respuesta. Revisa el estado del pedido.'); }
+      finally { enviando.current = false; onCambios(); }
+    });
+  }
+
   const isTerminal = isCardTerminal(order.status);
 
   const clock = stageClock(order, kitchenYellowMin, kitchenRedMin);
@@ -468,6 +487,7 @@ export default function OrderCard({
                 aria-label={`Historial de ${shortOrderNumber(order.order_number)}`}>{shortOrderNumber(order.order_number)}</button>
             </h3>
             <span className={`chip ${STATUS_CHIP[order.status]}`}>{STATUS_LABEL[order.status]}</span>
+            {esPrueba && <span className="chip chip-info">Prueba</span>}
             {/* Cronómetro de la etapa actual: en el renglón del título, así
                 los datos de abajo usan todo el ancho de la tarjeta. */}
             {clock && (
@@ -706,7 +726,7 @@ export default function OrderCard({
           {esperaEstaciones && <a href="./cocina" className={styles.accion}>Completar estaciones en Cocina</a>}
           {next && !esperaEstaciones && (
             <button
-              onClick={handleAdvance}
+              onClick={terminaPrueba ? handleTerminarPrueba : handleAdvance}
               disabled={isPending || !online}
               className="press btn-accent"
               style={{
@@ -718,7 +738,7 @@ export default function OrderCard({
                 opacity: isPending ? 0.7 : 1,
               }}
             >
-              {isPending ? '…' : nextLabel(order.status, order.order_type)}
+              {isPending ? '…' : terminaPrueba ? 'Terminar la prueba' : nextLabel(order.status, order.order_type)}
             </button>
           )}
           <DropdownMenu>
@@ -745,9 +765,15 @@ export default function OrderCard({
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setVoidTarget('order')} variant="destructive" className="min-h-11">
-                <Icon name="x" size={15} /> Anular pedido
-              </DropdownMenuItem>
+              {esPrueba && restaurantId ? (
+                <DropdownMenuItem onClick={handleTerminarPrueba} className="min-h-11">
+                  <Icon name="check" size={15} /> Terminar la prueba
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => setVoidTarget('order')} variant="destructive" className="min-h-11">
+                  <Icon name="x" size={15} /> Anular pedido
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

@@ -28,6 +28,7 @@ import {
   type BillAssignment, type SplitMode,
 } from '@/lib/bill-split';
 import { awardLoyaltyForOrder, maybeAwardSignupBonus } from '@/lib/actions/loyalty';
+import { pasePruebaValido } from '@/lib/pedido-prueba';
 import { notifyOrderStatus } from '@/lib/whatsapp/notify';
 import { getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalty';
 import { resolveItemOptions } from '@/lib/order-options';
@@ -290,6 +291,9 @@ export async function createOrder(
   }
 
   const { restaurantId, items, customer, paymentMethod, cashAmount, tipAccepted, clientId } = parsed.data;
+  /* Pedido de prueba del dueño (ficha 2.2): solo con un pase firmado por
+     el panel para ESTE restaurante. No registra cliente y nace marcado. */
+  const esPrueba = pasePruebaValido(parsed.data.prueba, restaurantId);
 
   const db = createServiceClient();
 
@@ -594,7 +598,7 @@ export async function createOrder(
   // romperse: customer_id queda en null.
   const phoneKey = customer.phone.replace(/\D/g, '');
   let customerId: string | null = null;
-  if (phoneKey.length >= 7) {
+  if (phoneKey.length >= 7 && !esPrueba) {
     const { data: cid } = await db.rpc('upsert_customer', {
       p_restaurant_id: restaurantId,
       p_name:          customer.name,
@@ -715,11 +719,20 @@ export async function createOrder(
     }
   }
 
+  if (esPrueba) {
+    /* La marca va justo después de crearlo, desde el servidor (el candado
+       de la 183 impide que la ponga el navegador). Si no se puede escribir
+       —por ejemplo, sin la 183— el pedido queda como uno normal y se
+       registra: nunca se rechaza el pedido por esto. */
+    const { error: marca } = await db.from('orders').update({ es_prueba: true }).eq('id', order.id).eq('restaurant_id', restaurantId);
+    if (marca) console.error('[pedido de prueba] no se pudo marcar', order.id, marca.message);
+  }
+
   const typeLabel =
     customer.type === 'DELIVERY' ? 'A domicilio' :
     customer.type === 'DINE_IN'  ? 'Comer aquí'  :
     'Para llevar';
-  notifyNewOrder(restaurantId, order, `${order.order_number} · ${customer.name} · ${typeLabel}`);
+  notifyNewOrder(restaurantId, order, `${esPrueba ? 'Prueba · ' : ''}${order.order_number} · ${customer.name} · ${typeLabel}`);
 
   return {
     success: true,
