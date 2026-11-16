@@ -21,13 +21,19 @@ import { useEffect, useRef, useState } from 'react';
  *
  * Con `cuadrada`, en el teléfono la tarjeta es cuadrada y enseña la versión
  * vertical recortada arriba: en el 16:9 de 335 px el gancho medía 13 px de
- * alto; así, 22. La decide el CSS y el <picture>: no hay salto al hidratar. */
+ * alto; así, 22. La decide el CSS y el <picture>: no hay salto al hidratar.
+ *
+ * Con `pelicula`, la ventana no abre una ruta con animación sino un video
+ * MP4 de la misma carpeta: `horizontal.mp4` en pantallas anchas y
+ * `vertical.mp4` en las verticales. Así va «Un solo lugar» en la portada
+ * (promo-video/, docs/negocio/GUION_VIDEO_UN_SOLO_LUGAR_2026-11-15.md). */
 const CUADRADA = '(max-width: 560px)';
 
 export function LandingIntro({
   ruta = 'intro',
   vertical = false,
   cuadrada = false,
+  pelicula = false,
   alt = '¿Sabes cuánto dinero se te fue hoy? Intro de Leogin',
   etiqueta = 'Mira cómo funciona · 54 s',
 }: {
@@ -37,6 +43,8 @@ export function LandingIntro({
   vertical?: boolean;
   /** En el teléfono, tarjeta cuadrada (portada-cuadrada.jpg y bucle-cuadrado.webm). */
   cuadrada?: boolean;
+  /** La ventana reproduce /<ruta>/horizontal.mp4 o vertical.mp4 en vez de abrir la ruta. */
+  pelicula?: boolean;
   alt?: string;
   etiqueta?: string;
 } = {}) {
@@ -90,7 +98,7 @@ export function LandingIntro({
   const open = () => {
     videoRef.current?.pause();
     const enVertical = vertical || window.matchMedia('(max-aspect-ratio: 4/5)').matches;
-    setSrc(`/${ruta}?modo=web&auto=1&sonido=1&formato=${enVertical ? 'v' : 'h'}`);
+    setSrc(pelicula ? `/${ruta}/${enVertical ? 'vertical' : 'horizontal'}.mp4` : `/${ruta}?modo=web&auto=1&sonido=1&formato=${enVertical ? 'v' : 'h'}`);
     dialogRef.current?.showModal();
   };
   const close = () => dialogRef.current?.close();
@@ -137,7 +145,7 @@ export function LandingIntro({
       {/* Un clic fuera del video (en el fondo oscuro) también cierra. */}
       <dialog
         ref={dialogRef}
-        className={`lp-intro-dialog${vertical ? ' lp-intro-dialog-v' : ''}`}
+        className={`lp-intro-dialog${vertical ? ' lp-intro-dialog-v' : ''}${pelicula ? ' lp-intro-dialog-peli' : ''}`}
         aria-label={alt}
         onClick={(e) => { if (e.target === e.currentTarget) close(); }}
       >
@@ -146,7 +154,9 @@ export function LandingIntro({
             <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
           </svg>
         </button>
-        {src && <iframe src={src} title={alt} allow="autoplay; fullscreen" className="lp-intro-frame" />}
+        {src && (pelicula
+          ? <video src={src} className="lp-intro-peli" controls autoPlay playsInline aria-label={alt} />
+          : <iframe src={src} title={alt} allow="autoplay; fullscreen" className="lp-intro-frame" />)}
       </dialog>
     </>
   );
