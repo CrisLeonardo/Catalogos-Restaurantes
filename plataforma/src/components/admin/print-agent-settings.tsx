@@ -16,7 +16,7 @@ import {
   type PrintAgentConfig,
   type ReportedPrinter,
 } from '@/lib/actions/print-agent';
-import { haceTiempo } from '@/lib/dates';
+import { estadoDePc } from '@/lib/estado-pc';
 import SaveBar, { type SaveStatus } from '@/components/admin/save-bar';
 
 // ── Estilos ────────────────────────────────────────────────────────────────────
@@ -416,13 +416,12 @@ export default function PrintAgentSettings() {
   function connectionLabel(): { text: string; color: string } {
     if (!config?.exists) return { text: 'Sin vincular', color: 'var(--u-text-4)' };
     if (!config.lastSeenAt) return { text: 'Token generado · esperando primera conexión', color: 'var(--c-warn)' };
-    // Etiqueta de "última conexión": el tiempo relativo se calcula al render a
-    // propósito (es texto informativo del panel admin, no estado persistente).
+    // El mismo reloj que Hoy, Ajustes y el superadmin (ficha 2.6). Se calcula
+    // al render a propósito: es texto informativo, no estado persistente.
     // eslint-disable-next-line react-hooks/purity
-    const ageMs = Date.now() - new Date(config.lastSeenAt).getTime();
-    if (ageMs < 90_000) return { text: '● Conectado', color: 'var(--c-ok)' };
-    // Antes solo contaba en horas: «Última conexión hace 2004 h» (T-02).
-    return { text: `Última conexión ${haceTiempo(config.lastSeenAt)}`, color: 'var(--c-warn)' };
+    const d = estadoDePc({ existe: true, activa: config.isActive, ultimaSenal: config.lastSeenAt }, Date.now());
+    const color = d.tono === 'ok' ? 'var(--c-ok)' : d.tono === 'danger' ? 'var(--c-danger)' : d.tono === 'info' ? 'var(--c-info)' : 'var(--c-warn)';
+    return { text: d.estado === 'conectada' ? '● Conectada' : d.texto, color };
   }
 
   const conn = connectionLabel();

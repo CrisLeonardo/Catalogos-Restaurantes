@@ -1,0 +1,40 @@
+/* Este aparato (ficha 2.6). Superficies sólidas, tokens del panel. */
+.cuerpo { display: grid; gap: 14px; }
+.nota { margin: 0; font-size: 14px; line-height: 1.45; color: var(--u-text-2); }
+.opciones { display: grid; gap: 8px; }
+.opcion {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 60px; padding: 10px 14px;
+  border-radius: 14px; border: 1.5px solid var(--adm-border-2);
+  background: var(--adm-card); color: var(--u-text);
+  font: inherit; cursor: pointer;
+  transition: border-color 150ms cubic-bezier(.22, 1, .36, 1), background 150ms cubic-bezier(.22, 1, .36, 1);
+}
+.opcion:hover { background: var(--adm-card-hover); }
+.opcion:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: 2px; }
+.opcion[data-on="1"] { border-color: var(--adm-accent-fill, var(--brand-accent)); background: var(--adm-card-hover); }
+.radio {
+  width: 20px; height: 20px; border-radius: 50%; flex: 0 0 auto;
+  border: 2px solid var(--adm-border-2);
+}
+.opcion[data-on="1"] .radio { border: 6px solid var(--adm-accent-fill, var(--brand-accent)); }
+.campo { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--u-text-2); }
+.pie { display: grid; gap: 8px; }
+.error { margin: 0; font-size: 13px; color: var(--c-danger); }
+
+.aviso {
+  margin: 12px 16px 0; padding: 12px 14px;
+  border-radius: 14px; border: 1px solid var(--adm-border);
+  background: var(--c-ok-bg); color: var(--u-text);
+  display: grid; gap: 10px;
+}
+.avisoFila { display: flex; align-items: flex-start; gap: 10px; }
+.avisoFila > svg { color: var(--c-ok); flex: 0 0 auto; margin-top: 2px; }
+.avisoFila p { flex: 1; margin: 0; font-size: 14px; line-height: 1.45; }
+.cerrar {
+  width: 32px; height: 32px; flex: 0 0 auto; display: grid; place-items: center;
+  border: none; border-radius: 8px; background: transparent; color: var(--u-text-2); cursor: pointer;
+}
+.cerrar:hover { background: var(--adm-card); }
+.avisoBotones { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.avisoMsg { margin: 0; font-size: 13px; color: var(--u-text-2); }

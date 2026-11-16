@@ -44,11 +44,14 @@ interface Props {
   /** Sección del centro de ayuda de la pantalla actual, si tiene. */
   helpSection?: string | null;
   isOperatorSession?: boolean;
+  /** Para qué es este aparato (ficha 2.6); null = no lo puede cambiar. */
+  aparato?: string | null;
+  onAparato?: () => void;
 }
 
 export default function AdminMoreMenu({
   restaurantName, roleLabel, planLabel, planColor,
-  hasMultipleRestaurants = false, helpSection, isOperatorSession = false,
+  hasMultipleRestaurants = false, helpSection, isOperatorSession = false, aparato = null, onAparato,
 }: Props) {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = panelBaseFrom(useRutaNavegador());
@@ -98,6 +101,14 @@ export default function AdminMoreMenu({
           <Icon name={scheme === 'light' ? 'moon' : 'sun'} size={16} />
           {scheme === 'light' ? 'Tema oscuro' : 'Tema claro'}
         </DropdownMenuItem>
+
+        {aparato && onAparato && (
+          <DropdownMenuItem onClick={onAparato}>
+            <Icon name="monitor" size={16} />
+            <span className="flex-1">Este aparato</span>
+            <span className="text-[12px] text-adm-text-3">{aparato}</span>
+          </DropdownMenuItem>
+        )}
 
         <DropdownMenuSeparator />
 

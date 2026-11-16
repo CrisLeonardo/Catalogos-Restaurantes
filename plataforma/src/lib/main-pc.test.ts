@@ -76,7 +76,7 @@ describe('readMainPcStatus', () => {
     expect(s.on).toBe(true);
     expect(s.live).toBe(false);
     expect(s.tone).toBe('warn');
-    expect(s.detail).toContain('Sin responder');
+    expect(s.detail).toMatch(/^Desconectada desde /);
   });
 
   it('el nombre que reporta el agente gana a la etiqueta del navegador', () => {

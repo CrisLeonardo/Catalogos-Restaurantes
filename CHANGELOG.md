@@ -15,6 +15,11 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
   - **Pedido de prueba** (migración 183): el dueño lo pide desde su carta con un pase firmado y lo ve en Pedidos con la etiqueta «Prueba». Al estar listo, «Terminar la prueba» lo cierra sin cobro, repone existencias y devuelve canjes. No registra cliente ni cuenta en cifras, caja, puntos ni tope de pedidos.
   - «Tu menú en línea» ya no dice «Piden 263 %»: cuenta solo los pedidos hechos desde la carta y los divide entre las personas distintas.
   - La tarjeta «Funciones disponibles en Premium» sale de Hoy y pasa al final de Negocio › Resumen.
+- **Aparato por rol y La PC del local con un solo estado** (ficha 2.6 de la auditoría; rama `feat/aparato-y-mi-pc`; maqueta aprobada `docs/diseno/MAQUETA_APARATO_Y_MI_PC_2026-11-16.html`) · **migración 184, antes de desplegar**:
+  - **La PC del local** abre con el veredicto («Revisa la impresora de cocina», «Todo listo para el servicio») y cuatro piezas: la PC, la impresora de cocina, la de caja y el respaldo sin internet. Si hay comandas que no salieron, lo dice con la hora y ofrece **Reintentar** (sin duplicar lo que ya se reimprimió). También lo avisa Hoy.
+  - **Un solo reloj** para la PC en Hoy, Ajustes, La PC del local y el superadmin: «Conectada», «Sin señal desde las 12:31» (desde los 90 s) o «Desconectada desde las 12:31» (desde los 10 min).
+  - **Este aparato:** en «⋯» (teléfono) o en la barra lateral (PC), el dueño o quien maneja el personal elige si el aparato es para Cocina, Caja, Tomar pedidos o el panel completo. Al abrir la app, el aparato va directo a esa pantalla, a pantalla completa, sin ampliar permisos de nadie. Después de elegir se puede probar el sonido y la impresora. Personal › Dispositivos dice el uso de cada aparato.
+  - Caja también tiene pantalla completa.
 
 ## v0.22.0 · 2026-11-15 · Video «Un solo lugar» en la portada y serie «Otra vez»
 PR #122 (merge `3a2046e`) · sin migraciones. Para que la portada cambie en producción basta desplegar el código.

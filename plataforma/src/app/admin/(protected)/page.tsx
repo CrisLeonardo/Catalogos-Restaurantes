@@ -37,6 +37,8 @@ import {
 } from '@/lib/hoy-etapa';
 import type { MarcaRestaurante, PlatoParaCompartir } from '@/lib/compartir/plato';
 import { getHitos, getTuDia } from '@/lib/db/momentos';
+import { leerSaludDelLocal } from '@/lib/db/estado-pc';
+import { estadoDeImpresora, estadoDePc, type DiagnosticoImpresora, type DiagnosticoPc } from '@/lib/estado-pc';
 import type { ResolvedTheme } from '@/lib/theme/resolve';
 import type { Restaurant } from '@/types';
 import { panelBase } from '@/lib/panel-links-server';
@@ -194,24 +196,29 @@ export default async function AdminHomePage() {
   // ── Salud de la PC principal ────────────────────────────────
   // 'offline' = estaba encendida y dejó de reportar >10 min. Durante la guía
   // no se pide elegirla: la impresora aparece cuando entra el primer pedido.
-  let agentOffline = false;
+  /* Un solo reloj para la PC (ficha 2.6, `lib/estado-pc.ts`): Hoy avisa
+     cuando lleva más de 10 min «Desconectada», igual que Ajustes, Mi PC y
+     el superadmin. Y una impresora que no imprime cuenta igual. */
+  let pcCaida: DiagnosticoPc | null = null;
+  let cocinaFalla: DiagnosticoImpresora | null = null;
+  let cajaFalla: DiagnosticoImpresora | null = null;
   let pcState: 'missing' | 'off' | null = null;
   if (ordersEnabled && restaurantId && allow('impresion')) {
-    const db = createServiceClient();
-    const { data: agent } = await db
-      .from('print_agents')
-      .select('last_seen_at, is_active')
-      .eq('restaurant_id', restaurantId)
-      .maybeSingle();
-    const lastSeen = (agent?.last_seen_at as string | null) ?? null;
+    const salud = await leerSaludDelLocal(restaurantId);
     // Frescura evaluada al momento del request a propósito (server component).
     // eslint-disable-next-line react-hooks/purity
-    const stale = !!lastSeen && Date.now() - new Date(lastSeen).getTime() > 10 * 60_000;
-    if (stale && (agent?.is_active as boolean | null) !== false) agentOffline = true;
+    const pc = estadoDePc(salud.pc, Date.now(), timezone);
+    if (pc.alarma) pcCaida = pc;
+    else if (pc.estado === 'conectada') {
+      const cocina = estadoDeImpresora(salud.cocina, 'comanda', timezone);
+      const caja = estadoDeImpresora(salud.caja, 'recibo', timezone);
+      if (cocina.estado === 'fallando') cocinaFalla = cocina;
+      if (caja.estado === 'fallando') cajaFalla = caja;
+    }
     const decide = profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN';
     if (decide && etapa !== 'nuevo') {
-      if (!agent) pcState = 'missing';
-      else if ((agent.is_active as boolean | null) === false) pcState = 'off';
+      if (!salud.pc.existe) pcState = 'missing';
+      else if (salud.pc.activa === false) pcState = 'off';
     }
   }
 
@@ -302,11 +309,19 @@ export default async function AdminHomePage() {
 
   // ── Avisos de la cuenta: misma forma que las excepciones del servicio ──
   const avisos: AvisoCuenta[] = [];
-  if (agentOffline) {
+  if (pcCaida) {
     avisos.push({
       key: 'pc', ruta: '/admin/mi-pc', nivel: 'urgente', accion: 'Revisar',
-      titulo: 'La PC del local dejó de responder',
+      titulo: `La PC del local: ${pcCaida.texto.charAt(0).toLowerCase()}${pcCaida.texto.slice(1)}`,
       detalle: 'Revisa que esté encendida y con internet; mientras tanto no se imprimen comandas solas.',
+    });
+  }
+  for (const [key, falla, papel] of [['imp-cocina', cocinaFalla, 'cocina'], ['imp-caja', cajaFalla, 'caja']] as const) {
+    if (!falla) continue;
+    avisos.push({
+      key, ruta: '/admin/mi-pc', nivel: 'urgente', accion: 'Reintentar',
+      titulo: `La impresora de ${papel}: ${falla.texto}`,
+      detalle: '¿Sin papel o apagada? Revísala y vuelve a mandarlos desde La PC del local.',
     });
   }
   if (cobro && !cobro.enRevision) {

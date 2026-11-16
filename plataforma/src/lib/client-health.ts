@@ -12,6 +12,7 @@
    ============================================================ */
 
 import { isOpenNow, type HourExceptions, type WeeklyHours } from '@/lib/hours';
+import { PC_DESCONECTADA_MS } from '@/lib/estado-pc';
 
 export type SaludRestaurante = {
   restaurantId: string;
@@ -49,7 +50,8 @@ export type AlertaSalud = {
 const DIA = 86_400_000;
 export const DIAS_SIN_PEDIDOS = 7;
 export const DIAS_SIN_PLATILLOS = 3;
-export const MIN_PC_CAIDA = 15;
+/** El mismo reloj que Hoy, Ajustes y Mi PC (ficha 2.6, `lib/estado-pc.ts`). */
+export const MIN_PC_CAIDA = PC_DESCONECTADA_MS / 60_000;
 /** Desde cuántos días sin conectarse la PC ya no es «se cayó» sino «la dejaron». */
 export const PC_DIAS_ABANDONADA = 1;
 export const FALLIDAS_AVISO = 3;
