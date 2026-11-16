@@ -87,7 +87,7 @@ function buildPlanCards(pricing: PlanPricing, esElPrimero: boolean): PlanCardDef
       name: 'Estándar',
       priceLabel: planPriceQ(pricing, 'ESTANDAR'),
       priceUnit: '/ mes',
-      trialLabel: conPrueba ? `Con ${trial} días gratis` : 'Se suma a tu mensualidad',
+      trialLabel: conPrueba ? `Con ${trial} días gratis` : esElPrimero ? 'Mensualidad desde hoy' : 'Se suma a tu mensualidad',
       features: PLAN_POINTS.ESTANDAR,
     },
     {
@@ -96,7 +96,7 @@ function buildPlanCards(pricing: PlanPricing, esElPrimero: boolean): PlanCardDef
       badge: 'RECOMENDADO',
       priceLabel: conPrueba ? `Gratis ${trial} días` : planPriceQ(pricing, 'PREMIUM'),
       priceUnit: conPrueba ? '' : '/ mes',
-      trialLabel: conPrueba ? `luego ${planPriceLabel(pricing, 'PREMIUM')}` : 'Se suma a tu mensualidad',
+      trialLabel: conPrueba ? `luego ${planPriceLabel(pricing, 'PREMIUM')}` : esElPrimero ? 'Mensualidad desde hoy' : 'Se suma a tu mensualidad',
       features: PLAN_POINTS.PREMIUM,
     },
   ];
@@ -232,7 +232,9 @@ export default function NuevoRestaurante({
         <p style={{ fontSize: 13, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
           {conPrueba
             ? `Elige el plan con el que quieres empezar. Todos incluyen ${trialDays} días gratis.`
-            : 'Elige el plan de este restaurante. Se cobra aparte y se suma a tu mensualidad desde hoy: la prueba gratis es solo para el primero.'}
+            : esElPrimero
+              ? 'Elige el plan con el que quieres empezar. El Básico es gratis para siempre; los planes con pedidos se cobran desde hoy, sin contrato.'
+              : 'Elige el plan de este restaurante. Se cobra aparte y se suma a tu mensualidad desde hoy.'}
         </p>
         {enLinea && (
           <p style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, lineHeight: 1.5, margin: 0, padding: '10px 12px', borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--brand-accent) 8%, transparent)', color: 'var(--u-text-2)' }}>
@@ -458,7 +460,11 @@ export default function NuevoRestaurante({
                   : selectedPlan === 'EN_LINEA'
                   ? 'Tu restaurante queda en vivo con pedidos para llevar y a domicilio. Sin tarjeta. Sin compromiso.'
                   : 'Tu restaurante queda en vivo con pedidos online activos. Sin tarjeta. Sin compromiso. Cancela cuando quieras.')
-                : 'La prueba gratis es una por persona y ya la usaste en tu primer restaurante, así que este entra a tu mensualidad desde hoy. Puedes darlo de baja cuando quieras.'}
+                : esElPrimero
+                  ? 'Tu restaurante queda en vivo y la mensualidad corre desde hoy. Sin contrato: puedes darlo de baja cuando quieras.'
+                  : trialDays > 0
+                    ? 'La prueba gratis es una por persona y ya la usaste en tu primer restaurante, así que este entra a tu mensualidad desde hoy. Puedes darlo de baja cuando quieras.'
+                    : 'Este restaurante entra a tu mensualidad desde hoy. Puedes darlo de baja cuando quieras.'}
           </p>
         </Glass>
       </div>

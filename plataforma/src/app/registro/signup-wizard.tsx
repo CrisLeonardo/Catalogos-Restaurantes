@@ -300,7 +300,7 @@ export default function SignupWizard({
           </div>
           <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
             En cuanto tengas tu cuenta te llevamos a crearlo: eliges plan, nombre y
-            estilo, y queda en vivo. Empiezas con {trialDays} días gratis, sin tarjeta.
+            estilo, y queda en vivo.{trialDays > 0 ? ` Empiezas con ${trialDays} días gratis, sin tarjeta.` : ' El menú digital es gratis para siempre.'}
             Con esta misma cuenta podrás abrir los que quieras.
           </p>
         </Glass>

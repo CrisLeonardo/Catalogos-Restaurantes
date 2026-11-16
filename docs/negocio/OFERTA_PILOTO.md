@@ -1,5 +1,7 @@
 # Oferta de piloto — 3 alternativas
 
+> **Nota 2026-11-15:** la prueba gratis del registro se quitó (migración 182). Las alternativas A y C, que regalan tiempo, quedan en pausa mientras Leogin necesita ingresos desde el primer mes; ver [PRECIOS_VIGENTES.md](PRECIOS_VIGENTES.md).
+
 **Vigente desde: 2026-07-24.** Tres formas distintas de bajarle el riesgo al primer restaurante que dice "sí". Elige la que más te haga sentido para tu situación — no son excluyentes entre sí, puedes usar una distinta con cada prospecto según cómo lo veas. Precios de referencia en [PRECIOS_VIGENTES.md](PRECIOS_VIGENTES.md).
 
 ---

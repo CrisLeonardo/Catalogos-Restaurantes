@@ -123,7 +123,7 @@ function faqs(trialDays: number, enLinea: string, basico: string) {
     },
     {
       q: '¿Cuánto cuesta?',
-      a: `El plan En línea cuesta ${enLinea}, sin costo de alta, incluye hasta ${TOPE} pedidos al mes y empiezas con ${trialDays} días gratis, sin tarjeta. Si por ahora solo quieres tu catálogo en un link, sin pedidos en línea, el Básico es ${basico.toLowerCase()} para siempre. Cuando crezcas (más de ${TOPE} pedidos al mes, más personas, reportes y corte de caja, mesas), subes a Estándar. Si un mes pasas los ${TOPE}, no se corta ningún pedido: te avisamos y al mes siguiente cambias.`,
+      a: `El plan En línea cuesta ${enLinea}, sin costo de alta, incluye hasta ${TOPE} pedidos al mes${trialDays > 0 ? ` y empiezas con ${trialDays} días gratis, sin tarjeta` : ', sin contrato'}. Si por ahora solo quieres tu catálogo en un link, sin pedidos en línea, el Básico es ${basico.toLowerCase()} para siempre. Cuando crezcas (más de ${TOPE} pedidos al mes, más personas, reportes y corte de caja, mesas), subes a Estándar. Si un mes pasas los ${TOPE}, no se corta ningún pedido: te avisamos y al mes siguiente cambias.`,
     },
   ];
 }
@@ -185,7 +185,7 @@ export default async function VendeEnLinea() {
                 <LandingDemo href={demoUrl} />
               </div>
               <p className="lp-body" style={{ fontSize: 13.5, marginTop: 14, color: 'var(--u-text-4)' }}>
-                {pricing.trialDays} días gratis · sin tarjeta · sin comisión por pedido
+                {pricing.trialDays > 0 ? `${pricing.trialDays} días gratis · sin tarjeta · ` : 'Sin alta · sin contrato · '}sin comisión por pedido
               </p>
             </div>
           </div>
@@ -325,7 +325,7 @@ export default async function VendeEnLinea() {
             </div>
             <div className="el-precio-acciones">
               <CtaEnLinea className="lp-btn lp-btn-lg lp-btn-primary" lugar="precio">
-                Probar {pricing.trialDays} días gratis
+                {pricing.trialDays > 0 ? `Probar ${pricing.trialDays} días gratis` : 'Empezar a vender'}
               </CtaEnLinea>
               <Link href="/planes" className="lp-link" style={{ fontSize: 13.5 }}>
                 ¿Solo tu catálogo, sin pedidos? El Básico es gratis →
