@@ -85,3 +85,13 @@ npm run otra-vez:render   # los 6 MP4 en out/otra-vez/ (genera banda y QR si fal
 - **`scripts/otra-vez/qr.mjs`**: el QR del cierre. Para apuntarlo a otra dirección: `node scripts/otra-vez/qr.mjs https://…`.
 
 La grabación deja a Rincón 502 **local** como un restaurante que ya paga su plan (sin avisos de prueba) y con ubicación, para que salga el mapa de entrega. Los pedidos de la grabación cambian de estado directo en la base local para mostrar el seguimiento («Listo», «En camino»).
+
+# «Un solo lugar» — el video general
+
+Un video de 53,4 s que explica qué es Leogin: «Hoy tu restaurante vive en 8 lugares» → los ocho se meten en un teléfono → los tres tipos de negocio con pantallas reales → cocina, caja y ventas → lo demás que trae → cierre con QR. En vertical y horizontal, sin precios ni prueba gratis. Guion: [`docs/negocio/GUION_VIDEO_UN_SOLO_LUGAR_2026-11-15.md`](../docs/negocio/GUION_VIDEO_UN_SOLO_LUGAR_2026-11-15.md).
+
+```bash
+npm run un-lugar:render   # los 2 MP4 en out/un-lugar/ (genera la banda si falta)
+```
+
+Usa las mismas capturas y el mismo QR de «Otra vez» (`npm run otra-vez:grabar` antes, si no existen). El texto y los tiempos están en `src/un-lugar/guion.ts`; las escenas, en `src/un-lugar/UnSoloLugar.tsx`, que reutiliza el aparato con pantallas (`Aparato`) y el tramo «además» de «Otra vez». La banda sale de `scripts/un-lugar/sonido.mjs`.

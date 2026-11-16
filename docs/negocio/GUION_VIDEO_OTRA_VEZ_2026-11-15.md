@@ -42,7 +42,10 @@ Cada uno sale en vertical (redes) y horizontal (visitas con PC o tableta).
 - **Sin voz**: el texto en pantalla basta para redes sin sonido, y en una visita quien habla es el vendedor. La música y los efectos se sintetizan con código.
 - **Un video por público** en vez de uno general: en una visita ya se sabe qué tipo de negocio es, y en redes un video que nombra el problema exacto retiene más que uno que intenta hablarle a todos.
 
+## Estado
+
+**Aprobada por el dueño el 2026-11-15.** Es la serie que se usa para las visitas y las redes. El video general de la marca es aparte: [«Un solo lugar»](GUION_VIDEO_UN_SOLO_LUGAR_2026-11-15.md).
+
 ## Pendiente
 
-- El dueño no ha visto ni aprobado los videos.
 - No se ha escuchado la banda sonora en un teléfono real ni se ha probado el QR desde una pantalla.

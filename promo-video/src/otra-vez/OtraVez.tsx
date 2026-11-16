@@ -17,7 +17,7 @@ import { Caos, Reloj } from './Caos';
 import { ADEMAS, ADEMAS_PANTALLAS, GUIONES, type Guion } from './guiones';
 import { Pasos } from './Pasos';
 
-const Logo: React.FC<{ tam: number }> = ({ tam }) => (
+export const Logo: React.FC<{ tam: number }> = ({ tam }) => (
   <svg width={tam} height={tam} viewBox="0 0 100 100">
     <defs>
       <linearGradient id="lgOtraVez" x1="27" y1="19" x2="72" y2="81" gradientUnits="userSpaceOnUse">
@@ -97,7 +97,7 @@ const Titulo: React.FC = () => {
 };
 
 // ── lo demás que trae ─────────────────────────────────────────────────────
-const Ademas: React.FC = () => {
+export const Ademas: React.FC = () => {
   const f = useCurrentFrame();
   const { width, height } = useVideoConfig();
   const vertical = height > width;

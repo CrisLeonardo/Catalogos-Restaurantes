@@ -9,9 +9,9 @@ import type { Guion, PasoGuion, Toma } from './guiones';
 const ENTRA = 12; // cuadros que tarda el aparato en llegar
 
 /** Reparte los cuadros del paso entre sus tomas según el peso. */
-function repartir(tomas: Toma[]): { desde: number; hasta: number }[] {
+function repartir(tomas: Toma[], dur = PASO): { desde: number; hasta: number }[] {
   const total = tomas.reduce((s, t) => s + (t.peso ?? 1), 0);
-  const util = PASO - ENTRA - 4;
+  const util = dur - ENTRA - 4;
   let c = ENTRA;
   return tomas.map((t) => {
     const d = (util * (t.peso ?? 1)) / total;
@@ -21,9 +21,9 @@ function repartir(tomas: Toma[]): { desde: number; hasta: number }[] {
   });
 }
 
-const Pantalla: React.FC<{ paso: PasoGuion; ancho: number }> = ({ paso, ancho }) => {
+const Pantalla: React.FC<{ paso: PasoGuion; ancho: number; dur?: number }> = ({ paso, ancho, dur }) => {
   const f = useCurrentFrame();
-  const tramos = repartir(paso.tomas);
+  const tramos = repartir(paso.tomas, dur);
   const k = ancho / captura(paso.tomas[0].captura).ancho;
   const centro = (t: Toma, nombre?: string) => {
     const b = nombre ? captura(t.captura).cajas[nombre] : undefined;
@@ -78,8 +78,8 @@ const Pantalla: React.FC<{ paso: PasoGuion; ancho: number }> = ({ paso, ancho })
 };
 
 /** Cuánto sube el aparato para que lo que se toca o resalta quede a la vista. */
-function seguir(paso: PasoGuion, ancho: number, ventana: number, f: number): number {
-  const tramos = repartir(paso.tomas);
+export function seguir(paso: PasoGuion, ancho: number, ventana: number, f: number, dur?: number): number {
+  const tramos = repartir(paso.tomas, dur);
   const c0 = captura(paso.tomas[0].captura);
   const k = ancho / c0.ancho;
   const maximo = Math.max(0, (ancho * c0.alto) / c0.ancho + 40 - ventana);
@@ -94,7 +94,8 @@ function seguir(paso: PasoGuion, ancho: number, ventana: number, f: number): num
   return antes + (sube[n] - antes) * av(f, tramos[n].desde - 2, tramos[n].desde + 14);
 }
 
-const Aparato: React.FC<{ paso: PasoGuion; ancho: number }> = ({ paso, ancho }) => {
+/** `dur`: cuadros que dura el paso (por omisión, los de «Otra vez»). */
+export const Aparato: React.FC<{ paso: PasoGuion; ancho: number; dur?: number }> = ({ paso, ancho, dur }) => {
   const c = captura(paso.tomas[0].captura);
   const alto = (ancho * c.alto) / c.ancho;
   const marco = paso.aparato === 'telefono' ? 16 : 20;
@@ -102,7 +103,7 @@ const Aparato: React.FC<{ paso: PasoGuion; ancho: number }> = ({ paso, ancho }) 
   return (
     <div style={{ width: ancho + marco * 2, height: alto + marco * 2, borderRadius: radio, background: '#0B0B0D', padding: marco, boxShadow: '0 40px 90px rgba(60,30,10,.35), 0 0 0 2px #2A2A2E inset' }}>
       <div style={{ position: 'relative', width: ancho, height: alto, borderRadius: radio - marco, overflow: 'hidden' }}>
-        <Pantalla paso={paso} ancho={ancho} />
+        <Pantalla paso={paso} ancho={ancho} dur={dur} />
       </div>
     </div>
   );

@@ -37,7 +37,9 @@
     "lint": "eslint src && tsc",
     "otra-vez:grabar": "node scripts/otra-vez/grabar.mjs",
     "otra-vez:sonido": "node scripts/otra-vez/sonido.mjs",
-    "otra-vez:render": "node scripts/otra-vez/render.mjs"
+    "otra-vez:render": "node scripts/otra-vez/render.mjs",
+    "un-lugar:sonido": "node scripts/un-lugar/sonido.mjs",
+    "un-lugar:render": "node scripts/un-lugar/render.mjs"
   },
   "allowScripts": {
     "esbuild": false
