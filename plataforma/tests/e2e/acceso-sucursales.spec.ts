@@ -208,7 +208,8 @@ test.describe('Auditoría 0.12 — acceso por membresía', () => {
       await expect(async () => {
         if (captured) return;
         const pdf = page.getByRole('menuitem', { name: /PDF para imprimir/ });
-        if (!(await pdf.isVisible())) await page.getByRole('button', { name: 'Exportar', exact: true }).click();
+        // Desde la ficha 2.4 el menú también importa: «Importar o exportar».
+        if (!(await pdf.isVisible())) await page.getByRole('button', { name: 'Importar o exportar', exact: true }).click();
         await pdf.click();
         await expect.poll(() => captured !== null, { timeout: 5_000 }).toBe(true);
       }).toPass({ timeout: 60_000 });
