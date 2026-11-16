@@ -366,6 +366,10 @@ Las fichas indican **qué cubren y dónde está la especificación**. El detalle
 | 2.11 Navegación móvil por rol | M | D05 | D05, apartado §9 |
 | 2.12 Lenguaje de una sola marca (glosario) | S | D07, apartado §9 «Mensajes» | D07 |
 
+**Cómo se trabaja la ola 2 (decisión del dueño, 2026-11-15):** la auditoría y el rediseño «nada saturado» (PR #110 y #112, ya en producción) avanzan juntos, como dos líneas de un mismo tablero. Cada ficha de esta ola se diseña con la [guía «nada saturado»](../guias/GUIA_DISENO_NADA_SATURADO.md): maqueta con el antes y la propuesta, visto bueno del dueño, construcción y comprobación en pantalla. Las pantallas que todavía no pasaron por ese método y no tienen ficha propia van en la línea N del tablero (§7).
+
+**Estado de 2.1 y 2.2 (2026-11-15):** [maqueta](../diseno/MAQUETA_HOY_POR_ETAPA_2026-11-15.html) presentada al dueño en la rama `feat/hoy-por-etapa`, con Hoy en sus versiones nuevo, operando y cerrado, Primeros pasos por resultado y la vista en PC. Espera su visto bueno y cuatro decisiones: «Cobrado» frente a «Ventas», el pedido de prueba (requiere migración), sacar Premium de Hoy y la versión «cerrado». Todavía no se construye nada.
+
 ### Ola 3 · Números confiables y retención
 
 | Ficha | Tamaño | Cubre | Especificación |
@@ -450,11 +454,12 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 **Integración:** las olas 0 y 1 quedan juntas en `release/integracion-2026-11-09` (registro §35). Implementadas; las pruebas con personas y en el local siguen pendientes.
 
 **Ola 1**: [x] 1.0 (base visual, PR #91) · [x] 1.1 (cobro completo, PR #92) · [x] 1.2 (recibo, borrador y traspaso formal; migraciones 170–172) · [x] 1.3 (ciclo de mesa, migración 173) · [x] 1.4 (Servicio, migración 174) · [x] 1.5 (Cocina, migración 175, prueba física pendiente) · [x] 1.6 (Pedidos en vivo, migración 176) · [x] 1.7 (permisos por trabajo, migración 177; [plan](PLAN_PERMISOS_POR_TRABAJO_2026-11-08.md)) · [x] 1.8 (recepción, migración 178; [plan](PLAN_RECEPCION_2026-11-09.md)) · [x] 1.9 (catálogo, migración 179; [plan](PLAN_CATALOGO_2026-11-09.md)) · [x] 1.10 (inventario y agotados, migración 180; [plan](PLAN_INVENTARIO_2026-11-09.md)) · [x] 1.11 (comensal: ficha, carrito, lealtad y carta; [plan](PLAN_COMENSAL_FICHA_CARRITO_2026-11-09.md)) · [x] 1.12 (comensal: entrada, confirmación y seguimiento; [plan](PLAN_COMENSAL_CHECKOUT_SEGUIMIENTO_2026-11-09.md))
-**Ola 2**: [ ] 2.1 · [ ] 2.2 · [ ] 2.3 · [ ] 2.4 · [ ] 2.5 · [ ] 2.6 · [ ] 2.7 · [ ] 2.8 · [ ] 2.9 · [ ] 2.10 · [ ] 2.11 · [ ] 2.12
+**Ola 2**: [ ] 2.1 (maqueta presentada) · [ ] 2.2 (maqueta presentada) · [ ] 2.3 · [ ] 2.4 · [ ] 2.5 · [ ] 2.6 · [ ] 2.7 · [ ] 2.8 · [ ] 2.9 · [ ] 2.10 · [ ] 2.11 · [ ] 2.12
 **Ola 3**: [ ] 3.1 · [ ] 3.2 · [ ] 3.3 · [ ] 3.4 · [ ] 3.5 · [ ] 3.6 · [ ] 3.7
 **Ola 4**: [ ] 4.1 · [ ] 4.2 · [ ] 4.3 · [ ] 4.4 · [ ] 4.5 · [ ] 4.6 · [ ] 4.7 · [ ] 4.8 · [ ] 4.9 · [ ] 4.10 · [ ] 4.11 · [ ] 4.12
 **Comercial**: [ ] V.1 · [ ] V.2 · [ ] V.3 · [ ] V.4 · [ ] V.5 · [ ] V.6
 **Calidad**: Q.1, Q.2 y Q.3 son continuas.
+**Línea N · nada saturado** (pantallas sin ficha propia que aún no pasan por el método; [guía](../guias/GUIA_DISENO_NADA_SATURADO.md)). Ya pasadas: Tomar pedidos, carta del comensal, Pedidos en vivo, Menú › Platillos y Hoy (#110), además de Cocina, Caja, Clientes, Negocio y Ajustes (#112). Pendientes: [ ] Recepción (reservas y espera) · [ ] Inventario · [ ] Cupones, lealtad y encuestas (con 3.3–3.5) · [ ] Analítica y finanzas (con 3.2) · [ ] Mi cuenta · [ ] Superadmin (con 4.9) · [ ] Web pública (con V.1–V.3)
 
 ---
 
