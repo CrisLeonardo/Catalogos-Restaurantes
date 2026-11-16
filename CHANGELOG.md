@@ -6,6 +6,13 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+## v0.22.0 · 2026-11-15 · Video «Un solo lugar» en la portada y serie «Otra vez»
+PR #122 (merge `3a2046e`) · sin migraciones. Para que la portada cambie en producción basta desplegar el código.
+- **La portada abre el video «Un solo lugar»** en lugar de la animación «Las tres fugas»: en pantallas anchas se ve el horizontal y en las verticales (teléfono) el vertical, a pantalla completa. La tarjeta muestra el gancho —«Hoy tu restaurante vive en 8 lugares»— con un bucle sin sonido y la etiqueta «Qué es Leogin · 53 s»; el video (unos 3 MB) solo se descarga al tocar «play». `/vende-en-linea` no cambia y la ruta `/intro` queda sin enlace desde la portada.
+- **Video general «Un solo lugar»** (`promo-video/`, 53,4 s, vertical y horizontal): el restaurante repartido en ocho lugares se junta en uno; luego los tres tipos de negocio con pantallas reales de Rincón 502, cocina, caja y ventas, y el cierre con QR. Guion: [`docs/negocio/GUION_VIDEO_UN_SOLO_LUGAR_2026-11-15.md`](docs/negocio/GUION_VIDEO_UN_SOLO_LUGAR_2026-11-15.md).
+- **Serie «Otra vez»**, aprobada por el dueño para visitas y redes: el domingo de hora pico se congela, se rebobina y se repite con Leogin. Tres videos de 45,6 s (con meseros, sin meseros y venta en línea), cada uno en vertical y horizontal. Guion: [`docs/negocio/GUION_VIDEO_OTRA_VEZ_2026-11-15.md`](docs/negocio/GUION_VIDEO_OTRA_VEZ_2026-11-15.md).
+- Ningún video muestra precios ni prueba gratis, y ninguno hace zoom sobre las pantallas: lo señalado queda nítido dentro de un anillo y el resto se desenfoca. Se reproducen con `npm run otra-vez:grabar`, `otra-vez:render`, `un-lugar:render` y `un-lugar:web`.
+
 ## v0.21.0 · 2026-11-15 · Video promocional y pedido que llega a cocina
 PR #118 (merge `a6ca706`) y PR #117 (merge `0a1dbb5`) · migración 181. La 181 no depende del despliegue: corrige producción en cuanto se corre (fuera de la hora pico, porque bloquea `orders` un momento). Ningún cambio de la app pide desplegar.
 - **«Enviar a cocina» ya funciona con un pedido recién hecho** (migración 181): desde v0.18.0, todo pedido nuevo respondía «Operación de pedido inválida.» al mandarlo a cocina u operarlo desde Pedidos en vivo, porque nacía sin versión (`orders.updated_at` vacío). Ahora la versión nace con el pedido, los pedidos que ya existían la toman de su hora de creación y la columna no puede volver a quedar vacía.
