@@ -7,7 +7,7 @@ import { Icon } from '@/components/icons';
 import GoogleStaffButton from '@/components/auth/google-staff-button';
 import GoogleG from '@/components/auth/google-g';
 import { signupAccount, type SignupState } from '@/lib/actions/signup';
-import { defaultPlanPricing, type PlanPricing } from '@/lib/plans';
+import type { PlanPricing } from '@/lib/plans';
 import { ErrorBox, Field, Stepper, WizardNav } from '@/components/signup/wizard-ui';
 
 const empty: SignupState = null;
@@ -36,15 +36,15 @@ const empty: SignupState = null;
  */
 const DRAFT_KEY = 'leogin_signup_draft';
 
-type Draft = { step: number; fullName: string };
+type Draft = { fullName: string };
 
 export default function SignupWizard({
-  pricing = defaultPlanPricing(),
   googleEnabled = false,
   googleAccount = null,
   existingAccount = null,
   authError = false,
 }: {
+  /** Ya no se usa en esta pantalla (ficha 2.3); se conserva la firma. */
   pricing?: PlanPricing;
   /** ¿Está configurado el acceso con Google? (NEXT_PUBLIC_GOOGLE_AUTH_ENABLED) */
   googleEnabled?: boolean;
@@ -55,10 +55,8 @@ export default function SignupWizard({
   /** Volvimos de Google sin sesión (cancelado o fallido) — se avisa y se sigue. */
   authError?: boolean;
 }) {
-  const trialDays = pricing.trialDays;
   const [state, formAction, isPending] = useActionState(signupAccount, empty);
 
-  const [step, setStep] = useState(0);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   // El correo se escribe UNA vez. La doble captura se quitó a propósito: era
@@ -68,10 +66,8 @@ export default function SignupWizard({
   // grande en el paso "Confirmar", antes de crear nada. La contraseña sí se
   // repite: esa no se puede releer.
   const [password, setPassword] = useState('');
-  const [password2, setPassword2] = useState('');
   // Ver lo que se escribió: la confirmación dice "coinciden", esto dice "qué".
   const [showPassword, setShowPassword] = useState(false);
-  const [terms, setTerms] = useState(false);
   const [stepError, setStepError] = useState<string | null>(null);
 
   const googleEmail = googleAccount?.email ?? null;
@@ -97,7 +93,6 @@ export default function SignupWizard({
     }
     if (draft) {
       setFullName(draft.fullName || googleName || '');
-      setStep(draft.step);
     } else if (googleEmail) {
       setFullName((prev) => prev || googleName || '');
     }
@@ -106,44 +101,45 @@ export default function SignupWizard({
   /** Guarda el borrador justo antes de que el navegador se vaya a Google. */
   function saveDraft() {
     try {
-      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step, fullName } satisfies Draft));
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ fullName } satisfies Draft));
     } catch {
       /* sin sessionStorage se pierde el borrador, pero el alta sigue */
     }
   }
 
-  const STEPS = ['Tu cuenta', 'Confirmar'];
-  const LAST_STEP = STEPS.length - 1;
-
-  function next() {
+  /* Ficha 2.3: una sola pantalla. «Confirmar» se fue: el correo se ve
+     grande bajo su campo, la contraseña se escribe una vez con «Ver» y los
+     términos se aceptan al crear la cuenta, dicho junto al botón. */
+  function validar(e: React.FormEvent<HTMLFormElement>) {
     setStepError(null);
-    if (step === 0) {
-      if (fullName.trim().length < 2) return setStepError('Escribe tu nombre.');
-      // Con Google el correo viene de la sesión (verificado por Google) y no
-      // hay contraseña: solo se valida lo que la persona sí escribió.
-      if (!withGoogle) {
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setStepError('Escribe un correo válido.');
-        if (password.length < 8) return setStepError('La contraseña debe tener al menos 8 caracteres.');
-        if (password !== password2) return setStepError('Las dos contraseñas no coinciden.');
-      }
+    const error = fullName.trim().length < 2
+      ? 'Escribe tu nombre.'
+      : !withGoogle && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+        ? 'Escribe un correo válido.'
+        : !withGoogle && password.length < 8
+          ? 'La contraseña debe tener al menos 8 caracteres.'
+          : null;
+    if (error) {
+      e.preventDefault();
+      setStepError(error);
     }
-    setStep((s) => Math.min(LAST_STEP, s + 1));
   }
 
   return (
-    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <form action={formAction} onSubmit={validar} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <input type="hidden" name="full_name" value={fullName} />
       <input type="hidden" name="email" value={withGoogle ? '' : email} />
       <input type="hidden" name="password" value={withGoogle ? '' : password} />
-      <input type="hidden" name="password2" value={withGoogle ? '' : password2} />
-      <input type="hidden" name="terms" value={terms ? 'on' : ''} />
+      {/* El servidor sigue pidiendo la repetición: se manda la misma, porque
+          con «Ver» la persona ya comprobó lo que escribió. */}
+      <input type="hidden" name="password2" value={withGoogle ? '' : password} />
+      <input type="hidden" name="terms" value="on" />
       {/* Pista, no credencial: el servidor relee la sesión de Google. */}
       <input type="hidden" name="auth_provider" value={withGoogle ? 'google' : 'password'} />
 
-      <Stepper steps={STEPS} step={step} />
+      <Stepper steps={['Tu cuenta', 'Tu negocio', 'Qué vendes', 'Tu carta']} step={0} />
 
-      {/* ── Paso 0: Tu cuenta ── */}
-      <div style={{ display: step === 0 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Ya hay una sesión abierta con cuenta de Leogin. Decirlo aquí evita
             el "ya existe ese correo" al final, cuando ya se llenó todo. */}
         {existingAccount && !withGoogle && (
@@ -239,83 +235,17 @@ export default function SignupWizard({
             </button>
           </div>
         </Field>
-        <Field
-          label="Repite tu contraseña"
-          hint={
-            password2.length > 0 && password !== password2
-              ? 'Las dos contraseñas no coinciden.'
-              : undefined
-          }
-        >
-          <input
-            type={showPassword ? 'text' : 'password'}
-            value={password2}
-            onChange={(e) => setPassword2(e.target.value)}
-            autoComplete="new-password"
-            className="adm-field adm-field-lg"
-          />
-        </Field>
         </>
         )}
       </div>
 
-      {/* ── Paso 1: Confirmar ── */}
-      <div style={{ display: step === 1 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
-        {/* El correo, aparte y en grande. Sustituye a la doble captura: es el
-            identificador de login y la única vía de recuperación, así que la
-            última oportunidad de cazar un dedazo tiene que verse, no esconderse
-            en una fila más de una lista. */}
-        <Glass variant="quiet" style={{ padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-          {withGoogle ? <GoogleG size={19} /> : <Icon name="mail" size={17} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0 }} />}
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', wordBreak: 'break-all' }}>
-              {(withGoogle ? googleEmail : email) || '—'}
-            </div>
-            <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2 }}>
-              {withGoogle
-                ? 'Entrarás a tu panel con esta cuenta de Google. Sin contraseña que recordar.'
-                : 'Con este correo entrarás a tu panel. Revísalo: si está mal, no podrás recuperar tu cuenta.'}
-            </div>
-          </div>
-          {!withGoogle && (
-            <button
-              type="button"
-              onClick={() => { setStepError(null); setStep(0); }}
-              className="press"
-              style={{
-                marginLeft: 'auto', flexShrink: 0, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                padding: '6px 12px', borderRadius: 99, border: '1px solid var(--u-hair-2)',
-                background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: 'var(--u-text-2)',
-              }}
-            >
-              Corregir
-            </button>
-          )}
-        </Glass>
-
-        <Glass style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6, border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>
-            <Icon name="sparkle" size={16} style={{ color: 'var(--brand-accent-ink)' }} />
-            Lo que sigue: crear tu restaurante
-          </div>
-          <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-            En cuanto tengas tu cuenta te llevamos a crearlo: eliges plan, nombre y
-            estilo, y queda en vivo.{trialDays > 0 ? ` Empiezas con ${trialDays} días gratis, sin tarjeta.` : ' El menú digital es gratis para siempre.'}
-            Con esta misma cuenta podrás abrir los que quieras.
-          </p>
-        </Glass>
-
-        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 12.5, color: 'var(--u-text-3)', cursor: 'pointer' }}>
-          <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} style={{ marginTop: 2, width: 16, height: 16, accentColor: 'var(--brand-accent)' }} />
-          <span>
-            Acepto los{' '}
-            <Link href="/terminos" target="_blank" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'none' }}>términos del servicio</Link>
-            {' '}y la{' '}
-            <Link href="/privacidad" target="_blank" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'none' }}>política de privacidad</Link>
-            {' '}de Leogin.
-          </span>
-        </label>
-      </div>
+      <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
+        Al crear tu cuenta aceptas los{' '}
+        <Link href="/terminos" target="_blank" style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'none' }}>términos del servicio</Link>
+        {' '}y la{' '}
+        <Link href="/privacidad" target="_blank" style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'none' }}>política de privacidad</Link>
+        {' '}de Leogin.
+      </p>
 
       {/* Errores */}
       {authError && !stepError && !state?.error && !withGoogle && (
@@ -326,14 +256,13 @@ export default function SignupWizard({
       {(stepError || state?.error) && <ErrorBox>{stepError ?? state?.error}</ErrorBox>}
 
       <WizardNav
-        step={step}
-        lastStep={LAST_STEP}
-        onBack={() => { setStepError(null); setStep((s) => Math.max(0, s - 1)); }}
-        onNext={next}
+        step={0}
+        lastStep={0}
+        onBack={() => {}}
+        onNext={() => {}}
         submitLabel="Crear mi cuenta"
         pendingLabel="Creando tu cuenta…"
         isPending={isPending}
-        canSubmit={terms}
       />
 
       <p style={{ textAlign: 'center', fontSize: 12.5, color: 'var(--u-text-4)', margin: 0 }}>

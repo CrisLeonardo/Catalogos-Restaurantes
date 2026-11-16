@@ -23,9 +23,10 @@ export const metadata: Metadata = {
 export default async function MuestraPage({
   searchParams,
 }: {
-  searchParams: Promise<{ estilo?: string | string[]; nombre?: string | string[] }>;
+  searchParams: Promise<{ estilo?: string | string[]; nombre?: string | string[]; alta?: string | string[] }>;
 }) {
-  const { estilo, nombre } = await searchParams;
+  const { estilo, nombre, alta } = await searchParams;
   const uno = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? '';
-  return <MuestraClient estiloInicial={uno(estilo) || null} nombreInicial={uno(nombre).slice(0, 40)} />;
+  // `?alta=1`: la carta del alta (ficha 2.3) nace vacía, sin los platos de Rincón 502.
+  return <MuestraClient estiloInicial={uno(estilo) || null} nombreInicial={uno(nombre).slice(0, 40)} alta={uno(alta) === '1'} />;
 }
