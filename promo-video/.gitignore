@@ -9,4 +9,7 @@ out
 # Se generan: npm run grabar (capturas de la app local) y npm run musica
 public/capturas
 public/audio
+
+# Se genera: npm run banda:una-toma
+public/una-toma/banda-*.wav
 public/otra-vez

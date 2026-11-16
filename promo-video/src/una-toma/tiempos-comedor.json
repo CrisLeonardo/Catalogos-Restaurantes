@@ -1,0 +1,140 @@
+{
+  "_nota": "Línea de tiempo del video «comedor» (plan Estándar), en cuadros a 30 fps. La leen el video y la banda sonora (scripts/banda-una-toma.mjs comedor). «eventos»: [cuadro, tipo, ...].",
+  "fps": 30,
+  "total": 1020,
+  "gancho": {
+    "rasga": 90,
+    "chispa": 106,
+    "iris": 112
+  },
+  "drop": 120,
+  "revela": {
+    "riser": 690,
+    "inicio": 720,
+    "golpe": 750,
+    "aLogo": 836
+  },
+  "cierre": {
+    "inicio": 870,
+    "oferta": 894,
+    "url": 918,
+    "qr": 930
+  },
+  "cliente": {
+    "tapA": 140,
+    "tapB": 158,
+    "tapCarrito": 176,
+    "hoja": 182,
+    "tapEnviar": 220,
+    "sale": 230
+  },
+  "mostrador": {
+    "llega": 274,
+    "acerca": 300,
+    "tapCocina": 318,
+    "tapListo": 392,
+    "listo": 396,
+    "sale": 410
+  },
+  "vuelve": {
+    "llega": 450,
+    "sale": 540
+  },
+  "duenio": {
+    "llega": 580,
+    "suma": 598
+  },
+  "eventos": [
+    [
+      0,
+      "burbuja"
+    ],
+    [
+      6,
+      "burbuja"
+    ],
+    [
+      15,
+      "burbuja"
+    ],
+    [
+      24,
+      "burbuja"
+    ],
+    [
+      34,
+      "burbuja"
+    ],
+    [
+      44,
+      "burbuja"
+    ],
+    [
+      54,
+      "burbuja"
+    ],
+    [
+      64,
+      "burbuja"
+    ],
+    [
+      74,
+      "burbuja"
+    ],
+    [
+      140,
+      "toque"
+    ],
+    [
+      158,
+      "toque"
+    ],
+    [
+      176,
+      "toque"
+    ],
+    [
+      220,
+      "toque"
+    ],
+    [
+      318,
+      "toque"
+    ],
+    [
+      392,
+      "toque"
+    ],
+    [
+      230,
+      "viaje",
+      274
+    ],
+    [
+      410,
+      "viaje",
+      450
+    ],
+    [
+      540,
+      "viaje",
+      580
+    ],
+    [
+      274,
+      "ding"
+    ],
+    [
+      396,
+      "exito"
+    ],
+    [
+      450,
+      "exito"
+    ],
+    [
+      598,
+      "suma"
+    ]
+  ]
+}

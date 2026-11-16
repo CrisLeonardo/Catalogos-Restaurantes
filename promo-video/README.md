@@ -1,5 +1,7 @@
 # Video promocional de Leogin
 
+> **En uso (2026-11-15):** «Un solo lugar» en la portada y la serie «Otra vez» para visitas y redes. «Una sola toma» queda como serie adicional. El video «Bajo control» que se describe primero se conserva como referencia técnica; al dueño no le gustó y no se usa.
+
 Anuncio vertical de 40 s (1080×1920, 30 fps, H.264) para TikTok y Reels, dirigido a la **cafetería o el restaurante pequeño que empieza**. Muestra la app de verdad: las pantallas se graban de la app local con Playwright y se montan con [Remotion](https://www.remotion.dev).
 
 El guion, los ganchos y las decisiones están en [`docs/negocio/GUION_VIDEO_PROMO_2026-11-14.md`](../docs/negocio/GUION_VIDEO_PROMO_2026-11-14.md).
@@ -51,6 +53,33 @@ Antes de la migración 181 (PR #118), un pedido recién creado nacía con `order
 
 Remotion es gratis para personas y empresas de hasta 3 personas. Si Leogin crece por encima de eso, hace falta su licencia de empresa: pon la clave en `REMOTION_LICENSE_KEY` y `npm run render` la usa sola.
 
+## Una sola toma
+
+Serie de tres videos de 34 s. En cada uno, un pedido cruza el restaurante sin un solo corte: una chispa sale del aparato donde nace el pedido, la cámara la sigue de uno a otro y al final se aleja para revelar el recorrido completo. Cada video sale en **vertical** (TikTok/Reels) y **horizontal** (PC, visita al restaurante). Guion y decisiones: [`docs/negocio/GUION_VIDEO_UNA_TOMA_2026-11-15.md`](../docs/negocio/GUION_VIDEO_UNA_TOMA_2026-11-15.md).
+
+| Video | Para quién | Recorrido |
+|---|---|---|
+| `meseros` | Restaurante con meseros (Premium) | Mesero → cocina → caja → dueño |
+| `comedor` | Comedor o cafetería (Estándar) | Cliente con QR → mostrador → cliente → dueño |
+| `domicilio` | Vende en línea (En línea) | Cliente con link y mapa → cocina → cliente → dueño |
+
+No necesita la app local ni la base: las pantallas se dibujan en código copiando la app real, y los platos son las ilustraciones de Rincón 502 (`public/una-toma/platos/`).
+
+```bash
+npm run banda:una-toma -- comedor       # banda sonora → public/una-toma/banda-comedor.wav
+npm run render:una-toma                 # los 6 MP4 → out/una-toma/leogin-<video>-<formato>.mp4
+npm run render:una-toma -- comedor V    # uno solo
+npm run fotos:una-toma -- comedor V 0 300 790   # fotogramas sueltos para revisar
+```
+
+| Archivo | Qué hace |
+|---|---|
+| `src/una-toma/guiones/*.tsx` | Cada video: gancho, aparatos, recorrido de la chispa, cámara, textos y cierre (precio, URL y QR). |
+| `src/una-toma/tiempos-<video>.json` | La línea de tiempo en cuadros y los efectos de sonido. La leen el video **y** la banda sonora. |
+| `src/una-toma/gancho.tsx`, `ganchos/` | Segundos 0–4: la «forma vieja» (comanda, gritos, chats) que se rompe. |
+| `src/una-toma/mundo.tsx` | Motor común: aparatos en un mismo espacio, cámara continua, chispa y revelación. |
+| `src/una-toma/pantallas.tsx`, `pantallas-cliente.tsx` | Pantallas: mesero, cocina, caja, Hoy; carta del cliente, carrito, seguimiento y «En vivo». |
+| `src/una-toma/textos.tsx`, `cierre.tsx` | Titulares al ritmo de los toques; logo, precio, `distleogin.com` y QR. |
 ---
 
 # Serie «Otra vez» — el mismo domingo, dos veces
