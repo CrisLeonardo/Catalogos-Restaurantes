@@ -206,7 +206,13 @@ export default async function LeoginLanding() {
 
             <div className="lp-hero-media" style={{ display: 'flex', justifyContent: 'center' }}>
               <div className="lp-hero-tarjeta" style={{ width: '100%' }}>
-                <LandingIntro cuadrada />
+                <LandingIntro
+                  ruta="un-lugar"
+                  cuadrada
+                  pelicula
+                  alt="Hoy tu restaurante vive en 8 lugares. Video: qué es Leogin"
+                  etiqueta="Qué es Leogin · 53 s"
+                />
               </div>
             </div>
 

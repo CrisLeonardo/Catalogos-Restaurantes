@@ -12,3 +12,4 @@ public/audio
 
 # Se genera: npm run banda:una-toma
 public/una-toma/banda-*.wav
+public/otra-vez

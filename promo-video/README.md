@@ -1,6 +1,6 @@
 # Video promocional de Leogin
 
-> **Vigente: «Una sola toma» (2026-11-15)**, ver la [sección de abajo](#una-sola-toma). El video «Bajo control» que se describe primero se conserva como referencia técnica; al dueño no le gustó y no se usa.
+> **En uso (2026-11-15):** «Un solo lugar» en la portada y la serie «Otra vez» para visitas y redes. «Una sola toma» queda como serie adicional. El video «Bajo control» que se describe primero se conserva como referencia técnica; al dueño no le gustó y no se usa.
 
 Anuncio vertical de 40 s (1080×1920, 30 fps, H.264) para TikTok y Reels, dirigido a la **cafetería o el restaurante pequeño que empieza**. Muestra la app de verdad: las pantallas se graban de la app local con Playwright y se montan con [Remotion](https://www.remotion.dev).
 
@@ -80,3 +80,48 @@ npm run fotos:una-toma -- comedor V 0 300 790   # fotogramas sueltos para revisa
 | `src/una-toma/mundo.tsx` | Motor común: aparatos en un mismo espacio, cámara continua, chispa y revelación. |
 | `src/una-toma/pantallas.tsx`, `pantallas-cliente.tsx` | Pantallas: mesero, cocina, caja, Hoy; carta del cliente, carrito, seguimiento y «En vivo». |
 | `src/una-toma/textos.tsx`, `cierre.tsx` | Titulares al ritmo de los toques; logo, precio, `distleogin.com` y QR. |
+---
+
+# Serie «Otra vez» — el mismo domingo, dos veces
+
+Tres videos de 45,6 s, uno por tipo de negocio, cada uno en **vertical** (1080×1920, TikTok y Reels) y **horizontal** (1920×1080, para mostrarlo en una PC o tableta al visitar un restaurante). No muestran precios ni prueba gratis. El guion y las decisiones están en [`docs/negocio/GUION_VIDEO_OTRA_VEZ_2026-11-15.md`](../docs/negocio/GUION_VIDEO_OTRA_VEZ_2026-11-15.md).
+
+| Video | Para quién |
+|---|---|
+| `leogin-otra-vez-meseros-*.mp4` | Restaurante con meseros |
+| `leogin-otra-vez-comedor-*.mp4` | Negocio pequeño, sin meseros: el cliente pide desde su mesa |
+| `leogin-otra-vez-domicilio-*.mp4` | Quien vende en línea, a domicilio o para llevar |
+
+## Cómo se reproduce
+
+Con Supabase local arriba y la app en `http://localhost:3000` en modo producción (igual que arriba):
+
+```bash
+cd promo-video
+npm install
+npm run otra-vez:grabar   # siembra Rincón 502 (solo base local) y graba las 44 pantallas
+npm run otra-vez:render   # los 6 MP4 en out/otra-vez/ (genera banda y QR si faltan)
+```
+
+`npm run otra-vez:grabar -- meseros` regraba solo una sección (`meseros`, `comedor`, `domicilio`, `cierre`, `extras`). `npm run otra-vez:render -- comedor vertical` exporta solo uno. `node scripts/otra-vez/revisar.mjs <composición> <carpeta> <cuadros>` saca fotogramas sueltos para revisar sin exportar todo.
+
+## Cómo está hecho
+
+- **`src/otra-vez/guiones.ts`**: todo el texto de los tres videos (gancho, molestias del caos, los cinco pasos y qué pantalla muestra cada uno). Para otro público se agrega un guion; el motor no cambia.
+- **`src/otra-vez/Caos.tsx`**: el domingo sin Leogin. Depende solo del número de cuadro, por eso el rebobinado es la misma escena recorrida hacia atrás.
+- **`src/otra-vez/Pasos.tsx`**: las pantallas reales dentro del teléfono o la tableta, con el dedo y el resaltado animados sobre las capturas (lo resaltado queda nítido y el resto se desenfoca; sin acercamientos).
+- **`scripts/otra-vez/sonido.mjs`**: la banda sonora, sintetizada con código (sin material de terceros), a 100 pulsos por minuto; el video corta en los mismos pulsos (`src/otra-vez/base.ts`).
+- **`scripts/otra-vez/qr.mjs`**: el QR del cierre. Para apuntarlo a otra dirección: `node scripts/otra-vez/qr.mjs https://…`.
+
+La grabación deja a Rincón 502 **local** como un restaurante que ya paga su plan (sin avisos de prueba) y con ubicación, para que salga el mapa de entrega. Los pedidos de la grabación cambian de estado directo en la base local para mostrar el seguimiento («Listo», «En camino»).
+
+# «Un solo lugar» — el video general
+
+Un video de 53,4 s que explica qué es Leogin: «Hoy tu restaurante vive en 8 lugares» → los ocho se meten en un teléfono → los tres tipos de negocio con pantallas reales → cocina, caja y ventas → lo demás que trae → cierre con QR. En vertical y horizontal, sin precios ni prueba gratis. Guion: [`docs/negocio/GUION_VIDEO_UN_SOLO_LUGAR_2026-11-15.md`](../docs/negocio/GUION_VIDEO_UN_SOLO_LUGAR_2026-11-15.md).
+
+```bash
+npm run un-lugar:render   # los 2 MP4 en out/un-lugar/ (genera la banda si falta)
+npm run un-lugar:web      # los deja livianos en plataforma/public/un-lugar/ para la portada
+```
+
+Usa las mismas capturas y el mismo QR de «Otra vez» (`npm run otra-vez:grabar` antes, si no existen). El texto y los tiempos están en `src/un-lugar/guion.ts`; las escenas, en `src/un-lugar/UnSoloLugar.tsx`, que reutiliza el aparato con pantallas (`Aparato`) y el tramo «además» de «Otra vez». La banda sale de `scripts/un-lugar/sonido.mjs`.

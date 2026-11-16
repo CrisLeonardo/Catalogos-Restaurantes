@@ -3629,8 +3629,13 @@ html:has(.lp-intro-dialog[open]) { overflow: hidden; }
 .lp-intro-v { aspect-ratio: 9 / 16; max-width: 320px; border-radius: 26px; }
 .lp-intro-dialog-v { width: min(94vw, calc((100dvh - 104px) * 0.5625)); }
 .lp-intro-dialog-v .lp-intro-frame { height: calc(100dvh - 40px); }
+/* «Un solo lugar» en la portada: un MP4 en vez de la animación. La ventana
+   mide lo que el video 16:9 que cabe en la pantalla, sin barras negras. */
+.lp-intro-dialog-peli { width: min(94vw, 1280px, calc((100dvh - 40px) * 16 / 9)); }
+.lp-intro-peli { display: block; width: 100%; aspect-ratio: 16 / 9; background: #121214; }
 /* En el teléfono la intro va en vertical y ocupa toda la pantalla */
 @media (max-aspect-ratio: 4/5) {
+  .lp-intro-peli { height: 100dvh; aspect-ratio: auto; object-fit: contain; }
   .lp-intro-dialog { width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; }
   .lp-intro-frame, .lp-intro-dialog-v .lp-intro-frame { height: 100dvh; max-height: none; }
   .lp-intro-close { top: max(10px, env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); }
