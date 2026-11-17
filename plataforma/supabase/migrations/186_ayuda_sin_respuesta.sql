@@ -7,8 +7,9 @@
 --  restaurante, sin quién la escribió: sirve para que Leogin agregue
 --  respuestas (Superadmin › Configuración › Soporte), no para vigilar.
 --
---  RLS sin políticas: la escribe y la lee el servidor con la service
---  role, como activity_log.
+--  RLS sin políticas permisivas: la escribe y la lee el servidor con la
+--  service role, como activity_log. Lleva la regla restrictiva del segundo
+--  factor del Super Admin (migración 137), como toda tabla con RLS.
 --
 --  Aplicar ANTES o DESPUÉS de desplegar: si falta, la búsqueda funciona
 --  igual y simplemente no se anota. Independiente de la 184 y la 185.
@@ -26,6 +27,13 @@ create table if not exists public.ayuda_sin_respuesta (
 create index if not exists ayuda_sin_respuesta_fecha_idx on public.ayuda_sin_respuesta (created_at desc);
 
 alter table public.ayuda_sin_respuesta enable row level security;
+drop policy if exists super_admin_segundo_factor on public.ayuda_sin_respuesta;
+create policy super_admin_segundo_factor on public.ayuda_sin_respuesta
+  as restrictive for all to authenticated
+  using ((select public.leogin_sesion_con_segundo_factor()))
+  with check ((select public.leogin_sesion_con_segundo_factor()));
+revoke all on public.ayuda_sin_respuesta from public, anon, authenticated, service_role;
+grant select, insert on public.ayuda_sin_respuesta to service_role;
 
 comment on table public.ayuda_sin_respuesta is
   'Búsquedas del Centro de ayuda sin respuesta (ficha 2.9). Solo la frase y el '
