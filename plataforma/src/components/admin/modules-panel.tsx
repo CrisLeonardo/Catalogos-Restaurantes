@@ -35,6 +35,7 @@ import { Icon } from '@/components/icons';
 import { List, ListLink, ListRow, ListText } from '@/components/ui/list';
 import { Section, SectionNote } from '@/components/ui/section';
 import { Switch } from '@/components/ui/switch';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { setModuleEnabled } from '@/lib/actions/modules';
 import { updateOwnOrderTypes } from '@/lib/actions/restaurant';
 import {
@@ -154,6 +155,18 @@ function LockedRow({ icon, label, description, lockLabel }: {
   );
 }
 
+/* Ficha 2.8 (R37.3): antes de apagar, qué pasa y qué se conserva. Apagar
+   nunca borra datos: al encenderla vuelven. */
+const AL_APAGAR: Partial<Record<string, string>> = {
+  reservaciones: 'Tus clientes ya no podrán reservar. Las reservas que ya tienes se guardan.',
+  lista_espera: 'Dejas de anotar grupos en la lista de espera. Lo anotado se guarda.',
+  llamada_mesero: 'El botón «Llamar al mesero» desaparece de tu carta.',
+  encuestas: 'Tus clientes dejan de recibir la encuesta. Las calificaciones que ya tienes se guardan.',
+  cupones: 'Tus clientes ya no podrán aplicar cupones al pagar. Tus cupones se guardan y vuelven al encenderla.',
+  loyalty: 'Tus clientes dejan de ganar y canjear puntos. Los puntos que ya tienen se guardan y vuelven al encenderla.',
+  recetas: 'Dejas de calcular el costo por receta. Tus recetas e ingredientes se guardan.',
+};
+
 export default function ModulesPanel({ restaurantId, modules: rawModules, settings, orderTypes, supportWhatsapp, planActual, billedNow = null, billedCurrency = 'GTQ' }: Props) {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = panelBaseFrom(useRutaNavegador());
@@ -176,7 +189,19 @@ export default function ModulesPanel({ restaurantId, modules: rawModules, settin
   // En línea: para llevar y a domicilio; comer en local pide Estándar.
   const isEnLinea = planActual === 'EN_LINEA';
 
-  function toggle(key: ActivatableModuleKey, next: boolean) {
+  const { confirm, dialog } = useConfirm();
+
+  async function toggle(key: ActivatableModuleKey, next: boolean) {
+    if (!next) {
+      const nombre = ACTIVATABLE_MODULES.find((m) => m.key === key)?.label ?? 'esta función';
+      const ok = await confirm({
+        title: `¿Apagar ${nombre}?`,
+        description: AL_APAGAR[key] ?? 'Desaparece de tu panel y de tu carta. Lo que ya tienes se guarda y vuelve al encenderla.',
+        confirmLabel: `Apagar ${nombre}`,
+        cancelLabel: 'Dejarla encendida',
+      });
+      if (!ok) return;
+    }
     setError(null);
     setBusyKey(key);
     // Optimista: el interruptor cambia al instante; si el servidor rechaza, se revierte.
@@ -323,6 +348,7 @@ export default function ModulesPanel({ restaurantId, modules: rawModules, settin
 
   return (
     <div className="adm-w-read flex flex-col gap-6">
+      {dialog}
       <p className="text-[14px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
         Enciende solo lo que usa tu restaurante. Lo que apagues desaparece de tu
         panel y puedes volver a encenderlo cuando quieras.

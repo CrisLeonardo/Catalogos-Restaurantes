@@ -44,6 +44,12 @@ PR #124 (merge `0d15c36`), PR #121 (merge `fd9e728`) y PR #120 (merge `a7a8040`)
   - **Así queda** está siempre encendida: Portada, un platillo abierto y el carrito, con lo que suele romperse a la vista (el nombre más largo, el precio más alto y un platillo sin foto). «Probar como cliente» abre la carta interactiva.
   - Al publicar dice qué diseño quedó y ofrece **Volver al anterior**. Tu logo, tus textos y tus pedidos nunca cambian con un diseño.
   - No se recomienda ninguna combinación poco legible, y en el catálogo se marcan. Las plantillas propias solo aparecen si tienes alguna; guardar una nueva está en «⋯».
+- **Ajustes que dicen cómo estás** (ficha 2.8 de la auditoría; rama `feat/ajustes-claros`; maqueta aprobada `docs/diseno/MAQUETA_AJUSTES_CLAROS_2026-11-16.html`) · sin migraciones:
+  - Cada fila de Ajustes dice su estado: horario, mesas, hasta dónde repartes, quién confirma y cuántas funciones están encendidas. Lo que conviene revisar sale en ámbar.
+  - **Horarios:** eliges «Con horario» o «A toda hora» (ya no dice «Sin horario»). El día apagado dice «Cerrado», puedes copiar un día a los demás, dos turnos que se pisan no se guardan y ves las próximas aperturas con los feriados.
+  - **Zona de entrega:** eliges por zonas, por distancia o a cualquier dirección. «Prueba un punto» en el mapa dice si un cliente queda dentro. Una zona sin tarifa no se guarda hasta escribirla; 0 se ve como «Gratis».
+  - **Pedidos y cobro:** «Confirmar automáticamente» dice en cuántos minutos, el semáforo se ve como línea de tiempo y no se guarda un ámbar después del rojo. «Pago con tarjeta» aclara que es con tu terminal.
+  - **Funciones:** antes de apagar una, dice qué pasa y qué se conserva. **Salón:** no deja quitar una mesa con una cuenta abierta. **Perfil:** separa lo que ve tu cliente y aclara el botón de WhatsApp.
 
 ## v0.22.0 · 2026-11-15 · Video «Un solo lugar» en la portada y serie «Otra vez»
 PR #122 (merge `3a2046e`) · sin migraciones. Para que la portada cambie en producción basta desplegar el código.

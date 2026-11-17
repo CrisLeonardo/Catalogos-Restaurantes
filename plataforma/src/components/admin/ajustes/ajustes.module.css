@@ -1,0 +1,41 @@
+/* Piezas compartidas de Ajustes (ficha 2.8). Superficies sólidas y tokens del panel. */
+.seg {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px;
+  padding: 4px; border-radius: 12px; background: var(--adm-bg-2);
+}
+.seg > button {
+  min-height: 44px; padding: 0 10px; border: none; border-radius: 9px; background: transparent;
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--u-text-2); cursor: pointer; text-align: center;
+}
+.seg > button[data-on] { background: var(--adm-card); color: var(--u-text); box-shadow: var(--adm-shadow-xs); }
+.seg > button:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: 1px; }
+.nota {
+  margin: 12px 0 0; padding: 10px 12px; border-radius: 12px;
+  background: var(--c-info-bg); color: var(--u-text-2); font-size: 13px; line-height: 1.45;
+}
+.nota strong { color: var(--u-text); }
+.aviso {
+  margin: 12px 0 0; padding: 10px 12px; border-radius: 12px;
+  background: var(--c-warn-bg); color: var(--u-text-2); font-size: 13px; line-height: 1.45;
+}
+.aviso strong { color: var(--u-text); }
+.bien {
+  margin: 0; padding: 10px 12px; border-radius: 12px;
+  background: var(--c-ok-bg); color: var(--c-ok); font-size: 13px; font-weight: 600; line-height: 1.45;
+}
+.copiar {
+  margin-top: 12px; min-height: 44px; padding: 0 14px; align-self: flex-start;
+  border-radius: 12px; border: 1px solid var(--adm-border-2); background: var(--adm-card);
+  font: inherit; font-size: 13px; font-weight: 600; color: var(--u-text); cursor: pointer;
+}
+.copiar:hover { background: var(--adm-card-hover); }
+.error { margin: 10px 0 0; font-size: 13px; font-weight: 600; color: var(--c-danger); }
+.lista { display: grid; margin-top: 4px; }
+.fila {
+  display: flex; align-items: center; gap: 12px; min-height: 44px;
+  border-bottom: 1px solid var(--adm-border); font-size: 14px;
+}
+.fila:last-child { border-bottom: 0; }
+.filaDia { flex: 1; min-width: 0; font-weight: 600; color: var(--u-text); }
+.filaValor { color: var(--u-text-2); font-variant-numeric: tabular-nums; text-align: right; }
+.filaValor[data-cerrado] { color: var(--c-warn); font-weight: 600; }

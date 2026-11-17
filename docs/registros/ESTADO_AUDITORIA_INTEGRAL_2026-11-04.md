@@ -817,6 +817,37 @@ La siguiente ficha es **1.12 · Comensal: entrada, checkout y seguimiento**. Que
 - **No comprobado:** una carta sin platillos, una casi sin fotos y una de solo para llevar (lo cubren las pruebas de la regla), y la vista interactiva en otra pestaña.
 - **Validación:** `typecheck` y `lint` sin errores (los tres avisos de siempre); 1,571 unitarias pasan, con una omitida, incluidas las 9 de `recomendaciones.test.ts`.
 - **Fuera de esta ficha (R32):** el modo Básico/Avanzado de la pestaña Marca (R32.3) y los textos semánticos protegidos (R32.7) siguen pendientes.
+## 42. Ajustes que dicen cómo estás · ficha 2.8 (2026-11-16)
+
+**Rama** `feat/ajustes-claros`, desde `main` (`a7a8040`). Los §37–§41 (fichas 2.3–2.7) están en las ramas de los PR #126, #127, #128, #130 y #131. Maqueta aprobada: [`MAQUETA_AJUSTES_CLAROS_2026-11-16.html`](../diseno/MAQUETA_AJUSTES_CLAROS_2026-11-16.html), con las cuatro recomendaciones. Sin migración. Cubre R24.2, R25.1, R25.2, R25.4, R26.3, R26.4, R27.2, R28.1–R28.3, R29.2, R29.3, R29.6, R37.3, PA-T02 y PA-T03.
+
+- **Ajustes (R24.2):** cada fila lleva su estado, calculado en `lib/ajustes-estado.ts`: «Rincón 502», «A toda hora» (ámbar), «20 mesas · 7 en el plano», «Hasta 6 km», «Confirmas tú» y «7 encendidas» (antes decía «7 activas»). La fila de la PC no se tocó, porque su reloj único está en la 2.6 (#130).
+- **Horarios (PA-T02, PA-T03, R26.3–4):**
+  - «¿Cuándo recibes pedidos?» se responde con «Con horario» o «A toda hora». Una semana sin días sigue siendo «A toda hora»: el cliente no nota cambio, pero ya no dice «Sin horario».
+  - Con horario, el día apagado dice «Cerrado», y la primera vez se parte de todos los días abiertos.
+  - «Copiar el lunes a los demás días abiertos».
+  - Dos turnos que se pisan no se guardan, ni en pantalla ni en el servidor (`parseHours`). Un turno de madrugada (20:00–02:00) no choca con uno de la mañana.
+  - «Próximas aperturas» enseña tres días tal como los verá el cliente, y el feriado manda sobre la semana.
+- **Entrega (R28.1–3):**
+  - «¿A dónde repartes?»: Por zonas, Por distancia o A cualquier dirección (`elegirModoDeEntrega`). Pasar a distancia o a cualquier dirección apaga las zonas (no las borra) después de confirmar. Pasar a zonas apaga la distancia y conserva la ubicación.
+  - Si hoy usa las dos, se dice. «A cualquier dirección» sale en ámbar.
+  - «Prueba un punto»: un toque en el mapa responde «✓ Dentro: 0.7 km de tu local» o «Fuera». Usa la misma fórmula del servidor, y la frontera exacta cuenta como dentro.
+  - Una zona nueva nace sin tarifa: no se guarda hasta escribirla, y 0 se ve como «Gratis».
+- **Pedidos y cobro (R29.2, R29.3, R29.6):**
+  - «Confirmar automáticamente» dice en cuántos minutos.
+  - El semáforo se ve como línea de tiempo.
+  - `saveOrdersAndCurrency` rechaza el ámbar después del rojo, tiempos en cero o negativos y una confirmación de más de 60 min (`problemaDeTiempos`).
+  - «Pago con tarjeta» aclara que se cobra con la terminal y no en línea.
+- **Perfil (R25.1, R25.2, R25.4):**
+  - «Lo que ve tu cliente», y el lema dice dónde sale.
+  - El interruptor de WhatsApp se llama «Botón "Enviar mi pedido por WhatsApp"» y aclara que no son avisos automáticos.
+- **Funciones (R37.3):** apagar una función pide confirmación con lo que pasa y lo que se conserva, por ejemplo «Los puntos que ya tienen se guardan y vuelven al encenderla».
+- **Salón (R27.2):** al bajar el número de mesas, se avisa debajo del control si una mesa con cuenta abierta queda fuera («La mesa 20 tiene una cuenta abierta (Q70.00)») y qué QR dejan de servir. Esa mesa no se puede quitar, ni en pantalla ni en el servidor.
+- **De paso:** el mapa de entrega ya no falla en desarrollo con «Map container is already initialized» (doble montaje).
+- **Comprobado en pantalla:** a 375 px en claro (Ajustes, Horarios con turno que se pisa y guardado bloqueado, Entrega con prueba de punto, Por zonas y envío sin tarifa, Pedidos y cobro) y a 1280 px en claro y oscuro (Funciones al apagar, Salón con la mesa 20 ocupada y guardado bloqueado, Ajustes). Para la prueba del Salón se abrió y luego se devolvió un pedido viejo en local; también se restauró la entrega de Rincón (6 km).
+- **No comprobado:** guardar de verdad un horario con turnos de madrugada y la vista de Perfil en pantalla (los cambios son de texto).
+- **Validación:** `typecheck` y `lint` sin errores (los tres avisos de siempre); 1,573 unitarias pasan, con una omitida, incluidas las 11 de `ajustes-estado.test.ts`.
+- **Fuera de esta ficha:** búsqueda por tarea en Ajustes (R24.3), asistente de mesas y QR por zona (R27.1, R27.3–5), polígonos y franjas de reparto (R28.5), propina y moneda real (R29.4–5) y dependencias entre funciones (R37.4–5).
 
 ---
 

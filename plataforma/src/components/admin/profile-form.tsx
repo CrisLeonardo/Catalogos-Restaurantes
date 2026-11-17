@@ -61,6 +61,8 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
           <input type="hidden" name="restaurantId" value={restaurantId} />
           <input type="hidden" name="orders_whatsapp" value="" />
 
+          {/* Ficha 2.8 (R25.1): lo que ve el cliente, dicho. */}
+          <p style={{ margin: '0 2px -6px', fontSize: 12, fontWeight: 600, color: 'var(--u-text-3)', letterSpacing: '0.02em' }}>LO QUE VE TU CLIENTE</p>
           <Card className="flex flex-col gap-4 p-4">
             <div>
             <label htmlFor="name" style={labelStyle}>Nombre del restaurante *</label>
@@ -83,7 +85,11 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
               defaultValue={restaurant.tagline ?? ''}
               placeholder="Una frase que describe tu lugar"
               className="adm-field"
+              aria-describedby="tagline-donde"
             />
+            <p id="tagline-donde" style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 4 }}>
+              Sale en la portada de tu carta, salvo que pongas otro texto en Personalizar › Textos.
+            </p>
             </div>
 
             <div>
@@ -137,16 +143,16 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--u-hair-2)' }}>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>Recibir pedidos por WhatsApp</div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>Botón «Enviar mi pedido por WhatsApp»</div>
                 <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>
-                  Al confirmar, el comensal ve el botón para enviarte el pedido por WhatsApp a este número.
+                  Al confirmar, el cliente puede mandarte su pedido desde su teléfono a este número. No son avisos automáticos.
                 </p>
               </div>
               <input type="hidden" name="orders_whatsapp_enabled" value={ordersWaEnabled ? 'true' : 'false'} />
               <Switch
                 checked={ordersWaEnabled}
                 onCheckedChange={setOrdersWaEnabled}
-                aria-label="Recibir pedidos por WhatsApp"
+                aria-label="Botón «Enviar mi pedido por WhatsApp»"
               />
             </div>
           </Card>
