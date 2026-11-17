@@ -85,6 +85,12 @@ describe('describirActividad · antifraude (PROD-10)', () => {
     expect(describirActividad(fila('horario', null, {}))).toBe('Cambió el horario del restaurante');
   });
 
+  it('el turno de práctica dice quién lo hizo y en cuánto', () => {
+    expect(describirActividad(fila('turno_practica', null, { minutos: 4 }, 'Ana')))
+      .toBe('Ana hizo el turno de práctica en 4 minutos');
+    expect(describirActividad(fila('turno_practica', null, null))).toBe('Hizo el turno de práctica');
+  });
+
   it('más de dos opciones se resumen', () => {
     const opciones = ['A', 'B', 'C', 'D'].map((x) => ({ que: x, antes: 1, despues: 2 }));
     expect(describirActividad(fila('precio', 'Combo', { precio: null, opciones })))

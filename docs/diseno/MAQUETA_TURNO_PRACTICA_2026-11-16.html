@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueta · Turno de práctica</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F2F1EE;--bg2:#E9E7E3;--card:#FFFFFF;--ink:#17161A;--ink2:rgba(23,22,26,.72);--ink3:rgba(23,22,26,.56);--line:rgba(23,22,26,.12);--line2:rgba(23,22,26,.2);--coral:#C2542F;--on:#fff;--ok:#1E7A46;--okbg:#E4F3E9;--warn:#8A5A00;--warnbg:#FBEFD2;--info:#1F5FA8;--infobg:#E3EEFB;--page:#DEDCD7;--sh:0 1px 2px rgba(0,0,0,.06)}
+[data-theme=dark]{--bg:#0C0B0A;--bg2:#141311;--card:#1A1917;--ink:#F5F3EF;--ink2:rgba(245,243,239,.74);--ink3:rgba(245,243,239,.56);--line:rgba(245,243,239,.12);--line2:rgba(245,243,239,.22);--coral:#D9683F;--on:#fff;--ok:#6FD49A;--okbg:#12301F;--warn:#F0C568;--warnbg:#33270B;--info:#8DBBF2;--infobg:#10243D;--page:#000;--sh:none}
+*{box-sizing:border-box;margin:0}
+body{font-family:Geist,system-ui,sans-serif;background:var(--page);color:var(--ink);padding:24px 16px 80px;-webkit-font-smoothing:antialiased}
+h1{font-size:28px;font-weight:800;letter-spacing:-.03em}
+h2{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:48px 0 6px}
+.lead{max-width:760px;color:var(--ink2);font-size:15px;line-height:1.5;margin-top:8px}
+.top{display:flex;align-items:flex-start;gap:16px;justify-content:space-between;max-width:1280px;margin:0 auto}
+.wrap{max-width:1280px;margin:0 auto}
+.tog{border:1px solid var(--line2);background:var(--card);color:var(--ink);font:inherit;font-size:14px;font-weight:600;height:44px;padding:0 16px;border-radius:12px;cursor:pointer;flex-shrink:0}
+.pair{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;margin-top:16px}
+.col{display:flex;flex-direction:column;gap:10px}
+.tag{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.tag b{color:var(--coral)}
+.note{font-size:13px;color:var(--ink2);max-width:375px;line-height:1.45}
+.notes{max-width:340px;font-size:14px;line-height:1.5;color:var(--ink2);padding-top:28px}
+.notes li{margin:0 0 10px 18px}
+.notes strong{color:var(--ink)}
+/* teléfono */
+.ph{width:375px;height:720px;background:var(--bg);border-radius:28px;border:1px solid var(--line2);overflow:hidden;position:relative;display:flex;flex-direction:column;font-size:14px}
+.ph.old{opacity:.92}
+.bar{height:54px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 12px 0 16px;border-bottom:1px solid var(--line);background:var(--bg)}
+.bar b{flex:1;font-size:18px;font-weight:800;letter-spacing:-.03em}
+.ib{width:42px;height:42px;border-radius:12px;background:var(--card);box-shadow:var(--sh);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink);flex-shrink:0}
+.ib svg,.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sub{display:flex;gap:2px;margin:6px 12px;padding:3px;background:var(--bg2);border-radius:12px;flex-shrink:0;overflow:hidden}
+.sub span{padding:7px 12px;border-radius:9px;font-size:13px;font-weight:500;color:var(--ink2);white-space:nowrap}
+.sub .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+.body{flex:1;overflow:hidden;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.nav{height:62px;flex-shrink:0;border-top:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:space-around;font-size:11px;color:var(--ink3);position:relative}
+.nav span{display:grid;justify-items:center;gap:3px}
+.nav .on{color:var(--coral);font-weight:600}
+.nav .plus{width:52px;height:52px;border-radius:50%;background:var(--coral);color:var(--on);display:grid;place-items:center;margin-top:-26px;box-shadow:0 6px 16px rgba(194,84,47,.35)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh)}
+.fold{position:absolute;left:0;right:0;border-top:2px dashed var(--coral);z-index:5}
+.fold i{display:none}
+.cap{font-size:13px;font-weight:600;color:var(--coral)}.cap.old{color:var(--ink2)}
+.row{display:flex;align-items:center;gap:8px}
+.hs{display:flex;gap:8px;overflow:hidden;flex-shrink:0}
+.pill{height:44px;padding:0 14px;border-radius:12px;background:var(--bg2);display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink2);white-space:nowrap;flex-shrink:0}
+.pill.on{background:var(--ink);color:var(--bg)}
+.pill small{font-weight:600;opacity:.7;font-variant-numeric:tabular-nums}
+.pill.warn{background:var(--warnbg);color:var(--warn)}
+.btn{height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--line2);background:var(--card);display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;white-space:nowrap;flex-shrink:0}
+.btn.p{background:var(--coral);border-color:var(--coral);color:var(--on)}
+.btn.sq{width:48px;height:48px;padding:0}
+.btn.t{height:48px}
+.mut{color:var(--ink3)}.s12{font-size:12px}.s13{font-size:13px}.num{font-variant-numeric:tabular-nums}
+.chip{font-size:11px;font-weight:600;padding:3px 8px;border-radius:8px;white-space:nowrap}
+.c-info{background:var(--infobg);color:var(--info)}.c-ok{background:var(--okbg);color:var(--ok)}.c-warn{background:var(--warnbg);color:var(--warn)}
+.search{flex:1;min-width:0;height:48px;border-radius:12px;border:1px solid var(--line2);background:var(--card);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--ink3);font-size:14px}
+/* pedido */
+.ord{padding:12px 14px;display:grid;gap:8px}
+.ord h4{font-size:15px;font-weight:600}
+.ord .act{height:48px;border-radius:12px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:600;font-size:14px}
+.ord .act.q{background:var(--bg2);color:var(--ink)}
+/* platillo */
+.dish{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);min-height:64px}
+.dish:last-child{border-bottom:0}
+.thumb{width:44px;height:44px;border-radius:10px;background:var(--bg2);flex-shrink:0;display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--ink3)}
+.dish .n{flex:1;min-width:0}
+.dish .n b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sw{width:44px;height:26px;border-radius:999px;background:var(--coral);position:relative;flex-shrink:0}
+.sw::after{content:"";position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:#fff}
+.sw.off{background:var(--line2)}.sw.off::after{right:auto;left:3px}
+/* hoy */
+.kpi{padding:16px}
+.kpi .big{font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1.05}
+.kpi .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.kpi .two b{display:block;font-size:20px;font-weight:600}
+.lrow{display:flex;align-items:center;gap:12px;padding:0 14px;min-height:56px;border-bottom:1px solid var(--line)}
+.lrow:last-child{border-bottom:0}
+.lrow .n{flex:1;min-width:0}
+.lrow .n b{display:block;font-weight:600}
+.ring{width:36px;height:36px;border-radius:50%;background:conic-gradient(var(--coral) 80%,var(--bg2) 0);display:grid;place-items:center;flex-shrink:0}
+.ring::after{content:"";width:26px;height:26px;border-radius:50%;background:var(--card)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--warn);flex-shrink:0;margin:0 14px}
+/* bloques «antes» */
+.blk{border-radius:14px;border:1px solid var(--line);background:var(--card);padding:12px 14px;flex-shrink:0}
+.tint{background:color-mix(in srgb,var(--coral) 9%,var(--card));border-color:color-mix(in srgb,var(--coral) 35%,transparent)}
+/* escritorio */
+.desk{width:100%;max-width:1180px;height:560px;background:var(--bg);border:1px solid var(--line2);border-radius:16px;overflow:hidden;display:flex;font-size:14px;margin-top:14px}
+.side{width:200px;flex-shrink:0;border-right:1px solid var(--line);padding:16px 12px;display:grid;gap:4px;align-content:start;font-size:14px;color:var(--ink2)}
+.side b{color:var(--ink);font-size:15px;margin-bottom:10px;padding:0 10px}
+.side span{padding:9px 10px;border-radius:10px}
+.side .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+.dmain{flex:1;min-width:0;display:flex;flex-direction:column}
+.dbar{height:60px;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--line);flex-shrink:0}
+.dbar b{font-size:22px;font-weight:800;letter-spacing:-.03em}
+.dbody{padding:16px 24px;display:flex;flex-direction:column;gap:14px;overflow:hidden;flex:1}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tabsd{display:flex;gap:4px;margin-left:16px}
+.tabsd span{padding:7px 12px;border-radius:9px;font-size:13px;color:var(--ink2)}
+.tabsd .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+table{width:100%;border-collapse:collapse}
+td,th{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line);font-size:14px}
+th{font-size:12px;font-weight:600;color:var(--ink3)}
+td.r,th.r{text-align:right}
+@media(max-width:820px){.notes{padding-top:0;max-width:375px}.desk{display:none}.nodesk{display:block!important}}
+.nodesk{display:none;font-size:13px;color:var(--ink3);margin-top:10px}
+/* propios de esta maqueta */
+.ex{display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:60px;border-bottom:1px solid var(--line)}
+.ex:last-child{border-bottom:0}
+.ex .n{flex:1;min-width:0}.ex .n b{display:block;font-weight:600;font-size:14px}
+.ex .go{font-size:13px;font-weight:600;color:var(--coral);white-space:nowrap}
+.sd{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.sd.d{background:#B3261E}.sd.w{background:#C98A0B}.sd.n{background:var(--ink3)}
+[data-theme=dark] .sd.d{background:#F2877E}
+.money{padding:14px 16px}
+.money .lab{font-size:13px;color:var(--ink3);font-weight:500}
+.money .big{font-size:36px;font-weight:700;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
+.money .split{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.money .split b{display:block;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.money .foot{margin-top:10px;font-size:13px;color:var(--ink3)}
+.up{color:var(--ok);font-weight:600}
+.step{display:flex;gap:12px;align-items:flex-start;padding:14px}
+.step .k{width:28px;height:28px;border-radius:50%;border:2px solid var(--line2);display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--ink3);flex-shrink:0}
+.step.now .k{border-color:var(--coral);color:var(--coral)}
+.step .n{flex:1;min-width:0}
+.step .n b{display:block;font-size:15px;font-weight:600}
+.step .n p{font-size:13px;color:var(--ink2);margin-top:3px;line-height:1.4}
+.step .btn{margin-top:10px}
+.hdr{display:flex;align-items:center;gap:8px;min-height:32px}
+.hdr .d{flex:1;font-size:14px;color:var(--ink3);font-weight:500}
+.hdr a{font-size:13px;font-weight:600;color:var(--coral)}
+.sec{font-size:13px;font-weight:600;color:var(--ink3);margin:2px 2px -2px}
+.bug{display:inline-block;font-size:11px;font-weight:700;color:#B3261E;background:#FBE4E2;border-radius:6px;padding:1px 6px;margin-left:4px}
+[data-theme=dark] .bug{color:#F2877E;background:#3A1512}
+.g2{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;align-items:start}
+.bars{display:flex;align-items:flex-end;gap:6px;height:90px;padding:0 16px 14px}
+.bars i{flex:1;background:var(--bg2);border-radius:4px 4px 0 0}
+.bars i.on{background:var(--coral)}
+@media(max-width:420px){.ph{width:100%}}
+/* propios de la maqueta del turno de práctica */
+.pbar{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--infobg);color:var(--info);border-bottom:1px solid var(--line);font-size:13px}
+.pbar b{font-weight:700}
+.pbar .sal{margin-left:auto;font-weight:700;white-space:nowrap}
+.prog{display:flex;gap:4px;padding:0 12px 6px;background:var(--infobg)}
+.prog i{flex:1;height:4px;border-radius:2px;background:var(--line2)}.prog i.on{background:var(--info)}
+.mesa{border-radius:14px;border:1px solid var(--line2);background:var(--card);padding:10px 12px;min-height:74px;display:flex;flex-direction:column;justify-content:space-between}
+.mesa b{font-size:22px;font-weight:700}
+.mesa.p{border:2px dashed var(--info);background:var(--infobg)}
+.mesa.p b{color:var(--info)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tour{position:absolute;left:16px;right:16px;top:230px;background:var(--card);border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,.25);padding:16px;z-index:6;display:grid;gap:8px}
+.velo{position:absolute;inset:0;background:rgba(0,0,0,.35);z-index:5}
+.cta{height:50px;border-radius:14px;background:var(--coral);color:#fff;display:grid;place-items:center;font-weight:700;font-size:15px}
+.ghost{min-height:40px;display:grid;place-items:center;font-size:13px;font-weight:600;color:var(--ink2)}
+.hoja{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:22px 22px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.18);padding:16px;z-index:6;display:grid;gap:10px}
+.aviso{border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.4;background:var(--infobg);color:var(--info);border:1px solid color-mix(in srgb,var(--info) 30%,transparent)}
+.paso{display:flex;gap:10px;align-items:center;font-size:14px;padding:6px 0}
+.paso .k{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--okbg);color:var(--ok);flex-shrink:0}
+.comanda{border-radius:14px;border:1px solid var(--line2);background:var(--card);padding:12px;display:grid;gap:6px}
+.comanda.p{border:2px dashed var(--info)}
+@media(max-width:420px){.ph{width:100%}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0"/></symbol>
+<symbol id="more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+<symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+</defs></svg>
+
+<div class="top">
+  <div>
+    <div class="tag">Maqueta para aprobar · 2026-11-16 · ficha 2.5 de la auditoría (A05)</div>
+    <h1>Turno de práctica</h1>
+    <p class="lead">Quien entra es un mesero o cajero nuevo, en su primer día, con el teléfono del local. Quiere una sola cosa: <strong>atender una mesa completa sin miedo a equivocarse</strong>. Hoy recibe un recorrido de cinco consejos que dice dónde está cada cosa, y luego aprende con pedidos reales que después hay que anular con PIN y que ensucian ventas, caja y existencias. La propuesta es un turno de cinco minutos en las pantallas de verdad, sobre una «Mesa P» de práctica que no cuenta en nada y que se borra al terminar. Nada de esto está construido.</p>
+  </div>
+  <button class="tog" onclick="const h=document.documentElement;h.dataset.theme=h.dataset.theme==='dark'?'light':'dark'">Claro / oscuro</button>
+</div>
+
+<div class="wrap">
+
+<h2>1 · Empezar</h2>
+<p class="lead">Se ofrece en el último paso del recorrido de bienvenida y queda siempre en Tomar pedidos › «⋯» › «Turno de práctica». El dueño también puede mandárselo a alguien desde Personal.</p>
+<div class="pair">
+  <div class="col">
+    <div class="tag">Hoy</div>
+    <div class="ph old" style="height:600px">
+      <div class="bar"><b>Tomar pedidos</b><span class="ib"><svg><use href="#bell"/></svg></span><span class="ib"><svg><use href="#more"/></svg></span></div>
+      <div class="body">
+        <div class="grid2"><div class="mesa"><b>1</b><span class="s12 mut">Libre</span></div><div class="mesa"><b>2</b><span class="s12 mut">Libre</span></div><div class="mesa"><b>3</b><span class="s12 mut">Libre</span></div><div class="mesa"><b>4</b><span class="s12 mut">Libre</span></div></div>
+      </div>
+      <div class="velo"></div>
+      <div class="tour"><span class="s12" style="color:var(--coral);font-weight:700">PASO 1 DE 5</span><b style="font-size:20px">¡Bienvenido!</b><span class="s13 mut">Este es tu centro de control: tu menú, tus pedidos y tus clientes. Te enseñamos dónde está cada cosa.</span><div class="row"><span class="s13 mut">Omitir</span><span class="btn p" style="margin-left:auto">Siguiente</span></div></div>
+    </div>
+    <div class="cap old">— — Cinco consejos de dónde está todo; para practicar, solo pedidos reales</div>
+  </div>
+
+  <div class="col">
+    <div class="tag"><b>Al terminar el recorrido</b></div>
+    <div class="ph" style="height:600px">
+      <div class="bar"><b>Tomar pedidos</b><span class="ib"><svg><use href="#bell"/></svg></span><span class="ib"><svg><use href="#more"/></svg></span></div>
+      <div class="body">
+        <div class="grid2"><div class="mesa"><b>1</b><span class="s12 mut">Libre</span></div><div class="mesa"><b>2</b><span class="s12 mut">Libre</span></div><div class="mesa"><b>3</b><span class="s12 mut">Libre</span></div><div class="mesa"><b>4</b><span class="s12 mut">Libre</span></div></div>
+      </div>
+      <div class="velo"></div>
+      <div class="tour"><span class="s12" style="color:var(--info);font-weight:700">TURNO DE PRÁCTICA · 5 MIN</span><b style="font-size:20px">¿Practicamos una mesa?</b><span class="s13 mut">Abres una mesa, pides, mandas a cocina, cobras y corriges, con tu menú real. Nada cuenta: ni ventas, ni caja, ni existencias. Al final se borra.</span><div class="cta">Empezar la práctica</div><div class="ghost">Ahora no</div></div>
+    </div>
+    <div class="cap">— — La invitación llega cuando ya sabe dónde está todo</div>
+  </div>
+</div>
+
+<h2>2 · Practicar en las pantallas de verdad</h2>
+<p class="lead">Una franja azul arriba dice el paso y cómo salir, y acompaña de pantalla en pantalla. La práctica pasa en una <strong>Mesa P</strong> que no existe en el salón, así que nunca ocupa una mesa real.</p>
+<div class="pair">
+  <div class="col">
+    <div class="tag"><b>Paso 1 · abre la Mesa P</b></div>
+    <div class="ph" style="height:600px">
+      <div class="bar"><b>Tomar pedidos</b><span class="ib"><svg><use href="#more"/></svg></span></div>
+      <div class="pbar"><b>Práctica</b> · Paso 1 de 6 · Toca la Mesa P<span class="sal">Salir</span></div>
+      <div class="prog"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="body">
+        <div class="grid2"><div class="mesa p"><b>P</b><span class="s12" style="color:var(--info)">Mesa de práctica</span></div><div class="mesa"><b>1</b><span class="s12 mut">Libre</span></div><div class="mesa"><b>2</b><span class="s12 mut">Libre</span></div><div class="mesa"><b>3</b><span class="s12 mut">Libre</span></div></div>
+      </div>
+    </div>
+    <div class="cap">— — La Mesa P va primero y no ocupa una mesa real</div>
+  </div>
+
+  <div class="col">
+    <div class="tag"><b>Paso 2 · un platillo con extra</b></div>
+    <div class="ph" style="height:600px">
+      <div class="bar"><b>Mesa P</b></div>
+      <div class="pbar"><b>Práctica</b> · Paso 2 de 6 · Agrega una hamburguesa con un extra<span class="sal">Salir</span></div>
+      <div class="prog"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div>
+      <div class="body"><div class="card" style="padding:12px"><b>Rincón Clásica</b><div class="s12 mut">Q52.00</div></div></div>
+      <div class="hoja"><b style="font-size:18px">Rincón Clásica</b><span class="s13 mut">Término</span><div class="row" style="gap:8px"><span class="pill on">Tres cuartos</span><span class="pill">Bien cocida</span></div><span class="s13 mut">Extras</span><div class="row" style="gap:8px"><span class="pill on">Tocino +Q8</span><span class="pill">Queso +Q6</span></div><div class="cta">Agregar · Q60.00</div></div>
+    </div>
+    <div class="cap">— — La misma hoja del platillo que usará en el servicio</div>
+  </div>
+
+  <div class="col">
+    <div class="tag"><b>Paso 4 · márcalo listo</b></div>
+    <div class="ph" style="height:600px">
+      <div class="bar"><b>Cocina</b></div>
+      <div class="pbar"><b>Práctica</b> · Paso 4 de 6 · Márcalo listo en Cocina<span class="sal">Salir</span></div>
+      <div class="prog"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+      <div class="body">
+        <div class="comanda p"><div class="row"><b>Mesa P</b><span class="chip c-info" style="margin-left:auto">Práctica</span></div><span>1× Rincón Clásica</span><span class="s12 mut">Tres cuartos · +Tocino</span><div class="cta" style="height:44px">Listo</div></div>
+        <div class="comanda"><div class="row"><b>Mesa 7</b><span class="chip c-warn" style="margin-left:auto">12 min</span></div><span>2× Pepián</span></div>
+      </div>
+    </div>
+    <div class="cap">— — En Cocina se ve como práctica y no se imprime</div>
+  </div>
+
+  <div class="col">
+    <div class="tag"><b>Paso 5 · cobrar</b></div>
+    <div class="ph" style="height:600px">
+      <div class="bar"><b>Mesa P</b></div>
+      <div class="pbar"><b>Práctica</b> · Paso 5 de 6 · Cobra Q60.00 en efectivo<span class="sal">Salir</span></div>
+      <div class="prog"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+      <div class="body"></div>
+      <div class="hoja"><b style="font-size:18px">Cobrar Mesa P</b><div class="row"><span class="mut">Por cobrar</span><b style="margin-left:auto;font-size:20px" class="num">Q60.00</b></div><div class="row" style="gap:8px"><span class="pill on">Efectivo</span><span class="pill">Tarjeta</span></div><div class="search" style="color:var(--ink)">Recibido: Q100.00 · Vuelto Q40.00</div><div class="aviso">Cobro de práctica: no entra dinero a la caja.</div><div class="cta">Cobrar Q60.00</div></div>
+    </div>
+    <div class="cap">— — El cobro de verdad, con el vuelto, pero sin dinero</div>
+  </div>
+</div>
+
+<h2>3 · Terminar</h2>
+<div class="pair">
+  <div class="col">
+    <div class="tag"><b>Lo hiciste</b></div>
+    <div class="ph" style="height:560px">
+      <div class="bar"><b>Tomar pedidos</b></div>
+      <div class="body" style="justify-content:center">
+        <div class="card" style="padding:18px;display:grid;gap:8px">
+          <b style="font-size:22px">¡Turno de práctica completo!</b>
+          <span class="s13 mut">Lo hiciste en 4 minutos.</span>
+          <div class="paso"><span class="k">✓</span>Abriste una mesa</div>
+          <div class="paso"><span class="k">✓</span>Pediste con un extra</div>
+          <div class="paso"><span class="k">✓</span>Mandaste a cocina y quedó listo</div>
+          <div class="paso"><span class="k">✓</span>Cobraste y diste vuelto</div>
+          <div class="paso"><span class="k">✓</span>Corregiste un plato</div>
+          <span class="s12 mut">La Mesa P y sus pedidos ya se borraron.</span>
+          <div class="cta">Empezar el servicio</div>
+          <div class="ghost">Repetir la práctica</div>
+        </div>
+      </div>
+    </div>
+    <div class="cap">— — Resultado claro y la salida a trabajar</div>
+  </div>
+  <ul class="notes">
+    <li><strong>Los seis pasos:</strong> abrir la Mesa P, pedir un platillo con extra, enviar a cocina, marcar listo, cobrar con vuelto y corregir (anular un plato). Si el plan no tiene Cocina, el paso 4 se hace en Pedidos.</li>
+    <li><strong>Nada cuenta:</strong> usa el pedido de prueba de la ficha 2.2, que no cuenta en cifras, caja, puntos ni existencias. El cobro de práctica no registra dinero. En práctica, la anulación no pide el PIN del encargado y lo dice: «en un turno real te lo pedirán».</li>
+    <li><strong>No molesta al servicio:</strong> la Mesa P no ocupa mesas reales y la comanda no se imprime. En Pedidos y Cocina, la tarjeta lleva la etiqueta «Práctica».</li>
+    <li><strong>Salir cuando quiera:</strong> «Salir» borra la Mesa P y sus pedidos. Si alguien cierra la app a la mitad, la práctica se borra sola en dos horas.</li>
+    <li><strong>Quién:</strong> cualquiera con acceso a Tomar pedidos. El dueño lo ve en Personal: «Hizo la práctica · hoy 10:42».</li>
+  </ul>
+</div>
+
+<h2>4 · En la PC (1280 px)</h2>
+<p class="lead">La misma franja de pasos sobre la pantalla de Tomar pedidos de escritorio; la Mesa P va primero en el plano y en la lista.</p>
+<div class="desk" style="height:420px">
+  <div class="side"><b>Rincón 502</b><span>Hoy</span><span>Pedidos</span><span>Menú</span><span class="on">Tomar pedidos</span><span>Clientes</span><span>Negocio</span></div>
+  <div class="dmain">
+    <div class="dbar"><b>Tomar pedidos</b></div>
+    <div class="pbar" style="padding:10px 24px"><b>Práctica</b> · Paso 3 de 6 · Envía el pedido a cocina<span class="sal">Salir de la práctica</span></div>
+    <div class="dbody" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-content:start">
+      <div class="mesa p"><b>P</b><span class="s12" style="color:var(--info)">Práctica · Q60.00</span></div>
+      <div class="mesa"><b>1</b><span class="s12 mut">Libre</span></div><div class="mesa"><b>2</b><span class="s12 mut">Libre</span></div><div class="mesa"><b>3</b><span class="s12 mut">Libre</span></div><div class="mesa"><b>4</b><span class="s12 mut">Libre</span></div>
+      <div class="mesa"><b>5</b><span class="s12 mut">Libre</span></div><div class="mesa"><b>6</b><span class="s12 mut">Libre</span></div><div class="mesa"><b>7</b><span class="s12 mut">Ocupada · 12 min</span></div><div class="mesa"><b>8</b><span class="s12 mut">Libre</span></div><div class="mesa"><b>9</b><span class="s12 mut">Libre</span></div>
+    </div>
+  </div>
+</div>
+<p class="nodesk">La vista de PC se ve en una pantalla ancha.</p>
+
+<h2>Lo que necesito que decidas</h2>
+<ol class="lead" style="padding-left:20px">
+  <li><strong>Dónde se practica:</strong> ¿en el propio restaurante con la Mesa P, que no cuenta en nada (recomendado), o en un restaurante de práctica aparte con datos de ejemplo?</li>
+  <li><strong>El cobro:</strong> ¿cobro de práctica sin dinero (recomendado)?</li>
+  <li><strong>La impresora:</strong> ¿la comanda de práctica no se imprime (recomendado) o sale impresa con «PRÁCTICA — NO COCINAR»?</li>
+  <li><strong>El PIN:</strong> en la práctica, ¿anular un plato no pide el PIN del encargado (recomendado), avisando que en el turno real sí lo pedirán?</li>
+</ol>
+</div>
+</body>
+</html>

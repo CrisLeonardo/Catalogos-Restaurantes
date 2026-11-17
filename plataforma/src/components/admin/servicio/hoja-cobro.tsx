@@ -30,6 +30,8 @@ interface HojaCobroProps {
   onAbonar: (pagos: PagoCobro[], reparto: string | null, partes: string[]) => void;
   onGuardarPartes: (cantidad: number) => void;
   mantieneMesa: boolean;
+  /** Una nota junto al botón: el turno de práctica dice que no entra dinero. */
+  nota?: string;
 }
 
 const centavos = (n: number) => Math.round(n * 100);
@@ -51,7 +53,7 @@ function billetes(total: number): number[] {
 
 export default function HojaCobro({
   titulo, resumen, desglose, porCobrar, yaCobrado, saldosPlatos, contexto, money, redondear,
-  busy, onClose, onCobrarTodo, onCobrarParte, onAbonar, onGuardarPartes, mantieneMesa,
+  busy, onClose, onCobrarTodo, onCobrarParte, onAbonar, onGuardarPartes, mantieneMesa, nota,
 }: HojaCobroProps) {
   const [modo, setModo] = useState<ModoCobro>('todo');
   const [personas, setPersonas] = useState(2);
@@ -142,6 +144,7 @@ export default function HojaCobro({
                   ? 'La cuenta queda pagada y la mesa sigue abierta.'
                   : `La mesa sigue abierta con ${money((saldo - base) / 100)} pendientes.`}</p>
               )}
+              {nota && <p className="sv-foot-note">{nota}</p>}
               <Button type="button" size="action" onClick={cobrar} disabled={!puede} aria-busy={busy}>
                 {busy ? 'Cobrando…' : cta}
               </Button>

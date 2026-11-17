@@ -280,6 +280,10 @@ function queHizo(r: ActivityLike): string {
       const motivo = typeof m.motivo === 'string' && m.motivo ? ` («${m.motivo}»)` : '';
       return `devolvió ${monto != null ? fmtMoney(monto) : 'dinero'} del pedido ${e}${motivo}`;
     }
+    case 'turno_practica': {
+      const min = num(m.minutos);
+      return `hizo el turno de práctica${min ? ` en ${plural(min, 'minuto', 'minutos')}` : ''}`;
+    }
     default:
       return humanizarClave(r.action).toLowerCase() + (e && !esUuid(e) ? ` — ${e}` : '');
   }
