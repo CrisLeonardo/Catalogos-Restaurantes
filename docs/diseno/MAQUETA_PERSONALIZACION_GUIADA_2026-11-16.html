@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueta · Personalizar con ayuda</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F2F1EE;--bg2:#E9E7E3;--card:#FFFFFF;--ink:#17161A;--ink2:rgba(23,22,26,.72);--ink3:rgba(23,22,26,.56);--line:rgba(23,22,26,.12);--line2:rgba(23,22,26,.2);--coral:#C2542F;--on:#fff;--ok:#1E7A46;--okbg:#E4F3E9;--warn:#8A5A00;--warnbg:#FBEFD2;--info:#1F5FA8;--infobg:#E3EEFB;--page:#DEDCD7;--sh:0 1px 2px rgba(0,0,0,.06)}
+[data-theme=dark]{--bg:#0C0B0A;--bg2:#141311;--card:#1A1917;--ink:#F5F3EF;--ink2:rgba(245,243,239,.74);--ink3:rgba(245,243,239,.56);--line:rgba(245,243,239,.12);--line2:rgba(245,243,239,.22);--coral:#D9683F;--on:#fff;--ok:#6FD49A;--okbg:#12301F;--warn:#F0C568;--warnbg:#33270B;--info:#8DBBF2;--infobg:#10243D;--page:#000;--sh:none}
+*{box-sizing:border-box;margin:0}
+body{font-family:Geist,system-ui,sans-serif;background:var(--page);color:var(--ink);padding:24px 16px 80px;-webkit-font-smoothing:antialiased}
+h1{font-size:28px;font-weight:800;letter-spacing:-.03em}
+h2{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:48px 0 6px}
+.lead{max-width:760px;color:var(--ink2);font-size:15px;line-height:1.5;margin-top:8px}
+.top{display:flex;align-items:flex-start;gap:16px;justify-content:space-between;max-width:1280px;margin:0 auto}
+.wrap{max-width:1280px;margin:0 auto}
+.tog{border:1px solid var(--line2);background:var(--card);color:var(--ink);font:inherit;font-size:14px;font-weight:600;height:44px;padding:0 16px;border-radius:12px;cursor:pointer;flex-shrink:0}
+.pair{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;margin-top:16px}
+.col{display:flex;flex-direction:column;gap:10px}
+.tag{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.tag b{color:var(--coral)}
+.note{font-size:13px;color:var(--ink2);max-width:375px;line-height:1.45}
+.notes{max-width:340px;font-size:14px;line-height:1.5;color:var(--ink2);padding-top:28px}
+.notes li{margin:0 0 10px 18px}
+.notes strong{color:var(--ink)}
+/* teléfono */
+.ph{width:375px;height:720px;background:var(--bg);border-radius:28px;border:1px solid var(--line2);overflow:hidden;position:relative;display:flex;flex-direction:column;font-size:14px}
+.ph.old{opacity:.92}
+.bar{height:54px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 12px 0 16px;border-bottom:1px solid var(--line);background:var(--bg)}
+.bar b{flex:1;font-size:18px;font-weight:800;letter-spacing:-.03em}
+.ib{width:42px;height:42px;border-radius:12px;background:var(--card);box-shadow:var(--sh);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink);flex-shrink:0}
+.ib svg,.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sub{display:flex;gap:2px;margin:6px 12px;padding:3px;background:var(--bg2);border-radius:12px;flex-shrink:0;overflow:hidden}
+.sub span{padding:7px 12px;border-radius:9px;font-size:13px;font-weight:500;color:var(--ink2);white-space:nowrap}
+.sub .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+.body{flex:1;overflow:hidden;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.nav{height:62px;flex-shrink:0;border-top:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:space-around;font-size:11px;color:var(--ink3);position:relative}
+.nav span{display:grid;justify-items:center;gap:3px}
+.nav .on{color:var(--coral);font-weight:600}
+.nav .plus{width:52px;height:52px;border-radius:50%;background:var(--coral);color:var(--on);display:grid;place-items:center;margin-top:-26px;box-shadow:0 6px 16px rgba(194,84,47,.35)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh)}
+.fold{position:absolute;left:0;right:0;border-top:2px dashed var(--coral);z-index:5}
+.fold i{display:none}
+.cap{font-size:13px;font-weight:600;color:var(--coral)}.cap.old{color:var(--ink2)}
+.row{display:flex;align-items:center;gap:8px}
+.hs{display:flex;gap:8px;overflow:hidden;flex-shrink:0}
+.pill{height:44px;padding:0 14px;border-radius:12px;background:var(--bg2);display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink2);white-space:nowrap;flex-shrink:0}
+.pill.on{background:var(--ink);color:var(--bg)}
+.pill small{font-weight:600;opacity:.7;font-variant-numeric:tabular-nums}
+.pill.warn{background:var(--warnbg);color:var(--warn)}
+.btn{height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--line2);background:var(--card);display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;white-space:nowrap;flex-shrink:0}
+.btn.p{background:var(--coral);border-color:var(--coral);color:var(--on)}
+.btn.sq{width:48px;height:48px;padding:0}
+.btn.t{height:48px}
+.mut{color:var(--ink3)}.s12{font-size:12px}.s13{font-size:13px}.num{font-variant-numeric:tabular-nums}
+.chip{font-size:11px;font-weight:600;padding:3px 8px;border-radius:8px;white-space:nowrap}
+.c-info{background:var(--infobg);color:var(--info)}.c-ok{background:var(--okbg);color:var(--ok)}.c-warn{background:var(--warnbg);color:var(--warn)}
+.search{flex:1;min-width:0;height:48px;border-radius:12px;border:1px solid var(--line2);background:var(--card);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--ink3);font-size:14px}
+/* pedido */
+.ord{padding:12px 14px;display:grid;gap:8px}
+.ord h4{font-size:15px;font-weight:600}
+.ord .act{height:48px;border-radius:12px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:600;font-size:14px}
+.ord .act.q{background:var(--bg2);color:var(--ink)}
+/* platillo */
+.dish{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);min-height:64px}
+.dish:last-child{border-bottom:0}
+.thumb{width:44px;height:44px;border-radius:10px;background:var(--bg2);flex-shrink:0;display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--ink3)}
+.dish .n{flex:1;min-width:0}
+.dish .n b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sw{width:44px;height:26px;border-radius:999px;background:var(--coral);position:relative;flex-shrink:0}
+.sw::after{content:"";position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:#fff}
+.sw.off{background:var(--line2)}.sw.off::after{right:auto;left:3px}
+/* hoy */
+.kpi{padding:16px}
+.kpi .big{font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1.05}
+.kpi .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.kpi .two b{display:block;font-size:20px;font-weight:600}
+.lrow{display:flex;align-items:center;gap:12px;padding:0 14px;min-height:56px;border-bottom:1px solid var(--line)}
+.lrow:last-child{border-bottom:0}
+.lrow .n{flex:1;min-width:0}
+.lrow .n b{display:block;font-weight:600}
+.ring{width:36px;height:36px;border-radius:50%;background:conic-gradient(var(--coral) 80%,var(--bg2) 0);display:grid;place-items:center;flex-shrink:0}
+.ring::after{content:"";width:26px;height:26px;border-radius:50%;background:var(--card)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--warn);flex-shrink:0;margin:0 14px}
+/* bloques «antes» */
+.blk{border-radius:14px;border:1px solid var(--line);background:var(--card);padding:12px 14px;flex-shrink:0}
+.tint{background:color-mix(in srgb,var(--coral) 9%,var(--card));border-color:color-mix(in srgb,var(--coral) 35%,transparent)}
+/* escritorio */
+.desk{width:100%;max-width:1180px;height:560px;background:var(--bg);border:1px solid var(--line2);border-radius:16px;overflow:hidden;display:flex;font-size:14px;margin-top:14px}
+.side{width:200px;flex-shrink:0;border-right:1px solid var(--line);padding:16px 12px;display:grid;gap:4px;align-content:start;font-size:14px;color:var(--ink2)}
+.side b{color:var(--ink);font-size:15px;margin-bottom:10px;padding:0 10px}
+.side span{padding:9px 10px;border-radius:10px}
+.side .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+.dmain{flex:1;min-width:0;display:flex;flex-direction:column}
+.dbar{height:60px;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--line);flex-shrink:0}
+.dbar b{font-size:22px;font-weight:800;letter-spacing:-.03em}
+.dbody{padding:16px 24px;display:flex;flex-direction:column;gap:14px;overflow:hidden;flex:1}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tabsd{display:flex;gap:4px;margin-left:16px}
+.tabsd span{padding:7px 12px;border-radius:9px;font-size:13px;color:var(--ink2)}
+.tabsd .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+table{width:100%;border-collapse:collapse}
+td,th{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line);font-size:14px}
+th{font-size:12px;font-weight:600;color:var(--ink3)}
+td.r,th.r{text-align:right}
+@media(max-width:820px){.notes{padding-top:0;max-width:375px}.desk{display:none}.nodesk{display:block!important}}
+.nodesk{display:none;font-size:13px;color:var(--ink3);margin-top:10px}
+/* propios de esta maqueta */
+.ex{display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:60px;border-bottom:1px solid var(--line)}
+.ex:last-child{border-bottom:0}
+.ex .n{flex:1;min-width:0}.ex .n b{display:block;font-weight:600;font-size:14px}
+.ex .go{font-size:13px;font-weight:600;color:var(--coral);white-space:nowrap}
+.sd{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.sd.d{background:#B3261E}.sd.w{background:#C98A0B}.sd.n{background:var(--ink3)}
+[data-theme=dark] .sd.d{background:#F2877E}
+.money{padding:14px 16px}
+.money .lab{font-size:13px;color:var(--ink3);font-weight:500}
+.money .big{font-size:36px;font-weight:700;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
+.money .split{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.money .split b{display:block;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.money .foot{margin-top:10px;font-size:13px;color:var(--ink3)}
+.up{color:var(--ok);font-weight:600}
+.step{display:flex;gap:12px;align-items:flex-start;padding:14px}
+.step .k{width:28px;height:28px;border-radius:50%;border:2px solid var(--line2);display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--ink3);flex-shrink:0}
+.step.now .k{border-color:var(--coral);color:var(--coral)}
+.step .n{flex:1;min-width:0}
+.step .n b{display:block;font-size:15px;font-weight:600}
+.step .n p{font-size:13px;color:var(--ink2);margin-top:3px;line-height:1.4}
+.step .btn{margin-top:10px}
+.hdr{display:flex;align-items:center;gap:8px;min-height:32px}
+.hdr .d{flex:1;font-size:14px;color:var(--ink3);font-weight:500}
+.hdr a{font-size:13px;font-weight:600;color:var(--coral)}
+.sec{font-size:13px;font-weight:600;color:var(--ink3);margin:2px 2px -2px}
+.bug{display:inline-block;font-size:11px;font-weight:700;color:#B3261E;background:#FBE4E2;border-radius:6px;padding:1px 6px;margin-left:4px}
+[data-theme=dark] .bug{color:#F2877E;background:#3A1512}
+.g2{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;align-items:start}
+.bars{display:flex;align-items:flex-end;gap:6px;height:90px;padding:0 16px 14px}
+.bars i{flex:1;background:var(--bg2);border-radius:4px 4px 0 0}
+.bars i.on{background:var(--coral)}
+@media(max-width:420px){.ph{width:100%}}
+/* propios de la maqueta 2.7 */
+.tabs{display:flex;gap:2px;padding:3px;background:var(--bg2);border-radius:12px;overflow:hidden;flex-shrink:0}
+.tabs span{padding:7px 10px;border-radius:9px;font-size:13px;font-weight:500;color:var(--ink2);white-space:nowrap}
+.tabs .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+.rec{border-radius:18px;border:1.5px solid var(--line2);background:var(--card);overflow:hidden;display:grid}
+.rec.on{border-color:var(--coral)}
+.rec .pie{display:flex;align-items:center;gap:10px;padding:10px 12px}
+.rec .pie .n{flex:1;min-width:0}.rec .pie b{display:block;font-size:15px;font-weight:600}.rec .pie span{font-size:12px;color:var(--ink3)}
+.usa{height:40px;padding:0 14px;border-radius:12px;background:var(--coral);color:#fff;display:inline-flex;align-items:center;font-size:13px;font-weight:700;white-space:nowrap}
+.usa.q{background:var(--bg2);color:var(--ink)}
+/* muestras de carta (mini) */
+.m{height:150px;padding:10px;display:grid;gap:6px;align-content:start;overflow:hidden}
+.m .hd{display:flex;align-items:center;gap:6px;font-weight:800;font-size:13px}
+.m .lg{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:11px;font-weight:800}
+.m .cats{display:flex;gap:4px}.m .cats i{font-style:normal;font-size:9px;padding:3px 7px;border-radius:99px}
+.m .g{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.m .t{border-radius:8px;overflow:hidden;font-size:9px;font-weight:600}
+.m .t .ft{height:34px;background-size:cover;background-position:center}
+.m .t .tx{padding:3px 5px;display:flex;justify-content:space-between}
+.m .fila{display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px dotted currentColor}
+.ft1{background:linear-gradient(135deg,#7a3b1d,#d2924f)}.ft2{background:linear-gradient(135deg,#3b2a1a,#a86b33)}.ft3{background:linear-gradient(135deg,#8c1d12,#e0a35a)}.ft4{background:linear-gradient(135deg,#5b4128,#c9a26a)}
+.pv{border-radius:18px;border:1px solid var(--line2);background:var(--card);overflow:hidden;display:grid}
+.pvtabs{display:flex;gap:4px;padding:8px;border-bottom:1px solid var(--line)}
+.pvtabs span{flex:1;text-align:center;padding:7px 0;border-radius:9px;font-size:12px;font-weight:600;color:var(--ink2)}
+.pvtabs .on{background:var(--bg2);color:var(--ink)}
+.bar2{flex-shrink:0;display:flex;align-items:center;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:var(--card)}
+.bar2 .t{flex:1;font-size:13px;color:var(--ink2)}
+.ok{display:flex;align-items:center;gap:10px;border-radius:12px;padding:10px 12px;background:var(--okbg);color:var(--ok);font-size:13px;font-weight:600}
+.ok a{margin-left:auto;color:var(--ok);text-decoration:underline}
+.sel{display:flex;align-items:center;gap:8px;padding:0 14px;min-height:52px;border-bottom:1px solid var(--line);font-size:14px}
+.sel:last-child{border-bottom:0}
+.sel .mut{margin-left:auto}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0"/></symbol>
+<symbol id="more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+</defs></svg>
+
+<div class="top">
+  <div>
+    <div class="tag">Maqueta para aprobar · 2026-11-16 · ficha 2.7 de la auditoría (R32, X22, A04)</div>
+    <h1>Personalizar con ayuda</h1>
+    <p class="lead">Quien entra es el dueño, pocas veces: al abrir el restaurante o cuando quiere refrescar su carta. Quiere una sola cosa: <strong>que su carta se vea bien sin saber de diseño</strong>. Hoy encuentra 8 estructuras por 26 paletas (208 combinaciones), con muestras de tacos genéricos y la vista previa apagada «porque consume CPU». La propuesta: tres diseños recomendados para su carta, con sus platillos de verdad, uno de un toque, y el catálogo completo un nivel más adentro. Nada de esto está construido.</p>
+  </div>
+  <button class="tog" onclick="const h=document.documentElement;h.dataset.theme=h.dataset.theme==='dark'?'light':'dark'">Claro / oscuro</button>
+</div>
+
+<div class="wrap">
+
+<h2>1 · Elegir un diseño</h2>
+<p class="lead">Las tres recomendaciones salen de lo que el restaurante ya tiene: cuántos platillos llevan foto, cuántos platillos son y si vende sobre todo para llevar. Cada muestra usa su logo, sus platillos y sus precios. «Ver todos los diseños» abre el catálogo de hoy, intacto.</p>
+<div class="pair">
+  <div class="col">
+    <div class="tag">Hoy</div>
+    <div class="ph old">
+      <div class="bar"><b>Personalizar sitio</b><span class="ib"><svg><use href="#bell"/></svg></span><span class="ib"><svg><use href="#more"/></svg></span></div>
+      <div class="body">
+        <div class="tabs"><span class="on">Diseño</span><span>Marca</span><span>Menú</span><span>Textos</span><span>Avanzado</span></div>
+        <p class="s12 mut" style="line-height:1.45">Elige un punto de partida y luego afínalo en las demás pestañas. Tu logo, nombre, textos y configuración de pedidos se conservan — la plantilla solo cambia colores…</p>
+        <div class="row"><b class="s13" style="flex:1">Tus plantillas</b><span class="btn p">+ Guardar diseño actual</span></div>
+        <p class="s12 mut">Aún no tienes plantillas propias…</p>
+        <b class="s13">1 · La estructura <span class="mut" style="font-weight:400">8 para elegir</span></b>
+        <div class="hs" style="flex-wrap:wrap;gap:6px"><span class="pill on">Clásico</span><span class="pill">Carta de autor</span><span class="pill">Revista</span><span class="pill">Kiosco</span><span class="pill">Estantes</span></div>
+        <b class="s13">2 · El estilo <span class="mut" style="font-weight:400">26 paletas</span></b>
+        <div class="grid2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="blk s12">Tacos · Bebidas · Q45</div><div class="blk s12">Tacos · Bebidas · Q45</div></div>
+      </div>
+    </div>
+    <div class="cap old">— — 208 combinaciones con tacos de ejemplo; la vista previa, apagada</div>
+  </div>
+
+  <div class="col">
+    <div class="tag"><b>Propuesta</b> · teléfono</div>
+    <div class="ph">
+      <div class="bar"><b>Personalizar sitio</b><span class="ib"><svg><use href="#more"/></svg></span></div>
+      <div class="body">
+        <div class="tabs"><span class="on">Diseño</span><span>Marca</span><span>Menú</span><span>Textos</span><span>Más</span></div>
+        <b style="font-size:16px">Recomendados para tu carta</b>
+        <span class="s12 mut" style="margin-top:-6px">13 de tus 38 platillos tienen foto: te conviene una carta con miniaturas</span>
+        <div class="rec on">
+          <div class="m" style="background:#F7F1E8;color:#2a1d14">
+            <div class="hd"><span class="lg" style="background:#B5462A;color:#fff">R</span>Rincón 502</div>
+            <div class="g" style="grid-template-columns:1fr"><div class="t" style="background:#fff;display:flex"><div class="ft ft3" style="width:48px;height:36px"></div><div class="tx" style="flex:1;align-items:center"><span>Pepperoni (mediana)</span><span>Q85</span></div></div><div class="t" style="background:#fff;display:flex"><div class="ft ft4" style="width:48px;height:36px"></div><div class="tx" style="flex:1;align-items:center"><span>Nachos Supremos</span><span>Q48</span></div></div></div>
+          </div>
+          <div class="pie"><span class="n"><b>Rápida de pedir · recomendado</b><span>Una fila por platillo, para el que tiene prisa</span></span><span class="usa">Usar este</span></div>
+        </div>
+        <div class="rec">
+          <div class="m" style="background:#0b0b0c;color:#F5F3EF">
+            <div class="hd"><span class="lg" style="background:#D97757;color:#0b0b0c">R</span>Rincón 502</div>
+            <div class="cats"><i style="background:#F5F3EF;color:#0b0b0c">Hamburguesas</i><i style="background:#1e1e20">Pizzas</i><i style="background:#1e1e20">Entradas</i></div>
+            <div class="g"><div class="t" style="background:#141416"><div class="ft ft1"></div><div class="tx"><span>Rincón Clásica</span><span>Q52</span></div></div><div class="t" style="background:#141416"><div class="ft ft2"></div><div class="tx"><span>Doble Bacon</span><span>Q68</span></div></div></div>
+          </div>
+          <div class="pie"><span class="n"><b>Fotos grandes</b><span>Tus platillos se venden con la vista</span></span><span class="usa q">El tuyo hoy</span></div>
+        </div>
+        
+      </div>
+      <div class="bar2"><span class="t">Ver todos los diseños (208)</span><span class="btn">Ver cómo queda</span></div>
+    </div>
+    <div class="cap">— — Tres opciones con su carta; la tercera, al deslizar</div>
+  </div>
+
+  <div class="col">
+    <div class="tag"><b>Propuesta</b> · la tercera, sin fotos</div>
+    <div class="ph" style="height:420px">
+      <div class="body">
+        <div class="rec">
+          <div class="m" style="background:#1c1b18;color:#EDE6D6;font-family:Georgia,serif">
+            <div class="hd" style="justify-content:center;letter-spacing:.08em">RINCÓN 502</div>
+            <div class="fila"><span>Rincón Clásica</span><span>Q52.00</span></div>
+            <div class="fila"><span>Doble Bacon</span><span>Q68.00</span></div>
+            <div class="fila"><span>Pepperoni (mediana)</span><span>Q85.00</span></div>
+            <div class="fila"><span>Nachos Supremos</span><span>Q48.00</span></div>
+          </div>
+          <div class="pie"><span class="n"><b>Carta elegante</b><span>Sin fotos: nombre y precio, como impresa</span></span><span class="usa">Usar este</span></div>
+        </div>
+        <p class="note">Si casi ningún platillo tiene foto, esta va primero y «Fotos grandes» no se recomienda: una rejilla de cuadros vacíos se ve peor que una buena carta de texto.</p>
+      </div>
+    </div>
+    <div class="cap">— — Lo que se recomienda depende de la carta, no de la moda</div>
+  </div>
+</div>
+
+<h2>2 · Ver cómo queda, siempre</h2>
+<p class="lead">La vista previa ya no arranca apagada: una <strong>vista rápida</strong> enseña la carta con sus datos sin cargar la página entera. Tiene tres pestañas, porque un diseño se acepta por el recorrido completo y no solo por la portada: la portada, un platillo abierto y el carrito. «Probar como cliente» abre la carta interactiva en otra pestaña.</p>
+<div class="pair">
+  <div class="col">
+    <div class="tag"><b>Propuesta</b> · vista rápida</div>
+    <div class="ph" style="height:560px">
+      <div class="bar"><b>Así queda</b><span class="btn" style="height:36px">Cerrar</span></div>
+      <div class="body">
+        <div class="pv">
+          <div class="pvtabs"><span>Portada</span><span class="on">Platillo</span><span>Carrito</span></div>
+          <div style="background:#0b0b0c;color:#F5F3EF;padding:14px;display:grid;gap:10px;height:330px">
+            <div class="ft ft1" style="height:130px;border-radius:12px"></div>
+            <b style="font-size:18px">Rincón Clásica</b>
+            <span class="s12" style="opacity:.7">Carne de res, queso cheddar, tocino y salsa de la casa</span>
+            <div class="row"><span style="padding:6px 10px;border-radius:99px;background:#1e1e20;font-size:12px">Tres cuartos</span><span style="padding:6px 10px;border-radius:99px;background:#D97757;color:#0b0b0c;font-size:12px">+ Tocino Q8</span></div>
+            <div style="margin-top:auto;height:44px;border-radius:12px;background:#D97757;color:#0b0b0c;display:grid;place-items:center;font-weight:700">Agregar · Q60.00</div>
+          </div>
+        </div>
+        <span class="btn t">Probar como cliente ↗</span>
+      </div>
+    </div>
+    <div class="cap">— — Portada, platillo y carrito con un toque, sin «consume CPU»</div>
+  </div>
+  <ul class="notes">
+    <li><strong>Con lo malo también:</strong> la vista rápida usa los platillos de verdad, incluidos el nombre más largo, el que no tiene foto y el precio más alto. Así se ve si algo se rompe antes de publicar.</li>
+    <li><strong>Legible siempre:</strong> no se recomienda una combinación con poco contraste entre texto y fondo, o entre botón y su letra. En el catálogo completo, esas llevan la marca «Poco legible».</li>
+    <li><strong>En el teléfono</strong>, «Ver cómo queda» y «Guardar» van en una barra que no tapa el botón de «Tomar pedido».</li>
+  </ul>
+</div>
+
+<h2>3 · Publicar y poder volver</h2>
+<p class="lead">Hoy, «Guardar» publica y no hay vuelta atrás: si el nuevo diseño no le gustó a nadie, hay que rehacer el anterior a mano. La propuesta: al publicar se guarda el diseño anterior y queda «Volver al anterior» a un toque. Las plantillas propias siguen existiendo, pero no ocupan la pantalla si no tiene ninguna: «Guardar como plantilla» pasa a «⋯».</p>
+<div class="pair">
+  <div class="col">
+    <div class="tag"><b>Propuesta</b> · recién publicado</div>
+    <div class="ph" style="height:420px">
+      <div class="bar"><b>Personalizar sitio</b><span class="ib"><svg><use href="#more"/></svg></span></div>
+      <div class="body">
+        <div class="ok">✓ Publicado: «Rápida de pedir»<a>Volver al anterior</a></div>
+        <div class="card" style="padding:4px 0">
+          <div class="sel"><span>Diseño</span><span class="mut">Rápida de pedir</span></div>
+          <div class="sel"><span>Colores</span><span class="mut">Papel de Autor</span></div>
+          <div class="sel"><span>Logo, nombre y textos</span><span class="mut">Sin cambios</span></div>
+        </div>
+        <p class="note">El resumen dice qué cambió. Tu logo, tus textos y tus pedidos nunca cambian con un diseño.</p>
+      </div>
+    </div>
+    <div class="cap">— — Publicar es reversible y dice qué cambió</div>
+  </div>
+</div>
+
+<h2>4 · En la PC (1280 px)</h2>
+<p class="lead">A la izquierda, los tres recomendados uno al lado del otro; a la derecha, la vista rápida con sus tres pestañas, siempre encendida.</p>
+<div class="desk" style="height:470px">
+  <div class="side"><b>Rincón 502</b><span>Hoy</span><span>Pedidos</span><span>Menú</span><span>Clientes</span><span>Negocio</span><span class="on">Ajustes</span></div>
+  <div class="dmain">
+    <div class="dbar"><b>Personalizar sitio</b><div class="tabsd"><span class="on">Diseño</span><span>Marca</span><span>Menú</span><span>Textos</span><span>Más</span></div></div>
+    <div class="dbody" style="display:grid;grid-template-columns:1.6fr 1fr;gap:16px">
+      <div style="display:grid;gap:12px;align-content:start">
+        <div class="row"><b style="font-size:16px;flex:1">Recomendados para tu carta</b><span class="s13" style="color:var(--coral);font-weight:600">Ver todos los diseños (208)</span></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          <div class="rec on"><div class="m" style="background:#0b0b0c;color:#F5F3EF"><div class="hd"><span class="lg" style="background:#D97757;color:#0b0b0c">R</span>Rincón 502</div><div class="g"><div class="t" style="background:#141416"><div class="ft ft1"></div><div class="tx"><span>Clásica</span><span>Q52</span></div></div><div class="t" style="background:#141416"><div class="ft ft2"></div><div class="tx"><span>Bacon</span><span>Q68</span></div></div></div></div><div class="pie"><span class="n"><b>Fotos grandes</b></span><span class="usa q">El tuyo</span></div></div>
+          <div class="rec"><div class="m" style="background:#F7F1E8;color:#2a1d14"><div class="hd"><span class="lg" style="background:#B5462A;color:#fff">R</span>Rincón 502</div><div class="g" style="grid-template-columns:1fr"><div class="t" style="background:#fff;display:flex"><div class="ft ft3" style="width:40px;height:30px"></div><div class="tx" style="flex:1"><span>Pepperoni</span><span>Q85</span></div></div><div class="t" style="background:#fff;display:flex"><div class="ft ft4" style="width:40px;height:30px"></div><div class="tx" style="flex:1"><span>Nachos</span><span>Q48</span></div></div></div></div><div class="pie"><span class="n"><b>Rápida de pedir</b></span><span class="usa">Usar</span></div></div>
+          <div class="rec"><div class="m" style="background:#1c1b18;color:#EDE6D6;font-family:Georgia,serif"><div class="hd" style="justify-content:center">RINCÓN 502</div><div class="fila"><span>Clásica</span><span>Q52.00</span></div><div class="fila"><span>Bacon</span><span>Q68.00</span></div></div><div class="pie"><span class="n"><b>Carta elegante</b></span><span class="usa">Usar</span></div></div>
+        </div>
+        <div class="card" style="padding:4px 0"><div class="sel"><span>Logo y colores de tu marca</span><span class="mut">Marca ›</span></div><div class="sel"><span>Tus plantillas guardadas</span><span class="mut">Ninguna</span></div></div>
+      </div>
+      <div class="pv" style="align-content:start">
+        <div class="pvtabs"><span class="on">Portada</span><span>Platillo</span><span>Carrito</span></div>
+        <div style="background:#0b0b0c;color:#F5F3EF;padding:16px;display:grid;gap:10px;height:300px;align-content:start">
+          <div style="display:grid;justify-items:center;gap:6px;padding:16px 0"><span class="lg" style="width:44px;height:44px;border-radius:12px;background:#D97757;color:#0b0b0c;display:grid;place-items:center;font-weight:800">R</span><b style="font-size:20px">Rincón 502</b><span class="s12" style="opacity:.7">Sabor que enamora</span></div>
+          <div class="g" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ft ft1" style="height:70px;border-radius:10px"></div><div class="ft ft2" style="height:70px;border-radius:10px"></div></div>
+        </div>
+        <div style="padding:10px"><span class="btn" style="width:100%">Probar como cliente ↗</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="nodesk">La vista de PC se ve en una pantalla ancha.</p>
+
+<h2>Lo que necesito que decidas</h2>
+<ol class="lead" style="padding-left:20px">
+  <li><strong>Las recomendaciones:</strong> ¿tres diseños elegidos según la carta (cuántos platillos tienen foto, cuántos son y si vende sobre todo para llevar), con el catálogo completo en «Ver todos» (recomendado)?</li>
+  <li><strong>La vista previa:</strong> ¿vista rápida siempre encendida con Portada, Platillo y Carrito, y la carta interactiva en otra pestaña (recomendado)?</li>
+  <li><strong>Volver atrás:</strong> ¿se guarda solo el diseño anterior para «Volver al anterior» (recomendado, una columna nueva), o un historial de los últimos cinco?</li>
+  <li><strong>Las plantillas propias:</strong> ¿solo se ven si ya tienes alguna, y «Guardar como plantilla» pasa a «⋯» (recomendado)?</li>
+</ol>
+</div>
+</body>
+</html>
