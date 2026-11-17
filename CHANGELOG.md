@@ -6,6 +6,8 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+## v0.24.0 · 2026-11-17 · Ola 2: arranque y autonomía
+PR #135 (merge `a89d7ca`), que junta #125–#128 y #130–#134 · migraciones 184, 185 y 186 · en producción el 2026-11-17 (`prod-2026-11-17`). El dueño corrió las tres antes del despliegue.
 - **Alta hasta el primer valor** (ficha 2.3; rama `feat/alta-primer-valor`; maqueta aprobada `docs/diseno/MAQUETA_ALTA_PRIMER_VALOR_2026-11-16.html`) · sin migraciones:
   - El alta pasa de 7 pantallas a 4: la cuenta en una sola, después el negocio con «¿Cómo te piden tus clientes?», «¿Qué vendes?» (nombre y precio de los primeros platillos) y «Así se ve tu carta», con la carta de verdad. Al crear, entra directo a Hoy.
   - El plan ya no viene en Premium para todos: se sugiere por cómo le piden (Básico, En línea o Premium) y se cambia antes de crear, con el precio a la vista. El estilo llega elegido y se cambia entre tres sugerencias; los demás están en Personalizar.

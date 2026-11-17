@@ -885,6 +885,29 @@ La siguiente ficha es **1.12 · Comensal: entrada, checkout y seguimiento**. Que
   - **Lectura física con teléfonos:** queda para el dueño.
 - **Validación:** `typecheck` y `lint` sin errores; 1,569 unitarias pasan, con una omitida.
 
+## 45. La Ola 2 en producción (2026-11-17)
+
+A pedido del dueño, las fichas 2.3–2.10 y el CHANGELOG de v0.23.0 se juntaron en la rama `integracion/ola-2` (PR #135), como se hizo en el §35.
+
+- **Choques resueltos:**
+  - CHANGELOG, plan y registro: se conservan las entradas de todas las ramas, ordenadas, con un solo tablero.
+  - `activity-labels.ts` y su prueba: se conservan las etiquetas de 2.5 y de 2.6.
+  - Ajustes: `ajustes/page.tsx` conserva los imports de 2.6 y 2.8.
+  - `verificar_migraciones.sql`: lleva las huellas 184–186.
+- **Validación con todo junto:** tipos y lint sin errores; 1,647 unitarias pasan. Las pantallas principales abren en local y el CI del #135 pasó en verde.
+- **Despliegue:** el dueño corrió 184, 185 y 186 en producción antes de fusionar. El merge `a89d7ca` se desplegó en unos 4 minutos.
+- **Comprobado en producción:**
+  - `/registro/listo` responde 404 y el registro es de una pantalla.
+  - `distleogin.com/m/rincon502` abre la carta.
+- **No comprobado:** el panel en producción, porque pide sesión.
+- **Etiquetas:** `v0.24.0` y `prod-2026-11-17` sobre `a89d7ca`, con el visto bueno del dueño.
+- **PR y ramas:**
+  - GitHub marcó como fusionados #125, #126, #128 y #130–#134.
+  - El #127 se cerró con una nota: su base era la rama de la 2.3 y ya estaba completo en `main`.
+  - Las ramas se borraron.
+  - Siguen abiertos el #129 (propuesta de planes) y los de dependencias.
+- **Lo que sigue:** fichas 2.11 (navegación móvil por rol) y 2.12 (glosario), y la línea N.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*
