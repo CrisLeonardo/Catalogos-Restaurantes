@@ -370,6 +370,8 @@ Las fichas indican **qué cubren y dónde está la especificación**. El detalle
 
 **Estado de 2.1 y 2.2 (2026-11-16):** construidas en la rama `feat/hoy-por-etapa` según la [maqueta](../diseno/MAQUETA_HOY_POR_ETAPA_2026-11-15.html) aprobada el 2026-11-15, con las cuatro recomendaciones: «Cobrado» en vez de «Ventas», pedido de prueba (**migración 183**), Premium fuera de Hoy y versión «cerrado». El pedido de prueba no se cobra: termina cerrado para no poner dinero ficticio en la caja. Detalle y pruebas en el §36 del [registro](../registros/ESTADO_AUDITORIA_INTEGRAL_2026-11-04.md).
 
+**Estado de 2.10 (2026-11-17):** [maqueta](../diseno/MAQUETA_CODIGO_QR_2026-11-17.html) presentada en la rama `feat/codigo-qr`, desde `main`. Propone elegir para qué es el QR (Redes, Imprimir o Solo el código) y ver exactamente el archivo que se descarga, con un solo botón. El cartel sale en hoja carta con la escala explicada. Lo impreso usa la dirección estable `/m/<slug>`, que sobrevive a un cambio de nombre. El texto del cartel no promete funciones apagadas, la pantalla avisa en una copia de prueba y los errores son reales. Espera el visto bueno y cuatro decisiones. Las fichas 2.3–2.9 están en los PR #126–#128 y #130–#133.
+
 ### Ola 3 · Números confiables y retención
 
 | Ficha | Tamaño | Cubre | Especificación |
