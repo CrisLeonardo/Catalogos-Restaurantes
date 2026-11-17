@@ -755,6 +755,18 @@ La siguiente ficha es **1.12 · Comensal: entrada, checkout y seguimiento**. Que
 - **Validación:** `typecheck` y `lint` sin errores (los tres avisos de siempre); 1,562 unitarias pasan, con una omitida.
 - **Limpieza:** se quitaron la guía anterior (`onboarding-checklist.tsx`), el widget «La casa» y `getActiveOrdersPreview`, que ya no usaba nadie.
 
+## 37. Alta hasta el primer valor · ficha 2.3 (2026-11-16)
+
+**Rama** `feat/alta-primer-valor`, desde `main` (`a7a8040`). Maqueta aprobada: [`MAQUETA_ALTA_PRIMER_VALOR_2026-11-16.html`](../diseno/MAQUETA_ALTA_PRIMER_VALOR_2026-11-16.html). Sin migraciones.
+
+- **Registro (`/registro`) en una pantalla:** sale «Confirmar». La contraseña se escribe una vez, con «Ver», y los términos se aceptan al crear la cuenta, con el aviso junto al botón; el servidor recibe la misma contraseña como repetición. En el teléfono se ocultan las ventajas para que el formulario suba.
+- **Crear restaurante (`/mi-cuenta/nuevo`) en tres pasos:** tu negocio (nombre, la dirección con «Cambiar» y «¿Cómo te piden tus clientes?»), «¿Qué vendes?» (nombre y precio, «Agregar otro», «Lo hago después») y «Así se ve tu carta» (la carta de verdad, con el estilo y el plan con su precio y «Cambiar»). En PC la carta se arma en vivo junto al formulario.
+- **Reglas** en `plataforma/src/lib/alta.ts`, con 7 pruebas: plan por intención (carta → Básico, para llevar y a domicilio → En línea, mesas → Premium), los dos modos de Estándar y la lectura de los platillos (coma decimal, filas a medias rechazadas y un tope de 20).
+- **Servidor:** `createAnotherRestaurant` crea la categoría «Platillos» con los platillos y siempre devuelve la URL del panel; ya no hay `/registro/listo` ni la ventana «¡Listo!». La vista previa reutiliza `/preview/muestra` con `?alta=1` y los platillos por `postMessage`, sin tocar la base.
+- **Recorrido probado en local** como Comedor Ana (segundo restaurante). «Para llevar y a domicilio» con dos platillos («12,50» se guardó como Q12.50) creó el plan En línea, con para llevar y a domicilio, y entró directo a Hoy con el paso 1 de la guía hecho. «Mesas» sugirió Premium y «Solo ven la carta» sugirió Básico gratis, con «Lo hago después». Cambiar el estilo repinta la carta al momento.
+- **Comprobado en pantalla:** 375 px y 1280 px, en claro. **No comprobado:** el alta del primer restaurante de una cuenta nueva en pantalla (cambian la barra de pasos y los textos de cobro) ni el modo oscuro.
+- **Hallazgo:** el servidor de desarrollo volvió a servir JavaScript viejo; se arregló reiniciándolo sin `.next`.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

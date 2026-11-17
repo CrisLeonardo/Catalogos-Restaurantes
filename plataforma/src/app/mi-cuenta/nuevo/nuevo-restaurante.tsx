@@ -2,104 +2,74 @@
 
 import { useActionState, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
-import TemplateGallery from '@/components/admin/template-gallery';
 import { findStructure, findTemplate } from '@/lib/theme/templates';
 import { borrarEleccionMuestra, leerEleccionMuestra } from '@/lib/muestra-mensajes';
 import { borrarPerfil, leerPerfil } from '@/lib/perfil-negocio';
 import { createAnotherRestaurant, type NewRestaurantState } from '@/lib/actions/mi-cuenta';
-import { RestauranteListo } from '@/components/signup/restaurante-listo';
-import { PLAN_POINTS, defaultPlanPricing, planPriceLabel, planPriceQ, type PlanPricing } from '@/lib/plans';
+import { CartaEnVivo } from '@/components/signup/carta-en-vivo';
+import { defaultPlanPricing, planPriceLabel, type PlanPricing } from '@/lib/plans';
 import {
-  ErrorBox, Field, Stepper, Summary, WizardNav, localSlugify,
-} from '@/components/signup/wizard-ui';
+  leerPlatosDelAlta, modosEstandar, planSugerido,
+  type ComoTePiden, type ModoPedido, type PlanAlta,
+} from '@/lib/alta';
+import { ErrorBox, Field, Stepper, WizardNav, localSlugify } from '@/components/signup/wizard-ui';
 
 /* ============================================================
-   CREAR UN RESTAURANTE — desde Mi cuenta
+   CREAR UN RESTAURANTE — alta hasta el primer valor (ficha 2.3)
    ------------------------------------------------------------
-   Esta pantalla era los tres primeros pasos del asistente de `/registro`.
-   Se movió aquí cuando el alta se partió en dos: la calle crea una CUENTA,
-   y los restaurantes nacen siempre desde Mi cuenta, sea el primero o el
-   quinto. Un solo sitio donde nace un restaurante, con las mismas reglas
-   para todos — antes eran dos caminos que se fueron separando solos (el de
-   `/registro` sabía de plantillas y modos de pedido; el de Mi cuenta no).
+   Maqueta aprobada: docs/diseno/MAQUETA_ALTA_PRIMER_VALOR_2026-11-16.html
 
-   Lo que NO se pide aquí y sí se pedía antes: correo, contraseña y
-   términos. Eso es de la cuenta, ya está hecho, y volver a pedirlo era
-   justamente lo que impedía tener dos restaurantes con un solo correo.
+   Tres pasos, después de la cuenta: el negocio (nombre y «¿cómo te
+   piden?»), lo que vende (nombre y precio) y su carta de verdad, con el
+   estilo y el plan ya elegidos y a la vista con su precio. Al crear,
+   entra directo a Hoy, donde sigue la guía «Llega a tu primer pedido».
+
+   Antes eran plan → restaurante → estilo → confirmar → «listo»: el plan
+   venía en Premium para todos y el estilo se escogía entre 208
+   combinaciones con la carta vacía.
+
+   Es el ÚNICO sitio donde nace un restaurante, sea el primero o el
+   quinto de la misma cuenta.
    ============================================================ */
 
-type PlanOption = 'BASICO' | 'EN_LINEA' | 'ESTANDAR' | 'PREMIUM';
-type OrderTypeOption = 'dine_in' | 'pickup' | 'delivery';
-
-const ORDER_TYPE_LABEL: Record<OrderTypeOption, string> = {
-  dine_in: 'Comer en local',
-  pickup: 'Para llevar',
-  delivery: 'A domicilio',
-};
-
-const ESTANDAR_TYPE_OPTIONS: { id: OrderTypeOption; icon: string; title: string; desc: string }[] = [
-  { id: 'dine_in', icon: 'utensils', title: 'Comer en local', desc: 'El cliente pide desde la mesa con QR. Ideal para restaurantes y cafeterías.' },
-  { id: 'pickup', icon: 'bag', title: 'Para llevar', desc: 'El cliente pide en línea y retira en el mostrador.' },
-  { id: 'delivery', icon: 'truck', title: 'A domicilio', desc: 'Tus clientes piden en línea y reciben en su dirección.' },
+const COMO: { id: ComoTePiden; titulo: string; detalle: string }[] = [
+  { id: 'carta', titulo: 'Solo ven la carta', detalle: 'La consultan con un QR y piden en persona' },
+  { id: 'llevar', titulo: 'Para llevar y a domicilio', detalle: 'Piden desde la carta en su teléfono' },
+  { id: 'mesas', titulo: 'En mesas, con meseros', detalle: 'Toman pedidos en el salón y cobran en caja' },
 ];
 
-interface PlanCardDef {
-  code: PlanOption;
-  name: string;
-  badge?: string;
-  priceLabel: string;
-  priceUnit: string;
-  trialLabel: string;
-  features: { text: string; positive: boolean }[];
+/* Tres estilos para «Cambiar»: uno claro, uno que va con el negocio y uno
+   oscuro. Las 208 combinaciones siguen en Personalizar. */
+const ESTILOS: Record<ComoTePiden, string[]> = {
+  carta: ['lino-coral', 'cafe-barrio', 'carbon-autor'],
+  llevar: ['lino-coral', 'naranja-reparto', 'carbon-autor'],
+  mesas: ['lino-coral', 'brasa-humo', 'carbon-autor'],
+};
+
+const PLAN_NOMBRE: Record<PlanAlta, string> = {
+  BASICO: 'Básico', EN_LINEA: 'En línea', ESTANDAR: 'Estándar', PREMIUM: 'Premium',
+};
+
+const MODO_NOMBRE: Record<ModoPedido, string> = {
+  dine_in: 'comer en local', pickup: 'para llevar', delivery: 'a domicilio',
+};
+
+function detallePlan(plan: PlanAlta, como: ComoTePiden): string {
+  if (plan === 'BASICO') return 'Menú digital con QR, sin pedidos en línea';
+  if (plan === 'EN_LINEA') return 'Pedidos para llevar y a domicilio';
+  if (plan === 'ESTANDAR') return `Dos modos de pedido: ${modosEstandar(como).map((m) => MODO_NOMBRE[m]).join(' y ')}`;
+  return 'Mesas y meseros, para llevar y a domicilio';
 }
 
-/* Los precios y los días de prueba salen del PlanPricing vigente
-   (overrides del super admin) — el servidor los pasa por props.
+type Fila = { nombre: string; precio: string };
+const FILAS_VACIAS: Fila[] = [{ nombre: '', precio: '' }, { nombre: '', precio: '' }, { nombre: '', precio: '' }];
 
-   `esElPrimero` cambia lo que se promete: la prueba gratis es UNA por
-   persona (ver lib/billing-signup.ts), así que decirle "30 días gratis" a
-   quien va por su segundo local sería mentirle. */
-function buildPlanCards(pricing: PlanPricing, esElPrimero: boolean): PlanCardDef[] {
-  const trial = pricing.trialDays;
-  const conPrueba = esElPrimero && trial > 0;
-  return [
-    {
-      code: 'BASICO',
-      name: 'Básico',
-      badge: 'GRATIS',
-      priceLabel: planPriceLabel(pricing, 'BASICO'),
-      priceUnit: '',
-      trialLabel: 'Gratis para siempre, sin tarjeta',
-      features: PLAN_POINTS.BASICO,
-    },
-    {
-      code: 'EN_LINEA',
-      name: 'En línea',
-      priceLabel: planPriceQ(pricing, 'EN_LINEA'),
-      priceUnit: '/ mes',
-      trialLabel: conPrueba ? `Con ${trial} días gratis · sin alta` : 'Sin costo de alta',
-      features: PLAN_POINTS.EN_LINEA,
-    },
-    {
-      code: 'ESTANDAR',
-      name: 'Estándar',
-      priceLabel: planPriceQ(pricing, 'ESTANDAR'),
-      priceUnit: '/ mes',
-      trialLabel: conPrueba ? `Con ${trial} días gratis` : esElPrimero ? 'Mensualidad desde hoy' : 'Se suma a tu mensualidad',
-      features: PLAN_POINTS.ESTANDAR,
-    },
-    {
-      code: 'PREMIUM',
-      name: 'Premium',
-      badge: 'RECOMENDADO',
-      priceLabel: conPrueba ? `Gratis ${trial} días` : planPriceQ(pricing, 'PREMIUM'),
-      priceUnit: conPrueba ? '' : '/ mes',
-      trialLabel: conPrueba ? `luego ${planPriceLabel(pricing, 'PREMIUM')}` : esElPrimero ? 'Mensualidad desde hoy' : 'Se suma a tu mensualidad',
-      features: PLAN_POINTS.PREMIUM,
-    },
-  ];
+function nombreEstilo(id: string): string {
+  const t = findTemplate(id);
+  if (!t) return 'Clásico';
+  const e = t.structure ? findStructure(t.structure) : undefined;
+  return [e?.name, t.name].filter(Boolean).join(' · ');
 }
 
 export default function NuevoRestaurante({
@@ -109,376 +79,280 @@ export default function NuevoRestaurante({
 }: {
   rootDomain: string;
   pricing?: PlanPricing;
-  /** ¿Todavía no es dueño de ningún restaurante? Decide prueba gratis y textos. */
+  /** ¿Todavía no es dueño de ningún restaurante? Decide textos y pasos. */
   esElPrimero: boolean;
 }) {
-  const PLAN_CARDS = buildPlanCards(pricing, esElPrimero);
-  const trialDays = pricing.trialDays;
   const [state, formAction, isPending] = useActionState<NewRestaurantState, FormData>(createAnotherRestaurant, null);
-  // El local nuevo se abre con una navegación de documento, no con el
-  // `redirect()` del servidor: su panel es la raíz de otro host y esa raíz
-  // solo es el panel si la petición pasa por el proxy. Mismo motivo —y mismo
-  // bug— que al entrar desde Mi cuenta; ver `enterRestaurant`.
-  //
-  // Antes de entrar, «Así se ve TU restaurante» (PLAN_MOMENTOS_PICO G1): la
-  // navegación la hace su botón «Entrar a mi panel».
-  const [listo, setListo] = useState<string | null>(null);
+  /* El panel del local nuevo es la raíz de otro host: navega el navegador,
+     no un `redirect()` del servidor (ver `enterRestaurant`). */
   useEffect(() => {
     if (state && 'url' in state) {
       borrarEleccionMuestra();
       borrarPerfil();
-      setListo(state.url);
+      window.location.assign(state.url);
     }
   }, [state]);
   const actionError = state && 'error' in state ? state.error : null;
 
   const [step, setStep] = useState(0);
-  const [selectedPlan, setSelectedPlan] = useState<PlanOption>('PREMIUM');
-  // Estándar elige 2 de los 3 modos de pedido (el 3ero requiere Premium).
-  const [estandarTypes, setEstandarTypes] = useState<OrderTypeOption[]>(['dine_in', 'pickup']);
-  // Estilo visual de inicio (plantilla); siempre se puede cambiar en Personalizar.
-  // Claro por defecto (2026-08-24): «Lino & Coral», no «Carbón de Autor», que
-  // es oscura de verdad desde 2026-10-27.
-  const [templateId, setTemplateId] = useState('lino-coral');
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [slugEdited, setSlugEdited] = useState(false);
-  const [whatsapp, setWhatsapp] = useState('');
+  const [editandoSlug, setEditandoSlug] = useState(false);
+  const [como, setComo] = useState<ComoTePiden | null>(null);
+  const [planElegido, setPlanElegido] = useState<PlanAlta | null>(null);
+  const [templateId, setTemplateId] = useState('lino-coral');
+  /* El estilo con el que llegó (el de la vitrina de la portada, si eligió
+     uno): encabeza las opciones de «Cambiar» y no se mueve al elegir otra. */
+  const [estiloInicial, setEstiloInicial] = useState('lino-coral');
+  const [filas, setFilas] = useState<Fila[]>(FILAS_VACIAS);
+  const [cambiando, setCambiando] = useState<'estilo' | 'plan' | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
 
-  // Lo que eligió en la vitrina de diseños de la portada llega puesto: el
-  // estilo y, si lo escribió, el nombre. Ya decidió; preguntarle desde cero
-  // lo haría dudar (docs/planes/PLAN_EXPERIENCIA_VIVA_2026-10-26.md §1.6).
-  // En un efecto y no al iniciar el estado: localStorage no existe en el
-  // servidor y el primer pintado tiene que coincidir.
-  const [desdeVitrina, setDesdeVitrina] = useState(false);
+  // Lo que eligió en la vitrina de diseños de la portada llega puesto.
   useEffect(() => {
     const eleccion = leerEleccionMuestra();
     if (!eleccion) return;
-    if (findTemplate(eleccion.estilo)) {
-      setTemplateId(eleccion.estilo);
-      setDesdeVitrina(true);
-    }
+    if (findTemplate(eleccion.estilo)) { setTemplateId(eleccion.estilo); setEstiloInicial(eleccion.estilo); }
     if (eleccion.nombre.trim().length >= 2) setName((actual) => actual || eleccion.nombre.trim());
   }, []);
-
-  // Quien llegó por /vende-en-linea no tiene mesas: el plan llega armado
-  // como lo va a usar —En línea, para llevar y a domicilio— en vez de
-  // Premium con un salón y un mesero que no tiene (lib/perfil-negocio.ts).
-  // Solo cambia lo que viene marcado; puede elegir otro igual.
-  const [enLinea, setEnLinea] = useState(false);
+  // Quien llegó por /vende-en-linea vende para llevar y a domicilio.
   useEffect(() => {
-    if (leerPerfil() !== 'en-linea') return;
-    setEnLinea(true);
-    setSelectedPlan('EN_LINEA');
-    setEstandarTypes(['pickup', 'delivery']);
+    if (leerPerfil() === 'en-linea') setComo((actual) => actual ?? 'llevar');
   }, []);
 
+  const comoEfectivo: ComoTePiden = como ?? 'carta';
+  const plan: PlanAlta = planElegido ?? planSugerido(comoEfectivo);
   const effectiveSlug = slugEdited ? slug : localSlugify(name);
+  const host = `${effectiveSlug || 'turestaurante'}.${rootDomain.replace(/:\d+$/, '')}`;
 
-  // El estilo elegido son dos decisiones (estructura + paleta): el resumen las
-  // nombra las dos, o el dueño no ve por ningún lado la que más cambia su menú.
-  const chosenTemplate = findTemplate(templateId);
-  const chosenStructure = chosenTemplate?.structure ? findStructure(chosenTemplate.structure) : undefined;
-  const styleSummary = chosenTemplate
-    ? [chosenStructure?.name, chosenTemplate.name].filter(Boolean).join(' · ')
-    : 'Clásico';
+  /* Lo que ya se puede pintar en la carta: filas completas y válidas. */
+  const platos = useMemo(() => filas
+    .map((f) => ({ nombre: f.nombre.trim(), precio: Math.round(Number(f.precio.replace(',', '.')) * 100) / 100 }))
+    .filter((p) => p.nombre.length >= 2 && Number.isFinite(p.precio) && p.precio > 0), [filas]);
 
-  function toggleEstandarType(id: OrderTypeOption) {
-    setEstandarTypes((prev) => {
-      const isOn = prev.includes(id);
-      if (isOn) return prev.length === 1 ? prev : prev.filter((t) => t !== id);
-      return prev.length >= 2 ? prev : [...prev, id];
-    });
-  }
-
-  const estandarSummary = estandarTypes.map((t) => ORDER_TYPE_LABEL[t]).join(' + ');
-
-  const previewHost = useMemo(() => {
-    const root = rootDomain.replace(/:\d+$/, '');
-    return `${effectiveSlug || 'turestaurante'}.${root}`;
-  }, [effectiveSlug, rootDomain]);
-
-  const STEPS = ['Tu plan', 'Tu restaurante', 'Tu estilo', 'Confirmar'];
-  const LAST_STEP = STEPS.length - 1;
+  const pasos = esElPrimero ? ['Tu cuenta', 'Tu negocio', 'Qué vendes', 'Tu carta'] : ['Tu negocio', 'Qué vendes', 'Tu carta'];
+  const LAST_STEP = 2;
 
   function next() {
     setStepError(null);
+    if (step === 0) {
+      if (name.trim().length < 2) return setStepError('Escribe el nombre de tu negocio.');
+      if (effectiveSlug.length < 3) return setStepError('La dirección de tu carta debe tener al menos 3 letras.');
+      if (!como) return setStepError('Elige cómo te piden tus clientes.');
+    }
     if (step === 1) {
-      if (name.trim().length < 2) return setStepError('Escribe el nombre de tu restaurante.');
-      if (effectiveSlug.length < 3) return setStepError('La dirección debe tener al menos 3 caracteres.');
-      if (whatsapp && !/^\+?[\d\s\-()]{7,20}$/.test(whatsapp)) {
-        return setStepError('El número de WhatsApp no es válido.');
-      }
+      const r = leerPlatosDelAlta(JSON.stringify(filas));
+      if ('error' in r) return setStepError(r.error);
     }
     setStep((s) => Math.min(LAST_STEP, s + 1));
   }
 
-  const conPrueba = esElPrimero && trialDays > 0;
+  function cambiarFila(i: number, campo: keyof Fila, valor: string) {
+    setFilas((prev) => prev.map((f, j) => (j === i ? { ...f, [campo]: valor } : f)));
+  }
+
+  const precioPlan = planPriceLabel(pricing, plan);
+  const conPrueba = esElPrimero && pricing.trialDays > 0 && plan !== 'BASICO';
+  const notaCobro = plan === 'BASICO'
+    ? 'El plan Básico es gratis para siempre, sin tarjeta.'
+    : conPrueba
+      ? `Empiezas con ${pricing.trialDays} días gratis; luego ${precioPlan}. Lo cambias o das de baja cuando quieras.`
+      : esElPrimero
+        ? `${PLAN_NOMBRE[plan]} se cobra desde hoy (${precioPlan}). Sin contrato: lo cambias o das de baja cuando quieras.`
+        : `Se suma a tu mensualidad desde hoy (${precioPlan}). Lo puedes dar de baja cuando quieras.`;
 
   return (
     <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <input type="hidden" name="plan_code" value={selectedPlan} />
-      <input type="hidden" name="estandar_order_types" value={estandarTypes.join(',')} />
+      <input type="hidden" name="plan_code" value={plan} />
+      <input type="hidden" name="estandar_order_types" value={modosEstandar(comoEfectivo).join(',')} />
       <input type="hidden" name="template_id" value={templateId} />
       <input type="hidden" name="name" value={name} />
       <input type="hidden" name="slug" value={effectiveSlug} />
-      <input type="hidden" name="whatsapp" value={whatsapp} />
+      <input type="hidden" name="platos" value={JSON.stringify(filas)} />
 
-      <Stepper steps={STEPS} step={step} />
+      <Stepper steps={pasos} step={esElPrimero ? step + 1 : step} />
 
-      {/* ── Paso 0: Tu plan ── */}
-      <div style={{ display: step === 0 ? 'flex' : 'none', flexDirection: 'column', gap: 12 }}>
-        <p style={{ fontSize: 13, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-          {conPrueba
-            ? `Elige el plan con el que quieres empezar. Todos incluyen ${trialDays} días gratis.`
-            : esElPrimero
-              ? 'Elige el plan con el que quieres empezar. El Básico es gratis para siempre; los planes con pedidos se cobran desde hoy, sin contrato.'
-              : 'Elige el plan de este restaurante. Se cobra aparte y se suma a tu mensualidad desde hoy.'}
-        </p>
-        {enLinea && (
-          <p style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, lineHeight: 1.5, margin: 0, padding: '10px 12px', borderRadius: 'var(--radius-lg)', background: 'color-mix(in srgb, var(--brand-accent) 8%, transparent)', color: 'var(--u-text-2)' }}>
-            <Icon name="truck" size={16} style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 2 }} />
-            Lo dejamos listo para vender en línea: el plan En línea, con para llevar y a domicilio, sin mesas ni meseros. Puedes cambiarlo si quieres.
-          </p>
-        )}
-        <div className="signup-plans">
-          {PLAN_CARDS.map((plan) => {
-            const active = selectedPlan === plan.code;
-            return (
-              <button
-                key={plan.code}
-                type="button"
-                onClick={() => setSelectedPlan(plan.code)}
-                style={{
-                  padding: '14px 12px',
-                  borderRadius: 'var(--radius-lg)',
-                  border: active
-                    ? '2px solid var(--brand-accent)'
-                    : '2px solid var(--u-hair-2)',
-                  background: active
-                    ? 'rgba(var(--brand-accent-rgb,99,102,241),0.08)'
-                    : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'border-color 150ms, background 150ms',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 8,
-                  position: 'relative',
-                }}
-              >
-                {plan.badge && (
-                  <span style={{
-                    fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-full)',
-                    background: 'var(--brand-accent)', color: '#fff', letterSpacing: '0.07em',
-                    alignSelf: 'flex-start',
-                  }}>
-                    {plan.badge}
-                  </span>
-                )}
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)', marginBottom: 4 }}>
-                    {plan.name}
-                  </div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: active ? 'var(--brand-accent)' : 'var(--u-text-2)', lineHeight: 1.1 }}>
-                    {plan.priceLabel}
-                    {plan.priceUnit && <span style={{ fontSize: 12, fontWeight: 500 }}> {plan.priceUnit}</span>}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>
-                    {plan.trialLabel}
-                  </div>
-                </div>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {plan.features.map((f) => (
-                    <li key={f.text} style={{
-                      fontSize: 11, color: f.positive ? 'var(--u-text-3)' : 'var(--u-text-4)',
-                      display: 'flex', gap: 5, alignItems: 'flex-start',
-                    }}>
-                      <span style={{
-                        color: f.positive ? (active ? 'var(--brand-accent)' : 'var(--u-text-4)') : 'var(--u-text-4)',
-                        flexShrink: 0, lineHeight: 1.6, fontSize: 11,
-                      }}>
-                        {f.positive ? '✓' : '✗'}
-                      </span>
-                      {f.text}
-                    </li>
-                  ))}
-                </ul>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Sub-selector: Estándar elige 2 de 3 modos de pedido */}
-        {selectedPlan === 'ESTANDAR' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, fontWeight: 600 }}>
-              Elige 2 modos de pedido (mismo precio, {planPriceLabel(pricing, 'ESTANDAR')})
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-              {ESTANDAR_TYPE_OPTIONS.map((b) => {
-                const active = estandarTypes.includes(b.id);
-                const capped = !active && estandarTypes.length >= 2;
-                return (
-                  <button
-                    key={b.id}
-                    type="button"
-                    onClick={() => toggleEstandarType(b.id)}
-                    disabled={capped}
-                    style={{
-                      padding: '12px 12px',
-                      borderRadius: 'var(--radius-lg)',
-                      border: active ? '2px solid var(--brand-accent)' : '2px solid var(--u-hair-2)',
-                      background: active ? 'rgba(var(--brand-accent-rgb,99,102,241),0.08)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-                      cursor: capped ? 'not-allowed' : 'pointer',
-                      opacity: capped ? 0.45 : 1,
-                      textAlign: 'left',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 6,
-                      transition: 'border-color 150ms, background 150ms, opacity 150ms',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                      <Icon name={b.icon} size={16} style={{ color: active ? 'var(--brand-accent)' : 'var(--u-text-3)' }} />
-                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>{b.title}</span>
-                    </div>
-                    <span style={{ fontSize: 11, color: 'var(--u-text-3)', lineHeight: 1.45 }}>{b.desc}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: 0, lineHeight: 1.45 }}>
-              Para tener los 3 modos juntos necesitas Premium. Podrás cambiar tu elección cuando quieras desde el panel.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* ── Paso 1: Tu restaurante ── */}
-      <div style={{ display: step === 1 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
-        <Field label="Nombre del restaurante">
+      {/* ── 1 · Tu negocio ── */}
+      <div style={{ display: step === 0 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
+        <Field label="¿Cómo se llama tu negocio?">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Ej. Tu Restaurante"
+            placeholder="Ej. Café Ana"
+            autoComplete="organization"
             className="adm-field adm-field-lg"
           />
         </Field>
-        <Field label="Dirección de tu menú" hint="Así llegarán tus clientes. Puedes cambiarla.">
-          {/* El recuadro es el campo (se marca al enfocar el texto de dentro). */}
-          <div className="adm-field adm-field-lg" style={{ display: 'flex', alignItems: 'center', padding: 0, overflow: 'hidden' }}>
-            <input
-              value={effectiveSlug}
-              onChange={(e) => { setSlugEdited(true); setSlug(localSlugify(e.target.value)); }}
-              placeholder="turestaurante"
-              aria-label="Dirección de tu menú"
-              style={{
-                flex: 1, minWidth: 0, padding: '12px 14px', border: 'none', background: 'transparent',
-                color: 'inherit', font: 'inherit', outline: 'none',
-              }}
-            />
-            <span style={{ fontSize: 13, color: 'var(--u-text-4)', padding: '0 12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-              .{rootDomain.replace(/:\d+$/, '')}
-            </span>
-          </div>
-        </Field>
-        <Field label="WhatsApp del restaurante" hint="Opcional. Para las alertas de pedido; se cambia luego en Ajustes.">
-          <input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+502 0000 0000" className="adm-field adm-field-lg" />
-        </Field>
-        <Glass variant="quiet" style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--u-text-3)' }}>
-          <Icon name="eye" size={16} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0 }} />
-          <span>Tu menú vivirá en <strong style={{ color: 'var(--u-text)' }}>{previewHost}</strong></span>
-        </Glass>
-      </div>
-
-      {/* ── Paso 2: Tu estilo (plantilla visual de inicio) ── */}
-      <div style={{ display: step === 2 ? 'flex' : 'none', flexDirection: 'column', gap: 12 }}>
-        <p style={{ fontSize: 13, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-          Elige primero cómo se recorre tu carta y después con qué colores nace: son
-          dos decisiones distintas y cualquier color va en cualquier estructura.
-          Es solo el punto de partida — todo se cambia luego en «Personalizar».
-        </p>
-        {desdeVitrina && (
-          <Glass variant="quiet" style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--u-text-3)' }}>
-            <Icon name="sparkle" size={16} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0 }} />
-            <span>Te dejamos puesto el que elegiste en la portada: <strong style={{ color: 'var(--u-text)' }}>{styleSummary}</strong>.</span>
-          </Glass>
-        )}
-        {/* La galería abre en la estructura de la plantilla que ya está elegida,
-            no siempre en «Clásico»: abriendo siempre en la primera parecía que
-            solo existían las de siempre y que el resto no estaba. */}
-        <TemplateGallery
-          mode="pick"
-          compact
-          initialStructure={chosenTemplate?.structure ?? 'clasico'}
-          appliedId={templateId}
-          onApply={(tpl) => setTemplateId(tpl.id)}
-          brandName={name}
-        />
-      </div>
-
-      {/* ── Paso 3: Confirmar ── */}
-      <div style={{ display: step === 3 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
-        <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Summary
-            label="Plan"
-            value={
-              selectedPlan === 'BASICO'
-                ? `Básico · ${planPriceLabel(pricing, 'BASICO')} para siempre`
-                : selectedPlan === 'EN_LINEA'
-                  ? `En línea · Para llevar + A domicilio · ${planPriceLabel(pricing, 'EN_LINEA')}${conPrueba ? ` (${trialDays} días gratis)` : ''}`
-                : selectedPlan === 'ESTANDAR'
-                  ? `Estándar · ${estandarSummary} · ${planPriceLabel(pricing, 'ESTANDAR')}${conPrueba ? ` (${trialDays} días gratis)` : ''}`
-                  : conPrueba
-                    ? `Premium · ${trialDays} días gratis, luego ${planPriceLabel(pricing, 'PREMIUM')}`
-                    : `Premium · ${planPriceLabel(pricing, 'PREMIUM')}`
-            }
-          />
-          <Summary label="Restaurante" value={name || '—'} />
-          <Summary label="Dirección" value={previewHost} />
-          <Summary label="Estilo" value={styleSummary} />
-          {whatsapp && <Summary label="WhatsApp" value={whatsapp} />}
-        </Glass>
-
-        <Glass style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6, border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>
-            <Icon name="sparkle" size={16} style={{ color: 'var(--brand-accent-ink)' }} />
-            {selectedPlan === 'BASICO'
-              ? 'Gratis para siempre'
-              : conPrueba
-                ? `${trialDays} días de prueba gratis`
-                : 'Se cobra desde hoy'}
-          </div>
-          <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-            {selectedPlan === 'BASICO'
-              ? 'Tu restaurante queda en vivo con tu menú digital. Sin tarjeta. Sin compromiso. Cancela cuando quieras.'
-              : conPrueba
-                ? (selectedPlan === 'ESTANDAR'
-                  ? `Tu restaurante queda en vivo con pedidos de ${estandarSummary.toLowerCase()} activos. Sin tarjeta. Sin compromiso.`
-                  : selectedPlan === 'EN_LINEA'
-                  ? 'Tu restaurante queda en vivo con pedidos para llevar y a domicilio. Sin tarjeta. Sin compromiso.'
-                  : 'Tu restaurante queda en vivo con pedidos online activos. Sin tarjeta. Sin compromiso. Cancela cuando quieras.')
-                : esElPrimero
-                  ? 'Tu restaurante queda en vivo y la mensualidad corre desde hoy. Sin contrato: puedes darlo de baja cuando quieras.'
-                  : trialDays > 0
-                    ? 'La prueba gratis es una por persona y ya la usaste en tu primer restaurante, así que este entra a tu mensualidad desde hoy. Puedes darlo de baja cuando quieras.'
-                    : 'Este restaurante entra a tu mensualidad desde hoy. Puedes darlo de baja cuando quieras.'}
+        {editandoSlug ? (
+          <Field label="Dirección de tu carta" hint="Así llegarán tus clientes.">
+            <div className="adm-field adm-field-lg" style={{ display: 'flex', alignItems: 'center', padding: 0, overflow: 'hidden' }}>
+              <input
+                value={effectiveSlug}
+                onChange={(e) => { setSlugEdited(true); setSlug(localSlugify(e.target.value)); }}
+                placeholder="turestaurante"
+                aria-label="Dirección de tu carta"
+                style={{ flex: 1, minWidth: 0, padding: '12px 14px', border: 'none', background: 'transparent', color: 'inherit', font: 'inherit', outline: 'none' }}
+              />
+              <span style={{ fontSize: 13, color: 'var(--u-text-4)', padding: '0 12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                .{rootDomain.replace(/:\d+$/, '')}
+              </span>
+            </div>
+          </Field>
+        ) : (
+          <p style={{ margin: '-8px 0 0', fontSize: 13, color: 'var(--u-text-3)', overflowWrap: 'anywhere' }}>
+            Tu carta: <strong style={{ color: 'var(--u-text)' }}>{host}</strong>{' · '}
+            <button type="button" onClick={() => setEditandoSlug(true)} className="alta-enlace">Cambiar</button>
           </p>
-        </Glass>
+        )}
+
+        <fieldset style={{ border: 0, padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <legend style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', marginBottom: 10, padding: 0 }}>
+            ¿Cómo te piden tus clientes?
+          </legend>
+          {COMO.map((c) => (
+            <label key={c.id} className="alta-opcion" data-activa={como === c.id || undefined}>
+              <input
+                type="radio"
+                name="como_te_piden"
+                value={c.id}
+                checked={como === c.id}
+                onChange={() => { setComo(c.id); setPlanElegido(null); }}
+              />
+              <span style={{ minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: 'var(--u-text)' }}>{c.titulo}</span>
+                <span style={{ display: 'block', fontSize: 13, color: 'var(--u-text-3)', marginTop: 2 }}>{c.detalle}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      </div>
+
+      {/* ── 2 · Qué vendes ── */}
+      <div className="alta-dos" style={{ display: step === 1 ? undefined : 'none' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+          <div>
+            <h2 className="t-display" style={{ fontSize: 24, margin: 0, lineHeight: 1.15 }}>¿Qué vendes?</h2>
+            <p style={{ fontSize: 14, color: 'var(--u-text-3)', margin: '6px 0 0', lineHeight: 1.45 }}>
+              Escribe tres o más. Con nombre y precio basta; la foto y la descripción, después.
+            </p>
+          </div>
+          {filas.map((f, i) => (
+            <div key={i} className="alta-fila">
+              <input
+                value={f.nombre}
+                onChange={(e) => cambiarFila(i, 'nombre', e.target.value)}
+                placeholder={i === 0 ? 'Ej. Café americano' : 'Otro platillo'}
+                aria-label={`Nombre del platillo ${i + 1}`}
+                maxLength={120}
+                className="adm-field adm-field-lg"
+              />
+              <div className="adm-field adm-field-lg" style={{ display: 'flex', alignItems: 'center', padding: 0, overflow: 'hidden' }}>
+                <span style={{ paddingLeft: 12, color: 'var(--u-text-4)', fontSize: 14 }}>Q</span>
+                <input
+                  value={f.precio}
+                  onChange={(e) => cambiarFila(i, 'precio', e.target.value.replace(/[^\d.,]/g, ''))}
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  aria-label={`Precio del platillo ${i + 1}`}
+                  style={{ flex: 1, minWidth: 0, padding: '12px 10px 12px 6px', border: 'none', background: 'transparent', color: 'inherit', font: 'inherit', outline: 'none', fontVariantNumeric: 'tabular-nums' }}
+                />
+              </div>
+            </div>
+          ))}
+          {filas.length < 20 && (
+            <button type="button" onClick={() => setFilas((p) => [...p, { nombre: '', precio: '' }])} className="alta-enlace alta-agregar">
+              <Icon name="plus" size={16} /> Agregar otro
+            </button>
+          )}
+        </div>
+        <div className="alta-solo-pc">
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--u-text-3)', textAlign: 'center', marginBottom: 10 }}>
+            Tu carta, en vivo
+          </div>
+          {step >= 1 && <CartaEnVivo estilo={templateId} nombre={name} platos={platos} />}
+        </div>
+      </div>
+
+      {/* ── 3 · Tu carta ── */}
+      {step === 2 && <h2 className="t-display" style={{ fontSize: 24, margin: 0, lineHeight: 1.15 }}>Así se ve tu carta</h2>}
+      <div className="alta-dos" style={{ display: step === 2 ? undefined : 'none' }}>
+        <div className="alta-telefono">
+          {step === 2 && <CartaEnVivo estilo={templateId} nombre={name} platos={platos} />}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+          <div className="alta-resumen">
+            <div className="alta-renglon">
+              <span className="alta-k">Estilo</span>
+              <span className="alta-v">{nombreEstilo(templateId)}</span>
+              <button type="button" className="alta-enlace" aria-expanded={cambiando === 'estilo'}
+                onClick={() => setCambiando((c) => (c === 'estilo' ? null : 'estilo'))}>Cambiar</button>
+            </div>
+            {cambiando === 'estilo' && (
+              <div className="alta-elegir">
+                {[...new Set([estiloInicial, ...ESTILOS[comoEfectivo]])].slice(0, 4).map((id) => (
+                  <label key={id} className="alta-opcion" data-activa={templateId === id || undefined}>
+                    <input type="radio" name="estilo_alta" checked={templateId === id} onChange={() => setTemplateId(id)} />
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--u-text)' }}>{nombreEstilo(id)}</span>
+                  </label>
+                ))}
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--u-text-3)' }}>Los demás estilos están en Personalizar, dentro de tu panel.</p>
+              </div>
+            )}
+            <div className="alta-renglon">
+              <span className="alta-k">Plan</span>
+              <span className="alta-v">{PLAN_NOMBRE[plan]} · {precioPlan}</span>
+              <button type="button" className="alta-enlace" aria-expanded={cambiando === 'plan'}
+                onClick={() => setCambiando((c) => (c === 'plan' ? null : 'plan'))}>Cambiar</button>
+            </div>
+            {cambiando === 'plan' && (
+              <div className="alta-elegir">
+                {(['BASICO', 'EN_LINEA', 'ESTANDAR', 'PREMIUM'] as PlanAlta[]).map((p) => (
+                  <label key={p} className="alta-opcion" data-activa={plan === p || undefined}>
+                    <input type="radio" name="plan_alta" checked={plan === p} onChange={() => setPlanElegido(p)} />
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--u-text)' }}>
+                        {PLAN_NOMBRE[p]} · {planPriceLabel(pricing, p)}
+                      </span>
+                      <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>{detallePlan(p, comoEfectivo)}</span>
+                    </span>
+                  </label>
+                ))}
+                <Link href="/planes" target="_blank" className="alta-enlace" style={{ fontSize: 13 }}>Comparar los planes</Link>
+              </div>
+            )}
+          </div>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.45 }}>{notaCobro}</p>
+          {platos.length === 0 && (
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.45 }}>
+              Aún no escribiste platillos: tu panel te pedirá el primero.
+            </p>
+          )}
+        </div>
       </div>
 
       {(stepError || actionError) && <ErrorBox>{stepError ?? actionError}</ErrorBox>}
 
+      {step === 1 && (
+        <button
+          type="button"
+          onClick={() => { setStepError(null); setFilas(FILAS_VACIAS); setStep(2); }}
+          className="alta-enlace"
+          style={{ alignSelf: 'center', minHeight: 44, color: 'var(--u-text-3)' }}
+        >
+          Lo hago después
+        </button>
+      )}
+
       <WizardNav
         step={step}
         lastStep={LAST_STEP}
-        onBack={() => { setStepError(null); setStep((s) => Math.max(0, s - 1)); }}
+        onBack={() => { setStepError(null); setCambiando(null); setStep((s) => Math.max(0, s - 1)); }}
         onNext={next}
+        nextLabel={step === 1 ? 'Ver mi carta' : 'Continuar'}
         submitLabel={esElPrimero ? 'Crear mi restaurante' : 'Crear restaurante'}
         pendingLabel="Creando tu restaurante…"
-        isPending={isPending}
+        isPending={isPending || (!!state && 'url' in state)}
       />
 
       <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--u-text-4)', margin: 0 }}>
@@ -486,8 +360,6 @@ export default function NuevoRestaurante({
           Volver a Mi cuenta
         </Link>
       </p>
-
-      {listo && <RestauranteListo url={listo} estilo={templateId} nombre={name} />}
     </form>
   );
 }

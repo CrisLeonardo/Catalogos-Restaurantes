@@ -8,6 +8,9 @@ export interface MuestraPedido {
   type: 'leogin-muestra';
   estilo: string;
   nombre: string;
+  /** Los platillos que escribió en el alta (ficha 2.3). Sin ellos, la carta
+      de muestra de Rincón 502. */
+  platos?: { nombre: string; precio: number }[];
 }
 
 /** El menú avisa que ya puede recibir (`lista`) o que ya pintó un estilo
@@ -19,7 +22,9 @@ export interface MuestraAviso {
 
 export function esMuestraPedido(d: unknown): d is MuestraPedido {
   const m = d as Partial<MuestraPedido> | null;
-  return !!m && m.type === 'leogin-muestra' && typeof m.estilo === 'string' && typeof m.nombre === 'string';
+  return !!m && m.type === 'leogin-muestra' && typeof m.estilo === 'string' && typeof m.nombre === 'string'
+    && (m.platos === undefined || (Array.isArray(m.platos) && m.platos.length <= 20
+      && m.platos.every((p) => !!p && typeof p.nombre === 'string' && typeof p.precio === 'number')));
 }
 
 export function esMuestraAviso(d: unknown): d is MuestraAviso {

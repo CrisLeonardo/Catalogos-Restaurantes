@@ -135,10 +135,11 @@ export default async function RegistroPage({
               Tu menú en línea, en vivo hoy mismo.
             </h1>
             <p className="t-mute" style={{ fontSize: 15, lineHeight: 1.55, marginTop: 14, maxWidth: 420 }}>
-              Primero tu cuenta —es un minuto—, y enseguida creas tu restaurante:
-              eliges plan, nombre y estilo. Sin instalar nada, sin saber de tecnología.
+              Primero tu cuenta; después, el nombre de tu negocio y lo que vendes.
+              En unos minutos ves tu carta funcionando. Sin instalar nada, sin saber de tecnología.
             </p>
-            <ul style={{ listStyle: 'none', margin: '22px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* En el teléfono se ocultan (ficha 2.3): el formulario sube. */}
+            <ul className="registro-ventajas" style={{ listStyle: 'none', margin: '22px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
               {perks(pricing.trialDays).map((p) => (
                 <li key={p.text} style={{ display: 'flex', gap: 11, alignItems: 'center', fontSize: 14 }}>
                   <span style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb, 99,102,241),0.12)', color: 'var(--brand-accent-ink)' }}>

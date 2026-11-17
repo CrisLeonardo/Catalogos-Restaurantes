@@ -30,6 +30,7 @@ import { findTemplate } from '@/lib/theme/templates';
 import type { OrderType } from '@/lib/theme/defaults';
 import { registrarEvento } from '@/lib/analytics-server';
 import { EVENTOS } from '@/lib/analytics';
+import { leerPlatosDelAlta } from '@/lib/alta';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
@@ -234,6 +235,12 @@ export async function createAnotherRestaurant(
   const estandarOrderTypes: OrderType[] =
     requestedEstandarTypes.length === ESTANDAR_MAX_ORDER_TYPES ? requestedEstandarTypes : ['pickup', 'dine_in'];
 
+  /* Los primeros platillos (ficha 2.3): nombre y precio, escritos en el
+     alta. Se descartan las filas vacías; una fila a medias se rechaza para
+     no crear un platillo con precio 0 que el dueño no quiso. */
+  const platos = leerPlatosDelAlta(formData.get('platos'));
+  if ('error' in platos) return platos;
+
   if (!name || name.length < 2) return { error: 'Escribe el nombre de tu restaurante.' };
   if (name.length > 80) return { error: 'El nombre es demasiado largo.' };
   if (whatsapp && !/^\+?[\d\s\-()]{7,20}$/.test(whatsapp)) {
@@ -350,20 +357,32 @@ export async function createAnotherRestaurant(
     return { error: 'No se pudo terminar de crear el restaurante. Inténtalo de nuevo.' };
   }
 
-  /* El PRIMERO aterriza en la pantalla de bienvenida —qué incluye su plan y
-     qué hacer ahora—, que es la que antes cerraba el registro. Del segundo en
-     adelante se entra directo al panel: quien abre su tercer local no necesita
-     que le expliquen el producto otra vez. */
-  //
-  // El primero sigue con `redirect()` porque su destino es una ruta de ESTE
-  // sitio (`/registro/listo`) y no la raíz de otro host: no puede caer en la
-  // trampa de abajo. El resto entra al panel del local nuevo, y ese destino
-  // sí es la raíz de otro host — se devuelve para que navegue el cliente, por
-  // el mismo motivo que `enterRestaurant` (ver la nota allí).
-  // Embudo de la web (WEB-01). Solo el primero: el quinto local de un
-  // grupo no es un alta nueva.
+  /* ── Primeros platillos (ficha 2.3) ─────────────────────────
+     Van a la categoría «Platillos», la misma que crea el panel cuando el
+     primer platillo llega sin categoría. Si falla, el restaurante ya
+     existe y la guía de Hoy pide el paso 1: no se deshace el alta. */
+  if (platos.lista.length > 0) {
+    const { data: cat } = await db.from('categories')
+      .insert({ restaurant_id: restaurantId, name: 'Platillos', sort_order: 0 })
+      .select('id').single();
+    const { error: pErr } = await db.from('products').insert(platos.lista.map((p, i) => ({
+      restaurant_id: restaurantId,
+      category_id: (cat?.id as string | undefined) ?? null,
+      name: p.nombre,
+      price: p.precio,
+      is_available: true,
+      is_active: true,
+      sort_order: i,
+    })));
+    if (pErr) console.error('[alta] no se pudieron crear los primeros platillos', restaurantId, pErr.message);
+    else await registrarEvento(EVENTOS.primerPlatillo, '/mi-cuenta/nuevo');
+  }
+
+  /* Todos entran directo a Hoy (ficha 2.3): la carta ya se vio en el último
+     paso del alta, así que la pantalla «listo» sobraba. El panel es la raíz
+     de otro host, por eso navega el cliente; mismo motivo que
+     `enterRestaurant`. */
   if (esElPrimero) await registrarEvento(EVENTOS.restauranteCreado, '/mi-cuenta/nuevo');
-  if (esElPrimero) redirect(`/registro/listo?slug=${encodeURIComponent(slug)}&plan=${planCode}`);
   return { url: `${adminUrl(slug)}?welcome=1` };
 }
 
