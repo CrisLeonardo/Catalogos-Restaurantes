@@ -15,6 +15,12 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
   - **Pedido de prueba** (migración 183): el dueño lo pide desde su carta con un pase firmado y lo ve en Pedidos con la etiqueta «Prueba». Al estar listo, «Terminar la prueba» lo cierra sin cobro, repone existencias y devuelve canjes. No registra cliente ni cuenta en cifras, caja, puntos ni tope de pedidos.
   - «Tu menú en línea» ya no dice «Piden 263 %»: cuenta solo los pedidos hechos desde la carta y los divide entre las personas distintas.
   - La tarjeta «Funciones disponibles en Premium» sale de Hoy y pasa al final de Negocio › Resumen.
+- **Ajustes que dicen cómo estás** (ficha 2.8 de la auditoría; rama `feat/ajustes-claros`; maqueta aprobada `docs/diseno/MAQUETA_AJUSTES_CLAROS_2026-11-16.html`) · sin migraciones:
+  - Cada fila de Ajustes dice su estado: horario, mesas, hasta dónde repartes, quién confirma y cuántas funciones están encendidas. Lo que conviene revisar sale en ámbar.
+  - **Horarios:** eliges «Con horario» o «A toda hora» (ya no dice «Sin horario»). El día apagado dice «Cerrado», puedes copiar un día a los demás, dos turnos que se pisan no se guardan y ves las próximas aperturas con los feriados.
+  - **Zona de entrega:** eliges por zonas, por distancia o a cualquier dirección. «Prueba un punto» en el mapa dice si un cliente queda dentro. Una zona sin tarifa no se guarda hasta escribirla; 0 se ve como «Gratis».
+  - **Pedidos y cobro:** «Confirmar automáticamente» dice en cuántos minutos, el semáforo se ve como línea de tiempo y no se guarda un ámbar después del rojo. «Pago con tarjeta» aclara que es con tu terminal.
+  - **Funciones:** antes de apagar una, dice qué pasa y qué se conserva. **Salón:** no deja quitar una mesa con una cuenta abierta. **Perfil:** separa lo que ve tu cliente y aclara el botón de WhatsApp.
 
 ## v0.22.0 · 2026-11-15 · Video «Un solo lugar» en la portada y serie «Otra vez»
 PR #122 (merge `3a2046e`) · sin migraciones. Para que la portada cambie en producción basta desplegar el código.

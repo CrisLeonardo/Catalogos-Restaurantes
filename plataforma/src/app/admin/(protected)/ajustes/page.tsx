@@ -13,6 +13,9 @@ import MenuLanguagesEditor from '@/components/admin/menu-languages-editor';
 import type { Restaurant } from '@/types';
 import { ACTIVATABLE_MODULES, isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import { whatsappVisiblePara } from '@/lib/whatsapp/visible';
+import { estadoEntrega, estadoHorario, estadoPedidos } from '@/lib/ajustes-estado';
+import { getDeliveryZones } from '@/lib/db/zones';
+import type { ThemeConfig } from '@/lib/theme/defaults';
 
 export const metadata = { title: 'Ajustes – Panel admin' };
 
@@ -62,10 +65,15 @@ export default async function AdminAjustesPage() {
   let restaurant: Restaurant | null = ctx.restaurant ?? null;
   let dineInEnabled = false;
   let deliveryEnabled = false;
-  if (slug) {
-    const data = await getRestaurantBySlug(slug);
+  let config: ThemeConfig | null = null;
+  /* Con el slug del perfil también: sin el subdominio, la configuración
+     (mesas, confirmación automática) quedaba sin leer. */
+  const slugTema = slug ?? (restaurant?.slug as string | undefined) ?? null;
+  if (slugTema) {
+    const data = await getRestaurantBySlug(slugTema);
     if (data) {
       restaurant = data.restaurant;
+      config = data.resolved.config;
       dineInEnabled = data.resolved.config.orderTypes.includes('dine_in');
       deliveryEnabled = data.resolved.config.orderTypes.includes('delivery');
     }
@@ -113,9 +121,21 @@ export default async function AdminAjustesPage() {
   ).length;
   const planLabel = restaurant?.plan_actual ? (PLANS[restaurant.plan_actual as PlanCode]?.name ?? restaurant.plan_actual) : undefined;
 
+  /* Ficha 2.8 (R24.2): cada fila dice cómo está. Lo que falta, en ámbar. */
+  const zona = restaurant?.timezone || 'America/Guatemala';
+  // Frescura evaluada al momento del request a propósito (server component).
+  const horario = estadoHorario(restaurant?.hours ?? null, restaurant?.hour_exceptions ?? null, zona, new Date());
+  const zonas = ordersEnabled && restaurantId ? (await getDeliveryZones(restaurantId)).length : 0;
+  const entrega = estadoEntrega(zonas, restaurant?.delivery_radius_km ?? null,
+    restaurant?.location_lat != null && restaurant?.location_lng != null);
+  const pedidos = config ? estadoPedidos(config.autoConfirmEnabled, config.autoConfirmMinutes) : null;
+  const mesas = config ? config.dineInTableCount : null;
+  const enPlano = config?.floorPlan?.enabled ? (config.floorPlan.tables?.length ?? 0) : 0;
+  const salon = mesas != null ? `${mesas} ${mesas === 1 ? 'mesa' : 'mesas'}${enPlano ? ` · ${enPlano} en el plano` : ''}` : undefined;
+
   const negocio: Row[] = [
-    { href: '/admin/perfil', icon: 'user', label: 'Perfil del negocio', desc: 'Nombre, contacto y datos de tu cuenta', key: 'perfil' },
-    { href: '/admin/ajustes/restaurante', icon: 'clock', label: 'Horarios', desc: 'A qué hora abres cada día y la pausa de pedidos', key: 'ajustes' },
+    { href: '/admin/perfil', icon: 'user', label: 'Perfil del negocio', desc: 'Nombre, contacto y datos de tu cuenta', key: 'perfil', value: restaurant?.name ?? undefined },
+    { href: '/admin/ajustes/restaurante', icon: 'clock', label: 'Horarios', desc: 'A qué hora abres cada día y la pausa de pedidos', key: 'ajustes', value: horario.texto, tone: horario.tono },
     /* Salón. ESTABA EN EL MENÚ Y NO EN ESTA LISTA (corregido el 2026-09-07):
        `admin-nav.ts` lo cuenta como pestaña del grupo Ajustes, pero el grupo
        tiene `index: true` —no dibuja fila de pestañas, dibuja esta portada—
@@ -124,10 +144,10 @@ export default async function AdminAjustesPage() {
        pantalla sencillamente no existía. Ver la prueba de admin-nav.test.ts,
        que ahora compara las dos listas. */
     ...(mesasAccesible
-      ? [{ href: '/admin/ajustes/salon', icon: 'grid', label: 'Salón', desc: 'Cuántas mesas hay, el plano del local y el QR de cada mesa', key: 'mesas' } as Row]
+      ? [{ href: '/admin/ajustes/salon', icon: 'grid', label: 'Salón', desc: 'Cuántas mesas hay, el plano del local y el QR de cada mesa', key: 'mesas', value: salon } as Row]
       : []),
     ...(ordersEnabled
-      ? [{ href: '/admin/ajustes/entrega', icon: 'mapPin', label: 'Zona de entrega', desc: 'Dónde estás y hasta dónde repartes a domicilio', key: 'ajustes' } as Row]
+      ? [{ href: '/admin/ajustes/entrega', icon: 'mapPin', label: 'Zona de entrega', desc: 'Dónde estás y hasta dónde repartes a domicilio', key: 'ajustes', ...(deliveryEnabled ? { value: entrega.texto, tone: entrega.tono } : {}) } as Row]
       : []),
     { href: '/admin/personalizacion', icon: 'sparkle', label: 'Personalizar el sitio', desc: 'Colores, tipografía y plantilla de tu menú', key: 'personalizar' },
     { href: '/admin/qr', icon: 'image', label: 'Código QR', desc: 'El código que pones en las mesas y en el mostrador', key: 'qr' },
@@ -135,7 +155,7 @@ export default async function AdminAjustesPage() {
 
   const servicio: Row[] = [
     ...(ordersEnabled
-      ? [{ href: '/admin/ajustes/pedidos', icon: 'wallet', label: 'Pedidos y cobro', desc: 'Propina, moneda, confirmación automática y semáforo de cocina', key: 'ajustes' } as Row]
+      ? [{ href: '/admin/ajustes/pedidos', icon: 'wallet', label: 'Pedidos y cobro', desc: 'Propina, moneda, confirmación automática y semáforo de cocina', key: 'ajustes', value: pedidos?.texto } as Row]
       : []),
     ...(ordersEnabled
       ? [{ href: '/admin/mi-pc', icon: 'monitor', label: 'La PC del local', desc: 'Imprime comandas sola y te cubre si se cae el internet', key: 'impresion', value: pcValue, tone: pcTone } as Row]
@@ -158,7 +178,7 @@ export default async function AdminAjustesPage() {
   const cuenta: Row[] = [
     { href: '/admin/suscripcion', icon: 'wallet', label: 'Mi suscripción', desc: 'Tu plan, lo que incluye y cómo cambiarlo', key: 'suscripcion', value: planLabel },
     ...(showStaff
-      ? [{ href: '/admin/modulos', icon: 'grid', label: 'Funciones', desc: 'Enciende y apaga lo que usa tu restaurante', key: 'modulos', value: activeModules ? `${activeModules} activas` : undefined } as Row]
+      ? [{ href: '/admin/modulos', icon: 'grid', label: 'Funciones', desc: 'Enciende y apaga lo que usa tu restaurante', key: 'modulos', value: activeModules ? `${activeModules} encendidas` : undefined } as Row]
       : []),
     { href: '/admin/respaldo', icon: 'download', label: 'Exportar tus datos', desc: 'Tu catálogo, clientes y pedidos en un Excel', key: 'respaldo' },
     { href: '/admin/ayuda', icon: 'helpCircle', label: 'Ayuda y tutoriales', desc: 'Guías paso a paso de cada pantalla', key: 'ayuda' },
