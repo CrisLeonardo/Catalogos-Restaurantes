@@ -386,6 +386,8 @@ Las fichas indican **qué cubren y dónde está la especificación**. El detalle
 
 **Estado de 2.10 (2026-11-17):** [maqueta](../diseno/MAQUETA_CODIGO_QR_2026-11-17.html) presentada en la rama `feat/codigo-qr`, desde `main`. Propone elegir para qué es el QR (Redes, Imprimir o Solo el código) y ver exactamente el archivo que se descarga, con un solo botón. El cartel sale en hoja carta con la escala explicada. Lo impreso usa la dirección estable `/m/<slug>`, que sobrevive a un cambio de nombre. El texto del cartel no promete funciones apagadas, la pantalla avisa en una copia de prueba y los errores son reales. El dueño la aprobó con las cuatro recomendaciones y quedó **construida** (registro §44), sin migración. Las fichas 2.3–2.9 están en los PR #126–#128 y #130–#133.
 
+**Estado de 2.11 (2026-11-17):** [maqueta](../diseno/MAQUETA_NAVEGACION_POR_ROL_2026-11-17.html) presentada en la rama `feat/navegacion-por-rol`, desde `main`. Propone una regla para la barra del teléfono: si el trabajo de una persona cabe en la barra, la barra nombra sus pantallas (caja: Pedidos, Mesas, Tomar pedido y Caja; recepción: Mesas, Reservas, Espera y Pedidos); si no, van las cuatro secciones más usadas y «Más» (dueño: Hoy, Pedidos, Tomar pedido, Menú y Más). «Más» vive en la propia barra y se marca cuando estás en Clientes, Negocio o Ajustes, para no repetir lo que se revirtió el 2026-09-07. La PC del dueño conserva sus seis secciones. Pendiente de aprobación.
+
 ### Ola 3 · Números confiables y retención
 
 | Ficha | Tamaño | Cubre | Especificación |
