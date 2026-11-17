@@ -388,6 +388,8 @@ Las fichas indican **qué cubren y dónde está la especificación**. El detalle
 
 **Estado de 2.11 (2026-11-17):** [maqueta](../diseno/MAQUETA_NAVEGACION_POR_ROL_2026-11-17.html) presentada en la rama `feat/navegacion-por-rol`, desde `main`. Propone una regla para la barra del teléfono: si el trabajo de una persona cabe en la barra, la barra nombra sus pantallas (caja: Pedidos, Mesas, Tomar pedido y Caja; recepción: Mesas, Reservas, Espera y Pedidos); si no, van las cuatro secciones más usadas y «Más» (dueño: Hoy, Pedidos, Tomar pedido, Menú y Más). «Más» vive en la propia barra y se marca cuando estás en Clientes, Negocio o Ajustes, para no repetir lo que se revirtió el 2026-09-07. La PC del dueño conserva sus seis secciones. El dueño la aprobó con las cuatro recomendaciones y quedó **construida** (registro §46), sin migración: `barraMovil` en `lib/admin-nav.ts`, la hoja «Más» con el buscador y la barra sólida con etiquetas de 12 px.
 
+**Estado de 2.12 (2026-11-17):** [glosario](../guias/GUIA_GLOSARIO.md) presentado en la rama `feat/glosario`, apilada sobre `feat/navegacion-por-rol`. Propone «platillo» para todo lo que se vende (también en Tomar pedidos), «pantalla de cocina» en vez de KDS, «función» en vez de «módulo», los tres modos con un solo nombre, exportaciones con los estados de la pantalla y una prueba que detecte las palabras prohibidas. Pendiente de aprobación.
+
 ### Ola 3 · Números confiables y retención
 
 | Ficha | Tamaño | Cubre | Especificación |
