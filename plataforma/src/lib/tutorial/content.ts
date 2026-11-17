@@ -67,18 +67,20 @@ export function searchSections(
   sections: TutorialSectionDef[],
   query: string,
 ): TutorialSectionDef[] {
-  const q = query.toLowerCase().trim();
+  /* Sin acentos ni mayúsculas (ficha 2.9): «diseno» encuentra «Diseño». */
+  const n = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const q = n(query).trim();
   if (!q) return sections;
   return sections
     .map((sec) => {
       const matchesSec =
-        sec.title.toLowerCase().includes(q) ||
-        sec.description.toLowerCase().includes(q);
+        n(sec.title).includes(q) ||
+        n(sec.description).includes(q);
       const matchingSteps = sec.steps.filter(
         (s) =>
-          s.title.toLowerCase().includes(q) ||
-          s.description.toLowerCase().includes(q) ||
-          (s.route?.toLowerCase().includes(q) ?? false),
+          n(s.title).includes(q) ||
+          n(s.description).includes(q) ||
+          (s.route ? n(s.route).includes(q) : false),
       );
       if (matchesSec) return sec;
       if (matchingSteps.length > 0) return { ...sec, steps: matchingSteps };

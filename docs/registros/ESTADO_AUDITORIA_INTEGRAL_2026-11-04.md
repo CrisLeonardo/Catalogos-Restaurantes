@@ -755,6 +755,23 @@ La siguiente ficha es **1.12 · Comensal: entrada, checkout y seguimiento**. Que
 - **Validación:** `typecheck` y `lint` sin errores (los tres avisos de siempre); 1,562 unitarias pasan, con una omitida.
 - **Limpieza:** se quitaron la guía anterior (`onboarding-checklist.tsx`), el widget «La casa» y `getActiveOrdersPreview`, que ya no usaba nadie.
 
+## 43. Ayuda por lo que necesitas · ficha 2.9 (2026-11-16)
+
+**Rama** `feat/ayuda-por-intencion`, desde `main` (`a7a8040`). Maqueta aprobada con sus cuatro recomendaciones: [`MAQUETA_AYUDA_POR_INTENCION_2026-11-16.html`](../diseno/MAQUETA_AYUDA_POR_INTENCION_2026-11-16.html). Las secciones 37–42 (fichas 2.3–2.8) están en sus propias ramas.
+
+- **Un solo índice de intenciones** en `plataforma/src/lib/ayuda/intenciones.ts` (15 casos con sinónimos, sin depender de acentos) que usan el Centro de ayuda y el buscador del panel (Ctrl K, grupo «Hacer»). La primera respuesta es un botón a la pantalla exacta. Si la persona no puede abrirla, se le dice a quién pedírselo, y Ctrl K solo ofrece lo que puede abrir.
+- **«No me entran pedidos» se revisa en vivo** (`lib/ayuda/diagnostico.ts` y la acción `diagnosticoDePedidos`): pausa (con «Reanudar» ahí mismo), horario, pedidos y modos encendidos y PC del local, con el reloj de la ficha 2.6. Lo que falla va primero. Si quien pregunta no puede reanudar, se le dice que lo pida al dueño o al encargado.
+- **Mensaje a soporte con contexto editable**: restaurante, plan, lo que buscó y versión, en WhatsApp y correo. La persona puede cambiarlo antes de enviarlo.
+- **Migración 186 `ayuda_sin_respuesta`**: guarda solo la frase y el restaurante, nunca quién la escribió; RLS sin políticas. Se anota 1.5 s después de dejar de escribir, así que solo queda la frase final, sin las letras intermedias. Si falta la tabla, la búsqueda funciona igual. Superadmin › Configuración › Soporte la muestra agrupada y con lo más pedido primero (`lib/ayuda/sin-respuesta.ts`).
+- **Comprobado en pantalla** con Rincón 502:
+  - A 390 px en claro: casos comunes; diagnóstico con pausa; «Reanudar», que deja todo en verde; respuesta «se trabo la impresora»; búsqueda sin respuesta («exportar a contpaq» quedó anotada una sola vez).
+  - A 390 px en oscuro: el diagnóstico.
+  - A 1280 px en oscuro: respuesta, diagnóstico y Ctrl K «Hacer».
+  - En PC, el botón de la respuesta ya no cruza toda la columna, sino que mide lo que dice.
+  - La lista del superadmin se vio montada a mano en la página de Ayuda, solo en local. El superadmin local pide el segundo factor y no se saltó.
+- **No comprobado en pantalla:** el caso «sin permiso» con una cuenta de mesero; lo cubren las pruebas del índice. Tampoco la fila de la PC dentro del diagnóstico, porque la base local no tiene agente; lo cubre su prueba.
+- **Validación:** `typecheck` y `lint` sin errores; 1,575 unitarias pasan (13 nuevas de ayuda) y una omitida.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*
