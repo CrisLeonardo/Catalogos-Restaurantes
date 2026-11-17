@@ -908,6 +908,31 @@ A pedido del dueño, las fichas 2.3–2.10 y el CHANGELOG de v0.23.0 se juntaron
   - Siguen abiertos el #129 (propuesta de planes) y los de dependencias.
 - **Lo que sigue:** fichas 2.11 (navegación móvil por rol) y 2.12 (glosario), y la línea N.
 
+## 46. Navegación por rol · ficha 2.11 (2026-11-17)
+
+**Rama** `feat/navegacion-por-rol`, desde `main` (`a89d7ca`). Maqueta aprobada con sus cuatro recomendaciones: [`MAQUETA_NAVEGACION_POR_ROL_2026-11-17.html`](../diseno/MAQUETA_NAVEGACION_POR_ROL_2026-11-17.html). Sin migración.
+
+- **Una regla** (`barraMovil` en `lib/admin-nav.ts`): si las pantallas de trabajo de la persona caben en cuatro casillas (contando el botón de tomar pedido), la barra las nombra una por una. Si no, van las cuatro secciones más usadas y «Más». Nunca hay más de cinco casillas.
+- **Dueño y encargado:** Hoy · Pedidos · Tomar pedido · Menú · Más. Sin «Tomar pedido» en el plan, la casilla la ocupa Negocio.
+- **Puestos:**
+  - Caja: Pedidos · Mesas · Tomar pedido · Caja · Más (Hoy y Salón).
+  - Recepción: Mesas · Reservas · Espera · Pedidos · Más. Quien no toma pedidos tiene Pedidos al final.
+  - Cocina: Hoy · Cocina, sin «Más».
+  - Mesero: sigue sin barra.
+- **«Más» vive en la barra** y se marca estando en lo que trae dentro (`destinoActivo`). Abre una hoja con el buscador y una fila por sección que dice lo que trae. Así no se repite lo que se revirtió el 2026-09-07.
+- **Una sección de una sola pantalla se llama como ella** (`destinoDeGrupo`): el encargado ve «Caja» y no «Negocio», también en la barra lateral.
+- **Sin pestañas repetidas:** en modo «trabajo» la barra ya nombra cada pantalla, así que no se pinta la fila de pestañas. Caja y Cocina ganaron su título (caían en «Panel»).
+- **PC:** el dueño conserva sus seis secciones. Los puestos ven su lista y, bajo «También», lo que en el teléfono está en «Más».
+- **Barra sólida** (`--adm-card`, sin vidrio) con etiquetas de 12 px.
+- **Tours:** `lib/tutorial/objetivo.ts` señala «Más» cuando la sección del paso está dentro. El tour de bienvenida ya no dice «seis lugares».
+- **Comprobado en pantalla** con Rincón 502 y personal de prueba local (`caja@`, `recepcion@`, `cocina@rincon502.test`, solo en la base local):
+  - Dueño a 375 px en claro: cinco casillas de 70 px, hoja «Más», buscador desde la hoja, «Más» marcado en Clientes y Escape que devuelve el foco.
+  - Dueño a 320 px en oscuro, en Negocio: «Más» marcado, sin etiquetas cortadas ni desborde.
+  - Dueño a 1280 px: las seis secciones, sin «Más».
+  - Caja a 375 px (con «Más»: Hoy y Salón) y a 1280 px (con «También»). Recepción a 375 px en Espera. Cocina a 375 px en oscuro.
+- **No comprobado:** el encargado en pantalla (lo cubren las pruebas) y una prueba con personas.
+- **Validación:** `typecheck` y `lint` sin errores; 1,652 unitarias pasan, con una omitida. `admin-nav.test.ts` cubre cada puesto, que ningún destino lleve a una pantalla sin permiso y cuándo se marca «Más».
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

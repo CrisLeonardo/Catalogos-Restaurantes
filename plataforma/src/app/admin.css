@@ -217,6 +217,45 @@
    llegar al mismo sitio. */
 .admin-fab { display: none; }
 
+/* «Más» (ficha 2.11) es una casilla del teléfono. En la PC la barra lateral
+   tiene sitio: el dueño ve sus seis secciones y cada puesto ve lo de «Más»
+   abajo, bajo «También». */
+.admin-nav .admin-navmas { display: none; }
+.admin-nav-tambien {
+  padding: 14px 12px 4px;
+  font-size: calc(11px * var(--admin-panel-scale, 1)); font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--u-text-3);
+}
+
+/* La hoja «Más» del teléfono: el buscador y una fila por sección, con lo
+   que trae dentro. */
+.hoja-mas .hoja-operativa-pie:empty { display: none; }
+.hoja-mas-buscar {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px;
+  padding: 0 14px; margin-bottom: 12px;
+  border-radius: var(--radius-lg); border: 1px solid var(--adm-border-2, var(--u-hair));
+  background: var(--adm-bg, transparent); color: var(--u-text-3);
+  font: inherit; font-size: 14px; text-align: left; cursor: pointer;
+}
+.hoja-mas-lista {
+  list-style: none; margin: 0; padding: 0;
+  border: 1px solid var(--adm-border, var(--u-hair)); border-radius: var(--radius-lg); overflow: hidden;
+}
+.hoja-mas-lista li + li { border-top: 1px solid var(--adm-border, var(--u-hair)); }
+.hoja-mas-fila {
+  display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 14px;
+  color: var(--u-text); text-decoration: none;
+}
+.hoja-mas-icono {
+  width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center;
+  border-radius: 10px; background: var(--adm-bg-2, var(--surface-2)); color: var(--u-text-2);
+}
+.hoja-mas-texto { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.hoja-mas-texto b { font-size: 15px; font-weight: 600; }
+.hoja-mas-texto span { font-size: 12px; line-height: 1.4; color: var(--u-text-3); overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.hoja-mas-fila[aria-current="page"] .hoja-mas-texto b { color: var(--brand-accent-ink, var(--admin-panel-accent)); }
+.hoja-mas-chev { flex-shrink: 0; color: var(--u-text-3); }
+
 .admin-nav {
   display: flex; flex-direction: column; gap: 4px;
   flex: 1; min-height: 0; overflow-y: auto;
@@ -553,8 +592,9 @@
     min-height: calc(var(--adm-nav-h) + env(safe-area-inset-bottom, 0px));
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid var(--admin-panel-hair);
-    background: color-mix(in srgb, var(--admin-panel-bg) 88%, transparent);
-    -webkit-backdrop-filter: blur(18px) saturate(130%); backdrop-filter: blur(18px) saturate(130%);
+    /* Sólida, como las tarjetas (ficha 2.11): el vidrio cambiaba de color con
+       lo que pasara por debajo. */
+    background: var(--adm-card, var(--admin-panel-bg));
     overflow: visible;
     --u-text:   var(--admin-panel-text);
     --u-text-2: var(--admin-panel-text-2);
@@ -565,8 +605,10 @@
     flex: 1 1 0; min-width: 0; flex-direction: column; justify-content: center; gap: 3px;
     padding: 5px 2px; border-radius: 12px; text-align: center;
   }
+  /* 12 px: con cinco casillas como mucho (ficha 2.11) cada una mide ~70 px,
+     y las etiquetas ya no tienen que encogerse a 10 px para caber siete. */
   .admin-navlink .nav-label {
-    flex: none; font-size: calc(10px * var(--admin-panel-scale, 1)); font-weight: 500;
+    flex: none; font-size: calc(12px * var(--admin-panel-scale, 1)); font-weight: 500;
     letter-spacing: 0; line-height: 1.2;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   }
@@ -589,6 +631,8 @@
   /* Barra con un solo sitio (el mesero puro): no se pinta, y todo lo que
      reservaba su hueco —contenido, barra del carrito, avisos— baja al canto.
      Mismo truco que `.admin-kiosk`. Ver `sinBarra` en shell.tsx. */
+  .admin-nav .nav-en-mas, .admin-nav .nav-solo-pc { display: none; }
+  .admin-nav .admin-navmas { display: flex; font-family: inherit; }
   .admin-shell[data-sin-barra] { --adm-nav-h: 0px; }
   .admin-shell[data-sin-barra] .admin-nav { display: none; }
   /* El aro de "ya te oí" sale por encima del icono en vez de empujar el
@@ -619,11 +663,12 @@
      viven la barra del carrito (56), la de guardado (66) y los avisos
      (72). Por eso el CÍRCULO se aparta en cuanto alguna aparece — abajo.
 
-     LOS SEIS DESTINOS SE QUEDAN (2026-09-07). El botón nació echando a
-     Clientes y Negocio al menú "⋯" y eso costaba más de lo que ahorraba:
-     desaparecían sin rastro, y estando EN una de esas dos pantallas la
-     barra no marcaba nada. Medido a 375 px: seis destinos a 47 px con las
-     seis etiquetas enteras (`scrollWidth === clientWidth`). */
+     Desde la ficha 2.11 (2026-11-17) la barra tiene cinco casillas como
+     mucho: Clientes, Negocio y Ajustes del dueño van a «Más», que vive en la
+     propia barra y se marca estando en ellas. Así no se repite lo que se
+     revirtió el 2026-09-07 (mudarlos al «⋯» de arriba: desaparecían sin
+     rastro y la barra no marcaba nada). Ver `barraMovil` en
+     lib/admin-nav.ts. */
 
   .admin-fab {
     display: flex; flex: 0 0 86px; min-width: 0;
@@ -638,7 +683,7 @@
     color: var(--u-text-2);
   }
   .admin-fab .nav-label {
-    flex: none; font-size: calc(10px * var(--admin-panel-scale, 1)); font-weight: 600;
+    flex: none; font-size: calc(12px * var(--admin-panel-scale, 1)); font-weight: 600;
     line-height: 1.2; letter-spacing: 0; white-space: nowrap;
   }
   /* En la pantalla a la que lleva. Mismo acento que marca destino en esta

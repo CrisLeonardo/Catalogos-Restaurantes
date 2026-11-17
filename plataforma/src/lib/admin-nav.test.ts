@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildNav, barraDestinos, seccionDeRuta, type NavContext } from './admin-nav';
+import { buildNav, barraMovil, destinoActivo, seccionDeRuta, type BarraMovil, type NavContext } from './admin-nav';
+import { permisosDePuesto } from './permisos-trabajo';
 import { can } from './permissions';
 
 /* ── Contexto ─────────────────────────────────────────────────────
@@ -131,8 +132,11 @@ describe('seccionDeRuta (SEC-06)', () => {
    El mesero puro veía «Hoy» (que el layout rebotaba a Tomar pedidos) y
    «Pedidos» (que ya era Tomar pedidos), sin botón central —se colgaba tras
    «Menú», que él no tiene— y sin ningún destino marcado. */
-describe('barraDestinos', () => {
+describe('barraMovil (ficha 2.11): la barra del teléfono por rol', () => {
   const MESERO: NavContext = { ...CTX_DUEÑO, role: 'RESTAURANT_STAFF', permissions: ['mesero'], showStaff: false };
+  const puesto = (p: Parameters<typeof permisosDePuesto>[0]): NavContext =>
+    ({ ...CTX_DUEÑO, role: 'RESTAURANT_STAFF', permissions: permisosDePuesto(p), showStaff: false });
+  const nombres = (b: BarraMovil) => b.principales.map((d) => d.label);
 
   it('el mesero puro no ve «Hoy»: el panel lo devolvería a Tomar pedidos', () => {
     expect(buildNav(MESERO).map((g) => g.key)).toEqual(['pedidos']);
@@ -140,40 +144,90 @@ describe('barraDestinos', () => {
   });
 
   it('el mesero puro tiene un solo sitio: no hay barra que pintar', () => {
-    expect(barraDestinos(buildNav(MESERO)).destinos).toBe(1);
+    expect(barraMovil(buildNav(MESERO)).sinBarra).toBe(true);
+    expect(barraMovil(buildNav(puesto('mesero'))).sinBarra).toBe(true);
   });
 
-  it('quien sí entra al panel sigue viendo «Hoy»', () => {
-    const conPedidos = buildNav({ ...MESERO, permissions: ['mesero', 'pedidos'] });
-    expect(conPedidos[0].key).toBe('hoy');
-    expect(buildNav(CTX_DUEÑO)[0].key).toBe('hoy');
+  it('dueño: Hoy · Pedidos · [botón] · Menú · Más, con Clientes, Negocio y Ajustes dentro', () => {
+    const b = barraMovil(buildNav(CTX_DUEÑO));
+    expect(b.modo).toBe('secciones');
+    expect(nombres(b)).toEqual(['Hoy', 'Pedidos', 'Menú']);
+    expect(b.conBoton).toBe(true);
+    expect(b.botonEn).toBe(2);
+    expect(b.mas.map((d) => d.label)).toEqual(['Clientes', 'Negocio', 'Ajustes']);
+    // Cinco casillas: tres destinos, el botón y «Más».
+    expect(b.principales.length + 1 + 1).toBe(5);
   });
 
-  it('con los seis destinos del dueño el botón va tras «Menú»', () => {
-    const grupos = buildNav(CTX_DUEÑO);
-    const barra = barraDestinos(grupos);
-    expect(barra.conBoton).toBe(true);
-    expect(grupos[barra.botonTras].key).toBe('menu');
-    expect(barra.destinos).toBe(7);
+  it('dueño sin Tomar pedidos en el plan: Negocio ocupa esa casilla', () => {
+    const b = barraMovil(buildNav({ ...CTX_DUEÑO, planActual: 'ESTANDAR' }));
+    expect(b.conBoton).toBe(false);
+    expect(b.botonEn).toBe(-1);
+    expect(nombres(b)).toEqual(['Hoy', 'Pedidos', 'Menú', 'Negocio']);
+    expect(b.mas.map((d) => d.label)).toEqual(['Clientes', 'Ajustes']);
   });
 
-  it('sin «Menú» el botón no desaparece: va al centro de lo que haya', () => {
-    const grupos = buildNav({ ...MESERO, permissions: ['mesero', 'pedidos'] });
-    expect(grupos.map((g) => g.key)).toEqual(['hoy', 'pedidos']);
-    const barra = barraDestinos(grupos);
-    expect(barra.conBoton).toBe(true);
-    expect(barra.botonTras).toBe(0);
-    expect(barra.destinos).toBe(3);
+  it('caja: sus pantallas por nombre, con Hoy y Salón en «Más»', () => {
+    const b = barraMovil(buildNav(puesto('caja')));
+    expect(b.modo).toBe('trabajo');
+    expect(nombres(b)).toEqual(['Pedidos', 'Mesas', 'Caja']);
+    expect(b.botonEn).toBe(2);
+    expect(b.mas.map((d) => d.label)).toEqual(['Hoy', 'Salón']);
   });
 
-  it('sin Tomar pedidos en el plan no hay botón', () => {
-    const barra = barraDestinos(buildNav({ ...CTX_DUEÑO, planActual: 'ESTANDAR' }));
-    expect(barra.conBoton).toBe(false);
-    expect(barra.botonTras).toBe(-1);
+  it('recepción: Mesas, Reservas, Espera y Pedidos a un toque', () => {
+    const b = barraMovil(buildNav(puesto('recepcion')));
+    expect(b.modo).toBe('trabajo');
+    expect(nombres(b)).toEqual(['Mesas', 'Reservas', 'Espera', 'Pedidos']);
+    expect(b.conBoton).toBe(false);
+    expect(b.mas.map((d) => d.label)).toEqual(['Hoy', 'Salón']);
   });
 
-  it('en la vista previa del súper admin no hay botón', () => {
-    expect(barraDestinos(buildNav({ ...CTX_DUEÑO, preview: true }), true).conBoton).toBe(false);
+  it('cocina: cabe todo, sin «Más», y su casilla se llama Cocina', () => {
+    const b = barraMovil(buildNav(puesto('cocina')));
+    expect(nombres(b)).toEqual(['Hoy', 'Cocina']);
+    expect(b.mas).toEqual([]);
+    expect(b.sinBarra).toBe(false);
+  });
+
+  it('encargado: como el dueño, y una sección de una sola pantalla se llama como ella', () => {
+    const b = barraMovil(buildNav(puesto('encargado')));
+    expect(b.modo).toBe('secciones');
+    expect(nombres(b)).toEqual(['Hoy', 'Pedidos', 'Menú']);
+    expect(b.mas.map((d) => d.label)).toEqual(['Clientes', 'Caja', 'Salón']);
+  });
+
+  it('ningún destino lleva a una pantalla con candado ni que la persona no pueda abrir', () => {
+    for (const p of ['caja', 'recepcion', 'cocina', 'encargado'] as const) {
+      const ctx = puesto(p);
+      const b = barraMovil(buildNav(ctx));
+      for (const d of [...b.principales, ...b.mas]) {
+        const llave = seccionDeRuta(d.href);
+        if (llave) expect(can(ctx.role, ctx.permissions, llave), `${p} → ${d.href}`).toBe(true);
+      }
+    }
+  });
+
+  it('«Más» se marca estando en una de sus pantallas, y el botón no deja a Pedidos marcado', () => {
+    const b = barraMovil(buildNav(CTX_DUEÑO));
+    expect(destinoActivo(b, '/admin/cupones')).toBe('clientes');
+    expect(b.mas.some((d) => d.key === destinoActivo(b, '/admin/ajustes/salon'))).toBe(true);
+    expect(destinoActivo(b, '/admin/pedidos')).toBe('pedidos');
+    expect(destinoActivo(b, '/admin/mesero')).toBeNull();
+    expect(destinoActivo(b, '/admin')).toBe('hoy');
+  });
+
+  it('«Más» dice lo que trae dentro', () => {
+    const b = barraMovil(buildNav(CTX_DUEÑO));
+    expect(b.mas.find((d) => d.key === 'negocio')?.detalle).toBe('Resumen, analítica, finanzas, caja y más');
+    expect(barraMovil(buildNav({ ...CTX_DUEÑO, felActive: false })).mas.find((d) => d.key === 'negocio')?.detalle)
+      .toBe('Resumen, analítica, finanzas y caja');
+  });
+
+  it('en la vista previa del súper admin no hay botón y se enseñan las secciones', () => {
+    const b = barraMovil(buildNav({ ...CTX_DUEÑO, preview: true }), true);
+    expect(b.conBoton).toBe(false);
+    expect(b.modo).toBe('secciones');
   });
 });
 

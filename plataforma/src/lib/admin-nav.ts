@@ -286,36 +286,178 @@ export function findGroup(groups: NavGroup[], pathname: string): NavGroup | null
   return best?.group ?? null;
 }
 
-/* ── La barra de destinos del teléfono ──────────────────────────────
-   Con el menú de un dueño la cuenta es fácil: seis destinos y el botón de
-   tomar pedido entre Menú y Clientes. Con un rol estrecho no, y ahí se
-   rompía (auditoría de navegación 2026-10-14): el botón se colgaba DETRÁS
-   del grupo «Menú», y quien no lo tiene —un mesero, un cajero con Tomar
-   pedidos— se quedaba sin botón y sin ningún destino marcado en esa
-   pantalla. Esto decide la barra a partir de los grupos ya filtrados. */
+/* ── La barra de destinos del teléfono (ficha 2.11, D05) ─────────────
+   Una sola regla: SI EL TRABAJO DE ALGUIEN CABE EN LA BARRA, LA BARRA ES SU
+   TRABAJO; si no, van sus cuatro secciones más usadas y «Más».
+
+   · Modo «trabajo» (caja, recepción, cocina, permisos a la medida): la
+     barra nombra sus pantallas una por una —«Caja», «Mesas», «Espera»— en
+     vez de las secciones del dueño. Antes la cajera llegaba a Caja tocando
+     «Negocio» y recepción tenía su trabajo partido entre «Pedidos» y
+     «Clientes».
+   · Modo «secciones» (dueño, encargado): Hoy, Pedidos, el botón de tomar
+     pedido y Menú; Clientes, Negocio y Ajustes van a «Más». Antes eran siete
+     casillas de 47 px con letras de 10 px.
+
+   «Más» vive DENTRO de la barra y se marca cuando la pantalla abierta está
+   en él. Es lo que faltó el 2026-09-07, cuando Clientes y Negocio se
+   mudaron al «⋯» de arriba y se revirtió: desaparecían sin rastro y la
+   barra no marcaba nada estando en ellas.
+
+   En la PC la barra lateral tiene sitio: el dueño conserva sus seis
+   secciones y cada puesto ve la misma lista que en su teléfono, con lo de
+   «Más» abajo, bajo «También». Maqueta aprobada:
+   docs/diseno/MAQUETA_NAVEGACION_POR_ROL_2026-11-17.html. */
 
 /** «Tomar pedidos»: es pestaña de Pedidos y, en el teléfono, el botón central. */
 export const RUTA_TOMAR_PEDIDO = '/admin/mesero';
 
-export interface BarraDestinos {
-  /** Hay botón central de tomar pedido. */
-  conBoton: boolean;
-  /** Índice del grupo tras el cual va el botón (-1 sin botón). */
-  botonTras: number;
-  /** Sitios DISTINTOS a los que lleva la barra (el botón cuenta si va a otro). */
-  destinos: number;
+/** Casillas de la barra, contando el botón y «Más». */
+const CASILLAS = 5;
+/** Destinos principales, contando el botón (D05: máximo cuatro + «Más»). */
+const PRINCIPALES = 4;
+
+/** Nombre corto e icono de una pantalla cuando ocupa una casilla propia. */
+const PANTALLA: Record<string, { label: string; icon: string }> = {
+  '/admin/pedidos': { label: 'Pedidos', icon: 'list' },
+  '/admin/cocina': { label: 'Cocina', icon: 'flame' },
+  '/admin/mesas': { label: 'Mesas', icon: 'grid' },
+  '/admin/reservaciones': { label: 'Reservas', icon: 'calendar' },
+  '/admin/lista-espera': { label: 'Espera', icon: 'users' },
+  '/admin/caja': { label: 'Caja', icon: 'banknote' },
+  '/admin/menu': { label: 'Platillos', icon: 'bag' },
+  '/admin/ajustes/salon': { label: 'Salón', icon: 'settings' },
+};
+
+/** Cuando el lugar ya no alcanza para todos, gana lo que se usa más. */
+const PRIORIDAD_DE_SECCION = ['hoy', 'pedidos', 'menu', 'negocio', 'clientes', 'ajustes'];
+
+export interface DestinoBarra {
+  /** Llave del grupo (modo secciones) o la ruta de la pantalla (modo trabajo). */
+  key: string;
+  label: string;
+  icon: string;
+  href: string;
+  /** Rutas en las que este destino dice «aquí estás». */
+  rutas: string[];
+  /** Lo que trae dentro (filas de «Más»). */
+  detalle?: string;
+  /** Paso del tour guiado que lo señala (la llave del grupo). */
+  tour?: string;
 }
 
-export function barraDestinos(groups: NavGroup[], preview = false): BarraDestinos {
+export interface BarraMovil {
+  modo: 'secciones' | 'trabajo';
+  /** Destinos a la vista, en orden. Sin el botón ni «Más». */
+  principales: DestinoBarra[];
+  /** Hay botón central de tomar pedido. */
+  conBoton: boolean;
+  /** Índice de `principales` delante del cual va el botón (-1 sin botón). */
+  botonEn: number;
+  /** Lo que va dentro de «Más» (vacío: no hay «Más»). */
+  mas: DestinoBarra[];
+  /** Un solo sitio no es navegación: el teléfono no pinta la barra. */
+  sinBarra: boolean;
+}
+
+function frase(partes: string[]): string {
+  const p = partes.map((t, i) => (i === 0 ? t : t.charAt(0).toLowerCase() + t.slice(1)));
+  if (p.length <= 1) return p[0] ?? '';
+  if (p.length > 4) return `${p.slice(0, 4).join(', ')} y más`;
+  return `${p.slice(0, -1).join(', ')} y ${p.at(-1)}`;
+}
+
+function pantalla(item: NavItem, g: NavGroup): DestinoBarra {
+  const p = PANTALLA[item.href] ?? { label: item.label, icon: g.icon };
+  return { key: item.href, label: p.label, icon: p.icon, href: item.href, rutas: [item.href], tour: g.key };
+}
+
+/**
+ * Un grupo como destino. Si enseña UNA sola pantalla se llama como ella
+ * («Caja» y no «Negocio», «Cocina» y no «Pedidos»): una casilla dice lo
+ * que abre.
+ */
+export function destinoDeGrupo(g: NavGroup, conBoton = false): DestinoBarra {
+  const propias = g.items.filter((it) => !(conBoton && it.href === RUTA_TOMAR_PEDIDO));
+  const rutas = g.items.length === 0 ? [g.href] : [...propias.map((it) => it.href), ...(g.index ? [g.href] : [])];
+  if (g.items.length === 1 && !g.items[0].locked) {
+    return { ...pantalla(g.items[0], g), key: g.key, href: g.href, rutas };
+  }
+  const resto = propias.filter((it) => !it.locked && it.label !== g.label).map((it) => it.label);
+  return { key: g.key, label: g.label, icon: g.icon, href: g.href, rutas, detalle: frase(resto) || undefined, tour: g.key };
+}
+
+export function barraMovil(groups: NavGroup[], preview = false): BarraMovil {
   const conBoton = !preview && groups
     .some((g) => g.items.some((it) => it.href === RUTA_TOMAR_PEDIDO && !it.locked));
-  /* Tras «Menú» si existe: con los seis destinos del dueño deja tres a cada
-     lado. Si no, en el centro de lo que haya. */
-  const menu = groups.findIndex((g) => g.key === 'menu');
-  const botonTras = !conBoton ? -1 : menu >= 0 ? menu : Math.max(0, Math.ceil(groups.length / 2) - 1);
-  const sitios = new Set(groups.map((g) => g.href));
+  const boton = conBoton ? 1 : 0;
+
+  /* Las pantallas de trabajo: todo lo que no es configuración (Ajustes) ni
+     la portada (Hoy), sin candados y sin la de tomar pedido (es el botón). */
+  const trabajo = groups
+    .filter((g) => g.key !== 'hoy' && !g.index)
+    .flatMap((g) => g.items
+      .filter((it) => !it.locked && it.href !== RUTA_TOMAR_PEDIDO)
+      .map((it) => pantalla(it, g)));
+  /* Quien no toma pedidos (recepción) mira Pedidos solo por los avisos: su
+     trabajo es el salón, así que Pedidos va al final. */
+  if (!conBoton) trabajo.sort((a, b) => Number(a.href === '/admin/pedidos') - Number(b.href === '/admin/pedidos'));
+
+  let modo: BarraMovil['modo'];
+  let principales: DestinoBarra[];
+  let mas: DestinoBarra[];
+
+  if (!preview && trabajo.length + boton <= PRINCIPALES) {
+    modo = 'trabajo';
+    const hoy = groups.filter((g) => g.key === 'hoy').map((g) => destinoDeGrupo(g));
+    const config = groups.filter((g) => g.index)
+      .flatMap((g) => g.items.filter((it) => !it.locked).map((it) => pantalla(it, g)));
+    const extras = [...hoy, ...config];
+    if (trabajo.length + boton + extras.length <= CASILLAS) {
+      principales = [...hoy, ...trabajo, ...config];
+      mas = [];
+    } else {
+      principales = trabajo;
+      mas = extras;
+    }
+  } else {
+    modo = 'secciones';
+    const todos = groups.map((g) => ({ g, d: destinoDeGrupo(g, conBoton) }));
+    if (groups.length + boton <= CASILLAS) {
+      principales = todos.map((x) => x.d);
+      mas = [];
+    } else {
+      const orden = (k: string) => {
+        const i = PRIORIDAD_DE_SECCION.indexOf(k);
+        return i < 0 ? PRIORIDAD_DE_SECCION.length : i;
+      };
+      const elegidos = new Set([...groups].sort((a, b) => orden(a.key) - orden(b.key))
+        .slice(0, PRINCIPALES - boton).map((g) => g.key));
+      principales = todos.filter((x) => elegidos.has(x.g.key)).map((x) => x.d);
+      mas = todos.filter((x) => !elegidos.has(x.g.key)).map((x) => x.d);
+    }
+  }
+
+  // El botón va en el centro real de las casillas.
+  const casillas = principales.length + boton + (mas.length > 0 ? 1 : 0);
+  const botonEn = conBoton ? Math.min(principales.length, Math.floor(casillas / 2)) : -1;
+  const sitios = new Set([...principales, ...mas].map((d) => d.href));
   if (conBoton) sitios.add(RUTA_TOMAR_PEDIDO);
-  return { conBoton, botonTras, destinos: sitios.size };
+  return { modo, principales, conBoton, botonEn, mas, sinBarra: sitios.size < 2 };
+}
+
+/**
+ * El destino que dice «aquí estás»: la coincidencia más larga entre todos.
+ * Devuelve su `key`, o null si la pantalla no es de ninguno.
+ */
+export function destinoActivo(barra: BarraMovil, pathname: string): string | null {
+  let mejor: { key: string; len: number } | null = null;
+  for (const d of [...barra.principales, ...barra.mas]) {
+    for (const r of d.rutas) {
+      if (isActivePath(pathname, r) && (!mejor || r.length > mejor.len)) mejor = { key: d.key, len: r.length };
+    }
+  }
+  return mejor?.key ?? null;
 }
 
 /* ── Qué sección exige cada pantalla (SEC-06) ──────────────────────────
