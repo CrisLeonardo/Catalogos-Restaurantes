@@ -4,7 +4,7 @@
    se convierte en una barra inferior fija tipo app. Envuelve /admin/*.
    El nav se agrupa en secciones (escritorio) y se filtra por permisos. */
 
-import { useEffect, useState, useMemo } from 'react';
+import { Suspense, useCallback, useEffect, useState, useMemo } from 'react';
 import Link, { useLinkStatus } from 'next/link';
 import AssetImage from '@/components/asset-image';
 import { usePathname } from 'next/navigation';
@@ -30,6 +30,8 @@ import SectionTabs from '@/components/admin/section-tabs';
 import CommandSearch from '@/components/admin/command-search';
 import AdminMoreMenu from '@/components/admin/admin-more-menu';
 import { PLAN_COLOR_VAR } from '@/lib/plans';
+import { AvisoAparatoListo, HojaAparato, InicioDelAparato } from '@/components/admin/aparato/este-aparato';
+import { USOS, type UsoAparato } from '@/lib/aparato';
 
 
 
@@ -108,6 +110,8 @@ interface Props {
   preview?: boolean;
   /** Sesión iniciada por PIN — cambia "Salir" por "Cambiar de usuario". */
   isOperatorSession?: boolean;
+  /** Para qué es este aparato (ficha 2.6, migración 184). */
+  aparato?: { uso: UsoAparato | null; nombre: string | null };
   children: React.ReactNode;
 }
 
@@ -126,7 +130,7 @@ export default function AdminShell({
   llamadaMeseroActive = false,
   logoUrl, logoBg, zone, role, permissions, userName, canManageStaff, hasMultipleRestaurants = false,
   tourEnEspera = false, planActual, dineInEnabled = false, deliveryEnabled = false, whatsappReady = false, preview = false,
-  isOperatorSession = false, children,
+  isOperatorSession = false, aparato, children,
 }: Props) {
   const realPathname = usePathname();
 
@@ -139,7 +143,7 @@ export default function AdminShell({
      cadena vacía en el subdominio de hoy. Ver lib/panel-links.ts. */
   const panelBase = panelBaseFrom(realPathname);
   /** Enlace a pintar para una ruta interna del panel. */
-  const enlace = (ruta: string) => panelHref(panelBase, ruta);
+  const enlace = useCallback((ruta: string) => panelHref(panelBase, ruta), [panelBase]);
 
   /* `pathname` es siempre la ruta INTERNA (`/admin/...`), venga el navegador
      por el subdominio o por `/panel/<slug>`. Así toda la lógica de abajo
@@ -166,7 +170,10 @@ export default function AdminShell({
     ? 'leogin:modo-servicio:cocina'
     : pathname.startsWith('/admin/mesero')
       ? 'leogin:modo-servicio:mesero'
-      : null;
+      /* Caja también (ficha 2.6): el aparato de caja abre a pantalla completa. */
+      : pathname.startsWith('/admin/caja')
+        ? 'leogin:modo-servicio:caja'
+        : null;
 
   /* Al entrar en una pantalla con modo servicio se aplica lo que este
      aparato tuviera guardado; al salir a cualquier otra sección se apaga
@@ -269,6 +276,19 @@ export default function AdminShell({
   });
   const activeGroup = findGroup(groups, pathname);
 
+  /* ESTE APARATO (ficha 2.6). Las rutas que ESTA persona tiene en su menú
+     (plan, módulos y permisos ya aplicados): el inicio directo nunca lleva
+     a otra. Lo cambia quien maneja el personal; el servidor lo vuelve a
+     comprobar al guardar. */
+  const rutasPermitidas = useMemo(
+    () => new Set(groups.flatMap((g) => [g.href, ...g.items.filter((i) => !i.locked).map((i) => i.href)])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(groups.map((g) => [g.href, g.items.map((i) => [i.href, !!i.locked])]))],
+  );
+  const [hojaAparato, setHojaAparato] = useState(false);
+  const puedeCambiarAparato = !preview && !!restaurantId && showStaff;
+  const usoAparato = aparato?.uso ?? null;
+
   /* ── EL BOTÓN DE TOMAR PEDIDO ───────────────────────────────────
      Lo primero que hace cualquiera con este sistema es apuntar un
      pedido, y hasta ahora eso estaban tres toques: Pedidos, la pestaña
@@ -332,6 +352,8 @@ export default function AdminShell({
   const enTomarPedido = pathname.startsWith('/admin/mesero');
 
   const TITLES: Record<string, string> = {
+    // Antes que '/admin/mesero': gana el primer prefijo que coincide.
+    '/admin/mesero/practica': 'Turno de práctica',
     '/admin/mesero': 'Tomar pedidos',
     '/admin/mesas': 'Mesas · Comer en local',
     '/admin/pedidos': 'Pedidos en vivo',
@@ -349,6 +371,7 @@ export default function AdminShell({
     '/admin/suscripcion': 'Mi suscripción',
     // «Platillo», como dicen la pestaña («Platillos») y el resto del panel.
     '/admin/menu/productos/new': 'Nuevo platillo',
+    '/admin/menu/importar': 'Importar carta',
     '/admin/menu/productos': 'Platillo',
     '/admin/menu': 'Platillos',
     // El mismo nombre que en Ajustes (AJU-04): eran «Perfil» aquí y
@@ -435,8 +458,9 @@ export default function AdminShell({
      mesa ya sale EN la mesa, con su botón «Atender»: la tarjeta flotante
      repetía el hecho y encima tapaba la comanda. */
   const isSalon   = isWaiter || pathname.startsWith('/admin/mesas');
-  // Únicas dos pantallas táctiles con modo "pantalla completa" (ver toggleKiosk).
-  const kioskEligible = isKitchen || isWaiter;
+  // Las pantallas táctiles con modo "pantalla completa" (ver toggleKiosk).
+  const isCaja    = pathname.startsWith('/admin/caja');
+  const kioskEligible = isKitchen || isWaiter || isCaja;
   /* El cable con la pantalla de dentro: el boton "Modo servicio" del
      panel de mesero enciende ESTE estado. Se memoriza para no re-montar
      todo el arbol de contenido en cada render del armazon. */
@@ -526,6 +550,7 @@ export default function AdminShell({
             </button>
           </div>
           <div className="admin-kiosk-body">
+            <Suspense fallback={null}><AvisoAparatoListo uso={usoAparato} /></Suspense>
             <ServiceModeContext.Provider value={servicio}>{children}</ServiceModeContext.Provider>
           </div>
           {!preview && <LoginWelcomeToast restaurantName={restaurantName} userName={userName} roleLabel={roleLabel} />}
@@ -698,6 +723,22 @@ export default function AdminShell({
           </a>
         )}
 
+        {/* Ficha 2.6: para qué es este aparato. Solo quien maneja el personal. */}
+        {puedeCambiarAparato && (
+          <button
+            type="button"
+            onClick={() => setHojaAparato(true)}
+            className="press glass-quiet admin-switch-restaurant"
+            style={{ borderRadius: 'var(--radius-lg)', padding: '10px 12px', marginBottom: 8, border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left', font: 'inherit' }}
+          >
+            <Icon name="monitor" size={15} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />
+            <span style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 600, color: 'var(--u-text-2)' }}>
+              Este aparato · {usoAparato ? USOS[usoAparato].label : 'Panel completo'}
+            </span>
+            <Icon name="chevronRight" size={14} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+          </button>
+        )}
+
         <div className="glass-quiet admin-usercard" style={{ borderRadius: 'var(--radius-lg)', padding: 12 }}>
           <div className="admin-usericon" style={{ width: 34, height: 34, borderRadius: 'var(--radius-full)', background: 'color-mix(in srgb, var(--u-text) 10%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
             <Icon name="user" size={17} />
@@ -771,6 +812,8 @@ export default function AdminShell({
               hasMultipleRestaurants={hasMultipleRestaurants}
               helpSection={helpSection}
               isOperatorSession={isOperatorSession}
+              aparato={puedeCambiarAparato ? (usoAparato ? USOS[usoAparato].label : 'Panel completo') : null}
+              onAparato={() => setHojaAparato(true)}
             />
           )}
         </div>
@@ -787,15 +830,22 @@ export default function AdminShell({
           </div>
         )}
         <div className="admin-content">
+          <Suspense fallback={null}><AvisoAparatoListo uso={usoAparato} /></Suspense>
           <ServiceModeContext.Provider value={servicio}>{children}</ServiceModeContext.Provider>
         </div>
       </div>
       {avisosFlotantes}
       {!preview && <CommandSearch groups={groups} />}
+      {!preview && <InicioDelAparato uso={usoAparato} pathname={pathname} rutasPermitidas={rutasPermitidas} enlace={enlace} />}
+      {hojaAparato && restaurantId && (
+        <HojaAparato restaurantId={restaurantId} uso={usoAparato} nombre={aparato?.nombre ?? null}
+          enlace={enlace} onClose={() => setHojaAparato(false)} />
+      )}
       {/* El tour enseña los seis destinos de la barra. Sin barra (el mesero
           puro) no hay nada que señalar: eran cinco pasos sobre Menú y
           Ajustes, pantallas que esa persona no puede abrir. */}
-      {!sinBarra && <WelcomeTour restaurantName={restaurantName} preview={preview} enEspera={tourEnEspera} />}
+      {!sinBarra && <WelcomeTour restaurantName={restaurantName} preview={preview} enEspera={tourEnEspera}
+        practicaHref={barra.conBoton ? enlace('/admin/mesero/practica') : null} />}
       {!preview && <LoginWelcomeToast restaurantName={restaurantName} userName={userName} roleLabel={roleLabel} />}
       {/* Tours guiados del centro de ayuda ("Ver en mi panel") — el host vive
           aquí para sobrevivir a las navegaciones entre páginas del panel. */}

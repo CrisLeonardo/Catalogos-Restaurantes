@@ -1,10 +1,10 @@
 'use server';
 
 import { createClient, getStaffUser } from '@/lib/supabase/server';
-import { puedeEnSeccion } from '@/lib/auth/seccion';
+import { contextoDeCatalogo, topeDeProductos, type ContextoCatalogo } from '@/lib/catalogo/contexto';
 import { createServiceClient } from '@/lib/supabase/service';
-import { resolveGroupBranchId, canActOnGroupBranch, getAdminMenu } from '@/lib/db/admin';
-import { resolveOwnRestaurantId, resolveEffectiveRole } from '@/lib/db/membership';
+import { canActOnGroupBranch, getAdminMenu } from '@/lib/db/admin';
+import { resolveEffectiveRole } from '@/lib/db/membership';
 import { can } from '@/lib/permissions';
 import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -15,7 +15,6 @@ import {
 import { longDate } from '@/lib/documents/format';
 import type { DocumentBranding } from '@/lib/documents/types';
 import { sanitizeDietaryTags } from '@/lib/dietary-tags';
-import { PLANS, type PlanCode } from '@/lib/plans';
 import type { Category, Product, ProductOptionGroup } from '@/types';
 import { panelLink } from '@/lib/panel-links-server';
 import { registrarEvento } from '@/lib/analytics-server';
@@ -30,65 +29,12 @@ const esHasta = (v: unknown): v is AgotadoHasta => v === 'manana' || v === 'repo
 export type ProductState = { error: string } | null;
 
 async function resolveContext(formData: FormData) {
-  const supabase = await createClient();
-  const { data: { user } } = await getStaffUser();
-  if (!user) return null;
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('restaurant_id, role, permissions')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile) return null;
-
-  // Quien administra un grupo trabaja sobre una sucursal suya (subdominio verificado);
-  // SUPER_ADMIN, cualquiera por el id del form. Ambos usan el cliente elevado.
-  // Quien administra un grupo entra a la sucursal del subdominio (verificada
-  // contra su organización); el resto, al suyo. `resolveGroupBranchId`
-  // devuelve null si no administra ninguno, así que sirve de las dos cosas:
-  // de comprobación y de id. Ver la migración 116.
-  const groupBranchId = profile.role === 'SUPER_ADMIN' ? null : await resolveGroupBranchId();
-  const elevated = profile.role === 'SUPER_ADMIN' || groupBranchId !== null;
-  const restaurantId = profile.role === 'SUPER_ADMIN'
-    ? (formData.get('restaurantId') as string)
-    : (groupBranchId ?? (await resolveOwnRestaurantId(profile.restaurant_id)));
-
-  if (!restaurantId) return null;
-  if (!(await puedeEnSeccion(restaurantId, 'catalogo'))) return null;
-
-  const db = elevated ? createServiceClient() : supabase;
-  return { db, restaurantId, role: profile.role, userId: user.id };
+  return contextoDeCatalogo((formData.get('restaurantId') as string | null) ?? null);
 }
 
-/**
- * Tope de productos del plan gratuito (BASICO, ver PLANS.maxProducts en
- * plans.ts). Devuelve un mensaje de error si el restaurante ya llegó al
- * tope, o null si puede seguir creando productos.
- */
-async function checkProductLimit(
-  ctx: NonNullable<Awaited<ReturnType<typeof resolveContext>>>,
-): Promise<string | null> {
-  const { data: restaurant } = await ctx.db
-    .from('restaurants')
-    .select('plan_actual')
-    .eq('id', ctx.restaurantId)
-    .single();
-
-  const maxProducts = restaurant?.plan_actual
-    ? PLANS[restaurant.plan_actual as PlanCode]?.maxProducts
-    : undefined;
-  if (!maxProducts) return null;
-
-  const { count } = await ctx.db
-    .from('products')
-    .select('id', { count: 'exact', head: true })
-    .eq('restaurant_id', ctx.restaurantId);
-
-  if ((count ?? 0) >= maxProducts) {
-    return `Llegaste al límite de ${maxProducts} productos de tu plan. Sube de plan para agregar productos ilimitados.`;
-  }
-  return null;
+/** Tope de productos del plan gratuito (ver lib/catalogo/contexto.ts). */
+async function checkProductLimit(ctx: ContextoCatalogo): Promise<string | null> {
+  return topeDeProductos(ctx, 1);
 }
 
 /** Los errores que la base explica (candados LGD01) se dicen tal cual; el resto, genérico. */

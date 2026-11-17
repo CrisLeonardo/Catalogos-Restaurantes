@@ -14,6 +14,7 @@ import TablesPanel from '@/components/admin/tables-panel';
 import PlanLockedScreen from '@/components/admin/plan-locked-screen';
 import { getSalonData } from '../../mesas/salon-data';
 import { panelLink } from '@/lib/panel-links-server';
+import { getActiveTableNumbers } from '@/lib/db/orders';
 
 export const metadata = { title: 'Salón – Panel admin' };
 
@@ -34,12 +35,18 @@ export default async function AjustesSalonPage() {
 
   if (!restaurantId || !slug || !config) redirect(await panelLink('/admin/mesas'));
 
+  /* Ficha 2.8 (R27.2): las mesas con cuenta abierta, para no quitarlas sin
+     resolverlas al bajar el número de mesas. */
+  const ocupacion = await getActiveTableNumbers(restaurantId);
+  const ocupadas = Object.entries(ocupacion).map(([n, o]) => ({ n: Number(n), total: Math.max(0, o.total - (o.paid ?? 0)) }));
+
   return (
     <TablesPanel
       restaurantId={restaurantId}
       slug={slug}
       menuUrl={menuUrl}
       restaurantName={config.brandName}
+      ocupadas={ocupadas}
       config={{
         orderTypes: config.orderTypes,
         dineInTableCount: config.dineInTableCount,

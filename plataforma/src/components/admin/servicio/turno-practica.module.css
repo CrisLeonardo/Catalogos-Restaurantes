@@ -1,0 +1,112 @@
+/* Turno de práctica (ficha 2.5). Lo demás es el CSS de Tomar pedidos
+   (`.sv-*` en admin.css): la práctica se ve igual que el turno real. */
+
+/* ── La franja: dice el paso y cómo salir, nada más ───────────── */
+.barra {
+  flex: 0 0 auto;
+  display: grid; gap: 8px;
+  padding: 10px 16px 0;
+  background: var(--c-info-bg);
+  border-bottom: 1px solid color-mix(in srgb, var(--c-info) 24%, transparent);
+  color: var(--u-text);
+}
+.barraFila { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.marca {
+  flex: 0 0 auto;
+  padding: 3px 9px; border-radius: var(--radius-md);
+  background: var(--sv-info-fill); color: var(--c-on-solid);
+  font-size: 12px; font-weight: 700; letter-spacing: 0.02em;
+}
+.texto {
+  flex: 1; min-width: 0; margin: 0;
+  font-size: 14px; font-weight: 500; line-height: 1.35; text-wrap: pretty;
+}
+.paso { font-weight: 700; color: var(--c-info); font-variant-numeric: tabular-nums; }
+.salir {
+  flex: 0 0 auto;
+  min-height: 40px; padding: 0 14px;
+  display: inline-flex; align-items: center;
+  border-radius: var(--radius-md); border: 1px solid var(--u-hair-2);
+  background: var(--adm-card); color: var(--u-text);
+  font-size: 14px; font-weight: 600; text-decoration: none;
+}
+.salir:hover { background: var(--adm-card-hover, var(--surface-2)); }
+.progreso { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; padding-bottom: 10px; }
+.progreso > span {
+  height: 4px; border-radius: 2px;
+  background: color-mix(in srgb, var(--c-info) 18%, transparent);
+}
+.progreso > span[data-on="hecho"] { background: var(--sv-info-fill); }
+.progreso > span[data-on="ahora"] { background: color-mix(in srgb, var(--sv-info-fill) 55%, transparent); }
+
+/* ── Cocina simulada ──────────────────────────────────────────── */
+.cocina {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: grid; align-content: start; justify-items: center; gap: 18px;
+  padding: 24px 16px 32px;
+}
+.cocinaHead { width: min(100%, 440px); display: grid; gap: 6px; }
+.cocinaHead h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+.cocinaHead p { margin: 0; font-size: 14px; color: var(--u-text-2); line-height: 1.45; }
+.ticket {
+  width: min(100%, 440px);
+  display: grid; gap: 14px; padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--u-hair-2); border-top: 4px solid var(--sv-info-fill);
+  background: var(--adm-card);
+}
+.ticket header { display: flex; align-items: center; gap: 10px; }
+.ticket header strong { font-size: 18px; font-weight: 700; }
+.chipPractica {
+  padding: 2px 8px; border-radius: var(--radius-md);
+  background: var(--c-info-bg); color: var(--c-info);
+  font-size: 12px; font-weight: 700;
+}
+.ticket ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.ticket li { display: flex; gap: 10px; font-size: 16px; line-height: 1.35; }
+.ticket li b { display: block; font-weight: 600; }
+.ticket li small { display: block; font-size: 13px; color: var(--u-text-2); }
+.cant { font-family: var(--ui-font-mono); font-weight: 700; min-width: 28px; }
+
+/* ── Anular ───────────────────────────────────────────────────── */
+.campo { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--u-text-2); }
+.campo input {
+  height: 48px; padding: 0 14px;
+  border-radius: var(--radius-lg); border: 1.5px solid var(--u-hair-2);
+  background: var(--adm-card); color: var(--u-text);
+  font: inherit; font-size: 16px; font-weight: 500;
+}
+.sugerencias { display: flex; flex-wrap: wrap; gap: 8px; }
+.sugerencias > button { flex: 1 1 180px; min-height: 44px; font-size: 14px; }
+
+/* ── Final ────────────────────────────────────────────────────── */
+.fin {
+  flex: 1; min-height: 0; overflow-y: auto;
+  width: min(100%, 440px); margin-inline: auto;
+  display: grid; align-content: center; justify-items: center; gap: 12px;
+  padding: 32px 16px; text-align: center;
+}
+.fin h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; text-wrap: balance; }
+.finIco {
+  width: 56px; height: 56px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--c-ok-bg); color: var(--c-ok);
+}
+.finSub { margin: 0; font-size: 15px; color: var(--u-text-2); }
+.hechos {
+  list-style: none; margin: 4px 0; padding: 0; width: 100%;
+  display: grid; gap: 8px; text-align: left;
+}
+.hechos li { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+.hechos li :global(svg) { color: var(--c-ok); flex: 0 0 auto; }
+.finAcciones { width: 100%; display: grid; gap: 10px; margin-top: 8px; }
+.finAcciones > a { text-decoration: none; }
+
+/* ── Sin carta ────────────────────────────────────────────────── */
+.vacio {
+  width: min(100%, 400px); margin: 48px auto; padding: 0 16px;
+  display: grid; gap: 10px; text-align: center;
+}
+.vacio h1 { margin: 0; font-size: 20px; font-weight: 600; }
+.vacio p { margin: 0; color: var(--u-text-2); }
+.vacio > a { text-decoration: none; }

@@ -306,7 +306,16 @@ huellas(n, que, ok, cuando) as (values
   ('183', 'primeros pasos: pedido de prueba que no cuenta en cifras, caja, puntos ni existencias',
      exists (select 1 from information_schema.columns where table_schema='public' and table_name='orders' and column_name='es_prueba')
      and to_regprocedure('public.leogin_terminar_pedido_prueba(uuid,uuid,uuid)') is not null,
-     'ANTES de desplegar; independiente de la 182')
+     'ANTES de desplegar; independiente de la 182'),
+  ('184', 'para qué es cada aparato: cocina, caja o mesero abren directo en su pantalla',
+     exists (select 1 from information_schema.columns where table_schema='public' and table_name='restaurant_devices' and column_name='uso'),
+     'ANTES de desplegar; independiente de la 182 y la 183'),
+  ('185', 'personalizar: el diseño anterior de la carta para «Volver al anterior»',
+     exists (select 1 from information_schema.columns where table_schema='public' and table_name='restaurant_themes' and column_name='config_anterior'),
+     'ANTES de desplegar; independiente de la 184'),
+  ('186', 'ayuda: búsquedas sin respuesta (solo la frase) para agregar respuestas',
+     to_regclass('public.ayuda_sin_respuesta') is not null,
+     'antes o después de desplegar; independiente de la 184 y la 185')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

@@ -25,7 +25,8 @@ const empty: ZonesState = null;
 
 export interface ZoneDraft {
   nombre: string;
-  tarifa: number;
+  /** null = todavía sin escribir (ficha 2.8, R28.3): no es lo mismo que 0, gratis. */
+  tarifa: number | null;
 }
 
 export default function DeliveryZonesEditor({
@@ -44,7 +45,7 @@ export default function DeliveryZonesEditor({
     const z = draft.trim();
     if (!z) return;
     if (!zones.some((x) => x.nombre.toLowerCase() === z.toLowerCase())) {
-      setZones((prev) => [...prev, { nombre: z, tarifa: 0 }]);
+      setZones((prev) => [...prev, { nombre: z, tarifa: null }]);
     }
     setDraft('');
   }
@@ -52,12 +53,14 @@ export default function DeliveryZonesEditor({
   function setTarifa(nombre: string, valor: string) {
     const n = Number(valor);
     setZones((prev) => prev.map((z) =>
-      z.nombre === nombre ? { ...z, tarifa: Number.isFinite(n) && n > 0 ? n : 0 } : z,
+      z.nombre === nombre ? { ...z, tarifa: valor.trim() === '' || !Number.isFinite(n) ? null : Math.max(0, n) } : z,
     ));
   }
+  const sinTarifa = zones.filter((z) => z.tarifa == null).map((z) => z.nombre);
 
   return (
-    <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+      onSubmit={(e) => { if (sinTarifa.length) e.preventDefault(); }}>
       <input type="hidden" name="restaurantId" value={restaurantId} />
       <input type="hidden" name="zones" value={JSON.stringify(zones)} />
 
@@ -68,10 +71,9 @@ export default function DeliveryZonesEditor({
           Zonas a las que llevas a domicilio
         </p>
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 12, lineHeight: 1.5 }}>
-          Si agregas zonas, el cliente debe elegir la suya al pedir a domicilio y
-          paga la tarifa de esa zona; si la suya no está, solo podrá pedir para
-          recoger. Sin zonas = entregas a cualquier dirección con la tarifa
-          normal. Tarifa en 0 = envío gratis para esa zona.
+          El cliente elige la suya al pedir a domicilio y paga el envío de esa
+          zona; si la suya no está, solo podrá pedir para recoger. Envío en 0 =
+          gratis para esa zona.
         </p>
 
         {/* Zonas con su tarifa */}
@@ -99,11 +101,14 @@ export default function DeliveryZonesEditor({
                   min="0"
                   step="0.01"
                   inputMode="decimal"
-                  value={z.tarifa}
+                  value={z.tarifa ?? ''}
+                  placeholder="Q"
                   onChange={(e) => setTarifa(z.nombre, e.target.value)}
                   className="adm-field adm-field-sm"
                   style={{ width: 84, fontVariantNumeric: 'tabular-nums' }}
+                  aria-invalid={z.tarifa == null || undefined}
                 />
+                {z.tarifa === 0 && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-ok)' }}>Gratis</span>}
 
                 <button
                   type="button"
@@ -151,6 +156,11 @@ export default function DeliveryZonesEditor({
         </div>
       </Glass>
 
+      {sinTarifa.length > 0 && (
+        <p role="alert" style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--c-warn)' }}>
+          Falta el envío de {sinTarifa.join(', ')}. Escribe 0 si es gratis.
+        </p>
+      )}
       <SaveBar dirty={dirty} pending={isPending} status={state} label="Guardar zonas" />
     </form>
   );

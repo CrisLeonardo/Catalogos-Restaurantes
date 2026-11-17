@@ -18,6 +18,8 @@ import { updateRestaurantLocation, type SaveState } from '@/lib/actions/restaura
 import type { Restaurant } from '@/types';
 import SaveBar from '@/components/admin/save-bar';
 import { useFormDirty } from '@/lib/use-form-dirty';
+import { pruebaDeDistancia } from '@/lib/ajustes-estado';
+import ajustes from '@/components/admin/ajustes/ajustes.module.css';
 
 const LocationMap = dynamic(
   () => import('./restaurant-location-map'),
@@ -51,6 +53,8 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
   const [lat,    setLat]    = useState(restaurant.location_lat    ?? DEFAULT_LAT);
   const [lng,    setLng]    = useState(restaurant.location_lng    ?? DEFAULT_LNG);
   const [radius, setRadius] = useState(restaurant.delivery_radius_km ?? DEFAULT_RADIUS);
+  const [prueba, setPrueba] = useState<[number, number] | null>(null);
+  const resultado = prueba ? pruebaDeDistancia([lat, lng], prueba, radius) : null;
   const [geoEnabled, setGeoEnabled] = useState(
     restaurant.location_lat !== null && restaurant.location_lng !== null && restaurant.delivery_radius_km !== null
   );
@@ -101,7 +105,23 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
               lng={lng}
               radiusKm={radius}
               onLocationChange={handleLocationChange}
+              onPrueba={(la, ln) => setPrueba([la, ln])}
             />
+
+            {/* Ficha 2.8 (R28.2): antes de que pida un cliente. */}
+            <div style={{ marginTop: 10, display: 'grid', gap: 6 }} role="status" aria-live="polite">
+              {resultado ? (
+                <p className={resultado.dentro ? ajustes.bien : ajustes.aviso} style={{ margin: 0 }}>
+                  {resultado.dentro
+                    ? `✓ Dentro: ${resultado.km} km de tu local.`
+                    : `Fuera: ${resultado.km} km, y repartes hasta ${radius % 1 === 0 ? radius : radius.toFixed(1)} km. Ese cliente solo podría pedir para recoger.`}
+                </p>
+              ) : (
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-3)' }}>
+                  <strong style={{ color: 'var(--u-text-2)' }}>Prueba un punto:</strong> toca el mapa donde vive un cliente y te digo si queda dentro.
+                </p>
+              )}
+            </div>
 
             {/* Coordenadas en texto (solo lectura, informativo) */}
             <div style={{

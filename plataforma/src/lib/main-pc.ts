@@ -1,4 +1,4 @@
-import { haceTiempo } from '@/lib/dates';
+import { estadoDePc } from '@/lib/estado-pc';
 /* ============================================================
    ¿QUÉ DICE EL PANEL SOBRE LA PC PRINCIPAL?
    ------------------------------------------------------------
@@ -55,12 +55,6 @@ function minutesSince(iso: string | null, now: number): number | null {
   return (now - t) / 60_000;
 }
 
-/** «hace 5 min», «hace 3 h», «ayer», «hace 4 días», «el 11 jul 2026».
- *  Solo sabía de minutos y horas: una PC apagada desde julio decía
- *  «hace 2004 h» (auditoría 2026-10-02, T-02). */
-function agoLabel(mins: number, now: number): string {
-  return haceTiempo(now - mins * 60_000, now);
-}
 
 export function readMainPcStatus(
   config: MainPcInput | null,
@@ -130,11 +124,14 @@ export function readMainPcStatus(
     };
   }
 
+  /* Las mismas palabras que Hoy, Ajustes y el superadmin (ficha 2.6):
+     «Sin señal desde las 12:31» o «Desconectada desde las 12:31». */
+  const texto = estadoDePc({ existe: true, activa: true, ultimaSenal: config.lastSeenAt }, now).texto;
   return {
     on: true, isThisDevice, live: false, where, deviceLabel: name, tone: 'warn',
     label,
     detail: isThisDevice
-      ? `Sin responder desde ${agoLabel(mins, now)}. El servicio de esta computadora no está corriendo.`
-      : `Sin responder desde ${agoLabel(mins, now)}. ¿Está encendida y con internet?`,
+      ? `${texto}. El servicio de esta computadora no está corriendo.`
+      : `${texto}. ¿Está encendida y con internet?`,
   };
 }

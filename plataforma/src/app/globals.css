@@ -4203,17 +4203,40 @@ html[data-admin-area][data-scheme="light"] {
 .lp-incluye[open] > summary svg { transform: rotate(180deg); }
 .lp-incluye > .lp-bento { text-align: left; }
 
-/* «Así se ve TU restaurante» (components/signup/restaurante-listo.tsx · G1). */
-.listo-fondo {
-  position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 16px;
-  background: rgba(12, 11, 10, 0.62); overflow-y: auto;
+/* Alta hasta el primer valor (ficha 2.3): app/registro y app/mi-cuenta/nuevo. */
+@media (max-width: 640px) { .registro-ventajas { display: none !important; } }
+.alta-pagina { flex: 1; width: 100%; max-width: 640px; margin: 0 auto; padding: 20px 16px 64px; }
+@media (min-width: 900px) { .alta-pagina { max-width: 920px; padding-top: 32px; } }
+.alta-dos { display: grid; gap: 20px; }
+.alta-solo-pc { display: none; }
+@media (min-width: 900px) {
+  .alta-dos { grid-template-columns: minmax(0, 1fr) 270px; align-items: start; gap: 32px; }
+  .alta-solo-pc { display: block; }
+  /* En PC el teléfono va a la derecha, como en «¿Qué vendes?». */
+  .alta-telefono { order: 2; }
 }
-.listo-tarjeta {
-  width: 100%; max-width: 440px; display: flex; flex-direction: column; align-items: center; gap: 18px;
-  padding: 22px 20px; border-radius: 26px; background: #fff; color: #17161a;
-  box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.5);
+.alta-fila { display: grid; grid-template-columns: minmax(0, 1fr) 112px; gap: 8px; }
+.alta-opcion {
+  display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 12px 14px; cursor: pointer;
+  border: 1px solid var(--u-hair-2); border-radius: 14px; background: var(--surface-1, var(--brand-bg));
 }
-.listo-cabeza { display: flex; align-items: center; gap: 14px; width: 100%; }
+.alta-opcion[data-activa] { border-color: var(--brand-accent); box-shadow: inset 0 0 0 1px var(--brand-accent); }
+.alta-opcion input { width: 20px; height: 20px; margin: 0; flex-shrink: 0; accent-color: var(--brand-accent); }
+.alta-opcion:has(input:focus-visible) { outline: 2px solid var(--brand-accent-ink, var(--brand-accent)); outline-offset: 2px; }
+.alta-enlace {
+  display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; cursor: pointer;
+  font: inherit; font-weight: 600; color: var(--brand-accent-ink, var(--brand-accent)); text-decoration: none;
+}
+.alta-agregar { min-height: 44px; font-size: 14px; align-self: flex-start; }
+.alta-resumen { border: 1px solid var(--u-hair-2); border-radius: 14px; overflow: hidden; }
+.alta-renglon { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 14px; font-size: 14px; }
+.alta-renglon + .alta-renglon, .alta-elegir + .alta-renglon { border-top: 1px solid var(--u-hair); }
+.alta-k { width: 52px; flex-shrink: 0; color: var(--u-text-3); }
+.alta-v { flex: 1; min-width: 0; font-weight: 600; color: var(--u-text); }
+.alta-renglon .alta-enlace { min-height: 44px; font-size: 13px; }
+.alta-elegir { display: flex; flex-direction: column; gap: 8px; padding: 4px 14px 14px; }
+
+/* La carta en vivo del alta (components/signup/carta-en-vivo.tsx). */
 .listo-telefono {
   width: 250px; height: min(500px, 58svh); border-radius: 34px; overflow: hidden;
   border: 9px solid #1C1C1E; background: #1C1C1E; box-shadow: 0 24px 50px -24px rgba(0, 0, 0, 0.5);
@@ -4225,16 +4248,6 @@ html[data-admin-area][data-scheme="light"] {
   position: absolute; left: 0; top: 0; display: block; border: 0;
   width: 375px; height: 161.6%; transform: scale(0.6187); transform-origin: 0 0;
 }
-.listo-entrar {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 48px;
-  border: 0; border-radius: 14px; cursor: pointer; font-size: 15px; font-weight: 700;
-  background: var(--brand-accent, #E8534A); color: var(--brand-on-accent, #fff);
-}
-@media (prefers-reduced-motion: no-preference) {
-  .listo-tarjeta { animation: fiesta-entra-g 380ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both; }
-  .listo-telefono { animation: fiesta-entra-g 520ms cubic-bezier(0.2, 0.9, 0.3, 1.1) 140ms both; }
-}
-@keyframes fiesta-entra-g { from { opacity: 0; transform: translate3d(0, 16px, 0) scale(0.96); } }
 
 /* «Pídelo tú mismo» (components/pidelo, auditoría EV-01): el punto «en vivo»
    del panel de mentira y la entrada de la tarjeta del pedido. */

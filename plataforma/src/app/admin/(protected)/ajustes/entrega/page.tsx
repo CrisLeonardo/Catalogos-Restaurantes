@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/server';
 import RestaurantLocationEditor from '@/components/admin/restaurant-location-editor';
 import DeliveryZonesEditor from '@/components/admin/delivery-zones-editor';
 import { getDeliveryZones } from '@/lib/db/zones';
+import ModoDeEntrega from '@/components/admin/ajustes/modo-entrega';
+import { modoEntrega } from '@/lib/ajustes-estado';
 import type { Restaurant } from '@/types';
 
 export const metadata = { title: 'Zona de entrega – Panel admin' };
@@ -44,19 +46,25 @@ export default async function AdminEntregaPage() {
 
   if (!restaurant) redirect('/admin/login');
 
+  /* Ficha 2.8 (R28.1): la manera de repartir se elige a propósito y solo
+     se enseña el editor de esa manera. */
+  const r = restaurant as Restaurant;
+  const modo = modoEntrega(zones.length, r.delivery_radius_km, r.location_lat != null && r.location_lng != null);
+
   return (
     <div className="anim-fade-up adm-w-read">
-      <p className="mb-5 text-[14px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
-        Marca dónde está tu local y hasta dónde repartes. El cliente pone su pin
-        en el mapa al pagar, y el pedido se rechaza si cae fuera del radio.
-      </p>
-      <RestaurantLocationEditor restaurant={restaurant as Restaurant} />
-      <div style={{ marginTop: 28 }}>
-        <DeliveryZonesEditor
-          restaurantId={restaurantId}
-          initialZones={zones.map((z) => ({ nombre: z.nombre, tarifa: z.tarifa }))}
-        />
-      </div>
+      <ModoDeEntrega
+        restaurantId={restaurantId}
+        modo={modo}
+        zonas={zones.length}
+        editorDistancia={<RestaurantLocationEditor restaurant={r} />}
+        editorZonas={
+          <DeliveryZonesEditor
+            restaurantId={restaurantId}
+            initialZones={zones.map((z) => ({ nombre: z.nombre, tarifa: z.tarifa }))}
+          />
+        }
+      />
     </div>
   );
 }

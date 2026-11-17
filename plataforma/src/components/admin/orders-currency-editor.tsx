@@ -148,6 +148,7 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
         <List>
           <ToggleRow
             label="Pago con tarjeta"
+            desc="Con tu terminal (POS), en el local o al entregar. No cobra en línea."
             value={patch.acceptsCard}
             onChange={(v) => set('acceptsCard', v)}
           />
@@ -253,8 +254,10 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
       <Section title="Cuando entra un pedido">
         <List>
           <ToggleRow
-            label="Confirmarlos solo"
-            desc="Pasan a “En preparación” si nadie los confirma antes."
+            label="Confirmar automáticamente"
+            desc={patch.autoConfirmEnabled
+              ? `Si nadie lo confirma en ${patch.autoConfirmMinutes} min, pasa a cocina.`
+              : 'Confirmas tú cada pedido que entra.'}
             value={patch.autoConfirmEnabled}
             onChange={(v) => set('autoConfirmEnabled', v)}
           />
@@ -289,6 +292,19 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
             onChange={(v) => set('kdsRedMin', Math.max(v, patch.kdsYellowMin + 1))}
           />
         </List>
+        {/* Ficha 2.8 (R29.3): el semáforo como línea de tiempo. */}
+        <div className="mt-3 grid gap-1.5" aria-hidden>
+          <div className="flex h-3.5 overflow-hidden rounded-full">
+            <span style={{ flex: patch.kdsYellowMin, background: 'var(--c-ok-solid)' }} />
+            <span style={{ flex: Math.max(1, patch.kdsRedMin - patch.kdsYellowMin), background: 'var(--c-warn-solid)' }} />
+            <span style={{ flex: Math.max(4, Math.round(patch.kdsRedMin / 2)), background: 'var(--c-danger-solid)' }} />
+          </div>
+          <div className="flex text-[12px] text-adm-text-3 tabular-nums">
+            <span style={{ flex: patch.kdsYellowMin }}>0 min</span>
+            <span style={{ flex: Math.max(1, patch.kdsRedMin - patch.kdsYellowMin) }}>ámbar {patch.kdsYellowMin} min</span>
+            <span style={{ flex: Math.max(4, Math.round(patch.kdsRedMin / 2)) }}>rojo {patch.kdsRedMin} min</span>
+          </div>
+        </div>
         <SectionNote>
           Minutos de espera con los que la comanda cambia de color en la
           pantalla de cocina. Verde a tiempo · ámbar apúrate · rojo tarde.

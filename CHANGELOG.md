@@ -6,6 +6,53 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+- **Alta hasta el primer valor** (ficha 2.3; rama `feat/alta-primer-valor`; maqueta aprobada `docs/diseno/MAQUETA_ALTA_PRIMER_VALOR_2026-11-16.html`) · sin migraciones:
+  - El alta pasa de 7 pantallas a 4: la cuenta en una sola, después el negocio con «¿Cómo te piden tus clientes?», «¿Qué vendes?» (nombre y precio de los primeros platillos) y «Así se ve tu carta», con la carta de verdad. Al crear, entra directo a Hoy.
+  - El plan ya no viene en Premium para todos: se sugiere por cómo le piden (Básico, En línea o Premium) y se cambia antes de crear, con el precio a la vista. El estilo llega elegido y se cambia entre tres sugerencias; los demás están en Personalizar.
+  - Los platillos del alta se crean en «Platillos». En PC, la carta se arma en vivo junto al formulario.
+  - Salen la confirmación aparte del registro, la contraseña repetida, la pantalla «¡Tu restaurante está en vivo!» y la ventana «¡Listo!».
+- **Importar una carta con revisión** (ficha 2.4; rama `feat/importar-carta`; maqueta aprobada `docs/diseno/MAQUETA_IMPORTAR_CARTA_2026-11-16.html`) · sin migraciones:
+  - En Platillos › «Importar o exportar» › «Importar carta», la carta entra con una **foto o un PDF** (leídos sin IA: OCR libre en el propio navegador, y el texto del PDF), con un **Excel o CSV** con las mismas columnas que la exportación (hay plantilla) o pegando la lista tal como está en WhatsApp o Word. Lo leído de una foto o PDF se muestra como texto para corregirlo antes de revisar.
+  - Antes de publicar se revisa cada fila: lo dudoso (sin precio, precio sospechoso, repetido) queda sin marcar y se corrige en la misma fila. Si el platillo ya existe, no se duplica: se ofrece cambiarle el precio. El botón dice exactamente qué pasará.
+  - Lo importado sale visible y se puede **deshacer** el lote completo; lo que ya se vendió se conserva.
+  - En el alta, «Pegar mi lista» llena los primeros platillos.
+- **Turno de práctica** (ficha 2.5 de la auditoría; rama `feat/turno-practica`; maqueta aprobada `docs/diseno/MAQUETA_TURNO_PRACTICA_2026-11-16.html`) · sin migraciones:
+  - Una «Mesa P» con tu carta real y las mismas pantallas de Tomar pedidos para practicar una mesa completa en seis pasos: abrir, pedir con un extra, enviar a cocina, marcar listo, anular un plato y cobrar con vuelto. La franja de arriba dice el paso y cómo salir.
+  - No cuenta en nada: no crea pedidos ni cobros, no mueve existencias, no imprime y anular no pide PIN (lo avisa). Al salir se olvida.
+  - Se ofrece al final del recorrido de bienvenida y en la búsqueda de Tomar pedidos. El dueño ve en Personal quién la hizo y en cuántos minutos.
+- **Aparato por rol y La PC del local con un solo estado** (ficha 2.6 de la auditoría; rama `feat/aparato-y-mi-pc`; maqueta aprobada `docs/diseno/MAQUETA_APARATO_Y_MI_PC_2026-11-16.html`) · **migración 184, antes de desplegar**:
+  - **La PC del local** abre con el veredicto («Revisa la impresora de cocina», «Todo listo para el servicio») y cuatro piezas: la PC, la impresora de cocina, la de caja y el respaldo sin internet. Si hay comandas que no salieron, lo dice con la hora y ofrece **Reintentar** (sin duplicar lo que ya se reimprimió). También lo avisa Hoy.
+  - **Un solo reloj** para la PC en Hoy, Ajustes, La PC del local y el superadmin: «Conectada», «Sin señal desde las 12:31» (desde los 90 s) o «Desconectada desde las 12:31» (desde los 10 min).
+  - **Este aparato:** en «⋯» (teléfono) o en la barra lateral (PC), el dueño o quien maneja el personal elige si el aparato es para Cocina, Caja, Tomar pedidos o el panel completo. Al abrir la app, el aparato va directo a esa pantalla, a pantalla completa, sin ampliar permisos de nadie. Después de elegir se puede probar el sonido y la impresora. Personal › Dispositivos dice el uso de cada aparato.
+  - Caja también tiene pantalla completa.
+- **Personalizar con ayuda** (ficha 2.7 de la auditoría; rama `feat/personalizacion-guiada`; maqueta aprobada `docs/diseno/MAQUETA_PERSONALIZACION_GUIADA_2026-11-16.html`) · **migración 185, antes de desplegar**:
+  - La pestaña Diseño abre con **tres diseños recomendados para tu carta**, según cuántos platillos tienen foto, cuántos son y si vendes sobre todo para llevar. Cada uno se ve con tu logo, tus platillos y tus precios, y se usa con un toque. Las 208 combinaciones siguen en «Ver todos los diseños».
+  - **Así queda** está siempre encendida: Portada, un platillo abierto y el carrito, con lo que suele romperse a la vista (el nombre más largo, el precio más alto y un platillo sin foto). «Probar como cliente» abre la carta interactiva.
+  - Al publicar dice qué diseño quedó y ofrece **Volver al anterior**. Tu logo, tus textos y tus pedidos nunca cambian con un diseño.
+  - No se recomienda ninguna combinación poco legible, y en el catálogo se marcan. Las plantillas propias solo aparecen si tienes alguna; guardar una nueva está en «⋯».
+- **Ajustes que dicen cómo estás** (ficha 2.8 de la auditoría; rama `feat/ajustes-claros`; maqueta aprobada `docs/diseno/MAQUETA_AJUSTES_CLAROS_2026-11-16.html`) · sin migraciones:
+  - Cada fila de Ajustes dice su estado: horario, mesas, hasta dónde repartes, quién confirma y cuántas funciones están encendidas. Lo que conviene revisar sale en ámbar.
+  - **Horarios:** eliges «Con horario» o «A toda hora» (ya no dice «Sin horario»). El día apagado dice «Cerrado», puedes copiar un día a los demás, dos turnos que se pisan no se guardan y ves las próximas aperturas con los feriados.
+  - **Zona de entrega:** eliges por zonas, por distancia o a cualquier dirección. «Prueba un punto» en el mapa dice si un cliente queda dentro. Una zona sin tarifa no se guarda hasta escribirla; 0 se ve como «Gratis».
+  - **Pedidos y cobro:** «Confirmar automáticamente» dice en cuántos minutos, el semáforo se ve como línea de tiempo y no se guarda un ámbar después del rojo. «Pago con tarjeta» aclara que es con tu terminal.
+  - **Funciones:** antes de apagar una, dice qué pasa y qué se conserva. **Salón:** no deja quitar una mesa con una cuenta abierta. **Perfil:** separa lo que ve tu cliente y aclara el botón de WhatsApp.
+- **Ayuda por lo que necesitas** (ficha 2.9; rama `feat/ayuda-por-intencion`; maqueta aprobada `docs/diseno/MAQUETA_AYUDA_POR_INTENCION_2026-11-16.html`) · **migración 186, antes o después de desplegar**:
+  - El Centro de ayuda pregunta «¿Qué necesitas hacer?» y arriba ofrece cinco casos comunes. Entiende frases como «se trabó la impresora» o «cerrar por hoy», con o sin acentos. La primera respuesta es un botón a la pantalla exacta; si la persona no puede abrirla, se le dice a quién pedírselo.
+  - **«No me entran pedidos» revisa el restaurante en ese momento:** pausa, horario, modos de pedido y PC del local. Lo que falla va primero, y la pausa trae «Reanudar» ahí mismo.
+  - El buscador del panel (Ctrl K) usa el mismo índice: en «Hacer» salen solo las acciones que la persona puede abrir.
+  - El mensaje a soporte ya va escrito con el restaurante, el plan, lo que se buscó y la versión, y se puede cambiar antes de enviarlo.
+  - **Migración 186:** lo que se busca y no tiene respuesta se anota (solo la frase, nunca quién la escribió) y se ve en Superadmin › Configuración › Soporte, agrupado y con lo más pedido primero.
+- **Código QR** (ficha 2.10; rama `feat/codigo-qr`; maqueta aprobada `docs/diseno/MAQUETA_CODIGO_QR_2026-11-17.html`) · sin migraciones:
+  - Eliges para qué lo quieres (Redes, Imprimir o Solo el código) y ves exactamente el archivo que se descarga, con un solo botón. «Solo el código» ya trae el logo, igual que la vista previa.
+  - El cartel sale en **hoja carta** con dos carteles de 10.5 × 14.8 cm para recortar. La pantalla dice cómo imprimirlo para que el código mida 7 cm.
+  - **Lo impreso ya no se rompe** si cambias el nombre del restaurante: el QR apunta a `distleogin.com/m/<tu-restaurante>`. El enlace corto sigue escrito para teclearlo.
+  - El cartel solo promete lo que tienes encendido: sin pedidos en línea dice «Mira nuestra carta».
+  - En una copia de prueba la pantalla avisa que el QR no abrirá en el restaurante. Si copiar o descargar falla, lo dice, y «Archivo listo» solo sale cuando el archivo existe.
+  - En la PC, la vista previa queda a la izquierda y las opciones a la derecha.
+
+## v0.23.0 · 2026-11-16 · Hoy por etapa, pedido de prueba y sin prueba gratis
+PR #124 (merge `0d15c36`), PR #121 (merge `fd9e728`) y PR #120 (merge `a7a8040`) · migraciones 182 y 183 · en producción el 2026-11-16 (`prod-2026-11-16`). El dueño corrió la 183 antes del despliegue, la 182 después, y también las pendientes 154 y 181.
+- **Serie de video «Una sola toma»** (PR #120, `promo-video/`, aparte de la app): tres videos de 34 s (con meseros, comedor y domicilio) en vertical y horizontal, en los que un pedido cruza el restaurante sin cortes. Convive con «Otra vez» y «Un solo lugar», que son los que están en uso.
 - **Sin prueba gratis** (PR #121, merge `fd9e728`) · **migración 182, justo después de desplegar**: los planes con pedidos (En línea, Estándar y Premium) se cobran desde el primer día; el gancho gratis sigue siendo el plan Básico. La 182 pone `trial_days = 0` y los textos de registro, planes, portada, Mi cuenta y términos dejan de prometer días gratis. Los restaurantes que ya estaban en prueba la terminan como estaba.
 - **Hoy por etapa y Primeros pasos por resultado** (fichas 2.1 y 2.2 de la auditoría; rama `feat/hoy-por-etapa`; maqueta aprobada `docs/diseno/MAQUETA_HOY_POR_ETAPA_2026-11-15.html`) · **migración 183, antes de desplegar**:
   - Hoy elige sola su versión. **Nuevo:** la guía «Llega a tu primer pedido», sin cifras en cero. **Operando:** arriba, hasta tres cosas que piden acción (pedidos por aceptar, pedidos atascados en cocina, comida lista que espera, caja sin abrir…), con «Ver N más» para el resto. **Cerrado:** cuando la caja ya cerró y no queda nada vivo, lo cobrado del día, el cuadre y lo comprobable de la semana.

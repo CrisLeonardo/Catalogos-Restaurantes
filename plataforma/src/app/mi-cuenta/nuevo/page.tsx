@@ -63,20 +63,17 @@ export default async function NuevoRestaurantePage() {
       </header>
 
       <div
-        className="anim-fade-up"
-        style={{ flex: 1, width: '100%', maxWidth: 640, margin: '0 auto', padding: '32px 18px 64px' }}
+        className="anim-fade-up alta-pagina"
       >
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)', marginBottom: 12 }}>
-          {esElPrimero ? 'Tu primer restaurante' : 'Otro restaurante'}
-        </div>
-        <h1 className="t-display" style={{ fontSize: 'clamp(24px, 5vw, 32px)', lineHeight: 1.1, margin: '0 0 8px' }}>
-          {esElPrimero ? 'Vamos a crear tu restaurante' : 'Crea otro restaurante'}
-        </h1>
-        <p className="t-mute" style={{ fontSize: 14, margin: '0 0 24px', lineHeight: 1.55 }}>
-          Entrarás con esta misma cuenta, sin otro correo ni otra contraseña.
-        </p>
+        {/* Ficha 2.3: sin título encima. Cada paso dice lo suyo; al segundo
+            restaurante se le recuerda en una línea que es la misma cuenta. */}
+        {!esElPrimero && (
+          <p className="t-mute" style={{ fontSize: 14, margin: '0 0 16px', lineHeight: 1.5 }}>
+            <strong style={{ color: 'var(--u-text)' }}>Otro restaurante</strong> · entrarás con esta misma cuenta.
+          </p>
+        )}
 
-        <Glass style={{ padding: '26px 24px' }}>
+        <Glass style={{ padding: '22px 20px' }}>
           <NuevoRestaurante
             rootDomain={rootDomainForUrls()}
             pricing={pricing}

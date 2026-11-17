@@ -26,7 +26,6 @@ export default function robots(): MetadataRoute.Robots {
         '/pedido/',
         '/preview',
         '/api/',
-        '/registro/listo',
       ],
     },
     sitemap: `${marketingBase()}/sitemap.xml`,

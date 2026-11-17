@@ -755,6 +755,136 @@ La siguiente ficha es **1.12 · Comensal: entrada, checkout y seguimiento**. Que
 - **Validación:** `typecheck` y `lint` sin errores (los tres avisos de siempre); 1,562 unitarias pasan, con una omitida.
 - **Limpieza:** se quitaron la guía anterior (`onboarding-checklist.tsx`), el widget «La casa» y `getActiveOrdersPreview`, que ya no usaba nadie.
 
+## 37. Alta hasta el primer valor · ficha 2.3 (2026-11-16)
+
+**Rama** `feat/alta-primer-valor`, desde `main` (`a7a8040`). Maqueta aprobada: [`MAQUETA_ALTA_PRIMER_VALOR_2026-11-16.html`](../diseno/MAQUETA_ALTA_PRIMER_VALOR_2026-11-16.html). Sin migraciones.
+
+- **Registro (`/registro`) en una pantalla:** sale «Confirmar». La contraseña se escribe una vez, con «Ver», y los términos se aceptan al crear la cuenta, con el aviso junto al botón; el servidor recibe la misma contraseña como repetición. En el teléfono se ocultan las ventajas para que el formulario suba.
+- **Crear restaurante (`/mi-cuenta/nuevo`) en tres pasos:** tu negocio (nombre, la dirección con «Cambiar» y «¿Cómo te piden tus clientes?»), «¿Qué vendes?» (nombre y precio, «Agregar otro», «Lo hago después») y «Así se ve tu carta» (la carta de verdad, con el estilo y el plan con su precio y «Cambiar»). En PC la carta se arma en vivo junto al formulario.
+- **Reglas** en `plataforma/src/lib/alta.ts`, con 7 pruebas: plan por intención (carta → Básico, para llevar y a domicilio → En línea, mesas → Premium), los dos modos de Estándar y la lectura de los platillos (coma decimal, filas a medias rechazadas y un tope de 20).
+- **Servidor:** `createAnotherRestaurant` crea la categoría «Platillos» con los platillos y siempre devuelve la URL del panel; ya no hay `/registro/listo` ni la ventana «¡Listo!». La vista previa reutiliza `/preview/muestra` con `?alta=1` y los platillos por `postMessage`, sin tocar la base.
+- **Recorrido probado en local** como Comedor Ana (segundo restaurante). «Para llevar y a domicilio» con dos platillos («12,50» se guardó como Q12.50) creó el plan En línea, con para llevar y a domicilio, y entró directo a Hoy con el paso 1 de la guía hecho. «Mesas» sugirió Premium y «Solo ven la carta» sugirió Básico gratis, con «Lo hago después». Cambiar el estilo repinta la carta al momento.
+- **Comprobado en pantalla:** 375 px y 1280 px, en claro. **No comprobado:** el alta del primer restaurante de una cuenta nueva en pantalla (cambian la barra de pasos y los textos de cobro) ni el modo oscuro.
+- **Hallazgo:** el servidor de desarrollo volvió a servir JavaScript viejo; se arregló reiniciándolo sin `.next`.
+
+## 38. Importar una carta con revisión · ficha 2.4 (2026-11-16)
+
+**Rama** `feat/importar-carta`, apilada sobre `feat/alta-primer-valor` (PR #126). Maqueta aprobada: [`MAQUETA_IMPORTAR_CARTA_2026-11-16.html`](../diseno/MAQUETA_IMPORTAR_CARTA_2026-11-16.html). Sin migraciones.
+
+- **Decisiones del dueño:** lista pegada y hoja de cálculo ahora; foto y PDF después (le parecen lo más práctico, pero hoy implican IA de pago). Lo importado sale visible, porque ya pasó por la revisión. Si el platillo ya existe, se ofrece cambiarle el precio. «Pegar mi lista» también va en el alta.
+- **Reglas** en `plataforma/src/lib/importar-carta.ts` (12 pruebas). Lista: el último número es el precio; una línea sin precio abre categoría si va en mayúsculas, termina en «:» o va tras una línea en blanco; si no, es un platillo con duda. Hoja: columnas «Producto» y «Precio», más «Categoría» y «Descripción» opcionales, las mismas que la exportación; acepta .xlsx (`importar-carta-xlsx.ts`, probada con un libro real) y CSV con comas o punto y coma. Dudas: sin precio, precio de Q1,000 o más, repetido. La comparación ignora tildes y mayúsculas.
+- **Servidor** (`lib/actions/importar-carta.ts`): vuelve a comparar contra la base al publicar, respeta el tope de productos del plan, usa las categorías que existen y crea las que faltan («Platillos» si no hay). Anota el lote en `activity_log` (`importar_carta`). Deshacer borra lo creado que no se haya vendido, devuelve los precios que nadie volvió a cambiar y quita las categorías que quedaron vacías (`importar_carta_deshecha`). El control de acceso del catálogo pasó a `lib/catalogo/contexto.ts`, compartido con `products.ts`.
+- **Pantallas:** `/admin/menu/importar` (en el teléfono, lista con pie fijo; en la PC, tabla editable en la fila). Se entra desde «Importar o exportar» en Platillos y desde el catálogo vacío («O importa tu carta completa»). Al volver sale un aviso con «Deshacer».
+- **Recorrido probado en local** (Comedor Ana, PC y teléfono). Una lista de 9 líneas dio dos categorías y 5 platillos nuevos. «Pepian de pollo» encontró el «Pepián de pollo» existente y ofreció pasar de Q45.00 a Q48.00. «Caldo de res» quedó sin precio hasta escribirlo, y «Coca cola 1500» quedó en duda. Al publicar entró todo; «Deshacer» lo devolvió exacto (5 borrados, precio restaurado, categorías quitadas). En el alta, «Pegar mi lista» llenó las filas y avisa lo que no usó.
+- **No comprobado en pantalla:** subir un archivo desde el navegador (la lectura de Excel y CSV sí está probada) ni el aviso del catálogo vacío.
+- **Foto y PDF sin IA (misma rama, a pedido del dueño).** El PDF se lee en el servidor con pdf.js (`unpdf`, `lib/importar-carta-pdf.ts`), que rearma los renglones por altura y separa dos columnas cuando un precio va seguido de otro platillo; tiene 5 pruebas, con PDF reales. Un PDF escaneado no trae texto y se pide subirlo como foto. La foto se lee con OCR libre (`tesseract.js`, `lib/ocr-carta.ts`) en un trabajador del navegador: la imagen no sale del aparato. Los archivos del lector (unos 6 MB, en caché tras la primera vez) se copian de `node_modules` a `public/ocr/` en `postinstall` (`scripts/copiar-ocr.mjs`); esa carpeta está fuera de git, del linter y del proxy (sin la CSP de páginas, para el WebAssembly). Lo leído llega como texto a la lista, con un aviso para corregirlo, y de ahí a la revisión de siempre. «Foto o PDF» es ahora la primera pestaña, luego «Excel» y «Pegar lista».
+- **Probado en el navegador:** una carta dibujada como imagen dio «Desayunos» (3) y «Bebidas» (1) con sus precios exactos. Un PDF hecho a mano, con el precio en otra columna, dio «Pepian de pollo Q45.00» e «Hilachas Q48.50». Una foto real de teléfono, con sombras o letra decorativa, no se probó: puede leer menos, y eso queda a la vista en la revisión.
+## 39. Turno de práctica · ficha 2.5 (2026-11-16)
+
+**Rama** `feat/turno-practica`, desde `main` (`a7a8040`). Los §37 y §38 (fichas 2.3 y 2.4) están en las ramas de los PR #126 y #127. Maqueta aprobada: [`MAQUETA_TURNO_PRACTICA_2026-11-16.html`](../diseno/MAQUETA_TURNO_PRACTICA_2026-11-16.html), con las cuatro recomendaciones.
+
+- **Cómo es:** `/admin/mesero/practica` atiende una «Mesa P» con la carta real y las mismas piezas de Tomar pedidos: carta, hoja de opciones, comanda, hoja del plato y hoja de cobro. Una franja azul dice «Paso N de 6» y tiene «Salir». Los seis pasos son abrir la mesa, pedir dos platillos (uno con extra, si la carta los tiene), enviar a cocina, marcarlo listo, anular un plato y cobrar con vuelto. Al final dice cuánto tardó, con «Empezar el servicio» y «Repetir la práctica».
+- **Nada cuenta:** todo vive en la memoria del aparato. No crea pedidos, cobros, movimientos de existencias ni comandas impresas, y al salir se olvida. Lo único que guarda es `activity_log` `turno_practica` con los minutos, que Personal muestra como «Ana hizo el turno de práctica en 4 minutos». Se comprobó en la base local: cero pedidos nuevos después de dos prácticas completas.
+- **Desviaciones de la maqueta:** (1) pantalla propia en vez del salón en vivo. Enganchar la Mesa P al módulo de servicio (más de 2,000 líneas) obligaba a esquivar, en cada envío, cobro, anulación, impresión y lectura del salón, que nada se escribiera, y un descuido ahí cobra de verdad. Además, la mesa del servidor va de 1 a 200 y la anulación exige firma. (2) La cocina se simula dentro de la práctica, con la etiqueta «Práctica»: no aparece en Pedidos ni en Cocina. (3) «Corregir» va antes de «cobrar»: en un turno real no se anula un plato ya cobrado. (4) No usa el pedido de prueba de la 2.2: no hace falta, porque nada llega a la base.
+- **Entradas:** último paso del recorrido de bienvenida («¿Practicamos una mesa?», solo si el restaurante tiene Tomar pedidos) y la búsqueda de Tomar pedidos («Turno de práctica»). Pueden practicar quienes tienen permiso de tomar pedidos o de cobrar.
+- **Cambios pequeños en piezas compartidas:** la hoja de cobro admite una `nota` («Cobro de práctica: no entra dinero a la caja.») y el armazón da el título «Turno de práctica».
+- **Comprobado en pantalla:** 375 px en claro y 1280 px en claro y oscuro (Rincón 502), del recorrido al final. También la entrada desde la búsqueda de Tomar pedidos y la línea en Personal.
+- **No comprobado:** la práctica con una carta sin platillos con opciones (cubierta por la prueba de la regla) ni con un rol de solo cobro.
+- **Validación:** `typecheck` y `lint` sin errores; 1,568 unitarias pasan, con una omitida (incluye `lib/turno-practica.test.ts` y la frase nueva de la bitácora).
+## 40. Aparato por rol y Mi PC con un solo estado · ficha 2.6 (2026-11-16)
+
+**Rama** `feat/aparato-y-mi-pc`, desde `main` (`a7a8040`). Los §37–§39 (fichas 2.3, 2.4 y 2.5) están en las ramas de los PR #126, #127 y #128. Maqueta aprobada: [`MAQUETA_APARATO_Y_MI_PC_2026-11-16.html`](../diseno/MAQUETA_APARATO_Y_MI_PC_2026-11-16.html), con las cuatro recomendaciones. Cubre A06, R34 (1, 3 y parte del 4), X17, PA-T21 y PA-T22.
+
+- **Un solo reloj (X17, PA-T21):** `lib/estado-pc.ts` decide para todos: «Conectada» con señal de menos de 90 s; «Sin señal desde las 12:31» hasta los 10 min; «Desconectada desde las 12:31» después; «Apagada» si el dueño la apagó. Lo usan Hoy (avisa solo con «Desconectada»), Ajustes, Mi PC, la tarjeta de impresoras, el interruptor de la PC principal (`lib/main-pc.ts`) y el superadmin (`MIN_PC_CAIDA` pasa de 15 a 10 min). Antes eran 90 s, 10 min y 15 min, con palabras distintas. Se comprobó en local con una PC sin señal hace 30 min: Hoy, Ajustes y Mi PC dijeron «Desconectada desde las 5:17 p. m.».
+- **La PC del local (R34.1):** arriba va el veredicto («Revisa la impresora de cocina», «Todo listo para el servicio»…). Debajo, cuatro piezas: PC, impresora de cocina, impresora de caja y respaldo sin internet. «PC conectada» ya no es «todo listo»: una impresora con papeles fallidos de las últimas 12 h cuenta como falla (`lib/db/estado-pc.ts`; un papel que se reimprimió y salió ya no cuenta). La explicación de qué es la PC principal solo sale cuando todavía no hay una.
+- **Reintentar (PA-T22):** `reintentarImpresiones` devuelve a la cola solo los papeles que fallaron y nadie volvió a mandar. Salen como el original, no como COPIA, porque nunca llegaron a la cocina. Queda en la bitácora (`impresion_reintento`). Las reimpresiones deliberadas siguen saliendo como COPIA. Si hay papeles que no salieron, Hoy lo avisa con «Reintentar». Probado en local: 3 comandas fallidas volvieron a pendientes y el titular pasó a «Todo listo».
+- **Este aparato (A06), migración 184:** `restaurant_devices.uso` (`cocina`, `caja`, `mesero` o vacío para el panel completo). Se elige en «⋯ › Este aparato» en el teléfono y en la barra lateral en la PC. Solo lo cambian el dueño y quien tiene el permiso de Personal (`ownerCtx`). El aparato es siempre el de la cookie del navegador, y queda además en la lista de aparatos del local. Al guardar se abre esa pantalla a pantalla completa, con «Probar sonido» e «Imprimir prueba». Cada vez que se abre la app en Hoy, el aparato lleva a su pantalla, una vez por sesión de la pestaña, y solo si la persona la tiene en su menú (`destinoDelAparato`). Si no, sale un aviso y entra a su pantalla de siempre. Personal › Dispositivos dice el uso: «Tablet de cocina · Cocina». Caja ganó pantalla completa, como Cocina y Tomar pedidos.
+- **Comprobado en pantalla:** Mi PC a 375 px en claro (falla y todo listo) y a 1280 px en oscuro (desconectada). También la hoja «Este aparato» a 1280 px, el paso a Cocina a pantalla completa con su aviso y el inicio directo desde Hoy (y que la segunda visita a Hoy ya no rebota). Además, Caja a pantalla completa con desplazamiento, Personal › Dispositivos y el «⋯» del teléfono.
+- **No comprobado:** con hardware real (la PC se simuló con una fila en `print_agents`), una persona sin acceso a la pantalla del aparato (lo cubre la prueba de `destinoDelAparato`), «Probar sonido» con audio y el superadmin en pantalla (lo cubre `client-health.test.ts`).
+- **Validación:** `typecheck` y `lint` sin errores (los tres avisos de siempre); 1,577 unitarias pasan, con una omitida. Incluye `estado-pc.test.ts` (11), `aparato.test.ts` (3) y la bitácora nueva.
+- **Fuera de esta ficha (R34):** el asistente de instalación con corte controlado de internet, el diagnóstico descargable y la reconciliación tras reconexión siguen pendientes.
+## 41. Personalizar con ayuda · ficha 2.7 (2026-11-16)
+
+**Rama** `feat/personalizacion-guiada`, desde `main` (`a7a8040`). Los §37–§40 (fichas 2.3–2.6) están en las ramas de los PR #126, #127, #128 y #130. Maqueta aprobada: [`MAQUETA_PERSONALIZACION_GUIADA_2026-11-16.html`](../diseno/MAQUETA_PERSONALIZACION_GUIADA_2026-11-16.html), con las cuatro recomendaciones. Cubre A04, X22 y R32 (1, 2, 4, 5, 6 y 8).
+
+- **Tres recomendados (R32.1, X22, A04):** `lib/theme/recomendaciones.ts` elige el orden con lo que la carta ya tiene: con 60 % o más de platillos con foto, «Fotos grandes»; desde 25 %, «Rápida de pedir» (filas con miniatura); con menos, «Carta elegante», y «Fotos grandes» no se ofrece si vende para llevar. Con más de 60 platillos, «Rápida de pedir» va primero. Cada uno es una estructura con su paleta, y la paleta se cambia por la primera legible si hiciera falta. Las muestras usan el logo, los platillos, los precios y las fotos reales (`components/admin/personalizar/`). En Rincón 502 (13 de 38 con foto) recomienda «Rápida de pedir». El catálogo de 208 combinaciones sigue intacto en «Ver todos los diseños».
+- **Legible (R32.4):** contraste WCAG de texto sobre fondo (4.5:1) y letra del botón sobre el acento (3:1). Nada poco legible se recomienda, y el catálogo marca «Poco legible». Hoy las 208 combinaciones pasan; la marca queda para las que se agreguen.
+- **Vista rápida (R32.2 y R32.5):** «Así queda» ya no arranca apagada «porque consume CPU». Enseña Portada, Platillo (el de nombre más largo) y Carrito (el más caro y uno sin foto) con los colores, letras y radios del tema, y cambia al instante con cada ajuste. «Probar como cliente» abre la carta interactiva en otra pestaña, por el mismo canal de vista previa en vivo. Es una aproximación: la de verdad sigue siendo la interactiva.
+- **Volver al anterior (R32.6), migración 185:** `restaurant_themes.config_anterior`. Al publicar un cambio de DISEÑO se guarda el anterior (solo lo visual). El aviso dice «Publicado: «Carta de autor · Papel de Autor». Tu logo, tus textos y tus pedidos no cambiaron» con «Volver al anterior». `volverAlDisenoAnterior` intercambia los dos diseños, así que volver también se deshace. Sin la 185, publica como siempre y no ofrece volver.
+- **Plantillas propias:** solo aparecen si existen. «Guardar este diseño como plantilla» y «Volver al diseño anterior» están en el «⋯» de Recomendados.
+- **Móvil (R32.8):** ya estaba resuelto, así que no se tocó: «Ver cómo queda» va a la derecha y, con la barra de guardar puesta, el botón «Tomar pedido» se aplana.
+- **Comprobado en pantalla:** a 375 px en claro (tres recomendados y vista rápida) y a 1280 px en claro y oscuro (tres por fila). Se probaron aplicar «Carta elegante» con la vista rápida en vivo, publicar con su resumen, «Volver al anterior» (el diseño original quedó en la base y el logo y los textos no se tocaron), «⋯ › Guardar como plantilla» y cancelarlo, las pestañas Platillo y Carrito, y «Ver todos».
+- **No comprobado:** una carta sin platillos, una casi sin fotos y una de solo para llevar (lo cubren las pruebas de la regla), y la vista interactiva en otra pestaña.
+- **Validación:** `typecheck` y `lint` sin errores (los tres avisos de siempre); 1,571 unitarias pasan, con una omitida, incluidas las 9 de `recomendaciones.test.ts`.
+- **Fuera de esta ficha (R32):** el modo Básico/Avanzado de la pestaña Marca (R32.3) y los textos semánticos protegidos (R32.7) siguen pendientes.
+## 42. Ajustes que dicen cómo estás · ficha 2.8 (2026-11-16)
+
+**Rama** `feat/ajustes-claros`, desde `main` (`a7a8040`). Los §37–§41 (fichas 2.3–2.7) están en las ramas de los PR #126, #127, #128, #130 y #131. Maqueta aprobada: [`MAQUETA_AJUSTES_CLAROS_2026-11-16.html`](../diseno/MAQUETA_AJUSTES_CLAROS_2026-11-16.html), con las cuatro recomendaciones. Sin migración. Cubre R24.2, R25.1, R25.2, R25.4, R26.3, R26.4, R27.2, R28.1–R28.3, R29.2, R29.3, R29.6, R37.3, PA-T02 y PA-T03.
+
+- **Ajustes (R24.2):** cada fila lleva su estado, calculado en `lib/ajustes-estado.ts`: «Rincón 502», «A toda hora» (ámbar), «20 mesas · 7 en el plano», «Hasta 6 km», «Confirmas tú» y «7 encendidas» (antes decía «7 activas»). La fila de la PC no se tocó, porque su reloj único está en la 2.6 (#130).
+- **Horarios (PA-T02, PA-T03, R26.3–4):**
+  - «¿Cuándo recibes pedidos?» se responde con «Con horario» o «A toda hora». Una semana sin días sigue siendo «A toda hora»: el cliente no nota cambio, pero ya no dice «Sin horario».
+  - Con horario, el día apagado dice «Cerrado», y la primera vez se parte de todos los días abiertos.
+  - «Copiar el lunes a los demás días abiertos».
+  - Dos turnos que se pisan no se guardan, ni en pantalla ni en el servidor (`parseHours`). Un turno de madrugada (20:00–02:00) no choca con uno de la mañana.
+  - «Próximas aperturas» enseña tres días tal como los verá el cliente, y el feriado manda sobre la semana.
+- **Entrega (R28.1–3):**
+  - «¿A dónde repartes?»: Por zonas, Por distancia o A cualquier dirección (`elegirModoDeEntrega`). Pasar a distancia o a cualquier dirección apaga las zonas (no las borra) después de confirmar. Pasar a zonas apaga la distancia y conserva la ubicación.
+  - Si hoy usa las dos, se dice. «A cualquier dirección» sale en ámbar.
+  - «Prueba un punto»: un toque en el mapa responde «✓ Dentro: 0.7 km de tu local» o «Fuera». Usa la misma fórmula del servidor, y la frontera exacta cuenta como dentro.
+  - Una zona nueva nace sin tarifa: no se guarda hasta escribirla, y 0 se ve como «Gratis».
+- **Pedidos y cobro (R29.2, R29.3, R29.6):**
+  - «Confirmar automáticamente» dice en cuántos minutos.
+  - El semáforo se ve como línea de tiempo.
+  - `saveOrdersAndCurrency` rechaza el ámbar después del rojo, tiempos en cero o negativos y una confirmación de más de 60 min (`problemaDeTiempos`).
+  - «Pago con tarjeta» aclara que se cobra con la terminal y no en línea.
+- **Perfil (R25.1, R25.2, R25.4):**
+  - «Lo que ve tu cliente», y el lema dice dónde sale.
+  - El interruptor de WhatsApp se llama «Botón "Enviar mi pedido por WhatsApp"» y aclara que no son avisos automáticos.
+- **Funciones (R37.3):** apagar una función pide confirmación con lo que pasa y lo que se conserva, por ejemplo «Los puntos que ya tienen se guardan y vuelven al encenderla».
+- **Salón (R27.2):** al bajar el número de mesas, se avisa debajo del control si una mesa con cuenta abierta queda fuera («La mesa 20 tiene una cuenta abierta (Q70.00)») y qué QR dejan de servir. Esa mesa no se puede quitar, ni en pantalla ni en el servidor.
+- **De paso:** el mapa de entrega ya no falla en desarrollo con «Map container is already initialized» (doble montaje).
+- **Comprobado en pantalla:** a 375 px en claro (Ajustes, Horarios con turno que se pisa y guardado bloqueado, Entrega con prueba de punto, Por zonas y envío sin tarifa, Pedidos y cobro) y a 1280 px en claro y oscuro (Funciones al apagar, Salón con la mesa 20 ocupada y guardado bloqueado, Ajustes). Para la prueba del Salón se abrió y luego se devolvió un pedido viejo en local; también se restauró la entrega de Rincón (6 km).
+- **No comprobado:** guardar de verdad un horario con turnos de madrugada y la vista de Perfil en pantalla (los cambios son de texto).
+- **Validación:** `typecheck` y `lint` sin errores (los tres avisos de siempre); 1,573 unitarias pasan, con una omitida, incluidas las 11 de `ajustes-estado.test.ts`.
+- **Fuera de esta ficha:** búsqueda por tarea en Ajustes (R24.3), asistente de mesas y QR por zona (R27.1, R27.3–5), polígonos y franjas de reparto (R28.5), propina y moneda real (R29.4–5) y dependencias entre funciones (R37.4–5).
+## 43. Ayuda por lo que necesitas · ficha 2.9 (2026-11-16)
+
+**Rama** `feat/ayuda-por-intencion`, desde `main` (`a7a8040`). Maqueta aprobada con sus cuatro recomendaciones: [`MAQUETA_AYUDA_POR_INTENCION_2026-11-16.html`](../diseno/MAQUETA_AYUDA_POR_INTENCION_2026-11-16.html). Las secciones 37–42 (fichas 2.3–2.8) están en sus propias ramas.
+
+- **Un solo índice de intenciones** en `plataforma/src/lib/ayuda/intenciones.ts` (15 casos con sinónimos, sin depender de acentos) que usan el Centro de ayuda y el buscador del panel (Ctrl K, grupo «Hacer»). La primera respuesta es un botón a la pantalla exacta. Si la persona no puede abrirla, se le dice a quién pedírselo, y Ctrl K solo ofrece lo que puede abrir.
+- **«No me entran pedidos» se revisa en vivo** (`lib/ayuda/diagnostico.ts` y la acción `diagnosticoDePedidos`): pausa (con «Reanudar» ahí mismo), horario, pedidos y modos encendidos y PC del local, con el reloj de la ficha 2.6. Lo que falla va primero. Si quien pregunta no puede reanudar, se le dice que lo pida al dueño o al encargado.
+- **Mensaje a soporte con contexto editable**: restaurante, plan, lo que buscó y versión, en WhatsApp y correo. La persona puede cambiarlo antes de enviarlo.
+- **Migración 186 `ayuda_sin_respuesta`**: guarda solo la frase y el restaurante, nunca quién la escribió. RLS sin políticas permisivas, solo con el candado del segundo factor (migración 137, lo exige el CI). Se anota 1.5 s después de dejar de escribir, así que solo queda la frase final, sin las letras intermedias. Si falta la tabla, la búsqueda funciona igual. Superadmin › Configuración › Soporte la muestra agrupada y con lo más pedido primero (`lib/ayuda/sin-respuesta.ts`).
+- **Comprobado en pantalla** con Rincón 502:
+  - A 390 px en claro: casos comunes; diagnóstico con pausa; «Reanudar», que deja todo en verde; respuesta «se trabo la impresora»; búsqueda sin respuesta («exportar a contpaq» quedó anotada una sola vez).
+  - A 390 px en oscuro: el diagnóstico.
+  - A 1280 px en oscuro: respuesta, diagnóstico y Ctrl K «Hacer».
+  - En PC, el botón de la respuesta ya no cruza toda la columna, sino que mide lo que dice.
+  - La lista del superadmin se vio montada a mano en la página de Ayuda, solo en local. El superadmin local pide el segundo factor y no se saltó.
+- **No comprobado en pantalla:** el caso «sin permiso» con una cuenta de mesero; lo cubren las pruebas del índice. Tampoco la fila de la PC dentro del diagnóstico, porque la base local no tiene agente; lo cubre su prueba.
+- **Validación:** `typecheck` y `lint` sin errores; 1,575 unitarias pasan (13 nuevas de ayuda) y una omitida.
+## 44. Código QR · ficha 2.10 (2026-11-17)
+
+**Rama** `feat/codigo-qr`, desde `main` (`a7a8040`). Maqueta aprobada con sus cuatro recomendaciones: [`MAQUETA_CODIGO_QR_2026-11-17.html`](../diseno/MAQUETA_CODIGO_QR_2026-11-17.html). Las secciones 37–43 (fichas 2.3–2.9) están en sus propias ramas.
+
+- **La vista previa es el archivo.** Se elige Redes, Imprimir o Solo el código, y `lib/documents/qr-art.ts` dibuja un canvas (`dibujarTarjeta`, `dibujarHojaCartel`, `dibujarCodigo`). La pantalla enseña ese canvas y el botón lo guarda tal cual; el PDF lleva la misma imagen a tamaño real. Salen los tres botones y la diferencia entre el logo de la vista previa y el PNG sin logo.
+- **Cartel en hoja carta** (jsPDF `letter`): dos carteles de 105 × 148 mm lado a lado, con línea de corte, código de 70 mm y la indicación de imprimir en «Tamaño real». Se dibuja a 200 ppp.
+- **Lo impreso no se rompe:** el QR codifica `/m/<slug>` (`stableMenuSlugUrl` en `lib/tenant.ts`), que sigue abriendo la carta por los alias de la migración 134. El enlace corto queda escrito para teclearlo.
+- **Frases según lo encendido** (`lib/qr-material.ts`, con 7 pruebas): sin pedidos en línea solo «Mira nuestra carta»; con pedidos, también «Mira la carta y pide» y la de los modos que estén encendidos.
+- **Avisos que dicen la verdad:** en una copia de prueba la pantalla pide no imprimir. «Copiar» que falla dice cómo copiar a mano, y «Archivo listo» solo sale cuando el archivo existe.
+- **Comprobado en pantalla** con Rincón 502:
+  - A 390 px en claro: Redes e Imprimir. A 390 px en oscuro: Solo el código, «Copiado» y el error de copia simulado.
+  - A 1280 px: Imprimir en claro y Redes en oscuro, con la vista previa a la izquierda y las opciones a la derecha.
+  - La hoja, ampliada a resolución real, se lee nítida.
+  - Los tres archivos se interceptaron antes de guardarse: PDF de 84 KB que empieza con `%PDF-`, tarjeta PNG de 94 KB y código PNG de 35 KB.
+  - El QR pide `localhost:3000/m/rincon502`, y esa dirección abre la carta.
+- **No comprobado en pantalla:**
+  - **Sin pedidos en línea:** la base local vuelve a encender pedidos según el plan; lo cubren las pruebas.
+  - **Con logo:** Rincón 502 no tiene. El dibujo del logo es el de antes.
+  - **Lectura física con teléfonos:** queda para el dueño.
+- **Validación:** `typecheck` y `lint` sin errores; 1,569 unitarias pasan, con una omitida.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

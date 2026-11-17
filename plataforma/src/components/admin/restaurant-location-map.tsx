@@ -11,9 +11,14 @@ interface Props {
   lng: number;
   radiusKm: number;
   onLocationChange: (lat: number, lng: number) => void;
+  /** Ficha 2.8: tocar el mapa prueba si un cliente ahí queda dentro. */
+  onPrueba?: (lat: number, lng: number) => void;
 }
 
-export default function RestaurantLocationMap({ lat, lng, radiusKm, onLocationChange }: Props) {
+export default function RestaurantLocationMap({ lat, lng, radiusKm, onLocationChange, onPrueba }: Props) {
+  const onPruebaRef = useRef(onPrueba);
+  const pruebaRef = useRef<unknown>(null);
+  useEffect(() => { onPruebaRef.current = onPrueba; });
   const containerRef     = useRef<HTMLDivElement>(null);
   const mapRef           = useRef<unknown>(null);
   const markerRef        = useRef<unknown>(null);
@@ -36,10 +41,16 @@ export default function RestaurantLocationMap({ lat, lng, radiusKm, onLocationCh
       document.head.appendChild(link);
     }
 
+    /* En desarrollo el efecto corre dos veces: sin esta guarda, la segunda
+       importación creaba un segundo mapa sobre el mismo contenedor y Leaflet
+       fallaba («Map container is already initialized»). */
+    let cancelado = false;
     import('leaflet').then((mod) => {
       const L = mod.default;
+      const el = containerRef.current as (HTMLDivElement & { _leaflet_id?: number }) | null;
+      if (cancelado || !el || el._leaflet_id) return;
 
-      const map = L.map(containerRef.current!, {
+      const map = L.map(el, {
         center: [lat, lng],
         zoom:   15,
       });
@@ -84,12 +95,22 @@ export default function RestaurantLocationMap({ lat, lng, radiusKm, onLocationCh
         onLocationChange(pos.lat, pos.lng);
       });
 
+      /* «Prueba un punto»: un toque pone el pin azul del cliente. */
+      map.on('click', (e: { latlng: { lat: number; lng: number } }) => {
+        if (!onPruebaRef.current) return;
+        const p = e.latlng;
+        if (pruebaRef.current) (pruebaRef.current as ReturnType<typeof L.circleMarker>).setLatLng(p);
+        else pruebaRef.current = L.circleMarker(p, { radius: 8, color: '#fff', weight: 3, fillColor: '#2563eb', fillOpacity: 1 }).addTo(map);
+        onPruebaRef.current(p.lat, p.lng);
+      });
+
       mapRef.current    = map;
       markerRef.current = marker;
       circleRef.current = circle;
     });
 
     return () => {
+      cancelado = true;
       (mapRef.current as { remove?: () => void })?.remove?.();
       mapRef.current = null;
     };

@@ -78,7 +78,7 @@ export function ErrorBox({ children }: { children: React.ReactNode }) {
  * «Continuar» era justo lo que se sentía pesado.
  */
 export function WizardNav({
-  step, lastStep, onBack, onNext, submitLabel, pendingLabel, isPending, canSubmit = true,
+  step, lastStep, onBack, onNext, submitLabel, pendingLabel, isPending, canSubmit = true, nextLabel = 'Continuar',
 }: {
   step: number;
   lastStep: number;
@@ -88,6 +88,8 @@ export function WizardNav({
   pendingLabel: string;
   isPending: boolean;
   canSubmit?: boolean;
+  /** Texto del botón de avanzar («Ver mi carta» en el alta). */
+  nextLabel?: string;
 }) {
   const blocked = isPending || !canSubmit;
   return (
@@ -123,7 +125,7 @@ export function WizardNav({
           className="press btn-accent"
           style={{ flex: 1, padding: '13px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 15, border: 'none', color: '#fff', cursor: 'pointer' }}
         >
-          Continuar
+          {nextLabel}
         </button>
       ) : (
         <button

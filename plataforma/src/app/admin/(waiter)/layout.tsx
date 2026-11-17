@@ -18,6 +18,7 @@ import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
 import SessionHeartbeat from '@/components/admin/session-heartbeat';
 import type { Metadata } from 'next';
 import { panelLink } from '@/lib/panel-links-server';
+import { getEsteAparato } from '@/lib/db/aparato';
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: 'Panel de Mesero' };
@@ -135,6 +136,7 @@ export default async function WaiterLayout({ children }: { children: React.React
 
   return (
     <AdminShell
+      aparato={await getEsteAparato(restaurantId)}
       restaurantName={restaurantName}
       restaurantId={restaurantId}
       ordersEnabled={ordersEnabled}

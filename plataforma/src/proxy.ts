@@ -1006,6 +1006,8 @@ export const config = {
   // sin esta exclusión, cada una de esas peticiones pagaba 1-2 round-trips
   // de refresco de sesión a Supabase de balde.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    /* `ocr/`: el lector de fotos de la carta (scripts/copiar-ocr.mjs) corre
+       en un trabajador con WebAssembly; no lleva la CSP de las páginas. */
+    "/((?!_next/static|_next/image|ocr/|favicon.ico|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

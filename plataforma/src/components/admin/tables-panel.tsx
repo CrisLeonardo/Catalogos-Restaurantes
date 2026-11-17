@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import type { ThemeConfig, FloorPlan } from '@/lib/theme/defaults';
 import SaveBar, { type SaveStatus } from '@/components/admin/save-bar';
+import { fmtMoney } from '@/lib/money';
 import { useValueDirty } from '@/lib/use-form-dirty';
 
 type Patch = Pick<ThemeConfig,
@@ -27,6 +28,8 @@ interface Props {
   config: Patch;
   /** Para la hoja de QR imprimible. */
   restaurantName?: string;
+  /** Mesas con cuenta abierta (ficha 2.8): no se quitan sin resolverlas. */
+  ocupadas?: { n: number; total: number }[];
 }
 
 /** Cuántos QR se ven antes de «Ver los N»: el PDF cubre la descarga de todos. */
@@ -149,7 +152,7 @@ function TableQRCard({ tableNumber, slug }: { tableNumber: number; slug: string 
   );
 }
 
-export default function TablesPanel({ restaurantId, slug, menuUrl, config: initial, restaurantName }: Props) {
+export default function TablesPanel({ restaurantId, slug, menuUrl, config: initial, restaurantName, ocupadas = [] }: Props) {
   const [patch, setPatch] = useState<Patch>(initial);
   const [showAllQr, setShowAllQr] = useState(false);
   const [sheetBusy, setSheetBusy] = useState(false);
@@ -184,7 +187,18 @@ export default function TablesPanel({ restaurantId, slug, menuUrl, config: initi
     setPatch((p) => ({ ...p, [k]: v }));
   }
 
+  /* Ficha 2.8 (R27.2): bajar el número de mesas no puede dejar fuera una
+     mesa con cuenta abierta, y los QR de las que salen dejan de servir. */
+  const ocupadasFuera = ocupadas.filter((o) => o.n > patch.dineInTableCount);
+  const qrQueSalen = patch.dineInTableCount < initial.dineInTableCount
+    ? Array.from({ length: initial.dineInTableCount - patch.dineInTableCount }, (_, i) => patch.dineInTableCount + i + 1)
+    : [];
+
   function save() {
+    if (ocupadasFuera.length) {
+      setStatus({ error: `La mesa ${ocupadasFuera.map((o) => o.n).join(', ')} tiene una cuenta abierta: ciérrala antes de quitarla.` });
+      return;
+    }
     setStatus(null);
     // Limpia mesas del plano que ya no existen (si se redujo el número de mesas).
     const fp = patch.floorPlan;
@@ -255,6 +269,23 @@ export default function TablesPanel({ restaurantId, slug, menuUrl, config: initi
             </div>
           </div>
         )}
+        {dineInEnabled && (ocupadasFuera.length > 0 || qrQueSalen.length > 0) && (
+        <div role="alert" style={{
+          padding: '10px 12px', borderRadius: 12, fontSize: 13, lineHeight: 1.45,
+          background: 'var(--c-warn-bg)', color: 'var(--u-text-2)',
+        }}>
+          {ocupadasFuera.map((o) => (
+            <p key={o.n} style={{ margin: '0 0 4px' }}>
+              <strong style={{ color: 'var(--u-text)' }}>La mesa {o.n} tiene una cuenta abierta ({fmtMoney(o.total)}):</strong> ciérrala antes de quitarla.
+            </p>
+          ))}
+          {qrQueSalen.length > 0 && (
+            <p style={{ margin: 0 }}>
+              {qrQueSalen.length === 1 ? `El QR de la mesa ${qrQueSalen[0]} dejará de servir.` : `Los QR de las mesas ${qrQueSalen[0]} a ${qrQueSalen[qrQueSalen.length - 1]} dejarán de servir.`}
+            </p>
+          )}
+        </div>
+      )}
 
         {dineInEnabled && (
           <div style={{ paddingTop: 14, borderTop: '1px solid var(--u-hair)' }}>

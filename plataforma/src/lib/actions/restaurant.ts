@@ -9,7 +9,8 @@ import { logActivity } from '@/lib/activity';
 import { mismoJson } from '@/lib/activity-diff';
 import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
-import type { HourInterval, WeeklyHours, HourExceptions } from '@/lib/hours';
+import { DAY_LABELS, type HourInterval, type WeeklyHours, type HourExceptions } from '@/lib/hours';
+import { problemaDeTiempos, turnosQueSePisan } from '@/lib/ajustes-estado';
 import type { ThemeConfig, ThemeContent, OrderType } from '@/lib/theme/defaults';
 import { extractVisualConfig, type TemplateConfig } from '@/lib/theme/templates';
 import { ESTANDAR_MAX_ORDER_TYPES, orderTypesForPlan } from '@/lib/plans';
@@ -202,9 +203,13 @@ function parseHours(raw: string | null): { hours: WeeklyHours | null } | { error
       }
       intervals.push([open, close]);
     }
+    // Ficha 2.8 (PA-T03): dos turnos del mismo día que se pisan no se guardan.
+    if (turnosQueSePisan(intervals)) {
+      return { error: `El ${DAY_LABELS[day as keyof typeof DAY_LABELS].toLowerCase()} tiene dos turnos que se pisan. Corrígelos y vuelve a guardar.` };
+    }
     if (intervals.length > 0) out[day as keyof WeeklyHours] = intervals;
   }
-  // Sin ningún día con horario = "sin horario configurado" (siempre abierto).
+  // Sin ningún día con horario = "a toda hora" (siempre abierto).
   return { hours: Object.keys(out).length > 0 ? out : null };
 }
 
@@ -592,7 +597,7 @@ export async function updateMenuLanguages(formData: FormData): Promise<void> {
   updateTag(`restaurant:${ctx.restaurantId}`);
 }
 
-export type SaveThemeResult = { error?: string; ok?: boolean };
+export type SaveThemeResult = { error?: string; ok?: boolean; /** Hay un diseño anterior para «Volver al anterior» (ficha 2.7). */ hayAnterior?: boolean };
 
 export async function saveOrdersAndCurrency(input: {
   restaurantId: string;
@@ -663,6 +668,26 @@ export async function saveOrdersAndCurrency(input: {
   if ('deliveryFee' in input.patch) {
     const fee = Number(input.patch.deliveryFee);
     newConfig.deliveryFee = Number.isFinite(fee) ? Math.max(0, Math.min(10_000, Math.round(fee * 100) / 100)) : 0;
+  }
+
+  /* Ficha 2.8 (R29.3): el candado está aquí y no solo en la pantalla. Un
+     ámbar después del rojo o un tiempo en cero no se guardan. */
+  const tiempo = (k: string, def: number) => Number((newConfig as Record<string, unknown>)[k] ?? def);
+  const problema = problemaDeTiempos({
+    kdsYellowMin: tiempo('kdsYellowMin', 10), kdsRedMin: tiempo('kdsRedMin', 20),
+    autoConfirmMinutes: tiempo('autoConfirmMinutes', 5), salonReadyMin: tiempo('salonReadyMin', 5),
+    salonUnpaidMin: tiempo('salonUnpaidMin', 15), salonUnacceptedMin: tiempo('salonUnacceptedMin', 5),
+  });
+  if (problema) return { error: problema };
+
+  /* Ficha 2.8 (R27.2): bajar el número de mesas no deja fuera una mesa con
+     cuenta abierta (quedaría «fuera del salón» sin que nadie lo decida). */
+  const mesasAntes = Number(existingConfig.dineInTableCount ?? 0);
+  const mesasDespues = Number(newConfig.dineInTableCount ?? mesasAntes);
+  if ('dineInTableCount' in input.patch && mesasDespues < mesasAntes) {
+    const { getActiveTableNumbers } = await import('@/lib/db/orders');
+    const fuera = Object.keys(await getActiveTableNumbers(input.restaurantId)).map(Number).filter((n) => n > mesasDespues);
+    if (fuera.length) return { error: `La mesa ${fuera.join(', ')} tiene una cuenta abierta: ciérrala antes de quitarla.` };
   }
 
   const { error } = await db
@@ -860,10 +885,20 @@ export async function saveAdminRestaurantTheme(input: {
     ? config.portadaVariant
     : 'spotlight';
 
-  const { error } = await db
+  /* «Volver al anterior» (ficha 2.7, migración 185): si cambió el DISEÑO
+     (lo visual), el que había se guarda. Si solo cambiaron textos o el logo,
+     el anterior que ya hubiera se conserva. */
+  const { data: previo } = await db
     .from('restaurant_themes')
-    .upsert(
-      {
+    .select('config')
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
+  const configPrevia = (previo?.config as ThemeConfig | null) ?? null;
+  const cambioDiseno = !!configPrevia
+    && JSON.stringify(extractVisualConfig({ ...config, ...configPrevia } as ThemeConfig)) !== JSON.stringify(extractVisualConfig(config));
+  const anterior = cambioDiseno ? { config_anterior: extractVisualConfig({ ...config, ...configPrevia } as ThemeConfig) } : {};
+
+  const fila = {
         restaurant_id: restaurantId,
         config,
         content,
@@ -878,9 +913,14 @@ export async function saveAdminRestaurantTheme(input: {
         catalog_view: config.catalogView,
         glass_intensity: config.glassIntensity,
         background_image: config.backgroundImage,
-      },
-      { onConflict: 'restaurant_id' },
-    );
+  };
+  let { error } = await db.from('restaurant_themes').upsert({ ...fila, ...anterior }, { onConflict: 'restaurant_id' });
+  // Sin la migración 185 se publica como siempre, sin anterior.
+  let sinAnterior = false;
+  if (error && cambioDiseno && faltaLaColumna(error)) {
+    ({ error } = await db.from('restaurant_themes').upsert(fila, { onConflict: 'restaurant_id' }));
+    sinAnterior = true;
+  }
 
   if (error) return { error: error.message };
 
@@ -888,7 +928,57 @@ export async function saveAdminRestaurantTheme(input: {
   revalidatePath('/admin/perfil');
   revalidatePath('/');
   updateTag(`restaurant:${restaurantId}`);
-  return { ok: true };
+  return { ok: true, hayAnterior: cambioDiseno && !sinAnterior };
+}
+
+/**
+ * «Volver al anterior» (ficha 2.7, migración 185). Intercambia el diseño
+ * publicado con el anterior —así volver también se puede deshacer—. Solo lo
+ * visual: el logo, el nombre, los textos y los pedidos no se tocan.
+ */
+export async function volverAlDisenoAnterior(
+  restaurantId: string,
+): Promise<{ ok: true; config: ThemeConfig } | { error: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autorizado.' };
+  const { data: profile } = await supabase.from('profiles').select('restaurant_id, role').eq('id', user.id).single();
+  if (!profile) return { error: 'No autorizado.' };
+  const isSuperAdmin = profile.role === 'SUPER_ADMIN';
+  if (!isSuperAdmin && !(await canActOnRestaurant(profile.restaurant_id, restaurantId))) return { error: 'No autorizado.' };
+  if (!isSuperAdmin && !(await puedeEnSeccion(restaurantId, 'personalizar'))) return { error: SIN_SECCION };
+
+  const db = createServiceClient();
+  const { data, error: errLeer } = await db
+    .from('restaurant_themes')
+    .select('config, config_anterior')
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
+  if (errLeer) return { error: faltaLaColumna(errLeer) ? 'Falta aplicar la migración 185 en la base.' : 'No se pudo leer el diseño.' };
+  const actual = data?.config as ThemeConfig | null;
+  const anterior = data?.config_anterior as TemplateConfig | null;
+  if (!actual || !anterior) return { error: 'No hay un diseño anterior al que volver.' };
+
+  const config = { ...actual, ...anterior } as ThemeConfig;
+  const legacyPortada = ['spotlight', 'poster', 'stack'].includes(config.portadaVariant) ? config.portadaVariant : 'spotlight';
+  const { error } = await db.from('restaurant_themes').update({
+    config,
+    config_anterior: extractVisualConfig(actual),
+    color_primary: config.colorAccent,
+    color_bg: config.colorBg,
+    color_text: config.colorText,
+    font_display: config.fontDisplay,
+    portada_style: legacyPortada,
+    catalog_view: config.catalogView,
+    glass_intensity: config.glassIntensity,
+    background_image: config.backgroundImage,
+  }).eq('restaurant_id', restaurantId);
+  if (error) return { error: 'No se pudo volver al diseño anterior. Inténtalo de nuevo.' };
+
+  revalidatePath('/admin/personalizacion');
+  revalidatePath('/');
+  updateTag(`restaurant:${restaurantId}`);
+  return { ok: true, config };
 }
 
 /* ============================================================
@@ -995,4 +1085,48 @@ export async function deleteRestaurantThemeTemplate(input: {
   if (error) return { error: error.message };
   revalidatePath('/admin/personalizacion');
   return {};
+}
+
+/**
+ * «¿A dónde repartes?» (ficha 2.8, R28.1). Antes «a cualquier dirección» era
+ * lo que pasaba si no se agregaban zonas, y el dueño lo descubría tarde. Ahora
+ * se elige una manera y los datos quedan coherentes con ella:
+ *
+ *   · zonas ........ se apaga la distancia (la ubicación se conserva).
+ *   · distancia .... se desactivan las zonas (no se borran: los pedidos
+ *                    viejos las referencian) y se enciende el radio.
+ *   · cualquiera ... se apagan las dos.
+ */
+export async function elegirModoDeEntrega(
+  restaurantId: string, modo: 'zonas' | 'distancia' | 'cualquiera',
+): Promise<{ ok: true } | { error: string }> {
+  if (modo !== 'zonas' && modo !== 'distancia' && modo !== 'cualquiera') return { error: 'Manera de repartir inválida.' };
+  const fd = new FormData();
+  fd.set('restaurantId', restaurantId);
+  const ctx = await resolveContext(fd, 'ajustes');
+  if (!ctx) return { error: 'No autorizado.' };
+
+  const { data: r } = await ctx.db
+    .from('restaurants').select('location_lat, location_lng, delivery_radius_km').eq('id', ctx.restaurantId).single();
+
+  if (modo !== 'zonas') {
+    const { error } = await ctx.db.from('delivery_zones').update({ activo: false }).eq('restaurant_id', ctx.restaurantId);
+    if (error) return { error: 'No se pudieron quitar las zonas. Inténtalo de nuevo.' };
+  }
+  /* Por distancia necesita un punto: si el local todavía no lo marcó, se
+     parte del centro de la Ciudad de Guatemala y el editor pide moverlo. */
+  const cambios = modo === 'distancia'
+    ? {
+        location_lat: (r?.location_lat as number | null) ?? 14.64072,
+        location_lng: (r?.location_lng as number | null) ?? -90.51327,
+        delivery_radius_km: (r?.delivery_radius_km as number | null) ?? 3,
+      }
+    : { delivery_radius_km: null };
+  const { error } = await ctx.db.from('restaurants').update(cambios).eq('id', ctx.restaurantId);
+  if (error) return { error: 'No se pudo guardar. Inténtalo de nuevo.' };
+
+  revalidatePath('/admin/ajustes/entrega');
+  revalidatePath('/admin/ajustes');
+  updateTag(`restaurant:${ctx.restaurantId}`);
+  return { ok: true };
 }

@@ -22,6 +22,8 @@ import SaveBar from '@/components/admin/save-bar';
 import { useFormDirty } from '@/lib/use-form-dirty';
 import { corteAHora, CORTE_POR_OMISION } from '@/lib/caja/dia';
 import PausaPedidos from '@/components/admin/pausa-pedidos';
+import { primerSolape, proximasAperturas } from '@/lib/ajustes-estado';
+import s from '@/components/admin/ajustes/ajustes.module.css';
 
 const TIMEZONES = [
   'America/Guatemala',
@@ -105,8 +107,36 @@ export default function HoursEditor({ restaurant, pintadoEn }: { restaurant: Res
   const { ref: formRef, dirty, markSaved } = useFormDirty();
   useEffect(() => { if (state && 'saved' in state) markSaved(); }, [state, markSaved]);
   const [days, setDays] = useState<Record<DayKey, DayState>>(() => initDays(restaurant.hours));
-  /** Ningún día encendido → se guarda `hours = null` → abierto siempre. */
-  const sinHorario = DAY_ORDER.every((d) => !days[d].on);
+  /* Ficha 2.8 (PA-T02): «A toda hora» se elige a propósito. Antes, sin días
+     encendidos decía «Sin horario» y el dueño creía que no había configurado
+     nada, cuando su menú estaba abierto siempre. `hours = null` sigue siendo
+     «a toda hora»; con horario, el día apagado es «Cerrado». */
+  const [modo, setModo] = useState<'horario' | 'siempre'>(restaurant.hours ? 'horario' : 'siempre');
+  const conHorario = modo === 'horario';
+  const hoursJson = conHorario ? buildHoursJson(days) : '';
+  const horarioActual = hoursJson ? (JSON.parse(hoursJson) as WeeklyHours) : null;
+  const solape = conHorario ? primerSolape(horarioActual) : null;
+  const sinDias = conHorario && DAY_ORDER.every((d) => !days[d].on);
+  const primerAbierto = DAY_ORDER.find((d) => days[d].on) ?? null;
+
+  function elegirModo(m: 'horario' | 'siempre') {
+    setModo(m);
+    // La primera vez con horario se parte de todos los días abiertos para editar.
+    if (m === 'horario' && DAY_ORDER.every((d) => !days[d].on)) {
+      setDays((prev) => Object.fromEntries(DAY_ORDER.map((d) => [d, { ...prev[d], on: true }])) as Record<DayKey, DayState>);
+    }
+  }
+
+  function copiarATodos(origen: DayKey) {
+    setDays((prev) => {
+      const otrosAbiertos = DAY_ORDER.some((d) => d !== origen && prev[d].on);
+      return Object.fromEntries(DAY_ORDER.map((d) => [d,
+        d === origen || (otrosAbiertos && !prev[d].on)
+          ? prev[d]
+          : { on: true, intervals: prev[origen].intervals.map((iv) => ({ ...iv })) },
+      ])) as Record<DayKey, DayState>;
+    });
+  }
   const [timezone, setTimezone] = useState(restaurant.timezone || 'America/Guatemala');
   const [exceptions, setExceptions] = useState<ExceptionRow[]>(() => initExceptions(restaurant.hour_exceptions));
 
@@ -171,9 +201,10 @@ export default function HoursEditor({ restaurant, pintadoEn }: { restaurant: Res
       }}
       pintadoEn={pintadoEn}
     />
-    <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+      onSubmit={(e) => { if (solape || sinDias) e.preventDefault(); }}>
       <input type="hidden" name="restaurantId" value={restaurant.id} />
-      <input type="hidden" name="hours" value={buildHoursJson(days)} />
+      <input type="hidden" name="hours" value={hoursJson} />
       <input type="hidden" name="hour_exceptions" value={buildExceptionsJson(exceptions)} />
 
       {/* ── Horario semanal ── */}
@@ -185,23 +216,18 @@ export default function HoursEditor({ restaurant, pintadoEn }: { restaurant: Res
           (p. ej. 7:00–10:00 y 13:00–21:00). Un cierre de madrugada (p. ej.
           20:00 a 02:00) cruza la medianoche sin problema.
         </p>
-        {/* Sin ningún día encendido el restaurante cuenta como ABIERTO SIEMPRE
-            (lib/hours.ts). Cada fila decía «Cerrado» y el dueño entendía lo
-            contrario de lo que pasa (auditoría 2026-10-02, AJU-02). */}
-        {sinHorario && (
-          <div
-            role="note"
-            style={{
-              marginBottom: 12, padding: '10px 12px', borderRadius: 'var(--radius-md)',
-              background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)',
-              color: 'var(--u-text-2)', fontSize: 13, lineHeight: 1.45,
-            }}
-          >
-            <strong style={{ color: 'var(--u-text)' }}>Sin horario: tu menú sale abierto a toda hora.</strong>{' '}
-            Toca los días que abres para poner tu horario.
-          </div>
+        <div className={s.seg} role="radiogroup" aria-label="Cuándo recibes pedidos">
+          {([['horario', 'Con horario'], ['siempre', 'A toda hora']] as const).map(([v, label]) => (
+            <button key={v} type="button" role="radio" aria-checked={modo === v} data-on={modo === v ? '1' : undefined}
+              onClick={() => elegirModo(v)}>{label}</button>
+          ))}
+        </div>
+        {!conHorario && (
+          <p className={s.nota} role="note">
+            <strong>Tu menú está abierto siempre.</strong> Para dejar de recibir pedidos un rato, usa «Pausar pedidos».
+          </p>
         )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {conHorario && <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
           {DAY_ORDER.map((day) => {
             const d = days[day];
             return (
@@ -287,12 +313,23 @@ export default function HoursEditor({ restaurant, pintadoEn }: { restaurant: Res
                     )}
                   </div>
                 ) : (
-                  <span style={{ fontSize: 13, color: 'var(--u-text-4)', marginTop: 12 }}>{sinHorario ? 'Sin horario' : 'Cerrado'}</span>
+                  <span style={{ fontSize: 13, color: 'var(--u-text-4)', marginTop: 12 }}>Cerrado</span>
                 )}
               </div>
             );
           })}
-        </div>
+        </div>}
+        {conHorario && primerAbierto && (
+          <button type="button" className={s.copiar} onClick={() => copiarATodos(primerAbierto)}>
+            Copiar el {DAY_LABELS[primerAbierto].toLowerCase()} a los demás días abiertos
+          </button>
+        )}
+        {solape && (
+          <p className={s.error} role="alert">
+            El {DAY_LABELS[solape.dia].toLowerCase()} tiene dos turnos que se pisan ({solape.turnos[0].join('–')} y {solape.turnos[1].join('–')}).
+          </p>
+        )}
+        {sinDias && <p className={s.error} role="alert">Enciende al menos un día, o elige «A toda hora».</p>}
       </Card>
 
       {/* ── Excepciones por fecha (feriados) ── */}
@@ -401,6 +438,21 @@ export default function HoursEditor({ restaurant, pintadoEn }: { restaurant: Res
           value={timezone}
           onValueChange={setTimezone}
         />
+      </Card>
+
+      {/* ── Próximas aperturas (ficha 2.8, PA-T03): tal como las verá el
+          cliente, con los feriados encima del horario semanal. ── */}
+      <Card className="p-4">
+        <label style={labelStyle}>Próximas aperturas</label>
+        <div className={s.lista}>
+          {proximasAperturas(horarioActual, buildExceptionsJson(exceptions) ? JSON.parse(buildExceptionsJson(exceptions)) as HourExceptions : null,
+            timezone, new Date(pintadoEn), 3).map((a) => (
+            <div key={a.dia} className={s.fila}>
+              <span className={s.filaDia}>{a.dia}</span>
+              <span className={s.filaValor} data-cerrado={a.cerrado ? '1' : undefined}>{a.texto}</span>
+            </div>
+          ))}
+        </div>
       </Card>
 
       {/* ── Cuándo termina el día de caja (migración 145) ──

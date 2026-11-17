@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 
 const TOUR_KEY = 'leogin_tour_completed';
@@ -11,9 +12,11 @@ type StepDef = {
   title: string;
   desc: string;
   target: string | null;
+  /** El último paso invita al turno de práctica (ficha 2.5). */
+  practica?: boolean;
 };
 
-const STEPS: StepDef[] = [
+const PASOS: StepDef[] = [
   {
     title: '¡Bienvenido a tu panel!',
     desc: 'Este es tu centro de control: tu menú, tus pedidos y tus clientes. Te enseñamos dónde está cada cosa en menos de un minuto.',
@@ -41,15 +44,28 @@ const STEPS: StepDef[] = [
   },
 ];
 
+/* La invitación llega cuando ya sabe dónde está todo: practicar una mesa
+   completa con su carta real, sin que nada cuente (ficha 2.5). */
+const PASO_PRACTICA: StepDef = {
+  title: '¿Practicamos una mesa?',
+  desc: 'Cinco minutos: abres una mesa, pides, mandas a cocina, corriges y cobras con tu menú real. Nada cuenta: ni ventas, ni caja, ni existencias. Al final se borra.',
+  target: null,
+  practica: true,
+};
+
 interface Props {
   restaurantName?: string;
   preview?: boolean;
   /** La lista de primeros pasos está en pantalla: no abrirse solo encima de
    *  ella (auditoría de experiencia 2026-10-27, EV-14 — una voz por vez). */
   enEspera?: boolean;
+  /** Dónde está el turno de práctica, si este restaurante toma pedidos. */
+  practicaHref?: string | null;
 }
 
-export default function WelcomeTour({ restaurantName, preview, enEspera = false }: Props) {
+export default function WelcomeTour({ restaurantName, preview, enEspera = false, practicaHref = null }: Props) {
+  const router = useRouter();
+  const STEPS = useMemo(() => (practicaHref ? [...PASOS, PASO_PRACTICA] : PASOS), [practicaHref]);
   const [active, setActive] = useState(false);
   const [step, setStep] = useState(0);
   const [spotRect, setSpotRect] = useState<DOMRect | null>(null);
@@ -90,7 +106,7 @@ export default function WelcomeTour({ restaurantName, preview, enEspera = false 
     // paso sigue sin foco en vez de señalar a la nada.
     if (r.height === 0) { setSpotRect(null); return; }
     setSpotRect(r);
-  }, []);
+  }, [STEPS]);
 
   useEffect(() => {
     if (!active) return;
@@ -258,14 +274,14 @@ export default function WelcomeTour({ restaurantName, preview, enEspera = false 
             onClick={complete}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 12, color: 'var(--u-text-4)', padding: '4px 2px',
+              fontSize: 12, color: 'var(--u-text-4)', padding: '4px 2px', whiteSpace: 'nowrap',
             }}
           >
-            Omitir
+            {current.practica ? 'Ahora no' : 'Omitir'}
           </button>
 
           <div style={{ display: 'flex', gap: 7 }}>
-            {step > 0 && (
+            {step > 0 && !current.practica && (
               <button
                 type="button"
                 onClick={() => setStep((s) => s - 1)}
@@ -283,17 +299,23 @@ export default function WelcomeTour({ restaurantName, preview, enEspera = false 
             )}
             <button
               type="button"
-              onClick={() => { if (isLast) complete(); else setStep((s) => s + 1); }}
+              onClick={() => {
+                if (!isLast) { setStep((s) => s + 1); return; }
+                complete();
+                if (current.practica && practicaHref) router.push(practicaHref);
+              }}
               className="press"
               style={{
                 border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-md)',
                 padding: '8px 18px', fontSize: 12, fontWeight: 700,
                 background: 'var(--brand-accent, #6366f1)',
                 color: 'var(--brand-on-accent, #fff)',
-                display: 'flex', alignItems: 'center', gap: 5,
+                display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
               }}
             >
-              {isLast ? (
+              {current.practica ? (
+                <>Empezar la práctica <Icon name="chevronRight" size={14} /></>
+              ) : isLast ? (
                 <><Icon name="check" size={14} /> ¡Listo!</>
               ) : (
                 <>Siguiente <Icon name="chevronRight" size={14} /></>

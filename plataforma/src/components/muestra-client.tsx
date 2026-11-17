@@ -10,7 +10,7 @@ import { useEffect, useMemo, useState } from 'react';
 import PreviewClient, { type ThemePreviewState } from '@/components/super/preview-client';
 import { resolveTheme } from '@/lib/theme/resolve';
 import { applyTemplateToConfig, findTemplate } from '@/lib/theme/templates';
-import { DEMO_CATEGORIES, DEMO_PRODUCTS, DEMO_THEME } from '@/lib/demo-menu';
+import { DEMO_CATEGORIES, DEMO_PRODUCTS, DEMO_THEME, type DemoCategory, type DemoProduct } from '@/lib/demo-menu';
 import { esMuestraPedido, type MuestraAviso } from '@/lib/muestra-mensajes';
 
 export function estadoMuestra(estilo: string | null, nombre: string): ThemePreviewState {
@@ -24,19 +24,44 @@ export function estadoMuestra(estilo: string | null, nombre: string): ThemePrevi
   return { config, content: base.content, customCss: '' };
 }
 
+/** La carta del alta (ficha 2.3): sus platillos en «Platillos», sin foto.
+    `null` es la portada (sin alta): la carta de Rincón 502. Una lista vacía
+    es un alta que todavía no escribe platillos: la carta va vacía, nunca con
+    platos que no son suyos. */
+export function cartaMuestra(platos: { nombre: string; precio: number }[] | null):
+  { categories: DemoCategory[]; products: DemoProduct[] } {
+  if (!platos) return { categories: DEMO_CATEGORIES, products: DEMO_PRODUCTS };
+  if (platos.length === 0) return { categories: [], products: [] };
+  return {
+    categories: [{ id: 'alta', name: 'Platillos', icon: 'utensils' }],
+    products: platos.map((p, i) => ({
+      id: `alta-${i}`, category_id: 'alta', name: p.nombre.slice(0, 120), description: null,
+      price: p.precio, image_url: null, icon: null, tags: null, dietary_tags: null, options: null,
+    })),
+  };
+}
+
 function avisar(msg: MuestraAviso) {
   if (window.parent !== window) window.parent.postMessage(msg, window.location.origin);
 }
 
-export default function MuestraClient({ estiloInicial, nombreInicial }: { estiloInicial: string | null; nombreInicial: string }) {
+export default function MuestraClient({ estiloInicial, nombreInicial, alta = false }: { estiloInicial: string | null; nombreInicial: string; alta?: boolean }) {
   const inicial = useMemo(() => estadoMuestra(estiloInicial, nombreInicial), [estiloInicial, nombreInicial]);
-  const [pedido, setPedido] = useState<{ estilo: string | null; nombre: string } | null>(null);
-  const estado = useMemo(() => (pedido ? estadoMuestra(pedido.estilo, pedido.nombre) : undefined), [pedido]);
+  const [pedido, setPedido] = useState<{ estilo: string | null; nombre: string; platos: { nombre: string; precio: number }[] | null } | null>(null);
+  /* Con los platillos del alta, la carta abre directo en ellos —como al
+     escanear el QR de una mesa—: la portada a pantalla completa los dejaba
+     fuera de la vista del teléfono de muestra. */
+  const estado = useMemo(() => {
+    if (!pedido) return undefined;
+    const e = estadoMuestra(pedido.estilo, pedido.nombre);
+    return pedido.platos?.length ? { ...e, config: { ...e.config, portadaVariant: 'none' as const } } : e;
+  }, [pedido]);
+  const carta = useMemo(() => cartaMuestra(pedido?.platos ?? (alta ? [] : null)), [pedido, alta]);
 
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (e.origin !== window.location.origin || !esMuestraPedido(e.data)) return;
-      setPedido({ estilo: e.data.estilo, nombre: e.data.nombre });
+      setPedido({ estilo: e.data.estilo, nombre: e.data.nombre, platos: e.data.platos ?? null });
     };
     window.addEventListener('message', onMessage);
     avisar({ type: 'leogin-muestra-lista' });
@@ -56,8 +81,8 @@ export default function MuestraClient({ estiloInicial, nombreInicial }: { estilo
       initialConfig={inicial.config}
       initialContent={inicial.content}
       initialCss=""
-      categories={DEMO_CATEGORIES}
-      products={DEMO_PRODUCTS}
+      categories={carta.categories}
+      products={carta.products}
       ordersEnabled
       estado={estado}
       muestra

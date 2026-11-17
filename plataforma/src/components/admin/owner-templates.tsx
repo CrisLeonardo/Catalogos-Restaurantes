@@ -40,6 +40,8 @@ export default function OwnerTemplates({
   onTemplatesChange,
   onApply,
   appliedId,
+  nombrarAlAbrir = false,
+  onCancelar,
 }: {
   restaurantId: string;
   /** Config actual del editor (con lo no guardado): lo que se snapshotea al guardar. */
@@ -48,8 +50,12 @@ export default function OwnerTemplates({
   onTemplatesChange: (next: RestaurantThemeTemplate[]) => void;
   onApply: (tpl: BuiltinTemplate) => void;
   appliedId?: string | null;
+  /** Se abrió desde «⋯ › Guardar como plantilla» (ficha 2.7): pide el nombre ya. */
+  nombrarAlAbrir?: boolean;
+  /** Canceló el nombre: sin plantillas, el editor vuelve a esconder la sección. */
+  onCancelar?: () => void;
 }) {
-  const [naming, setNaming] = useState(false);
+  const [naming, setNaming] = useState(nombrarAlAbrir);
   const [name, setName] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [isPending, start] = useTransition();
@@ -67,6 +73,7 @@ export default function OwnerTemplates({
       if (res.template) onTemplatesChange([res.template, ...templates]);
       setNaming(false);
       setName('');
+      onCancelar?.();
     });
   }
 
@@ -115,14 +122,14 @@ export default function OwnerTemplates({
             onChange={(e) => setName(e.target.value)}
             placeholder="Nombre de tu plantilla (ej. Verano 2026)"
             maxLength={60}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') { setNaming(false); setName(''); setErr(null); } }}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') { setNaming(false); setName(''); setErr(null); onCancelar?.(); } }}
             className="adm-field"
             style={{ flex: '1 1 220px', width: 'auto' }}
           />
           <button type="button" onClick={handleSave} disabled={isPending} className="press btn-accent" style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 12, cursor: 'pointer', opacity: isPending ? 0.6 : 1 }}>
             {isPending ? 'Guardando…' : 'Guardar'}
           </button>
-          <button type="button" onClick={() => { setNaming(false); setName(''); setErr(null); }} className="press" style={{ padding: '9px 14px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12, border: '1px solid var(--u-hair)', background: 'transparent', color: 'var(--u-text-2)', cursor: 'pointer' }}>
+          <button type="button" onClick={() => { setNaming(false); setName(''); setErr(null); onCancelar?.(); }} className="press" style={{ padding: '9px 14px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12, border: '1px solid var(--u-hair)', background: 'transparent', color: 'var(--u-text-2)', cursor: 'pointer' }}>
             Cancelar
           </button>
         </div>

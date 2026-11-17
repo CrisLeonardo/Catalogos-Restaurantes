@@ -85,6 +85,19 @@ describe('describirActividad · antifraude (PROD-10)', () => {
     expect(describirActividad(fila('horario', null, {}))).toBe('Cambió el horario del restaurante');
   });
 
+  it('el turno de práctica dice quién lo hizo y en cuánto', () => {
+    expect(describirActividad(fila('turno_practica', null, { minutos: 4 }, 'Ana')))
+      .toBe('Ana hizo el turno de práctica en 4 minutos');
+    expect(describirActividad(fila('turno_practica', null, null))).toBe('Hizo el turno de práctica');
+  });
+
+  it('la PC del local y los aparatos se dicen con palabras', () => {
+    expect(describirActividad(fila('impresion_reintento', null, { papel: 'kitchen', n: 3 }, 'Ana')))
+      .toBe('Ana volvió a mandar 3 comandas que no salieron');
+    expect(describirActividad(fila('aparato_uso', 'Tablet de cocina', { uso: 'Cocina' }, 'Ana')))
+      .toBe('Ana dejó un aparato para Cocina — Tablet de cocina');
+  });
+
   it('más de dos opciones se resumen', () => {
     const opciones = ['A', 'B', 'C', 'D'].map((x) => ({ que: x, antes: 1, despues: 2 }));
     expect(describirActividad(fila('precio', 'Combo', { precio: null, opciones })))

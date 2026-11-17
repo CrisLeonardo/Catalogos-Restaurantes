@@ -11,8 +11,10 @@ import KitchenPrintSettings from '@/components/admin/kitchen-print-settings';
 import PrintStationsSettings from '@/components/admin/print-stations-settings';
 import { Card } from '@/components/ui/card';
 import { Section } from '@/components/ui/section';
-import { Button } from '@/components/ui/button';
 import { haceTiempo } from '@/lib/dates';
+import EstadoDelLocal, { type PiezaDelLocal } from '@/components/admin/mi-pc/estado-del-local';
+import { leerSaludDelLocal } from '@/lib/db/estado-pc';
+import { estadoDeImpresora, estadoDePc, veredictoDePc, type DiagnosticoImpresora } from '@/lib/estado-pc';
 
 export const metadata = { title: 'Mi PC del local – Panel admin' };
 
@@ -35,7 +37,8 @@ export const metadata = { title: 'Mi PC del local – Panel admin' };
    redirigen aquí (ver sus page.tsx) para no romper enlaces viejos.
    ============================================================ */
 
-const timeAgo = (iso: string): string => haceTiempo(iso);
+/** «windows:EPSON TM-T20» → «EPSON TM-T20»: el prefijo es del agente, no del dueño. */
+const nombreImpresora = (t: string) => t.replace(/^(windows|doc):/i, '').replace(/^tcp:\/\//i, 'Red ');
 
 const QUE_HACE = [
   {
@@ -72,149 +75,114 @@ export default async function AdminMiPcPage() {
   if (!restaurantId) redirect('/admin/login');
 
   const db = createServiceClient();
-  const { data: agent } = await db
-    .from('print_agents')
-    .select('last_seen_at, agent_version, kitchen_target, receipt_target, hub_url, hub_order_token, is_active, device_name')
-    .eq('restaurant_id', restaurantId)
-    .maybeSingle();
-
-  const lastSeen = (agent?.last_seen_at as string | null) ?? null;
-  const active = !!agent && (agent.is_active as boolean | null) !== false;
+  const [salud, { data: r }] = await Promise.all([
+    leerSaludDelLocal(restaurantId),
+    db.from('restaurants').select('timezone').eq('id', restaurantId).maybeSingle(),
+  ]);
+  const zona = (r?.timezone as string | null) || 'America/Guatemala';
   // Frescura evaluada al momento del request a propósito (server component):
   // es texto informativo del panel, no estado persistente.
   // eslint-disable-next-line react-hooks/purity
-  const connected = active && !!lastSeen && Date.now() - new Date(lastSeen).getTime() < 90_000;
-  const kitchenTarget = (agent?.kitchen_target as string | null) ?? null;
-  const receiptTarget = (agent?.receipt_target as string | null) ?? null;
-  const hubReady = !!agent?.hub_url && !!agent?.hub_order_token;
+  const ahora = Date.now();
+  const pc = estadoDePc(salud.pc, ahora, zona);
+  const conectada = pc.estado === 'conectada';
+  const cocina = estadoDeImpresora(salud.cocina, 'comanda', zona);
+  const caja = estadoDeImpresora(salud.caja, 'recibo', zona);
+  const veredicto = veredictoDePc(pc, cocina, caja, salud.pc.hubListo);
 
-  const hubUrl = (agent?.hub_url as string | null) ?? null;
-  const hubToken = (agent?.hub_order_token as string | null) ?? null;
-  const kdsUrl = connected && hubUrl && hubToken
-    ? `${hubUrl.replace(/\/+$/, '')}/kds?t=${encodeURIComponent(hubToken)}`
+  /* La pantalla de cocina de respaldo vive en la PC (hub local). */
+  const { data: hub } = conectada
+    ? await db.from('print_agents').select('hub_url, hub_order_token').eq('restaurant_id', restaurantId).maybeSingle()
+    : { data: null };
+  const kdsUrl = hub?.hub_url && hub?.hub_order_token
+    ? `${(hub.hub_url as string).replace(/\/+$/, '')}/kds?t=${encodeURIComponent(hub.hub_order_token as string)}`
     : null;
+
+  const piezaImpresora = (key: string, titulo: string, d: DiagnosticoImpresora, destino: string | null, papel: 'kitchen' | 'receipt'): PiezaDelLocal => {
+    if (!conectada) {
+      return { key, titulo, tono: 'neutral', texto: destino ? `${nombreImpresora(destino)} · espera a la PC` : 'Sin impresora elegida' };
+    }
+    if (d.estado === 'sin_asignar') return { key, titulo, tono: 'warn', texto: d.texto, enlace: { href: '#impresoras', label: 'Elegir' } };
+    if (d.estado === 'fallando') return { key, titulo, tono: 'warn', texto: `${d.texto} · ¿sin papel?`, reintentar: papel };
+    return { key, titulo, tono: 'ok', texto: d.estado === 'sin_uso' && destino ? `${nombreImpresora(destino)} · nada impreso hoy` : d.texto };
+  };
+
+  const piezas: PiezaDelLocal[] = [
+    {
+      key: 'pc',
+      titulo: salud.pc.nombre ? `PC principal · ${salud.pc.nombre}` : 'PC principal',
+      texto: conectada && salud.pc.ultimaSenal ? `Conectada · señal ${haceTiempo(salud.pc.ultimaSenal, ahora)}` : pc.texto,
+      tono: pc.tono,
+      ...(conectada ? {} : { enlace: { href: '#pc-principal', label: 'Revisar' } }),
+    },
+    piezaImpresora('cocina', 'Impresora de cocina', cocina, salud.cocina.destino, 'kitchen'),
+    piezaImpresora('caja', 'Impresora de caja', caja, salud.caja.destino, 'receipt'),
+    conectada && salud.pc.hubListo
+      ? { key: 'respaldo', titulo: 'Si se cae el internet', tono: 'ok', texto: 'Protegido: los pedidos siguen por tu WiFi',
+          ...(kdsUrl ? { enlace: { href: kdsUrl, label: 'Cocina de respaldo', externo: true } } : {}) }
+      : { key: 'respaldo', titulo: 'Si se cae el internet', tono: conectada ? 'warn' : 'neutral',
+          texto: conectada ? 'Sin proteger: actualiza Leogin en la PC principal' : 'Sin proteger mientras la PC no conteste' },
+  ];
+  const sinPc = pc.estado === 'sin_pc';
 
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 880 }}>
-      {/* ── Hero ─────────────────────────────────────────────── */}
-      <Card className="p-5">
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
-          <div style={{
-            width: 46, height: 46, borderRadius: 'var(--radius-lg)', flexShrink: 0, display: 'grid', placeItems: 'center',
-            background: 'var(--admin-panel-btn, var(--brand-accent))', color: 'var(--admin-panel-btn-text, #fff)',
-          }}>
-            <Icon name="monitor" size={22} />
-          </div>
-          <div style={{ flex: 1, minWidth: 240 }}>
-            {/* El titular es el ESTADO, no el nombre de la pantalla: la barra
-                de arriba ya dice "La PC del local", y lo que el dueño viene a
-                averiguar es si está funcionando. Antes el estado era una
-                pastilla de 11 px al lado de un título repetido. */}
-            <h2 className="t-display" style={{ fontSize: 20, lineHeight: 1.1, color: connected ? 'var(--c-ok)' : 'var(--c-warn)' }}>
-              {connected ? 'Todo listo' : active && agent ? 'Sin responder' : 'Sin PC principal'}
-            </h2>
-            <p style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.55, margin: '6px 0 0' }}>
-              Una computadora del restaurante hace de <strong style={{ color: 'var(--u-text-2)' }}>PC
-              principal</strong>: la que está junto a la impresora. Se configura una sola vez y de ahí
-              en adelante trabaja sola.
-            </p>
-          </div>
-        </div>
-
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-          gap: 12, marginTop: 18,
-        }}>
-          {QUE_HACE.map((b) => (
-            <div key={b.title} style={{
-              borderRadius: 'var(--radius-lg)', padding: '13px 14px',
-              background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-              border: '1px solid var(--u-hair)',
+      {sinPc ? (
+        /* Sin PC todavía: aquí sí se explica qué es. Con PC, esto sobraba
+           en cada visita y empujaba el estado real tres pantallas abajo. */
+        <Card className="p-5">
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
+            <div style={{
+              width: 46, height: 46, borderRadius: 'var(--radius-lg)', flexShrink: 0, display: 'grid', placeItems: 'center',
+              background: 'var(--admin-panel-btn, var(--brand-accent))', color: 'var(--admin-panel-btn-text, #fff)',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <Icon name={b.icon} size={16} style={{ color: 'var(--brand-accent-ink, var(--u-text))' }} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>{b.title}</span>
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--u-text-3)', lineHeight: 1.55 }}>{b.desc}</div>
+              <Icon name="monitor" size={22} />
             </div>
-          ))}
-        </div>
-      </Card>
+            <div style={{ flex: 1, minWidth: 240 }}>
+              <h2 className="t-display" style={{ fontSize: 20, lineHeight: 1.1 }}>Sin PC principal</h2>
+              <p style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.55, margin: '6px 0 0' }}>
+                Una computadora del restaurante hace de <strong style={{ color: 'var(--u-text-2)' }}>PC
+                principal</strong>: la que está junto a la impresora. Se configura una sola vez y de ahí
+                en adelante trabaja sola.
+              </p>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12, marginTop: 18 }}>
+            {QUE_HACE.map((b) => (
+              <div key={b.title} style={{
+                borderRadius: 'var(--radius-lg)', padding: '13px 14px',
+                background: 'var(--adm-bg-2)', border: '1px solid var(--u-hair)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <Icon name={b.icon} size={16} style={{ color: 'var(--brand-accent-ink, var(--u-text))' }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>{b.title}</span>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.55 }}>{b.desc}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : (
+        <EstadoDelLocal restaurantId={restaurantId} veredicto={veredicto} piezas={piezas} puedeProbar={conectada} />
+      )}
 
-      {/* ── 1. El interruptor ────────────────────────────────── */}
-      <Section title="Paso 1 · La PC principal">
-        <Card className="p-4.5" id="pc-principal">
+      {/* ── La PC principal ──────────────────────────────────── */}
+      <Section title={sinPc ? 'Paso 1 · Elige la PC principal' : 'La PC principal'}>
+        <Card className="p-4.5" id="pc-principal" style={{ scrollMarginTop: 80 }}>
           <MainPcSwitch />
         </Card>
       </Section>
 
-      {/* ── 2. Impresoras ────────────────────────────────────── */}
-      <Section title="Paso 2 · Dónde imprime">
-        <Card className="p-4.5">
-          {connected ? (
-            <div style={{
-              display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
-              gap: 12, marginBottom: 16,
-            }}>
-              {[{ icon: 'flame', label: 'Comandas de cocina', target: kitchenTarget },
-                { icon: 'receipt', label: 'Recibos de caja', target: receiptTarget }].map((p) => (
-                <div key={p.label} style={{
-                  display: 'flex', alignItems: 'center', gap: 10, borderRadius: 'var(--radius-lg)', padding: '10px 13px',
-                  background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair)',
-                }}>
-                  <Icon name={p.icon} size={16} style={{ color: p.target ? 'var(--c-ok, #4ade80)' : 'var(--u-text-4)', flexShrink: 0 }} />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 600 }}>{p.label}</div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: p.target ? 'var(--u-text)' : 'var(--u-text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {p.target || 'Sin asignar — elígela abajo'}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.6, margin: '0 0 14px' }}>
+      {/* ── Impresoras ───────────────────────────────────────── */}
+      <Section title={sinPc ? 'Paso 2 · Dónde imprime' : 'Dónde imprime'}>
+        <Card className="p-4.5" id="impresoras" style={{ scrollMarginTop: 80 }}>
+          {!conectada && (
+            <p style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.6, margin: '0 0 14px' }}>
               En cuanto la PC principal esté conectada, aquí aparecerán sus impresoras para que elijas
               cuál imprime las comandas de cocina y cuál los recibos de caja. Pueden ser la misma.
             </p>
           )}
           <PrintAgentSettings />
-        </Card>
-      </Section>
-
-      {/* ── 3. Respaldo sin internet ─────────────────────────── */}
-      <Section title="Paso 3 · Si se cae el internet">
-        <Card className="p-4.5">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <span style={{
-              width: 9, height: 9, borderRadius: 'var(--radius-full)', flexShrink: 0,
-              background: connected && hubReady ? 'var(--c-ok, #4ade80)' : 'var(--u-text-4)',
-            }} />
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>
-              {connected && hubReady ? 'Protegido' : 'Sin proteger'}
-            </span>
-            {lastSeen && !connected && (
-              <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>· última señal {timeAgo(lastSeen)}</span>
-            )}
-          </div>
-          <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.6, margin: 0 }}>
-            {connected && hubReady
-              ? 'Si se corta la señal, tus meseros y los QR de las mesas siguen tomando pedidos: los recibe esta PC por tu WiFi y las comandas se imprimen igual. Al volver el internet todo se sincroniza solo, sin duplicados y sin que nadie tenga que hacer nada.'
-              : 'Con la PC principal encendida, un corte de internet deja de detener el local: los pedidos siguen entrando por tu WiFi y se sincronizan solos al volver la señal.'}
-          </p>
-          {kdsUrl && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--u-hair)' }}>
-              <div style={{ flex: 1, minWidth: 220 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text)' }}>Pantalla de cocina de respaldo</div>
-                <div style={{ fontSize: 11, color: 'var(--u-text-3)', lineHeight: 1.5, marginTop: 3 }}>
-                  Ábrela en la tablet de cocina (misma red WiFi) y déjala de marcador: muestra los pedidos aunque no haya internet.
-                </div>
-              </div>
-              <Button render={<a href={kdsUrl} target="_blank" rel="noopener noreferrer" />} variant="secondary" size="sm">
-                <Icon name="flame" size={15} /> Abrir pantalla de respaldo
-              </Button>
-            </div>
-          )}
         </Card>
       </Section>
 

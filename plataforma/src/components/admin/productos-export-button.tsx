@@ -1,6 +1,7 @@
 'use client';
 
 import { useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { useToastManager } from '@/components/ui/toast';
 import { exportProductsXlsx, getProductsPdfData, type ProductExportRow } from '@/lib/actions/products';
 import {
@@ -19,7 +20,8 @@ function groupByCategory(rows: ProductExportRow[]): [string, ProductExportRow[]]
   return order.map((name) => [name, groups.get(name)!]);
 }
 
-export default function ProductosExportButton({ restaurantId }: { restaurantId: string }) {
+export default function ProductosExportButton({ restaurantId, importarHref }: { restaurantId: string; importarHref?: string }) {
+  const router = useRouter();
   const [pendingXlsx, startXlsx] = useTransition();
   const [pendingPdf, startPdf] = useTransition();
   const toast = useToastManager();
@@ -97,6 +99,7 @@ export default function ProductosExportButton({ restaurantId }: { restaurantId: 
       onExcel={downloadXlsx}
       onPdf={downloadPdf}
       busy={pendingXlsx ? 'excel' : pendingPdf ? 'pdf' : null}
+      onImportar={importarHref ? () => router.push(importarHref) : undefined}
     />
   );
 }

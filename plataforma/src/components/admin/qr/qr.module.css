@@ -1,0 +1,57 @@
+/* Código QR (ficha 2.10). Superficies sólidas del panel; el papel de la
+   vista previa es siempre claro, como el archivo. */
+.qr { display: grid; gap: 14px; max-width: 460px; }
+@media (min-width: 1024px) {
+  .qr { max-width: 1040px; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; align-items: start; }
+  .qr > * { grid-column: 2; }
+  .qr > .previa { grid-column: 1; grid-row: 1 / span 12; position: sticky; top: 16px; }
+}
+
+.destino {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px; min-height: 60px;
+  border-radius: 18px; border: 1px solid var(--adm-border); background: var(--adm-card); box-shadow: var(--adm-shadow-sm);
+}
+.destino b { display: block; font-size: 14px; font-weight: 600; color: var(--u-text); }
+.destino code { display: block; font-size: 12px; color: var(--u-text-3); overflow-wrap: anywhere; user-select: all; font-family: inherit; }
+
+.seg { display: flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--adm-bg-2); }
+.seg button {
+  flex: 1; min-height: 40px; border: 0; border-radius: 9px; background: transparent; cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 500; color: var(--u-text-2); white-space: nowrap;
+}
+.seg button[aria-checked='true'] { background: var(--adm-card); color: var(--u-text); font-weight: 600; box-shadow: var(--adm-shadow-sm); }
+.seg button:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: 1px; }
+
+.previa {
+  display: grid; place-items: center; padding: 16px; border-radius: 18px;
+  background: var(--adm-bg-2); min-height: 280px;
+}
+.previa img { display: block; max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12); background: #fff; }
+.previa[data-uso='redes'] img { width: 260px; }
+.previa[data-uso='imprimir'] img { width: 280px; border-radius: 2px; }
+.previa[data-uso='codigo'] img { width: 240px; }
+@media (min-width: 1024px) {
+  .previa { min-height: 560px; padding: 28px; }
+  .previa[data-uso='redes'] img { width: 380px; }
+  .previa[data-uso='imprimir'] img { width: 420px; }
+  .previa[data-uso='codigo'] img { width: 360px; }
+}
+.cargando { width: 200px; aspect-ratio: 4 / 5; border-radius: 6px; background: var(--adm-card); opacity: 0.6; }
+
+.ayuda { margin: 0; font-size: 13px; line-height: 1.5; color: var(--u-text-2); text-align: center; }
+@media (min-width: 1024px) { .ayuda { text-align: left; } }
+
+.campo { display: grid; gap: 6px; }
+.campo label { font-size: 12px; font-weight: 600; color: var(--u-text-3); }
+
+.aviso { margin: 0; border-radius: 14px; padding: 10px 12px; font-size: 13px; line-height: 1.45; }
+.aviso[data-tono='prueba'] { background: var(--c-warn-bg); color: var(--c-warn); }
+.aviso[data-tono='error'] { background: var(--c-danger-bg); color: var(--c-danger); }
+
+.mesas {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; padding: 0 14px;
+  border-radius: 12px; border: 1px solid var(--adm-border); background: var(--adm-card);
+  font-size: 13px; font-weight: 600; color: var(--u-text); text-decoration: none;
+}
+.mesas span { color: var(--u-text-3); font-weight: 500; }
+.mesas:hover { background: var(--adm-card-hover); }
