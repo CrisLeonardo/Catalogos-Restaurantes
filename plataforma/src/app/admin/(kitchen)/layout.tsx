@@ -17,6 +17,7 @@ import OfflineSupport from '@/components/offline-support';
 import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
 import SessionHeartbeat from '@/components/admin/session-heartbeat';
 import type { Metadata } from 'next';
+import { getEsteAparato } from '@/lib/db/aparato';
 
 export const metadata: Metadata = { title: 'Cocina (KDS)' };
 
@@ -123,6 +124,7 @@ export default async function KitchenLayout({ children }: { children: React.Reac
 
   return (
     <AdminShell
+      aparato={await getEsteAparato(restaurantId)}
       restaurantName={restaurantName}
       restaurantId={restaurantId}
       ordersEnabled={ordersEnabled}

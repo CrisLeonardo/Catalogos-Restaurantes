@@ -34,6 +34,11 @@ PR #124 (merge `0d15c36`), PR #121 (merge `fd9e728`) y PR #120 (merge `a7a8040`)
   - Una «Mesa P» con tu carta real y las mismas pantallas de Tomar pedidos para practicar una mesa completa en seis pasos: abrir, pedir con un extra, enviar a cocina, marcar listo, anular un plato y cobrar con vuelto. La franja de arriba dice el paso y cómo salir.
   - No cuenta en nada: no crea pedidos ni cobros, no mueve existencias, no imprime y anular no pide PIN (lo avisa). Al salir se olvida.
   - Se ofrece al final del recorrido de bienvenida y en la búsqueda de Tomar pedidos. El dueño ve en Personal quién la hizo y en cuántos minutos.
+- **Aparato por rol y La PC del local con un solo estado** (ficha 2.6 de la auditoría; rama `feat/aparato-y-mi-pc`; maqueta aprobada `docs/diseno/MAQUETA_APARATO_Y_MI_PC_2026-11-16.html`) · **migración 184, antes de desplegar**:
+  - **La PC del local** abre con el veredicto («Revisa la impresora de cocina», «Todo listo para el servicio») y cuatro piezas: la PC, la impresora de cocina, la de caja y el respaldo sin internet. Si hay comandas que no salieron, lo dice con la hora y ofrece **Reintentar** (sin duplicar lo que ya se reimprimió). También lo avisa Hoy.
+  - **Un solo reloj** para la PC en Hoy, Ajustes, La PC del local y el superadmin: «Conectada», «Sin señal desde las 12:31» (desde los 90 s) o «Desconectada desde las 12:31» (desde los 10 min).
+  - **Este aparato:** en «⋯» (teléfono) o en la barra lateral (PC), el dueño o quien maneja el personal elige si el aparato es para Cocina, Caja, Tomar pedidos o el panel completo. Al abrir la app, el aparato va directo a esa pantalla, a pantalla completa, sin ampliar permisos de nadie. Después de elegir se puede probar el sonido y la impresora. Personal › Dispositivos dice el uso de cada aparato.
+  - Caja también tiene pantalla completa.
 
 ## v0.22.0 · 2026-11-15 · Video «Un solo lugar» en la portada y serie «Otra vez»
 PR #122 (merge `3a2046e`) · sin migraciones. Para que la portada cambie en producción basta desplegar el código.

@@ -3,6 +3,7 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { createServiceClient } from '@/lib/supabase/service';
 import { decidePinAccess, isValidDeviceId, type PinAccess } from '@/lib/auth/pin-policy';
+import { leerUso, USOS } from '@/lib/aparato';
 
 export type { PinAccess };
 
@@ -175,25 +176,32 @@ export type TrustedDevice = {
   last_seen_at: string;
   /** Se dio de alta solo al entrar con PIN (no lo autorizó nadie a mano). */
   auto: boolean;
+  /** Para qué es (ficha 2.6, migración 184): «Cocina», «Caja»… o null. */
+  uso: string | null;
 };
 
 /** Aparatos del restaurante, el más reciente primero. */
 export async function listTrustedDevices(restaurantId: string): Promise<TrustedDevice[]> {
   try {
     const db = createServiceClient();
-    const { data } = await db
+    const leer = (columnas: string) => db
       .from('restaurant_devices')
-      .select('device_id, label, created_at, last_seen_at, added_by')
+      .select(columnas)
       .eq('restaurant_id', restaurantId)
       .order('last_seen_at', { ascending: false })
       .limit(50);
+    // Sin la migración 184 la columna `uso` no existe: se lee sin ella.
+    const conUso = await leer('device_id, label, created_at, last_seen_at, added_by, uso');
+    const { data } = conUso.error ? await leer('device_id, label, created_at, last_seen_at, added_by') : conUso;
+    const filas = (data ?? []) as unknown as Record<string, unknown>[];
 
-    return (data ?? []).map((d) => ({
+    return filas.map((d) => ({
       device_id: d.device_id as string,
       label: (d.label as string | null) ?? null,
       created_at: d.created_at as string,
       last_seen_at: d.last_seen_at as string,
       auto: d.added_by == null,
+      uso: (() => { const u = leerUso(d.uso); return u ? USOS[u].label : null; })(),
     }));
   } catch {
     return []; // migración sin aplicar → la tarjeta se muestra vacía

@@ -26,6 +26,7 @@ import { emailEnabled } from '@/lib/email';
 import type { Restaurant } from '@/types';
 import { panelLink } from '@/lib/panel-links-server';
 import { whatsappVisiblePara } from '@/lib/whatsapp/visible';
+import { getEsteAparato } from '@/lib/db/aparato';
 
 export default async function AdminProtectedLayout({
   children,
@@ -217,6 +218,7 @@ export default async function AdminProtectedLayout({
   return (
     <PlanPricingProvider pricing={pricing}>
     <AdminShell
+      aparato={await getEsteAparato(currentRestaurant?.id ?? null)}
       restaurantName={restaurantName}
       restaurantId={currentRestaurant?.id ?? null}
       planActual={planActual}

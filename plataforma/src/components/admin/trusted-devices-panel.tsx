@@ -114,6 +114,7 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, color: 'var(--u-text)', fontWeight: 500 }}>
                   {d.label || 'Dispositivo sin nombre'}
+                  {d.uso && <span style={{ color: 'var(--u-text-3)', fontWeight: 400 }}> · {d.uso}</span>}
                   {d.device_id === thisDeviceId && (
                     <span style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 400 }}> · este</span>
                   )}

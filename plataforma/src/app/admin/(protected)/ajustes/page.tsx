@@ -13,6 +13,8 @@ import MenuLanguagesEditor from '@/components/admin/menu-languages-editor';
 import type { Restaurant } from '@/types';
 import { ACTIVATABLE_MODULES, isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import { whatsappVisiblePara } from '@/lib/whatsapp/visible';
+import { leerSaludDelLocal } from '@/lib/db/estado-pc';
+import { estadoDeImpresora, estadoDePc } from '@/lib/estado-pc';
 
 export const metadata = { title: 'Ajustes – Panel admin' };
 
@@ -81,19 +83,18 @@ export default async function AdminAjustesPage() {
   let pcValue = 'Sin configurar';
   let pcTone: 'warn' | undefined;
   if (ordersEnabled && restaurantId && allow('impresion')) {
-    const db = createServiceClient();
-    const { data: agent } = await db
-      .from('print_agents')
-      .select('last_seen_at, is_active')
-      .eq('restaurant_id', restaurantId)
-      .maybeSingle();
-    const lastSeen = (agent?.last_seen_at as string | null) ?? null;
-    if (lastSeen) {
-      // eslint-disable-next-line react-hooks/purity
-      const stale = Date.now() - new Date(lastSeen).getTime() > 10 * 60_000;
-      const off = (agent?.is_active as boolean | null) === false;
-      pcValue = off ? 'Apagada' : stale ? 'Sin responder' : 'Conectada';
-      pcTone = stale && !off ? 'warn' : undefined;
+    /* El mismo reloj que Hoy, Mi PC y el superadmin (ficha 2.6). */
+    const zona = (restaurant as { timezone?: string | null } | null)?.timezone || 'America/Guatemala';
+    const salud = await leerSaludDelLocal(restaurantId);
+    // Frescura evaluada al momento del request a propósito (server component).
+    // eslint-disable-next-line react-hooks/purity
+    const pc = estadoDePc(salud.pc, Date.now(), zona);
+    if (pc.estado !== 'sin_pc') {
+      const falla = pc.estado === 'conectada'
+        && [estadoDeImpresora(salud.cocina, 'comanda', zona), estadoDeImpresora(salud.caja, 'recibo', zona)]
+          .some((d) => d.estado === 'fallando');
+      pcValue = falla ? 'Revisa la impresora' : pc.texto;
+      pcTone = falla || pc.tono === 'warn' || pc.tono === 'danger' ? 'warn' : undefined;
     }
   }
 

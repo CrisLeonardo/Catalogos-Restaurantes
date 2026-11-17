@@ -1,0 +1,35 @@
+/* La PC del local: veredicto y piezas (ficha 2.6). Superficies sólidas. */
+.estado { display: grid; gap: 12px; }
+
+.veredicto {
+  padding: 16px 18px;
+  border-radius: 18px; border: 1px solid var(--adm-border);
+  background: var(--adm-card); box-shadow: var(--adm-shadow-sm);
+}
+.veredicto h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; text-wrap: balance; }
+.veredicto p { margin: 4px 0 0; font-size: 14px; line-height: 1.45; color: var(--u-text-2); }
+.veredicto[data-tono="ok"] h2 { color: var(--c-ok); }
+.veredicto[data-tono="warn"] h2 { color: var(--c-warn); }
+.veredicto[data-tono="danger"] h2 { color: var(--c-danger); }
+
+.ico {
+  width: 28px; height: 28px; border-radius: 50%; flex: 0 0 auto;
+  display: grid; place-items: center;
+  background: var(--adm-bg-2); color: var(--u-text-3);
+}
+.ico[data-tono="ok"] { background: var(--c-ok-bg); color: var(--c-ok); }
+.ico[data-tono="warn"] { background: var(--c-warn-bg); color: var(--c-warn); }
+.ico[data-tono="danger"] { background: var(--c-danger-bg); color: var(--c-danger); }
+.ico[data-tono="info"] { background: var(--c-info-bg); color: var(--c-info); }
+
+.enlace {
+  flex: 0 0 auto; min-height: 40px; display: inline-flex; align-items: center;
+  font-size: 13px; font-weight: 600; color: var(--brand-accent-ink); text-decoration: none; white-space: nowrap;
+}
+.enlace:hover { text-decoration: underline; }
+
+.acciones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.acciones > * { text-decoration: none; }
+
+.nota { margin: 0; font-size: 13px; line-height: 1.45; color: var(--u-text-3); }
+.nota[data-bad="1"] { color: var(--c-danger); }

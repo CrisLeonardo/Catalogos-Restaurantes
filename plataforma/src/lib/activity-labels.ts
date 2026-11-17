@@ -284,6 +284,13 @@ function queHizo(r: ActivityLike): string {
       const min = num(m.minutos);
       return `hizo el turno de práctica${min ? ` en ${plural(min, 'minuto', 'minutos')}` : ''}`;
     }
+    case 'impresion_reintento': {
+      const n = num(m.n) ?? 0;
+      const papel = m.papel === 'receipt' ? plural(n, 'recibo', 'recibos') : plural(n, 'comanda', 'comandas');
+      return `volvió a mandar ${papel} que no ${n === 1 ? 'salió' : 'salieron'}`;
+    }
+    case 'aparato_uso':
+      return `dejó un aparato para ${typeof m.uso === 'string' ? m.uso : 'otro uso'}${e && !esUuid(e) ? ` — ${e}` : ''}`;
     default:
       return humanizarClave(r.action).toLowerCase() + (e && !esUuid(e) ? ` — ${e}` : '');
   }
