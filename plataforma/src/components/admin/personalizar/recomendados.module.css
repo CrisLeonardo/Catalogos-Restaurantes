@@ -1,0 +1,39 @@
+/* Recomendados (ficha 2.7). Tarjetas sólidas del panel. */
+.bloque { display: grid; gap: 12px; }
+.cabeza { display: flex; align-items: flex-start; gap: 12px; }
+.titulo { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.02em; color: var(--u-text); }
+.porque { margin: 2px 0 0; font-size: 13px; line-height: 1.45; color: var(--u-text-3); }
+.lista { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+.tarjeta {
+  display: grid; overflow: hidden;
+  border-radius: 18px; border: 1.5px solid var(--adm-border-2);
+  background: var(--adm-card); box-shadow: var(--adm-shadow-xs);
+  container-type: inline-size;
+}
+.tarjeta[data-on="1"] { border-color: var(--adm-accent-fill, var(--brand-accent)); }
+.pie { display: flex; align-items: center; gap: 10px; padding: 10px 12px 12px; border-top: 1px solid var(--adm-border); }
+.nombre { margin: 0; font-size: 15px; font-weight: 600; color: var(--u-text); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.marca {
+  font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 99px;
+  background: var(--c-ok-bg); color: var(--c-ok);
+}
+.desc { margin: 2px 0 0; font-size: 12px; line-height: 1.4; color: var(--u-text-3); }
+.usar {
+  flex: 0 0 auto; min-height: 44px; padding: 0 16px; border: none; border-radius: 12px; cursor: pointer;
+  background: var(--adm-accent-fill, var(--brand-accent)); color: var(--brand-on-accent, #fff);
+  font: inherit; font-size: 14px; font-weight: 700; white-space: nowrap;
+}
+.usar:hover { background: var(--adm-accent-fill-hover, var(--brand-accent-ink)); }
+.usar:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: 2px; }
+.estado {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 10px;
+  border-radius: 10px; font-size: 13px; font-weight: 600; white-space: nowrap;
+  background: var(--c-ok-bg); color: var(--c-ok);
+}
+.estado[data-tono="neutro"] { background: var(--adm-bg-2); color: var(--u-text-2); }
+
+/* Tarjeta angosta (tres por fila en la PC): el botón va debajo, a lo ancho. */
+@container (max-width: 259px) {
+  .pie { flex-direction: column; align-items: stretch; }
+  .usar, .estado { width: 100%; justify-content: center; }
+}

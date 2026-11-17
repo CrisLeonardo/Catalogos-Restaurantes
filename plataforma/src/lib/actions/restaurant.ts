@@ -592,7 +592,7 @@ export async function updateMenuLanguages(formData: FormData): Promise<void> {
   updateTag(`restaurant:${ctx.restaurantId}`);
 }
 
-export type SaveThemeResult = { error?: string; ok?: boolean };
+export type SaveThemeResult = { error?: string; ok?: boolean; /** Hay un diseño anterior para «Volver al anterior» (ficha 2.7). */ hayAnterior?: boolean };
 
 export async function saveOrdersAndCurrency(input: {
   restaurantId: string;
@@ -860,10 +860,20 @@ export async function saveAdminRestaurantTheme(input: {
     ? config.portadaVariant
     : 'spotlight';
 
-  const { error } = await db
+  /* «Volver al anterior» (ficha 2.7, migración 185): si cambió el DISEÑO
+     (lo visual), el que había se guarda. Si solo cambiaron textos o el logo,
+     el anterior que ya hubiera se conserva. */
+  const { data: previo } = await db
     .from('restaurant_themes')
-    .upsert(
-      {
+    .select('config')
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
+  const configPrevia = (previo?.config as ThemeConfig | null) ?? null;
+  const cambioDiseno = !!configPrevia
+    && JSON.stringify(extractVisualConfig({ ...config, ...configPrevia } as ThemeConfig)) !== JSON.stringify(extractVisualConfig(config));
+  const anterior = cambioDiseno ? { config_anterior: extractVisualConfig({ ...config, ...configPrevia } as ThemeConfig) } : {};
+
+  const fila = {
         restaurant_id: restaurantId,
         config,
         content,
@@ -878,9 +888,14 @@ export async function saveAdminRestaurantTheme(input: {
         catalog_view: config.catalogView,
         glass_intensity: config.glassIntensity,
         background_image: config.backgroundImage,
-      },
-      { onConflict: 'restaurant_id' },
-    );
+  };
+  let { error } = await db.from('restaurant_themes').upsert({ ...fila, ...anterior }, { onConflict: 'restaurant_id' });
+  // Sin la migración 185 se publica como siempre, sin anterior.
+  let sinAnterior = false;
+  if (error && cambioDiseno && faltaLaColumna(error)) {
+    ({ error } = await db.from('restaurant_themes').upsert(fila, { onConflict: 'restaurant_id' }));
+    sinAnterior = true;
+  }
 
   if (error) return { error: error.message };
 
@@ -888,7 +903,57 @@ export async function saveAdminRestaurantTheme(input: {
   revalidatePath('/admin/perfil');
   revalidatePath('/');
   updateTag(`restaurant:${restaurantId}`);
-  return { ok: true };
+  return { ok: true, hayAnterior: cambioDiseno && !sinAnterior };
+}
+
+/**
+ * «Volver al anterior» (ficha 2.7, migración 185). Intercambia el diseño
+ * publicado con el anterior —así volver también se puede deshacer—. Solo lo
+ * visual: el logo, el nombre, los textos y los pedidos no se tocan.
+ */
+export async function volverAlDisenoAnterior(
+  restaurantId: string,
+): Promise<{ ok: true; config: ThemeConfig } | { error: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autorizado.' };
+  const { data: profile } = await supabase.from('profiles').select('restaurant_id, role').eq('id', user.id).single();
+  if (!profile) return { error: 'No autorizado.' };
+  const isSuperAdmin = profile.role === 'SUPER_ADMIN';
+  if (!isSuperAdmin && !(await canActOnRestaurant(profile.restaurant_id, restaurantId))) return { error: 'No autorizado.' };
+  if (!isSuperAdmin && !(await puedeEnSeccion(restaurantId, 'personalizar'))) return { error: SIN_SECCION };
+
+  const db = createServiceClient();
+  const { data, error: errLeer } = await db
+    .from('restaurant_themes')
+    .select('config, config_anterior')
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
+  if (errLeer) return { error: faltaLaColumna(errLeer) ? 'Falta aplicar la migración 185 en la base.' : 'No se pudo leer el diseño.' };
+  const actual = data?.config as ThemeConfig | null;
+  const anterior = data?.config_anterior as TemplateConfig | null;
+  if (!actual || !anterior) return { error: 'No hay un diseño anterior al que volver.' };
+
+  const config = { ...actual, ...anterior } as ThemeConfig;
+  const legacyPortada = ['spotlight', 'poster', 'stack'].includes(config.portadaVariant) ? config.portadaVariant : 'spotlight';
+  const { error } = await db.from('restaurant_themes').update({
+    config,
+    config_anterior: extractVisualConfig(actual),
+    color_primary: config.colorAccent,
+    color_bg: config.colorBg,
+    color_text: config.colorText,
+    font_display: config.fontDisplay,
+    portada_style: legacyPortada,
+    catalog_view: config.catalogView,
+    glass_intensity: config.glassIntensity,
+    background_image: config.backgroundImage,
+  }).eq('restaurant_id', restaurantId);
+  if (error) return { error: 'No se pudo volver al diseño anterior. Inténtalo de nuevo.' };
+
+  revalidatePath('/admin/personalizacion');
+  revalidatePath('/');
+  updateTag(`restaurant:${restaurantId}`);
+  return { ok: true, config };
 }
 
 /* ============================================================

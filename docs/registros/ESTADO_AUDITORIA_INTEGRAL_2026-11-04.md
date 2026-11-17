@@ -755,6 +755,21 @@ La siguiente ficha es **1.12 · Comensal: entrada, checkout y seguimiento**. Que
 - **Validación:** `typecheck` y `lint` sin errores (los tres avisos de siempre); 1,562 unitarias pasan, con una omitida.
 - **Limpieza:** se quitaron la guía anterior (`onboarding-checklist.tsx`), el widget «La casa» y `getActiveOrdersPreview`, que ya no usaba nadie.
 
+## 41. Personalizar con ayuda · ficha 2.7 (2026-11-16)
+
+**Rama** `feat/personalizacion-guiada`, desde `main` (`a7a8040`). Los §37–§40 (fichas 2.3–2.6) están en las ramas de los PR #126, #127, #128 y #130. Maqueta aprobada: [`MAQUETA_PERSONALIZACION_GUIADA_2026-11-16.html`](../diseno/MAQUETA_PERSONALIZACION_GUIADA_2026-11-16.html), con las cuatro recomendaciones. Cubre A04, X22 y R32 (1, 2, 4, 5, 6 y 8).
+
+- **Tres recomendados (R32.1, X22, A04):** `lib/theme/recomendaciones.ts` elige el orden con lo que la carta ya tiene: con 60 % o más de platillos con foto, «Fotos grandes»; desde 25 %, «Rápida de pedir» (filas con miniatura); con menos, «Carta elegante», y «Fotos grandes» no se ofrece si vende para llevar. Con más de 60 platillos, «Rápida de pedir» va primero. Cada uno es una estructura con su paleta, y la paleta se cambia por la primera legible si hiciera falta. Las muestras usan el logo, los platillos, los precios y las fotos reales (`components/admin/personalizar/`). En Rincón 502 (13 de 38 con foto) recomienda «Rápida de pedir». El catálogo de 208 combinaciones sigue intacto en «Ver todos los diseños».
+- **Legible (R32.4):** contraste WCAG de texto sobre fondo (4.5:1) y letra del botón sobre el acento (3:1). Nada poco legible se recomienda, y el catálogo marca «Poco legible». Hoy las 208 combinaciones pasan; la marca queda para las que se agreguen.
+- **Vista rápida (R32.2 y R32.5):** «Así queda» ya no arranca apagada «porque consume CPU». Enseña Portada, Platillo (el de nombre más largo) y Carrito (el más caro y uno sin foto) con los colores, letras y radios del tema, y cambia al instante con cada ajuste. «Probar como cliente» abre la carta interactiva en otra pestaña, por el mismo canal de vista previa en vivo. Es una aproximación: la de verdad sigue siendo la interactiva.
+- **Volver al anterior (R32.6), migración 185:** `restaurant_themes.config_anterior`. Al publicar un cambio de DISEÑO se guarda el anterior (solo lo visual). El aviso dice «Publicado: «Carta de autor · Papel de Autor». Tu logo, tus textos y tus pedidos no cambiaron» con «Volver al anterior». `volverAlDisenoAnterior` intercambia los dos diseños, así que volver también se deshace. Sin la 185, publica como siempre y no ofrece volver.
+- **Plantillas propias:** solo aparecen si existen. «Guardar este diseño como plantilla» y «Volver al diseño anterior» están en el «⋯» de Recomendados.
+- **Móvil (R32.8):** ya estaba resuelto, así que no se tocó: «Ver cómo queda» va a la derecha y, con la barra de guardar puesta, el botón «Tomar pedido» se aplana.
+- **Comprobado en pantalla:** a 375 px en claro (tres recomendados y vista rápida) y a 1280 px en claro y oscuro (tres por fila). Se probaron aplicar «Carta elegante» con la vista rápida en vivo, publicar con su resumen, «Volver al anterior» (el diseño original quedó en la base y el logo y los textos no se tocaron), «⋯ › Guardar como plantilla» y cancelarlo, las pestañas Platillo y Carrito, y «Ver todos».
+- **No comprobado:** una carta sin platillos, una casi sin fotos y una de solo para llevar (lo cubren las pruebas de la regla), y la vista interactiva en otra pestaña.
+- **Validación:** `typecheck` y `lint` sin errores (los tres avisos de siempre); 1,571 unitarias pasan, con una omitida, incluidas las 9 de `recomendaciones.test.ts`.
+- **Fuera de esta ficha (R32):** el modo Básico/Avanzado de la pestaña Marca (R32.3) y los textos semánticos protegidos (R32.7) siguen pendientes.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

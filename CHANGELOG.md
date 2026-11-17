@@ -15,6 +15,11 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
   - **Pedido de prueba** (migración 183): el dueño lo pide desde su carta con un pase firmado y lo ve en Pedidos con la etiqueta «Prueba». Al estar listo, «Terminar la prueba» lo cierra sin cobro, repone existencias y devuelve canjes. No registra cliente ni cuenta en cifras, caja, puntos ni tope de pedidos.
   - «Tu menú en línea» ya no dice «Piden 263 %»: cuenta solo los pedidos hechos desde la carta y los divide entre las personas distintas.
   - La tarjeta «Funciones disponibles en Premium» sale de Hoy y pasa al final de Negocio › Resumen.
+- **Personalizar con ayuda** (ficha 2.7 de la auditoría; rama `feat/personalizacion-guiada`; maqueta aprobada `docs/diseno/MAQUETA_PERSONALIZACION_GUIADA_2026-11-16.html`) · **migración 185, antes de desplegar**:
+  - La pestaña Diseño abre con **tres diseños recomendados para tu carta**, según cuántos platillos tienen foto, cuántos son y si vendes sobre todo para llevar. Cada uno se ve con tu logo, tus platillos y tus precios, y se usa con un toque. Las 208 combinaciones siguen en «Ver todos los diseños».
+  - **Así queda** está siempre encendida: Portada, un platillo abierto y el carrito, con lo que suele romperse a la vista (el nombre más largo, el precio más alto y un platillo sin foto). «Probar como cliente» abre la carta interactiva.
+  - Al publicar dice qué diseño quedó y ofrece **Volver al anterior**. Tu logo, tus textos y tus pedidos nunca cambian con un diseño.
+  - No se recomienda ninguna combinación poco legible, y en el catálogo se marcan. Las plantillas propias solo aparecen si tienes alguna; guardar una nueva está en «⋯».
 
 ## v0.22.0 · 2026-11-15 · Video «Un solo lugar» en la portada y serie «Otra vez»
 PR #122 (merge `3a2046e`) · sin migraciones. Para que la portada cambie en producción basta desplegar el código.
