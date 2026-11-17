@@ -10,14 +10,19 @@ import { Section as UiSection, SectionNote } from '@/components/ui/section';
 import { Switch } from '@/components/ui/switch';
 import { Icon } from '@/components/icons';
 import ImageUpload from '@/components/admin/image-upload';
-import PreviewPane, { useThemePreviewChannel } from '@/components/super/preview-pane';
+import { useThemePreviewChannel } from '@/components/super/preview-pane';
+import Recomendados from '@/components/admin/personalizar/recomendados';
+import { VistaRapida, type PlatoMuestra } from '@/components/admin/personalizar/muestra';
+import { nombreDelDiseno, type SenalesDeCarta } from '@/lib/theme/recomendaciones';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useRouter } from 'next/navigation';
 import TemplateGallery from '@/components/admin/template-gallery';
 import OwnerTemplates from '@/components/admin/owner-templates';
-import { saveAdminRestaurantTheme, type RestaurantThemeTemplate } from '@/lib/actions/restaurant';
+import { saveAdminRestaurantTheme, volverAlDisenoAnterior, type RestaurantThemeTemplate } from '@/lib/actions/restaurant';
 import { cerrarYArchivarEdicion, listarEdiciones, quitarEdicion, type EdicionDelPanel } from '@/lib/actions/vitrina';
 import { fontsForRole, SHADOW_OPTIONS, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
 import { isLight } from '@/lib/theme/resolve';
-import { applyTemplateToConfig, structureOfConfig, type BuiltinTemplate } from '@/lib/theme/templates';
+import { applyTemplateToConfig, BUILTIN_TEMPLATES, structureOfConfig, type BuiltinTemplate } from '@/lib/theme/templates';
 import { useLeaveGuard } from '@/components/admin/save-bar';
 
 /* ── Contraste WCAG (asistente de legibilidad) ─────────────
@@ -58,6 +63,10 @@ interface Props {
   content: ThemeContent;
   customCss: string;
   ownerTemplates: RestaurantThemeTemplate[];
+  /** La carta de verdad para las recomendaciones y la vista rápida (ficha 2.7). */
+  carta: { senales: SenalesDeCarta; platos: PlatoMuestra[] };
+  /** Hay un diseño anterior guardado (migración 185). */
+  hayAnterior: boolean;
 }
 
 /* ── Las cinco pestañas ──────────────────────────────────────
@@ -82,7 +91,15 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
 ];
 
 /* ── Componente principal ─────────────────────────────────── */
-export default function AdminThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss: initialCss, ownerTemplates: initialOwnerTemplates }: Props) {
+export default function AdminThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss: initialCss, ownerTemplates: initialOwnerTemplates, carta, hayAnterior }: Props) {
+  const router = useRouter();
+  /* Ficha 2.7: el catálogo completo y las plantillas propias van un nivel
+     más adentro; al publicar se puede volver al diseño anterior. */
+  const [verTodos, setVerTodos] = useState(false);
+  const [nombrando, setNombrando] = useState(false);
+  const [anterior, setAnterior] = useState(hayAnterior);
+  const [publicado, setPublicado] = useState<string | null>(null);
+  const [volviendo, startVolver] = useTransition();
   const [config, setConfig] = useState<ThemeConfig>(initialConfig);
   const [content, setContent] = useState<ThemeContent>(initialContent);
   const [ownerTemplates, setOwnerTemplates] = useState<RestaurantThemeTemplate[]>(initialOwnerTemplates);
@@ -138,8 +155,28 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
     setMsg(null);
     start(async () => {
       const res = await saveAdminRestaurantTheme({ restaurantId, config, content, customCss, resetCustomCss: cssWasReset });
-      if (res.error) setMsg(`Error: ${res.error}`);
-      else setMsg('Publicado');
+      if (res.error) { setMsg(`Error: ${res.error}`); return; }
+      setMsg('Publicado');
+      // Ya no hay nada «aplicado sin guardar»: la tarjeta pasa a «El tuyo hoy».
+      setAppliedTpl(null);
+      router.refresh();
+      if (res.hayAnterior) {
+        setAnterior(true);
+        const d = nombreDelDiseno(config);
+        setPublicado(d.colores ? `${d.estructura} · ${d.colores}` : d.estructura);
+      }
+    });
+  }
+
+  function volver() {
+    startVolver(async () => {
+      const res = await volverAlDisenoAnterior(restaurantId);
+      if ('error' in res) { setMsg(`Error: ${res.error}`); return; }
+      setConfig(res.config);
+      setAppliedTpl(null);
+      setPublicado(null);
+      setMsg('Volviste al diseño anterior');
+      router.refresh();
     });
   }
 
@@ -195,50 +232,89 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
         </div>
 
         {/* ── Tab: Diseño (punto de partida: estructura × paleta) ── */}
+        {/* Recién publicado: qué quedó y cómo volver (ficha 2.7). */}
+        {publicado && anterior && (
+          <div role="status" className="mb-3.5 flex flex-wrap items-center gap-2.5 rounded-adm-lg px-4 py-3"
+            style={{ background: 'var(--c-ok-bg)', border: '1px solid var(--c-ok-line)', color: 'var(--c-ok)' }}>
+            <Icon name="checkCircle" size={16} />
+            <span className="flex-1 text-[14px] font-semibold">Publicado: «{publicado}». Tu logo, tus textos y tus pedidos no cambiaron.</span>
+            <button type="button" onClick={volver} disabled={volviendo} className="press min-h-10 text-[14px] font-semibold underline underline-offset-2"
+              style={{ color: 'var(--c-ok)', background: 'none', border: 'none', cursor: 'pointer' }}>
+              {volviendo ? 'Volviendo…' : 'Volver al anterior'}
+            </button>
+          </div>
+        )}
+
+        {/* ── Tab: Diseño ──
+            Ficha 2.7: arriba, tres diseños recomendados para ESTA carta con
+            sus platillos de verdad; el catálogo de 208 combinaciones queda un
+            nivel más adentro, intacto. */}
         {tab === 'diseno' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <SectionNote className="px-1">
-              Elige un punto de partida y luego afínalo en las demás pestañas.
-              Tu logo, nombre, textos y configuración de pedidos <strong className="text-adm-text-2">se conservan</strong> —
-              la plantilla solo cambia colores, tipografía, portada y estilo.
-              Nada se publica hasta que toques «Guardar cambios».
-            </SectionNote>
-            <OwnerTemplates
-              restaurantId={restaurantId}
-              currentConfig={config}
-              templates={ownerTemplates}
-              onTemplatesChange={setOwnerTemplates}
-              onApply={applyBuiltinTemplate}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <Recomendados
+              senales={carta.senales}
+              platos={carta.platos}
+              nombre={config.brandName}
+              logo={config.logoUrl}
+              config={config}
               appliedId={appliedTpl}
+              onApply={applyBuiltinTemplate}
+              acciones={
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="press grid size-11 shrink-0 place-items-center rounded-adm-lg border border-adm-border-2 bg-adm-card text-adm-text" aria-label="Más opciones de diseño" title="Más opciones">
+                    <Icon name="more" size={18} />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-[240px] [&_[data-slot=dropdown-menu-item]]:min-h-11">
+                    <DropdownMenuItem onClick={() => { setNombrando(true); setVerTodos(false); }}>
+                      <Icon name="plus" size={16} /> Guardar este diseño como plantilla
+                    </DropdownMenuItem>
+                    {anterior && (
+                      <DropdownMenuItem onClick={volver} disabled={volviendo}>
+                        <Icon name="undo" size={16} /> Volver al diseño anterior
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              }
             />
-            <div style={{ height: 1, background: 'var(--u-hair)', margin: '2px 0' }} aria-hidden />
-            {/* Abre en la estructura que el menú ya está usando: si este
-                restaurante lleva meses con la carta en acordeón, empezar en
-                "Clásico" le enseñaría 22 diseños que no son el suyo. */}
-            <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedTpl} initialStructure={structureOfConfig(initialConfig)} brandName={config.brandName} />
             {appliedTpl && (
-              <div
-                role="status"
-                className="flex items-start gap-2.5 rounded-adm-lg px-4 py-3"
-                style={{ background: 'var(--c-ok-bg)', border: '1px solid var(--c-ok-line)' }}
-              >
-                <span style={{ color: 'var(--c-ok)', flexShrink: 0, marginTop: 1 }}>
-                  <Icon name="checkCircle" size={16} />
-                </span>
-                <span className="text-[12px] leading-relaxed text-adm-text-2">
-                  Plantilla aplicada. Revísala en la vista previa y pulsa <strong>Guardar cambios</strong> para publicarla,
-                  o sigue personalizando en las otras pestañas.
-                  {cssWasReset && (
-                    <> Este sitio tenía un <strong>diseño CSS a medida</strong> que pisaba los colores de las plantillas;
-                    se desactivó para que la plantilla se vea fiel (se elimina al guardar).</>
-                  )}
+              <div role="status" className="flex items-start gap-2.5 rounded-adm-lg px-4 py-3"
+                style={{ background: 'var(--c-ok-bg)', border: '1px solid var(--c-ok-line)' }}>
+                <span style={{ color: 'var(--c-ok)', flexShrink: 0, marginTop: 1 }}><Icon name="checkCircle" size={16} /></span>
+                <span className="text-[13px] leading-relaxed text-adm-text-2">
+                  Aplicado. Revísalo en «Así queda» y toca <strong>Guardar</strong> para publicarlo.
+                  {cssWasReset && <> Este sitio tenía un diseño a medida que pisaba los colores; se quita al guardar.</>}
                 </span>
               </div>
+            )}
+
+            {(ownerTemplates.length > 0 || nombrando) && (
+              <OwnerTemplates
+                restaurantId={restaurantId}
+                currentConfig={config}
+                templates={ownerTemplates}
+                onTemplatesChange={setOwnerTemplates}
+                onApply={applyBuiltinTemplate}
+                appliedId={appliedTpl}
+                nombrarAlAbrir={nombrando}
+                onCancelar={() => setNombrando(false)}
+              />
+            )}
+
+            <button type="button" onClick={() => setVerTodos((v) => !v)} aria-expanded={verTodos}
+              className="press flex min-h-12 w-full items-center gap-3 rounded-adm-lg border border-adm-border bg-adm-card px-4 text-left shadow-adm-xs">
+              <Icon name="grid" size={16} />
+              <span className="flex-1 text-[14px] font-semibold text-adm-text">
+                {verTodos ? 'Ocultar el catálogo completo' : `Ver todos los diseños (${BUILTIN_TEMPLATES.length})`}
+              </span>
+              <Icon name="chevronDown" size={16} style={{ transform: verTodos ? 'rotate(180deg)' : undefined, transition: 'transform 150ms' }} />
+            </button>
+            {verTodos && (
+              <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedTpl} initialStructure={structureOfConfig(initialConfig)} brandName={config.brandName} />
             )}
           </div>
         )}
 
-        {/* ── Tab: Marca ── */}
         {tab === 'marca' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <Section title="Logos e imágenes">
@@ -802,8 +878,20 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
         )}
       </div>
 
-      {/* ── Panel de vista previa ── */}
-      <PreviewPane previewId={restaurantId} id="vista-previa" />
+      {/* ── Así queda ──
+          Ficha 2.7: la vista rápida está siempre encendida (portada, un
+          platillo y el carrito con la carta real) y no carga la carta
+          entera. La interactiva se abre en otra pestaña y recibe los
+          cambios sin guardar por el mismo canal de siempre. */}
+      <aside className="preview-pane" id="vista-previa">
+        <span className="adm-label">Así queda</span>
+        <VistaRapida config={config} platos={carta.platos} nombre={content.portada?.title || config.brandName}
+          lema={content.portada?.subtitle || config.tagline} logo={config.logoUrl} />
+        <a href={`/preview/${restaurantId}`} target="_blank" rel="noopener noreferrer"
+          className="press flex min-h-12 items-center justify-center gap-2 rounded-adm-lg border border-adm-border-2 bg-adm-card text-[14px] font-semibold text-adm-text no-underline">
+          Probar como cliente <Icon name="arrowUpRight" size={15} />
+        </a>
+      </aside>
     </div>
   );
 }

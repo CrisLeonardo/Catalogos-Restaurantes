@@ -309,7 +309,10 @@ huellas(n, que, ok, cuando) as (values
      'ANTES de desplegar; independiente de la 182'),
   ('184', 'para qué es cada aparato: cocina, caja o mesero abren directo en su pantalla',
      exists (select 1 from information_schema.columns where table_schema='public' and table_name='restaurant_devices' and column_name='uso'),
-     'ANTES de desplegar; independiente de la 182 y la 183')
+     'ANTES de desplegar; independiente de la 182 y la 183'),
+  ('185', 'personalizar: el diseño anterior de la carta para «Volver al anterior»',
+     exists (select 1 from information_schema.columns where table_schema='public' and table_name='restaurant_themes' and column_name='config_anterior'),
+     'ANTES de desplegar; independiente de la 184')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

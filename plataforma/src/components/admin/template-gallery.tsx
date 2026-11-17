@@ -27,6 +27,7 @@ import {
   type BuiltinTemplate, type StructureId,
 } from '@/lib/theme/templates';
 import { DEFAULT_CONFIG, findFont, type ThemeConfig } from '@/lib/theme/defaults';
+import { legibilidad } from '@/lib/theme/recomendaciones';
 
 function rgbaOf(hex: string, a: number): string {
   let h = hex.trim().replace('#', '');
@@ -579,6 +580,10 @@ export default function TemplateGallery({
                 <div style={{ padding: '0 3px 3px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text)', flex: 1, minWidth: 0 }}>{tpl.name}</span>
+                    {/* Ficha 2.7: una combinación con poco contraste se avisa. */}
+                    {!legibilidad(tpl.config).ok && (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-warn)', flexShrink: 0 }}>Poco legible</span>
+                    )}
                     {applied ? (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--brand-accent-ink, #D97757)', flexShrink: 0 }}>
                         <Icon name="checkCircle" size={11} /> {mode === 'pick' ? 'Elegida' : 'Aplicada'}

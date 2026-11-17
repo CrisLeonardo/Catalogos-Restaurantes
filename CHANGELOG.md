@@ -39,6 +39,11 @@ PR #124 (merge `0d15c36`), PR #121 (merge `fd9e728`) y PR #120 (merge `a7a8040`)
   - **Un solo reloj** para la PC en Hoy, Ajustes, La PC del local y el superadmin: «Conectada», «Sin señal desde las 12:31» (desde los 90 s) o «Desconectada desde las 12:31» (desde los 10 min).
   - **Este aparato:** en «⋯» (teléfono) o en la barra lateral (PC), el dueño o quien maneja el personal elige si el aparato es para Cocina, Caja, Tomar pedidos o el panel completo. Al abrir la app, el aparato va directo a esa pantalla, a pantalla completa, sin ampliar permisos de nadie. Después de elegir se puede probar el sonido y la impresora. Personal › Dispositivos dice el uso de cada aparato.
   - Caja también tiene pantalla completa.
+- **Personalizar con ayuda** (ficha 2.7 de la auditoría; rama `feat/personalizacion-guiada`; maqueta aprobada `docs/diseno/MAQUETA_PERSONALIZACION_GUIADA_2026-11-16.html`) · **migración 185, antes de desplegar**:
+  - La pestaña Diseño abre con **tres diseños recomendados para tu carta**, según cuántos platillos tienen foto, cuántos son y si vendes sobre todo para llevar. Cada uno se ve con tu logo, tus platillos y tus precios, y se usa con un toque. Las 208 combinaciones siguen en «Ver todos los diseños».
+  - **Así queda** está siempre encendida: Portada, un platillo abierto y el carrito, con lo que suele romperse a la vista (el nombre más largo, el precio más alto y un platillo sin foto). «Probar como cliente» abre la carta interactiva.
+  - Al publicar dice qué diseño quedó y ofrece **Volver al anterior**. Tu logo, tus textos y tus pedidos nunca cambian con un diseño.
+  - No se recomienda ninguna combinación poco legible, y en el catálogo se marcan. Las plantillas propias solo aparecen si tienes alguna; guardar una nueva está en «⋯».
 
 ## v0.22.0 · 2026-11-15 · Video «Un solo lugar» en la portada y serie «Otra vez»
 PR #122 (merge `3a2046e`) · sin migraciones. Para que la portada cambie en producción basta desplegar el código.
