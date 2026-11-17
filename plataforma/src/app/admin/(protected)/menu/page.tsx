@@ -6,6 +6,8 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { PLANS, type PlanCode } from '@/lib/plans';
 import CatalogPanel from '@/components/admin/catalog-panel';
 import ProductosExportButton from '@/components/admin/productos-export-button';
+import AvisoImportacion from '@/components/admin/aviso-importacion';
+import { panelLink } from '@/lib/panel-links-server';
 import { withEffectiveAvailability } from '@/lib/product-availability';
 import { corteAHora } from '@/lib/caja/dia';
 
@@ -14,7 +16,7 @@ export const metadata = { title: 'Catálogo – Panel admin' };
 export default async function AdminMenuPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filtro?: string; q?: string; cat?: string; f?: string; orden?: string }>;
+  searchParams: Promise<{ filtro?: string; q?: string; cat?: string; f?: string; orden?: string; importado?: string; n?: string; p?: string }>;
 }) {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
@@ -53,14 +55,21 @@ export default async function AdminMenuPage({
   // eslint-disable-next-line react-hooks/purity
   const ahora = Date.now();
   const sp = await searchParams;
+  const importarHref = await panelLink('/admin/menu/importar');
+  const lote = sp.importado && /^[0-9a-f-]{36}$/i.test(sp.importado) ? sp.importado : null;
 
   return (
     <div className="anim-fade-up flex flex-col gap-4">
       {/* La lista recibe la disponibilidad YA resuelta con la regla del menú:
           antes pintaba la columna cruda y enseñaba «Agotado» en platillos que
           el comensal estaba pidiendo (auditoría 2026-10-02, CAT-01). */}
+      {/* Recién importado (ficha 2.4): qué entró y «Deshacer». */}
+      {lote && (
+        <AvisoImportacion restaurantId={restaurantId} lote={lote}
+          nuevos={Math.max(0, Number(sp.n) || 0)} precios={Math.max(0, Number(sp.p) || 0)} />
+      )}
       <CatalogPanel
-        exportSlot={<ProductosExportButton restaurantId={restaurantId} />}
+        exportSlot={<ProductosExportButton restaurantId={restaurantId} importarHref={importarHref} />}
         inicial={sp}
         restaurantId={restaurantId}
         categories={categories}

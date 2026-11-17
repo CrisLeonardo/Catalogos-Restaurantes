@@ -349,6 +349,7 @@ export default function AdminShell({
     '/admin/suscripcion': 'Mi suscripción',
     // «Platillo», como dicen la pestaña («Platillos») y el resto del panel.
     '/admin/menu/productos/new': 'Nuevo platillo',
+    '/admin/menu/importar': 'Importar carta',
     '/admin/menu/productos': 'Platillo',
     '/admin/menu': 'Platillos',
     // El mismo nombre que en Ajustes (AJU-04): eran «Perfil» aquí y

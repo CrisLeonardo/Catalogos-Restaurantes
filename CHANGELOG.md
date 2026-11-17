@@ -9,6 +9,12 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 ## v0.23.0 · 2026-11-16 · Hoy por etapa, pedido de prueba y sin prueba gratis
 PR #124 (merge `0d15c36`), PR #121 (merge `fd9e728`) y PR #120 (merge `a7a8040`) · migraciones 182 y 183 · en producción el 2026-11-16 (`prod-2026-11-16`). El dueño corrió la 183 antes del despliegue, la 182 después, y también las pendientes 154 y 181.
 - **Serie de video «Una sola toma»** (PR #120, `promo-video/`, aparte de la app): tres videos de 34 s (con meseros, comedor y domicilio) en vertical y horizontal, en los que un pedido cruza el restaurante sin cortes. Convive con «Otra vez» y «Un solo lugar», que son los que están en uso.
+- **Importar una carta con revisión** (ficha 2.4; rama `feat/importar-carta`; maqueta aprobada `docs/diseno/MAQUETA_IMPORTAR_CARTA_2026-11-16.html`) · sin migraciones:
+  - En Platillos › «Importar o exportar» › «Importar carta», la carta entra con una **foto o un PDF** (leídos sin IA: OCR libre en el propio navegador, y el texto del PDF), con un **Excel o CSV** con las mismas columnas que la exportación (hay plantilla) o pegando la lista tal como está en WhatsApp o Word. Lo leído de una foto o PDF se muestra como texto para corregirlo antes de revisar.
+  - Antes de publicar se revisa cada fila: lo dudoso (sin precio, precio sospechoso, repetido) queda sin marcar y se corrige en la misma fila. Si el platillo ya existe, no se duplica: se ofrece cambiarle el precio. El botón dice exactamente qué pasará.
+  - Lo importado sale visible y se puede **deshacer** el lote completo; lo que ya se vendió se conserva.
+  - En el alta, «Pegar mi lista» llena los primeros platillos.
+
 - **Alta hasta el primer valor** (ficha 2.3; rama `feat/alta-primer-valor`; maqueta aprobada `docs/diseno/MAQUETA_ALTA_PRIMER_VALOR_2026-11-16.html`) · sin migraciones:
   - El alta pasa de 7 pantallas a 4: la cuenta en una sola, después el negocio con «¿Cómo te piden tus clientes?», «¿Qué vendes?» (nombre y precio de los primeros platillos) y «Así se ve tu carta», con la carta de verdad. Al crear, entra directo a Hoy.
   - El plan ya no viene en Premium para todos: se sugiere por cómo le piden (Básico, En línea o Premium) y se cambia antes de crear, con el precio a la vista. El estilo llega elegido y se cambia entre tres sugerencias; los demás están en Personalizar.

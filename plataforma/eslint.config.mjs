@@ -29,6 +29,9 @@ const eslintConfig = defineConfig([
     // GSAP minificado que sirve la intro de la portada (lo copia
     // docs/diseno/intro-animada/publicar-en-web.mjs): es de un tercero.
     "public/intro/gsap.min.js",
+    // El lector de fotos de la carta (tesseract.js), copiado de node_modules
+    // por scripts/copiar-ocr.mjs: es de un tercero y está minificado.
+    "public/ocr/**",
   ]),
 ]);
 
