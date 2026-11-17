@@ -7,6 +7,7 @@ import { Icon } from '@/components/icons';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import type { NavGroup } from '@/lib/admin-nav';
 import { panelBaseFrom, panelHref } from '@/lib/panel-links';
+import { buscarIntenciones } from '@/lib/ayuda/intenciones';
 
 /* ============================================================
    BUSCADOR DEL PANEL (rediseño 2026-08-21, Fase 4)
@@ -107,14 +108,28 @@ export default function CommandSearch({ groups }: Props) {
     return out;
   }, [groups]);
 
+  /* Ficha 2.9: las mismas respuestas que el Centro de ayuda. «no me entran
+     pedidos» o «cerrar por hoy» no son nombres de pantalla, son cosas que
+     hacer; van primero, como «Hacer», y solo si esa persona puede abrir la
+     pantalla. El diagnóstico abre Ayuda con la pregunta ya puesta. */
+  const permitidas = useMemo(() => new Set(all.filter((h) => !h.locked).map((h) => h.href)), [all]);
+
   const hits = useMemo(() => {
     const needle = fold(q.trim());
     if (!needle) return all.slice(0, 8);
+    const hacer: Hit[] = buscarIntenciones(q)
+      .filter((i) => i.diagnostico || (i.ruta && (permitidas.has(i.ruta) || i.ruta.startsWith('/mi-cuenta'))))
+      .slice(0, 3)
+      .map((i) => ({
+        href: i.diagnostico ? `/admin/ayuda?q=${encodeURIComponent(i.titulo)}` : i.ruta!,
+        label: i.titulo, group: 'Hacer', haystack: '',
+      }));
     // Las palabras pueden venir en cualquier orden: "pedidos cocina" y
     // "cocina pedidos" tienen que encontrar lo mismo.
     const words = needle.split(/\s+/);
-    return all.filter((h) => words.every((w) => h.haystack.includes(w))).slice(0, 8);
-  }, [q, all]);
+    const pantallas = all.filter((h) => words.every((w) => h.haystack.includes(w)) && !hacer.some((x) => x.href === h.href));
+    return [...hacer, ...pantallas].slice(0, 8);
+  }, [q, all, permitidas]);
 
   // Abrir con ⌘K / Ctrl+K desde cualquier pantalla del panel. Se ignora si el
   // foco está escribiendo en otro sitio y el atajo no es el nuestro.
@@ -183,7 +198,7 @@ export default function CommandSearch({ groups }: Props) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={onInputKey}
-            placeholder="Busca una pantalla: impresora, QR, inventario…"
+            placeholder="Qué necesitas: impresora, cerrar por hoy, QR…"
             className="min-w-0 flex-1 bg-transparent text-[15px] text-adm-text outline-none placeholder:text-adm-text-4"
             autoComplete="off"
             spellCheck={false}

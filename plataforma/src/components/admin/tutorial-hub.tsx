@@ -13,7 +13,7 @@
      que caduquen con cada cambio de UI.
    ============================================================ */
 
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 /* `Link` es aqui `PanelLink`: traduce las rutas del panel al origen desde el
    que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
    Ver components/admin/panel-link.tsx. */
@@ -36,11 +36,23 @@ import {
 } from '@/lib/tutorial/content';
 import { usePathname as useRutaNavegador } from 'next/navigation';
 import { panelBaseFrom, panelHref } from '@/lib/panel-links';
+import { CasosComunes, Respuestas } from '@/components/admin/ayuda/por-intencion';
+import { buscarIntenciones, mensajeASoporte, type IdIntencion } from '@/lib/ayuda/intenciones';
+import { anotarBusquedaSinRespuesta } from '@/lib/actions/ayuda';
+import ayuda from '@/components/admin/ayuda/ayuda.module.css';
 
 interface Props {
   plan: string | null;
   modules: Record<string, boolean>;
   contact: PlatformContactSettings;
+  /** Ficha 2.9: intenciones cuya pantalla esta persona puede abrir. */
+  abribles: IdIntencion[];
+  restaurantId: string | null;
+  restaurante: string;
+  /** Versión desplegada (commit corto) para el mensaje a soporte. */
+  version: string;
+  /** Llega desde el buscador del panel con la pregunta puesta. */
+  consultaInicial?: string;
 }
 
 const PLAN_COLORS: Record<string, string> = {
@@ -51,11 +63,11 @@ const PLAN_COLORS: Record<string, string> = {
   'Módulo': 'var(--c-info)',
 };
 
-export default function TutorialHub({ plan, modules, contact }: Props) {
+export default function TutorialHub({ plan, modules, contact, abribles, restaurantId, restaurante, version, consultaInicial = '' }: Props) {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = panelBaseFrom(useRutaNavegador());
   const planNum = getPlanLevelNum(plan);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(consultaInicial);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     'primeros-pasos': true,
   });
@@ -72,6 +84,25 @@ export default function TutorialHub({ plan, modules, contact }: Props) {
     [query, modules],
   );
 
+  /* Ficha 2.9: primero lo que la persona necesita hacer, después el manual. */
+  const intenciones = useMemo(() => buscarIntenciones(query), [query]);
+  const abriblesSet = useMemo(() => new Set(abribles), [abribles]);
+  const sinRespuesta = query.trim().length >= 3 && intenciones.length === 0 && filteredSections.length === 0;
+
+  /* Lo que no encuentra respuesta se anota (solo la frase) cuando se deja de
+     escribir, para que Leogin agregue respuestas. */
+  useEffect(() => {
+    if (!sinRespuesta) return;
+    const t = setTimeout(() => { void anotarBusquedaSinRespuesta(query); }, 1500);
+    return () => clearTimeout(t);
+  }, [sinRespuesta, query]);
+
+  function abrirGuia(id: string) {
+    setQuery('');
+    setOpenSections({ [id]: true });
+    setTimeout(() => document.getElementById(`ayuda-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  }
+
   function toggleSection(id: string) {
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
   }
@@ -84,11 +115,7 @@ export default function TutorialHub({ plan, modules, contact }: Props) {
       {/* Entradilla. El título lo pone la barra de arriba ("Centro de ayuda");
           repetirlo aquí a 22 px solo empujaba hacia abajo el buscador, que es
           lo que de verdad se usa en esta pantalla. */}
-      <p style={{ fontSize: 14, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
-        Guía completa de tu sistema, adaptada a tu plan{plan ? ` ${getPlanDisplayName(plan)}` : ''}.
-        Las secciones con <strong style={{ color: 'var(--u-text-2)' }}>guía interactiva</strong> te
-        muestran cada paso señalándolo en tu propio panel.
-      </p>
+      <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--u-text)' }}>¿Qué necesitas hacer?</h2>
 
       {/* Barra de búsqueda */}
       <div style={{ position: 'relative' }}>
@@ -102,7 +129,8 @@ export default function TutorialHub({ plan, modules, contact }: Props) {
         />
         <input
           type="search"
-          placeholder="Busca un tema: pedidos, QR, inventario, cupones…"
+          placeholder="Qué pasa o qué quieres hacer"
+          aria-label="Qué necesitas hacer"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="adm-field"
@@ -127,6 +155,16 @@ export default function TutorialHub({ plan, modules, contact }: Props) {
           es un destino ("empezá por aquí"), y de fila se lee y se toca igual
           que todo lo demás de esta pantalla. Se esconde mientras se busca,
           porque entonces lo único que importa son los resultados. */}
+      {!isSearching && <CasosComunes onElegir={setQuery} />}
+
+      {isSearching && (
+        <Respuestas intenciones={intenciones} abribles={abriblesSet} restaurantId={restaurantId}
+          onGuia={abrirGuia} onElegir={setQuery} />
+      )}
+
+      {!isSearching && <span className={ayuda.rotulo} style={{ marginBottom: -10 }}>TODAS LAS GUÍAS</span>}
+      {isSearching && filteredSections.length > 0 && <span className={ayuda.rotulo} style={{ marginBottom: -10 }}>GUÍAS RELACIONADAS</span>}
+
       {!isSearching && (
         <List>
           <ListButton
@@ -156,10 +194,10 @@ export default function TutorialHub({ plan, modules, contact }: Props) {
       )}
 
       {/* Resultados vacíos */}
-      {isSearching && filteredSections.length === 0 && (
+      {isSearching && intenciones.length === 0 && filteredSections.length === 0 && (
         <Card className="px-5 py-8 text-center" style={{ color: 'var(--u-text-3)' }}>
           <Icon name="helpCircle" size={28} style={{ marginBottom: 10 }} />
-          <p style={{ fontSize: 14 }}>No encontramos resultados para <strong>&quot;{query}&quot;</strong>.</p>
+          <p style={{ fontSize: 14 }}>Todavía no tenemos respuesta para <strong>&quot;{query}&quot;</strong>. Escríbenos abajo y lo resolvemos.</p>
           <p style={{ fontSize: 12, marginTop: 4 }}>Intenta con otra palabra o <button type="button" onClick={() => setQuery('')} style={{ background: 'none', border: 'none', color: 'var(--brand-accent-ink)', cursor: 'pointer', fontSize: 12 }}>limpia la búsqueda</button>.</p>
         </Card>
       )}
@@ -185,18 +223,27 @@ export default function TutorialHub({ plan, modules, contact }: Props) {
       </div>
 
       {/* Contactar soporte */}
-      <ContactSupportCard contact={contact} />
+      <ContactSupportCard contact={contact}
+        mensaje={mensajeASoporte({ restaurante, plan: plan ? getPlanDisplayName(plan) : null, busqueda: query, version })} />
     </div>
   );
 }
 
 /* ── Contactar soporte ───────────────────────────────────── */
 
-function ContactSupportCard({ contact }: { contact: PlatformContactSettings }) {
+function ContactSupportCard({ contact, mensaje: inicial }: { contact: PlatformContactSettings; mensaje: string }) {
+  /* Ficha 2.9 (R39.4): el primer mensaje lleva el contexto —restaurante,
+     plan, lo que buscó y la versión— y se puede cambiar antes de enviarlo.
+     Nunca contraseñas ni pedidos. Se actualiza con la búsqueda hasta que
+     la persona lo edita. */
+  const [editado, setEditado] = useState<string | null>(null);
+  const mensaje = editado ?? inicial;
   const waLink = contact.support_whatsapp
-    ? `https://wa.me/${contact.support_whatsapp.replace(/\D/g, '')}`
+    ? `https://wa.me/${contact.support_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(mensaje)}`
     : null;
-  const mailLink = contact.support_email ? `mailto:${contact.support_email}` : null;
+  const mailLink = contact.support_email
+    ? `mailto:${contact.support_email}?subject=${encodeURIComponent('Ayuda con mi panel')}&body=${encodeURIComponent(mensaje)}`
+    : null;
 
   return (
     <Card className="px-5 py-4.5 mt-1">
@@ -216,6 +263,11 @@ function ContactSupportCard({ contact }: { contact: PlatformContactSettings }) {
           </div>
         </div>
       </div>
+      <label style={{ display: 'grid', gap: 6, marginBottom: 12 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text-3)' }}>Tu mensaje</span>
+        <textarea className={ayuda.mensaje} value={mensaje} onChange={(e) => setEditado(e.target.value)} maxLength={600} />
+        <span className={ayuda.nota}>Puedes cambiarlo antes de enviarlo. No incluye contraseñas ni pedidos.</span>
+      </label>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {waLink ? (
           <Button

@@ -21,6 +21,12 @@ PR #124 (merge `0d15c36`), PR #121 (merge `fd9e728`) y PR #120 (merge `a7a8040`)
   - Los platillos del alta se crean en «Platillos». En PC, la carta se arma en vivo junto al formulario.
   - Salen la confirmación aparte del registro, la contraseña repetida, la pantalla «¡Tu restaurante está en vivo!» y la ventana «¡Listo!».
 
+- **Ayuda por lo que necesitas** (ficha 2.9; rama `feat/ayuda-por-intencion`; maqueta aprobada `docs/diseno/MAQUETA_AYUDA_POR_INTENCION_2026-11-16.html`) · **migración 186, antes o después de desplegar**:
+  - El Centro de ayuda pregunta «¿Qué necesitas hacer?» y arriba ofrece cinco casos comunes. Entiende frases como «se trabó la impresora» o «cerrar por hoy», con o sin acentos. La primera respuesta es un botón a la pantalla exacta; si la persona no puede abrirla, se le dice a quién pedírselo.
+  - **«No me entran pedidos» revisa el restaurante en ese momento:** pausa, horario, modos de pedido y PC del local. Lo que falla va primero, y la pausa trae «Reanudar» ahí mismo.
+  - El buscador del panel (Ctrl K) usa el mismo índice: en «Hacer» salen solo las acciones que la persona puede abrir.
+  - El mensaje a soporte ya va escrito con el restaurante, el plan, lo que se buscó y la versión, y se puede cambiar antes de enviarlo.
+  - **Migración 186:** lo que se busca y no tiene respuesta se anota (solo la frase, nunca quién la escribió) y se ve en Superadmin › Configuración › Soporte, agrupado y con lo más pedido primero.
 - **Sin prueba gratis** (PR #121, merge `fd9e728`) · **migración 182, justo después de desplegar**: los planes con pedidos (En línea, Estándar y Premium) se cobran desde el primer día; el gancho gratis sigue siendo el plan Básico. La 182 pone `trial_days = 0` y los textos de registro, planes, portada, Mi cuenta y términos dejan de prometer días gratis. Los restaurantes que ya estaban en prueba la terminan como estaba.
 - **Hoy por etapa y Primeros pasos por resultado** (fichas 2.1 y 2.2 de la auditoría; rama `feat/hoy-por-etapa`; maqueta aprobada `docs/diseno/MAQUETA_HOY_POR_ETAPA_2026-11-15.html`) · **migración 183, antes de desplegar**:
   - Hoy elige sola su versión. **Nuevo:** la guía «Llega a tu primer pedido», sin cifras en cero. **Operando:** arriba, hasta tres cosas que piden acción (pedidos por aceptar, pedidos atascados en cocina, comida lista que espera, caja sin abrir…), con «Ver N más» para el resto. **Cerrado:** cuando la caja ya cerró y no queda nada vivo, lo cobrado del día, el cuadre y lo comprobable de la semana.

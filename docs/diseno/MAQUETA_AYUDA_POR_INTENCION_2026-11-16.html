@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueta · Ayuda por intención</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F2F1EE;--bg2:#E9E7E3;--card:#FFFFFF;--ink:#17161A;--ink2:rgba(23,22,26,.72);--ink3:rgba(23,22,26,.56);--line:rgba(23,22,26,.12);--line2:rgba(23,22,26,.2);--coral:#C2542F;--on:#fff;--ok:#1E7A46;--okbg:#E4F3E9;--warn:#8A5A00;--warnbg:#FBEFD2;--info:#1F5FA8;--infobg:#E3EEFB;--page:#DEDCD7;--sh:0 1px 2px rgba(0,0,0,.06)}
+[data-theme=dark]{--bg:#0C0B0A;--bg2:#141311;--card:#1A1917;--ink:#F5F3EF;--ink2:rgba(245,243,239,.74);--ink3:rgba(245,243,239,.56);--line:rgba(245,243,239,.12);--line2:rgba(245,243,239,.22);--coral:#D9683F;--on:#fff;--ok:#6FD49A;--okbg:#12301F;--warn:#F0C568;--warnbg:#33270B;--info:#8DBBF2;--infobg:#10243D;--page:#000;--sh:none}
+*{box-sizing:border-box;margin:0}
+body{font-family:Geist,system-ui,sans-serif;background:var(--page);color:var(--ink);padding:24px 16px 80px;-webkit-font-smoothing:antialiased}
+h1{font-size:28px;font-weight:800;letter-spacing:-.03em}
+h2{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:48px 0 6px}
+.lead{max-width:760px;color:var(--ink2);font-size:15px;line-height:1.5;margin-top:8px}
+.top{display:flex;align-items:flex-start;gap:16px;justify-content:space-between;max-width:1280px;margin:0 auto}
+.wrap{max-width:1280px;margin:0 auto}
+.tog{border:1px solid var(--line2);background:var(--card);color:var(--ink);font:inherit;font-size:14px;font-weight:600;height:44px;padding:0 16px;border-radius:12px;cursor:pointer;flex-shrink:0}
+.pair{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;margin-top:16px}
+.col{display:flex;flex-direction:column;gap:10px}
+.tag{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.tag b{color:var(--coral)}
+.note{font-size:13px;color:var(--ink2);max-width:375px;line-height:1.45}
+.notes{max-width:340px;font-size:14px;line-height:1.5;color:var(--ink2);padding-top:28px}
+.notes li{margin:0 0 10px 18px}
+.notes strong{color:var(--ink)}
+/* teléfono */
+.ph{width:375px;height:720px;background:var(--bg);border-radius:28px;border:1px solid var(--line2);overflow:hidden;position:relative;display:flex;flex-direction:column;font-size:14px}
+.ph.old{opacity:.92}
+.bar{height:54px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 12px 0 16px;border-bottom:1px solid var(--line);background:var(--bg)}
+.bar b{flex:1;font-size:18px;font-weight:800;letter-spacing:-.03em}
+.ib{width:42px;height:42px;border-radius:12px;background:var(--card);box-shadow:var(--sh);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink);flex-shrink:0}
+.ib svg,.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sub{display:flex;gap:2px;margin:6px 12px;padding:3px;background:var(--bg2);border-radius:12px;flex-shrink:0;overflow:hidden}
+.sub span{padding:7px 12px;border-radius:9px;font-size:13px;font-weight:500;color:var(--ink2);white-space:nowrap}
+.sub .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+.body{flex:1;overflow:hidden;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.nav{height:62px;flex-shrink:0;border-top:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:space-around;font-size:11px;color:var(--ink3);position:relative}
+.nav span{display:grid;justify-items:center;gap:3px}
+.nav .on{color:var(--coral);font-weight:600}
+.nav .plus{width:52px;height:52px;border-radius:50%;background:var(--coral);color:var(--on);display:grid;place-items:center;margin-top:-26px;box-shadow:0 6px 16px rgba(194,84,47,.35)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh)}
+.fold{position:absolute;left:0;right:0;border-top:2px dashed var(--coral);z-index:5}
+.fold i{display:none}
+.cap{font-size:13px;font-weight:600;color:var(--coral)}.cap.old{color:var(--ink2)}
+.row{display:flex;align-items:center;gap:8px}
+.hs{display:flex;gap:8px;overflow:hidden;flex-shrink:0}
+.pill{height:44px;padding:0 14px;border-radius:12px;background:var(--bg2);display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink2);white-space:nowrap;flex-shrink:0}
+.pill.on{background:var(--ink);color:var(--bg)}
+.pill small{font-weight:600;opacity:.7;font-variant-numeric:tabular-nums}
+.pill.warn{background:var(--warnbg);color:var(--warn)}
+.btn{height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--line2);background:var(--card);display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;white-space:nowrap;flex-shrink:0}
+.btn.p{background:var(--coral);border-color:var(--coral);color:var(--on)}
+.btn.sq{width:48px;height:48px;padding:0}
+.btn.t{height:48px}
+.mut{color:var(--ink3)}.s12{font-size:12px}.s13{font-size:13px}.num{font-variant-numeric:tabular-nums}
+.chip{font-size:11px;font-weight:600;padding:3px 8px;border-radius:8px;white-space:nowrap}
+.c-info{background:var(--infobg);color:var(--info)}.c-ok{background:var(--okbg);color:var(--ok)}.c-warn{background:var(--warnbg);color:var(--warn)}
+.search{flex:1;min-width:0;height:48px;border-radius:12px;border:1px solid var(--line2);background:var(--card);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--ink3);font-size:14px}
+/* pedido */
+.ord{padding:12px 14px;display:grid;gap:8px}
+.ord h4{font-size:15px;font-weight:600}
+.ord .act{height:48px;border-radius:12px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:600;font-size:14px}
+.ord .act.q{background:var(--bg2);color:var(--ink)}
+/* platillo */
+.dish{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);min-height:64px}
+.dish:last-child{border-bottom:0}
+.thumb{width:44px;height:44px;border-radius:10px;background:var(--bg2);flex-shrink:0;display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--ink3)}
+.dish .n{flex:1;min-width:0}
+.dish .n b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sw{width:44px;height:26px;border-radius:999px;background:var(--coral);position:relative;flex-shrink:0}
+.sw::after{content:"";position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:#fff}
+.sw.off{background:var(--line2)}.sw.off::after{right:auto;left:3px}
+/* hoy */
+.kpi{padding:16px}
+.kpi .big{font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1.05}
+.kpi .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.kpi .two b{display:block;font-size:20px;font-weight:600}
+.lrow{display:flex;align-items:center;gap:12px;padding:0 14px;min-height:56px;border-bottom:1px solid var(--line)}
+.lrow:last-child{border-bottom:0}
+.lrow .n{flex:1;min-width:0}
+.lrow .n b{display:block;font-weight:600}
+.ring{width:36px;height:36px;border-radius:50%;background:conic-gradient(var(--coral) 80%,var(--bg2) 0);display:grid;place-items:center;flex-shrink:0}
+.ring::after{content:"";width:26px;height:26px;border-radius:50%;background:var(--card)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--warn);flex-shrink:0;margin:0 14px}
+/* bloques «antes» */
+.blk{border-radius:14px;border:1px solid var(--line);background:var(--card);padding:12px 14px;flex-shrink:0}
+.tint{background:color-mix(in srgb,var(--coral) 9%,var(--card));border-color:color-mix(in srgb,var(--coral) 35%,transparent)}
+/* escritorio */
+.desk{width:100%;max-width:1180px;height:560px;background:var(--bg);border:1px solid var(--line2);border-radius:16px;overflow:hidden;display:flex;font-size:14px;margin-top:14px}
+.side{width:200px;flex-shrink:0;border-right:1px solid var(--line);padding:16px 12px;display:grid;gap:4px;align-content:start;font-size:14px;color:var(--ink2)}
+.side b{color:var(--ink);font-size:15px;margin-bottom:10px;padding:0 10px}
+.side span{padding:9px 10px;border-radius:10px}
+.side .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+.dmain{flex:1;min-width:0;display:flex;flex-direction:column}
+.dbar{height:60px;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--line);flex-shrink:0}
+.dbar b{font-size:22px;font-weight:800;letter-spacing:-.03em}
+.dbody{padding:16px 24px;display:flex;flex-direction:column;gap:14px;overflow:hidden;flex:1}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tabsd{display:flex;gap:4px;margin-left:16px}
+.tabsd span{padding:7px 12px;border-radius:9px;font-size:13px;color:var(--ink2)}
+.tabsd .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+table{width:100%;border-collapse:collapse}
+td,th{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line);font-size:14px}
+th{font-size:12px;font-weight:600;color:var(--ink3)}
+td.r,th.r{text-align:right}
+@media(max-width:820px){.notes{padding-top:0;max-width:375px}.desk{display:none}.nodesk{display:block!important}}
+.nodesk{display:none;font-size:13px;color:var(--ink3);margin-top:10px}
+/* propios de esta maqueta */
+.ex{display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:60px;border-bottom:1px solid var(--line)}
+.ex:last-child{border-bottom:0}
+.ex .n{flex:1;min-width:0}.ex .n b{display:block;font-weight:600;font-size:14px}
+.ex .go{font-size:13px;font-weight:600;color:var(--coral);white-space:nowrap}
+.sd{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.sd.d{background:#B3261E}.sd.w{background:#C98A0B}.sd.n{background:var(--ink3)}
+[data-theme=dark] .sd.d{background:#F2877E}
+.money{padding:14px 16px}
+.money .lab{font-size:13px;color:var(--ink3);font-weight:500}
+.money .big{font-size:36px;font-weight:700;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
+.money .split{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.money .split b{display:block;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.money .foot{margin-top:10px;font-size:13px;color:var(--ink3)}
+.up{color:var(--ok);font-weight:600}
+.step{display:flex;gap:12px;align-items:flex-start;padding:14px}
+.step .k{width:28px;height:28px;border-radius:50%;border:2px solid var(--line2);display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--ink3);flex-shrink:0}
+.step.now .k{border-color:var(--coral);color:var(--coral)}
+.step .n{flex:1;min-width:0}
+.step .n b{display:block;font-size:15px;font-weight:600}
+.step .n p{font-size:13px;color:var(--ink2);margin-top:3px;line-height:1.4}
+.step .btn{margin-top:10px}
+.hdr{display:flex;align-items:center;gap:8px;min-height:32px}
+.hdr .d{flex:1;font-size:14px;color:var(--ink3);font-weight:500}
+.hdr a{font-size:13px;font-weight:600;color:var(--coral)}
+.sec{font-size:13px;font-weight:600;color:var(--ink3);margin:2px 2px -2px}
+.bug{display:inline-block;font-size:11px;font-weight:700;color:#B3261E;background:#FBE4E2;border-radius:6px;padding:1px 6px;margin-left:4px}
+[data-theme=dark] .bug{color:#F2877E;background:#3A1512}
+.g2{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;align-items:start}
+.bars{display:flex;align-items:flex-end;gap:6px;height:90px;padding:0 16px 14px}
+.bars i{flex:1;background:var(--bg2);border-radius:4px 4px 0 0}
+.bars i.on{background:var(--coral)}
+@media(max-width:420px){.ph{width:100%}}
+/* propios de la maqueta 2.9 */
+.ls{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.li{display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:56px;border-bottom:1px solid var(--line);font-size:14px}
+.li:last-child{border-bottom:0}
+.li .n{flex:1;min-width:0}.li .n b{display:block;font-weight:600}.li .n span{font-size:12px;color:var(--ink3)}
+.ico{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;font-size:13px;font-weight:800}
+.ico.ok{background:var(--okbg);color:var(--ok)}.ico.w{background:var(--warnbg);color:var(--warn)}
+.buscar{display:flex;align-items:center;gap:8px;height:48px;border-radius:14px;border:1.5px solid var(--line2);background:var(--card);padding:0 14px;font-size:15px;color:var(--ink)}
+.buscar.on{border-color:var(--coral)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips span{height:40px;padding:0 14px;border-radius:12px;background:var(--card);border:1px solid var(--line2);display:inline-flex;align-items:center;font-size:13px;font-weight:600}
+.resp{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;display:grid;gap:10px}
+.resp h3{font-size:17px;font-weight:700;margin:0}
+.resp p{font-size:13px;color:var(--ink2);line-height:1.45;margin:0}
+.cta{height:48px;border-radius:12px;background:var(--coral);color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px}
+.sec2{height:44px;border-radius:12px;border:1px solid var(--line2);display:grid;place-items:center;font-weight:600;font-size:13px}
+.gt{font-size:12px;font-weight:600;color:var(--ink3);letter-spacing:.02em}
+.msg{border-radius:14px;background:var(--bg2);padding:12px;font-size:13px;line-height:1.5;color:var(--ink)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0"/></symbol>
+<symbol id="more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+</defs></svg>
+
+<div class="top">
+  <div>
+    <div class="tag">Maqueta para aprobar · 2026-11-16 · ficha 2.9 de la auditoría (R39, X18, S07)</div>
+    <h1>Ayuda por lo que necesitas</h1>
+    <p class="lead">Quien entra a Ayuda tiene un problema ahora: no salen las comandas, no entran pedidos, quiere cerrar por hoy. No viene a leer un manual. Hoy el buscador compara palabras exactas: «no me entran pedidos» no encuentra nada y manda directo a WhatsApp; «impresora» explica el recibo en vez de llevar a preparar la PC. La propuesta: buscar por lo que quieres hacer, que la primera respuesta sea un botón a la pantalla exacta y, cuando se puede, revisar el problema con los datos de tu restaurante. Nada de esto está construido.</p>
+  </div>
+  <button class="tog" onclick="const h=document.documentElement;h.dataset.theme=h.dataset.theme==='dark'?'light':'dark'">Claro / oscuro</button>
+</div>
+
+<div class="wrap">
+
+<h2>1 · Lo que necesitas, no un tema</h2>
+<p class="lead">Al abrir, arriba están los cinco casos más comunes; el manual completo sigue abajo en «Todas las guías». Las búsquedas entienden sinónimos y faltas de acentos: «impresora», «no sale el ticket», «comanda» llevan al mismo lugar.</p>
+<div class="pair">
+  <div class="col">
+    <div class="tag">Hoy</div>
+    <div class="ph old" style="height:560px">
+      <div class="bar"><b>Centro de ayuda</b><span class="ib"><svg><use href="#more"/></svg></span></div>
+      <div class="body">
+        <div class="buscar on">no me entran pedidos</div>
+        <div class="resp" style="text-align:center"><p>No encontramos resultados para «no me entran pedidos».<br>Intenta con otra palabra.</p></div>
+        <div class="resp"><b>¿No encontraste lo que buscabas?</b><span class="sec2">Escribir por WhatsApp</span><span class="sec2">Enviar correo</span></div>
+      </div>
+    </div>
+    <div class="cap old">— — El problema más urgente termina en «escríbenos»</div>
+  </div>
+  <div class="col">
+    <div class="tag"><b>Propuesta</b> · al abrir</div>
+    <div class="ph" style="height:560px">
+      <div class="bar"><b>Centro de ayuda</b><span class="ib"><svg><use href="#more"/></svg></span></div>
+      <div class="body">
+        <b style="font-size:17px">¿Qué necesitas hacer?</b>
+        <div class="buscar mut">Escribe lo que pasa o lo que quieres hacer</div>
+        <div class="chips"><span>No me entran pedidos</span><span>Configurar la impresora</span><span>Cerrar por hoy</span><span>Cambiar un precio</span><span>No puedo entrar</span></div>
+        <span class="gt">TODAS LAS GUÍAS</span>
+        <div class="ls"><div class="li"><span class="n"><b>Primeros pasos en tu panel</b></span><span class="mut">›</span></div><div class="li"><span class="n"><b>Tus platillos</b></span><span class="mut">›</span></div><div class="li"><span class="n"><b>Pedidos en vivo</b></span><span class="mut">›</span></div></div>
+      </div>
+    </div>
+    <div class="cap">— — Los casos de todos los días, a un toque</div>
+  </div>
+</div>
+
+<h2>2 · La primera respuesta resuelve</h2>
+<p class="lead">«No me entran pedidos» revisa tu restaurante en ese momento: si los pedidos están pausados, si tu horario dice cerrado, si los modos de pedido están apagados y si la PC del local responde. Lo que falla trae su botón. «Impresora» lleva directo a preparar La PC del local, con la guía después.</p>
+<div class="pair">
+  <div class="col">
+    <div class="tag"><b>Propuesta</b> · no me entran pedidos</div>
+    <div class="ph" style="height:600px">
+      <div class="bar"><b>Centro de ayuda</b><span class="ib"><svg><use href="#more"/></svg></span></div>
+      <div class="body">
+        <div class="buscar on">no me entran pedidos</div>
+        <div class="resp">
+          <h3>Revisamos tu restaurante</h3>
+          <div class="ls">
+            <div class="li"><span class="ico w">!</span><span class="n"><b>Tus pedidos están pausados</b><span>Desde las 13:10: «Cocina saturada»</span></span><span class="btn p" style="height:40px">Reanudar</span></div>
+            <div class="li"><span class="ico ok">✓</span><span class="n"><b>Tu horario dice abierto</b><span>Hoy 11:00 – 22:00</span></span></div>
+            <div class="li"><span class="ico ok">✓</span><span class="n"><b>Para llevar y a domicilio encendidos</b></span></div>
+            <div class="li"><span class="ico ok">✓</span><span class="n"><b>La PC del local responde</b></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cap">— — El diagnóstico con tus datos, y el arreglo al lado</div>
+  </div>
+  <div class="col">
+    <div class="tag"><b>Propuesta</b> · impresora</div>
+    <div class="ph" style="height:600px">
+      <div class="bar"><b>Centro de ayuda</b><span class="ib"><svg><use href="#more"/></svg></span></div>
+      <div class="body">
+        <div class="buscar on">impresora</div>
+        <div class="resp">
+          <h3>Configurar la impresora</h3>
+          <p>Las comandas y los recibos salen por la PC del local: ahí eliges qué impresora imprime cada cosa y mandas una prueba.</p>
+          <span class="cta">Ir a La PC del local</span>
+          <span class="sec2">Ver la guía paso a paso</span>
+        </div>
+        <span class="gt">TAMBIÉN</span>
+        <div class="ls"><div class="li"><span class="n"><b>Imprimir sin PC (por USB)</b></span><span class="mut">›</span></div><div class="li"><span class="n"><b>Una impresora por estación</b></span><span class="mut">›</span></div></div>
+      </div>
+    </div>
+    <div class="cap">— — Acción primero, explicación después</div>
+  </div>
+</div>
+
+<h2>3 · Ayuda que puedes cumplir, y soporte con contexto</h2>
+<p class="lead">Si quien busca no puede abrir esa pantalla (un cocinero que quiere cambiar un precio), la respuesta lo dice y le indica a quién pedírselo, en vez de mandarlo a una pantalla cerrada. Y cuando haga falta escribir a soporte, el mensaje ya lleva el restaurante, el plan, lo que buscó y la versión; la persona lo ve y lo puede cambiar antes de enviarlo. Nunca lleva contraseñas ni pedidos.</p>
+<div class="pair">
+  <div class="col">
+    <div class="tag"><b>Propuesta</b> · sin permiso</div>
+    <div class="ph" style="height:420px">
+      <div class="bar"><b>Centro de ayuda</b></div>
+      <div class="body">
+        <div class="buscar on">cambiar precio</div>
+        <div class="resp">
+          <h3>Cambiar un precio</h3>
+          <p>Los precios los cambia quien maneja el Menú. Tu usuario no tiene ese permiso: pídeselo al dueño o al encargado.</p>
+        </div>
+      </div>
+    </div>
+    <div class="cap">— — Ninguna respuesta lleva a una puerta cerrada</div>
+  </div>
+  <div class="col">
+    <div class="tag"><b>Propuesta</b> · escribir a soporte</div>
+    <div class="ph" style="height:420px">
+      <div class="bar"><b>Centro de ayuda</b></div>
+      <div class="body">
+        <b style="font-size:15px">Escribir a Leogin</b>
+        <div class="msg">Hola, soy de <b>Rincón 502</b> (plan Premium). Busqué «no me entran pedidos» y no lo resolví. Versión 0.23.0.</div>
+        <span class="s12 mut">Puedes cambiar el mensaje antes de enviarlo. No incluye contraseñas ni pedidos.</span>
+        <span class="cta">Enviar por WhatsApp</span>
+      </div>
+    </div>
+    <div class="cap">— — Soporte entiende en el primer mensaje</div>
+  </div>
+</div>
+
+<h2>4 · En la PC (1280 px)</h2>
+<p class="lead">La misma búsqueda arriba; la respuesta a la izquierda y las guías relacionadas a la derecha. El buscador del panel (Ctrl K) usa las mismas respuestas.</p>
+<div class="desk" style="height:440px">
+  <div class="side"><b>Rincón 502</b><span>Hoy</span><span>Pedidos</span><span>Menú</span><span>Clientes</span><span>Negocio</span><span class="on">Ajustes</span></div>
+  <div class="dmain">
+    <div class="dbar"><b>Centro de ayuda</b></div>
+    <div class="dbody">
+      <div class="buscar on" style="max-width:640px">no me entran pedidos</div>
+      <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start">
+        <div class="resp"><h3>Revisamos tu restaurante</h3><div class="ls">
+          <div class="li"><span class="ico w">!</span><span class="n"><b>Tus pedidos están pausados</b><span>Desde las 13:10</span></span><span class="btn p" style="height:40px">Reanudar</span></div>
+          <div class="li"><span class="ico ok">✓</span><span class="n"><b>Tu horario dice abierto</b></span></div>
+          <div class="li"><span class="ico ok">✓</span><span class="n"><b>La PC del local responde</b></span></div></div></div>
+        <div style="display:grid;gap:8px"><span class="gt">GUÍAS RELACIONADAS</span><div class="ls"><div class="li"><span class="n"><b>Pedidos en vivo</b></span><span class="mut">›</span></div><div class="li"><span class="n"><b>Pausar pedidos</b></span><span class="mut">›</span></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="nodesk">La vista de PC se ve en una pantalla ancha.</p>
+
+<h2>Lo que necesito que decidas</h2>
+<ol class="lead" style="padding-left:20px">
+  <li><strong>Diagnóstico en vivo:</strong> ¿«No me entran pedidos» revisa pausa, horario, modos de pedido y la PC del local con los datos de ese momento (recomendado)?</li>
+  <li><strong>Un solo índice:</strong> ¿las mismas respuestas en Ayuda y en el buscador del panel (Ctrl K / «⋯ › Buscar») (recomendado)?</li>
+  <li><strong>Soporte con contexto:</strong> ¿el mensaje a soporte lleva restaurante, plan, lo que buscó y la versión, visible y editable antes de enviar (recomendado)?</li>
+  <li><strong>Aprender de lo que no se encuentra:</strong> ¿anotar las búsquedas sin respuesta (solo la frase, sin datos de clientes) para que las veas en el superadmin y agregues respuestas (recomendado; una tabla nueva)?</li>
+</ol>
+</div>
+</body>
+</html>
