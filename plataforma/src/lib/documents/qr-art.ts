@@ -2,11 +2,14 @@
    QR CON MARCA (SOLO CLIENTE) — auditoría 2026-10-02, AJU-07
    ------------------------------------------------------------
    El QR del restaurante era solo el cuadro negro. Aquí se arma:
-   · `qrPng`        el QR como PNG (lo usan también los QR de mesa);
-   · `downloadQrSocialPng` una tarjeta 1080×1350 para redes: nombre,
-     QR con el logo al centro, «Escanea para ver el menú y pedir» y
-     el enlace;
-   · `downloadQrCardPdf`   el mismo cartel en A6 para imprimir.
+   · `qrPng` .............. el QR como PNG (lo usan también los QR de mesa);
+   · `dibujarTarjeta` ..... tarjeta 1080×1350 para redes;
+   · `dibujarHojaCartel` .. hoja carta con dos carteles de 105×148 mm;
+   · `dibujarCodigo` ...... el código solo, 1200 px, con el logo.
+   Ficha 2.10: cada uno devuelve el canvas. La pantalla enseña ESE canvas
+   y la descarga lo guarda tal cual (el PDF lleva la misma imagen), así
+   que lo que se ve es lo que se descarga. La frase del cartel la eligen
+   las reglas de `lib/qr-material.ts`.
 
    Con logo, el QR se pide con corrección de errores alta (`ecc=H`,
    aguanta ~30 % tapado) y el logo ocupa menos del 6 % del área.
@@ -15,6 +18,7 @@
    ============================================================ */
 
 import { createDoc } from '@/lib/documents/pdf';
+import { CARTEL, mmAPx } from '@/lib/qr-material';
 
 type Ecc = 'M' | 'H';
 
@@ -49,7 +53,7 @@ export async function qrPng(url: string, px = 600, ecc: Ecc = 'M'): Promise<stri
 }
 
 /** Logo del restaurante por el proxy del mismo origen; null si no tiene. */
-async function loadLogo(restaurantId: string): Promise<HTMLImageElement | null> {
+export async function cargarLogo(restaurantId: string): Promise<HTMLImageElement | null> {
   try {
     const res = await fetch(`/api/doc-logo/restaurant/${restaurantId}`);
     if (!res.ok) return null;
@@ -103,43 +107,49 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, maxW: number, size
   return s;
 }
 
-function fileBase(name: string): string {
-  return name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'restaurante';
+export interface Material {
+  /** Lo que codifica el QR (la dirección estable). */
+  url: string;
+  /** Lo que se lee impreso (el enlace corto). */
+  direccion: string;
+  restaurantName: string;
+  accent: string;
+  frase: string;
+  logo: HTMLImageElement | null;
 }
 
-function download(href: string, name: string) {
-  const a = document.createElement('a');
-  a.href = href;
-  a.download = name;
-  a.click();
-}
+const TINTA = '#18181b';
+const GRIS = '#52525b';
+const FUENTE = 'Helvetica, Arial, sans-serif';
 
-export async function downloadQrSocialPng(opts: {
-  url: string; restaurantName: string; restaurantId: string; accent: string;
-}): Promise<void> {
-  const { url, restaurantName, restaurantId, accent } = opts;
-  const W = 1080, H = 1350;
+function lienzo(w: number, h: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d')!;
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('canvas');
+  return [canvas, ctx];
+}
 
+/** Tarjeta para redes, 1080 × 1350 (4:5, la de Instagram). */
+export async function dibujarTarjeta(m: Material): Promise<HTMLCanvasElement> {
+  const W = 1080, H = 1350;
+  const [canvas, ctx] = lienzo(W, H);
   ctx.fillStyle = '#faf8f5';
   ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = accent;
+  ctx.fillStyle = m.accent;
   ctx.fillRect(0, 0, W, 18);
 
-  ctx.fillStyle = '#18181b';
+  ctx.fillStyle = TINTA;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
-  fitText(ctx, restaurantName, W - 160, 84);
-  ctx.fillText(restaurantName, W / 2, 190);
+  fitText(ctx, m.restaurantName, W - 160, 84);
+  ctx.fillText(m.restaurantName, W / 2, 190);
 
-  ctx.fillStyle = '#52525b';
-  ctx.font = '500 40px Helvetica, Arial, sans-serif';
-  ctx.fillText('Nuestro menú, en tu teléfono', W / 2, 260);
+  ctx.fillStyle = GRIS;
+  ctx.font = `500 40px ${FUENTE}`;
+  ctx.fillText('Nuestra carta, en tu teléfono', W / 2, 260);
 
-  // Tarjeta blanca con el QR
   const card = 700, cx = (W - card) / 2, cy = 330;
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.12)';
@@ -149,71 +159,112 @@ export async function downloadQrSocialPng(opts: {
   roundRect(ctx, cx, cy, card, card, 48);
   ctx.fill();
   ctx.restore();
-  const logo = await loadLogo(restaurantId);
-  const qr = await qrWithLogo(url, logo, 600);
-  ctx.drawImage(qr, cx + 50, cy + 50, 600, 600);
+  ctx.drawImage(await qrWithLogo(m.url, m.logo, 600), cx + 50, cy + 50, 600, 600);
 
-  ctx.fillStyle = '#18181b';
-  ctx.font = '700 52px Helvetica, Arial, sans-serif';
-  ctx.fillText('Escanea para ver el menú y pedir', W / 2, cy + card + 120);
-
-  ctx.fillStyle = accent;
+  ctx.fillStyle = TINTA;
+  fitText(ctx, m.frase, W - 160, 56);
+  ctx.fillText(m.frase, W / 2, cy + card + 120);
+  ctx.fillStyle = m.accent;
   ctx.fillRect(W / 2 - 60, cy + card + 160, 120, 8);
-
-  ctx.fillStyle = '#52525b';
-  fitText(ctx, url.replace(/^https?:\/\//, ''), W - 160, 38, 500);
-  ctx.fillText(url.replace(/^https?:\/\//, ''), W / 2, cy + card + 230);
-
-  await new Promise<void>((resolve) => canvas.toBlob((blob) => {
-    if (blob) {
-      const href = URL.createObjectURL(blob);
-      download(href, `qr-redes-${fileBase(restaurantName)}.png`);
-      setTimeout(() => URL.revokeObjectURL(href), 1000);
-    }
-    resolve();
-  }, 'image/png'));
+  ctx.fillStyle = GRIS;
+  fitText(ctx, m.direccion, W - 160, 38, 500);
+  ctx.fillText(m.direccion, W / 2, cy + card + 230);
+  return canvas;
 }
 
-export async function downloadQrCardPdf(opts: {
-  url: string; restaurantName: string; restaurantId: string; accent: string;
-}): Promise<void> {
-  const { url, restaurantName, restaurantId, accent } = opts;
-  // Cartel A6 vertical (105 × 148 mm) centrado en una hoja A5, con línea de
-  // corte: cualquier impresora casera saca A5 y se recorta a mano.
-  const doc = await createDoc({ format: 'a5', orientation: 'p' });
-  const cw = 105, ch = 148;
-  const x0 = (doc.internal.pageSize.getWidth() - cw) / 2;
-  const y0 = (doc.internal.pageSize.getHeight() - ch) / 2;
-  const hex = accent.replace('#', '');
-  const rgb: [number, number, number] = hex.length === 6
-    ? [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)]
-    : [24, 24, 27];
+/** El código solo, 1200 px, con el logo y un margen blanco de lectura. */
+export async function dibujarCodigo(m: Pick<Material, 'url' | 'logo'>): Promise<HTMLCanvasElement> {
+  const W = 1200, pad = 72;
+  const [canvas, ctx] = lienzo(W, W);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, W);
+  ctx.drawImage(await qrWithLogo(m.url, m.logo, W - pad * 2), pad, pad, W - pad * 2, W - pad * 2);
+  return canvas;
+}
 
-  doc.setDrawColor(200, 200, 205);
-  doc.setLineDashPattern([1.5, 1.5], 0);
-  doc.rect(x0, y0, cw, ch);
-  doc.setLineDashPattern([], 0);
-  doc.setFillColor(...rgb);
-  doc.rect(x0, y0, cw, 3, 'F');
+/**
+ * Hoja carta a 200 ppp con dos carteles de 105 × 148 mm lado a lado, su
+ * línea de corte y, abajo, cómo imprimirla. El código mide 70 mm.
+ */
+export async function dibujarHojaCartel(m: Material): Promise<HTMLCanvasElement> {
+  const W = mmAPx(CARTEL.hojaMm.w), H = mmAPx(CARTEL.hojaMm.h);
+  const [canvas, ctx] = lienzo(W, H);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
 
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(24, 24, 27);
-  doc.setFontSize(18);
-  doc.text(restaurantName, x0 + cw / 2, y0 + 18, { align: 'center', maxWidth: cw - 14 });
+  const cw = mmAPx(CARTEL.cartelMm.w), ch = mmAPx(CARTEL.cartelMm.h);
+  const x0 = Math.round((W - cw * 2) / 2), y0 = mmAPx(12);
+  const q = mmAPx(CARTEL.codigoMm);
+  const qr = await qrWithLogo(m.url, m.logo, q);
 
-  const logo = await loadLogo(restaurantId);
-  const qr = await qrWithLogo(url, logo, 700);
-  const q = 70;
-  doc.addImage(qr.toDataURL('image/png'), 'PNG', x0 + (cw - q) / 2, y0 + 28, q, q, 'qr', 'FAST');
+  for (const x of [x0, x0 + cw]) {
+    ctx.fillStyle = m.accent;
+    ctx.fillRect(x, y0, cw, mmAPx(3));
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = TINTA;
+    fitText(ctx, m.restaurantName, cw - mmAPx(14), mmAPx(6.4));
+    ctx.fillText(m.restaurantName, x + cw / 2, y0 + mmAPx(19));
+    ctx.drawImage(qr, x + (cw - q) / 2, y0 + mmAPx(26), q, q);
+    fitText(ctx, m.frase, cw - mmAPx(12), mmAPx(4.8));
+    ctx.fillText(m.frase, x + cw / 2, y0 + mmAPx(108));
+    ctx.fillStyle = m.accent;
+    ctx.fillRect(x + cw / 2 - mmAPx(8), y0 + mmAPx(112), mmAPx(16), mmAPx(1.2));
+    ctx.fillStyle = GRIS;
+    fitText(ctx, m.direccion, cw - mmAPx(12), mmAPx(3.4), 500);
+    ctx.fillText(m.direccion, x + cw / 2, y0 + mmAPx(121));
+  }
 
-  doc.setFontSize(13);
-  doc.text('Escanea para ver el menú y pedir', x0 + cw / 2, y0 + 28 + q + 12, { align: 'center', maxWidth: cw - 12 });
-  doc.setFillColor(...rgb);
-  doc.rect(x0 + cw / 2 - 8, y0 + 28 + q + 17, 16, 1.2, 'F');
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(82, 82, 91);
-  doc.text(url.replace(/^https?:\/\//, ''), x0 + cw / 2, y0 + 28 + q + 26, { align: 'center', maxWidth: cw - 12 });
+  // Línea de corte: el contorno de los dos carteles y la división.
+  ctx.strokeStyle = '#a1a1aa';
+  ctx.lineWidth = 3;
+  ctx.setLineDash([14, 12]);
+  ctx.strokeRect(x0, y0, cw * 2, ch);
+  ctx.beginPath();
+  ctx.moveTo(x0 + cw, y0);
+  ctx.lineTo(x0 + cw, y0 + ch);
+  ctx.stroke();
+  ctx.setLineDash([]);
 
-  doc.save(`qr-cartel-${fileBase(restaurantName)}.pdf`);
+  ctx.fillStyle = '#71717a';
+  ctx.textAlign = 'center';
+  ctx.font = `500 ${mmAPx(3.2)}px ${FUENTE}`;
+  ctx.fillText('Corta por la línea punteada. Imprime en «Tamaño real» o al 100 %.', W / 2, y0 + ch + mmAPx(10));
+  return canvas;
+}
+
+function blobDe(canvas: HTMLCanvasElement, tipo = 'image/png'): Promise<Blob> {
+  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('blob'))), tipo));
+}
+
+/** URL local para enseñar el canvas en la pantalla; el que llama la libera. */
+export async function vistaPrevia(canvas: HTMLCanvasElement): Promise<string> {
+  return URL.createObjectURL(await blobDe(canvas));
+}
+
+function bajar(href: string, nombre: string) {
+  const a = document.createElement('a');
+  a.href = href;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+/** Guarda el canvas como PNG. Si el archivo no se pudo hacer, lanza. */
+export async function descargarPng(canvas: HTMLCanvasElement, nombre: string): Promise<void> {
+  const href = URL.createObjectURL(await blobDe(canvas));
+  bajar(href, nombre);
+  setTimeout(() => URL.revokeObjectURL(href), 1000);
+}
+
+/** Guarda la hoja como PDF carta, con la misma imagen a tamaño real. */
+export async function descargarHojaPdf(canvas: HTMLCanvasElement, nombre: string): Promise<void> {
+  const doc = await createDoc({ format: 'letter', orientation: 'p' });
+  doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, CARTEL.hojaMm.w, CARTEL.hojaMm.h, 'hoja', 'FAST');
+  const blob = doc.output('blob');
+  if (!blob.size) throw new Error('pdf');
+  const href = URL.createObjectURL(blob);
+  bajar(href, nombre);
+  setTimeout(() => URL.revokeObjectURL(href), 1000);
 }
