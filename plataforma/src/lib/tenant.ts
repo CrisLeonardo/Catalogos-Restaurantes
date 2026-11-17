@@ -119,6 +119,15 @@ export function stableTableUrl(slug: string, mesa: number): string {
   return `${stableRootUrl()}/m/${slug}/${mesa}`;
 }
 
+/**
+ * La carta general por la dirección estable (ficha 2.10): `/m/<slug>` sin
+ * mesa. Es la que va en lo IMPRESO desde Código QR: si cambia el slug, el
+ * viejo queda en `restaurant_slug_aliases` y el cartel sigue abriendo.
+ */
+export function stableMenuSlugUrl(slug: string): string {
+  return `${stableRootUrl()}/m/${slug}`;
+}
+
 /** Igual que stableTableUrl(), pero para el QR general del restaurante (sin mesa). */
 export function stableMenuUrl(restaurantId: string): string {
   return `${stableRootUrl()}/m/${restaurantId}`;

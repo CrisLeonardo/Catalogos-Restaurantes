@@ -864,6 +864,26 @@ La siguiente ficha es **1.12 · Comensal: entrada, checkout y seguimiento**. Que
   - La lista del superadmin se vio montada a mano en la página de Ayuda, solo en local. El superadmin local pide el segundo factor y no se saltó.
 - **No comprobado en pantalla:** el caso «sin permiso» con una cuenta de mesero; lo cubren las pruebas del índice. Tampoco la fila de la PC dentro del diagnóstico, porque la base local no tiene agente; lo cubre su prueba.
 - **Validación:** `typecheck` y `lint` sin errores; 1,575 unitarias pasan (13 nuevas de ayuda) y una omitida.
+## 44. Código QR · ficha 2.10 (2026-11-17)
+
+**Rama** `feat/codigo-qr`, desde `main` (`a7a8040`). Maqueta aprobada con sus cuatro recomendaciones: [`MAQUETA_CODIGO_QR_2026-11-17.html`](../diseno/MAQUETA_CODIGO_QR_2026-11-17.html). Las secciones 37–43 (fichas 2.3–2.9) están en sus propias ramas.
+
+- **La vista previa es el archivo.** Se elige Redes, Imprimir o Solo el código, y `lib/documents/qr-art.ts` dibuja un canvas (`dibujarTarjeta`, `dibujarHojaCartel`, `dibujarCodigo`). La pantalla enseña ese canvas y el botón lo guarda tal cual; el PDF lleva la misma imagen a tamaño real. Salen los tres botones y la diferencia entre el logo de la vista previa y el PNG sin logo.
+- **Cartel en hoja carta** (jsPDF `letter`): dos carteles de 105 × 148 mm lado a lado, con línea de corte, código de 70 mm y la indicación de imprimir en «Tamaño real». Se dibuja a 200 ppp.
+- **Lo impreso no se rompe:** el QR codifica `/m/<slug>` (`stableMenuSlugUrl` en `lib/tenant.ts`), que sigue abriendo la carta por los alias de la migración 134. El enlace corto queda escrito para teclearlo.
+- **Frases según lo encendido** (`lib/qr-material.ts`, con 7 pruebas): sin pedidos en línea solo «Mira nuestra carta»; con pedidos, también «Mira la carta y pide» y la de los modos que estén encendidos.
+- **Avisos que dicen la verdad:** en una copia de prueba la pantalla pide no imprimir. «Copiar» que falla dice cómo copiar a mano, y «Archivo listo» solo sale cuando el archivo existe.
+- **Comprobado en pantalla** con Rincón 502:
+  - A 390 px en claro: Redes e Imprimir. A 390 px en oscuro: Solo el código, «Copiado» y el error de copia simulado.
+  - A 1280 px: Imprimir en claro y Redes en oscuro, con la vista previa a la izquierda y las opciones a la derecha.
+  - La hoja, ampliada a resolución real, se lee nítida.
+  - Los tres archivos se interceptaron antes de guardarse: PDF de 84 KB que empieza con `%PDF-`, tarjeta PNG de 94 KB y código PNG de 35 KB.
+  - El QR pide `localhost:3000/m/rincon502`, y esa dirección abre la carta.
+- **No comprobado en pantalla:**
+  - **Sin pedidos en línea:** la base local vuelve a encender pedidos según el plan; lo cubren las pruebas.
+  - **Con logo:** Rincón 502 no tiene. El dibujo del logo es el de antes.
+  - **Lectura física con teléfonos:** queda para el dueño.
+- **Validación:** `typecheck` y `lint` sin errores; 1,569 unitarias pasan, con una omitida.
 
 ---
 

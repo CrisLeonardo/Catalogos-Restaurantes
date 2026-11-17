@@ -27,6 +27,13 @@ PR #124 (merge `0d15c36`), PR #121 (merge `fd9e728`) y PR #120 (merge `a7a8040`)
   - El buscador del panel (Ctrl K) usa el mismo índice: en «Hacer» salen solo las acciones que la persona puede abrir.
   - El mensaje a soporte ya va escrito con el restaurante, el plan, lo que se buscó y la versión, y se puede cambiar antes de enviarlo.
   - **Migración 186:** lo que se busca y no tiene respuesta se anota (solo la frase, nunca quién la escribió) y se ve en Superadmin › Configuración › Soporte, agrupado y con lo más pedido primero.
+- **Código QR** (ficha 2.10; rama `feat/codigo-qr`; maqueta aprobada `docs/diseno/MAQUETA_CODIGO_QR_2026-11-17.html`) · sin migraciones:
+  - Eliges para qué lo quieres (Redes, Imprimir o Solo el código) y ves exactamente el archivo que se descarga, con un solo botón. «Solo el código» ya trae el logo, igual que la vista previa.
+  - El cartel sale en **hoja carta** con dos carteles de 10.5 × 14.8 cm para recortar. La pantalla dice cómo imprimirlo para que el código mida 7 cm.
+  - **Lo impreso ya no se rompe** si cambias el nombre del restaurante: el QR apunta a `distleogin.com/m/<tu-restaurante>`. El enlace corto sigue escrito para teclearlo.
+  - El cartel solo promete lo que tienes encendido: sin pedidos en línea dice «Mira nuestra carta».
+  - En una copia de prueba la pantalla avisa que el QR no abrirá en el restaurante. Si copiar o descargar falla, lo dice, y «Archivo listo» solo sale cuando el archivo existe.
+  - En la PC, la vista previa queda a la izquierda y las opciones a la derecha.
 - **Sin prueba gratis** (PR #121, merge `fd9e728`) · **migración 182, justo después de desplegar**: los planes con pedidos (En línea, Estándar y Premium) se cobran desde el primer día; el gancho gratis sigue siendo el plan Básico. La 182 pone `trial_days = 0` y los textos de registro, planes, portada, Mi cuenta y términos dejan de prometer días gratis. Los restaurantes que ya estaban en prueba la terminan como estaba.
 - **Hoy por etapa y Primeros pasos por resultado** (fichas 2.1 y 2.2 de la auditoría; rama `feat/hoy-por-etapa`; maqueta aprobada `docs/diseno/MAQUETA_HOY_POR_ETAPA_2026-11-15.html`) · **migración 183, antes de desplegar**:
   - Hoy elige sola su versión. **Nuevo:** la guía «Llega a tu primer pedido», sin cifras en cero. **Operando:** arriba, hasta tres cosas que piden acción (pedidos por aceptar, pedidos atascados en cocina, comida lista que espera, caja sin abrir…), con «Ver N más» para el resto. **Cerrado:** cuando la caja ya cerró y no queda nada vivo, lo cobrado del día, el cuadre y lo comprobable de la semana.

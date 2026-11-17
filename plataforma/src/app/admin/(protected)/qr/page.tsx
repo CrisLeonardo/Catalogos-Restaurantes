@@ -1,52 +1,42 @@
 import { headers } from 'next/headers';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
+import { stableMenuSlugUrl, subdomainUrl } from '@/lib/tenant';
+import { frasesDelCartel } from '@/lib/qr-material';
 import QRDisplay from '@/components/admin/qr-display';
 
 export const metadata = { title: 'Código QR – Panel admin' };
 
+/* Código QR (ficha 2.10): el título lo pone la barra de arriba. Lo que
+   el cartel puede prometer sale de lo que el restaurante tiene encendido. */
 export default async function QRPage() {
   const ctx = await getAdminContext();
-  const headersList = await headers();
-  const tenantSlug = headersList.get('x-tenant-slug');
+  const slug = (await headers()).get('x-tenant-slug') ?? ctx?.restaurant?.slug ?? null;
+  const data = slug ? await getRestaurantBySlug(slug) : null;
 
-  // Resolve restaurant
-  let restaurantId: string | null = null;
-  let restaurantName = 'Mi restaurante';
-  let slug: string | null = tenantSlug;
-  let accent = '#D97757';
-  let hasLogo = false;
-
-  if (tenantSlug) {
-    const data = await getRestaurantBySlug(tenantSlug);
-    if (data) {
-      restaurantName = data.restaurant.name;
-      restaurantId = data.restaurant.id;
-      accent = data.resolved.config.colorAccent || accent;
-      hasLogo = !!data.resolved.config.logoUrl;
-    }
-  } else if (ctx?.restaurant) {
-    restaurantName = ctx.restaurant.name;
-    restaurantId = ctx.restaurant.id;
-    slug = ctx.restaurant.slug;
+  if (!slug || !data) {
+    return (
+      <p style={{ fontSize: 14, color: 'var(--u-text-3)' }}>
+        No encontramos la dirección de tu carta. Escríbenos desde Ayuda y lo revisamos.
+      </p>
+    );
   }
 
-  return (
-    <div style={{ maxWidth: 420 }}>
-      {/* El título ya lo pone la barra de arriba ("Código QR"). */}
-      <p style={{ fontSize: 14, color: 'var(--u-text-3)', marginBottom: 20 }}>
-        Compártelo en redes o en tu bio: es el link con el que la gente pide
-        en línea. Para las mesas, usa los QR de Ajustes › Salón.
-      </p>
+  const { restaurant, resolved } = data;
+  // Los módulos, de la sesión (al día); los de la carta pueden venir de caché.
+  const fuente = ctx?.restaurant?.id === restaurant.id ? ctx.restaurant : restaurant;
+  const modules = (fuente.modules ?? {}) as Record<string, boolean>;
+  const frases = frasesDelCartel({ pedidos: modules.orders === true, orderTypes: resolved.config.orderTypes ?? [] });
 
-      {restaurantId && slug ? (
-        <QRDisplay restaurantName={restaurantName} slug={slug} restaurantId={restaurantId} accent={accent} hasLogo={hasLogo} />
-      ) : (
-        <p style={{ fontSize: 14, color: 'var(--u-text-3)' }}>
-          No se pudo determinar la URL del menú. Verifica que el restaurante
-          tenga un slug asignado.
-        </p>
-      )}
-    </div>
+  return (
+    <QRDisplay
+      restaurantName={restaurant.name}
+      restaurantId={restaurant.id}
+      accent={resolved.config.colorAccent || '#D97757'}
+      hasLogo={!!resolved.config.logoUrl}
+      urlEstable={stableMenuSlugUrl(restaurant.slug)}
+      enlaceCorto={subdomainUrl(restaurant.slug)}
+      frases={frases}
+    />
   );
 }

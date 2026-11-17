@@ -19,7 +19,7 @@ export const INK_RGB = hexToRgb(LEOGIN_INK);
 export const MUTED_RGB = hexToRgb(LEOGIN_MUTED);
 export const HAIRLINE_RGB: [number, number, number] = [228, 228, 231];
 
-export async function createDoc(opts?: { format?: 'a4' | 'a5'; orientation?: 'p' | 'l' }): Promise<jsPDF> {
+export async function createDoc(opts?: { format?: 'a4' | 'a5' | 'letter'; orientation?: 'p' | 'l' }): Promise<jsPDF> {
   const { jsPDF: JsPDF } = await import('jspdf');
   return new JsPDF({ unit: 'mm', format: opts?.format ?? 'a4', orientation: opts?.orientation ?? 'p' });
 }
