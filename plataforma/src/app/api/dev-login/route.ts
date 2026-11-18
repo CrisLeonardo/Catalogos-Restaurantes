@@ -31,6 +31,18 @@
      /api/dev-login?next=/admin/caja      → a dónde ir después
      /api/dev-login?cuenta=1&email=x@test → sesión de la CUENTA LEOGIN
                                             (billetera), a /billetera
+     /api/dev-login?email=super-demo@local.test&next=/super
+                                          → superadmin de prueba, con
+                                            el segundo factor hecho solo
+
+   ── EL SEGUNDO FACTOR, SIN TECLEAR CÓDIGO ──────────────────────
+   El superadmin entra con app autenticadora (migración 137) y en local
+   no hay celular que dé el código. Si la cuenta lo exige, esta ruta le
+   inscribe una app «dev-login» con un secreto nuevo, calcula el código
+   del momento (lib/dev/totp.ts) y lo verifica: la sesión queda en
+   `aal2` de verdad y las políticas de la base se cumplen igual. Nada se
+   salta. Una cuenta con una app REAL (inscrita por una persona) no se
+   toca: se le explica que use la cuenta de prueba.
    ============================================================ */
 
 import { NextResponse, type NextRequest } from 'next/server';
@@ -38,6 +50,8 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { createClient, createWalletClient } from '@/lib/supabase/server';
 import { adminUrl } from '@/lib/tenant';
 import { panelHref } from '@/lib/panel-links';
+import { exigeSegundoFactor } from '@/lib/auth/segundo-factor-policy';
+import { base32ABytes, codigoTotp } from '@/lib/dev/totp';
 
 export const runtime = 'nodejs';
 
@@ -102,6 +116,54 @@ async function panelDe(db: ReturnType<typeof createServiceClient>, userId: strin
   return r?.slug ? adminUrl(r.slug) : null;
 }
 
+const PREFIJO_APP_DE_PRUEBA = 'dev-login';
+
+/**
+ * Completa el segundo factor de una cuenta de prueba: borra las apps
+ * «dev-login» de antes (su secreto no se guarda en ningún lado), inscribe
+ * una nueva, calcula su código y lo verifica. Devuelve una respuesta solo
+ * si no se pudo.
+ */
+async function segundoFactorDePrueba(
+  db: ReturnType<typeof createServiceClient>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  email: string,
+): Promise<NextResponse | null> {
+  const { data: lista, error: listaErr } = await supabase.auth.mfa.listFactors();
+  if (listaErr) return new NextResponse(`No se pudieron leer las apps de la cuenta: ${listaErr.message}`, { status: 500 });
+
+  const todas = lista?.all ?? [];
+  const real = todas.find((f) => f.status === 'verified' && !(f.friendly_name ?? '').startsWith(PREFIJO_APP_DE_PRUEBA));
+  if (real) {
+    return new NextResponse(
+      `${email} tiene una app autenticadora de verdad («${real.friendly_name ?? 'sin nombre'}»), así que pide su código.\n\n`
+      + `Para entrar sin código usa el superadmin de prueba:\n`
+      + `  /api/dev-login?email=super-demo@local.test&next=/super\n\n`
+      + `Si todavía no existe, créalo con:\n`
+      + `  node scripts/crear-super-admin.mjs super-demo@local.test <una contraseña larga>\n`,
+      { status: 409, headers: { 'content-type': 'text/plain; charset=utf-8' } },
+    );
+  }
+
+  for (const f of todas) {
+    await db.auth.admin.mfa.deleteFactor({ userId, id: f.id });
+  }
+
+  const { data: app, error: appErr } = await supabase.auth.mfa.enroll({
+    factorType: 'totp',
+    issuer: 'Leogin local',
+    friendlyName: `${PREFIJO_APP_DE_PRUEBA} ${Date.now()}`,
+  });
+  if (appErr || !app) return new NextResponse(`No se pudo inscribir la app de prueba: ${appErr?.message ?? 'sin datos'}`, { status: 500 });
+
+  const code = codigoTotp(base32ABytes(app.totp.secret));
+  const { error: verErr } = await supabase.auth.mfa.challengeAndVerify({ factorId: app.id, code });
+  if (verErr) return new NextResponse(`No se pudo verificar el código de prueba: ${verErr.message}`, { status: 500 });
+
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   if (process.env.DEV_LOGIN !== '1' || !supabaseEsLocal()) return NO_EXISTE();
 
@@ -142,6 +204,11 @@ export async function GET(request: NextRequest) {
     type: 'magiclink',
   });
   if (otpErr) return new NextResponse(`No se pudo abrir la sesión: ${otpErr.message}`, { status: 500 });
+
+  if (!cuenta && sesion.user && exigeSegundoFactor(sesion.user)) {
+    const fallo = await segundoFactorDePrueba(db, supabase, sesion.user.id, email);
+    if (fallo) return fallo;
+  }
 
   if (!cuenta && next.startsWith('/admin') && sesion.user) {
     const base = await panelDe(db, sesion.user.id);
