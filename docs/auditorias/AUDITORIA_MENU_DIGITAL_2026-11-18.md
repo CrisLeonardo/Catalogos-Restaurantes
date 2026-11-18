@@ -125,3 +125,9 @@ En la mesa alguien suele tomar el teléfono, leer cuatro precios en voz alta y h
 3. **Elegir la siguiente inversión según el local piloto.** Muchos platos parecidos favorecen la comparación. Una panadería que actualiza lotes favorece la hornada. El pedido colaborativo merece inversión solo después de observar que varias personas quieren participar. Las cinco ideas no necesitan convivir en una pantalla.
 
 **Decisión del dueño antes de implementar:** elegir el tipo de restaurante piloto y si la primera prueba debe resolver la decisión de grupo o construir recuerdo de marca desde redes. La maqueta muestra una interpretación cálida y editorial del ejemplo Rincón 502. Al integrarla se mantienen sus ocho estructuras y se usan los colores y las fuentes configurados por cada negocio.
+
+## Demostración de tres cartas completas
+
+[Abrir el estudio de cartas](../diseno/MAQUETA_CARTAS_VIVAS_2026-11-18.html). El selector superior cambia de restaurante y conserva su carrito por separado. Miga de Oro abre el brioche para mostrar el relleno y presenta la siguiente hornada. Doble Fondo permite comparar, elegir el término y pedir. Mesa Larga calcula el total compartido y recoge propuestas antes de decidir cuántas órdenes agregar. En los tres se puede llegar a la confirmación y avanzar el seguimiento de prueba.
+
+En «Escenarios de prueba» se puede entrar por QR de mesa o publicación, agotar la especialidad, dejar la carta vacía, recuperar un fallo o buscar «Special 1001» en una carta extensa. Los precios y las fotos son de demostración. El navegador conserva los pedidos localmente. La ronda funciona pasando el mismo teléfono. La prueba de volumen usa datos en memoria y no acredita concurrencia, paginación del servidor o tiempos de producción.
