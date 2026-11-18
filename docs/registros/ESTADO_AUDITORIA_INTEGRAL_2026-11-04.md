@@ -992,6 +992,53 @@ A pedido del dueño, las fichas 2.3–2.10 y el CHANGELOG de v0.23.0 se juntaron
 - **No comprobado:** el programa sin activar y Encuestas sin respuestas, en pantalla; una prueba con una persona.
 - **Validación:** `typecheck` y `lint` sin errores; 1,658 unitarias pasan, con una omitida.
 
+## 51. Finanzas y Analítica sin saturar · línea N (2026-11-18)
+
+**Rama** `feat/analitica-nada-saturado`, apilada sobre `feat/promociones-nada-saturado`. [Maqueta](../diseno/MAQUETA_ANALITICA_FINANZAS_NADA_SATURADO_2026-11-18.html) aprobada con sus seis recomendaciones. Sin migración. La ficha 3.2 sigue abierta: aquí entra solo lo que se resuelve sin tocar la base de datos.
+
+- **Finanzas, antes:**
+  - Ocho mandos antes del primer número: dos fechas, «Aplicar», tres atajos, Excel y PDF. La cifra quedaba a 330 px.
+  - Seis cifras, dos en Q0.00 porque no había costos, y una nota que lo explicaba.
+  - **La gráfica «Ingreso por día» no se veía**: las barras quedaban aplastadas en 2 px, en el teléfono y en la PC.
+  - Con la lectura caída, la pantalla mostraba Q0.00.
+  - El porcentaje por zona se calculaba sobre todo lo vendido.
+  - 2,190 px de alto.
+- **Finanzas, después** (1,366 px de alto, la cifra a 196 px):
+  - Una línea de periodo (7 · 30 · 90 días · Otro…) con «Descargar».
+  - «Vendiste del 20 oct al 18 nov» con la cifra, los pedidos, el ticket y la gráfica. La gráfica se lee al tocar una barra (`ChartReadout`).
+  - «¿Cuánto ganaste?» lleva a poner costos. Con costos a medias dice «Estimación parcial» y qué parte de lo vendido cuenta. Con todos: ganancia y margen, «antes de sueldos y gastos».
+  - Envíos y propinas van en una línea.
+  - «De dónde vino» junta canal, pago y zona en una tarjeta con pestañas; cada fila dice dinero, pedidos y porcentaje. Zona se mide contra lo vendido a domicilio, con una fila «Sin zona anotada» para el resto.
+  - «Lo que más vendiste» enseña cinco y el resto si se pide. «Por ganancia» solo existe si hay costos.
+  - En la PC, lo vendido va a la izquierda y la ganancia y el reparto a la derecha. En el DOM hay un solo orden, el del teléfono.
+- **Analítica, antes:**
+  - El mismo selector.
+  - El mapa de 24 horas había que deslizarlo de lado en el teléfono.
+  - Dos listas de diez, con ceros en rojo.
+  - Canal, pago y zona repetidos, contados en pedidos.
+  - 2,366 px de alto.
+- **Analítica, después** (1,038 px de alto):
+  - Tres cifras en una franja: pedidos, cancelados y minutos en preparar. Los cancelados van en ámbar desde el 10 %.
+  - El mapa se titula con la respuesta («Se llena el sábado a las 7 a. m.») y se recorta a las horas con pedidos, con la semana empezando el lunes.
+  - El tiempo de un domicilio va en una línea.
+  - «Tus platillos» tiene «Más pedidos» y «Sin pedidos». La segunda lista son solo los disponibles que nadie pidió, y cada uno abre su ficha en Menú.
+  - Canal, pago y zona se quedan en Finanzas.
+- **Lecturas:**
+  - `getSalesReport` devuelve `estado: 'error'` cuando el RPC falla (X20/PA-T16), y Finanzas pone el aviso de lectura.
+  - `getAnalytics` suma los platillos por `product_id` y usa el nombre de hoy, así que renombrar ya no parte el ranking (X19/PA-T14). Los vendidos sin id conservan el nombre del pedido.
+  - Nueva `sinPedidos`: los platillos disponibles con cero pedidos.
+  - El reporte en SQL (`leogin_sales_report`) sigue agrupando por nombre: es de la ficha 3.2.
+- **Atajos del periodo:** cuentan desde el día de negocio que calcula el servidor, no desde el reloj del aparato. Una fecha futura en la URL se corta a hoy.
+- **Comprobado en pantalla** a 390 px y 1280 px, claro y oscuro:
+  - Finanzas: 30 días; la pestaña Zona; «Otro…» del 1 al 15 nov; 7 días; la hoja «Descargar» (sin descargar); un rango sin ventas.
+  - Analítica: 30 días, «Sin pedidos» y sus enlaces, y un rango sin pedidos.
+  - Resumen sigue igual.
+- **No comprobado en pantalla:** la ganancia parcial y completa, porque los datos locales no tienen costos; la descarga real de Excel y PDF; el aviso de lectura caída. Tampoco hay una prueba con una persona.
+- **Validación:**
+  - `typecheck` y `lint` sin errores.
+  - 1,663 unitarias pasan, con una omitida.
+  - Nueva `rango-en-palabras.test.ts`: dice el año solo cuando no es el actual o cuando el rango cruza de año.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

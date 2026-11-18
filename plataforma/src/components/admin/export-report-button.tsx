@@ -1,6 +1,8 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
+import { HojaOperativa } from '@/components/ui/hoja-operativa';
+import s from './negocio.module.css';
 import { Icon } from '@/components/icons';
 import { useToastManager } from '@/components/ui/toast';
 import { exportSalesReportXlsx, getSalesReportData } from '@/lib/actions/finanzas';
@@ -12,9 +14,12 @@ import {
 } from '@/lib/documents/pdf';
 import { formatDocMoney, formatDateRangeLabel, longDate } from '@/lib/documents/format';
 
+/* «Descargar» (línea N, 2026-11-18): Excel y PDF juntos en una hoja,
+   cada uno diciendo para qué sirve. Antes eran dos botones fijos. */
 export default function ExportReportButton({
-  restaurantId, from, to,
-}: { restaurantId: string; from: string; to: string }) {
+  restaurantId, from, to, resumen,
+}: { restaurantId: string; from: string; to: string; resumen?: string }) {
+  const [hoja, setHoja] = useState(false);
   const [pendingXlsx, startXlsx] = useTransition();
   const [pendingPdf, startPdf] = useTransition();
   const toast = useToastManager();
@@ -33,6 +38,7 @@ export default function ExportReportButton({
       a.download = res.filename ?? 'reporte.xlsx';
       a.click();
       URL.revokeObjectURL(url);
+      setHoja(false);
       toast.add({ title: 'Excel descargado', type: 'success' });
     });
   }
@@ -110,33 +116,41 @@ export default function ExportReportButton({
 
       finalizePdf(doc, { branding, generatedAtLabel: longDate(new Date().toISOString()) });
       doc.save(`reporte-ventas-${r.from}_a_${r.to}.pdf`);
+      setHoja(false);
       toast.add({ title: 'PDF descargado', type: 'success' });
     });
   }
 
-  const btnStyle: React.CSSProperties = {
-    padding: '8px 14px', borderRadius: 'var(--radius-md)', border: 'none',
-    fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', cursor: 'pointer',
-  };
+  const ocupado = pendingXlsx || pendingPdf;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <button
-        onClick={downloadXlsx}
-        disabled={pendingXlsx}
-        className="press glass-quiet"
-        style={{ ...btnStyle, opacity: pendingXlsx ? 0.7 : 1, cursor: pendingXlsx ? 'not-allowed' : 'pointer' }}
-      >
-        {pendingXlsx ? '…' : <><Icon name="download" size={13} style={{ display: 'inline', verticalAlign: '-2px' }} /> Excel</>}
+    <>
+      <button type="button" className={s.descargar} aria-label="Descargar el reporte" onClick={() => setHoja(true)}>
+        <Icon name="download" size={18} />
+        <span>Descargar</span>
       </button>
-      <button
-        onClick={downloadPdf}
-        disabled={pendingPdf}
-        className="press glass-quiet"
-        style={{ ...btnStyle, opacity: pendingPdf ? 0.7 : 1, cursor: pendingPdf ? 'not-allowed' : 'pointer' }}
-      >
-        {pendingPdf ? '…' : <><Icon name="download" size={13} style={{ display: 'inline', verticalAlign: '-2px' }} /> PDF</>}
-      </button>
-    </div>
+      {hoja && (
+        <HojaOperativa
+          label="Descargar el reporte"
+          resumen={resumen ? <p className={s.nota}>{resumen}</p> : undefined}
+          className="hoja-negocio"
+          onClose={() => setHoja(false)}
+          footer={null}
+        >
+          <ul className={s.opciones} aria-busy={ocupado || undefined}>
+            <li>
+              <button type="button" className={s.opcion} disabled={ocupado} onClick={downloadXlsx}>
+                <span>{pendingXlsx ? 'Preparando el Excel…' : 'Excel, para tu contador'}</span><em>.xlsx</em>
+              </button>
+            </li>
+            <li>
+              <button type="button" className={s.opcion} disabled={ocupado} onClick={downloadPdf}>
+                <span>{pendingPdf ? 'Preparando el PDF…' : 'PDF, para imprimir o enviar'}</span><em>.pdf</em>
+              </button>
+            </li>
+          </ul>
+        </HojaOperativa>
+      )}
+    </>
   );
 }

@@ -1,0 +1,182 @@
+/* Finanzas y Analítica.
+   Línea N «nada saturado» (maqueta aprobada el 2026-11-18:
+   docs/diseno/MAQUETA_ANALITICA_FINANZAS_NADA_SATURADO_2026-11-18.html).
+   La respuesta arriba, un selector de periodo de una línea, nada en Q0.00 y
+   superficies sólidas. */
+
+.panel { display: flex; flex-direction: column; gap: 12px; max-width: 1040px; }
+
+.tarjeta {
+  background: var(--adm-card); border: 1px solid var(--adm-border);
+  border-radius: 18px; box-shadow: var(--adm-shadow-xs);
+}
+
+/* ── Selector de periodo ────────────────────────────────────── */
+.periodo { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 560px; }
+.segmentos { flex: 1 1 auto; min-width: 0; display: flex; gap: 2px; padding: 3px; border-radius: 14px; background: var(--surface-2); }
+.segmento {
+  flex: 1 1 0; min-width: 0; min-height: 42px; padding: 0 6px; border: 0; border-radius: 11px;
+  background: transparent; color: var(--u-text-2); font: inherit; font-size: 14px; font-weight: 500;
+  white-space: nowrap; cursor: pointer;
+  transition: background 150ms cubic-bezier(.22,1,.36,1), color 150ms cubic-bezier(.22,1,.36,1);
+}
+.segmento[aria-pressed='true'] { background: var(--adm-card); color: var(--u-text); font-weight: 600; box-shadow: var(--adm-shadow-xs), inset 0 0 0 1px var(--adm-border); }
+.segmento:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: 1px; }
+.segmento:disabled { cursor: progress; }
+@media (prefers-reduced-motion: reduce) { .segmento { transition: none; } }
+
+.descargar {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-width: 48px; min-height: 48px; padding: 0 12px; border-radius: 14px;
+  border: 1px solid var(--adm-border-2); background: var(--adm-card); color: var(--u-text);
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.descargar span { display: none; }
+@media (min-width: 1024px) { .descargar { padding: 0 16px; } .descargar span { display: inline; } }
+.descargar:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: 2px; }
+@media (hover: hover) { .descargar:hover { background: var(--adm-card-hover); } }
+
+/* ── Hojas ──────────────────────────────────────────────────── */
+.hojaCuerpo { display: flex; flex-direction: column; gap: 14px; }
+.nota { margin: 0; font-size: 13px; line-height: 1.45; color: var(--u-text-3); }
+.dos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: 13px; font-weight: 600; color: var(--u-text-2); }
+.error { margin: 0; font-size: 13px; color: var(--c-danger); }
+.opciones { list-style: none; margin: 0; padding: 0; border: 1px solid var(--adm-border); border-radius: 14px; overflow: hidden; background: var(--adm-card); }
+.opciones > li + li { border-top: 1px solid var(--adm-border); }
+.opcion {
+  display: flex; width: 100%; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px;
+  border: 0; background: transparent; color: var(--u-text); font: inherit; font-size: 15px; text-align: left; cursor: pointer;
+}
+.opcion > span { flex: 1; min-width: 0; }
+.opcion em { font-style: normal; font-size: 13px; color: var(--u-text-3); }
+.opcion:disabled { cursor: progress; color: var(--u-text-3); }
+.opcion:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: -2px; }
+@media (hover: hover) { .opcion:not(:disabled):hover { background: var(--adm-card-hover); } }
+
+/* ── Lo vendido, con su gráfica ─────────────────────────────── */
+.vendido { padding: 16px 16px 12px; }
+.clave { margin: 0; font-size: 13px; font-weight: 600; color: var(--u-text-3); }
+.cifra { margin: 2px 0 0; font-size: 32px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; color: var(--u-text); font-variant-numeric: tabular-nums; }
+.apoyo { margin: 4px 0 0; font-size: 13px; line-height: 1.45; color: var(--u-text-2); font-variant-numeric: tabular-nums; }
+.barras { display: flex; align-items: flex-end; gap: 2px; height: 96px; margin-top: 14px; }
+@media (min-width: 1024px) { .barras { height: 128px; gap: 3px; } }
+.columna { flex: 1 1 0; min-width: 0; height: 100%; display: flex; align-items: flex-end; cursor: pointer; }
+.barra { display: block; width: 100%; min-height: 2px; border-radius: 3px 3px 0 0; background: var(--chart-hi); }
+.barra[data-vacia] { background: var(--surface-2); }
+.columna[data-tip-on] .barra { background: var(--u-text); }
+.eje { display: flex; justify-content: space-between; margin-top: 4px; font-size: 12px; color: var(--u-text-3); }
+.lectura :global(.chart-readout) { margin-top: 6px; font-family: inherit; font-size: 13px; line-height: 18px; color: var(--u-text-2); font-variant-numeric: tabular-nums; }
+.columna[data-tip-on] { outline: none; }
+
+/* ── Cuánto ganaste ─────────────────────────────────────────── */
+.ganancia { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+.ganancia > div { flex: 1; min-width: 0; font-size: 14px; line-height: 1.45; color: var(--u-text); }
+.ganancia > div > span { display: block; font-size: 13px; color: var(--u-text-3); }
+.ganancia .monto { display: block; font-size: 20px; font-weight: 700; color: var(--u-text); font-variant-numeric: tabular-nums; }
+.ganancia .parcial {
+  display: inline-flex; width: fit-content; margin-top: 6px; padding: 2px 8px; border-radius: 999px;
+  background: var(--c-warn-bg); color: var(--c-warn); font-size: 12px; font-weight: 700;
+}
+.enlace {
+  flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 12px;
+  border: 1px solid var(--adm-border-2); background: var(--adm-card); color: var(--u-text);
+  font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap;
+}
+.enlace:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: 2px; }
+@media (hover: hover) { .enlace:hover { background: var(--adm-card-hover); } }
+
+.linea { margin: 0; padding: 0 4px; font-size: 14px; line-height: 1.45; color: var(--u-text-2); }
+.linea b { color: var(--u-text); font-variant-numeric: tabular-nums; }
+
+/* ── Tarjetas con lista ─────────────────────────────────────── */
+.bloque { padding: 14px 16px 8px; }
+.titulo { display: flex; align-items: baseline; gap: 8px; margin: 0 0 8px; font-size: 15px; font-weight: 700; color: var(--u-text); }
+.titulo span { margin-left: auto; font-size: 13px; font-weight: 500; color: var(--u-text-3); }
+.bloque .segmentos { margin-bottom: 6px; }
+
+.reparto { list-style: none; margin: 0; padding: 0; }
+.reparto li { display: grid; grid-template-columns: 1fr auto; gap: 1px 10px; padding: 10px 0; border-top: 1px solid var(--adm-border); }
+.reparto li:first-child { border-top: 0; }
+.reparto b { font-size: 14px; font-weight: 600; color: var(--u-text); min-width: 0; overflow-wrap: anywhere; }
+.reparto em { font-style: normal; font-size: 14px; font-weight: 600; text-align: right; color: var(--u-text); font-variant-numeric: tabular-nums; }
+.reparto span, .reparto small { font-size: 12px; color: var(--u-text-3); font-variant-numeric: tabular-nums; }
+.reparto small { text-align: right; }
+.medida { grid-column: 1 / -1; display: block; height: 4px; margin-top: 5px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.medida i { display: block; height: 100%; border-radius: 4px; background: var(--chart-hi); }
+
+.ranking { list-style: none; margin: 0; padding: 0; }
+.ranking li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: center; min-height: 48px; padding: 6px 0; border-top: 1px solid var(--adm-border); font-size: 14px; }
+.ranking li:first-child { border-top: 0; }
+.ranking .n { font-size: 12px; color: var(--u-text-3); font-variant-numeric: tabular-nums; }
+.ranking b { font-weight: 600; color: var(--u-text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ranking b small { display: block; font-size: 12px; font-weight: 500; color: var(--u-text-3); }
+.ranking em { font-style: normal; font-weight: 600; color: var(--u-text); text-align: right; font-variant-numeric: tabular-nums; }
+.ranking.sinNumero li { grid-template-columns: minmax(0, 1fr) auto; }
+.fila { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; color: var(--u-text); text-decoration: none; font-weight: 600; min-width: 0; }
+.fila span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fila:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: 2px; border-radius: 8px; }
+.ranking li:has(> .fila) { display: block; padding: 0; }
+.chevron { flex: none; color: var(--u-text-3); }
+
+.mas {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 2px; border: 0; background: none;
+  color: var(--brand-accent-ink); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.mas:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: 2px; border-radius: 8px; }
+
+.pildoras { display: flex; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.pildora {
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  min-height: 44px; padding: 0 14px; border-radius: var(--radius-md); border: 1px solid var(--adm-border-2);
+  background: var(--adm-bg-2); color: var(--u-text-2); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.pildora[aria-pressed='true'] { background: var(--u-text); color: var(--adm-bg); border-color: transparent; }
+.pildora:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: 2px; }
+.pildora em { font-style: normal; font-variant-numeric: tabular-nums; opacity: .75; font-weight: 500; }
+.vacio { margin: 0; padding: 4px 0 10px; font-size: 14px; line-height: 1.45; color: var(--u-text-3); }
+
+/* ── Analítica ──────────────────────────────────────────────── */
+.franja { display: grid; grid-template-columns: repeat(var(--celdas, 3), minmax(0, 1fr)); }
+.franja > div { padding: 12px 14px; border-left: 1px solid var(--adm-border); font-size: 12px; line-height: 1.35; color: var(--u-text-3); min-width: 0; }
+.franja > div:first-child { border-left: 0; }
+.franja b { display: block; font-size: 20px; font-weight: 700; letter-spacing: -.02em; color: var(--u-text); font-variant-numeric: tabular-nums; }
+.franja [data-alto] b { color: var(--c-warn); }
+
+.mapa { display: grid; gap: 3px; margin-top: 4px; }
+.mapa .hora { font-size: 11px; color: var(--u-text-3); text-align: center; font-variant-numeric: tabular-nums; }
+.mapa .dia { font-size: 11px; color: var(--u-text-2); align-self: center; }
+.celda { display: block; aspect-ratio: 1; max-height: 28px; border-radius: 3px; background: var(--surface-2); }
+.leyenda { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 10px; font-size: 12px; color: var(--u-text-3); }
+.leyenda i { display: block; width: 12px; height: 12px; border-radius: 3px; background: var(--surface-2); }
+
+/* ── PC ─────────────────────────────────────────────────────── */
+.columnas { display: grid; gap: 12px; align-items: start; }
+.columnas > div { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+@media (min-width: 1024px) {
+  .columnas { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+  .columnasMapa { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
+}
+
+/* Finanzas: un solo orden en el DOM (el del teléfono); en la PC, dos
+   columnas con lo vendido a la izquierda y la ganancia y el reparto a
+   la derecha. */
+.finanzas {
+  display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'vendido' 'ganancia' 'linea' 'origen' 'top';
+}
+.finanzas > div { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.finanzas > div:empty { display: none; }
+.aVendido { grid-area: vendido; }
+.aGanancia { grid-area: ganancia; }
+.aLinea { grid-area: linea; }
+.aOrigen { grid-area: origen; }
+.aTop { grid-area: top; }
+@media (min-width: 1024px) {
+  .finanzas {
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr auto auto;
+    grid-template-areas: 'vendido ganancia' 'vendido origen' 'linea origen' 'top origen';
+    align-items: start;
+  }
+}

@@ -1,38 +1,58 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
-import { getSalesReport, type Split } from '@/lib/db/reports';
+import { getSalesReport } from '@/lib/db/reports';
 import { can } from '@/lib/permissions';
-import DateRangeForm from '@/components/admin/date-range-form';
+import SelectorPeriodo from '@/components/admin/selector-periodo';
+import { rangoEnPalabras } from '@/lib/rango-en-palabras';
 import ExportReportButton from '@/components/admin/export-report-button';
+import AvisoLectura from '@/components/admin/aviso-lectura';
+import { DeDondeVino, LoMasVendido } from '@/components/admin/finanzas-tarjetas';
+import { ChartReadout } from '@/components/ui/chart-readout';
 import { fmtMoney } from '@/lib/money';
-import { Card } from '@/components/ui/card';
-import { Section } from '@/components/ui/section';
-import { Stat, StatGroup } from '@/components/ui/stat';
 import { EmptyState } from '@/components/ui/empty-state';
 import { panelLink } from '@/lib/panel-links-server';
 import { diaDeNegocio } from '@/lib/caja/dia';
 import { corteDelRestaurante } from '@/lib/db/dia-negocio';
+import s from '@/components/admin/negocio.module.css';
 
 export const metadata = { title: 'Finanzas – Panel admin' };
 
 /* ============================================================
    /admin/finanzas — el reporte del negocio
    ------------------------------------------------------------
-   Ingreso, utilidad, margen y mix de ventas en un rango.
+   Ingreso, ganancia, margen y mix de ventas en un rango. El arqueo
+   de caja vive en su propia pestaña (Caja) desde 2026-09-01.
 
-   Esta pantalla NO se rediseñó en 2026-09-01: funciona y el dueño
-   la conoce. Lo único que cambió es que el arqueo de caja se fue de
-   aquí. Vivía al final del scroll, como un formulario largo detrás
-   de siete tarjetas de números — y cerrar caja no es un apéndice de
-   un reporte: es la última tarea de todas las noches, la hace el
-   cajero y no el dueño. Ahora vive en su propia pestaña (Caja) y
-   aquí queda el enlace, para que quien lo buscaba donde siempre
-   estuvo lo encuentre.
+   Línea N «nada saturado» (maqueta aprobada el 2026-11-18,
+   docs/diseno/MAQUETA_ANALITICA_FINANZAS_NADA_SATURADO_2026-11-18.html):
+   - la respuesta arriba: «Vendiste Q…» con su gráfica por día, que
+     se lee al tocar una barra (antes las barras quedaban aplastadas
+     en 2 px y no se veía nada);
+   - un selector de periodo de una línea; Excel y PDF en «Descargar»;
+   - nada en Q0.00: sin costos se dice cómo ver la ganancia y con
+     costos a medias, «estimación parcial» y cuánto cubre (O06, PA-T17);
+     con la lectura caída sale el aviso, no ceros (X20);
+   - canal, pago y zona en una tarjeta; zona se mide contra lo vendido
+     a domicilio, no contra todo.
    ============================================================ */
 
 const money = (n: number) => fmtMoney(n);
+const pedidos = (n: number) => (n === 1 ? '1 pedido' : `${n.toLocaleString('es-GT')} pedidos`);
+const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'];
+/** «Vie 14 nov» */
+function diaLargo(ymd: string): string {
+  const d = new Date(`${ymd}T12:00:00Z`);
+  return `${DIAS[d.getUTCDay()]} ${d.getUTCDate()} ${MESES[d.getUTCMonth()]}`;
+}
+/** «14 nov» */
+function diaCorto(ymd: string): string {
+  const d = new Date(`${ymd}T12:00:00Z`);
+  return `${d.getUTCDate()} ${MESES[d.getUTCMonth()]}`;
+}
 
 /* «Hoy» es el día de NEGOCIO (migración 145): a la 1:30 el rango por
    omisión sigue siendo el de la noche que todavía no termina. */
@@ -86,155 +106,164 @@ export default async function AdminFinanzasPage({
     );
   }
 
-  const today = await todayInTz(timezone, restaurantId);
+  const hoy = await todayInTz(timezone, restaurantId);
   const sp = await searchParams;
-  const to = isYmd(sp.to) ? sp.to : today;
-  const from = isYmd(sp.from) ? sp.from : shiftYmd(to, -29);
+  const to = isYmd(sp.to) && sp.to <= hoy ? sp.to : hoy;
+  const from = isYmd(sp.from) && sp.from <= to ? sp.from : shiftYmd(to, -29);
 
-  const report = await getSalesReport(restaurantId, from, to, timezone);
+  const [report, costosHref] = await Promise.all([
+    getSalesReport(restaurantId, from, to, timezone),
+    panelLink('/admin/menu'),
+  ]);
+  const rango = rangoEnPalabras(from, to, hoy);
+
+  const selector = (
+    <SelectorPeriodo from={from} to={to} hoy={hoy} basePath="/admin/finanzas">
+      {report.estado !== 'error' && report.orders > 0 && (
+        <ExportReportButton
+          restaurantId={restaurantId}
+          from={from}
+          to={to}
+          resumen={`${rango.charAt(0).toUpperCase()}${rango.slice(1)} · ${pedidos(report.orders)}`}
+        />
+      )}
+    </SelectorPeriodo>
+  );
+
+  /* Con la lectura caída, los ceros dirían «no vendiste»: no se pintan
+     (auditoría 2026-11-03, X20/PA-T16). */
+  if (report.estado === 'error') {
+    return (
+      <div className={`${s.panel} anim-fade-up`}>
+        {selector}
+        <AvisoLectura estado="error" que="las ventas de estas fechas" noConcluir="No significa que no hayas vendido." sinDatos />
+      </div>
+    );
+  }
+
+  if (report.orders === 0) {
+    return (
+      <div className={`${s.panel} anim-fade-up`}>
+        {selector}
+        <div className={`${s.tarjeta} ${s.vendido}`}>
+          <p className={s.clave}>Sin ventas {rango}</p>
+          <p className={s.apoyo}>Elige otras fechas para ver lo que vendiste.</p>
+        </div>
+      </div>
+    );
+  }
 
   const maxRevenue = Math.max(...report.series.map((d) => d.revenue), 1);
+  const tip = (d: { date: string; revenue: number; orders: number }) =>
+    `${diaLargo(d.date)} · ${money(d.revenue)} · ${pedidos(d.orders)}`;
+  const ultimoConVenta = [...report.series].reverse().find((d) => d.revenue > 0);
+  const primero = report.series[0];
+  const ultimo = report.series.at(-1);
+
+  /* La ganancia de los platillos: sin costos no existe (no «Q0.00»); con
+     costos a medias es una estimación y se dice cuánto cubre. Costear
+     variantes, extras y empaque (F16/O06) queda para la ficha 3.2. */
+  const sinCostos = report.marginPct == null;
+  const cobertura = report.productRevenue > 0 ? report.costedRevenue / report.productRevenue : 0;
+  const parcial = !sinCostos && cobertura < 0.95;
+
+  const domicilio = report.byChannel.find((c) => c.key === 'DELIVERY')?.revenue ?? 0;
 
   return (
-    <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* Rango + export */}
-      <Card className="flex flex-col gap-3 p-4">
-        <DateRangeForm from={from} to={to} />
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <ExportReportButton restaurantId={restaurantId} from={from} to={to} />
+    <div className={`${s.panel} anim-fade-up`}>
+      {selector}
+
+      {/* Un solo orden en el DOM: el del teléfono (vendido, ganancia, la
+          línea, de dónde vino, platillos). En la PC la rejilla los pone
+          en dos columnas. */}
+      <div className={s.finanzas}>
+        <div className={s.aVendido}>
+            <section className={`${s.tarjeta} ${s.vendido}`} aria-labelledby="lo-vendido">
+              <h2 className={s.clave} id="lo-vendido">Vendiste {rango}</h2>
+              <p className={s.cifra}>{money(report.revenue)}</p>
+              <p className={s.apoyo}>{pedidos(report.orders)} · ticket promedio {money(report.avgTicket)}</p>
+              {report.series.length > 1 && (
+                <ChartReadout className={s.lectura} defaultTip={ultimoConVenta ? tip(ultimoConVenta) : undefined}>
+                  <div className={s.barras} role="img" aria-label={`Lo vendido por día ${rango}. Toca una barra para ver ese día.`}>
+                    {report.series.map((d) => (
+                      <div key={d.date} className={s.columna} data-tip={tip(d)}>
+                        <span
+                          className={s.barra}
+                          data-vacia={d.revenue > 0 ? undefined : ''}
+                          style={{ height: `${Math.max((d.revenue / maxRevenue) * 100, d.revenue > 0 ? 4 : 0)}%` }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className={s.eje} aria-hidden>
+                    <span>{primero ? diaCorto(primero.date) : ''}</span>
+                    <span>{ultimo ? diaCorto(ultimo.date) : ''}</span>
+                  </div>
+                </ChartReadout>
+              )}
+            </section>
         </div>
-      </Card>
-
-      <Section title="Resumen del rango">
-        <StatGroup>
-          <Stat label={`Ingreso (${report.orders} ${report.orders === 1 ? 'pedido' : 'pedidos'})`} value={money(report.revenue)} />
-          <Stat label={report.marginPct != null ? `Utilidad (margen ${report.marginPct.toFixed(0)}%)` : 'Utilidad (captura costos)'} value={money(report.profit)} />
-          <Stat label="Costo de lo vendido" value={money(report.cost)} />
-          <Stat label="Ticket promedio" value={money(report.avgTicket)} />
-          <Stat label="Envíos" value={money(report.deliveryRevenue)} />
-          <Stat label={report.tips > 0 ? 'Propinas (incluidas en el ingreso)' : 'Propinas'} value={money(report.tips)} />
-        </StatGroup>
-      </Section>
-
-      {/* La venta no se borra al devolver (migración 145): el dinero que
-          salió se cuenta aparte, el día en que salió. */}
-      {report.refunds > 0 && (
-        <Card className="p-3.5" style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
-          Se devolvieron <strong>{money(report.refunds)}</strong> a clientes en{' '}
-          {report.refundOrders === 1 ? 'un pedido' : `${report.refundOrders} pedidos`} durante este rango.
-          El ingreso no los resta: la venta sigue registrada y el dinero salió el día de la devolución.
-        </Card>
-      )}
-
-      {report.marginPct == null && report.orders > 0 && (
-        <Card className="p-3.5" style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
-          Aún no hay costos capturados en tus platillos: la utilidad y el margen aparecerán
-          cuando pongas el <strong>Costo</strong> en el editor de cada platillo.
-        </Card>
-      )}
-
-      {/* Con costos a medias, «Utilidad Q34.50 (margen 48 %)» junto a un
-          ingreso de Q2,794 se lee como que el negocio gana Q34. Es la utilidad
-          de los platillos que SÍ tienen costo, y hay que decirlo con la cifra
-          (auditoría 2026-10-02, NEG-01). */}
-      {report.marginPct != null && report.productRevenue > 0 && report.costedRevenue < report.productRevenue * 0.95 && (
-        <Card className="p-3.5" style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
-          La utilidad y el margen solo cuentan los platillos que tienen costo cargado:{' '}
-          <strong>{money(report.costedRevenue)}</strong> de <strong>{money(report.productRevenue)}</strong> vendidos
-          ({Math.round((report.costedRevenue / report.productRevenue) * 100)}%). Pon el <strong>Costo</strong> en
-          el resto de tus platillos para ver la utilidad completa.
-        </Card>
-      )}
-
-      {/* Gráfica diaria */}
-      <Card className="flex flex-col gap-3.5 p-4.5">
-        <div className="adm-label">Ingreso por día</div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 120 }}>
-          {report.series.map((d, i) => {
-            const h = (d.revenue / maxRevenue) * 100;
-            return (
-              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0 }}>
-                <div
-                  title={`${d.label}: ${money(d.revenue)} · ${d.orders} ${d.orders === 1 ? 'pedido' : 'pedidos'}`}
-                  style={{
-                    width: '100%', height: `${Math.max(h, d.revenue > 0 ? 5 : 1.5)}%`, minHeight: 2,
-                    borderRadius: '3px 3px 0 0',
-                    background: d.revenue > 0 ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)',
-                  }}
-                />
-              </div>
-            );
-          })}
+        <div className={s.aGanancia}>
+            <div className={`${s.tarjeta} ${s.ganancia}`}>
+              {sinCostos ? (
+                <>
+                  <div>¿Cuánto ganaste?<span>Pon el costo de tus platillos y aquí verás la ganancia.</span></div>
+                  <Link className={s.enlace} href={costosHref}>Poner costos</Link>
+                </>
+              ) : parcial ? (
+                <div>
+                  Ganaste unos
+                  <b className={s.monto}>{money(report.profit)}</b>
+                  <span>
+                    Solo cuenta {money(report.costedRevenue)} de lo vendido ({Math.round(cobertura * 100)} %): el resto de tus platillos no tiene costo.
+                  </span>
+                  <span className={s.parcial}>Estimación parcial</span>
+                </div>
+              ) : (
+                <div>
+                  Ganaste
+                  <b className={s.monto}>{money(report.profit)}</b>
+                  <span>Margen {(report.marginPct ?? 0).toFixed(0)} % · costo de lo vendido {money(report.cost)} · antes de sueldos y gastos</span>
+                </div>
+              )}
+            </div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--u-text-4)' }}>
-          <span>{report.series[0]?.label}</span>
-          <span>{report.series[report.series.length - 1]?.label}</span>
-        </div>
-      </Card>
+        <div className={s.aLinea}>
+            {(report.deliveryRevenue > 0 || report.tips > 0) && (
+              <p className={s.linea}>
+                Incluye{' '}
+                {report.deliveryRevenue > 0 && <><b>{money(report.deliveryRevenue)}</b> de envíos</>}
+                {report.deliveryRevenue > 0 && report.tips > 0 && ' y '}
+                {report.tips > 0 && <><b>{money(report.tips)}</b> de propinas</>}.
+              </p>
+            )}
 
-      {/* Mix de ventas */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-        <SplitCard title="Por canal" rows={report.byChannel} total={report.revenue} />
-        <SplitCard title="Por método de pago" rows={report.byPayment} total={report.revenue} />
-        {report.byZone.length > 0 && <SplitCard title="Por zona de entrega" rows={report.byZone} total={report.revenue} />}
+            {/* La venta no se borra al devolver (migración 145): el dinero que
+                salió se cuenta aparte, el día en que salió. */}
+            {report.refunds > 0 && (
+              <p className={s.linea}>
+                Se devolvieron <b>{money(report.refunds)}</b> en {pedidos(report.refundOrders)}. No se restan de lo vendido: el dinero salió el día de la devolución.
+              </p>
+            )}
+        </div>
+        <div className={s.aOrigen}>
+            <DeDondeVino
+              canal={report.byChannel}
+              pago={report.byPayment}
+              zona={report.byZone}
+              total={report.revenue}
+              totalDomicilio={domicilio}
+            />
+        </div>
+        <div className={s.aTop}>
+            {report.topByRevenue.length > 0 && (
+              <LoMasVendido
+                porIngreso={report.topByRevenue.map(({ name, qty, revenue, profit }) => ({ name, qty, revenue, profit }))}
+                porGanancia={report.topByProfit.map(({ name, qty, revenue, profit }) => ({ name, qty, revenue, profit }))}
+              />
+            )}
+        </div>
       </div>
-
-      {/* Top productos */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
-        <ProductTable title="Más vendidos (por ingreso)" rows={report.topByRevenue.map((p) => ({ name: p.name, a: `${p.qty}`, b: money(p.revenue) }))} colA="Cant." colB="Ingreso" />
-        {report.topByProfit.length > 0 && (
-          <ProductTable title="Más rentables (por utilidad)" rows={report.topByProfit.map((p) => ({ name: p.name, a: `${p.qty}`, b: money(p.profit) }))} colA="Cant." colB="Utilidad" />
-        )}
-      </div>
-
     </div>
-  );
-}
-
-function SplitCard({ title, rows, total }: { title: string; rows: Split[]; total: number }) {
-  return (
-    <Card className="flex flex-col gap-3 p-4.5">
-      <div className="adm-label">{title}</div>
-      {rows.length === 0 ? (
-        <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
-      ) : rows.map((r) => {
-        const pct = total > 0 ? (r.revenue / total) * 100 : 0;
-        return (
-          <div key={r.key} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-              <span style={{ color: 'var(--u-text-2)' }}>{r.label}</span>
-              <span style={{ color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{money(r.revenue)} · {pct.toFixed(0)}%</span>
-            </div>
-            <div style={{ height: 6, borderRadius: 'var(--radius-full)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', overflow: 'hidden' }}>
-              <div style={{ width: `${pct}%`, height: '100%', background: 'var(--brand-accent)', borderRadius: 'var(--radius-full)' }} />
-            </div>
-          </div>
-        );
-      })}
-    </Card>
-  );
-}
-
-function ProductTable({ title, rows, colA, colB }: { title: string; rows: { name: string; a: string; b: string }[]; colA: string; colB: string }) {
-  return (
-    <Card className="flex flex-col gap-2 p-4.5">
-      <div className="adm-label">{title}</div>
-      {rows.length === 0 ? (
-        <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
-      ) : (
-        <>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 56px 90px', gap: 8, fontSize: 11, color: 'var(--u-text-4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            <span>Platillo</span><span style={{ textAlign: 'right' }}>{colA}</span><span style={{ textAlign: 'right' }}>{colB}</span>
-          </div>
-          {rows.map((r, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 56px 90px', gap: 8, fontSize: 13, padding: '5px 0', borderTop: i > 0 ? '1px solid var(--u-hair)' : 'none' }}>
-              <span style={{ color: 'var(--u-text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
-              <span style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>{r.a}</span>
-              <span style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text)' }}>{r.b}</span>
-            </div>
-          ))}
-        </>
-      )}
-    </Card>
   );
 }

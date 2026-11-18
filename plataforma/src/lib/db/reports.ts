@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { corteDelRestaurante } from '@/lib/db/dia-negocio';
 import { labelOf } from '@/lib/payment-method';
+import type { EstadoLectura } from '@/lib/db/lectura';
 
 /* ============================================================
    REPORTES FINANCIEROS — Fase A (Admin Pro)
@@ -59,6 +60,9 @@ export interface SalesReport {
   byZone: Split[];
   topByRevenue: ReportProduct[];
   topByProfit: ReportProduct[];
+  /** «error» cuando la lectura falló: los ceros de arriba NO dicen que no
+      se vendió (auditoría 2026-11-03, X20). Sin el campo, es una lectura buena. */
+  estado?: EstadoLectura;
 }
 
 const CHANNEL_LABEL: Record<string, string> = {
@@ -67,7 +71,8 @@ const CHANNEL_LABEL: Record<string, string> = {
   DINE_IN: 'Comer en local',
 };
 
-const EMPTY = (from: string, to: string): SalesReport => ({
+const EMPTY = (from: string, to: string, estado?: EstadoLectura): SalesReport => ({
+  ...(estado ? { estado } : {}),
   from, to, orders: 0, revenue: 0, productRevenue: 0, deliveryRevenue: 0, tips: 0,
   cost: 0, profit: 0, marginPct: null, costedRevenue: 0, avgTicket: 0, refunds: 0, refundOrders: 0,
   series: [], byChannel: [], byPayment: [], byZone: [], topByRevenue: [], topByProfit: [],
@@ -202,7 +207,10 @@ export async function getSalesReport(
     }));
   }
 
-  if (error || !data) return EMPTY(from, to);
+  if (error || !data) {
+    if (error) console.error('[reports]', error.code ?? '', error.message ?? '');
+    return EMPTY(from, to, 'error');
+  }
 
   return buildSalesReport(from, to, data as RawSalesReport);
 }
