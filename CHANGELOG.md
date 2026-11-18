@@ -6,6 +6,8 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+- Auditoría del menú digital con las ocho estructuras en móvil y escritorio, recorridos de compra, prueba de volumen y propuestas para conectar las publicaciones del restaurante con sus platillos. [Informe y evidencia visual](docs/auditorias/AUDITORIA_MENU_DIGITAL_2026-11-18.md).
+
 ## v0.24.0 · 2026-11-17 · Ola 2: arranque y autonomía
 PR #135 (merge `a89d7ca`), que junta #125–#128 y #130–#134 · migraciones 184, 185 y 186 · en producción el 2026-11-17 (`prod-2026-11-17`). El dueño corrió las tres antes del despliegue.
 - **Alta hasta el primer valor** (ficha 2.3; rama `feat/alta-primer-valor`; maqueta aprobada `docs/diseno/MAQUETA_ALTA_PRIMER_VALOR_2026-11-16.html`) · sin migraciones:

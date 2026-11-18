@@ -14,6 +14,8 @@
 
 Documentos técnicos que viven pegados al código: [`../plataforma/docs/`](../plataforma/docs/) (offline, FEL, Google Auth, pagos, Leogin Desktop, estrategia instalable).
 
+Para trabajar la presentación y venta de la carta, consulta la [auditoría del menú digital del 18 de noviembre](auditorias/AUDITORIA_MENU_DIGITAL_2026-11-18.md).
+
 ## Convenciones de nombre
 
 - `PLAN_<TEMA>_<AAAA-MM-DD>.md` — planes. La fecha es la de creación.
