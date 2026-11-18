@@ -1108,6 +1108,43 @@ A pedido del dueño, las fichas 2.3–2.10 y el CHANGELOG de v0.23.0 se juntaron
   - `typecheck`, `lint` y la auditoría de candados RLS sin hallazgos.
   - 1,674 unitarias pasan, con una omitida; las nuevas son `cola.test.ts` y `totp.test.ts`.
 
+## 54. Web pública sin saturar · línea N + fichas V.1–V.3 (2026-11-18)
+
+**Rama** `feat/web-publica-nada-saturado`, apilada sobre `feat/superadmin-nada-saturado`. [Maqueta](../diseno/MAQUETA_WEB_PUBLICA_NADA_SATURADO_2026-11-18.html) aprobada con sus cinco recomendaciones. Sin migración. **Con esto termina la línea N.**
+
+**Portada: de 13 a 7 bloques.** En el teléfono pasa de 16,577 a 7,459 px.
+1. **Titular y video.** Se quedan los aprobados. La acción principal es «Probar la demo» (`LandingDemo primaria`) y la segunda, «Crear mi restaurante». Debajo, no dentro del botón: «La carta con QR es gratis para siempre. Los pedidos van con un plan.»
+2. **¿Cuál es tu caso? (V.2).** Tres casos, cada uno con su plan y su precio: mesas y meseros → Premium, cafetería o mostrador → Estándar, vendo por redes → En línea (lleva a /vende-en-linea). Más una línea «¿Solo quieres tu carta con QR? Básico, gratis». Los precios quedan a unos 900 px; antes estaban a 12,100.
+3. **Pídelo tú mismo**, la demo.
+4. **La escena «del caos al control».** Se desvía de la maqueta: el bloque de «tres momentos» no se dibujó como tarjetas nuevas. Se reutilizó la escena aprobada, que ya cuenta el pedido, la cocina y el cierre.
+5. **¿Qué plan te conviene? (V.3).** Se elige con «¿Cómo te piden?» y, si es para llevar, «¿Más de 300 pedidos al mes?». Debajo, los cuatro planes en una tarjeta, con el precio en una sola línea.
+6. **Preguntas frecuentes.** Ahora también responden cómo se verá la carta, qué pasa al crecer y qué pasa sin internet.
+7. **Cierre.**
+
+Salieron de la portada la tira de cifras, el panel, la vitrina de diseños, «sin internet», el bento de funciones, «para quién» y «cómo se empieza».
+
+**La misma regla que el alta.** `planParaTuCaso` (lib/alta.ts, con pruebas) usa `planSugerido` y agrega dos casos: mostrador → Estándar, y para llevar con más de 300 pedidos → Estándar. El componente común `PlanPorPreguntas` sale en la portada y en /planes. Si recomienda En línea, guarda el perfil `en-linea` para el alta, igual que hacía su tarjeta.
+
+**/planes.** Pasa de 7,302 a 4,014 px en el teléfono. Un titular y la pregunta. «Lo que incluye Premium» y «Ver todo lado a lado» quedan plegados.
+
+**Textos que prometían de más.** La lealtad ya no «canjea por descuentos al pagar» (`lib/modules.ts`): ahora los puntos se cambian por premios del catálogo. La pregunta de varias sucursales apunta a Mi cuenta. En el encabezado, el pie y el menú del teléfono, «Funciones» (llevaba al bento que salió) pasa a «Tu caso» / «Elige tu caso».
+
+**Comprobado en pantalla** a 390 px y 1280 px; la web solo tiene tema claro:
+- En la portada: los tres casos y las respuestas «llevar» → En línea, «más de 300» → Estándar y «mesas» → Premium.
+- En /planes: la pregunta, la lista y abrir lo plegado.
+- El menú del encabezado.
+- El HTML que sirve el servidor, después de reiniciar el dev server: los avisos de hidratación eran de la versión anterior en caché.
+
+**No comprobado:**
+- La demo en sí, que no cambió.
+- Una prueba con prospectos: la meta de V.1 es que 8 de 10 expliquen qué hace Leogin.
+- Medir «demo empezada» y «plan sugerido elegido» (F06), que espera a que se encienda la analítica.
+
+**Validación:**
+- `typecheck` y `lint` sin errores.
+- 1,677 unitarias pasan, con una omitida.
+- La prueba e2e `planes.spec.ts` ahora abre la tabla plegada antes de revisarla; no se corrió en local.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

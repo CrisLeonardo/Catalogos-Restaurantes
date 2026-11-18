@@ -2,12 +2,13 @@ import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { conEvento, EVENTOS } from '@/lib/analytics';
 import { SiteHeader, SiteFooter, SectionHead, contactHref, CONTACT_ICON } from '@/components/site-chrome';
-import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceLabel, PLAN_ACCENT, PLAN_ACCENT_INK, publicPlanCapabilities, planPresentation, planGrowthCopy, planComparisonCopy } from '@/lib/plans';
+import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceLabel, planPriceQ, PLAN_ACCENT_INK, publicPlanCapabilities, planPresentation, planGrowthCopy, planComparisonCopy } from '@/lib/plans';
 import type { PlanPricing } from '@/lib/plans';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { fmtMoney } from '@/lib/money';
-import { CtaEnLinea } from '@/components/en-linea/cta-en-linea';
+import { PlanPorPreguntas, type PlanDeLaWeb } from '@/components/landing-planes';
+import type { PlanAlta } from '@/lib/alta';
 
 export const metadata = {
   title: 'Planes y precios — Leogin',
@@ -51,6 +52,21 @@ function buildFaqs(pricing: PlanPricing) {
         : 'El plan Básico es gratis para siempre: con él ya tienes tu menú digital con QR y puedes conocer Leogin sin pagar. Los planes con pedidos se cobran desde que los activas, sin contrato: puedes cancelar cuando quieras.',
     },
   ];
+}
+
+/* Una línea por plan para «¿qué plan te conviene?» (la misma que la portada). */
+function planesDeLaWeb(pricing: PlanPricing): PlanDeLaWeb[] {
+  return PUBLIC_PLANS.map((code) => {
+    const gratis = pricing.prices[code] === 0;
+    const puntos = planPresentation({ plan: code, pricing }).points.filter((p) => p.positive).map((p) => p.text);
+    return {
+      code: code as PlanAlta,
+      nombre: PLANS[code].name,
+      precio: gratis ? 'Gratis' : planPriceQ(pricing, code),
+      gratis,
+      resumen: puntos.slice(0, 2).join(' · '),
+    };
+  });
 }
 
 function fmtQ(n: number) {
@@ -104,104 +120,15 @@ export default async function PlanesPage() {
           Precio fijo. <span style={{ color: 'var(--brand-accent-ink)' }}>Nunca</span> un % de tus ventas
         </h1>
         <p className="lp-lead" style={{ margin: '18px auto 0', maxWidth: 600 }}>
-          Eliges plan por las funciones que necesitas, no por cuánto vendes. Cada plan ya trae
-          definido lo suyo, sin ir encendiendo funciones una por una. Sin tope de ventas, sin comisión
-          por pedido y sin cobros sorpresa.
+          Eliges plan por cómo trabajas, no por cuánto vendes: sin comisión por pedido y sin cobros sorpresa.
         </p>
-        <div style={{ marginTop: 28, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <Link href="/registro" {...conEvento('lp-btn lp-btn-primary', EVENTOS.clicCrear, 'planes arriba')}>
-            Empieza gratis · sin tarjeta
-          </Link>
-          <a href="#comparativa" className="lp-btn lp-btn-soft">
-            Ver comparativa
-          </a>
-        </div>
       </section>
 
-      {/* Tarjetas de los planes */}
+      {/* ¿Qué plan te conviene? (V.3, línea N 2026-11-18): la pregunta marca
+          el plan y los cuatro caben en una tarjeta con el precio en una
+          línea. Antes eran cuatro tarjetas largas que había que leer enteras. */}
       <section style={{ maxWidth: 1100, margin: '0 auto', padding: '0 18px 24px' }}>
-        {/* Cuatro planes: 4, 2 o 1 columna (lp-cols-4). Con auto-fit salían
-            tres arriba y Premium huérfano abajo en anchos medianos. */}
-        <div className="lp-cols-4" style={{ gap: 20, alignItems: 'start' }}>
-          {PUBLIC_PLANS.map((code) => {
-            const p = PLANS[code];
-            const accent = PLAN_ACCENT[code];
-            const contract = planPresentation({ plan: code, pricing });
-            return (
-              <div
-                key={code}
-                className="lp-card"
-                style={{
-                  padding: '26px 22px',
-                  display: 'flex', flexDirection: 'column', gap: 18,
-                  ...(p.highlight
-                    ? { border: `1.5px solid ${accent}`, boxShadow: 'var(--lp-shadow-lg)' }
-                    : {}),
-                }}
-              >
-                {p.badge && (
-                  <div style={{
-                    position: 'absolute', top: -11, left: '50%', transform: 'translateX(-50%)',
-                    fontSize: 9.5, fontWeight: 800, letterSpacing: '0.1em', padding: '5px 14px',
-                    borderRadius: 99, whiteSpace: 'nowrap',
-                    background: p.highlight ? accent : '#fff',
-                    color: p.highlight ? '#fff' : PLAN_ACCENT_INK[code],
-                    border: p.highlight ? 'none' : `1px solid color-mix(in srgb, ${accent} 34%, transparent)`,
-                    boxShadow: 'var(--lp-shadow-sm)',
-                  }}>
-                    {p.badge}
-                  </div>
-                )}
-
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--u-text)', fontFamily: 'var(--font-display)' }}>{p.name}</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 4, lineHeight: 1.4 }}>{p.tagline}</div>
-                </div>
-
-                <div>
-                  <div style={{ fontSize: 32, fontWeight: 800, color: accent, fontFamily: 'var(--font-display)', lineHeight: 1 }}>
-                    {planPriceLabel(pricing, code)}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 5 }}>
-                    {contract.policy}
-                  </div>
-                </div>
-
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 9 }}>
-                  {contract.points.map(({ text: label, positive: ok }) => (
-                    <li key={label} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13.5 }}>
-                      <span style={{ color: ok ? 'var(--c-ok)' : 'var(--u-text-4)', flexShrink: 0 }}>
-                        <Icon name={ok ? 'check' : 'x'} size={15} />
-                      </span>
-                      <span style={{ color: ok ? 'var(--u-text-2)' : 'var(--u-text-4)' }}>{label}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* En línea deja el alta armada para vender en línea (perfil
-                    'en-linea', ver lib/perfil-negocio.ts), igual que su página. */}
-                {code === 'EN_LINEA' ? (
-                  <CtaEnLinea className="lp-btn lp-btn-soft" lugar="planes" style={{ width: '100%', marginTop: 'auto' }}>
-                    Elegir {p.name}
-                  </CtaEnLinea>
-                ) : (
-                  <Link
-                    href="/registro"
-                    {...conEvento(`lp-btn ${p.highlight ? '' : 'lp-btn-soft'}`, EVENTOS.clicCrear, `planes ${p.name}`)}
-                    style={{
-                      width: '100%', marginTop: 'auto',
-                      ...(p.highlight
-                        ? { background: accent, color: '#fff', boxShadow: `0 8px 22px color-mix(in srgb, ${accent} 28%, transparent)` }
-                        : {}),
-                    }}
-                  >
-                    {code === 'BASICO' ? 'Empezar con Básico' : `Elegir ${p.name}`}
-                  </Link>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        <PlanPorPreguntas planes={planesDeLaWeb(pricing)} origen="planes" />
       </section>
 
       {/* Nota de uso justo */}
@@ -217,13 +144,12 @@ export default async function PlanesPage() {
       </section>
 
       {/* Lo que incluye Premium */}
-      <section style={{ maxWidth: 1100, margin: '0 auto', padding: '0 18px 56px' }}>
-        <SectionHead
-          eyebrow="Incluido en Premium"
-          title="Todas estas herramientas, en un solo precio fijo"
-          lead="Sin encender funciones una por una ni pagar aparte por cada cosa: Premium las trae todas."
-        />
-        <div style={{ height: 26 }} />
+      <section style={{ maxWidth: 1100, margin: '0 auto', padding: '0 18px 16px' }}>
+        <details className="lp-incluye">
+          <summary className="lp-btn lp-btn-soft">
+            Lo que incluye Premium <Icon name="chevronDown" size={16} />
+          </summary>
+          <div style={{ height: 14 }} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 14 }}>
           {ACTIVATABLE_MODULES.filter((m) => INCLUDED_MODULES.PREMIUM.includes(m.key)).map((m) => (
             <div key={m.key} className="lp-card lp-card-lift" style={{ borderRadius: 18, padding: '17px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -235,12 +161,16 @@ export default async function PlanesPage() {
             </div>
           ))}
         </div>
+        </details>
       </section>
 
       {/* Tabla de comparación completa */}
       <section id="comparativa" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 18px 64px' }}>
-        <SectionHead eyebrow="Comparativa" title="Todo lado a lado" />
-        <div style={{ height: 26 }} />
+        <details className="lp-incluye">
+          <summary className="lp-btn lp-btn-soft">
+            Ver todo lado a lado <Icon name="chevronDown" size={16} />
+          </summary>
+          <div style={{ height: 14 }} />
         <div className="lp-card" style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5, minWidth: 620 }}>
             <thead>
@@ -304,6 +234,7 @@ export default async function PlanesPage() {
             </tbody>
           </table>
         </div>
+        </details>
       </section>
 
       {/* Franquicias / multisucursal */}

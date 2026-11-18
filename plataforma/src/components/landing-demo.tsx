@@ -23,7 +23,10 @@ import { fmtMoney } from '@/lib/money';
  *
  * El QR se dibuja aquí y no en el servidor: lleva la sala, que es de cada
  * visita. `qrcode` se carga al abrir, no con la portada. */
-export function LandingDemo({ href }: { href: string }) {
+/* `primaria` (línea N, V.1, 2026-11-18): en la portada probar la demo es
+   la acción principal, con el mismo texto en teléfono y en PC. */
+export function LandingDemo({ href, primaria = false }: { href: string; primaria?: boolean }) {
+  const estilo = primaria ? 'lp-btn-primary' : 'lp-btn-soft';
   const ref = useRef<HTMLDialogElement>(null);
   const [sala, setSala] = useState<string | null>(null);
   const [qr, setQr] = useState<string | null>(null);
@@ -53,16 +56,16 @@ export function LandingDemo({ href }: { href: string }) {
 
   return (
     <>
-      <a href={href} className="lp-btn lp-btn-lg lp-btn-soft lp-demo-movil">
-        <Icon name="grid" size={16} /> Ver demo en vivo
+      <a href={href} className={`lp-btn lp-btn-lg ${estilo} lp-demo-movil`}>
+        {primaria ? 'Probar la demo' : <><Icon name="grid" size={16} /> Ver demo en vivo</>}
       </a>
       <button
         type="button"
-        className="lp-btn lp-btn-lg lp-btn-soft lp-demo-pc"
+        className={`lp-btn lp-btn-lg ${estilo} lp-demo-pc`}
         onClick={abrir}
         aria-haspopup="dialog"
       >
-        <Icon name="phone" size={16} /> Haz un pedido de prueba
+        {primaria ? 'Probar la demo' : <><Icon name="phone" size={16} /> Haz un pedido de prueba</>}
       </button>
 
       <dialog
