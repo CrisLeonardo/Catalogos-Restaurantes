@@ -460,7 +460,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
 
             <Section title="Estilo de tarjetas (glass)">
               <Note>
-                Las tarjetas de producto, el carrito y los modales usan este estilo de cristal.
+                Las tarjetas de platillo, el carrito y los modales usan este estilo de cristal.
               </Note>
               <Segmented
                 label="Estilo"
@@ -571,12 +571,12 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
 
               {config.cardStyle === 'texto' ? (
                 <Note>
-                  La forma «Texto» no muestra ninguna imagen, así que el arte de productos no
+                  La forma «Texto» no muestra ninguna imagen, así que el arte de platillos no
                   aplica aquí.
                 </Note>
               ) : (
                 <Segmented
-                  label="Arte de productos"
+                  label="Arte de platillos"
                   value={config.productArt}
                   options={[['auto', 'Auto (foto o patrón)'], ['pattern', 'Solo patrón'], ['photo', 'Solo foto']]}
                   onChange={(v) => setC('productArt', v as ThemeConfig['productArt'])}
@@ -585,12 +585,12 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
             </Section>
 
             <Section title="Elementos visibles">
-              <Toggle label="Buscador de productos" value={config.showSearch} onChange={(v) => setC('showSearch', v)} />
+              <Toggle label="Buscador de platillos" value={config.showSearch} onChange={(v) => setC('showSearch', v)} />
               <Toggle label="Íconos de categoría" value={config.showCategoryIcons} onChange={(v) => setC('showCategoryIcons', v)} />
               <Toggle label="Etiquetas (Picante, Nuevo, Veggie…)" value={config.showTags} onChange={(v) => setC('showTags', v)} />
               <Toggle label="Favoritos como tarjeta destacada" value={config.featuredFavorites} onChange={(v) => setC('featuredFavorites', v)} />
               <Note>
-                Los productos con etiqueta «Favorito» o «Destacado» se muestran en grande, a todo lo ancho
+                Los platillos con etiqueta «Favorito» o «Destacado» se muestran en grande, a todo lo ancho
                 (máximo 3), para guiar al cliente hacia tus platillos estrella.
               </Note>
               <Toggle label="Sugerir acompañamientos («Acompáñalo con…»)" value={config.suggestPairings} onChange={(v) => setC('suggestPairings', v)} />
@@ -618,7 +618,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               <Toggle label="Modo lanzamiento (drop)" value={config.launchMode} onChange={(v) => setC('launchMode', v)} />
               <Note>
                 Para quien vende por ediciones: la portada Vitrina anuncia la edición con su cuenta
-                regresiva y cada producto lleva su número (Nº 01 / 06). Apágalo si vendes todos los días.
+                regresiva y cada platillo lleva su número (Nº 01 / 06). Apágalo si vendes todos los días.
               </Note>
               {config.launchMode && (
                 <>
@@ -675,7 +675,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 />
               )}
               <Note>
-                Muestra «¡Solo quedan 4!» en los productos que llevan inventario. El cliente solo ve el
+                Muestra «¡Solo quedan 4!» en los platillos que llevan inventario. El cliente solo ve el
                 número cuando ya quedan pocas; tu inventario completo no sale del panel.
               </Note>
             </Section>
@@ -687,7 +687,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               <TextCtl label="Mensaje cuando no hay resultados" value={content.catalog.empty} onChange={(v) => setT('catalog', 'empty', v)} />
             </Section>
 
-            <Section title="Etiquetas de producto">
+            <Section title="Etiquetas de platillo">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <TextCtl label="Picante" value={content.tags.hot} onChange={(v) => setT('tags', 'hot', v)} />
                 <TextCtl label="Nuevo" value={content.tags.new} onChange={(v) => setT('tags', 'new', v)} />
@@ -750,7 +750,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 ['badgeOpen', 'Etiqueta «Abierto»'],
                 ['badgeClosed', 'Etiqueta «Cerrado»'],
               ]],
-              ['product', 'Producto', [
+              ['product', 'Platillo', [
                 ['add', 'Botón "Agregar"'],
                 ['soldOut', 'Agotado'],
                 ['chooseOne', 'Opción obligatoria'],
@@ -908,7 +908,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
 const NAV_HINT: Record<string, string> = {
   chips: 'Píldoras arriba que filtran una categoría a la vez. Es la vista de siempre.',
   secciones: 'Toda la carta de corrido, una sección por categoría, con un índice que se queda pegado arriba.',
-  acordeon: 'Categorías plegadas: se abre una a la vez. Para cartas con muchísimos productos.',
+  acordeon: 'Categorías plegadas: se abre una a la vez. Para cartas con muchísimos platillos.',
   portadas: 'El menú arranca eligiendo sección en tarjetas grandes, como una app de comida.',
 };
 
@@ -918,7 +918,7 @@ const CARD_HINT: Record<string, string> = {
   texto: 'Carta impresa: sin imágenes, nombre y precio unidos por una línea de puntos.',
   mosaico: 'Tarjetas de alturas desiguales que encajan como una revista.',
   carrusel: 'Cada categoría es una fila que se desliza de lado.',
-  pieza: 'Un producto por pantalla: foto enorme, nombre de cartel y un botón grande. Para vender con la pura vista.',
+  pieza: 'Un platillo por pantalla: foto enorme, nombre de cartel y un botón grande. Para vender con la pura vista.',
 };
 
 const PORTADA_HINT: Record<string, string> = {
@@ -926,7 +926,7 @@ const PORTADA_HINT: Record<string, string> = {
   poster: 'El nombre enorme alineado a la izquierda, como un cartel.',
   stack: 'Logo arriba y tres tarjetas con lo que te distingue.',
   fullbleed: 'Tu imagen de fondo a pantalla completa con el nombre encima (súbela en «Fondo»).',
-  vitrina: 'Foto a pantalla completa con tu nombre a tamaño de cartel. Si no subes imagen de fondo, usa la de tu producto favorito.',
+  vitrina: 'Foto a pantalla completa con tu nombre a tamaño de cartel. Si no subes imagen de fondo, usa la de tu platillo favorito.',
   ticket: 'Una comanda de papel, con bordes dentados y letra de máquina.',
   directo: 'Solo un encabezado pequeño: el menú empieza de inmediato, sin pantalla de bienvenida.',
   none: 'Sin ninguna cabecera: el menú arranca en seco.',

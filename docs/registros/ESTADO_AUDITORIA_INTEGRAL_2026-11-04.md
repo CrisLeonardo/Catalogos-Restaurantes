@@ -934,6 +934,23 @@ A pedido del dueño, las fichas 2.3–2.10 y el CHANGELOG de v0.23.0 se juntaron
 - **No comprobado:** el encargado en pantalla (lo cubren las pruebas) y una prueba con personas.
 - **Validación:** `typecheck` y `lint` sin errores; 1,652 unitarias pasan, con una omitida. `admin-nav.test.ts` cubre cada puesto, que ningún destino lleve a una pantalla sin permiso y cuándo se marca «Más».
 
+## 47. Glosario de una sola marca · ficha 2.12 (2026-11-17)
+
+**Rama** `feat/glosario`, apilada sobre `feat/navegacion-por-rol`. Glosario aprobado con sus cuatro recomendaciones: [`GUIA_GLOSARIO.md`](../guias/GUIA_GLOSARIO.md). Sin migración.
+
+- **«Platillo» para todo lo que se vende:** Tomar pedidos, la mesa, el cobro, Cocina, exportaciones, planes, Importar carta, Lealtad e Inicio. Se respetan «plato principal» y «Platos fuertes». La carta del comensal sigue con la palabra que eligió cada restaurante para su carrito.
+- **Cómo se cambió sin tocar código:** un script con el analizador de TypeScript cambió solo literales, plantillas y texto JSX (unas 190 ediciones). Quedaron fuera las rutas (`/admin/menu/productos`), los sinónimos del buscador, las claves de datos (`formData.get('platos')`, el valor interno de la pestaña «Por platillos») y Canales, que sigue apagado.
+- **Exportaciones con los estados de la pantalla:** el Excel y el respaldo usan `STATUS_LABEL` de `lib/order-status.ts`. Antes decían «Nuevo», «En preparación» y «Cancelado».
+- **Contabilidad:** «Costo de lo vendido» e «Ingreso por platillos». El Excel de la carta se titula «Tu carta».
+- **Sin jerga:** «pantalla de cocina» en vez de KDS; «función» en vez de «módulo» en avisos, errores, Funciones, Ayuda y planes; «pantalla completa» en vez de «modo kiosco». La pestaña del navegador sin título propio dice «Leogin».
+- **Los tres modos con un solo nombre:** Comer en local, Para llevar y A domicilio, en tarjetas, alertas, filtros, comandas impresas, Hoy y exportaciones.
+- **Importar carta:** la plantilla trae la columna «Platillo» y la hoja vieja con «Producto» se sigue leyendo.
+- **Prueba que vigila:** `src/lib/glosario.test.ts` lee con el analizador de TypeScript los textos visibles de todo `src` (sin superadmin) y falla con la lista de cada palabra prohibida. Al estrenarse encontró 5 textos que la barrida no había cambiado.
+- **Comprobado en pantalla** con Rincón 502: Tomar pedidos («Buscar platillo, mesa o acción», «Mesa 1 · 1 platillo», «Agregar platillos», «Toca un platillo y aparece aquí»), la pestaña del navegador de Cocina («Cocina») y la web pública («una foto del platillo»). La limonada de prueba se quitó antes de enviarla y no quedó nada en la base.
+- **No comprobado en pantalla:** los archivos de exportación (lo cubren las pruebas y el código comparte `STATUS_LABEL`).
+- **Aviso:** la PC tenía unos 150 MB de memoria libre durante la prueba y el servidor de desarrollo se trababa. Hubo que reiniciarlo varias veces.
+- **Validación:** `typecheck` y `lint` sin errores; 1,658 unitarias pasan, con una omitida.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

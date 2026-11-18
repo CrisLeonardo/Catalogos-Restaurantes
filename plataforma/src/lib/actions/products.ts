@@ -520,11 +520,11 @@ export async function exportProductsXlsx(
   if ('error' in data) return data;
   const { rows, branding, slug } = data;
 
-  const subtitle = `${rows.length} producto${rows.length === 1 ? '' : 's'} · Generado el ${longDate(new Date().toISOString())}`;
+  const subtitle = `${rows.length} platillo${rows.length === 1 ? '' : 's'} · Generado el ${longDate(new Date().toISOString())}`;
   const wb = await createBrandedWorkbook();
-  const ws = wb.addWorksheet('Productos');
-  const headers = ['Categoría', 'Producto', 'Precio', 'Costo', 'Margen', 'Stock', 'Activo', 'Disponible', 'Tiene variantes'];
-  addBrandedHeader(ws, { branding, title: 'Catálogo de productos', subtitle, columnsSpan: headers.length });
+  const ws = wb.addWorksheet('Platillos');
+  const headers = ['Categoría', 'Platillo', 'Precio', 'Costo', 'Margen', 'Stock', 'Activo', 'Disponible', 'Tiene variantes'];
+  addBrandedHeader(ws, { branding, title: 'Tu carta', subtitle, columnsSpan: headers.length });
 
   const { headerRow } = writeStyledTable(
     ws, branding, headers,
@@ -538,7 +538,7 @@ export async function exportProductsXlsx(
   autoFitColumns(ws);
 
   const xlsx = await workbookToBase64(wb);
-  return { xlsx, filename: `productos-${slug}-${new Date().toISOString().slice(0, 10)}.xlsx` };
+  return { xlsx, filename: `platillos-${slug}-${new Date().toISOString().slice(0, 10)}.xlsx` };
 }
 
 

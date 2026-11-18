@@ -24,8 +24,8 @@ export default function CompartirPlato({ marca, plato }: { marca: MarcaRestauran
       </button>
       {abierto && (
         <CompartirDialogo
-          titulo="Tu plato del día"
-          archivo={`plato-del-dia-${plato.nombre.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.png`}
+          titulo="Tu platillo del día"
+          archivo={`platillo-del-dia-${plato.nombre.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.png`}
           texto={`Hoy en ${marca.nombre}: ${plato.nombre}. Pídelo en ${marca.menu}`}
           generar={generar}
           onClose={cerrar}

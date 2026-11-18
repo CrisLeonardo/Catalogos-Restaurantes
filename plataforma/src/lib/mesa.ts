@@ -39,7 +39,7 @@ export function mesaDeFila(
 /** «Mesa 4» o el texto de reserva, para pintar un renglón. */
 export function etiquetaDeMesa(
   row: { table_number?: number | null; address?: string | null } | null | undefined,
-  siNoHay = 'En local',
+  siNoHay = 'Comer en local',
 ): string {
   const n = mesaDeFila(row);
   if (n != null) return direccionDeMesa(n);

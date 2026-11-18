@@ -213,9 +213,9 @@ export default function PrintStationsSettings() {
                   {c.productosConAnulacion > 0 && (
                     <button
                       type="button"
-                      onClick={() => hacer(() => limpiarAnulaciones(c.id), 'Los platos de esa categoría vuelven a seguir a su categoría.')}
+                      onClick={() => hacer(() => limpiarAnulaciones(c.id), 'Los platillos de esa categoría vuelven a seguir a su categoría.')}
                       disabled={pendiente}
-                      title="Quitar la estación puesta a mano en esos platos, para que vuelvan a seguir a su categoría."
+                      title="Quitar la estación puesta a mano en esos platillos, para que vuelvan a seguir a su categoría."
                       style={{
                         marginLeft: 7, padding: '1px 7px', borderRadius: 'var(--radius-full)', fontSize: 11,
                         fontWeight: 700, cursor: 'pointer', color: 'var(--brand-accent-ink)',

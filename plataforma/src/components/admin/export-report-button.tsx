@@ -58,7 +58,7 @@ export default function ExportReportButton({
         body: [
           ['Pedidos', String(r.orders)],
           ['Ingreso bruto', money(r.revenue)],
-          ['Ingreso de productos', money(r.productRevenue)],
+          ['Ingreso por platillos', money(r.productRevenue)],
           ['Envíos', money(r.deliveryRevenue)],
           ['Propinas', money(r.tips)],
           ['Costo', money(r.cost)],
@@ -99,7 +99,7 @@ export default function ExportReportButton({
         sectionTitle(title);
         await brandedAutoTable(doc, branding, {
           startY: y,
-          head: [['Producto', 'Cant.', 'Ingreso', 'Costo', 'Utilidad']],
+          head: [['Platillo', 'Cant.', 'Ingreso', 'Costo', 'Utilidad']],
           body: rows.map((p) => [p.name, String(p.qty), money(p.revenue), money(p.cost), money(p.profit)]),
           columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
         });

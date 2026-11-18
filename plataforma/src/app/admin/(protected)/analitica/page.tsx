@@ -71,7 +71,7 @@ export default async function AdminAnaliticaPage({
       <EmptyState
         icon="chart"
         title="Analítica todavía no está activa"
-        desc="Se basa en los pedidos en línea. Activa el módulo Pedidos (plan Estándar) para ver horas pico, velocidad de productos, cancelaciones y tiempos."
+        desc="Se basa en los pedidos en línea. Enciende la función Pedidos (plan Estándar) para ver horas pico, velocidad de platillos, cancelaciones y tiempos."
         action={{ href: '/admin/suscripcion', label: 'Ver planes' }}
       />
     );

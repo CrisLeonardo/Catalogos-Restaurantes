@@ -64,7 +64,7 @@ export interface SalesReport {
 const CHANNEL_LABEL: Record<string, string> = {
   PICKUP: 'Para llevar',
   DELIVERY: 'A domicilio',
-  DINE_IN: 'En el local',
+  DINE_IN: 'Comer en local',
 };
 
 const EMPTY = (from: string, to: string): SalesReport => ({

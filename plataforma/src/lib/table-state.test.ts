@@ -41,7 +41,7 @@ describe('tableState', () => {
   it('una mesa con gente NO pide atención: es tinta normal', () => {
     const s = tableState(ocupada(), undefined, NOW);
     expect(s.kind).toBe('abierta');
-    expect(s.label).toBe('3 platos · 20 min');
+    expect(s.label).toBe('3 platillos · 20 min');
   });
 
   it('pedir la cuenta gana sobre cualquier reloj', () => {
@@ -60,7 +60,7 @@ describe('tableState', () => {
     expect(cuenta.priority).toBeLessThan(llamada.priority);
   });
 
-  it('un plato listo avisa solo cuando lleva rato sin que lo lleven', () => {
+  it('un platillo listo avisa solo cuando lleva rato sin que lo lleven', () => {
     const recien = tableState(
       ocupada({ status: 'READY', readySince: haceMin(READY_ALERT_MIN - 1) }), undefined, NOW);
     expect(recien.kind).toBe('abierta');
@@ -97,7 +97,7 @@ describe('tableState', () => {
     expect(s.reason).toBe('abandonada');
   });
 
-  it('un plato "listo" de ayer tampoco se anuncia como listo', () => {
+  it('un platillo "listo" de ayer tampoco se anuncia como listo', () => {
     const s = tableState(
       ocupada({ status: 'READY', since: haceMin(ABANDONED_HOURS * 60 + 5), readySince: haceMin(1400) }),
       undefined, NOW);
@@ -145,14 +145,14 @@ describe('tableState', () => {
   it('sin reloj no inventa relojes, pero sí respeta lo que pidió el comensal', () => {
     const sinReloj = tableState(ocupada(), undefined, null);
     expect(sinReloj.kind).toBe('abierta');
-    expect(sinReloj.label).toBe('3 platos');
+    expect(sinReloj.label).toBe('3 platillos');
 
     const conCuenta = tableState(ocupada(), { reason: 'bill', since: haceMin(3) }, null);
     expect(conCuenta.reason).toBe('cuenta');
   });
 
-  it('el singular de un plato está bien escrito', () => {
-    expect(tableState(ocupada({ itemCount: 1 }), undefined, NOW).label).toBe('1 plato · 20 min');
+  it('el singular de un platillo está bien escrito', () => {
+    expect(tableState(ocupada({ itemCount: 1 }), undefined, NOW).label).toBe('1 platillo · 20 min');
   });
 });
 
@@ -190,7 +190,7 @@ describe('short — lo que cabe en la ficha de mesa', () => {
     // La línea larga sí cuenta los platos; la ficha solo tiene sitio para el
     // tiempo, que es el dato con el que el mesero decide a dónde va.
     const s = tableState(ocupada(), undefined, NOW);
-    expect(s.label).toBe('3 platos · 20 min');
+    expect(s.label).toBe('3 platillos · 20 min');
     expect(s.short).toBe('20 min');
   });
 
@@ -384,7 +384,7 @@ function sentada(over: Partial<TableSeating> = {}): TableSeating {
 }
 
 describe('mesa sentada sin pedido', () => {
-  it('ocupa la mesa aunque no haya ni un plato', () => {
+  it('ocupa la mesa aunque no haya ni un platillo', () => {
     const s = tableState(undefined, undefined, NOW, undefined, sentada());
     expect(s.kind).toBe('abierta');
     expect(s.label).toBe('4 personas · 3 min');
@@ -429,7 +429,7 @@ describe('mesa sentada sin pedido', () => {
 
   it('el reloj de la mesa empieza al SENTARSE, no al pedir', () => {
     const s = tableState(ocupada({ since: haceMin(5) }), undefined, NOW, undefined, sentada({ seatedAt: haceMin(25) }));
-    expect(s.label).toBe('3 platos · 25 min');
+    expect(s.label).toBe('3 platillos · 25 min');
   });
 
   it('sentarse hace rato NO cuenta como comanda parada en cocina', () => {

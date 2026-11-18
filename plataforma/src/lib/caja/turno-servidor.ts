@@ -222,7 +222,7 @@ async function pedidos(db: Db, q: (cols: string) => PromiseLike<{ data: unknown;
 function etiqueta(o: FilaPedido): string {
   if (o.order_type === 'DINE_IN') return etiquetaDeMesa(o);
   const nombre = o.customer_name?.trim();
-  if (o.order_type === 'DELIVERY') return nombre ? `Domicilio · ${nombre}` : 'Domicilio';
+  if (o.order_type === 'DELIVERY') return nombre ? `A domicilio · ${nombre}` : 'A domicilio';
   return nombre ? `Para llevar · ${nombre}` : 'Para llevar';
 }
 

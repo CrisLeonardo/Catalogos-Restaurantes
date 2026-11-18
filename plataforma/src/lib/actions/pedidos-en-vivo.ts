@@ -82,7 +82,7 @@ export async function leerHistorialPedido(restaurante: string, pedido: string): 
     const quien = nombres.get(a.requested_by) || 'Responsable sin nombre';
     const firma = a.approved_by && a.approved_by !== a.requested_by ? nombres.get(a.approved_by) || 'Encargado sin nombre' : null;
     hitos.push({ id: `anulacion-${a.id}`, hora: a.created_at, alerta: true,
-      titulo: a.item_id ? `Anulación · ${a.quantity}× ${platos.get(a.item_id) ?? 'Plato'}` : 'Pedido anulado',
+      titulo: a.item_id ? `Anulación · ${a.quantity}× ${platos.get(a.item_id) ?? 'Platillo'}` : 'Pedido anulado',
       detalle: [a.reason, `Por ${quien}`, firma && `Autorizó ${firma}`].filter(Boolean).join(' · ') });
   }
   for (const p of pagos.data) {

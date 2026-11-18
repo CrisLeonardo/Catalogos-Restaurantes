@@ -80,7 +80,7 @@ export default async function AdminFinanzasPage({
       <EmptyState
         icon="banknote"
         title="Finanzas todavía no está activa"
-        desc="Los reportes financieros y el corte de caja se basan en los pedidos en línea. Activa el módulo Pedidos (plan Estándar) para empezar a medir ingresos, utilidad y margen."
+        desc="Los reportes financieros y el corte de caja se basan en los pedidos en línea. Enciende la función Pedidos (plan Estándar) para empezar a medir ingresos, utilidad y margen."
         action={{ href: '/admin/suscripcion', label: 'Ver planes' }}
       />
     );
@@ -109,7 +109,7 @@ export default async function AdminFinanzasPage({
         <StatGroup>
           <Stat label={`Ingreso (${report.orders} ${report.orders === 1 ? 'pedido' : 'pedidos'})`} value={money(report.revenue)} />
           <Stat label={report.marginPct != null ? `Utilidad (margen ${report.marginPct.toFixed(0)}%)` : 'Utilidad (captura costos)'} value={money(report.profit)} />
-          <Stat label="Costo de productos vendidos" value={money(report.cost)} />
+          <Stat label="Costo de lo vendido" value={money(report.cost)} />
           <Stat label="Ticket promedio" value={money(report.avgTicket)} />
           <Stat label="Envíos" value={money(report.deliveryRevenue)} />
           <Stat label={report.tips > 0 ? 'Propinas (incluidas en el ingreso)' : 'Propinas'} value={money(report.tips)} />
@@ -128,7 +128,7 @@ export default async function AdminFinanzasPage({
 
       {report.marginPct == null && report.orders > 0 && (
         <Card className="p-3.5" style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
-          Aún no hay costos capturados en tus productos: la utilidad y el margen aparecerán
+          Aún no hay costos capturados en tus platillos: la utilidad y el margen aparecerán
           cuando pongas el <strong>Costo</strong> en el editor de cada platillo.
         </Card>
       )}

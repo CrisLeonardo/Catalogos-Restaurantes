@@ -65,7 +65,7 @@ describe('excepcionesDeServicio', () => {
       pedido({ created_at: hace(2), order_type: 'DELIVERY' }),
     ], AHORA, hora, dinero);
     expect(e.titulo).toBe('2 pedidos esperan que los aceptes');
-    expect(e.detalle).toBe('Domicilio · el primero hace 6 min');
+    expect(e.detalle).toBe('A domicilio · el primero hace 6 min');
     expect(e.nivel).toBe('urgente');
   });
 

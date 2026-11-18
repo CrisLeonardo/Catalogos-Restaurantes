@@ -10,7 +10,7 @@ import type { ModulesMap, ModuleSettings } from '@/lib/modules';
 import type { OrderType } from '@/lib/theme/defaults';
 import { panelLink } from '@/lib/panel-links-server';
 
-export const metadata = { title: 'Módulos – Panel admin' };
+export const metadata = { title: 'Funciones – Panel admin' };
 
 export default async function ModulosPage() {
   const ctx = await getAdminContext();

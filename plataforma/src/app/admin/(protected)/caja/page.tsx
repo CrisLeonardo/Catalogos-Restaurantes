@@ -76,7 +76,7 @@ export default async function AdminCajaPage() {
       <EmptyState
         icon="banknote"
         title="La caja todavía no está activa"
-        desc="El cierre de caja se basa en los pedidos: cuánto entró en efectivo, qué salió y cuánta propina hubo. Activa el módulo Pedidos (plan Estándar) para empezar a cuadrar."
+        desc="El cierre de caja se basa en los pedidos: cuánto entró en efectivo, qué salió y cuánta propina hubo. Enciende la función Pedidos (plan Estándar) para empezar a cuadrar."
         action={{ href: '/admin/suscripcion', label: 'Ver planes' }}
       />
     );

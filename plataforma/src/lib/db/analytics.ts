@@ -46,7 +46,7 @@ export interface Analytics {
 
 const WEEKDAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const CHANNEL_LABEL: Record<string, string> = {
-  PICKUP: 'Para llevar', DELIVERY: 'A domicilio', DINE_IN: 'En el local',
+  PICKUP: 'Para llevar', DELIVERY: 'A domicilio', DINE_IN: 'Comer en local',
 };
 
 const EMPTY = (from: string, to: string, estado: EstadoLectura = 'ok'): Analytics => ({

@@ -1,6 +1,6 @@
 # Glosario de Leogin: una sola forma de decir cada cosa
 
-**Ficha 2.12 de la auditoría (D07 y el apartado §9 «Mensajes») · 2026-11-17 · propuesta para aprobar.**
+**Ficha 2.12 de la auditoría (D07 y el apartado §9 «Mensajes») · aprobado y aplicado el 2026-11-17.**
 
 Este glosario guía los textos que leen el restaurante y sus comensales: el panel, Tomar pedidos, Cocina, Caja, la carta, las exportaciones y la web pública. **No** cambia nombres internos del código ni de la base (`product`, `order`, `NEW`…). El superadmin lo usa el equipo de Leogin y queda fuera.
 
@@ -51,7 +51,7 @@ Una sola lista por cosa, la misma en la pantalla, las alertas y las exportacione
 - El menú «Producto» de la web pública habla de Leogin, no de la carta.
 - Canales, que sigue apagado.
 
-## Decisiones
+## Decisiones (aprobadas con las cuatro recomendaciones)
 
 1. **«Platillo» también en Tomar pedidos**, en lugar de «plato» (recomendado). ¿O el mesero sigue diciendo «plato»?
 2. **Exportaciones con las palabras y los estados de la pantalla** (recomendado). Un Excel que dice «Cancelado» cuando la pantalla dice «Anulado» parece otro pedido.

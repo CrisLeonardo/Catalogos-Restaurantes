@@ -35,7 +35,7 @@ function platosDe(o: OrderWithItems): number {
 }
 
 function platos(n: number): string {
-  return n === 1 ? '1 plato' : `${n} platos`;
+  return n === 1 ? '1 platillo' : `${n} platillos`;
 }
 
 /** "1 plato listo" / "3 platos listos": el participio concuerda o se lee mal. */
@@ -95,7 +95,7 @@ export function tableTimeline(orders: OrderWithItems[]): TimelineEvent[] {
   for (const o of orders) {
     for (const v of o.voids ?? []) {
       const nombre = v.item_id
-        ? (o.items ?? []).find((it) => it.id === v.item_id)?.name_snapshot ?? 'un plato'
+        ? (o.items ?? []).find((it) => it.id === v.item_id)?.name_snapshot ?? 'un platillo'
         : 'la comanda entera';
       const cuantos = v.item_id && v.quantity ? `${v.quantity} · ` : '';
       // Quién anuló, con el nombre guardado al anular: sigue saliendo aunque

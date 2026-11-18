@@ -169,7 +169,7 @@ export default function OptionsEditor({
             </label>
           ) : group.type === 'combo' ? (
             <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-              Todos los componentes aparecen <strong>incluidos por defecto</strong>. El precio base del producto es el plato principal; el precio de cada componente se suma automáticamente al total que ve el cliente en el menú.
+              Todos los componentes aparecen <strong>incluidos por defecto</strong>. El precio base del platillo es el plato principal; el precio de cada componente se suma automáticamente al total que ve el cliente en el menú.
             </p>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--u-text-3)' }}>

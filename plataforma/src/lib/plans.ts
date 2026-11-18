@@ -414,7 +414,7 @@ export const GROUP_PANEL_FEE = 299;
 export const PLAN_POINTS: Record<PlanCode, { text: string; positive: boolean }[]> = {
   BASICO: [
     { text: 'Menú digital con código QR', positive: true },
-    { text: `Hasta ${PLANS.BASICO.maxProducts} productos · ${PLANS.BASICO.users} usuario`, positive: true },
+    { text: `Hasta ${PLANS.BASICO.maxProducts} platillos · ${PLANS.BASICO.users} usuario`, positive: true },
     { text: 'Tu logo y color de marca', positive: true },
     { text: 'Sin pedidos en línea', positive: false },
   ],
@@ -422,12 +422,12 @@ export const PLAN_POINTS: Record<PlanCode, { text: string; positive: boolean }[]
     { text: 'Para llevar y a domicilio', positive: true },
     { text: 'Zonas de reparto y seguimiento del pedido', positive: true },
     { text: 'Avisos en tiempo real y WhatsApp', positive: true },
-    { text: `Hasta ${PLANS.EN_LINEA.monthlyOrderCap} pedidos/mes sin cortar pedidos · ${PLANS.EN_LINEA.maxProducts} productos · ${PLANS.EN_LINEA.users} usuario`, positive: true },
+    { text: `Hasta ${PLANS.EN_LINEA.monthlyOrderCap} pedidos/mes sin cortar pedidos · ${PLANS.EN_LINEA.maxProducts} platillos · ${PLANS.EN_LINEA.users} usuario`, positive: true },
   ],
   ESTANDAR: [
     { text: `Elige ${ESTANDAR_MAX_ORDER_TYPES} de 3 modos de pedido`, positive: true },
     { text: 'Avisos en tiempo real y WhatsApp', positive: true },
-    { text: `Productos ilimitados · ${PLANS.ESTANDAR.users} usuarios`, positive: true },
+    { text: `Platillos ilimitados · ${PLANS.ESTANDAR.users} usuarios`, positive: true },
     { text: 'Reportes financieros y corte de caja', positive: true },
   ],
   PREMIUM: [
@@ -568,7 +568,7 @@ export function planPresentation(input: PlanPresentationInput) {
         : 'Tarifa pública de referencia; el cobro de este restaurante aún no está configurado.',
     billingStartedAt: billing?.started_at ?? null,
     usersLabel: plan.users === 'unlimited' ? 'Usuarios ilimitados' : `${plan.users} ${plan.users === 1 ? 'usuario' : 'usuarios'} del panel`,
-    productsLabel: plan.maxProducts ? `Hasta ${plan.maxProducts} productos` : 'Productos ilimitados',
+    productsLabel: plan.maxProducts ? `Hasta ${plan.maxProducts} platillos` : 'Platillos ilimitados',
   };
 }
 
@@ -663,6 +663,6 @@ export function loQueSePierde(antes: PlanCode, despues: PlanCode): string[] {
   if (a.hasFullTheme && !d.hasFullTheme) fuera.push('Personalización completa');
   const modulos = (INCLUDED_MODULES[antes] ?? []).filter((k) => !INCLUDED_MODULES[despues].includes(k));
   if (modulos.length > 0) fuera.push(`${modulos.length} ${modulos.length === 1 ? 'herramienta incluida' : 'herramientas incluidas'} (lealtad, cupones y más)`);
-  if (d.maxProducts && !a.maxProducts) fuera.push(`Productos ilimitados (el plan nuevo llega a ${d.maxProducts})`);
+  if (d.maxProducts && !a.maxProducts) fuera.push(`Platillos ilimitados (el plan nuevo llega a ${d.maxProducts})`);
   return fuera;
 }

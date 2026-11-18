@@ -183,7 +183,7 @@ export function HojaMesa({
         {onLiberar && accion === 'liberar' && (
           <p className="sv-foot-note">
             Se registrará una salida con {money(mesa.saldo)} pendientes.
-            {mesa.sinEnviar > 0 && ` Se descartarán ${mesa.sinEnviar} productos sin enviar en este dispositivo.`}
+            {mesa.sinEnviar > 0 && ` Se descartarán ${mesa.sinEnviar} platillos sin enviar en este dispositivo.`}
           </p>
         )}
         {onLiberar && <button
@@ -310,7 +310,7 @@ export function HojaVoz({ productos, money, onClose, onAgregar }: {
             </div>
             {lineas.length === 0 ? (
               <div className="sv-vacio" style={{ padding: '18px 0' }}>
-                Ningún plato de la carta encaja con eso.<br />Prueba con el buscador.
+                Ningún platillo de la carta encaja con eso.<br />Prueba con el buscador.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -351,12 +351,12 @@ export function HojaVoz({ productos, money, onClose, onAgregar }: {
    ════════════════════════════════════════════════════════════ */
 
 export const ATAJOS: { k: string; d: string }[] = [
-  { k: '⌘K / Ctrl K', d: 'Buscar plato, mesa o acción' },
+  { k: '⌘K / Ctrl K', d: 'Buscar platillo, mesa o acción' },
   { k: '1 – 9', d: 'Agregar el más pedido número N' },
   { k: 'Alt 1 – 9', d: 'Saltar a la mesa abierta N' },
   { k: '⌘⏎ / Ctrl ⏎', d: 'Enviar a cocina' },
   { k: 'Alt C', d: 'Abrir la cuenta de la mesa' },
-  { k: '2 pepián ⏎', d: 'Teclear cantidad + plato en el buscador' },
+  { k: '2 pepián ⏎', d: 'Teclear cantidad + platillo en el buscador' },
   { k: '/', d: 'Volver al buscador' },
   { k: 'Esc', d: 'Cerrar o volver' },
   { k: '?', d: 'Ver estos atajos' },
@@ -428,7 +428,7 @@ export function HojaLinea({
 
         {linea.pagada && (
           <div className="sv-hint" style={{ background: 'var(--c-ok-bg)', color: 'var(--c-ok)' }}>
-            Este plato ya está cobrado. Anularlo ahora deja un cobro sin nada detrás:
+            Este platillo ya está cobrado. Anularlo ahora deja un cobro sin nada detrás:
             devuélvelo desde Caja.
           </div>
         )}
@@ -504,7 +504,7 @@ export function HojaLinea({
                   </div>
                 )}
                 <div style={{ fontSize: 13, color: 'var(--u-text-3)', fontWeight: 500 }}>
-                  Elige la mesa. El plato no se vuelve a mandar a cocina.
+                  Elige la mesa. El platillo no se vuelve a mandar a cocina.
                 </div>
                 <div className="sv-pick">
                   {orden.map((m) => (
@@ -528,7 +528,7 @@ export function HojaLinea({
           disabled={linea.pagada}
         >
           <Icon name="trash" size={17} />
-          Anular este plato
+          Anular este platillo
         </button>
         <div className="sv-foot-note">
           Anular pide motivo y, si hace falta, el PIN de un encargado. Queda escrito.
@@ -585,7 +585,7 @@ export function HojaLibre({ nombreInicial, money, onClose, onAgregar }: {
       <div className="sv-sheet-pad">
         <HojaHead
           title="Algo que no está en la carta"
-          sub="El plato del día, un descorche, un recargo. Entra a la cuenta como cualquier otro y queda registrado."
+          sub="El platillo del día, un descorche, un recargo. Entra a la cuenta como cualquier otro y queda registrado."
           onClose={onClose}
         />
 
@@ -594,7 +594,7 @@ export function HojaLibre({ nombreInicial, money, onClose, onAgregar }: {
             className="sv-field"
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
-            placeholder="Descorche, plato del día…"
+            placeholder="Descorche, platillo del día…"
             maxLength={80}
           />
         </Campo>

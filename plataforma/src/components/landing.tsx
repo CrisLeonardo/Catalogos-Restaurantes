@@ -32,7 +32,7 @@ const PROOF = [
 /* Beneficios para el dueño y para el comensal. */
 const FOR_OWNER = [
   { icon: 'bell',    title: 'Los pedidos no se te escapan', body: 'Cada pedido suena y aparece al instante en tu panel, en la cocina y en la impresora de comandas.' },
-  { icon: 'wallet',  title: 'Tu dinero, cuadrado',          body: 'Corte de caja, costo por plato, margen real y reportes que puedes exportar. Sin hojas de cálculo a mano.' },
+  { icon: 'wallet',  title: 'Tu dinero, cuadrado',          body: 'Corte de caja, costo por platillo, margen real y reportes que puedes exportar. Sin hojas de cálculo a mano.' },
   { icon: 'box',     title: 'Sabes qué tienes y qué falta', body: 'Existencias con kardex: cada venta descuenta del platillo y te avisa al llegar al mínimo. Las recetas calculan tu costo.' },
   { icon: 'sparkle', title: 'Tu marca, no la nuestra',      body: 'Colores, logo, fotos y tipografía propios. Tus clientes ven tu restaurante, no “otra app” con tu comida adentro.' },
 ];
@@ -52,17 +52,17 @@ const CAPABILITIES: {
 }[] = [
   { icon: 'bag',      label: 'Menú digital con QR',   body: 'Tu carta con fotos, categorías, variantes y combos. Cambias un precio y está en vivo al segundo.', wide: true },
   { icon: 'truck',    label: 'Pedidos en línea',      body: 'Comer en local con número de mesa, para llevar y a domicilio con mapa y zonas de reparto.', wide: true },
-  { icon: 'flame',    label: 'Pantalla de cocina',    body: 'El KDS ordena las comandas por tiempo y estado.' },
+  { icon: 'flame',    label: 'Pantalla de cocina',    body: 'Ordena las comandas por tiempo y estado.' },
   { icon: 'userPlus', label: 'Panel de mesero',       body: 'Toma la orden en la tablet, divide la cuenta y cobra.' },
   { icon: 'print',    label: 'Comandas impresas',     body: 'La comanda sale sola en la impresora térmica.' },
-  { icon: 'wallet',   label: 'Finanzas y caja',       body: 'Corte de caja, gastos, margen por plato y reportes.' },
+  { icon: 'wallet',   label: 'Finanzas y caja',       body: 'Corte de caja, gastos, margen por platillo y reportes.' },
   { icon: 'box',      label: 'Inventario y recetas',  body: 'Kardex con costo promedio ponderado y alertas.' },
-  { icon: 'chart',    label: 'Analítica',             body: 'Horas pico, platos estrella y ticket promedio.' },
+  { icon: 'chart',    label: 'Analítica',             body: 'Horas pico, platillos estrella y ticket promedio.' },
   { icon: 'star',     label: 'Lealtad y cupones',     body: 'Puntos por compra, premios canjeables y códigos.' },
   { icon: 'calendar', label: 'Reservas y espera',     body: 'Reservaciones de mesa y control de la cola.' },
   { icon: 'users',    label: 'Personal con roles',    body: 'Cada quien entra con su PIN y ve solo lo suyo.' },
   { icon: 'dashboard',label: 'Multisucursal',         body: 'Cada local con su menú y su QR, todo en un panel.' },
-  { icon: 'monitor',  label: 'Leogin Escritorio',     body: 'La app de la caja, con impresión y modo kiosco.' },
+  { icon: 'monitor',  label: 'Leogin Escritorio',     body: 'La app de la caja, con impresión y pantalla completa.' },
   { icon: 'thumbsUp', label: 'Encuestas',             body: 'Calificación y comentario después de cada pedido.' },
   { icon: 'globe',    label: 'Menú bilingüe',         body: 'La misma carta en dos idiomas para el turista.' },
   { icon: 'leaf',     label: 'Alérgenos y dietas',    body: 'Marca vegano, sin gluten y los 14 alérgenos.' },
@@ -128,7 +128,7 @@ function structuredData(pricing: PlanPricing) {
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web',
       description:
-        'Sistema para restaurantes con menú digital QR, pedidos en línea, pantalla de cocina (KDS), panel de mesero, inventario, finanzas y programa de lealtad. Hecho en Guatemala.',
+        'Sistema para restaurantes con menú digital QR, pedidos en línea, pantalla de cocina, panel de mesero, inventario, finanzas y programa de lealtad. Hecho en Guatemala.',
       inLanguage: 'es',
       offers: PUBLIC_PLANS.map((code) => ({
         '@type': 'Offer',
@@ -336,7 +336,7 @@ export default async function LeoginLanding() {
               <ul style={{ listStyle: 'none', margin: '22px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {[
                   { icon: 'bellRing', t: 'Alerta que no se ignora', d: 'Sonido, aviso de escritorio y notificación al teléfono hasta que alguien lo atienda.' },
-                  { icon: 'flame',    t: 'Cocina sincronizada',     d: 'El KDS muestra cada comanda con su cronómetro y su estado.' },
+                  { icon: 'flame',    t: 'Cocina sincronizada',     d: 'La pantalla de cocina muestra cada comanda con su cronómetro y su estado.' },
                   { icon: 'banknote', t: 'Corte de caja al cerrar', d: 'Ventas por canal y método de pago, propinas, gastos y margen del día.' },
                 ].map((r) => (
                   <li key={r.t} style={{ display: 'flex', gap: 13, alignItems: 'flex-start' }}>
@@ -378,7 +378,7 @@ export default async function LeoginLanding() {
                 internet vuelve, sincroniza solo — sin pedidos perdidos ni comandas repetidas.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 22 }}>
-                {['Impresión térmica automática', 'Modo kiosco', 'Se actualiza sola', 'Windows'].map((t) => (
+                {['Impresión térmica automática', 'Pantalla completa', 'Se actualiza sola', 'Windows'].map((t) => (
                   <span key={t} className="lp-chip">{t}</span>
                 ))}
               </div>

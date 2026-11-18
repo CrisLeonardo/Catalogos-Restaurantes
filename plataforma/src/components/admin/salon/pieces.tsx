@@ -272,7 +272,7 @@ export function estadoDeFicha(t: SalonTable, largo = false): string {
   if (t.state.kind === 'atencion') return largo ? t.state.label : t.state.short;
   const occ = t.occ;
   if (!occ) return largo ? t.state.label : t.state.short;
-  if (occ.status === 'NEW') return occ.itemCount === 1 ? '1 plato' : `${occ.itemCount} platos`;
+  if (occ.status === 'NEW') return occ.itemCount === 1 ? '1 platillo' : `${occ.itemCount} platillos`;
   return ESTADO_CORTO[occ.status] ?? t.state.short;
 }
 

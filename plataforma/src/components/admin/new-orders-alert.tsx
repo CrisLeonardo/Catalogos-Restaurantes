@@ -82,7 +82,7 @@ function timeAgo(iso: string): string {
 
 function typeLabel(t: PendingNewOrder['order_type'], address: string | null): string {
   if (t === 'DELIVERY') return 'A domicilio';
-  if (t === 'DINE_IN')  return address ?? 'Comer aquí';
+  if (t === 'DINE_IN')  return address ?? 'Comer en local';
   return 'Para llevar';
 }
 

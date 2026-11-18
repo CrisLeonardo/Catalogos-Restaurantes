@@ -15,7 +15,7 @@ export const ADMIN_SECTIONS = [
   { key: 'mesero',       label: 'Mesero' },
   { key: 'pedidos',      label: 'Pedidos' },
   { key: 'lista_espera', label: 'Lista de espera' },
-  { key: 'cocina',       label: 'Cocina (KDS)' },
+  { key: 'cocina',       label: 'Cocina' },
   { key: 'catalogo',     label: 'Catálogo' },
   { key: 'categorias',   label: 'Categorías' },
   { key: 'inventario',   label: 'Inventario' },
@@ -34,7 +34,7 @@ export const ADMIN_SECTIONS = [
   // 'repartidores' es la página donde el dueño los da de alta (/admin/repartidores).
   { key: 'reparto',      label: 'Reparto (pantalla del repartidor)' },
   { key: 'repartidores', label: 'Repartidores' },
-  { key: 'modulos',      label: 'Módulos' },
+  { key: 'modulos',      label: 'Funciones' },
   { key: 'cupones',      label: 'Cupones' },
   { key: 'personal',     label: 'Personal y permisos' },
   { key: 'suscripcion',  label: 'Mi suscripción' },

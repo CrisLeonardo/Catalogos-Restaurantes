@@ -163,7 +163,7 @@ export default function CanalesPanel({
       {mappings.length === 0 ? (
         <Card className="p-7 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
           Todavía no conectaste ningún producto. Mientras el mapa esté vacío, los pedidos de apps
-          externas se rechazan porque Leogin no sabe a qué plato corresponden.
+          externas se rechazan porque Leogin no sabe a qué platillo corresponden.
         </Card>
       ) : (
         <Card className="overflow-hidden p-0">

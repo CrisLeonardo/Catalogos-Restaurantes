@@ -34,7 +34,7 @@ function buildFaqs(pricing: PlanPricing) {
     },
     {
       q: '¿Qué incluye cada plan?',
-      a: 'Cada plan ya trae definido lo suyo — no hay módulos sueltos que comprar aparte. Si vendes solo para llevar y a domicilio y vas empezando, En línea te alcanza; si además tienes mesas o quieres reportes y corte de caja, Estándar; si quieres reservaciones, lealtad, cupones, encuestas y todo lo demás sin ir activando una cosa a la vez, Premium lo incluye todo por su precio fijo.',
+      a: 'Cada plan ya trae definido lo suyo — no hay funciones sueltas que comprar aparte. Si vendes solo para llevar y a domicilio y vas empezando, En línea te alcanza; si además tienes mesas o quieres reportes y corte de caja, Estándar; si quieres reservaciones, lealtad, cupones, encuestas y todo lo demás sin ir activando una cosa a la vez, Premium lo incluye todo por su precio fijo.',
     },
     {
       q: '¿Cuál es la diferencia entre los planes?',
@@ -105,7 +105,7 @@ export default async function PlanesPage() {
         </h1>
         <p className="lp-lead" style={{ margin: '18px auto 0', maxWidth: 600 }}>
           Eliges plan por las funciones que necesitas, no por cuánto vendes. Cada plan ya trae
-          definido lo suyo, sin ir activando módulos uno por uno. Sin tope de ventas, sin comisión
+          definido lo suyo, sin ir encendiendo funciones una por una. Sin tope de ventas, sin comisión
           por pedido y sin cobros sorpresa.
         </p>
         <div style={{ marginTop: 28, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -221,7 +221,7 @@ export default async function PlanesPage() {
         <SectionHead
           eyebrow="Incluido en Premium"
           title="Todas estas herramientas, en un solo precio fijo"
-          lead="Sin activar módulos uno por uno ni pagar aparte por cada cosa: Premium las trae todas."
+          lead="Sin encender funciones una por una ni pagar aparte por cada cosa: Premium las trae todas."
         />
         <div style={{ height: 26 }} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 14 }}>
@@ -283,7 +283,7 @@ export default async function PlanesPage() {
               {(['orderScope', 'productsLabel', 'policy'] as const).map((key) => (
                 <tr key={key} style={{ borderBottom: '1px solid var(--u-hair)' }}>
                   <td style={{ padding: '10px 16px', fontSize: 13, color: 'var(--u-text-3)' }}>
-                    {key === 'orderScope' ? 'Modalidades de pedido' : key === 'productsLabel' ? 'Productos' : 'Límite de pedidos'}
+                    {key === 'orderScope' ? 'Modalidades de pedido' : key === 'productsLabel' ? 'Platillos' : 'Límite de pedidos'}
                   </td>
                   {PUBLIC_PLANS.map((code) => <td key={code} style={{ padding: '10px 8px', textAlign: 'center', fontSize: 12 }}>{planPresentation({ plan: code, pricing })[key]}</td>)}
                 </tr>

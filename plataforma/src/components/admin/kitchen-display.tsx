@@ -74,7 +74,7 @@ function ordenarInicial(ordenes: OrderWithItems[]): string[] {
 
 function nombrePedido(o: OrderWithItems) {
   if (o.order_type === 'DINE_IN') return etiquetaDeMesa(o);
-  return o.order_type === 'PICKUP' ? 'Para llevar' : 'Domicilio';
+  return o.order_type === 'PICKUP' ? 'Para llevar' : 'A domicilio';
 }
 
 export default function KitchenDisplay({

@@ -321,7 +321,7 @@ export function tableState(
     return abierta(`${quien} · ${fmtMin(min)}`, 'Sentada');
   }
 
-  const platos = occ.itemCount === 1 ? '1 plato' : `${occ.itemCount} platos`;
+  const platos = occ.itemCount === 1 ? '1 platillo' : `${occ.itemCount} platillos`;
 
   // Sin reloj todavía (primer render del servidor): se muestra lo que no
   // depende del tiempo. La llamada del comensal sí, porque es un hecho.

@@ -155,7 +155,7 @@ export async function getRecipeForProduct(
     .eq('id', productId)
     .eq('restaurant_id', restaurantId)
     .single();
-  if (!prod) return { error: 'Producto no encontrado' };
+  if (!prod) return { error: 'Platillo no encontrado' };
 
   const recipe = await getProductRecipe(productId);
   return { recipe };

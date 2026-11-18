@@ -96,7 +96,7 @@ const etiquetaDeSello = (t: string) => PRESET_TAGS.find((p) => p.id === t)?.labe
 
 /** Ícono del patrón de marca cuando el platillo no tiene foto. */
 const PRODUCT_ICONS = [
-  { id: 'utensils',  label: 'General',   keywords: ['comida', 'food', 'menu', 'plato', 'general'] },
+  { id: 'utensils',  label: 'General',   keywords: ['comida', 'food', 'menu', 'plato', 'platillo', 'general'] },
   { id: 'coffee',    label: 'Café',      keywords: ['cafe', 'coffee', 'expreso', 'latte', 'capuchino', 'americano', 'bebida', 'drink', 'moca', 'mocha'] },
   { id: 'bagel',     label: 'Bagel',     keywords: ['bagel', 'rosquilla'] },
   { id: 'croissant', label: 'Croissant', keywords: ['croissant', 'medialuna'] },

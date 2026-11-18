@@ -56,7 +56,7 @@ export function isSectionLocked(
 }
 
 export function getPlanLabel(level: PlanLevel, moduleKey?: string): string | null {
-  if (moduleKey) return 'Módulo';
+  if (moduleKey) return 'Función';
   // «Popular» era el nombre viejo del plan Estándar.
   if (level === 'popular') return 'Plan Estándar';
   if (level === 'premium') return 'Plan Premium';
@@ -662,7 +662,7 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
         description:
           'Elige la mesa (o «Pedido para llevar»), agrega los platillos tocándolos o buscándolos por nombre, y toca «Enviar a cocina». Puedes seguir con otra mesa mientras se envía.',
         route: 'Pedidos → Tomar pedidos',
-        tip: 'En la computadora, Ctrl K abre el buscador: escribe el número de mesa o el nombre del plato.',
+        tip: 'En la computadora, Ctrl K abre el buscador: escribe el número de mesa o el nombre del platillo.',
       },
       {
         id: 'cobrar-mesa',
@@ -1022,7 +1022,7 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
         id: 'que-es-fel',
         title: '¿Qué es FEL?',
         description:
-          'La factura electrónica en línea de la SAT. Con este módulo emites facturas de tus pedidos desde el panel. Leogin la activa para tu restaurante cuando está lista.',
+          'La factura electrónica en línea de la SAT. Con esta función emites facturas de tus pedidos desde el panel. Leogin la activa para tu restaurante cuando está lista.',
         route: 'Negocio → Facturación',
       },
       {

@@ -27,7 +27,7 @@ import s from './importar-carta.module.css';
 
 const EJEMPLO = 'DESAYUNOS\nHuevos rancheros ........ Q35\nDesayuno chapín  42.00\n\nALMUERZOS\nPepián de pollo   Q45';
 
-const PLANTILLA = 'Categoría,Producto,Precio,Descripción\nDesayunos,Huevos rancheros,35,\nAlmuerzos,Pepián de pollo,45,Con arroz y tortillas\n';
+const PLANTILLA = 'Categoría,Platillo,Precio,Descripción\nDesayunos,Huevos rancheros,35,\nAlmuerzos,Pepián de pollo,45,Con arroz y tortillas\n';
 
 const DUDA: Record<NonNullable<FilaImportada['duda']>, string> = {
   'sin-precio': 'No encontramos el precio',
@@ -194,7 +194,7 @@ export default function ImportarCarta({
           <div className={s.encabezado} role="row">
             <span role="columnheader" className={s.cCheck} aria-label="Agregar" />
             <span role="columnheader" className={s.cCategoria}>Categoría</span>
-            <span role="columnheader" className={s.cNombre}>Producto</span>
+            <span role="columnheader" className={s.cNombre}>Platillo</span>
             <span role="columnheader" className={s.cPrecio}>Precio</span>
             <span role="columnheader" className={s.cQue}>Qué pasará</span>
           </div>
@@ -310,7 +310,7 @@ export default function ImportarCarta({
       ) : (
         <div className={s.bloque}>
           <p className={s.ayuda}>
-            Excel o CSV con las columnas <strong>Categoría</strong>, <strong>Producto</strong> y <strong>Precio</strong>.
+            Excel o CSV con las columnas <strong>Categoría</strong>, <strong>Platillo</strong> y <strong>Precio</strong>.
             «Descripción» es opcional. Son las mismas columnas que tu exportación del catálogo.
           </p>
           <button type="button" className={s.soltar} onClick={() => archivo.current?.click()} disabled={pending}>

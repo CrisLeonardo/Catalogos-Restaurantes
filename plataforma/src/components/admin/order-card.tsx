@@ -50,14 +50,14 @@ function originLabel(order: OrderWithItems): { icon: string; text: string } {
 
 function typeLabel(order: OrderWithItems): { icon: string; text: string } {
   if (order.order_type === 'PICKUP')  return { icon: 'bag', text: 'Para llevar' };
-  if (order.order_type === 'DINE_IN') return { icon: 'utensils', text: 'En local' };
-  return { icon: 'truck', text: 'Domicilio' };
+  if (order.order_type === 'DINE_IN') return { icon: 'utensils', text: 'Comer en local' };
+  return { icon: 'truck', text: 'A domicilio' };
 }
 
 function buildKitchenHtml(order: OrderWithItems, restaurantName: string, format: TicketFormat): string {
   const orderTypeLabel =
     order.order_type === 'PICKUP'  ? 'Para llevar' :
-    order.order_type === 'DINE_IN' ? 'En local'    : 'A domicilio';
+    order.order_type === 'DINE_IN' ? 'Comer en local' : 'A domicilio';
 
   const timeStr = ticketTime(order.created_at, format);
 
@@ -166,7 +166,7 @@ function buildReceiptHtml(order: OrderWithItems, currency: PanelCurrency, restau
 
   const orderTypeLabel =
     order.order_type === 'PICKUP'   ? 'Para llevar' :
-    order.order_type === 'DINE_IN'  ? 'En local'    : 'Domicilio';
+    order.order_type === 'DINE_IN'  ? 'Comer en local' : 'A domicilio';
 
   const dateStr = ticketDateTime(order.created_at, format);
 
@@ -602,7 +602,7 @@ export default function OrderCard({
                     type="button"
                     onClick={() => setVoidTarget({ id: item.id, name: item.name_snapshot, remainingQty: remaining })}
                     disabled={isPending || !online}
-                    title="Anular este plato"
+                    title="Anular este platillo"
                     aria-label={`Anular ${item.name_snapshot}`}
                     className="press chip-danger order-void-x tap44"
                     style={{ width: 22, height: 22, borderRadius: 'var(--radius-sm)', borderWidth: 1, borderStyle: 'solid', cursor: 'pointer', display: 'grid', placeItems: 'center' }}

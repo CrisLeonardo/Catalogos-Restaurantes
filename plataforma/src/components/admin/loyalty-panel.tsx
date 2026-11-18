@@ -173,12 +173,12 @@ function SettingsForm({ restaurantId, settings, isNew }: { restaurantId: string;
         <Switch checked={p.rewards_enabled} onCheckedChange={(v) => set('rewards_enabled', v)} />
         {/* En un <span>: sueltos, el texto y el <strong> eran tres hijos del
             flex y la frase se partía en columnas en el teléfono. */}
-        <span>Mostrar el catálogo de <strong>Recompensas</strong> en el menú (canje de puntos por productos)</span>
+        <span>Mostrar el catálogo de <strong>Recompensas</strong> en el menú (canje de puntos por platillos)</span>
       </label>
 
       <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-        La regla general (<strong>{p.earn_rate} pts por cada Q{p.earn_amount}</strong>) aplica a los productos sin puntos propios. Puedes fijar
-        los puntos exactos de cada producto en su ficha (Menú → editar producto → <em>Puntos de lealtad</em>).
+        La regla general (<strong>{p.earn_rate} pts por cada Q{p.earn_amount}</strong>) aplica a los platillos sin puntos propios. Puedes fijar
+        los puntos exactos de cada platillo en su ficha (Menú → editar platillo → <em>Puntos de lealtad</em>).
         Los puntos se acumulan cuando el pedido se marca <strong>entregado</strong>.
       </p>
       {/* Plegado: es la letra pequeña del programa, se lee una vez. */}
@@ -291,7 +291,7 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
           <div>
             <label style={labelStyle}>Platillo del menú</label>
             <Select
-              options={[{ value: '', label: '— Recompensa sin producto —' }, ...products.map((p) => ({ value: p.id, label: `${p.name} · ${fmtMoney(Number(p.price))}` }))]}
+              options={[{ value: '', label: '— Recompensa sin platillo —' }, ...products.map((p) => ({ value: p.id, label: `${p.name} · ${fmtMoney(Number(p.price))}` }))]}
               value={form.product_id ?? ''}
               onValueChange={pickProduct}
             />
@@ -333,7 +333,7 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{r.title}</div>
                 <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>
-                  {r.product_name ? r.product_name : 'Sin producto'}
+                  {r.product_name ? r.product_name : 'Sin platillo'}
                   {r.stock != null && ` · stock ${r.stock}`}
                   {r.per_customer_limit != null && ` · máx ${r.per_customer_limit}/cliente`}
                 </div>

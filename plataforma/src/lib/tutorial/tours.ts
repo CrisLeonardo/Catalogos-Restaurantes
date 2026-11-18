@@ -49,7 +49,7 @@ export const GUIDED_TOURS: GuidedTourDef[] = [
         target: 'catalogo-nuevo',
         path: '/admin/menu',
         title: 'Crea un platillo nuevo',
-        desc: 'Con este botón agregas un producto: nombre, precio, foto, descripción y sus opciones (tamaños, extras). Queda visible en tu menú digital al instante.',
+        desc: 'Con este botón agregas un platillo: nombre, precio, foto, descripción y sus opciones (tamaños, extras). Queda visible en tu menú digital al instante.',
       },
       {
         target: null,
@@ -178,7 +178,7 @@ export const GUIDED_TOURS: GuidedTourDef[] = [
         target: 'cocina',
         path: '/admin/pedidos',
         title: 'Y para la cocina…',
-        desc: 'La pantalla de Cocina (KDS) muestra solo lo que hay que preparar, con semáforo de tiempos, pensada para una tablet en la cocina.',
+        desc: 'La pantalla de cocina muestra solo lo que hay que preparar, con semáforo de tiempos, pensada para una tablet en la cocina.',
       },
     ],
   },

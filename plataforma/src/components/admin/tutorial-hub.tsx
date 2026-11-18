@@ -60,7 +60,7 @@ const PLAN_COLORS: Record<string, string> = {
   'Plan Premium': 'var(--plan-premium)',
   /* Tinta del sistema y no un hex: #14b8a6 era legible en oscuro y se
      quedaba en 2.2:1 sobre el blanco del tema claro. */
-  'Módulo': 'var(--c-info)',
+  'Función': 'var(--c-info)',
 };
 
 export default function TutorialHub({ plan, modules, contact, abribles, restaurantId, restaurante, version, consultaInicial = '' }: Props) {
@@ -477,11 +477,11 @@ function LockedContent({ planLabel, moduleKey }: { planLabel: string | null; mod
       {isModule ? (
         <>
           <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text-2)', margin: '0 0 6px' }}>
-            Módulo no activado
+            Función apagada
           </p>
           <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5, margin: '0 0 14px' }}>
-            Este módulo está disponible en tu plan pero necesita ser activado.
-            Ve a Módulos para encenderlo.
+            Esta función está en tu plan pero todavía está apagada.
+            Ve a Funciones para encenderla.
           </p>
           <Link
             href="/admin/modulos"
@@ -492,7 +492,7 @@ function LockedContent({ planLabel, moduleKey }: { planLabel: string | null; mod
               background: 'var(--c-info-bg)', color: 'var(--c-info)', textDecoration: 'none',
             }}
           >
-            Ir a Módulos →
+            Ir a Funciones →
           </Link>
         </>
       ) : (

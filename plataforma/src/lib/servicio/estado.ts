@@ -306,7 +306,7 @@ export function subtituloDeMesa(m: MesaServicio, corto = false): string {
   /* El mismo reloj que Mesas: «3 h 9 min» y no «189 min» para la misma
      mesa en las dos pantallas. */
   if (m.minutos != null) partes.push(fmtMin(m.minutos));
-  if (m.platos > 0) partes.push(`${m.platos} ${m.platos === 1 ? 'plato' : 'platos'}`);
+  if (m.platos > 0) partes.push(`${m.platos} ${m.platos === 1 ? 'platillo' : 'platillos'}`);
   else if (m.estado === 'sentada' && !m.personas) partes.push('sin pedir');
   if (m.qrPendiente > 0) partes.push('QR nuevo');
   return partes.join(' · ');

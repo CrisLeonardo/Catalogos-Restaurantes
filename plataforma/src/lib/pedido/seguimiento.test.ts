@@ -17,11 +17,11 @@ describe('pasos del seguimiento', () => {
     expect(pasos[3].label).toBe('Listo para recoger');
   });
 
-  it('aceptado y preparando con los platos listos y la hora de aceptación', () => {
+  it('aceptado y preparando con los platillos listos y la hora de aceptación', () => {
     const pasos = pasosDelSeguimiento({ ...base, status: 'PREP', orderType: 'DINE_IN', acceptedAt: '2026-11-09T19:04:00Z', platos: { listos: 2, total: 3 } }, T);
     expect(pasos.map((x) => `${x.clave}:${x.estado}`)).toEqual(['recibido:hecho', 'aceptado:hecho', 'preparando:activo', 'listo:pendiente', 'final:pendiente']);
     expect(pasos[1].hora).toBe('2026-11-09T19:04:00Z');
-    expect(pasos[2].detalle).toBe('2 de 3 platos listos');
+    expect(pasos[2].detalle).toBe('2 de 3 platillos listos');
     expect(pasos[4].label).toBe('Comida servida');
   });
 

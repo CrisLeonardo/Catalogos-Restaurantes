@@ -31,7 +31,7 @@ export function TuDiaTira({
         <span className="tu-dia-chip">
           <Icon name="star" size={14} />
           <span>
-            Plato estrella: <strong>{estrella.name}</strong> · {estrella.qty}
+            Platillo estrella: <strong>{estrella.name}</strong> · {estrella.qty}
           </span>
           {compartir}
         </span>

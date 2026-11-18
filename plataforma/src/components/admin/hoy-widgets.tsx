@@ -121,7 +121,7 @@ export async function StockWidget({ data, canSeeInventory }: { data: StockData; 
             className="gap-2 text-[14px] font-semibold"
             style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}
           >
-            Ver {resto === 1 ? 'el otro producto' : `los otros ${resto} productos`}
+            Ver {resto === 1 ? 'el otro platillo' : `los otros ${resto} platillos`}
             <Icon name="chevronRight" size={15} />
           </ListLink>
         )}

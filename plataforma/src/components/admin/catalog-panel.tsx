@@ -326,7 +326,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
       {/* El tope del plan solo se dice cuando está cerca. */}
       {(atProductLimit || nearProductLimit) && (
         <p style={{ margin: '-6px 0 0', fontSize: 13, fontWeight: 600, color: atProductLimit ? 'var(--c-danger)' : 'var(--c-warn)' }}>
-          {products.length}/{maxProducts} productos de tu plan
+          {products.length}/{maxProducts} platillos de tu plan
         </p>
       )}
 

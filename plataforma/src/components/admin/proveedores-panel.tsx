@@ -274,7 +274,7 @@ function OrdersTab({
             ))}
             <Button type="button" variant="secondary" size="sm" className="self-start" onClick={() => setLines((ls) => [...ls, { ...EMPTY_LINE }])}>+ Renglón</Button>
             <p style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
-              Vincular un renglón a un producto o insumo real hace que, al marcar la orden como recibida, se sume su stock y se recalcule su costo promedio ponderado (Kardex). Sin vincular, el renglón queda solo como registro contable.
+              Vincular un renglón a un platillo o insumo real hace que, al marcar la orden como recibida, se sume su stock y se recalcule su costo promedio ponderado (Kardex). Sin vincular, el renglón queda solo como registro contable.
             </p>
           </div>
 

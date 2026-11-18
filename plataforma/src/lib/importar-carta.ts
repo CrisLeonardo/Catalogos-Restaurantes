@@ -114,7 +114,7 @@ export function leerHoja(celdas: unknown[][]): { filas: FilaImportada[] } | { er
   const iNombre = col('nombre');
   const iPrecio = col('precio');
   if (iNombre < 0 || iPrecio < 0) {
-    return { error: 'La hoja necesita las columnas «Producto» y «Precio» en la primera fila. Descarga la plantilla para ver el formato.' };
+    return { error: 'La hoja necesita las columnas «Platillo» y «Precio» en la primera fila. Descarga la plantilla para ver el formato.' };
   }
   const iCategoria = col('categoria');
   const iDescripcion = col('descripcion');

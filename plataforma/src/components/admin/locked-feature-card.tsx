@@ -24,7 +24,7 @@ const ALL_UPGRADE_FEATURES: UpgradeFeature[] = [
     icon: 'userPlus',
     name: 'Panel de mesero y mapa de mesas',
     hook: 'Toma pedidos desde cada mesa',
-    impact: 'Tu equipo toma pedidos desde una tablet en la mesa y ves un mapa con el estado de cada una (libre, ocupada, por cobrar). No es un módulo que se compre aparte: es exclusivo de Premium.',
+    impact: 'Tu equipo toma pedidos desde una tablet en la mesa y ves un mapa con el estado de cada una (libre, ocupada, por cobrar). No es una función que se compre aparte: es exclusivo de Premium.',
     currentLabel: 'Sin panel de mesero ni mapa de mesas',
     premiumLabel: 'Panel de mesero + mapa de mesas',
     // Quien solo vende en línea no tiene mesas: ofrecérselas no vende nada.

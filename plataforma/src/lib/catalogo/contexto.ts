@@ -67,10 +67,10 @@ export async function topeDeProductos(ctx: ContextoCatalogo, nuevos = 1): Promis
 
   const actuales = count ?? 0;
   if (actuales >= maxProducts) {
-    return `Llegaste al límite de ${maxProducts} productos de tu plan. Sube de plan para agregar productos ilimitados.`;
+    return `Llegaste al límite de ${maxProducts} platillos de tu plan. Sube de plan para agregar platillos ilimitados.`;
   }
   if (actuales + nuevos > maxProducts) {
-    return `Tu plan permite ${maxProducts} productos y ya tienes ${actuales}: caben ${maxProducts - actuales} más. Quita algunos de la importación o sube de plan.`;
+    return `Tu plan permite ${maxProducts} platillos y ya tienes ${actuales}: caben ${maxProducts - actuales} más. Quita algunos de la importación o sube de plan.`;
   }
   return null;
 }

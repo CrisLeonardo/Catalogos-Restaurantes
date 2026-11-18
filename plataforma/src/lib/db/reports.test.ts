@@ -38,7 +38,7 @@ describe('buildSalesReport', () => {
       ],
     };
     const r = buildSalesReport('2026-08-01', '2026-08-01', raw);
-    expect(r.byChannel.find((c) => c.key === 'DINE_IN')?.label).toBe('En el local');
+    expect(r.byChannel.find((c) => c.key === 'DINE_IN')?.label).toBe('Comer en local');
     expect(r.byChannel.find((c) => c.key === 'ALGO_NUEVO')?.label).toBe('ALGO_NUEVO');
   });
 

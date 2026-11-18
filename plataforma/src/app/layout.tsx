@@ -110,7 +110,7 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 
   return {
-    title: 'Menú en línea',
+    title: 'Leogin',
     description: 'Menús interactivos para restaurantes',
     // Nota: NO se fija `manifest` aquí — src/app/manifest.ts (archivo de
     // convención, mismo segmento raíz) siempre gana sobre este campo cuando

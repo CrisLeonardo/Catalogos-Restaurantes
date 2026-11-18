@@ -306,7 +306,7 @@ export default function TableCycle(p: Props) {
           .reduce((s, l) => s + l.quantity, 0);
         const nombre = TIEMPOS.find((t) => t.n === primero)?.label ?? 'primer tiempo';
         return {
-          nota: `${cuantos} ${cuantos === 1 ? 'plato' : 'platos'} del ${nombre.toLowerCase()}. El resto se queda apuntado aquí.`,
+          nota: `${cuantos} ${cuantos === 1 ? 'platillo' : 'platillos'} del ${nombre.toLowerCase()}. El resto se queda apuntado aquí.`,
           accion: `Marchar ${nombre.toLowerCase()}${aDonde}`,
           icon: 'bell',
           kbd: 'Ctrl+Enter',
@@ -316,7 +316,7 @@ export default function TableCycle(p: Props) {
         };
       }
       return {
-        nota: `${porEnviar} ${porEnviar === 1 ? 'plato' : 'platos'} por enviar. Cocina todavía no los ha visto.`,
+        nota: `${porEnviar} ${porEnviar === 1 ? 'platillo' : 'platillos'} por enviar. Cocina todavía no los ha visto.`,
         accion: `Enviar a cocina${aDonde}`,
         icon: 'bell',
         kbd: 'Ctrl+Enter',
@@ -344,7 +344,7 @@ export default function TableCycle(p: Props) {
       }
       return {
         nota: mesa
-          ? 'La mesa está libre. Apunta el primer plato y queda abierta.'
+          ? 'La mesa está libre. Apunta el primer platillo y queda abierta.'
           : 'Apunta lo que se lleva y mándalo a cocina.',
         accion: 'Agregar platillos',
         icon: 'plus',
@@ -431,7 +431,7 @@ export default function TableCycle(p: Props) {
 
   /* Los cuatro tramos del ciclo, con la hora de cada paso. */
   const tramos = [
-    { titulo: 'Pedido', detalle: occ ? `${occ.itemCount} ${occ.itemCount === 1 ? 'plato' : 'platos'}` : porEnviar > 0 ? `${porEnviar} por enviar` : 'sin abrir' },
+    { titulo: 'Pedido', detalle: occ ? `${occ.itemCount} ${occ.itemCount === 1 ? 'platillo' : 'platillos'}` : porEnviar > 0 ? `${porEnviar} por enviar` : 'sin abrir' },
     { titulo: 'En cocina', detalle: (now != null && hora(occ?.firedAt ?? null)) ? `salió ${hora(occ!.firedAt)}` : 'pendiente' },
     { titulo: 'Servida', detalle: desde(occ?.servedAt, now) ? `hace ${desde(occ?.servedAt, now)}` : 'pendiente' },
     { titulo: 'Cobrar', detalle: state.reason === 'cuenta' ? 'pidió la cuenta' : stage.index === 3 ? 'sin cobrar' : 'pendiente' },
@@ -583,7 +583,7 @@ export default function TableCycle(p: Props) {
                 marcas que lleva un plato al apuntarlo. Solo en mesa: un
                 pedido para llevar no tiene tiempos que repartir. */}
             {mesa != null && (
-              <div className="ciclo-seats" role="group" aria-label="Tiempo al que se apuntan los platos nuevos">
+              <div className="ciclo-seats" role="group" aria-label="Tiempo al que se apuntan los platillos nuevos">
                 <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>Tiempo</span>
                 <button
                   type="button"
@@ -611,7 +611,7 @@ export default function TableCycle(p: Props) {
               </div>
             )}
             {puedeRepartir && (
-              <div className="ciclo-seats" role="group" aria-label="Asiento al que se apuntan los platos nuevos">
+              <div className="ciclo-seats" role="group" aria-label="Asiento al que se apuntan los platillos nuevos">
                 <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>Asiento</span>
                 {[null, ...Array.from({ length: Math.max(2, Math.min(personas ?? 4, MAX_ASIENTOS)) }, (_, i) => i + 1)].map((n) => (
                   <button
@@ -716,7 +716,7 @@ export default function TableCycle(p: Props) {
                       item: { id: l.itemId!, name: l.name, remainingQty: l.qty },
                     })}
                     aria-label={`Anular ${l.name}`}
-                    title="Anular este plato"
+                    title="Anular este platillo"
                   >
                     <Icon name="trash" size={14} />
                   </button>
@@ -764,7 +764,7 @@ export default function TableCycle(p: Props) {
             <div className="adm-label" style={{ color: 'var(--u-text-3)' }}>Cómo se reparte</div>
             {reparto.length === 0 ? (
               <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-4)', lineHeight: 1.45 }}>
-                Cuando apuntes platos aparece aquí quién pidió qué.
+                Cuando apuntes platillos aparece aquí quién pidió qué.
               </p>
             ) : reparto.map((r) => (
               <div key={String(r.seat)} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1000,7 +1000,7 @@ function MasAcciones({ puedeMover, onJuntar, onMover, onNota, onArticuloLibre }:
     /* La puerta principal del artículo libre está en el buscador, cuando
        no encuentra nada. Esta es para quien YA sabe que no está en la
        carta y no quiere teclear para comprobarlo (M-09). */
-    { icon: 'tag', label: 'Artículo libre', hint: 'Algo que no está en la carta: descorche, plato del día', onClick: onArticuloLibre },
+    { icon: 'tag', label: 'Artículo libre', hint: 'Algo que no está en la carta: descorche, platillo del día', onClick: onArticuloLibre },
   ];
 
   return (

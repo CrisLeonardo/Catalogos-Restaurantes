@@ -330,7 +330,7 @@ export default function AdminNotifications({
           {
             const typeLabel =
               order.order_type === 'DELIVERY' ? 'A domicilio'
-              : order.order_type === 'DINE_IN' ? 'Comer aquí' : 'Para llevar';
+              : order.order_type === 'DINE_IN' ? 'Comer en local' : 'Para llevar';
             const body = `${shortOrderNumber(order.order_number)} · ${order.customer_name} · ${typeLabel}`;
             notifyUser('🛎 Nuevo pedido', body, { tag: order.id, url: panelHref(base, '/admin/pedidos'), vibrate: [200, 100, 200] });
           }

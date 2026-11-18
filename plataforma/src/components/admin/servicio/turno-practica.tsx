@@ -133,7 +133,7 @@ export default function TurnoPractica({ restaurantId, products, categories, pues
       : 'Agrega dos platillos de tu carta',
     'Envía el pedido a cocina',
     'Márcalo listo, como lo hará la cocina',
-    'Corrige: toca un plato de la comanda y anúlalo',
+    'Corrige: toca un platillo de la comanda y anúlalo',
     `Cobra ${money(resumen.porCobrar)} en efectivo`,
   ][paso] ?? '';
 
@@ -205,7 +205,7 @@ export default function TurnoPractica({ restaurantId, products, categories, pues
   function anular(l: LineaServicio) {
     const quedan = resumen.platos - 1;
     if (quedan < 1) {
-      setAviso({ text: 'Deja al menos un plato para practicar el cobro.', bad: true });
+      setAviso({ text: 'Deja al menos un platillo para practicar el cobro.', bad: true });
       setHoja(null);
       return;
     }
@@ -252,7 +252,7 @@ export default function TurnoPractica({ restaurantId, products, categories, pues
     onAdd: agregar,
     onOpts: (p: Product, qty: number) => { if (abierta) setHoja({ k: 'mods', product: p, qty }); else agregar(p, qty); },
     onRemove: quitarUno,
-    onOpenItem: () => setAviso({ text: 'En la práctica, usa platos de tu carta.' }),
+    onOpenItem: () => setAviso({ text: 'En la práctica, usa platillos de tu carta.' }),
     onVoz: () => {},
     conTeclado, aprendiz: false, hayVoz: false, money,
   };
@@ -295,7 +295,7 @@ export default function TurnoPractica({ restaurantId, products, categories, pues
         </span>
         <span style={{ display: 'block', textAlign: 'left' }}>
           <span className="sv-card-name">Mesa de práctica</span>
-          <span className="sv-card-sub">{resumen.platos ? `${resumen.platos} platos` : 'Nada cuenta'}</span>
+          <span className="sv-card-sub">{resumen.platos ? `${resumen.platos} platillos` : 'Nada cuenta'}</span>
         </span>
         {resumen.total > 0 && <span className="sv-card-total">{redondear(resumen.total)}</span>}
       </button>
@@ -310,7 +310,7 @@ export default function TurnoPractica({ restaurantId, products, categories, pues
         </span>
         <span className="sv-mesa-row">
           <span className="sv-mesa-sub">
-            {resumen.platos ? `${ESTADO_LABEL[estadoMesa]} · ${resumen.platos} platos` : 'Nada cuenta'}
+            {resumen.platos ? `${ESTADO_LABEL[estadoMesa]} · ${resumen.platos} platillos` : 'Nada cuenta'}
           </span>
           {resumen.total > 0 && <span className="sv-mesa-total">{redondear(resumen.total)}</span>}
         </span>
@@ -329,7 +329,7 @@ export default function TurnoPractica({ restaurantId, products, categories, pues
       {movil && (
         <div className="sv-mesa-acciones">
           <button type="button" className="sv-cta" data-tone="quiet" onClick={() => setPantalla('carta')}>
-            <Icon name="plus" size={17} aria-hidden /> Agregar platos
+            <Icon name="plus" size={17} aria-hidden /> Agregar platillos
           </button>
         </div>
       )}
@@ -541,7 +541,7 @@ export default function TurnoPractica({ restaurantId, products, categories, pues
    PIN llegará en el turno real. */
 function HojaAnular({ linea, onClose, onAnular }: { linea: LineaServicio; onClose: () => void; onAnular: () => void }) {
   const [motivo, setMotivo] = useState('');
-  const sugerencias = ['El cliente cambió de opinión', 'Me equivoqué de plato'];
+  const sugerencias = ['El cliente cambió de opinión', 'Me equivoqué de platillo'];
   return (
     <Hoja onClose={onClose} label={`Anular ${linea.nombre}`}>
       <div className="sv-sheet-pad">
@@ -557,7 +557,7 @@ function HojaAnular({ linea, onClose, onAnular }: { linea: LineaServicio; onClos
         </div>
         <p className="sv-foot-note">En la práctica no se pide el PIN del encargado ni queda escrito. En un turno real, sí.</p>
         <button type="button" className="sv-cta" data-tone="danger" disabled={!motivo.trim()} onClick={onAnular}>
-          Anular el plato
+          Anular el platillo
         </button>
       </div>
     </Hoja>
@@ -569,7 +569,7 @@ function Fin({ minutos, conExtra, onRepetir }: { minutos: number; conExtra: bool
     'Abriste una mesa',
     conExtra ? 'Pediste con un extra' : 'Pediste dos platillos',
     'Mandaste a cocina y quedó listo',
-    'Corregiste un plato',
+    'Corregiste un platillo',
     'Cobraste y diste vuelto',
   ];
   return (

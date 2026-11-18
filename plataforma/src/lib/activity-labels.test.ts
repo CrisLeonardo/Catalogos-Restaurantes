@@ -27,7 +27,7 @@ describe('describirActividad', () => {
 
   it('frases de ejemplo', () => {
     expect(describirActividad(fila('order_void', 'se acabó el producto', { itemId: 'x' }, 'Carlos')))
-      .toBe('Carlos anuló un plato — «se acabó el producto»');
+      .toBe('Carlos anuló un platillo — «se acabó el producto»');
     expect(describirActividad(fila('order_status', 'SERVED'))).toBe('Pasó un pedido a «Servido»');
     expect(describirActividad(fila('descuento_mesa', '4', { tipo: 'percent', valor: 10, motivo: 'Cumpleaños' })))
       .toBe('Aplicó un descuento del 10 % en la mesa 4 («Cumpleaños»)');

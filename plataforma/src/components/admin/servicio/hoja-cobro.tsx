@@ -181,7 +181,7 @@ export default function HojaCobro({
               <Tabs.Tab value="todo" disabled={busy}>Cuenta completa</Tabs.Tab>
               {contexto && <Tabs.Tab value="iguales" disabled={busy || !puedeAbonar}>Partes iguales</Tabs.Tab>}
               {contexto && <Tabs.Tab value="libre" disabled={busy || !puedeAbonar}>Importe libre</Tabs.Tab>}
-              {saldosPlatos && <Tabs.Tab value="platos" disabled={busy}>Por platos</Tabs.Tab>}
+              {saldosPlatos && <Tabs.Tab value="platos" disabled={busy}>Por platillos</Tabs.Tab>}
             </Tabs.List>
             <Tabs.Panel value="todo" />
             <Tabs.Panel value="libre" className="sv-cobro-modo">
@@ -228,7 +228,7 @@ export default function HojaCobro({
               )}
             </Tabs.Panel>
             <Tabs.Panel value="platos" className="sv-cobro-modo">
-              <p className="sv-foot-note">Marca los platos que paga esta persona.</p>
+              <p className="sv-foot-note">Marca los platillos que paga esta persona.</p>
               {cobrables.map((l) => (
                 <button type="button" className="sv-pay" key={l.id} aria-pressed={marcadas.includes(l.id)}
                   data-on={marcadas.includes(l.id) ? '1' : '0'} disabled={busy}
@@ -241,7 +241,7 @@ export default function HojaCobro({
                   <span className="sv-pay-box" aria-hidden>{marcadas.includes(l.id) ? '✓' : ''}</span>
                 </button>
               ))}
-              {cobrables.length === 0 && <p className="sv-foot-note">No hay platos con cuotas disponibles para cobrar.</p>}
+              {cobrables.length === 0 && <p className="sv-foot-note">No hay platillos con cuotas disponibles para cobrar.</p>}
             </Tabs.Panel>
           </Tabs.Root>
         )}

@@ -81,7 +81,7 @@ export async function saveInventory(
   if (!ctx) return { error: 'No autorizado.' };
 
   const id = (formData.get('id') as string)?.trim();
-  if (!id || !UUID.test(id)) return { error: 'Producto inválido.' };
+  if (!id || !UUID.test(id)) return { error: 'Platillo inválido.' };
 
   const track = formData.get('track_stock') === 'true';
   const threshold = Math.max(0, toInt(formData.get('low_stock_threshold')));
@@ -119,7 +119,7 @@ export async function ajustarExistencias(
 ): Promise<{ ok?: true; despues?: number; error?: string }> {
   const ctx = await resolveContext(restaurantIdForm);
   if (!ctx) return { error: 'No autorizado.' };
-  if (!UUID.test(productId)) return { error: 'Producto inválido.' };
+  if (!UUID.test(productId)) return { error: 'Platillo inválido.' };
   if (!['sumar', 'restar', 'fijar'].includes(modo)) return { error: 'Ajuste inválido.' };
   const n = Math.trunc(Number(cantidad));
   if (!Number.isFinite(n) || n < 0) return { error: 'Escribe una cantidad desde 0.' };
