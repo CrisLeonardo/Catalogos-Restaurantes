@@ -6,6 +6,20 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+## v0.25.0 · 2026-11-18 · Cierre de la Ola 2 y línea N «nada saturado»
+PR #137 a #146, fusionados juntos por #146 (apilados), más #144 contra `main` · **migración 187, antes de desplegar** (si falta, la cola del superadmin se ve sin estados y lo dice).
+- **Navegación por rol** (ficha 2.11, #137): si el trabajo cabe en cuatro casillas, la barra del teléfono nombra pantallas (caja, recepción, cocina); si no, Hoy · Pedidos · [+] · Menú · Más.
+- **Glosario** (ficha 2.12, #138): «platillo», «pantalla de cocina», «función» y los tres modos de pedido en toda la interfaz, vigilados por `glosario.test.ts`. Tomar pedidos y Cocina usan el menú del panel.
+- **Línea N «nada saturado»** (una maqueta aprobada por pantalla, registro §48–§54):
+  - **Recepción** (#139): pestañas, una acción por fila y lo demás en una hoja.
+  - **Inventario** (#140): lo que cuentas, con «+1» y una hoja por platillo (de 3,987 a 912 px).
+  - **Cupones, lealtad y encuestas** (#141): un cupón usado ya no se borra; el ajuste de puntos exige motivo y muestra los movimientos.
+  - **Finanzas y Analítica** (#142): selector de periodo de una línea; la gráfica por día vuelve a verse; la ganancia nunca sale en Q0.00 (sin costos lleva a ponerlos; con costos a medias dice «estimación parcial»); una lectura caída avisa en vez de mostrar ceros; Analítica cuenta los platillos por id.
+  - **Mi cuenta** (#143): Restaurantes con lo de hoy en cada fila; Comparativa pasa a Finanzas como «Por restaurante»; dos pestañas en vez de cuatro.
+  - **Superadmin** (#145, ficha 4.9, **migración 187**): el inicio es una cola de trabajo (servicio afectado, cobranza, activación, seguimiento) con asuntos que se posponen, anotan o resuelven, con historia; la ficha abre con el resumen de soporte; el cobro caído ya no se lee como «todo al día»; dar acceso dice qué podrá hacer cada papel.
+  - **Web pública** (#146, fichas V.1–V.3): la portada pasa de 13 a 7 bloques (de 16,577 a 7,459 px en el teléfono), con «Probar la demo» primero, tres casos con su plan y «¿qué plan te conviene?» con la misma regla del alta; /planes con la misma pregunta y la tabla plegada; la lealtad ya no promete canje al pagar.
+- **Herramienta local** (#144): el superadmin de prueba `super-demo@local.test` entra con `dev-login` sin teclear el código de dos pasos. En producción no existe.
+
 ## v0.24.0 · 2026-11-17 · Ola 2: arranque y autonomía
 PR #135 (merge `a89d7ca`), que junta #125–#128 y #130–#134 · migraciones 184, 185 y 186 · en producción el 2026-11-17 (`prod-2026-11-17`). El dueño corrió las tres antes del despliegue.
 - **Alta hasta el primer valor** (ficha 2.3; rama `feat/alta-primer-valor`; maqueta aprobada `docs/diseno/MAQUETA_ALTA_PRIMER_VALOR_2026-11-16.html`) · sin migraciones:
