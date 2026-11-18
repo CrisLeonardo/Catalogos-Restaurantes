@@ -92,8 +92,21 @@ un tirón, sin pasar por el formulario:
 |---------|------|
 | El panel del dueño | http://localhost:3000/api/dev-login |
 | Directo a una pantalla | http://localhost:3000/api/dev-login?next=/admin/caja |
-| Otro usuario | http://localhost:3000/api/dev-login?email=admin@local.test&next=/super |
+| Otro usuario | http://localhost:3000/api/dev-login?email=caja@rincon502.test |
+| El superadmin, sin código | http://localhost:3000/api/dev-login?email=super-demo@local.test&next=/super |
 | La cuenta Leogin de un comensal (billetera) | http://localhost:3000/api/dev-login?cuenta=1&email=comensal@billetera.test |
+
+**El superadmin y su código de 6 cifras.** Todo SUPER_ADMIN entra con app
+autenticadora (migración 137), y en local no hay celular que dé el código.
+`super-demo@local.test` es el superadmin de prueba: si no existe, créalo una vez
+con `node scripts/crear-super-admin.mjs super-demo@local.test <una contraseña larga>`
+(la contraseña no se vuelve a usar: se entra por `dev-login`). Al abrirle sesión,
+`dev-login` le inscribe una app «dev-login» con un secreto nuevo, calcula el código
+del momento (`src/lib/dev/totp.ts`) y lo verifica: la sesión queda en `aal2` de
+verdad y las políticas de la base se cumplen igual; no se salta nada. Una cuenta
+con una app inscrita por una persona (como `admin@local.test`) no se toca: la ruta
+responde 409 y explica que uses `super-demo@local.test`. En producción nada de
+esto existe: la ruta responde 404 fuera de un Supabase local.
 
 El comensal de prueba `comensal@billetera.test` («Ana Comensal», sin contraseña)
 no viene en la semilla: créalo una vez con
