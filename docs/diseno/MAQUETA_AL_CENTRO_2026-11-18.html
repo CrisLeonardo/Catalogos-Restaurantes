@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es-GT">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Al centro · Rincón 502 · Maqueta</title>
+<style>
+*{box-sizing:border-box} body{margin:0;background:#e8e3da;color:#28241e;font:16px/1.45 "Segoe UI",sans-serif}
+main{max-width:1150px;margin:auto;padding:24px}.lab{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px}
+h1{font:600 clamp(21px,3vw,30px)/1.1 Georgia,serif;margin:0}h2,h3,p{margin:0}button,select{font:inherit;color:inherit;cursor:pointer;min-height:44px}button:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #4789c2;outline-offset:2px}
+button,select{border:1px solid var(--line,#8f887d);background:var(--paper,#fffaf1);border-radius:8px;padding:8px 13px}
+.layout{display:grid;grid-template-columns:minmax(180px,235px) minmax(0,1fr);gap:24px;align-items:start}.before{padding:14px;background:#dcd6ca;border-radius:12px}.before summary{cursor:pointer;min-height:44px;font-weight:600}.before img{display:block;width:100%;max-width:220px;margin:auto;border-radius:8px}.before p{font-size:14px;margin-top:12px}
+.menu{--paper:#fff8e9;--ink:#282016;--soft:#605344;--line:#bbae9a;--accent:#932e1b;--on:#fff8ed;background:var(--paper);color:var(--ink);border:1px solid var(--line);overflow:hidden;border-radius:12px}
+.menu.dark{--paper:#221f1b;--ink:#fff4df;--soft:#d0c0aa;--line:#786957;--accent:#ffae88;--on:#32190e}.brand{border-bottom:1px solid var(--line);padding:10px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}.brand b{font:700 22px Georgia,serif}.brand small{font-size:13px;color:var(--soft)}
+.hero{display:grid;grid-template-columns:1.05fr 1fr;min-height:245px}.hero img{width:100%;height:100%;min-height:210px;object-fit:cover;display:block}.lead{padding:clamp(16px,3vw,34px);align-self:center}.lead h2{font:600 clamp(37px,5vw,62px)/.94 Georgia,serif;letter-spacing:-.04em;margin-bottom:12px}.lead p{color:var(--soft)}.lead strong{display:block;margin-top:10px;font-size:19px}
+.body{padding:16px 22px 22px}.pick,.line,.sum{display:flex;justify-content:space-between;align-items:center;gap:12px}.pick{border-block:1px solid var(--line);padding:9px 0;font-weight:600}.line{border-bottom:1px solid var(--line);padding:12px 0}.line small,.sum small{display:block;color:var(--soft);font-size:14px}.line strong,.sum strong,.lead strong{font-variant-numeric:tabular-nums}.sum{margin-top:16px;flex-wrap:wrap}.sum strong{font-size:24px}.primary{background:var(--accent);color:var(--on);border:0;font-weight:700}.check{display:flex;align-items:center;gap:9px;min-height:44px;cursor:pointer}.check input{width:20px;height:20px;accent-color:var(--accent)}.summary{margin-top:16px;padding:16px;border:2px solid var(--accent);border-radius:8px}.summary ul{padding-left:20px}.menu h3{font:600 23px Georgia,serif}.notes{margin-top:18px;color:#554c42;font-size:14px}.line select{max-width:60%}
+@media(max-width:700px){main{padding:10px}.lab{margin-bottom:10px}.layout{display:flex;flex-direction:column;gap:10px}.menu{width:100%;order:-1}.before{width:100%}.hero{min-height:0;grid-template-columns:1.08fr 1fr}.hero img{min-height:155px}.lead{padding:13px}.lead h2{font-size:34px}.lead p{font-size:14px}.lead strong{font-size:16px}.body{padding:10px 14px 16px}.brand{padding:8px 14px}.line{padding-block:9px}.sum{gap:8px}.before img{max-height:340px;width:auto;max-width:100%}}
+.before img{height:auto}.line select{max-width:68%}@media(min-width:701px){.hero{height:280px}.hero img{height:280px}}
+</style>
+<main>
+<header class="lab"><h1>Propuesta · Al centro</h1><button id="theme" aria-pressed="false">Modo oscuro</button></header>
+<div class="layout">
+<details class="before" open><summary>Antes · Clásico</summary><img src="al-centro-antes.webp" width="310" height="671" alt="Entrada actual con nombre de Rincón 502 y botón Ver el menú"><p>Enlace general en 390 × 844. El primer nombre de platillo empieza a 1,003 px del inicio.</p></details>
+<article class="menu" id="menu"><header class="brand"><b>Rincón 502</b><small>El Progreso, Jutiapa</small></header>
+<div class="hero"><div class="lead"><h2>Alitas al centro.</h2><p id="serving"></p><strong id="headline"></strong></div><img src="../../plataforma/public/demo/rincon502/alitas-bbq.webp" alt="Ilustración de las alitas BBQ con ranch"></div>
+<div class="body"><div class="pick"><label for="people">¿Cuántos comparten?</label><select id="people"><option value="2">2 personas</option><option value="4">4 personas</option></select></div>
+<div class="line"><div><b>Alitas BBQ</b><small id="wings"></small></div><strong id="wingPrice"></strong></div>
+<div class="line"><div><label for="side">Al centro</label><small id="sidePrice"></small></div><select id="side"><option value="35">Papas con queso</option><option value="48">Nachos supremos</option><option value="0">Solo alitas</option></select></div>
+<div class="line"><label class="check"><input id="drink" type="checkbox">Una limonada por persona</label><strong id="drinkPrice"></strong></div>
+<div class="sum" aria-live="polite" aria-atomic="true"><div><small>Total de la mesa</small><strong id="total"></strong><small id="each"></small></div><button id="review" class="primary">Revisar selección</button></div>
+<section id="summary" class="summary" hidden><h3 tabindex="-1">Tu selección</h3><ul id="items"></ul><p id="sumText"></p><button id="back">Volver a ajustar</button></section>
+</div></article></div>
+<p class="notes">Maqueta local con ilustraciones y precios de la carta de muestra. La selección permite revisar cantidades y precios antes de pasar al carrito.</p></main>
+<script>
+const el = id => document.getElementById(id);
+const money = value => 'Q' + value.toFixed(2);
+function render() {
+  const people = Number(el('people').value);
+  const orders = people / 2;
+  const side = Number(el('side').value);
+  const drinks = el('drink').checked ? people : 0;
+  const total = orders * (55 + side) + drinks * 18;
+  const perPerson = money(total / people) + ' por persona';
+  el('serving').textContent = (8 * orders) + ' alitas BBQ, con apio y ranch.';
+  el('headline').textContent = perPerson;
+  el('wings').textContent = orders + (orders === 1 ? ' orden de ocho' : ' órdenes de ocho');
+  el('wingPrice').textContent = money(55 * orders);
+  el('sidePrice').textContent = money(side * orders);
+
+  el('drinkPrice').textContent = (drinks ? '' : '+') + money(people * 18);
+  el('each').textContent = perPerson;
+  el('total').textContent = money(total);
+  const lines = [orders + ' × Alitas BBQ · ' + money(55 * orders)];
+  if (side) lines.push(orders + ' × ' + (side === 35 ? 'Papas con queso' : 'Nachos supremos') + ' · ' + money(side * orders));
+  if (drinks) lines.push(drinks + ' × Limonada con menta · ' + money(drinks * 18));
+  el('items').replaceChildren(...lines.map(text => {const li = document.createElement('li'); li.textContent = text; return li;}));
+  el('sumText').textContent = 'Total ' + money(total) + ' · ' + perPerson;
+}
+for (const id of ['people','side','drink']) el(id).addEventListener('change', render);
+el('review').onclick = () => {el('summary').hidden = false; el('summary').querySelector('h3').focus();};
+el('back').onclick = () => {el('summary').hidden = true; el('people').focus();};
+el('theme').onclick = () => {const dark = el('menu').classList.toggle('dark'); el('theme').setAttribute('aria-pressed',String(dark));};
+render();
+</script></html>
