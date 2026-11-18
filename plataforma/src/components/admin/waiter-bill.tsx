@@ -152,7 +152,7 @@ const KICKER: React.CSSProperties = {
 const MODE_TABS: { id: SplitMode; label: string; hint: string }[] = [
   { id: 'single', label: 'Una sola cuenta', hint: 'La mesa paga junta. Imprime la cuenta y listo.' },
   { id: 'equal', label: 'Partes iguales', hint: 'Solo dime entre cuántas personas: el total se parte parejo.' },
-  { id: 'byItem', label: 'Cada quien lo suyo', hint: 'Toca a una persona y luego SUS platos. Un plato se puede compartir tocándolo con varias.' },
+  { id: 'byItem', label: 'Cada quien lo suyo', hint: 'Toca a una persona y luego SUS platillos. Un platillo se puede compartir tocándolo con varias.' },
 ];
 
 /* ── Componente ───────────────────────────────────────────── */
@@ -436,7 +436,7 @@ export default function WaiterBill({
       {mode === 'byItem' && (
         <>
           <div>
-            <div style={KICKER}>Personas · toca una para asignarle platos</div>
+            <div style={KICKER}>Personas · toca una para asignarle platillos</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {peopleIds.map((id) => {
                 const on = safeActive === id;
@@ -517,7 +517,7 @@ export default function WaiterBill({
             }}>
               <Icon name="alertCircle" size={15} style={{ color: 'var(--c-warn)', flexShrink: 0 }} />
               <span style={{ flex: 1, minWidth: 170, fontSize: 12, color: 'var(--u-text-2)', lineHeight: 1.45 }}>
-                <b>{unassignedCount} plato{unassignedCount === 1 ? '' : 's'} sin asignar</b> ·{' '}
+                <b>{unassignedCount} platillo{unassignedCount === 1 ? '' : 's'} sin asignar</b> ·{' '}
                 {money(split.unassigned?.total ?? 0, currency)} que nadie está pagando.
               </span>
               <button
@@ -536,7 +536,7 @@ export default function WaiterBill({
       {/* ── Platos ───────────────────────────────────────── */}
       <div>
         <div style={KICKER}>
-          {mode === 'byItem' ? `Platos · tocando asignas a ${label(safeActive)}` : 'Platos de la mesa'}
+          {mode === 'byItem' ? `Platillos · tocando asignas a ${label(safeActive)}` : 'Platillos de la mesa'}
         </div>
         <Group>
           {liveLines.map((line, i) => (
@@ -658,7 +658,7 @@ export default function WaiterBill({
           se usa: primero se decide cómo se reparte y qué platos entran,
           y el número solo importa al final. */}
       <Group>
-        <BillRow label={`Consumo · ${liveLines.length} plato${liveLines.length === 1 ? '' : 's'}`} value={money(breakdown.items, currency)} />
+        <BillRow label={`Consumo · ${liveLines.length} platillo${liveLines.length === 1 ? '' : 's'}`} value={money(breakdown.items, currency)} />
         {breakdown.tip > 0 && <><Hr /><BillRow label="Propina" value={money(breakdown.tip, currency)} /></>}
         {breakdown.delivery > 0 && <><Hr /><BillRow label="Envío" value={money(breakdown.delivery, currency)} /></>}
         {/* El descuento deja de ser un renglón que solo se LEE (M-10).
@@ -895,7 +895,7 @@ function LineCard({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onVoid(); }}
-          title="Anular este plato"
+          title="Anular este platillo"
           aria-label={`Anular ${line.name}`}
           className="press"
           style={{ width: 26, height: 26, borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-danger-line)', background: 'var(--c-danger-bg)', color: 'var(--c-danger)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}

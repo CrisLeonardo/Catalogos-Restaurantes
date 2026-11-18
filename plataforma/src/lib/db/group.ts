@@ -230,6 +230,8 @@ export type BranchFigures = {
       cuánto de lo vendido tiene costo (auditoría 2026-11-03, X21). */
   productRevenue: number;
   marginPct: number | null;
+  /** false si su reporte no se pudo leer: sus ceros NO son ventas en cero. */
+  leido: boolean;
 };
 
 export type GroupReport = {
@@ -242,6 +244,10 @@ export type GroupReport = {
   /** null si ningún platillo vendido tiene costo cargado. */
   totalMarginPct: number | null;
   perBranch: BranchFigures[];
+  /** Restaurantes cuyo reporte falló: los totales NO los cuentan y la
+      pantalla lo dice (auditoría 2026-11-03, Mi cuenta: «error en una
+      sucursal se declara como parcial»). */
+  sinLeer: string[];
   combinedSeries: { date: string; label: string; revenue: number }[];
 };
 
@@ -259,7 +265,8 @@ export async function getGroupReport(branches: Restaurant[], from: string, to: s
     cost: reports[i].cost, costedRevenue: reports[i].costedRevenue,
     productRevenue: reports[i].productRevenue,
     marginPct: marginOf(reports[i].profit, reports[i].costedRevenue),
-  })).sort((a, b) => b.revenue - a.revenue);
+    leido: reports[i].estado !== 'error',
+  })).sort((a, b) => (a.leido === b.leido ? b.revenue - a.revenue : a.leido ? -1 : 1));
 
   // Serie combinada por fecha (suma de todas las sucursales).
   const byDate = new Map<string, { label: string; revenue: number }>();
@@ -285,6 +292,7 @@ export async function getGroupReport(branches: Restaurant[], from: string, to: s
     totalProductRevenue: perBranch.reduce((s, b) => s + b.productRevenue, 0),
     totalMarginPct: marginOf(totalProfit, totalCostedRevenue),
     perBranch,
+    sinLeer: perBranch.filter((b) => !b.leido).map((b) => b.name),
     combinedSeries,
   };
 }

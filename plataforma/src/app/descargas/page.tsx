@@ -27,7 +27,7 @@ const BENEFITS = [
   {
     icon: 'flame',
     title: 'Modo cocina a pantalla completa',
-    desc: 'Un acceso directo abre el KDS en modo kiosco, sin bandeja ni menús — ideal para una pantalla dedicada.',
+    desc: 'Un acceso directo abre la pantalla de cocina a pantalla completa, sin bandeja ni menús — ideal para una pantalla dedicada.',
   },
   {
     icon: 'plug',

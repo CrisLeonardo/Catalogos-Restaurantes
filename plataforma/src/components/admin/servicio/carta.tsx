@@ -129,8 +129,8 @@ export default function Carta({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={onKey}
-            placeholder="Buscar plato o alias…"
-            aria-label="Buscar un plato para agregar"
+            placeholder="Buscar platillo o alias…"
+            aria-label="Buscar un platillo para agregar"
             autoComplete="off"
             enterKeyHint="done"
           />
@@ -180,15 +180,15 @@ export default function Carta({
               </div>
               <button type="button" className="sv-favoritos-editar" onClick={onTurno}>{conTeclado ? 'Preparar turno' : 'Editar'}</button>
             </div>
-            {aprendiz && <p className="sv-foot-note">Toca un favorito para agregar un plato.</p>}
+            {aprendiz && <p className="sv-foot-note">Toca un favorito para agregar un platillo.</p>}
             {favs.length > 0 && (
               <div className="sv-fav-grid">
                 {favs.map((p, i) => (!p && !conTeclado ? null :
                   <button key={i} type="button" className="sv-fav" disabled={!p?.is_available}
-                    aria-label={`Puesto ${i + 1} · ${p?.name ?? 'Sin plato'}${p && !p.is_available ? ' · Agotado' : ''}`}
+                    aria-label={`Puesto ${i + 1} · ${p?.name ?? 'Sin platillo'}${p && !p.is_available ? ' · Agotado' : ''}`}
                     onClick={() => { if (p) onAdd(p, 1); }}>
                     {conTeclado && <span className="sv-fav-key" aria-hidden>{i + 1}</span>}
-                    <span className="sv-fav-name">{p?.name ?? 'Sin plato'}</span>
+                    <span className="sv-fav-name">{p?.name ?? 'Sin platillo'}</span>
                     <span className="sv-fav-price">{p ? p.is_available ? money(p.price) : 'Agotado' : 'Puesto reservado'}</span>
                   </button>
                 ))}
@@ -200,8 +200,8 @@ export default function Carta({
         {dishes.length === 0 ? (
           <div className="sv-vacio">
             {term
-              ? <>Ningún plato se llama «{term}».<br />Prueba otra palabra.</>
-              : 'Esta categoría no tiene platos.'}
+              ? <>Ningún platillo se llama «{term}».<br />Prueba otra palabra.</>
+              : 'Esta categoría no tiene platillos.'}
             {/* Y aquí, justo aquí, la salida (M-09). No es un botón más del
                 menú: es la respuesta a lo que el mesero acaba de descubrir,
                 y llega con el nombre ya escrito. */}

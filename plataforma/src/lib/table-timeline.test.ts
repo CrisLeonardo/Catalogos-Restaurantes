@@ -31,8 +31,8 @@ describe('tableTimeline', () => {
       pedido({ created_at: '2026-08-26T12:40:00Z', items: [item('b', 'Café', 2)] }),
     ]);
     expect(t.map((e) => e.text)).toEqual([
-      'Se abrió la mesa · 3 platos a cocina',
-      '2 platos más a cocina',
+      'Se abrió la mesa · 3 platillos a cocina',
+      '2 platillos más a cocina',
     ]);
   });
 
@@ -41,7 +41,7 @@ describe('tableTimeline', () => {
       pedido({ created_at: '2026-08-26T12:40:00Z', items: [item('b', 'Café', 1)] }),
       pedido({ created_at: '2026-08-26T12:07:00Z', items: [item('a', 'Sopa', 1)] }),
     ]);
-    expect(t[0].text).toBe('Se abrió la mesa · 1 plato a cocina');
+    expect(t[0].text).toBe('Se abrió la mesa · 1 platillo a cocina');
   });
 
   it('recorre las cuatro marcas de tiempo de una comanda servida', () => {
@@ -55,10 +55,10 @@ describe('tableTimeline', () => {
       items: [item('a', 'Sopa', 2)],
     })]);
     expect(t.map((e) => e.text)).toEqual([
-      'Se abrió la mesa · 2 platos a cocina',
+      'Se abrió la mesa · 2 platillos a cocina',
       'Cocina aceptó la comanda',
-      '2 platos listos',
-      '2 platos servidos en la mesa',
+      '2 platillos listos',
+      '2 platillos servidos en la mesa',
     ]);
     expect(t[0].who).toBe('Carlos');
     expect(t.some((e) => e.pendiente)).toBe(false);
@@ -72,7 +72,7 @@ describe('tableTimeline', () => {
       items: [item('a', 'Pizza', 1)],
     })]);
     const listo = t.find((e) => e.text.includes('listo'));
-    expect(listo).toMatchObject({ text: '1 plato listo en la barra', pendiente: true });
+    expect(listo).toMatchObject({ text: '1 platillo listo en la barra', pendiente: true });
   });
 
   it('marca como pendiente la comanda que cocina no ha aceptado', () => {
@@ -84,13 +84,13 @@ describe('tableTimeline', () => {
     expect(t[0].pendiente).toBe(true);
   });
 
-  it('no cuenta las unidades anuladas en el número de platos', () => {
+  it('no cuenta las unidades anuladas en el número de platillos', () => {
     const t = tableTimeline([pedido({
       created_at: '2026-08-26T12:07:00Z',
       items: [item('a', 'Limonada', 3)],
       voids: [{ item_id: 'a', quantity: 1, reason: 'Se equivocó', created_at: '2026-08-26T12:10:00Z' }],
     })]);
-    expect(t[0].text).toBe('Se abrió la mesa · 2 platos a cocina');
+    expect(t[0].text).toBe('Se abrió la mesa · 2 platillos a cocina');
   });
 
   it('la anulación es un hecho más del turno, en su hora', () => {
@@ -101,7 +101,7 @@ describe('tableTimeline', () => {
       voids: [{ item_id: 'a', quantity: 1, reason: 'Se equivocó', created_at: '2026-08-26T12:10:00Z' }],
     })]);
     expect(t.map((e) => e.text)).toEqual([
-      'Se abrió la mesa · 2 platos a cocina',
+      'Se abrió la mesa · 2 platillos a cocina',
       'Se anuló 1 · Limonada · Se equivocó',
       'Cocina aceptó la comanda',
     ]);
@@ -124,7 +124,7 @@ describe('tableTimeline', () => {
       pedido({ status: 'CANCEL', created_at: '2026-08-26T12:07:00Z', items: [item('a', 'Sopa', 1)] }),
       pedido({ created_at: '2026-08-26T12:40:00Z', items: [item('b', 'Café', 1)] }),
     ]);
-    expect(t.map((e) => e.text)).toEqual(['Se abrió la mesa · 1 plato a cocina']);
+    expect(t.map((e) => e.text)).toEqual(['Se abrió la mesa · 1 platillo a cocina']);
   });
 
   it('una mesa sin nada no inventa historia', () => {

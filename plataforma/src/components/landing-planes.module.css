@@ -1,0 +1,47 @@
+/* ¿Qué plan te conviene? y los tres casos de la portada (V.2/V.3,
+   línea N; maqueta aprobada el 2026-11-18). Web pública: tema claro. */
+
+.caja { display: flex; flex-direction: column; gap: 16px; padding: clamp(16px, 3vw, 24px); max-width: 640px; margin: 0 auto; border-radius: 22px; }
+.pregunta { margin: 0; padding: 0; border: 0; min-width: 0; }
+.pregunta legend { padding: 0; margin-bottom: 10px; font-size: 16px; font-weight: 700; color: var(--u-text); }
+.opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.opcion {
+  min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--u-text) 26%, var(--lp-card));
+  background: var(--lp-card); color: var(--u-text); font: inherit; font-size: 14px; cursor: pointer;
+}
+.opcion[aria-pressed='true'] { border: 2px solid var(--brand-accent); color: var(--brand-accent-ink); font-weight: 700; padding: 0 15px; }
+.opcion:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: 2px; }
+
+.lista { list-style: none; margin: 0; padding: 0; border: 1px solid var(--lp-line); border-radius: 16px; overflow: hidden; background: var(--lp-card); }
+.plan { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: baseline; padding: 12px 14px; }
+.plan + .plan { border-top: 1px solid var(--lp-line); }
+.plan[data-elegido] { background: color-mix(in srgb, var(--brand-accent) 7%, var(--lp-card)); }
+.nombre { font-size: 15px; font-weight: 700; color: var(--u-text); }
+.nombre em { font-style: normal; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-accent-ink); }
+.precio { font-size: 18px; font-weight: 800; color: var(--u-text); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+.precio small { font-size: 13px; font-weight: 600; color: var(--u-text-3); }
+.resumen { grid-column: 1 / -1; font-size: 13px; line-height: 1.4; color: var(--u-text-3); }
+
+.cta { width: 100%; }
+.mas { align-self: center; font-size: 14px; font-weight: 600; color: var(--brand-accent-ink); text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+.mas:hover { text-decoration: underline; }
+
+/* ── ¿Cuál es tu caso? ──────────────────────────────────────── */
+.casos { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; border-radius: 22px; overflow: hidden; }
+@media (min-width: 900px) { .casos { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.casos > li + li { border-top: 1px solid var(--lp-line); }
+@media (min-width: 900px) { .casos > li + li { border-top: 0; border-left: 1px solid var(--lp-line); } }
+.caso {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; height: 100%;
+  padding: 14px 16px; color: inherit; text-decoration: none;
+}
+@media (hover: hover) { .caso:hover { background: color-mix(in srgb, var(--brand-accent) 5%, var(--lp-card)); } }
+.caso:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: -2px; }
+.casoIcono { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, var(--brand-accent) 10%, var(--lp-card)); color: var(--brand-accent-ink); }
+.caso b { display: block; font-size: 15px; color: var(--u-text); }
+.caso span { display: block; font-size: 13px; line-height: 1.4; color: var(--u-text-3); margin-top: 2px; }
+.caso em { font-style: normal; font-size: 13px; font-weight: 700; color: var(--u-text); white-space: nowrap; text-align: right; }
+.caso em small { display: block; font-size: 12px; font-weight: 500; color: var(--u-text-3); }
+.soloCarta { margin: 12px 0 0; font-size: 14px; color: var(--u-text-3); text-align: center; }
+.soloCarta a { color: var(--brand-accent-ink); font-weight: 700; text-decoration: none; }
+.soloCarta a:hover { text-decoration: underline; }

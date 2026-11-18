@@ -1,5 +1,6 @@
 'use server';
 import { identidadReciente } from '@/lib/auth/reauth';
+import { STATUS_LABEL } from '@/lib/order-status';
 import { reauthRequerida } from '@/lib/auth/reauth-policy';
 
 /* ============================================================
@@ -28,12 +29,10 @@ import { longDate } from '@/lib/documents/format';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
-const ORDER_STATUS_LABEL: Record<string, string> = {
-  NEW: 'Nuevo', PREP: 'En preparación', READY: 'Listo', TRANSIT: 'En camino',
-  SERVED: 'Servido', DELIVERED: 'Entregado', CANCEL: 'Cancelado',
-};
+// Los mismos estados que la pantalla (glosario, ficha 2.12).
+const ORDER_STATUS_LABEL: Record<string, string> = STATUS_LABEL;
 const ORDER_TYPE_LABEL: Record<string, string> = {
-  PICKUP: 'Para llevar', DINE_IN: 'En local', DELIVERY: 'Domicilio',
+  PICKUP: 'Para llevar', DINE_IN: 'Comer en local', DELIVERY: 'A domicilio',
 };
 
 async function authRestaurant(restaurantId: string): Promise<{ error: string } | { role: string }> {
@@ -109,11 +108,11 @@ export async function exportBackupXlsx(
   const wsCat = wb.addWorksheet('Catálogo');
   addBrandedHeader(wsCat, {
     branding, title: 'Catálogo', columnsSpan: 8,
-    subtitle: `${products.length} producto${products.length === 1 ? '' : 's'} · ${generated}`,
+    subtitle: `${products.length} platillo${products.length === 1 ? '' : 's'} · ${generated}`,
   });
   const catHeader = writeStyledTable(
     wsCat, branding,
-    ['Categoría', 'Producto', 'Precio', 'Costo', 'Stock', 'Con control de stock', 'Activo', 'Disponible'],
+    ['Categoría', 'Platillo', 'Precio', 'Costo', 'Stock', 'Con control de stock', 'Activo', 'Disponible'],
     products.map((p) => [
       categoryName.get(p.category_id ?? '') ?? 'Sin categoría', p.name, p.price, p.cost,
       p.track_stock ? p.stock : null, p.track_stock ? 'Sí' : 'No', p.is_active ? 'Sí' : 'No', p.is_available ? 'Sí' : 'No',
@@ -186,7 +185,7 @@ export async function exportBackupXlsx(
   });
   const ordHeader = writeStyledTable(
     wsOrd, branding,
-    ['Número', 'Fecha', 'Hora', 'Cliente', 'Teléfono', 'Tipo', 'Estado', 'Productos', 'Subtotal', 'Envío', 'Total', 'Notas'],
+    ['Número', 'Fecha', 'Hora', 'Cliente', 'Teléfono', 'Tipo', 'Estado', 'Platillos', 'Subtotal', 'Envío', 'Total', 'Notas'],
     ordRows,
     { currencyCols: [9, 10, 11] },
   );

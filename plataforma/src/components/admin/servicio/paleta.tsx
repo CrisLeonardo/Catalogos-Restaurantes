@@ -143,7 +143,7 @@ export default function Paleta({
         className="sv-palette"
         role="dialog"
         aria-modal="true"
-        aria-label="Buscar plato, mesa o acción"
+        aria-label="Buscar platillo, mesa o acción"
         onClick={(e) => e.stopPropagation()}
       >
         <input
@@ -151,7 +151,7 @@ export default function Paleta({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="2 pepián · mesa 7 · cobrar · juntar"
-          aria-label="Buscar plato, mesa o acción"
+          aria-label="Buscar platillo, mesa o acción"
           autoComplete="off"
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown') {

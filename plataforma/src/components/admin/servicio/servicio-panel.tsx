@@ -420,7 +420,7 @@ export default function ServicioPanel({
         k, lineas.map((l) => l.open || l.options.length === 0 ? l : { ...l, price: precios.get(l.productId) ?? l.price }),
       ])));
       const n = contarCarts(d.carts);
-      setAviso({ text: n === 1 ? 'Se recuperó 1 plato sin enviar.' : `Se recuperaron ${n} platos sin enviar.` });
+      setAviso({ text: n === 1 ? 'Se recuperó 1 platillo sin enviar.' : `Se recuperaron ${n} platillos sin enviar.` });
     } catch { /* modo privado: el borrador es un extra */ }
   }, [restaurantId, waiterId, productosServidor]);
 
@@ -636,7 +636,7 @@ export default function ServicioPanel({
 
   const empujar = useCallback((linea: CartLine, aviso = true) => {
     if (sel.kind === 'none') { tocaMesa(); return; }
-    if (enLimpieza) { setAviso({ text: 'La mesa está por limpiar. Elige otra para agregar platos.', bad: true }); return; }
+    if (enLimpieza) { setAviso({ text: 'La mesa está por limpiar. Elige otra para agregar platillos.', bad: true }); return; }
     const k = cartKey(sel);
     setCarts((prev) => {
       const actual = prev[k] ?? [];
@@ -742,7 +742,7 @@ export default function ServicioPanel({
     setAviso({
       text: faltan.length
         ? `Otra ronda: ${n} al carrito. Sin ${faltan.join(', ')} (agotado o cambió en la carta).`
-        : `Otra ronda: ${n} ${n === 1 ? 'plato' : 'platos'} al carrito. Revisa y envía.`,
+        : `Otra ronda: ${n} ${n === 1 ? 'platillo' : 'platillos'} al carrito. Revisa y envía.`,
       bad: faltan.length > 0,
     });
   }, [ordersVivos, products, empujar, enLimpieza]);
@@ -883,7 +883,7 @@ export default function ServicioPanel({
       const identificaPlato = aEnviar.some((l) => error.includes(`"${l.name}"`));
       const lineas = aEnviar.map((l) => ({
         ...l, errorEnvio: !identificaPlato || error.includes(`"${l.name}"`)
-          ? error : 'Pendiente. Corrige el plato señalado antes de reenviar.',
+          ? error : 'Pendiente. Corrige el platillo señalado antes de reenviar.',
       }));
       setCarts((prev) => ({ ...prev, [k]: [...lineas, ...(prev[k] ?? [])] }));
       if (!mesa) setNombreLlevar((prev) => prev || nombreEnviado);
@@ -1525,13 +1525,13 @@ export default function ServicioPanel({
           {!enLimpieza && puedeTomarPedidos && (movil || planoVisible) && (
             <button type="button" className="sv-cta" data-tone="quiet"
               onClick={() => { setVistaCarta(true); setPantalla('comanda'); }}>
-              <Icon name="plus" size={17} aria-hidden /> Agregar platos
+              <Icon name="plus" size={17} aria-hidden /> Agregar platillos
             </button>
           )}
         </div>
       )}
       {sel.kind === 'llevar' && resumen.nNuevas === 0 && (
-        <div className="sv-foot-note">Toca un plato para empezar el pedido de mostrador.</div>
+        <div className="sv-foot-note">Toca un platillo para empezar el pedido de mostrador.</div>
       )}
       {conTeclado && (
         <div className="sv-foot-keys">
@@ -1588,7 +1588,7 @@ export default function ServicioPanel({
           </div> : <span style={{ flex: 1 }} />}
 
           <Ghost onClick={() => setPaleta(true)} icon={planoVisible ? 'search' : 'more'}>
-            {planoVisible ? 'Buscar plato, mesa o acción' : 'Acciones'}
+            {planoVisible ? 'Buscar platillo, mesa o acción' : 'Acciones'}
             {conTeclado && <Key>{atajo(mod, 'K')}</Key>}
           </Ghost>
           {!servicio?.active && <Ghost onClick={cambiarAprendiz} on={aprendiz} title="Modo aprendiz">Modo aprendiz</Ghost>}
@@ -1628,7 +1628,7 @@ export default function ServicioPanel({
                   <h1 className={eligeVista ? 'sr-only' : 'sv-rail-title'}>Salón</h1>
                   {(!movil || !eligeVista) && <div className="sv-rail-sub">{resumenDelSalon(mesas)}</div>}
                 </div>
-                {movil && <Ghost onClick={() => setPaleta(true)} icon="search" soloIcono title="Buscar plato, mesa o acción" />}
+                {movil && <Ghost onClick={() => setPaleta(true)} icon="search" soloIcono title="Buscar platillo, mesa o acción" />}
                 {pickupEnabled && (
                   <button type="button" className="sv-ghost sv-llevar-b" aria-label="Para llevar" onClick={() => setHoja({ k: 'llevar' })}>
                     <Icon name="bag" size={17} />
@@ -1986,7 +1986,7 @@ export default function ServicioPanel({
             }
             setHoja(null);
             const n = dictadas.reduce((s, d) => s + d.qty, 0);
-            setAviso({ text: n === 1 ? '1 plato agregado por voz' : `${n} platos agregados por voz` });
+            setAviso({ text: n === 1 ? '1 platillo agregado por voz' : `${n} platillos agregados por voz` });
           }}
         />
       )}
@@ -2020,7 +2020,7 @@ export default function ServicioPanel({
           onAnular={() => {
             const l = hoja.linea;
             const o = ordersVivos.find((x) => x.id === l.orderId);
-            if (!o || !l.orderId) { setAviso({ text: 'Ese plato ya no se puede anular.', bad: true }); return; }
+            if (!o || !l.orderId) { setAviso({ text: 'Ese platillo ya no se puede anular.', bad: true }); return; }
             setHoja({
               k: 'anular',
               orderId: l.orderId,

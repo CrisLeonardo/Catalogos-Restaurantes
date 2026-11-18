@@ -5,7 +5,6 @@ import { accesoAlPanel } from '@/lib/auth/panel-destino';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { can } from '@/lib/permissions';
-import type { ModulesMap } from '@/lib/modules';
 import { authPathFor } from '@/lib/tenant';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import { isSessionStale, SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
@@ -18,8 +17,9 @@ import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
 import SessionHeartbeat from '@/components/admin/session-heartbeat';
 import type { Metadata } from 'next';
 import { getEsteAparato } from '@/lib/db/aparato';
+import { menuDelPanel, type RestauranteDelMenu } from '@/lib/admin/menu-del-panel';
 
-export const metadata: Metadata = { title: 'Cocina (KDS)' };
+export const metadata: Metadata = { title: 'Cocina' };
 
 /**
  * Layout de la pantalla de cocina (KDS). Usa el mismo AdminShell (sidebar +
@@ -100,26 +100,22 @@ export default async function KitchenLayout({ children }: { children: React.Reac
   if (!restaurantId) redirect(profile.role === 'SUPER_ADMIN' ? '/super/restaurantes' : '/admin/login');
 
   let restaurantName = 'Restaurante';
-  let ordersEnabled = false;
   let logoUrl: string | null = null;
   let logoBg: string | null = null;
   let zone = '';
-  let planActual: string | null = null;
+  // Lo que el menú del panel necesita (ficha 2.11): el mismo que en el resto.
+  let menuDe: RestauranteDelMenu | null = null;
 
   if (tenant) {
     restaurantName = tenant.restaurant.name;
-    const mod = tenant.restaurant.modules as ModulesMap;
-    ordersEnabled = mod?.['orders'] === true;
     logoUrl = tenant.resolved.config.logoUrl ?? null;
     logoBg = tenant.resolved.config.colorBg ?? null;
     zone = tenant.resolved.config.zone ?? '';
-    planActual = tenant.restaurant.plan_actual ?? null;
+    menuDe = tenant.restaurant;
   } else {
-    const { data: r } = await db.from('restaurants').select('name, modules, plan_actual').eq('id', restaurantId).single();
+    const { data: r } = await db.from('restaurants').select('name, modules, module_settings, plan_actual').eq('id', restaurantId).single();
     restaurantName = (r?.name as string | null) ?? 'Restaurante';
-    const mod = r?.modules as ModulesMap;
-    ordersEnabled = mod?.['orders'] === true;
-    planActual = (r?.plan_actual as string | null) ?? null;
+    menuDe = r;
   }
 
   return (
@@ -127,8 +123,7 @@ export default async function KitchenLayout({ children }: { children: React.Reac
       aparato={await getEsteAparato(restaurantId)}
       restaurantName={restaurantName}
       restaurantId={restaurantId}
-      ordersEnabled={ordersEnabled}
-      planActual={planActual}
+      {...menuDelPanel(menuDe, tenant?.resolved.config.orderTypes ?? null, profile.role)}
       logoUrl={logoUrl}
       logoBg={logoBg}
       zone={zone}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { leerPlatosDelAlta, modosEstandar, planSugerido } from '@/lib/alta';
+import { leerPlatosDelAlta, modosEstandar, planParaTuCaso, planSugerido } from '@/lib/alta';
 
 describe('planSugerido', () => {
   it('sugiere el plan por cómo le piden, no Premium para todos', () => {
@@ -36,5 +36,22 @@ describe('leerPlatosDelAlta', () => {
   });
   it('un texto que no es JSON se explica', () => {
     expect(leerPlatosDelAlta('{roto')).toEqual({ error: 'No pudimos leer tus platillos. Vuelve a escribirlos.' });
+  });
+});
+
+describe('planParaTuCaso (web pública, V.2/V.3)', () => {
+  it('usa la misma regla que el alta en sus tres casos', () => {
+    expect(planParaTuCaso('carta')).toBe(planSugerido('carta'));
+    expect(planParaTuCaso('llevar')).toBe(planSugerido('llevar'));
+    expect(planParaTuCaso('mesas')).toBe(planSugerido('mesas'));
+  });
+
+  it('mostrador va a Estándar', () => {
+    expect(planParaTuCaso('mostrador')).toBe('ESTANDAR');
+  });
+
+  it('para llevar con más de 300 pedidos al mes pasa a Estándar', () => {
+    expect(planParaTuCaso('llevar', true)).toBe('ESTANDAR');
+    expect(planParaTuCaso('mesas', true)).toBe('PREMIUM');
   });
 });

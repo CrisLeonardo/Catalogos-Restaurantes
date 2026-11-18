@@ -368,7 +368,7 @@ export function buildReceiptEscPos(
   const dateStr = ticketDateTime(order.created_at, format);
   const typeLabel =
     order.order_type === 'PICKUP'  ? 'Para llevar' :
-    order.order_type === 'DINE_IN' ? 'En local'    : 'Domicilio';
+    order.order_type === 'DINE_IN' ? 'Comer en local' : 'A domicilio';
 
   b.init()
    .align('center')
@@ -483,7 +483,7 @@ export function buildSplitBillEscPos(input: {
   b.align('left').sep('-');
 
   if (input.lines.length === 0) {
-    b.line('(sin platos asignados)');
+    b.line('(sin platillos asignados)');
   }
   for (const l of input.lines) {
     b.row(`${l.quantity}x ${l.name}`, fm(l.amount));

@@ -53,7 +53,7 @@ export function SiteHeader({ home = false }: { home?: boolean }) {
         </Link>
         <nav aria-label="Navegación principal" className="lp-nav">
           <a href={anchor('producto')} className="lp-navlink">Producto</a>
-          <a href={anchor('capacidades')} className="lp-navlink">Funciones</a>
+          <a href={anchor('casos')} className="lp-navlink">Tu caso</a>
           <Link href="/vende-en-linea" className="lp-navlink">Vende en línea</Link>
           <Link href="/planes" className="lp-navlink">Planes</Link>
           <a href={demoUrl} className="lp-navlink">Demo</a>
@@ -103,7 +103,7 @@ export function SiteFooter({ home = false }: { home?: boolean }) {
           </div>
 
           <FooterCol title="Producto">
-            <a href={anchor('capacidades')} className="lp-footer-link">Funciones</a>
+            <a href={anchor('casos')} className="lp-footer-link">Elige tu caso</a>
             <Link href="/vende-en-linea" className="lp-footer-link">Para vender en línea</Link>
             <Link href="/planes" className="lp-footer-link">Planes y precios</Link>
             <a href={demoUrl} className="lp-footer-link">Demo en vivo</a>

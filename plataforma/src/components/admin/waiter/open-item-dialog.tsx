@@ -88,7 +88,7 @@ export default function OpenItemDialog({
           Artículo libre
         </div>
         <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 6, lineHeight: 1.45 }}>
-          Algo que no está en la carta: el plato del día, un descorche, un recargo.
+          Algo que no está en la carta: el platillo del día, un descorche, un recargo.
           Entra a la cuenta como cualquier otro y queda registrado.
         </div>
 
@@ -97,7 +97,7 @@ export default function OpenItemDialog({
             autoFocus={!nombreInicial.trim()}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Descorche, plato del día…"
+            placeholder="Descorche, platillo del día…"
             aria-label="Nombre del artículo"
             maxLength={80}
             className="adm-field adm-field-lg" style={campoStyle}

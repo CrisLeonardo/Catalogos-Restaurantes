@@ -37,7 +37,7 @@ export async function setModuleEnabled(
   key: ActivatableModuleKey,
   enabled: boolean,
 ): Promise<ModuleActionResult> {
-  if (!VALID_KEYS.includes(key)) return { error: 'Módulo inválido.' };
+  if (!VALID_KEYS.includes(key)) return { error: 'Función inválida.' };
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -52,7 +52,7 @@ export async function setModuleEnabled(
 
   const isSuper = profile.role === 'SUPER_ADMIN';
   const isOwner = profile.role === 'RESTAURANT_OWNER';
-  if (!isSuper && !isOwner) return { error: 'Solo el propietario puede activar módulos.' };
+  if (!isSuper && !isOwner) return { error: 'Solo el dueño puede encender funciones.' };
 
   // El dueño solo puede tocar su propio restaurante.
   if (isOwner && !(await canActOnRestaurant(profile.restaurant_id, restaurantId))) {
@@ -61,7 +61,7 @@ export async function setModuleEnabled(
 
   const meta = moduleMeta(key);
   if (meta.requiresSetup && !isSuper) {
-    return { error: 'Este módulo lo activa el equipo de Leogin. Solicítalo desde Soporte.' };
+    return { error: 'Esta función la enciende el equipo de Leogin. Pídela desde Soporte.' };
   }
 
   const db = createServiceClient();
@@ -75,7 +75,7 @@ export async function setModuleEnabled(
   // Leogin debe haber habilitado el módulo (modules[key]) para que exista algo
   // que prender/apagar; si no, ni siquiera debería mostrarse en el panel.
   if (!isManaged(rest.modules as Record<string, boolean> | null, key) && !isSuper) {
-    return { error: 'Este módulo no está disponible en tu plan. Contáctanos para activarlo.' };
+    return { error: 'Esta función no está en tu plan. Escríbenos para encenderla.' };
   }
 
   const current = (rest.module_settings as ModuleSettings | null) ?? {};

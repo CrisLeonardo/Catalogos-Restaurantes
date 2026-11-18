@@ -448,7 +448,7 @@ export default function ModulesPanel({ restaurantId, modules: rawModules, settin
             <RowIcon name="wallet" on />
             <ListText
               title={`Plan ${PLANS[currentPlan].name}`}
-              desc={`${contract.moduleCounts.included} módulos incluidos · ${contract.moduleCounts.enabled} habilitados · ${contract.moduleCounts.active} encendidos · ${contract.moduleCounts.configured} con configuración comprobada`}
+              desc={`${contract.moduleCounts.included} funciones incluidas · ${contract.moduleCounts.enabled} habilitadas · ${contract.moduleCounts.active} encendidos · ${contract.moduleCounts.configured} con configuración comprobada`}
             />
             <span className="t-mono shrink-0 text-[13px]" style={{ color: 'var(--u-text-2)' }}>
               {`${formatPlanAmount(amount, billedCurrency)}${billedCurrency === 'GTQ' ? '' : ` ${billedCurrency}`} / mes`}

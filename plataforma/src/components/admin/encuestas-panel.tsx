@@ -1,12 +1,18 @@
 'use client';
 
-import { Icon } from '@/components/icons';
-import { Card } from '@/components/ui/card';
-import { Stat, StatGroup } from '@/components/ui/stat';
+/* Encuestas. Línea N «nada saturado» (maqueta aprobada el 2026-11-18:
+   docs/diseno/MAQUETA_PROMOCIONES_NADA_SATURADO_2026-11-18.html).
+
+   El promedio y la distribución caben en una tarjeta; debajo, lo que
+   dijeron los clientes en una lista sólida. «Con comentario» y «3 o menos»
+   solo aparecen cuando hay alguna. En la PC, el resumen va a la izquierda. */
+
+import { useState } from 'react';
+import { EmptyState } from '@/components/ui/empty-state';
 import type { OrderRating, RatingsSummary } from '@/lib/db/encuestas';
 import type { EstadoLectura } from '@/lib/db/lectura';
 import AvisoLectura from '@/components/admin/aviso-lectura';
-import { useState } from 'react';
+import s from './fidelidad.module.css';
 
 interface Props {
   ratings: OrderRating[];
@@ -16,11 +22,16 @@ interface Props {
   leidoEn: string;
 }
 
-function Stars({ value, size = 14 }: { value: number; size?: number }) {
+type Filtro = 'todas' | 'comentario' | 'bajas';
+const POR_PAGINA = 20;
+
+function Estrellas({ valor, size = 14 }: { valor: number; size?: number }) {
+  const llenas = Math.round(valor);
   return (
-    <span style={{ display: 'inline-flex', gap: 2 }}>
-      {[1, 2, 3, 4, 5].map((s) => (
-        <svg key={s} width={size} height={size} viewBox="0 0 24 24" fill={s <= Math.round(value) ? 'var(--c-warn)' : 'none'} stroke="#fbbf24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <span className={s.estrellas} role="img" aria-label={`${llenas} de 5 estrellas`}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <svg key={n} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true"
+          fill={n <= llenas ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2} strokeLinejoin="round">
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
         </svg>
       ))}
@@ -28,27 +39,11 @@ function Stars({ value, size = 14 }: { value: number; size?: number }) {
   );
 }
 
-function DistBar({ label, count, total }: { label: string; count: number; total: number }) {
-  const pct = total > 0 ? (count / total) * 100 : 0;
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <span style={{ fontSize: 11, color: 'var(--u-text-3)', width: 14, textAlign: 'right', flexShrink: 0 }}>{label}</span>
-      <div style={{ flex: 1, height: 6, borderRadius: 'var(--radius-full)', background: 'color-mix(in srgb, var(--u-text) 8%, transparent)' }}>
-        <div style={{ height: '100%', borderRadius: 'var(--radius-full)', background: 'var(--chart-hi)', width: `${pct}%`, transition: 'width 400ms' }} />
-      </div>
-      <span style={{ fontSize: 11, color: 'var(--u-text-4)', width: 24, textAlign: 'right', flexShrink: 0 }}>{count}</span>
-    </div>
-  );
-}
+const respuestas = (n: number) => `${n.toLocaleString('es-GT')} ${n === 1 ? 'respuesta' : 'respuestas'}`;
 
 export default function EncuestasPanel({ ratings, summary, estado, leidoEn }: Props) {
-  /* Cinco a la vista y «Ver todas»: antes la lista tenía su propio scroll
-     de 400 px dentro de la página — scroll dentro de scroll, que en el
-     teléfono atrapa el dedo (auditoría 2026-10-02, CLI-04). */
-  const [allReviews, setAllReviews] = useState(false);
-  const shownRatings = allReviews ? ratings : ratings.slice(0, 5);
-  const avgDisplay = summary.average > 0 ? summary.average.toFixed(1) : '—';
-  const avgMonthDisplay = summary.avgThisMonth > 0 ? summary.avgThisMonth.toFixed(1) : '—';
+  const [filtro, setFiltro] = useState<Filtro>('todas');
+  const [cuantas, setCuantas] = useState(POR_PAGINA);
 
   if (estado === 'error') {
     return (
@@ -62,77 +57,90 @@ export default function EncuestasPanel({ ratings, summary, estado, leidoEn }: Pr
     );
   }
 
+  if (summary.total === 0) {
+    return (
+      <div className={s.panel}>
+        <EmptyState
+          icon="thumbsUp"
+          title="Aún no hay respuestas"
+          desc="Quien pide desde su celular ve una encuesta de menos de 30 segundos al terminar. Sus calificaciones aparecerán aquí."
+          action={{ label: 'Comparte tu código QR', href: '/admin/qr', icon: null }}
+        />
+      </div>
+    );
+  }
+
+  const conComentario = ratings.filter((r) => r.comment?.trim());
+  const bajas = ratings.filter((r) => r.rating <= 3);
+  const lista = filtro === 'comentario' ? conComentario : filtro === 'bajas' ? bajas : ratings;
+  const visibles = lista.slice(0, cuantas);
+  const maximo = Math.max(1, ...Object.values(summary.distribution));
+  const pildoras: { valor: Filtro; texto: string; cuenta: number }[] = [
+    { valor: 'todas', texto: 'Todas', cuenta: summary.total },
+    ...(conComentario.length > 0 ? [{ valor: 'comentario' as const, texto: 'Con comentario', cuenta: conComentario.length }] : []),
+    ...(bajas.length > 0 ? [{ valor: 'bajas' as const, texto: '3 o menos', cuenta: bajas.length }] : []),
+  ];
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <StatGroup>
-        <Stat label={summary.total > 0 ? `Promedio general (${summary.total} reseñas)` : 'Promedio general (sin reseñas)'} value={avgDisplay} />
-        <Stat label={`Este mes (${summary.thisMonth} reseñas)`} value={avgMonthDisplay} />
-        <Stat label="Total reseñas" value={String(summary.total)} />
-      </StatGroup>
-
-      {/* .enc-cols: lado a lado en escritorio, apilado en móvil */}
-      <div className="enc-cols">
-        {/* Distribución */}
-        <Card className="p-4">
-          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--u-text)', marginBottom: 12 }}>Distribución</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            {([5, 4, 3, 2, 1] as const).map((s) => (
-              <DistBar key={s} label={String(s)} count={summary.distribution[s]} total={summary.total} />
-            ))}
+    <div className={`${s.panel} ${s.panelAncho}`}>
+      <div className={s.encuestas}>
+        <section className={`${s.tarjeta} ${s.resumen}`} aria-label="Resumen de las encuestas">
+          <div className={s.promedio}>
+            <b>{summary.average.toFixed(1)}</b>
+            <Estrellas valor={summary.average} />
+            <span>{respuestas(summary.total)}</span>
+            <span>{summary.thisMonth === 0 ? 'ninguna este mes' : `${summary.thisMonth} este mes`}</span>
           </div>
-        </Card>
+          <ul className={s.distribucion} aria-label="Respuestas por estrellas">
+            {([5, 4, 3, 2, 1] as const).map((n) => (
+              <li key={n}>
+                <span>{n}</span>
+                <span className={s.barra} aria-hidden="true"><i style={{ width: `${(summary.distribution[n] / maximo) * 100}%` }} /></span>
+                <span><span className="sr-only">{n} estrellas: </span>{summary.distribution[n]}</span>
+              </li>
+            ))}
+          </ul>
+          <details className={s.privacidad}>
+            <summary>¿Quién ve el nombre?</summary>
+            <p>
+              La encuesta no es anónima: si el cliente dejó su nombre en el pedido, lo ves junto a su calificación para
+              poder darle seguimiento, y así se le dice antes de responder.
+            </p>
+          </details>
+        </section>
 
-        {/* Reseñas recientes */}
-        <Card className="p-4">
-          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--u-text)', marginBottom: 12 }}>Reseñas recientes</div>
-          {ratings.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--u-text-3)' }}>
-              <Icon name="thumbsUp" size={28} style={{ marginBottom: 8, opacity: 0.3 }} />
-              <div style={{ fontSize: 13 }}>Aún no hay reseñas</div>
-              <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 4 }}>
-                Las calificaciones aparecerán aquí cuando tus clientes respondan la encuesta.
-              </div>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {shownRatings.map((r) => (
-                <div key={r.id} style={{ padding: '10px 12px', borderRadius: 'var(--radius-md)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                      <Stars value={r.rating} />
-                      <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>
-                        {r.customer_name || 'Anónimo'}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: 11, color: 'var(--u-text-4)', flexShrink: 0 }}>
-                      {new Date(r.created_at).toLocaleDateString('es-GT', { day: 'numeric', month: 'short' })}
-                    </span>
-                  </div>
-                  {r.comment && (
-                    <p style={{ fontSize: 12, color: 'var(--u-text-2)', margin: 0, lineHeight: 1.4, fontStyle: 'italic' }}>
-                      “{r.comment}”
-                    </p>
-                  )}
-                </div>
-              ))}
-              {ratings.length > 5 && (
-                <button
-                  type="button"
-                  onClick={() => setAllReviews((v) => !v)}
-                  className="press"
-                  style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: '6px 0', cursor: 'pointer', color: 'var(--brand-accent-ink)', fontSize: 13, fontWeight: 600 }}
-                >
-                  {allReviews ? 'Ver menos' : `Ver todas (${ratings.length})`}
+        <div className={s.panel}>
+          {pildoras.length > 1 && (
+            <div className={s.pildoras} role="group" aria-label="Filtrar respuestas">
+              {pildoras.map((p) => (
+                <button key={p.valor} type="button" className={s.pildora} aria-pressed={filtro === p.valor}
+                  onClick={() => { setFiltro(p.valor); setCuantas(POR_PAGINA); }}>
+                  {p.texto}<em>{p.cuenta}</em>
                 </button>
-              )}
+              ))}
             </div>
           )}
-        </Card>
-      </div>
-
-      <div className="note note-info" style={{ fontSize: 13, fontWeight: 500 }}>
-        <Icon name="helpCircle" size={16} style={{ flexShrink: 0, marginTop: 1 }} />
-        Al terminar su pedido, el cliente ve una encuesta de menos de 30 segundos. No es anónima: si dejó su nombre en el pedido, lo ves junto a su calificación para poder darle seguimiento, y así se lo decimos antes de responder.
+          <ul className={`${s.tarjeta} ${s.lista}`}>
+            {visibles.map((r) => (
+              <li key={r.id} className={s.resena} data-baja={r.rating <= 2 ? '' : undefined}>
+                <header>
+                  <Estrellas valor={r.rating} />
+                  <b>{r.customer_name || 'Sin nombre'}</b>
+                  <time dateTime={r.created_at}>{new Date(r.created_at).toLocaleDateString('es-GT', { day: 'numeric', month: 'short' })}</time>
+                </header>
+                {r.comment?.trim() && <p>«{r.comment.trim()}»</p>}
+              </li>
+            ))}
+          </ul>
+          {lista.length > cuantas && (
+            <button type="button" className={s.mas} onClick={() => setCuantas((n) => n + POR_PAGINA)}>
+              Ver {Math.min(POR_PAGINA, lista.length - cuantas)} más
+            </button>
+          )}
+          {filtro === 'todas' && ratings.length < summary.total && lista.length <= cuantas && (
+            <p className={s.hojaResumen}>Se muestran las {ratings.length} más recientes de {summary.total}.</p>
+          )}
+        </div>
       </div>
     </div>
   );

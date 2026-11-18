@@ -10,6 +10,8 @@ export type RestaurantRow = Restaurant & {
 export type RestaurantUser = {
   id: string;
   email: string | null;
+  /** Última vez que abrió sesión (Supabase Auth), para el resumen de soporte. */
+  lastSignInAt?: string | null;
   role: Profile['role'];
   full_name: string | null;
   /**
@@ -129,6 +131,7 @@ export const getRestaurantUsers = cache(
         return {
           id: p.id as string,
           email: data.user?.email ?? null,
+          lastSignInAt: data.user?.last_sign_in_at ?? null,
           role: p.role as Profile['role'],
           full_name: (p.full_name as string | null) ?? null,
           viaMembership,

@@ -102,7 +102,7 @@ export default function VoidOrderDialog({
           </div>
         </div>
         <p className="note note-warn">
-          <span>Se repone el inventario de los productos con control de stock. {cobro ? `Hay ${cobro} netos registrados. ` : ''}
+          <span>Se repone el inventario de los platillos con control de stock. {cobro ? `Hay ${cobro} netos registrados. ` : ''}
             Si ya recibiste dinero, revisa el cobro y registra cualquier devolución por separado en Caja.</span>
         </p>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { objetivoDelTour } from '@/lib/tutorial/objetivo';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 
@@ -23,8 +24,8 @@ const PASOS: StepDef[] = [
     target: null,
   },
   {
-    title: 'Seis lugares, nada más',
-    desc: 'Todo el sistema vive en estas seis secciones. Al entrar en cualquiera aparecen sus pestañas arriba: no hay nada escondido, solo un nivel más adentro.',
+    title: 'Pocos lugares, nada más',
+    desc: 'Todo el sistema vive en estas secciones. Al entrar en cualquiera aparecen sus pestañas arriba. En el teléfono, lo que usas menos está en «Más»: nada escondido, solo un toque más adentro.',
     target: 'nav',
   },
   {
@@ -97,7 +98,7 @@ export default function WelcomeTour({ restaurantName, preview, enEspera = false,
     const { target } = STEPS[stepIdx];
     if (!target) { setSpotRect(null); return; }
 
-    const el = document.querySelector<HTMLElement>(`[data-tour-step="${target}"]`);
+    const el = objetivoDelTour(target);
     if (!el) { setSpotRect(null); return; }
 
     const r = el.getBoundingClientRect();

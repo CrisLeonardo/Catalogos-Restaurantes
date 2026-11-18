@@ -301,7 +301,7 @@ export async function exportSalesReportXlsx(
   };
   ws1.addRow(['Pedidos', report.orders]);
   moneyRow('Ingreso bruto', report.revenue);
-  moneyRow('Ingreso de productos', report.productRevenue);
+  moneyRow('Ingreso por platillos', report.productRevenue);
   moneyRow('Envíos', report.deliveryRevenue);
   moneyRow('Propinas', report.tips);
   if (report.refunds > 0) moneyRow('Devoluciones (dinero devuelto)', -report.refunds);
@@ -344,7 +344,7 @@ export async function exportSalesReportXlsx(
   const ws3 = wb.addWorksheet('Más vendidos');
   addBrandedHeader(ws3, { branding, title: 'Más vendidos (por ingreso)', subtitle, columnsSpan: 5, compact: true });
   const { headerRow: revHeader } = writeStyledTable(
-    ws3, branding, ['Producto', 'Cantidad', 'Ingreso', 'Costo', 'Utilidad'],
+    ws3, branding, ['Platillo', 'Cantidad', 'Ingreso', 'Costo', 'Utilidad'],
     report.topByRevenue.map((p) => [p.name, p.qty, p.revenue, p.cost, p.profit]),
     { currencyCols: [3, 4, 5] },
   );
@@ -356,7 +356,7 @@ export async function exportSalesReportXlsx(
     const ws4 = wb.addWorksheet('Más rentables');
     addBrandedHeader(ws4, { branding, title: 'Más rentables (por utilidad)', subtitle, columnsSpan: 5, compact: true });
     const { headerRow: profitHeader } = writeStyledTable(
-      ws4, branding, ['Producto', 'Cantidad', 'Ingreso', 'Costo', 'Utilidad'],
+      ws4, branding, ['Platillo', 'Cantidad', 'Ingreso', 'Costo', 'Utilidad'],
       report.topByProfit.map((p) => [p.name, p.qty, p.revenue, p.cost, p.profit]),
       { currencyCols: [3, 4, 5] },
     );

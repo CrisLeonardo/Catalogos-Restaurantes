@@ -908,6 +908,243 @@ A pedido del dueño, las fichas 2.3–2.10 y el CHANGELOG de v0.23.0 se juntaron
   - Siguen abiertos el #129 (propuesta de planes) y los de dependencias.
 - **Lo que sigue:** fichas 2.11 (navegación móvil por rol) y 2.12 (glosario), y la línea N.
 
+## 46. Navegación por rol · ficha 2.11 (2026-11-17)
+
+**Rama** `feat/navegacion-por-rol`, desde `main` (`a89d7ca`). Maqueta aprobada con sus cuatro recomendaciones: [`MAQUETA_NAVEGACION_POR_ROL_2026-11-17.html`](../diseno/MAQUETA_NAVEGACION_POR_ROL_2026-11-17.html). Sin migración.
+
+- **Una regla** (`barraMovil` en `lib/admin-nav.ts`): si las pantallas de trabajo de la persona caben en cuatro casillas (contando el botón de tomar pedido), la barra las nombra una por una. Si no, van las cuatro secciones más usadas y «Más». Nunca hay más de cinco casillas.
+- **Dueño y encargado:** Hoy · Pedidos · Tomar pedido · Menú · Más. Sin «Tomar pedido» en el plan, la casilla la ocupa Negocio.
+- **Puestos:**
+  - Caja: Pedidos · Mesas · Tomar pedido · Caja · Más (Hoy y Salón).
+  - Recepción: Mesas · Reservas · Espera · Pedidos · Más. Quien no toma pedidos tiene Pedidos al final.
+  - Cocina: Hoy · Cocina, sin «Más».
+  - Mesero: sigue sin barra.
+- **«Más» vive en la barra** y se marca estando en lo que trae dentro (`destinoActivo`). Abre una hoja con el buscador y una fila por sección que dice lo que trae. Así no se repite lo que se revirtió el 2026-09-07.
+- **Una sección de una sola pantalla se llama como ella** (`destinoDeGrupo`): el encargado ve «Caja» y no «Negocio», también en la barra lateral.
+- **Sin pestañas repetidas:** en modo «trabajo» la barra ya nombra cada pantalla, así que no se pinta la fila de pestañas. Caja y Cocina ganaron su título (caían en «Panel»).
+- **PC:** el dueño conserva sus seis secciones. Los puestos ven su lista y, bajo «También», lo que en el teléfono está en «Más».
+- **Barra sólida** (`--adm-card`, sin vidrio) con etiquetas de 12 px.
+- **Tours:** `lib/tutorial/objetivo.ts` señala «Más» cuando la sección del paso está dentro. El tour de bienvenida ya no dice «seis lugares».
+- **Comprobado en pantalla** con Rincón 502 y personal de prueba local (`caja@`, `recepcion@`, `cocina@rincon502.test`, solo en la base local):
+  - Dueño a 375 px en claro: cinco casillas de 70 px, hoja «Más», buscador desde la hoja, «Más» marcado en Clientes y Escape que devuelve el foco.
+  - Dueño a 320 px en oscuro, en Negocio: «Más» marcado, sin etiquetas cortadas ni desborde.
+  - Dueño a 1280 px: las seis secciones, sin «Más».
+  - Caja a 375 px (con «Más»: Hoy y Salón) y a 1280 px (con «También»). Recepción a 375 px en Espera. Cocina a 375 px en oscuro.
+- **Arreglo posterior (rama `feat/glosario`):** Tomar pedidos y Cocina tienen su propio layout y le pasaban al armazón cuatro datos, así que allí el menú se armaba como si el plan fuera Básico: al entrar a Tomar pedidos desaparecía el botón, aparecía «Negocio» y nada quedaba marcado. Los tres layouts usan ahora `menuDelPanel` (`lib/admin/menu-del-panel.ts`). Tomar pedidos y Cocina siguen sin fila de pestañas, como se aprobaron. Comprobado a 515 px: Tomar pedidos con el botón marcado y Cocina con Pedidos marcado.
+- **No comprobado:** el encargado en pantalla (lo cubren las pruebas) y una prueba con personas.
+- **Validación:** `typecheck` y `lint` sin errores; 1,652 unitarias pasan, con una omitida. `admin-nav.test.ts` cubre cada puesto, que ningún destino lleve a una pantalla sin permiso y cuándo se marca «Más».
+
+## 47. Glosario de una sola marca · ficha 2.12 (2026-11-17)
+
+**Rama** `feat/glosario`, apilada sobre `feat/navegacion-por-rol`. Glosario aprobado con sus cuatro recomendaciones: [`GUIA_GLOSARIO.md`](../guias/GUIA_GLOSARIO.md). Sin migración.
+
+- **«Platillo» para todo lo que se vende:** Tomar pedidos, la mesa, el cobro, Cocina, exportaciones, planes, Importar carta, Lealtad e Inicio. Se respetan «plato principal» y «Platos fuertes». La carta del comensal sigue con la palabra que eligió cada restaurante para su carrito.
+- **Cómo se cambió sin tocar código:** un script con el analizador de TypeScript cambió solo literales, plantillas y texto JSX (unas 190 ediciones). Quedaron fuera las rutas (`/admin/menu/productos`), los sinónimos del buscador, las claves de datos (`formData.get('platos')`, el valor interno de la pestaña «Por platillos») y Canales, que sigue apagado.
+- **Exportaciones con los estados de la pantalla:** el Excel y el respaldo usan `STATUS_LABEL` de `lib/order-status.ts`. Antes decían «Nuevo», «En preparación» y «Cancelado».
+- **Contabilidad:** «Costo de lo vendido» e «Ingreso por platillos». El Excel de la carta se titula «Tu carta».
+- **Sin jerga:** «pantalla de cocina» en vez de KDS; «función» en vez de «módulo» en avisos, errores, Funciones, Ayuda y planes; «pantalla completa» en vez de «modo kiosco». La pestaña del navegador sin título propio dice «Leogin».
+- **Los tres modos con un solo nombre:** Comer en local, Para llevar y A domicilio, en tarjetas, alertas, filtros, comandas impresas, Hoy y exportaciones.
+- **Importar carta:** la plantilla trae la columna «Platillo» y la hoja vieja con «Producto» se sigue leyendo.
+- **Prueba que vigila:** `src/lib/glosario.test.ts` lee con el analizador de TypeScript los textos visibles de todo `src` (sin superadmin) y falla con la lista de cada palabra prohibida. Al estrenarse encontró 5 textos que la barrida no había cambiado.
+- **Comprobado en pantalla** con Rincón 502: Tomar pedidos («Buscar platillo, mesa o acción», «Mesa 1 · 1 platillo», «Agregar platillos», «Toca un platillo y aparece aquí»), la pestaña del navegador de Cocina («Cocina») y la web pública («una foto del platillo»). La limonada de prueba se quitó antes de enviarla y no quedó nada en la base.
+- **No comprobado en pantalla:** los archivos de exportación (lo cubren las pruebas y el código comparte `STATUS_LABEL`).
+- **Aviso:** la PC tenía unos 150 MB de memoria libre durante la prueba y el servidor de desarrollo se trababa. Hubo que reiniciarlo varias veces.
+- **Validación:** `typecheck` y `lint` sin errores; 1,658 unitarias pasan, con una omitida.
+
+## 48. Recepción sin saturar · línea N (2026-11-17)
+
+**Rama** `feat/recepcion-nada-saturado`, apilada sobre `feat/glosario`. [Maqueta](../diseno/MAQUETA_RECEPCION_NADA_SATURADO_2026-11-17.html) aprobada con sus cinco recomendaciones. Sin migración.
+
+- **Antes (390 px, una noche normal):** Reservas medía 3,484 px con 48 mandos; la primera llegada empezaba a 438 px y «Nueva reserva» a 2,388 px. En Espera cada grupo ocupaba unos 400 px y arriba había dos tarjetas de resumen, una con «—». «Cancelar» cancelaba con un toque y sin preguntar.
+- **Una fila de mandos** en las dos pantallas: pestañas (Hoy · Próximos · Revisar y Esperan · Atendidos · Revisar) y el botón para anotar. «Revisar» solo aparece si quedó algo de días anteriores. Las piezas compartidas viven en `components/admin/recepcion-comun.tsx`.
+- **Una acción por fila:** Sentar en N, Confirmar, Terminó, Llegó o No llegó; en Espera, además, avisar por WhatsApp si tiene teléfono y aún no se le avisó. Lo demás está en la hoja que se abre al tocar la fila (`HojaOperativa`): otra mesa, mesa prevista, cambiar día u hora, llamar, no asistió y cancelar (Reservas); otra mesa, WhatsApp, llamar, avisé en persona, no llegó y quitar (Espera).
+- **Anotar en una hoja:** «Nueva reserva» con Hoy y Mañana de un toque, la hora propuesta (las 19:00 o la siguiente media hora) y los lugares que quedan a esa hora antes de guardar; la nota es opcional. «Agregar grupo» con tres campos. El aviso de sobrecupo con horas sugeridas sigue igual.
+- **La agenda** es una línea en el teléfono que se abre al tocarla y queda abierta a la derecha en la PC, con la duración de las reservas dentro. «Confirmada» ya no se anuncia: solo «Sin confirmar». «¿Se envió el WhatsApp?» sigue en la fila.
+- **Cancelar pide confirmación**, como «No asistió». Las confirmaciones se abren después de cerrar la hoja, porque el diálogo de confirmar no puede quedar encima de una hoja nativa.
+- **Comprobado en pantalla** a 390 px y 1280 px, claro y oscuro, con datos de prueba locales: las cuatro reservas de hoy caben en una pantalla (filas de 68 px, la primera a 218 px); guardar una reserva para mañana, confirmar una pendiente, abrir la confirmación de cancelar y la pregunta «¿se envió?».
+- **No comprobado:** abrir WhatsApp de verdad (se probó marcando el aviso abierto en la base local) y una prueba con una persona en la puerta.
+- **Validación:** `typecheck` y `lint` sin errores; 1,658 unitarias pasan, con una omitida (incluidas la escala tipográfica y el glosario).
+
+## 49. Inventario sin saturar · línea N (2026-11-17)
+
+**Rama** `feat/inventario-nada-saturado`, apilada sobre `feat/recepcion-nada-saturado`. [Maqueta](../diseno/MAQUETA_INVENTARIO_NADA_SATURADO_2026-11-17.html) aprobada con sus cinco recomendaciones. Sin migración.
+
+- **Antes (390 px, 6 de 38 platillos contados):** 3,987 px y 120 mandos; tarjeta de cobertura, «Por revisar» y tres filas de mandos antes de la lista; el primer platillo a 764 px; los 32 sin contar llenaban la lista con casilla y botón; cada platillo contado medía 153 px con cinco botones, «Bien» y «mínimo N».
+- **Después:** 912 px y 30 mandos. Buscador y una fila de píldoras (Contados · Sin contar · categorías, como en Platillos). «Por revisar» es el primer grupo de la lista y el platillo no se repite abajo. Filas de 64 px con cuántos quedan y «+1»; en la PC también «−», que abre la hoja en «Restar».
+- **Hoja del platillo:** abre en «Sumar · Reposición»; ahí están restar, número exacto (con motivo obligatorio), el mínimo, el historial y «Dejar de contar» (confirma después de cerrar la hoja).
+- **Sin contar:** la fila entera marca la casilla, «Elegir los N» con una categoría o búsqueda, y «Contar existencias…» abre una hoja con la tabla de existencias iniciales y mínimo, todos o ninguno. La cobertura «6 de 38» es una línea aquí. Si no se cuenta nada, la pantalla abre en esta vista.
+- **Comprobado en pantalla** a 390 px y 1280 px, claro y oscuro, con datos locales: sumar 12 a la Gaseosa, empezar a contar dos bebidas (una en 0 pasó a «Por revisar») y la confirmación de «Dejar de contar». Los datos de prueba se deshicieron después.
+- **No comprobado:** «Ya hay» de un ingrediente agotado (no había ninguno) y una prueba con una persona.
+- **Validación:** `typecheck` y `lint` sin errores; 1,658 unitarias pasan, con una omitida.
+
+## 50. Cupones, lealtad y encuestas sin saturar · línea N (2026-11-18)
+
+**Rama** `feat/promociones-nada-saturado`, apilada sobre `feat/inventario-nada-saturado`. [Maqueta](../diseno/MAQUETA_PROMOCIONES_NADA_SATURADO_2026-11-18.html) aprobada con sus seis recomendaciones. Sin migración.
+
+- **Cupones, antes:** 31 mandos en el teléfono; «Activos 2 · En total 4» y una fila solo para «Nuevo cupón»; cada cupón con interruptor, lápiz y basura de 32 px sin nombre; la basura borraba aunque el cupón ya se hubiera usado.
+- **Cupones, después:** 19 mandos y cabe en una pantalla. Una línea («2 en uso · usados 10 veces») con «Nuevo cupón»; «En uso» arriba y «Sin usar ahora» abajo, en gris; cada fila dice beneficio, fecha y usos, con el estado escrito. La hoja del cupón resume lo que hace en una frase y lleva «Pausar» o «Reanudar»; si ya venció o se agotó, el botón grande es «Cambiar la fecha» o «Cambiar el límite de usos». «Nuevo cupón» pide código, descuento y hasta cuándo; compra mínima, límite, inicio y nota se abren aparte.
+- **Un cupón usado no se elimina** (`deleteCoupon` borra solo con `uses = 0`, en el mismo DELETE, y si no, explica que se pause).
+- **Lealtad, antes:** cuatro cifras en cero y el formulario de ajuste manual arriba; la lista de miembros a 711 px; reglas en una tercera pestaña con dos «Guardar».
+- **Lealtad, después:** el programa en una frase («1 punto por cada Q10 · 20 de bienvenida — para Tres Leches se gastan Q2,500») con «Reglas», pestañas Miembros y Recompensas, y el primer miembro a 350 px. La hoja del cliente suma o resta con motivo obligatorio (`adjustPoints` lo exige también) y enseña los movimientos (`movimientosDePuntos`). Reglas guarda tasas, premios en la carta, doble del primer pedido y sorpresa con un solo botón. Cada premio dice cuánto hay que gastar para ganarlo. El mínimo para canjear ya no se muestra: el comensal no lo usa desde que se quitó el pago con puntos; se conserva su valor al guardar.
+- **Dentro de una hoja no se usa el Select de Base UI:** su lista se abre fuera del `<dialog>` y queda tapada. El cliente y el platillo se eligen con un buscador de hasta seis resultados.
+- **Encuestas, después:** el promedio, «18 respuestas · ninguna este mes» y la distribución en una tarjeta (a la izquierda en la PC); las reseñas en una lista sólida a 379 px, veinte por vez; «Con comentario» y «3 o menos» solo si hay alguna; «¿Quién ve el nombre?» plegado. Estrellas con `--c-warn` en vez de `#fbbf24`.
+- **Comprobado en pantalla** a 390 px y 1280 px, claro y oscuro: crear, pausar y eliminar un cupón de prueba; sumar 50 puntos con motivo y ver los movimientos; Reglas; elegir un platillo para un premio. Los datos de prueba (cupón, cuentas, movimientos, premios y bitácora) se borraron después.
+- **No comprobado:** el programa sin activar y Encuestas sin respuestas, en pantalla; una prueba con una persona.
+- **Validación:** `typecheck` y `lint` sin errores; 1,658 unitarias pasan, con una omitida.
+
+## 51. Finanzas y Analítica sin saturar · línea N (2026-11-18)
+
+**Rama** `feat/analitica-nada-saturado`, apilada sobre `feat/promociones-nada-saturado`. [Maqueta](../diseno/MAQUETA_ANALITICA_FINANZAS_NADA_SATURADO_2026-11-18.html) aprobada con sus seis recomendaciones. Sin migración. La ficha 3.2 sigue abierta: aquí entra solo lo que se resuelve sin tocar la base de datos.
+
+- **Finanzas, antes:**
+  - Ocho mandos antes del primer número: dos fechas, «Aplicar», tres atajos, Excel y PDF. La cifra quedaba a 330 px.
+  - Seis cifras, dos en Q0.00 porque no había costos, y una nota que lo explicaba.
+  - **La gráfica «Ingreso por día» no se veía**: las barras quedaban aplastadas en 2 px, en el teléfono y en la PC.
+  - Con la lectura caída, la pantalla mostraba Q0.00.
+  - El porcentaje por zona se calculaba sobre todo lo vendido.
+  - 2,190 px de alto.
+- **Finanzas, después** (1,366 px de alto, la cifra a 196 px):
+  - Una línea de periodo (7 · 30 · 90 días · Otro…) con «Descargar».
+  - «Vendiste del 20 oct al 18 nov» con la cifra, los pedidos, el ticket y la gráfica. La gráfica se lee al tocar una barra (`ChartReadout`).
+  - «¿Cuánto ganaste?» lleva a poner costos. Con costos a medias dice «Estimación parcial» y qué parte de lo vendido cuenta. Con todos: ganancia y margen, «antes de sueldos y gastos».
+  - Envíos y propinas van en una línea.
+  - «De dónde vino» junta canal, pago y zona en una tarjeta con pestañas; cada fila dice dinero, pedidos y porcentaje. Zona se mide contra lo vendido a domicilio, con una fila «Sin zona anotada» para el resto.
+  - «Lo que más vendiste» enseña cinco y el resto si se pide. «Por ganancia» solo existe si hay costos.
+  - En la PC, lo vendido va a la izquierda y la ganancia y el reparto a la derecha. En el DOM hay un solo orden, el del teléfono.
+- **Analítica, antes:**
+  - El mismo selector.
+  - El mapa de 24 horas había que deslizarlo de lado en el teléfono.
+  - Dos listas de diez, con ceros en rojo.
+  - Canal, pago y zona repetidos, contados en pedidos.
+  - 2,366 px de alto.
+- **Analítica, después** (1,038 px de alto):
+  - Tres cifras en una franja: pedidos, cancelados y minutos en preparar. Los cancelados van en ámbar desde el 10 %.
+  - El mapa se titula con la respuesta («Se llena el sábado a las 7 a. m.») y se recorta a las horas con pedidos, con la semana empezando el lunes.
+  - El tiempo de un domicilio va en una línea.
+  - «Tus platillos» tiene «Más pedidos» y «Sin pedidos». La segunda lista son solo los disponibles que nadie pidió, y cada uno abre su ficha en Menú.
+  - Canal, pago y zona se quedan en Finanzas.
+- **Lecturas:**
+  - `getSalesReport` devuelve `estado: 'error'` cuando el RPC falla (X20/PA-T16), y Finanzas pone el aviso de lectura.
+  - `getAnalytics` suma los platillos por `product_id` y usa el nombre de hoy, así que renombrar ya no parte el ranking (X19/PA-T14). Los vendidos sin id conservan el nombre del pedido.
+  - Nueva `sinPedidos`: los platillos disponibles con cero pedidos.
+  - El reporte en SQL (`leogin_sales_report`) sigue agrupando por nombre: es de la ficha 3.2.
+- **Atajos del periodo:** cuentan desde el día de negocio que calcula el servidor, no desde el reloj del aparato. Una fecha futura en la URL se corta a hoy.
+- **Comprobado en pantalla** a 390 px y 1280 px, claro y oscuro:
+  - Finanzas: 30 días; la pestaña Zona; «Otro…» del 1 al 15 nov; 7 días; la hoja «Descargar» (sin descargar); un rango sin ventas.
+  - Analítica: 30 días, «Sin pedidos» y sus enlaces, y un rango sin pedidos.
+  - Resumen sigue igual.
+- **No comprobado en pantalla:** la ganancia parcial y completa, porque los datos locales no tienen costos; la descarga real de Excel y PDF; el aviso de lectura caída. Tampoco hay una prueba con una persona.
+- **Validación:**
+  - `typecheck` y `lint` sin errores.
+  - 1,663 unitarias pasan, con una omitida.
+  - Nueva `rango-en-palabras.test.ts`: dice el año solo cuando no es el actual o cuando el rango cruza de año.
+
+## 52. Mi cuenta sin saturar · línea N (2026-11-18)
+
+**Rama** `feat/mi-cuenta-nada-saturado`, apilada sobre `feat/analitica-nada-saturado`. [Maqueta](../diseno/MAQUETA_MI_CUENTA_NADA_SATURADO_2026-11-18.html) aprobada con sus seis recomendaciones. Sin migración.
+
+- **Antes** (dueño de dos restaurantes, en el teléfono):
+  - Cuatro pestañas que no cabían.
+  - Restaurantes solo decía el nombre y «Dueño».
+  - Resumen abría con cinco cifras translúcidas, tres en Q0.00 y «Mejor hoy: Prueba Fiesta · Q0.00». Después venían el enlace del grupo fijo, un «Atención» repetido y la lista otra vez (1,256 px).
+  - Comparativa decía «Utilidad Q0.00» sin costos (X21).
+  - Finanzas y Comparativa repetían el selector de ocho mandos. Su «hoy» salía del reloj del servidor, en UTC.
+- **Restaurantes** (absorbe Resumen):
+  - Un saludo y una línea con la suma de hoy («Hoy van Q… en N pedidos entre tus 2 restaurantes» o «Hoy todavía no hay ventas»).
+  - Cada fila dice cómo va hoy y lleva «Pausado» y «N agotados» en ámbar. Tocarla entra.
+  - «⋯» abre una hoja con lo de 14 días, «Equipo y accesos», «Ver su carta» y «Entrar».
+  - El enlace del grupo es una fila que abre su hoja (copiar, abrir y QR, o crearlo).
+  - El PIN se pide en una hoja.
+  - Las sucursales que se ven por la organización sin membresía también se listan, con su enlace al panel.
+- **Finanzas** (absorbe Comparativa):
+  - Las piezas de Finanzas del panel: selector de periodo de una línea, «Descargar» en hoja, «Vendiste Q…» con gráfica y la ganancia sin ceros falsos.
+  - «Por restaurante» trae lo vendido, el % del grupo, los pedidos y la ganancia, o «sin costos».
+  - «Hoy» es el día de negocio del primer restaurante.
+  - Con varios restaurantes y un plan sin Finanzas, se ve lo vendido por restaurante y la ganancia queda con candado. Con uno solo, sigue la pantalla «viene con Estándar».
+- **Lecturas:** `getGroupReport` marca `leido` por restaurante y junta `sinLeer`. La pantalla nombra al que falló, el total dice «sin contar …» y, si fallan todos, sale el aviso de lectura (X20).
+- **Rutas:** `/mi-cuenta/resumen` → `/mi-cuenta`, y `/mi-cuenta/comparativa` → `/mi-cuenta/finanzas` con el mismo rango. Los enlaces de `/central`, del panel, de la portada y del destino tras el login van directo a las rutas nuevas.
+- **Tokens:** Mi cuenta no es área del panel (tema claro de la web), así que `.marco` (`components/mi-cuenta/mi-cuenta.module.css`) le da los tokens sólidos del panel en claro.
+- **Se borraron** `kpi.tsx`, `group-link-section.tsx`, `group-link-card.tsx` y `date-range-form.tsx`, que ya no los usa nadie. La ayuda (`tutorial/content.ts`) nombra las pestañas nuevas.
+- **Comprobado en pantalla** a 390 px y 1280 px, en claro (Mi cuenta no tiene tema oscuro):
+  - Filas con «Pausado» y «1 agotado» (puestos a mano en la base local y devueltos después).
+  - La hoja «⋯», incluido «Entrar», que lleva al panel.
+  - El enlace del grupo con QR. Copiar falla en el navegador integrado y enseña su aviso.
+  - En Finanzas: 30 y 7 días, «Descargar» y «Por restaurante».
+  - Las rutas viejas.
+- **No comprobado en pantalla:** un dueño de un solo restaurante, un restaurante con PIN, el plan sin Finanzas, un restaurante que no se pudo leer y la ganancia con costos. Para ninguno hay datos locales. Tampoco hay una prueba con una persona.
+- **Validación:** `typecheck` y `lint` sin errores; 1,663 unitarias pasan, con una omitida.
+
+## 53. Superadmin: cola de trabajo y ficha de soporte · línea N + ficha 4.9 (2026-11-18)
+
+**Rama** `feat/superadmin-nada-saturado`, apilada sobre `feat/mi-cuenta-nada-saturado`. [Maqueta](../diseno/MAQUETA_SUPERADMIN_NADA_SATURADO_2026-11-18.html) aprobada con sus seis recomendaciones. **Migración 187** (`super_asuntos`, `super_eventos`): se aplica ANTES de desplegar.
+
+- **Cómo se probó en local:** el superadmin pide código de dos pasos y en local no hay celular que lo dé. `dev-login` completa el segundo factor de `super-demo@local.test`; viene del PR #144 (`chore/dev-login-superadmin-sin-codigo`, contra main) y se trajo aquí con cherry-pick.
+- **Inicio, antes:**
+  - Seis cifras: en la PC, cinco arriba y una abajo (N09).
+  - 17 avisos sin estado, uno por síntoma (la PC caída y sus impresiones fallidas salían por separado). Al día siguiente volvían iguales aunque ya se hubiera llamado.
+  - Debajo, gráfica, recién llegados, más activos y distribución por plan.
+  - 2,643 px de alto en el teléfono.
+- **Inicio, después** (1,118 px, la cola desde arriba):
+  - El dinero va en una línea («Este mes: Q1,345.00 en mensualidades · Q0.00 cobrado · Q2,242.00 vencido · 10 restaurantes activos»).
+  - La cola tiene cuatro grupos: servicio afectado, cobranza, activación y seguimiento. Hay un asunto por restaurante y tipo, con los síntomas juntos y su antigüedad, y tres visibles por grupo con «Ver los N».
+  - La hoja del asunto trae la evidencia, WhatsApp, «Posponer…» (con motivo y plazo), «Anotar», «Abrir su ficha» y «Marcar como resuelto», con su historia.
+  - «N pospuestos · ver» abre la lista con «Volver ya».
+  - La gráfica, la distribución por plan y la tabla por actividad ya estaban en Métricas. Los restaurantes recientes y «Nuevo restaurante» están en Restaurantes.
+- **Estados** (`lib/super/cola.ts`, probado): cada asunto lleva una firma de su evidencia. Uno resuelto no vuelve con la misma firma. Uno pospuesto vuelve en su fecha («Volvió: se cumplió la fecha») o si cambia la evidencia («Volvió: hay algo nuevo»). «Sin pedidos» es seguimiento, no cliente perdido, y al posponerlo propone «Cerrado por temporada».
+- **Lectura caída:** `getBillingDashboard` devuelve `estado: 'error'` y el inicio dice que el cobro no se pudo leer, en vez de ceros. Lo mismo hace la salud (N12) y los estados de la cola.
+- **Ficha › Resumen:**
+  - Antes: seis cifras y una gráfica.
+  - Ahora: una línea con plan, mensualidad y antigüedad como cliente, y lo abierto de ese restaurante (la misma cola).
+  - Filas con el dueño (WhatsApp de un toque), el último acceso (`lastSignInAt`), la operación, la PC (`estadoDePc`) y el cobro.
+  - Notas de soporte con autor y una historia que junta alta, pagos y lo hecho en la cola.
+- **Accesos (N19):** el papel ya no partía de «Dueño». Ahora, bajo el papel elegido, se lee qué podrá hacer esa persona (`consecuenciaDePapel`), en ámbar si es Dueño. El rescate de cuentas no cambia.
+- **Comprobado en pantalla** a 390 px y 1280 px, claro y oscuro:
+  - En el inicio: abrir un asunto, anotar, posponer «Espera un pago» una semana (Cobranza de 10 a 9, «1 pospuesto»), «Volver ya» y resolver un seguimiento (de 3 a 2).
+  - En la ficha: «+ Anotar».
+  - En Accesos: ver la consecuencia de Dueño y de Cocina, sin enviar.
+  - Los eventos y estados de prueba se borraron de la base local.
+- **No comprobado en pantalla:** un servicio afectado real (no hay PC caída en local), la lectura de cobro caída, la cola vacía, el inicio sin la 187 y una prueba con una persona.
+- **Validación:**
+  - `typecheck`, `lint` y la auditoría de candados RLS sin hallazgos.
+  - 1,674 unitarias pasan, con una omitida; las nuevas son `cola.test.ts` y `totp.test.ts`.
+
+## 54. Web pública sin saturar · línea N + fichas V.1–V.3 (2026-11-18)
+
+**Rama** `feat/web-publica-nada-saturado`, apilada sobre `feat/superadmin-nada-saturado`. [Maqueta](../diseno/MAQUETA_WEB_PUBLICA_NADA_SATURADO_2026-11-18.html) aprobada con sus cinco recomendaciones. Sin migración. **Con esto termina la línea N.**
+
+**Portada: de 13 a 7 bloques.** En el teléfono pasa de 16,577 a 7,459 px.
+1. **Titular y video.** Se quedan los aprobados. La acción principal es «Probar la demo» (`LandingDemo primaria`) y la segunda, «Crear mi restaurante». Debajo, no dentro del botón: «La carta con QR es gratis para siempre. Los pedidos van con un plan.»
+2. **¿Cuál es tu caso? (V.2).** Tres casos, cada uno con su plan y su precio: mesas y meseros → Premium, cafetería o mostrador → Estándar, vendo por redes → En línea (lleva a /vende-en-linea). Más una línea «¿Solo quieres tu carta con QR? Básico, gratis». Los precios quedan a unos 900 px; antes estaban a 12,100.
+3. **Pídelo tú mismo**, la demo.
+4. **La escena «del caos al control».** Se desvía de la maqueta: el bloque de «tres momentos» no se dibujó como tarjetas nuevas. Se reutilizó la escena aprobada, que ya cuenta el pedido, la cocina y el cierre.
+5. **¿Qué plan te conviene? (V.3).** Se elige con «¿Cómo te piden?» y, si es para llevar, «¿Más de 300 pedidos al mes?». Debajo, los cuatro planes en una tarjeta, con el precio en una sola línea.
+6. **Preguntas frecuentes.** Ahora también responden cómo se verá la carta, qué pasa al crecer y qué pasa sin internet.
+7. **Cierre.**
+
+Salieron de la portada la tira de cifras, el panel, la vitrina de diseños, «sin internet», el bento de funciones, «para quién» y «cómo se empieza».
+
+**La misma regla que el alta.** `planParaTuCaso` (lib/alta.ts, con pruebas) usa `planSugerido` y agrega dos casos: mostrador → Estándar, y para llevar con más de 300 pedidos → Estándar. El componente común `PlanPorPreguntas` sale en la portada y en /planes. Si recomienda En línea, guarda el perfil `en-linea` para el alta, igual que hacía su tarjeta.
+
+**/planes.** Pasa de 7,302 a 4,014 px en el teléfono. Un titular y la pregunta. «Lo que incluye Premium» y «Ver todo lado a lado» quedan plegados.
+
+**Textos que prometían de más.** La lealtad ya no «canjea por descuentos al pagar» (`lib/modules.ts`): ahora los puntos se cambian por premios del catálogo. La pregunta de varias sucursales apunta a Mi cuenta. En el encabezado, el pie y el menú del teléfono, «Funciones» (llevaba al bento que salió) pasa a «Tu caso» / «Elige tu caso».
+
+**Comprobado en pantalla** a 390 px y 1280 px; la web solo tiene tema claro:
+- En la portada: los tres casos y las respuestas «llevar» → En línea, «más de 300» → Estándar y «mesas» → Premium.
+- En /planes: la pregunta, la lista y abrir lo plegado.
+- El menú del encabezado.
+- El HTML que sirve el servidor, después de reiniciar el dev server: los avisos de hidratación eran de la versión anterior en caché.
+
+**No comprobado:**
+- La demo en sí, que no cambió.
+- Una prueba con prospectos: la meta de V.1 es que 8 de 10 expliquen qué hace Leogin.
+- Medir «demo empezada» y «plan sugerido elegido» (F06), que espera a que se encienda la analítica.
+
+**Validación:**
+- `typecheck` y `lint` sin errores.
+- 1,677 unitarias pasan, con una omitida.
+- La prueba e2e `planes.spec.ts` ahora abre la tabla plegada antes de revisarla; no se corrió en local.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

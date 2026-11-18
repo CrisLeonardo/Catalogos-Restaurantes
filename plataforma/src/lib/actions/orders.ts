@@ -730,7 +730,7 @@ export async function createOrder(
 
   const typeLabel =
     customer.type === 'DELIVERY' ? 'A domicilio' :
-    customer.type === 'DINE_IN'  ? 'Comer aquí'  :
+    customer.type === 'DINE_IN'  ? 'Comer en local'  :
     'Para llevar';
   notifyNewOrder(restaurantId, order, `${esPrueba ? 'Prueba · ' : ''}${order.order_number} · ${customer.name} · ${typeLabel}`);
 
@@ -2057,7 +2057,7 @@ export async function setItemSeat(
     .eq('id', itemId)
     .maybeSingle();
   const dueño = (item as { order?: { restaurant_id: string } | null } | null)?.order?.restaurant_id;
-  if (!item || dueño !== restaurantId) return { error: 'Plato no encontrado.' };
+  if (!item || dueño !== restaurantId) return { error: 'Platillo no encontrado.' };
 
   const { error } = await db.from('order_items').update({ seat_no: seatNo }).eq('id', itemId);
   if (error) {
@@ -2259,7 +2259,7 @@ function printFailureMessage(
       // Se pidió reimprimir una estación concreta y el pedido no tiene ni
       // una línea suya. Pasa si alguien cambió el mapa entre que salió el
       // papel y se pulsó «Reintentar».
-      return 'Ese pedido ya no tiene platos de esa estación.';
+      return 'Ese pedido ya no tiene platillos de esa estación.';
     case 'pc-off':
       return 'La PC principal del local está apagada: enciéndela en «Mi PC del local» para poder imprimir.';
     case 'not-found':
@@ -2321,15 +2321,9 @@ export async function reprintKitchenTicket(
 
 /* ── Export de pedidos — PDF (cliente) + Excel (servidor) ────── */
 
-const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
-  NEW: 'Nuevo',
-  PREP: 'En preparación',
-  READY: 'Listo',
-  TRANSIT: 'En camino',
-  SERVED: 'Servido',
-  DELIVERED: 'Entregado',
-  CANCEL: 'Cancelado',
-};
+// Los mismos estados que la pantalla (glosario, ficha 2.12): un Excel que
+// dice «Cancelado» donde la pantalla dice «Anulado» parece otro pedido.
+const ORDER_STATUS_LABEL: Record<OrderStatus, string> = STATUS_LABEL;
 
 export interface OrderExportRow {
   orderNumber: string;
@@ -2426,7 +2420,7 @@ async function buildOrdersExportData(
       time: hora,
       customerName: String(o.customer_name),
       customerPhone: String(o.customer_phone),
-      orderType: o.order_type === 'PICKUP' ? 'Para llevar' : o.order_type === 'DINE_IN' ? 'En local' : 'Domicilio',
+      orderType: o.order_type === 'PICKUP' ? 'Para llevar' : o.order_type === 'DINE_IN' ? 'Comer en local' : 'A domicilio',
       status: ORDER_STATUS_LABEL[o.status as OrderStatus] ?? String(o.status),
       items,
       subtotal: Number(o.subtotal),
@@ -2532,7 +2526,7 @@ export async function exportOrdersXlsx(
 
   const { headerRow } = writeStyledTable(
     ws, branding,
-    ['Número', 'Fecha', 'Hora', 'Cliente', 'Teléfono', 'Tipo', 'Estado', 'Productos', 'Subtotal', 'Envío', 'Total', 'Notas'],
+    ['Número', 'Fecha', 'Hora', 'Cliente', 'Teléfono', 'Tipo', 'Estado', 'Platillos', 'Subtotal', 'Envío', 'Total', 'Notas'],
     rows.map((r) => [
       r.orderNumber, r.date, r.time, r.customerName, r.customerPhone, r.orderType, r.status, r.items,
       r.subtotal, r.deliveryFee, r.total, r.notes,

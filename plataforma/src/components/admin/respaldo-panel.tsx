@@ -24,7 +24,7 @@ const HOJAS = [
   { icon: 'bag', label: 'Catálogo', desc: 'Todos tus platillos, con precio, costo y existencias.' },
   { icon: 'grid', label: 'Categorías', desc: 'Tu menú tal como está organizado hoy.' },
   { icon: 'users', label: 'Clientes', desc: 'Nombre, contacto, dirección y su historial de compra.' },
-  { icon: 'receipt', label: 'Pedidos', desc: 'Hasta los últimos 5.000, con sus productos y totales.' },
+  { icon: 'receipt', label: 'Pedidos', desc: 'Hasta los últimos 5.000, con sus platillos y totales.' },
 ];
 
 export default function RespaldoPanel({ restaurantId }: { restaurantId: string }) {

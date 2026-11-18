@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueta · Navegación por rol</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F2F1EE;--bg2:#E9E7E3;--card:#FFFFFF;--ink:#17161A;--ink2:rgba(23,22,26,.72);--ink3:rgba(23,22,26,.56);--line:rgba(23,22,26,.12);--line2:rgba(23,22,26,.2);--coral:#C2542F;--on:#fff;--ok:#1E7A46;--okbg:#E4F3E9;--warn:#8A5A00;--warnbg:#FBEFD2;--page:#DEDCD7;--sh:0 1px 2px rgba(0,0,0,.06);--scrim:rgba(23,22,26,.36)}
+[data-theme=dark]{--bg:#0C0B0A;--bg2:#141311;--card:#1A1917;--ink:#F5F3EF;--ink2:rgba(245,243,239,.74);--ink3:rgba(245,243,239,.56);--line:rgba(245,243,239,.12);--line2:rgba(245,243,239,.22);--coral:#D9683F;--on:#fff;--ok:#6FD49A;--okbg:#12301F;--warn:#F0C568;--warnbg:#33270B;--page:#000;--sh:none;--scrim:rgba(0,0,0,.6)}
+*{box-sizing:border-box;margin:0}
+body{font-family:Geist,system-ui,sans-serif;background:var(--page);color:var(--ink);padding:24px 16px 80px;-webkit-font-smoothing:antialiased}
+h1{font-size:28px;font-weight:800;letter-spacing:-.03em}
+h2{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:48px 0 6px}
+h3{font-size:16px;font-weight:700;margin:0 0 4px}
+.lead{max-width:760px;color:var(--ink2);font-size:15px;line-height:1.5;margin-top:8px}
+.top{display:flex;align-items:flex-start;gap:16px;justify-content:space-between;max-width:1280px;margin:0 auto}
+.wrap{max-width:1280px;margin:0 auto}
+.tog{border:1px solid var(--line2);background:var(--card);color:var(--ink);font:inherit;font-size:14px;font-weight:600;height:44px;padding:0 16px;border-radius:12px;cursor:pointer;flex-shrink:0}
+.pair{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;margin-top:16px}
+.col{display:flex;flex-direction:column;gap:10px}
+.tag{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.tag b{color:var(--coral)}
+.cap{font-size:13px;font-weight:600;color:var(--coral);max-width:375px;line-height:1.4}.cap.old{color:var(--ink2)}
+.i{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+/* teléfono */
+.ph{width:375px;height:640px;background:var(--bg);border-radius:28px;border:1px solid var(--line2);overflow:hidden;position:relative;display:flex;flex-direction:column;font-size:14px}
+.bar{height:54px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 12px 0 16px;border-bottom:1px solid var(--line);background:var(--bg)}
+.bar b{flex:1;font-size:18px;font-weight:800;letter-spacing:-.03em}
+.ib{width:42px;height:42px;border-radius:12px;background:var(--card);box-shadow:var(--sh);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink);flex-shrink:0}
+.sub{display:flex;gap:2px;margin:6px 12px;padding:3px;background:var(--bg2);border-radius:12px;flex-shrink:0;overflow:hidden}
+.sub span{padding:7px 12px;border-radius:9px;font-size:13px;font-weight:500;color:var(--ink2);white-space:nowrap}
+.sub .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+.body{flex:1;overflow:hidden;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh)}
+.ghost{height:64px;border-radius:18px;background:var(--card);border:1px solid var(--line);flex-shrink:0}
+.ghost.t{height:120px}
+/* barra inferior */
+.nav{flex-shrink:0;border-top:1px solid var(--line);display:flex;align-items:stretch;padding:6px 4px 10px;position:relative;color:var(--ink3)}
+.nav.glass{background:color-mix(in srgb,var(--bg) 88%,transparent)}
+.nav.solid{background:var(--card)}
+.nav>span{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:5px 2px;text-align:center}
+.nav>span em{font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;line-height:1.2}
+.nav.old>span em{font-size:10px}
+.nav.new>span em{font-size:12px}
+.nav .on{color:var(--coral);font-weight:600}
+.nav .fab{flex:0 0 86px;justify-content:flex-end;position:relative;color:var(--ink2);font-weight:600}
+.nav .fab i{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);width:56px;height:56px;border-radius:50%;background:var(--coral);color:var(--on);display:grid;place-items:center;box-shadow:0 6px 18px -5px rgba(194,84,47,.6)}
+.nav .fab i .i{width:26px;height:26px;stroke-width:2.4}
+.nav .fab.on{color:var(--coral)}
+/* hoja Más */
+.scrim{position:absolute;inset:0;background:var(--scrim);z-index:4}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:5;background:var(--card);border-radius:22px 22px 0 0;padding:8px 12px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 -8px 30px rgba(0,0,0,.18)}
+.grab{width:36px;height:4px;border-radius:4px;background:var(--line2);margin:0 auto 4px}
+.sheet h4{font-size:16px;font-weight:700;padding:0 4px}
+.search{height:48px;border-radius:12px;border:1px solid var(--line2);background:var(--bg);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--ink3);font-size:14px}
+.ls{border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.li{display:flex;align-items:center;gap:12px;padding:8px 14px;min-height:60px;border-bottom:1px solid var(--line);font-size:14px}
+.li:last-child{border-bottom:0}
+.li .n{flex:1;min-width:0}.li .n b{display:block;font-weight:600;font-size:15px}.li .n span{font-size:12px;color:var(--ink3)}
+.li .ico{width:36px;height:36px;border-radius:10px;background:var(--bg2);display:grid;place-items:center;color:var(--ink2);flex-shrink:0}
+.li.on .n b{color:var(--coral)}
+.chev{color:var(--ink3)}
+/* tabla de puestos */
+.roles{display:grid;gap:14px;margin-top:16px}
+.role{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;display:grid;grid-template-columns:220px 1fr 1fr;gap:20px;align-items:start}
+.role p{font-size:13px;color:var(--ink2);line-height:1.45}
+.mini{border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:var(--bg);width:100%;max-width:375px}
+.mini .nav{margin-top:30px}
+.mini .lbl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);padding:8px 12px 0}
+.mini .lbl b{color:var(--coral)}
+.taps{font-size:12px;color:var(--ink2);padding:6px 12px 10px;line-height:1.5}
+.taps b{color:var(--ink);font-variant-numeric:tabular-nums}
+.none{height:62px;display:grid;place-items:center;font-size:13px;color:var(--ink3);border-top:1px dashed var(--line2)}
+@media(max-width:960px){.role{grid-template-columns:1fr}}
+/* escritorio */
+.desk{width:100%;max-width:1180px;height:420px;background:var(--bg);border:1px solid var(--line2);border-radius:16px;overflow:hidden;display:flex;font-size:14px;margin-top:14px}
+.side{width:210px;flex-shrink:0;border-right:1px solid var(--line);padding:16px 12px;display:flex;flex-direction:column;gap:2px;color:var(--ink2)}
+.side b{color:var(--ink);font-size:15px;margin-bottom:10px;padding:0 10px}
+.side span{padding:9px 10px;border-radius:10px;display:flex;align-items:center;gap:10px}
+.side .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+.side .div{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);padding:14px 10px 4px}
+.dmain{flex:1;min-width:0;display:flex;flex-direction:column}
+.dbar{height:60px;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--line);flex-shrink:0}
+.dbar b{font-size:22px;font-weight:800;letter-spacing:-.03em}
+.dbody{padding:16px 24px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-content:start}
+.dpair{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:820px){.desk,.dpair{display:none}.nodesk{display:block!important}}
+.nodesk{display:none;font-size:13px;color:var(--ink3);margin-top:10px}
+ol.lead li{margin-bottom:8px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="hoy" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="list" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r=".6"/><circle cx="4" cy="12" r=".6"/><circle cx="4" cy="18" r=".6"/></symbol>
+<symbol id="bag" viewBox="0 0 24 24"><path d="M5 8h14l-1 12H6L5 8z"/><path d="M9 8a3 3 0 0 1 6 0"/></symbol>
+<symbol id="users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16 4.6a3.2 3.2 0 0 1 0 6.3M18 14.8c1.9.7 3 2.6 3 5.2"/></symbol>
+<symbol id="chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></symbol>
+<symbol id="gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2 1.2M17.8 15.3l2 1.2M4.2 16.5l2-1.2M17.8 8.7l2-1.2"/></symbol>
+<symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></symbol>
+<symbol id="cash" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></symbol>
+<symbol id="table" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="cal" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
+<symbol id="wait" viewBox="0 0 24 24"><path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9"/></symbol>
+<symbol id="flame" viewBox="0 0 24 24"><path d="M12 21c-4 0-6-2.6-6-6 0-4 4-6 4-10 2 1.5 4 4 4 6 1-1 1.5-2 1.5-3 2 2 2.5 4.5 2.5 7 0 3.4-2 6-6 6z"/></symbol>
+<symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
+<symbol id="chevr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+</defs></svg>
+
+<div class="top">
+  <div>
+    <div class="tag">Maqueta para aprobar · 2026-11-17 · ficha 2.11 de la auditoría (D05)</div>
+    <h1>Navegación por rol</h1>
+    <p class="lead">En el teléfono, la barra de abajo es lo que más se toca del panel. Hoy el dueño ve siete casillas a 47 px cada una, con letras de 10 px: Hoy, Pedidos, Menú, el botón de tomar pedido, Clientes, Negocio y Ajustes. Y cada puesto hereda las secciones del dueño aunque no le sirvan. La cajera llega a Caja tocando «Negocio». Recepción tiene su trabajo partido entre «Pedidos» y «Clientes». Las dos ven «Ajustes» solo porque pueden acomodar mesas. La propuesta tiene una sola regla: <strong>si tu trabajo cabe en la barra, la barra es tu trabajo; si no, van tus cuatro secciones más usadas y «Más»</strong>. Nada de esto está construido.</p>
+  </div>
+  <button class="tog" onclick="const h=document.documentElement;h.dataset.theme=h.dataset.theme==='dark'?'light':'dark'">Claro / oscuro</button>
+</div>
+
+<div class="wrap">
+
+<h2>1 · El dueño: cuatro y «Más»</h2>
+<p class="lead">Lo que el dueño toca en cada visita: ver cómo va el día (Hoy), ver los pedidos, tomar uno y agotar o cambiar un platillo (Menú). Clientes, Negocio y Ajustes se usan, pero no en cada visita: pasan a «Más», <strong>dentro de la misma barra</strong>. En septiembre se probó mandar Clientes y Negocio al «⋯» de arriba y se revirtió por dos razones: desaparecían sin rastro y, estando en una de esas pantallas, la barra no marcaba nada. Aquí «Más» está donde siempre estuvieron y se marca cuando estás en una de ellas.</p>
+<div class="pair">
+  <div class="col">
+    <div class="tag">Hoy</div>
+    <div class="ph">
+      <div class="bar"><b>Hoy</b><span class="ib"><svg class="i"><use href="#more"/></svg></span></div>
+      <div class="body"><div class="ghost t"></div><div class="ghost"></div><div class="ghost"></div><div class="ghost"></div></div>
+      <div class="nav old glass">
+        <span class="on"><svg class="i"><use href="#hoy"/></svg><em>Hoy</em></span>
+        <span><svg class="i"><use href="#list"/></svg><em>Pedidos</em></span>
+        <span><svg class="i"><use href="#bag"/></svg><em>Menú</em></span>
+        <span class="fab"><i><svg class="i"><use href="#plus"/></svg></i><em>Tomar pedido</em></span>
+        <span><svg class="i"><use href="#users"/></svg><em>Clientes</em></span>
+        <span><svg class="i"><use href="#chart"/></svg><em>Negocio</em></span>
+        <span><svg class="i"><use href="#gear"/></svg><em>Ajustes</em></span>
+      </div>
+    </div>
+    <div class="cap old">— — Siete casillas de 47 px, letras de 10 px y barra de vidrio</div>
+  </div>
+  <div class="col">
+    <div class="tag"><b>Propuesta</b></div>
+    <div class="ph">
+      <div class="bar"><b>Hoy</b><span class="ib"><svg class="i"><use href="#more"/></svg></span></div>
+      <div class="body"><div class="ghost t"></div><div class="ghost"></div><div class="ghost"></div><div class="ghost"></div></div>
+      <div class="nav new solid">
+        <span class="on"><svg class="i"><use href="#hoy"/></svg><em>Hoy</em></span>
+        <span><svg class="i"><use href="#list"/></svg><em>Pedidos</em></span>
+        <span class="fab"><i><svg class="i"><use href="#plus"/></svg></i><em>Tomar pedido</em></span>
+        <span><svg class="i"><use href="#bag"/></svg><em>Menú</em></span>
+        <span><svg class="i"><use href="#more"/></svg><em>Más</em></span>
+      </div>
+    </div>
+    <div class="cap">— — Cinco casillas de 72 px, letras de 12 px, barra sólida y el botón en el centro real</div>
+  </div>
+  <div class="col">
+    <div class="tag"><b>Propuesta</b> · al tocar «Más»</div>
+    <div class="ph">
+      <div class="bar"><b>Hoy</b><span class="ib"><svg class="i"><use href="#more"/></svg></span></div>
+      <div class="body"><div class="ghost t"></div><div class="ghost"></div></div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h4>Más</h4>
+        <div class="search"><svg class="i"><use href="#search"/></svg>Buscar una pantalla o una tarea</div>
+        <div class="ls">
+          <div class="li"><span class="ico"><svg class="i"><use href="#users"/></svg></span><span class="n"><b>Clientes</b><span>Lealtad, cupones, encuestas y reservaciones</span></span><svg class="i chev"><use href="#chevr"/></svg></div>
+          <div class="li"><span class="ico"><svg class="i"><use href="#chart"/></svg></span><span class="n"><b>Negocio</b><span>Resumen, analítica, finanzas y caja</span></span><svg class="i chev"><use href="#chevr"/></svg></div>
+          <div class="li"><span class="ico"><svg class="i"><use href="#gear"/></svg></span><span class="n"><b>Ajustes</b><span>Horarios, salón, QR, personal y tu plan</span></span><svg class="i chev"><use href="#chevr"/></svg></div>
+        </div>
+      </div>
+    </div>
+    <div class="cap">— — Tres filas que dicen lo que hay dentro, y el buscador a la mano</div>
+  </div>
+  <div class="col">
+    <div class="tag"><b>Propuesta</b> · estando en Clientes › Cupones</div>
+    <div class="ph">
+      <div class="bar"><b>Cupones</b><span class="ib"><svg class="i"><use href="#more"/></svg></span></div>
+      <div class="sub"><span>Clientes</span><span>Lealtad</span><span class="on">Cupones</span><span>Encuestas</span></div>
+      <div class="body"><div class="ghost"></div><div class="ghost"></div><div class="ghost"></div><div class="ghost"></div></div>
+      <div class="nav new solid">
+        <span><svg class="i"><use href="#hoy"/></svg><em>Hoy</em></span>
+        <span><svg class="i"><use href="#list"/></svg><em>Pedidos</em></span>
+        <span class="fab"><i><svg class="i"><use href="#plus"/></svg></i><em>Tomar pedido</em></span>
+        <span><svg class="i"><use href="#bag"/></svg><em>Menú</em></span>
+        <span class="on"><svg class="i"><use href="#more"/></svg><em>Más</em></span>
+      </div>
+    </div>
+    <div class="cap">— — «Más» marcado: la barra siempre dice dónde estás. Las pestañas de Clientes siguen arriba, como hoy</div>
+  </div>
+</div>
+<p class="lead"><strong>Lo que cuesta:</strong> llegar a Negocio pasa de 1 toque a 2, y a Cupones de 2 a 3. <strong>Lo que gana:</strong> lo de cada visita queda más grande y más fácil de atinar con el pulgar. Si el plan no trae «Tomar pedido» (solo en línea), su casilla la ocupa Negocio: Hoy · Pedidos · Menú · Negocio · Más. El encargado ve lo mismo que el dueño, con lo que tenga permitido.</p>
+
+<h2>2 · Cada puesto ve su trabajo</h2>
+<p class="lead">Cuando lo que un puesto usa cabe en la barra, la barra enseña <strong>sus pantallas por nombre</strong> y no las secciones del dueño. Lo de configurar (Salón) y la portada Hoy pasan a «Más». Las cifras son toques desde cualquier pantalla del panel hasta su tarea.</p>
+<div class="roles">
+
+  <div class="role">
+    <div><h3>Caja</h3><p>Cobra cuentas en Mesas o en Pedidos, abre y cierra la caja, y a veces toma un pedido para llevar.</p></div>
+    <div class="mini"><div class="lbl">Hoy</div>
+      <div class="nav old glass">
+        <span><svg class="i"><use href="#hoy"/></svg><em>Hoy</em></span>
+        <span class="on"><svg class="i"><use href="#list"/></svg><em>Pedidos</em></span>
+        <span class="fab"><i><svg class="i"><use href="#plus"/></svg></i><em>Tomar pedido</em></span>
+        <span><svg class="i"><use href="#chart"/></svg><em>Negocio</em></span>
+        <span><svg class="i"><use href="#gear"/></svg><em>Ajustes</em></span>
+      </div>
+      <div class="taps">Caja: <b>1</b> toque, pero en «Negocio» · Mesas: <b>2</b> (Pedidos › Mesas) · «Ajustes» solo trae Salón</div>
+    </div>
+    <div class="mini"><div class="lbl"><b>Propuesta</b></div>
+      <div class="nav new solid">
+        <span class="on"><svg class="i"><use href="#list"/></svg><em>Pedidos</em></span>
+        <span><svg class="i"><use href="#table"/></svg><em>Mesas</em></span>
+        <span class="fab"><i><svg class="i"><use href="#plus"/></svg></i><em>Tomar pedido</em></span>
+        <span><svg class="i"><use href="#cash"/></svg><em>Caja</em></span>
+        <span><svg class="i"><use href="#more"/></svg><em>Más</em></span>
+      </div>
+      <div class="taps">Caja: <b>1</b> · Mesas: <b>1</b> · Pedidos: <b>1</b> · Hoy y Salón en «Más»</div>
+    </div>
+  </div>
+
+  <div class="role">
+    <div><h3>Recepción</h3><p>Sienta grupos, lleva la lista de espera y las reservaciones, y mira los pedidos.</p></div>
+    <div class="mini"><div class="lbl">Hoy</div>
+      <div class="nav old glass">
+        <span><svg class="i"><use href="#hoy"/></svg><em>Hoy</em></span>
+        <span class="on"><svg class="i"><use href="#list"/></svg><em>Pedidos</em></span>
+        <span><svg class="i"><use href="#users"/></svg><em>Clientes</em></span>
+        <span><svg class="i"><use href="#gear"/></svg><em>Ajustes</em></span>
+      </div>
+      <div class="taps">Mesas: <b>2</b> (Pedidos › Mesas) · Espera: <b>2</b> (Clientes › Lista de espera) · Reservas en «Clientes»</div>
+    </div>
+    <div class="mini"><div class="lbl"><b>Propuesta</b></div>
+      <div class="nav new solid">
+        <span class="on"><svg class="i"><use href="#table"/></svg><em>Mesas</em></span>
+        <span><svg class="i"><use href="#cal"/></svg><em>Reservas</em></span>
+        <span><svg class="i"><use href="#wait"/></svg><em>Espera</em></span>
+        <span><svg class="i"><use href="#list"/></svg><em>Pedidos</em></span>
+        <span><svg class="i"><use href="#more"/></svg><em>Más</em></span>
+      </div>
+      <div class="taps">Mesas, Reservas, Espera y Pedidos: <b>1</b> toque cada una · Hoy y Salón en «Más»</div>
+    </div>
+  </div>
+
+  <div class="role">
+    <div><h3>Cocina</h3><p>Una sola pantalla de trabajo. Normalmente en un aparato fijo, que ya abre directo en Cocina (ficha 2.6).</p></div>
+    <div class="mini"><div class="lbl">Hoy</div>
+      <div class="nav old glass">
+        <span><svg class="i"><use href="#hoy"/></svg><em>Hoy</em></span>
+        <span class="on"><svg class="i"><use href="#list"/></svg><em>Pedidos</em></span>
+      </div>
+      <div class="taps">Su pantalla se llama «Pedidos», aunque solo trae Cocina</div>
+    </div>
+    <div class="mini"><div class="lbl"><b>Propuesta</b></div>
+      <div class="nav new solid">
+        <span><svg class="i"><use href="#hoy"/></svg><em>Hoy</em></span>
+        <span class="on"><svg class="i"><use href="#flame"/></svg><em>Cocina</em></span>
+      </div>
+      <div class="taps">Cabe todo: no hace falta «Más». La casilla dice lo que abre</div>
+    </div>
+  </div>
+
+  <div class="role">
+    <div><h3>Mesero</h3><p>Su panel es una sola pantalla: Tomar pedidos.</p></div>
+    <div class="mini"><div class="lbl">Hoy</div><div class="none">Sin barra: le devuelve ese espacio al salón</div><div class="taps">Se queda igual</div></div>
+    <div class="mini"><div class="lbl"><b>Propuesta</b></div><div class="none">Sin barra (igual que hoy)</div><div class="taps">Se queda igual</div></div>
+  </div>
+
+</div>
+<p class="lead">Si a alguien le das permisos a la medida, se aplica la misma regla: si sus pantallas caben en cuatro casillas, la barra las nombra una por una; si no, ve las secciones como el dueño. Una sección con una sola pantalla se llama como esa pantalla («Caja» y no «Negocio»). Ningún botón lleva a una pantalla que no puede abrir.</p>
+
+<h2>3 · En la PC (1280 px)</h2>
+<p class="lead">En la PC hay espacio de sobra. El dueño conserva sus seis secciones en la barra lateral, igual que hoy. Los puestos ven la misma lista que en su teléfono, con lo de «Más» abajo, bajo «También». Así, quien usa el teléfono y la PC de la caja encuentra todo en el mismo orden.</p>
+<div class="dpair">
+  <div>
+    <div class="tag">Caja · hoy</div>
+    <div class="desk" style="height:360px">
+      <div class="side"><b>Rincón 502</b><span><svg class="i"><use href="#hoy"/></svg>Hoy</span><span><svg class="i"><use href="#list"/></svg>Pedidos</span><span class="on"><svg class="i"><use href="#chart"/></svg>Negocio</span><span><svg class="i"><use href="#gear"/></svg>Ajustes</span></div>
+      <div class="dmain"><div class="dbar"><b>Caja</b></div><div class="dbody"><div class="ghost t"></div><div class="ghost t"></div><div class="ghost t"></div></div></div>
+    </div>
+  </div>
+  <div>
+    <div class="tag"><b>Propuesta</b> · Caja</div>
+    <div class="desk" style="height:360px">
+      <div class="side"><b>Rincón 502</b><span><svg class="i"><use href="#list"/></svg>Pedidos</span><span><svg class="i"><use href="#table"/></svg>Mesas</span><span><svg class="i"><use href="#plus"/></svg>Tomar pedido</span><span class="on"><svg class="i"><use href="#cash"/></svg>Caja</span><span class="div">También</span><span><svg class="i"><use href="#hoy"/></svg>Hoy</span><span><svg class="i"><use href="#gear"/></svg>Salón</span></div>
+      <div class="dmain"><div class="dbar"><b>Caja</b></div><div class="dbody"><div class="ghost t"></div><div class="ghost t"></div><div class="ghost t"></div></div></div>
+    </div>
+  </div>
+</div>
+<p class="nodesk">La vista de PC se ve en una pantalla ancha.</p>
+
+<h2>Lo que necesito que decidas</h2>
+<ol class="lead" style="padding-left:20px">
+  <li><strong>Dueño en el teléfono:</strong> ¿Hoy · Pedidos · Tomar pedido · Menú · Más, con Clientes, Negocio y Ajustes dentro de «Más» (recomendado)? ¿O se quedan las siete casillas de hoy y solo cambian los puestos?</li>
+  <li><strong>Qué hay en «Más»:</strong> ¿tres filas (Clientes, Negocio, Ajustes) con lo que traen dentro y el buscador arriba (recomendado)? ¿O la lista completa de pantallas?</li>
+  <li><strong>Puestos:</strong> ¿la barra de caja, recepción y cocina nombra sus pantallas una por una, y la PC sigue el mismo orden (recomendado)?</li>
+  <li><strong>Barra sólida:</strong> ¿la barra pasa de vidrio a superficie sólida, como las tarjetas (recomendado)? Así se lee igual sobre cualquier cosa que pase por debajo.</li>
+</ol>
+</div>
+</body>
+</html>

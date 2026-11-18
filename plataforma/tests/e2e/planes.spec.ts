@@ -136,6 +136,8 @@ test.describe('Auditoría 0.2 — cinco superficies del contrato', () => {
         await expect(page.locator('#planes').getByText(formatPlanAmount(contract.publicAmount), { exact: true }).first()).toBeVisible();
       });
       await visit(page, '/planes', async () => {
+        // La tabla completa va plegada (línea N, V.3, 2026-11-18): se abre.
+        await page.getByText('Ver todo lado a lado', { exact: true }).click();
         await expect(page.getByRole('table').getByText(contract.publicLabel, { exact: true }).first()).toBeVisible();
       });
       await expect(page.getByRole('table').getByText('Facturación electrónica (FEL)', { exact: true })).toHaveCount(0);

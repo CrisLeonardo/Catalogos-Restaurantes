@@ -94,7 +94,7 @@ export default async function TuAnoPage() {
         <EmptyState
           icon="calendar"
           title={`Tu ${ano} con Leogin empieza con tu primer pedido`}
-          desc="Cuando tus clientes empiecen a pedir, aquí verás cuánto vendiste, tu plato estrella y tu mejor día del año."
+          desc="Cuando tus clientes empiecen a pedir, aquí verás cuánto vendiste, tu platillo estrella y tu mejor día del año."
           action={{ label: 'Comparte tu menú', href: '/admin/qr', icon: null }}
         />
       </div>
@@ -104,7 +104,7 @@ export default async function TuAnoPage() {
   const tarjetas: Array<{ etiqueta: string; valor: string; detalle?: string; rodar?: boolean }> = [
     { etiqueta: 'Vendiste', valor: money(reporte.revenue), detalle: `Ticket promedio ${money(reporte.avgTicket)}`, rodar: true },
     { etiqueta: 'Pedidos', valor: miles(reporte.orders), rodar: true },
-    ...(estrella ? [{ etiqueta: 'Tu plato estrella', valor: estrella.name, detalle: `${miles(estrella.qty)} vendidos` }] : []),
+    ...(estrella ? [{ etiqueta: 'Tu platillo estrella', valor: estrella.name, detalle: `${miles(estrella.qty)} vendidos` }] : []),
     ...(mejorDia ? [{ etiqueta: 'Tu mejor día', valor: fechaLarga(mejorDia.date), detalle: `${money(mejorDia.revenue)} en ${mejorDia.orders} pedidos` }] : []),
     ...(canal && pctCanal > 0 ? [{ etiqueta: 'Así te pidieron', valor: canal.label, detalle: `${pctCanal} % de los pedidos` }] : []),
     ...((clientesNuevos ?? 0) > 0 ? [{ etiqueta: 'Clientes nuevos', valor: miles(clientesNuevos ?? 0), rodar: true }] : []),

@@ -44,7 +44,7 @@ type Patch = Pick<ThemeConfig,
 const ORDER_TYPE_LABEL: Record<ThemeConfig['orderTypes'][number], string> = {
   dine_in: 'Comer en local',
   pickup: 'Para llevar',
-  delivery: 'Domicilio',
+  delivery: 'A domicilio',
 };
 
 interface Props {

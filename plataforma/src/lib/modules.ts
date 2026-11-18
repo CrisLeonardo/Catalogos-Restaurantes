@@ -144,7 +144,7 @@ export const ACTIVATABLE_MODULES: ModuleMeta[] = [
   {
     key: 'loyalty',
     label: 'Lealtad / Puntos',
-    description: 'Programa de puntos: tus clientes acumulan por cada compra y canjean por descuentos al pagar.',
+    description: 'Programa de puntos: tus clientes acumulan puntos con cada compra y los cambian por premios de tu catálogo.',
     icon: 'star',
     href: '/admin/lealtad',
     navLabel: 'Lealtad',
@@ -194,7 +194,7 @@ export const ACTIVATABLE_MODULES: ModuleMeta[] = [
 
 export function moduleMeta(key: ActivatableModuleKey): ModuleMeta {
   const m = ACTIVATABLE_MODULES.find((x) => x.key === key);
-  if (!m) throw new Error(`Módulo desconocido: ${key}`);
+  if (!m) throw new Error(`Función desconocida: ${key}`);
   return m;
 }
 

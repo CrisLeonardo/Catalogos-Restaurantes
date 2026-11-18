@@ -180,7 +180,7 @@ export default function Comanda({
                 className="sv-line-body"
                 onClick={() => onLinea(l)}
                 disabled={l.enviando}
-                title={l.enviando ? 'Enviándose a cocina' : 'Ver qué se puede hacer con este plato'}
+                title={l.enviando ? 'Enviándose a cocina' : 'Ver qué se puede hacer con este platillo'}
               >
                 <span className="sv-line-q">{l.cantidad}×</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
@@ -239,7 +239,7 @@ export default function Comanda({
 
       {vacia && (
         <div className="sv-vacio" style={{ padding: '26px 0' }}>
-          Mesa abierta y sin nada.<br />Toca un plato y aparece aquí.
+          Mesa abierta y sin nada.<br />Toca un platillo y aparece aquí.
         </div>
       )}
 
@@ -255,7 +255,7 @@ export default function Comanda({
           disabled={ocupado}
         >
           <Icon name="undo" size={16} />
-          Otra ronda · repetir la última ({unidadesRonda} {unidadesRonda === 1 ? 'plato' : 'platos'})
+          Otra ronda · repetir la última ({unidadesRonda} {unidadesRonda === 1 ? 'platillo' : 'platillos'})
         </button>
       )}
     </div>

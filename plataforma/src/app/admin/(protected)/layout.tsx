@@ -14,8 +14,6 @@ import SessionHeartbeat from '@/components/admin/session-heartbeat';
 import { can, isMeseroOnly } from '@/lib/permissions';
 import { seccionDeRuta } from '@/lib/admin-nav';
 import { internalPanelPath } from '@/lib/panel-links';
-import { isModuleActive } from '@/lib/modules';
-import { withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
 import { authPathFor } from '@/lib/tenant';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import { isSessionStale, SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
@@ -25,8 +23,8 @@ import { getMyMemberships } from '@/lib/db/membership';
 import { emailEnabled } from '@/lib/email';
 import type { Restaurant } from '@/types';
 import { panelLink } from '@/lib/panel-links-server';
-import { whatsappVisiblePara } from '@/lib/whatsapp/visible';
 import { getEsteAparato } from '@/lib/db/aparato';
+import { menuDelPanel } from '@/lib/admin/menu-del-panel';
 
 export default async function AdminProtectedLayout({
   children,
@@ -126,11 +124,6 @@ export default async function AdminProtectedLayout({
   let zone = '';
   // URL del panel del grupo para volver (solo dueño de grupo "entrando" a una sucursal).
   let groupReturnUrl: string | null = null;
-  // "Comer en local" activo → el restaurante depende de /admin/mesas para
-  // configurar cantidad de mesas y preferencias, aunque su plan no incluya
-  // el panel de mesero completo (ver mesas/page.tsx).
-  let dineInEnabled = false;
-  let deliveryEnabled = false;
 
   // A partir de aquí solo se arma lo que se PINTA: el candado de arriba ya
   // decidió que esta sesión puede estar en este subdominio.
@@ -140,8 +133,6 @@ export default async function AdminProtectedLayout({
     logoUrl = tenantData.resolved.config.logoUrl ?? null;
     logoBg = tenantData.resolved.config.colorBg ?? null;
     zone = tenantData.resolved.config.zone ?? '';
-    dineInEnabled = tenantData.resolved.config.orderTypes.includes('dine_in');
-    deliveryEnabled = tenantData.resolved.config.orderTypes.includes('delivery');
   } else {
     // Sin subdominio de restaurante: quien tiene varios va a Mi cuenta a
     // elegir, el resto se queda con el suyo (Leogin Desktop arranca así).
@@ -161,7 +152,7 @@ export default async function AdminProtectedLayout({
   // sin saltar a un host donde quizá no haya sesión.
   if (currentRestaurant
       && (await getMyMemberships()).filter((m) => m.role === 'OWNER').length > 1) {
-    groupReturnUrl = '/mi-cuenta/resumen';
+    groupReturnUrl = '/mi-cuenta';
   }
 
   // Aviso de correo sin confirmar: solo al DUEÑO (el personal entra por PIN
@@ -170,7 +161,6 @@ export default async function AdminProtectedLayout({
   const needsEmailVerification =
     profile.role === 'RESTAURANT_OWNER' && !profile.email_verified_at && emailEnabled();
 
-  const planActual = (currentRestaurant?.plan_actual as string | null) ?? null;
 
   // El aviso «Tu local no tiene PC principal» ya NO se pinta aquí, en todas
   // las pantallas: ocupaba un cuarto del teléfono en Hoy, Pedidos, Menú… y
@@ -183,30 +173,7 @@ export default async function AdminProtectedLayout({
   const tourEnEspera =
     profile.role === 'RESTAURANT_OWNER' && currentRestaurant?.onboarding_done === false;
 
-  // El PLAN manda sobre restaurants.modules: si el plan lo incluye, se entrega,
-  // aunque la bandera del jsonb se haya quedado atrás. La migración 095 ya
-  // garantiza este piso en la base; aquí se vuelve a aplicar para que el panel
-  // sea correcto aunque corra contra una base donde aún no se haya ejecutado.
-  // Sin esto, una sección incluida en el plan con la bandera en false
-  // desaparecía del nav por completo — lockableNavItem devuelve [], ni candado
-  // ni acceso — y el cliente pagaba por algo que nunca veía.
-  const mod = withPlanFloor(
-    ((PLAN_ORDER as string[]).includes(planActual ?? '') ? planActual : 'BASICO') as PlanCode,
-    (currentRestaurant?.modules as Record<string, boolean> | null) ?? {},
-  );
-  const m = (k: string) => mod[k] === true;
-
-  // Módulos activables: activos solo si Leogin los habilitó Y el restaurante los prendió.
-  const modSettings = currentRestaurant?.module_settings ?? null;
-  const felActive = isModuleActive(mod, modSettings, 'fel');
-  const proveedoresActive = isModuleActive(mod, modSettings, 'proveedores');
-  const loyaltyActive = isModuleActive(mod, modSettings, 'loyalty');
-  const reservacionesActive = isModuleActive(mod, modSettings, 'reservaciones');
-  const listaEsperaActive = isModuleActive(mod, modSettings, 'lista_espera');
-  const encuestasActive = isModuleActive(mod, modSettings, 'encuestas');
-  const cuponesActive = isModuleActive(mod, modSettings, 'cupones');
-  const recetasActive = isModuleActive(mod, modSettings, 'recetas');
-  const llamadaMeseroActive = isModuleActive(mod, modSettings, 'llamada_mesero');
+  // Plan, funciones y modos del menú: ver lib/admin/menu-del-panel.ts.
 
   // Precios vigentes para los upsells del panel (candados de plan, módulos,
   // suscripción): reflejan lo que el super admin configuró, no el default.
@@ -221,24 +188,7 @@ export default async function AdminProtectedLayout({
       aparato={await getEsteAparato(currentRestaurant?.id ?? null)}
       restaurantName={restaurantName}
       restaurantId={currentRestaurant?.id ?? null}
-      planActual={planActual}
-      dineInEnabled={dineInEnabled}
-      deliveryEnabled={deliveryEnabled}
-      whatsappReady={whatsappVisiblePara(profile.role)}
-      ordersEnabled={m('orders')}
-      analiticaEnabled={m('analitica')}
-      inventarioEnabled={m('inventario')}
-      ingredientesEnabled={recetasActive}
-      personalEnabled={m('personal')}
-      finanzasEnabled={m('finanzas')}
-      felActive={felActive}
-      proveedoresActive={proveedoresActive}
-      loyaltyActive={loyaltyActive}
-      reservacionesActive={reservacionesActive}
-      listaEsperaActive={listaEsperaActive}
-      encuestasActive={encuestasActive}
-      cuponesActive={cuponesActive}
-      llamadaMeseroActive={llamadaMeseroActive}
+      {...menuDelPanel(currentRestaurant, tenantData?.resolved.config.orderTypes ?? null, profile.role)}
       logoUrl={logoUrl}
       logoBg={logoBg}
       zone={zone}

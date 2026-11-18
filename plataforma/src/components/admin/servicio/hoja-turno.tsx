@@ -36,7 +36,7 @@ export function HojaTurno({ restaurantId, rol, productos, populares, preferencia
 
   async function publicar(tipo: 'favoritos' | 'alias') {
     if (busy) return;
-    if (tipo === 'favoritos' && !leerPuestos(orden)) { setMensaje('Cada plato debe ocupar un solo puesto.'); return; }
+    if (tipo === 'favoritos' && !leerPuestos(orden)) { setMensaje('Cada platillo debe ocupar un solo puesto.'); return; }
     setBusy(true);
     try {
       const res = await guardarPreferenciaServicio(restaurantId, tipo, tipo === 'favoritos' ? perfil : plato,
@@ -76,7 +76,7 @@ export function HojaTurno({ restaurantId, rol, productos, populares, preferencia
                   setOrden(siguiente);
                 }}>
                   <option value="">Sin asignar</option>
-                  {elegido && !activos.some((p) => p.id === elegido) && <option value={elegido}>Plato retirado</option>}
+                  {elegido && !activos.some((p) => p.id === elegido) && <option value={elegido}>Platillo retirado</option>}
                   {activos.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </label>
@@ -85,7 +85,7 @@ export function HojaTurno({ restaurantId, rol, productos, populares, preferencia
         </div>
         {perfil === rol && (
           <button type="button" className="sv-cta" disabled={busy} onClick={() => {
-            if (!leerPuestos(orden)) { setMensaje('Cada plato debe ocupar un solo puesto.'); return; }
+            if (!leerPuestos(orden)) { setMensaje('Cada platillo debe ocupar un solo puesto.'); return; }
             onAplicar(orden);
           }}>Fijar favoritos en este dispositivo</button>
         )}
@@ -93,12 +93,12 @@ export function HojaTurno({ restaurantId, rol, productos, populares, preferencia
           <>
             <button type="button" className="sv-cta" data-tone="quiet" disabled={busy}
               onClick={() => void publicar('favoritos')}>Guardar para {ROLES_SERVICIO[perfil]}</button>
-            <label className="sv-turno-campo">Plato con alias de trabajo
-              <select className="sv-field" aria-label="Plato con alias de trabajo" value={plato} onChange={(e) => {
+            <label className="sv-turno-campo">Platillo con alias de trabajo
+              <select className="sv-field" aria-label="Platillo con alias de trabajo" value={plato} onChange={(e) => {
                 setPlato(e.target.value);
                 setAlias(preferencias.alias[e.target.value] ?? '');
               }}>
-                <option value="">Elige un plato</option>
+                <option value="">Elige un platillo</option>
                 {activos.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </label>

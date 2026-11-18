@@ -10,7 +10,7 @@ import { getPrintStations, getFallosDeImpresion } from '@/lib/db/print-stations'
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import KitchenDisplay from '@/components/admin/kitchen-display';
 
-export const metadata = { title: 'Cocina (KDS)' };
+export const metadata = { title: 'Cocina' };
 
 export default async function CocinaPage() {
   const { data: { user } } = await getStaffUser();

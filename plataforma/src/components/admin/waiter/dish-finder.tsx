@@ -209,8 +209,8 @@ export default function DishFinder({
           value={raw}
           onChange={(e) => setRaw(e.target.value)}
           onKeyDown={onInputKey}
-          placeholder="Escribe un plato… (o «3 lim»)"
-          aria-label="Buscar un plato para agregar"
+          placeholder="Escribe un platillo… (o «3 lim»)"
+          aria-label="Buscar un platillo para agregar"
           autoComplete="off"
           enterKeyHint="done"
         />
@@ -232,7 +232,7 @@ export default function DishFinder({
             {/* Sin «disponible»: ahora los agotados SÍ salen, así que si no
                 hay nada es que ese plato no está en la carta. La palabra
                 sobraba y además insinuaba una respuesta que no era. */}
-            Ningún plato se llama «{term}».
+            Ningún platillo se llama «{term}».
             {/* Y aquí, justo aquí, la salida (M-09). No es un botón más del
                 menú: es la respuesta a lo que el mesero acaba de descubrir,
                 y llega con el nombre ya escrito. */}

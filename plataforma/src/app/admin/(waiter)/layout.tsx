@@ -5,7 +5,6 @@ import { accesoAlPanel } from '@/lib/auth/panel-destino';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { can } from '@/lib/permissions';
-import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import { PLANS, type PlanCode } from '@/lib/plans';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import { isSessionStale, SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
@@ -19,6 +18,7 @@ import SessionHeartbeat from '@/components/admin/session-heartbeat';
 import type { Metadata } from 'next';
 import { panelLink } from '@/lib/panel-links-server';
 import { getEsteAparato } from '@/lib/db/aparato';
+import { menuDelPanel, type RestauranteDelMenu } from '@/lib/admin/menu-del-panel';
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: 'Panel de Mesero' };
@@ -97,33 +97,27 @@ export default async function WaiterLayout({ children }: { children: React.React
   if (!restaurantId) redirect(profile.role === 'SUPER_ADMIN' ? '/super/restaurantes' : '/admin/login');
 
   let restaurantName = 'Restaurante';
-  let ordersEnabled = false;
   let logoUrl: string | null = null;
   // Fondo del MENÚ del restaurante — el sidebar pinta el logo sobre él (ver AdminShell.logoBg).
   let logoBg: string | null = null;
   let zone = '';
-  let llamadaMeseroActive = false;
 
   let planActual: string | null = null;
+  // Lo que el menú del panel necesita (ficha 2.11): el mismo que en el resto.
+  let menuDe: RestauranteDelMenu | null = null;
 
   if (tenantData) {
     restaurantName = tenantData.restaurant.name;
-    const mod = tenantData.restaurant.modules as ModulesMap;
-    const modSettings = tenantData.restaurant.module_settings as ModuleSettings;
-    ordersEnabled = mod?.['orders'] === true;
-    llamadaMeseroActive = isModuleActive(mod, modSettings, 'llamada_mesero');
     logoUrl = tenantData.resolved.config.logoUrl ?? null;
     logoBg = tenantData.resolved.config.colorBg ?? null;
     zone = tenantData.resolved.config.zone ?? '';
     planActual = tenantData.restaurant.plan_actual ?? null;
+    menuDe = tenantData.restaurant;
   } else {
     const { data: r } = await db.from('restaurants').select('name, modules, module_settings, plan_actual').eq('id', restaurantId).single();
     restaurantName = (r?.name as string | null) ?? 'Restaurante';
-    const mod = r?.modules as ModulesMap;
-    const modSettings = r?.module_settings as ModuleSettings;
-    ordersEnabled = mod?.['orders'] === true;
-    llamadaMeseroActive = isModuleActive(mod, modSettings, 'llamada_mesero');
     planActual = (r?.plan_actual as string | null) ?? null;
+    menuDe = r;
   }
 
   // El panel de mesero es exclusivo de Premium — no se vende a la carta. Un
@@ -139,8 +133,7 @@ export default async function WaiterLayout({ children }: { children: React.React
       aparato={await getEsteAparato(restaurantId)}
       restaurantName={restaurantName}
       restaurantId={restaurantId}
-      ordersEnabled={ordersEnabled}
-      llamadaMeseroActive={llamadaMeseroActive}
+      {...menuDelPanel(menuDe, tenantData?.resolved.config.orderTypes ?? null, profile.role)}
       logoUrl={logoUrl}
       logoBg={logoBg}
       zone={zone}

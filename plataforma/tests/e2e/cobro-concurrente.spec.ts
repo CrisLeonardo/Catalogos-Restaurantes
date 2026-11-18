@@ -54,7 +54,7 @@ async function openBill(page: Page, mesa = 1, localSlug = slug) {
     await expect(page.getByRole('button', { name: /^Cobrar mesa/ }).first()).toBeVisible();
   }).toPass({ timeout: 90_000 });
   await page.getByRole('button', { name: /^Cobrar mesa/ }).first().click();
-  await expect(page.getByRole('tab', { name: 'Por platos' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Por platillos' })).toBeVisible();
 }
 
 async function limpiarYLiberar(page: Page, mesa: number) {
@@ -85,7 +85,7 @@ test('1.4 · conserva puestos, borradores y la guarnición al recuperar un enví
     const url = `${origin}/panel/${slug}/mesero?mesa=13`;
     const abrirCarta = async () => {
       await page.goto(url, { waitUntil: 'domcontentloaded' });
-      await page.getByRole('button', { name: 'Agregar platos', exact: true }).click();
+      await page.getByRole('button', { name: 'Agregar platillos', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Favoritos del turno' })).toBeVisible();
     };
     const puesto = (n: number) => page.getByRole('button', { name: new RegExp(`^Puesto ${n} ·`) });
@@ -96,7 +96,7 @@ test('1.4 · conserva puestos, borradores y la guarnición al recuperar un enví
 
     await page.getByRole('button', { name: 'Preparar turno' }).click();
     const turno = page.getByRole('dialog', { name: 'Preparar turno' });
-    await turno.getByLabel('Plato con alias de trabajo').selectOption(pollo);
+    await turno.getByLabel('Platillo con alias de trabajo').selectOption(pollo);
     await turno.getByLabel('Alias', { exact: true }).fill('plancha especial');
     await turno.getByRole('button', { name: 'Guardar alias' }).click();
     await expect(turno.getByText('Alias guardado.')).toBeVisible();
@@ -105,7 +105,7 @@ test('1.4 · conserva puestos, borradores y la guarnición al recuperar un enví
     await turno.getByRole('button', { name: 'Guardar para Equipo' }).click();
     await expect(turno.getByText(/Guardado para el perfil/)).toBeVisible();
     await page.keyboard.press('Escape');
-    const buscar = page.getByRole('textbox', { name: 'Buscar un plato para agregar' });
+    const buscar = page.getByRole('textbox', { name: 'Buscar un platillo para agregar' });
     await buscar.fill('plancha especial');
     await expect(page.locator('.sv-find-parsed')).toContainText('Pollo a la plancha');
     await buscar.fill('cafe');
@@ -242,7 +242,7 @@ test('1.6 · conserva el historial abierto y revela una incidencia fuera del fil
       await expect(page.getByRole('heading', { name: 'Pedidos en vivo', exact: true })).toBeVisible();
     }).toPass({ timeout: 60_000 });
     const tarjeta = page.getByRole('article', { name: 'Pedido AUD-R02' });
-    const filtro = page.getByRole('button', { name: /^En local/ });
+    const filtro = page.getByRole('button', { name: /^Comer en local/ });
     await expect(async () => {
       await filtro.click();
       await expect(filtro).toHaveAttribute('aria-pressed', 'true', { timeout: 1500 });
@@ -512,7 +512,7 @@ test('dos empleados cobran un plato una vez; el saldo se cobra y la mesa se cier
       await login(context, users[i].email);
       const page = await context.newPage();
       await openBill(page);
-      await page.getByRole('tab', { name: 'Por platos' }).click();
+      await page.getByRole('tab', { name: 'Por platillos' }).click();
       await page.getByRole('button', { name: /1× AUD Plato 52.*c\/u/ }).click();
       await page.getByRole('button', { name: 'Tarjeta', exact: true }).click();
       return page;
@@ -547,7 +547,7 @@ test('0.15 · una respuesta perdida se recupera tras recargar con la identidad o
     await login(context, users[0].email);
     const page = await context.newPage();
     await openBill(page);
-    await page.getByRole('tab', { name: 'Por platos' }).click();
+    await page.getByRole('tab', { name: 'Por platillos' }).click();
     await page.getByRole('button', { name: /1× AUD Reintento 52.*c\/u/ }).click();
     await page.getByRole('button', { name: 'Tarjeta', exact: true }).click();
     let lost = false;
@@ -594,7 +594,7 @@ test('0.16 · un parcial y una ronda nueva se cierran cobrando el saldo de cada 
     await login(context, users[0].email);
     const page = await context.newPage();
     await openBill(page, 2);
-    await page.getByRole('tab', { name: 'Por platos' }).click();
+    await page.getByRole('tab', { name: 'Por platillos' }).click();
     await page.getByRole('button', { name: /1× AUD Ronda 40.*c\/u/ }).click();
     await page.getByRole('button', { name: 'Tarjeta', exact: true }).click();
     await page.getByRole('button', { name: /Cobrar Q40\.00 de esta parte/ }).click();
@@ -629,7 +629,7 @@ test('0.17 · el botón y Postgres conservan Q33.34 + Q33.33 + Q33.33', async ({
     const page = await context.newPage();
     for (let i = 0; i < 3; i++) {
       await openBill(page, 3);
-      await page.getByRole('tab', { name: 'Por platos' }).click();
+      await page.getByRole('tab', { name: 'Por platillos' }).click();
       await page.getByRole('button', { name: new RegExp(`1× AUD Residuo ${i + 1}.*c/u`) }).click();
       await page.getByRole('button', { name: 'Tarjeta', exact: true }).click();
       if (i < 2) {

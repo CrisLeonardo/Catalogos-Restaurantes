@@ -152,7 +152,7 @@ describe('cambiar de plan desde el panel', () => {
     const bajar = loQueSePierde('PREMIUM', 'EN_LINEA');
     expect(bajar).toContain('Pedidos para comer en local');
     expect(bajar).toContain('Reportes financieros y corte de caja');
-    expect(bajar.some((t) => t.startsWith('Productos ilimitados'))).toBe(true);
+    expect(bajar.some((t) => t.startsWith('Platillos ilimitados'))).toBe(true);
     expect(loQueSePierde('EN_LINEA', 'PREMIUM')).toEqual([]);
   });
 });

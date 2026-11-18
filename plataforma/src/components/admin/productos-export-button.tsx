@@ -37,7 +37,7 @@ export default function ProductosExportButton({ restaurantId, importarHref }: { 
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = res.filename ?? 'productos.xlsx';
+      a.download = res.filename ?? 'platillos.xlsx';
       a.click();
       URL.revokeObjectURL(url);
       toast.add({ title: 'Excel descargado', type: 'success' });
@@ -54,8 +54,8 @@ export default function ProductosExportButton({ restaurantId, importarHref }: { 
       const doc = await createDoc({ format: 'a4', orientation: 'p' });
       let y = await drawPdfHeader(doc, {
         branding,
-        title: 'Catálogo de productos',
-        subtitle: `${rows.length} producto${rows.length === 1 ? '' : 's'}`,
+        title: 'Tu carta',
+        subtitle: `${rows.length} platillo${rows.length === 1 ? '' : 's'}`,
       });
 
       for (const [categoryName, items] of groupByCategory(rows)) {
@@ -68,7 +68,7 @@ export default function ProductosExportButton({ restaurantId, importarHref }: { 
 
         const anyStock = items.some((p) => p.trackStock);
         const anyCost = items.some((p) => p.cost != null);
-        const head = ['Producto', 'Precio'];
+        const head = ['Platillo', 'Precio'];
         if (anyCost) head.push('Costo', 'Margen');
         if (anyStock) head.push('Stock');
         head.push('Estado');
@@ -89,7 +89,7 @@ export default function ProductosExportButton({ restaurantId, importarHref }: { 
       }
 
       finalizePdf(doc, { branding, generatedAtLabel: longDate(new Date().toISOString()) });
-      doc.save(`productos-${slug}-${new Date().toISOString().slice(0, 10)}.pdf`);
+      doc.save(`platillos-${slug}-${new Date().toISOString().slice(0, 10)}.pdf`);
       toast.add({ title: 'PDF descargado', type: 'success' });
     });
   }

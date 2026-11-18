@@ -65,7 +65,7 @@ export function pasosDelSeguimiento(p: PedidoParaSeguir, t: TextosSeguimiento): 
     // El mesero toma pedidos que nacen en preparación: aceptado sin hora.
     { clave: 'aceptado', label: 'Aceptado', estado: n >= 1 ? 'hecho' : 'pendiente', hora: n >= 1 ? p.acceptedAt ?? null : null, detalle: null },
     { clave: 'preparando', label: t.preparando, estado: estado(1, 1), hora: null,
-      detalle: n === 1 && platos ? `${platos.listos} de ${platos.total} ${platos.total === 1 ? 'plato listo' : 'platos listos'}` : null },
+      detalle: n === 1 && platos ? `${platos.listos} de ${platos.total} ${platos.total === 1 ? 'platillo listo' : 'platillos listos'}` : null },
     { clave: 'listo', label: p.orderType === 'PICKUP' ? t.listoRecoger : t.listo, estado: estado(2, 2), hora: n >= 2 ? p.readyAt ?? null : null, detalle: null },
   ];
   if (domicilio) pasos.push({ clave: 'camino', label: t.camino, estado: estado(3, 3), hora: null, detalle: null });

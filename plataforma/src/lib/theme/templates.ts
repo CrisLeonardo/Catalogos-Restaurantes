@@ -137,7 +137,7 @@ export const MENU_STRUCTURES: MenuStructure[] = [
     id: 'carta',
     name: 'Carta de autor',
     desc: 'Sin una sola foto: secciones, serifas y el precio al final de una línea de puntos.',
-    hint: 'Para bistrós, bares de vinos y cocina de autor: donde una foto del plato resta en vez de sumar y la carta se lee como un texto.',
+    hint: 'Para bistrós, bares de vinos y cocina de autor: donde una foto del platillo resta en vez de sumar y la carta se lee como un texto.',
     signature: 'papel-autor',
     legacyId: 'carta-autor',
     config: {
@@ -157,7 +157,7 @@ export const MENU_STRUCTURES: MenuStructure[] = [
     id: 'revista',
     name: 'Revista',
     desc: 'Mosaico editorial a página completa, con el destacado abriendo cada sección.',
-    hint: 'Para quien vende con la imagen del plato y tiene fotos buenas. Aprovecha la pantalla ancha: en el teléfono se pliega a dos columnas.',
+    hint: 'Para quien vende con la imagen del platillo y tiene fotos buenas. Aprovecha la pantalla ancha: en el teléfono se pliega a dos columnas.',
     signature: 'tinta-editorial',
     legacyId: 'revista',
     config: {

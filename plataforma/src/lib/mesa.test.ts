@@ -62,8 +62,8 @@ describe('etiquetaDeMesa', () => {
   });
 
   it('sin nada, el texto de reserva', () => {
-    expect(etiquetaDeMesa({ address: null })).toBe('En local');
-    expect(etiquetaDeMesa({ address: '   ' })).toBe('En local');
+    expect(etiquetaDeMesa({ address: null })).toBe('Comer en local');
+    expect(etiquetaDeMesa({ address: '   ' })).toBe('Comer en local');
     expect(etiquetaDeMesa(null, 'Sin mesa')).toBe('Sin mesa');
   });
 });

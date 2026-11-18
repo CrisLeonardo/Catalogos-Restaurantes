@@ -50,7 +50,7 @@ async function authorizeFel(
     .eq('id', restaurantId)
     .single();
   if (!rest || !isModuleActive(rest.modules as ModulesMap, rest.module_settings as ModuleSettings, 'fel')) {
-    return { error: 'El módulo de Facturación no está activo.' };
+    return { error: 'La función de Facturación no está encendida.' };
   }
   return { ok: true, userId: actor.userId, esDueno: actor.esDueno };
 }
@@ -426,7 +426,7 @@ export async function emitirFacturaAutomatica(
       .eq('id', restaurantId)
       .single();
     if (!rest || !isModuleActive(rest.modules as ModulesMap, rest.module_settings as ModuleSettings, 'fel')) {
-      return { emitida: false, motivo: 'Módulo de facturación inactivo.' };
+      return { emitida: false, motivo: 'La función de facturación está apagada.' };
     }
 
     const settings = await leerSettings(restaurantId);

@@ -14,7 +14,8 @@ import type { EstadoLectura } from '@/lib/db/lectura';
    ============================================================ */
 
 export type HeatCell = { day: number; hour: number; count: number };
-export type Velocity = { name: string; qty: number };
+/** `id` es el del platillo cuando sigue en la carta; `null` si se borró. */
+export type Velocity = { id: string | null; name: string; qty: number };
 export type CountSplit = { key: string; label: string; count: number };
 
 export interface Analytics {
@@ -35,6 +36,8 @@ export interface Analytics {
   busiestWeekday: string | null;
   topSellers: Velocity[];
   deadStock: Velocity[];        // productos con menos (o cero) ventas
+  /** Todos los platillos de la carta sin un solo pedido en el rango. */
+  sinPedidos: Velocity[];
   byChannel: CountSplit[];
   byPayment: CountSplit[];
   byZone: CountSplit[];
@@ -46,13 +49,13 @@ export interface Analytics {
 
 const WEEKDAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const CHANNEL_LABEL: Record<string, string> = {
-  PICKUP: 'Para llevar', DELIVERY: 'A domicilio', DINE_IN: 'En el local',
+  PICKUP: 'Para llevar', DELIVERY: 'A domicilio', DINE_IN: 'Comer en local',
 };
 
 const EMPTY = (from: string, to: string, estado: EstadoLectura = 'ok'): Analytics => ({
   estado, from, to, totalOrders: 0, validOrders: 0, cancelled: 0, cancelRate: 0,
   heat: [], heatMax: 0, peakLabel: null, busiestWeekday: null,
-  topSellers: [], deadStock: [], byChannel: [], byPayment: [], byZone: [],
+  topSellers: [], deadStock: [], sinPedidos: [], byChannel: [], byPayment: [], byZone: [],
   avgPrepMin: null, avgDeliveryMin: null, prepSamples: 0, deliverySamples: 0,
 });
 
@@ -64,7 +67,7 @@ type Row = {
   status: string;
   ready_at: string | null;
   delivered_at: string | null;
-  items: { name_snapshot: string; quantity: number }[] | null;
+  items: { product_id: string | null; name_snapshot: string; quantity: number }[] | null;
 };
 
 /** Hora local 0–23 del restaurante. */
@@ -94,12 +97,12 @@ export async function getAnalytics(
   const TOPE_PEDIDOS = 20000, TOPE_PRODUCTOS = 2000;
   const [{ data: orderData, error: errPedidos }, { data: productData, error: errProductos }] = await Promise.all([
     db.from('orders')
-      .select('created_at, order_type, payment_method, delivery_zone, status, ready_at, delivered_at, items:order_items(name_snapshot, quantity)')
+      .select('created_at, order_type, payment_method, delivery_zone, status, ready_at, delivered_at, items:order_items(product_id, name_snapshot, quantity)')
       .eq('restaurant_id', restaurantId)
       .gte('created_at', sinceUtc.toISOString())
       .lte('created_at', untilUtc.toISOString())
       .limit(TOPE_PEDIDOS),
-    db.from('products').select('name').eq('restaurant_id', restaurantId).limit(TOPE_PRODUCTOS),
+    db.from('products').select('id, name, is_available').eq('restaurant_id', restaurantId).limit(TOPE_PRODUCTOS),
   ]);
   if (errPedidos || errProductos) {
     console.error('[analytics]', errPedidos?.code ?? '', errPedidos?.message ?? '', errProductos?.code ?? '', errProductos?.message ?? '');
@@ -119,6 +122,7 @@ export async function getAnalytics(
   const heatMap = new Map<string, number>();   // "day-hour" → count
   const weekdayCount = new Array(7).fill(0);
   const sellMap = new Map<string, number>();
+  const nombreVendido = new Map<string, string>();   // id → nombre del pedido, si el platillo ya no está
   const channel = new Map<string, number>();
   const payment = new Map<string, number>();
   const zone = new Map<string, number>();
@@ -149,8 +153,13 @@ export async function getAnalytics(
       payment.set(pm, (payment.get(pm) ?? 0) + 1);
       if (o.delivery_zone) zone.set(o.delivery_zone, (zone.get(o.delivery_zone) ?? 0) + 1);
 
+      // Por id del platillo, no por el nombre del pedido: renombrar un
+      // platillo partía su ranking en dos (auditoría 2026-11-03, X19/PA-T14).
       for (const it of o.items ?? []) {
-        sellMap.set(it.name_snapshot, (sellMap.get(it.name_snapshot) ?? 0) + Number(it.quantity));
+        const k = it.product_id ? `id:${it.product_id}` : `nombre:${it.name_snapshot}`;
+        sellMap.set(k, (sellMap.get(k) ?? 0) + Number(it.quantity));
+        if (!it.product_id) continue;
+        if (!nombreVendido.has(k)) nombreVendido.set(k, it.name_snapshot);
       }
 
       // Tiempos (minutos) — solo donde hay marca de tiempo (pedidos nuevos).
@@ -184,14 +193,20 @@ export async function getAnalytics(
   }
 
   // Velocidad de productos: top y "no se mueven" (incluye productos con 0 ventas).
-  const allProducts = (productData ?? []).map((p) => p.name as string);
-  const velocity: Velocity[] = allProducts.map((name) => ({ name, qty: sellMap.get(name) ?? 0 }));
-  // productos vendidos pero ya borrados del catálogo: agréguialos también al top.
-  for (const [name, qty] of sellMap) {
-    if (!allProducts.includes(name)) velocity.push({ name, qty });
+  // El nombre es el de HOY en la carta; uno borrado conserva el del pedido.
+  const enCarta = (productData ?? []) as { id: string; name: string; is_available: boolean | null }[];
+  const velocity: Velocity[] = enCarta.map((p) => ({ id: p.id, name: p.name, qty: sellMap.get(`id:${p.id}`) ?? 0 }));
+  const idsEnCarta = new Set(enCarta.map((p) => `id:${p.id}`));
+  for (const [k, qty] of sellMap) {
+    if (idsEnCarta.has(k)) continue;
+    const name = k.startsWith('id:') ? (nombreVendido.get(k) ?? 'Platillo borrado') : k.slice('nombre:'.length);
+    velocity.push({ id: null, name, qty });
   }
   const topSellers = [...velocity].filter((v) => v.qty > 0).sort((a, b) => b.qty - a.qty).slice(0, 10);
   const deadStock = [...velocity].sort((a, b) => a.qty - b.qty).slice(0, 10);
+  // Solo los que se pueden pedir: uno agotado o escondido ya no está en la carta.
+  const disponibles = new Set(enCarta.filter((p) => p.is_available !== false).map((p) => p.id));
+  const sinPedidos = velocity.filter((v) => v.qty === 0 && v.id != null && disponibles.has(v.id)).sort((a, b) => a.name.localeCompare(b.name, 'es'));
 
   const mkSplit = (m: Map<string, number>, labeler: (k: string) => string): CountSplit[] =>
     [...m.entries()].map(([key, count]) => ({ key, label: labeler(key), count })).sort((a, b) => b.count - a.count);
@@ -203,7 +218,7 @@ export async function getAnalytics(
     cancelled,
     cancelRate: totalOrders > 0 ? (cancelled / totalOrders) * 100 : 0,
     heat, heatMax, peakLabel, busiestWeekday,
-    topSellers, deadStock,
+    topSellers, deadStock, sinPedidos,
     byChannel: mkSplit(channel, (k) => CHANNEL_LABEL[k] ?? k),
     // El vocabulario único de lib/payment-method: antes solo traducía CASH
     // y la pantalla imprimía «CARD» (auditoría 2026-11-03, X19).

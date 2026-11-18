@@ -73,7 +73,7 @@ function queHizo(r: ActivityLike): string {
       return `pasó un pedido a «${estado}»`;
     }
     case 'order_void':
-      return `anuló ${m.itemId ? 'un plato' : 'un pedido'}${e ? ` — «${e}»` : ''}`;
+      return `anuló ${m.itemId ? 'un platillo' : 'un pedido'}${e ? ` — «${e}»` : ''}`;
     case 'descuento_mesa': {
       const valor = num(m.valor);
       const monto = num(m.monto);

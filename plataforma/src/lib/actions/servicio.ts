@@ -60,10 +60,10 @@ export async function guardarPreferenciaServicio(
   const ids = puestos ? puestos.filter((id): id is string => id !== null) : [clave];
   const db = createServiceClient();
   if (ids.length > 0) {
-    if (!ids.every(identidadCobroValida)) return { error: 'Selecciona platos del catálogo.' };
+    if (!ids.every(identidadCobroValida)) return { error: 'Selecciona platillos del catálogo.' };
     const { count, error } = await db.from('products').select('id', { head: true, count: 'exact' })
       .eq('restaurant_id', restaurantId).eq('is_active', true).in('id', ids);
-    if (error || count !== ids.length) return { error: 'Un plato ya no está activo en este local. Actualiza la carta.' };
+    if (error || count !== ids.length) return { error: 'Un platillo ya no está activo en este local. Actualiza la carta.' };
   }
   const { error } = await db.from('servicio_preferencias')
     .upsert({ restaurant_id: restaurantId, tipo, clave, valor: puestos ?? alias });
@@ -77,7 +77,7 @@ const MAX_LINEAS = 120;
 
 /** El aviso cuando la 133 todavía no ha corrido en esta base. */
 const SIN_COLUMNA =
-  'Falta la migración 133 para poder marcar los platos uno a uno. '
+  'Falta la migración 133 para poder marcar los platillos uno a uno. '
   + 'Mientras tanto, «Servido» marca la ronda entera.';
 
 /* ────────────────────────────────────────────────────────────
@@ -110,7 +110,7 @@ export async function servirLineas(
   if (!restaurantId || !Array.isArray(itemIds) || itemIds.length === 0) {
     return { error: 'Datos inválidos.' };
   }
-  if (itemIds.length > MAX_LINEAS) return { error: 'Demasiados platos de una vez.' };
+  if (itemIds.length > MAX_LINEAS) return { error: 'Demasiados platillos de una vez.' };
 
   const acceso = await assertTableAccess(restaurantId);
   if ('error' in acceso) return acceso;
@@ -130,7 +130,7 @@ export async function servirLineas(
   type Fila = { id: string; order_id: string; order?: { restaurant_id: string; status: string } | null };
   const propias = ((lineas ?? []) as unknown as Fila[])
     .filter((l) => l.order?.restaurant_id === restaurantId);
-  if (propias.length === 0) return { error: 'Esos platos no son de esta mesa.' };
+  if (propias.length === 0) return { error: 'Esos platillos no son de esta mesa.' };
 
   const ahora = new Date().toISOString();
   const { data: servidas, error } = await db
@@ -190,7 +190,7 @@ export async function deshacerServirLineas(
   if (!restaurantId || !Array.isArray(itemIds) || itemIds.length === 0) {
     return { error: 'Datos inválidos.' };
   }
-  if (itemIds.length > MAX_LINEAS) return { error: 'Demasiados platos que deshacer.' };
+  if (itemIds.length > MAX_LINEAS) return { error: 'Demasiados platillos que deshacer.' };
 
   const acceso = await assertTableAccess(restaurantId);
   if ('error' in acceso) return acceso;
@@ -253,7 +253,7 @@ export async function cobrarParteDeMesa(
   if (!Array.isArray(itemIds) || itemIds.length === 0) {
     return { error: 'No hay nada marcado que cobrar.' };
   }
-  if (itemIds.length > MAX_LINEAS) return { error: 'Demasiados platos de una vez.' };
+  if (itemIds.length > MAX_LINEAS) return { error: 'Demasiados platillos de una vez.' };
   if (!Array.isArray(pagos) || pagos.length === 0) return { error: 'Falta cómo se pagó.' };
   if (pagos.some((p) => !isPaymentMethod(p.method))) return { error: 'Forma de pago inválida.' };
   if (pagos.some((p) => !(Number.isFinite(p.amount) && p.amount > 0))) {
@@ -302,10 +302,10 @@ export async function cobradoDeMesa(
     p_restaurant: restaurantId, p_mesa: tableNumber,
   });
   if (error) {
-    if (faltaLaFuncion(error)) return { error: 'Falta la migración 164 para consultar las cuotas exactas por plato.', needsMigration: true };
+    if (faltaLaFuncion(error)) return { error: 'Falta la migración 164 para consultar las cuotas exactas por platillo.', needsMigration: true };
     return { error: error.message };
   }
-  if (!data) return { error: 'No se pudo leer el saldo por plato.' };
+  if (!data) return { error: 'No se pudo leer el saldo por platillo.' };
   return data;
 
 }
@@ -560,7 +560,7 @@ export async function marcarAgotado(
   if (!restaurantId || !productId) return { error: 'Datos inválidos.' };
 
   const acceso = await assertTableAccess(restaurantId, ['catalogo']);
-  if ('error' in acceso) return { error: 'Solo quien administra la carta puede marcar un plato como agotado.' };
+  if ('error' in acceso) return { error: 'Solo quien administra la carta puede marcar un platillo como agotado.' };
 
   const db = createServiceClient();
   let vuelve: string | null = null;
@@ -569,7 +569,7 @@ export async function marcarAgotado(
     const { data: r, error } = await db.rpc('leogin_marcar_agotado', {
       p_restaurant: restaurantId, p_ids: [productId], p_hasta: ['manana', 'reponer', 'manual'].includes(hasta) ? hasta : 'manana', p_actor: acceso.actor.userId,
     });
-    if (error) return { error: error.code === 'LGD01' ? 'Ese plato no es de este restaurante.' : 'No se pudo marcar agotado.' };
+    if (error) return { error: error.code === 'LGD01' ? 'Ese platillo no es de este restaurante.' : 'No se pudo marcar agotado.' };
     vuelve = (r as { vuelve?: string | null })?.vuelve ?? null;
   } else {
     const { data, error } = await db
@@ -579,7 +579,7 @@ export async function marcarAgotado(
       .eq('restaurant_id', restaurantId)
       .select('id');
     if (error) return { error: 'No se pudo marcar disponible.' };
-    if (!data || data.length === 0) return { error: 'Ese plato no es de este restaurante.' };
+    if (!data || data.length === 0) return { error: 'Ese platillo no es de este restaurante.' };
   }
 
   // La misma etiqueta que invalida Menú: el catálogo del mesero está en
@@ -683,7 +683,7 @@ export async function moverPlatoDeMesa(
     .eq('id', itemId)
     .maybeSingle();
   const dueño = (item as { order?: { restaurant_id: string } | null } | null)?.order?.restaurant_id;
-  if (!item || dueño !== restaurantId) return { error: 'Plato no encontrado.' };
+  if (!item || dueño !== restaurantId) return { error: 'Platillo no encontrado.' };
 
   const { data, error } = await db.rpc('move_order_item', {
     p_order_item_id: itemId,
@@ -692,7 +692,7 @@ export async function moverPlatoDeMesa(
   });
   if (error) {
     if (error.code === 'PGRST202' || error.code === '42883') {
-      return { error: 'Falta la migración 152 para pasar platos entre mesas.', needsMigration: true };
+      return { error: 'Falta la migración 152 para pasar platillos entre mesas.', needsMigration: true };
     }
     return { error: error.message };
   }

@@ -17,9 +17,9 @@ type Fila = {
 function etiquetaDe(f: Fila): string {
   if (f.order_type === 'DINE_IN') {
     const n = mesaDeFila(f);
-    return n != null ? direccionDeMesa(n) : 'En el local';
+    return n != null ? direccionDeMesa(n) : 'Comer en local';
   }
-  return f.order_type === 'PICKUP' ? 'Para llevar' : 'Domicilio';
+  return f.order_type === 'PICKUP' ? 'Para llevar' : 'A domicilio';
 }
 
 /** Los pedidos vivos de las últimas 48 h, o null si la lectura falló. */

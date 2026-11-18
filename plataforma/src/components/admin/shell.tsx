@@ -25,7 +25,8 @@ import AdminInstallPrompt from '@/components/admin/install-prompt';
 import LoginWelcomeToast from '@/components/admin/login-welcome-toast';
 import { ToastProvider, Toaster } from '@/components/ui/toast';
 import { isMeseroOnly } from '@/lib/permissions';
-import { buildNav, findGroup, barraDestinos, type NavGroup } from '@/lib/admin-nav';
+import { buildNav, findGroup, barraMovil, destinoActivo, destinoDeGrupo, type DestinoBarra, type NavGroup } from '@/lib/admin-nav';
+import { HojaOperativa } from '@/components/ui/hoja-operativa';
 import SectionTabs from '@/components/admin/section-tabs';
 import CommandSearch from '@/components/admin/command-search';
 import AdminMoreMenu from '@/components/admin/admin-more-menu';
@@ -309,25 +310,19 @@ export default function AdminShell({
      barra lateral y "Tomar pedidos" ya es una pestaña con su nombre
      entero.
 
-     LOS SEIS DESTINOS SE QUEDAN (corregido el 2026-09-07). El botón nació
-     echando a Clientes y Negocio al menú "⋯", y eso resultó ser un cambio
-     con dos costes que no se vieron al medirlo:
+     Desde la ficha 2.11 (2026-11-17) la barra tiene cinco casillas como
+     mucho y depende del rol: ver `barraMovil` en lib/admin-nav.ts. «Más»
+     vive en la propia barra y se marca estando en lo que trae dentro, que
+     es lo que faltó el 2026-09-07 al mudar Clientes y Negocio al «⋯». */
 
-       · Los dos destinos desaparecían sin dejar rastro. Quien los buscaba
-         en la barra —donde llevaban meses— no tenía ninguna pista de que
-         se habían mudado a un menú de la barra de ARRIBA.
-       · Y peor: estando EN Clientes o en Negocio, la barra no marcaba
-         nada. Ninguno de los cuatro destinos visibles estaba activo, así
-         que la pantalla no decía dónde estabas.
-
-     Medido en pantalla: con el botón puesto, los seis destinos caben a
-     47 px cada uno en un teléfono de 375 px, con las seis etiquetas
-     enteras y sin recortes (`scrollWidth === clientWidth`). Por debajo de
-     360 px la ranura del botón se estrecha para dejarles sitio, ver
-     globals.css. */
-
-  const barra = barraDestinos(groups, preview);
+  /* Ficha 2.11: la barra por rol. Si el trabajo de la persona cabe en la
+     barra, la barra nombra sus pantallas; si no, cuatro secciones y «Más».
+     Ver `barraMovil` en lib/admin-nav.ts. */
+  const barra = barraMovil(groups, preview);
   const conBoton = barra.conBoton;
+  const activoBarra = destinoActivo(barra, pathname);
+  const enMas = barra.mas.some((d) => d.key === activoBarra);
+  const [hojaMas, setHojaMas] = useState(false);
 
   /* Una barra con un solo sitio no es navegación. Le pasaba al mesero puro:
      «Pedidos» y el botón llevaban los dos a Tomar pedidos (y antes «Hoy»
@@ -335,7 +330,7 @@ export default function AdminShell({
      el teléfono la barra se va y le devuelve esos 56 px al salón; lo que
      queda de cuenta (cambiar de usuario, sonido, ayuda) sigue en la barra
      de arriba. Ver `[data-sin-barra]` en admin.css. */
-  const sinBarra = barra.destinos < 2;
+  const sinBarra = barra.sinBarra;
 
   /* "Aquí estás", no "aquí no estoy". El botón se APARTABA en
      `/admin/mesero` y `/admin/caja` —`visibility: hidden`— y lo que se veía
@@ -357,6 +352,10 @@ export default function AdminShell({
     '/admin/mesero': 'Tomar pedidos',
     '/admin/mesas': 'Mesas · Comer en local',
     '/admin/pedidos': 'Pedidos en vivo',
+    // Sin pestañas encima (un puesto con su barra propia) el título dice la
+    // pantalla: caían en el «Panel» de reserva.
+    '/admin/caja': 'Caja',
+    '/admin/cocina': 'Cocina',
     '/admin/categorias': 'Categorías',
     '/admin/inventario': 'Inventario',
     '/admin/ingredientes': 'Ingredientes',
@@ -433,7 +432,12 @@ export default function AdminShell({
      no tiene pestañas por diseño) y en la portada de Ajustes se pintaba igual:
      17 px de barra vacía con su línea debajo, que en un teléfono es una banda
      entera de armazón que no dice nada. */
-  const showTabs = !!activeGroup && !backToIndex && !activeGroup.index && activeGroup.items.length >= 2;
+  /* En modo «trabajo» la barra ya nombra cada pantalla de la persona: una
+     fila de pestañas encima repetiría los mismos destinos. */
+  /* Tomar pedidos y Cocina son pantallas de trabajo a lo ancho, con su
+     propio layout: nunca llevaron la fila de pestañas y así se aprobaron. */
+  const pantallaDeTrabajo = pathname.startsWith('/admin/mesero') || pathname.startsWith('/admin/cocina');
+  const showTabs = barra.modo === 'secciones' && !pantallaDeTrabajo && !!activeGroup && !backToIndex && !activeGroup.index && activeGroup.items.length >= 2;
   const showSubbar = backToIndex || showTabs;
 
   /* Estando en una pestaña, el título de arriba dice el GRUPO ("Menú") y la
@@ -572,28 +576,102 @@ export default function AdminShell({
        antes se quitaba aquí, en el marcado, y en la barra lateral —donde no
        hay botón— Tomar pedidos se quedaba sin ningún destino marcado. */
     const cede = active && conBoton && enTomarPedido && g.key === 'pedidos';
+    // Una sección de una sola pantalla se llama como ella («Caja», no «Negocio»).
+    const d = destinoDeGrupo(g, conBoton);
+    // En el teléfono, lo que está en «Más» no se pinta en la barra.
+    const clase = barra.mas.some((m) => m.key === g.key) ? ' nav-en-mas' : '';
     if (preview) {
       return (
-        <div key={g.key} className="admin-navlink" data-active={active ? '1' : '0'} data-tour-step={g.key} style={{ cursor: 'default' }}>
-          <Icon name={g.icon} size={18} />
-          <span className="nav-label">{g.label}</span>
+        <div key={g.key} className={`admin-navlink${clase}`} data-active={active ? '1' : '0'} data-tour-step={g.key} style={{ cursor: 'default' }}>
+          <Icon name={d.icon} size={18} />
+          <span className="nav-label">{d.label}</span>
         </div>
       );
     }
     return (
-      <Link key={g.key} href={enlace(g.href)} className="admin-navlink press" data-active={active ? '1' : '0'} data-cede={cede ? '1' : undefined} data-tour-step={g.key}>
-        <Icon name={g.icon} size={18} />
-        <span className="nav-label">{g.label}</span>
+      <Link key={g.key} href={enlace(g.href)} className={`admin-navlink press${clase}`} data-active={active ? '1' : '0'} data-cede={cede ? '1' : undefined} aria-current={active && !cede ? 'page' : undefined} data-tour-step={g.key}>
+        <Icon name={d.icon} size={18} />
+        <span className="nav-label">{d.label}</span>
         <NavPending />
       </Link>
     );
   }
 
-  /** El botón central. Su ranura vive DENTRO de la barra, entre Menú y
-   *  Clientes — así queda 3 destinos a cada lado (Hoy/Pedidos/Menú y
-   *  Clientes/Negocio/Ajustes) y el botón cae en el centro real de los
-   *  siete huecos, no solo entre los dos primeros. Sin «Menú» (un rol
-   *  estrecho) va al centro de lo que haya: ver `barraDestinos`. */
+  /** Un destino del modo «trabajo»: una pantalla con su nombre. */
+  function renderDestino(d: DestinoBarra, clase = '') {
+    const active = activoBarra === d.key;
+    return (
+      <Link key={d.key} href={enlace(d.href)} className={`admin-navlink press${clase}`} data-active={active ? '1' : '0'} aria-current={active ? 'page' : undefined} data-tour-step={d.tour}>
+        <Icon name={d.icon} size={18} />
+        <span className="nav-label">{d.label}</span>
+        <NavPending />
+      </Link>
+    );
+  }
+
+  /** «Más»: una casilla de la barra del teléfono, marcada si la pantalla
+   *  abierta vive dentro. En la PC no existe: la barra lateral tiene sitio. */
+  function renderMas() {
+    if (barra.mas.length === 0 || preview) return null;
+    return (
+      <button
+        key="mas"
+        type="button"
+        className="admin-navlink admin-navmas press"
+        data-active={enMas ? '1' : '0'}
+        aria-haspopup="dialog"
+        aria-expanded={hojaMas}
+        data-tour-step="mas"
+        data-tour-alt={barra.mas.map((m) => m.tour).filter(Boolean).join(' ')}
+        onClick={() => setHojaMas(true)}
+      >
+        <Icon name="more" size={18} />
+        <span className="nav-label">Más</span>
+      </button>
+    );
+  }
+
+  /** Los destinos de la barra, con el botón en el centro real. */
+  function renderBarra() {
+    if (barra.modo === 'secciones') {
+      let vistos = 0;
+      const nodos: React.ReactNode[] = [];
+      for (const g of groups) {
+        const enLaBarra = !barra.mas.some((m) => m.key === g.key);
+        if (enLaBarra && vistos === barra.botonEn) nodos.push(renderTomarPedido());
+        nodos.push(renderGroup(g));
+        if (enLaBarra) vistos += 1;
+      }
+      if (barra.botonEn === vistos) nodos.push(renderTomarPedido());
+      nodos.push(renderMas());
+      return nodos;
+    }
+    /* Modo «trabajo». En la PC el botón no se pinta (es del teléfono), así
+       que Tomar pedido va como un destino más, en el mismo sitio. */
+    const tomar = conBoton ? [
+      renderTomarPedido(),
+      <Link key="tomar-pc" href={enlace('/admin/mesero')} className="admin-navlink press nav-solo-pc" data-active={enTomarPedido ? '1' : '0'} aria-current={enTomarPedido ? 'page' : undefined}>
+        <Icon name="plus" size={18} />
+        <span className="nav-label">Tomar pedido</span>
+      </Link>,
+    ] : [];
+    const nodos: React.ReactNode[] = [];
+    barra.principales.forEach((d, i) => {
+      if (i === barra.botonEn) nodos.push(...tomar);
+      nodos.push(renderDestino(d));
+    });
+    if (barra.botonEn === barra.principales.length) nodos.push(...tomar);
+    nodos.push(renderMas());
+    if (barra.mas.length > 0) {
+      nodos.push(<span key="tambien" className="admin-nav-tambien nav-solo-pc" aria-hidden>También</span>);
+      for (const d of barra.mas) nodos.push(renderDestino(d, ' nav-solo-pc'));
+    }
+    return nodos;
+  }
+
+  /** El botón central. Su ranura vive DENTRO de la barra, en el centro
+   *  real de las casillas (`botonEn` de `barraMovil`): con el dueño,
+   *  Hoy · Pedidos · [botón] · Menú · Más. */
   function renderTomarPedido() {
     return (
       <Link
@@ -676,11 +754,7 @@ export default function AdminShell({
             misma lista se convierte en la barra inferior fija (ver globals.css).
             Ya no hay secciones plegables: con seis ítems no hay nada que plegar. */}
         <nav className="admin-nav" data-tour-step="nav">
-          {groups.map((g, i) => (
-            i === barra.botonTras
-              ? [renderGroup(g), renderTomarPedido()]
-              : renderGroup(g)
-          ))}
+          {renderBarra()}
         </nav>
 
         {/* Plan badge — link to /admin/suscripcion, hides its label on mobile bottom bar */}
@@ -837,6 +911,32 @@ export default function AdminShell({
       {avisosFlotantes}
       {!preview && <CommandSearch groups={groups} />}
       {!preview && <InicioDelAparato uso={usoAparato} pathname={pathname} rutasPermitidas={rutasPermitidas} enlace={enlace} />}
+      {hojaMas && (
+        <HojaOperativa label="Más" className="hoja-mas" onClose={() => setHojaMas(false)} footer={null}>
+          <button
+            type="button"
+            className="hoja-mas-buscar press"
+            onClick={() => { setHojaMas(false); window.dispatchEvent(new Event('admin:search')); }}
+          >
+            <Icon name="search" size={18} />
+            Buscar una pantalla o una tarea
+          </button>
+          <ul className="hoja-mas-lista">
+            {barra.mas.map((d) => (
+              <li key={d.key}>
+                <Link href={enlace(d.href)} className="hoja-mas-fila press" aria-current={activoBarra === d.key ? 'page' : undefined} onClick={() => setHojaMas(false)}>
+                  <span className="hoja-mas-icono" aria-hidden><Icon name={d.icon} size={18} /></span>
+                  <span className="hoja-mas-texto">
+                    <b>{d.label}</b>
+                    {d.detalle && <span>{d.detalle}</span>}
+                  </span>
+                  <Icon name="chevronRight" size={16} className="hoja-mas-chev" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </HojaOperativa>
+      )}
       {hojaAparato && restaurantId && (
         <HojaAparato restaurantId={restaurantId} uso={usoAparato} nombre={aparato?.nombre ?? null}
           enlace={enlace} onClose={() => setHojaAparato(false)} />

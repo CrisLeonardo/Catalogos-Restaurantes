@@ -88,9 +88,9 @@ const STAGES: { id: StageId; title: string; hint: string; statuses: string[] }[]
 
 const TYPE_FILTERS: { id: 'ALL' | ServiceType; label: string; icon: string }[] = [
   { id: 'ALL',      label: 'Todos',       icon: 'list' },
-  { id: 'DINE_IN',  label: 'En local',    icon: 'utensils' },
+  { id: 'DINE_IN',  label: 'Comer en local', icon: 'utensils' },
   { id: 'PICKUP',   label: 'Para llevar', icon: 'bag' },
-  { id: 'DELIVERY', label: 'Domicilio',   icon: 'truck' },
+  { id: 'DELIVERY', label: 'A domicilio', icon: 'truck' },
 ];
 
 function OrdersPanelInner({
@@ -354,7 +354,7 @@ function OrdersPanelInner({
 
       await brandedAutoTable(doc, branding, {
         startY: y,
-        head: [['Número', 'Fecha', 'Hora', 'Cliente', 'Teléfono', 'Tipo', 'Estado', 'Productos', 'Subtotal', 'Envío', 'Total', 'Notas']],
+        head: [['Número', 'Fecha', 'Hora', 'Cliente', 'Teléfono', 'Tipo', 'Estado', 'Platillos', 'Subtotal', 'Envío', 'Total', 'Notas']],
         body: rows.map((r) => [
           r.orderNumber, r.date, r.time, r.customerName, r.customerPhone, r.orderType, r.status, r.items,
           formatDocMoney(r.subtotal, branding), formatDocMoney(r.deliveryFee, branding), formatDocMoney(r.total, branding), r.notes,

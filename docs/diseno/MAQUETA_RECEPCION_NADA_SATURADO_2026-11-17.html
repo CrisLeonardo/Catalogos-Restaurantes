@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueta · Recepción sin saturar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F2F1EE;--bg2:#E9E7E3;--card:#FFFFFF;--ink:#17161A;--ink2:rgba(23,22,26,.72);--ink3:rgba(23,22,26,.56);--line:rgba(23,22,26,.12);--line2:rgba(23,22,26,.2);--coral:#C2542F;--on:#fff;--ok:#1E7A46;--okbg:#E4F3E9;--warn:#8A5A00;--warnbg:#FBEFD2;--info:#1F5FA8;--infobg:#E3EDF9;--danger:#B3261E;--wa:#25D366;--page:#DEDCD7;--sh:0 1px 2px rgba(0,0,0,.06);--scrim:rgba(23,22,26,.36)}
+[data-theme=dark]{--bg:#0C0B0A;--bg2:#141311;--card:#1A1917;--ink:#F5F3EF;--ink2:rgba(245,243,239,.74);--ink3:rgba(245,243,239,.56);--line:rgba(245,243,239,.12);--line2:rgba(245,243,239,.22);--coral:#D9683F;--on:#fff;--ok:#6FD49A;--okbg:#12301F;--warn:#F0C568;--warnbg:#33270B;--info:#8DB8F0;--infobg:#132339;--danger:#F2867E;--page:#000;--sh:none;--scrim:rgba(0,0,0,.6)}
+*{box-sizing:border-box;margin:0}
+body{font-family:Geist,system-ui,sans-serif;background:var(--page);color:var(--ink);padding:24px 16px 80px;-webkit-font-smoothing:antialiased}
+h1{font-size:28px;font-weight:800;letter-spacing:-.03em}
+h2{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:48px 0 6px}
+.lead{max-width:780px;color:var(--ink2);font-size:15px;line-height:1.5;margin-top:8px}
+.top{display:flex;align-items:flex-start;gap:16px;justify-content:space-between;max-width:1280px;margin:0 auto}
+.wrap{max-width:1280px;margin:0 auto}
+.tog{border:1px solid var(--line2);background:var(--card);color:var(--ink);font:inherit;font-size:14px;font-weight:600;height:44px;padding:0 16px;border-radius:12px;cursor:pointer;flex-shrink:0}
+.pair{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;margin-top:16px}
+.col{display:flex;flex-direction:column;gap:10px}
+.tag{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.tag b{color:var(--coral)}
+.cap{font-size:13px;font-weight:600;color:var(--coral);max-width:375px;line-height:1.45}.cap.old{color:var(--ink2);font-weight:500}
+.i{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.i.s{width:16px;height:16px}
+/* teléfono */
+.ph{width:375px;height:700px;background:var(--bg);border-radius:28px;border:1px solid var(--line2);overflow:hidden;position:relative;display:flex;flex-direction:column;font-size:14px}
+.bar{height:54px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 12px 0 16px;border-bottom:1px solid var(--line);background:var(--bg)}
+.bar b{flex:1;font-size:18px;font-weight:800;letter-spacing:-.03em}
+.ib{width:40px;height:40px;border-radius:12px;background:var(--card);box-shadow:var(--sh);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink);flex-shrink:0}
+.body{flex:1;overflow:hidden;padding:12px;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh)}
+.nav{flex-shrink:0;border-top:1px solid var(--line);display:flex;padding:6px 4px 10px;background:var(--card);color:var(--ink3)}
+.nav span{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px}
+.nav .on{color:var(--coral);font-weight:600}
+/* antes */
+.ttl{font-size:22px;font-weight:700;letter-spacing:-.02em}.ttl small{display:block;font-size:13px;font-weight:400;color:var(--ink3);letter-spacing:0;margin-top:2px}
+.agenda{padding:14px}
+.ah{display:flex;align-items:center;gap:6px;margin-bottom:8px}.ah b{flex:1;font-size:15px}
+.chip{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;border:1px solid var(--line2);font-size:12px;font-weight:600;color:var(--ink2);white-space:nowrap}
+.chip.warn{background:var(--warnbg);color:var(--warn);border-color:transparent}
+.chip.ok{background:var(--okbg);color:var(--ok);border-color:transparent}
+.chip.info{background:var(--infobg);color:var(--info);border-color:transparent}
+.fr{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:10px;font-size:13px;color:var(--ink2);height:28px}
+.fr i{display:block;height:8px;border-radius:8px;background:var(--bg2);position:relative;overflow:hidden}
+.fr i:after{content:"";position:absolute;inset:0 auto 0 0;width:var(--w);background:var(--ink);border-radius:8px}
+.fr span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.sec{font-size:15px;font-weight:700;margin-top:4px}.sec small{font-weight:400;color:var(--ink3);font-size:13px}
+.old-row{padding:14px;display:grid;grid-template-columns:62px 1fr;gap:10px}
+.hr{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}.hr small{display:block;font-weight:400;font-size:12px;color:var(--ink3)}
+.nm{font-weight:700;font-size:15px}
+.mt{font-size:13px;color:var(--ink2);margin-top:2px}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.b{height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--line2);background:var(--card);font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;color:var(--ink);white-space:nowrap}
+.b.g{border-color:transparent;background:transparent;color:var(--ink2)}
+.b.p{background:var(--coral);color:var(--on);border-color:transparent}
+.b.wa{background:var(--wa);color:#0b2e17;border-color:transparent}
+.b.t{height:44px;padding:0 16px;font-size:14px}
+.sel{height:36px;border-radius:10px;border:1px solid var(--line2);padding:0 10px;font-size:13px;color:var(--ink2);display:inline-flex;align-items:center;gap:20px;background:var(--card)}
+.measure{position:absolute;right:8px;font-size:11px;font-weight:700;color:var(--coral);background:var(--card);border:1px solid var(--coral);border-radius:6px;padding:2px 6px;z-index:3}
+/* propuesta */
+.mandos{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.seg{flex:1;display:flex;gap:2px;padding:3px;background:var(--bg2);border-radius:12px;min-width:0}
+.seg span{flex:1;text-align:center;padding:8px 4px;border-radius:9px;font-size:13px;font-weight:500;color:var(--ink2);white-space:nowrap}
+.seg span em{font-style:normal;font-variant-numeric:tabular-nums;color:var(--ink3);margin-left:3px}
+.seg .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+.seg .w em{color:var(--warn);font-weight:700}
+.nueva{height:44px;padding:0 14px;border-radius:12px;background:var(--coral);color:var(--on);font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:6px;flex-shrink:0}
+.linea{display:flex;align-items:center;gap:10px;padding:0 14px;height:48px;font-size:13px;color:var(--ink2)}
+.linea b{color:var(--ink);font-variant-numeric:tabular-nums}
+.linea .mini{flex:1;height:6px;border-radius:6px;background:var(--bg2);position:relative;overflow:hidden;max-width:90px}
+.linea .mini:after{content:"";position:absolute;inset:0 auto 0 0;width:12%;background:var(--ink);border-radius:6px}
+.grp{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3);padding:4px 4px 0}
+.grp.warn{color:var(--warn)}
+.ls{overflow:hidden}
+.row{display:grid;grid-template-columns:64px 1fr auto;align-items:center;gap:10px;padding:10px 12px 10px 14px;min-height:66px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .hr small{font-size:12px}
+.row .nm{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .mt{font-size:13px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.row .mt .w{color:var(--warn);font-weight:600}
+.row .mt .o{color:var(--ok);font-weight:600}
+.row .act{display:flex;gap:6px;align-items:center}
+.ab{height:44px;padding:0 14px;border-radius:12px;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);background:var(--card);color:var(--ink);white-space:nowrap}
+.ab.p{background:var(--coral);color:var(--on);border-color:transparent}
+.ab.wa{width:44px;padding:0;justify-content:center;background:var(--wa);color:#0b2e17;border-color:transparent}
+.ask{grid-column:2/4;display:flex;align-items:center;gap:8px;background:var(--warnbg);color:var(--warn);border-radius:10px;padding:6px 6px 6px 10px;font-size:13px;font-weight:600}
+.ask span{flex:1}
+.ask .ab{height:36px;font-size:13px;padding:0 10px}
+.sum{font-size:13px;color:var(--ink3);padding:0 4px}.sum b{color:var(--ink);font-weight:600}
+/* hojas */
+.scrim{position:absolute;inset:0;background:var(--scrim);z-index:4}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:5;background:var(--card);border-radius:22px 22px 0 0;padding:8px 14px 16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 -8px 30px rgba(0,0,0,.18)}
+.grab{width:36px;height:4px;border-radius:4px;background:var(--line2);margin:0 auto}
+.sh-h{display:flex;align-items:flex-start;gap:10px}.sh-h div{flex:1}.sh-h b{font-size:18px;font-weight:700;display:block}.sh-h span{font-size:13px;color:var(--ink3)}
+.x{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--ink2);background:var(--bg2)}
+.note{background:var(--bg2);border-radius:12px;padding:10px 12px;font-size:13px;color:var(--ink2)}
+.big{height:56px;border-radius:14px;background:var(--coral);color:var(--on);font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px}
+.opt{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.opt div{display:flex;align-items:center;gap:12px;min-height:50px;padding:0 14px;border-bottom:1px solid var(--line);font-size:14px}
+.opt div:last-child{border-bottom:0}
+.opt div span{flex:1}.opt div em{font-style:normal;color:var(--ink3);font-size:13px}
+.opt .d{color:var(--danger)}
+.fld{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:var(--ink2)}
+.inp{height:48px;border-radius:12px;border:1px solid var(--line2);background:var(--bg);display:flex;align-items:center;padding:0 12px;font-size:15px;font-weight:400;color:var(--ink)}
+.inp.ph2{color:var(--ink3)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dias{display:flex;gap:6px}.dias span{flex:1;height:44px;border-radius:12px;border:1px solid var(--line2);display:grid;place-items:center;font-size:14px;font-weight:500}
+.dias .on{border:2px solid var(--coral);color:var(--coral);font-weight:700}
+.hint{font-size:12px;color:var(--ok);font-weight:600}
+.add{font-size:14px;font-weight:600;color:var(--coral)}
+/* escritorio */
+.desk{width:100%;max-width:1180px;height:560px;background:var(--bg);border:1px solid var(--line2);border-radius:16px;overflow:hidden;display:flex;font-size:14px;margin-top:14px}
+.side{width:210px;flex-shrink:0;border-right:1px solid var(--line);padding:16px 12px;display:flex;flex-direction:column;gap:2px;color:var(--ink2)}
+.side b{color:var(--ink);font-size:15px;margin-bottom:10px;padding:0 10px}
+.side span{padding:9px 10px;border-radius:10px;display:flex;align-items:center;gap:10px}
+.side .on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--sh)}
+.side .div{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);padding:14px 10px 4px}
+.dmain{flex:1;min-width:0;display:flex;flex-direction:column}
+.dbar{height:60px;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--line);flex-shrink:0}
+.dbar b{font-size:22px;font-weight:800;letter-spacing:-.03em}
+.dbody{padding:16px 24px;display:flex;flex-direction:column;gap:12px;min-height:0}
+.dgrid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:start}
+.dgrid .seg{max-width:420px}
+.dgrid .row{grid-template-columns:60px 1fr auto}
+@media(max-width:820px){.desk{display:none}.nodesk{display:block!important}}
+.nodesk{display:none;font-size:13px;color:var(--ink3);margin-top:10px}
+/* tablas */
+table{border-collapse:collapse;width:100%;max-width:980px;margin-top:14px;background:var(--card);border-radius:16px;overflow:hidden;font-size:14px}
+th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.4}
+th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3)}
+td b{font-variant-numeric:tabular-nums}
+td.mejor{color:var(--ok);font-weight:600}
+td.peor{color:var(--warn);font-weight:600}
+ol.dec{max-width:820px;margin-top:12px;padding-left:22px;font-size:15px;line-height:1.5;color:var(--ink2)}
+ol.dec li{margin-bottom:10px}ol.dec b{color:var(--ink)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></symbol>
+<symbol id="bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></symbol>
+<symbol id="table" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="cal" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
+<symbol id="users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16 4.6a3.2 3.2 0 0 1 0 6.3M18 14.8c1.9.7 3 2.6 3 5.2"/></symbol>
+<symbol id="list" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r=".6"/><circle cx="4" cy="12" r=".6"/><circle cx="4" cy="18" r=".6"/></symbol>
+<symbol id="chevd" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+<symbol id="chevr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+<symbol id="x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="wa" viewBox="0 0 24 24"><path d="M4 20l1.3-4A8 8 0 1 1 8 18.7z"/><path d="M9 9.5c.3 2 2.5 4.2 4.5 4.5l1-1.2 2 .9c-.3 1.3-1.3 2-2.5 1.8-3-.5-5.5-3-6-6-.2-1.2.5-2.2 1.8-2.5l.9 2z"/></symbol>
+<symbol id="phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></symbol>
+<symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="hoy" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2 1.2M17.8 15.3l2 1.2M4.2 16.5l2-1.2M17.8 8.7l2-1.2"/></symbol>
+</defs></svg>
+
+<div class="top">
+  <div>
+    <div class="tag">Maqueta para aprobar · 2026-11-17 · línea N «nada saturado» · Recepción</div>
+    <h1>Recepción: reservas y espera sin saturar</h1>
+    <p class="lead">Quien está en la puerta entra a Recepción para tres cosas: <strong>sentar a quien acaba de llegar</strong>, <strong>anotar una reserva mientras alguien llama</strong> y <strong>avisar al grupo que espera</strong>. Medido hoy a 390 px, con una noche normal (4 reservas hoy, 2 próximas y 3 grupos esperando): Reservas mide <b>3,484 px</b>, unas cuatro pantallas, y tiene <b>48 botones y listas</b>. La primera llegada empieza a 438 px, debajo de la agenda. El formulario de «Nueva reserva» está a <b>2,388 px</b>, tres pantallas abajo, justo cuando hay alguien en el teléfono. En Espera, cada grupo ocupa unos 400 px con seis o siete mandos, y arriba hay dos tarjetas de resumen, una con «—». La propuesta no quita ninguna función. Deja <strong>una acción por fila</strong>, lleva lo demás a la hoja que se abre al tocar la fila y pone «Nueva reserva» y «Agregar grupo» arriba. Nada de esto está construido.</p>
+  </div>
+  <button class="tog" onclick="const h=document.documentElement;h.dataset.theme=h.dataset.theme==='dark'?'light':'dark'">Claro / oscuro</button>
+</div>
+
+<div class="wrap">
+
+<!-- ═════════ 1. RESERVAS ═════════ -->
+<h2>1 · Reservas en el teléfono</h2>
+<div class="pair">
+  <div class="col">
+    <div class="tag">Antes</div>
+    <div class="ph">
+      <div class="bar"><b>Reservaciones</b><span class="ib"><svg class="i"><use href="#bell"/></svg></span><span class="ib"><svg class="i"><use href="#more"/></svg></span></div>
+      <div class="body">
+        <div class="ttl">Reservaciones<small>Hoy, martes, 17 de noviembre</small></div>
+        <div class="card agenda">
+          <div class="ah"><b>Agenda de hoy</b><span class="chip">Aforo 76</span><span class="chip">Reservas de 90 min</span></div>
+          <div class="fr"><span>20:00</span><i style="--w:7%"></i><span>5 / 76</span></div>
+          <div class="fr"><span>21:00</span><i style="--w:12%"></i><span>9 / 76</span></div>
+          <div class="fr"><span>22:00</span><i style="--w:12%"></i><span>9 / 76</span></div>
+          <div class="fr"><span>23:00</span><i style="--w:11%"></i><span>8 / 76</span></div>
+          <div class="mt" style="font-size:12px;color:var(--ink3);margin-top:6px">Personas previstas a la vez · 13 mesas sin plazas se cuentan de 4</div>
+        </div>
+        <div class="sec">Pasó su hora <small>· sin marcar llegada</small></div>
+        <div class="card old-row">
+          <div class="hr">21:30<small>hace 45 min</small></div>
+          <div>
+            <div class="nm">Andrea Morales</div>
+            <span class="chip info" style="margin-top:4px">Confirmada</span>
+            <div class="mt">4 personas · +502 5512 3344</div>
+            <div class="mt">Cumpleaños, traen pastel</div>
+            <div class="btns"><span class="b">Llegó · sentar en 7</span><span class="sel">Otra mesa… <svg class="i s"><use href="#chevd"/></svg></span></div>
+            <div class="btns"><span class="b g">Cambiar hora</span><span class="b g">No asistió</span><span class="b g">Cancelar</span></div>
+            <div class="btns"><span class="mt" style="margin:0;align-self:center">Mesa prevista</span><span class="sel">Sin asignar <svg class="i s"><use href="#chevd"/></svg></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="nav"><span><svg class="i"><use href="#table"/></svg>Mesas</span><span class="on"><svg class="i"><use href="#cal"/></svg>Reservas</span><span><svg class="i"><use href="#users"/></svg>Espera</span><span><svg class="i"><use href="#list"/></svg>Pedidos</span><span><svg class="i"><use href="#more"/></svg>Más</span></div>
+    </div>
+    <p class="cap old">El título repite la barra. La agenda ocupa el primer tercio aunque la noche va al 12 %. Cada reserva lleva hasta siete mandos y una explicación. Debajo siguen «Llegan pronto», «En mesa», «Por revisar» con 3 de octubre, el formulario de 7 campos y «Próximos días»: 3,484 px en total.</p>
+  </div>
+
+  <div class="col">
+    <div class="tag"><b>Propuesta</b></div>
+    <div class="ph">
+      <div class="bar"><b>Reservaciones</b><span class="ib"><svg class="i"><use href="#bell"/></svg></span><span class="ib"><svg class="i"><use href="#more"/></svg></span></div>
+      <div class="body">
+        <div class="mandos">
+          <div class="seg"><span class="on">Hoy<em>4</em></span><span>Próximos<em>2</em></span><span class="w">Revisar<em>3</em></span></div>
+          <span class="nueva"><svg class="i"><use href="#plus"/></svg>Nueva</span>
+        </div>
+        <div class="card linea"><svg class="i s"><use href="#cal"/></svg><span>Agenda · máximo <b>9 de 76</b> a las 21:00</span><span class="mini"></span><svg class="i s"><use href="#chevd"/></svg></div>
+        <div class="grp warn">Pasó su hora</div>
+        <div class="card ls">
+          <div class="row"><div class="hr">21:30<small>hace 45 min</small></div><div style="min-width:0"><div class="nm">Andrea Morales</div><div class="mt">4 personas · Cumpleaños, traen pastel</div></div><div class="act"><span class="ab">Sentar en 7</span></div></div>
+        </div>
+        <div class="grp">Llegan pronto</div>
+        <div class="card ls">
+          <div class="row"><div class="hr">22:30<small>en 15 min</small></div><div style="min-width:0"><div class="nm">Luis Fernando Pérez</div><div class="mt">2 personas · mesa 3 prevista</div></div><div class="act"><span class="ab p">Sentar en 3</span></div></div>
+          <div class="row"><div class="hr">23:00<small>en 45 min</small></div><div style="min-width:0"><div class="nm">Gabriela Soto</div><div class="mt"><span class="w">Sin confirmar</span> · 6 personas · Terraza</div></div><div class="act"><span class="ab">Confirmar</span></div></div>
+        </div>
+        <div class="grp">En mesa</div>
+        <div class="card ls">
+          <div class="row"><div class="hr">20:45<small>mesa 5</small></div><div style="min-width:0"><div class="nm">Familia Recinos</div><div class="mt">5 personas</div></div><div class="act"><span class="ab">Terminó</span></div></div>
+        </div>
+      </div>
+      <div class="nav"><span><svg class="i"><use href="#table"/></svg>Mesas</span><span class="on"><svg class="i"><use href="#cal"/></svg>Reservas</span><span><svg class="i"><use href="#users"/></svg>Espera</span><span><svg class="i"><use href="#list"/></svg>Pedidos</span><span><svg class="i"><use href="#more"/></svg>Más</span></div>
+    </div>
+    <p class="cap">Una fila de mandos: Hoy · Próximos · Revisar (aparece solo si hay algo de días anteriores) y «Nueva». La agenda queda en una línea que se abre al tocarla y se pinta en ámbar desde el 80 %. Cada reserva lleva una sola acción, la que toca ahora. «Confirmada» ya no se anuncia: solo se marca «Sin confirmar». Las cuatro reservas de hoy caben en una pantalla.</p>
+  </div>
+</div>
+
+<!-- ═════════ 2. HOJAS ═════════ -->
+<h2>2 · Lo demás, a un toque: la hoja de cada reserva y «Nueva reserva»</h2>
+<div class="pair">
+  <div class="col">
+    <div class="tag"><b>Al tocar la fila</b></div>
+    <div class="ph">
+      <div class="bar"><b>Reservaciones</b><span class="ib"><svg class="i"><use href="#bell"/></svg></span><span class="ib"><svg class="i"><use href="#more"/></svg></span></div>
+      <div class="body"></div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div class="sh-h"><div><b>Andrea Morales</b><span>Hoy 21:30 · 4 personas · hace 45 min</span></div><span class="x"><svg class="i"><use href="#x"/></svg></span></div>
+        <div class="note">Cumpleaños, traen pastel</div>
+        <div class="big">Llegó · sentar en 7</div>
+        <div class="opt">
+          <div><span>Otra mesa</span><em>Mesa 7 · 4 plazas</em><svg class="i s"><use href="#chevr"/></svg></div>
+          <div><span>Mesa prevista</span><em>Sin asignar</em><svg class="i s"><use href="#chevr"/></svg></div>
+          <div><span>Cambiar día u hora</span><svg class="i s"><use href="#chevr"/></svg></div>
+          <div><svg class="i s"><use href="#phone"/></svg><span>Llamar</span><em>+502 5512 3344</em></div>
+        </div>
+        <div class="opt">
+          <div><span>No asistió</span><em>queda en el historial</em></div>
+          <div class="d"><span>Cancelar reserva</span><em>pide confirmar</em></div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">Todo lo que antes estaba siempre a la vista sigue a un toque. Lo ocasional se ordena de más a menos usado, y lo que no se deshace queda al fondo. Hoy «Cancelar» está junto a «Cambiar hora» y cancela sin preguntar. En la propuesta pide confirmación.</p>
+  </div>
+
+  <div class="col">
+    <div class="tag"><b>«Nueva»: mientras alguien llama</b></div>
+    <div class="ph">
+      <div class="bar"><b>Reservaciones</b><span class="ib"><svg class="i"><use href="#bell"/></svg></span><span class="ib"><svg class="i"><use href="#more"/></svg></span></div>
+      <div class="body"></div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div class="sh-h"><div><b>Nueva reserva</b></div><span class="x"><svg class="i"><use href="#x"/></svg></span></div>
+        <label class="fld">Nombre<span class="inp ph2">Juan García</span></label>
+        <div class="g2"><label class="fld">Personas<span class="inp">2</span></label><label class="fld">Teléfono<span class="inp ph2">+502 0000 0000</span></label></div>
+        <div class="fld">Día<div class="dias"><span class="on">Hoy</span><span>Mañana</span><span>Otra fecha</span></div></div>
+        <label class="fld">Hora<span class="inp">19:00</span></label>
+        <div class="hint">A las 19:00 quedan 71 de 76 lugares</div>
+        <span class="add">+ Agregar una nota</span>
+        <div class="big">Guardar reserva</div>
+      </div>
+    </div>
+    <p class="cap">El botón está arriba, en cualquier pestaña. Hoy y Mañana se eligen con un toque, sin abrir el calendario. Antes de guardar se ve si cabe. Si no cabe, sigue el aviso aprobado el 9 de noviembre, con las horas sugeridas y «Reservar de todas formas». La nota es opcional.</p>
+  </div>
+</div>
+
+<!-- ═════════ 3. ESPERA ═════════ -->
+<h2>3 · Espera en el teléfono</h2>
+<div class="pair">
+  <div class="col">
+    <div class="tag">Antes</div>
+    <div class="ph">
+      <div class="bar"><b>Lista de espera</b><span class="ib"><svg class="i"><use href="#bell"/></svg></span><span class="ib"><svg class="i"><use href="#more"/></svg></span></div>
+      <div class="body">
+        <div style="display:flex;align-items:center;gap:8px"><div class="ttl" style="flex:1">Lista de espera<small>Hoy, martes, 17 de noviembre</small></div><span class="b p t"><svg class="i s"><use href="#plus"/></svg>Agregar grupo</span></div>
+        <div class="g2">
+          <div class="card" style="padding:12px"><div class="mt">Esperando</div><div style="font-size:24px;font-weight:700">3</div><div class="mt" style="font-size:12px">13 personas</div></div>
+          <div class="card" style="padding:12px"><div class="mt">Espera estimada</div><div style="font-size:24px;font-weight:700">—</div><div class="mt" style="font-size:12px">Se estima con 3 grupos sentados hoy</div></div>
+        </div>
+        <div class="sec">En la cola</div>
+        <div class="card old-row">
+          <div class="hr">21:50<small>26 min</small></div>
+          <div>
+            <div class="nm">Familia Pérez</div>
+            <span class="chip" style="margin-top:4px">Sin avisar</span>
+            <div class="mt">4 personas · +502 5567 8899</div>
+            <div class="mt">Silla para bebé</div>
+            <div class="note" style="margin-top:8px"><b>Mesa 7 está libre</b><br>Justa para 4.<div class="btns"><span class="b p">Sentar en 7</span></div><div class="btns"><span class="sel">Otra mesa… <svg class="i s"><use href="#chevd"/></svg></span></div></div>
+            <div class="btns"><span class="b wa"><svg class="i s"><use href="#wa"/></svg>Abrir WhatsApp</span></div>
+            <div class="btns"><span class="b g">Avisé en persona</span><span class="b g">No llegó</span><span class="b g">Quitar</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="nav"><span><svg class="i"><use href="#table"/></svg>Mesas</span><span><svg class="i"><use href="#cal"/></svg>Reservas</span><span class="on"><svg class="i"><use href="#users"/></svg>Espera</span><span><svg class="i"><use href="#list"/></svg>Pedidos</span><span><svg class="i"><use href="#more"/></svg>Más</span></div>
+    </div>
+    <p class="cap old">Un solo grupo llena la pantalla. Las dos tarjetas de arriba repiten lo que dice la lista, y una enseña «—». Debajo siguen los otros grupos, «Por revisar» y «Ya atendidos»: 2,024 px.</p>
+  </div>
+
+  <div class="col">
+    <div class="tag"><b>Propuesta</b></div>
+    <div class="ph">
+      <div class="bar"><b>Lista de espera</b><span class="ib"><svg class="i"><use href="#bell"/></svg></span><span class="ib"><svg class="i"><use href="#more"/></svg></span></div>
+      <div class="body">
+        <div class="mandos">
+          <div class="seg"><span class="on">Esperan<em>3</em></span><span>Atendidos<em>1</em></span><span class="w">Revisar<em>2</em></span></div>
+          <span class="nueva"><svg class="i"><use href="#plus"/></svg>Grupo</span>
+        </div>
+        <div class="sum"><b>13 personas</b> esperando · el orden lo decides tú</div>
+        <div class="card ls">
+          <div class="row"><div class="hr">26 min<small>21:50</small></div><div style="min-width:0"><div class="nm">Familia Pérez</div><div class="mt">4 personas · Silla para bebé</div></div><div class="act"><span class="ab wa" aria-label="Avisar por WhatsApp"><svg class="i"><use href="#wa"/></svg></span><span class="ab p">Sentar en 7</span></div></div>
+          <div class="row"><div class="hr">18 min<small>21:57</small></div><div style="min-width:0"><div class="nm">Jorge y Ana</div><div class="mt"><span class="o">Avisados 22:12</span> · 2 personas</div></div><div class="act"><span class="ab p">Sentar en 2</span></div></div>
+          <div class="row"><div class="hr">7 min<small>22:09</small></div><div style="min-width:0"><div class="nm">Grupo de oficina</div><div class="mt"><span class="w">Sin mesa para 7</span> · sin teléfono</div></div><div class="act"><span class="ab">Sentar</span></div></div>
+        </div>
+        <div class="tag" style="margin-top:6px">Si WhatsApp quedó abierto</div>
+        <div class="card ls">
+          <div class="row" style="row-gap:8px"><div class="hr">26 min<small>21:50</small></div><div style="min-width:0"><div class="nm">Familia Pérez</div><div class="mt">4 personas · Silla para bebé</div></div><div class="act"><span class="ab p">Sentar en 7</span></div>
+            <div class="ask"><span>¿Se envió el WhatsApp?</span><span class="ab">Sí</span><span class="ab">No</span></div></div>
+        </div>
+      </div>
+      <div class="nav"><span><svg class="i"><use href="#table"/></svg>Mesas</span><span><svg class="i"><use href="#cal"/></svg>Reservas</span><span class="on"><svg class="i"><use href="#users"/></svg>Espera</span><span><svg class="i"><use href="#list"/></svg>Pedidos</span><span><svg class="i"><use href="#more"/></svg>Más</span></div>
+    </div>
+    <p class="cap">La misma fila de mandos que en Reservas. Cada grupo lleva una o dos acciones: avisar por WhatsApp (solo si tiene teléfono y aún no se le avisó) y sentar en la mesa sugerida. La pregunta «¿se envió?» sigue en la fila, porque es la regla de 1.8: abrir WhatsApp no es avisar. «Avisé en persona», «Otra mesa», «No llegó» y «Quitar» van en la hoja del grupo. La espera estimada aparece en la línea de resumen cuando ya se puede calcular.</p>
+  </div>
+</div>
+
+<!-- ═════════ 4. PC ═════════ -->
+<h2>4 · En la PC (1280 px)</h2>
+<div class="desk">
+  <div class="side">
+    <b>Rincón 502</b>
+    <span><svg class="i"><use href="#table"/></svg>Mesas</span>
+    <span class="on"><svg class="i"><use href="#cal"/></svg>Reservas</span>
+    <span><svg class="i"><use href="#users"/></svg>Espera</span>
+    <span><svg class="i"><use href="#list"/></svg>Pedidos</span>
+    <span class="div">También</span>
+    <span><svg class="i"><use href="#hoy"/></svg>Hoy</span>
+    <span><svg class="i"><use href="#gear"/></svg>Salón</span>
+  </div>
+  <div class="dmain">
+    <div class="dbar"><b>Reservaciones</b></div>
+    <div class="dbody">
+      <div class="mandos" style="max-width:none"><div class="seg" style="flex:0 1 420px"><span class="on">Hoy<em>4</em></span><span>Próximos<em>2</em></span><span class="w">Revisar<em>3</em></span></div><span style="flex:1"></span><span class="nueva"><svg class="i"><use href="#plus"/></svg>Nueva reserva</span></div>
+      <div class="dgrid">
+        <div class="col">
+          <div class="grp warn">Pasó su hora</div>
+          <div class="card ls">
+            <div class="row"><div class="hr">21:30<small>hace 45 min</small></div><div style="min-width:0"><div class="nm">Andrea Morales</div><div class="mt">4 personas · +502 5512 3344 · Cumpleaños, traen pastel</div></div><div class="act"><span class="ab">Sentar en 7</span></div></div>
+          </div>
+          <div class="grp">Llegan pronto</div>
+          <div class="card ls">
+            <div class="row"><div class="hr">22:30<small>en 15 min</small></div><div style="min-width:0"><div class="nm">Luis Fernando Pérez</div><div class="mt">2 personas · mesa 3 prevista · +502 5523 4455</div></div><div class="act"><span class="ab p">Sentar en 3</span></div></div>
+            <div class="row"><div class="hr">23:00<small>en 45 min</small></div><div style="min-width:0"><div class="nm">Gabriela Soto</div><div class="mt"><span class="w">Sin confirmar</span> · 6 personas · Terraza si se puede</div></div><div class="act"><span class="ab">Confirmar</span></div></div>
+          </div>
+          <div class="grp">En mesa</div>
+          <div class="card ls">
+            <div class="row"><div class="hr">20:45<small>mesa 5</small></div><div style="min-width:0"><div class="nm">Familia Recinos</div><div class="mt">5 personas</div></div><div class="act"><span class="ab">Terminó</span></div></div>
+          </div>
+        </div>
+        <div class="card agenda">
+          <div class="ah"><b>Agenda de hoy</b><span class="chip">Aforo 76</span><span class="chip">Reservas de 90 min ⌄</span></div>
+          <div class="fr"><span>20:00</span><i style="--w:7%"></i><span>5 / 76</span></div>
+          <div class="fr"><span>21:00</span><i style="--w:12%"></i><span>9 / 76</span></div>
+          <div class="fr"><span>22:00</span><i style="--w:12%"></i><span>9 / 76</span></div>
+          <div class="fr"><span>23:00</span><i style="--w:11%"></i><span>8 / 76</span></div>
+          <div class="mt" style="font-size:12px;color:var(--ink3);margin-top:6px">Personas previstas a la vez</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="nodesk">La vista de PC se ve en una pantalla ancha.</p>
+<p class="cap" style="max-width:820px;margin-top:10px">En la PC sobra espacio, así que la agenda queda abierta a la derecha y la fila enseña también el teléfono. «Nueva reserva» y la hoja de cada reserva se abren como diálogo. Espera usa la misma lista, con las acciones a la derecha.</p>
+
+<!-- ═════════ 5. TOQUES ═════════ -->
+<h2>5 · Toques, en el papel de quien está en la puerta</h2>
+<table>
+  <tr><th>Tarea</th><th>Hoy</th><th>Propuesta</th></tr>
+  <tr><td>Anotar una reserva mientras alguien llama</td><td>Bajar 3 pantallas hasta el formulario, llenar 7 campos con calendario y Guardar</td><td class="mejor">«Nueva», 4 campos (Hoy y Mañana de un toque) y Guardar</td></tr>
+  <tr><td>Sentar a quien llegó con reserva</td><td>1 toque, pero la primera llegada empieza a 438 px, debajo de la agenda</td><td class="mejor">1 toque; la primera llegada empieza a unos 160 px</td></tr>
+  <tr><td>Confirmar una reserva pendiente</td><td>1</td><td>1</td></tr>
+  <tr><td>Ver los próximos días</td><td>Bajar 4 pantallas</td><td class="mejor">1 toque en «Próximos»</td></tr>
+  <tr><td>Cambiar la hora, otra mesa o la mesa prevista</td><td>1 (siempre a la vista)</td><td class="peor">2 (fila y opción)</td></tr>
+  <tr><td>Cancelar una reserva</td><td>1, sin confirmar</td><td class="mejor">2 y confirmación (evita cancelar por error)</td></tr>
+  <tr><td>Espera: avisar por WhatsApp y sentar</td><td>1 y 1</td><td>1 y 1</td></tr>
+  <tr><td>Espera: «Avisé en persona», «No llegó», «Quitar»</td><td>1</td><td class="peor">2 (fila y opción)</td></tr>
+  <tr><td>Espera: anotar un grupo</td><td>1 y 4 campos</td><td class="mejor">1 y 3 campos (la nota es opcional)</td></tr>
+</table>
+
+<!-- ═════════ 6. DECISIONES ═════════ -->
+<h2>6 · Lo que decides tú</h2>
+<ol class="dec">
+  <li><b>Una acción por fila y lo demás en la hoja de la fila</b> (recomendado). Lo ocasional pasa de 1 toque a 2, pero cada reserva baja de unos 300 px a 66 px y se ve la noche entera de un vistazo.</li>
+  <li><b>«Nueva reserva» y «Agregar grupo» en una hoja</b> que se abre desde arriba (recomendado), con Hoy y Mañana de un toque y la capacidad a la vista antes de guardar.</li>
+  <li><b>Pestañas Hoy · Próximos · Revisar</b> en Reservas y <b>Esperan · Atendidos · Revisar</b> en Espera (recomendado). «Revisar» solo aparece si quedó algo de días anteriores.</li>
+  <li><b>La agenda en una línea que se abre en el teléfono y abierta en la PC</b> (recomendado). Se pinta en ámbar desde el 80 % del aforo. La duración de las reservas pasa a esa agenda abierta.</li>
+  <li><b>Cancelar pide confirmación</b> (recomendado), como «No asistió».</li>
+</ol>
+<p class="lead" style="margin-top:16px">No cambia: la capacidad que comprueba el servidor y el aviso de sobrecupo con horas sugeridas, la mesa sugerida, la pregunta «¿se envió?», «Por revisar» para lo de días anteriores, el día de negocio del local, los permisos de recepción y la barra de abajo (ficha 2.11). Sin migración.</p>
+
+</div>
+</body>
+</html>

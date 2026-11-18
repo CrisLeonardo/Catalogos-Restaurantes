@@ -19,6 +19,7 @@
    ============================================================ */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { objetivoDelTour } from '@/lib/tutorial/objetivo';
 import { usePathname, useRouter } from 'next/navigation';
 import { internalPanelPath, panelBaseFrom, panelHref } from '@/lib/panel-links';
 import { Icon } from '@/components/icons';
@@ -163,7 +164,7 @@ export default function GuidedTourHost() {
     stopLocating();
     const attempt = () => {
       tries += 1;
-      const el = document.querySelector<HTMLElement>(`[data-tour-step="${def.target}"]`);
+      const el = objetivoDelTour(def.target);
       if (el && el.getBoundingClientRect().height > 0) {
         stopLocating();
         el.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -191,7 +192,7 @@ export default function GuidedTourHost() {
     const def = tour.steps[step];
     if (!def?.target) return;
     const refresh = () => {
-      const el = document.querySelector<HTMLElement>(`[data-tour-step="${def.target}"]`);
+      const el = objetivoDelTour(def.target);
       setSpotRect(el && el.getBoundingClientRect().height > 0 ? el.getBoundingClientRect() : null);
     };
     window.addEventListener('resize', refresh);

@@ -169,7 +169,7 @@ export default async function AdminNegocioPage({
           las cifras: es una invitación, no lo que el dueño vino a ver. */}
       {ordersEnabled && (
         <Link href="/admin/tu-ano" className="tu-ano-enlace press">
-          <span><strong>Tu año con Leogin</strong> · lo vendido, tu plato estrella y tu mejor día</span>
+          <span><strong>Tu año con Leogin</strong> · lo vendido, tu platillo estrella y tu mejor día</span>
           <span aria-hidden>→</span>
         </Link>
       )}

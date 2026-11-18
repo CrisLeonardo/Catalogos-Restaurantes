@@ -117,7 +117,7 @@ export function duracion(ms: number): string {
 }
 
 const CANAL: Record<PedidoVivo['order_type'], string> = {
-  PICKUP: 'Para llevar', DELIVERY: 'Domicilio', DINE_IN: 'En el local',
+  PICKUP: 'Para llevar', DELIVERY: 'A domicilio', DINE_IN: 'Comer en local',
 };
 
 /**

@@ -1,0 +1,102 @@
+/* Mi cuenta (línea N «nada saturado», maqueta aprobada el 2026-11-18:
+   docs/diseno/MAQUETA_MI_CUENTA_NADA_SATURADO_2026-11-18.html).
+
+   Mi cuenta NO es área del panel (`html[data-admin-area]`): vive en el
+   dominio principal con el tema claro de la web. Para usar las mismas
+   piezas sólidas que Negocio (negocio.module.css) se le dan aquí los
+   tokens del panel en su versión clara, con los mismos valores de
+   globals.css. */
+
+.marco {
+  --adm-bg: #f2f1ee;
+  --adm-bg-2: #ffffff;
+  --adm-card: #ffffff;
+  --adm-card-hover: #faf9f7;
+  --adm-border: rgba(28, 22, 16, 0.12);
+  --adm-border-2: rgba(28, 22, 16, 0.20);
+  --adm-shadow-xs: 0 1px 2px rgba(28, 22, 16, 0.08);
+  --adm-accent-fill: #c2542f;
+  --adm-accent-fill-hover: #a8461f;
+  --chart-hi: #c2542f;
+  --chart-base: color-mix(in srgb, var(--u-text) 15%, transparent);
+}
+
+/* ── Pestañas: Restaurantes · Finanzas ──────────────────────── */
+.pestanas { display: flex; gap: 2px; padding: 3px; margin: 0 0 20px; max-width: 360px; border-radius: 14px; background: var(--surface-2); }
+.pestana {
+  flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 0 10px;
+  border-radius: 11px; color: var(--u-text-2); font-size: 14px; font-weight: 500; text-decoration: none; white-space: nowrap;
+}
+.pestana[aria-current='page'] { background: var(--adm-card); color: var(--u-text); font-weight: 600; box-shadow: var(--adm-shadow-xs), inset 0 0 0 1px var(--adm-border); }
+.pestana:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: 1px; }
+
+/* ── Restaurantes ───────────────────────────────────────────── */
+.inicio { display: flex; flex-direction: column; gap: 12px; }
+.hola { margin: 0; padding: 0 2px; font-size: 24px; font-weight: 800; letter-spacing: -.03em; line-height: 1.15; color: var(--u-text); overflow-wrap: anywhere; }
+.linea { margin: 0; padding: 0 2px; font-size: 14px; line-height: 1.45; color: var(--u-text-2); }
+.linea b { color: var(--u-text); font-variant-numeric: tabular-nums; }
+.aviso { margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--c-warn-bg); color: var(--u-text); font-size: 14px; line-height: 1.45; }
+
+.columnas { display: grid; gap: 12px; align-items: start; }
+@media (min-width: 900px) { .columnas { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); } }
+
+.tarjeta { background: var(--adm-card); border: 1px solid var(--adm-border); border-radius: 18px; box-shadow: var(--adm-shadow-xs); overflow: hidden; }
+.lista { list-style: none; margin: 0; padding: 0; }
+.lista > li + li { border-top: 1px solid var(--adm-border); }
+
+.fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.entrar {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center;
+  width: 100%; min-height: 72px; padding: 10px 4px 10px 12px; border: 0; background: transparent;
+  color: inherit; font: inherit; text-align: left; text-decoration: none; cursor: pointer;
+}
+.entrar:disabled { cursor: progress; opacity: .6; }
+.entrar:focus-visible, .mas:focus-visible, .accion:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: -2px; }
+@media (hover: hover) { .entrar:not(:disabled):hover, .accion:hover { background: var(--adm-card-hover); } }
+.logo { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; display: grid; place-items: center; background: var(--surface-2); color: var(--u-text-3); font-weight: 800; font-size: 16px; }
+.nombre { display: block; font-size: 15px; font-weight: 700; color: var(--u-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 2px; font-size: 13px; color: var(--u-text-3); font-variant-numeric: tabular-nums; }
+.meta b { color: var(--u-text); font-weight: 600; }
+.chip { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--adm-border-2); font-size: 12px; font-weight: 600; color: var(--u-text-2); white-space: nowrap; }
+.chip[data-tono='aviso'] { border-color: transparent; background: var(--c-warn-bg); color: var(--c-warn); }
+.chevron { color: var(--u-text-3); }
+.mas {
+  display: grid; place-items: center; width: 44px; height: 48px; margin-right: 6px; border: 0; border-radius: 12px;
+  background: transparent; color: var(--u-text-2); cursor: pointer;
+}
+@media (hover: hover) { .mas:hover { background: var(--adm-card-hover); } }
+.error { margin: 0; padding: 0 14px 10px; font-size: 13px; color: var(--c-danger); }
+
+.accion {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 0 14px;
+  border: 0; background: transparent; color: var(--u-text); font: inherit; font-size: 14px; text-align: left; text-decoration: none; cursor: pointer;
+}
+.accion > span { flex: 1; min-width: 0; }
+.accion em { font-style: normal; font-size: 13px; color: var(--u-text-3); }
+.accion svg:first-child { color: var(--u-text-2); flex: none; }
+
+/* ── Hojas ──────────────────────────────────────────────────── */
+.hojaCuerpo { display: flex; flex-direction: column; gap: 14px; }
+.resumen { margin: 0; font-size: 13px; line-height: 1.45; color: var(--u-text-3); font-variant-numeric: tabular-nums; }
+.opciones { list-style: none; margin: 0; padding: 0; border: 1px solid var(--adm-border); border-radius: 14px; overflow: hidden; background: var(--adm-card); }
+.opciones > li + li { border-top: 1px solid var(--adm-border); }
+.enlace { margin: 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--adm-border); background: var(--adm-bg); font-size: 14px; color: var(--u-text); overflow-wrap: anywhere; }
+.dos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.secundario {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; padding: 0 14px;
+  border-radius: 12px; border: 1px solid var(--adm-border-2); background: var(--adm-card); color: var(--u-text);
+  font: inherit; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer;
+}
+.secundario:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: 2px; }
+.qr { align-self: center; padding: 14px; border-radius: 16px; background: #fff; border: 1px solid var(--adm-border); }
+.qr img { display: block; }
+.pin { letter-spacing: .5em; text-align: center; font-size: 22px; }
+
+/* ── Finanzas: «Por restaurante» y plan sin Finanzas ───────── */
+.candado { display: flex; align-items: center; gap: 12px; padding: 12px 14px; font-size: 14px; line-height: 1.45; color: var(--u-text-2); }
+.candado > span { flex: 1; min-width: 0; }
+.candado svg { flex: none; color: var(--u-text-3); }
+.sinLeer { color: var(--c-warn); font-weight: 600; }
+
+/* Una hoja sin pie (Descargar) no deja la franja vacía. */
+.marco :global(.hoja-operativa-pie:empty) { display: none; }

@@ -24,7 +24,7 @@ export async function authorizeModuleAction(
     .eq('id', restaurantId)
     .single();
   if (!rest || !isModuleActive(rest.modules as ModulesMap, rest.module_settings as ModuleSettings, key)) {
-    return { error: 'Este módulo no está activo.' };
+    return { error: 'Esta función no está encendida.' };
   }
   return { ok: true };
 }

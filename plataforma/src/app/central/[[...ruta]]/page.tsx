@@ -17,9 +17,9 @@ export const dynamic = 'force-dynamic';
    ============================================================ */
 
 const DESTINO: Record<string, string> = {
-  '': '/mi-cuenta/resumen',
+  '': '/mi-cuenta',
   sucursales: '/mi-cuenta',
-  comparativa: '/mi-cuenta/comparativa',
+  comparativa: '/mi-cuenta/finanzas',
   finanzas: '/mi-cuenta/finanzas',
   // Sin sesión, Mi cuenta ya manda al login que corresponde.
   login: '/mi-cuenta',

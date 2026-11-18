@@ -315,7 +315,10 @@ huellas(n, que, ok, cuando) as (values
      'ANTES de desplegar; independiente de la 184'),
   ('186', 'ayuda: búsquedas sin respuesta (solo la frase) para agregar respuestas',
      to_regclass('public.ayuda_sin_respuesta') is not null,
-     'antes o después de desplegar; independiente de la 184 y la 185')
+     'antes o después de desplegar; independiente de la 184 y la 185'),
+  ('187', 'superadmin: cola de trabajo con asuntos pospuestos o resueltos y notas de soporte',
+     to_regclass('public.super_asuntos') is not null and to_regclass('public.super_eventos') is not null,
+     'ANTES de desplegar; independiente de la 184–186')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

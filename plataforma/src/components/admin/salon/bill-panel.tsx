@@ -163,7 +163,7 @@ export default function BillPanel({
             {sinPedido ? (
               <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
                 Sentados y todavía sin pedir. La cuenta empieza en cuanto alguien
-                les apunte el primer plato.
+                les apunte el primer platillo.
               </p>
             ) : loading ? (
               <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-3)' }}>Cargando la cuenta…</p>
@@ -173,7 +173,7 @@ export default function BillPanel({
               <>
             <div className="adm-label" style={{ color: 'var(--u-text-3)' }}>La cuenta</div>
             {vivas.length === 0 ? (
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-3)' }}>Todavía no hay platos apuntados.</p>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-3)' }}>Todavía no hay platillos apuntados.</p>
             ) : vivas.map((l) => (
               /* LA MISMA fila que la pantalla del mesero (M-22). Antes eran
                  dos árboles distintos y ya divergían: aquí no se veían ni
@@ -223,7 +223,7 @@ export default function BillPanel({
       <div style={{ padding: '14px 16px 16px', borderTop: '1px solid var(--u-hair)', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {!canWaiter && (
           <p style={{ margin: 0, fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.45 }}>
-            Cobrar y agregar platos se hace desde el panel de mesero, que no está en tu plan.
+            Cobrar y agregar platillos se hace desde el panel de mesero, que no está en tu plan.
             Sentar y repartir sí se hacen aquí.
           </p>
         )}

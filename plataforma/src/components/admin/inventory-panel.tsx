@@ -1,23 +1,31 @@
 'use client';
 
 /* ============================================================
-   INVENTARIO (auditoría 1.10: E11, N20, R11, O04)
+   INVENTARIO
    ------------------------------------------------------------
-   Maqueta aprobada: docs/diseno/MAQUETA_INVENTARIO_2026-11-09.html.
-     · Cobertura: «12 de 39 platillos con control», no tres ceros que
-       parecían «todo bien» con nada controlado (N20).
-     · Por revisar hoy: sin existencias, agotados (con cuándo vuelven),
-       ingredientes que se acabaron y bajo mínimo.
-     · Buscador, categorías y filtros; activar el control de varios a la
-       vez con existencias iniciales y vista previa, todo o nada.
+   Auditoría 1.10 (E11, N20, R11, O04; maqueta del 2026-11-09) y línea N
+   «nada saturado» (maqueta aprobada el 2026-11-17:
+   docs/diseno/MAQUETA_INVENTARIO_NADA_SATURADO_2026-11-17.html).
+
+     · Arriba, el buscador y una fila de píldoras: Contados · Sin contar ·
+       categorías. La lista enseña solo lo que cuentas.
+     · «Por revisar» es el primer grupo de la lista: sin existencias, bajo
+       el mínimo, agotados a mano e ingredientes que se acabaron.
+     · Cada fila dice cuántos quedan y lleva «+1». Al tocarla se abre la
+       hoja del platillo, que empieza en «Sumar · Reposición»; ahí están
+       restar, el número exacto, el mínimo, el historial y dejar de contar.
+     · «Sin contar» es la configuración: la fila marca la casilla y
+       «Contar existencias…» abre la hoja con existencias iniciales y mínimo,
+       todo o nada.
      · Ajustes con motivo (obligatorio al restar o fijar), en una sola
        operación bajo bloqueo; el historial dice motivo, nota y quién.
    ============================================================ */
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { HojaOperativa } from '@/components/ui/hoja-operativa';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useToastManager } from '@/components/ui/toast';
@@ -43,14 +51,6 @@ const MOTIVOS: Record<ModoAjuste, { key: MotivoAjuste; label: string }[]> = {
   fijar: [{ key: 'conteo', label: 'Conteo físico' }, { key: 'correccion', label: 'Corrección' }, { key: 'otro', label: 'Otro' }],
 };
 
-type Filtro = 'sin_control' | 'con_control' | 'bajo' | 'agotado';
-const FILTROS: { key: Filtro; label: string }[] = [
-  { key: 'sin_control', label: 'Sin control' },
-  { key: 'con_control', label: 'Con control' },
-  { key: 'bajo', label: 'Bajo mínimo' },
-  { key: 'agotado', label: 'Agotado' },
-];
-
 export type IngredienteAgotado = { id: string; name: string; platillos: number };
 
 interface Props {
@@ -61,53 +61,48 @@ interface Props {
   timezone?: string;
 }
 
+type Vista = 'contados' | 'sin_contar';
+
 const esBajo = (p: Product) => p.track_stock && Number(p.stock ?? 0) > 0 && Number(p.stock ?? 0) <= Number(p.low_stock_threshold ?? 0);
+const platillos = (n: number) => `${n} ${n === 1 ? 'platillo' : 'platillos'}`;
 
 export default function InventoryPanel({ restaurantId, categories, products, ingredientesAgotados = [], timezone }: Props) {
   const router = useRouter();
   const { add: toast } = useToastManager();
+  const { confirm, dialog } = useConfirm();
   const [pendiente, start] = useTransition();
   const [query, setQuery] = useState('');
-  const [cat, setCat] = useState('todos');
-  const [filtro, setFiltro] = useState<Filtro | null>(null);
+  const [cat, setCat] = useState<string | null>(null);
+  const contadosTodos = products.filter((p) => p.track_stock);
+  const [vista, setVista] = useState<Vista>(contadosTodos.length > 0 ? 'contados' : 'sin_contar');
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [activacion, setActivacion] = useState<{ titulo: string; filas: { id: string; name: string; stock: string; minimo: string }[] } | null>(null);
-  const [errorActivar, setErrorActivar] = useState<string | null>(null);
-  const [ajuste, setAjuste] = useState<{ product: Product; modo: ModoAjuste } | null>(null);
+  const [abierto, setAbierto] = useState<{ id: string; modo: ModoAjuste } | null>(null);
+  const pildoras = useRef<HTMLDivElement>(null);
 
   // La hora de esta lectura: decide qué «hasta mañana» ya volvió.
   // eslint-disable-next-line react-hooks/purity
   const ahora = Date.now();
   const activos = products.filter((p) => p.is_active);
-  const controlados = activos.filter((p) => p.track_stock);
-  const sinControl = activos.length - controlados.length;
   const agotado = (p: Product) => isUnavailable(p, ahora);
 
-  /* ── Por revisar hoy ── */
-  const sinExistencias = activos.filter((p) => isOutOfStock(p));
-  const agotadosAMano = activos.filter((p) => !isOutOfStock(p) && agotado(p) && p.agotado_motivo !== 'ingrediente');
-  const bajos = activos.filter(esBajo);
-  const porRevisar = sinExistencias.length + agotadosAMano.length + ingredientesAgotados.length + bajos.length;
-
-  /* ── Lista ── */
-  const cuenta: Record<Filtro, number> = {
-    sin_control: products.filter((p) => !p.track_stock).length,
-    con_control: products.filter((p) => p.track_stock).length,
-    bajo: products.filter(esBajo).length,
-    agotado: products.filter((p) => p.is_active && agotado(p)).length,
-  };
   const q = normalizar(query.trim());
-  const lista = products.filter((p) => {
-    if (cat !== 'todos' && p.category_id !== cat) return false;
-    if (q && !normalizar(p.name).includes(q)) return false;
-    switch (filtro) {
-      case 'sin_control': return !p.track_stock;
-      case 'con_control': return p.track_stock;
-      case 'bajo': return esBajo(p);
-      case 'agotado': return p.is_active && agotado(p);
-      default: return true;
-    }
-  });
+  const pasa = (p: Product) => (!cat || p.category_id === cat) && (!q || normalizar(p.name).includes(q));
+
+  /* ── Contados: primero lo que hay que revisar ── */
+  const sinExistencias = activos.filter((p) => isOutOfStock(p) && pasa(p));
+  const bajos = activos.filter((p) => esBajo(p) && pasa(p));
+  const agotadosAMano = activos.filter((p) => !isOutOfStock(p) && agotado(p) && p.agotado_motivo !== 'ingrediente' && pasa(p));
+  const ingredientes = cat ? [] : ingredientesAgotados.filter((i) => !q || normalizar(i.name).includes(q));
+  const enRevision = new Set([...sinExistencias, ...bajos, ...agotadosAMano].map((p) => p.id));
+  const contados = contadosTodos.filter((p) => pasa(p) && !enRevision.has(p.id));
+  const porRevisar = sinExistencias.length + bajos.length + agotadosAMano.length + ingredientes.length;
+
+  /* ── Sin contar ── */
+  const sinContarTodos = products.filter((p) => !p.track_stock);
+  const sinContar = sinContarTodos.filter(pasa);
+  const enVista = vista === 'contados' ? contadosTodos : sinContarTodos;
+  const categoriasConAlgo = categories.filter((c) => enVista.some((p) => p.category_id === c.id));
 
   function hecho(titulo: string, descripcion?: string) {
     toast({ title: titulo, description: descripcion, type: 'success' });
@@ -141,357 +136,241 @@ export default function InventoryPanel({ restaurantId, categories, products, ing
     });
   }
 
-  /* ── Activar control ── */
-  function abrirActivacion(ids?: string[]) {
-    const elegidos = ids
-      ? products.filter((p) => ids.includes(p.id))
-      : seleccion.size > 0
-        ? products.filter((p) => seleccion.has(p.id))
-        : lista.filter((p) => !p.track_stock);
-    const filas = elegidos.filter((p) => !p.track_stock).map((p) => ({ id: p.id, name: p.name, stock: '', minimo: '' }));
-    if (filas.length === 0) return;
-    const titulo = filas.length === 1 ? filas[0].name
-      : seleccion.size > 0 || ids ? `${filas.length} platillos`
-      : cat !== 'todos' ? categories.find((c) => c.id === cat)?.name ?? `${filas.length} platillos` : `${filas.length} platillos`;
-    setErrorActivar(null);
-    setActivacion({ titulo, filas });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-  const [todosStock, setTodosStock] = useState('');
-  const [todosMinimo, setTodosMinimo] = useState('');
-  const filasValidas = activacion?.filas.every((f) => /^\d+$/.test(f.stock) && /^\d+$/.test(f.minimo || '0')) ?? false;
-  const enCero = activacion?.filas.filter((f) => f.stock === '0') ?? [];
-
-  function confirmarActivacion() {
-    if (!activacion) return;
-    setErrorActivar(null);
-    start(async () => {
-      const r = await activarControl(restaurantId, activacion.filas.map((f) => ({ id: f.id, stock: Number(f.stock), minimo: Number(f.minimo || 0) })));
-      if (r.error) { setErrorActivar(r.error); return; }
-      setActivacion(null);
-      setSeleccion(new Set());
-      hecho(`Control activado en ${r.activados} ${r.activados === 1 ? 'platillo' : 'platillos'}`);
-    });
-  }
-
-  return (
-    <div className={s.panel}>
-      {/* Cobertura (N20, E11) */}
-      <section className={`${s.tarjeta} ${s.cobertura}`} aria-label="Cobertura del inventario">
-        <div className={s.cobFila}>
-          <span className={s.cobGrande}>{controlados.length} de {activos.length}</span>
-          <span>platillos con control de existencias</span>
-        </div>
-        <div className={s.barra} aria-hidden><i style={{ width: `${activos.length ? Math.round((controlados.length / activos.length) * 100) : 0}%` }} /></div>
-        <p className={s.nota}>
-          {sinControl === 0
-            ? 'Cuentas las existencias de todos tus platillos visibles.'
-            : `Los otros ${sinControl} se venden sin límite: no sabemos cuántos quedan.`}
-        </p>
-      </section>
-
-      {/* Por revisar hoy (R11.1) */}
-      <section className={s.tarjeta} aria-labelledby="inv-revisar">
-        <h2 id="inv-revisar" className={s.revisarTitulo}>
-          Por revisar hoy {porRevisar > 0 && <span className={`${s.chip} ${s.chipWarn}`}>{porRevisar}</span>}
-        </h2>
-        {porRevisar === 0 ? (
-          <p className={s.vacio}>Nada por revisar: no hay agotados ni existencias bajo el mínimo.</p>
-        ) : (
-          <ul className={s.lista}>
-            {sinExistencias.map((p) => (
-              <li key={`se-${p.id}`} className={s.item}>
-                <div className={s.itemTexto}><b>{p.name}</b><span>Sin existencias · vuelve al reponer</span></div>
-                <Button type="button" size="sm" variant="secondary" onClick={() => setAjuste({ product: p, modo: 'sumar' })}>Reponer</Button>
-              </li>
-            ))}
-            {agotadosAMano.map((p) => (
-              <li key={`am-${p.id}`} className={s.item}>
-                <div className={s.itemTexto}><b>{p.name}</b><span>{razonDeAgotado(p, timezone, ahora)}</span></div>
-                <Button type="button" size="sm" variant="secondary" disabled={pendiente} onClick={() => yaHay(p)}>Ya hay</Button>
-              </li>
-            ))}
-            {ingredientesAgotados.map((i) => (
-              <li key={`ing-${i.id}`} className={s.item}>
-                <div className={s.itemTexto}>
-                  <b>Se acabó {i.name}</b>
-                  <span>{i.platillos} {i.platillos === 1 ? 'platillo fuera' : 'platillos fuera'} del menú</span>
-                </div>
-                <Button type="button" size="sm" variant="secondary" disabled={pendiente} onClick={() => yaHayIngrediente(i)}>Ya hay</Button>
-              </li>
-            ))}
-            {bajos.map((p) => (
-              <li key={`bj-${p.id}`} className={s.item}>
-                <div className={s.itemTexto}><b>{p.name}</b><span>Quedan {Number(p.stock ?? 0)} · mínimo {Number(p.low_stock_threshold ?? 0)}</span></div>
-                <Button type="button" size="sm" variant="secondary" onClick={() => setAjuste({ product: p, modo: 'sumar' })}>Reponer</Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* Activar control en lote, con vista previa (E11) */}
-      {activacion && (
-        <section className={`${s.tarjeta} ${s.activar}`} aria-labelledby="inv-activar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h2 id="inv-activar" style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Activar control · {activacion.titulo}</h2>
-            <Button type="button" variant="ghost" size="icon" className="ml-auto" aria-label="Cerrar" onClick={() => setActivacion(null)}>
-              <Icon name="x" size={16} />
-            </Button>
-          </div>
-          {activacion.filas.length > 1 && (
-            <div className={s.todos}>
-              <label>Existencias para todos
-                <input className="adm-field adm-field-auto tabular-nums" inputMode="numeric" value={todosStock} onChange={(e) => setTodosStock(e.target.value.replace(/\D/g, ''))} />
-              </label>
-              <label>Avisar al llegar a
-                <input className="adm-field adm-field-auto tabular-nums" inputMode="numeric" value={todosMinimo} onChange={(e) => setTodosMinimo(e.target.value.replace(/\D/g, ''))} />
-              </label>
-              <Button type="button" size="sm" variant="secondary" disabled={!todosStock && !todosMinimo}
-                onClick={() => setActivacion({ ...activacion, filas: activacion.filas.map((f) => ({ ...f, stock: todosStock || f.stock, minimo: todosMinimo || f.minimo })) })}>
-                Aplicar a las filas
-              </Button>
-            </div>
-          )}
-          <div className={s.scroll}>
-            <table className={s.tabla}>
-              <thead><tr><th>Platillo</th><th className={s.n}>Existencias</th><th className={s.n}>Avisar al llegar a</th></tr></thead>
-              <tbody>
-                {activacion.filas.map((f, i) => (
-                  <tr key={f.id}>
-                    <td>{f.name}</td>
-                    <td className={s.n}>
-                      <input className="adm-field adm-field-auto tabular-nums" inputMode="numeric" aria-label={`Existencias de ${f.name}`} value={f.stock} placeholder="0"
-                        onChange={(e) => setActivacion({ ...activacion, filas: activacion.filas.map((x, j) => (j === i ? { ...x, stock: e.target.value.replace(/\D/g, '') } : x)) })} />
-                    </td>
-                    <td className={s.n}>
-                      <input className="adm-field adm-field-auto tabular-nums" inputMode="numeric" aria-label={`Mínimo de ${f.name}`} value={f.minimo} placeholder="0"
-                        onChange={(e) => setActivacion({ ...activacion, filas: activacion.filas.map((x, j) => (j === i ? { ...x, minimo: e.target.value.replace(/\D/g, '') } : x)) })} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className={s.nota} style={{ margin: 0 }}>
-            {enCero.length > 0 && <><b>{enCero.map((f) => f.name).join(', ')}</b> {enCero.length === 1 ? 'empieza' : 'empiezan'} en 0: {enCero.length === 1 ? 'queda agotado' : 'quedan agotados'} hasta reponer. </>}
-            {activacion.filas.length > 1 ? `Se activan los ${activacion.filas.length} juntos o ninguno.` : 'Desde ahora cada venta descuenta una unidad.'}
-          </p>
-          {!filasValidas && <p className={s.nota} style={{ margin: 0 }}>Escribe las existencias de cada platillo (0 si no hay).</p>}
-          {errorActivar && <p role="alert" className={s.error}>{errorActivar}</p>}
-          <div className={s.pie}>
-            <Button type="button" size="touch" disabled={!filasValidas || pendiente} onClick={confirmarActivacion}>
-              {pendiente ? 'Activando…' : `Activar ${activacion.filas.length} ${activacion.filas.length === 1 ? 'platillo' : 'platillos'}`}
-            </Button>
-            <Button type="button" size="touch" variant="ghost" onClick={() => setActivacion(null)}>Cancelar</Button>
-          </div>
-        </section>
-      )}
-
-      {/* Buscador, categorías y filtros */}
-      <div className={s.herramientas}>
-        <label className="adm-search" style={{ flex: '1 1 200px' }}>
-          <Icon name="search" size={16} aria-hidden />
-          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar platillo" aria-label="Buscar platillo" autoComplete="off" />
-        </label>
-        <Button type="button" variant="secondary" disabled={!lista.some((p) => !p.track_stock) && seleccion.size === 0} onClick={() => abrirActivacion()}>
-          {seleccion.size > 0 ? `Activar control (${seleccion.size})…` : 'Activar control…'}
-        </Button>
-      </div>
-      <div className="u-noscroll" style={{ display: 'flex', gap: 7, overflowX: 'auto' }}>
-        {[{ id: 'todos', name: 'Todas' }, ...categories].map((c) => (
-          <Button key={c.id} variant={c.id === cat ? 'primary' : 'secondary'} size="sm" className="shrink-0 rounded-adm-full"
-            aria-pressed={c.id === cat} onClick={() => setCat(c.id)}>
-            {c.name}
-          </Button>
-        ))}
-      </div>
-      <div className={s.filtros} role="group" aria-label="Filtros">
-        {FILTROS.map((f) => (
-          <button key={f.key} type="button" className={`${s.filtro} press`} aria-pressed={filtro === f.key} onClick={() => setFiltro(filtro === f.key ? null : f.key)}>
-            {f.label} <span className={s.cuenta}>{cuenta[f.key]}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Lista */}
-      {lista.length === 0 ? (
-        <div className={s.tarjeta}><p className={s.vacio} style={{ padding: 24, textAlign: 'center' }}>No hay platillos con estos filtros.</p></div>
-      ) : (
-        <div className={s.tarjeta}>
-          {lista.map((p) => (
-            <Fila key={p.id} p={p} restaurantId={restaurantId} timezone={timezone} ahora={ahora}
-              marcado={seleccion.has(p.id)}
-              onMarcar={() => setSeleccion((prev) => { const n = new Set(prev); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n; })}
-              onActivar={() => abrirActivacion([p.id])}
-              onAjustar={(modo) => setAjuste({ product: p, modo })}
-              onSumarUno={() => sumarUno(p)}
-              pendiente={pendiente}
-              onCambio={() => router.refresh()} />
-          ))}
-        </div>
-      )}
-
-      {seleccion.size > 0 && !activacion && (
-        <div className="adm-savebar" role="region" aria-label="Activar en lote">
-          <span className={s.loteCuenta}>{seleccion.size} {seleccion.size === 1 ? 'seleccionado' : 'seleccionados'}</span>
-          <Button type="button" size="sm" onClick={() => abrirActivacion()}>Activar control…</Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => setSeleccion(new Set())}>Quitar selección</Button>
-        </div>
-      )}
-
-      {ajuste && (
-        <HojaAjuste restaurantId={restaurantId} product={ajuste.product} modoInicial={ajuste.modo}
-          onClose={() => setAjuste(null)}
-          onHecho={(texto) => { setAjuste(null); hecho(texto); }} />
-      )}
-    </div>
-  );
-}
-
-/* ── Una fila ─────────────────────────────────────────────── */
-
-function Fila({ p, restaurantId, timezone, ahora, marcado, onMarcar, onActivar, onAjustar, onSumarUno, pendiente, onCambio }: {
-  p: Product; restaurantId: string; timezone?: string; ahora: number; marcado: boolean;
-  onMarcar: () => void; onActivar: () => void; onAjustar: (m: ModoAjuste) => void; onSumarUno: () => void;
-  pendiente: boolean; onCambio: () => void;
-}) {
-  const { confirm, dialog } = useConfirm();
-  const [detalle, setDetalle] = useState<'historial' | 'ajustes' | null>(null);
-  const [movs, setMovs] = useState<StockMovement[] | null>(null);
-  const [minimo, setMinimo] = useState(String(p.low_stock_threshold ?? 0));
-  const [error, setError] = useState<string | null>(null);
-  const [cargando, start] = useTransition();
-  const stock = Number(p.stock ?? 0);
-  const fuera = isOutOfStock(p);
-  const bajo = esBajo(p);
-  const agotadoAMano = !fuera && isUnavailable(p, ahora);
-
-  function verHistorial() {
-    if (detalle === 'historial') { setDetalle(null); return; }
-    setDetalle('historial');
-    start(async () => { setMovs(await getProductMovements(restaurantId, p.id)); });
-  }
-
-  function guardar(track: boolean) {
-    const fd = new FormData();
-    fd.set('restaurantId', restaurantId);
-    fd.set('id', p.id);
-    fd.set('track_stock', String(track));
-    fd.set('low_stock_threshold', minimo);
-    setError(null);
-    start(async () => {
-      const r = await saveInventory(null, fd);
-      if (r && 'error' in r) { setError(r.error); return; }
-      setDetalle(null);
-      onCambio();
-    });
-  }
-
-  async function desactivar() {
+  async function dejarDeContar(p: Product) {
+    setAbierto(null);
     if (!(await confirm({
       title: `¿Dejar de contar «${p.name}»?`,
       description: 'Se podrá vender sin límite y dejarás de ver cuántos quedan. El historial se conserva.',
       confirmLabel: 'Dejar de contar',
     }))) return;
-    guardar(false);
+    const fd = new FormData();
+    fd.set('restaurantId', restaurantId);
+    fd.set('id', p.id);
+    fd.set('track_stock', 'false');
+    fd.set('low_stock_threshold', String(p.low_stock_threshold ?? 0));
+    start(async () => {
+      const r = await saveInventory(null, fd);
+      if (r && 'error' in r) toast({ title: r.error, type: 'error' }); else hecho(`Ya no cuentas ${p.name}`);
+    });
   }
 
+  /* ── Contar existencias (antes «Activar control») ── */
+  function abrirActivacion() {
+    const filas = products.filter((p) => seleccion.has(p.id) && !p.track_stock).map((p) => ({ id: p.id, name: p.name, stock: '', minimo: '' }));
+    if (filas.length === 0) return;
+    setActivacion({ titulo: filas.length === 1 ? filas[0].name : platillos(filas.length), filas });
+  }
+  function confirmarActivacion(filas: { id: string; stock: string; minimo: string }[], onError: (e: string) => void) {
+    start(async () => {
+      const r = await activarControl(restaurantId, filas.map((f) => ({ id: f.id, stock: Number(f.stock), minimo: Number(f.minimo || 0) })));
+      if (r.error) { onError(r.error); return; }
+      setActivacion(null);
+      setSeleccion(new Set());
+      cambiarVista('contados');
+      hecho(`Ahora cuentas ${platillos(r.activados ?? filas.length)} más`);
+    });
+  }
+  const marcar = (id: string) => setSeleccion((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const sinMarcar = sinContar.filter((p) => !seleccion.has(p.id));
+
+  const enHoja = abierto ? products.find((p) => p.id === abierto.id) ?? null : null;
+  /* Al cambiar de vista, la fila de píldoras vuelve al inicio: se ve cuál está elegida. */
+  const cambiarVista = (v: Vista) => { setVista(v); setCat(null); pildoras.current?.scrollTo({ left: 0 }); };
+
   return (
-    <div className={s.fila}>
+    <div className={s.panel}>
       {dialog}
-      {!p.track_stock && (
-        <label className={s.marcaZona}>
-          <input type="checkbox" className={s.marca} checked={marcado} onChange={onMarcar} aria-label={`Seleccionar ${p.name}`} />
+
+      {/* Buscador y una fila de píldoras */}
+      <div className={s.mandos}>
+        <label className={`adm-search ${s.buscar}`}>
+          <Icon name="search" size={16} aria-hidden />
+          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar platillo" aria-label="Buscar platillo" autoComplete="off" />
         </label>
-      )}
-      <div className={s.filaNombre}>
-        <b>{p.name}</b>
-        <div className={s.filaMeta}>
-          {!p.track_stock && <span className={s.chip}>Sin control</span>}
-          {fuera && <span className={`${s.chip} ${s.chipBad}`}>Sin existencias</span>}
-          {bajo && <span className={`${s.chip} ${s.chipWarn}`}>Bajo mínimo</span>}
-          {p.track_stock && !fuera && !bajo && <span className={`${s.chip} ${s.chipOk}`}>Bien</span>}
-          {agotadoAMano && <span className={`${s.chip} ${s.chipWarn}`} title={razonDeAgotado(p, timezone, ahora)}>Agotado</span>}
-          {!p.is_active && <span className={s.chip}>Oculto</span>}
-          {p.track_stock && <span>mínimo {Number(p.low_stock_threshold ?? 0)}</span>}
+        <div ref={pildoras} className={`u-noscroll ${s.pildoras}`} role="group" aria-label="Qué platillos ver">
+          <button type="button" className={s.pildora} aria-pressed={vista === 'contados'} onClick={() => cambiarVista('contados')}>
+            Contados <span className={s.cuenta}>{contadosTodos.length}</span>
+          </button>
+          <button type="button" className={s.pildora} aria-pressed={vista === 'sin_contar'} onClick={() => cambiarVista('sin_contar')}>
+            Sin contar <span className={s.cuenta}>{sinContarTodos.length}</span>
+          </button>
+          {categoriasConAlgo.length > 1 && categoriasConAlgo.map((c) => (
+            <button key={c.id} type="button" className={s.pildora} data-categoria="" aria-pressed={cat === c.id}
+              onClick={() => setCat(cat === c.id ? null : c.id)}>
+              {c.name}
+            </button>
+          ))}
         </div>
       </div>
 
-      {p.track_stock ? (
-        <div className={s.paso}>
-          <Button type="button" variant="secondary" size="icon" className="size-10" aria-label={`Restar a ${p.name}`} title="Restar (pide motivo)"
-            disabled={stock <= 0} onClick={() => onAjustar('restar')}>
-            <Icon name="minus" size={16} />
-          </Button>
-          <button type="button" className={`${s.valor} press`} style={{ border: 'none', background: 'transparent', cursor: 'pointer', minHeight: 40 }}
-            aria-label={`${p.name}: quedan ${stock}. Fijar el número exacto`} title="Fijar el número exacto" onClick={() => onAjustar('fijar')}>
-            {stock}
-          </button>
-          <Button type="button" variant="secondary" size="icon" className="size-10" aria-label={`Sumar uno a ${p.name} (reposición)`} title="Sumar uno · Reposición"
-            disabled={pendiente} onClick={onSumarUno}>
-            <Icon name="plus" size={16} />
-          </Button>
-          <Button type="button" variant="ghost" size="icon" className="size-10" aria-label={`Historial de ${p.name}`} title="Historial" onClick={verHistorial}>
-            <Icon name="clock" size={16} />
-          </Button>
-          <Button type="button" variant="ghost" size="icon" className="size-10" aria-label={`Ajustes de ${p.name}`} title="Mínimo y control"
-            onClick={() => setDetalle(detalle === 'ajustes' ? null : 'ajustes')}>
-            <Icon name="settings" size={16} />
-          </Button>
-        </div>
-      ) : (
-        <Button type="button" variant="secondary" size="sm" style={{ marginLeft: 'auto' }} onClick={onActivar}>Activar control</Button>
+      {vista === 'contados' && (
+        contadosTodos.length === 0 && porRevisar === 0 ? (
+          <EmptyState icon="box" title="Todavía no cuentas ningún platillo"
+            desc="Elige los que se acaban, como postres del día o bebidas embotelladas. Leogin los descuenta al vender."
+            action={{ label: 'Elegir qué contar', onClick: () => cambiarVista('sin_contar') }} />
+        ) : porRevisar === 0 && contados.length === 0 ? (
+          <div className={s.tarjeta}><p className={s.vacio}>No hay platillos contados con este filtro.</p></div>
+        ) : (
+          <>
+            {porRevisar > 0 && (
+              <>
+                <h2 className={s.grupo} data-aviso="">Por revisar</h2>
+                <ul className={`${s.tarjeta} ${s.lista}`}>
+                  {sinExistencias.map((p) => (
+                    <FilaContada key={`se-${p.id}`} p={p} tono="se-acabo" meta={<><span data-tono="mal">Se acabó</span> · vuelve al reponer</>}
+                      onAbrir={() => setAbierto({ id: p.id, modo: 'sumar' })}
+                      accion={<Button type="button" size="touch" variant="secondary" onClick={() => setAbierto({ id: p.id, modo: 'sumar' })}>Reponer</Button>} />
+                  ))}
+                  {bajos.map((p) => (
+                    <FilaContada key={`bj-${p.id}`} p={p} tono="bajo"
+                      meta={<><span data-tono="aviso">Bajo el mínimo</span> · avisa en {Number(p.low_stock_threshold ?? 0)}</>}
+                      onAbrir={() => setAbierto({ id: p.id, modo: 'sumar' })}
+                      accion={<Button type="button" size="touch" variant="secondary" onClick={() => setAbierto({ id: p.id, modo: 'sumar' })}>Reponer</Button>} />
+                  ))}
+                  {agotadosAMano.map((p) => (
+                    <FilaContada key={`am-${p.id}`} p={p} meta={razonDeAgotado(p, timezone, ahora)}
+                      onAbrir={p.track_stock ? () => setAbierto({ id: p.id, modo: 'sumar' }) : undefined} sinCifra={!p.track_stock}
+                      accion={<Button type="button" size="touch" variant="secondary" disabled={pendiente} onClick={() => yaHay(p)}>Ya hay</Button>} />
+                  ))}
+                  {ingredientes.map((i) => (
+                    <li key={`ing-${i.id}`} className={s.fila}>
+                      <div className={s.filaTexto}>
+                        <b>Se acabó {i.name}</b>
+                        <span>{platillos(i.platillos)} fuera del menú</span>
+                      </div>
+                      <Button type="button" size="touch" variant="secondary" disabled={pendiente} onClick={() => yaHayIngrediente(i)}>Ya hay</Button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {contados.length > 0 && (
+              <>
+                {porRevisar > 0 && <h2 className={s.grupo}>Contados</h2>}
+                <ul className={`${s.tarjeta} ${s.lista}`}>
+                  {contados.map((p) => (
+                    <FilaContada key={p.id} p={p} meta={!p.is_active ? 'Oculto en la carta' : null}
+                      onAbrir={() => setAbierto({ id: p.id, modo: 'sumar' })}
+                      accion={(
+                        <>
+                          <button type="button" className={`${s.paso} ${s.soloPc}`} aria-label={`Restar a ${p.name} (pide motivo)`} title="Restar (pide motivo)"
+                            disabled={Number(p.stock ?? 0) <= 0} onClick={() => setAbierto({ id: p.id, modo: 'restar' })}>
+                            <Icon name="minus" size={18} />
+                          </button>
+                          <button type="button" className={s.paso} aria-label={`Sumar uno a ${p.name} (reposición)`} title="Sumar uno · Reposición"
+                            disabled={pendiente} onClick={() => sumarUno(p)}>
+                            <Icon name="plus" size={18} />
+                          </button>
+                        </>
+                      )} />
+                  ))}
+                </ul>
+              </>
+            )}
+          </>
+        )
       )}
 
-      {detalle === 'historial' && (
-        <div className={s.detalle}>
-          {cargando || movs === null ? <p className={s.nota} style={{ margin: 0 }}>Cargando…</p>
-            : movs.length === 0 ? <p className={s.nota} style={{ margin: 0 }}>Sin movimientos todavía.</p>
-            : movs.map((m) => (
-              <div key={m.id} className={s.mov}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ color: 'var(--u-text)', fontWeight: 500 }}>{REASON_LABEL[m.reason] ?? m.reason}{m.nota ? ` · ${m.nota}` : ''}</div>
-                  <div style={{ color: 'var(--u-text-3)', fontSize: 12 }}>
-                    {new Date(m.created_at).toLocaleString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', ...(timezone ? { timeZone: timezone } : {}) })}
-                    {m.quien ? ` · ${m.quien}` : ''}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }} className="tabular-nums">
-                  <div style={{ fontWeight: 600, color: Number(m.delta) >= 0 ? 'var(--c-ok)' : 'var(--c-danger)' }}>{Number(m.delta) >= 0 ? '+' : '−'}{Math.abs(Number(m.delta))}</div>
-                  {m.balance_after != null && <div style={{ color: 'var(--u-text-3)', fontSize: 12 }}>quedan {Number(m.balance_after)}</div>}
-                </div>
-              </div>
-            ))}
+      {vista === 'sin_contar' && (
+        <>
+          <p className={s.linea}>
+            Cuentas <b>{contadosTodos.length} de {products.length}</b> platillos. Los demás se venden sin límite.
+            {sinContarTodos.length > 0 && ' Toca los que quieras contar: los que se acaban, como postres del día o bebidas embotelladas.'}
+          </p>
+          {sinContar.length === 0 ? (
+            <div className={s.tarjeta}><p className={s.vacio}>{sinContarTodos.length === 0 ? 'Ya cuentas todos tus platillos.' : 'No hay platillos sin contar con este filtro.'}</p></div>
+          ) : (
+            <>
+              <ul className={`${s.tarjeta} ${s.lista}`}>
+                {sinContar.map((p) => (
+                  <li key={p.id}>
+                    <label className={s.elegir}>
+                      <input type="checkbox" className={s.marca} checked={seleccion.has(p.id)} onChange={() => marcar(p.id)} />
+                      <span className={s.filaTexto}>
+                        <b>{p.name}</b>
+                        {!p.is_active && <span>Oculto en la carta</span>}
+                      </span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+              {(cat || q) && sinMarcar.length > 1 && (
+                <button type="button" className={s.enlace} onClick={() => setSeleccion((prev) => new Set([...prev, ...sinMarcar.map((p) => p.id)]))}>
+                  Elegir los {sinMarcar.length}{cat ? ` de ${categories.find((c) => c.id === cat)?.name ?? 'esta categoría'}` : ''}
+                </button>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {seleccion.size > 0 && !activacion && (
+        <div className="adm-savebar" role="region" aria-label="Contar existencias">
+          <span className={s.loteCuenta}>{seleccion.size} {seleccion.size === 1 ? 'elegido' : 'elegidos'}</span>
+          <Button type="button" size="touch" variant="ghost" onClick={() => setSeleccion(new Set())}>Quitar</Button>
+          <Button type="button" size="touch" onClick={abrirActivacion}>Contar existencias…</Button>
         </div>
       )}
 
-      {detalle === 'ajustes' && (
-        <div className={s.detalle} style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)' }}>
-            Avisar al llegar a
-            <input className="adm-field adm-field-auto tabular-nums" inputMode="numeric" style={{ width: 96 }} value={minimo}
-              onChange={(e) => setMinimo(e.target.value.replace(/\D/g, ''))} />
-          </label>
-          <Button type="button" size="sm" disabled={cargando} onClick={() => guardar(true)}>Guardar mínimo</Button>
-          <Button type="button" size="sm" variant="outline" disabled={cargando} onClick={desactivar}>Dejar de contar</Button>
-          {error && <p role="alert" className={s.error} style={{ flexBasis: '100%' }}>{error}</p>}
-        </div>
+      {activacion && (
+        <HojaContar titulo={activacion.titulo} filasIniciales={activacion.filas} pendiente={pendiente}
+          onClose={() => setActivacion(null)} onConfirmar={confirmarActivacion} />
+      )}
+
+      {enHoja && abierto && (
+        <HojaPlatillo key={`${enHoja.id}-${abierto.modo}`} restaurantId={restaurantId} product={enHoja} modoInicial={abierto.modo} timezone={timezone}
+          onClose={() => setAbierto(null)}
+          onHecho={(texto) => { setAbierto(null); hecho(texto); }}
+          onDejarDeContar={() => dejarDeContar(enHoja)} />
       )}
     </div>
   );
 }
 
-/* ── Hoja de ajuste con motivo (R11.4) ────────────────────── */
+/* ── Una fila contada: nombre, cuántos quedan y su acción ───── */
 
-function HojaAjuste({ restaurantId, product, modoInicial, onClose, onHecho }: {
-  restaurantId: string; product: Product; modoInicial: ModoAjuste; onClose: () => void; onHecho: (texto: string) => void;
+function FilaContada({ p, meta, tono, sinCifra, onAbrir, accion }: {
+  p: Product; meta?: React.ReactNode; tono?: 'se-acabo' | 'bajo'; sinCifra?: boolean;
+  onAbrir?: () => void; accion: React.ReactNode;
 }) {
+  const texto = (
+    <>
+      <span className={s.filaTexto}>
+        <b>{p.name}</b>
+        {meta && <span>{meta}</span>}
+      </span>
+      {!sinCifra && <span className={s.cifra} data-tono={tono}>{Number(p.stock ?? 0)}</span>}
+    </>
+  );
+  return (
+    <li className={s.fila}>
+      {onAbrir ? (
+        <button type="button" className={s.abrir} onClick={onAbrir} aria-haspopup="dialog"
+          aria-label={`${p.name}: quedan ${Number(p.stock ?? 0)}. Ajustar existencias`}>
+          {texto}
+        </button>
+      ) : <div className={s.abrir}>{texto}</div>}
+      <span className={s.accion}>{accion}</span>
+    </li>
+  );
+}
+
+/* ── Hoja del platillo: ajuste con motivo (R11.4) y lo demás ─── */
+
+function HojaPlatillo({ restaurantId, product, modoInicial, timezone, onClose, onHecho, onDejarDeContar }: {
+  restaurantId: string; product: Product; modoInicial: ModoAjuste; timezone?: string;
+  onClose: () => void; onHecho: (texto: string) => void; onDejarDeContar: () => void;
+}) {
+  const router = useRouter();
   const stock = Number(product.stock ?? 0);
+  const minimoActual = Number(product.low_stock_threshold ?? 0);
   const [modo, setModo] = useState<ModoAjuste>(modoInicial);
   const [cantidad, setCantidad] = useState(modoInicial === 'fijar' ? String(stock) : '1');
   const [motivo, setMotivo] = useState<MotivoAjuste | null>(modoInicial === 'sumar' ? 'reposicion' : null);
   const [nota, setNota] = useState('');
+  const [minimo, setMinimo] = useState(String(minimoActual));
+  const [movs, setMovs] = useState<StockMovement[] | null>(null);
+  const [verHistorial, setVerHistorial] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendiente, start] = useTransition();
 
@@ -518,26 +397,45 @@ function HojaAjuste({ restaurantId, product, modoInicial, onClose, onHecho }: {
     });
   }
 
+  function guardarMinimo() {
+    const fd = new FormData();
+    fd.set('restaurantId', restaurantId);
+    fd.set('id', product.id);
+    fd.set('track_stock', 'true');
+    fd.set('low_stock_threshold', minimo);
+    setError(null);
+    start(async () => {
+      const r = await saveInventory(null, fd);
+      if (r && 'error' in r) { setError(r.error); return; }
+      router.refresh();
+    });
+  }
+
+  function abrirHistorial() {
+    setVerHistorial((v) => !v);
+    if (movs === null) start(async () => { setMovs(await getProductMovements(restaurantId, product.id)); });
+  }
+
   const verbo = modo === 'sumar' ? `Sumar ${Number.isFinite(n) ? n : ''}` : modo === 'restar' ? `Restar ${Number.isFinite(n) ? n : ''}` : `Dejar en ${Number.isFinite(n) ? n : ''}`;
+  const hora = (iso: string) => new Date(iso).toLocaleString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', ...(timezone ? { timeZone: timezone } : {}) });
 
   return (
     <HojaOperativa
-      label={`Ajustar existencias de ${product.name}`}
-      title={`${product.name} · quedan ${stock}`}
+      label={`Existencias de ${product.name}`}
+      title={product.name}
+      className="hoja-inventario"
+      resumen={<p className={s.hojaResumen}>Quedan <b>{stock}</b>{minimoActual > 0 ? ` · avisa al llegar a ${minimoActual}` : ''}</p>}
       onClose={onClose}
       footer={(
-        <div className={s.pie}>
-          <Button type="button" size="touch" disabled={!valido || pendiente} onClick={confirmar}>
-            {pendiente ? 'Guardando…' : `${verbo}${motivoLabel ? ` · ${motivoLabel}` : ''}`}
-          </Button>
-          <Button type="button" size="touch" variant="ghost" onClick={onClose}>Cancelar</Button>
-        </div>
+        <Button type="button" size="action" className="w-full" disabled={!valido || pendiente} onClick={confirmar}>
+          {pendiente ? 'Guardando…' : `${verbo}${motivoLabel ? ` · ${motivoLabel}` : ''}`}
+        </Button>
       )}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className={s.hojaCuerpo}>
         <div className={s.modos} role="group" aria-label="Tipo de ajuste">
           {(['sumar', 'restar', 'fijar'] as const).map((m) => (
-            <button key={m} type="button" className={s.motivo} aria-pressed={modo === m} onClick={() => cambiarModo(m)}>
+            <button key={m} type="button" className={s.modo} aria-pressed={modo === m} disabled={m === 'restar' && stock <= 0} onClick={() => cambiarModo(m)}>
               {m === 'sumar' ? 'Sumar' : m === 'restar' ? 'Restar' : 'Número exacto'}
             </button>
           ))}
@@ -545,28 +443,138 @@ function HojaAjuste({ restaurantId, product, modoInicial, onClose, onHecho }: {
         <div className={s.cantidad}>
           <label htmlFor="ajuste-cantidad" className="sr-only">Cantidad</label>
           <input id="ajuste-cantidad" className="adm-field adm-field-auto tabular-nums" inputMode="numeric" value={cantidad}
-            onChange={(e) => setCantidad(e.target.value.replace(/\D/g, ''))} autoFocus />
-          <span style={{ color: 'var(--u-text-2)', fontSize: 14 }}>
+            onChange={(e) => setCantidad(e.target.value.replace(/\D/g, ''))} onFocus={(e) => e.currentTarget.select()} />
+          <span className={s.quedarian}>
             {Number.isFinite(quedan) && quedan >= 0
               ? <>quedarían <b className="tabular-nums">{quedan}</b></>
-              : <span style={{ color: 'var(--c-danger)' }}>Sólo quedan {stock}</span>}
+              : <span style={{ color: 'var(--c-danger)' }}>Solo quedan {stock}</span>}
           </span>
         </div>
         <div>
-          <p style={{ margin: '0 0 8px', fontWeight: 600, fontSize: 14 }}>
-            ¿Por qué?{modo === 'sumar' ? '' : <span style={{ fontWeight: 400, color: 'var(--u-text-3)' }}> · obligatorio</span>}
-          </p>
+          <p className={s.pregunta}>¿Por qué?{modo === 'sumar' ? '' : <span> · obligatorio</span>}</p>
           <div className={s.motivos} role="group" aria-label="Motivo">
             {MOTIVOS[modo].map((m) => (
               <button key={m.key} type="button" className={s.motivo} aria-pressed={motivo === m.key} onClick={() => setMotivo(m.key)}>{m.label}</button>
             ))}
           </div>
         </div>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)' }}>
-          Nota {motivo === 'otro' ? '(obligatoria)' : '(opcional)'}
-          <input className="adm-field" maxLength={200} value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ej.: se quemó una olla" />
-        </label>
-        <p className={s.nota} style={{ margin: 0 }}>Queda en el historial con tu nombre y la hora.</p>
+        {(motivo === 'otro' || modo !== 'sumar') && (
+          <label className={s.campo}>
+            Nota {motivo === 'otro' ? '(obligatoria)' : '(opcional)'}
+            <input className="adm-field" maxLength={200} value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ej.: se quemó una olla" />
+          </label>
+        )}
+        {error && <p role="alert" className={s.error}>{error}</p>}
+
+        <ul className={s.opciones}>
+          <li className={s.opcion}>
+            <label htmlFor="inv-minimo">Avisar al llegar a</label>
+            <input id="inv-minimo" className="adm-field adm-field-auto tabular-nums" inputMode="numeric" value={minimo}
+              onChange={(e) => setMinimo(e.target.value.replace(/\D/g, ''))} />
+            {minimo !== String(minimoActual) && minimo !== '' && (
+              <Button type="button" size="sm" variant="secondary" disabled={pendiente} onClick={guardarMinimo}>Guardar</Button>
+            )}
+          </li>
+          <li>
+            <button type="button" className={s.opcion} aria-expanded={verHistorial} onClick={abrirHistorial}>
+              <Icon name="clock" size={16} /><span>Historial</span><Icon name={verHistorial ? 'chevronDown' : 'chevronRight'} size={16} />
+            </button>
+            {verHistorial && (
+              <div className={s.historial}>
+                {movs === null ? <p className={s.hojaResumen}>Cargando…</p>
+                  : movs.length === 0 ? <p className={s.hojaResumen}>Sin movimientos todavía.</p>
+                  : movs.map((m) => (
+                    <div key={m.id} className={s.mov}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ color: 'var(--u-text)', fontWeight: 500 }}>{REASON_LABEL[m.reason] ?? m.reason}{m.nota ? ` · ${m.nota}` : ''}</div>
+                        <div style={{ color: 'var(--u-text-3)', fontSize: 12 }}>{hora(m.created_at)}{m.quien ? ` · ${m.quien}` : ''}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }} className="tabular-nums">
+                        <div style={{ fontWeight: 600, color: Number(m.delta) >= 0 ? 'var(--c-ok)' : 'var(--c-danger)' }}>{Number(m.delta) >= 0 ? '+' : '−'}{Math.abs(Number(m.delta))}</div>
+                        {m.balance_after != null && <div style={{ color: 'var(--u-text-3)', fontSize: 12 }}>quedan {Number(m.balance_after)}</div>}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </li>
+          <li>
+            <button type="button" className={s.opcion} data-tono="peligro" disabled={pendiente} onClick={onDejarDeContar}>
+              <span>Dejar de contar</span>
+            </button>
+          </li>
+        </ul>
+        <p className={s.hojaResumen}>Cada ajuste queda en el historial con tu nombre y la hora.</p>
+      </div>
+    </HojaOperativa>
+  );
+}
+
+/* ── Hoja «Contar existencias»: existencias iniciales y mínimo (E11) ── */
+
+function HojaContar({ titulo, filasIniciales, pendiente, onClose, onConfirmar }: {
+  titulo: string; filasIniciales: { id: string; name: string; stock: string; minimo: string }[]; pendiente: boolean;
+  onClose: () => void; onConfirmar: (filas: { id: string; stock: string; minimo: string }[], onError: (e: string) => void) => void;
+}) {
+  const [filas, setFilas] = useState(filasIniciales);
+  const [todosStock, setTodosStock] = useState('');
+  const [todosMinimo, setTodosMinimo] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const validas = filas.every((f) => /^\d+$/.test(f.stock) && /^\d+$/.test(f.minimo || '0'));
+  const enCero = filas.filter((f) => f.stock === '0');
+  const cambiar = (i: number, k: 'stock' | 'minimo', v: string) => setFilas((fs) => fs.map((x, j) => (j === i ? { ...x, [k]: v.replace(/\D/g, '') } : x)));
+
+  return (
+    <HojaOperativa
+      label={`Contar existencias de ${titulo}`}
+      title={`Contar existencias · ${titulo}`}
+      className="hoja-inventario"
+      resumen={<p className={s.hojaResumen}>{filas.length > 1 ? `Se empiezan a contar los ${filas.length} juntos o ninguno.` : 'Desde ahora cada venta descuenta una unidad.'}</p>}
+      onClose={onClose}
+      footer={(
+        <Button type="button" size="action" className="w-full" disabled={!validas || pendiente}
+          onClick={() => { setError(null); onConfirmar(filas, setError); }}>
+          {pendiente ? 'Guardando…' : `Contar ${platillos(filas.length)}`}
+        </Button>
+      )}
+    >
+      <div className={s.hojaCuerpo}>
+        {filas.length > 1 && (
+          <div className={s.todos}>
+            <label>Existencias para todos
+              <input className="adm-field adm-field-auto tabular-nums" inputMode="numeric" value={todosStock} onChange={(e) => setTodosStock(e.target.value.replace(/\D/g, ''))} />
+            </label>
+            <label>Avisar al llegar a
+              <input className="adm-field adm-field-auto tabular-nums" inputMode="numeric" value={todosMinimo} onChange={(e) => setTodosMinimo(e.target.value.replace(/\D/g, ''))} />
+            </label>
+            <Button type="button" size="touch" variant="secondary" disabled={!todosStock && !todosMinimo}
+              onClick={() => setFilas((fs) => fs.map((f) => ({ ...f, stock: todosStock || f.stock, minimo: todosMinimo || f.minimo })))}>
+              Aplicar a todos
+            </Button>
+          </div>
+        )}
+        <table className={s.tabla}>
+          <thead><tr><th>Platillo</th><th className={s.n}>Hay</th><th className={s.n}>Avisar en</th></tr></thead>
+          <tbody>
+            {filas.map((f, i) => (
+              <tr key={f.id}>
+                <td>{f.name}</td>
+                <td className={s.n}>
+                  <input className="adm-field adm-field-auto tabular-nums" inputMode="numeric" aria-label={`Existencias de ${f.name}`} value={f.stock} placeholder="0"
+                    onChange={(e) => cambiar(i, 'stock', e.target.value)} />
+                </td>
+                <td className={s.n}>
+                  <input className="adm-field adm-field-auto tabular-nums" inputMode="numeric" aria-label={`Mínimo de ${f.name}`} value={f.minimo} placeholder="0"
+                    onChange={(e) => cambiar(i, 'minimo', e.target.value)} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {enCero.length > 0 && (
+          <p className={s.hojaResumen}><b>{enCero.map((f) => f.name).join(', ')}</b> {enCero.length === 1 ? 'empieza' : 'empiezan'} en 0: {enCero.length === 1 ? 'queda agotado' : 'quedan agotados'} hasta reponer.</p>
+        )}
+        {!validas && <p className={s.hojaResumen}>Escribe cuántos hay de cada platillo (0 si no hay).</p>}
         {error && <p role="alert" className={s.error}>{error}</p>}
       </div>
     </HojaOperativa>
