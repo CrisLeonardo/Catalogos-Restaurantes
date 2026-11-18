@@ -352,27 +352,44 @@ export async function markInvoicePaid(
   const invoiceId = String(formData.get('invoiceId') ?? '').trim();
   const restaurantId = String(formData.get('restaurantId') ?? '').trim();
   if (!UUID_RE.test(invoiceId)) return { error: 'Factura inválida.' };
+  if (!UUID_RE.test(restaurantId)) return { error: 'Restaurante inválido.' };
 
-  const { data: inv } = await db.from('invoices').select('amount').eq('id', invoiceId).single();
-  const paidAmount = num(formData, 'paid_amount') || Number(inv?.amount ?? 0);
+  const { data: inv, error: lecturaErr } = await db.from('invoices')
+    .select('amount')
+    .eq('id', invoiceId)
+    .eq('restaurant_id', restaurantId)
+    .eq('status', 'PENDING')
+    .maybeSingle();
+  if (lecturaErr) return { error: lecturaErr.message };
+  if (!inv) return { error: 'No encontramos un cobro pendiente para este restaurante.' };
 
-  const { error } = await db.from('invoices').update({
+  const paidAmount = Number(formData.get('paid_amount'));
+  if (!Number.isFinite(paidAmount) || paidAmount <= 0 || paidAmount !== Math.round(paidAmount * 100) / 100) {
+    return { error: 'Ingresa un monto pagado válido, con hasta dos decimales.' };
+  }
+  if (paidAmount < Number(inv.amount)) {
+    return { error: 'El monto pagado debe cubrir el total del cobro.' };
+  }
+
+  const { data: pago, error } = await db.from('invoices').update({
     status: 'PAID',
     paid_at: new Date().toISOString(),
     paid_amount: paidAmount,
     payment_method: String(formData.get('payment_method') ?? '').trim() || 'Efectivo',
-  }).eq('id', invoiceId);
+  }).eq('id', invoiceId)
+    .eq('restaurant_id', restaurantId)
+    .eq('status', 'PENDING')
+    .eq('amount', inv.amount)
+    .select('id')
+    .maybeSingle();
   if (error) return { error: error.message };
+  if (!pago) return { error: 'El cobro cambió. Actualiza la página antes de registrar el pago.' };
 
   // Si ya no quedan cobros vencidos, reactiva al restaurante suspendido por impago.
-  let reactivated = false;
-  if (UUID_RE.test(restaurantId)) {
-    const { data } = await db.rpc('leogin_sync_restaurant_status', { p_restaurant_id: restaurantId });
-    reactivated = data === 'reactivated';
-  }
+  const { data } = await db.rpc('leogin_sync_restaurant_status', { p_restaurant_id: restaurantId });
   revalidateBilling(restaurantId);
   revalidatePath('/super/restaurantes');
-  return { ok: true, msg: reactivated ? 'Pago registrado. El restaurante se reactivó.' : 'Pago registrado.' };
+  return { ok: true, msg: data === 'reactivated' ? 'Pago registrado. El restaurante se reactivó.' : 'Pago registrado.' };
 }
 
 export async function markInvoiceUnpaid(
