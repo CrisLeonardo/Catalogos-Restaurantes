@@ -52,6 +52,19 @@ export const PAPELES: { value: string; label: string }[] = [
   { value: 'OWNER', label: 'Dueño (todo, incluido el cobro del plan)' },
 ];
 
+/** Lo que podrá hacer quien reciba ese papel, dicho antes de guardar
+ *  (auditoría 2026-11-03, N19: dar acceso no parte de «Dueño» y la
+ *  consecuencia se ve antes de confirmar). */
+export function consecuenciaDePapel(valor: string): string | null {
+  if (valor === 'OWNER') {
+    return 'Podrá todo: el cobro del plan, el equipo, los ajustes y borrar el restaurante. Dáselo solo a quien es dueño de verdad.';
+  }
+  if (!valor.startsWith('puesto:')) return null;
+  const puesto = PUESTOS.find((x) => `puesto:${x.key}` === valor);
+  if (!puesto) return null;
+  return `${puesto.desc}. No verá el cobro del plan${puesto.permisos.includes('personal') ? '' : ' ni podrá dar accesos'}.`;
+}
+
 export type Papel = {
   memberRole: 'OWNER' | 'MANAGER' | 'STAFF';
   puesto: PuestoKey | null;

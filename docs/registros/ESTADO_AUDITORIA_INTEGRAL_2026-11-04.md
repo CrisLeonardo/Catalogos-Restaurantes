@@ -1074,6 +1074,40 @@ A pedido del dueño, las fichas 2.3–2.10 y el CHANGELOG de v0.23.0 se juntaron
 - **No comprobado en pantalla:** un dueño de un solo restaurante, un restaurante con PIN, el plan sin Finanzas, un restaurante que no se pudo leer y la ganancia con costos. Para ninguno hay datos locales. Tampoco hay una prueba con una persona.
 - **Validación:** `typecheck` y `lint` sin errores; 1,663 unitarias pasan, con una omitida.
 
+## 53. Superadmin: cola de trabajo y ficha de soporte · línea N + ficha 4.9 (2026-11-18)
+
+**Rama** `feat/superadmin-nada-saturado`, apilada sobre `feat/mi-cuenta-nada-saturado`. [Maqueta](../diseno/MAQUETA_SUPERADMIN_NADA_SATURADO_2026-11-18.html) aprobada con sus seis recomendaciones. **Migración 187** (`super_asuntos`, `super_eventos`): se aplica ANTES de desplegar.
+
+- **Cómo se probó en local:** el superadmin pide código de dos pasos y en local no hay celular que lo dé. `dev-login` completa el segundo factor de `super-demo@local.test`; viene del PR #144 (`chore/dev-login-superadmin-sin-codigo`, contra main) y se trajo aquí con cherry-pick.
+- **Inicio, antes:**
+  - Seis cifras: en la PC, cinco arriba y una abajo (N09).
+  - 17 avisos sin estado, uno por síntoma (la PC caída y sus impresiones fallidas salían por separado). Al día siguiente volvían iguales aunque ya se hubiera llamado.
+  - Debajo, gráfica, recién llegados, más activos y distribución por plan.
+  - 2,643 px de alto en el teléfono.
+- **Inicio, después** (1,118 px, la cola desde arriba):
+  - El dinero va en una línea («Este mes: Q1,345.00 en mensualidades · Q0.00 cobrado · Q2,242.00 vencido · 10 restaurantes activos»).
+  - La cola tiene cuatro grupos: servicio afectado, cobranza, activación y seguimiento. Hay un asunto por restaurante y tipo, con los síntomas juntos y su antigüedad, y tres visibles por grupo con «Ver los N».
+  - La hoja del asunto trae la evidencia, WhatsApp, «Posponer…» (con motivo y plazo), «Anotar», «Abrir su ficha» y «Marcar como resuelto», con su historia.
+  - «N pospuestos · ver» abre la lista con «Volver ya».
+  - La gráfica, la distribución por plan y la tabla por actividad ya estaban en Métricas. Los restaurantes recientes y «Nuevo restaurante» están en Restaurantes.
+- **Estados** (`lib/super/cola.ts`, probado): cada asunto lleva una firma de su evidencia. Uno resuelto no vuelve con la misma firma. Uno pospuesto vuelve en su fecha («Volvió: se cumplió la fecha») o si cambia la evidencia («Volvió: hay algo nuevo»). «Sin pedidos» es seguimiento, no cliente perdido, y al posponerlo propone «Cerrado por temporada».
+- **Lectura caída:** `getBillingDashboard` devuelve `estado: 'error'` y el inicio dice que el cobro no se pudo leer, en vez de ceros. Lo mismo hace la salud (N12) y los estados de la cola.
+- **Ficha › Resumen:**
+  - Antes: seis cifras y una gráfica.
+  - Ahora: una línea con plan, mensualidad y antigüedad como cliente, y lo abierto de ese restaurante (la misma cola).
+  - Filas con el dueño (WhatsApp de un toque), el último acceso (`lastSignInAt`), la operación, la PC (`estadoDePc`) y el cobro.
+  - Notas de soporte con autor y una historia que junta alta, pagos y lo hecho en la cola.
+- **Accesos (N19):** el papel ya no partía de «Dueño». Ahora, bajo el papel elegido, se lee qué podrá hacer esa persona (`consecuenciaDePapel`), en ámbar si es Dueño. El rescate de cuentas no cambia.
+- **Comprobado en pantalla** a 390 px y 1280 px, claro y oscuro:
+  - En el inicio: abrir un asunto, anotar, posponer «Espera un pago» una semana (Cobranza de 10 a 9, «1 pospuesto»), «Volver ya» y resolver un seguimiento (de 3 a 2).
+  - En la ficha: «+ Anotar».
+  - En Accesos: ver la consecuencia de Dueño y de Cocina, sin enviar.
+  - Los eventos y estados de prueba se borraron de la base local.
+- **No comprobado en pantalla:** un servicio afectado real (no hay PC caída en local), la lectura de cobro caída, la cola vacía, el inicio sin la 187 y una prueba con una persona.
+- **Validación:**
+  - `typecheck`, `lint` y la auditoría de candados RLS sin hallazgos.
+  - 1,674 unitarias pasan, con una omitida; las nuevas son `cola.test.ts` y `totp.test.ts`.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

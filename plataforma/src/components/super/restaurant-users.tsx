@@ -18,7 +18,7 @@ import {
 } from '@/lib/actions/memberships';
 import type { RestaurantUser } from '@/lib/db/super-admin';
 import type { MemberRole } from '@/lib/membership-roles';
-import { PAPELES, papelActual } from '@/lib/permisos-trabajo';
+import { PAPELES, papelActual, consecuenciaDePapel } from '@/lib/permisos-trabajo';
 import { FIELD_LABEL } from '@/components/admin/field-label';
 
 const empty: SuperState = null;
@@ -32,6 +32,28 @@ const PAPEL = PAPELES;
 
 /* El rótulo de campo del panel (D-8): en minúscula, no en mayúsculas de cartel. */
 const labelStyle: React.CSSProperties = FIELD_LABEL;
+
+/* El papel se elige siempre (no parte de «Dueño») y lo que implica se lee
+   antes de guardar (auditoría 2026-11-03, N19; línea N 2026-11-18). */
+function ElegirPapel({ id }: { id: string }) {
+  const [valor, setValor] = useState('');
+  const consecuencia = valor ? consecuenciaDePapel(valor) : null;
+  return (
+    <>
+      <select id={id} name="role" value={valor} onChange={(e) => setValor(e.target.value)} required className="adm-field" style={{ cursor: 'pointer' }} aria-describedby={consecuencia ? `${id}_que` : undefined}>
+        <option value="" disabled>Elige su papel</option>
+        {PAPEL.map((p) => (
+          <option key={p.value} value={p.value} style={{ color: 'var(--u-text)' }}>{p.label}</option>
+        ))}
+      </select>
+      {consecuencia && (
+        <p id={`${id}_que`} style={{ fontSize: 12, lineHeight: 1.5, margin: '6px 0 0', maxWidth: 360, color: valor === 'OWNER' ? 'var(--c-warn)' : 'var(--u-text-3)' }}>
+          {consecuencia}
+        </p>
+      )}
+    </>
+  );
+}
 
 function genPassword(): string {
   // Sin caracteres ambiguos (0/O, 1/l) para dictar por teléfono.
@@ -358,12 +380,7 @@ function GrantAccessForm({ restaurantId }: { restaurantId: string }) {
         </div>
         <div>
           <label htmlFor="grant_role" style={labelStyle}>Papel</label>
-          <select id="grant_role" name="role" defaultValue="" required className="adm-field" style={{ cursor: 'pointer' }}>
-            <option value="" disabled>Elige su papel</option>
-            {PAPEL.map((p) => (
-              <option key={p.value} value={p.value} style={{ color: 'var(--u-text)' }}>{p.label}</option>
-            ))}
-          </select>
+          <ElegirPapel id="grant_role" />
         </div>
         <button
           type="submit"
@@ -435,12 +452,7 @@ function AddUserForm({
 
         <div>
           <label htmlFor="u_role" style={labelStyle}>Papel *</label>
-          <select id="u_role" name="role" defaultValue="" required className="adm-field" style={{ cursor: 'pointer' }}>
-            <option value="" disabled>Elige su papel</option>
-            {PAPEL.map((p) => (
-              <option key={p.value} value={p.value} style={{ color: 'var(--u-text)' }}>{p.label}</option>
-            ))}
-          </select>
+          <ElegirPapel id="u_role" />
         </div>
 
         <div>

@@ -584,6 +584,8 @@ export interface BillingRow {
   currentMonthlyStatus: InvoiceStatus | null;
   /** ¿Tiene alguna factura vencida? */
   hasOverdue: boolean;
+  /** Vencimiento más viejo entre lo pendiente ya vencido (YYYY-MM-DD). */
+  overdueSince: string | null;
   /** Último pago registrado. */
   lastPaidAt: string | null;
   /** Tráfico/afluencia para decidir precio. */
@@ -609,6 +611,9 @@ export interface BillingStats {
 }
 
 export interface BillingDashboard {
+  /** «error» si no se pudieron leer restaurantes, cobros o facturas: sus
+      ceros NO son «todo al día» (auditoría 2026-11-03, 4.11). */
+  estado?: 'error';
   rows: BillingRow[];
   stats: BillingStats;
   period: string;
@@ -627,9 +632,9 @@ export const getBillingDashboard = cache(async (): Promise<BillingDashboard> => 
   const monthStart = `${period.slice(0, 7)}-01T00:00:00Z`;
 
   const [
-    { data: restaurants },
-    { data: configs },
-    { data: invoices },
+    { data: restaurants, error: errRestaurantes },
+    { data: configs, error: errCobros },
+    { data: invoices, error: errFacturas },
     { data: visits },
     { data: orders },
   ] = await Promise.all([
@@ -695,6 +700,7 @@ export const getBillingDashboard = cache(async (): Promise<BillingDashboard> => 
       hasCurrentMonthly: !!currentMonthly,
       currentMonthlyStatus: currentMonthly?.status ?? null,
       hasOverdue: pending.some((i) => isOverdue(i, today)),
+      overdueSince: pending.filter((i) => isOverdue(i, today)).map((i) => i.due_date as string).sort()[0] ?? null,
       lastPaidAt: lastPaid,
       visits30: visitMap.get(id) ?? 0,
       unique30: uniqueMap.get(id)?.size ?? 0,
@@ -717,7 +723,11 @@ export const getBillingDashboard = cache(async (): Promise<BillingDashboard> => 
   const overdueCount = rows.filter((r) => r.hasOverdue).length;
   const activeBilling = [...configMap.values()].filter((c) => c.active && c.monthly_fee > 0).length;
 
+  const fallo = errRestaurantes || errCobros || errFacturas;
+  if (fallo) console.error('[billing] tablero de cobros:', fallo.message);
+
   return {
+    ...(fallo ? { estado: 'error' as const } : {}),
     rows,
     stats: {
       mrr,
