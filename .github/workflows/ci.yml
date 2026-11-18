@@ -43,6 +43,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # Estos puertos de supabase/config.toml caen dentro del rango efímero
+      # de Linux. Resérvalos antes de que las descargas y Docker abran sockets.
+      - name: Reservar los puertos de Supabase en el runner
+        run: |
+          reservados=$(sysctl -n net.ipv4.ip_local_reserved_ports)
+          sudo sysctl -w "net.ipv4.ip_local_reserved_ports=${reservados:+$reservados,}54600-54607"
+
       - name: Node 22
         uses: actions/setup-node@v7
         with:
