@@ -2,28 +2,61 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getMyGroupScope, getGroupReport } from '@/lib/db/group';
 import { Icon } from '@/components/icons';
-import DateRangeForm from '@/components/admin/date-range-form';
+import SelectorPeriodo from '@/components/admin/selector-periodo';
+import AvisoLectura from '@/components/admin/aviso-lectura';
 import GroupFinanceExport from '@/components/mi-cuenta/group-finance-export';
-import { fmtMoney } from '@/lib/money';
-import Kpi from '@/components/mi-cuenta/kpi';
-import { coberturaDeCostos } from '@/lib/finanzas-cobertura';
 import { ChartReadout } from '@/components/ui/chart-readout';
-import { diaSemana } from '@/lib/dates';
+import { fmtMoney } from '@/lib/money';
+import { coberturaDeCostos } from '@/lib/finanzas-cobertura';
+import { rangoEnPalabras } from '@/lib/rango-en-palabras';
+import { diaDeNegocio } from '@/lib/caja/dia';
+import { corteDelRestaurante } from '@/lib/db/dia-negocio';
+import { adminUrl } from '@/lib/tenant';
+import n from '@/components/admin/negocio.module.css';
+import s from '@/components/mi-cuenta/mi-cuenta.module.css';
 
 export const metadata = { title: 'Finanzas — Leogin' };
 export const dynamic = 'force-dynamic';
 
-const money = (n: number) => fmtMoney(n);
-/** «lun 28 sept · Q1,234.00» — lo que dice una barra al tocarla. */
-const revenueTip = (d: { date: string; revenue: number }) => `${diaSemana(d.date)} · ${money(d.revenue)}`;
-function todayYmd(): string { return new Date().toLocaleDateString('en-CA'); }
+/* ============================================================
+   FINANZAS — lo vendido y ganado del negocio (o de todos juntos).
+   ------------------------------------------------------------
+   Línea N «nada saturado» (maqueta aprobada el 2026-11-18,
+   docs/diseno/MAQUETA_MI_CUENTA_NADA_SATURADO_2026-11-18.html): las
+   mismas piezas que Finanzas del panel (selector de periodo de una línea,
+   «Descargar» en hoja, «Vendiste Q…» con su gráfica y la ganancia sin
+   ceros falsos), y Comparativa adentro como «Por restaurante».
+
+   - «Hoy» es el día de negocio del primer restaurante, no el reloj del
+     servidor (en UTC, pasadas las 6 p. m. de Guatemala el rango terminaba
+     mañana).
+   - Un restaurante cuyo reporte falló se nombra y el total dice «sin
+     contar» ese restaurante.
+   - Con varios restaurantes y un plan sin Finanzas se ve lo vendido por
+     restaurante, pero la ganancia va con candado, como en el panel. Antes
+     Comparativa la daba sin plan.
+   ============================================================ */
+
+const money = (v: number) => fmtMoney(v);
+const pedidos = (k: number) => (k === 1 ? '1 pedido' : `${k.toLocaleString('es-GT')} pedidos`);
+const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'];
+const diaLargo = (ymd: string) => {
+  const d = new Date(`${ymd}T12:00:00Z`);
+  return `${DIAS[d.getUTCDay()]} ${d.getUTCDate()} ${MESES[d.getUTCMonth()]}`;
+};
+const diaCorto = (ymd: string) => {
+  const d = new Date(`${ymd}T12:00:00Z`);
+  return `${d.getUTCDate()} ${MESES[d.getUTCMonth()]}`;
+};
 function shiftYmd(ymd: string, days: number): string {
   const d = new Date(`${ymd}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
-const isYmd = (s: string | undefined): s is string => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
+const isYmd = (v: string | undefined): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
+const juntar = (nombres: string[]) =>
+  (nombres.length <= 1 ? nombres.join('') : `${nombres.slice(0, -1).join(', ')} y ${nombres.at(-1)}`);
 
-/** FINANZAS — el P&L del negocio (o de todos juntos), exportable. */
 export default async function FinanzasGrupoPage({
   searchParams,
 }: { searchParams: Promise<{ from?: string; to?: string }> }) {
@@ -31,165 +64,199 @@ export default async function FinanzasGrupoPage({
   if (!scope) redirect('/mi-cuenta');
   const varios = scope.isGroup;
 
-  /* Los reportes financieros vienen con el plan Estándar. Esta pantalla no
-     puede ser el atajo que los entrega gratis: se enseña lo que se enseña
-     dentro del panel —qué es y con qué plan viene—, no los números. */
-  if (!scope.hasFinance) return <FinanzasBloqueadas upgradeUrl={scope.upgradeUrl} />;
+  /* Los reportes financieros vienen con el plan Estándar. Con un solo
+     restaurante esta pantalla no puede ser el atajo que los entrega gratis:
+     se enseña qué es y con qué plan viene, no los números. */
+  if (!scope.hasFinance && !varios) return <FinanzasBloqueadas upgradeUrl={scope.upgradeUrl} />;
 
+  const primero = scope.branches[0];
+  const hoy = primero
+    ? diaDeNegocio(new Date(), primero.timezone || 'America/Guatemala', await corteDelRestaurante(primero.id))
+    : new Date().toISOString().slice(0, 10);
   const sp = await searchParams;
-  const to = isYmd(sp.to) ? sp.to : todayYmd();
-  const from = isYmd(sp.from) ? sp.from : shiftYmd(to, -29);
+  const to = isYmd(sp.to) && sp.to <= hoy ? sp.to : hoy;
+  const from = isYmd(sp.from) && sp.from <= to ? sp.from : shiftYmd(to, -29);
+  const rango = rangoEnPalabras(from, to, hoy);
 
   const report = await getGroupReport(scope.branches, from, to);
-  const maxRev = Math.max(...report.combinedSeries.map((d) => d.revenue), 1);
-  // Costo y margen con las MISMAS cuentas que el panel: solo lo que tiene
-  // costo cargado (lib/db/group.ts, auditoría 2026-10-02, MIC-01).
-  const margin = report.totalMarginPct;
-  const cost = report.totalCost;
-  /* Sin costos cargados, «Costo Q0 · Utilidad Q0» se lee como un resultado:
-     es un dato que falta (auditoría 2026-11-03, X21). Con costos a medias se
-     dice qué parte de lo vendido cubren, igual que Finanzas del panel. */
-  const cobertura = coberturaDeCostos({ productRevenue: report.totalProductRevenue, costedRevenue: report.totalCostedRevenue });
-  const sinCostos = cobertura.tipo === 'sin-costos';
-  const costosAMedias = cobertura.tipo === 'parcial';
-  const coberturaPct = cobertura.tipo === 'parcial' ? cobertura.pct : null;
+  const leidos = report.perBranch.filter((b) => b.leido);
+
+  const selector = (
+    <SelectorPeriodo from={from} to={to} hoy={hoy} basePath="/mi-cuenta/finanzas">
+      {scope.hasFinance && report.totalOrders > 0 && (
+        <GroupFinanceExport from={from} to={to} resumen={`${rango.charAt(0).toUpperCase()}${rango.slice(1)} · ${pedidos(report.totalOrders)}`} />
+      )}
+    </SelectorPeriodo>
+  );
+
+  /* Ninguno se pudo leer: los ceros dirían «no vendiste» (X20). */
+  if (report.perBranch.length > 0 && leidos.length === 0) {
+    return (
+      <div className={`${n.panel} anim-fade-up`}>
+        {selector}
+        <AvisoLectura estado="error" que="las ventas de estas fechas" noConcluir="No significa que no hayas vendido." sinDatos />
+      </div>
+    );
+  }
+
+  if (report.totalOrders === 0 && report.sinLeer.length === 0) {
+    return (
+      <div className={`${n.panel} anim-fade-up`}>
+        {selector}
+        <div className={`${n.tarjeta} ${n.vendido}`}>
+          <p className={n.clave}>Sin ventas {rango}</p>
+          <p className={n.apoyo}>Elige otras fechas para ver lo que vendiste.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const serie = report.combinedSeries;
+  const maxRev = Math.max(...serie.map((d) => d.revenue), 1);
+  const tip = (d: { date: string; revenue: number }) => `${diaLargo(d.date)} · ${money(d.revenue)}`;
+  const ultimoConVenta = [...serie].reverse().find((d) => d.revenue > 0);
   const avgTicket = report.totalOrders > 0 ? report.totalRevenue / report.totalOrders : 0;
+  const sinContar = report.sinLeer.length > 0 ? `, sin contar ${juntar(report.sinLeer)}` : '';
+
+  /* Ganancia con las MISMAS cuentas que el panel: solo lo que tiene costo
+     cargado; sin costos no es «Q0.00» (auditoría 2026-11-03, X21). */
+  const cobertura = coberturaDeCostos({ productRevenue: report.totalProductRevenue, costedRevenue: report.totalCostedRevenue });
+  const costosHref = !varios && primero ? `${adminUrl(primero.slug)}/menu` : null;
 
   return (
-    <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)', marginBottom: 8 }}>{scope.name}</div>
-        <h1 className="t-display" style={{ fontSize: 'clamp(22px, 4vw, 28px)', lineHeight: 1.15, margin: 0 }}>
-          {varios ? 'Finanzas del grupo' : 'Finanzas'}
-        </h1>
-      </div>
+    <div className={`${n.panel} anim-fade-up`}>
+      {selector}
 
-      <div className="glass" style={{ borderRadius: 'var(--radius-lg)', padding: 16, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <DateRangeForm from={from} to={to} basePath="/mi-cuenta/finanzas" />
-        {report.perBranch.length > 0 && <GroupFinanceExport from={from} to={to} />}
-      </div>
+      <div className={n.finanzas}>
+        <div className={n.aVendido}>
+          <section className={`${n.tarjeta} ${n.vendido}`} aria-labelledby="mc-vendido">
+            <h1 className={n.clave} id="mc-vendido">Vendiste {rango}{sinContar}</h1>
+            <p className={n.cifra}>{money(report.totalRevenue)}</p>
+            <p className={n.apoyo}>
+              {pedidos(report.totalOrders)} · ticket {money(avgTicket)}
+              {varios ? ` · ${leidos.length} ${leidos.length === 1 ? 'restaurante' : 'restaurantes'}` : ''}
+            </p>
+            {serie.length > 1 && (
+              <ChartReadout className={n.lectura} defaultTip={ultimoConVenta ? tip(ultimoConVenta) : undefined}>
+                <div className={n.barras} role="img" aria-label={`Lo vendido por día ${rango}. Toca una barra para ver ese día.`}>
+                  {serie.map((d) => (
+                    <div key={d.date} className={n.columna} data-tip={tip(d)}>
+                      <span
+                        className={n.barra}
+                        data-vacia={d.revenue > 0 ? undefined : ''}
+                        style={{ height: `${Math.max((d.revenue / maxRev) * 100, d.revenue > 0 ? 4 : 0)}%` }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className={n.eje} aria-hidden>
+                  <span>{diaCorto(serie[0].date)}</span>
+                  <span>{diaCorto(serie[serie.length - 1].date)}</span>
+                </div>
+              </ChartReadout>
+            )}
+          </section>
+        </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-        <Kpi label={varios ? 'Ingreso del grupo' : 'Ingreso'} value={money(report.totalRevenue)} hero />
-        {sinCostos ? (
-          <>
-            <Kpi label="Costo de lo vendido" value="Sin datos" sub="ningún platillo vendido tiene costo" small />
-            <Kpi label="Utilidad" value="No disponible" sub="faltan costos" small />
-          </>
-        ) : (
-          <>
-            <Kpi label="Costo de lo vendido" value={money(cost)} sub={costosAMedias ? `de ${coberturaPct}% de lo vendido` : undefined} />
-            <Kpi label="Utilidad" value={money(report.totalProfit)} sub={margin != null ? `margen ${margin.toFixed(0)}%${costosAMedias ? ' · parcial' : ''}` : undefined} />
-          </>
-        )}
-        <Kpi label="Ticket promedio" value={money(avgTicket)} />
-        <Kpi label="Pedidos" value={String(report.totalOrders)} />
-      </div>
-
-      {(sinCostos || costosAMedias) && (
-        <div style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5, padding: '0 2px' }}>
-          {sinCostos ? (
-            <>Ninguno de los platillos vendidos tiene costo cargado, así que todavía no se puede calcular la utilidad. Pon el <strong>Costo</strong> en el editor de cada platillo.</>
+        <div className={n.aGanancia}>
+          {!scope.hasFinance ? (
+            <div className={`${n.tarjeta} ${s.candado}`}>
+              <Icon name="key" size={18} />
+              <span>Ganancia, margen y descargas vienen con el plan Estándar.</span>
+              {scope.upgradeUrl && <a className={n.enlace} href={scope.upgradeUrl}>Ver mi plan</a>}
+            </div>
           ) : (
-            <>La utilidad solo cuenta los platillos que tienen costo: <strong>{money(report.totalCostedRevenue)}</strong> de <strong>{money(report.totalProductRevenue)}</strong> vendidos ({coberturaPct}%). Pon el <strong>Costo</strong> en el resto para verla completa.</>
+            <div className={`${n.tarjeta} ${n.ganancia}`}>
+              {cobertura.tipo === 'sin-costos' || cobertura.tipo === 'sin-ventas' ? (
+                <>
+                  <div>¿Cuánto ganaste?<span>Pon el costo de tus platillos{varios ? ' en cada restaurante' : ''} y aquí verás la ganancia.</span></div>
+                  {costosHref && <a className={n.enlace} href={costosHref}>Poner costos</a>}
+                </>
+              ) : cobertura.tipo === 'parcial' ? (
+                <div>
+                  Ganaste unos
+                  <b className={n.monto}>{money(report.totalProfit)}</b>
+                  <span>Solo cuenta {money(report.totalCostedRevenue)} de lo vendido ({cobertura.pct} %): el resto de los platillos no tiene costo.</span>
+                  <span className={n.parcial}>Estimación parcial</span>
+                </div>
+              ) : (
+                <div>
+                  Ganaste
+                  <b className={n.monto}>{money(report.totalProfit)}</b>
+                  <span>Margen {(report.totalMarginPct ?? 0).toFixed(0)} % · costo de lo vendido {money(report.totalCost)} · antes de sueldos y gastos</span>
+                </div>
+              )}
+            </div>
           )}
         </div>
-      )}
 
-      <div className="glass" style={{ borderRadius: 'var(--radius-lg)', padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-3)' }}>{varios ? 'Ingreso diario del grupo' : 'Ingreso diario'}</div>
-        {/* Tocar una barra dice su día y su cifra (NEG-05). */}
-        <ChartReadout
-          defaultTip={report.combinedSeries.length
-            ? revenueTip(report.combinedSeries[report.combinedSeries.length - 1])
-            : undefined}
-        >
-        <div style={{ display: 'flex', gap: 3, height: 120 }}>
-          {report.combinedSeries.map((d, i) => {
-            const h = (d.revenue / maxRev) * 100;
-            return (
-              <div key={i} data-tip={revenueTip(d)} style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'flex-end' }}>
-                <div style={{ width: '100%', height: `${Math.max(h, d.revenue > 0 ? 5 : 1.5)}%`, minHeight: 2, borderRadius: '3px 3px 0 0', background: d.revenue > 0 ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)' }} />
-              </div>
-            );
-          })}
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--u-text-4)', marginTop: 6 }}>
-          <span>{report.combinedSeries[0]?.label}</span>
-          <span>{report.combinedSeries[report.combinedSeries.length - 1]?.label}</span>
-        </div>
-        </ChartReadout>
-      </div>
-
-      {/* Con un solo restaurante esta tabla es una fila que repite los
-          totales de arriba, así que solo se pinta cuando hay varios. */}
-      {varios && (
-        <>
-        {/* Contribución por restaurante — con margen y ticket promedio. La tabla
-            se desplaza sola en pantallas angostas en vez de estrujar la página. */}
-        <div className="glass" style={{ borderRadius: 'var(--radius-lg)', overflowX: 'auto' }}>
-          <div style={{ minWidth: 520 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 90px 100px', gap: 8, padding: '12px 18px', fontSize: 11, color: 'var(--u-text-4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              <span>Restaurante</span><span style={{ textAlign: 'right' }}>Ingreso</span><span style={{ textAlign: 'right' }}>Pedidos</span><span style={{ textAlign: 'right' }}>Utilidad</span>
-            </div>
-            {report.perBranch.map((b) => {
-              const m = b.marginPct;
-              const ticket = b.orders > 0 ? b.revenue / b.orders : 0;
-              return (
-                <div key={b.id} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 90px 100px', gap: 8, padding: '11px 18px', borderTop: '1px solid var(--u-hair)', fontSize: 13, alignItems: 'center' }}>
-                  <span style={{ color: 'var(--u-text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.name}</span>
-                  <span style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text)' }}>{money(b.revenue)}</span>
-                  <div style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>
-                    {b.orders}
-                    <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{money(ticket)} c/u</div>
-                  </div>
-                  <div style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>
-                    {coberturaDeCostos(b).tipo === 'sin-costos' ? 'Sin datos' : money(b.profit)}
-                    <div style={{ fontSize: 11, color: m != null && m < 0 ? 'var(--c-danger)' : 'var(--u-text-4)' }}>{m != null ? `${m.toFixed(0)}% margen` : coberturaDeCostos(b).tipo === 'sin-costos' ? 'faltan costos' : '—'}</div>
-                  </div>
-                </div>
-              );
-            })}
+        {varios && (
+          <div className={n.aOrigen}>
+            <section className={`${n.tarjeta} ${n.bloque}`} aria-labelledby="mc-por-restaurante">
+              <h2 className={n.titulo} id="mc-por-restaurante">Por restaurante</h2>
+              <ul className={n.reparto}>
+                {report.perBranch.map((b) => {
+                  if (!b.leido) {
+                    return (
+                      <li key={b.id}>
+                        <b>{b.name}</b>
+                        <em className={s.sinLeer}>No se pudo leer</em>
+                        <span>Vuelve a intentarlo en un momento</span>
+                        <small />
+                      </li>
+                    );
+                  }
+                  if (b.orders === 0) {
+                    return (
+                      <li key={b.id}>
+                        <b>{b.name}</b>
+                        <em style={{ color: 'var(--u-text-3)', fontWeight: 500 }}>Sin ventas</em>
+                        <span>en estas fechas</span>
+                        <small />
+                      </li>
+                    );
+                  }
+                  const c = coberturaDeCostos(b);
+                  const detalle = !scope.hasFinance
+                    ? pedidos(b.orders)
+                    : c.tipo === 'sin-costos'
+                      ? `${pedidos(b.orders)} · sin costos`
+                      : `${pedidos(b.orders)} · ganancia ${money(b.profit)}${b.marginPct != null ? ` · margen ${b.marginPct.toFixed(0)} %` : ''}${c.tipo === 'parcial' ? ' · parcial' : ''}`;
+                  const parte = report.totalRevenue > 0 ? Math.round((b.revenue / report.totalRevenue) * 100) : 0;
+                  return (
+                    <li key={b.id}>
+                      <b>{b.name}</b>
+                      <em>{money(b.revenue)}</em>
+                      <span>{detalle}</span>
+                      <small>{parte} %</small>
+                      <span className={n.medida} aria-hidden><i style={{ width: `${parte}%` }} /></span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
           </div>
-        </div>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }
 
-
-/* ── Sin el plan que las incluye ─────────────────────────────── */
+/* ── Un solo restaurante, sin el plan que las incluye ────────── */
 
 function FinanzasBloqueadas({ upgradeUrl }: { upgradeUrl: string | null }) {
   return (
-    <div className="anim-fade-up glass" style={{ borderRadius: 'var(--radius-lg)', padding: '26px 24px', maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <span
-        style={{
-          width: 42, height: 42, borderRadius: 'var(--radius-lg)', display: 'grid', placeItems: 'center',
-          background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)',
-          color: 'var(--brand-accent-ink)',
-        }}
-      >
-        <Icon name="wallet" size={20} />
-      </span>
+    <div className={`${n.tarjeta} anim-fade-up`} style={{ padding: '22px 20px', maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div>
-        <h1 className="t-display" style={{ fontSize: 22, margin: 0 }}>Finanzas</h1>
-        <p style={{ fontSize: 14, color: 'var(--u-text-3)', lineHeight: 1.6, margin: '8px 0 0' }}>
-          Ingreso, costo, utilidad y margen de tu negocio, con exportación a Excel y PDF.
-          Vienen con el plan <strong>Estándar</strong>. El resumen de ventas de hoy lo
-          tienes igual, sin cambiar de plan.
+        <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.02em', margin: 0, color: 'var(--u-text)' }}>Finanzas</h1>
+        <p style={{ fontSize: 14, color: 'var(--u-text-2)', lineHeight: 1.5, margin: '8px 0 0' }}>
+          Lo vendido, el costo, la ganancia y el margen de tu negocio, con descarga a Excel y PDF.
+          Vienen con el plan <strong>Estándar</strong>. Cómo va hoy lo ves igual en Restaurantes, sin cambiar de plan.
         </p>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {upgradeUrl && (
-          <a href={upgradeUrl} className="press btn-accent" style={{ padding: '11px 18px', borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-            Ver mi plan
-          </a>
-        )}
-        <Link href="/mi-cuenta/resumen" className="press glass-quiet" style={{ padding: '11px 18px', borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', textDecoration: 'none' }}>
-          Ir al resumen
-        </Link>
+        {upgradeUrl && <a href={upgradeUrl} className={n.enlace}>Ver mi plan</a>}
+        <Link href="/mi-cuenta" className={n.enlace}>Ir a Restaurantes</Link>
       </div>
     </div>
   );

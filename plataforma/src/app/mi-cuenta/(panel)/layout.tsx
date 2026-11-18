@@ -11,6 +11,7 @@ import { isSessionStale, SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity
 import SessionHeartbeat from '@/components/admin/session-heartbeat';
 import { ToastProvider, Toaster } from '@/components/ui/toast';
 import MiCuentaNav from './mi-cuenta-nav';
+import s from '@/components/mi-cuenta/mi-cuenta.module.css';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,10 +24,10 @@ export const dynamic = 'force-dynamic';
  * porque nació cuando los grupos los creaba Leogin a mano. Hoy es una
  * pestaña más de esta misma pantalla, con la misma sesión.
  *
- * Las secciones (Resumen, Comparativa, Finanzas) aparecen en cuanto la
- * persona tiene un restaurante propio: mirar cómo va el negocio de un
- * vistazo, sin entrar al panel, sirve igual con uno que con cinco. Quién ve
- * cuál lo decide `getMyGroupScope` (ver MiCuentaNav).
+ * Las secciones (Restaurantes · Finanzas) aparecen en cuanto la persona
+ * tiene un restaurante propio: mirar cómo va el negocio de un vistazo, sin
+ * entrar al panel, sirve igual con uno que con cinco (ver MiCuentaNav).
+ * Resumen y Comparativa se fundieron en ellas el 2026-11-18 (línea N).
  *
  * `/mi-cuenta/nuevo` queda FUERA de este marco a propósito: es un asistente
  * a pantalla completa, con su propia cabecera.
@@ -105,14 +106,8 @@ export default async function MiCuentaPanelLayout({ children }: { children: Reac
         </form>
       </header>
 
-      <div style={{ flex: 1, width: '100%', maxWidth: 940, margin: '0 auto', padding: '30px 18px 72px' }}>
-        {scope && (
-          <MiCuentaNav
-            isGroup={scope.isGroup}
-            financeLocked={!scope.hasFinance}
-            upgradeUrl={scope.upgradeUrl}
-          />
-        )}
+      <div className={s.marco} style={{ flex: 1, width: '100%', maxWidth: 940, margin: '0 auto', padding: '20px 16px 72px' }}>
+        {scope && <MiCuentaNav />}
         {children}
       </div>
     </main>

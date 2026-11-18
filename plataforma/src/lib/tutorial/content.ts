@@ -792,15 +792,15 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
         id: 'resumen-consolidado',
         title: 'Resumen y finanzas del grupo',
         description:
-          'Las ventas de hoy y de los últimos 14 días de todos tus restaurantes, y las finanzas del grupo con ingreso, costo y margen de cada uno.',
-        route: 'Mi cuenta → Resumen · Mi cuenta → Finanzas',
+          'Cuánto lleva hoy cada uno de tus restaurantes, en su fila de Mi cuenta, y las finanzas del grupo con lo vendido y ganado de todos.',
+        route: 'Mi cuenta → Restaurantes · Mi cuenta → Finanzas',
       },
       {
         id: 'comparativa',
         title: 'Compara tus restaurantes',
         description:
-          'Cuánto vende cada uno y qué parte del total representa, en el rango que elijas.',
-        route: 'Mi cuenta → Comparativa',
+          'Cuánto vende cada uno y qué parte del total representa, en el rango que elijas: la tarjeta «Por restaurante» de Finanzas.',
+        route: 'Mi cuenta → Finanzas',
       },
       {
         id: 'nuevo-restaurante',

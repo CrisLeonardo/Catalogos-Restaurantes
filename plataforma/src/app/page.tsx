@@ -124,7 +124,7 @@ export default async function Home({
   if (!slug) {
     const host = (await headers()).get('host');
     if (isAdminSubdomain(host)) redirect('/admin');
-    if (isGroupSubdomain(host)) redirect('/mi-cuenta/resumen');
+    if (isGroupSubdomain(host)) redirect('/mi-cuenta');
     return <LeoginLanding />;
   }
 

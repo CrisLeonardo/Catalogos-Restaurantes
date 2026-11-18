@@ -55,7 +55,7 @@ export async function resolveStaffDestination(
      organización pero ninguna membresía propia, así que la regla de arriba
      no lo alcanza. Su casa es el consolidado, que hoy es una sección de Mi
      cuenta (antes era `/central`, en otro subdominio). */
-  if (memberships.length === 0 && (await myOrganizationId())) return `/mi-cuenta/resumen`;
+  if (memberships.length === 0 && (await myOrganizationId())) return `/mi-cuenta`;
   if (memberships.length === 1 && !profile.restaurant_id) {
     // Perfil sin restaurante "de casa" pero con una membresía: se entra a esa.
     const { data: only } = await supabase

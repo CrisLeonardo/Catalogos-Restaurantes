@@ -6,7 +6,9 @@
    resuelve la marca y comprueba el plan — este componente solo dispara la
    descarga y dibuja el PDF con la librería compartida. */
 
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
+import { HojaOperativa } from '@/components/ui/hoja-operativa';
+import n from '@/components/admin/negocio.module.css';
 import { Icon } from '@/components/icons';
 import { useToastManager } from '@/components/ui/toast';
 import { exportGroupFinanceXlsx, getGroupFinancePdfData } from '@/lib/actions/group-finance';
@@ -14,7 +16,10 @@ import { createDoc, drawPdfHeader, brandedAutoTable, getLastAutoTableFinalY, fin
 import { formatDocMoney, formatDateRangeLabel, longDate } from '@/lib/documents/format';
 import { cifrasDeCosto } from '@/lib/finanzas-cobertura';
 
-export default function GroupFinanceExport({ from, to }: { from: string; to: string }) {
+/* «Descargar» (línea N, 2026-11-18): Excel y PDF en una hoja, como en
+   Finanzas del panel. */
+export default function GroupFinanceExport({ from, to, resumen }: { from: string; to: string; resumen?: string }) {
+  const [hoja, setHoja] = useState(false);
   const [pendingXlsx, startXlsx] = useTransition();
   const [pendingPdf, startPdf] = useTransition();
   const toast = useToastManager();
@@ -33,6 +38,7 @@ export default function GroupFinanceExport({ from, to }: { from: string; to: str
       a.download = res.filename ?? 'finanzas-grupo.xlsx';
       a.click();
       URL.revokeObjectURL(url);
+      setHoja(false);
       toast.add({ title: 'Excel descargado', type: 'success' });
     });
   }
@@ -92,25 +98,40 @@ export default function GroupFinanceExport({ from, to }: { from: string; to: str
 
       finalizePdf(doc, { branding, generatedAtLabel: longDate(new Date().toISOString()) });
       doc.save(`finanzas_${from}_a_${to}.pdf`);
+      setHoja(false);
       toast.add({ title: 'PDF descargado', type: 'success' });
     });
   }
 
-  const btnStyle = (pending: boolean): React.CSSProperties => ({
-    display: 'inline-flex', alignItems: 'center', gap: 7, whiteSpace: 'nowrap',
-    padding: '10px 14px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair)',
-    color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600, background: 'transparent',
-    cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.7 : 1,
-  });
+  const ocupado = pendingXlsx || pendingPdf;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <button type="button" onClick={downloadXlsx} disabled={pendingXlsx} className="press glass-quiet" style={btnStyle(pendingXlsx)}>
-        <Icon name="download" size={15} /> {pendingXlsx ? '…' : 'Excel'}
+    <>
+      <button type="button" className={n.descargar} aria-label="Descargar el reporte" onClick={() => setHoja(true)}>
+        <Icon name="download" size={18} />
+        <span>Descargar</span>
       </button>
-      <button type="button" onClick={downloadPdf} disabled={pendingPdf} className="press glass-quiet" style={btnStyle(pendingPdf)}>
-        <Icon name="download" size={15} /> {pendingPdf ? '…' : 'PDF'}
-      </button>
-    </div>
+      {hoja && (
+        <HojaOperativa
+          label="Descargar el reporte"
+          resumen={resumen ? <p className={n.nota}>{resumen}</p> : undefined}
+          onClose={() => setHoja(false)}
+          footer={null}
+        >
+          <ul className={n.opciones} aria-busy={ocupado || undefined}>
+            <li>
+              <button type="button" className={n.opcion} disabled={ocupado} onClick={downloadXlsx}>
+                <span>{pendingXlsx ? 'Preparando el Excel…' : 'Excel, para tu contador'}</span><em>.xlsx</em>
+              </button>
+            </li>
+            <li>
+              <button type="button" className={n.opcion} disabled={ocupado} onClick={downloadPdf}>
+                <span>{pendingPdf ? 'Preparando el PDF…' : 'PDF, para imprimir o enviar'}</span><em>.pdf</em>
+              </button>
+            </li>
+          </ul>
+        </HojaOperativa>
+      )}
+    </>
   );
 }

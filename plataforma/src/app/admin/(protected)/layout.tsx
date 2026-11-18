@@ -152,7 +152,7 @@ export default async function AdminProtectedLayout({
   // sin saltar a un host donde quizá no haya sesión.
   if (currentRestaurant
       && (await getMyMemberships()).filter((m) => m.role === 'OWNER').length > 1) {
-    groupReturnUrl = '/mi-cuenta/resumen';
+    groupReturnUrl = '/mi-cuenta';
   }
 
   // Aviso de correo sin confirmar: solo al DUEÑO (el personal entra por PIN

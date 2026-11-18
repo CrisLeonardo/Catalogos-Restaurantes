@@ -1039,6 +1039,41 @@ A pedido del dueño, las fichas 2.3–2.10 y el CHANGELOG de v0.23.0 se juntaron
   - 1,663 unitarias pasan, con una omitida.
   - Nueva `rango-en-palabras.test.ts`: dice el año solo cuando no es el actual o cuando el rango cruza de año.
 
+## 52. Mi cuenta sin saturar · línea N (2026-11-18)
+
+**Rama** `feat/mi-cuenta-nada-saturado`, apilada sobre `feat/analitica-nada-saturado`. [Maqueta](../diseno/MAQUETA_MI_CUENTA_NADA_SATURADO_2026-11-18.html) aprobada con sus seis recomendaciones. Sin migración.
+
+- **Antes** (dueño de dos restaurantes, en el teléfono):
+  - Cuatro pestañas que no cabían.
+  - Restaurantes solo decía el nombre y «Dueño».
+  - Resumen abría con cinco cifras translúcidas, tres en Q0.00 y «Mejor hoy: Prueba Fiesta · Q0.00». Después venían el enlace del grupo fijo, un «Atención» repetido y la lista otra vez (1,256 px).
+  - Comparativa decía «Utilidad Q0.00» sin costos (X21).
+  - Finanzas y Comparativa repetían el selector de ocho mandos. Su «hoy» salía del reloj del servidor, en UTC.
+- **Restaurantes** (absorbe Resumen):
+  - Un saludo y una línea con la suma de hoy («Hoy van Q… en N pedidos entre tus 2 restaurantes» o «Hoy todavía no hay ventas»).
+  - Cada fila dice cómo va hoy y lleva «Pausado» y «N agotados» en ámbar. Tocarla entra.
+  - «⋯» abre una hoja con lo de 14 días, «Equipo y accesos», «Ver su carta» y «Entrar».
+  - El enlace del grupo es una fila que abre su hoja (copiar, abrir y QR, o crearlo).
+  - El PIN se pide en una hoja.
+  - Las sucursales que se ven por la organización sin membresía también se listan, con su enlace al panel.
+- **Finanzas** (absorbe Comparativa):
+  - Las piezas de Finanzas del panel: selector de periodo de una línea, «Descargar» en hoja, «Vendiste Q…» con gráfica y la ganancia sin ceros falsos.
+  - «Por restaurante» trae lo vendido, el % del grupo, los pedidos y la ganancia, o «sin costos».
+  - «Hoy» es el día de negocio del primer restaurante.
+  - Con varios restaurantes y un plan sin Finanzas, se ve lo vendido por restaurante y la ganancia queda con candado. Con uno solo, sigue la pantalla «viene con Estándar».
+- **Lecturas:** `getGroupReport` marca `leido` por restaurante y junta `sinLeer`. La pantalla nombra al que falló, el total dice «sin contar …» y, si fallan todos, sale el aviso de lectura (X20).
+- **Rutas:** `/mi-cuenta/resumen` → `/mi-cuenta`, y `/mi-cuenta/comparativa` → `/mi-cuenta/finanzas` con el mismo rango. Los enlaces de `/central`, del panel, de la portada y del destino tras el login van directo a las rutas nuevas.
+- **Tokens:** Mi cuenta no es área del panel (tema claro de la web), así que `.marco` (`components/mi-cuenta/mi-cuenta.module.css`) le da los tokens sólidos del panel en claro.
+- **Se borraron** `kpi.tsx`, `group-link-section.tsx`, `group-link-card.tsx` y `date-range-form.tsx`, que ya no los usa nadie. La ayuda (`tutorial/content.ts`) nombra las pestañas nuevas.
+- **Comprobado en pantalla** a 390 px y 1280 px, en claro (Mi cuenta no tiene tema oscuro):
+  - Filas con «Pausado» y «1 agotado» (puestos a mano en la base local y devueltos después).
+  - La hoja «⋯», incluido «Entrar», que lleva al panel.
+  - El enlace del grupo con QR. Copiar falla en el navegador integrado y enseña su aviso.
+  - En Finanzas: 30 y 7 días, «Descargar» y «Por restaurante».
+  - Las rutas viejas.
+- **No comprobado en pantalla:** un dueño de un solo restaurante, un restaurante con PIN, el plan sin Finanzas, un restaurante que no se pudo leer y la ganancia con costos. Para ninguno hay datos locales. Tampoco hay una prueba con una persona.
+- **Validación:** `typecheck` y `lint` sin errores; 1,663 unitarias pasan, con una omitida.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*
