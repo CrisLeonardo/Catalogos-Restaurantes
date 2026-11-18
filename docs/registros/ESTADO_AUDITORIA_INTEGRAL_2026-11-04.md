@@ -965,6 +965,18 @@ A pedido del dueño, las fichas 2.3–2.10 y el CHANGELOG de v0.23.0 se juntaron
 - **No comprobado:** abrir WhatsApp de verdad (se probó marcando el aviso abierto en la base local) y una prueba con una persona en la puerta.
 - **Validación:** `typecheck` y `lint` sin errores; 1,658 unitarias pasan, con una omitida (incluidas la escala tipográfica y el glosario).
 
+## 49. Inventario sin saturar · línea N (2026-11-17)
+
+**Rama** `feat/inventario-nada-saturado`, apilada sobre `feat/recepcion-nada-saturado`. [Maqueta](../diseno/MAQUETA_INVENTARIO_NADA_SATURADO_2026-11-17.html) aprobada con sus cinco recomendaciones. Sin migración.
+
+- **Antes (390 px, 6 de 38 platillos contados):** 3,987 px y 120 mandos; tarjeta de cobertura, «Por revisar» y tres filas de mandos antes de la lista; el primer platillo a 764 px; los 32 sin contar llenaban la lista con casilla y botón; cada platillo contado medía 153 px con cinco botones, «Bien» y «mínimo N».
+- **Después:** 912 px y 30 mandos. Buscador y una fila de píldoras (Contados · Sin contar · categorías, como en Platillos). «Por revisar» es el primer grupo de la lista y el platillo no se repite abajo. Filas de 64 px con cuántos quedan y «+1»; en la PC también «−», que abre la hoja en «Restar».
+- **Hoja del platillo:** abre en «Sumar · Reposición»; ahí están restar, número exacto (con motivo obligatorio), el mínimo, el historial y «Dejar de contar» (confirma después de cerrar la hoja).
+- **Sin contar:** la fila entera marca la casilla, «Elegir los N» con una categoría o búsqueda, y «Contar existencias…» abre una hoja con la tabla de existencias iniciales y mínimo, todos o ninguno. La cobertura «6 de 38» es una línea aquí. Si no se cuenta nada, la pantalla abre en esta vista.
+- **Comprobado en pantalla** a 390 px y 1280 px, claro y oscuro, con datos locales: sumar 12 a la Gaseosa, empezar a contar dos bebidas (una en 0 pasó a «Por revisar») y la confirmación de «Dejar de contar». Los datos de prueba se deshicieron después.
+- **No comprobado:** «Ya hay» de un ingrediente agotado (no había ninguno) y una prueba con una persona.
+- **Validación:** `typecheck` y `lint` sin errores; 1,658 unitarias pasan, con una omitida.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*
