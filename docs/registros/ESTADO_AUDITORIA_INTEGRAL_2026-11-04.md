@@ -930,6 +930,7 @@ A pedido del dueño, las fichas 2.3–2.10 y el CHANGELOG de v0.23.0 se juntaron
   - Dueño a 320 px en oscuro, en Negocio: «Más» marcado, sin etiquetas cortadas ni desborde.
   - Dueño a 1280 px: las seis secciones, sin «Más».
   - Caja a 375 px (con «Más»: Hoy y Salón) y a 1280 px (con «También»). Recepción a 375 px en Espera. Cocina a 375 px en oscuro.
+- **Arreglo posterior (rama `feat/glosario`):** Tomar pedidos y Cocina tienen su propio layout y le pasaban al armazón cuatro datos, así que allí el menú se armaba como si el plan fuera Básico: al entrar a Tomar pedidos desaparecía el botón, aparecía «Negocio» y nada quedaba marcado. Los tres layouts usan ahora `menuDelPanel` (`lib/admin/menu-del-panel.ts`). Tomar pedidos y Cocina siguen sin fila de pestañas, como se aprobaron. Comprobado a 515 px: Tomar pedidos con el botón marcado y Cocina con Pedidos marcado.
 - **No comprobado:** el encargado en pantalla (lo cubren las pruebas) y una prueba con personas.
 - **Validación:** `typecheck` y `lint` sin errores; 1,652 unitarias pasan, con una omitida. `admin-nav.test.ts` cubre cada puesto, que ningún destino lleve a una pantalla sin permiso y cuándo se marca «Más».
 

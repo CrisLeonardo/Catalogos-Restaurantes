@@ -434,7 +434,10 @@ export default function AdminShell({
      entera de armazón que no dice nada. */
   /* En modo «trabajo» la barra ya nombra cada pantalla de la persona: una
      fila de pestañas encima repetiría los mismos destinos. */
-  const showTabs = barra.modo === 'secciones' && !!activeGroup && !backToIndex && !activeGroup.index && activeGroup.items.length >= 2;
+  /* Tomar pedidos y Cocina son pantallas de trabajo a lo ancho, con su
+     propio layout: nunca llevaron la fila de pestañas y así se aprobaron. */
+  const pantallaDeTrabajo = pathname.startsWith('/admin/mesero') || pathname.startsWith('/admin/cocina');
+  const showTabs = barra.modo === 'secciones' && !pantallaDeTrabajo && !!activeGroup && !backToIndex && !activeGroup.index && activeGroup.items.length >= 2;
   const showSubbar = backToIndex || showTabs;
 
   /* Estando en una pestaña, el título de arriba dice el GRUPO ("Menú") y la
