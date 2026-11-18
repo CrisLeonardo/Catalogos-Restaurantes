@@ -385,6 +385,9 @@ export async function adjustPoints(
   const pts = Math.floor(Number(points));
   if (!customerId) return { error: 'Selecciona un cliente.' };
   if (isNaN(pts) || pts <= 0) return { error: 'Indica una cantidad de puntos válida.' };
+  /* Los puntos valen dinero: cada ajuste a mano dice por qué (línea N,
+     decisión del dueño del 2026-11-18). */
+  if (!note?.trim()) return { error: 'Di por qué cambias los puntos.' };
 
   const signed = tipo === 'REDEEM' ? -pts : pts;
   const db = createServiceClient();
@@ -394,12 +397,40 @@ export async function adjustPoints(
     p_order_id: null,
     p_tipo: tipo,
     p_points: signed,
-    p_note: note?.trim() || (tipo === 'REDEEM' ? 'Canje manual' : 'Ajuste manual'),
+    p_note: note.trim().slice(0, 200),
   });
   if (error) return { error: error.message };
 
   revalidatePath('/admin/lealtad');
   return { ok: true, balance: data as number };
+}
+
+export interface MovimientoPuntos {
+  id: string;
+  tipo: string;
+  points: number;
+  note: string | null;
+  order_id: string | null;
+  created_at: string;
+}
+
+/** Los últimos movimientos de puntos de un cliente, para su hoja en el panel. */
+export async function movimientosDePuntos(
+  restaurantId: string,
+  customerId: string,
+): Promise<{ error?: string; movimientos?: MovimientoPuntos[] }> {
+  const auth = await authorizeModuleAction(restaurantId, 'loyalty');
+  if ('error' in auth) return auth;
+  const db = createServiceClient();
+  const { data, error } = await db
+    .from('loyalty_transactions')
+    .select('id, tipo, points, note, order_id, created_at')
+    .eq('restaurant_id', restaurantId)
+    .eq('customer_id', customerId)
+    .order('created_at', { ascending: false })
+    .limit(30);
+  if (error) return { error: 'No se pudieron leer los movimientos. Inténtalo de nuevo.' };
+  return { movimientos: (data ?? []) as MovimientoPuntos[] };
 }
 
 /**

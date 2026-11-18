@@ -231,7 +231,7 @@
    que trae dentro. */
 .hoja-mas .hoja-operativa-pie:empty { display: none; }
 .hoja-recepcion .hoja-operativa-pie:empty { display: none; }
-.hoja-recepcion, .hoja-inventario { --hoja-ancho: 520px; }
+.hoja-recepcion, .hoja-inventario, .hoja-fidelidad { --hoja-ancho: 520px; }
 .hoja-mas-buscar {
   display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px;
   padding: 0 14px; margin-bottom: 12px;

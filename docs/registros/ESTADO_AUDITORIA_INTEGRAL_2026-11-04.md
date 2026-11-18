@@ -977,6 +977,21 @@ A pedido del dueño, las fichas 2.3–2.10 y el CHANGELOG de v0.23.0 se juntaron
 - **No comprobado:** «Ya hay» de un ingrediente agotado (no había ninguno) y una prueba con una persona.
 - **Validación:** `typecheck` y `lint` sin errores; 1,658 unitarias pasan, con una omitida.
 
+## 50. Cupones, lealtad y encuestas sin saturar · línea N (2026-11-18)
+
+**Rama** `feat/promociones-nada-saturado`, apilada sobre `feat/inventario-nada-saturado`. [Maqueta](../diseno/MAQUETA_PROMOCIONES_NADA_SATURADO_2026-11-18.html) aprobada con sus seis recomendaciones. Sin migración.
+
+- **Cupones, antes:** 31 mandos en el teléfono; «Activos 2 · En total 4» y una fila solo para «Nuevo cupón»; cada cupón con interruptor, lápiz y basura de 32 px sin nombre; la basura borraba aunque el cupón ya se hubiera usado.
+- **Cupones, después:** 19 mandos y cabe en una pantalla. Una línea («2 en uso · usados 10 veces») con «Nuevo cupón»; «En uso» arriba y «Sin usar ahora» abajo, en gris; cada fila dice beneficio, fecha y usos, con el estado escrito. La hoja del cupón resume lo que hace en una frase y lleva «Pausar» o «Reanudar»; si ya venció o se agotó, el botón grande es «Cambiar la fecha» o «Cambiar el límite de usos». «Nuevo cupón» pide código, descuento y hasta cuándo; compra mínima, límite, inicio y nota se abren aparte.
+- **Un cupón usado no se elimina** (`deleteCoupon` borra solo con `uses = 0`, en el mismo DELETE, y si no, explica que se pause).
+- **Lealtad, antes:** cuatro cifras en cero y el formulario de ajuste manual arriba; la lista de miembros a 711 px; reglas en una tercera pestaña con dos «Guardar».
+- **Lealtad, después:** el programa en una frase («1 punto por cada Q10 · 20 de bienvenida — para Tres Leches se gastan Q2,500») con «Reglas», pestañas Miembros y Recompensas, y el primer miembro a 350 px. La hoja del cliente suma o resta con motivo obligatorio (`adjustPoints` lo exige también) y enseña los movimientos (`movimientosDePuntos`). Reglas guarda tasas, premios en la carta, doble del primer pedido y sorpresa con un solo botón. Cada premio dice cuánto hay que gastar para ganarlo. El mínimo para canjear ya no se muestra: el comensal no lo usa desde que se quitó el pago con puntos; se conserva su valor al guardar.
+- **Dentro de una hoja no se usa el Select de Base UI:** su lista se abre fuera del `<dialog>` y queda tapada. El cliente y el platillo se eligen con un buscador de hasta seis resultados.
+- **Encuestas, después:** el promedio, «18 respuestas · ninguna este mes» y la distribución en una tarjeta (a la izquierda en la PC); las reseñas en una lista sólida a 379 px, veinte por vez; «Con comentario» y «3 o menos» solo si hay alguna; «¿Quién ve el nombre?» plegado. Estrellas con `--c-warn` en vez de `#fbbf24`.
+- **Comprobado en pantalla** a 390 px y 1280 px, claro y oscuro: crear, pausar y eliminar un cupón de prueba; sumar 50 puntos con motivo y ver los movimientos; Reglas; elegir un platillo para un premio. Los datos de prueba (cupón, cuentas, movimientos, premios y bitácora) se borraron después.
+- **No comprobado:** el programa sin activar y Encuestas sin respuestas, en pantalla; una prueba con una persona.
+- **Validación:** `typecheck` y `lint` sin errores; 1,658 unitarias pasan, con una omitida.
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

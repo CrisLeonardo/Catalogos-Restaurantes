@@ -218,15 +218,26 @@ export async function deleteCoupon(
   const auth = await getAuthorized(restaurantId);
   if (!auth.ok) return { error: auth.error };
 
+  /* Un cupón que ya se usó no se borra: se pausa, para que sus usos sigan
+     contando (línea N, decisión del dueño del 2026-11-18). La condición va
+     en el mismo DELETE para que un uso que entra a la vez no se pierda. */
   const db = createServiceClient();
   const { data: borrados, error } = await db
     .from('coupons')
     .delete()
     .eq('id', couponId)
     .eq('restaurant_id', restaurantId)
+    .eq('uses', 0)
     .select('code, discount_type, discount_value, uses');
   if (error) return { error: error.message };
   const borrado = borrados?.[0];
+  if (!borrado) {
+    const { data: sigue } = await db
+      .from('coupons').select('uses').eq('id', couponId).eq('restaurant_id', restaurantId).maybeSingle();
+    if (sigue && Number(sigue.uses) > 0) {
+      return { error: 'Este cupón ya se usó y no se puede eliminar. Páusalo para que nadie más lo use.' };
+    }
+  }
   if (borrado) {
     await anotarCupon(restaurantId, auth.userId, borrado.code as string, 'borrado', {
       tipo: borrado.discount_type, valor: Number(borrado.discount_value), usos: borrado.uses,

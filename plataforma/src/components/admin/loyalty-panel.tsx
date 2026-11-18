@@ -1,30 +1,38 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { Card } from '@/components/ui/card';
+/* Lealtad. Línea N «nada saturado» (maqueta aprobada el 2026-11-18:
+   docs/diseno/MAQUETA_PROMOCIONES_NADA_SATURADO_2026-11-18.html).
+
+   Arriba, el programa en una frase y cuánto hay que gastar para el premio
+   más barato; «Reglas» abre las tasas, el doble del primer pedido y la
+   sorpresa con un solo «Guardar». Debajo, Miembros y Recompensas: cada
+   fila abre su hoja. El ajuste a mano de puntos pide siempre el motivo. */
+
+import { useId, useMemo, useState, useTransition } from 'react';
+import { Tabs } from '@base-ui/react/tabs';
+import { Icon } from '@/components/icons';
 import { Button } from '@/components/ui/button';
-import { Select } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { EmptyState } from '@/components/ui/empty-state';
+import { HojaOperativa } from '@/components/ui/hoja-operativa';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useToastManager } from '@/components/ui/toast';
 import {
-  saveLoyaltySettings, adjustPoints, saveReward, deleteReward, toggleReward, saveLealtadExtras,
-  type LoyaltySettingsPatch, type RewardPatch, type LealtadExtrasPatch,
+  saveLoyaltySettings, adjustPoints, saveReward, deleteReward, toggleReward, saveLealtadExtras, movimientosDePuntos,
+  type RewardPatch, type MovimientoPuntos,
 } from '@/lib/actions/loyalty';
 import type { AjustesExtraLealtad, LoyaltySettings, LoyaltyAccount, LoyaltySummary, RewardRow } from '@/lib/db/loyalty';
-import { assetSrc } from '@/lib/asset-image';
 import { fmtMoney } from '@/lib/money';
-import { FIELD_LABEL } from '@/components/admin/field-label';
-import SaveBar, { type SaveStatus } from '@/components/admin/save-bar';
-import { useValueDirty } from '@/lib/use-form-dirty';
-import { Stat, StatGroup } from '@/components/ui/stat';
-import PageTabs from '@/components/admin/page-tabs';
+import s from './fidelidad.module.css';
 
 interface RewardProduct { id: string; name: string; price: number; image_url: string | null; cost: number | null }
+type Cliente = { id: string; name: string; phone: string };
 
 interface Props {
   restaurantId: string;
   settings: LoyaltySettings;
   accounts: LoyaltyAccount[];
-  customers: { id: string; name: string; phone: string }[];
+  customers: Cliente[];
   summary: LoyaltySummary;
   hasSettings: boolean;
   rewards: RewardRow[];
@@ -32,406 +40,596 @@ interface Props {
   extras: AjustesExtraLealtad;
 }
 
-const labelStyle: React.CSSProperties = FIELD_LABEL;
+type Vista = 'miembros' | 'recompensas';
 
-type Tab = 'miembros' | 'recompensas' | 'config';
+const num = (n: number) => n.toLocaleString('es-GT');
+const q = (n: number) => fmtMoney(n, 'GTQ', Number.isInteger(n) ? 0 : 2);
+const pts = (n: number) => `${num(n)} ${n === 1 ? 'punto' : 'puntos'}`;
+
+/** Lo que tiene que gastar un cliente para juntar `puntos`, con las tasas dadas. */
+function gastoPara(puntos: number, tasa: number, monto: number): number | null {
+  if (!(tasa > 0) || !(monto > 0)) return null;
+  return Math.ceil((puntos * monto) / tasa);
+}
 
 export default function LoyaltyPanel({ restaurantId, settings, accounts, customers, summary, hasSettings, rewards, products, extras }: Props) {
-  const [tab, setTab] = useState<Tab>(hasSettings ? 'miembros' : 'config');
+  const { add: toast } = useToastManager();
+  const { confirm, dialog } = useConfirm();
+  const [vista, setVista] = useState<Vista>('miembros');
+  const [verReglas, setVerReglas] = useState(false);
+  const [ajuste, setAjuste] = useState<{ cuenta: LoyaltyAccount | null } | null>(null);
+  const [premio, setPremio] = useState<RewardRow | 'nuevo' | null>(null);
+  const [buscar, setBuscar] = useState('');
+
+  const hecho = (t: string) => toast({ title: t, type: 'success' });
+  const activas = rewards.filter((r) => r.active);
+  const masBarata = [...activas].sort((a, b) => a.points_cost - b.points_cost)[0];
+  const gasto = masBarata ? gastoPara(masBarata.points_cost, settings.earn_rate, settings.earn_amount) : null;
+
+  const miembros = useMemo(() => {
+    const t = buscar.trim().toLowerCase();
+    if (!t) return accounts;
+    return accounts.filter((a) => (a.customer_name ?? '').toLowerCase().includes(t) || (a.customer_phone ?? '').includes(t));
+  }, [accounts, buscar]);
+
+  async function borrarPremio(r: RewardRow) {
+    setPremio(null);
+    if (!(await confirm({ title: `¿Borrar «${r.title}»?`, description: 'Tus clientes ya no la verán en la carta. No se puede deshacer.', confirmLabel: 'Borrar' }))) return;
+    let res: { error?: string } = {};
+    try { res = await deleteReward(restaurantId, r.id); } catch { res = { error: 'sin conexión' }; }
+    if (res.error) toast({ title: `No se pudo borrar «${r.title}». Sigue en la lista; inténtalo de nuevo.`, type: 'error' });
+    else hecho(`«${r.title}» borrada`);
+  }
+
+  const frase = `${pts(Number(settings.earn_rate))} por cada ${q(Number(settings.earn_amount))}`
+    + (settings.signup_bonus > 0 ? ` · ${num(settings.signup_bonus)} de bienvenida` : '');
+
+  /* Sin programa guardado, la pantalla es una sola tarjeta: los valores de
+     muestra también hay que guardarlos para empezar a dar puntos. */
+  if (!hasSettings) {
+    return (
+      <div className={s.panel}>
+        <section className={`${s.tarjeta} ${s.programaNuevo}`}>
+          <h2>Tu programa de puntos todavía no está activo</h2>
+          <p>Con las tasas de muestra, tus clientes ganan <b>{frase}</b> y los canjean por los premios que tú elijas.</p>
+          <Button type="button" size="touch" className="self-start" onClick={() => setVerReglas(true)}>Revisar y activar</Button>
+        </section>
+        {verReglas && (
+          <HojaReglas restaurantId={restaurantId} settings={settings} extras={extras} nuevo
+            onClose={() => setVerReglas(false)} onHecho={(t) => { setVerReglas(false); hecho(t); }} />
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* La fila de cifras del panel (`StatGroup`), no cuatro tarjetas sueltas
-          con su propia letra (auditoría 2026-10-02, T-05). */}
-      <StatGroup>
-        <Stat label="Miembros" value={summary.members.toLocaleString('es-GT')} />
-        <Stat label="Puntos vigentes" value={summary.puntosVigentes.toLocaleString('es-GT')} />
-        <Stat label="Canjeados este mes" value={summary.canjeadosMes.toLocaleString('es-GT')} />
-        <Stat label="Recompensas activas" value={String(rewards.filter((r) => r.active).length)} />
-      </StatGroup>
-
-      {/* Los campos de Configuración ya traen valores (1 punto por cada Q10…),
-          así que «configura las tasas» no se entendía: lo que falta es
-          GUARDARLAS, aunque sean esas (auditoría 2026-10-02, CLI-02). */}
-      {!hasSettings && (
-        <div className="note note-warn" style={{ fontSize: 13 }}>
-          El programa todavía no está activo: revisa las tasas en Configuración y guárdalas
-          (aunque te sirvan las que vienen) para empezar a dar puntos.
+    <div className={s.panel}>
+      {dialog}
+      <section className={`${s.tarjeta} ${s.programa}`} aria-label="Tu programa de puntos">
+        <div>
+          {frase}
+          <span>
+            {settings.earn_rate <= 0 ? 'Con esta tasa nadie gana puntos.'
+              : masBarata && gasto != null ? `Para ${masBarata.title} (${num(masBarata.points_cost)} pts) se gastan ${q(gasto)}`
+              : 'Todavía no ofreces premios para canjear.'}
+          </span>
         </div>
+        <Button type="button" variant="outline" size="touch" onClick={() => setVerReglas(true)}>Reglas</Button>
+      </section>
+
+      <div className={s.mandos}>
+        <Tabs.Root value={vista} onValueChange={(v) => setVista(v as Vista)} className={s.pestanasRaiz}>
+          <Tabs.List className={s.pestanas} aria-label="Lealtad">
+            <Tabs.Tab value="miembros" className={s.pestana}>Miembros{summary.members > 0 && <em>{num(summary.members)}</em>}</Tabs.Tab>
+            <Tabs.Tab value="recompensas" className={s.pestana}>Recompensas{rewards.length > 0 && <em>{rewards.length}</em>}</Tabs.Tab>
+          </Tabs.List>
+        </Tabs.Root>
+      </div>
+
+      {vista === 'miembros' && (
+        <>
+          {accounts.length > 0 && (
+            <div className={s.mandos}>
+              <input type="search" className={`adm-field ${s.buscar}`} placeholder="Buscar cliente" aria-label="Buscar cliente por nombre o teléfono"
+                value={buscar} onChange={(e) => setBuscar(e.target.value)} />
+              <button type="button" className={s.cuadrado} aria-label="Sumar o restar puntos a un cliente" title="Sumar o restar puntos a un cliente"
+                onClick={() => setAjuste({ cuenta: null })}>
+                <Icon name="plus" size={18} />
+              </button>
+            </div>
+          )}
+          {accounts.length === 0 ? (
+            <EmptyState
+              icon="gift"
+              title="Todavía nadie tiene puntos"
+              desc="Se suman cuando un cliente que pidió con su cuenta de Google recibe su pedido."
+              action={{ label: 'Sumar puntos a un cliente', onClick: () => setAjuste({ cuenta: null }) }}
+            />
+          ) : miembros.length === 0 ? (
+            <p className={`${s.tarjeta} ${s.vacio}`}>Nadie coincide con «{buscar}».</p>
+          ) : (
+            <ul className={`${s.tarjeta} ${s.lista}`}>
+              {miembros.map((a) => (
+                <li key={a.id}>
+                  <button type="button" className={s.abrir} onClick={() => setAjuste({ cuenta: a })}>
+                    <span className={s.filaTexto}>
+                      <b>{a.customer_name || 'Cliente sin nombre'}</b>
+                      <span>{[a.customer_phone, a.lifetime_points > a.points_balance ? `ganó ${num(a.lifetime_points)} en total` : null].filter(Boolean).join(' · ') || 'Sin teléfono'}</span>
+                    </span>
+                    <span className={s.puntos}>{num(a.points_balance)}<small>pts</small></span>
+                    <Icon name="chevronRight" size={16} className={s.chevron} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
 
-      <PageTabs tabs={[['miembros', 'Miembros'], ['recompensas', 'Recompensas'], ['config', 'Configuración']] as const} value={tab} onChange={setTab} />
+      {vista === 'recompensas' && (
+        rewards.length === 0 ? (
+          <EmptyState
+            icon="gift"
+            title="Todavía no ofreces premios"
+            desc="Un premio es un platillo que tus clientes canjean con sus puntos."
+            action={{ label: 'Crear el primero', onClick: () => setPremio('nuevo') }}
+          />
+        ) : (
+          <>
+            <div className={s.mandos}>
+              <p className={s.linea}>
+                {settings.rewards_enabled ? 'Tus clientes las ven en la carta.' : 'El catálogo está apagado en Reglas: tus clientes no lo ven.'}
+              </p>
+              <button type="button" className={s.anotar} onClick={() => setPremio('nuevo')}><Icon name="plus" size={18} /> Nueva</button>
+            </div>
+            <ul className={`${s.tarjeta} ${s.lista}`}>
+              {rewards.map((r) => {
+                const g = gastoPara(r.points_cost, settings.earn_rate, settings.earn_amount);
+                const meta = [
+                  r.active ? null : 'Oculta',
+                  g != null ? `se gastan ${q(g)}` : null,
+                  r.per_customer_limit != null ? `${r.per_customer_limit} por cliente` : null,
+                  r.stock != null ? `quedan ${r.stock}` : null,
+                ].filter(Boolean).join(' · ');
+                return (
+                  <li key={r.id} className={r.active ? undefined : s.apagada}>
+                    <button type="button" className={s.abrir} onClick={() => setPremio(r)}>
+                      <span className={s.filaTexto}><b>{r.title}</b>{meta && <span>{meta}</span>}</span>
+                      <span className={s.puntos}>{num(r.points_cost)}<small>pts</small></span>
+                      <Icon name="chevronRight" size={16} className={s.chevron} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )
+      )}
 
-      {tab === 'config' && <SettingsForm restaurantId={restaurantId} settings={settings} isNew={!hasSettings} />}
-      {tab === 'config' && hasSettings && <ExtrasForm restaurantId={restaurantId} extras={extras} />}
-      {tab === 'miembros' && <MembersTab restaurantId={restaurantId} accounts={accounts} customers={customers} settings={settings} />}
-      {tab === 'recompensas' && <RewardsTab restaurantId={restaurantId} rewards={rewards} products={products} />}
+      {verReglas && (
+        <HojaReglas restaurantId={restaurantId} settings={settings} extras={extras}
+          onClose={() => setVerReglas(false)} onHecho={(t) => { setVerReglas(false); hecho(t); }} />
+      )}
+      {ajuste && (
+        <HojaAjuste restaurantId={restaurantId} cuenta={ajuste.cuenta} accounts={accounts} customers={customers}
+          onClose={() => setAjuste(null)} onHecho={(t) => { setAjuste(null); hecho(t); }} />
+      )}
+      {premio && (
+        <HojaPremio restaurantId={restaurantId} premio={premio === 'nuevo' ? null : premio} products={products} settings={settings}
+          onClose={() => setPremio(null)} onHecho={(t) => { setPremio(null); hecho(t); }}
+          onBorrar={premio === 'nuevo' ? undefined : () => borrarPremio(premio)} />
+      )}
     </div>
   );
 }
 
-/* Lo que engancha (PLAN_MOMENTOS_PICO M3 y M4): el doble de puntos en el
-   primer pedido y la sorpresa de la casa. Se guarda aparte de las tasas. */
-function ExtrasForm({ restaurantId, extras }: { restaurantId: string; extras: AjustesExtraLealtad }) {
-  const [p, setP] = useState<LealtadExtrasPatch>({
-    primer_pedido_doble: extras.primerPedidoDoble,
-    sorpresa_texto: extras.sorpresaTexto,
-    sorpresa_cada: extras.sorpresaCada ?? 20,
-  });
+/* ── Reglas del programa: tasas, premios en la carta, doble y sorpresa ── */
+function HojaReglas({ restaurantId, settings, extras, nuevo, onClose, onHecho }: {
+  restaurantId: string; settings: LoyaltySettings; extras: AjustesExtraLealtad; nuevo?: boolean;
+  onClose: () => void; onHecho: (t: string) => void;
+}) {
+  const [tasa, setTasa] = useState(String(settings.earn_rate));
+  const [monto, setMonto] = useState(String(settings.earn_amount));
+  const [bienvenida, setBienvenida] = useState(String(settings.signup_bonus));
+  const [enCarta, setEnCarta] = useState(settings.rewards_enabled);
+  const [doble, setDoble] = useState(extras.primerPedidoDoble);
   const [sorpresa, setSorpresa] = useState(!!extras.sorpresaTexto);
-  const [isPending, start] = useTransition();
-  const [msg, setMsg] = useState<{ text: string; bad: boolean } | null>(null);
+  const [sorpresaTexto, setSorpresaTexto] = useState(extras.sorpresaTexto ?? '');
+  const [sorpresaCada, setSorpresaCada] = useState(String(extras.sorpresaCada ?? 20));
+  const [error, setError] = useState<string | null>(null);
+  const [pendiente, start] = useTransition();
 
-  function save() {
-    setMsg(null);
+  const t = parseFloat(tasa);
+  const m = parseFloat(monto);
+  const valido = t >= 0 && m > 0 && (!sorpresa || (sorpresaTexto.trim() !== '' && parseInt(sorpresaCada, 10) >= 2));
+
+  function guardar() {
+    setError(null);
     start(async () => {
-      const res = await saveLealtadExtras(restaurantId, { ...p, sorpresa_texto: sorpresa ? p.sorpresa_texto : null });
-      setMsg(res.error ? { text: res.error, bad: true } : { text: 'Guardado.', bad: false });
+      const r1 = await saveLoyaltySettings(restaurantId, {
+        earn_rate: t, earn_amount: m, min_redeem: settings.min_redeem,
+        signup_bonus: parseInt(bienvenida, 10) || 0, rewards_enabled: enCarta,
+      });
+      if (r1.error) { setError(r1.error); return; }
+      const r2 = await saveLealtadExtras(restaurantId, {
+        primer_pedido_doble: doble,
+        sorpresa_texto: sorpresa ? sorpresaTexto : null,
+        sorpresa_cada: sorpresa ? parseInt(sorpresaCada, 10) || null : null,
+      });
+      if (r2.error) { setError(`Las tasas se guardaron, pero el resto no: ${r2.error}`); return; }
+      onHecho(nuevo ? 'Programa de puntos activo' : 'Reglas guardadas');
     });
   }
 
   return (
-    <Card className="flex flex-col gap-3.5 p-4">
-      <div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)' }}>Lo que hace volver a tus clientes</div>
-        <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: '3px 0 0', lineHeight: 1.5 }}>
-          Dos detalles que el cliente ve al enviar su pedido desde su celular.
+    <HojaOperativa
+      label="Reglas del programa de puntos"
+      title="Reglas del programa"
+      className="hoja-fidelidad"
+      onClose={onClose}
+      footer={(
+        <Button type="button" size="action" className="w-full" disabled={!valido || pendiente} onClick={guardar}>
+          {pendiente ? 'Guardando…' : nuevo ? 'Activar el programa' : 'Guardar'}
+        </Button>
+      )}
+    >
+      <div className={s.hojaCuerpo}>
+        <div className={s.dos}>
+          <label className={s.campo}>Puntos que gana
+            <input className="adm-field tabular-nums" inputMode="decimal" value={tasa} onChange={(e) => setTasa(e.target.value.replace(/[^\d.]/g, ''))} />
+          </label>
+          <label className={s.campo}>Por cada (Q)
+            <input className="adm-field tabular-nums" inputMode="decimal" value={monto} onChange={(e) => setMonto(e.target.value.replace(/[^\d.]/g, ''))} />
+          </label>
+        </div>
+        <label className={s.campo}><span>Puntos de bienvenida <small>· al pedir por primera vez con su cuenta</small></span>
+          <input className="adm-field tabular-nums" inputMode="numeric" value={bienvenida} onChange={(e) => setBienvenida(e.target.value.replace(/\D/g, ''))} />
+        </label>
+        <p className={s.hojaResumen}>
+          Los puntos se suman cuando el pedido se marca entregado. Un platillo puede tener sus propios puntos en su ficha del menú.
         </p>
-      </div>
 
-      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--u-text-2)' }}>
-        <Switch checked={p.primer_pedido_doble} onCheckedChange={(v) => setP((s) => ({ ...s, primer_pedido_doble: v }))} />
-        <span>
-          <strong>Doble de puntos en el primer pedido.</strong> El primer pedido que un cliente hace desde su
-          celular, con su cuenta, suma el doble. Es la mejor razón para que pida por el QR.
-        </span>
-      </label>
-
-      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--u-text-2)' }}>
-        <Switch checked={sorpresa} onCheckedChange={setSorpresa} />
-        <span>
-          <strong>Sorpresa de la casa.</strong> De vez en cuando, al azar, un pedido se lleva un regalo. Le sale
-          al cliente al enviar su pedido y a tu personal en la tarjeta del pedido. Tú decides el regalo;
-          no se descuenta solo.
-        </span>
-      </label>
-      {sorpresa && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-          <div>
-            <label style={labelStyle}>La sorpresa</label>
-            <input className="adm-field" maxLength={80} placeholder="Hoy el postre va por la casa" value={p.sorpresa_texto ?? ''} onChange={(e) => setP((s) => ({ ...s, sorpresa_texto: e.target.value }))} />
+        <label className={s.interruptor}>
+          <Switch checked={enCarta} onCheckedChange={setEnCarta} />
+          <span><b>Mostrar los premios en la carta.</b> Tus clientes ven qué pueden canjear con sus puntos.</span>
+        </label>
+        <label className={s.interruptor}>
+          <Switch checked={doble} onCheckedChange={setDoble} />
+          <span><b>Doble de puntos en el primer pedido</b> que un cliente hace desde su celular, con su cuenta.</span>
+        </label>
+        <label className={s.interruptor}>
+          <Switch checked={sorpresa} onCheckedChange={setSorpresa} />
+          <span><b>Sorpresa de la casa.</b> De vez en cuando, al azar, un pedido se lleva un regalo. Tú decides cuál; no se descuenta solo.</span>
+        </label>
+        {sorpresa && (
+          <div className={s.dos}>
+            <label className={s.campo}>La sorpresa
+              <input className="adm-field" maxLength={80} placeholder="Hoy el postre va por la casa" value={sorpresaTexto} onChange={(e) => setSorpresaTexto(e.target.value)} />
+            </label>
+            <label className={s.campo}>Sale en 1 de cada…
+              <input className="adm-field tabular-nums" inputMode="numeric" value={sorpresaCada} onChange={(e) => setSorpresaCada(e.target.value.replace(/\D/g, ''))} />
+            </label>
           </div>
-          <div>
-            <label style={labelStyle}>Sale en 1 de cada… pedidos</label>
-            <input className="adm-field" type="number" inputMode="numeric" min="2" max="500" step="1" value={p.sorpresa_cada ?? ''} onChange={(e) => setP((s) => ({ ...s, sorpresa_cada: parseInt(e.target.value, 10) || null }))} />
+        )}
+        <details className={s.privacidad}>
+          <summary>¿Quién acumula puntos?</summary>
+          <p>
+            Solo quien pide con su cuenta de Google. Los pedidos sin sesión quedan como pedido normal, pero no suman puntos
+            ni reciben los de bienvenida. Si esa persona inicia sesión después, sus pedidos anteriores no ganan puntos:
+            puedes sumárselos a mano en Miembros.
+          </p>
+        </details>
+        {error && <p role="alert" className={s.error}>{error}</p>}
+      </div>
+    </HojaOperativa>
+  );
+}
+
+/* ── Sumar o restar puntos, siempre con motivo ──────────────────── */
+const MOTIVOS = {
+  sumar: ['Pedido sin sesión', 'Cortesía', 'Corrección', 'Otro'],
+  restar: ['Canje en caja', 'Corrección', 'Otro'],
+} as const;
+
+function HojaAjuste({ restaurantId, cuenta, accounts, customers, onClose, onHecho }: {
+  restaurantId: string; cuenta: LoyaltyAccount | null; accounts: LoyaltyAccount[]; customers: Cliente[];
+  onClose: () => void; onHecho: (t: string) => void;
+}) {
+  const [clienteId, setClienteId] = useState(cuenta?.customer_id ?? '');
+  const [modo, setModo] = useState<'sumar' | 'restar'>('sumar');
+  const [cantidad, setCantidad] = useState('');
+  const [motivo, setMotivo] = useState<string | null>(null);
+  const [nota, setNota] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [movs, setMovs] = useState<MovimientoPuntos[] | null>(null);
+  const [verMovs, setVerMovs] = useState(false);
+  const [pendiente, start] = useTransition();
+
+  const actual = cuenta ?? accounts.find((a) => a.customer_id === clienteId) ?? null;
+  const cliente = customers.find((c) => c.id === clienteId);
+  const nombre = actual?.customer_name || cliente?.name || 'Cliente';
+  const saldo = actual?.points_balance ?? 0;
+  const n = parseInt(cantidad, 10);
+  const quedaria = modo === 'sumar' ? saldo + (n || 0) : saldo - (n || 0);
+  const valido = !!clienteId && n > 0 && quedaria >= 0 && !!motivo && (motivo !== 'Otro' || nota.trim() !== '');
+
+  function cambiarModo(m: 'sumar' | 'restar') { setModo(m); setMotivo(null); setError(null); }
+
+  function guardar() {
+    if (!valido || !motivo) return;
+    setError(null);
+    const texto = motivo === 'Otro' ? nota.trim() : nota.trim() ? `${motivo}: ${nota.trim()}` : motivo;
+    start(async () => {
+      const r = await adjustPoints(restaurantId, clienteId, n, modo === 'sumar' ? 'ADJUST' : 'REDEEM', texto);
+      if (r.error) { setError(r.error); return; }
+      onHecho(`${nombre}: ${num(r.balance ?? quedaria)} pts`);
+    });
+  }
+
+  function abrirMovimientos() {
+    setVerMovs((v) => !v);
+    if (movs === null && actual) {
+      start(async () => {
+        const r = await movimientosDePuntos(restaurantId, actual.customer_id);
+        if (r.error) { setError(r.error); setMovs([]); return; }
+        setMovs(r.movimientos ?? []);
+      });
+    }
+  }
+
+  const fecha = (iso: string) => new Date(iso).toLocaleString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+  return (
+    <HojaOperativa
+      label={cuenta ? `Puntos de ${nombre}` : 'Sumar o restar puntos'}
+      title={cuenta ? nombre : 'Sumar o restar puntos'}
+      className="hoja-fidelidad"
+      resumen={actual ? <p className={s.hojaResumen}>Tiene <b>{num(saldo)} pts</b>{actual.lifetime_points > saldo ? ` · ganó ${num(actual.lifetime_points)} en total` : ''}</p> : undefined}
+      onClose={onClose}
+      footer={(
+        <Button type="button" size="action" className="w-full" disabled={!valido || pendiente} onClick={guardar}>
+          {pendiente ? 'Guardando…' : `${modo === 'sumar' ? 'Sumar' : 'Restar'} ${n > 0 ? pts(n) : 'puntos'}`}
+        </Button>
+      )}
+    >
+      <div className={s.hojaCuerpo}>
+        {!cuenta && (
+          <Elegir
+            etiqueta="Cliente"
+            buscarTexto="Buscar por nombre o teléfono"
+            opciones={customers.map((c) => ({ id: c.id, texto: c.name, detalle: c.phone }))}
+            valor={clienteId}
+            onCambio={(v) => { setClienteId(v); setMovs(null); setModo('sumar'); setMotivo(null); }}
+          />
+        )}
+        <div className={s.modos} role="group" aria-label="Sumar o restar">
+          <button type="button" className={s.modo} aria-pressed={modo === 'sumar'} onClick={() => cambiarModo('sumar')}>Sumar</button>
+          <button type="button" className={s.modo} aria-pressed={modo === 'restar'} disabled={saldo <= 0} onClick={() => cambiarModo('restar')}>Restar</button>
+        </div>
+        <div className={s.cantidad}>
+          <label htmlFor="ajuste-puntos" className="sr-only">Puntos</label>
+          <input id="ajuste-puntos" className="adm-field adm-field-auto tabular-nums" inputMode="numeric" placeholder="0" value={cantidad}
+            onChange={(e) => setCantidad(e.target.value.replace(/\D/g, ''))} />
+          {clienteId && n > 0 && (
+            <span className={s.quedaria}>
+              {quedaria >= 0 ? <>Quedaría en <b className="tabular-nums">{num(quedaria)} pts</b></> : <span style={{ color: 'var(--c-danger)' }}>Solo tiene {num(saldo)} pts</span>}
+            </span>
+          )}
+        </div>
+        <div>
+          <p className={s.pregunta}>¿Por qué? <span>· obligatorio</span></p>
+          <div className={s.motivos} role="group" aria-label="Motivo">
+            {MOTIVOS[modo].map((m) => (
+              <button key={m} type="button" className={s.motivo} aria-pressed={motivo === m} onClick={() => setMotivo(m)}>{m}</button>
+            ))}
           </div>
         </div>
-      )}
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <Button onClick={save} disabled={isPending}>{isPending ? 'Guardando…' : 'Guardar'}</Button>
-        {msg && <span role="status" style={{ fontSize: 13, color: msg.bad ? 'var(--c-danger)' : 'var(--c-ok)' }}>{msg.text}</span>}
+        {motivo && (
+          <label className={s.campo}><span>Nota <small>· {motivo === 'Otro' ? 'obligatoria' : 'opcional'}</small></span>
+            <input className="adm-field" maxLength={160} value={nota} placeholder="Ej.: pedido del martes en la noche" onChange={(e) => setNota(e.target.value)} />
+          </label>
+        )}
+        {error && <p role="alert" className={s.error}>{error}</p>}
+        {actual && (
+          <ul className={s.opciones}>
+            <li>
+              <button type="button" className={s.opcion} aria-expanded={verMovs} onClick={abrirMovimientos}>
+                <Icon name="clock" size={16} /><span>Movimientos de puntos</span><Icon name={verMovs ? 'chevronDown' : 'chevronRight'} size={16} />
+              </button>
+              {verMovs && (
+                <div className={s.historial}>
+                  {movs === null ? <p className={s.hojaResumen}>Cargando…</p>
+                    : movs.length === 0 ? <p className={s.hojaResumen}>Sin movimientos todavía.</p>
+                    : movs.map((m) => (
+                      <div key={m.id} className={s.mov}>
+                        <div>
+                          {m.note || (m.order_id ? 'Pedido' : m.tipo === 'REDEEM' ? 'Canje' : 'Ajuste')}
+                          <small>{fecha(m.created_at)}{m.order_id ? ' · por un pedido' : ''}</small>
+                        </div>
+                        <b data-signo={m.points >= 0 ? 'mas' : 'menos'}>{m.points >= 0 ? '+' : '−'}{num(Math.abs(m.points))}</b>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </li>
+          </ul>
+        )}
       </div>
-    </Card>
+    </HojaOperativa>
   );
 }
 
-function SettingsForm({ restaurantId, settings, isNew }: { restaurantId: string; settings: LoyaltySettings; isNew: boolean }) {
-  const [p, setP] = useState<LoyaltySettingsPatch>({
-    earn_rate: settings.earn_rate,
-    earn_amount: settings.earn_amount,
-    min_redeem: settings.min_redeem,
-    signup_bonus: settings.signup_bonus,
-    rewards_enabled: settings.rewards_enabled,
-  });
-  const [isPending, start] = useTransition();
-  const [status, setStatus] = useState<SaveStatus>(null);
-  const { dirty, markSaved } = useValueDirty(p);
-  function set<K extends keyof LoyaltySettingsPatch>(k: K, v: LoyaltySettingsPatch[K]) { setP((s) => ({ ...s, [k]: v })); }
+/* ── Elegir de una lista larga dentro de una hoja ─────────────────
+   Un buscador con hasta 6 resultados. El Select de Base UI abre su lista
+   fuera del <dialog> de la hoja y quedaría tapado por la capa superior. */
+type OpcionElegir = { id: string; texto: string; detalle?: string };
 
-  function save() {
-    setStatus(null);
-    start(async () => {
-      const res = await saveLoyaltySettings(restaurantId, p);
-      if (res.error) { setStatus({ error: res.error }); return; }
-      markSaved();
-      setStatus({ saved: true });
-    });
+function Elegir({ etiqueta, buscarTexto, opciones, valor, onCambio, opcional }: {
+  etiqueta: string; buscarTexto: string; opciones: OpcionElegir[]; valor: string;
+  onCambio: (id: string) => void; opcional?: string;
+}) {
+  const id = useId();
+  const [texto, setTexto] = useState('');
+  const elegida = opciones.find((o) => o.id === valor);
+  const t = texto.trim().toLowerCase();
+  const encontradas = t ? opciones.filter((o) => o.texto.toLowerCase().includes(t) || (o.detalle ?? '').toLowerCase().includes(t)).slice(0, 6) : [];
+
+  if (elegida) {
+    return (
+      <div className={s.campo}>
+        {etiqueta}
+        <ul className={s.opciones}>
+          <li>
+            <button type="button" className={s.opcion} onClick={() => { onCambio(''); setTexto(''); }} aria-label={`${elegida.texto}. Cambiar ${etiqueta.toLowerCase()}`}>
+              <span><b>{elegida.texto}</b>{elegida.detalle ? ` · ${elegida.detalle}` : ''}</span>
+              <em>Cambiar</em>
+            </button>
+          </li>
+        </ul>
+      </div>
+    );
   }
 
   return (
-    <>
-    <Card className="flex flex-col gap-3.5 p-4">
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-        <div><label style={labelStyle}>Puntos otorgados</label><input className="adm-field" type="number" inputMode="decimal" min="0" step="0.1" value={p.earn_rate} onChange={(e) => set('earn_rate', parseFloat(e.target.value) || 0)} /></div>
-        <div><label style={labelStyle}>Por cada Q gastados</label><input className="adm-field" type="number" inputMode="decimal" min="0.01" step="1" value={p.earn_amount} onChange={(e) => set('earn_amount', parseFloat(e.target.value) || 0)} /></div>
-        <div><label style={labelStyle}>Mínimo para canjear (puntos)</label><input className="adm-field" type="number" inputMode="decimal" min="0" step="1" value={p.min_redeem} onChange={(e) => set('min_redeem', parseInt(e.target.value, 10) || 0)} /></div>
-        <div><label style={labelStyle}>Puntos de bienvenida</label><input className="adm-field" type="number" inputMode="decimal" min="0" step="1" value={p.signup_bonus} onChange={(e) => set('signup_bonus', parseInt(e.target.value, 10) || 0)} /></div>
-      </div>
-
-      <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--u-text-2)' }}>
-        <Switch checked={p.rewards_enabled} onCheckedChange={(v) => set('rewards_enabled', v)} />
-        {/* En un <span>: sueltos, el texto y el <strong> eran tres hijos del
-            flex y la frase se partía en columnas en el teléfono. */}
-        <span>Mostrar el catálogo de <strong>Recompensas</strong> en el menú (canje de puntos por platillos)</span>
-      </label>
-
-      <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-        La regla general (<strong>{p.earn_rate} pts por cada Q{p.earn_amount}</strong>) aplica a los platillos sin puntos propios. Puedes fijar
-        los puntos exactos de cada platillo en su ficha (Menú → editar platillo → <em>Puntos de lealtad</em>).
-        Los puntos se acumulan cuando el pedido se marca <strong>entregado</strong>.
-      </p>
-      {/* Plegado: es la letra pequeña del programa, se lee una vez. */}
-      <details style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
-        <summary style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--u-text-2)', width: 'fit-content' }}>
-          ¿Quién acumula puntos?
-        </summary>
-        <p style={{ margin: '6px 0 0' }}>
-          Solo quien pide con su <strong>cuenta de Google</strong>. Los pedidos sin sesión (invitados)
-          quedan registrados como pedido normal, pero no suman puntos ni reciben los de bienvenida; y si
-          esa persona inicia sesión más tarde, sus pedidos anteriores no ganan puntos.
-        </p>
-      </details>
-    </Card>
-    {/* Recién creado el programa, los valores de muestra también hay que
-        guardarlos: la barra sale aunque no se haya tocado nada. */}
-    <SaveBar
-      dirty={dirty || (isNew && !status)}
-      pending={isPending}
-      status={status}
-      onSave={save}
-      label={isNew && !dirty ? 'Activar el programa' : 'Guardar'}
-      hint={isNew && !dirty ? 'El programa aún no está activo' : undefined}
-      guardLeave={dirty}
-    />
-    </>
+    <div className={s.campo}>
+      <label htmlFor={id}>{etiqueta}{opcional ? <small> · opcional</small> : null}</label>
+      <input id={id} type="search" className="adm-field" placeholder={buscarTexto} value={texto} onChange={(e) => setTexto(e.target.value)} />
+      {t && (
+        encontradas.length === 0 ? <small>Nada coincide con «{texto}».</small> : (
+          <ul className={s.opciones}>
+            {encontradas.map((o) => (
+              <li key={o.id}>
+                <button type="button" className={s.opcion} onClick={() => onCambio(o.id)}>
+                  <span>{o.texto}</span>{o.detalle && <em>{o.detalle}</em>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )
+      )}
+    </div>
   );
 }
 
-function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string; rewards: RewardRow[]; products: RewardProduct[] }) {
-  const blank: RewardPatch = { product_id: '', title: '', description: '', image_url: '', points_cost: 100, active: true, stock: null, per_customer_limit: null, sort_order: 0 };
-  const [form, setForm] = useState<RewardPatch>(blank);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [isPending, start] = useTransition();
-  const [msg, setMsg] = useState<string | null>(null);
+/* ── Nueva recompensa o cambiarla ──────────────────────────────── */
+function HojaPremio({ restaurantId, premio, products, settings, onClose, onHecho, onBorrar }: {
+  restaurantId: string; premio: RewardRow | null; products: RewardProduct[]; settings: LoyaltySettings;
+  onClose: () => void; onHecho: (t: string) => void; onBorrar?: () => void;
+}) {
+  const [form, setForm] = useState<RewardPatch>(premio ? {
+    id: premio.id, product_id: premio.product_id ?? '', title: premio.title, description: premio.description ?? '',
+    image_url: premio.image_url ?? '', points_cost: premio.points_cost, active: premio.active,
+    stock: premio.stock, per_customer_limit: premio.per_customer_limit, sort_order: premio.sort_order,
+  } : { product_id: '', title: '', description: '', image_url: '', points_cost: 100, active: true, stock: null, per_customer_limit: null, sort_order: 0 });
+  const [verMas, setVerMas] = useState(!!(premio?.description || premio?.stock != null || premio?.per_customer_limit != null));
+  const [error, setError] = useState<string | null>(null);
+  const [pendiente, start] = useTransition();
 
-  function set<K extends keyof RewardPatch>(k: K, v: RewardPatch[K]) { setForm((s) => ({ ...s, [k]: v })); }
-
-  function pickProduct(id: string) {
-    const prod = products.find((p) => p.id === id);
-    setForm((s) => ({
-      ...s,
+  function set<K extends keyof RewardPatch>(k: K, v: RewardPatch[K]) { setForm((f) => ({ ...f, [k]: v })); }
+  function elegirPlatillo(id: string) {
+    const p = products.find((x) => x.id === id);
+    setForm((f) => ({
+      ...f,
       product_id: id || null,
-      title: s.title?.trim() ? s.title : (prod?.name ?? ''),
-      image_url: s.image_url?.trim() ? s.image_url : (prod?.image_url ?? ''),
+      title: f.title?.trim() ? f.title : (p?.name ?? ''),
+      image_url: f.image_url?.trim() ? f.image_url : (p?.image_url ?? ''),
     }));
   }
 
-  function startEdit(r: RewardRow) {
-    setEditingId(r.id);
-    setForm({
-      id: r.id, product_id: r.product_id ?? '', title: r.title, description: r.description ?? '',
-      image_url: r.image_url ?? '', points_cost: r.points_cost, active: r.active,
-      stock: r.stock, per_customer_limit: r.per_customer_limit, sort_order: r.sort_order,
-    });
-    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
+  const gasto = gastoPara(form.points_cost, settings.earn_rate, settings.earn_amount);
+  const valido = form.title.trim() !== '' && form.points_cost > 0;
 
-  function reset() { setEditingId(null); setForm(blank); setMsg(null); }
-
-  function save() {
-    setMsg(null);
+  function guardar() {
+    setError(null);
     start(async () => {
-      const res = await saveReward(restaurantId, form);
-      if (res.error) { setMsg(`Error: ${res.error}`); return; }
-      reset();
+      const r = await saveReward(restaurantId, form);
+      if (r.error) { setError(r.error); return; }
+      onHecho(premio ? `«${form.title}» guardada` : `«${form.title}» agregada`);
     });
   }
 
-  /* Borrar y mostrar/ocultar revisan la respuesta. Antes la ignoraban: si
-     fallaba, la recompensa seguía igual y nada lo decía (auditoría
-     2026-11-03, X07). El aviso queda bajo la recompensa afectada. */
-  const [fallo, setFallo] = useState<{ id: string; texto: string } | null>(null);
-
-  function remove(r: RewardRow) {
-    setFallo(null);
+  function alternar() {
+    if (!premio) return;
+    setError(null);
+    const mostrar = !premio.active;
     start(async () => {
-      let res: { error?: string } = {};
-      try { res = await deleteReward(restaurantId, r.id); } catch { res = { error: 'sin conexión' }; }
-      if (res.error) {
-        setFallo({ id: r.id, texto: `No se pudo borrar «${r.title}». Sigue en la lista; inténtalo de nuevo.` });
+      let r: { error?: string } = {};
+      try { r = await toggleReward(restaurantId, premio.id, mostrar); } catch { r = { error: 'sin conexión' }; }
+      if (r.error) {
+        setError(mostrar
+          ? `No se pudo mostrar «${premio.title}». Sigue oculta para tus clientes; inténtalo de nuevo.`
+          : `No se pudo ocultar «${premio.title}». Tus clientes la siguen viendo; inténtalo de nuevo.`);
         return;
       }
-      if (editingId === r.id) reset();
-    });
-  }
-
-  function toggle(r: RewardRow) {
-    setFallo(null);
-    const mostrar = !r.active;
-    start(async () => {
-      let res: { error?: string } = {};
-      try { res = await toggleReward(restaurantId, r.id, mostrar); } catch { res = { error: 'sin conexión' }; }
-      if (res.error) {
-        setFallo({
-          id: r.id,
-          texto: mostrar
-            ? `No se pudo mostrar «${r.title}». Sigue oculta para tus clientes; inténtalo de nuevo.`
-            : `No se pudo ocultar «${r.title}». Tus clientes la siguen viendo; inténtalo de nuevo.`,
-        });
-      }
+      onHecho(mostrar ? `«${premio.title}» visible en la carta` : `«${premio.title}» oculta`);
     });
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <Card className="flex flex-col gap-3 p-4">
-        <div className="adm-label">{editingId ? 'Editar recompensa' : 'Nueva recompensa'}</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-          <div>
-            <label style={labelStyle}>Platillo del menú</label>
-            <Select
-              options={[{ value: '', label: '— Recompensa sin platillo —' }, ...products.map((p) => ({ value: p.id, label: `${p.name} · ${fmtMoney(Number(p.price))}` }))]}
-              value={form.product_id ?? ''}
-              onValueChange={pickProduct}
-            />
-          </div>
-          <div><label style={labelStyle}>Nombre visible</label><input className="adm-field" value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Ej. Hamburguesa gratis" /></div>
-          <div><label style={labelStyle}>Costo en puntos</label><input className="adm-field" style={{ textAlign: 'right' }} type="number" inputMode="decimal" min="1" step="1" value={form.points_cost} onChange={(e) => set('points_cost', parseInt(e.target.value, 10) || 0)} /></div>
-        </div>
-        <div><label style={labelStyle}>Descripción (opcional)</label><input className="adm-field" value={form.description ?? ''} onChange={(e) => set('description', e.target.value)} placeholder="Detalle breve de la recompensa" /></div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-          <div><label style={labelStyle}>Stock límite (vacío = ilimitado)</label><input className="adm-field" type="number" inputMode="decimal" min="0" step="1" value={form.stock ?? ''} onChange={(e) => set('stock', e.target.value === '' ? null : parseInt(e.target.value, 10))} /></div>
-          <div><label style={labelStyle}>Máx. por cliente (vacío = sin límite)</label><input className="adm-field" type="number" inputMode="decimal" min="1" step="1" value={form.per_customer_limit ?? ''} onChange={(e) => set('per_customer_limit', e.target.value === '' ? null : parseInt(e.target.value, 10))} /></div>
-        </div>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', fontSize: 13, color: 'var(--u-text-2)' }}>
-          <Switch checked={form.active !== false} onCheckedChange={(v) => set('active', v)} />
-          Activa (visible para los comensales)
+    <HojaOperativa
+      label={premio ? `Recompensa ${premio.title}` : 'Nueva recompensa'}
+      title={premio ? premio.title : 'Nueva recompensa'}
+      className="hoja-fidelidad"
+      onClose={onClose}
+      footer={(
+        <Button type="button" size="action" className="w-full" disabled={!valido || pendiente} onClick={guardar}>
+          {pendiente ? 'Guardando…' : premio ? 'Guardar cambios' : 'Agregar recompensa'}
+        </Button>
+      )}
+    >
+      <div className={s.hojaCuerpo}>
+        <Elegir
+          etiqueta="Platillo del menú"
+          buscarTexto="Buscar platillo"
+          opcional="Sin platillo"
+          opciones={products.map((p) => ({ id: p.id, texto: p.name, detalle: fmtMoney(Number(p.price)) }))}
+          valor={form.product_id ?? ''}
+          onCambio={elegirPlatillo}
+        />
+        <label className={s.campo}>Nombre que ven tus clientes
+          <input className="adm-field" maxLength={120} value={form.title} placeholder="Ej.: Postre gratis" onChange={(e) => set('title', e.target.value)} />
         </label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Button onClick={save} disabled={isPending || !form.title.trim() || !(form.points_cost > 0)} size="sm" className="rounded-adm-full">
-            {isPending ? '…' : editingId ? 'Guardar cambios' : 'Agregar recompensa'}
-          </Button>
-          {editingId && <Button onClick={reset} variant="outline" size="sm" className="rounded-adm-full">Cancelar</Button>}
-          {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>{msg}</span>}
+        <div className={s.cantidad}>
+          <label className={s.campo}>Cuesta (puntos)
+            <input className="adm-field adm-field-auto tabular-nums" inputMode="numeric" value={form.points_cost || ''}
+              onChange={(e) => set('points_cost', parseInt(e.target.value.replace(/\D/g, ''), 10) || 0)} />
+          </label>
+          {gasto != null && form.points_cost > 0 && <span className={s.quedaria}>Un cliente gasta <b>{q(gasto)}</b> para ganarla</span>}
         </div>
-      </Card>
-
-      {rewards.length === 0 ? (
-        <Card className="p-7 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>Aún no hay recompensas. Crea la primera arriba.</Card>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {rewards.map((r) => (
-            <div key={r.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <Card className="flex items-center gap-3 p-3" style={{ opacity: r.active ? 1 : 0.6 }}>
-              <div style={{ width: 46, height: 46, borderRadius: 'var(--radius-md)', overflow: 'hidden', flexShrink: 0, background: 'var(--surface-2)', display: 'grid', placeItems: 'center', fontSize: 18 }}>
-                {r.image_url
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  ? <img src={assetSrc(r.image_url, 96)} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : '🎁'}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{r.title}</div>
-                <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>
-                  {r.product_name ? r.product_name : 'Sin platillo'}
-                  {r.stock != null && ` · stock ${r.stock}`}
-                  {r.per_customer_limit != null && ` · máx ${r.per_customer_limit}/cliente`}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'var(--ui-font-mono)', color: 'var(--brand-accent-ink)', fontSize: 14, whiteSpace: 'nowrap' }}>{r.points_cost.toLocaleString('es-GT')} pts</div>
-              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                <Button onClick={() => toggle(r)} disabled={isPending} variant="outline" size="sm" title={r.active ? 'Desactivar' : 'Activar'}>{r.active ? 'Ocultar' : 'Mostrar'}</Button>
-                <Button onClick={() => startEdit(r)} variant="outline" size="sm">Editar</Button>
-                <Button onClick={() => remove(r)} disabled={isPending} variant="outline" size="sm" className="border-[var(--c-danger-line)] text-[var(--c-danger)]">Borrar</Button>
-              </div>
-            </Card>
-            {fallo?.id === r.id && (
-              <div role="alert" style={{ fontSize: 13, color: 'var(--c-danger)', padding: '0 4px', lineHeight: 1.45 }}>{fallo.texto}</div>
-            )}
+        {verMas ? (
+          <>
+            <label className={s.campo}><span>Descripción <small>· opcional</small></span>
+              <input className="adm-field" maxLength={400} value={form.description ?? ''} placeholder="Detalle breve" onChange={(e) => set('description', e.target.value)} />
+            </label>
+            <div className={s.dos}>
+              <label className={s.campo}>Máximo por cliente
+                <input className="adm-field tabular-nums" inputMode="numeric" placeholder="Sin límite" value={form.per_customer_limit ?? ''}
+                  onChange={(e) => set('per_customer_limit', e.target.value === '' ? null : parseInt(e.target.value.replace(/\D/g, ''), 10) || null)} />
+              </label>
+              <label className={s.campo}>Cuántas hay
+                <input className="adm-field tabular-nums" inputMode="numeric" placeholder="Sin límite" value={form.stock ?? ''}
+                  onChange={(e) => set('stock', e.target.value === '' ? null : parseInt(e.target.value.replace(/\D/g, ''), 10))} />
+              </label>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MembersTab({ restaurantId, accounts, customers, settings }: { restaurantId: string; accounts: LoyaltyAccount[]; customers: { id: string; name: string; phone: string }[]; settings: LoyaltySettings }) {
-  const [customerId, setCustomerId] = useState('');
-  const [points, setPoints] = useState('');
-  const [tipo, setTipo] = useState<'ADJUST' | 'REDEEM'>('ADJUST');
-  const [note, setNote] = useState('');
-  const [isPending, start] = useTransition();
-  const [msg, setMsg] = useState<string | null>(null);
-
-  function apply() {
-    setMsg(null);
-    start(async () => {
-      const res = await adjustPoints(restaurantId, customerId, parseInt(points, 10) || 0, tipo, note);
-      if (res.error) { setMsg(`Error: ${res.error}`); return; }
-      setMsg(`Saldo actualizado: ${res.balance} pts`);
-      setPoints(''); setNote('');
-    });
-  }
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <Card className="flex flex-col gap-3 p-4">
-        <div className="adm-label">Asignar / restar puntos manualmente</div>
-        {/* .admin-form-3: 3 columnas en escritorio, apilado en móvil (antes
-            columnas fijas que aplastaban el selector de cliente). */}
-        <div className="admin-form-3">
-          <div className="fg-full">
-            <label style={labelStyle}>Cliente</label>
-            <Select
-              options={[{ value: '', label: 'Selecciona…' }, ...customers.map((c) => ({ value: c.id, label: `${c.name}${c.phone ? ` · ${c.phone}` : ''}` }))]}
-              value={customerId}
-              onValueChange={setCustomerId}
-            />
-          </div>
-          <div><label style={labelStyle}>Puntos</label><input className="adm-field" style={{ textAlign: 'right' }} type="number" inputMode="numeric" min="1" step="1" value={points} onChange={(e) => setPoints(e.target.value)} /></div>
-          <div>
-            <label style={labelStyle}>Tipo</label>
-            <Select
-              options={[{ value: 'ADJUST', label: 'Sumar' }, { value: 'REDEEM', label: 'Restar' }]}
-              value={tipo}
-              onValueChange={(v) => setTipo(v as 'ADJUST' | 'REDEEM')}
-            />
-          </div>
-        </div>
-        <div><label style={labelStyle}>Nota (opcional)</label><input className="adm-field" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Motivo del ajuste" /></div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Button onClick={apply} disabled={isPending || !customerId} size="sm" className="rounded-adm-full">
-            {isPending ? '…' : tipo === 'REDEEM' ? 'Restar puntos' : 'Sumar puntos'}
-          </Button>
-          {tipo === 'REDEEM' && points && <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>≈ {fmtMoney((parseInt(points, 10) || 0) * settings.redeem_value)} de descuento</span>}
-          {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>{msg}</span>}
-        </div>
-      </Card>
-
-      {accounts.length === 0 ? (
-        <Card className="p-7 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>Aún no hay miembros con puntos.</Card>
-      ) : (
-        <Card className="overflow-hidden p-0">
-          {/* En móvil se oculta "Histórico" (columna menos útil) para que
-              Cliente/Saldo/Valor quepan sin desbordar la pantalla. */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead><tr style={{ borderBottom: '1px solid var(--u-hair)' }}>
-              {['Cliente', 'Saldo', 'Histórico', 'Valor'].map((h) => <th key={h} className={h === 'Histórico' ? 'hide-mobile' : undefined} style={{ padding: '10px 12px', textAlign: h === 'Cliente' ? 'left' : 'right', color: 'var(--u-text-3)', fontWeight: 500, fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{h}</th>)}
-            </tr></thead>
-            <tbody>
-              {accounts.map((a) => (
-                <tr key={a.id} style={{ borderBottom: '1px solid var(--u-hair)' }}>
-                  <td style={{ padding: '10px 12px' }}><div style={{ fontWeight: 500 }}>{a.customer_name}</div><div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{a.customer_phone}</div></td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontFamily: 'var(--ui-font-mono)', color: 'var(--brand-accent-ink)' }}>{a.points_balance.toLocaleString('es-GT')}</td>
-                  <td className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{a.lifetime_points.toLocaleString('es-GT')}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{fmtMoney(a.points_balance * settings.redeem_value)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      )}
-    </div>
+          </>
+        ) : (
+          <button type="button" className={s.agregar} onClick={() => setVerMas(true)}>+ Descripción, límite por cliente o cuántas hay</button>
+        )}
+        {error && <p role="alert" className={s.error}>{error}</p>}
+        {premio && (
+          <ul className={s.opciones}>
+            <li>
+              <button type="button" className={s.opcion} disabled={pendiente} onClick={alternar}>
+                <span>{premio.active ? 'Ocultarla de la carta' : 'Mostrarla en la carta'}</span>
+                <em>{premio.active ? 'visible' : 'oculta'}</em>
+              </button>
+            </li>
+            {onBorrar && (
+              <li><button type="button" className={s.opcion} data-tono="peligro" disabled={pendiente} onClick={onBorrar}><Icon name="trash" size={16} /><span>Borrar</span></button></li>
+            )}
+          </ul>
+        )}
+      </div>
+    </HojaOperativa>
   );
 }
