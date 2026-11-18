@@ -14,6 +14,8 @@
 
 Documentos técnicos que viven pegados al código: [`../plataforma/docs/`](../plataforma/docs/) (offline, FEL, Google Auth, pagos, Leogin Desktop, estrategia instalable).
 
+La [validación de lanzamiento del 18 de noviembre](auditorias/AUDITORIA_VALIDACION_LANZAMIENTO_2026-11-18.md) reúne la evidencia de producción, el ensayo de primera mensualidad y los pendientes de venta.
+
 ## Convenciones de nombre
 
 - `PLAN_<TEMA>_<AAAA-MM-DD>.md` — planes. La fecha es la de creación.
