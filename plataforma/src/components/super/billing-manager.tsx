@@ -7,7 +7,7 @@
    · Lista las facturas y permite registrar el pago.
    ============================================================ */
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useCallback, useEffect, useState } from 'react';
 import { Glass } from '@/components/glass';
 import { fmtMoney } from '@/lib/money';
 import { downloadReceipt } from '@/lib/receipt';
@@ -349,6 +349,10 @@ function InvoiceRow({
   const overdue = isOverdue(inv);
   const meta = STATUS_META[inv.status] ?? STATUS_META.PENDING;
   const [payOpen, setPayOpen] = useState(false);
+  const reportarPago = useCallback((resultado: { ok: boolean; msg: string }) => {
+    onResult(resultado);
+    if (resultado.ok) setPayOpen(false);
+  }, [onResult]);
 
   async function receipt() {
     try {
@@ -412,7 +416,7 @@ function InvoiceRow({
       </div>
 
       {payOpen && inv.status === 'PENDING' && (
-        <PayForm inv={inv} restaurantId={restaurantId} onResult={(t) => { onResult(t); if (t.ok) setPayOpen(false); }} />
+        <PayForm inv={inv} restaurantId={restaurantId} onResult={reportarPago} />
       )}
     </div>
   );
