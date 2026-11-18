@@ -951,6 +951,20 @@ A pedido del dueño, las fichas 2.3–2.10 y el CHANGELOG de v0.23.0 se juntaron
 - **Aviso:** la PC tenía unos 150 MB de memoria libre durante la prueba y el servidor de desarrollo se trababa. Hubo que reiniciarlo varias veces.
 - **Validación:** `typecheck` y `lint` sin errores; 1,658 unitarias pasan, con una omitida.
 
+## 48. Recepción sin saturar · línea N (2026-11-17)
+
+**Rama** `feat/recepcion-nada-saturado`, apilada sobre `feat/glosario`. [Maqueta](../diseno/MAQUETA_RECEPCION_NADA_SATURADO_2026-11-17.html) aprobada con sus cinco recomendaciones. Sin migración.
+
+- **Antes (390 px, una noche normal):** Reservas medía 3,484 px con 48 mandos; la primera llegada empezaba a 438 px y «Nueva reserva» a 2,388 px. En Espera cada grupo ocupaba unos 400 px y arriba había dos tarjetas de resumen, una con «—». «Cancelar» cancelaba con un toque y sin preguntar.
+- **Una fila de mandos** en las dos pantallas: pestañas (Hoy · Próximos · Revisar y Esperan · Atendidos · Revisar) y el botón para anotar. «Revisar» solo aparece si quedó algo de días anteriores. Las piezas compartidas viven en `components/admin/recepcion-comun.tsx`.
+- **Una acción por fila:** Sentar en N, Confirmar, Terminó, Llegó o No llegó; en Espera, además, avisar por WhatsApp si tiene teléfono y aún no se le avisó. Lo demás está en la hoja que se abre al tocar la fila (`HojaOperativa`): otra mesa, mesa prevista, cambiar día u hora, llamar, no asistió y cancelar (Reservas); otra mesa, WhatsApp, llamar, avisé en persona, no llegó y quitar (Espera).
+- **Anotar en una hoja:** «Nueva reserva» con Hoy y Mañana de un toque, la hora propuesta (las 19:00 o la siguiente media hora) y los lugares que quedan a esa hora antes de guardar; la nota es opcional. «Agregar grupo» con tres campos. El aviso de sobrecupo con horas sugeridas sigue igual.
+- **La agenda** es una línea en el teléfono que se abre al tocarla y queda abierta a la derecha en la PC, con la duración de las reservas dentro. «Confirmada» ya no se anuncia: solo «Sin confirmar». «¿Se envió el WhatsApp?» sigue en la fila.
+- **Cancelar pide confirmación**, como «No asistió». Las confirmaciones se abren después de cerrar la hoja, porque el diálogo de confirmar no puede quedar encima de una hoja nativa.
+- **Comprobado en pantalla** a 390 px y 1280 px, claro y oscuro, con datos de prueba locales: las cuatro reservas de hoy caben en una pantalla (filas de 68 px, la primera a 218 px); guardar una reserva para mañana, confirmar una pendiente, abrir la confirmación de cancelar y la pregunta «¿se envió?».
+- **No comprobado:** abrir WhatsApp de verdad (se probó marcando el aviso abierto en la base local) y una prueba con una persona en la puerta.
+- **Validación:** `typecheck` y `lint` sin errores; 1,658 unitarias pasan, con una omitida (incluidas la escala tipográfica y el glosario).
+
 ---
 
 *Actualiza este documento al cerrar cada ficha o al fusionar PR, o muévelo a `docs/archivo/` cuando la ola 0 esté fusionada y desplegada.*

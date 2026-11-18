@@ -479,7 +479,7 @@ Marca con `[x]` y el commit o PR de cierre en el mismo commit del cambio.
 **Ola 4**: [ ] 4.1 · [ ] 4.2 · [ ] 4.3 · [ ] 4.4 · [ ] 4.5 · [ ] 4.6 · [ ] 4.7 · [ ] 4.8 · [ ] 4.9 · [ ] 4.10 · [ ] 4.11 · [ ] 4.12
 **Comercial**: [ ] V.1 · [ ] V.2 · [ ] V.3 · [ ] V.4 · [ ] V.5 · [ ] V.6
 **Calidad**: Q.1, Q.2 y Q.3 son continuas.
-**Línea N · nada saturado** (pantallas sin ficha propia que aún no pasan por el método; [guía](../guias/GUIA_DISENO_NADA_SATURADO.md)). Ya pasadas: Tomar pedidos, carta del comensal, Pedidos en vivo, Menú › Platillos y Hoy (#110), además de Cocina, Caja, Clientes, Negocio y Ajustes (#112). Pendientes: [ ] Recepción (reservas y espera; [maqueta](../diseno/MAQUETA_RECEPCION_NADA_SATURADO_2026-11-17.html) presentada en `feat/recepcion-nada-saturado`) · [ ] Inventario · [ ] Cupones, lealtad y encuestas (con 3.3–3.5) · [ ] Analítica y finanzas (con 3.2) · [ ] Mi cuenta · [ ] Superadmin (con 4.9) · [ ] Web pública (con V.1–V.3)
+**Línea N · nada saturado** (pantallas sin ficha propia que aún no pasan por el método; [guía](../guias/GUIA_DISENO_NADA_SATURADO.md)). Ya pasadas: Tomar pedidos, carta del comensal, Pedidos en vivo, Menú › Platillos y Hoy (#110), además de Cocina, Caja, Clientes, Negocio y Ajustes (#112). [x] Recepción (reservas y espera; [maqueta](../diseno/MAQUETA_RECEPCION_NADA_SATURADO_2026-11-17.html) aprobada y construida en `feat/recepcion-nada-saturado`, registro §48). Pendientes: [ ] Inventario · [ ] Cupones, lealtad y encuestas (con 3.3–3.5) · [ ] Analítica y finanzas (con 3.2) · [ ] Mi cuenta · [ ] Superadmin (con 4.9) · [ ] Web pública (con V.1–V.3)
 
 ---
 
