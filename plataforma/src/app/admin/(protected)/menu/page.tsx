@@ -10,6 +10,8 @@ import AvisoImportacion from '@/components/admin/aviso-importacion';
 import { panelLink } from '@/lib/panel-links-server';
 import { withEffectiveAvailability } from '@/lib/product-availability';
 import { corteAHora } from '@/lib/caja/dia';
+import EstadosDelDia from '@/components/admin/estados-del-dia';
+import { getEstadosVigentes } from '@/lib/db/estados';
 
 export const metadata = { title: 'Catálogo – Panel admin' };
 
@@ -39,13 +41,15 @@ export default async function AdminMenuPage({
   // getAdminMenu y la fila de módulos solo dependen de restaurantId, no una
   // de la otra — se lanzan juntas en vez de esperarlas en serie.
   const db = createServiceClient();
-  const [{ categories, products }, { data: rest }] = await Promise.all([
+  const [{ categories, products }, { data: rest }, estados] = await Promise.all([
     getAdminMenu(restaurantId),
     db
       .from('restaurants')
       .select('plan_actual, timezone, day_cutoff_minutes')
       .eq('id', restaurantId)
       .single(),
+    // Estados del día (CV-32, migración 189).
+    getEstadosVigentes(restaurantId),
   ]);
 
   const maxProducts = rest?.plan_actual ? PLANS[rest.plan_actual as PlanCode]?.maxProducts : undefined;
@@ -68,6 +72,13 @@ export default async function AdminMenuPage({
         <AvisoImportacion restaurantId={restaurantId} lote={lote}
           nuevos={Math.max(0, Number(sp.n) || 0)} precios={Math.max(0, Number(sp.p) || 0)} />
       )}
+      <EstadosDelDia
+        restaurantId={restaurantId}
+        estados={estados.estados}
+        faltaTabla={estados.faltaTabla}
+        ahora={ahora}
+        platillos={products.map((p) => ({ id: p.id as string, name: p.name as string }))}
+      />
       <CatalogPanel
         exportSlot={<ProductosExportButton restaurantId={restaurantId} importarHref={importarHref} />}
         inicial={sp}

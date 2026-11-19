@@ -24,6 +24,7 @@ import type { EdicionArchivada } from '@/lib/db/vitrina';
 import type { WeeklyHours } from '@/lib/hours';
 import type { Category, Product } from '@/types';
 import type { MasPedido } from '@/lib/db/menu';
+import type { EstadoDelDia } from '@/lib/db/estados';
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon' | 'name_en'> & { availability?: WeeklyHours | null };
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'>;
@@ -49,6 +50,8 @@ interface Props {
   initialPlato?: string | null;
   /** «Lo más pedido» (CV-31). */
   masPedidos?: MasPedido[];
+  /** Estados del día (CV-32). */
+  estados?: EstadoDelDia[];
   /** Módulos activos para mostrar funciones opcionales en el menú. */
   llamadaMeseroEnabled?: boolean;
   /** Módulo de lealtad activo (independiente del catálogo de canje). */
@@ -72,7 +75,7 @@ interface Props {
   muestra?: boolean;
 }
 
-export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, cierraEn = null, timezone = 'America/Guatemala', initialMesa, initialPlato = null, masPedidos = [], llamadaMeseroEnabled = false, loyaltyOn = false, rewardsCatalog = null, googleAuthEnabled = false, whatsappNumber = null, restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null, menuLanguages = [], archivo = [], muestra = false }: Props) {
+export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, cierraEn = null, timezone = 'America/Guatemala', initialMesa, initialPlato = null, masPedidos = [], estados = [], llamadaMeseroEnabled = false, loyaltyOn = false, rewardsCatalog = null, googleAuthEnabled = false, whatsappNumber = null, restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null, menuLanguages = [], archivo = [], muestra = false }: Props) {
   /* Una mesa que no existe en el local no se guarda: la carta lo dice y no
      deja pedir a esa mesa (auditoría 1.12, M01). */
   /* Pedido de prueba del dueño (ficha 2.2): guarda el pase de la URL. */
@@ -182,7 +185,7 @@ export default function MenuShell({ config, content, categories, products, resta
                 </div>
               </div>
             )}
-            <MenuClient initialPlato={initialPlato} masPedidos={masPedidos} categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} timezone={timezone} llamadaMeseroEnabled={llamadaMeseroEnabled} initialMesa={mesaInvalida ? undefined : initialMesa}
+            <MenuClient initialPlato={initialPlato} masPedidos={masPedidos} estados={estados} categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} timezone={timezone} llamadaMeseroEnabled={llamadaMeseroEnabled} initialMesa={mesaInvalida ? undefined : initialMesa}
           mesaInvalida={mesaInvalida} loyaltyOn={loyaltyOn} rewardsCatalog={rewardsCatalog} googleAuthEnabled={googleAuthEnabled} whatsappNumber={whatsappNumber} restaurantLat={restaurantLat} restaurantLng={restaurantLng} deliveryRadiusKm={deliveryRadiusKm} />
           </div>
           {vitrina && cfg.launchMode && (

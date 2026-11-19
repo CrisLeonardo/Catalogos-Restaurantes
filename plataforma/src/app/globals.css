@@ -1149,6 +1149,8 @@ html[data-scheme="light"] .btn-white {
 .opt-hint[data-required="1"] { color: var(--c-warn); }
 
 .opt-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Estados del día (CV-32): la barra del que se está viendo se llena en 5 s. */
+@keyframes estado-avance { from { width: 0%; } to { width: 100%; } }
 /* «Tu pedido» a la derecha de la carta en PC (CV-19). La carta no se
    ensancha: el panel ocupa el hueco que sobra a su derecha y solo existe
    cuando cabe (carta de 460 px desde 1180 de ventana; de 760, desde 1400). */

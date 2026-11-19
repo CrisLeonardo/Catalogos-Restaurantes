@@ -6,6 +6,7 @@ import LeoginLanding from '@/components/landing';
 import BranchSelector from '@/components/branch-selector';
 import { getRestaurantBySlugCached } from '@/lib/db/restaurants';
 import { getGroupBranches } from '@/lib/db/org-public';
+import { getEstadosVigentesCached } from '@/lib/db/estados';
 import { getMenuDataCached, getMasPedidosSemanaCached, withStockLeft, LecturaMenuFallida, type MenuData } from '@/lib/db/menu';
 import CartaNoCargo from '@/components/menu/carta-no-cargo';
 import { buildThemeVars, formatPriceCarta } from '@/lib/theme/resolve';
@@ -207,6 +208,8 @@ export default async function Home({
   let menu: MenuData;
   // «Lo más pedido» (CV-31) se pide junto con la carta; si falla, la tira no se pinta.
   const masPedidosP = getMasPedidosSemanaCached(data.restaurant.id).catch(() => []);
+  // Estados del día (CV-32): si falla o falta la migración 189, no se pintan.
+  const estadosP = getEstadosVigentesCached(data.restaurant.id).catch(() => []);
   try {
     menu = await getMenuDataCached(data.restaurant.id);
   } catch (e) {
@@ -277,6 +280,7 @@ export default async function Home({
       initialMesa={initialMesa}
       initialPlato={initialPlato}
       masPedidos={await masPedidosP}
+      estados={await estadosP}
       llamadaMeseroEnabled={isModuleActive(mod, modSettings, 'llamada_mesero')}
       loyaltyOn={loyaltyOn}
       rewardsCatalog={rewardsCatalog}
