@@ -34,3 +34,18 @@ describe('rearmarPedido', () => {
     expect(r.faltan).toBe(3);
   });
 });
+
+describe('leerUltimoPedido', () => {
+  it('no ofrece «lo de siempre» recién pedido ni pasados 90 días', async () => {
+    const { guardarUltimoPedido, leerUltimoPedido, RECIENTE_MS } = await import('./lo-de-siempre');
+    const mem = new Map<string, string>();
+    (globalThis as unknown as { localStorage: Storage }).localStorage = {
+      getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => { mem.set(k, v); },
+    } as Storage;
+    guardarUltimoPedido('r1', [{ lineId: 'l', productId: 'a', name: 'A', price: 10, quantity: 1, image_url: null }]);
+    const ahora = Date.now();
+    expect(leerUltimoPedido('r1', ahora + 60_000)).toBeNull();
+    expect(leerUltimoPedido('r1', ahora + RECIENTE_MS + 60_000)).toHaveLength(1);
+    expect(leerUltimoPedido('r1', ahora + 91 * 24 * 60 * 60 * 1000)).toBeNull();
+  });
+});

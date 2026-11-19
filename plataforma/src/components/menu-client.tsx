@@ -30,6 +30,9 @@ import type { Sugerencia } from '@/components/menu/pairings';
 import type { CartItem, Category, Product } from '@/types';
 import type { MenuReward } from '@/components/menu/rewards-section';
 import MasPedidos from '@/components/menu/mas-pedidos';
+import PedidoLateral from '@/components/menu/pedido-lateral';
+import Estados from '@/components/menu/estados';
+import type { EstadoDelDia } from '@/lib/db/estados';
 import { elegirMasPedidos } from '@/lib/menu/mas-pedidos';
 import { leerUltimoPedido, rearmarPedido, type PedidoRearmado } from '@/lib/menu/lo-de-siempre';
 import { abrirEmbudo, contarPaso } from '@/lib/menu/embudo';
@@ -60,6 +63,8 @@ interface Props {
   initialPlato?: string | null;
   /** Ventas de la semana por platillo, para «Lo más pedido» (CV-31). */
   masPedidos?: MasPedido[];
+  /** Estados del día vigentes (CV-32). */
+  estados?: EstadoDelDia[];
   initialMesa?: number;
   /** QR de una mesa que no existe en el local (1.12, M01): se avisa y no se guarda. */
   mesaInvalida?: number | null;
@@ -98,7 +103,7 @@ function hasOptions(p: ProdItem): boolean {
 
 export default function MenuClient({
   categories, products, ordersEnabled = false, restaurantId, timezone = 'America/Guatemala',
-  llamadaMeseroEnabled = false, initialPlato = null, masPedidos = [], initialMesa, mesaInvalida = null, loyaltyOn = false, rewardsCatalog = null,
+  llamadaMeseroEnabled = false, initialPlato = null, masPedidos = [], estados = [], initialMesa, mesaInvalida = null, loyaltyOn = false, rewardsCatalog = null,
   googleAuthEnabled = false, whatsappNumber = null,
   restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null,
 }: Props) {
@@ -330,8 +335,37 @@ export default function MenuClient({
           <Icon name={mesaInvalida ? 'alertCircle' : 'utensils'} size={18} style={{ flexShrink: 0, marginTop: 1, color: mesaInvalida ? 'var(--c-warn)' : 'var(--u-text-2)' }} />
           {mesaInvalida
             ? <span><strong>La mesa {mesaInvalida} no existe en {config.brandName || 'este local'}.</strong> Escanea el QR de tu mesa o pide ayuda al personal. Puedes ver el menú mientras tanto.</span>
-            : <span><strong>Mesa {mesaActual}</strong> · tu pedido llega a esta mesa</span>}
+            : <span style={{ flex: 1 }}><strong>Mesa {mesaActual}</strong> · tu pedido llega a esta mesa</span>}
+          {/* Pedido de la mesa: desde aquí se vuelve a la lista compartida
+              aunque el carrito propio esté vacío. */}
+          {!mesaInvalida && config.pedidoDeMesa && (
+            <button type="button" className="press" onClick={() => { closeOverlays(); setCartOpen(true); }}
+              style={{ flexShrink: 0, minHeight: 32, padding: '0 10px', borderRadius: 999, border: '1px solid var(--u-hair-2)', background: 'var(--surface-2)', color: 'var(--u-text)', fontWeight: 700, fontSize: 'var(--m-fs-xs)', cursor: 'pointer' }}>
+              Pedido de la mesa
+            </button>
+          )}
         </div>
+      )}
+
+      {/* El pedido en curso, como franja arriba de la carta (CV-14): antes
+          flotaba encima de las tarjetas y de la barra. */}
+      {ordersEnabled && restaurantId && !demo && !kiosk && !vitrina && (
+        <ActiveOrderChip restaurantId={restaurantId} enLinea />
+      )}
+
+      {/* Estados del día (CV-32): arriba de todo lo demás, como en WhatsApp. */}
+      {!vitrina && restaurantId && (
+        <Estados
+          restaurantId={restaurantId}
+          estados={estados}
+          nombre={config.brandName}
+          onPedir={(id) => {
+            const p = products.find((x) => x.id === id);
+            if (!p) return false;
+            setCartOpen(false); setAvisoAbierto(null); setSelected(p);
+            return true;
+          }}
+        />
       )}
 
       {/* «Lo de siempre» (CV-33): un toque y vuelve el pedido de la última vez,
@@ -427,10 +461,12 @@ export default function MenuClient({
             setSelected(producto);
           }}
           onPedirDemo={demo ? () => { setCartOpen(false); setDemoOpen(true); } : undefined}
+          mesaCompartida={!demo && !kiosk && restaurantId && tableScanned && mesaActual && config.pedidoDeMesa ? { restaurantId, mesa: mesaActual } : null}
         />
       )}
       {demo && <PedidoDemo open={demoOpen} onClose={() => setDemoOpen(false)} />}
-      {ordersEnabled && restaurantId && !demo && !selected && !cartOpen && !kiosk && (
+      {/* Vitrina conserva su aviso flotante; las demás lo llevan en la carta. */}
+      {ordersEnabled && restaurantId && !demo && !selected && !cartOpen && !kiosk && vitrina && (
         <ActiveOrderChip restaurantId={restaurantId} />
       )}
 
@@ -443,6 +479,9 @@ export default function MenuClient({
       {/* Barra de navegación inferior — se oculta cuando hay un sheet de producto
           o carrito abierto, y en KIOSKO (cuenta/fidelidad/pedidos son datos
           personales que no deben quedar a la vista en un aparato compartido). */}
+      {/* En PC, el pedido siempre a la vista a la derecha de la carta (CV-19). */}
+      {barraVisible && <PedidoLateral onVer={() => { closeOverlays(); setCartOpen(true); }} />}
+
       {barraVisible && (
         <BottomNav
           pedido={count > 0 ? {

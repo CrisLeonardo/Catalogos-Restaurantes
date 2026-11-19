@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { usePrice, useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { formatAmountCarta, roleSize } from '@/lib/theme/resolve';
+import { marcarOrigen } from '@/lib/menu/origen-ficha';
 
 /* ── Superficie de una pieza de la carta ──────────────────────
    Sustituye a `Glass` en los platillos. El motivo está explicado a fondo en
@@ -52,7 +53,7 @@ export function MenuSurface({
       className={`m-surface ${clickable ? 'press' : ''} ${className}`}
       data-clickable={clickable ? '1' : undefined}
       data-unavailable={unavailable ? '1' : undefined}
-      onClick={clickable ? onClick : undefined}
+      onClick={clickable ? (e) => { marcarOrigen(e.currentTarget); onClick!(); } : undefined}
       style={style}
     >
       {clickable && <AbrirPieza label={ariaLabel} onClick={onClick!} />}
@@ -70,7 +71,7 @@ export function AbrirPieza({ label, onClick }: { label?: string; onClick: () => 
       type="button"
       className="m-surface-abrir"
       aria-label={label}
-      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      onClick={(e) => { e.stopPropagation(); marcarOrigen(e.currentTarget.parentElement); onClick(); }}
     />
   );
 }
