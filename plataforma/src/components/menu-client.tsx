@@ -21,7 +21,8 @@ import { getScannedTable, watchScannedTable, isStandaloneLaunch } from '@/lib/ta
 import { mesaExiste } from '@/lib/mesa-valida';
 import { isKioskMode } from '@/lib/kiosk';
 import { hasAnyHours, isOpenNow, type WeeklyHours } from '@/lib/hours';
-import { useThemeConfig } from '@/lib/theme/context';
+import { useThemeConfig, useThemeContent } from '@/lib/theme/context';
+import { formatPrice } from '@/lib/theme/resolve';
 import { volarAlCarrito } from '@/lib/volar-al-carrito';
 import { isVitrina } from '@/lib/theme/defaults';
 import { sugerirAcompanantes } from '@/lib/menu-pairings';
@@ -92,7 +93,7 @@ export default function MenuClient({
   googleAuthEnabled = false, whatsappNumber = null,
   restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null,
 }: Props) {
-  const { items, addItem, qtyOfProduct } = useCart();
+  const { items, addItem, qtyOfProduct, total: cartTotal } = useCart();
   const [selected, setSelected] = useState<ProdItem | null>(null);
   /** Por qué no se puede pedir el platillo abierto, si es el caso (CV-10). */
   const [avisoAbierto, setAvisoAbierto] = useState<{ id: string; texto: string } | null>(null);
@@ -106,6 +107,7 @@ export default function MenuClient({
   /** La mesa en la que está el comensal, para decírsela (1.12, M01). */
   const [mesaActual, setMesaActual] = useState<number | null>(null);
   const config = useThemeConfig();
+  const content = useThemeContent();
   const [authError, setAuthError] = useState(false);
   // MODO KIOSKO (autoservicio): dispositivo compartido del local. Se ocultan
   // cuenta/fidelidad/mis pedidos (datos personales de otros clientes) y los
@@ -185,6 +187,10 @@ export default function MenuClient({
   const pairingsOn = ordersEnabled && config.suggestPairings !== false;
   // Vitrina: barra arriba con la bolsa, y abajo solo la bolsa (ver vitrina-bar.tsx).
   const vitrina = isVitrina(config);
+  /* La barra de abajo (navegación + pedido + mesero, CV-14). Se oculta con
+     una hoja abierta y en KIOSKO (cuenta, puntos y pedidos son datos
+     personales que no deben quedar a la vista en un aparato compartido). */
+  const barraVisible = ordersEnabled && !demo && !vitrina && !selected && !cartOpen && !kiosk;
   const enCarrito = useMemo(() => items.map((i) => i.productId), [items]);
   const sheetPairings = useMemo(
     () => (pairingsOn && selected ? acompanantesPara([selected.id, ...enCarrito], products, categories, timezone) : []),
@@ -330,7 +336,9 @@ export default function MenuClient({
       )}
       {ordersEnabled && (vitrina
         ? !selected && !cartOpen && <VitrinaBag onOpen={() => setCartOpen(true)} />
-        : !selected && !cartOpen && <CartBar onOpen={() => setCartOpen(true)} navigationVisible={!demo && !kiosk} />)}
+        // Con la barra de abajo a la vista, el pedido vive DENTRO de ella
+        // (CV-14); el botón suelto queda para la demo y el kiosko.
+        : !selected && !cartOpen && (demo || kiosk) && <CartBar onOpen={() => setCartOpen(true)} navigationVisible={false} />)}
       {ordersEnabled && cartOpen && (
         <CartPanel
           sugerencias={cartPairings}
@@ -350,15 +358,27 @@ export default function MenuClient({
         <ActiveOrderChip restaurantId={restaurantId} />
       )}
 
-      {llamadaMeseroEnabled && restaurantId && tableScanned && !selected && !cartOpen && !kiosk && (
-        <WaiterCallButton restaurantId={restaurantId} raised={ordersEnabled && count > 0} />
+      {/* Sin barra de abajo (carta sin pedidos en línea), el mesero sigue
+          flotando; con barra, es una sección de ella (CV-14). */}
+      {llamadaMeseroEnabled && restaurantId && tableScanned && !selected && !cartOpen && !kiosk && !barraVisible && (
+        <WaiterCallButton restaurantId={restaurantId} />
       )}
 
       {/* Barra de navegación inferior — se oculta cuando hay un sheet de producto
           o carrito abierto, y en KIOSKO (cuenta/fidelidad/pedidos son datos
           personales que no deben quedar a la vista en un aparato compartido). */}
-      {ordersEnabled && !demo && !vitrina && !selected && !cartOpen && !kiosk && (
+      {barraVisible && (
         <BottomNav
+          pedido={count > 0 ? {
+            count,
+            importe: formatPrice(cartTotal, config),
+            label: content.cart.barCta,
+            ariaLabel: `${content.cart.barCta} · ${count} ${count === 1 ? content.cart.itemsOne : content.cart.itemsMany} · ${formatPrice(cartTotal, config)}`,
+            onOpen: () => { closeOverlays(); setCartOpen(true); },
+          } : null}
+          mesero={llamadaMeseroEnabled && restaurantId && tableScanned
+            ? <WaiterCallButton restaurantId={restaurantId} enBarra />
+            : null}
           active={activeTab}
           ordersEnabled={ordersEnabled}
           loyaltyOn={loyaltyOn}
