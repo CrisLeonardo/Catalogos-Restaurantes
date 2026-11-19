@@ -29,12 +29,13 @@ import { edicionPermitePedir, fechaCorta } from '@/lib/vitrina/edicion';
 import { DIETARY_TAG_MAP } from '@/lib/dietary-tags';
 import { useLocale, useLocalized } from '@/lib/locale/context';
 import { Acompanantes, type Sugerencia } from '@/components/menu/pairings';
+import { isUnavailable, type AvailabilityFields } from '@/lib/product-availability';
 import type { CartItem, CartItemOption, Product, ProductOptionGroup } from '@/types';
 import {
   cabeOtra, grupoEsObligatorio, grupoPendiente, reglaDeGrupo, seleccionDeLinea, seleccionInicial, textoPendiente, variantesDeLinea,
 } from '@/lib/menu/opciones';
 
-type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'>;
+type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'> & AvailabilityFields;
 
 /** Variante inicial de cada componente con variantes: la primera. El precio
     SIEMPRE usó la primera como fallback — sin esto, la píldora no se veía
@@ -50,7 +51,7 @@ function initialVariants(groups: ProductOptionGroup[]): Record<string, string> {
 }
 
 export default function ProductSheet({
-  product, icon, ordersEnabled, onClose, acompanantes = [], linea, onGuardado,
+  product, icon, ordersEnabled, onClose, acompanantes = [], linea, onGuardado, aviso,
 }: {
   product: ProdItem;
   icon: string;
@@ -61,6 +62,9 @@ export default function ProductSheet({
   /** «Cambiar» desde el carrito (1.11, M04): esta línea se reemplaza en su lugar. */
   linea?: CartItem;
   onGuardado?: () => void;
+  /** No se puede pedir ahora (agotado o fuera de horario): la ficha se abre
+      para leer y dice por qué, en vez de «Agregar» (CV-10). */
+  aviso?: string | null;
 }) {
   const config = useThemeConfig();
   const content = useThemeContent();
@@ -185,10 +189,15 @@ export default function ProductSheet({
   }
 
   const usePhoto = product.image_url && config.productArt !== 'pattern';
+  // Si llegó sin aviso (un enlace directo, «Cambiar» desde el carrito…) pero
+  // está agotado, igual se dice: nunca un «Agregar» que el servidor rechaza.
+  const noSePide = aviso ?? (!linea && isUnavailable(product) ? content.product.soldOut : null);
 
   const pie = (
     <div className="hoja-platillo-accion">
-      {ordersEnabled && !edicionPermitePedir(edicion) ? (
+      {ordersEnabled && noSePide ? (
+        <div className="m-sheet-closed" role="status">{noSePide}</div>
+      ) : ordersEnabled && !edicionPermitePedir(edicion) ? (
         <div className="m-sheet-closed" role="status">
           {edicion.estado === 'proxima' && edicion.abre !== null ? `Esta edición abre el ${fechaCorta(edicion.abre)}` : content.vitrina.launchClosed}
         </div>
@@ -279,11 +288,14 @@ export default function ProductSheet({
           </div>
         )}
         {!(product.dietary_tags && product.dietary_tags.some((k) => DIETARY_TAG_MAP[k]?.kind === 'allergen')) && (
-          /* Sin alérgenos indicados no se calla: callar parece «no contiene» (M08). */
-          <p style={{ margin: 0, fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)', padding: '10px 12px', borderRadius: 'var(--m-r-md)', border: '1px dashed var(--u-hair-2)' }}>
-            {es
-              ? 'Alérgenos: el restaurante no los ha indicado. Pregunta antes de pedir.'
-              : 'Allergens: not provided by the restaurant. Ask before ordering.'}
+          /* Sin alérgenos indicados no se calla: callar parece «no contiene» (M08).
+             Pero tampoco ocupa el sitio de lo que vende: era un recuadro
+             punteado de dos líneas en cada platillo; ahora es una línea
+             discreta (CV-15). El recuadro solo vive cuando el dueño SÍ los
+             indicó (las etiquetas de arriba). */
+          <p style={{ margin: 0, fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="alertCircle" size={13} />
+            {es ? 'Alérgenos sin indicar · pregunta antes de pedir' : 'Allergens not listed · ask before ordering'}
           </p>
         )}
 
@@ -410,7 +422,7 @@ export default function ProductSheet({
           );
         })}
 
-        {ordersEnabled && !linea && (
+        {ordersEnabled && !linea && !noSePide && (
           <Acompanantes
             items={acompanantes}
             elegidos={extras}

@@ -6,6 +6,26 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+- Auditoría del menú digital «La carta que vende» (Claude): 8 estructuras medidas en producción a 320/390/1280 px, recorridos de compra, rendimiento con 4G lenta, 4 fallos P1 (recarga en la primera visita, carta vacía cacheada, aviso de Google al entrar, enlace sin vista previa), propuesta en seis piezas con maqueta interactiva y comparación con la auditoría de ChatGPT. [Auditoría](docs/auditorias/AUDITORIA_CARTA_QUE_VENDE_2026-11-18.md) · [maqueta](docs/diseno/MAQUETA_CARTA_QUE_VENDE_2026-11-18.html).
+- **Fase 0 de «La carta que vende»** (sin diseño nuevo, sin migración):
+  - La carta ya no se recarga sola en la primera visita.
+  - Una lectura fallida dice «No pudimos cargar la carta» en vez de enseñar un restaurante vacío durante un minuto.
+  - Se quitó el aviso de Google al entrar.
+  - Un enlace a la carta sin logo lleva tarjeta de vista previa con la paleta.
+  - «Agregar» funciona con teclado.
+  - Estantes ya no desborda en el teléfono.
+  - La búsqueda encuentra en inglés.
+  - Desaparece el «EST · 2024» inventado.
+  - Lo agotado se puede abrir y dice cuándo vuelve.
+- **Fase 1 de «La carta que vende»** (nada saturado, sin migración):
+  - La carta abre con una cabecera breve y la comida a la vista: el primer precio sube de ~1,000 px a menos de 450. La portada completa queda como opción del editor.
+  - Una sola barra abajo con el pedido y el mesero.
+  - «Cierra en 40 min» solo cuando cuenta.
+  - Sin el «El menú» repetido.
+  - Alérgenos en una línea.
+  - «Va bien con» con fotos.
+  - Checkout de mesa sin campos que no se usan.
+
 ## v0.25.0 · 2026-11-18 · Cierre de la Ola 2 y línea N «nada saturado»
 PR #137 a #146, fusionados juntos por #146 (apilados), más #144 contra `main` · **migración 187, antes de desplegar** (si falta, la cola del superadmin se ve sin estados y lo dice).
 - **Navegación por rol** (ficha 2.11, #137): si el trabajo cabe en cuatro casillas, la barra del teléfono nombra pantallas (caja, recepción, cocina); si no, Hoy · Pedidos · [+] · Menú · Más.
