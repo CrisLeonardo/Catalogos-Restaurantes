@@ -4,8 +4,8 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
-## Sin publicar
-
+## v0.26.0 · 2026-11-19 · «La carta que vende»: fases 0 y 1
+PR #153, #154 y #157, fusionados juntos (apilados), más #156 contra `main` · **sin migración**.
 - Auditoría del menú digital «La carta que vende» (Claude): 8 estructuras medidas en producción a 320/390/1280 px, recorridos de compra, rendimiento con 4G lenta, 4 fallos P1 (recarga en la primera visita, carta vacía cacheada, aviso de Google al entrar, enlace sin vista previa), propuesta en seis piezas con maqueta interactiva y comparación con la auditoría de ChatGPT. [Auditoría](docs/auditorias/AUDITORIA_CARTA_QUE_VENDE_2026-11-18.md) · [maqueta](docs/diseno/MAQUETA_CARTA_QUE_VENDE_2026-11-18.html).
 - **Fase 0 de «La carta que vende»** (sin diseño nuevo, sin migración):
   - La carta ya no se recarga sola en la primera visita.
@@ -25,6 +25,7 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
   - Alérgenos en una línea.
   - «Va bien con» con fotos.
   - Checkout de mesa sin campos que no se usan.
+- **Next.js 16.4.3 → 16.4.6** (#156): cierra dos avisos moderados de caché de `'use cache'`, que Leogin no usaba.
 
 ## v0.25.0 · 2026-11-18 · Cierre de la Ola 2 y línea N «nada saturado»
 PR #137 a #146, fusionados juntos por #146 (apilados), más #144 contra `main` · **migración 187, antes de desplegar** (si falta, la cola del superadmin se ve sin estados y lo dice).
