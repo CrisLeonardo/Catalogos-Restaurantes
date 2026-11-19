@@ -20,9 +20,9 @@ import { useCart, carritoGuardadoTieneAlgo } from '@/lib/cart-context';
 import { getScannedTable, watchScannedTable, isStandaloneLaunch } from '@/lib/table-session';
 import { mesaExiste } from '@/lib/mesa-valida';
 import { isKioskMode } from '@/lib/kiosk';
-import { getMyAccount } from '@/lib/actions/loyalty';
 import { hasAnyHours, isOpenNow, type WeeklyHours } from '@/lib/hours';
-import { useThemeConfig } from '@/lib/theme/context';
+import { useThemeConfig, useThemeContent } from '@/lib/theme/context';
+import { formatPrice } from '@/lib/theme/resolve';
 import { volarAlCarrito } from '@/lib/volar-al-carrito';
 import { isVitrina } from '@/lib/theme/defaults';
 import { sugerirAcompanantes } from '@/lib/menu-pairings';
@@ -36,7 +36,6 @@ import type { MenuReward } from '@/components/menu/rewards-section';
    escanear un QR es el menú, no el formulario de su cuenta. */
 const AccountSheet = dynamic(() => import('@/components/menu/account-sheet'));
 const MyOrders = dynamic(() => import('@/components/my-orders'));
-const GoogleLoyaltyIntro = dynamic(() => import('@/components/menu/google-loyalty-intro'));
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon' | 'name_en'> & { availability?: WeeklyHours | null };
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'> & {
@@ -94,8 +93,10 @@ export default function MenuClient({
   googleAuthEnabled = false, whatsappNumber = null,
   restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null,
 }: Props) {
-  const { items, addItem, qtyOfProduct } = useCart();
+  const { items, addItem, qtyOfProduct, total: cartTotal } = useCart();
   const [selected, setSelected] = useState<ProdItem | null>(null);
+  /** Por qué no se puede pedir el platillo abierto, si es el caso (CV-10). */
+  const [avisoAbierto, setAvisoAbierto] = useState<{ id: string; texto: string } | null>(null);
   /** «Cambiar» desde el carrito (1.11, M04): la línea que se está corrigiendo. */
   const [editando, setEditando] = useState<CartItem | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
@@ -106,8 +107,8 @@ export default function MenuClient({
   /** La mesa en la que está el comensal, para decírsela (1.12, M01). */
   const [mesaActual, setMesaActual] = useState<number | null>(null);
   const config = useThemeConfig();
+  const content = useThemeContent();
   const [authError, setAuthError] = useState(false);
-  const [googleIntroOpen, setGoogleIntroOpen] = useState(false);
   // MODO KIOSKO (autoservicio): dispositivo compartido del local. Se ocultan
   // cuenta/fidelidad/mis pedidos (datos personales de otros clientes) y los
   // avisos de Google; el pedido va directo al checkout de mostrador.
@@ -173,23 +174,10 @@ export default function MenuClient({
     return () => clearTimeout(t);
   }, [authError]);
 
-  // Aviso de una sola vez (primera visita a este restaurante) explicando que
-  // los puntos de fidelidad requieren sesión de Google. Se omite si ya hay
-  // sesión iniciada (getMyAccount) para no molestar a quien ya la usa.
-  useEffect(() => {
-    if (!restaurantId || !loyaltyOn || !googleAuthEnabled) return;
-    if (isKioskMode()) return; // kiosko: sin invitaciones a iniciar sesión
-    const key = `google-loyalty-intro-${restaurantId}`;
-    if (localStorage.getItem(key)) return;
-    let cancelled = false;
-    (async () => {
-      const acc = await getMyAccount(restaurantId).catch(() => null);
-      if (cancelled) return;
-      localStorage.setItem(key, '1');
-      if (!acc?.loggedIn) setGoogleIntroOpen(true);
-    })();
-    return () => { cancelled = true; };
-  }, [restaurantId, loyaltyOn, googleAuthEnabled]);
+  /* Antes, en la primera visita, un aviso «Gana puntos con Google» tapaba la
+     carta antes de ver un plato. Se quitó (auditoría «La carta que vende»,
+     CV-03): la invitación vive donde tiene sentido, en la confirmación del
+     pedido («Con tu cuenta, este pedido te daba N puntos») y en «Cuenta». */
 
   const count = items.reduce((s, i) => s + i.quantity, 0);
 
@@ -199,6 +187,10 @@ export default function MenuClient({
   const pairingsOn = ordersEnabled && config.suggestPairings !== false;
   // Vitrina: barra arriba con la bolsa, y abajo solo la bolsa (ver vitrina-bar.tsx).
   const vitrina = isVitrina(config);
+  /* La barra de abajo (navegación + pedido + mesero, CV-14). Se oculta con
+     una hoja abierta y en KIOSKO (cuenta, puntos y pedidos son datos
+     personales que no deben quedar a la vista en un aparato compartido). */
+  const barraVisible = ordersEnabled && !demo && !vitrina && !selected && !cartOpen && !kiosk;
   const enCarrito = useMemo(() => items.map((i) => i.productId), [items]);
   const sheetPairings = useMemo(
     () => (pairingsOn && selected ? acompanantesPara([selected.id, ...enCarrito], products, categories, timezone) : []),
@@ -232,10 +224,9 @@ export default function MenuClient({
 
   /* «Atrás» y Esc cierran la hoja en vez de sacar del menú (ver
      use-hoja-en-historial.ts). El nombre va de la capa de ARRIBA hacia
-     abajo, en el mismo orden en que se pintan: el aviso de Google, las
-     pantallas completas (z 70), el carrito y la ficha del platillo. */
-  const hoja = googleIntroOpen ? 'google'
-    : pedidosOpen ? 'pedidos'
+     abajo, en el mismo orden en que se pintan: las pantallas completas
+     (z 70), el carrito y la ficha del platillo. */
+  const hoja = pedidosOpen ? 'pedidos'
     : accountOpen ? 'cuenta'
     : rewardsOpen ? 'puntos'
     : cartOpen ? 'carrito'
@@ -244,11 +235,10 @@ export default function MenuClient({
   useHojaEnHistorial({
     hoja,
     cerrarTodo: () => {
-      closeOverlays(); setCartOpen(false); setSelected(null); setGoogleIntroOpen(false);
+      closeOverlays(); setCartOpen(false); setSelected(null);
     },
     cerrarArriba: () => {
-      if (googleIntroOpen) setGoogleIntroOpen(false);
-      else if (pedidosOpen || accountOpen || rewardsOpen) closeOverlays();
+      if (pedidosOpen || accountOpen || rewardsOpen) closeOverlays();
       else if (cartOpen) setCartOpen(false);
       else setSelected(null);
     },
@@ -311,7 +301,7 @@ export default function MenuClient({
         timezone={timezone}
         qtyOf={qtyOfProduct}
         onAdd={onAdd}
-        onOpen={(p) => { setCartOpen(false); setSelected(p); }}
+        onOpen={(p, aviso) => { setCartOpen(false); setAvisoAbierto(aviso ? { id: p.id, texto: aviso } : null); setSelected(p); }}
       />
 
       {ordersEnabled && <div style={{ height: count > 0 ? 88 : 24 }} />}
@@ -322,6 +312,7 @@ export default function MenuClient({
           product={selected}
           icon={selected.icon || catIcon.get(selected.category_id ?? '') || 'utensils'}
           ordersEnabled={ordersEnabled}
+          aviso={avisoAbierto?.id === selected.id ? avisoAbierto.texto : null}
           acompanantes={editando ? [] : sheetPairings}
           linea={editando ?? undefined}
           onClose={() => {
@@ -345,7 +336,9 @@ export default function MenuClient({
       )}
       {ordersEnabled && (vitrina
         ? !selected && !cartOpen && <VitrinaBag onOpen={() => setCartOpen(true)} />
-        : !selected && !cartOpen && <CartBar onOpen={() => setCartOpen(true)} navigationVisible={!demo && !kiosk} />)}
+        // Con la barra de abajo a la vista, el pedido vive DENTRO de ella
+        // (CV-14); el botón suelto queda para la demo y el kiosko.
+        : !selected && !cartOpen && (demo || kiosk) && <CartBar onOpen={() => setCartOpen(true)} navigationVisible={false} />)}
       {ordersEnabled && cartOpen && (
         <CartPanel
           sugerencias={cartPairings}
@@ -365,15 +358,27 @@ export default function MenuClient({
         <ActiveOrderChip restaurantId={restaurantId} />
       )}
 
-      {llamadaMeseroEnabled && restaurantId && tableScanned && !selected && !cartOpen && !kiosk && (
-        <WaiterCallButton restaurantId={restaurantId} raised={ordersEnabled && count > 0} />
+      {/* Sin barra de abajo (carta sin pedidos en línea), el mesero sigue
+          flotando; con barra, es una sección de ella (CV-14). */}
+      {llamadaMeseroEnabled && restaurantId && tableScanned && !selected && !cartOpen && !kiosk && !barraVisible && (
+        <WaiterCallButton restaurantId={restaurantId} />
       )}
 
       {/* Barra de navegación inferior — se oculta cuando hay un sheet de producto
           o carrito abierto, y en KIOSKO (cuenta/fidelidad/pedidos son datos
           personales que no deben quedar a la vista en un aparato compartido). */}
-      {ordersEnabled && !demo && !vitrina && !selected && !cartOpen && !kiosk && (
+      {barraVisible && (
         <BottomNav
+          pedido={count > 0 ? {
+            count,
+            importe: formatPrice(cartTotal, config),
+            label: content.cart.barCta,
+            ariaLabel: `${content.cart.barCta} · ${count} ${count === 1 ? content.cart.itemsOne : content.cart.itemsMany} · ${formatPrice(cartTotal, config)}`,
+            onOpen: () => { closeOverlays(); setCartOpen(true); },
+          } : null}
+          mesero={llamadaMeseroEnabled && restaurantId && tableScanned
+            ? <WaiterCallButton restaurantId={restaurantId} enBarra />
+            : null}
           active={activeTab}
           ordersEnabled={ordersEnabled}
           loyaltyOn={loyaltyOn}
@@ -456,11 +461,6 @@ export default function MenuClient({
             </button>
           </Glass>
         </div>
-      )}
-
-      {/* Aviso de primera visita: fidelidad requiere sesión de Google */}
-      {googleIntroOpen && (
-        <GoogleLoyaltyIntro onClose={() => setGoogleIntroOpen(false)} />
       )}
     </>
   );

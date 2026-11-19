@@ -121,6 +121,42 @@ export function isOpenNow(
 }
 
 /**
+ * Minutos que faltan para cerrar, si está abierto ahora; null si está cerrado
+ * o no tiene horario (siempre abierto). Sirve para el aviso «Cierra en 40 min»
+ * de la cabecera de la carta: el estado solo toma sitio cuando cuenta
+ * (auditoría «La carta que vende», CV-13).
+ */
+export function minutosParaCerrar(
+  hours: WeeklyHours | null | undefined,
+  timezone: string,
+  now: Date = new Date(),
+  exceptions?: HourExceptions | null,
+): number | null {
+  const { day, minutes } = localNowParts(timezone, now);
+  const todayOverride = exceptions?.[localDateKey(now, timezone)];
+  if (!hours && !todayOverride) return null;
+
+  const today = todayOverride ?? hours?.[String(day) as DayKey] ?? [];
+  for (const [open, close] of today) {
+    const o = toMinutes(open);
+    const c = toMinutes(close);
+    if (Number.isNaN(o) || Number.isNaN(c)) continue;
+    if (c > o && minutes >= o && minutes < c) return c - minutes;
+    if (c <= o && minutes >= o) return 24 * 60 - minutes + c; // cruza medianoche
+  }
+  const yesterdayDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const yesterdayOverride = exceptions?.[localDateKey(yesterdayDate, timezone)];
+  const yesterday = yesterdayOverride ?? hours?.[String((day + 6) % 7) as DayKey] ?? [];
+  for (const [open, close] of yesterday) {
+    const o = toMinutes(open);
+    const c = toMinutes(close);
+    if (Number.isNaN(o) || Number.isNaN(c)) continue;
+    if (c <= o && minutes < c) return c - minutes;
+  }
+  return null;
+}
+
+/**
  * Texto amable de la PRÓXIMA apertura ("hoy a las 18:00", "mañana a las 08:00",
  * "el Lunes a las 08:00") o null si no se puede determinar. Útil para avisar al
  * comensal cuándo vuelve a abrir cuando el restaurante está cerrado ahora.

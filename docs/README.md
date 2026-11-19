@@ -14,6 +14,8 @@
 
 Documentos técnicos que viven pegados al código: [`../plataforma/docs/`](../plataforma/docs/) (offline, FEL, Google Auth, pagos, Leogin Desktop, estrategia instalable).
 
+Para mejorar la carta del comensal como vendedora del restaurante, consulta la [auditoría «La carta que vende»](auditorias/AUDITORIA_CARTA_QUE_VENDE_2026-11-18.md) y su [maqueta](diseno/MAQUETA_CARTA_QUE_VENDE_2026-11-18.html).
+
 ## Convenciones de nombre
 
 - `PLAN_<TEMA>_<AAAA-MM-DD>.md` — planes. La fecha es la de creación.

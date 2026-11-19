@@ -168,8 +168,10 @@ function tamañoCartel(texto: string): number {
   return Math.min(26, 90 / (larga * 0.5));
 }
 
-export default function Portada({ isOpen = true, fallbackImage = null, whatsappNumber = null }: {
+export default function Portada({ isOpen = true, cierraEn = null, fallbackImage = null, whatsappNumber = null }: {
   isOpen?: boolean;
+  /** Minutos para cerrar, si está abierto (CV-13). */
+  cierraEn?: number | null;
   /** Foto para la portada Vitrina si el dueño no subió imagen de fondo: la de
       un producto de su carta (la elige MenuShell). */
   fallbackImage?: string | null;
@@ -185,6 +187,10 @@ export default function Portada({ isOpen = true, fallbackImage = null, whatsappN
 
   const title = content.portada.title || config.brandName;
   const subtitle = content.portada.subtitle || config.tagline;
+  /* El rótulo pequeño de Carta de autor y Pizarra (CV-08). «EST · 2024» fue el
+     valor de muestra hasta 2026-11; un tema guardado con él no lo escribió
+     el dueño, así que tampoco se imprime. */
+  const kicker = content.portada.posterKicker && content.portada.posterKicker !== 'EST · 2024' ? content.portada.posterKicker : '';
   const anim = config.animations;
   // El lienzo ancho (tablet/escritorio/revista) pide un titular mayor; la
   // columna de texto sale de `.menu-canvas`, la misma clase que usa el <main>
@@ -238,7 +244,7 @@ export default function Portada({ isOpen = true, fallbackImage = null, whatsappN
           {config.portadaShowLogo && <BrandMark size={46} />}
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <div className="t-poster" style={{ fontSize: 'var(--m-fs-sm)', letterSpacing: '0.3em', color: 'var(--u-text-3)' }}>{content.portada.posterKicker}</div>
+          {kicker && <div className="t-poster" style={{ fontSize: 'var(--m-fs-sm)', letterSpacing: '0.3em', color: 'var(--u-text-3)' }}>{kicker}</div>}
           <div className="t-poster" style={{ fontSize: heroSize(22, 56, 104, 24), lineHeight: 0.84, marginTop: 6 }}>{title}</div>
           {subtitle && (
             <p className="t-serif" style={{ fontStyle: 'italic', fontSize: 'var(--m-fs-xl)', color: 'var(--u-text-2)', marginTop: 'var(--m-sp-4)' }}>{subtitle}</p>
@@ -425,11 +431,14 @@ export default function Portada({ isOpen = true, fallbackImage = null, whatsappN
           <div aria-hidden style={notch('top')} />
           <div aria-hidden style={notch('bottom')} />
 
-          <div className="t-mono" style={{ fontSize: 'var(--m-fs-xs)', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--u-text-3)', textAlign: 'center' }}>
-            {content.portada.posterKicker}
-          </div>
-
-          <div style={rule} />
+          {kicker && (
+            <>
+              <div className="t-mono" style={{ fontSize: 'var(--m-fs-xs)', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--u-text-3)', textAlign: 'center' }}>
+                {kicker}
+              </div>
+              <div style={rule} />
+            </>
+          )}
 
           {config.portadaShowLogo && (
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
@@ -472,24 +481,31 @@ export default function Portada({ isOpen = true, fallbackImage = null, whatsappN
     );
   }
 
-  /* ── Directo ──
-     Sin héroe: un encabezado compacto y el menú empieza de inmediato. Es lo
-     que quiere quien pone el QR en la mesa y no soporta que el comensal tenga
-     que deslizar una pantalla entera antes de ver un solo platillo.
-     Distinto de 'none', que deja la carta huérfana y sin ninguna identidad. */
+  /* ── Directo · la CABECERA BREVE ──
+     Sin héroe: una franja con logo, nombre y lema, y el menú empieza de
+     inmediato. Desde la auditoría «La carta que vende» (CV-11) es como abre
+     toda carta salvo que el dueño pida la portada completa (ver MenuShell).
+     Distinto de 'none', que deja la carta huérfana y sin ninguna identidad.
+
+     El estado solo toma sitio cuando cuenta (CV-13): «Abierto ahora» anuncia
+     lo normal y se calla; «Cierra en 40 min» sí se dice. Cerrado lo explica
+     el aviso de arriba de la carta, con cuándo vuelve a abrir. */
   if (config.portadaVariant === 'directo') {
+    const cierraPronto = isOpen && cierraEn !== null && cierraEn <= 60;
     return (
-      <section style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '24px 0 2px' }}>
-        {config.portadaShowLogo && <BrandMark size={54} />}
+      <section style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 0 0' }}>
+        {config.portadaShowLogo && <BrandMark size={48} />}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 className="t-display" style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * clamp(22px, 6.5vw, 30px))` }}>{title}</h1>
+          <h1 className="t-display" style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * clamp(22px, 6.5vw, 28px))` }}>{title}</h1>
           {subtitle && (
-            <p className="t-serif" style={{ ...subT.vars, fontSize: `calc(var(--m-fs-sm) * ${subT.size})`, marginTop: 3 }}>{subtitle}</p>
-          )}
-          {config.portadaShowBadge && (
-            <div style={{ marginTop: 9 }}><OpenBadge isOpen={isOpen} /></div>
+            <p className="t-serif" style={{ ...subT.vars, fontSize: `calc(var(--m-fs-sm) * ${subT.size})`, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</p>
           )}
         </div>
+        {config.portadaShowBadge && cierraPronto && (
+          <span role="status" className="m-badge" style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--c-warn)' }}>
+            <Icon name="clock" size={13} /> Cierra en {cierraEn} min
+          </span>
+        )}
       </section>
     );
   }
