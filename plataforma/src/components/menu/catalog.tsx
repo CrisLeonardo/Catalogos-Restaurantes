@@ -576,9 +576,51 @@ export default function Catalog({
 
       {/* ── Navegación de la carta ── */}
 
+      {/* VISTA DE PC (auditoría «La carta que vende», CV-19): las categorías en
+          un riel a la izquierda de la carta, que en PC sustituye a las
+          píldoras y al índice de arriba (`.m-nav-movil` se oculta cuando el
+          riel cabe). Hace lo mismo que la navegación de cada estructura:
+          filtra (píldoras, portadas), salta (secciones) o abre y salta
+          (acordeón). Solo existe donde cabe junto a la carta (globals.css). */}
+      {categories.length > 1 && (
+        <nav className="m-pc-rail m-surface" aria-label={locale === 'en' ? 'Menu sections' : 'Secciones de la carta'}>
+          {(nav === 'chips' || nav === 'portadas') && (
+            <button type="button" className="m-pc-rail-item" aria-current={activeCat === null && !searching ? 'true' : undefined}
+              onClick={() => { setQuery(''); setAntojo(null); setActiveCat(null); rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
+              {config.showCategoryIcons && <Icon name="grid" size={16} />}{content.catalog.allLabel}
+            </button>
+          )}
+          {categories.map((c) => {
+            const activa = nav === 'secciones' ? spySection === c.id
+              : nav === 'acordeon' ? openCatId === c.id
+              : activeCat === c.id;
+            return (
+              <button key={c.id} type="button" className="m-pc-rail-item"
+                aria-current={activa && !searching ? 'true' : undefined}
+                data-dim={catAvail.get(c.id) === false ? '1' : undefined}
+                onClick={() => {
+                  setQuery(''); setAntojo(null);
+                  if (nav === 'secciones') { goToSection(c.id); return; }
+                  if (nav === 'acordeon') {
+                    setOpenCat(c.id);
+                    // Tras abrirla: el salto mide la sección ya desplegada.
+                    setTimeout(() => goToSection(c.id), 60);
+                    return;
+                  }
+                  setActiveCat(c.id);
+                  rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}>
+                {catAvail.get(c.id) === false ? <Icon name="clock" size={16} /> : config.showCategoryIcons && <Icon name={catIcon.get(c.id) ?? 'utensils'} size={16} />}
+                <span>{localize(c.name, c.name_en)}</span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
+
       {/* Píldoras: filtro de una categoría a la vez. */}
       {nav === 'chips' && !searching && (
-        <div className="u-noscroll" style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '16px 0 6px' }}>
+        <div className="u-noscroll m-nav-movil" style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '16px 0 6px' }}>
           <CategoryChip label={content.catalog.allLabel} icon={config.showCategoryIcons ? 'grid' : undefined} active={activeCat === null} onClick={() => setActiveCat(null)} />
           {categories.map((c) => (
             <CategoryChip
@@ -599,7 +641,7 @@ export default function Catalog({
           barra flotando con el contenido pasando descubierto por los costados. */}
       {nav === 'secciones' && !searching && groups.length > 1 && (
         <div
-          className="menu-bleed"
+          className="menu-bleed m-nav-movil"
           style={{
             position: 'sticky', top: 0, zIndex: 5, marginTop: 4,
             background: 'color-mix(in srgb, var(--brand-bg) 88%, transparent)',

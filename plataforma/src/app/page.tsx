@@ -174,8 +174,38 @@ export default async function Home({
     return <LeoginLanding />;
   }
 
-  // Subdominio `demo` → menú de ejemplo (Rincón 502, sin BD)
+  // Subdominio `demo` → menú de ejemplo.
   if (slug === DEMO_SLUG) {
+    /* UNA sola demo (2026-11-19, pedido del dueño): había dos Rincón 502 —
+       el restaurante de ejemplo en producción, con fotos reales, y esta
+       copia fija con dibujos— y confundían. Si existe el restaurante
+       `DEMO_RESTAURANT_SLUG` (por omisión «rincon502»), la demo enseña SU
+       carta, su tema y sus fotos. Sigue siendo demo: `restaurantId="demo"`,
+       así que el pedido termina en «Pídelo tú mismo» y no toca la base. Sin
+       ese restaurante (o con su lectura caída), la copia fija de siempre. */
+    const real = await getRestaurantBySlugCached(process.env.DEMO_RESTAURANT_SLUG || 'rincon502').catch(() => null);
+    const menuReal = real ? await getMenuDataCached(real.restaurant.id).catch(() => null) : null;
+    if (real && menuReal && menuReal.products.length > 0) {
+      const [masPedidosDemo, estadosDemo] = await Promise.all([
+        getMasPedidosSemanaCached(real.restaurant.id).catch(() => []),
+        getEstadosVigentesCached(real.restaurant.id).catch(() => []),
+      ]);
+      return (
+        <>
+          <DemoBar />
+          <MenuShell
+            config={real.resolved.config}
+            content={real.resolved.content}
+            categories={menuReal.categories}
+            products={withStockLeft(menuReal.products, menuReal.stockLeft, real.resolved.config)}
+            restaurantId="demo"
+            ordersEnabled
+            masPedidos={masPedidosDemo}
+            estados={estadosDemo}
+          />
+        </>
+      );
+    }
     const demo = resolveTheme(DEMO_THEME, DEMO_SLUG);
     return (
       <>

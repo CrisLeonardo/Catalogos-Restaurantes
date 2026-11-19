@@ -10,7 +10,8 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
   - Estados del día (24 h) arriba de la carta, que el dueño publica desde Menú.
   - El pedido de la mesa: cada teléfono suma lo suyo y uno lo manda a cocina como un solo pedido. Viene apagado y se enciende en Ajustes → Salón.
   - La ficha nace de la foto tocada.
-  - «Tu pedido» siempre a la vista en PC.
+  - Vista de PC: categorías a la izquierda y «Tu pedido» a la derecha. Las píldoras del teléfono se ocultan en PC.
+  - La demo pública enseña el Rincón 502 real, con sus fotos.
   - Búsqueda por antojo.
   - Foto guiada al subir la de un platillo.
   - El pedido en curso ya no flota sobre la carta.

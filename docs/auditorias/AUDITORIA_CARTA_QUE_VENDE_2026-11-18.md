@@ -212,12 +212,27 @@ Pendiente: el aviso flotante del pedido activo (`ORD-…`) sigue encima de la ca
   - La franja «Mesa N» lleva a la lista aunque el carrito propio esté vacío.
   - Probado con dos teléfonos: salió un solo pedido con los dos platillos.
 - **Ficha que nace de la foto:** FLIP de 380 ms desde la tarjeta tocada, sin animación con «reducir movimiento».
-- **CV-19 · PC:** «Tu pedido» queda fijo a la derecha de la carta, que conserva su ancho. El riel de categorías de la izquierda no se hizo: chocaría con las cuatro formas de navegar de las estructuras.
+- **CV-19 · Vista de PC:** la carta conserva su ancho y tiene un panel a cada lado.
+  - A la derecha, «Tu pedido» fijo.
+  - A la izquierda, un riel de categorías que hace lo mismo que la navegación de cada estructura: filtra con píldoras y portadas, salta con secciones, y abre y salta con acordeón.
+  - Cuando el riel cabe, las píldoras y el índice del teléfono se ocultan, así que el teléfono y la PC tienen cada uno su vista.
+  - Por ancho de ventana:
+
+    | Carta | Riel desde | Pedido desde |
+    |---|---|---|
+    | 460 px | 1180 px | 1180 px |
+    | 760 px | 1280 px | 1400 px |
+    | Revista (1120 px) | No cabe | No cabe |
+
+  - Riel y panel son sólidos, como la barra de abajo.
 - **CV-34 · Búsqueda por antojo:** «Para compartir», «Menos de Q50», «Sin carne» y «Picante», y solo los que sirven.
 - **CV-36 · Foto guiada:** un consejo de encuadre y avisos si la foto sale oscura, quemada o movida. Solo avisa.
 - **CV-14:** el pedido en curso es una franja en la carta, ya no flota. «Pedir lo de la última vez» espera 3 h desde el último pedido.
 - **CV-09 · Más de 1,000 platillos:** la carta los lee de 1,000 en 1,000 (`lib/db/por-bloques.ts`, con prueba), con orden estable. Un bloque que falla no se hace pasar por lectura completa.
-- **CV-35 · Descripción asistida con IA:** no se hizo. El proyecto no tiene proveedor de IA; hace falta que el dueño elija uno y ponga la clave.
+- **CV-35 · Descripción asistida con IA:** **descartada** por decisión del dueño (2026-11-19): por ahora no quiere IA en Leogin.
+- **CV-21 · Demo con fotos reales:** había dos Rincón 502, el restaurante de ejemplo en producción, con fotos reales, y la copia fija de la demo, con dibujos. Ahora la demo pública (`demo.`) enseña la carta, el tema y las fotos del restaurante `DEMO_RESTAURANT_SLUG` («rincon502» por omisión) y sigue en modo demo: el pedido termina en «Pídelo tú mismo» sin tocar la base. Sin ese restaurante, usa la copia fija.
+
+**Con esto la auditoría queda completa:** CV-01 a CV-37 están hechos, salvo CV-35, descartado, y CV-38, que ya cubre el `content-visibility` de las tarjetas.
 
 ---
 

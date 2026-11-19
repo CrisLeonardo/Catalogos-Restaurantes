@@ -1165,6 +1165,44 @@ html[data-scheme="light"] .btn-white {
 }
 @media (min-width: 1180px) { html[data-canvas="movil"] .m-pedido-lateral.m-surface { display: flex; } }
 @media (min-width: 1400px) { html[data-canvas="ancho"] .m-pedido-lateral.m-surface { display: flex; } }
+
+/* Vista de PC (CV-19): las categorías en un riel a la IZQUIERDA de la carta,
+   simétrico al pedido de la derecha. Cuando el riel cabe, las píldoras y el
+   índice de arriba (pensados para el pulgar) se van: en PC sobran. */
+.m-pc-rail.m-surface {
+  display: none;
+  position: fixed; top: 24px; z-index: 30;
+  right: calc(50% + var(--menu-max, 460px) / 2 + 24px);
+  width: 220px; max-height: calc(100dvh - 24px - var(--m-nav-h, 76px) - 24px); overflow-y: auto;
+  flex-direction: column; gap: 2px; padding: 10px;
+  border-radius: var(--m-r-xl);
+}
+/* Sólidos, con la misma superficie que la barra de abajo: sobre un fondo
+   con foto o degradado, `.m-surface` dejaba el texto sin contraste. */
+.m-pc-rail.m-surface, .m-pedido-lateral.m-surface {
+  background: color-mix(in srgb, var(--brand-bg) 93%, var(--brand-text));
+  border: 1px solid var(--u-hair);
+  box-shadow: 0 10px 28px -14px rgb(0 0 0 / 0.45), 0 2px 6px -2px rgb(0 0 0 / 0.12);
+}
+.m-pc-rail-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 0 12px;
+  border: none; border-radius: var(--m-r-md); background: none; cursor: pointer; text-align: left;
+  font: inherit; font-size: var(--m-fs-sm); font-weight: 600; color: var(--u-text-2);
+}
+.m-pc-rail-item > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (hover: hover) { .m-pc-rail-item:hover { background: var(--surface-3); color: var(--u-text); } }
+.m-pc-rail-item[aria-current="true"] { background: var(--u-text); color: var(--brand-bg); }
+.m-pc-rail-item[data-dim="1"]:not([aria-current="true"]) { opacity: 0.6; }
+.m-pc-rail-item:focus-visible { outline: 2px solid var(--brand-accent-ink, var(--brand-accent)); outline-offset: 2px; }
+@media (min-width: 1180px) {
+  html[data-canvas="movil"] .m-pc-rail.m-surface { display: flex; }
+  html[data-canvas="movil"] .m-nav-movil { display: none !important; }
+}
+/* Carta ancha (760 px): el riel (244 px) cabe desde 1280; el pedido, desde 1400. */
+@media (min-width: 1280px) {
+  html[data-canvas="ancho"] .m-pc-rail.m-surface { display: flex; }
+  html[data-canvas="ancho"] .m-nav-movil { display: none !important; }
+}
 /* «Va bien con» (CV-16): piezas pequeñas con foto en un carril. Sólidas,
    con la paleta del restaurante; marcada = borde y marca de tinta. */
 .m-acomp { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 4px; scroll-snap-type: x proximity; }
