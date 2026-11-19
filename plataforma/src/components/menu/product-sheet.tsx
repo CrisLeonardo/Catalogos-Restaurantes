@@ -288,11 +288,14 @@ export default function ProductSheet({
           </div>
         )}
         {!(product.dietary_tags && product.dietary_tags.some((k) => DIETARY_TAG_MAP[k]?.kind === 'allergen')) && (
-          /* Sin alérgenos indicados no se calla: callar parece «no contiene» (M08). */
-          <p style={{ margin: 0, fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)', padding: '10px 12px', borderRadius: 'var(--m-r-md)', border: '1px dashed var(--u-hair-2)' }}>
-            {es
-              ? 'Alérgenos: el restaurante no los ha indicado. Pregunta antes de pedir.'
-              : 'Allergens: not provided by the restaurant. Ask before ordering.'}
+          /* Sin alérgenos indicados no se calla: callar parece «no contiene» (M08).
+             Pero tampoco ocupa el sitio de lo que vende: era un recuadro
+             punteado de dos líneas en cada platillo; ahora es una línea
+             discreta (CV-15). El recuadro solo vive cuando el dueño SÍ los
+             indicó (las etiquetas de arriba). */
+          <p style={{ margin: 0, fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="alertCircle" size={13} />
+            {es ? 'Alérgenos sin indicar · pregunta antes de pedir' : 'Allergens not listed · ask before ordering'}
           </p>
         )}
 

@@ -50,6 +50,35 @@
 .item:focus-visible { outline: none; }
 .item:focus-visible .mark { outline: 2px solid var(--u-text); outline-offset: 2px; }
 
+/* ── Con algo en el carrito (CV-14): las secciones quedan en iconos y el
+   pedido ocupa el centro de la MISMA barra. El nombre de cada sección sigue
+   en su aria-label. */
+.bar[data-lleva='1'] .item { flex: 0 0 auto; width: 42px; }
+.bar[data-lleva='1'] .label { display: none; }
+.bar[data-lleva='1'] .mark { width: 38px; height: 34px; }
+.pedido {
+  flex: 1 1 auto; min-width: 0; align-self: center;
+  display: flex; align-items: center; gap: 8px;
+  height: 46px; margin: 0 4px; padding: 0 14px 0 6px;
+  border: 0; border-radius: var(--m-r-lg); cursor: pointer;
+  background: var(--u-text); color: var(--brand-bg);
+  font: inherit; font-size: 14px; font-weight: 700;
+  container-type: inline-size;
+  animation-name: cart-in; animation-duration: 260ms;
+  animation-timing-function: cubic-bezier(.22, 1, .36, 1); animation-fill-mode: both;
+}
+.pedidoCount {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;
+  min-width: 32px; height: 32px; padding: 0 9px; border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-bg) 18%, var(--u-text));
+  font-variant-numeric: tabular-nums;
+}
+.pedidoLabel { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pedidoTotal { flex-shrink: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Si no cabe todo, se va primero la palabra: el número y el total dicen más. */
+@container (max-width: 150px) { .pedidoLabel { display: none; } .pedidoTotal { margin-left: auto; } }
+.pedido:focus-visible { outline: 2px solid var(--u-text); outline-offset: 2px; }
+
 /* ── Resumen del carrito: un solo botón, encima de la barra ── */
 .cartDock {
   position: fixed; left: 0; right: 0; z-index: 40; max-width: 100vw;
@@ -80,5 +109,5 @@
 @keyframes cart-in { from { opacity: 0; transform: translateY(10px); } }
 @media (prefers-reduced-motion: reduce) {
   .item, .mark { transition: none; }
-  .cart { animation-duration: 1ms; }
+  .cart, .pedido { animation-duration: 1ms; }
 }

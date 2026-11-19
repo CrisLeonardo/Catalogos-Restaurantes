@@ -244,6 +244,11 @@ export interface ThemeConfig {
   portadaShowLogo: boolean;
   portadaShowBadge: boolean;    // "Abierto ahora · Zona X"
   portadaShowStatus: boolean;   // el puntito que "respira"
+  /** La portada de pantalla completa de la plantilla. Apagado (por omisión),
+      la carta abre con la CABECERA BREVE —logo, nombre y lema en una franja—
+      y la comida hace de portada (auditoría «La carta que vende», CV-11).
+      Vitrina conserva su cartel siempre: ahí la portada sí vende. */
+  portadaCompleta?: boolean;
 
   // ── Lienzo ──
   layoutWidth: LayoutWidth;     // ancho máximo del menú (móvil / ancho / revista)
@@ -468,6 +473,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   portadaShowLogo: true,
   portadaShowBadge: true,
   portadaShowStatus: true,
+  portadaCompleta: false,
 
   layoutWidth: 'movil',
 
