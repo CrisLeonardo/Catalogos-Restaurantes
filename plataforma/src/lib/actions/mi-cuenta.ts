@@ -23,7 +23,7 @@ import { logPanelAccess } from '@/lib/auth/access-log';
 import { adminUrl } from '@/lib/tenant';
 import { slugify, validateSlug, crossSlugCollision, slugTaken, uniqueSlug } from '@/lib/slug';
 import { ensureOwnerOrganization } from '@/lib/db/organizations';
-import { withPlanFloor, ESTANDAR_MAX_ORDER_TYPES, type PlanCode } from '@/lib/plans';
+import { withPlanFloor, ESTANDAR_MAX_ORDER_TYPES } from '@/lib/plans';
 import { newRestaurantBilling } from '@/lib/billing-signup';
 import { getPricingSettings } from '@/lib/db/billing';
 import { findTemplate } from '@/lib/theme/templates';
@@ -218,11 +218,10 @@ export async function createAnotherRestaurant(
 
   const name = ((formData.get('name') as string) ?? '').trim();
   const rawSlug = ((formData.get('slug') as string) ?? '').trim().toLowerCase();
-  const rawPlan = formData.get('plan_code') as string | null;
-  const planCode: PlanCode =
-    rawPlan === 'BASICO' ? 'BASICO'
-      : rawPlan === 'EN_LINEA' ? 'EN_LINEA'
-        : rawPlan === 'ESTANDAR' ? 'ESTANDAR' : 'PREMIUM';
+  const planCode = formData.get('plan_code');
+  if (planCode !== 'BASICO' && planCode !== 'EN_LINEA' && planCode !== 'ESTANDAR' && planCode !== 'PREMIUM') {
+    return { error: 'Elige un plan válido para tu restaurante.' };
+  }
   const template = findTemplate(((formData.get('template_id') as string) ?? '').trim());
   const whatsapp = ((formData.get('whatsapp') as string) ?? '').trim() || null;
 
@@ -321,7 +320,7 @@ export async function createAnotherRestaurant(
       : planCode === 'EN_LINEA' ? ['pickup', 'delivery']
       : planCode === 'ESTANDAR' ? estandarOrderTypes
         : ['dine_in', 'delivery', 'pickup'];
-  await db.from('restaurant_themes').insert({
+  const { error: temaErr } = await db.from('restaurant_themes').insert({
     restaurant_id: restaurantId,
     brand_name: name,
     config: { ...(template ? structuredClone(template.config) : {}), orderTypes },
@@ -331,7 +330,7 @@ export async function createAnotherRestaurant(
   // La prueba gratis es UNA por persona, en su primer restaurante. Ver la
   // regla y el porqué en lib/billing-signup.ts.
   const pricing = await getPricingSettings();
-  await db.from('restaurant_billing').insert({
+  const { error: cobroErr } = await db.from('restaurant_billing').insert({
     restaurant_id: restaurantId,
     ...newRestaurantBilling({
       planCode,
@@ -339,7 +338,15 @@ export async function createAnotherRestaurant(
       isFirstOfOwner: esElPrimero,
     }),
   });
-  await db.rpc('leogin_apply_auto_price', { p_restaurant_id: restaurantId });
+  const altaErr = temaErr ?? cobroErr ?? (await db.rpc('leogin_apply_auto_price', {
+    p_restaurant_id: restaurantId,
+  })).error;
+  if (altaErr) {
+    // Sin tema o mensualidad, el restaurante todavía no está listo para abrir.
+    const { error: limpiezaErr } = await db.from('restaurants').delete().eq('id', restaurantId);
+    console.error('[alta] no se pudo configurar el restaurante', restaurantId, altaErr.message, limpiezaErr?.message);
+    return { error: 'No se pudo terminar de crear el restaurante. Inténtalo de nuevo.' };
+  }
 
   // ── La membresía de dueño ──────────────────────────────────
   // Esto es lo que hace que aparezca en Mi cuenta y que pueda entrar. NO se
