@@ -249,6 +249,10 @@ export interface ThemeConfig {
       y la comida hace de portada (auditoría «La carta que vende», CV-11).
       Vitrina conserva su cartel siempre: ahí la portada sí vende. */
   portadaCompleta?: boolean;
+  /** El pedido de la mesa (auditoría «La carta que vende», §5 pieza 5,
+      migración 190): con el QR de la mesa, cada teléfono suma lo suyo a una
+      lista compartida y uno la manda a cocina. Apagado: piloto por restaurante. */
+  pedidoDeMesa?: boolean;
 
   // ── Lienzo ──
   layoutWidth: LayoutWidth;     // ancho máximo del menú (móvil / ancho / revista)
@@ -474,6 +478,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   portadaShowBadge: true,
   portadaShowStatus: true,
   portadaCompleta: false,
+  pedidoDeMesa: false,
 
   layoutWidth: 'movil',
 

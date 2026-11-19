@@ -247,7 +247,7 @@ export default function ImageUpload({
 
       {guia && !preview && (
         <span style={{ fontSize: 12, color: 'var(--u-text-3)', maxWidth: 260, lineHeight: 1.4 }}>
-          El plato al centro, desde arriba en diagonal (como al sentarte) y con luz de día. Es lo que más vende.
+          El platillo al centro, desde arriba en diagonal (como al sentarte) y con luz de día. Es lo que más vende.
         </span>
       )}
       {guia && avisos.length > 0 && (

@@ -4,6 +4,17 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
+## Sin publicar
+
+- **Fase 3 de «La carta que vende»: otro nivel.** Lleva las **migraciones 189 y 190**, que se aplican antes de desplegar; sin ellas no hay estados ni pedido de la mesa y la carta funciona igual.
+  - Estados del día (24 h) arriba de la carta, que el dueño publica desde Menú.
+  - El pedido de la mesa: cada teléfono suma lo suyo y uno lo manda a cocina como un solo pedido. Viene apagado y se enciende en Ajustes → Salón.
+  - La ficha nace de la foto tocada.
+  - «Tu pedido» siempre a la vista en PC.
+  - Búsqueda por antojo.
+  - Foto guiada al subir la de un platillo.
+  - El pedido en curso ya no flota sobre la carta.
+
 ## v0.27.0 · 2026-11-19 · «La carta que vende»: fase 2
 PR #160 y #161 · **migración 188** (antes o después de desplegar; si falta, solo no se cuenta el embudo).
 - **Pedido de mesa sin nombre** (#160): se llama «Mesa N» en vez de rechazarse con «El nombre es requerido». El fallo estaba en producción desde v0.26.0.

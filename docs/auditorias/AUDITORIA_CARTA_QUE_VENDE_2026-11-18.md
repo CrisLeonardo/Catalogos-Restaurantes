@@ -200,6 +200,24 @@ Comprobado a 390 y 1280 px en las 8 estructuras, sin desborde. Falta probar en i
 
 Pendiente: el aviso flotante del pedido activo (`ORD-…`) sigue encima de la carta después de pedir, y falta ver la tarjeta del embudo en Analítica con sesión de dueño.
 
+**Estado (2026-11-19, más tarde):** la fase 2 está en producción (v0.27.0). La **fase 3 está hecha** en la rama `feat/carta-fase-3`, en commits locales: el dueño pidió subir todo junto al terminar la auditoría.
+
+- **CV-32 · Estados del día** (migración 189).
+  - En Panel → Menú, «+ Estado» pide foto, una línea y el platillo, ambos opcionales, y muestra los vigentes con cuánto les queda y «Quitar».
+  - En la carta salen como círculos al estilo WhatsApp, y los vistos se apagan.
+  - El visor ocupa la pantalla: avanza a los 5 s, se pasa tocando a los lados y «Ver y pedir» abre la ficha del platillo.
+- **Pedido de la mesa** (migración 190). Viene apagado y se enciende en Ajustes → Salón.
+  - Con el QR de la mesa, el carrito ofrece «Sumar lo mío a la mesa» con un nombre corto.
+  - La lista compartida dice qué lleva cada persona y cuánto, y cualquiera la manda a cocina, confirmando antes, como UN pedido «Mesa N»: se usa `createOrder` con el id de la cuenta como `client_id`, así que dos envíos a la vez dan uno solo.
+  - La franja «Mesa N» lleva a la lista aunque el carrito propio esté vacío.
+  - Probado con dos teléfonos: salió un solo pedido con los dos platillos.
+- **Ficha que nace de la foto:** FLIP de 380 ms desde la tarjeta tocada, sin animación con «reducir movimiento».
+- **CV-19 · PC:** «Tu pedido» queda fijo a la derecha de la carta, que conserva su ancho. El riel de categorías de la izquierda no se hizo: chocaría con las cuatro formas de navegar de las estructuras.
+- **CV-34 · Búsqueda por antojo:** «Para compartir», «Menos de Q50», «Sin carne» y «Picante», y solo los que sirven.
+- **CV-36 · Foto guiada:** un consejo de encuadre y avisos si la foto sale oscura, quemada o movida. Solo avisa.
+- **CV-14:** el pedido en curso es una franja en la carta, ya no flota. «Pedir lo de la última vez» espera 3 h desde el último pedido.
+- **CV-35 · Descripción asistida con IA:** no se hizo. El proyecto no tiene proveedor de IA; hace falta que el dueño elija uno y ponga la clave.
+
 ---
 
 ## 8 · Lo que decide el dueño

@@ -14,6 +14,7 @@ import styles from '@/components/menu/bottom-nav.module.css';
 import { HojaOperativa } from '@/components/ui/hoja-operativa';
 import { useLocale } from '@/lib/locale/context';
 import type { CartItem } from '@/types';
+import MesaCompartida from '@/components/menu/mesa-compartida';
 
 /* Barra inferior fija con el resumen del carrito. */
 export function CartBar({ onOpen, cartIconHidden, navigationVisible = true }: {
@@ -53,8 +54,10 @@ export function CartBar({ onOpen, cartIconHidden, navigationVisible = true }: {
    sólida del tema (antes era vidrio con desenfoque y un `div role="dialog"`
    sin manejo de foco). Cada platillo con opciones se puede «Cambiar» sin
    borrarlo ni rearmarlo; sus opciones dicen lo que suman. */
-export function CartPanel({ onClose, sugerencias = [], onPedirDemo, onEditar }: {
+export function CartPanel({ onClose, sugerencias = [], onPedirDemo, onEditar, mesaCompartida = null }: {
   onClose: () => void;
+  /** El pedido de la mesa (migración 190): restaurante y mesa, o null. */
+  mesaCompartida?: { restaurantId: string; mesa: number } | null;
   /** «Acompáñalo con…» con lo que todavía no lleva (CAT-13). */
   sugerencias?: Sugerencia[];
   /** En la demo no hay checkout: el botón abre «Pídelo tú mismo». */
@@ -99,6 +102,7 @@ export function CartPanel({ onClose, sugerencias = [], onPedirDemo, onEditar }: 
       onClose={onClose}
       footer={pie}
     >
+      {mesaCompartida && <MesaCompartida restaurantId={mesaCompartida.restaurantId} mesa={mesaCompartida.mesa} />}
       {items.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
           <Icon name="bag" size={48} strokeWidth={1.3} style={{ color: 'var(--u-text-4)' }} />

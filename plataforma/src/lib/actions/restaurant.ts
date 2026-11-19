@@ -608,7 +608,7 @@ export async function saveOrdersAndCurrency(input: {
   > & Partial<Pick<ThemeConfig,
     'floorPlan' | 'kdsYellowMin' | 'kdsRedMin' | 'kdsConfirmFirst' |
     'salonReadyMin' | 'salonUnpaidMin' | 'salonUnacceptedMin' |
-    'autoConfirmEnabled' | 'autoConfirmMinutes' | 'tipOrderTypes' | 'deliveryFee'
+    'autoConfirmEnabled' | 'autoConfirmMinutes' | 'tipOrderTypes' | 'deliveryFee' | 'pedidoDeMesa'
   >>;
 }): Promise<SaveThemeResult> {
   const supabase = await createClient();

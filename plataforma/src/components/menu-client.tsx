@@ -335,7 +335,15 @@ export default function MenuClient({
           <Icon name={mesaInvalida ? 'alertCircle' : 'utensils'} size={18} style={{ flexShrink: 0, marginTop: 1, color: mesaInvalida ? 'var(--c-warn)' : 'var(--u-text-2)' }} />
           {mesaInvalida
             ? <span><strong>La mesa {mesaInvalida} no existe en {config.brandName || 'este local'}.</strong> Escanea el QR de tu mesa o pide ayuda al personal. Puedes ver el menú mientras tanto.</span>
-            : <span><strong>Mesa {mesaActual}</strong> · tu pedido llega a esta mesa</span>}
+            : <span style={{ flex: 1 }}><strong>Mesa {mesaActual}</strong> · tu pedido llega a esta mesa</span>}
+          {/* Pedido de la mesa: desde aquí se vuelve a la lista compartida
+              aunque el carrito propio esté vacío. */}
+          {!mesaInvalida && config.pedidoDeMesa && (
+            <button type="button" className="press" onClick={() => { closeOverlays(); setCartOpen(true); }}
+              style={{ flexShrink: 0, minHeight: 32, padding: '0 10px', borderRadius: 999, border: '1px solid var(--u-hair-2)', background: 'var(--surface-2)', color: 'var(--u-text)', fontWeight: 700, fontSize: 'var(--m-fs-xs)', cursor: 'pointer' }}>
+              Pedido de la mesa
+            </button>
+          )}
         </div>
       )}
 
@@ -453,6 +461,7 @@ export default function MenuClient({
             setSelected(producto);
           }}
           onPedirDemo={demo ? () => { setCartOpen(false); setDemoOpen(true); } : undefined}
+          mesaCompartida={!demo && !kiosk && restaurantId && tableScanned && mesaActual && config.pedidoDeMesa ? { restaurantId, mesa: mesaActual } : null}
         />
       )}
       {demo && <PedidoDemo open={demoOpen} onClose={() => setDemoOpen(false)} />}
