@@ -1149,6 +1149,20 @@ html[data-scheme="light"] .btn-white {
 .opt-hint[data-required="1"] { color: var(--c-warn); }
 
 .opt-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+/* «Tu pedido» a la derecha de la carta en PC (CV-19). La carta no se
+   ensancha: el panel ocupa el hueco que sobra a su derecha y solo existe
+   cuando cabe (carta de 460 px desde 1180 de ventana; de 760, desde 1400). */
+.m-pedido-lateral.m-surface {
+  /* `.m-surface` (más abajo) pone position: relative: de ahí el doble selector. */
+  display: none;
+  position: fixed; top: 24px; z-index: 30;
+  left: calc(50% + var(--menu-max, 460px) / 2 + 24px);
+  width: 300px; max-height: calc(100dvh - 24px - var(--m-nav-h, 76px) - 24px);
+  flex-direction: column; gap: 12px; padding: 18px;
+  border-radius: var(--m-r-xl); color: var(--u-text);
+}
+@media (min-width: 1180px) { html[data-canvas="movil"] .m-pedido-lateral.m-surface { display: flex; } }
+@media (min-width: 1400px) { html[data-canvas="ancho"] .m-pedido-lateral.m-surface { display: flex; } }
 /* «Va bien con» (CV-16): piezas pequeñas con foto en un carril. Sólidas,
    con la paleta del restaurante; marcada = borde y marca de tinta. */
 .m-acomp { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 4px; scroll-snap-type: x proximity; }

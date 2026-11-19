@@ -30,6 +30,7 @@ import type { Sugerencia } from '@/components/menu/pairings';
 import type { CartItem, Category, Product } from '@/types';
 import type { MenuReward } from '@/components/menu/rewards-section';
 import MasPedidos from '@/components/menu/mas-pedidos';
+import PedidoLateral from '@/components/menu/pedido-lateral';
 import { elegirMasPedidos } from '@/lib/menu/mas-pedidos';
 import { leerUltimoPedido, rearmarPedido, type PedidoRearmado } from '@/lib/menu/lo-de-siempre';
 import { abrirEmbudo, contarPaso } from '@/lib/menu/embudo';
@@ -443,6 +444,9 @@ export default function MenuClient({
       {/* Barra de navegación inferior — se oculta cuando hay un sheet de producto
           o carrito abierto, y en KIOSKO (cuenta/fidelidad/pedidos son datos
           personales que no deben quedar a la vista en un aparato compartido). */}
+      {/* En PC, el pedido siempre a la vista a la derecha de la carta (CV-19). */}
+      {barraVisible && <PedidoLateral onVer={() => { closeOverlays(); setCartOpen(true); }} />}
+
       {barraVisible && (
         <BottomNav
           pedido={count > 0 ? {
