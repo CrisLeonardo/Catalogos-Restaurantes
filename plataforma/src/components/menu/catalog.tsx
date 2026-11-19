@@ -22,7 +22,7 @@ import AssetImage from '@/components/asset-image';
 import { FEATURED_ART_SIZES, PRODUCT_ART_SIZES } from '@/lib/asset-image';
 import { Icon, ICON_PATHS } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
-import { MenuSurface, Price, Tag, ctaClass } from '@/components/menu/ui';
+import { MenuSurface, AbrirPieza, Price, Tag, ctaClass } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { roleSize } from '@/lib/theme/resolve';
 import { LAYOUT_MIN_COL, isVitrina, type CardStyle, type LayoutWidth } from '@/lib/theme/defaults';
@@ -220,7 +220,8 @@ interface CatalogProps {
   timezone?: string;
   qtyOf: (productId: string) => number;
   onAdd: (product: ProdItem, sourceEl: HTMLElement) => void;
-  onOpen: (product: ProdItem) => void;
+  /** `aviso`: si el plato no se puede pedir ahora, por qué (CV-10). */
+  onOpen: (product: ProdItem, aviso?: string | null) => void;
 }
 
 export default function Catalog({
@@ -270,12 +271,14 @@ export default function Catalog({
     return m;
   }, [categories, timezone, now]);
 
-  // Busca en nombre, descripción y tags, ignorando acentos.
+  // Busca en nombre, descripción y tags, ignorando acentos — en los DOS
+  // idiomas siempre (CV-07): «lemonade» encuentra la limonada aunque la carta
+  // esté en español, y quien escribe «burger» también encuentra lo suyo.
   const q = fold(query.trim());
   const searching = q.length > 0;
   const searched = useMemo(() => {
     if (!searching) return products;
-    return products.filter((p) => fold([p.name, p.description ?? '', ...(p.tags ?? [])].join(' ')).includes(q));
+    return products.filter((p) => fold([p.name, p.description ?? '', p.name_en ?? '', p.description_en ?? '', ...(p.tags ?? [])].join(' ')).includes(q));
   }, [products, q, searching]);
 
   /* ── Cómo se agrupan los platillos ──────────────────────────
@@ -744,7 +747,7 @@ interface ItemsProps {
   ordersEnabled: boolean;
   qtyOf: (id: string) => number;
   onAdd: (p: ProdItem, el: HTMLElement) => void;
-  onOpen: (p: ProdItem) => void;
+  onOpen: (p: ProdItem, aviso?: string | null) => void;
   /** Posición de cada pieza en la edición (modo lanzamiento). */
   edition: { pos: Map<string, number>; total: number } | null;
   /** ¿Es la sección que ya se ve al abrir? Ver `fade`. */
@@ -1331,7 +1334,7 @@ interface TileProps {
   ordersEnabled: boolean;
   forceUnavailable?: boolean;
   onAdd: (p: ProdItem, el: HTMLElement) => void;
-  onOpen: (p: ProdItem) => void;
+  onOpen: (p: ProdItem, aviso?: string | null) => void;
 }
 
 function ProductTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpen }: TileProps) {
@@ -1340,7 +1343,7 @@ function ProductTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, on
   const unavail = forceUnavailable || isUnavailable(p);
   const aviso = useAvisoNoDisponible(p, forceUnavailable);
   return (
-    <MenuSurface className="m-tile" unavailable={unavail} onClick={() => onOpen(p)} ariaLabel={`Ver ${name}`}>
+    <MenuSurface className="m-tile" unavailable={unavail} onClick={() => onOpen(p, unavail ? aviso : null)} ariaLabel={`Ver ${name}`}>
       <div className="m-tile-art" style={{ aspectRatio: '1.25' }}>
         <ProductArt p={p} icon={icon} />
         {config.showTags && p.tags && p.tags.length > 0 && !unavail && (
@@ -1383,7 +1386,7 @@ function MosaicTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
   const aviso = useAvisoNoDisponible(p, forceUnavailable);
   const ratio = mosaicRatio(p);
   return (
-    <MenuSurface className="m-tile" unavailable={unavail} onClick={() => onOpen(p)} ariaLabel={`Ver ${name}`}>
+    <MenuSurface className="m-tile" unavailable={unavail} onClick={() => onOpen(p, unavail ? aviso : null)} ariaLabel={`Ver ${name}`}>
       <div className="m-tile-art" style={{ aspectRatio: String(ratio) }}>
         <ProductArt p={p} icon={icon} scale={1.15} />
         {config.showTags && p.tags?.[0] && !unavail && (
@@ -1431,7 +1434,7 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, w
       className="m-tile"
       style={{ borderRadius: 'var(--m-r-xl)' }}
       unavailable={unavail}
-      onClick={() => onOpen(p)}
+      onClick={() => onOpen(p, unavail ? aviso : null)}
       ariaLabel={`Ver ${name}`}
     >
       <div className="m-tile-art" style={{ aspectRatio: String(FEATURED_RATIO[width] ?? 1.85) }}>
@@ -1517,7 +1520,7 @@ function PiezaTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAd
   const vendido = total ? Math.round(((total - left!) / total) * 100) : 0;
   return (
     <article className="m-pieza" data-unavailable={unavail ? '1' : undefined}>
-      <button type="button" className="m-pieza-art" onClick={() => onOpen(p)} aria-label={`Ver ${name}`}>
+      <button type="button" className="m-pieza-art" onClick={() => onOpen(p, unavail ? aviso : null)} aria-label={`Ver ${name}`}>
         <ProductArt p={p} icon={icon} scale={1.5} sizes={PIEZA_ART_SIZES} />
         {/* En lanzamiento cada pieza lleva su número de edición: es lo que
             convierte una lista de productos en una colección. */}
@@ -1595,7 +1598,7 @@ function ProductRow({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
   const unavail = forceUnavailable || isUnavailable(p);
   const aviso = useAvisoNoDisponible(p, forceUnavailable);
   return (
-    <MenuSurface className="m-row" unavailable={unavail} onClick={() => onOpen(p)} ariaLabel={`Ver ${name}`}>
+    <MenuSurface className="m-row" unavailable={unavail} onClick={() => onOpen(p, unavail ? aviso : null)} ariaLabel={`Ver ${name}`}>
       <div className="m-row-art">
         <ProductArt p={p} icon={icon} scale={0.9} sizes="96px" />
       </div>
@@ -1629,25 +1632,19 @@ function TextRow({ p, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpe
   const aviso = useAvisoNoDisponible(p, forceUnavailable);
   return (
     <div
-      role={unavail ? undefined : 'button'}
-      tabIndex={unavail ? undefined : 0}
-      aria-label={unavail ? undefined : `Ver ${name}`}
-      onClick={() => !unavail && onOpen(p)}
-      onKeyDown={(e) => {
-        if (unavail) return;
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(p); }
-      }}
+      onClick={() => onOpen(p, unavail ? aviso : null)}
       className="press"
       data-unavailable={unavail ? '1' : undefined}
       style={{
         display: 'flex', alignItems: 'flex-start', gap: 'var(--m-sp-3)',
         padding: 'var(--m-sp-4) 2px', borderBottom: '1px solid var(--u-hair)',
-        cursor: unavail ? 'default' : 'pointer',
+        cursor: 'pointer', position: 'relative',
         /* 0.62 dejaba la descripcion por debajo del contraste minimo: el plato
            se leia como "borroso" y no como "hoy no esta". */
         opacity: unavail ? 0.72 : 1,
       }}
     >
+      <AbrirPieza label={`Ver ${name}`} onClick={() => onOpen(p, unavail ? aviso : null)} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--m-sp-2)' }}>
           <span className={`ct-product-name m-name ${unavail ? 'm-strike' : ''}`}>

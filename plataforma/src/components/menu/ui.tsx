@@ -20,7 +20,16 @@ import { roleSize } from '@/lib/theme/resolve';
    Enter/Espacio y un nombre accesible corto. Sin esto, una tarjeta se anuncia
    concatenando su contenido entero ("Mocha Negra Espresso doble, cacao 70%…
    26.00 Agregar") y el botón «Agregar» de dentro queda anidado en otro
-   control. */
+   control.
+
+   Auditoría «La carta que vende» (CV-05, CV-10): la tarjeta YA NO es un
+   `role="button"` con otro botón dentro. Con teclado, Enter sobre «Agregar»
+   burbujeaba al `onKeyDown` de la tarjeta y abría la ficha en vez de
+   agregar. Ahora la tarjeta es un contenedor que se toca con el dedo o el
+   ratón, y para teclado y lector de pantalla lleva su propio botón «Ver …»
+   (oculto a la vista, con el anillo de foco en la tarjeta) HERMANO de
+   «Agregar», no padre. Y lo agotado también se abre: se puede leer qué era
+   y cuándo vuelve; lo que no se puede es pedirlo (la ficha lo dice). */
 export function MenuSurface({
   className = '',
   style,
@@ -34,33 +43,35 @@ export function MenuSurface({
   children?: ReactNode;
   onClick?: () => void;
   ariaLabel?: string;
-  /** Agotado: se puede mirar, no pedir — deja de ser clicable. */
+  /** Agotado: se puede mirar y abrir, no pedir. */
   unavailable?: boolean;
 }) {
-  const clickable = Boolean(onClick) && !unavailable;
+  const clickable = Boolean(onClick);
   return (
     <div
       className={`m-surface ${clickable ? 'press' : ''} ${className}`}
       data-clickable={clickable ? '1' : undefined}
       data-unavailable={unavailable ? '1' : undefined}
       onClick={clickable ? onClick : undefined}
-      onKeyDown={
-        clickable
-          ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onClick?.();
-              }
-            }
-          : undefined
-      }
-      role={clickable ? 'button' : undefined}
-      tabIndex={clickable ? 0 : undefined}
-      aria-label={clickable ? ariaLabel : undefined}
       style={style}
     >
+      {clickable && <AbrirPieza label={ariaLabel} onClick={onClick!} />}
       {children}
     </div>
+  );
+}
+
+/** El camino de teclado y lector de pantalla para abrir una pieza de la
+    carta: un botón de verdad, fuera de la vista; el foco se dibuja en la
+    tarjeta entera (`.m-surface-abrir` en globals.css). */
+export function AbrirPieza({ label, onClick }: { label?: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className="m-surface-abrir"
+      aria-label={label}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+    />
   );
 }
 

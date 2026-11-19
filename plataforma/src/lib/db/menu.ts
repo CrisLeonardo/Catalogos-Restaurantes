@@ -127,11 +127,19 @@ export const getMenuData = cache(
  * Invalidar con revalidateTag(`menu:${restaurantId}`) en toda acción que
  * cree/edite/borre/reordene productos o categorías.
  */
+/** La carta pública no se pudo leer (no confundir con «no hay platos»). */
+export class LecturaMenuFallida extends Error {
+  constructor(restaurantId: string) {
+    super(`No se pudo leer la carta del restaurante ${restaurantId}`);
+    this.name = 'LecturaMenuFallida';
+  }
+}
+
 export function getMenuDataCached(restaurantId: string): Promise<MenuData> {
   return unstable_cache(
     async () => {
       const db = createServiceClient();
-      const [{ data: categories }, { data: products }] = await Promise.all([
+      const [cats, prods] = await Promise.all([
         db
           .from('categories')
           .select('id, name, name_en, icon, sort_order, availability')
@@ -145,6 +153,17 @@ export function getMenuDataCached(restaurantId: string): Promise<MenuData> {
           .eq('is_active', true)
           .order('sort_order'),
       ]);
+      // Una lectura fallida NO es una carta vacía (CV-02): si se devolviera
+      // el vacío, `unstable_cache` lo guardaría 60 s y todo el que escaneara
+      // el QR vería un restaurante «sin nada». Lanzar evita la caché; quien
+      // llama decide qué enseñar (la carta pinta «No pudimos cargar»).
+      const fallo = cats.error ?? prods.error;
+      if (fallo) {
+        console.error('[menu] lectura pública fallida:', fallo.code ?? '', fallo.message ?? '');
+        throw new LecturaMenuFallida(restaurantId);
+      }
+      const categories = cats.data;
+      const products = prods.data;
 
       return {
         categories: (categories as Category[]) ?? [],

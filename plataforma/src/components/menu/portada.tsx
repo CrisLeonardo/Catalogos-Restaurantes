@@ -185,6 +185,10 @@ export default function Portada({ isOpen = true, fallbackImage = null, whatsappN
 
   const title = content.portada.title || config.brandName;
   const subtitle = content.portada.subtitle || config.tagline;
+  /* El rótulo pequeño de Carta de autor y Pizarra (CV-08). «EST · 2024» fue el
+     valor de muestra hasta 2026-11; un tema guardado con él no lo escribió
+     el dueño, así que tampoco se imprime. */
+  const kicker = content.portada.posterKicker && content.portada.posterKicker !== 'EST · 2024' ? content.portada.posterKicker : '';
   const anim = config.animations;
   // El lienzo ancho (tablet/escritorio/revista) pide un titular mayor; la
   // columna de texto sale de `.menu-canvas`, la misma clase que usa el <main>
@@ -238,7 +242,7 @@ export default function Portada({ isOpen = true, fallbackImage = null, whatsappN
           {config.portadaShowLogo && <BrandMark size={46} />}
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <div className="t-poster" style={{ fontSize: 'var(--m-fs-sm)', letterSpacing: '0.3em', color: 'var(--u-text-3)' }}>{content.portada.posterKicker}</div>
+          {kicker && <div className="t-poster" style={{ fontSize: 'var(--m-fs-sm)', letterSpacing: '0.3em', color: 'var(--u-text-3)' }}>{kicker}</div>}
           <div className="t-poster" style={{ fontSize: heroSize(22, 56, 104, 24), lineHeight: 0.84, marginTop: 6 }}>{title}</div>
           {subtitle && (
             <p className="t-serif" style={{ fontStyle: 'italic', fontSize: 'var(--m-fs-xl)', color: 'var(--u-text-2)', marginTop: 'var(--m-sp-4)' }}>{subtitle}</p>
@@ -425,11 +429,14 @@ export default function Portada({ isOpen = true, fallbackImage = null, whatsappN
           <div aria-hidden style={notch('top')} />
           <div aria-hidden style={notch('bottom')} />
 
-          <div className="t-mono" style={{ fontSize: 'var(--m-fs-xs)', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--u-text-3)', textAlign: 'center' }}>
-            {content.portada.posterKicker}
-          </div>
-
-          <div style={rule} />
+          {kicker && (
+            <>
+              <div className="t-mono" style={{ fontSize: 'var(--m-fs-xs)', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--u-text-3)', textAlign: 'center' }}>
+                {kicker}
+              </div>
+              <div style={rule} />
+            </>
+          )}
 
           {config.portadaShowLogo && (
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>

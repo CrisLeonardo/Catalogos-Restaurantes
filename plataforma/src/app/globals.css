@@ -1274,7 +1274,17 @@ html[data-scheme="light"] .m-surface {
 /* Agotado: se ve, no se pide. La opacidad NO baja de 0.72 — por debajo, la
    descripción deja de pasar el contraste mínimo y el plato es ilegible en vez
    de "no disponible". */
-.m-surface[data-unavailable="1"] { opacity: 0.72; cursor: default; }
+.m-surface[data-unavailable="1"] { opacity: 0.72; }
+/* El botón «Ver …» de cada pieza (CV-05): invisible, pero alcanzable con
+   Tab; cuando tiene el foco, el anillo se dibuja en la tarjeta entera. */
+.m-surface-abrir {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+:has(> .m-surface-abrir:focus-visible) {
+  outline: 2px solid var(--brand-accent-ink, var(--brand-accent));
+  outline-offset: 2px;
+}
 
 /* ── Tarjeta de platillo (rejilla) ────────────────────────── */
 /* SIN `height: 100%`. Esto costo encontrarlo y es la causa de que la carta
@@ -2653,8 +2663,18 @@ select.adm-field { cursor: pointer; }
     [data-mfx="fila"]     { animation-name: m-aparece; animation-range: entry 0% entry 55%; }
     /* Revista: cada pieza se asienta. */
     [data-mfx="mosaico"]  { animation-name: m-asienta; }
-    /* Estantes: la repisa entera entra deslizándose. */
-    [data-mfx="carrusel"] { animation-name: m-desliza; animation-range: entry 0% entry 60%; }
+    /* Estantes: las piezas de la repisa entran deslizándose. Se mueven las
+       piezas DENTRO de la repisa y no la repisa: una repisa corrida 56 px a
+       la derecha se salía de la pantalla y, en el teléfono, ensanchaba la
+       página entera (376 px a 320, 446 a 390; auditoría «La carta que
+       vende», CV-06). La repisa ya recorta lo suyo (es un carril con scroll),
+       así que el deslizamiento se ve igual sin empujar nada afuera. */
+    [data-mfx="carrusel"] { animation: none; view-timeline: --repisa block; }
+    [data-mfx="carrusel"] > * {
+      animation: m-desliza linear both;
+      animation-timeline: --repisa;
+      animation-range: entry 0% entry 60%;
+    }
     /* Vitrina: una pieza por pantalla, que sube como un cartel. */
     [data-mfx="pieza"]    { animation-name: m-pieza; animation-range: entry 0% cover 32%; }
 

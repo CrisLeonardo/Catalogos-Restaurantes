@@ -162,6 +162,20 @@ Seis piezas comunes a todas las estructuras. Las estructuras siguen decidiendo *
 
 Cada fase en su rama y su PR; maqueta aprobada antes de tocar lo visual (la de este documento cubre las fases 1–3).
 
+**Estado (2026-11-18):** la **fase 0 está hecha** en la rama `fix/carta-fase-0`, apilada sobre esta auditoría. Lo que quedó:
+
+- **CV-01:** solo recarga si ya había un service worker al mando. Medido: 1 documento en la primera visita.
+- **CV-02:** la lectura fallida lanza (no se guarda en caché) y la carta dice «No pudimos cargar la carta · Volver a cargar». El checkout sigue sin sugerencias.
+- **CV-03:** se quitó el aviso de Google al llegar. La invitación ya vivía en la confirmación del pedido y en «Cuenta».
+- **CV-04 (parte general):** `/api/og/<slug>` dibuja una tarjeta de 1200 × 630 con nombre, frase y paleta cuando no hay logo.
+- **CV-05:** la tarjeta ya no es un botón con otro botón dentro. Lleva un «Ver …» propio para teclado, hermano de «Agregar», y el foco se dibuja en la tarjeta.
+- **CV-06:** la animación de Estantes movía la repisa entera 56 px a la derecha. Ahora mueve las piezas dentro de la repisa. `scrollWidth` es igual al ancho a 320, 390 y 768 en las 8 estructuras.
+- **CV-07:** la búsqueda mira los dos idiomas.
+- **CV-08:** el rótulo queda vacío por defecto, y un «EST · 2024» guardado no se imprime.
+- **CV-10:** lo agotado o fuera de horario abre la ficha en modo lectura con el motivo («Agotado · vuelve mañana»), sin «Agregar» ni acompañantes.
+
+Falta el plato estrella en la imagen de vista previa, que va con CV-30 en la fase 2.
+
 ---
 
 ## 8 · Lo que decide el dueño

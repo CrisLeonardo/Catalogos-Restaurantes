@@ -665,7 +665,9 @@ export const DEFAULT_CONTENT: ThemeContent = {
     cta: 'Ver el menú',
     badgeOpen: 'Abierto ahora',
     badgeClosed: 'Cerrado ahora',
-    posterKicker: 'EST · 2024',
+    /* Vacío: antes era «EST · 2024» y se imprimía en restaurantes que nunca
+       escribieron su año (CV-08). Sólo aparece si el dueño lo escribe. */
+    posterKicker: '',
   },
   vitrina: {
     ticker: '',
