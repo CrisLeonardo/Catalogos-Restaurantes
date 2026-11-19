@@ -17,6 +17,14 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
   - La búsqueda encuentra en inglés.
   - Desaparece el «EST · 2024» inventado.
   - Lo agotado se puede abrir y dice cuándo vuelve.
+- **Fase 1 de «La carta que vende»** (nada saturado, sin migración):
+  - La carta abre con una cabecera breve y la comida a la vista: el primer precio sube de ~1,000 px a menos de 450. La portada completa queda como opción del editor.
+  - Una sola barra abajo con el pedido y el mesero.
+  - «Cierra en 40 min» solo cuando cuenta.
+  - Sin el «El menú» repetido.
+  - Alérgenos en una línea.
+  - «Va bien con» con fotos.
+  - Checkout de mesa sin campos que no se usan.
 
 ## v0.25.0 · 2026-11-18 · Cierre de la Ola 2 y línea N «nada saturado»
 PR #137 a #146, fusionados juntos por #146 (apilados), más #144 contra `main` · **migración 187, antes de desplegar** (si falta, la cola del superadmin se ve sin estados y lo dice).
