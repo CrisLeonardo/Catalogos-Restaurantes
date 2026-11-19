@@ -14,6 +14,7 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
   - Búsqueda por antojo.
   - Foto guiada al subir la de un platillo.
   - El pedido en curso ya no flota sobre la carta.
+  - Una carta de más de 1,000 platillos ya no se corta en silencio.
 
 ## v0.27.0 · 2026-11-19 · «La carta que vende»: fase 2
 PR #160 y #161 · **migración 188** (antes o después de desplegar; si falta, solo no se cuenta el embudo).

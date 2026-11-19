@@ -216,6 +216,7 @@ Pendiente: el aviso flotante del pedido activo (`ORD-…`) sigue encima de la ca
 - **CV-34 · Búsqueda por antojo:** «Para compartir», «Menos de Q50», «Sin carne» y «Picante», y solo los que sirven.
 - **CV-36 · Foto guiada:** un consejo de encuadre y avisos si la foto sale oscura, quemada o movida. Solo avisa.
 - **CV-14:** el pedido en curso es una franja en la carta, ya no flota. «Pedir lo de la última vez» espera 3 h desde el último pedido.
+- **CV-09 · Más de 1,000 platillos:** la carta los lee de 1,000 en 1,000 (`lib/db/por-bloques.ts`, con prueba), con orden estable. Un bloque que falla no se hace pasar por lectura completa.
 - **CV-35 · Descripción asistida con IA:** no se hizo. El proyecto no tiene proveedor de IA; hace falta que el dueño elija uno y ponga la clave.
 
 ---

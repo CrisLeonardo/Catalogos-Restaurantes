@@ -1,4 +1,5 @@
 import { cache } from 'react';
+import { porBloques } from '@/lib/db/por-bloques';
 import { unstable_cache } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
@@ -103,11 +104,14 @@ export const getMenuData = cache(
         .eq('restaurant_id', restaurantId)
         .eq('is_active', true)
         .order('sort_order'),
-      supabase
+      // Por bloques: PostgREST corta en 1,000 filas sin avisar (CV-09).
+      porBloques<Record<string, unknown>>((desde, hasta) => supabase
         .from('products')
         .select(MENU_QUERY_COLUMNS)
         .eq('restaurant_id', restaurantId)
-        .order('sort_order'),
+        .order('sort_order')
+        .order('id')
+        .range(desde, hasta)),
     ]);
 
     return {
@@ -146,12 +150,15 @@ export function getMenuDataCached(restaurantId: string): Promise<MenuData> {
           .eq('restaurant_id', restaurantId)
           .eq('is_active', true)
           .order('sort_order'),
-        db
+        // Por bloques: PostgREST corta en 1,000 filas sin avisar (CV-09).
+        porBloques<Record<string, unknown>>((desde, hasta) => db
           .from('products')
           .select(MENU_QUERY_COLUMNS)
           .eq('restaurant_id', restaurantId)
           .eq('is_active', true)
-          .order('sort_order'),
+          .order('sort_order')
+          .order('id')
+          .range(desde, hasta)),
       ]);
       // Una lectura fallida NO es una carta vacía (CV-02): si se devolviera
       // el vacío, `unstable_cache` lo guardaría 60 s y todo el que escaneara
