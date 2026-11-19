@@ -6,12 +6,14 @@ import LeoginLanding from '@/components/landing';
 import BranchSelector from '@/components/branch-selector';
 import { getRestaurantBySlugCached } from '@/lib/db/restaurants';
 import { getGroupBranches } from '@/lib/db/org-public';
-import { getMenuDataCached, withStockLeft } from '@/lib/db/menu';
+import { getMenuDataCached, withStockLeft, LecturaMenuFallida, type MenuData } from '@/lib/db/menu';
+import CartaNoCargo from '@/components/menu/carta-no-cargo';
+import { buildThemeVars } from '@/lib/theme/resolve';
 import { getArchivoVitrinaCached, getVendidosDesdeCached, withStockTotal } from '@/lib/db/vitrina';
 import { isVitrina } from '@/lib/theme/defaults';
 import { estadoEdicion } from '@/lib/vitrina/edicion';
 import { resolveTheme } from '@/lib/theme/resolve';
-import { isOpenNow, nextOpenLabel } from '@/lib/hours';
+import { isOpenNow, minutosParaCerrar, nextOpenLabel } from '@/lib/hours';
 import { isModuleActive } from '@/lib/modules';
 import { DEMO_SLUG, rootDomainForUrls, isAdminSubdomain, isGroupSubdomain, subdomainUrl } from '@/lib/tenant';
 import { currencyCodeFor, jsonLdScript, restaurantJsonLd } from '@/lib/seo/restaurant-jsonld';
@@ -76,6 +78,7 @@ export async function generateMetadata(): Promise<Metadata> {
   // pwaIconUrl tiene prioridad para favicon; si no hay, usa el logo de portada.
   const favicon = data.resolved.config.pwaIconUrl ?? data.resolved.config.logoUrl;
   const logo = data.resolved.config.logoUrl;
+  const ogTarjeta = `${subdomainUrl(slug)}/api/og/${encodeURIComponent(slug)}`;
 
   return {
     title: `${name} — Menú`,
@@ -89,9 +92,13 @@ export async function generateMetadata(): Promise<Metadata> {
       // es_GT como la portada de Leogin; antes decía es_MX (CAT-11).
       locale: 'es_GT',
       type: 'website',
-      images: logo ? [{ url: logo }] : undefined,
+      // Sin logo, una tarjeta con el nombre y la paleta (CV-04): un enlace
+      // sin imagen en WhatsApp se ve como texto pelado.
+      images: logo ? [{ url: logo }] : [{ url: ogTarjeta, width: 1200, height: 630, alt: name }],
     },
-    twitter: { card: 'summary', title: `${name} — Menú`, description },
+    twitter: logo
+      ? { card: 'summary', title: `${name} — Menú`, description }
+      : { card: 'summary_large_image', title: `${name} — Menú`, description, images: [ogTarjeta] },
     robots: { index: true, follow: false },
   };
 }
@@ -158,10 +165,18 @@ export default async function Home({
     notFound();
   }
 
-  const menu = await getMenuDataCached(data.restaurant.id);
+  // Lectura fallida ≠ carta vacía (CV-02): se dice y se ofrece reintentar.
+  let menu: MenuData;
+  try {
+    menu = await getMenuDataCached(data.restaurant.id);
+  } catch (e) {
+    if (!(e instanceof LecturaMenuFallida)) throw e;
+    return <CartaNoCargo nombre={data.restaurant.name} vars={buildThemeVars(data.resolved.config)} />;
+  }
   const ordersEnabled = data.restaurant.modules?.orders === true;
   const tz = data.restaurant.timezone || 'America/Guatemala';
   const isOpen = isOpenNow(data.restaurant.hours, tz, new Date(), data.restaurant.hour_exceptions);
+  const cierraEn = isOpen ? minutosParaCerrar(data.restaurant.hours, tz, new Date(), data.restaurant.hour_exceptions) : null;
   const reopenHint = !isOpen ? nextOpenLabel(data.restaurant.hours, tz, new Date(), data.restaurant.hour_exceptions) : null;
 
   const mod = data.restaurant.modules as Record<string, boolean> | null;
@@ -217,6 +232,7 @@ export default async function Home({
       ordersEnabled={ordersEnabled}
       isOpen={isOpen}
       reopenHint={reopenHint}
+      cierraEn={cierraEn}
       timezone={tz}
       initialMesa={initialMesa}
       llamadaMeseroEnabled={isModuleActive(mod, modSettings, 'llamada_mesero')}

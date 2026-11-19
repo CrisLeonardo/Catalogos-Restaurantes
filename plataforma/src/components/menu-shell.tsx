@@ -38,6 +38,8 @@ interface Props {
   isOpen?: boolean;
   /** Texto de próxima apertura ("hoy a las 18:00") cuando está cerrado. */
   reopenHint?: string | null;
+  /** Minutos para cerrar, si está abierto (CV-13: «Cierra en 40 min»). */
+  cierraEn?: number | null;
   /** Zona horaria del restaurante (para los menús por franja horaria). */
   timezone?: string;
   /** Mesa pre-seleccionada desde el QR de la mesa. */
@@ -65,7 +67,7 @@ interface Props {
   muestra?: boolean;
 }
 
-export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, timezone = 'America/Guatemala', initialMesa, llamadaMeseroEnabled = false, loyaltyOn = false, rewardsCatalog = null, googleAuthEnabled = false, whatsappNumber = null, restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null, menuLanguages = [], archivo = [], muestra = false }: Props) {
+export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, cierraEn = null, timezone = 'America/Guatemala', initialMesa, llamadaMeseroEnabled = false, loyaltyOn = false, rewardsCatalog = null, googleAuthEnabled = false, whatsappNumber = null, restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null, menuLanguages = [], archivo = [], muestra = false }: Props) {
   /* Una mesa que no existe en el local no se guarda: la carta lo dice y no
      deja pedir a esa mesa (auditoría 1.12, M01). */
   /* Pedido de prueba del dueño (ficha 2.2): guarda el pase de la URL. */
@@ -96,12 +98,19 @@ export default function MenuShell({ config, content, categories, products, resta
      se pinta como sin portada —y entonces la carta lleva arriba el nombre
      del restaurante, que es lo que hace el catálogo cuando no hay portada—.
      El enlace general y el de redes siguen abriendo en la portada. */
-  const cfg = useMemo(
-    () => (initialMesa && initialMesa > 0 && config.portadaVariant !== 'none'
-      ? { ...config, portadaVariant: 'none' as const }
-      : config),
-    [config, initialMesa],
-  );
+  /* CABECERA BREVE (auditoría «La carta que vende», CV-11). La portada de
+     pantalla completa no enseñaba ni un plato y pedía un toque más. Ahora,
+     salvo que el dueño la pida (`portadaCompleta`), la carta abre con la
+     franja «directo» —logo, nombre y lema— y la comida empieza de
+     inmediato. Con QR de mesa, siempre la franja: el comensal ya está
+     sentado. Vitrina conserva su cartel y «Sin portada» se respeta. */
+  const cfg = useMemo(() => {
+    const v = config.portadaVariant;
+    if (v === 'vitrina' || v === 'none' || v === 'directo') return config;
+    const conMesa = !!initialMesa && initialMesa > 0;
+    if (config.portadaCompleta && !conMesa) return config;
+    return { ...config, portadaVariant: 'directo' as const };
+  }, [config, initialMesa]);
 
   /* La portada Vitrina vende con una foto. Si el dueño no subió imagen de
      fondo, se usa la de un producto de su carta: primero uno marcado como
@@ -140,7 +149,7 @@ export default function MenuShell({ config, content, categories, products, resta
               ([data-portada-viva] en globals.css). `contents`: la envoltura no
               crea caja, así que no cambia nada de cómo se maqueta. */}
           <div data-portada-viva={cfg.animations ? '' : undefined} style={{ display: 'contents' }}>
-            <Portada isOpen={isOpen} fallbackImage={vitrinaFoto} whatsappNumber={whatsappNumber} />
+            <Portada isOpen={isOpen} cierraEn={cierraEn} fallbackImage={vitrinaFoto} whatsappNumber={whatsappNumber} />
           </div>
           <div id="menu" style={{ scrollMarginTop: 16, paddingTop: 12 }}>
             {!isOpen && (

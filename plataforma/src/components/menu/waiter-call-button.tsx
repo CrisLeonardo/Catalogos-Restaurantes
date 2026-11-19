@@ -8,16 +8,20 @@ import { useEffect, useState, useTransition } from 'react';
 import { Icon } from '@/components/icons';
 import { callWaiter, type CallReason } from '@/lib/actions/waiter-call';
 import { getScannedTable, watchScannedTable } from '@/lib/table-session';
+import navStyles from './bottom-nav.module.css';
 
 type Status = 'idle' | 'sending' | 'sent' | 'error';
 
 export default function WaiterCallButton({
   restaurantId,
   raised = false,
+  enBarra = false,
 }: {
   restaurantId: string;
   /** Elevar el FAB por encima de la barra del carrito cuando hay pedidos. */
   raised?: boolean;
+  /** Como una sección más de la barra de abajo, no flotando (CV-14). */
+  enBarra?: boolean;
 }) {
   const [tableNumber, setTableNumber] = useState<number | null>(null);
   const [status, setStatus] = useState<Status>('idle');
@@ -83,8 +87,11 @@ export default function WaiterCallButton({
      CARTA, no el de la ventana (mismo criterio que active-order-chip.tsx). */
   const right = 'max(16px, calc(50% - var(--menu-max, 460px) / 2 + var(--menu-pad, 16px)))';
   const base = raised ? 160 : 92;
+  /* En la barra, las opciones salen justo encima de ella. */
+  const baseOpciones = enBarra ? 'calc(var(--m-nav-h) + env(safe-area-inset-bottom, 0px) + 4px)' : `${base}px`;
 
-  function choice(reason: CallReason, icon: string, text: string, bottom: number) {
+  function choice(reason: CallReason, icon: string, text: string, sobre: number) {
+    const bottom = `calc(${baseOpciones} + ${sobre}px)`;
     return (
       <button
         type="button"
@@ -119,11 +126,29 @@ export default function WaiterCallButton({
             style={{ position: 'fixed', inset: 0, zIndex: 59 }}
             aria-hidden="true"
           />
-          {choice('bill', 'wallet', 'La cuenta, por favor', base + 112)}
-          {choice('call', 'bell', 'Necesito algo', base + 56)}
+          {choice('bill', 'wallet', 'La cuenta, por favor', enBarra ? 56 : 112)}
+          {choice('call', 'bell', 'Necesito algo', enBarra ? 0 : 56)}
         </>
       )}
-
+      {enBarra ? (
+        <button
+          type="button"
+          className={navStyles.item}
+          onClick={() => {
+            if (sending || done) return;
+            if (failed) { handleCall(sentReason); return; }
+            setOpen((v) => !v);
+          }}
+          aria-disabled={sending || done}
+          aria-expanded={open}
+          aria-label={tableNumber ? `${label} · mesa ${tableNumber}` : label}
+          style={{ color: done ? 'var(--c-ok)' : failed ? 'var(--c-danger)' : undefined }}
+        >
+          <span className={navStyles.mark}><Icon name={open && !sending && !done ? 'x' : iconName} size={20} /></span>
+          <span className={navStyles.label}>{sending ? 'Avisando…' : done ? 'Ya viene' : failed ? 'Reintentar' : 'Mesero'}</span>
+          <span className="sr-only" role="status">{done ? label : ''}</span>
+        </button>
+      ) : (
       <button
         type="button"
         onClick={() => {
@@ -163,6 +188,7 @@ export default function WaiterCallButton({
           {open && !sending && !done ? 'Cerrar' : label}
         </span>
       </button>
+      )}
     </>
   );
 }

@@ -29,6 +29,12 @@ export default function OfflineSupport() {
       // defecto ('/') sigue igual que siempre.
       const prefix = getStableLinkPrefix();
       const options = prefix ? { scope: `${prefix}/` } : undefined;
+      // ¿Ya había un SW al mando ANTES de registrar? En la primera visita no:
+      // ahí `clients.claim()` también dispara `controllerchange`, y recargar
+      // descargaba la carta dos veces y le cerraba al comensal lo que tuviera
+      // abierto (auditoría «La carta que vende», CV-01). Solo un cambio de
+      // dueño —un SW nuevo reemplazando a uno viejo— amerita recargar.
+      const habiaControlador = !!navigator.serviceWorker.controller;
       navigator.serviceWorker.register('/sw.js', options).then((reg) => {
         // El SW nuevo ya se activa solo (skipWaiting + clients.claim en
         // sw.js), pero una pestaña que quedó abierta desde antes no se
@@ -39,7 +45,7 @@ export default function OfflineSupport() {
         // vez si hay varias pestañas del mismo origen.
         let reloaded = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-          if (reloaded) return;
+          if (reloaded || !habiaControlador) return;
           reloaded = true;
           window.location.reload();
         });
