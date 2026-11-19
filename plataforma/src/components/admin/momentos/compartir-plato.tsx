@@ -26,7 +26,8 @@ export default function CompartirPlato({ marca, plato }: { marca: MarcaRestauran
         <CompartirDialogo
           titulo="Tu platillo del día"
           archivo={`platillo-del-dia-${plato.nombre.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.png`}
-          texto={`Hoy en ${marca.nombre}: ${plato.nombre}. Pídelo en ${marca.menu}`}
+          // El enlace del PLATILLO (CV-30): abre su ficha y trae su foto en la vista previa.
+          texto={`Hoy en ${marca.nombre}: ${plato.nombre}. Pídelo en ${marca.menu}${plato.id ? `/?platillo=${plato.id}` : ''}`}
           generar={generar}
           onClose={cerrar}
         />

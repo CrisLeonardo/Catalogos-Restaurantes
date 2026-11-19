@@ -482,6 +482,27 @@ export function formatAmount(amount: number, config: ThemeConfig): string {
   }
 }
 
+/**
+ * El precio COMO SE LEE EN LA CARTA (auditoría «La carta que vende», CV-18):
+ * «Q52» cuando no hay centavos, «Q52.50» cuando sí. «Q52.00» en cada
+ * platillo se veía técnico, de caja registradora. Los totales del carrito y
+ * del checkout siguen con centavos (`formatPrice`): ahí se cuenta dinero.
+ */
+export function formatAmountCarta(amount: number, config: ThemeConfig): string {
+  const centavos = Math.round(amount * 100) % 100 !== 0;
+  if (centavos) return formatAmount(amount, config);
+  try {
+    return amount.toLocaleString(config.locale, { maximumFractionDigits: 0 });
+  } catch {
+    return amount.toLocaleString('es-GT', { maximumFractionDigits: 0 });
+  }
+}
+
+export function formatPriceCarta(amount: number, config: ThemeConfig): string {
+  const n = formatAmountCarta(amount, config);
+  return config.currencyPosition === 'prefix' ? `${config.currencySymbol}${n}` : `${n}${config.currencySymbol}`;
+}
+
 export function formatPrice(amount: number, config: ThemeConfig): string {
   const n = formatAmount(amount, config);
   return config.currencyPosition === 'prefix'

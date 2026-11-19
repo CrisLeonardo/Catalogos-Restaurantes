@@ -43,6 +43,33 @@ export async function trackVisit(
   }
 }
 
+/* ── Embudo de la carta (CV-37, migración 188) ──────────────
+   Un paso del comensal, anónimo: el mismo visitor_id del aparato, el canal
+   por el que entró y el paso. Una vez por paso y día (índice único). Si la
+   tabla todavía no existe, falla en silencio: medir nunca rompe la carta. */
+const CANALES = new Set(['mesa', 'general', 'platillo']);
+const PASOS = new Set(['apertura', 'ficha', 'agregar', 'checkout', 'pedido']);
+
+export async function trackEmbudo(
+  restaurantId: string,
+  visitorId: string,
+  canal: string,
+  paso: string,
+): Promise<void> {
+  if (!UUID_RE.test(restaurantId) || !UUID_RE.test(visitorId) || !CANALES.has(canal) || !PASOS.has(paso)) return;
+  const ip = clientIp(await headers());
+  if (!(await rateLimit(`embudo:${ip}:${restaurantId}`, 60, 60_000))) return;
+  try {
+    const db = createServiceClient();
+    await db.from('menu_embudo').upsert(
+      { restaurant_id: restaurantId, visitor_id: visitorId, canal, paso },
+      { onConflict: 'restaurant_id,visitor_id,paso,dia', ignoreDuplicates: true },
+    );
+  } catch {
+    // Las métricas jamás deben romper la página del cliente.
+  }
+}
+
 /* ── Lecturas (panel del dueño) ───────────────────────────── */
 
 export interface DayVisits {

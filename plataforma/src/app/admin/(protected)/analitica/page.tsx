@@ -14,6 +14,7 @@ import { panelHref } from '@/lib/panel-links';
 import { diaDeNegocio } from '@/lib/caja/dia';
 import { corteDelRestaurante } from '@/lib/db/dia-negocio';
 import s from '@/components/admin/negocio.module.css';
+import { getEmbudoCarta, CANALES_EMBUDO, type Embudo } from '@/lib/db/embudo';
 
 export const metadata = { title: 'Analítica – Panel admin' };
 
@@ -97,7 +98,7 @@ export default async function AdminAnaliticaPage({
   const to = isYmd(sp.to) && sp.to <= hoy ? sp.to : hoy;
   const from = isYmd(sp.from) && sp.from <= to ? sp.from : shiftYmd(to, -29);
 
-  const [a, base] = await Promise.all([getAnalytics(restaurantId, from, to, timezone), panelBase()]);
+  const [a, base, embudo] = await Promise.all([getAnalytics(restaurantId, from, to, timezone), panelBase(), getEmbudoCarta(restaurantId, from, to)]);
   const rango = rangoEnPalabras(from, to, hoy);
   const selector = <SelectorPeriodo from={from} to={to} hoy={hoy} basePath="/admin/analitica" />;
 
@@ -217,6 +218,35 @@ export default async function AdminAnaliticaPage({
           )}
         </div>
       </div>
+
+      {embudo.estado !== 'falta-migracion' && embudo.estado !== 'error' && <EmbudoCarta e={embudo.datos} rango={rango} />}
     </div>
+  );
+}
+
+/* ── Tu carta, de la apertura al pedido (CV-37) ───────────────
+   Una línea por canal con gente: cuántos abrieron, vieron un plato,
+   agregaron, llegaron al pago y pidieron, y qué parte terminó en pedido.
+   Personas por día, anónimas. Sin datos todavía, la tarjeta se calla. */
+const NOMBRE_CANAL: Record<(typeof CANALES_EMBUDO)[number], string> = {
+  mesa: 'QR de la mesa', general: 'Enlace de la carta', platillo: 'Enlace de un platillo',
+};
+function EmbudoCarta({ e, rango }: { e: Embudo; rango: string }) {
+  const filas = CANALES_EMBUDO.filter((c) => e[c].apertura > 0);
+  if (filas.length === 0) return null;
+  return (
+    <section className={`${s.tarjeta} ${s.bloque}`} aria-labelledby="embudo-carta">
+      <h2 className={s.titulo} id="embudo-carta">Tu carta, de abrirla a pedir · {rango}</h2>
+      {filas.map((c) => {
+        const f = e[c];
+        const conversion = f.apertura > 0 ? Math.round((f.pedido / f.apertura) * 100) : 0;
+        return (
+          <p key={c} className={s.linea}>
+            <b>{NOMBRE_CANAL[c]}</b>: {f.apertura.toLocaleString('es-GT')} la abrieron · {f.ficha.toLocaleString('es-GT')} vieron un platillo · {f.agregar.toLocaleString('es-GT')} agregaron · {f.checkout.toLocaleString('es-GT')} llegaron al pago · <b>{f.pedido.toLocaleString('es-GT')} pidieron ({conversion} %)</b>
+          </p>
+        );
+      })}
+      <p className={s.apoyo}>Personas por día, sin nombres ni teléfonos.</p>
+    </section>
   );
 }

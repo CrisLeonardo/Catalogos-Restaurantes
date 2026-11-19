@@ -264,12 +264,13 @@ export default async function AdminHomePage() {
   if (estrella && restaurantId && allow('catalogo')) {
     const { data: prod } = await createServiceClient()
       .from('products')
-      .select('image_url, price')
+      .select('id, image_url, price')
       .eq('restaurant_id', restaurantId)
       .eq('name', estrella.name)
       .limit(1)
       .maybeSingle();
     platoEstrella = {
+      id: (prod?.id as string | undefined) ?? null,
       nombre: estrella.name,
       precio: prod?.price != null ? fmt(Number(prod.price)) : null,
       imagen: (prod?.image_url as string | null | undefined) ?? null,

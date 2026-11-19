@@ -373,7 +373,7 @@ export const ROLE_NATURAL_COLOR: Record<TypographyRole, string> = {
 export const ROLE_NATURAL_FONT: Record<TypographyRole, string> = {
   heading: 'var(--font-display)', poster: 'var(--font-poster)', serif: 'var(--font-serif)',
   kicker: 'var(--font-poster)', body: 'var(--ui-font-sans)', productName: 'var(--font-display)',
-  productDesc: 'var(--ui-font-sans)', price: 'var(--ui-font-mono)', button: 'var(--ui-font-sans)',
+  productDesc: 'var(--ui-font-sans)', price: 'var(--ui-font-sans)', button: 'var(--ui-font-sans)',
   tag: 'var(--ui-font-sans)',
 };
 

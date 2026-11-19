@@ -188,6 +188,18 @@ Falta el plato estrella en la imagen de vista previa, que va con CV-30 en la fas
 
 Comprobado a 390 y 1280 px en las 8 estructuras, sin desborde. Falta probar en iPhone y Android físicos.
 
+**Estado (2026-11-19):** las fases 0 y 1 están en producción (v0.26.0). La **fase 2 está hecha** en la rama `feat/carta-fase-2`, con la migración 188.
+
+- **CV-30:** cada platillo tiene su enlace, `?platillo=<id>`, que abre su ficha encima de la carta. Si el platillo está agotado, la ficha lo dice; si ya no existe, abre solo la carta. Su vista previa es de 1200 × 630, con foto, nombre, precio y «Pídelo aquí». «Compartir» está en la ficha, y el momento «Comparte tu plato» del panel ya comparte ese enlace.
+- **CV-31:** «Lo más pedido esta semana» muestra hasta 4 platillos vendidos en los últimos 7 días. El número aparece desde 5 unidades, y la tira solo con 2 platillos o más.
+- **CV-18:** el precio de la carta es «Q52», y «Q52.50» cuando hay centavos, con la letra de la carta en cifras tabulares. Los totales del carrito y del checkout conservan los centavos.
+- **CV-33:** «Pedir lo de la última vez» se guarda en el aparato y se rearma con los precios y opciones de hoy. Salta lo que ya no está y nunca aparece en el kiosko.
+- **CV-37:** embudo anónimo apertura → ficha → agregar → checkout → pedido, por canal (mesa, general o platillo), en la tabla `menu_embudo` (migración 188), con su tarjeta en Analítica.
+- **CV-20:** sin cambios de carga. Las fuentes de marca ya no se precargaban, y los precios dejaron de pedir la letra de máquina de escribir: 4 archivos de letra en PC en Rincón 502.
+- **Encontrado al probar:** el pedido de mesa sin nombre se rechazaba en producción. Se arregló en el PR #160.
+
+Pendiente: el aviso flotante del pedido activo (`ORD-…`) sigue encima de la carta después de pedir, y falta ver la tarjeta del embudo en Analítica con sesión de dueño.
+
 ---
 
 ## 8 · Lo que decide el dueño

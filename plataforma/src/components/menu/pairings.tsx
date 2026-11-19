@@ -13,7 +13,7 @@
 
 import AssetImage from '@/components/asset-image';
 import { Icon } from '@/components/icons';
-import { formatPrice } from '@/lib/theme/resolve';
+import { formatPriceCarta } from '@/lib/theme/resolve';
 import { useThemeConfig } from '@/lib/theme/context';
 import { useLocale } from '@/lib/locale/context';
 
@@ -61,7 +61,7 @@ export function Acompanantes({
               className="press m-acomp-pieza"
               data-on={on ? '1' : undefined}
               aria-pressed={elegidos ? on : undefined}
-              aria-label={`${nombre}, más ${formatPrice(s.price, config)}`}
+              aria-label={`${nombre}, más ${formatPriceCarta(s.price, config)}`}
             >
               <span className="m-acomp-foto">
                 {s.image_url
@@ -70,7 +70,7 @@ export function Acompanantes({
                 <span className="m-acomp-marca" aria-hidden><Icon name={on ? 'check' : 'plus'} size={14} strokeWidth={on ? 3 : 2.4} /></span>
               </span>
               <span className="m-acomp-nombre">{nombre}</span>
-              <span className="m-acomp-precio">+{formatPrice(s.price, config)}</span>
+              <span className="m-acomp-precio">+{formatPriceCarta(s.price, config)}</span>
             </button>
           );
         })}
