@@ -339,6 +339,12 @@ export default function MenuClient({
         </div>
       )}
 
+      {/* El pedido en curso, como franja arriba de la carta (CV-14): antes
+          flotaba encima de las tarjetas y de la barra. */}
+      {ordersEnabled && restaurantId && !demo && !kiosk && !vitrina && (
+        <ActiveOrderChip restaurantId={restaurantId} enLinea />
+      )}
+
       {/* Estados del día (CV-32): arriba de todo lo demás, como en WhatsApp. */}
       {!vitrina && restaurantId && (
         <Estados
@@ -450,7 +456,8 @@ export default function MenuClient({
         />
       )}
       {demo && <PedidoDemo open={demoOpen} onClose={() => setDemoOpen(false)} />}
-      {ordersEnabled && restaurantId && !demo && !selected && !cartOpen && !kiosk && (
+      {/* Vitrina conserva su aviso flotante; las demás lo llevan en la carta. */}
+      {ordersEnabled && restaurantId && !demo && !selected && !cartOpen && !kiosk && vitrina && (
         <ActiveOrderChip restaurantId={restaurantId} />
       )}
 

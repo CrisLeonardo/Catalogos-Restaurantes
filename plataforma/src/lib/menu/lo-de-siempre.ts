@@ -20,6 +20,9 @@ import type { CartItem, CartItemOption, ProductOptionGroup } from '@/types';
 const CLAVE = (restaurantId: string) => `lo-de-siempre-${restaurantId}`;
 /** Pasado este tiempo, «la última vez» ya no ayuda. */
 const VIGENCIA_MS = 90 * 24 * 60 * 60 * 1000;
+/** Recién pedido, la carta ya enseña el pedido en curso: «lo de siempre»
+    es para la VUELTA (otro día), no para los minutos después de pedir. */
+export const RECIENTE_MS = 3 * 60 * 60 * 1000;
 
 export interface LineaGuardada {
   productId: string;
@@ -48,7 +51,7 @@ export function leerUltimoPedido(restaurantId: string, now: number = Date.now())
     const raw = localStorage.getItem(CLAVE(restaurantId));
     if (!raw) return null;
     const g = JSON.parse(raw) as Guardado;
-    if (!g || !Array.isArray(g.lineas) || typeof g.at !== 'number' || now - g.at > VIGENCIA_MS) return null;
+    if (!g || !Array.isArray(g.lineas) || typeof g.at !== 'number' || now - g.at > VIGENCIA_MS || now - g.at < RECIENTE_MS) return null;
     return g.lineas;
   } catch {
     return null;
