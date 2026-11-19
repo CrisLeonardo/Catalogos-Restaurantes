@@ -4,8 +4,8 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
-## Sin publicar
-
+## v0.27.0 · 2026-11-19 · «La carta que vende»: fase 2
+PR #160 y #161 · **migración 188** (antes o después de desplegar; si falta, solo no se cuenta el embudo).
 - **Pedido de mesa sin nombre** (#160): se llama «Mesa N» en vez de rechazarse con «El nombre es requerido». El fallo estaba en producción desde v0.26.0.
 - **Fase 2 de «La carta que vende»: la carta vende.** Lleva la **migración 188**, que se puede aplicar antes o después de desplegar: si falta, solo no se cuenta el embudo.
   - Cada platillo tiene su enlace (`?platillo=`), con su propia vista previa (foto, nombre y precio) y «Compartir» en la ficha.
