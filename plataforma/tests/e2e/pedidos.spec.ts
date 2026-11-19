@@ -147,12 +147,13 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
     await expect(carrito).toBeVisible();
     await expect(carrito).toContainText('Ver carrito');
     await expect(carrito).toContainText('42.00');
+    /* Una sola barra (auditoría «La carta que vende», CV-14): el pedido vive
+       DENTRO de la navegación —cuatro secciones más el pedido—, no flotando
+       encima de ella. */
     const navegacion = page.getByRole('navigation', { name: 'Navegación principal' });
-    await expect(navegacion.getByRole('button')).toHaveCount(4);
+    await expect(navegacion.getByRole('button')).toHaveCount(5);
     await expect(navegacion.getByRole('button', { name: 'Menú', exact: true })).toHaveAttribute('aria-current', 'page');
-    const barra = await navegacion.boundingBox();
-    const resumen = await carrito.boundingBox();
-    expect(resumen!.y + resumen!.height).toBeLessThan(barra!.y);
+    await expect(navegacion.getByRole('button', { name: /^Ver carrito/ })).toBeVisible();
     await carrito.focus();
     await carrito.press('Enter');
     await expect(page.getByRole('dialog', { name: 'Carrito' })).toBeVisible();
