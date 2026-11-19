@@ -6,9 +6,9 @@ import LeoginLanding from '@/components/landing';
 import BranchSelector from '@/components/branch-selector';
 import { getRestaurantBySlugCached } from '@/lib/db/restaurants';
 import { getGroupBranches } from '@/lib/db/org-public';
-import { getMenuDataCached, withStockLeft, LecturaMenuFallida, type MenuData } from '@/lib/db/menu';
+import { getMenuDataCached, getMasPedidosSemanaCached, withStockLeft, LecturaMenuFallida, type MenuData } from '@/lib/db/menu';
 import CartaNoCargo from '@/components/menu/carta-no-cargo';
-import { buildThemeVars } from '@/lib/theme/resolve';
+import { buildThemeVars, formatPriceCarta } from '@/lib/theme/resolve';
 import { getArchivoVitrinaCached, getVendidosDesdeCached, withStockTotal } from '@/lib/db/vitrina';
 import { isVitrina } from '@/lib/theme/defaults';
 import { estadoEdicion } from '@/lib/vitrina/edicion';
@@ -22,7 +22,18 @@ import { getPublicLoyaltyCached, type PublicReward } from '@/lib/db/loyalty';
 import { isGoogleAuthEnabled } from '@/lib/auth-config';
 
 /* ── Metadata dinámica por restaurante ─────────────────────── */
-export async function generateMetadata(): Promise<Metadata> {
+/** `?platillo=<id>` (CV-30): solo un UUID; cualquier otra cosa se ignora. */
+const UUID_PLATO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function platoDe(params: Record<string, string | string[] | undefined>): string | null {
+  const v = typeof params.platillo === 'string' ? params.platillo : null;
+  return v && UUID_PLATO.test(v) ? v.toLowerCase() : null;
+}
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<Metadata> {
   const slug = (await headers()).get('x-tenant-slug');
 
   if (!slug) {
@@ -80,6 +91,32 @@ export async function generateMetadata(): Promise<Metadata> {
   const logo = data.resolved.config.logoUrl;
   const ogTarjeta = `${subdomainUrl(slug)}/api/og/${encodeURIComponent(slug)}`;
 
+  /* El enlace de un platillo (CV-30) se presenta como ESE platillo: su
+     nombre, su precio y su foto en la vista previa de WhatsApp o Facebook. */
+  const platoId = platoDe(await searchParams);
+  if (platoId) {
+    const menu = await getMenuDataCached(data.restaurant.id).catch(() => null);
+    const plato = menu?.products.find((p) => p.id === platoId);
+    if (plato) {
+      const precio = formatPriceCarta(Number(plato.price), data.resolved.config);
+      const titulo = `${plato.name} · ${precio} — ${name}`;
+      const desc = plato.description || `Pídelo en línea en ${name}.`;
+      const img = `${ogTarjeta}?platillo=${platoId}`;
+      return {
+        title: titulo,
+        description: desc,
+        icons: favicon ? { icon: favicon, apple: favicon } : undefined,
+        openGraph: {
+          title: titulo, description: desc, url: menuUrl ? `${menuUrl}/?platillo=${platoId}` : undefined,
+          siteName: name, locale: 'es_GT', type: 'website',
+          images: [{ url: img, width: 1200, height: 630, alt: plato.name }],
+        },
+        twitter: { card: 'summary_large_image', title: titulo, description: desc, images: [img] },
+        robots: { index: false, follow: false },
+      };
+    }
+  }
+
   return {
     title: `${name} — Menú`,
     description,
@@ -115,6 +152,7 @@ export default async function Home({
   ]);
   const rawMesa = typeof params.mesa === 'string' ? params.mesa : undefined;
   const initialMesa = rawMesa ? (parseInt(rawMesa, 10) || undefined) : undefined;
+  const initialPlato = platoDe(params);
 
   // Dominio raíz → landing comercial de Leogin.
   //
@@ -167,6 +205,8 @@ export default async function Home({
 
   // Lectura fallida ≠ carta vacía (CV-02): se dice y se ofrece reintentar.
   let menu: MenuData;
+  // «Lo más pedido» (CV-31) se pide junto con la carta; si falla, la tira no se pinta.
+  const masPedidosP = getMasPedidosSemanaCached(data.restaurant.id).catch(() => []);
   try {
     menu = await getMenuDataCached(data.restaurant.id);
   } catch (e) {
@@ -235,6 +275,8 @@ export default async function Home({
       cierraEn={cierraEn}
       timezone={tz}
       initialMesa={initialMesa}
+      initialPlato={initialPlato}
+      masPedidos={await masPedidosP}
       llamadaMeseroEnabled={isModuleActive(mod, modSettings, 'llamada_mesero')}
       loyaltyOn={loyaltyOn}
       rewardsCatalog={rewardsCatalog}

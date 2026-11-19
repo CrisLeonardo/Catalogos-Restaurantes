@@ -16,6 +16,8 @@ import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { isValidGuatemalaPhone } from '@/lib/schemas';
 import { getScannedTable, clearScannedTable, watchScannedTable } from '@/lib/table-session';
 import { isKioskMode } from '@/lib/kiosk';
+import { guardarUltimoPedido } from '@/lib/menu/lo-de-siempre';
+import { contarPaso } from '@/lib/menu/embudo';
 import { useStableLinkPrefix } from '@/lib/tenant-client';
 import {
   NO_ZONE, haversineKm, buildWhatsAppUrl,
@@ -101,6 +103,8 @@ export default function CheckoutForm({
   const [kiosk, setKiosk] = useState(false);
   useEffect(() => {
     if (isKioskMode()) setKiosk(true);
+    contarPaso(restaurantId, 'checkout'); // embudo de la carta (CV-37)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const typeOptions = kiosk
@@ -403,6 +407,10 @@ export default function CheckoutForm({
     // siga "detectándose" en ella si vuelve a abrir el mismo enlace después.
     if (snap.orderTypeSnapshot === 'DINE_IN') clearScannedTable(restaurantId);
 
+    // «Lo de siempre» (CV-33): la próxima vez, este pedido a un toque. Nunca
+    // en el kiosko: el aparato es de todos.
+    if (!isKioskMode()) guardarUltimoPedido(restaurantId, items);
+    contarPaso(restaurantId, 'pedido');
     clearCart();
     setStep('success');
 

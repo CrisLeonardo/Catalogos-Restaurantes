@@ -951,7 +951,11 @@ html[data-scheme="light"] .btn-white {
 }
 .themed-type .t-mono,
 .ct-price {
-  font-family:    var(--t-price-family, var(--ui-font-mono));
+  /* La letra de la carta con cifras tabulares, no la de máquina de escribir
+     (CV-18): el precio se veía técnico. Una plantilla que eligió letra para
+     los precios la sigue mandando por --t-price-family. */
+  font-family:    var(--t-price-family, var(--ui-font-sans));
+  font-variant-numeric: tabular-nums;
   font-weight:    var(--t-price-weight, 600);
   font-style:     var(--t-price-style, normal);
   letter-spacing: var(--t-price-tracking, -0.01em);

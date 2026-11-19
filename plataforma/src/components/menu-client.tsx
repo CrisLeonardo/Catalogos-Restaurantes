@@ -22,13 +22,18 @@ import { mesaExiste } from '@/lib/mesa-valida';
 import { isKioskMode } from '@/lib/kiosk';
 import { hasAnyHours, isOpenNow, type WeeklyHours } from '@/lib/hours';
 import { useThemeConfig, useThemeContent } from '@/lib/theme/context';
-import { formatPrice } from '@/lib/theme/resolve';
+import { formatPrice, formatPriceCarta } from '@/lib/theme/resolve';
 import { volarAlCarrito } from '@/lib/volar-al-carrito';
 import { isVitrina } from '@/lib/theme/defaults';
 import { sugerirAcompanantes } from '@/lib/menu-pairings';
 import type { Sugerencia } from '@/components/menu/pairings';
 import type { CartItem, Category, Product } from '@/types';
 import type { MenuReward } from '@/components/menu/rewards-section';
+import MasPedidos from '@/components/menu/mas-pedidos';
+import { elegirMasPedidos } from '@/lib/menu/mas-pedidos';
+import { leerUltimoPedido, rearmarPedido, type PedidoRearmado } from '@/lib/menu/lo-de-siempre';
+import { abrirEmbudo, contarPaso } from '@/lib/menu/embudo';
+import type { MasPedido } from '@/lib/db/menu';
 
 /* Pantallas que solo existen cuando el comensal las abre (Mi cuenta, Mis
    pedidos, la invitación a la lealtad): se bajan al abrirlas, no con la
@@ -51,6 +56,10 @@ interface Props {
   restaurantId?: string;
   timezone?: string;
   llamadaMeseroEnabled?: boolean;
+  /** `?platillo=<id>`: el enlace de un platillo abre su ficha encima de la carta (CV-30). */
+  initialPlato?: string | null;
+  /** Ventas de la semana por platillo, para «Lo más pedido» (CV-31). */
+  masPedidos?: MasPedido[];
   initialMesa?: number;
   /** QR de una mesa que no existe en el local (1.12, M01): se avisa y no se guarda. */
   mesaInvalida?: number | null;
@@ -89,7 +98,7 @@ function hasOptions(p: ProdItem): boolean {
 
 export default function MenuClient({
   categories, products, ordersEnabled = false, restaurantId, timezone = 'America/Guatemala',
-  llamadaMeseroEnabled = false, initialMesa, mesaInvalida = null, loyaltyOn = false, rewardsCatalog = null,
+  llamadaMeseroEnabled = false, initialPlato = null, masPedidos = [], initialMesa, mesaInvalida = null, loyaltyOn = false, rewardsCatalog = null,
   googleAuthEnabled = false, whatsappNumber = null,
   restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null,
 }: Props) {
@@ -190,6 +199,24 @@ export default function MenuClient({
   /* La barra de abajo (navegación + pedido + mesero, CV-14). Se oculta con
      una hoja abierta y en KIOSKO (cuenta, puntos y pedidos son datos
      personales que no deben quedar a la vista en un aparato compartido). */
+  /* Embudo de la carta (CV-37): por qué puerta entró y hasta dónde llegó. */
+  useEffect(() => {
+    if (!restaurantId || demo) return;
+    abrirEmbudo(restaurantId, initialPlato ? 'platillo' : initialMesa && initialMesa > 0 ? 'mesa' : 'general');
+    // Solo al abrir la carta.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => { if (selected && restaurantId && !demo) contarPaso(restaurantId, 'ficha'); }, [selected, restaurantId, demo]);
+  useEffect(() => { if (count > 0 && restaurantId && !demo) contarPaso(restaurantId, 'agregar'); }, [count, restaurantId, demo]);
+
+  /* «Lo de siempre» (CV-33): solo en el cliente (vive en el aparato). */
+  const [deSiempre, setDeSiempre] = useState<PedidoRearmado | null>(null);
+  useEffect(() => {
+    if (!restaurantId || isKioskMode()) return;
+    const guardadas = leerUltimoPedido(restaurantId);
+    if (guardadas) setDeSiempre(rearmarPedido(guardadas, products));
+  }, [restaurantId, products]);
+  const destacadosVentas = useMemo(() => elegirMasPedidos(masPedidos, products), [masPedidos, products]);
   const barraVisible = ordersEnabled && !demo && !vitrina && !selected && !cartOpen && !kiosk;
   const enCarrito = useMemo(() => items.map((i) => i.productId), [items]);
   const sheetPairings = useMemo(
@@ -250,6 +277,19 @@ export default function MenuClient({
      persona espera aterrizar. Lo que ya no se puede reabrir (un platillo que
      se agotó, el aviso de Google) solo se olvida. */
   useEffect(() => {
+    /* EL PLATO COMO ANUNCIO (auditoría «La carta que vende», CV-30). Quien
+       toca el enlace de un platillo —un estado de WhatsApp, una historia—
+       aterriza con su ficha abierta encima de la carta, a un toque de
+       «Agregar». Agotado: la ficha lo dice (CV-10). Retirado: solo la carta.
+       El parámetro se quita para que cerrar o recargar no la reabra. */
+    if (initialPlato) {
+      const params = new URLSearchParams(window.location.search);
+      params.delete('platillo');
+      const qs = params.toString();
+      window.history.replaceState(window.history.state, '', window.location.pathname + (qs ? `?${qs}` : ''));
+      const anunciado = products.find((p) => p.id === initialPlato);
+      if (anunciado) { setSelected(anunciado); return; }
+    }
     const guardada = leerHojaGuardada();
     if (!guardada) return;
     const enKiosko = isKioskMode();
@@ -292,6 +332,42 @@ export default function MenuClient({
             ? <span><strong>La mesa {mesaInvalida} no existe en {config.brandName || 'este local'}.</strong> Escanea el QR de tu mesa o pide ayuda al personal. Puedes ver el menú mientras tanto.</span>
             : <span><strong>Mesa {mesaActual}</strong> · tu pedido llega a esta mesa</span>}
         </div>
+      )}
+
+      {/* «Lo de siempre» (CV-33): un toque y vuelve el pedido de la última vez,
+          con los precios de hoy. Solo con el carrito vacío: después estorba. */}
+      {ordersEnabled && !demo && !kiosk && !vitrina && count === 0 && deSiempre && deSiempre.lineas.length > 0 && (
+        <button
+          type="button"
+          className="press m-surface"
+          onClick={() => {
+            for (const l of deSiempre.lineas) addItem(l.item, l.quantity);
+            setCartOpen(true);
+          }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12, width: '100%', margin: '12px 0 0', padding: '12px 14px',
+            borderRadius: 'var(--m-r-lg)', cursor: 'pointer', color: 'var(--u-text)', textAlign: 'left', font: 'inherit',
+          }}
+        >
+          <span style={{ display: 'grid', placeItems: 'center', width: 38, height: 38, borderRadius: 999, background: 'var(--surface-3)', flexShrink: 0 }}>
+            <Icon name="rotate" size={18} />
+          </span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontWeight: 700, fontSize: 'var(--m-fs-md)' }}>Pedir lo de la última vez</span>
+            <span style={{ display: 'block', fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {deSiempre.lineas.map((l) => `${l.quantity}× ${l.item.name}`).join(' · ')}
+              {deSiempre.faltan > 0 ? ` · ${deSiempre.faltan} ya no está${deSiempre.faltan === 1 ? '' : 'n'}` : ''}
+            </span>
+          </span>
+          <span className="ct-price" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{formatPriceCarta(deSiempre.total, config)}</span>
+        </button>
+      )}
+
+      {!vitrina && (
+        <MasPedidos
+          items={destacadosVentas}
+          onOpen={(p) => { setCartOpen(false); setAvisoAbierto(null); setSelected(p); }}
+        />
       )}
 
       <Catalog

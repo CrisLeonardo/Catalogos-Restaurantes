@@ -30,6 +30,7 @@ import { DIETARY_TAG_MAP } from '@/lib/dietary-tags';
 import { useLocale, useLocalized } from '@/lib/locale/context';
 import { Acompanantes, type Sugerencia } from '@/components/menu/pairings';
 import { isUnavailable, type AvailabilityFields } from '@/lib/product-availability';
+import { useTenantPrefix } from '@/lib/tenant-client';
 import type { CartItem, CartItemOption, Product, ProductOptionGroup } from '@/types';
 import {
   cabeOtra, grupoEsObligatorio, grupoPendiente, reglaDeGrupo, seleccionDeLinea, seleccionInicial, textoPendiente, variantesDeLinea,
@@ -267,7 +268,10 @@ export default function ProductSheet({
         {description && (
           <p className="hoja-platillo-descripcion">{description}</p>
         )}
-        {ordersEnabled && <Price amount={unitPrice} size={22} />}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          {ordersEnabled ? <Price amount={unitPrice} size={22} /> : <span />}
+          <CompartirPlato productId={product.id} nombre={name} es={es} />
+        </div>
         {product.dietary_tags && product.dietary_tags.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {product.dietary_tags.map((k) => {
@@ -432,5 +436,45 @@ export default function ProductSheet({
         )}
       </div>
     </HojaOperativa>
+  );
+}
+
+/* ── «Compartir» (auditoría «La carta que vende», CV-30) ──────────
+   El enlace de ESTE platillo: abre la carta con su ficha encima y lleva su
+   propia vista previa (foto, nombre y precio). Con la hoja de compartir del
+   teléfono si la hay; si no, se copia. Nunca lleva la mesa: quien lo recibe
+   no está sentado ahí. */
+function CompartirPlato({ productId, nombre, es }: { productId: string; nombre: string; es: boolean }) {
+  const base = useTenantPrefix('/');
+  const [copiado, setCopiado] = useState(false);
+  async function compartir() {
+    const url = `${window.location.origin}${base}?platillo=${productId}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: nombre, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2200);
+    } catch {
+      /* El comensal canceló la hoja de compartir: no es un error. */
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={compartir}
+      className="press"
+      aria-label={es ? `Compartir ${nombre}` : `Share ${nombre}`}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 'var(--m-tap)', padding: '0 14px',
+        borderRadius: 'var(--m-r-pill)', border: '1px solid var(--u-hair-2)', background: 'var(--surface-2)',
+        color: 'var(--u-text-2)', fontSize: 'var(--m-fs-sm)', fontWeight: 600, cursor: 'pointer',
+      }}
+    >
+      <Icon name={copiado ? 'check' : 'upload'} size={15} />
+      <span role="status">{copiado ? (es ? 'Enlace copiado' : 'Link copied') : (es ? 'Compartir' : 'Share')}</span>
+    </button>
   );
 }

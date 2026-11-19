@@ -8,7 +8,7 @@ import { useId, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { usePrice, useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
-import { roleSize } from '@/lib/theme/resolve';
+import { formatAmountCarta, roleSize } from '@/lib/theme/resolve';
 
 /* ── Superficie de una pieza de la carta ──────────────────────
    Sustituye a `Glass` en los platillos. El motivo está explicado a fondo en
@@ -88,8 +88,10 @@ export function Price({
   muted?: boolean;
   style?: CSSProperties;
 }) {
-  const { symbol, position, format } = usePrice();
+  const { symbol, position } = usePrice();
   const config = useThemeConfig();
+  // «Q52», no «Q52.00» (CV-18).
+  const format = (n: number) => formatAmountCarta(n, config);
   const sz = size * roleSize(config, 'price');
   /* El simbolo de moneda salia a 9,24 px con un precio de 14: es el unico
      texto del menu que seguia por debajo del piso. Se subordina por PROPORCION

@@ -20,6 +20,8 @@ export interface MarcaRestaurante {
 }
 
 export interface PlatoParaCompartir {
+  /** Para el enlace del platillo (`?plato=<id>`, CV-30). */
+  id?: string | null;
   nombre: string;
   precio: string | null;
   imagen: string | null;

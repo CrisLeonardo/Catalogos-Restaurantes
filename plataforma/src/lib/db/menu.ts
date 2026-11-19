@@ -236,6 +236,42 @@ export function getWaiterCatalogCached(restaurantId: string): Promise<Omit<MenuD
  * aquí no viaja nada que el menú no enseñe ya. Una hora de caché: es una
  * sugerencia, no un reporte.
  */
+/** Unidades vendidas por platillo en los últimos 7 días, de más a menos. */
+export interface MasPedido { id: string; unidades: number }
+
+/**
+ * «LO MÁS PEDIDO» CON VENTAS REALES (auditoría «La carta que vende», CV-31)
+ * La semana y no el mes: «esta semana» es lo que se puede decir con verdad
+ * en la carta. Sin pedidos cancelados. En caché una hora, como la de abajo.
+ * Lectura fallida → [] (la tira simplemente no se pinta: es un extra).
+ */
+export function getMasPedidosSemanaCached(restaurantId: string): Promise<MasPedido[]> {
+  return unstable_cache(
+    async () => {
+      if (!/^[0-9a-f-]{36}$/i.test(restaurantId)) return [];
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const db = createServiceClient();
+      const { data, error } = await db
+        .from('order_items')
+        .select('product_id, quantity, order:orders!inner(restaurant_id, created_at, status)')
+        .eq('order.restaurant_id', restaurantId)
+        .gte('order.created_at', since)
+        .neq('order.status', 'CANCEL')
+        .not('product_id', 'is', null)
+        .limit(2000);
+      if (error || !data) return [];
+      const unidades = new Map<string, number>();
+      for (const row of data as { product_id: string | null; quantity: number }[]) {
+        if (!row.product_id) continue;
+        unidades.set(row.product_id, (unidades.get(row.product_id) ?? 0) + (Number(row.quantity) || 0));
+      }
+      return [...unidades.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([id, n]) => ({ id, unidades: n }));
+    },
+    ['mas-pedidos-semana', restaurantId],
+    { revalidate: 3600 },
+  )();
+}
+
 export function getTopSellingProductIdsCached(restaurantId: string): Promise<string[]> {
   return unstable_cache(
     async () => {
