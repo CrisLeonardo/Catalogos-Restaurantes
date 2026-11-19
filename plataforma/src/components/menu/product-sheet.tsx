@@ -16,7 +16,7 @@
 
 import AssetImage from '@/components/asset-image';
 import { PRODUCT_ART_SIZES } from '@/lib/asset-image';
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { HojaOperativa } from '@/components/ui/hoja-operativa';
 import { Icon } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
@@ -31,6 +31,7 @@ import { useLocale, useLocalized } from '@/lib/locale/context';
 import { Acompanantes, type Sugerencia } from '@/components/menu/pairings';
 import { isUnavailable, type AvailabilityFields } from '@/lib/product-availability';
 import { useTenantPrefix } from '@/lib/tenant-client';
+import { crecerDesdeOrigen } from '@/lib/menu/origen-ficha';
 import type { CartItem, CartItemOption, Product, ProductOptionGroup } from '@/types';
 import {
   cabeOtra, grupoEsObligatorio, grupoPendiente, reglaDeGrupo, seleccionDeLinea, seleccionInicial, textoPendiente, variantesDeLinea,
@@ -75,6 +76,9 @@ export default function ProductSheet({
   const { addItem, replaceItem } = useCart();
   const [qty, setQty] = useState(linea?.quantity ?? 1);
   const [heroReady, setHeroReady] = useState(false);
+  const heroRef = useRef<HTMLDivElement>(null);
+  // La foto de la ficha crece desde la de la tarjeta (antes de pintar, sin salto).
+  useLayoutEffect(() => { crecerDesdeOrigen(heroRef.current); }, []);
   const { locale } = useLocale();
   const name = useLocalized(product.name, product.name_en);
   const description = useLocalized(product.description ?? '', product.description_en);
@@ -231,8 +235,8 @@ export default function ProductSheet({
       onClose={onClose}
       footer={pie}
     >
-      {/* Hero */}
-      <div style={{ borderRadius: 'var(--m-r-xl)', overflow: 'hidden', position: 'relative', aspectRatio: '1.5', background: 'var(--surface-1)', border: '1px solid var(--u-hair)' }}>
+      {/* Hero · nace de la foto tocada (lib/menu/origen-ficha.ts) */}
+      <div ref={heroRef} style={{ borderRadius: 'var(--m-r-xl)', overflow: 'hidden', position: 'relative', aspectRatio: '1.5', background: 'var(--surface-1)', border: '1px solid var(--u-hair)' }}>
         {usePhoto ? (
           <>
             {/* Capa de fondo: la MISMA foto que la tarjeta que se acaba de

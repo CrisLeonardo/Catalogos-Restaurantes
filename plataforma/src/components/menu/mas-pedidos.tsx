@@ -14,6 +14,7 @@ import { Icon } from '@/components/icons';
 import { Price } from '@/components/menu/ui';
 import { useLocale, useLocalized } from '@/lib/locale/context';
 import type { DestacadoVentas } from '@/lib/menu/mas-pedidos';
+import { marcarOrigen } from '@/lib/menu/origen-ficha';
 
 interface Pieza { id: string; name: string; name_en?: string | null; price: number; image_url?: string | null; icon?: string | null }
 
@@ -41,7 +42,7 @@ function PiezaVentas<P extends Pieza>({ d, en, onOpen }: { d: DestacadoVentas<P>
   return (
     <button
       type="button"
-      onClick={() => onOpen(d.producto)}
+      onClick={(e) => { marcarOrigen(e.currentTarget); onOpen(d.producto); }}
       className="press m-acomp-pieza"
       style={{ flexBasis: 148 }}
       aria-label={`${en ? 'No.' : 'N.º'} ${d.puesto}: ${nombre}${dato ? `, ${dato} ${en ? 'this week' : 'esta semana'}` : ''}`}

@@ -39,6 +39,8 @@ import { cuandoVuelveTexto, isUnavailable } from '@/lib/product-availability';
 import { esDestacado } from '@/lib/menu-pairings';
 import type { Category, Product } from '@/types';
 import { suggestIcon } from '@/lib/category-icon';
+import { antojosDisponibles, coincideAntojo, type AntojoId } from '@/lib/menu/antojos';
+import { marcarOrigen } from '@/lib/menu/origen-ficha';
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon' | 'name_en'> & { availability?: WeeklyHours | null };
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'> & {
@@ -237,6 +239,9 @@ export default function Catalog({
   // sección por cortesía); `null` = lo cerró todo a propósito.
   const [openCat, setOpenCat] = useState<string | null | undefined>(undefined);
   const [query, setQuery] = useState('');
+  /* Búsqueda por antojo (CV-34): atajos al tocar la lupa. */
+  const [antojo, setAntojo] = useState<AntojoId | null>(null);
+  const [lupaAbierta, setLupaAbierta] = useState(false);
   const [spySection, setSpySection] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   useFotosAnticipadas(rootRef);
@@ -275,11 +280,15 @@ export default function Catalog({
   // idiomas siempre (CV-07): «lemonade» encuentra la limonada aunque la carta
   // esté en español, y quien escribe «burger» también encuentra lo suyo.
   const q = fold(query.trim());
-  const searching = q.length > 0;
+  const antojos = useMemo(() => antojosDisponibles(products, config.currencySymbol), [products, config.currencySymbol]);
+  const umbral = antojos[0]?.umbral ?? null;
+  const searching = q.length > 0 || antojo !== null;
   const searched = useMemo(() => {
     if (!searching) return products;
-    return products.filter((p) => fold([p.name, p.description ?? '', p.name_en ?? '', p.description_en ?? '', ...(p.tags ?? [])].join(' ')).includes(q));
-  }, [products, q, searching]);
+    return products.filter((p) =>
+      (!q || fold([p.name, p.description ?? '', p.name_en ?? '', p.description_en ?? '', ...(p.tags ?? [])].join(' ')).includes(q))
+      && (!antojo || coincideAntojo(p, antojo, umbral)));
+  }, [products, q, searching, antojo, umbral]);
 
   /* ── Cómo se agrupan los platillos ──────────────────────────
      Buscar siempre aplana: quien escribe "coca" quiere resultados de TODA la
@@ -448,10 +457,34 @@ export default function Catalog({
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        onFocus={() => setLupaAbierta(true)}
+        // Un respiro antes de cerrar: tocar un atajo quita el foco del campo.
+        onBlur={() => setTimeout(() => setLupaAbierta(false), 180)}
         placeholder={content.catalog.searchPlaceholder}
         className="glass-quiet ct-body"
         style={{ width: '100%', padding: '13px 14px 13px 42px', minHeight: 46, borderRadius: 'var(--m-r-md)', border: 'none', color: 'var(--u-text)', fontSize: 'var(--m-fs-lg)', outline: 'none', background: 'var(--surface-2)' }}
       />
+    </div>
+  ) : null;
+
+  /* Los atajos de antojo (CV-34): solo con la lupa abierta o con uno elegido,
+     y nunca mientras se escribe —ahí manda lo escrito—. `onMouseDown`
+     evita que tocar un atajo cierre la lupa antes del clic. */
+  const atajos = config.showSearch && antojos.length > 0 && !q && (lupaAbierta || antojo !== null) ? (
+    <div className="u-noscroll" role="group" aria-label={locale === 'en' ? 'Quick picks' : 'Antojos'}
+      style={{ display: 'flex', gap: 8, overflowX: 'auto', marginTop: 10, paddingBottom: 2 }}>
+      {antojos.map((a) => {
+        const on = antojo === a.id;
+        return (
+          <button key={a.id} type="button" className="press opt-pill" aria-pressed={on}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setAntojo(on ? null : a.id)}
+            style={{ flexShrink: 0, whiteSpace: 'nowrap', ...(on ? { background: 'var(--u-text)', color: 'var(--brand-bg)', borderColor: 'var(--u-text)' } : {}) }}>
+            {on && <Icon name="check" size={13} strokeWidth={3} />}
+            {locale === 'en' ? a.labelEn : a.label}
+          </button>
+        );
+      })}
     </div>
   ) : null;
 
@@ -539,6 +572,7 @@ export default function Catalog({
 
       {/* Búsqueda (en lienzos anchos ya viaja en el encabezado) */}
       {!wide && searchBox && <div style={{ marginTop: 14 }}>{searchBox}</div>}
+      {atajos}
 
       {/* ── Navegación de la carta ── */}
 
@@ -1526,7 +1560,7 @@ function PiezaTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAd
   const vendido = total ? Math.round(((total - left!) / total) * 100) : 0;
   return (
     <article className="m-pieza" data-unavailable={unavail ? '1' : undefined}>
-      <button type="button" className="m-pieza-art" onClick={() => onOpen(p, unavail ? aviso : null)} aria-label={`Ver ${name}`}>
+      <button type="button" className="m-pieza-art" onClick={(e) => { marcarOrigen(e.currentTarget); onOpen(p, unavail ? aviso : null); }} aria-label={`Ver ${name}`}>
         <ProductArt p={p} icon={icon} scale={1.5} sizes={PIEZA_ART_SIZES} />
         {/* En lanzamiento cada pieza lleva su número de edición: es lo que
             convierte una lista de productos en una colección. */}
