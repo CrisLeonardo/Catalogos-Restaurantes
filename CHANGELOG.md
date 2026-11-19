@@ -4,6 +4,16 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
+## Sin publicar
+
+- **Pedido de mesa sin nombre** (#160): se llama «Mesa N» en vez de rechazarse con «El nombre es requerido». El fallo estaba en producción desde v0.26.0.
+- **Fase 2 de «La carta que vende»: la carta vende.** Lleva la **migración 188**, que se puede aplicar antes o después de desplegar: si falta, solo no se cuenta el embudo.
+  - Cada platillo tiene su enlace (`?platillo=`), con su propia vista previa (foto, nombre y precio) y «Compartir» en la ficha.
+  - «Lo más pedido esta semana» con ventas reales.
+  - Precios de la carta sin «.00» y con la letra de la carta.
+  - «Pedir lo de la última vez».
+  - Embudo anónimo por canal (QR de mesa, enlace general y enlace de platillo) en Analítica.
+
 ## v0.26.0 · 2026-11-19 · «La carta que vende»: fases 0 y 1
 PR #153, #154 y #157, fusionados juntos (apilados), más #156 contra `main` · **sin migración**.
 - Auditoría del menú digital «La carta que vende» (Claude): 8 estructuras medidas en producción a 320/390/1280 px, recorridos de compra, rendimiento con 4G lenta, 4 fallos P1 (recarga en la primera visita, carta vacía cacheada, aviso de Google al entrar, enlace sin vista previa), propuesta en seis piezas con maqueta interactiva y comparación con la auditoría de ChatGPT. [Auditoría](docs/auditorias/AUDITORIA_CARTA_QUE_VENDE_2026-11-18.md) · [maqueta](docs/diseno/MAQUETA_CARTA_QUE_VENDE_2026-11-18.html).
