@@ -500,6 +500,16 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               <Note>
                 {PORTADA_HINT[config.portadaVariant] ?? ''}
               </Note>
+              {config.portadaVariant !== 'none' && config.portadaVariant !== 'directo' && config.portadaVariant !== 'vitrina' && (
+                <>
+                  <Toggle label="Portada a pantalla completa" value={config.portadaCompleta === true} onChange={(v) => setC('portadaCompleta', v)} />
+                  <Note>
+                    {config.portadaCompleta
+                      ? 'El enlace general abre en esta portada; el QR de la mesa entra directo a la carta.'
+                      : 'Apagado, la carta abre con una franja con tu logo y tu nombre, y la comida se ve de inmediato. Es lo que más vende.'}
+                  </Note>
+                </>
+              )}
               {config.portadaVariant !== 'none' && (
                 <>
                   <Toggle label="Mostrar logo" value={config.portadaShowLogo} onChange={(v) => setC('portadaShowLogo', v)} />

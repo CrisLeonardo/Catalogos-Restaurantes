@@ -13,7 +13,7 @@ import { getArchivoVitrinaCached, getVendidosDesdeCached, withStockTotal } from 
 import { isVitrina } from '@/lib/theme/defaults';
 import { estadoEdicion } from '@/lib/vitrina/edicion';
 import { resolveTheme } from '@/lib/theme/resolve';
-import { isOpenNow, nextOpenLabel } from '@/lib/hours';
+import { isOpenNow, minutosParaCerrar, nextOpenLabel } from '@/lib/hours';
 import { isModuleActive } from '@/lib/modules';
 import { DEMO_SLUG, rootDomainForUrls, isAdminSubdomain, isGroupSubdomain, subdomainUrl } from '@/lib/tenant';
 import { currencyCodeFor, jsonLdScript, restaurantJsonLd } from '@/lib/seo/restaurant-jsonld';
@@ -176,6 +176,7 @@ export default async function Home({
   const ordersEnabled = data.restaurant.modules?.orders === true;
   const tz = data.restaurant.timezone || 'America/Guatemala';
   const isOpen = isOpenNow(data.restaurant.hours, tz, new Date(), data.restaurant.hour_exceptions);
+  const cierraEn = isOpen ? minutosParaCerrar(data.restaurant.hours, tz, new Date(), data.restaurant.hour_exceptions) : null;
   const reopenHint = !isOpen ? nextOpenLabel(data.restaurant.hours, tz, new Date(), data.restaurant.hour_exceptions) : null;
 
   const mod = data.restaurant.modules as Record<string, boolean> | null;
@@ -231,6 +232,7 @@ export default async function Home({
       ordersEnabled={ordersEnabled}
       isOpen={isOpen}
       reopenHint={reopenHint}
+      cierraEn={cierraEn}
       timezone={tz}
       initialMesa={initialMesa}
       llamadaMeseroEnabled={isModuleActive(mod, modSettings, 'llamada_mesero')}

@@ -420,6 +420,10 @@ export default function Catalog({
   const autoKicker = [config.brandName, config.zone].filter(Boolean).join(' · ');
   const brandAlreadyShown = config.portadaVariant !== 'none';
   const kicker = content.catalog.kicker || (brandAlreadyShown ? '' : autoKicker);
+  /* «El menú» (CV-12): ocupaba 60–80 px antes de la búsqueda para repetir lo
+     que ya dice la cabecera. La fila de categorías es el encabezado. Solo se
+     pinta un titular que el dueño ESCRIBIÓ («Cocina de mercado»). */
+  const tituloPropio = content.catalog.heading.trim().toLowerCase() !== 'el menú' ? content.catalog.heading.trim() : '';
 
   /* En tablet/escritorio el buscador sube a la misma línea del título: un campo
      de 1.000 px de ancho bajo el encabezado es lo que delata a un menú pensado
@@ -500,9 +504,11 @@ export default function Catalog({
           )}
           {/* El titular crece con el lienzo: 44 px que mandan en un teléfono se
               quedan cortos en una página de revista de 1.120 px. */}
-          <h2 className="t-poster" style={{ ...headingT.vars, fontSize: `calc(${headingT.size} * clamp(34px, 11vw, ${width === 'revista' ? 64 : width === 'ancho' ? 52 : 44}px))`, marginTop: 2 }}>
-            {content.catalog.heading}
-          </h2>
+          {tituloPropio && (
+            <h2 className="t-poster" style={{ ...headingT.vars, fontSize: `calc(${headingT.size} * clamp(34px, 11vw, ${width === 'revista' ? 64 : width === 'ancho' ? 52 : 44}px))`, marginTop: 2 }}>
+              {tituloPropio}
+            </h2>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, flex: wide ? '1 1 260px' : '0 0 auto' }}>
           {wide && searchBox}
