@@ -340,4 +340,15 @@ Maqueta: [`docs/diseno/MAQUETA_CARTA_FASE_4_2026-11-20.html`](../diseno/MAQUETA_
 | F4-14 | **Estantes: pista de que la repisa sigue** y dibujo acotado con «Ver los N». | §4.3 y CV-38. |
 | F4-15 | **Clásico:** el texto de los destacados va debajo de la foto. **Carta de autor:** el precio en tinta completa. | §4.3. |
 
+**Estado (2026-11-20):** la **fase 4 está hecha** en la rama `feat/carta-fase-4`, sin migraciones. Comprobado en local a 320, 390 y 1280 px en las 8 estructuras, sin desborde ni errores de página.
+
+- **Entrada (F4-1 a F4-3):** con QR de mesa, la carta empieza a 389 px (antes ≈600). «Mesa 4» va en la cabecera, la lupa abre el campo con los antojos y «✕» lo cierra, y «Lo más pedido» es una fila de 80 px.
+- **PC (F4-4):** desde 1180 px (carta de 460) o 1400 px (carta de 760), la barra de abajo se va. Pedidos, Mis puntos y Cuenta pasan al pie del riel, y el mesero vuelve a su botón propio. Entre 1280 y 1400 px la carta de 760 conserva la barra, porque no le cabe «Tu pedido».
+- **Ficha (F4-5, F4-6):** se cierra arrastrando hacia abajo (más de 120 px o un gesto rápido); un arrastre corto la regresa. El total cuenta en 200 ms. Un platillo agotado ofrece «Ver más de Bebidas» y lleva a esa sección con la navegación de cada estructura.
+- **Mesa (F4-7):** «Por persona» o «Partes iguales» con dos personas o más. Probado con dos teléfonos: Q35 y Q48, o Q41.50 cada uno.
+- **Enlace (F4-8, F4-9):** `?platillo=doble-bacon` abre la ficha, y el enlace con el código sigue sirviendo. Con un nombre repetido se comparte el código. La tarjeta del enlace general lleva la foto del platillo más pedido con foto, y se usa aunque haya logo.
+- **Dueño (F4-10 a F4-12):** la recomendación de estructura ya existía (ficha 2.7); se suma el aviso de Vitrina con más de 15 platillos. Hay una guía de descripción cuando está vacía o solo elogia, y la vista «Así se ve en la carta» en tarjeta y lista.
+- **Estructuras (F4-13 a F4-15):** Pizarra abre varias secciones a la vez. En Estantes, el borde se desvanece mientras la repisa sigue, y una repisa de más de 8 termina en «Ver los N». El texto de los destacados va bajo la foto. El precio de Carta de autor sube de 14 a 16 px; ya era de tinta completa desde la fase 2.
+- **Encontrado al probar:** escribir directo en la descripción de un platillo existente no hacía nada. `useFormDirty` repintaba el campo antes de que React viera la tecla; se arregló en su propio commit.
+
 Fuera de la fase 4: el pedido de la mesa en tiempo real (hoy refresca cada 4 s, suficiente para el piloto) y quién está «eligiendo…». Los dos piden un canal de Realtime por mesa sin sesión, y conviene decidirlos con el piloto.

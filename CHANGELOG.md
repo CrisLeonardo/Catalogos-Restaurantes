@@ -6,7 +6,15 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
-_Nada por ahora._
+- **Fase 4 de «La carta que vende»: ordenar la entrada y cerrar lo pendiente.** Sin migraciones.
+  - La entrada pasa de cinco capas a tres: la mesa en la cabecera, la lupa como primera píldora y «Lo más pedido» en una fila baja.
+  - En PC ya no hay barra de teléfono: Pedidos, Mis puntos y Cuenta van al pie del riel.
+  - La ficha se cierra deslizando, su total cuenta al cambiar una opción, y lo agotado lleva a su sección.
+  - El pedido de la mesa dice cuánto le toca a cada quien.
+  - Enlace legible por platillo (`?platillo=doble-bacon`) y vista previa general con el platillo estrella.
+  - Para el dueño: cómo queda la foto en la carta, una guía para describir sin IA y el aviso de Vitrina con carta larga.
+  - Pizarra abre varias secciones, Estantes avisa que la repisa sigue y corta en «Ver los N», y los destacados llevan el texto bajo la foto.
+  - Arreglo: escribir directo en la descripción de un platillo ya no pierde las teclas.
 
 ## v0.28.0 · 2026-11-19 · «La carta que vende»: fase 3
 PR #163 · **migraciones 189 y 190** (sin ellas no hay estados ni pedido de la mesa y la carta funciona igual). Con esta versión la auditoría de la carta digital queda completa; la descripción asistida con IA (CV-35) quedó descartada por decisión del dueño.
