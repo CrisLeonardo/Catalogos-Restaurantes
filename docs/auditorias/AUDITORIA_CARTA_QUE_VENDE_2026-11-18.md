@@ -232,7 +232,7 @@ Pendiente: el aviso flotante del pedido activo (`ORD-…`) sigue encima de la ca
 - **CV-35 · Descripción asistida con IA:** **descartada** por decisión del dueño (2026-11-19): por ahora no quiere IA en Leogin.
 - **CV-21 · Demo con fotos reales:** había dos Rincón 502, el restaurante de ejemplo en producción, con fotos reales, y la copia fija de la demo, con dibujos. Ahora la demo pública (`demo.`) enseña la carta, el tema y las fotos del restaurante `DEMO_RESTAURANT_SLUG` («rincon502» por omisión) y sigue en modo demo: el pedido termina en «Pídelo tú mismo» sin tocar la base. Sin ese restaurante, usa la copia fija.
 
-**Con esto la auditoría queda completa:** CV-01 a CV-37 están hechos, salvo CV-35, descartado, y CV-38, que ya cubre el `content-visibility` de las tarjetas.
+**Corrección (2026-11-20):** aquí decía que la auditoría quedaba completa, y no era exacto. Las seis piezas y los hallazgos CV están en producción, salvo CV-35 (descartado). Pero varios detalles de la maqueta, las recomendaciones por estructura de §4.3 y CV-38 quedaron sin hacer o más simples. Se recogen en la fase 4 (§11).
 
 ---
 
@@ -279,3 +279,76 @@ La de ChatGPT ([`AUDITORIA_MENU_DIGITAL_2026-11-18.md`](https://github.com/CrisL
 ## 10 · Cobertura pendiente
 
 Safari en iPhone y Android físico (sobre todo CV-06 y la transición de la ficha), VoiceOver/TalkBack, cartas reales de 60–150 platos con fotos propias, zoom de texto al 200 %, seguimiento del pedido en pantalla y la prueba con comensales reales de la fase 1 antes de dar por buena la cabecera breve.
+
+---
+
+## 11 · Replanteamiento y fase 4 (2026-11-20)
+
+### Qué es la carta digital de Leogin
+
+Antes de seguir sumando piezas conviene decir para qué existe. La carta sirve a tres personas, cada una con una pregunta distinta:
+
+| Quién | Cómo llega | Su pregunta | La carta acierta si… |
+|---|---|---|---|
+| **Comensal sentado** | QR de la mesa | «¿Qué pido y cuánto me va a salir?» | Decide y pide sin esperar al mesero, con el precio claro y sin sorpresas. |
+| **Cliente que aún no viene** | Enlace en WhatsApp, Instagram, Facebook o Google | «¿Me antoja este lugar?» | Del platillo que vio pasa a pedirlo, o a ir, en uno o dos toques. |
+| **Dueño** | Panel, desde el teléfono | «¿Cómo vendo más sin más trabajo?» | La mantiene viva en minutos (foto, estado, agotado) y sabe qué funciona. |
+
+Lo que la carta **no** es: una página de presentación de la marca, un catálogo de funciones de Leogin ni un lugar para promociones que tapan la comida. Cada pieza nueva debe responder una de las tres preguntas; si no, sobra.
+
+### ¿La estamos mejorando?
+
+**Sí, en lo que más pesa.** Las fases 0–3 quitaron lo que hacía perder ventas: la recarga, la carta vacía por un fallo, el aviso de Google al llegar, la portada sin comida y las tres capas flotantes. Además le dieron a la carta lo que ninguna carta en PDF tiene: enlace por platillo, ventas reales, estados del día y el pedido de la mesa.
+
+**Pero hay un riesgo nuevo: la entrada se llenó.** Cada pieza se justificó sola, y juntas apilan cinco capas antes del primer platillo. Con QR de mesa, a 375 px se ven, en orden: cabecera, franja «Mesa 4», estados, «Lo más pedido» (≈190 px), buscador y píldoras. En PC sigue abajo la barra del teléfono aunque ya hay riel. Es lo mismo que la auditoría criticó de la portada, con piezas mejores. La fase 4 empieza por ahí.
+
+### Qué se toma de la auditoría de ChatGPT
+
+La rama `audit/menu-digital-venta` tiene ideas que no se habían aprovechado:
+
+| Idea de ChatGPT | Qué se toma |
+|---|---|
+| **«Al centro»**: el cliente ve cuánto le toca a cada persona mientras arma la comida | El pedido de la mesa enseña **cuánto le toca a cada quien**: por persona o en partes iguales. Era también lo que pedía la maqueta propia. |
+| Elegir la estructura **según la carta del negocio** (cuántos platillos, cuántas buenas fotos) | En el editor, una sugerencia de estructura con el número de platillos y cuántos tienen foto. Incluye el aviso de Vitrina con más de 15 platillos (§4.3). |
+| **Una línea que diga qué lleva**, la porción y con qué viene, en vez de «delicioso» | Sin IA: una guía corta junto a la descripción en el editor, con el ejemplo de la hamburguesa. Es la parte útil de CV-35 sin su costo. |
+| **Dibujar una parte de cada repisa** y «Ver todos» en cartas grandes | Estantes dibuja lo que cabe y ofrece «Ver los N». La búsqueda sigue mirando la carta entera (CV-38). |
+| **Agotado → acceso a su categoría** | La ficha de un platillo agotado ofrece «Ver más de <categoría>». |
+| Clásico sin logo: una «R» ocupa el sitio de la marca | Queda en el banco. Con la cabecera breve la inicial mide 48 px y ya no domina. |
+| «Entre estos dos», «La próxima hornada», «El primer bocado» | Banco (§6). Necesitan un restaurante piloto que las pida. |
+
+Lo que no se toma: medir antes de cada cambio visual como condición para decidir. El embudo (CV-37) ya mide por canal y servirá para comparar después.
+
+### Fase 4 · Ordenar la entrada y cerrar lo pendiente
+
+Maqueta: [`docs/diseno/MAQUETA_CARTA_FASE_4_2026-11-20.html`](../diseno/MAQUETA_CARTA_FASE_4_2026-11-20.html).
+
+| # | Qué | Por qué |
+|---|---|---|
+| F4-1 | **«Mesa 4» dentro de la cabecera**, como etiqueta a la derecha del nombre, con «Pedido de la mesa» cuando está encendido. Desaparece la franja. | Una capa menos. La mesa importa, pero cabe en la cabecera. |
+| F4-2 | **La lupa entra en la fila de categorías** (píldoras e índice) y se abre al tocarla, con los antojos. En Pizarra y Kiosco, que no tienen fila, el campo se queda. | Otra capa menos. Quien busca toca una vez; quien no, no la carga. |
+| F4-3 | **«Lo más pedido» más bajo:** foto cuadrada de 64 px, con el nombre y el precio al lado. | La tira bajaba de 190 a ≈90 px y la carta asomaba antes. |
+| F4-4 | **PC sin barra de teléfono:** Pedidos, Mis puntos, Cuenta y Mesero pasan al pie del riel. | La PC deja de verse como un teléfono estirado. |
+| F4-5 | **Ficha: deslizar hacia abajo cierra** y el total cuenta al cambiar una opción (200 ms, nada con «reducir movimiento»). | Lo pedía la maqueta aprobada. |
+| F4-6 | **Agotado → «Ver más de <categoría>».** | De ChatGPT y de la maqueta. |
+| F4-7 | **Pedido de la mesa: cuánto le toca a cada quien,** por persona o en partes iguales. | «Al centro» de ChatGPT y la maqueta propia. |
+| F4-8 | **Enlace legible:** `?platillo=doble-bacon`. El enlace con el código sigue sirviendo. | Se lee en el mensaje de WhatsApp antes de abrirlo. |
+| F4-9 | **Vista previa general con el platillo estrella** (el más pedido con foto), además del nombre y la paleta. | El resto de CV-04. |
+| F4-10 | **Editor: estructura según tu carta** y aviso de Vitrina con más de 15 platillos. | De ChatGPT y de §4.3. |
+| F4-11 | **Editor: guía de descripción** (qué lleva, porción, con qué viene). | CV-35 sin IA. |
+| F4-12 | **Foto guiada: marco de encuadre**, que enseña cómo queda recortada en la tarjeta. No se recorta sola: cada estructura usa otra proporción. | El resto de CV-36. |
+| F4-13 | **Pizarra (acordeón): varias secciones abiertas** a la vez. | §4.3. |
+| F4-14 | **Estantes: pista de que la repisa sigue** y dibujo acotado con «Ver los N». | §4.3 y CV-38. |
+| F4-15 | **Clásico:** el texto de los destacados va debajo de la foto. **Carta de autor:** el precio en tinta completa. | §4.3. |
+
+**Estado (2026-11-20):** la **fase 4 está hecha** en la rama `feat/carta-fase-4`, sin migraciones. Comprobado en local a 320, 390 y 1280 px en las 8 estructuras, sin desborde ni errores de página.
+
+- **Entrada (F4-1 a F4-3):** con QR de mesa, la carta empieza a 389 px (antes ≈600). «Mesa 4» va en la cabecera, la lupa abre el campo con los antojos y «✕» lo cierra, y «Lo más pedido» es una fila de 80 px.
+- **PC (F4-4):** desde 1180 px (carta de 460) o 1400 px (carta de 760), la barra de abajo se va. Pedidos, Mis puntos y Cuenta pasan al pie del riel, y el mesero vuelve a su botón propio. Entre 1280 y 1400 px la carta de 760 conserva la barra, porque no le cabe «Tu pedido».
+- **Ficha (F4-5, F4-6):** se cierra arrastrando hacia abajo (más de 120 px o un gesto rápido); un arrastre corto la regresa. El total cuenta en 200 ms. Un platillo agotado ofrece «Ver más de Bebidas» y lleva a esa sección con la navegación de cada estructura.
+- **Mesa (F4-7):** «Por persona» o «Partes iguales» con dos personas o más. Probado con dos teléfonos: Q35 y Q48, o Q41.50 cada uno.
+- **Enlace (F4-8, F4-9):** `?platillo=doble-bacon` abre la ficha, y el enlace con el código sigue sirviendo. Con un nombre repetido se comparte el código. La tarjeta del enlace general lleva la foto del platillo más pedido con foto, y se usa aunque haya logo.
+- **Dueño (F4-10 a F4-12):** la recomendación de estructura ya existía (ficha 2.7); se suma el aviso de Vitrina con más de 15 platillos. Hay una guía de descripción cuando está vacía o solo elogia, y la vista «Así se ve en la carta» en tarjeta y lista.
+- **Estructuras (F4-13 a F4-15):** Pizarra abre varias secciones a la vez. En Estantes, el borde se desvanece mientras la repisa sigue, y una repisa de más de 8 termina en «Ver los N». El texto de los destacados va bajo la foto. El precio de Carta de autor sube de 14 a 16 px; ya era de tinta completa desde la fase 2.
+- **Encontrado al probar:** escribir directo en la descripción de un platillo existente no hacía nada. `useFormDirty` repintaba el campo antes de que React viera la tecla; se arregló en su propio commit.
+
+Fuera de la fase 4: el pedido de la mesa en tiempo real (hoy refresca cada 4 s, suficiente para el piloto) y quién está «eligiendo…». Los dos piden un canal de Realtime por mesa sin sesión, y conviene decidirlos con el piloto.

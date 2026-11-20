@@ -21,13 +21,14 @@ import { currencyCodeFor, jsonLdScript, restaurantJsonLd } from '@/lib/seo/resta
 import { DEMO_CATEGORIES, DEMO_PRODUCTS, DEMO_THEME } from '@/lib/demo-menu';
 import { getPublicLoyaltyCached, type PublicReward } from '@/lib/db/loyalty';
 import { isGoogleAuthEnabled } from '@/lib/auth-config';
+import { resolverPlatillo, valorPlatillo } from '@/lib/menu/enlace-platillo';
+import { platilloEstrella } from '@/lib/menu/estrella';
 
 /* ── Metadata dinámica por restaurante ─────────────────────── */
-/** `?platillo=<id>` (CV-30): solo un UUID; cualquier otra cosa se ignora. */
-const UUID_PLATO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** `?platillo=` (CV-30): el código o el nombre legible (`doble-bacon`, F4-8);
+    cualquier otra cosa se ignora. */
 function platoDe(params: Record<string, string | string[] | undefined>): string | null {
-  const v = typeof params.platillo === 'string' ? params.platillo : null;
-  return v && UUID_PLATO.test(v) ? v.toLowerCase() : null;
+  return valorPlatillo(params.platillo);
 }
 
 export async function generateMetadata({
@@ -97,7 +98,7 @@ export async function generateMetadata({
   const platoId = platoDe(await searchParams);
   if (platoId) {
     const menu = await getMenuDataCached(data.restaurant.id).catch(() => null);
-    const plato = menu?.products.find((p) => p.id === platoId);
+    const plato = resolverPlatillo(platoId, menu?.products ?? []);
     if (plato) {
       const precio = formatPriceCarta(Number(plato.price), data.resolved.config);
       const titulo = `${plato.name} · ${precio} — ${name}`;
@@ -118,6 +119,10 @@ export async function generateMetadata({
     }
   }
 
+  /* La tarjeta grande con la foto del platillo estrella vende más que el
+     logo cuadrado (F4-9): con estrella va la tarjeta aunque haya logo. */
+  const conEstrella = !!(await platilloEstrella(data.restaurant.id).catch(() => null));
+  const usarTarjeta = !logo || conEstrella;
   return {
     title: `${name} — Menú`,
     description,
@@ -132,11 +137,11 @@ export async function generateMetadata({
       type: 'website',
       // Sin logo, una tarjeta con el nombre y la paleta (CV-04): un enlace
       // sin imagen en WhatsApp se ve como texto pelado.
-      images: logo ? [{ url: logo }] : [{ url: ogTarjeta, width: 1200, height: 630, alt: name }],
+      images: usarTarjeta ? [{ url: ogTarjeta, width: 1200, height: 630, alt: name }] : [{ url: logo! }],
     },
-    twitter: logo
-      ? { card: 'summary', title: `${name} — Menú`, description }
-      : { card: 'summary_large_image', title: `${name} — Menú`, description, images: [ogTarjeta] },
+    twitter: usarTarjeta
+      ? { card: 'summary_large_image', title: `${name} — Menú`, description, images: [ogTarjeta] }
+      : { card: 'summary', title: `${name} — Menú`, description },
     robots: { index: true, follow: false },
   };
 }

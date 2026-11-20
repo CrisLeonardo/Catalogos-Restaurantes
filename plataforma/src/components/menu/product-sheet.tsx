@@ -32,6 +32,8 @@ import { Acompanantes, type Sugerencia } from '@/components/menu/pairings';
 import { isUnavailable, type AvailabilityFields } from '@/lib/product-availability';
 import { useTenantPrefix } from '@/lib/tenant-client';
 import { crecerDesdeOrigen } from '@/lib/menu/origen-ficha';
+import { irACategoria } from '@/lib/menu/ir-a-categoria';
+import CifraQueCuenta from '@/components/menu/cifra-que-cuenta';
 import type { CartItem, CartItemOption, Product, ProductOptionGroup } from '@/types';
 import {
   cabeOtra, grupoEsObligatorio, grupoPendiente, reglaDeGrupo, seleccionDeLinea, seleccionInicial, textoPendiente, variantesDeLinea,
@@ -53,7 +55,7 @@ function initialVariants(groups: ProductOptionGroup[]): Record<string, string> {
 }
 
 export default function ProductSheet({
-  product, icon, ordersEnabled, onClose, acompanantes = [], linea, onGuardado, aviso,
+  product, icon, ordersEnabled, onClose, acompanantes = [], linea, onGuardado, aviso, categoria = null, enlace,
 }: {
   product: ProdItem;
   icon: string;
@@ -67,6 +69,11 @@ export default function ProductSheet({
   /** No se puede pedir ahora (agotado o fuera de horario): la ficha se abre
       para leer y dice por qué, en vez de «Agregar» (CV-10). */
   aviso?: string | null;
+  /** Su sección: si no se puede pedir, la ficha ofrece «Ver más de …»
+      (fase 4, F4-6), que lleva a esa sección de la carta. */
+  categoria?: { id: string; nombre: string } | null;
+  /** Lo que va en `?platillo=` al compartir: el nombre legible (F4-8). */
+  enlace?: string;
 }) {
   const config = useThemeConfig();
   const content = useThemeContent();
@@ -201,7 +208,14 @@ export default function ProductSheet({
   const pie = (
     <div className="hoja-platillo-accion">
       {ordersEnabled && noSePide ? (
-        <div className="m-sheet-closed" role="status">{noSePide}</div>
+        <>
+          <div className="m-sheet-closed" role="status">{noSePide}</div>
+          {categoria && (
+            <PrimaryButton size="lg" full onClick={() => { onClose(); irACategoria(categoria.id); }} style={{ flex: 1 }}>
+              {es ? `Ver más de ${categoria.nombre}` : `More ${categoria.nombre}`}
+            </PrimaryButton>
+          )}
+        </>
       ) : ordersEnabled && !edicionPermitePedir(edicion) ? (
         <div className="m-sheet-closed" role="status">
           {edicion.estado === 'proxima' && edicion.abre !== null ? `Esta edición abre el ${fechaCorta(edicion.abre)}` : content.vitrina.launchClosed}
@@ -215,7 +229,7 @@ export default function ProductSheet({
             style={{ flex: 1, ...(missingRequired ? { background: 'var(--surface-2)', color: 'var(--u-text)', boxShadow: 'inset 0 0 0 1px var(--u-hair-2)' } : {}) }}>
             {firstMissing
               ? textoPendiente(firstMissing, selected, es ? 'es' : 'en')
-              : <>{linea ? (es ? 'Guardar cambios' : 'Save changes') : content.product.add} · <span className="t-mono" style={{ fontWeight: 700, color: 'inherit' }}>{formatPrice(unitPrice * qty + (linea ? 0 : extrasTotal), config)}</span></>}
+              : <>{linea ? (es ? 'Guardar cambios' : 'Save changes') : content.product.add} · <span className="t-mono" style={{ fontWeight: 700, color: 'inherit' }}><CifraQueCuenta valor={unitPrice * qty + (linea ? 0 : extrasTotal)} formato={(n) => formatPrice(n, config)} /></span></>}
           </PrimaryButton>
         </>
       ) : (
@@ -232,6 +246,7 @@ export default function ProductSheet({
       title={<span className="t-display" style={{ ...titleT.vars, fontSize: 22 * titleT.size }}>{name}</span>}
       closeLabel={locale === 'en' ? 'Close' : 'Cerrar'}
       className="hoja-platillo"
+      deslizarParaCerrar
       onClose={onClose}
       footer={pie}
     >
@@ -274,7 +289,7 @@ export default function ProductSheet({
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           {ordersEnabled ? <Price amount={unitPrice} size={22} /> : <span />}
-          <CompartirPlato productId={product.id} nombre={name} es={es} />
+          <CompartirPlato clave={enlace ?? product.id} nombre={name} es={es} />
         </div>
         {product.dietary_tags && product.dietary_tags.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -448,11 +463,11 @@ export default function ProductSheet({
    propia vista previa (foto, nombre y precio). Con la hoja de compartir del
    teléfono si la hay; si no, se copia. Nunca lleva la mesa: quien lo recibe
    no está sentado ahí. */
-function CompartirPlato({ productId, nombre, es }: { productId: string; nombre: string; es: boolean }) {
+function CompartirPlato({ clave, nombre, es }: { clave: string; nombre: string; es: boolean }) {
   const base = useTenantPrefix('/');
   const [copiado, setCopiado] = useState(false);
   async function compartir() {
-    const url = `${window.location.origin}${base}?platillo=${productId}`;
+    const url = `${window.location.origin}${base}?platillo=${clave}`;
     try {
       if (navigator.share) {
         await navigator.share({ title: nombre, url });

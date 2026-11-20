@@ -506,6 +506,9 @@ export default function Portada({ isOpen = true, cierraEn = null, fallbackImage 
             <Icon name="clock" size={13} /> Cierra en {cierraEn} min
           </span>
         )}
+        {/* La mesa escaneada vive aquí (fase 4, F4-1): menu-client la dibuja
+            en este hueco en vez de una franja propia bajo la cabecera. */}
+        <span id="m-cabecera-mesa" style={{ display: 'contents' }} />
       </section>
     );
   }

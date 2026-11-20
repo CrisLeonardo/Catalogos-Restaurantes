@@ -250,6 +250,26 @@ export default function ImageUpload({
           El platillo al centro, desde arriba en diagonal (como al sentarte) y con luz de día. Es lo que más vende.
         </span>
       )}
+      {/* Marco de encuadre (fase 4, F4-12): cómo queda recortada en la carta.
+          No se recorta sola: cada estructura usa otra proporción, así que se
+          enseñan las dos que más se ven (tarjeta 3:2 y miniatura cuadrada). */}
+      {guia && preview && folder === 'products' && !uploading && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxWidth: 280 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text-2)' }}>Así se ve en la carta</span>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+            {[{ w: 132, h: 88, t: 'Tarjeta' }, { w: 64, h: 64, t: 'Lista' }].map((m) => (
+              <figure key={m.t} style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span aria-hidden style={{
+                  width: m.w, height: m.h, borderRadius: 10, border: '1px solid var(--u-hair-2)',
+                  backgroundColor: bgColor, backgroundImage: `url(${preview})`, backgroundSize: 'cover', backgroundPosition: 'center',
+                }} />
+                <figcaption style={{ fontSize: 11, color: 'var(--u-text-3)' }}>{m.t}</figcaption>
+              </figure>
+            ))}
+          </div>
+          <span style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.4 }}>Si el platillo queda cortado, tómala un poco más de lejos.</span>
+        </div>
+      )}
       {guia && avisos.length > 0 && (
         <ul role="status" style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4, maxWidth: 280 }}>
           {avisos.map((a) => (

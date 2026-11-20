@@ -4,6 +4,8 @@ import { getRestaurantBySlugCached } from '@/lib/db/restaurants';
 import { getMenuDataCached } from '@/lib/db/menu';
 import { isAllowedAssetUrl } from '@/lib/asset-url';
 import { buildThemeVars, formatPriceCarta } from '@/lib/theme/resolve';
+import { resolverPlatillo, valorPlatillo } from '@/lib/menu/enlace-platillo';
+import { platilloEstrella } from '@/lib/menu/estrella';
 
 /**
  * IMAGEN DE VISTA PREVIA DE LA CARTA (auditoría «La carta que vende»)
@@ -19,7 +21,6 @@ import { buildThemeVars, formatPriceCarta } from '@/lib/theme/resolve';
  *
  * GET /api/og/[slug][?platillo=<id>]
  */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** La foto como data URL JPEG, o null si no se pudo leer. */
 async function fotoJpeg(src: string, origen: string): Promise<string | null> {
@@ -57,10 +58,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   const headers = { 'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400' };
 
   /* ── Un platillo ── */
-  const platoId = new URL(req.url).searchParams.get('platillo');
-  if (platoId && UUID.test(platoId)) {
+  const platoId = valorPlatillo(new URL(req.url).searchParams.get('platillo'));
+  if (platoId) {
     const menu = await getMenuDataCached(data.restaurant.id).catch(() => null);
-    const plato = menu?.products.find((p) => p.id === platoId.toLowerCase());
+    const plato = resolverPlatillo(platoId, menu?.products ?? []);
     if (plato) {
       const foto = plato.image_url ? await fotoJpeg(plato.image_url, req.url) : null;
       const precio = formatPriceCarta(Number(plato.price), cfg);
@@ -97,15 +98,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   /* ── La carta en general ── */
   const frase = data.restaurant.tagline ?? '';
   const largo = nombre.length;
-  const tamNombre = largo > 28 ? 64 : largo > 18 ? 80 : 104;
+  // Con foto del platillo estrella (F4-9) el texto ocupa la mitad izquierda.
+  const estrella = await platilloEstrella(data.restaurant.id).catch(() => null);
+  const fotoEstrella = estrella ? await fotoJpeg(estrella.image_url, req.url) : null;
+  const tamNombre = fotoEstrella
+    ? (largo > 22 ? 56 : largo > 14 ? 68 : 84)
+    : (largo > 28 ? 64 : largo > 18 ? 80 : 104);
 
   return new ImageResponse(
     (
+      <div style={{ width: '100%', height: '100%', display: 'flex', background: fondo, color: tinta }}>
       <div
         style={{
-          width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
-          justifyContent: 'space-between', padding: '72px 80px',
-          background: fondo, color: tinta,
+          flex: 1, display: 'flex', flexDirection: 'column',
+          justifyContent: 'space-between', padding: fotoEstrella ? '64px 56px 64px 72px' : '72px 80px',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 28, opacity: 0.72 }}>
@@ -126,6 +132,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
             Ver el menú →
           </div>
         </div>
+      </div>
+      {fotoEstrella && estrella && (
+        <div style={{ width: 520, height: 630, display: 'flex', position: 'relative' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- next/og dibuja <img>, no next/image */}
+          <img src={fotoEstrella} alt="" width={520} height={630} style={{ width: 520, height: 630, objectFit: 'cover' }} />
+          <div style={{
+            position: 'absolute', left: 24, bottom: 24, display: 'flex', padding: '10px 18px', borderRadius: 999,
+            background: fondo, color: tinta, fontSize: 24, fontWeight: 700, maxWidth: 472,
+          }}>
+            {estrella.name}
+          </div>
+        </div>
+      )}
       </div>
     ),
     { width: 1200, height: 630, headers },

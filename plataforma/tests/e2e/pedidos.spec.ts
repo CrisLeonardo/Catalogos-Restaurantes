@@ -203,9 +203,14 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
     // prueba fallaba lejos de la causa. Se toca hasta que aparezca la barra
     // del carrito (agregar dos veces no cambia nada de lo que se comprueba).
     const agregar = page.getByRole('button', { name: `Agregar ${tenantA.productName}` });
+    /* En el teléfono el pedido vive en la barra de abajo («Ver carrito»); en
+       PC la barra se va y el pedido queda a la derecha con «Ir a pagar»
+       (fase 4 de «La carta que vende», F4-4). Esta prueba corre en PC. */
+    const hayPedido = page.getByRole('button', { name: /^Ver carrito/ })
+      .or(page.getByRole('complementary', { name: 'Tu pedido' }).getByRole('link', { name: /pagar/i }));
     await expect(async () => {
       await agregar.click();
-      await expect(page.getByRole('button', { name: /^Ver carrito/ })).toBeVisible({ timeout: 3_000 });
+      await expect(hayPedido.first()).toBeVisible({ timeout: 3_000 });
     }).toPass({ timeout: 60_000 });
     await page.goto(tenantUrl(tenantA.slug, '/checkout'));
 
