@@ -43,6 +43,7 @@ import { fmtMoney } from '@/lib/money';
 import s from './product-form.module.css';
 import { OpcionesAgotado } from '@/components/admin/hoja-agotar';
 import { AGOTADO_POR_OMISION, razonDeAgotado, type AgotadoHasta } from '@/lib/product-availability';
+import { descripcionVaga, GUIA_DESCRIPCION } from '@/lib/menu/descripcion';
 
 interface ProductFormProps {
   restaurantId: string;
@@ -377,8 +378,14 @@ export default function ProductForm({
           <label htmlFor="description" style={labelStyle}>Descripción</label>
           <textarea
             id="description" name="description" rows={3} value={descripcion} onChange={(e) => setDescripcion(e.target.value)}
-            placeholder="Qué lleva, tamaño, qué lo hace especial…" className="adm-field" style={{ resize: 'vertical', lineHeight: 1.5 }}
+            placeholder="Qué lleva, tamaño, con qué viene…" className="adm-field" style={{ resize: 'vertical', lineHeight: 1.5 }}
+            aria-describedby={descripcionVaga(descripcion) ? 'description-guia' : undefined}
           />
+          {/* Guía, no corrección (fase 4, F4-11): solo cuando la descripción
+              está vacía o no dice qué lleva. */}
+          {descripcionVaga(descripcion) && (
+            <p id="description-guia" className="mt-1.5 text-[12px] leading-relaxed text-adm-text-3">{GUIA_DESCRIPCION}</p>
+          )}
         </div>
         {conIngles ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
