@@ -30,6 +30,9 @@ export default function MesaCompartida({ restaurantId, mesa }: { restaurantId: s
   const config = useThemeConfig();
   const [estado, setEstado] = useState<EstadoMesa | null>(null);
   const [persona, setPersona] = useState('');
+  /* Cuánto le toca a cada quien (fase 4, F4-7; «Al centro» de ChatGPT):
+     lo de cada uno o el total en partes iguales. Solo informa; cobra la caja. */
+  const [vista, setVista] = useState<'persona' | 'iguales'>('persona');
   const [error, setError] = useState<string | null>(null);
   const [confirmar, setConfirmar] = useState(false);
   const [pendiente, start] = useTransition();
@@ -113,7 +116,25 @@ export default function MesaCompartida({ restaurantId, mesa }: { restaurantId: s
         </p>
       </div>
 
-      {porPersona.length > 0 && (
+      {porPersona.length > 1 && (
+        <div role="group" aria-label="Cómo ver la cuenta" className="m-segmento">
+          <button type="button" aria-pressed={vista === 'persona'} onClick={() => setVista('persona')}>Por persona</button>
+          <button type="button" aria-pressed={vista === 'iguales'} onClick={() => setVista('iguales')}>Partes iguales</button>
+        </div>
+      )}
+
+      {porPersona.length > 1 && vista === 'iguales' && (
+        <div role="status" style={{ textAlign: 'center', padding: '6px 0 2px' }}>
+          <div className="ct-price" style={{ fontSize: 28, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+            {formatPrice(Math.round((totalMesa / porPersona.length) * 100) / 100, config)}
+          </div>
+          <div style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-3)', marginTop: 2 }}>
+            por persona · {formatPrice(totalMesa, config)} entre {porPersona.length}. El total final lo da la caja.
+          </div>
+        </div>
+      )}
+
+      {porPersona.length > 0 && (porPersona.length < 2 || vista === 'persona') && (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
           {porPersona.map(([quien, suyas]) => (
             <li key={quien}>
