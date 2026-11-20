@@ -6,7 +6,11 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
-- **Fase 3 de «La carta que vende»: otro nivel.** Lleva las **migraciones 189 y 190**, que se aplican antes de desplegar; sin ellas no hay estados ni pedido de la mesa y la carta funciona igual.
+_Nada por ahora._
+
+## v0.28.0 · 2026-11-19 · «La carta que vende»: fase 3
+PR #163 · **migraciones 189 y 190** (sin ellas no hay estados ni pedido de la mesa y la carta funciona igual). Con esta versión la auditoría de la carta digital queda completa; la descripción asistida con IA (CV-35) quedó descartada por decisión del dueño.
+- **Fase 3 de «La carta que vende»: otro nivel.**
   - Estados del día (24 h) arriba de la carta, que el dueño publica desde Menú.
   - El pedido de la mesa: cada teléfono suma lo suyo y uno lo manda a cocina como un solo pedido. Viene apagado y se enciende en Ajustes → Salón.
   - La ficha nace de la foto tocada.
