@@ -6,7 +6,9 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
-- **Fase 4 de «La carta que vende»: ordenar la entrada y cerrar lo pendiente.** Sin migraciones.
+## v0.29.0 · 2026-11-20 · «La carta que vende»: fase 4
+PR #165 · **sin migraciones**. Replanteamiento de la carta digital tras cerrar la auditoría: la entrada se había saturado; se ordena y se toman ideas de la auditoría de ChatGPT.
+- **Fase 4 de «La carta que vende»: ordenar la entrada y cerrar lo pendiente.**
   - La entrada pasa de cinco capas a tres: la mesa en la cabecera, la lupa como primera píldora y «Lo más pedido» en una fila baja.
   - En PC ya no hay barra de teléfono: Pedidos, Mis puntos y Cuenta van al pie del riel.
   - La ficha se cierra deslizando, su total cuenta al cambiar una opción, y lo agotado lleva a su sección.
