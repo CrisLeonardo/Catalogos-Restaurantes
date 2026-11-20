@@ -55,7 +55,7 @@ function initialVariants(groups: ProductOptionGroup[]): Record<string, string> {
 }
 
 export default function ProductSheet({
-  product, icon, ordersEnabled, onClose, acompanantes = [], linea, onGuardado, aviso, categoria = null,
+  product, icon, ordersEnabled, onClose, acompanantes = [], linea, onGuardado, aviso, categoria = null, enlace,
 }: {
   product: ProdItem;
   icon: string;
@@ -72,6 +72,8 @@ export default function ProductSheet({
   /** Su sección: si no se puede pedir, la ficha ofrece «Ver más de …»
       (fase 4, F4-6), que lleva a esa sección de la carta. */
   categoria?: { id: string; nombre: string } | null;
+  /** Lo que va en `?platillo=` al compartir: el nombre legible (F4-8). */
+  enlace?: string;
 }) {
   const config = useThemeConfig();
   const content = useThemeContent();
@@ -287,7 +289,7 @@ export default function ProductSheet({
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           {ordersEnabled ? <Price amount={unitPrice} size={22} /> : <span />}
-          <CompartirPlato productId={product.id} nombre={name} es={es} />
+          <CompartirPlato clave={enlace ?? product.id} nombre={name} es={es} />
         </div>
         {product.dietary_tags && product.dietary_tags.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -461,11 +463,11 @@ export default function ProductSheet({
    propia vista previa (foto, nombre y precio). Con la hoja de compartir del
    teléfono si la hay; si no, se copia. Nunca lleva la mesa: quien lo recibe
    no está sentado ahí. */
-function CompartirPlato({ productId, nombre, es }: { productId: string; nombre: string; es: boolean }) {
+function CompartirPlato({ clave, nombre, es }: { clave: string; nombre: string; es: boolean }) {
   const base = useTenantPrefix('/');
   const [copiado, setCopiado] = useState(false);
   async function compartir() {
-    const url = `${window.location.origin}${base}?platillo=${productId}`;
+    const url = `${window.location.origin}${base}?platillo=${clave}`;
     try {
       if (navigator.share) {
         await navigator.share({ title: nombre, url });

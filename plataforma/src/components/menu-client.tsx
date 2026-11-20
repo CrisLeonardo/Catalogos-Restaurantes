@@ -37,6 +37,7 @@ import type { EstadoDelDia } from '@/lib/db/estados';
 import { elegirMasPedidos } from '@/lib/menu/mas-pedidos';
 import { leerUltimoPedido, rearmarPedido, type PedidoRearmado } from '@/lib/menu/lo-de-siempre';
 import { abrirEmbudo, contarPaso } from '@/lib/menu/embudo';
+import { claveEnlace, resolverPlatillo } from '@/lib/menu/enlace-platillo';
 import type { MasPedido } from '@/lib/db/menu';
 
 /* Pantallas que solo existen cuando el comensal las abre (Mi cuenta, Mis
@@ -293,7 +294,7 @@ export default function MenuClient({
       params.delete('platillo');
       const qs = params.toString();
       window.history.replaceState(window.history.state, '', window.location.pathname + (qs ? `?${qs}` : ''));
-      const anunciado = products.find((p) => p.id === initialPlato);
+      const anunciado = resolverPlatillo(initialPlato, products);
       if (anunciado) { setSelected(anunciado); return; }
     }
     const guardada = leerHojaGuardada();
@@ -461,6 +462,7 @@ export default function MenuClient({
           icon={selected.icon || catIcon.get(selected.category_id ?? '') || 'utensils'}
           ordersEnabled={ordersEnabled}
           aviso={avisoAbierto?.id === selected.id ? avisoAbierto.texto : null}
+          enlace={claveEnlace(selected, products)}
           categoria={(() => {
             const c = categories.find((x) => x.id === selected.category_id);
             return c && categories.length > 1 ? { id: c.id, nombre: c.name } : null;
