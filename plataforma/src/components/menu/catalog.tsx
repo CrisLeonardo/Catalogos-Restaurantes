@@ -7,7 +7,7 @@
      · config.catalogNav → cómo se recorre la carta
          'chips'      píldoras que filtran UNA categoría (el clásico)
          'secciones'  todas apiladas, scroll continuo + índice pegajoso
-         'acordeon'   categorías plegadas, se abre una a la vez
+         'acordeon'   categorías plegadas; se abren las que se quieran (F4-13)
          'portadas'   se elige categoría en tarjetas grandes y se entra
 
      · config.cardStyle → qué forma tiene cada platillo
@@ -242,6 +242,11 @@ export default function Catalog({
   // `undefined` = el comensal aún no ha tocado el acordeón (abrimos la primera
   // sección por cortesía); `null` = lo cerró todo a propósito.
   const [openCat, setOpenCat] = useState<string | null | undefined>(undefined);
+  /* Pizarra (acordeón): varias secciones abiertas a la vez (auditoría «La
+     carta que vende» §4.3; fase 4, F4-13). `null` = aún no tocó nada: la
+     primera abierta por cortesía. `openCat` queda como la última abierta,
+     la que marca el riel de PC. */
+  const [abiertas, setAbiertas] = useState<ReadonlySet<string> | null>(null);
   const [query, setQuery] = useState('');
   /* Búsqueda por antojo (CV-34): atajos al tocar la lupa. */
   const [antojo, setAntojo] = useState<AntojoId | null>(null);
@@ -392,6 +397,13 @@ export default function Catalog({
 
   const sectionKeys = groups.map((g) => g.key).join('|');
   const openCatId = openCat === undefined ? (groups[0]?.key ?? null) : openCat;
+  const abiertasEf: ReadonlySet<string> = abiertas ?? new Set(groups[0] ? [groups[0].key] : []);
+  const abrirSeccion = (id: string, abrir: boolean) => {
+    const sig = new Set(abiertasEf);
+    if (abrir) sig.add(id); else sig.delete(id);
+    setAbiertas(sig);
+    setOpenCat(abrir ? id : openCatId === id ? null : openCatId);
+  };
 
   /* Índice pegajoso: resalta la sección que se está leyendo. Sin esto el índice
      es un menú de saltos mudo — no dice dónde estás, que es la mitad de su
@@ -433,7 +445,7 @@ export default function Catalog({
     setQuery(''); setAntojo(null); setCampoAbierto(false);
     if (nav === 'secciones') { goToSection(id); return; }
     if (nav === 'acordeon') {
-      setOpenCat(id);
+      abrirSeccion(id, true);
       // Tras abrirla: el salto mide la sección ya desplegada.
       setTimeout(() => goToSection(id), 60);
       return;
@@ -789,7 +801,7 @@ export default function Catalog({
         <div style={{ display: 'flex', flexDirection: 'column', gap: vitrina ? 0 : nav === 'acordeon' ? 8 : width === 'revista' ? 44 : width === 'ancho' ? 34 : 26, marginTop: groupByCategory && !vitrina ? 16 : 0 }}>
           {groups.map((g, gi) => {
             const headed = groupByCategory && g.cat !== null;
-            const collapsed = nav === 'acordeon' && openCatId !== g.key;
+            const collapsed = nav === 'acordeon' && !abiertasEf.has(g.key);
             return (
               <section
                 key={g.key}
@@ -811,7 +823,7 @@ export default function Catalog({
                     width={width}
                     poster={card === 'pieza'}
                     countLabel={card === 'pieza' ? `${g.items.length} ${g.items.length === 1 ? content.cart.itemsOne : content.cart.itemsMany}` : undefined}
-                    onToggle={() => setOpenCat(collapsed ? g.key : null)}
+                    onToggle={() => abrirSeccion(g.key, collapsed)}
                   />
                 )}
                 {!collapsed && (
@@ -897,9 +909,25 @@ interface ItemsProps {
 /** Cuántas piezas de la primera sección entran con el reloj al abrir. */
 const ENTRAN_CON_RELOJ = 6;
 
+/** Piezas que dibuja una repisa de Estantes antes de «Ver los N» (F4-14). */
+const REPISA_MAX = 8;
+
 function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled, qtyOf, onAdd, onOpen, edition, primera = false }: ItemsProps) {
   const config = useThemeConfig();
   const anim = config.animations;
+  /* Estantes con carta grande (CV-38; fase 4, F4-14): la repisa dibuja
+     REPISA_MAX piezas y termina en «Ver los N». La búsqueda sigue mirando
+     la carta entera: filtra antes de llegar aquí. */
+  const [repisaEntera, setRepisaEntera] = useState(false);
+  /* ¿La repisa llegó a su final? Mientras no, su borde derecho se
+     desvanece para decir que sigue (§4.3). */
+  const repisaRef = useRef<HTMLDivElement>(null);
+  const [repisaAlFinal, setRepisaAlFinal] = useState(false);
+  const medirRepisa = () => {
+    const el = repisaRef.current;
+    if (el) setRepisaAlFinal(el.scrollLeft + el.clientWidth >= el.scrollWidth - 4);
+  };
+  useEffect(() => { if (card === 'carrusel') medirRepisa(); }, [card, items.length, repisaEntera]);
 
   const iconFor = (p: ProdItem) => p.icon || catIcon.get(p.category_id ?? '') || 'utensils';
   const common = (p: ProdItem) => ({
@@ -1006,9 +1034,14 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
   if (card === 'carrusel') {
     const tileW = width === 'revista' ? 232 : width === 'ancho' ? 204 : 152;
     const repisa = anim && !primera ? { 'data-mfx': 'carrusel' } : {};
+    const cortada = !repisaEntera && items.length > REPISA_MAX;
+    const aLaVista = cortada ? items.slice(0, REPISA_MAX) : items;
     return (
       <div
-        className="u-noscroll"
+        ref={repisaRef}
+        onScroll={medirRepisa}
+        className="u-noscroll m-repisa"
+        data-fin={repisaAlFinal ? '1' : undefined}
         {...repisa}
         style={{
           display: 'flex', gap: 12, overflowX: 'auto', marginTop: 10,
@@ -1019,11 +1052,19 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
           marginInline: 'calc(-1 * var(--menu-pad))', scrollSnapType: 'x proximity',
         }}
       >
-        {items.map((p, i) => (
+        {aLaVista.map((p, i) => (
           <div key={p.id} className={primera && anim && i < ENTRAN_CON_RELOJ ? 'anim-fade-up' : undefined} style={{ animationDelay: primera && anim ? `${i * 35}ms` : undefined, width: tileW, flexShrink: 0, scrollSnapAlign: 'start' }}>
             <ProductTile {...common(p)} />
           </div>
         ))}
+        {cortada && (
+          <div style={{ width: tileW, flexShrink: 0, scrollSnapAlign: 'start', display: 'flex' }}>
+            <button type="button" className="press m-repisa-mas" onClick={() => setRepisaEntera(true)}>
+              <Icon name="arrowRight" size={20} />
+              Ver los {items.length}
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -1559,8 +1600,9 @@ function MosaicTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
   );
 }
 
-/* Tarjeta destacada: ancho completo, arte grande y texto sobre un degradado
-   (blanco sobre velo oscuro = legible con foto o patrón en cualquier paleta).
+/* Tarjeta destacada: ancho completo, arte grande y el texto debajo, como
+   en las demás tarjetas (fase 4, F4-15; antes iba blanco sobre un velo
+   oscuro encima de la foto y tapaba el platillo).
 
    La proporción se abre con el lienzo EFECTIVO. Con 1.85 fijo, una tarjeta de
    ancho completo en una página de 1.120 px medía 600 px de alto: media
@@ -1586,12 +1628,11 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, w
       onClick={() => onOpen(p, unavail ? aviso : null)}
       ariaLabel={`Ver ${name}`}
     >
-      <div className="m-tile-art" style={{ aspectRatio: String(FEATURED_RATIO[width] ?? 1.85) }}>
-        <ProductArt p={p} icon={icon} scale={1.35} sizes={FEATURED_ART_SIZES} behindText />
-        <div
-          aria-hidden
-          style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.68), rgba(0,0,0,0.24) 46%, rgba(0,0,0,0) 72%)' }}
-        />
+      {/* El texto va DEBAJO de la foto (auditoría «La carta que vende» §4.3;
+          fase 4, F4-15): encima tapaba el platillo, que es lo que vende. La
+          foto queda un poco más baja para no alargar la tarjeta. */}
+      <div className="m-tile-art" style={{ aspectRatio: String((FEATURED_RATIO[width] ?? 1.85) * 1.15) }}>
+        <ProductArt p={p} icon={icon} scale={1.35} sizes={FEATURED_ART_SIZES} />
         <div style={{ position: 'absolute', top: wideFeat ? 20 : 10, left: wideFeat ? 24 : 10 }}>
           <span
             className="ct-tag"
@@ -1607,26 +1648,22 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, w
             <Icon name="star" size={11} /> {content.tags.fav}
           </span>
         </div>
-        <div style={{ position: 'absolute', left: wideFeat ? 24 : 14, right: wideFeat ? 24 : 14, bottom: wideFeat ? 20 : 12, display: 'flex', alignItems: 'flex-end', gap: 10 }}>
-          {/* El texto no se estira con la tarjeta: una descripción a 1.000 px de
-              ancho se lee como un pie de foto de periódico, no como un plato. */}
-          <div style={{ flex: 1, minWidth: 0, maxWidth: 620 }}>
-            <div
-              className="ct-product-name"
-              style={{ fontSize: (wideFeat ? 27 : 19) * roleSize(config, 'productName'), color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.55)', lineHeight: 1.15, textDecoration: unavail ? 'line-through' : 'none' }}
-            >
-              {name}
-            </div>
-            {aviso && (
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.6)', marginTop: 3 }}>{aviso}</div>
-            )}
-            {description && (
-              <div className="line-clamp-2" style={{ fontSize: (wideFeat ? 13.5 : 12) * roleSize(config, 'productDesc'), color: 'rgba(255,255,255,0.85)', marginTop: 3, lineHeight: 1.4, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
-                {description}
-              </div>
-            )}
-            <Price amount={displayPrice(p)} size={wideFeat ? 20 : 17} style={{ color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.55)', marginTop: 5, display: 'inline-block' }} />
+        {unavail && aviso && (
+          <div className="m-art-corner"><span className="m-badge">{aviso}</span></div>
+        )}
+      </div>
+      <div className="m-tile-body" style={wideFeat ? { padding: '14px 20px 16px' } : undefined}>
+        {/* El texto no se estira con la tarjeta: una descripción a 1.000 px de
+            ancho se lee como un pie de foto de periódico, no como un plato. */}
+        <div style={{ maxWidth: 620 }}>
+          <div className={`ct-product-name m-name ${unavail ? 'm-strike' : ''}`} style={{ fontSize: (wideFeat ? 24 : 18) * roleSize(config, 'productName'), lineHeight: 1.15 }}>
+            {name}
           </div>
+          {description && <div className="line-clamp-2 ct-product-desc m-desc">{description}</div>}
+        </div>
+        <DietaryBadges keys={p.dietary_tags} />
+        <div className="m-foot">
+          <Price amount={displayPrice(p)} size={wideFeat ? 19 : 16} muted={unavail} />
           {ordersEnabled && !unavail && <AddControl p={p} qty={qty} onAdd={onAdd} />}
         </div>
       </div>
@@ -1802,7 +1839,9 @@ function TextRow({ p, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpe
           {/* El filete punteado es lo que hace legible el par nombre→precio sin
               una foto de por medio: el ojo lo sigue de un lado al otro. */}
           <span aria-hidden style={{ flex: 1, minWidth: 12, alignSelf: 'flex-end', marginBottom: 5, borderBottom: '1px dotted var(--u-hair-2)' }} />
-          <Price amount={displayPrice(p)} size={14} muted={unavail} />
+          {/* 16 y no 14 (§4.3; fase 4, F4-15): en la carta sin fotos el precio
+              es lo que se compara de un vistazo. */}
+          <Price amount={displayPrice(p)} size={16} muted={unavail} />
         </div>
         {description && (
           <div className="ct-product-desc m-desc" style={{ marginTop: 'var(--m-sp-1)', maxWidth: '46em' }}>
