@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
@@ -311,6 +312,11 @@ export default function MenuClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* El hueco de la cabecera breve (portada.tsx). Solo existe con la
+     variante «directo»; sin él, la mesa se dice en su franja de siempre. */
+  const [huecoMesa, setHuecoMesa] = useState<HTMLElement | null>(null);
+  useEffect(() => { setHuecoMesa(document.getElementById('m-cabecera-mesa')); }, []);
+
   return (
     <>
       {loyaltyOn && restaurantId && (
@@ -324,8 +330,20 @@ export default function MenuClient({
         />
       )}
 
-      {/* La mesa, dicha (M01): en qué mesa está o que el QR no corresponde. */}
-      {ordersEnabled && !demo && !kiosk && (mesaInvalida || (tableScanned && mesaActual)) && (
+      {/* La mesa, dicha (M01): en qué mesa está o que el QR no corresponde.
+          Con la cabecera breve, la mesa válida es una etiqueta dentro de ella
+          (fase 4, F4-1); la franja queda para el aviso de mesa inválida y
+          para las cartas con portada completa. */}
+      {ordersEnabled && !demo && !kiosk && !mesaInvalida && tableScanned && mesaActual && huecoMesa && createPortal(
+        <button type="button" className="press m-mesa-cabecera"
+          disabled={!config.pedidoDeMesa}
+          aria-label={config.pedidoDeMesa ? `Mesa ${mesaActual}: ver el pedido de la mesa` : `Estás en la mesa ${mesaActual}; tu pedido llega a esta mesa`}
+          onClick={config.pedidoDeMesa ? () => { closeOverlays(); setCartOpen(true); } : undefined}>
+          <Icon name="utensils" size={15} /> Mesa {mesaActual}
+        </button>,
+        huecoMesa,
+      )}
+      {ordersEnabled && !demo && !kiosk && (mesaInvalida || (tableScanned && mesaActual && !huecoMesa)) && (
         <div role={mesaInvalida ? 'alert' : 'status'} style={{
           display: 'flex', alignItems: 'flex-start', gap: 10, margin: '12px 0', padding: '10px 14px',
           borderRadius: 'var(--m-r-lg)', fontSize: 'var(--m-fs-sm)', lineHeight: 1.45, color: 'var(--u-text)',
@@ -412,6 +430,26 @@ export default function MenuClient({
         qtyOf={qtyOfProduct}
         onAdd={onAdd}
         onOpen={(p, aviso) => { setCartOpen(false); setAvisoAbierto(aviso ? { id: p.id, texto: aviso } : null); setSelected(p); }}
+        pieRiel={barraVisible ? (
+          /* En PC la barra del teléfono se va (fase 4, F4-4): lo que llevaba
+             pasa al pie del riel. Solo se ve donde el riel y «Tu pedido»
+             caben a la vez (globals.css, `.m-pc-pie`). */
+          <>
+            {ordersEnabled && (
+              <button type="button" className="m-pc-rail-item" aria-current={activeTab === 'pedidos' ? 'page' : undefined} onClick={openPedidos}>
+                <Icon name="receipt" size={16} /><span>Pedidos</span>
+              </button>
+            )}
+            {loyaltyOn && (
+              <button type="button" className="m-pc-rail-item" aria-current={activeTab === 'fidelidad' ? 'page' : undefined} onClick={openRewards}>
+                <Icon name="star" size={16} /><span>Mis puntos</span>
+              </button>
+            )}
+            <button type="button" className="m-pc-rail-item" aria-current={activeTab === 'cuenta' ? 'page' : undefined} onClick={openAccount}>
+              <Icon name="user" size={16} /><span>Cuenta</span>
+            </button>
+          </>
+        ) : null}
       />
 
       {ordersEnabled && <div style={{ height: count > 0 ? 88 : 24 }} />}
@@ -482,7 +520,13 @@ export default function MenuClient({
       {/* En PC, el pedido siempre a la vista a la derecha de la carta (CV-19). */}
       {barraVisible && <PedidoLateral onVer={() => { closeOverlays(); setCartOpen(true); }} />}
 
+      {/* En PC, con la barra fuera, el mesero vuelve a su botón propio. */}
+      {barraVisible && llamadaMeseroEnabled && restaurantId && tableScanned && !selected && !cartOpen && (
+        <div className="m-mesero-pc"><WaiterCallButton restaurantId={restaurantId} /></div>
+      )}
+
       {barraVisible && (
+        <div className="m-barra-telefono">
         <BottomNav
           pedido={count > 0 ? {
             count,
@@ -502,6 +546,7 @@ export default function MenuClient({
           onSelectFidelidad={openRewards}
           onSelectCuenta={openAccount}
         />
+        </div>
       )}
 
       {/* Distintivo discreto del modo kiosko (confirma al staff que quedó activo) */}

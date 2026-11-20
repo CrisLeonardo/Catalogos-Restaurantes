@@ -23,11 +23,11 @@ export default function MasPedidos<P extends Pieza>({ items, onOpen }: { items: 
   const en = locale === 'en';
   if (items.length === 0) return null;
   return (
-    <section aria-labelledby="mas-pedidos-t" style={{ margin: '14px 0 4px' }}>
+    <section aria-labelledby="mas-pedidos-t" style={{ margin: '12px 0 2px' }}>
       <h2 id="mas-pedidos-t" className="opt-title" style={{ margin: '0 0 8px', fontSize: 'var(--m-fs-md)', fontWeight: 700, color: 'var(--u-text)' }}>
         {en ? 'Most ordered this week' : 'Lo más pedido esta semana'}
       </h2>
-      <div className="m-acomp u-noscroll" style={{ gap: 10 }}>
+      <div className="m-acomp u-noscroll" style={{ gap: 8 }}>
         {items.map((d) => <PiezaVentas key={d.producto.id} d={d} en={en} onOpen={onOpen} />)}
       </div>
     </section>
@@ -39,24 +39,26 @@ function PiezaVentas<P extends Pieza>({ d, en, onOpen }: { d: DestacadoVentas<P>
   const dato = d.vendidos !== null
     ? (en ? `${d.vendidos} sold` : `${d.vendidos} vendidos`)
     : null;
+  /* Fila baja (fase 4, F4-3): foto cuadrada de 64 px y, al lado, nombre,
+     ventas y precio. La pieza alta de 190 px empujaba la carta fuera de la
+     primera pantalla. */
   return (
     <button
       type="button"
       onClick={(e) => { marcarOrigen(e.currentTarget); onOpen(d.producto); }}
-      className="press m-acomp-pieza"
-      style={{ flexBasis: 148 }}
+      className="press m-acomp-pieza m-mp-pieza"
       aria-label={`${en ? 'No.' : 'N.º'} ${d.puesto}: ${nombre}${dato ? `, ${dato} ${en ? 'this week' : 'esta semana'}` : ''}`}
     >
-      <span className="m-acomp-foto" style={{ height: 96 }}>
+      <span className="m-acomp-foto m-mp-foto">
         {d.producto.image_url
-          ? <AssetImage src={d.producto.image_url} alt="" fill sizes="148px" style={{ objectFit: 'cover' }} />
-          : <Icon name={d.producto.icon || 'utensils'} size={26} />}
-        <span className="m-badge" aria-hidden style={{ position: 'absolute', left: 6, top: 6, background: 'var(--brand-bg)', color: 'var(--u-text)', fontWeight: 700 }}>
-          #{d.puesto}{dato ? ` · ${dato}` : ''}
-        </span>
+          ? <AssetImage src={d.producto.image_url} alt="" fill sizes="64px" style={{ objectFit: 'cover' }} />
+          : <Icon name={d.producto.icon || 'utensils'} size={22} />}
       </span>
-      <span className="m-acomp-nombre">{nombre}</span>
-      <span className="m-acomp-precio"><Price amount={Number(d.producto.price)} size={13} /></span>
+      <span className="m-mp-texto" aria-hidden>
+        <span className="m-acomp-nombre">{nombre}</span>
+        <span className="m-mp-dato">#{d.puesto}{dato ? ` · ${dato}` : ''}</span>
+        <span className="m-acomp-precio"><Price amount={Number(d.producto.price)} size={14} /></span>
+      </span>
     </button>
   );
 }

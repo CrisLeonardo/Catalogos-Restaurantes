@@ -224,10 +224,13 @@ interface CatalogProps {
   onAdd: (product: ProdItem, sourceEl: HTMLElement) => void;
   /** `aviso`: si el plato no se puede pedir ahora, por qué (CV-10). */
   onOpen: (product: ProdItem, aviso?: string | null) => void;
+  /** Pie del riel de PC (fase 4, F4-4): Pedidos, Mis puntos y Cuenta, que en
+      PC dejan la barra del teléfono. Lo arma menu-client. */
+  pieRiel?: React.ReactNode;
 }
 
 export default function Catalog({
-  categories, products, ordersEnabled, timezone = 'America/Guatemala', qtyOf, onAdd, onOpen,
+  categories, products, ordersEnabled, timezone = 'America/Guatemala', qtyOf, onAdd, onOpen, pieRiel = null,
 }: CatalogProps) {
   const config = useThemeConfig();
   const content = useThemeContent();
@@ -242,6 +245,13 @@ export default function Catalog({
   /* Búsqueda por antojo (CV-34): atajos al tocar la lupa. */
   const [antojo, setAntojo] = useState<AntojoId | null>(null);
   const [lupaAbierta, setLupaAbierta] = useState(false);
+  /* Lupa en la fila (fase 4, F4-2): en el teléfono, con píldoras o índice,
+     el buscador es la primera píldora y se despliega al tocarla. */
+  const [campoAbierto, setCampoAbierto] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // El cierre al perder el foco ocurre 180 ms después: lee el antojo vigente.
+  const antojoRef = useRef<AntojoId | null>(null);
+  useEffect(() => { antojoRef.current = antojo; }, [antojo]);
   const [spySection, setSpySection] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   useFotosAnticipadas(rootRef);
@@ -439,9 +449,25 @@ export default function Catalog({
      solo para el teléfono y estirado a la fuerza. */
   const wide = width !== 'movil';
 
+  /* La lupa viaja en la fila de categorías (F4-2) solo donde hay fila: con
+     píldoras o índice, en el lienzo de teléfono. En Pizarra (acordeón) y
+     Kiosco (portadas) el campo se queda: no hay fila donde ponerla. En PC el
+     riel oculta la fila, así que allí el campo se ve siempre (globals.css,
+     `.m-busca-fila[data-plegable]`). */
+  const lupaEnFila = config.showSearch && !wide && !vitrina && categories.length > 1
+    && (nav === 'chips' || nav === 'secciones');
+  const campoPlegado = lupaEnFila && !campoAbierto && !searching;
+  const abrirCampo = () => {
+    setCampoAbierto(true);
+    // El campo se dibuja en el siguiente render; el foco abre el teclado.
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+  const cerrarCampo = () => { setQuery(''); setAntojo(null); setCampoAbierto(false); };
+
   const searchBox = config.showSearch ? (
     <div style={{ position: 'relative', width: '100%', maxWidth: wide ? 320 : undefined }}>
-      <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--u-text-3)' }}>
+      {/* Encima del campo: `.glass-quiet` lo posiciona y tapaba la lupa. */}
+      <span aria-hidden style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--u-text-3)', zIndex: 1, pointerEvents: 'none', display: 'flex' }}>
         <Icon name="search" size={17} />
       </span>
       {/* Dos cosas aquí:
@@ -453,13 +479,18 @@ export default function Catalog({
            tocaba el buscador. */}
       <label htmlFor="menu-buscar" className="sr-only">Buscar en el menú</label>
       <input
+        ref={inputRef}
         id="menu-buscar"
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => setLupaAbierta(true)}
         // Un respiro antes de cerrar: tocar un atajo quita el foco del campo.
-        onBlur={() => setTimeout(() => setLupaAbierta(false), 180)}
+        // Sin nada escrito ni elegido, el campo vuelve a ser la lupa.
+        onBlur={() => setTimeout(() => {
+          setLupaAbierta(false);
+          if (!inputRef.current?.value) setCampoAbierto((abierto) => abierto && antojoRef.current !== null);
+        }, 180)}
         placeholder={content.catalog.searchPlaceholder}
         className="glass-quiet ct-body"
         style={{ width: '100%', padding: '13px 14px 13px 42px', minHeight: 46, borderRadius: 'var(--m-r-md)', border: 'none', color: 'var(--u-text)', fontSize: 'var(--m-fs-lg)', outline: 'none', background: 'var(--surface-2)' }}
@@ -570,8 +601,19 @@ export default function Catalog({
         </div>
       </div>
 
-      {/* Búsqueda (en lienzos anchos ya viaja en el encabezado) */}
-      {!wide && searchBox && <div style={{ marginTop: 14 }}>{searchBox}</div>}
+      {/* Búsqueda (en lienzos anchos ya viaja en el encabezado). Con la lupa
+          en la fila, el campo solo aparece al tocarla, con «✕» para volver. */}
+      {!wide && searchBox && (
+        <div className="m-busca-fila" data-plegable={campoPlegado ? '1' : undefined}
+          style={{ marginTop: 14, display: lupaEnFila ? 'flex' : undefined, gap: 8, alignItems: 'center' }}>
+          {searchBox}
+          {lupaEnFila && (
+            <button type="button" className="press m-chip m-chip-lupa m-nav-movil" aria-label="Cerrar la búsqueda" onClick={cerrarCampo}>
+              <Icon name="x" size={17} />
+            </button>
+          )}
+        </div>
+      )}
       {atajos}
 
       {/* ── Navegación de la carta ── */}
@@ -582,15 +624,15 @@ export default function Catalog({
           riel cabe). Hace lo mismo que la navegación de cada estructura:
           filtra (píldoras, portadas), salta (secciones) o abre y salta
           (acordeón). Solo existe donde cabe junto a la carta (globals.css). */}
-      {categories.length > 1 && (
+      {(categories.length > 1 || pieRiel) && (
         <nav className="m-pc-rail m-surface" aria-label={locale === 'en' ? 'Menu sections' : 'Secciones de la carta'}>
-          {(nav === 'chips' || nav === 'portadas') && (
+          {categories.length > 1 && (nav === 'chips' || nav === 'portadas') && (
             <button type="button" className="m-pc-rail-item" aria-current={activeCat === null && !searching ? 'true' : undefined}
               onClick={() => { setQuery(''); setAntojo(null); setActiveCat(null); rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
               {config.showCategoryIcons && <Icon name="grid" size={16} />}{content.catalog.allLabel}
             </button>
           )}
-          {categories.map((c) => {
+          {categories.length > 1 && categories.map((c) => {
             const activa = nav === 'secciones' ? spySection === c.id
               : nav === 'acordeon' ? openCatId === c.id
               : activeCat === c.id;
@@ -615,12 +657,14 @@ export default function Catalog({
               </button>
             );
           })}
+          {pieRiel && <div className="m-pc-pie">{pieRiel}</div>}
         </nav>
       )}
 
       {/* Píldoras: filtro de una categoría a la vez. */}
-      {nav === 'chips' && !searching && (
+      {nav === 'chips' && !searching && !(lupaEnFila && campoAbierto) && (
         <div className="u-noscroll m-nav-movil" style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '16px 0 6px' }}>
+          {lupaEnFila && <LupaChip onClick={abrirCampo} />}
           <CategoryChip label={content.catalog.allLabel} icon={config.showCategoryIcons ? 'grid' : undefined} active={activeCat === null} onClick={() => setActiveCat(null)} />
           {categories.map((c) => (
             <CategoryChip
@@ -639,7 +683,7 @@ export default function Catalog({
           El velo difuminado se sale hasta el borde de la ventana (menu-bleed):
           quedándose en el ancho del <main>, en tablet y escritorio se veía una
           barra flotando con el contenido pasando descubierto por los costados. */}
-      {nav === 'secciones' && !searching && groups.length > 1 && (
+      {nav === 'secciones' && !searching && !(lupaEnFila && campoAbierto) && groups.length > 1 && (
         <div
           className="menu-bleed m-nav-movil"
           style={{
@@ -657,6 +701,7 @@ export default function Catalog({
               display: 'flex', gap: 8, overflowX: 'auto', paddingBlock: '12px 10px',
             }}
           >
+            {lupaEnFila && <LupaChip onClick={abrirCampo} />}
             {groups.map((g) => (
               <CategoryChip
                 key={g.key}
@@ -1097,6 +1142,15 @@ function packColumns(items: ProdItem[], n: number): Array<Array<{ p: ProdItem; i
 }
 
 /* ── Piezas de navegación ─────────────────────────────────── */
+
+/** La lupa como primera píldora (fase 4, F4-2). */
+function LupaChip({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="press m-chip m-chip-lupa" aria-label="Buscar en la carta">
+      <Icon name="search" size={17} />
+    </button>
+  );
+}
 
 function CategoryChip({ label, icon, active, unavailable = false, onClick }: { label: string; icon?: string; active: boolean; unavailable?: boolean; onClick: () => void }) {
   // Fuera de horario (y no seleccionado): se atenúa y muestra un reloj, pero
