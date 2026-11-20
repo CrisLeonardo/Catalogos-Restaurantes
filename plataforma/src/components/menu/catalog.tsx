@@ -21,6 +21,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import AssetImage from '@/components/asset-image';
 import { FEATURED_ART_SIZES, PRODUCT_ART_SIZES } from '@/lib/asset-image';
 import { Icon, ICON_PATHS } from '@/components/icons';
+import { EVENTO_IR_A_CATEGORIA } from '@/lib/menu/ir-a-categoria';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { MenuSurface, AbrirPieza, Price, Tag, ctaClass } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
@@ -425,6 +426,29 @@ export default function Catalog({
     sectionEls.current.get(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  /** Lleva a una sección con la navegación de la estructura: filtra
+      (píldoras, portadas), salta (secciones) o abre y salta (acordeón).
+      Lo usan el riel de PC y «Ver más de …» de la ficha (F4-6). */
+  function irA(id: string) {
+    setQuery(''); setAntojo(null); setCampoAbierto(false);
+    if (nav === 'secciones') { goToSection(id); return; }
+    if (nav === 'acordeon') {
+      setOpenCat(id);
+      // Tras abrirla: el salto mide la sección ya desplegada.
+      setTimeout(() => goToSection(id), 60);
+      return;
+    }
+    setActiveCat(id);
+    rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  const irARef = useRef(irA);
+  useEffect(() => { irARef.current = irA; });
+  useEffect(() => {
+    const oir = (e: Event) => irARef.current((e as CustomEvent<string>).detail);
+    window.addEventListener(EVENTO_IR_A_CATEGORIA, oir);
+    return () => window.removeEventListener(EVENTO_IR_A_CATEGORIA, oir);
+  }, []);
+
   /* Medido en un teléfono de 375×812: el hero decía «Rincón 502», y 12 px
      más abajo este rótulo repetía «RINCÓN 502 · EL MENÚ» — justo debajo de
      un botón que acababa de decir «Ver el menú». Tres veces la misma palabra
@@ -640,18 +664,7 @@ export default function Catalog({
               <button key={c.id} type="button" className="m-pc-rail-item"
                 aria-current={activa && !searching ? 'true' : undefined}
                 data-dim={catAvail.get(c.id) === false ? '1' : undefined}
-                onClick={() => {
-                  setQuery(''); setAntojo(null);
-                  if (nav === 'secciones') { goToSection(c.id); return; }
-                  if (nav === 'acordeon') {
-                    setOpenCat(c.id);
-                    // Tras abrirla: el salto mide la sección ya desplegada.
-                    setTimeout(() => goToSection(c.id), 60);
-                    return;
-                  }
-                  setActiveCat(c.id);
-                  rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }}>
+                onClick={() => irA(c.id)}>
                 {catAvail.get(c.id) === false ? <Icon name="clock" size={16} /> : config.showCategoryIcons && <Icon name={catIcon.get(c.id) ?? 'utensils'} size={16} />}
                 <span>{localize(c.name, c.name_en)}</span>
               </button>

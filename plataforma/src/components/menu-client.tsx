@@ -461,6 +461,10 @@ export default function MenuClient({
           icon={selected.icon || catIcon.get(selected.category_id ?? '') || 'utensils'}
           ordersEnabled={ordersEnabled}
           aviso={avisoAbierto?.id === selected.id ? avisoAbierto.texto : null}
+          categoria={(() => {
+            const c = categories.find((x) => x.id === selected.category_id);
+            return c && categories.length > 1 ? { id: c.id, nombre: c.name } : null;
+          })()}
           acompanantes={editando ? [] : sheetPairings}
           linea={editando ?? undefined}
           onClose={() => {
