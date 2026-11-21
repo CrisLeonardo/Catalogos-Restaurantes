@@ -1,9 +1,8 @@
 // Genera el arte de marca del instalador NSIS (header.bmp, sidebar.bmp):
 // antes el instalador usaba el wizard genérico de NSIS sin ninguna imagen.
-// Sin dependencias (node puro) — dibuja a mano el mismo mark que
-// src/components/leogin-logo.tsx (fondo #1C1C1E + "L" en gradiente
-// E8534A→F5A030, mismas coordenadas del viewBox 100x100) y escribe BMP de
-// 24 bits sin comprimir, el único formato que acepta NSIS/MUI2 para
+// Sin dependencias (node puro): dibuja a mano la marca «La Comanda» (la misma
+// de plataforma/src/lib/marca/trazos.mjs) y escribe BMP de 24 bits sin
+// comprimir, el único formato que acepta NSIS/MUI2 para
 // MUI_HEADERIMAGE_BITMAP / MUI_WELCOMEFINISHPAGE_BITMAP.
 //
 // Uso: node scripts/generate-installer-art.mjs
@@ -17,9 +16,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = join(__dirname, '..', 'src-tauri', 'installer');
 mkdirSync(OUT_DIR, { recursive: true });
 
-const DARK = [0x1c, 0x1c, 0x1e]; // #1C1C1E, mismo fondo del mark
-const GRAD_FROM = [0xe8, 0x53, 0x4a]; // #E8534A
-const GRAD_TO = [0xf5, 0xa0, 0x30]; // #F5A030
+const DARK = [0x17, 0x16, 0x1a]; // tinta de Leogin (#17161A)
+const CORAL = [0xc2, 0x54, 0x2f]; // coral de la marca y de la interfaz (#C2542F)
+const CREMA = [0xf2, 0xf1, 0xee]; // crema (#F2F1EE)
 const SS = 4; // supersampling para bordes suaves sin librería de gráficos
 
 function lerp(a, b, t) { return a + (b - a) * t; }
@@ -36,36 +35,43 @@ function inRoundedRect(x, y, rx0, ry0, rx1, ry1, radius) {
   return true;
 }
 
-/** El path del mark `M27 19 h18 v44 h27 v18 H27 Z` = unión de 2 rects (viewBox 100x100). */
-function inMark(x, y) {
-  const stem = x >= 27 && x <= 45 && y >= 19 && y <= 81;
-  const foot = x >= 45 && x <= 72 && y >= 63 && y <= 81;
-  return stem || foot;
-}
-
-/** Color del gradiente lineal del mark (mismo x1,y1→x2,y2 que el SVG: 27,19 → 72,81). */
-function markGradientColor(x, y) {
-  const dx = 72 - 27, dy = 81 - 19;
-  const t = Math.max(0, Math.min(1, ((x - 27) * dx + (y - 19) * dy) / (dx * dx + dy * dy)));
-  return mix(GRAD_FROM, GRAD_TO, t);
+/**
+ * La marca «La Comanda» (plataforma/src/lib/marca/trazos.mjs, viewBox 100×110):
+ * cuerpo 100×100 con esquinas de arriba redondeadas (10), seis dientes de 10
+ * abajo, y recortados la L (tallo 27–44 × 22–78, pie 27–73 × 61–78) y el
+ * plato (círculo de radio 11 en 61,44).
+ */
+function inComanda(x, y) {
+  if (x < 0 || x > 100 || y < 0 || y > 110) return false;
+  if (y <= 100) {
+    if (!inRoundedRect(x, y, 0, 0, 100, 120, 10)) return false; // 120: solo redondea arriba
+  } else {
+    const ancho = 100 / 6, punta = Math.floor(x / ancho) * ancho + ancho / 2;
+    if (y - 100 > 10 * (1 - Math.abs(x - punta) / (ancho / 2))) return false;
+  }
+  const tallo = x >= 27 && x <= 44 && y >= 22 && y <= 78;
+  const pie = x >= 27 && x <= 73 && y >= 61 && y <= 78;
+  const plato = (x - 61) ** 2 + (y - 44) ** 2 <= 121;
+  return !(tallo || pie || plato);
 }
 
 /**
- * Dibuja el mark (viewBox 100x100) escalado dentro de un cuadro [bx,by,size].
- * badge=true agrega el fondo #1C1C1E propio del logo (para superficies que
- * no son ya de ese color, ej. el sidebar con degradado).
+ * Dibuja la marca dentro de un cuadro [bx, by, size].
+ * badge=false: la comanda coral; los huecos dejan ver el fondo.
+ * badge=true: loseta coral redondeada con la comanda crema al 74 % del alto
+ * (igual que el icono de la app).
  */
 function drawMark(px, x, y, bx, by, size, badge) {
   const lx = x - bx, ly = y - by;
   if (lx < 0 || lx > size || ly < 0 || ly > size) return null;
-  const vx = (lx / size) * 100, vy = (ly / size) * 100;
   if (badge) {
-    if (!inRoundedRect(vx, vy, 0, 0, 100, 100, 22)) return null;
-    if (inMark(vx, vy)) return markGradientColor(vx, vy);
-    return DARK;
+    if (!inRoundedRect(lx, ly, 0, 0, size, size, size * 0.23)) return null;
+    const alto = size * 0.74, k = 110 / alto;
+    const ox = (size - alto * 100 / 110) / 2, oy = (size - alto) / 2;
+    return inComanda((lx - ox) * k, (ly - oy) * k) ? CREMA : CORAL;
   }
-  if (inMark(vx, vy)) return markGradientColor(vx, vy);
-  return null;
+  const k = 110 / size, ox = (size - size * 100 / 110) / 2;
+  return inComanda((lx - ox) * k, ly * k) ? CORAL : null;
 }
 
 /** Fondo con leve resplandor radial de marca sobre un dorado oscuro (mismo lenguaje del hero del landing). */
@@ -74,7 +80,7 @@ function heroBackground(x, y, w, h) {
   const gx = w * 0.5, gy = h * 0.18;
   const dist = Math.hypot(x - gx, y - gy) / (Math.max(w, h) * 0.55);
   const glow = Math.max(0, 1 - dist);
-  const accent = mix(GRAD_FROM, GRAD_TO, y / h);
+  const accent = CORAL;
   return mix(base, accent, glow * 0.35);
 }
 
@@ -147,7 +153,7 @@ function writeBmp(path, width, height, rgb) {
   console.log(`  ✓ ${path} (${width}x${height}, ${(fileSize / 1024).toFixed(1)} KB)`);
 }
 
-// ── header.bmp (150x57) — mark centrado sobre el fondo oscuro del logo ──
+// ── header.bmp (150x57) — la comanda coral sobre el fondo oscuro ──
 const HEADER_W = 150, HEADER_H = 57;
 const headerSize = 38;
 const headerBx = HEADER_W - headerSize - 14; // alineado a la derecha, margen 14px

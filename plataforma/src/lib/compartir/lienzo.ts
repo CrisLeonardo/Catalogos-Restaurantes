@@ -16,6 +16,8 @@
    Solo cliente: todas las funciones tocan `document`.
    ============================================================ */
 
+import { COMANDA_ALTO, COMANDA_ANCHO, COMANDA_NORMAL, LEOGIN_CORAL, LEOGIN_CREMA } from '@/lib/marca/trazos.mjs';
+
 export const ANCHO = 1080;
 export const ALTO = 1920;
 
@@ -119,28 +121,22 @@ export function espaciado(ctx: CanvasRenderingContext2D, px: number): void {
   if ('letterSpacing' in c) c.letterSpacing = `${px}px`;
 }
 
-/** La «L» chiquita de Leogin y su nombre: la firma de cada imagen. */
+/** La marca de Leogin («La Comanda») y su nombre: la firma de cada imagen. */
 export function firmaLeogin(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, f: Fuentes): void {
   const s = 56;
   ctx.save();
+  // Loseta coral con la comanda crema al 74 % del alto, como el icono de la app.
   rectRedondo(ctx, x, y, s, s, 14);
-  ctx.fillStyle = '#1C1C1E';
+  ctx.fillStyle = LEOGIN_CORAL;
   ctx.fill();
-  const g = ctx.createLinearGradient(x, y, x + s, y + s);
-  g.addColorStop(0, '#E8534A');
-  g.addColorStop(1, '#F5A030');
-  ctx.fillStyle = g;
-  // El trazo del logo, en su cuadro de 100: M27 19h18v44h27v18H27Z.
-  const k = s / 100;
-  ctx.beginPath();
-  ctx.moveTo(x + 27 * k, y + 19 * k);
-  ctx.lineTo(x + 45 * k, y + 19 * k);
-  ctx.lineTo(x + 45 * k, y + 63 * k);
-  ctx.lineTo(x + 72 * k, y + 63 * k);
-  ctx.lineTo(x + 72 * k, y + 81 * k);
-  ctx.lineTo(x + 27 * k, y + 81 * k);
-  ctx.closePath();
-  ctx.fill();
+  const alto = s * 0.74;
+  const k = alto / COMANDA_ALTO;
+  ctx.translate(x + (s - COMANDA_ANCHO * k) / 2, y + (s - alto) / 2);
+  ctx.scale(k, k);
+  ctx.fillStyle = LEOGIN_CREMA;
+  ctx.fill(new Path2D(COMANDA_NORMAL), 'evenodd');
+  ctx.restore();
+  ctx.save();
   ctx.fillStyle = color;
   ctx.font = `600 30px ${f.ui}`;
   ctx.textBaseline = 'middle';

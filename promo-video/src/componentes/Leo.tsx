@@ -106,15 +106,4 @@ export const Leo: React.FC<Props> = ({ tam, ojos = 'abiertos', brazo = 0, mirada
   );
 };
 
-export const Logo: React.FC<{ tam: number }> = ({ tam }) => (
-  <svg viewBox="0 0 100 100" width={tam} height={tam} aria-hidden="true">
-    <defs>
-      <linearGradient id="logog" x1="27" y1="19" x2="72" y2="81" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#E8534A" />
-        <stop offset="1" stopColor="#F5A030" />
-      </linearGradient>
-    </defs>
-    <rect width="100" height="100" rx="22" fill="#1C1C1E" />
-    <path d="M27 19h18v44h27v18H27Z" fill="url(#logog)" />
-  </svg>
-);
+export { Logo } from './Marca';

@@ -6,6 +6,15 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+## v0.31.0 · 2026-11-21 · Logo «La Comanda»
+PR #169 y #170 · **sin migraciones**.
+- **Leogin estrena logo: «La Comanda».** Una comanda coral con la L y el plato recortados, y el nombre «leogin» en minúscula. Un solo coral, el de la interfaz (`#C2542F`), sin degradados.
+  - Sale en la web, el panel, Mi cuenta, la billetera, el superadmin, el favicon, los iconos de la app web y el de «añadir a inicio» del iPhone.
+  - Debajo de 24 px va una versión chica. Los huecos son recortes de verdad: sobre una foto se ve la foto.
+  - Android pregunta una vez por el icono nuevo de la app instalada.
+- **El logo nuevo también llega a:** la película «Un solo lugar» de la portada, la intro de «Vende en línea», la intro de prueba (`/intro`), la ventana de ejemplo de Descargas, la firma de las imágenes para compartir (plato del día y «Tu año») y el arte del instalador de Leogin Desktop.
+- Los trazos viven en `plataforma/src/lib/marca/trazos.mjs`; los iconos salen de `scripts/marca/generar-iconos.mjs`.
+
 ## v0.30.0 · 2026-11-20 · Editor en el teléfono, estados con foto y planes claros
 PR #167 · **sin migraciones**.
 - **El editor de platillo cabe en el teléfono.** «Toca alejar la pantalla» era el zoom automático del iPhone, que se activa al tocar un campo con letra menor de 16 px.
