@@ -6,6 +6,10 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+- El alta comprueba el tema y la mensualidad antes de confirmar el restaurante.
+- El cobro manual exige cubrir el importe completo y permite corregir un monto rechazado desde el mismo formulario.
+- La CI reserva los puertos de Supabase y la ruta de salud identifica el commit desplegado en Render.
+
 ## v0.31.0 · 2026-11-21 · Logo «La Comanda»
 PR #169 y #170 · **sin migraciones**.
 - **Leogin estrena logo: «La Comanda».** Una comanda coral con la L y el plato recortados, y el nombre «leogin» en minúscula. Un solo coral, el de la interfaz (`#C2542F`), sin degradados.
