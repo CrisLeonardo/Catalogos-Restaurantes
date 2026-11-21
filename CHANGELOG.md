@@ -7,7 +7,7 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 ## Sin publicar
 
 ## v0.31.0 · 2026-11-21 · Logo «La Comanda»
-PR #169 y el PR del resto de la marca · **sin migraciones**.
+PR #169 y #170 · **sin migraciones**.
 - **Leogin estrena logo: «La Comanda».** Una comanda coral con la L y el plato recortados, y el nombre «leogin» en minúscula. Un solo coral, el de la interfaz (`#C2542F`), sin degradados.
   - Sale en la web, el panel, Mi cuenta, la billetera, el superadmin, el favicon, los iconos de la app web y el de «añadir a inicio» del iPhone.
   - Debajo de 24 px va una versión chica. Los huecos son recortes de verdad: sobre una foto se ve la foto.
