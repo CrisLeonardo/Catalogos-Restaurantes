@@ -2710,7 +2710,10 @@ textarea.adm-field { resize: vertical; line-height: 1.5; min-height: 72px; }
 select.adm-field { cursor: pointer; }
 .adm-field-sm { min-height: 34px; padding: 7px 10px; font-size: 13px; }
 .adm-field-lg { min-height: 46px; padding: 12px 14px; font-size: 16px; }
-@media (max-width: 767px) { .adm-field:not(.adm-field-sm) { font-size: 16px; } }
+/* En el teléfono TODO campo va a 16 px, también los pequeños: con menos,
+   iOS acerca la pantalla al tocarlo y hay que alejarla a mano (editor de
+   platillo: opciones y combos, 2026-11-20). */
+@media (max-width: 767px) { .adm-field { font-size: 16px; } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }

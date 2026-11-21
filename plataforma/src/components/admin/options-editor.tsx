@@ -222,7 +222,10 @@ export default function OptionsEditor({
               const variantCount = choice.variants?.length ?? 0;
               return (
               <div key={choice.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                {/* En el teléfono el nombre se queda con la fila entera y el precio
+                    con sus botones baja a la línea de abajo: a 360 px el nombre de
+                    un componente se quedaba en 46 px y no se leía lo escrito. */}
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                   {group.type === 'single' && (
                     <input
                       type="radio"
@@ -239,8 +242,9 @@ export default function OptionsEditor({
                     value={choice.name}
                     onChange={(e) => setChoice(group.id, choice.id, { name: e.target.value })}
                     placeholder={group.type === 'combo' ? 'Componente (Papas fritas, Gaseosa…)' : 'Opción (Grande, Extra queso…)'}
-                    className="adm-field adm-field-sm adm-field-auto" style={{ flex: 1, minWidth: 0 }}
+                    className="adm-field adm-field-sm adm-field-auto" style={{ flex: '1 1 170px', minWidth: 0 }}
                   />
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginLeft: 'auto' }}>
                   <span style={{ fontSize: 12, color: 'var(--u-text-4)' }}>{group.type === 'combo' ? 'Q' : '+'}</span>
                   <input
                     type="number" inputMode="decimal"
@@ -258,7 +262,7 @@ export default function OptionsEditor({
                       className="press"
                       aria-label="Variantes del componente"
                       style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0 9px', height: 28, borderRadius: 'var(--radius-sm)',
+                        display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0 10px', height: 36, borderRadius: 'var(--radius-sm)',
                         border: `1px solid ${variantCount > 0 ? 'var(--c-ok-line)' : 'var(--u-hair)'}`, cursor: 'pointer',
                         background: variantCount > 0 ? 'var(--c-ok-bg)' : 'transparent',
                         color: variantCount > 0 ? 'var(--brand-accent, #22c55e)' : 'var(--u-text-4)',
@@ -280,13 +284,14 @@ export default function OptionsEditor({
                     className="press"
                     aria-label="Quitar opción"
                     style={{
-                      width: 28, height: 28, borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer',
+                      width: 36, height: 36, borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer',
                       background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: 'var(--u-text-4)',
                       display: 'grid', placeItems: 'center', flexShrink: 0,
                     }}
                   >
                     <Icon name="x" size={13} />
                   </button>
+                  </div>
                 </div>
 
                 {group.type === 'combo' && isOpen && (
@@ -298,7 +303,7 @@ export default function OptionsEditor({
                       Si agregas variantes, el cliente/mesero debe elegir una para incluir &quot;{choice.name || 'este componente'}&quot; (ej. sabor de bebida, tipo de papas).
                     </p>
                     {(choice.variants ?? []).map((variant) => (
-                      <div key={variant.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <div key={variant.id} style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                         <input
                           type="text"
                           value={variant.name}
@@ -307,8 +312,9 @@ export default function OptionsEditor({
                             setChoice(group.id, choice.id, { variants });
                           }}
                           placeholder="Variante (Coca-Cola, Papas rústicas…)"
-                          className="adm-field adm-field-sm adm-field-auto" style={{ flex: 1, minWidth: 0, fontSize: 12 }}
+                          className="adm-field adm-field-sm adm-field-auto" style={{ flex: '1 1 150px', minWidth: 0 }}
                         />
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginLeft: 'auto' }}>
                         <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>+</span>
                         <input
                           type="number" inputMode="decimal"
@@ -318,7 +324,7 @@ export default function OptionsEditor({
                             const variants = (choice.variants ?? []).map((v) => v.id === variant.id ? { ...v, priceDelta: Number(e.target.value) || 0 } : v);
                             setChoice(group.id, choice.id, { variants });
                           }}
-                          className="adm-field adm-field-sm adm-field-auto" style={{ width: 68, fontFamily: 'var(--ui-font-mono)', fontSize: 12 }}
+                          className="adm-field adm-field-sm adm-field-auto" style={{ width: 78, fontFamily: 'var(--ui-font-mono)' }}
                           aria-label="Precio extra de la variante"
                         />
                         <button
@@ -330,13 +336,14 @@ export default function OptionsEditor({
                           className="press"
                           aria-label="Quitar variante"
                           style={{
-                            width: 24, height: 24, borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer',
+                            width: 36, height: 36, borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer',
                             background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: 'var(--u-text-4)',
                             display: 'grid', placeItems: 'center', flexShrink: 0,
                           }}
                         >
                           <Icon name="x" size={11} />
                         </button>
+                        </div>
                       </div>
                     ))}
                     <button
