@@ -6,6 +6,17 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+## v0.30.0 · 2026-11-20 · Editor en el teléfono, estados con foto y planes claros
+PR #167 · **sin migraciones**.
+- **El editor de platillo cabe en el teléfono.** «Toca alejar la pantalla» era el zoom automático del iPhone, que se activa al tocar un campo con letra menor de 16 px.
+  - En el teléfono todos los campos del panel tienen 16 px; en PC siguen igual.
+  - En las opciones y variantes, el precio y los botones pasan a la línea de abajo cuando no caben. Los botones de quitar miden 36 px.
+- **Los estados del día pueden usar la foto de un platillo.** En «Publicar estado» aparece «O usa la foto de un platillo», con buscador si hay más de 12. El estado queda enlazado a ese platillo. Solo salen fotos subidas al restaurante.
+- **Al crear un restaurante, cada plan dice en qué se distingue.**
+  - En línea: para empezar, con un usuario, tope de platillos y tope de pedidos al mes.
+  - Estándar: para crecer, sin tope de pedidos ni platillos, con más usuarios, corte de caja y reportes.
+  - Lo que incluye cada plan no cambió.
+
 ## v0.29.0 · 2026-11-20 · «La carta que vende»: fase 4
 PR #165 · **sin migraciones**. Replanteamiento de la carta digital tras cerrar la auditoría: la entrada se había saturado; se ordena y se toman ideas de la auditoría de ChatGPT.
 - **Fase 4 de «La carta que vende»: ordenar la entrada y cerrar lo pendiente.**
