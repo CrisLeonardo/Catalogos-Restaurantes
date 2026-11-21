@@ -7,9 +7,14 @@
    círculos, con cuánto les queda. Publicar = foto + (opcional) una
    línea de texto + (opcional) el platillo al que lleva. Caducan solos
    a las 24 h. Nada más: es para hacerlo desde el teléfono en 20 s.
+
+   La foto se sube o se toma de un platillo que ya la tiene (dueño,
+   2026-11-20): tocar el platillo pone su foto y, de paso, hace que el
+   estado lleve a él. Solo se ofrecen fotos de este restaurante en
+   nuestro bucket, que son las que `publicarEstado` acepta.
    ============================================================ */
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import AssetImage from '@/components/asset-image';
 import ImageUpload from '@/components/admin/image-upload';
@@ -30,7 +35,8 @@ export default function EstadosDelDia({
 }: {
   restaurantId: string;
   estados: EstadoDelDia[];
-  platillos: Array<{ id: string; name: string }>;
+  /** `foto` solo viene cuando el platillo tiene una que se puede reusar. */
+  platillos: Array<{ id: string; name: string; foto: string | null }>;
   faltaTabla: boolean;
   ahora: number;
 }) {
@@ -39,18 +45,47 @@ export default function EstadosDelDia({
   const [foto, setFoto] = useState<string | null>(null);
   const [texto, setTexto] = useState('');
   const [platillo, setPlatillo] = useState('');
+  /** El platillo del que salió la foto, si salió de uno. */
+  const [fotoDe, setFotoDe] = useState<string | null>(null);
+  const [buscar, setBuscar] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pendiente, startTransition] = useTransition();
 
+  const conFoto = useMemo(() => platillos.filter((p) => p.foto), [platillos]);
+  const visibles = useMemo(() => {
+    const q = buscar.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if (!q) return conFoto;
+    return conFoto.filter((p) => p.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(q));
+  }, [conFoto, buscar]);
+
   if (faltaTabla) return null;
 
+  function usarFotoDe(p: { id: string; foto: string | null }) {
+    if (!p.foto) return;
+    setFoto(p.foto);
+    setFotoDe(p.id);
+    // Si no había elegido a dónde lleva, lleva a este platillo.
+    if (!platillo || platillo === fotoDe) setPlatillo(p.id);
+    setError(null);
+  }
+
+  function subida(url: string) {
+    setFoto(url);
+    if (fotoDe && platillo === fotoDe) setPlatillo('');
+    setFotoDe(null);
+  }
+
+  function cerrar() {
+    setAbierto(false); setFoto(null); setFotoDe(null); setTexto(''); setPlatillo(''); setBuscar(''); setError(null);
+  }
+
   function publicar() {
-    if (!foto) { setError('Sube una foto primero.'); return; }
+    if (!foto) { setError('Sube una foto o elige la de un platillo.'); return; }
     setError(null);
     startTransition(async () => {
       const r = await publicarEstado({ restaurantId, imagenUrl: foto, texto, platilloId: platillo || null });
       if (!r.ok) { setError(r.error); return; }
-      setAbierto(false); setFoto(null); setTexto(''); setPlatillo('');
+      cerrar();
       router.refresh();
     });
   }
@@ -96,7 +131,51 @@ export default function EstadosDelDia({
 
       {abierto && (
         <div className="flex flex-col gap-3 border-t border-[var(--adm-border)] pt-3">
-          <ImageUpload restaurantId={restaurantId} folder="estados" currentUrl={foto} onUpload={setFoto} />
+          {/* `key`: al elegir la foto de un platillo, el cuadro de subir la enseña. */}
+          <ImageUpload key={fotoDe ?? 'subida'} restaurantId={restaurantId} folder="estados" currentUrl={foto} onUpload={subida} />
+          {conFoto.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <span id="estado-de-platillo" className="text-[13px] text-adm-text-2">O usa la foto de un platillo</span>
+              {conFoto.length > 12 && (
+                <Input
+                  type="search"
+                  value={buscar}
+                  onChange={(e) => setBuscar(e.target.value)}
+                  placeholder="Buscar platillo"
+                  aria-label="Buscar platillo"
+                />
+              )}
+              {visibles.length > 0 ? (
+                <ul aria-labelledby="estado-de-platillo" className="flex gap-2 overflow-x-auto pb-1">
+                  {visibles.map((p) => {
+                    const elegido = fotoDe === p.id;
+                    return (
+                      <li key={p.id} className="shrink-0">
+                        <button
+                          type="button"
+                          aria-pressed={elegido}
+                          onClick={() => usarFotoDe(p)}
+                          className="press flex w-[76px] flex-col items-center gap-1 rounded-[12px] border-0 bg-transparent p-1 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-adm-accent-ink"
+                        >
+                          <span className={`relative block h-[64px] w-[64px] overflow-hidden rounded-[12px] border-2 ${elegido ? 'border-[var(--adm-accent-fill)]' : 'border-[var(--adm-border)]'}`}>
+                            <AssetImage src={p.foto!} alt="" fill sizes="64px" style={{ objectFit: 'cover' }} />
+                            {elegido && (
+                              <span aria-hidden className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-adm-accent-fill text-white">
+                                <Icon name="check" size={12} />
+                              </span>
+                            )}
+                          </span>
+                          <span className={`line-clamp-2 w-full text-[12px] leading-tight ${elegido ? 'font-semibold text-adm-text' : 'text-adm-text-2'}`}>{p.name}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="text-[13px] text-adm-text-3">Ningún platillo con foto se llama así.</p>
+              )}
+            </div>
+          )}
           <label className="flex flex-col gap-1 text-[13px] text-adm-text-2">
             Una línea (opcional)
             <Input value={texto} maxLength={80} onChange={(e) => setTexto(e.target.value)} placeholder="Ej. Salió la lasaña · 2 × Q45 hasta las 6" />
@@ -118,7 +197,7 @@ export default function EstadosDelDia({
             <Button size="touch" variant="primary" disabled={pendiente || !foto} onClick={publicar}>
               {pendiente ? 'Publicando…' : 'Publicar estado'}
             </Button>
-            <Button size="touch" variant="ghost" disabled={pendiente} onClick={() => { setAbierto(false); setError(null); }}>
+            <Button size="touch" variant="ghost" disabled={pendiente} onClick={cerrar}>
               Cancelar
             </Button>
           </div>
