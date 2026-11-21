@@ -74,45 +74,43 @@ export default async function EditProductPage({
 
   return (
     <div className="anim-fade-up">
-      {/* Encabezado */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 24,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Link
-            href={volverAlCatalogo(desde)}
-            className="press"
-            style={{
-              background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
-              border: '1px solid var(--u-hair)',
-              borderRadius: 'var(--radius-full)',
-              padding: '6px 14px',
-              fontSize: 13,
-              color: 'var(--u-text-2)',
-              textDecoration: 'none',
-            }}
-          >
-            ← Volver
-          </Link>
-          <h1
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 700,
-              fontSize: 20,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              minWidth: 0,
-            }}
-          >
-            {product.name}
-          </h1>
-        </div>
+      {/* Encabezado. Un nombre largo se corta con «…» en vez de ensanchar la
+          página: el `minWidth: 0` del título no basta si la fila que lo
+          contiene no puede encogerse, y en Android la página quedaba más
+          ancha que la pantalla (había que alejar y la barra de abajo se
+          salía por la derecha). «← Volver» no se parte en dos renglones. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, minWidth: 0 }}>
+        <Link
+          href={volverAlCatalogo(desde)}
+          className="press"
+          style={{
+            flexShrink: 0,
+            whiteSpace: 'nowrap',
+            background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
+            border: '1px solid var(--u-hair)',
+            borderRadius: 'var(--radius-full)',
+            padding: '6px 14px',
+            fontSize: 13,
+            color: 'var(--u-text-2)',
+            textDecoration: 'none',
+          }}
+        >
+          ← Volver
+        </Link>
+        <h1
+          style={{
+            flex: '1 1 auto',
+            fontFamily: 'var(--font-display)',
+            fontWeight: 700,
+            fontSize: 20,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            minWidth: 0,
+          }}
+        >
+          {product.name}
+        </h1>
       </div>
 
       <ProductForm
