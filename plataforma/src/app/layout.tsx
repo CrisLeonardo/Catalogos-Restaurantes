@@ -102,7 +102,9 @@ export async function generateMetadata(): Promise<Metadata> {
   // Área de personal: ícono genérico, sin consultar el tema del tenant.
   const slug = headersList.get('x-admin-area') ? null : headersList.get('x-tenant-slug');
 
-  let appleIcon = '/icon-512.png'; // plataforma / demo → ícono genérico
+  // Plataforma / demo → ícono de Leogin a sangre: iOS redondea las esquinas y
+  // pinta de negro las transparentes que traería la loseta redondeada.
+  let appleIcon = '/icon-maskable-512.png';
   if (slug && slug !== DEMO_SLUG) {
     const data = await getRestaurantBySlugCached(slug);
     const icon = data?.resolved.config.pwaIconUrl ?? data?.resolved.config.logoUrl;

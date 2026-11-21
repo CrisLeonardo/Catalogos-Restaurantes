@@ -11,8 +11,14 @@
  * el otro 512 `any`+`maskable`).
  *
  * Una sola lista, importada por los dos, para que no puedan volver a divergir.
+ *
+ * Desde la marca «La Comanda» (2026-11-21) la maskable es su propio archivo:
+ * coral a sangre con la comanda dentro del círculo seguro del 80 %, para que
+ * Android no le recorte los dientes. Los genera scripts/marca/generar-iconos.mjs.
+ * Al cambiar el dibujo, Android pregunta UNA vez por la actualización del ícono;
+ * eso es esperado.
  */
 export const LEOGIN_PWA_ICONS = [
   { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-  { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+  { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
 ] as const;

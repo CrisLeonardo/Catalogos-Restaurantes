@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La Comanda corregida</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Inter:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#F2F1EE;--card:#FFFFFF;--line:#E2E0DA;--tx:#17161A;--tx2:#5F5E5A;--ok:#2F7A4B;--no:#B23A2A}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0C0B0A;--card:#1A1917;--line:#2E2C29;--tx:#F5F3EF;--tx2:#B4B2A9;--ok:#7FC79A;--no:#F0907E}}
+:root[data-theme="dark"]{--bg:#0C0B0A;--card:#1A1917;--line:#2E2C29;--tx:#F5F3EF;--tx2:#B4B2A9;--ok:#7FC79A;--no:#F0907E}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 Inter,system-ui,sans-serif;padding:32px 16px}
+main{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1{font-size:28px;letter-spacing:-.02em;margin:0}
+h2{font-size:16px;margin:0 0 4px}
+p{margin:0;color:var(--tx2)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}
+.dos{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:20px}
+.fila{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end;margin-top:16px}
+.lab{font-size:12px;color:var(--tx2);margin-top:6px;text-align:center}
+.tile{position:relative;display:flex;align-items:center;justify-content:center}
+.wm{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;letter-spacing:-.045em;line-height:1}
+.lock{display:flex;align-items:center;gap:.3em}
+.est{font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid currentColor;display:inline-block;margin-bottom:8px}
+.est.no{color:var(--no)}.est.ok{color:var(--ok)}
+.badge{position:absolute;top:-7px;right:-7px;background:#FF3B30;color:#fff;border-radius:11px;min-width:22px;height:22px;font:600 13px system-ui;display:flex;align-items:center;justify-content:center;padding:0 6px}
+.foto{border-radius:14px;padding:22px;background:linear-gradient(135deg,#55744a,#a88a52 60%,#c9a46a)}
+.termico{background:#fff;border:1px dashed #9a9890;border-radius:6px;padding:12px 14px;font-family:ui-monospace,Menlo,monospace;color:#000;font-size:12px;width:220px}
+.sw{display:flex;gap:10px;align-items:center}
+.sw i{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);display:block}
+.dot-new{transform-box:fill-box;transform-origin:center;animation-name:ding;animation-duration:2.4s;animation-iteration-count:infinite;animation-timing-function:cubic-bezier(.22,1,.36,1)}
+@keyframes ding{0%,70%,100%{transform:scale(1)}80%{transform:scale(1.25)}88%{transform:scale(.94)}}
+@media (prefers-reduced-motion:reduce){.dot-new{animation-name:none}}
+ul{margin:8px 0 0;padding-left:18px;color:var(--tx2)}
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <h1>La Comanda, corregida</h1>
+    <p>Misma idea: una comanda con la L recortada. Cuatro arreglos: el punto deja la esquina del aviso, los huecos son recortes de verdad, hay versión chica y un solo coral.</p>
+  </div>
+
+  <div class="dos">
+    <section class="card">
+      <span class="est no">Antes</span>
+      <h2>Propuesta original</h2>
+      <div class="fila" data-set="antes"></div>
+      <ul>
+        <li>Punto negro donde el teléfono pone el aviso</li>
+        <li>L y aro pintados del color del fondo</li>
+        <li>A 16 px los seis dientes son ruido</li>
+      </ul>
+    </section>
+    <section class="card">
+      <span class="est ok">Corregida</span>
+      <h2>La L sostiene el plato</h2>
+      <div class="fila" data-set="nueva"></div>
+      <ul>
+        <li>Punto dentro de la esquina de la L, libre la esquina del aviso</li>
+        <li>L y punto recortados: se ve lo que hay detrás</li>
+        <li>Debajo de 24 px: tres dientes, L más gruesa, sin punto</li>
+      </ul>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>En el teléfono, con un aviso real</h2>
+    <p>El globito rojo del sistema cae en la esquina superior derecha. Antes había dos puntos ahí; ahora solo uno.</p>
+    <div class="fila" id="ios"></div>
+  </section>
+
+  <div class="dos">
+    <section class="card">
+      <h2>Sobre una foto</h2>
+      <p>Los huecos dejan ver el fondo; antes salía una L crema.</p>
+      <div class="fila" id="foto"></div>
+    </section>
+    <section class="card">
+      <h2>Ticket térmico, un color</h2>
+      <p>Sin el punto en la esquina ya no se lee «Li».</p>
+      <div class="fila" id="termico"></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Nombre y marca juntos</h2>
+    <div class="fila" id="lockups"></div>
+  </section>
+
+  <section class="card">
+    <h2>Pedido nuevo</h2>
+    <p>En reposo el plato es un hueco. Cuando entra un pedido se llena y da un saltito. Con «reducir movimiento» solo cambia de color.</p>
+    <div class="fila" id="estado"></div>
+  </section>
+
+  <section class="card">
+    <h2>Un solo coral: elegida la A (2026-11-21)</h2>
+    <p>A: el coral de la interfaz (<code>#C2542F</code>), una sola marca en todo Leogin. B: el rojo chile de la propuesta (<code>#E5402A</code>), más vivo en la pantalla de inicio, pero obliga a cambiar el acento de toda la interfaz o a convivir con dos.</p>
+    <div class="fila" id="colores"></div>
+  </section>
+</main>
+
+<script>
+const TEETH6='V100 L91.67,110 L83.33,100 L75,110 L66.67,100 L58.33,110 L50,100 L41.67,110 L33.33,100 L25,110 L16.67,100 L8.33,110 L0,100';
+const TEETH3='V100 L83.33,110 L66.67,100 L50,110 L33.33,100 L16.67,110 L0,100';
+const ticket=t=>`M10,0 H90 Q100,0 100,10 ${t} V10 Q0,0 10,0 Z`;
+const L_NORMAL='M30,22 H41 Q44,22 44,25 V61 H70 Q73,61 73,64 V75 Q73,78 70,78 H30 Q27,78 27,75 V25 Q27,22 30,22 Z';
+const L_CHICA='M27,18 H46 Q49,18 49,21 V56 H76 Q79,56 79,59 V77 Q79,80 76,80 H27 Q24,80 24,77 V21 Q24,18 27,18 Z';
+const DOT={cx:61,cy:44,r:11};
+const dotPath=({cx,cy,r})=>`M${cx-r},${cy} a${r},${r} 0 1,0 ${2*r},0 a${r},${r} 0 1,0 ${-2*r},0 Z`;
+const CORAL={A:'#C2542F',B:'#E5402A'};
+const TINTA='#17161A',CREMA='#F2F1EE';
+
+function nueva(px,{fill=CREMA,lleno=null,anim=false}={}){
+  const chica=px<24;
+  const d=chica?ticket(TEETH3)+' '+L_CHICA:ticket(TEETH6)+' '+L_NORMAL+' '+dotPath(DOT);
+  const extra=(!chica&&lleno)?`<circle class="${anim?'dot-new':''}" cx="${DOT.cx}" cy="${DOT.cy}" r="${DOT.r}" fill="${lleno}"/>`:'';
+  return `<svg viewBox="0 0 100 110" width="${px*100/110}" height="${px}" role="img" aria-label="Leogin" style="display:block"><path fill-rule="evenodd" d="${d}" fill="${fill}"/>${extra}</svg>`;
+}
+function antes(px,a,b,c){
+  return `<svg viewBox="-8 -14 124 128" width="${px*124/128}" height="${px}" aria-hidden="true" style="display:block"><path d="${ticket(TEETH6)}" fill="${a}"/><rect x="27" y="22" width="17" height="56" rx="3" fill="${b}"/><rect x="27" y="61" width="46" height="17" rx="3" fill="${b}"/><circle cx="98" cy="2" r="13" fill="${c}" stroke="${b}" stroke-width="6"/></svg>`;
+}
+function icono(px,coral,inner,badge){
+  return `<div><div class="tile" style="width:${px}px;height:${px}px;border-radius:${px*.23}px;background:${coral}">${inner}${badge?'<span class="badge">3</span>':''}</div><div class="lab">${badge?'Con aviso':px+' px'}</div></div>`;
+}
+const sizes=[112,48,32,16];
+document.querySelector('[data-set=antes]').innerHTML=sizes.map(p=>icono(p,'#E5402A',antes(p*.97,'#FFF4E8','#E5402A','#1A1411'))).join('');
+document.querySelector('[data-set=nueva]').innerHTML=sizes.map(p=>icono(p,CORAL.A,nueva(p*.74))).join('');
+
+document.getElementById('ios').innerHTML=
+  `<div style="display:flex;gap:28px;align-items:flex-end"><div><div class="lab" style="margin:0 0 8px">Antes</div><div style="display:flex;gap:20px">${icono(60,'#E5402A',antes(58,'#FFF4E8','#E5402A','#1A1411'),true)}</div></div>`+
+  `<div><div class="lab" style="margin:0 0 8px">Corregida</div><div style="display:flex;gap:20px">${icono(60,CORAL.A,nueva(44),true)}${icono(60,CORAL.A,nueva(44),false).replace('60 px','Sin aviso')}</div></div></div>`;
+
+document.getElementById('foto').innerHTML=
+  `<div class="foto lock">${antes(64,'#E5402A','#FFF4E8','#1A1411')}<span class="wm" style="font-size:44px;color:#fff">leogin</span></div>`+
+  `<div class="foto lock">${nueva(64,{fill:CORAL.A})}<span class="wm" style="font-size:44px;color:#fff">leogin</span></div>`;
+
+const tk=(m,txt)=>`<div class="termico"><div class="lock" style="justify-content:center;margin-bottom:8px">${m}<span class="wm" style="font-size:22px;color:#000">leogin</span></div><div>${txt}</div><div>MESA 4 · #0231 · 21/11</div></div>`;
+document.getElementById('termico').innerHTML=tk(antes(28,'#000','#fff','#000'),'Antes')+tk(nueva(28,{fill:'#000'}),'Corregida');
+
+document.getElementById('lockups').innerHTML=
+  `<div class="lock" style="background:${CREMA};padding:22px 26px;border-radius:14px">${nueva(72,{fill:CORAL.A})}<span class="wm" style="font-size:60px;color:${TINTA}">leogin</span></div>`+
+  `<div class="lock" style="background:#0C0B0A;padding:22px 26px;border-radius:14px">${nueva(72,{fill:CORAL.A})}<span class="wm" style="font-size:60px;color:#F5F3EF">leogin</span></div>`+
+  `<div class="lock" style="background:${CORAL.A};padding:22px 26px;border-radius:14px">${nueva(72,{fill:CREMA})}<span class="wm" style="font-size:60px;color:${CREMA}">leogin</span></div>`;
+
+document.getElementById('estado').innerHTML=
+  icono(96,CORAL.A,nueva(71),false).replace('96 px','Sin pedidos')+
+  icono(96,CORAL.A,nueva(71,{lleno:TINTA,anim:true}),false).replace('96 px','Pedido nuevo');
+
+document.getElementById('colores').innerHTML=
+  `<div>${icono(72,CORAL.A,nueva(53),false).replace('72 px','A · coral de la interfaz')}</div>`+
+  `<div>${icono(72,CORAL.B,nueva(53),false).replace('72 px','B · rojo chile')}</div>`+
+  `<div class="sw"><i style="background:${CORAL.A}"></i><i style="background:${TINTA}"></i><i style="background:${CREMA}"></i><span class="lab" style="margin:0">Coral, tinta y crema del sistema</span></div>`;
+</script>
+</body>
+</html>

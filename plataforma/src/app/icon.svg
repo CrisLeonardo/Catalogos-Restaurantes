@@ -1,10 +1,1 @@
-<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="lg" x1="27" y1="19" x2="72" y2="81" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#E8534A"/>
-      <stop offset="1" stop-color="#F5A030"/>
-    </linearGradient>
-  </defs>
-  <rect width="100" height="100" rx="22" fill="#1C1C1E"/>
-  <path d="M27 19 h18 v44 h27 v18 H27 Z" fill="url(#lg)"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><rect width="32" height="32" rx="7.36" fill="#C2542F"/><path transform="translate(5.236363636363636 4.16) scale(0.21527272727272728)" fill-rule="evenodd" clip-rule="evenodd" d="M10 0H90Q100 0 100 10V100L83.33 110L66.67 100L50 110L33.33 100L16.67 110L0 100V10Q0 0 10 0ZM27 18H46Q49 18 49 21V56H76Q79 56 79 59V77Q79 80 76 80H27Q24 80 24 77V21Q24 18 27 18Z" fill="#F2F1EE"/></svg>
