@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useState } from 'react';
 import { getDeviceId } from '@/lib/device-id';
 import { Glass } from '@/components/glass';
-import { LeoginMark } from '@/components/leogin-logo';
+import { LeoginMark, LeoginNombre } from '@/components/leogin-logo';
 import { Icon } from '@/components/icons';
 import { login, logout, type AuthState } from '@/lib/actions/auth';
 import type { ResumeSession } from '@/lib/auth/resume';
@@ -115,11 +115,8 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
               </p>
             </>
           ) : (
-            <p
-              className="t-display"
-              style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}
-            >
-              Leogin
+            <p style={{ display: 'flex', justifyContent: 'center', marginTop: 2 }}>
+              <LeoginNombre letra={30} />
             </p>
           )}
 

@@ -30,6 +30,7 @@ Esta skill manda sobre cualquier skill genérica de diseño. Si otra skill sugie
 - **Navegación inferior del comensal**: barra sólida con la paleta del restaurante, icono arriba y nombre abajo, sección activa con pastilla de tinta (`menu/bottom-nav.*`). El resumen del carrito es un solo botón encima. La cápsula gris (`ui/capsule-navigation.*`) fue **rechazada para el comensal** el 2026-11-10 y hoy solo la usa el superadmin. **El panel del restaurante conserva su barra operativa.**
 - Carta del comensal: ancho de columna fijo (techo de 460/760/1120 según `layoutWidth`); en PC se ve como en el teléfono. **No ensanchar** sin rediseñar antes las piezas.
 - 8 estructuras × 26 paletas de carta: no se sustituyen; un cambio debe funcionar en todas.
+- **Logo «La Comanda» (dueño, 2026-11-21).** Una comanda coral con la L y el plato recortados; nombre «leogin» en minúscula (Bricolage Grotesque 800, en trazos). Un solo coral, el de la interfaz (`#C2542F`): nada de degradados ni de un rojo aparte. Trazos en `lib/marca/trazos.mjs`, componente `components/leogin-logo.tsx` (`LeoginMark`, `LeoginNombre`, `LeoginLogo`); los iconos salen de `scripts/marca/generar-iconos.mjs`. Por debajo de 24 px va la versión chica. Nada en la esquina superior derecha del icono: ahí pone el teléfono su aviso. Maqueta: `docs/diseno/marca/logo-la-comanda-corregida.html`. Leo sigue siendo la L con cara.
 
 ## 3 · Tokens: usa variables, nunca valores sueltos
 
