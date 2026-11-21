@@ -6,6 +6,88 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+- El alta comprueba el tema y la mensualidad antes de confirmar el restaurante.
+- El cobro manual exige cubrir el importe completo y permite corregir un monto rechazado desde el mismo formulario.
+- La CI reserva los puertos de Supabase y la ruta de salud identifica el commit desplegado en Render.
+
+## v0.31.0 · 2026-11-21 · Logo «La Comanda»
+PR #169 y #170 · **sin migraciones**.
+- **Leogin estrena logo: «La Comanda».** Una comanda coral con la L y el plato recortados, y el nombre «leogin» en minúscula. Un solo coral, el de la interfaz (`#C2542F`), sin degradados.
+  - Sale en la web, el panel, Mi cuenta, la billetera, el superadmin, el favicon, los iconos de la app web y el de «añadir a inicio» del iPhone.
+  - Debajo de 24 px va una versión chica. Los huecos son recortes de verdad: sobre una foto se ve la foto.
+  - Android pregunta una vez por el icono nuevo de la app instalada.
+- **El logo nuevo también llega a:** la película «Un solo lugar» de la portada, la intro de «Vende en línea», la intro de prueba (`/intro`), la ventana de ejemplo de Descargas, la firma de las imágenes para compartir (plato del día y «Tu año») y el arte del instalador de Leogin Desktop.
+- Los trazos viven en `plataforma/src/lib/marca/trazos.mjs`; los iconos salen de `scripts/marca/generar-iconos.mjs`.
+
+## v0.30.0 · 2026-11-20 · Editor en el teléfono, estados con foto y planes claros
+PR #167 · **sin migraciones**.
+- **El editor de platillo cabe en el teléfono.** «Toca alejar la pantalla» era el zoom automático del iPhone, que se activa al tocar un campo con letra menor de 16 px.
+  - En el teléfono todos los campos del panel tienen 16 px; en PC siguen igual.
+  - En las opciones y variantes, el precio y los botones pasan a la línea de abajo cuando no caben. Los botones de quitar miden 36 px.
+- **Los estados del día pueden usar la foto de un platillo.** En «Publicar estado» aparece «O usa la foto de un platillo», con buscador si hay más de 12. El estado queda enlazado a ese platillo. Solo salen fotos subidas al restaurante.
+- **Al crear un restaurante, cada plan dice en qué se distingue.**
+  - En línea: para empezar, con un usuario, tope de platillos y tope de pedidos al mes.
+  - Estándar: para crecer, sin tope de pedidos ni platillos, con más usuarios, corte de caja y reportes.
+  - Lo que incluye cada plan no cambió.
+
+## v0.29.0 · 2026-11-20 · «La carta que vende»: fase 4
+PR #165 · **sin migraciones**. Replanteamiento de la carta digital tras cerrar la auditoría: la entrada se había saturado; se ordena y se toman ideas de la auditoría de ChatGPT.
+- **Fase 4 de «La carta que vende»: ordenar la entrada y cerrar lo pendiente.**
+  - La entrada pasa de cinco capas a tres: la mesa en la cabecera, la lupa como primera píldora y «Lo más pedido» en una fila baja.
+  - En PC ya no hay barra de teléfono: Pedidos, Mis puntos y Cuenta van al pie del riel.
+  - La ficha se cierra deslizando, su total cuenta al cambiar una opción, y lo agotado lleva a su sección.
+  - El pedido de la mesa dice cuánto le toca a cada quien.
+  - Enlace legible por platillo (`?platillo=doble-bacon`) y vista previa general con el platillo estrella.
+  - Para el dueño: cómo queda la foto en la carta, una guía para describir sin IA y el aviso de Vitrina con carta larga.
+  - Pizarra abre varias secciones, Estantes avisa que la repisa sigue y corta en «Ver los N», y los destacados llevan el texto bajo la foto.
+  - Arreglo: escribir directo en la descripción de un platillo ya no pierde las teclas.
+
+## v0.28.0 · 2026-11-19 · «La carta que vende»: fase 3
+PR #163 · **migraciones 189 y 190** (sin ellas no hay estados ni pedido de la mesa y la carta funciona igual). Con esta versión la auditoría de la carta digital queda completa; la descripción asistida con IA (CV-35) quedó descartada por decisión del dueño.
+- **Fase 3 de «La carta que vende»: otro nivel.**
+  - Estados del día (24 h) arriba de la carta, que el dueño publica desde Menú.
+  - El pedido de la mesa: cada teléfono suma lo suyo y uno lo manda a cocina como un solo pedido. Viene apagado y se enciende en Ajustes → Salón.
+  - La ficha nace de la foto tocada.
+  - Vista de PC: categorías a la izquierda y «Tu pedido» a la derecha. Las píldoras del teléfono se ocultan en PC.
+  - La demo pública enseña el Rincón 502 real, con sus fotos.
+  - Búsqueda por antojo.
+  - Foto guiada al subir la de un platillo.
+  - El pedido en curso ya no flota sobre la carta.
+  - Una carta de más de 1,000 platillos ya no se corta en silencio.
+
+## v0.27.0 · 2026-11-19 · «La carta que vende»: fase 2
+PR #160 y #161 · **migración 188** (antes o después de desplegar; si falta, solo no se cuenta el embudo).
+- **Pedido de mesa sin nombre** (#160): se llama «Mesa N» en vez de rechazarse con «El nombre es requerido». El fallo estaba en producción desde v0.26.0.
+- **Fase 2 de «La carta que vende»: la carta vende.** Lleva la **migración 188**, que se puede aplicar antes o después de desplegar: si falta, solo no se cuenta el embudo.
+  - Cada platillo tiene su enlace (`?platillo=`), con su propia vista previa (foto, nombre y precio) y «Compartir» en la ficha.
+  - «Lo más pedido esta semana» con ventas reales.
+  - Precios de la carta sin «.00» y con la letra de la carta.
+  - «Pedir lo de la última vez».
+  - Embudo anónimo por canal (QR de mesa, enlace general y enlace de platillo) en Analítica.
+
+## v0.26.0 · 2026-11-19 · «La carta que vende»: fases 0 y 1
+PR #153, #154 y #157, fusionados juntos (apilados), más #156 contra `main` · **sin migración**.
+- Auditoría del menú digital «La carta que vende» (Claude): 8 estructuras medidas en producción a 320/390/1280 px, recorridos de compra, rendimiento con 4G lenta, 4 fallos P1 (recarga en la primera visita, carta vacía cacheada, aviso de Google al entrar, enlace sin vista previa), propuesta en seis piezas con maqueta interactiva y comparación con la auditoría de ChatGPT. [Auditoría](docs/auditorias/AUDITORIA_CARTA_QUE_VENDE_2026-11-18.md) · [maqueta](docs/diseno/MAQUETA_CARTA_QUE_VENDE_2026-11-18.html).
+- **Fase 0 de «La carta que vende»** (sin diseño nuevo, sin migración):
+  - La carta ya no se recarga sola en la primera visita.
+  - Una lectura fallida dice «No pudimos cargar la carta» en vez de enseñar un restaurante vacío durante un minuto.
+  - Se quitó el aviso de Google al entrar.
+  - Un enlace a la carta sin logo lleva tarjeta de vista previa con la paleta.
+  - «Agregar» funciona con teclado.
+  - Estantes ya no desborda en el teléfono.
+  - La búsqueda encuentra en inglés.
+  - Desaparece el «EST · 2024» inventado.
+  - Lo agotado se puede abrir y dice cuándo vuelve.
+- **Fase 1 de «La carta que vende»** (nada saturado, sin migración):
+  - La carta abre con una cabecera breve y la comida a la vista: el primer precio sube de ~1,000 px a menos de 450. La portada completa queda como opción del editor.
+  - Una sola barra abajo con el pedido y el mesero.
+  - «Cierra en 40 min» solo cuando cuenta.
+  - Sin el «El menú» repetido.
+  - Alérgenos en una línea.
+  - «Va bien con» con fotos.
+  - Checkout de mesa sin campos que no se usan.
+- **Next.js 16.4.3 → 16.4.6** (#156): cierra dos avisos moderados de caché de `'use cache'`, que Leogin no usaba.
+
 ## v0.25.0 · 2026-11-18 · Cierre de la Ola 2 y línea N «nada saturado»
 PR #137 a #146, fusionados juntos por #146 (apilados), más #144 contra `main` · **migración 187, antes de desplegar** (si falta, la cola del superadmin se ve sin estados y lo dice).
 - **Navegación por rol** (ficha 2.11, #137): si el trabajo cabe en cuatro casillas, la barra del teléfono nombra pantallas (caja, recepción, cocina); si no, Hoy · Pedidos · [+] · Menú · Más.

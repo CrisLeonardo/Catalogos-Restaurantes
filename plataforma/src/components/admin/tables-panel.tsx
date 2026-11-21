@@ -18,7 +18,7 @@ type Patch = Pick<ThemeConfig,
   'orderTypes' | 'dineInTableCount' | 'dineInCourseOptions' |
   'tipEnabled' | 'tipPercent' | 'acceptsCard' |
   'currencySymbol' | 'currencyPosition' | 'locale' | 'animations' | 'floorPlan'
->;
+> & Partial<Pick<ThemeConfig, 'pedidoDeMesa'>>;
 
 interface Props {
   restaurantId: string;
@@ -234,6 +234,23 @@ export default function TablesPanel({ restaurantId, slug, menuUrl, config: initi
             onCheckedChange={(on) => { set('orderTypes', toggleIn(patch.orderTypes, 'dine_in', on)); }}
           />
         </div>
+
+        {/* El pedido de la mesa (auditoría «La carta que vende», migración 190). */}
+        {dineInEnabled && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, paddingTop: 12, borderTop: '1px solid var(--u-hair)' }}>
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 500 }}>Pedido de la mesa</div>
+              <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2, lineHeight: 1.4 }}>
+                Cada quien suma lo suyo desde su teléfono y uno lo manda a cocina como un solo pedido.
+              </div>
+            </div>
+            <Switch
+              aria-label="Pedido de la mesa"
+              checked={patch.pedidoDeMesa === true}
+              onCheckedChange={(on) => set('pedidoDeMesa', on)}
+            />
+          </div>
+        )}
 
         {dineInEnabled && (
           <div style={{

@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { SiteHeader, SiteFooter, SectionHead } from '@/components/site-chrome';
 import { DesktopPlatformNotice } from '@/components/desktop-platform-notice';
+import { LeoginMark } from '@/components/leogin-logo';
+import { LEOGIN_CORAL, LEOGIN_CREMA } from '@/lib/marca/trazos.mjs';
 
 export const metadata: Metadata = {
   title: 'Leogin Desktop — la app de escritorio de tu restaurante',
@@ -278,11 +280,8 @@ function DesktopMockup() {
         <div className="lp-device-screen-desk" style={{ background: '#f4f4f6' }}>
           {/* Barra de título estilo Windows */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: '#fff', borderBottom: '1px solid rgba(23,22,26,0.08)' }}>
-            <span style={{ width: 16, height: 16, borderRadius: 4, background: '#1C1C1E', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-              <svg width="10" height="10" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                <defs><linearGradient id="dm-lg" x1="27" y1="19" x2="72" y2="81" gradientUnits="userSpaceOnUse"><stop stopColor="#E8534A" /><stop offset="1" stopColor="#F5A030" /></linearGradient></defs>
-                <path d="M27 19 h18 v44 h27 v18 H27 Z" fill="url(#dm-lg)" />
-              </svg>
+            <span style={{ width: 16, height: 16, borderRadius: 4, background: LEOGIN_CORAL, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+              <LeoginMark size={12} color={LEOGIN_CREMA} decorativa />
             </span>
             <span style={{ fontSize: 11, fontWeight: 650, color: 'rgba(23,22,26,0.62)' }}>Leogin</span>
             <span style={{ flex: 1 }} />

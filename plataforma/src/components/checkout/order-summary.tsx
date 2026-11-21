@@ -130,6 +130,7 @@ function CouponBox({ restaurantId, total, applied, onChange }: {
   const [code, setCode] = useState('');
   const [msg, setMsg] = useState('');
   const [checking, setChecking] = useState(false);
+  const [abierto, setAbierto] = useState(false);
 
   async function apply() {
     if (!code.trim()) return;
@@ -157,13 +158,22 @@ function CouponBox({ restaurantId, total, applied, onChange }: {
             Quitar
           </button>
         </div>
+      ) : !abierto ? (
+        /* El cupón en mayúsculas en primer plano (CV-17) le pedía algo a
+           todos para servirle a unos pocos: ahora es un enlace que lo abre. */
+        <button type="button" onClick={() => setAbierto(true)} className="press"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 'var(--m-tap)', padding: 0, background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--m-fs-sm)', fontWeight: 600, color: 'var(--u-text-2)' }}>
+          <Icon name="plus" size={15} /> ¿Tienes un cupón?
+        </button>
       ) : (
         <div style={{ display: 'flex', gap: 8 }}>
           <input
+            autoFocus
+            aria-label="Código del cupón"
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="¿Tienes un cupón?"
-            style={{ flex: 1, minHeight: 'var(--m-tap)', background: 'var(--surface-2)', border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 'max(16px, var(--m-fs-md))', outline: 'none', textTransform: 'uppercase' }}
+            placeholder="Código"
+            style={{ flex: 1, minWidth: 0, minHeight: 'var(--m-tap)', background: 'var(--surface-2)', border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 'max(16px, var(--m-fs-md))', outline: 'none' }}
           />
           <button type="button" onClick={apply} disabled={checking || !code.trim()} className="press" style={{ padding: '0 18px', minHeight: 'var(--m-tap)', background: 'var(--surface-3)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair)', cursor: 'pointer', fontSize: 'var(--m-fs-sm)', fontWeight: 600, color: 'var(--u-text)', opacity: checking || !code.trim() ? 0.6 : 1 }}>
             {checking ? '…' : 'Aplicar'}

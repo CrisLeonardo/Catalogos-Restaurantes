@@ -54,8 +54,11 @@ async function auth(): Promise<boolean> {
 export async function GET() {
   const [db, autenticacion] = await Promise.all([baseDeDatos(), auth()]);
   const ok = db && autenticacion;
+  const headers = new Headers({ 'Cache-Control': 'no-store' });
+  const commit = process.env.RENDER_GIT_COMMIT;
+  if (commit && /^[a-f0-9]{40}$/i.test(commit)) headers.set('X-Leogin-Commit', commit);
   return Response.json(
     { ok, baseDeDatos: db, auth: autenticacion },
-    { status: ok ? 200 : 503, headers: { 'Cache-Control': 'no-store' } },
+    { status: ok ? 200 : 503, headers },
   );
 }

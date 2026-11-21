@@ -49,6 +49,13 @@ export type ResumeSession = {
  * Y como en un aparato de confianza el "Continuar como" de un dueño se
  * esconde, la sesión viva del segundo ni siquiera se ofrecía.
  */
+/** Mismo criterio que `resolveStaffDestination`: ¿su destino es Mi cuenta (o /super)? */
+async function casaEsMiCuenta(role: string): Promise<boolean> {
+  if (role === 'SUPER_ADMIN') return true;
+  const memberships = await getMyMemberships();
+  return memberships.some((m) => m.role === 'OWNER') || memberships.length > 1;
+}
+
 export async function getBareLoginSlug(deviceRestaurantId: string | null): Promise<string | null> {
   let restaurantId = deviceRestaurantId;
   try {
@@ -59,10 +66,23 @@ export async function getBareLoginSlug(deviceRestaurantId: string | null): Promi
         const supabase = await createClient();
         const { data: profile } = await supabase
           .from('profiles')
-          .select('restaurant_id')
+          .select('role, restaurant_id')
           .eq('id', user.id)
           .single();
-        if (profile?.restaurant_id) restaurantId = profile.restaurant_id as string;
+        /* Quien tiene Mi cuenta como casa (dueño, super admin, quien trabaja en
+           varios locales) no tiene UN restaurante: el «de casa» de su perfil es
+           solo el primero que creó. Mandarlo ahí lo dejaba en el login de ese
+           local aunque viniera de trabajar en otro (reportado 2026-11-21).
+           Sin slug, el login le ofrece «Continuar como» → Mi cuenta.
+           La pista del APARATO sí se respeta: si este aparato es de un local
+           (entró con PIN alguna vez), manda su grilla de PIN, que es lo que
+           protege la PC de caja cuando el dueño la deja con su sesión abierta
+           (checklist 2026-08-25). */
+        if (profile && await casaEsMiCuenta(profile.role as string)) {
+          if (!deviceRestaurantId) return null;
+        } else if (profile?.restaurant_id) {
+          restaurantId = profile.restaurant_id as string;
+        }
       }
     }
   } catch {

@@ -244,6 +244,15 @@ export interface ThemeConfig {
   portadaShowLogo: boolean;
   portadaShowBadge: boolean;    // "Abierto ahora · Zona X"
   portadaShowStatus: boolean;   // el puntito que "respira"
+  /** La portada de pantalla completa de la plantilla. Apagado (por omisión),
+      la carta abre con la CABECERA BREVE —logo, nombre y lema en una franja—
+      y la comida hace de portada (auditoría «La carta que vende», CV-11).
+      Vitrina conserva su cartel siempre: ahí la portada sí vende. */
+  portadaCompleta?: boolean;
+  /** El pedido de la mesa (auditoría «La carta que vende», §5 pieza 5,
+      migración 190): con el QR de la mesa, cada teléfono suma lo suyo a una
+      lista compartida y uno la manda a cocina. Apagado: piloto por restaurante. */
+  pedidoDeMesa?: boolean;
 
   // ── Lienzo ──
   layoutWidth: LayoutWidth;     // ancho máximo del menú (móvil / ancho / revista)
@@ -368,7 +377,7 @@ export const ROLE_NATURAL_COLOR: Record<TypographyRole, string> = {
 export const ROLE_NATURAL_FONT: Record<TypographyRole, string> = {
   heading: 'var(--font-display)', poster: 'var(--font-poster)', serif: 'var(--font-serif)',
   kicker: 'var(--font-poster)', body: 'var(--ui-font-sans)', productName: 'var(--font-display)',
-  productDesc: 'var(--ui-font-sans)', price: 'var(--ui-font-mono)', button: 'var(--ui-font-sans)',
+  productDesc: 'var(--ui-font-sans)', price: 'var(--ui-font-sans)', button: 'var(--ui-font-sans)',
   tag: 'var(--ui-font-sans)',
 };
 
@@ -468,6 +477,8 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   portadaShowLogo: true,
   portadaShowBadge: true,
   portadaShowStatus: true,
+  portadaCompleta: false,
+  pedidoDeMesa: false,
 
   layoutWidth: 'movil',
 
@@ -665,7 +676,9 @@ export const DEFAULT_CONTENT: ThemeContent = {
     cta: 'Ver el menú',
     badgeOpen: 'Abierto ahora',
     badgeClosed: 'Cerrado ahora',
-    posterKicker: 'EST · 2024',
+    /* Vacío: antes era «EST · 2024» y se imprimía en restaurantes que nunca
+       escribieron su año (CV-08). Sólo aparece si el dueño lo escribe. */
+    posterKicker: '',
   },
   vitrina: {
     ticker: '',

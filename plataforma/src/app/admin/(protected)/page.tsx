@@ -45,6 +45,7 @@ import { panelBase } from '@/lib/panel-links-server';
 import { panelHref } from '@/lib/panel-links';
 import { fmtMoney } from '@/lib/money';
 import { ritmoDelDia } from '@/lib/ritmo-del-dia';
+import { slugPlatillo } from '@/lib/menu/enlace-platillo';
 
 export const metadata = { title: 'Hoy – Panel admin' };
 
@@ -264,15 +265,19 @@ export default async function AdminHomePage() {
   if (estrella && restaurantId && allow('catalogo')) {
     const { data: prod } = await createServiceClient()
       .from('products')
-      .select('image_url, price')
+      .select('id, image_url, price')
       .eq('restaurant_id', restaurantId)
       .eq('name', estrella.name)
-      .limit(1)
-      .maybeSingle();
+      .limit(2);
+    /* El enlace por nombre legible (F4-8) solo si el nombre no se repite;
+       si se repite, por código. */
+    const unico = prod?.length === 1 ? prod[0] : null;
+    const primero = prod?.[0];
     platoEstrella = {
+      id: unico ? slugPlatillo(estrella.name) || (unico.id as string) : ((primero?.id as string | undefined) ?? null),
       nombre: estrella.name,
-      precio: prod?.price != null ? fmt(Number(prod.price)) : null,
-      imagen: (prod?.image_url as string | null | undefined) ?? null,
+      precio: primero?.price != null ? fmt(Number(primero.price)) : null,
+      imagen: (primero?.image_url as string | null | undefined) ?? null,
     };
   }
   const marca: MarcaRestaurante | null = resolved

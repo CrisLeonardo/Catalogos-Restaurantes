@@ -70,10 +70,22 @@ export function useFormDirty(): FormDirty {
     // `input` cubre lo que se escribe; `change` cubre selects, checkboxes y
     // archivos. Los dos en captura: algunos componentes detienen la
     // propagación en su propia raíz.
-    const onAny = () => check();
+    //
+    // La medida va DESPUÉS del evento (setTimeout 0), nunca dentro. Este
+    // oyente corre antes que el de React (que escucha en la raíz), y el
+    // `setDirty` de la primera tecla pintaba de nuevo el formulario con el
+    // valor viejo de los campos controlados: la tecla se perdía, el
+    // formulario seguía «sin cambios» y así cada tecla. Escribir directo en
+    // la descripción de un platillo no hacía nada (2026-11-20).
+    let pendiente: ReturnType<typeof setTimeout> | null = null;
+    const onAny = () => {
+      if (pendiente) return;
+      pendiente = setTimeout(() => { pendiente = null; check(); }, 0);
+    };
     form.addEventListener('input', onAny, true);
     form.addEventListener('change', onAny, true);
     return () => {
+      if (pendiente) clearTimeout(pendiente);
       form.removeEventListener('input', onAny, true);
       form.removeEventListener('change', onAny, true);
     };

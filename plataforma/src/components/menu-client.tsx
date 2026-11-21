@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
@@ -20,15 +21,24 @@ import { useCart, carritoGuardadoTieneAlgo } from '@/lib/cart-context';
 import { getScannedTable, watchScannedTable, isStandaloneLaunch } from '@/lib/table-session';
 import { mesaExiste } from '@/lib/mesa-valida';
 import { isKioskMode } from '@/lib/kiosk';
-import { getMyAccount } from '@/lib/actions/loyalty';
 import { hasAnyHours, isOpenNow, type WeeklyHours } from '@/lib/hours';
-import { useThemeConfig } from '@/lib/theme/context';
+import { useThemeConfig, useThemeContent } from '@/lib/theme/context';
+import { formatPrice, formatPriceCarta } from '@/lib/theme/resolve';
 import { volarAlCarrito } from '@/lib/volar-al-carrito';
 import { isVitrina } from '@/lib/theme/defaults';
 import { sugerirAcompanantes } from '@/lib/menu-pairings';
 import type { Sugerencia } from '@/components/menu/pairings';
 import type { CartItem, Category, Product } from '@/types';
 import type { MenuReward } from '@/components/menu/rewards-section';
+import MasPedidos from '@/components/menu/mas-pedidos';
+import PedidoLateral from '@/components/menu/pedido-lateral';
+import Estados from '@/components/menu/estados';
+import type { EstadoDelDia } from '@/lib/db/estados';
+import { elegirMasPedidos } from '@/lib/menu/mas-pedidos';
+import { leerUltimoPedido, rearmarPedido, type PedidoRearmado } from '@/lib/menu/lo-de-siempre';
+import { abrirEmbudo, contarPaso } from '@/lib/menu/embudo';
+import { claveEnlace, resolverPlatillo } from '@/lib/menu/enlace-platillo';
+import type { MasPedido } from '@/lib/db/menu';
 
 /* Pantallas que solo existen cuando el comensal las abre (Mi cuenta, Mis
    pedidos, la invitación a la lealtad): se bajan al abrirlas, no con la
@@ -36,7 +46,6 @@ import type { MenuReward } from '@/components/menu/rewards-section';
    escanear un QR es el menú, no el formulario de su cuenta. */
 const AccountSheet = dynamic(() => import('@/components/menu/account-sheet'));
 const MyOrders = dynamic(() => import('@/components/my-orders'));
-const GoogleLoyaltyIntro = dynamic(() => import('@/components/menu/google-loyalty-intro'));
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon' | 'name_en'> & { availability?: WeeklyHours | null };
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'> & {
@@ -52,6 +61,12 @@ interface Props {
   restaurantId?: string;
   timezone?: string;
   llamadaMeseroEnabled?: boolean;
+  /** `?platillo=<id>`: el enlace de un platillo abre su ficha encima de la carta (CV-30). */
+  initialPlato?: string | null;
+  /** Ventas de la semana por platillo, para «Lo más pedido» (CV-31). */
+  masPedidos?: MasPedido[];
+  /** Estados del día vigentes (CV-32). */
+  estados?: EstadoDelDia[];
   initialMesa?: number;
   /** QR de una mesa que no existe en el local (1.12, M01): se avisa y no se guarda. */
   mesaInvalida?: number | null;
@@ -90,12 +105,14 @@ function hasOptions(p: ProdItem): boolean {
 
 export default function MenuClient({
   categories, products, ordersEnabled = false, restaurantId, timezone = 'America/Guatemala',
-  llamadaMeseroEnabled = false, initialMesa, mesaInvalida = null, loyaltyOn = false, rewardsCatalog = null,
+  llamadaMeseroEnabled = false, initialPlato = null, masPedidos = [], estados = [], initialMesa, mesaInvalida = null, loyaltyOn = false, rewardsCatalog = null,
   googleAuthEnabled = false, whatsappNumber = null,
   restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null,
 }: Props) {
-  const { items, addItem, qtyOfProduct } = useCart();
+  const { items, addItem, qtyOfProduct, total: cartTotal } = useCart();
   const [selected, setSelected] = useState<ProdItem | null>(null);
+  /** Por qué no se puede pedir el platillo abierto, si es el caso (CV-10). */
+  const [avisoAbierto, setAvisoAbierto] = useState<{ id: string; texto: string } | null>(null);
   /** «Cambiar» desde el carrito (1.11, M04): la línea que se está corrigiendo. */
   const [editando, setEditando] = useState<CartItem | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
@@ -106,8 +123,8 @@ export default function MenuClient({
   /** La mesa en la que está el comensal, para decírsela (1.12, M01). */
   const [mesaActual, setMesaActual] = useState<number | null>(null);
   const config = useThemeConfig();
+  const content = useThemeContent();
   const [authError, setAuthError] = useState(false);
-  const [googleIntroOpen, setGoogleIntroOpen] = useState(false);
   // MODO KIOSKO (autoservicio): dispositivo compartido del local. Se ocultan
   // cuenta/fidelidad/mis pedidos (datos personales de otros clientes) y los
   // avisos de Google; el pedido va directo al checkout de mostrador.
@@ -173,23 +190,10 @@ export default function MenuClient({
     return () => clearTimeout(t);
   }, [authError]);
 
-  // Aviso de una sola vez (primera visita a este restaurante) explicando que
-  // los puntos de fidelidad requieren sesión de Google. Se omite si ya hay
-  // sesión iniciada (getMyAccount) para no molestar a quien ya la usa.
-  useEffect(() => {
-    if (!restaurantId || !loyaltyOn || !googleAuthEnabled) return;
-    if (isKioskMode()) return; // kiosko: sin invitaciones a iniciar sesión
-    const key = `google-loyalty-intro-${restaurantId}`;
-    if (localStorage.getItem(key)) return;
-    let cancelled = false;
-    (async () => {
-      const acc = await getMyAccount(restaurantId).catch(() => null);
-      if (cancelled) return;
-      localStorage.setItem(key, '1');
-      if (!acc?.loggedIn) setGoogleIntroOpen(true);
-    })();
-    return () => { cancelled = true; };
-  }, [restaurantId, loyaltyOn, googleAuthEnabled]);
+  /* Antes, en la primera visita, un aviso «Gana puntos con Google» tapaba la
+     carta antes de ver un plato. Se quitó (auditoría «La carta que vende»,
+     CV-03): la invitación vive donde tiene sentido, en la confirmación del
+     pedido («Con tu cuenta, este pedido te daba N puntos») y en «Cuenta». */
 
   const count = items.reduce((s, i) => s + i.quantity, 0);
 
@@ -199,6 +203,28 @@ export default function MenuClient({
   const pairingsOn = ordersEnabled && config.suggestPairings !== false;
   // Vitrina: barra arriba con la bolsa, y abajo solo la bolsa (ver vitrina-bar.tsx).
   const vitrina = isVitrina(config);
+  /* La barra de abajo (navegación + pedido + mesero, CV-14). Se oculta con
+     una hoja abierta y en KIOSKO (cuenta, puntos y pedidos son datos
+     personales que no deben quedar a la vista en un aparato compartido). */
+  /* Embudo de la carta (CV-37): por qué puerta entró y hasta dónde llegó. */
+  useEffect(() => {
+    if (!restaurantId || demo) return;
+    abrirEmbudo(restaurantId, initialPlato ? 'platillo' : initialMesa && initialMesa > 0 ? 'mesa' : 'general');
+    // Solo al abrir la carta.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => { if (selected && restaurantId && !demo) contarPaso(restaurantId, 'ficha'); }, [selected, restaurantId, demo]);
+  useEffect(() => { if (count > 0 && restaurantId && !demo) contarPaso(restaurantId, 'agregar'); }, [count, restaurantId, demo]);
+
+  /* «Lo de siempre» (CV-33): solo en el cliente (vive en el aparato). */
+  const [deSiempre, setDeSiempre] = useState<PedidoRearmado | null>(null);
+  useEffect(() => {
+    if (!restaurantId || isKioskMode()) return;
+    const guardadas = leerUltimoPedido(restaurantId);
+    if (guardadas) setDeSiempre(rearmarPedido(guardadas, products));
+  }, [restaurantId, products]);
+  const destacadosVentas = useMemo(() => elegirMasPedidos(masPedidos, products), [masPedidos, products]);
+  const barraVisible = ordersEnabled && !demo && !vitrina && !selected && !cartOpen && !kiosk;
   const enCarrito = useMemo(() => items.map((i) => i.productId), [items]);
   const sheetPairings = useMemo(
     () => (pairingsOn && selected ? acompanantesPara([selected.id, ...enCarrito], products, categories, timezone) : []),
@@ -232,10 +258,9 @@ export default function MenuClient({
 
   /* «Atrás» y Esc cierran la hoja en vez de sacar del menú (ver
      use-hoja-en-historial.ts). El nombre va de la capa de ARRIBA hacia
-     abajo, en el mismo orden en que se pintan: el aviso de Google, las
-     pantallas completas (z 70), el carrito y la ficha del platillo. */
-  const hoja = googleIntroOpen ? 'google'
-    : pedidosOpen ? 'pedidos'
+     abajo, en el mismo orden en que se pintan: las pantallas completas
+     (z 70), el carrito y la ficha del platillo. */
+  const hoja = pedidosOpen ? 'pedidos'
     : accountOpen ? 'cuenta'
     : rewardsOpen ? 'puntos'
     : cartOpen ? 'carrito'
@@ -244,11 +269,10 @@ export default function MenuClient({
   useHojaEnHistorial({
     hoja,
     cerrarTodo: () => {
-      closeOverlays(); setCartOpen(false); setSelected(null); setGoogleIntroOpen(false);
+      closeOverlays(); setCartOpen(false); setSelected(null);
     },
     cerrarArriba: () => {
-      if (googleIntroOpen) setGoogleIntroOpen(false);
-      else if (pedidosOpen || accountOpen || rewardsOpen) closeOverlays();
+      if (pedidosOpen || accountOpen || rewardsOpen) closeOverlays();
       else if (cartOpen) setCartOpen(false);
       else setSelected(null);
     },
@@ -260,6 +284,19 @@ export default function MenuClient({
      persona espera aterrizar. Lo que ya no se puede reabrir (un platillo que
      se agotó, el aviso de Google) solo se olvida. */
   useEffect(() => {
+    /* EL PLATO COMO ANUNCIO (auditoría «La carta que vende», CV-30). Quien
+       toca el enlace de un platillo —un estado de WhatsApp, una historia—
+       aterriza con su ficha abierta encima de la carta, a un toque de
+       «Agregar». Agotado: la ficha lo dice (CV-10). Retirado: solo la carta.
+       El parámetro se quita para que cerrar o recargar no la reabra. */
+    if (initialPlato) {
+      const params = new URLSearchParams(window.location.search);
+      params.delete('platillo');
+      const qs = params.toString();
+      window.history.replaceState(window.history.state, '', window.location.pathname + (qs ? `?${qs}` : ''));
+      const anunciado = resolverPlatillo(initialPlato, products);
+      if (anunciado) { setSelected(anunciado); return; }
+    }
     const guardada = leerHojaGuardada();
     if (!guardada) return;
     const enKiosko = isKioskMode();
@@ -276,6 +313,11 @@ export default function MenuClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* El hueco de la cabecera breve (portada.tsx). Solo existe con la
+     variante «directo»; sin él, la mesa se dice en su franja de siempre. */
+  const [huecoMesa, setHuecoMesa] = useState<HTMLElement | null>(null);
+  useEffect(() => { setHuecoMesa(document.getElementById('m-cabecera-mesa')); }, []);
+
   return (
     <>
       {loyaltyOn && restaurantId && (
@@ -289,8 +331,20 @@ export default function MenuClient({
         />
       )}
 
-      {/* La mesa, dicha (M01): en qué mesa está o que el QR no corresponde. */}
-      {ordersEnabled && !demo && !kiosk && (mesaInvalida || (tableScanned && mesaActual)) && (
+      {/* La mesa, dicha (M01): en qué mesa está o que el QR no corresponde.
+          Con la cabecera breve, la mesa válida es una etiqueta dentro de ella
+          (fase 4, F4-1); la franja queda para el aviso de mesa inválida y
+          para las cartas con portada completa. */}
+      {ordersEnabled && !demo && !kiosk && !mesaInvalida && tableScanned && mesaActual && huecoMesa && createPortal(
+        <button type="button" className="press m-mesa-cabecera"
+          disabled={!config.pedidoDeMesa}
+          aria-label={config.pedidoDeMesa ? `Mesa ${mesaActual}: ver el pedido de la mesa` : `Estás en la mesa ${mesaActual}; tu pedido llega a esta mesa`}
+          onClick={config.pedidoDeMesa ? () => { closeOverlays(); setCartOpen(true); } : undefined}>
+          <Icon name="utensils" size={15} /> Mesa {mesaActual}
+        </button>,
+        huecoMesa,
+      )}
+      {ordersEnabled && !demo && !kiosk && (mesaInvalida || (tableScanned && mesaActual && !huecoMesa)) && (
         <div role={mesaInvalida ? 'alert' : 'status'} style={{
           display: 'flex', alignItems: 'flex-start', gap: 10, margin: '12px 0', padding: '10px 14px',
           borderRadius: 'var(--m-r-lg)', fontSize: 'var(--m-fs-sm)', lineHeight: 1.45, color: 'var(--u-text)',
@@ -300,8 +354,73 @@ export default function MenuClient({
           <Icon name={mesaInvalida ? 'alertCircle' : 'utensils'} size={18} style={{ flexShrink: 0, marginTop: 1, color: mesaInvalida ? 'var(--c-warn)' : 'var(--u-text-2)' }} />
           {mesaInvalida
             ? <span><strong>La mesa {mesaInvalida} no existe en {config.brandName || 'este local'}.</strong> Escanea el QR de tu mesa o pide ayuda al personal. Puedes ver el menú mientras tanto.</span>
-            : <span><strong>Mesa {mesaActual}</strong> · tu pedido llega a esta mesa</span>}
+            : <span style={{ flex: 1 }}><strong>Mesa {mesaActual}</strong> · tu pedido llega a esta mesa</span>}
+          {/* Pedido de la mesa: desde aquí se vuelve a la lista compartida
+              aunque el carrito propio esté vacío. */}
+          {!mesaInvalida && config.pedidoDeMesa && (
+            <button type="button" className="press" onClick={() => { closeOverlays(); setCartOpen(true); }}
+              style={{ flexShrink: 0, minHeight: 32, padding: '0 10px', borderRadius: 999, border: '1px solid var(--u-hair-2)', background: 'var(--surface-2)', color: 'var(--u-text)', fontWeight: 700, fontSize: 'var(--m-fs-xs)', cursor: 'pointer' }}>
+              Pedido de la mesa
+            </button>
+          )}
         </div>
+      )}
+
+      {/* El pedido en curso, como franja arriba de la carta (CV-14): antes
+          flotaba encima de las tarjetas y de la barra. */}
+      {ordersEnabled && restaurantId && !demo && !kiosk && !vitrina && (
+        <ActiveOrderChip restaurantId={restaurantId} enLinea />
+      )}
+
+      {/* Estados del día (CV-32): arriba de todo lo demás, como en WhatsApp. */}
+      {!vitrina && restaurantId && (
+        <Estados
+          restaurantId={restaurantId}
+          estados={estados}
+          nombre={config.brandName}
+          onPedir={(id) => {
+            const p = products.find((x) => x.id === id);
+            if (!p) return false;
+            setCartOpen(false); setAvisoAbierto(null); setSelected(p);
+            return true;
+          }}
+        />
+      )}
+
+      {/* «Lo de siempre» (CV-33): un toque y vuelve el pedido de la última vez,
+          con los precios de hoy. Solo con el carrito vacío: después estorba. */}
+      {ordersEnabled && !demo && !kiosk && !vitrina && count === 0 && deSiempre && deSiempre.lineas.length > 0 && (
+        <button
+          type="button"
+          className="press m-surface"
+          onClick={() => {
+            for (const l of deSiempre.lineas) addItem(l.item, l.quantity);
+            setCartOpen(true);
+          }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12, width: '100%', margin: '12px 0 0', padding: '12px 14px',
+            borderRadius: 'var(--m-r-lg)', cursor: 'pointer', color: 'var(--u-text)', textAlign: 'left', font: 'inherit',
+          }}
+        >
+          <span style={{ display: 'grid', placeItems: 'center', width: 38, height: 38, borderRadius: 999, background: 'var(--surface-3)', flexShrink: 0 }}>
+            <Icon name="rotate" size={18} />
+          </span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontWeight: 700, fontSize: 'var(--m-fs-md)' }}>Pedir lo de la última vez</span>
+            <span style={{ display: 'block', fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {deSiempre.lineas.map((l) => `${l.quantity}× ${l.item.name}`).join(' · ')}
+              {deSiempre.faltan > 0 ? ` · ${deSiempre.faltan} ya no está${deSiempre.faltan === 1 ? '' : 'n'}` : ''}
+            </span>
+          </span>
+          <span className="ct-price" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{formatPriceCarta(deSiempre.total, config)}</span>
+        </button>
+      )}
+
+      {!vitrina && (
+        <MasPedidos
+          items={destacadosVentas}
+          onOpen={(p) => { setCartOpen(false); setAvisoAbierto(null); setSelected(p); }}
+        />
       )}
 
       <Catalog
@@ -311,7 +430,27 @@ export default function MenuClient({
         timezone={timezone}
         qtyOf={qtyOfProduct}
         onAdd={onAdd}
-        onOpen={(p) => { setCartOpen(false); setSelected(p); }}
+        onOpen={(p, aviso) => { setCartOpen(false); setAvisoAbierto(aviso ? { id: p.id, texto: aviso } : null); setSelected(p); }}
+        pieRiel={barraVisible ? (
+          /* En PC la barra del teléfono se va (fase 4, F4-4): lo que llevaba
+             pasa al pie del riel. Solo se ve donde el riel y «Tu pedido»
+             caben a la vez (globals.css, `.m-pc-pie`). */
+          <>
+            {ordersEnabled && (
+              <button type="button" className="m-pc-rail-item" aria-current={activeTab === 'pedidos' ? 'page' : undefined} onClick={openPedidos}>
+                <Icon name="receipt" size={16} /><span>Pedidos</span>
+              </button>
+            )}
+            {loyaltyOn && (
+              <button type="button" className="m-pc-rail-item" aria-current={activeTab === 'fidelidad' ? 'page' : undefined} onClick={openRewards}>
+                <Icon name="star" size={16} /><span>Mis puntos</span>
+              </button>
+            )}
+            <button type="button" className="m-pc-rail-item" aria-current={activeTab === 'cuenta' ? 'page' : undefined} onClick={openAccount}>
+              <Icon name="user" size={16} /><span>Cuenta</span>
+            </button>
+          </>
+        ) : null}
       />
 
       {ordersEnabled && <div style={{ height: count > 0 ? 88 : 24 }} />}
@@ -322,6 +461,12 @@ export default function MenuClient({
           product={selected}
           icon={selected.icon || catIcon.get(selected.category_id ?? '') || 'utensils'}
           ordersEnabled={ordersEnabled}
+          aviso={avisoAbierto?.id === selected.id ? avisoAbierto.texto : null}
+          enlace={claveEnlace(selected, products)}
+          categoria={(() => {
+            const c = categories.find((x) => x.id === selected.category_id);
+            return c && categories.length > 1 ? { id: c.id, nombre: c.name } : null;
+          })()}
           acompanantes={editando ? [] : sheetPairings}
           linea={editando ?? undefined}
           onClose={() => {
@@ -345,7 +490,9 @@ export default function MenuClient({
       )}
       {ordersEnabled && (vitrina
         ? !selected && !cartOpen && <VitrinaBag onOpen={() => setCartOpen(true)} />
-        : !selected && !cartOpen && <CartBar onOpen={() => setCartOpen(true)} navigationVisible={!demo && !kiosk} />)}
+        // Con la barra de abajo a la vista, el pedido vive DENTRO de ella
+        // (CV-14); el botón suelto queda para la demo y el kiosko.
+        : !selected && !cartOpen && (demo || kiosk) && <CartBar onOpen={() => setCartOpen(true)} navigationVisible={false} />)}
       {ordersEnabled && cartOpen && (
         <CartPanel
           sugerencias={cartPairings}
@@ -358,22 +505,45 @@ export default function MenuClient({
             setSelected(producto);
           }}
           onPedirDemo={demo ? () => { setCartOpen(false); setDemoOpen(true); } : undefined}
+          mesaCompartida={!demo && !kiosk && restaurantId && tableScanned && mesaActual && config.pedidoDeMesa ? { restaurantId, mesa: mesaActual } : null}
         />
       )}
       {demo && <PedidoDemo open={demoOpen} onClose={() => setDemoOpen(false)} />}
-      {ordersEnabled && restaurantId && !demo && !selected && !cartOpen && !kiosk && (
+      {/* Vitrina conserva su aviso flotante; las demás lo llevan en la carta. */}
+      {ordersEnabled && restaurantId && !demo && !selected && !cartOpen && !kiosk && vitrina && (
         <ActiveOrderChip restaurantId={restaurantId} />
       )}
 
-      {llamadaMeseroEnabled && restaurantId && tableScanned && !selected && !cartOpen && !kiosk && (
-        <WaiterCallButton restaurantId={restaurantId} raised={ordersEnabled && count > 0} />
+      {/* Sin barra de abajo (carta sin pedidos en línea), el mesero sigue
+          flotando; con barra, es una sección de ella (CV-14). */}
+      {llamadaMeseroEnabled && restaurantId && tableScanned && !selected && !cartOpen && !kiosk && !barraVisible && (
+        <WaiterCallButton restaurantId={restaurantId} />
       )}
 
       {/* Barra de navegación inferior — se oculta cuando hay un sheet de producto
           o carrito abierto, y en KIOSKO (cuenta/fidelidad/pedidos son datos
           personales que no deben quedar a la vista en un aparato compartido). */}
-      {ordersEnabled && !demo && !vitrina && !selected && !cartOpen && !kiosk && (
+      {/* En PC, el pedido siempre a la vista a la derecha de la carta (CV-19). */}
+      {barraVisible && <PedidoLateral onVer={() => { closeOverlays(); setCartOpen(true); }} />}
+
+      {/* En PC, con la barra fuera, el mesero vuelve a su botón propio. */}
+      {barraVisible && llamadaMeseroEnabled && restaurantId && tableScanned && !selected && !cartOpen && (
+        <div className="m-mesero-pc"><WaiterCallButton restaurantId={restaurantId} /></div>
+      )}
+
+      {barraVisible && (
+        <div className="m-barra-telefono">
         <BottomNav
+          pedido={count > 0 ? {
+            count,
+            importe: formatPrice(cartTotal, config),
+            label: content.cart.barCta,
+            ariaLabel: `${content.cart.barCta} · ${count} ${count === 1 ? content.cart.itemsOne : content.cart.itemsMany} · ${formatPrice(cartTotal, config)}`,
+            onOpen: () => { closeOverlays(); setCartOpen(true); },
+          } : null}
+          mesero={llamadaMeseroEnabled && restaurantId && tableScanned
+            ? <WaiterCallButton restaurantId={restaurantId} enBarra />
+            : null}
           active={activeTab}
           ordersEnabled={ordersEnabled}
           loyaltyOn={loyaltyOn}
@@ -382,6 +552,7 @@ export default function MenuClient({
           onSelectFidelidad={openRewards}
           onSelectCuenta={openAccount}
         />
+        </div>
       )}
 
       {/* Distintivo discreto del modo kiosko (confirma al staff que quedó activo) */}
@@ -456,11 +627,6 @@ export default function MenuClient({
             </button>
           </Glass>
         </div>
-      )}
-
-      {/* Aviso de primera visita: fidelidad requiere sesión de Google */}
-      {googleIntroOpen && (
-        <GoogleLoyaltyIntro onClose={() => setGoogleIntroOpen(false)} />
       )}
     </>
   );

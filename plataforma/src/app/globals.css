@@ -951,7 +951,11 @@ html[data-scheme="light"] .btn-white {
 }
 .themed-type .t-mono,
 .ct-price {
-  font-family:    var(--t-price-family, var(--ui-font-mono));
+  /* La letra de la carta con cifras tabulares, no la de máquina de escribir
+     (CV-18): el precio se veía técnico. Una plantilla que eligió letra para
+     los precios la sigue mandando por --t-price-family. */
+  font-family:    var(--t-price-family, var(--ui-font-sans));
+  font-variant-numeric: tabular-nums;
   font-weight:    var(--t-price-weight, 600);
   font-style:     var(--t-price-style, normal);
   letter-spacing: var(--t-price-tracking, -0.01em);
@@ -1145,6 +1149,145 @@ html[data-scheme="light"] .btn-white {
 .opt-hint[data-required="1"] { color: var(--c-warn); }
 
 .opt-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Estados del día (CV-32): la barra del que se está viendo se llena en 5 s. */
+@keyframes estado-avance { from { width: 0%; } to { width: 100%; } }
+/* «Tu pedido» a la derecha de la carta en PC (CV-19). La carta no se
+   ensancha: el panel ocupa el hueco que sobra a su derecha y solo existe
+   cuando cabe (carta de 460 px desde 1180 de ventana; de 760, desde 1400). */
+.m-pedido-lateral.m-surface {
+  /* `.m-surface` (más abajo) pone position: relative: de ahí el doble selector. */
+  display: none;
+  position: fixed; top: 24px; z-index: 30;
+  left: calc(50% + var(--menu-max, 460px) / 2 + 24px);
+  width: 300px; max-height: calc(100dvh - 24px - var(--m-nav-h, 76px) - 24px);
+  flex-direction: column; gap: 12px; padding: 18px;
+  border-radius: var(--m-r-xl); color: var(--u-text);
+}
+@media (min-width: 1180px) { html[data-canvas="movil"] .m-pedido-lateral.m-surface { display: flex; } }
+@media (min-width: 1400px) { html[data-canvas="ancho"] .m-pedido-lateral.m-surface { display: flex; } }
+
+/* Vista de PC (CV-19): las categorías en un riel a la IZQUIERDA de la carta,
+   simétrico al pedido de la derecha. Cuando el riel cabe, las píldoras y el
+   índice de arriba (pensados para el pulgar) se van: en PC sobran. */
+.m-pc-rail.m-surface {
+  display: none;
+  position: fixed; top: 24px; z-index: 30;
+  right: calc(50% + var(--menu-max, 460px) / 2 + 24px);
+  width: 220px; max-height: calc(100dvh - 24px - var(--m-nav-h, 76px) - 24px); overflow-y: auto;
+  flex-direction: column; gap: 2px; padding: 10px;
+  border-radius: var(--m-r-xl);
+}
+/* Sólidos, con la misma superficie que la barra de abajo: sobre un fondo
+   con foto o degradado, `.m-surface` dejaba el texto sin contraste. */
+.m-pc-rail.m-surface, .m-pedido-lateral.m-surface {
+  background: color-mix(in srgb, var(--brand-bg) 93%, var(--brand-text));
+  border: 1px solid var(--u-hair);
+  box-shadow: 0 10px 28px -14px rgb(0 0 0 / 0.45), 0 2px 6px -2px rgb(0 0 0 / 0.12);
+}
+.m-pc-rail-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 0 12px;
+  border: none; border-radius: var(--m-r-md); background: none; cursor: pointer; text-align: left;
+  font: inherit; font-size: var(--m-fs-sm); font-weight: 600; color: var(--u-text-2);
+}
+.m-pc-rail-item > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (hover: hover) { .m-pc-rail-item:hover { background: var(--surface-3); color: var(--u-text); } }
+.m-pc-rail-item[aria-current="true"] { background: var(--u-text); color: var(--brand-bg); }
+.m-pc-rail-item[data-dim="1"]:not([aria-current="true"]) { opacity: 0.6; }
+.m-pc-rail-item:focus-visible { outline: 2px solid var(--brand-accent-ink, var(--brand-accent)); outline-offset: 2px; }
+/* Lupa en la fila (fase 4, F4-2): plegado, el campo no se ve en el
+   teléfono; en PC, donde el riel oculta la fila, se ve siempre. */
+.m-busca-fila[data-plegable] { display: none !important; }
+.m-chip-lupa { flex-shrink: 0; width: 44px; min-width: 44px; padding: 0 !important; justify-content: center; }
+@media (min-width: 1180px) {
+  html[data-canvas="movil"] .m-pc-rail.m-surface { display: flex; }
+  html[data-canvas="movil"] .m-nav-movil { display: none !important; }
+  html[data-canvas="movil"] .m-busca-fila[data-plegable] { display: block !important; }
+}
+/* Carta ancha (760 px): el riel (244 px) cabe desde 1280; el pedido, desde 1400. */
+@media (min-width: 1280px) {
+  html[data-canvas="ancho"] .m-pc-rail.m-surface { display: flex; }
+  html[data-canvas="ancho"] .m-nav-movil { display: none !important; }
+}
+/* PC sin barra de teléfono (fase 4, F4-4). Donde caben el riel y «Tu
+   pedido», la barra de abajo se va: el pedido vive a la derecha y
+   Pedidos, Mis puntos y Cuenta en el pie del riel. Entre 1280 y 1400 la
+   carta ancha no tiene «Tu pedido» y la barra se queda. */
+.m-pc-pie { display: none; flex-direction: column; gap: 2px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--u-hair); }
+.m-mesero-pc { display: none; }
+@media (min-width: 1180px) {
+  html[data-canvas="movil"] .m-pc-pie, html[data-canvas="movil"] .m-mesero-pc { display: flex; }
+  html[data-canvas="movil"] .m-barra-telefono { display: none; }
+  html[data-canvas="movil"] .m-pc-rail.m-surface, html[data-canvas="movil"] .m-pedido-lateral.m-surface { max-height: calc(100dvh - 48px); }
+}
+@media (min-width: 1400px) {
+  html[data-canvas="ancho"] .m-pc-pie, html[data-canvas="ancho"] .m-mesero-pc { display: flex; }
+  html[data-canvas="ancho"] .m-barra-telefono { display: none; }
+  html[data-canvas="ancho"] .m-pc-rail.m-surface, html[data-canvas="ancho"] .m-pedido-lateral.m-surface { max-height: calc(100dvh - 48px); }
+}
+/* «Va bien con» (CV-16): piezas pequeñas con foto en un carril. Sólidas,
+   con la paleta del restaurante; marcada = borde y marca de tinta. */
+.m-acomp { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 4px; scroll-snap-type: x proximity; }
+.m-acomp-pieza {
+  flex: 0 0 112px; scroll-snap-align: start;
+  display: flex; flex-direction: column; gap: 4px; padding: 0 0 10px; text-align: left;
+  border-radius: var(--m-r-md); border: 1px solid var(--u-hair); background: var(--surface-2);
+  color: var(--u-text); font: inherit; cursor: pointer; overflow: hidden;
+  transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out);
+}
+.m-acomp-pieza[data-on="1"] { border-color: var(--u-text); background: var(--surface-3); }
+.m-acomp-foto {
+  position: relative; display: grid; place-items: center; height: 76px;
+  background: var(--surface-3); color: var(--u-text-3);
+}
+.m-acomp-marca {
+  position: absolute; right: 6px; bottom: 6px; display: grid; place-items: center;
+  width: 26px; height: 26px; border-radius: 999px;
+  background: var(--brand-bg); color: var(--u-text); border: 1px solid var(--u-hair-2);
+}
+.m-acomp-pieza[data-on="1"] .m-acomp-marca { background: var(--u-text); color: var(--brand-bg); border-color: var(--u-text); }
+.m-acomp-nombre {
+  padding: 0 10px; font-size: var(--m-fs-sm); font-weight: 600; line-height: 1.25;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.m-acomp-precio { padding: 0 10px; font-size: var(--m-fs-xs); color: var(--u-text-2); font-variant-numeric: tabular-nums; }
+.m-acomp-pieza:focus-visible { outline: 2px solid var(--brand-accent-ink, var(--brand-accent)); outline-offset: 2px; }
+/* Estantes (fase 4, F4-14): mientras la repisa sigue, su borde derecho se
+   desvanece; al llegar al final, nítido. «Ver los N» cierra una repisa larga. */
+.m-repisa:not([data-fin]) {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+}
+.m-repisa-mas {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  min-height: 160px; border-radius: var(--m-r-lg); border: 1px dashed var(--u-hair-2);
+  background: var(--surface-2); color: var(--u-text); font: inherit; font-size: var(--m-fs-sm); font-weight: 700; cursor: pointer;
+}
+.m-repisa-mas:focus-visible { outline: 2px solid var(--brand-accent-ink, var(--brand-accent)); outline-offset: 2px; }
+/* Control de dos posiciones de la carta (pedido de la mesa, F4-7). */
+.m-segmento { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--u-hair); }
+.m-segmento > button {
+  flex: 1; min-height: 40px; border: none; border-radius: 999px; background: none; cursor: pointer;
+  font: inherit; font-size: var(--m-fs-sm); font-weight: 700; color: var(--u-text-2);
+}
+.m-segmento > button[aria-pressed="true"] { background: var(--u-text); color: var(--brand-bg); }
+.m-segmento > button:focus-visible { outline: 2px solid var(--brand-accent-ink, var(--brand-accent)); outline-offset: 2px; }
+/* La mesa en la cabecera breve (fase 4, F4-1). Con el pedido de la mesa
+   encendido es un botón que abre la lista; si no, solo lo dice. */
+.m-mesa-cabecera {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px;
+  min-height: 40px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--u-hair-2); background: var(--surface-2); color: var(--u-text);
+  font: inherit; font-size: var(--m-fs-sm); font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.m-mesa-cabecera:disabled { cursor: default; opacity: 1; }
+.m-mesa-cabecera:focus-visible { outline: 2px solid var(--brand-accent-ink, var(--brand-accent)); outline-offset: 2px; }
+/* «Lo más pedido» en fila baja (fase 4, F4-3): ≈80 px en vez de 190. */
+.m-mp-pieza { flex: 0 0 216px; flex-direction: row; align-items: center; gap: 10px; padding: 8px; }
+.m-mp-foto { flex: 0 0 64px; width: 64px; height: 64px; border-radius: calc(var(--m-r-md) - 4px); overflow: hidden; }
+.m-mp-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.m-mp-texto .m-acomp-nombre, .m-mp-texto .m-acomp-precio { padding: 0; }
+.m-mp-texto .m-acomp-precio { color: var(--u-text); font-weight: 700; }
+.m-mp-dato { font-size: var(--m-fs-xs); color: var(--u-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .opt-pill {
   display: inline-flex; align-items: center; gap: 7px;
   min-height: 42px; padding: 9px 15px; border-radius: var(--radius-full);
@@ -1274,7 +1417,17 @@ html[data-scheme="light"] .m-surface {
 /* Agotado: se ve, no se pide. La opacidad NO baja de 0.72 — por debajo, la
    descripción deja de pasar el contraste mínimo y el plato es ilegible en vez
    de "no disponible". */
-.m-surface[data-unavailable="1"] { opacity: 0.72; cursor: default; }
+.m-surface[data-unavailable="1"] { opacity: 0.72; }
+/* El botón «Ver …» de cada pieza (CV-05): invisible, pero alcanzable con
+   Tab; cuando tiene el foco, el anillo se dibuja en la tarjeta entera. */
+.m-surface-abrir {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+:has(> .m-surface-abrir:focus-visible) {
+  outline: 2px solid var(--brand-accent-ink, var(--brand-accent));
+  outline-offset: 2px;
+}
 
 /* ── Tarjeta de platillo (rejilla) ────────────────────────── */
 /* SIN `height: 100%`. Esto costo encontrarlo y es la causa de que la carta
@@ -2557,7 +2710,10 @@ textarea.adm-field { resize: vertical; line-height: 1.5; min-height: 72px; }
 select.adm-field { cursor: pointer; }
 .adm-field-sm { min-height: 34px; padding: 7px 10px; font-size: 13px; }
 .adm-field-lg { min-height: 46px; padding: 12px 14px; font-size: 16px; }
-@media (max-width: 767px) { .adm-field:not(.adm-field-sm) { font-size: 16px; } }
+/* En el teléfono TODO campo va a 16 px, también los pequeños: con menos,
+   iOS acerca la pantalla al tocarlo y hay que alejarla a mano (editor de
+   platillo: opciones y combos, 2026-11-20). */
+@media (max-width: 767px) { .adm-field { font-size: 16px; } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
@@ -2653,8 +2809,18 @@ select.adm-field { cursor: pointer; }
     [data-mfx="fila"]     { animation-name: m-aparece; animation-range: entry 0% entry 55%; }
     /* Revista: cada pieza se asienta. */
     [data-mfx="mosaico"]  { animation-name: m-asienta; }
-    /* Estantes: la repisa entera entra deslizándose. */
-    [data-mfx="carrusel"] { animation-name: m-desliza; animation-range: entry 0% entry 60%; }
+    /* Estantes: las piezas de la repisa entran deslizándose. Se mueven las
+       piezas DENTRO de la repisa y no la repisa: una repisa corrida 56 px a
+       la derecha se salía de la pantalla y, en el teléfono, ensanchaba la
+       página entera (376 px a 320, 446 a 390; auditoría «La carta que
+       vende», CV-06). La repisa ya recorta lo suyo (es un carril con scroll),
+       así que el deslizamiento se ve igual sin empujar nada afuera. */
+    [data-mfx="carrusel"] { animation: none; view-timeline: --repisa block; }
+    [data-mfx="carrusel"] > * {
+      animation: m-desliza linear both;
+      animation-timeline: --repisa;
+      animation-range: entry 0% entry 60%;
+    }
     /* Vitrina: una pieza por pantalla, que sube como un cartel. */
     [data-mfx="pieza"]    { animation-name: m-pieza; animation-range: entry 0% cover 32%; }
 

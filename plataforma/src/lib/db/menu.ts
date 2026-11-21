@@ -1,4 +1,5 @@
 import { cache } from 'react';
+import { porBloques } from '@/lib/db/por-bloques';
 import { unstable_cache } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
@@ -103,11 +104,14 @@ export const getMenuData = cache(
         .eq('restaurant_id', restaurantId)
         .eq('is_active', true)
         .order('sort_order'),
-      supabase
+      // Por bloques: PostgREST corta en 1,000 filas sin avisar (CV-09).
+      porBloques<Record<string, unknown>>((desde, hasta) => supabase
         .from('products')
         .select(MENU_QUERY_COLUMNS)
         .eq('restaurant_id', restaurantId)
-        .order('sort_order'),
+        .order('sort_order')
+        .order('id')
+        .range(desde, hasta)),
     ]);
 
     return {
@@ -127,24 +131,46 @@ export const getMenuData = cache(
  * Invalidar con revalidateTag(`menu:${restaurantId}`) en toda acción que
  * cree/edite/borre/reordene productos o categorías.
  */
+/** La carta pública no se pudo leer (no confundir con «no hay platos»). */
+export class LecturaMenuFallida extends Error {
+  constructor(restaurantId: string) {
+    super(`No se pudo leer la carta del restaurante ${restaurantId}`);
+    this.name = 'LecturaMenuFallida';
+  }
+}
+
 export function getMenuDataCached(restaurantId: string): Promise<MenuData> {
   return unstable_cache(
     async () => {
       const db = createServiceClient();
-      const [{ data: categories }, { data: products }] = await Promise.all([
+      const [cats, prods] = await Promise.all([
         db
           .from('categories')
           .select('id, name, name_en, icon, sort_order, availability')
           .eq('restaurant_id', restaurantId)
           .eq('is_active', true)
           .order('sort_order'),
-        db
+        // Por bloques: PostgREST corta en 1,000 filas sin avisar (CV-09).
+        porBloques<Record<string, unknown>>((desde, hasta) => db
           .from('products')
           .select(MENU_QUERY_COLUMNS)
           .eq('restaurant_id', restaurantId)
           .eq('is_active', true)
-          .order('sort_order'),
+          .order('sort_order')
+          .order('id')
+          .range(desde, hasta)),
       ]);
+      // Una lectura fallida NO es una carta vacía (CV-02): si se devolviera
+      // el vacío, `unstable_cache` lo guardaría 60 s y todo el que escaneara
+      // el QR vería un restaurante «sin nada». Lanzar evita la caché; quien
+      // llama decide qué enseñar (la carta pinta «No pudimos cargar»).
+      const fallo = cats.error ?? prods.error;
+      if (fallo) {
+        console.error('[menu] lectura pública fallida:', fallo.code ?? '', fallo.message ?? '');
+        throw new LecturaMenuFallida(restaurantId);
+      }
+      const categories = cats.data;
+      const products = prods.data;
 
       return {
         categories: (categories as Category[]) ?? [],
@@ -217,6 +243,42 @@ export function getWaiterCatalogCached(restaurantId: string): Promise<Omit<MenuD
  * aquí no viaja nada que el menú no enseñe ya. Una hora de caché: es una
  * sugerencia, no un reporte.
  */
+/** Unidades vendidas por platillo en los últimos 7 días, de más a menos. */
+export interface MasPedido { id: string; unidades: number }
+
+/**
+ * «LO MÁS PEDIDO» CON VENTAS REALES (auditoría «La carta que vende», CV-31)
+ * La semana y no el mes: «esta semana» es lo que se puede decir con verdad
+ * en la carta. Sin pedidos cancelados. En caché una hora, como la de abajo.
+ * Lectura fallida → [] (la tira simplemente no se pinta: es un extra).
+ */
+export function getMasPedidosSemanaCached(restaurantId: string): Promise<MasPedido[]> {
+  return unstable_cache(
+    async () => {
+      if (!/^[0-9a-f-]{36}$/i.test(restaurantId)) return [];
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const db = createServiceClient();
+      const { data, error } = await db
+        .from('order_items')
+        .select('product_id, quantity, order:orders!inner(restaurant_id, created_at, status)')
+        .eq('order.restaurant_id', restaurantId)
+        .gte('order.created_at', since)
+        .neq('order.status', 'CANCEL')
+        .not('product_id', 'is', null)
+        .limit(2000);
+      if (error || !data) return [];
+      const unidades = new Map<string, number>();
+      for (const row of data as { product_id: string | null; quantity: number }[]) {
+        if (!row.product_id) continue;
+        unidades.set(row.product_id, (unidades.get(row.product_id) ?? 0) + (Number(row.quantity) || 0));
+      }
+      return [...unidades.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([id, n]) => ({ id, unidades: n }));
+    },
+    ['mas-pedidos-semana', restaurantId],
+    { revalidate: 3600 },
+  )();
+}
+
 export function getTopSellingProductIdsCached(restaurantId: string): Promise<string[]> {
   return unstable_cache(
     async () => {

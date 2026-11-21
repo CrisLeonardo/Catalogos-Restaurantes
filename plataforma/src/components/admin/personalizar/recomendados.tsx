@@ -8,9 +8,12 @@ import { useMemo, type ReactNode } from 'react';
 import { Icon } from '@/components/icons';
 import { MiniCarta, type PlatoMuestra } from '@/components/admin/personalizar/muestra';
 import { esElActual, recomendaciones, type SenalesDeCarta } from '@/lib/theme/recomendaciones';
-import type { BuiltinTemplate } from '@/lib/theme/templates';
+import { structureOfConfig, type BuiltinTemplate } from '@/lib/theme/templates';
 import type { ThemeConfig } from '@/lib/theme/defaults';
 import s from './recomendados.module.css';
+
+/** Vitrina, un platillo por pantalla: hasta aquí se recorre cómodo. */
+const VITRINA_MAX = 15;
 
 function porQue({ total, conFoto }: SenalesDeCarta): string {
   if (total === 0) return 'Cuando agregues platillos, las muestras usarán los tuyos.';
@@ -40,6 +43,15 @@ export default function Recomendados({ senales, platos, nombre, logo, config, ap
         <div className="min-w-0 flex-1">
           <h2 id="recomendados-titulo" className={s.titulo}>Recomendados para tu carta</h2>
           <p className={s.porque}>{porQue(senales)}</p>
+          {/* Vitrina enseña un platillo por pantalla (auditoría «La carta que
+              vende» §4.3; fase 4, F4-10): con una carta larga hay que bajar
+              mucho. Se avisa; no se impide. */}
+          {structureOfConfig(config) === 'vitrina' && senales.total > VITRINA_MAX && (
+            <p role="status" className={s.porque} style={{ color: 'var(--c-warn)', fontWeight: 600, display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+              <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+              Tu carta tiene {senales.total} platillos y Vitrina enseña uno por pantalla: sirve hasta unos {VITRINA_MAX}. Con más, prueba «Rápida de pedir».
+            </p>
+          )}
         </div>
         {acciones}
       </div>

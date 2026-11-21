@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { warmAsset } from '@/lib/asset-image';
+import { avisosDeFoto, medirArchivo, TEXTO_AVISO, type AvisoFoto } from '@/lib/menu/calidad-foto';
 
 interface ImageUploadProps {
   restaurantId: string;
@@ -102,6 +103,10 @@ export default function ImageUpload({
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(currentUrl ?? null);
   const [error, setError] = useState<string | null>(null);
+  /* Foto guiada (CV-36): solo para fotos de platillos y estados. Avisa,
+     nunca impide subir. */
+  const guia = mode === 'photo' && (folder === 'products' || folder === 'estados');
+  const [avisos, setAvisos] = useState<AvisoFoto[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const objectUrlRef = useRef<string | null>(null);
 
@@ -136,6 +141,10 @@ export default function ImageUpload({
 
     // Preview inmediato
     setLocalPreview(URL.createObjectURL(file));
+    if (guia) {
+      setAvisos([]);
+      void medirArchivo(file).then((c) => setAvisos(c ? avisosDeFoto(c) : []));
+    }
 
     // Ícono PWA → PNG cuadrado 512×512; resto → comprimir webp.
     const upload = mode === 'icon'
@@ -235,6 +244,39 @@ export default function ImageUpload({
       <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
         {preview ? 'Toca para cambiar' : 'Toca para añadir foto'}
       </span>
+
+      {guia && !preview && (
+        <span style={{ fontSize: 12, color: 'var(--u-text-3)', maxWidth: 260, lineHeight: 1.4 }}>
+          El platillo al centro, desde arriba en diagonal (como al sentarte) y con luz de día. Es lo que más vende.
+        </span>
+      )}
+      {/* Marco de encuadre (fase 4, F4-12): cómo queda recortada en la carta.
+          No se recorta sola: cada estructura usa otra proporción, así que se
+          enseñan las dos que más se ven (tarjeta 3:2 y miniatura cuadrada). */}
+      {guia && preview && folder === 'products' && !uploading && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxWidth: 280 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text-2)' }}>Así se ve en la carta</span>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+            {[{ w: 132, h: 88, t: 'Tarjeta' }, { w: 64, h: 64, t: 'Lista' }].map((m) => (
+              <figure key={m.t} style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span aria-hidden style={{
+                  width: m.w, height: m.h, borderRadius: 10, border: '1px solid var(--u-hair-2)',
+                  backgroundColor: bgColor, backgroundImage: `url(${preview})`, backgroundSize: 'cover', backgroundPosition: 'center',
+                }} />
+                <figcaption style={{ fontSize: 11, color: 'var(--u-text-3)' }}>{m.t}</figcaption>
+              </figure>
+            ))}
+          </div>
+          <span style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.4 }}>Si el platillo queda cortado, tómala un poco más de lejos.</span>
+        </div>
+      )}
+      {guia && avisos.length > 0 && (
+        <ul role="status" style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4, maxWidth: 280 }}>
+          {avisos.map((a) => (
+            <li key={a} style={{ fontSize: 12, lineHeight: 1.4, color: 'var(--c-warn)' }}>{TEXTO_AVISO[a]}</li>
+          ))}
+        </ul>
+      )}
 
       {error && (
         <span style={{ fontSize: 12, color: 'var(--c-danger)' }}>{error}</span>

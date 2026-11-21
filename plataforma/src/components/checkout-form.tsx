@@ -16,6 +16,8 @@ import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { isValidGuatemalaPhone } from '@/lib/schemas';
 import { getScannedTable, clearScannedTable, watchScannedTable } from '@/lib/table-session';
 import { isKioskMode } from '@/lib/kiosk';
+import { guardarUltimoPedido } from '@/lib/menu/lo-de-siempre';
+import { contarPaso } from '@/lib/menu/embudo';
 import { useStableLinkPrefix } from '@/lib/tenant-client';
 import {
   NO_ZONE, haversineKm, buildWhatsAppUrl,
@@ -101,6 +103,8 @@ export default function CheckoutForm({
   const [kiosk, setKiosk] = useState(false);
   useEffect(() => {
     if (isKioskMode()) setKiosk(true);
+    contarPaso(restaurantId, 'checkout'); // embudo de la carta (CV-37)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const typeOptions = kiosk
@@ -177,6 +181,15 @@ export default function CheckoutForm({
   // DINE_IN: mesa y preferencia de servicio
   const [tableNumber, setTableNumber]         = useState<number | null>(null);
   const [coursePreference, setCoursePreference] = useState('');
+  /* CHECKOUT EN MESA (auditoría «La carta que vende», CV-17). Con el QR de
+     la mesa, el comensal veía «A domicilio» y «Para llevar», su nombre y
+     teléfono, cuatro preferencias de servicio y la nota antes del botón,
+     para pedir un solo plato. En mesa basta el pedido, la mesa y «Enviar»;
+     lo demás sigue a un toque en «Agregar nombre, nota o preferencia». */
+  const [detallesMesa, setDetallesMesa] = useState(false);
+  const [cambiarTipo, setCambiarTipo] = useState(false);
+  const enMesa = type === 'DINE_IN' && !!tableNumber && !kiosk;
+  const verDetalles = !enMesa || detallesMesa;
 
   // Geo: coordenadas del pin del cliente en el mapa
   const [deliveryLat, setDeliveryLat] = useState<number | undefined>(undefined);
@@ -394,6 +407,10 @@ export default function CheckoutForm({
     // siga "detectándose" en ella si vuelve a abrir el mismo enlace después.
     if (snap.orderTypeSnapshot === 'DINE_IN') clearScannedTable(restaurantId);
 
+    // «Lo de siempre» (CV-33): la próxima vez, este pedido a un toque. Nunca
+    // en el kiosko: el aparato es de todos.
+    if (!isKioskMode()) guardarUltimoPedido(restaurantId, items);
+    contarPaso(restaurantId, 'pedido');
     clearCart();
     setStep('success');
 
@@ -678,7 +695,7 @@ export default function CheckoutForm({
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Tipo de pedido */}
-        {typeOptions.length > 1 && (
+        {typeOptions.length > 1 && (!enMesa || cambiarTipo) && (
           <div>
             <label className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)', textShadow: labelShadow }}>{content.checkout.typeLabel}</label>
             <div className="glass-quiet" style={{ display: 'flex', padding: 4, borderRadius: 'var(--m-r-md)', marginTop: 'var(--m-sp-2)' }}>
@@ -709,6 +726,7 @@ export default function CheckoutForm({
         {/* autoComplete: deja que el teléfono rellene nombre y número de una
            vez. Para quien teclea con un dedo es la diferencia entre terminar
            el pedido y dejarlo a medias. */}
+        {verDetalles && (<>
         <Field
           label={type === 'DINE_IN' ? `${content.checkout.name} (opcional)` : content.checkout.name}
           icon="user" value={name} onChange={setName}
@@ -729,6 +747,7 @@ export default function CheckoutForm({
             Número válido ✓
           </p>
         )}
+        </>)}
 
         {/* ── DINE_IN: mesa asignada por QR (solo lectura) ── */}
         {type === 'DINE_IN' && (
@@ -770,7 +789,22 @@ export default function CheckoutForm({
         )}
 
         {/* ── DINE_IN: preferencia de servicio ── */}
-        {type === 'DINE_IN' && config.dineInCourseOptions.length > 0 && (
+        {enMesa && !detallesMesa && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+            <button type="button" onClick={() => setDetallesMesa(true)} className="press"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 'var(--m-tap)', padding: 0, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand-accent-ink, var(--u-text))', fontWeight: 600, fontSize: 'var(--m-fs-sm)' }}>
+              <Icon name="plus" size={16} /> Agregar nombre, nota o preferencia
+            </button>
+            {typeOptions.length > 1 && !cambiarTipo && (
+              <button type="button" onClick={() => setCambiarTipo(true)} className="press t-mute"
+                style={{ minHeight: 'var(--m-tap)', padding: 0, background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-3)', textDecoration: 'underline' }}>
+                ¿No estás en el local? Cambiar tipo de pedido
+              </button>
+            )}
+          </div>
+        )}
+
+        {type === 'DINE_IN' && verDetalles && config.dineInCourseOptions.length > 0 && (
           <div>
             <label className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)', textShadow: labelShadow }}>{content.checkout.courseLabel} <span style={{ color: 'var(--u-text-4)', fontWeight: 400 }}>(opcional)</span></label>
             <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 7 }}>
@@ -922,7 +956,7 @@ export default function CheckoutForm({
           />
         )}
 
-        <Field label={content.checkout.notes} value={notes} onChange={setNotes} placeholder={content.checkout.notesPh} />
+        {verDetalles && <Field label={content.checkout.notes} value={notes} onChange={setNotes} placeholder={content.checkout.notesPh} />}
 
         </FormSection>
 

@@ -7,7 +7,7 @@
      · config.catalogNav → cómo se recorre la carta
          'chips'      píldoras que filtran UNA categoría (el clásico)
          'secciones'  todas apiladas, scroll continuo + índice pegajoso
-         'acordeon'   categorías plegadas, se abre una a la vez
+         'acordeon'   categorías plegadas; se abren las que se quieran (F4-13)
          'portadas'   se elige categoría en tarjetas grandes y se entra
 
      · config.cardStyle → qué forma tiene cada platillo
@@ -21,8 +21,9 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import AssetImage from '@/components/asset-image';
 import { FEATURED_ART_SIZES, PRODUCT_ART_SIZES } from '@/lib/asset-image';
 import { Icon, ICON_PATHS } from '@/components/icons';
+import { EVENTO_IR_A_CATEGORIA } from '@/lib/menu/ir-a-categoria';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
-import { MenuSurface, Price, Tag, ctaClass } from '@/components/menu/ui';
+import { MenuSurface, AbrirPieza, Price, Tag, ctaClass } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { roleSize } from '@/lib/theme/resolve';
 import { LAYOUT_MIN_COL, isVitrina, type CardStyle, type LayoutWidth } from '@/lib/theme/defaults';
@@ -39,6 +40,8 @@ import { cuandoVuelveTexto, isUnavailable } from '@/lib/product-availability';
 import { esDestacado } from '@/lib/menu-pairings';
 import type { Category, Product } from '@/types';
 import { suggestIcon } from '@/lib/category-icon';
+import { antojosDisponibles, coincideAntojo, type AntojoId } from '@/lib/menu/antojos';
+import { marcarOrigen } from '@/lib/menu/origen-ficha';
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon' | 'name_en'> & { availability?: WeeklyHours | null };
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'> & {
@@ -220,11 +223,15 @@ interface CatalogProps {
   timezone?: string;
   qtyOf: (productId: string) => number;
   onAdd: (product: ProdItem, sourceEl: HTMLElement) => void;
-  onOpen: (product: ProdItem) => void;
+  /** `aviso`: si el plato no se puede pedir ahora, por qué (CV-10). */
+  onOpen: (product: ProdItem, aviso?: string | null) => void;
+  /** Pie del riel de PC (fase 4, F4-4): Pedidos, Mis puntos y Cuenta, que en
+      PC dejan la barra del teléfono. Lo arma menu-client. */
+  pieRiel?: React.ReactNode;
 }
 
 export default function Catalog({
-  categories, products, ordersEnabled, timezone = 'America/Guatemala', qtyOf, onAdd, onOpen,
+  categories, products, ordersEnabled, timezone = 'America/Guatemala', qtyOf, onAdd, onOpen, pieRiel = null,
 }: CatalogProps) {
   const config = useThemeConfig();
   const content = useThemeContent();
@@ -235,7 +242,22 @@ export default function Catalog({
   // `undefined` = el comensal aún no ha tocado el acordeón (abrimos la primera
   // sección por cortesía); `null` = lo cerró todo a propósito.
   const [openCat, setOpenCat] = useState<string | null | undefined>(undefined);
+  /* Pizarra (acordeón): varias secciones abiertas a la vez (auditoría «La
+     carta que vende» §4.3; fase 4, F4-13). `null` = aún no tocó nada: la
+     primera abierta por cortesía. `openCat` queda como la última abierta,
+     la que marca el riel de PC. */
+  const [abiertas, setAbiertas] = useState<ReadonlySet<string> | null>(null);
   const [query, setQuery] = useState('');
+  /* Búsqueda por antojo (CV-34): atajos al tocar la lupa. */
+  const [antojo, setAntojo] = useState<AntojoId | null>(null);
+  const [lupaAbierta, setLupaAbierta] = useState(false);
+  /* Lupa en la fila (fase 4, F4-2): en el teléfono, con píldoras o índice,
+     el buscador es la primera píldora y se despliega al tocarla. */
+  const [campoAbierto, setCampoAbierto] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // El cierre al perder el foco ocurre 180 ms después: lee el antojo vigente.
+  const antojoRef = useRef<AntojoId | null>(null);
+  useEffect(() => { antojoRef.current = antojo; }, [antojo]);
   const [spySection, setSpySection] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   useFotosAnticipadas(rootRef);
@@ -270,13 +292,19 @@ export default function Catalog({
     return m;
   }, [categories, timezone, now]);
 
-  // Busca en nombre, descripción y tags, ignorando acentos.
+  // Busca en nombre, descripción y tags, ignorando acentos — en los DOS
+  // idiomas siempre (CV-07): «lemonade» encuentra la limonada aunque la carta
+  // esté en español, y quien escribe «burger» también encuentra lo suyo.
   const q = fold(query.trim());
-  const searching = q.length > 0;
+  const antojos = useMemo(() => antojosDisponibles(products, config.currencySymbol), [products, config.currencySymbol]);
+  const umbral = antojos[0]?.umbral ?? null;
+  const searching = q.length > 0 || antojo !== null;
   const searched = useMemo(() => {
     if (!searching) return products;
-    return products.filter((p) => fold([p.name, p.description ?? '', ...(p.tags ?? [])].join(' ')).includes(q));
-  }, [products, q, searching]);
+    return products.filter((p) =>
+      (!q || fold([p.name, p.description ?? '', p.name_en ?? '', p.description_en ?? '', ...(p.tags ?? [])].join(' ')).includes(q))
+      && (!antojo || coincideAntojo(p, antojo, umbral)));
+  }, [products, q, searching, antojo, umbral]);
 
   /* ── Cómo se agrupan los platillos ──────────────────────────
      Buscar siempre aplana: quien escribe "coca" quiere resultados de TODA la
@@ -369,6 +397,13 @@ export default function Catalog({
 
   const sectionKeys = groups.map((g) => g.key).join('|');
   const openCatId = openCat === undefined ? (groups[0]?.key ?? null) : openCat;
+  const abiertasEf: ReadonlySet<string> = abiertas ?? new Set(groups[0] ? [groups[0].key] : []);
+  const abrirSeccion = (id: string, abrir: boolean) => {
+    const sig = new Set(abiertasEf);
+    if (abrir) sig.add(id); else sig.delete(id);
+    setAbiertas(sig);
+    setOpenCat(abrir ? id : openCatId === id ? null : openCatId);
+  };
 
   /* Índice pegajoso: resalta la sección que se está leyendo. Sin esto el índice
      es un menú de saltos mudo — no dice dónde estás, que es la mitad de su
@@ -403,6 +438,29 @@ export default function Catalog({
     sectionEls.current.get(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  /** Lleva a una sección con la navegación de la estructura: filtra
+      (píldoras, portadas), salta (secciones) o abre y salta (acordeón).
+      Lo usan el riel de PC y «Ver más de …» de la ficha (F4-6). */
+  function irA(id: string) {
+    setQuery(''); setAntojo(null); setCampoAbierto(false);
+    if (nav === 'secciones') { goToSection(id); return; }
+    if (nav === 'acordeon') {
+      abrirSeccion(id, true);
+      // Tras abrirla: el salto mide la sección ya desplegada.
+      setTimeout(() => goToSection(id), 60);
+      return;
+    }
+    setActiveCat(id);
+    rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  const irARef = useRef(irA);
+  useEffect(() => { irARef.current = irA; });
+  useEffect(() => {
+    const oir = (e: Event) => irARef.current((e as CustomEvent<string>).detail);
+    window.addEventListener(EVENTO_IR_A_CATEGORIA, oir);
+    return () => window.removeEventListener(EVENTO_IR_A_CATEGORIA, oir);
+  }, []);
+
   /* Medido en un teléfono de 375×812: el hero decía «Rincón 502», y 12 px
      más abajo este rótulo repetía «RINCÓN 502 · EL MENÚ» — justo debajo de
      un botón que acababa de decir «Ver el menú». Tres veces la misma palabra
@@ -417,15 +475,35 @@ export default function Catalog({
   const autoKicker = [config.brandName, config.zone].filter(Boolean).join(' · ');
   const brandAlreadyShown = config.portadaVariant !== 'none';
   const kicker = content.catalog.kicker || (brandAlreadyShown ? '' : autoKicker);
+  /* «El menú» (CV-12): ocupaba 60–80 px antes de la búsqueda para repetir lo
+     que ya dice la cabecera. La fila de categorías es el encabezado. Solo se
+     pinta un titular que el dueño ESCRIBIÓ («Cocina de mercado»). */
+  const tituloPropio = content.catalog.heading.trim().toLowerCase() !== 'el menú' ? content.catalog.heading.trim() : '';
 
   /* En tablet/escritorio el buscador sube a la misma línea del título: un campo
      de 1.000 px de ancho bajo el encabezado es lo que delata a un menú pensado
      solo para el teléfono y estirado a la fuerza. */
   const wide = width !== 'movil';
 
+  /* La lupa viaja en la fila de categorías (F4-2) solo donde hay fila: con
+     píldoras o índice, en el lienzo de teléfono. En Pizarra (acordeón) y
+     Kiosco (portadas) el campo se queda: no hay fila donde ponerla. En PC el
+     riel oculta la fila, así que allí el campo se ve siempre (globals.css,
+     `.m-busca-fila[data-plegable]`). */
+  const lupaEnFila = config.showSearch && !wide && !vitrina && categories.length > 1
+    && (nav === 'chips' || nav === 'secciones');
+  const campoPlegado = lupaEnFila && !campoAbierto && !searching;
+  const abrirCampo = () => {
+    setCampoAbierto(true);
+    // El campo se dibuja en el siguiente render; el foco abre el teclado.
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+  const cerrarCampo = () => { setQuery(''); setAntojo(null); setCampoAbierto(false); };
+
   const searchBox = config.showSearch ? (
     <div style={{ position: 'relative', width: '100%', maxWidth: wide ? 320 : undefined }}>
-      <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--u-text-3)' }}>
+      {/* Encima del campo: `.glass-quiet` lo posiciona y tapaba la lupa. */}
+      <span aria-hidden style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--u-text-3)', zIndex: 1, pointerEvents: 'none', display: 'flex' }}>
         <Icon name="search" size={17} />
       </span>
       {/* Dos cosas aquí:
@@ -437,14 +515,43 @@ export default function Catalog({
            tocaba el buscador. */}
       <label htmlFor="menu-buscar" className="sr-only">Buscar en el menú</label>
       <input
+        ref={inputRef}
         id="menu-buscar"
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        onFocus={() => setLupaAbierta(true)}
+        // Un respiro antes de cerrar: tocar un atajo quita el foco del campo.
+        // Sin nada escrito ni elegido, el campo vuelve a ser la lupa.
+        onBlur={() => setTimeout(() => {
+          setLupaAbierta(false);
+          if (!inputRef.current?.value) setCampoAbierto((abierto) => abierto && antojoRef.current !== null);
+        }, 180)}
         placeholder={content.catalog.searchPlaceholder}
         className="glass-quiet ct-body"
         style={{ width: '100%', padding: '13px 14px 13px 42px', minHeight: 46, borderRadius: 'var(--m-r-md)', border: 'none', color: 'var(--u-text)', fontSize: 'var(--m-fs-lg)', outline: 'none', background: 'var(--surface-2)' }}
       />
+    </div>
+  ) : null;
+
+  /* Los atajos de antojo (CV-34): solo con la lupa abierta o con uno elegido,
+     y nunca mientras se escribe —ahí manda lo escrito—. `onMouseDown`
+     evita que tocar un atajo cierre la lupa antes del clic. */
+  const atajos = config.showSearch && antojos.length > 0 && !q && (lupaAbierta || antojo !== null) ? (
+    <div className="u-noscroll" role="group" aria-label={locale === 'en' ? 'Quick picks' : 'Antojos'}
+      style={{ display: 'flex', gap: 8, overflowX: 'auto', marginTop: 10, paddingBottom: 2 }}>
+      {antojos.map((a) => {
+        const on = antojo === a.id;
+        return (
+          <button key={a.id} type="button" className="press opt-pill" aria-pressed={on}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setAntojo(on ? null : a.id)}
+            style={{ flexShrink: 0, whiteSpace: 'nowrap', ...(on ? { background: 'var(--u-text)', color: 'var(--brand-bg)', borderColor: 'var(--u-text)' } : {}) }}>
+            {on && <Icon name="check" size={13} strokeWidth={3} />}
+            {locale === 'en' ? a.labelEn : a.label}
+          </button>
+        );
+      })}
     </div>
   ) : null;
 
@@ -497,9 +604,11 @@ export default function Catalog({
           )}
           {/* El titular crece con el lienzo: 44 px que mandan en un teléfono se
               quedan cortos en una página de revista de 1.120 px. */}
-          <h2 className="t-poster" style={{ ...headingT.vars, fontSize: `calc(${headingT.size} * clamp(34px, 11vw, ${width === 'revista' ? 64 : width === 'ancho' ? 52 : 44}px))`, marginTop: 2 }}>
-            {content.catalog.heading}
-          </h2>
+          {tituloPropio && (
+            <h2 className="t-poster" style={{ ...headingT.vars, fontSize: `calc(${headingT.size} * clamp(34px, 11vw, ${width === 'revista' ? 64 : width === 'ancho' ? 52 : 44}px))`, marginTop: 2 }}>
+              {tituloPropio}
+            </h2>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, flex: wide ? '1 1 260px' : '0 0 auto' }}>
           {wide && searchBox}
@@ -528,14 +637,59 @@ export default function Catalog({
         </div>
       </div>
 
-      {/* Búsqueda (en lienzos anchos ya viaja en el encabezado) */}
-      {!wide && searchBox && <div style={{ marginTop: 14 }}>{searchBox}</div>}
+      {/* Búsqueda (en lienzos anchos ya viaja en el encabezado). Con la lupa
+          en la fila, el campo solo aparece al tocarla, con «✕» para volver. */}
+      {!wide && searchBox && (
+        <div className="m-busca-fila" data-plegable={campoPlegado ? '1' : undefined}
+          style={{ marginTop: 14, display: lupaEnFila ? 'flex' : undefined, gap: 8, alignItems: 'center' }}>
+          {searchBox}
+          {lupaEnFila && (
+            <button type="button" className="press m-chip m-chip-lupa m-nav-movil" aria-label="Cerrar la búsqueda" onClick={cerrarCampo}>
+              <Icon name="x" size={17} />
+            </button>
+          )}
+        </div>
+      )}
+      {atajos}
 
       {/* ── Navegación de la carta ── */}
 
+      {/* VISTA DE PC (auditoría «La carta que vende», CV-19): las categorías en
+          un riel a la izquierda de la carta, que en PC sustituye a las
+          píldoras y al índice de arriba (`.m-nav-movil` se oculta cuando el
+          riel cabe). Hace lo mismo que la navegación de cada estructura:
+          filtra (píldoras, portadas), salta (secciones) o abre y salta
+          (acordeón). Solo existe donde cabe junto a la carta (globals.css). */}
+      {(categories.length > 1 || pieRiel) && (
+        <nav className="m-pc-rail m-surface" aria-label={locale === 'en' ? 'Menu sections' : 'Secciones de la carta'}>
+          {categories.length > 1 && (nav === 'chips' || nav === 'portadas') && (
+            <button type="button" className="m-pc-rail-item" aria-current={activeCat === null && !searching ? 'true' : undefined}
+              onClick={() => { setQuery(''); setAntojo(null); setActiveCat(null); rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
+              {config.showCategoryIcons && <Icon name="grid" size={16} />}{content.catalog.allLabel}
+            </button>
+          )}
+          {categories.length > 1 && categories.map((c) => {
+            const activa = nav === 'secciones' ? spySection === c.id
+              : nav === 'acordeon' ? openCatId === c.id
+              : activeCat === c.id;
+            return (
+              <button key={c.id} type="button" className="m-pc-rail-item"
+                aria-current={activa && !searching ? 'true' : undefined}
+                data-dim={catAvail.get(c.id) === false ? '1' : undefined}
+                onClick={() => irA(c.id)}>
+                {catAvail.get(c.id) === false ? <Icon name="clock" size={16} /> : config.showCategoryIcons && <Icon name={catIcon.get(c.id) ?? 'utensils'} size={16} />}
+                <span>{localize(c.name, c.name_en)}</span>
+              </button>
+            );
+          })}
+          {pieRiel && <div className="m-pc-pie">{pieRiel}</div>}
+        </nav>
+      )}
+
       {/* Píldoras: filtro de una categoría a la vez. */}
-      {nav === 'chips' && !searching && (
-        <div className="u-noscroll" style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '16px 0 6px' }}>
+      {nav === 'chips' && !searching && !(lupaEnFila && campoAbierto) && (
+        <div className="u-noscroll m-nav-movil" style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '16px 0 6px' }}>
+          {lupaEnFila && <LupaChip onClick={abrirCampo} />}
           <CategoryChip label={content.catalog.allLabel} icon={config.showCategoryIcons ? 'grid' : undefined} active={activeCat === null} onClick={() => setActiveCat(null)} />
           {categories.map((c) => (
             <CategoryChip
@@ -554,9 +708,9 @@ export default function Catalog({
           El velo difuminado se sale hasta el borde de la ventana (menu-bleed):
           quedándose en el ancho del <main>, en tablet y escritorio se veía una
           barra flotando con el contenido pasando descubierto por los costados. */}
-      {nav === 'secciones' && !searching && groups.length > 1 && (
+      {nav === 'secciones' && !searching && !(lupaEnFila && campoAbierto) && groups.length > 1 && (
         <div
-          className="menu-bleed"
+          className="menu-bleed m-nav-movil"
           style={{
             position: 'sticky', top: 0, zIndex: 5, marginTop: 4,
             background: 'color-mix(in srgb, var(--brand-bg) 88%, transparent)',
@@ -572,6 +726,7 @@ export default function Catalog({
               display: 'flex', gap: 8, overflowX: 'auto', paddingBlock: '12px 10px',
             }}
           >
+            {lupaEnFila && <LupaChip onClick={abrirCampo} />}
             {groups.map((g) => (
               <CategoryChip
                 key={g.key}
@@ -646,7 +801,7 @@ export default function Catalog({
         <div style={{ display: 'flex', flexDirection: 'column', gap: vitrina ? 0 : nav === 'acordeon' ? 8 : width === 'revista' ? 44 : width === 'ancho' ? 34 : 26, marginTop: groupByCategory && !vitrina ? 16 : 0 }}>
           {groups.map((g, gi) => {
             const headed = groupByCategory && g.cat !== null;
-            const collapsed = nav === 'acordeon' && openCatId !== g.key;
+            const collapsed = nav === 'acordeon' && !abiertasEf.has(g.key);
             return (
               <section
                 key={g.key}
@@ -668,7 +823,7 @@ export default function Catalog({
                     width={width}
                     poster={card === 'pieza'}
                     countLabel={card === 'pieza' ? `${g.items.length} ${g.items.length === 1 ? content.cart.itemsOne : content.cart.itemsMany}` : undefined}
-                    onToggle={() => setOpenCat(collapsed ? g.key : null)}
+                    onToggle={() => abrirSeccion(g.key, collapsed)}
                   />
                 )}
                 {!collapsed && (
@@ -744,7 +899,7 @@ interface ItemsProps {
   ordersEnabled: boolean;
   qtyOf: (id: string) => number;
   onAdd: (p: ProdItem, el: HTMLElement) => void;
-  onOpen: (p: ProdItem) => void;
+  onOpen: (p: ProdItem, aviso?: string | null) => void;
   /** Posición de cada pieza en la edición (modo lanzamiento). */
   edition: { pos: Map<string, number>; total: number } | null;
   /** ¿Es la sección que ya se ve al abrir? Ver `fade`. */
@@ -754,9 +909,25 @@ interface ItemsProps {
 /** Cuántas piezas de la primera sección entran con el reloj al abrir. */
 const ENTRAN_CON_RELOJ = 6;
 
+/** Piezas que dibuja una repisa de Estantes antes de «Ver los N» (F4-14). */
+const REPISA_MAX = 8;
+
 function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled, qtyOf, onAdd, onOpen, edition, primera = false }: ItemsProps) {
   const config = useThemeConfig();
   const anim = config.animations;
+  /* Estantes con carta grande (CV-38; fase 4, F4-14): la repisa dibuja
+     REPISA_MAX piezas y termina en «Ver los N». La búsqueda sigue mirando
+     la carta entera: filtra antes de llegar aquí. */
+  const [repisaEntera, setRepisaEntera] = useState(false);
+  /* ¿La repisa llegó a su final? Mientras no, su borde derecho se
+     desvanece para decir que sigue (§4.3). */
+  const repisaRef = useRef<HTMLDivElement>(null);
+  const [repisaAlFinal, setRepisaAlFinal] = useState(false);
+  const medirRepisa = () => {
+    const el = repisaRef.current;
+    if (el) setRepisaAlFinal(el.scrollLeft + el.clientWidth >= el.scrollWidth - 4);
+  };
+  useEffect(() => { if (card === 'carrusel') medirRepisa(); }, [card, items.length, repisaEntera]);
 
   const iconFor = (p: ProdItem) => p.icon || catIcon.get(p.category_id ?? '') || 'utensils';
   const common = (p: ProdItem) => ({
@@ -863,9 +1034,14 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
   if (card === 'carrusel') {
     const tileW = width === 'revista' ? 232 : width === 'ancho' ? 204 : 152;
     const repisa = anim && !primera ? { 'data-mfx': 'carrusel' } : {};
+    const cortada = !repisaEntera && items.length > REPISA_MAX;
+    const aLaVista = cortada ? items.slice(0, REPISA_MAX) : items;
     return (
       <div
-        className="u-noscroll"
+        ref={repisaRef}
+        onScroll={medirRepisa}
+        className="u-noscroll m-repisa"
+        data-fin={repisaAlFinal ? '1' : undefined}
         {...repisa}
         style={{
           display: 'flex', gap: 12, overflowX: 'auto', marginTop: 10,
@@ -876,11 +1052,19 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
           marginInline: 'calc(-1 * var(--menu-pad))', scrollSnapType: 'x proximity',
         }}
       >
-        {items.map((p, i) => (
+        {aLaVista.map((p, i) => (
           <div key={p.id} className={primera && anim && i < ENTRAN_CON_RELOJ ? 'anim-fade-up' : undefined} style={{ animationDelay: primera && anim ? `${i * 35}ms` : undefined, width: tileW, flexShrink: 0, scrollSnapAlign: 'start' }}>
             <ProductTile {...common(p)} />
           </div>
         ))}
+        {cortada && (
+          <div style={{ width: tileW, flexShrink: 0, scrollSnapAlign: 'start', display: 'flex' }}>
+            <button type="button" className="press m-repisa-mas" onClick={() => setRepisaEntera(true)}>
+              <Icon name="arrowRight" size={20} />
+              Ver los {items.length}
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -1012,6 +1196,15 @@ function packColumns(items: ProdItem[], n: number): Array<Array<{ p: ProdItem; i
 }
 
 /* ── Piezas de navegación ─────────────────────────────────── */
+
+/** La lupa como primera píldora (fase 4, F4-2). */
+function LupaChip({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="press m-chip m-chip-lupa" aria-label="Buscar en la carta">
+      <Icon name="search" size={17} />
+    </button>
+  );
+}
 
 function CategoryChip({ label, icon, active, unavailable = false, onClick }: { label: string; icon?: string; active: boolean; unavailable?: boolean; onClick: () => void }) {
   // Fuera de horario (y no seleccionado): se atenúa y muestra un reloj, pero
@@ -1331,7 +1524,7 @@ interface TileProps {
   ordersEnabled: boolean;
   forceUnavailable?: boolean;
   onAdd: (p: ProdItem, el: HTMLElement) => void;
-  onOpen: (p: ProdItem) => void;
+  onOpen: (p: ProdItem, aviso?: string | null) => void;
 }
 
 function ProductTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpen }: TileProps) {
@@ -1340,7 +1533,7 @@ function ProductTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, on
   const unavail = forceUnavailable || isUnavailable(p);
   const aviso = useAvisoNoDisponible(p, forceUnavailable);
   return (
-    <MenuSurface className="m-tile" unavailable={unavail} onClick={() => onOpen(p)} ariaLabel={`Ver ${name}`}>
+    <MenuSurface className="m-tile" unavailable={unavail} onClick={() => onOpen(p, unavail ? aviso : null)} ariaLabel={`Ver ${name}`}>
       <div className="m-tile-art" style={{ aspectRatio: '1.25' }}>
         <ProductArt p={p} icon={icon} />
         {config.showTags && p.tags && p.tags.length > 0 && !unavail && (
@@ -1383,7 +1576,7 @@ function MosaicTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
   const aviso = useAvisoNoDisponible(p, forceUnavailable);
   const ratio = mosaicRatio(p);
   return (
-    <MenuSurface className="m-tile" unavailable={unavail} onClick={() => onOpen(p)} ariaLabel={`Ver ${name}`}>
+    <MenuSurface className="m-tile" unavailable={unavail} onClick={() => onOpen(p, unavail ? aviso : null)} ariaLabel={`Ver ${name}`}>
       <div className="m-tile-art" style={{ aspectRatio: String(ratio) }}>
         <ProductArt p={p} icon={icon} scale={1.15} />
         {config.showTags && p.tags?.[0] && !unavail && (
@@ -1407,8 +1600,9 @@ function MosaicTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
   );
 }
 
-/* Tarjeta destacada: ancho completo, arte grande y texto sobre un degradado
-   (blanco sobre velo oscuro = legible con foto o patrón en cualquier paleta).
+/* Tarjeta destacada: ancho completo, arte grande y el texto debajo, como
+   en las demás tarjetas (fase 4, F4-15; antes iba blanco sobre un velo
+   oscuro encima de la foto y tapaba el platillo).
 
    La proporción se abre con el lienzo EFECTIVO. Con 1.85 fijo, una tarjeta de
    ancho completo en una página de 1.120 px medía 600 px de alto: media
@@ -1431,15 +1625,14 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, w
       className="m-tile"
       style={{ borderRadius: 'var(--m-r-xl)' }}
       unavailable={unavail}
-      onClick={() => onOpen(p)}
+      onClick={() => onOpen(p, unavail ? aviso : null)}
       ariaLabel={`Ver ${name}`}
     >
-      <div className="m-tile-art" style={{ aspectRatio: String(FEATURED_RATIO[width] ?? 1.85) }}>
-        <ProductArt p={p} icon={icon} scale={1.35} sizes={FEATURED_ART_SIZES} behindText />
-        <div
-          aria-hidden
-          style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.68), rgba(0,0,0,0.24) 46%, rgba(0,0,0,0) 72%)' }}
-        />
+      {/* El texto va DEBAJO de la foto (auditoría «La carta que vende» §4.3;
+          fase 4, F4-15): encima tapaba el platillo, que es lo que vende. La
+          foto queda un poco más baja para no alargar la tarjeta. */}
+      <div className="m-tile-art" style={{ aspectRatio: String((FEATURED_RATIO[width] ?? 1.85) * 1.15) }}>
+        <ProductArt p={p} icon={icon} scale={1.35} sizes={FEATURED_ART_SIZES} />
         <div style={{ position: 'absolute', top: wideFeat ? 20 : 10, left: wideFeat ? 24 : 10 }}>
           <span
             className="ct-tag"
@@ -1455,26 +1648,22 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, w
             <Icon name="star" size={11} /> {content.tags.fav}
           </span>
         </div>
-        <div style={{ position: 'absolute', left: wideFeat ? 24 : 14, right: wideFeat ? 24 : 14, bottom: wideFeat ? 20 : 12, display: 'flex', alignItems: 'flex-end', gap: 10 }}>
-          {/* El texto no se estira con la tarjeta: una descripción a 1.000 px de
-              ancho se lee como un pie de foto de periódico, no como un plato. */}
-          <div style={{ flex: 1, minWidth: 0, maxWidth: 620 }}>
-            <div
-              className="ct-product-name"
-              style={{ fontSize: (wideFeat ? 27 : 19) * roleSize(config, 'productName'), color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.55)', lineHeight: 1.15, textDecoration: unavail ? 'line-through' : 'none' }}
-            >
-              {name}
-            </div>
-            {aviso && (
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.6)', marginTop: 3 }}>{aviso}</div>
-            )}
-            {description && (
-              <div className="line-clamp-2" style={{ fontSize: (wideFeat ? 13.5 : 12) * roleSize(config, 'productDesc'), color: 'rgba(255,255,255,0.85)', marginTop: 3, lineHeight: 1.4, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
-                {description}
-              </div>
-            )}
-            <Price amount={displayPrice(p)} size={wideFeat ? 20 : 17} style={{ color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.55)', marginTop: 5, display: 'inline-block' }} />
+        {unavail && aviso && (
+          <div className="m-art-corner"><span className="m-badge">{aviso}</span></div>
+        )}
+      </div>
+      <div className="m-tile-body" style={wideFeat ? { padding: '14px 20px 16px' } : undefined}>
+        {/* El texto no se estira con la tarjeta: una descripción a 1.000 px de
+            ancho se lee como un pie de foto de periódico, no como un plato. */}
+        <div style={{ maxWidth: 620 }}>
+          <div className={`ct-product-name m-name ${unavail ? 'm-strike' : ''}`} style={{ fontSize: (wideFeat ? 24 : 18) * roleSize(config, 'productName'), lineHeight: 1.15 }}>
+            {name}
           </div>
+          {description && <div className="line-clamp-2 ct-product-desc m-desc">{description}</div>}
+        </div>
+        <DietaryBadges keys={p.dietary_tags} />
+        <div className="m-foot">
+          <Price amount={displayPrice(p)} size={wideFeat ? 19 : 16} muted={unavail} />
           {ordersEnabled && !unavail && <AddControl p={p} qty={qty} onAdd={onAdd} />}
         </div>
       </div>
@@ -1517,7 +1706,7 @@ function PiezaTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAd
   const vendido = total ? Math.round(((total - left!) / total) * 100) : 0;
   return (
     <article className="m-pieza" data-unavailable={unavail ? '1' : undefined}>
-      <button type="button" className="m-pieza-art" onClick={() => onOpen(p)} aria-label={`Ver ${name}`}>
+      <button type="button" className="m-pieza-art" onClick={(e) => { marcarOrigen(e.currentTarget); onOpen(p, unavail ? aviso : null); }} aria-label={`Ver ${name}`}>
         <ProductArt p={p} icon={icon} scale={1.5} sizes={PIEZA_ART_SIZES} />
         {/* En lanzamiento cada pieza lleva su número de edición: es lo que
             convierte una lista de productos en una colección. */}
@@ -1595,7 +1784,7 @@ function ProductRow({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
   const unavail = forceUnavailable || isUnavailable(p);
   const aviso = useAvisoNoDisponible(p, forceUnavailable);
   return (
-    <MenuSurface className="m-row" unavailable={unavail} onClick={() => onOpen(p)} ariaLabel={`Ver ${name}`}>
+    <MenuSurface className="m-row" unavailable={unavail} onClick={() => onOpen(p, unavail ? aviso : null)} ariaLabel={`Ver ${name}`}>
       <div className="m-row-art">
         <ProductArt p={p} icon={icon} scale={0.9} sizes="96px" />
       </div>
@@ -1629,25 +1818,19 @@ function TextRow({ p, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpe
   const aviso = useAvisoNoDisponible(p, forceUnavailable);
   return (
     <div
-      role={unavail ? undefined : 'button'}
-      tabIndex={unavail ? undefined : 0}
-      aria-label={unavail ? undefined : `Ver ${name}`}
-      onClick={() => !unavail && onOpen(p)}
-      onKeyDown={(e) => {
-        if (unavail) return;
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(p); }
-      }}
+      onClick={() => onOpen(p, unavail ? aviso : null)}
       className="press"
       data-unavailable={unavail ? '1' : undefined}
       style={{
         display: 'flex', alignItems: 'flex-start', gap: 'var(--m-sp-3)',
         padding: 'var(--m-sp-4) 2px', borderBottom: '1px solid var(--u-hair)',
-        cursor: unavail ? 'default' : 'pointer',
+        cursor: 'pointer', position: 'relative',
         /* 0.62 dejaba la descripcion por debajo del contraste minimo: el plato
            se leia como "borroso" y no como "hoy no esta". */
         opacity: unavail ? 0.72 : 1,
       }}
     >
+      <AbrirPieza label={`Ver ${name}`} onClick={() => onOpen(p, unavail ? aviso : null)} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--m-sp-2)' }}>
           <span className={`ct-product-name m-name ${unavail ? 'm-strike' : ''}`}>
@@ -1656,7 +1839,9 @@ function TextRow({ p, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpe
           {/* El filete punteado es lo que hace legible el par nombre→precio sin
               una foto de por medio: el ojo lo sigue de un lado al otro. */}
           <span aria-hidden style={{ flex: 1, minWidth: 12, alignSelf: 'flex-end', marginBottom: 5, borderBottom: '1px dotted var(--u-hair-2)' }} />
-          <Price amount={displayPrice(p)} size={14} muted={unavail} />
+          {/* 16 y no 14 (§4.3; fase 4, F4-15): en la carta sin fotos el precio
+              es lo que se compara de un vistazo. */}
+          <Price amount={displayPrice(p)} size={16} muted={unavail} />
         </div>
         {description && (
           <div className="ct-product-desc m-desc" style={{ marginTop: 'var(--m-sp-1)', maxWidth: '46em' }}>

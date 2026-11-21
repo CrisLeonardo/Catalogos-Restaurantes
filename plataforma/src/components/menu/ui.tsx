@@ -8,7 +8,8 @@ import { useId, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { usePrice, useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
-import { roleSize } from '@/lib/theme/resolve';
+import { formatAmountCarta, roleSize } from '@/lib/theme/resolve';
+import { marcarOrigen } from '@/lib/menu/origen-ficha';
 
 /* ── Superficie de una pieza de la carta ──────────────────────
    Sustituye a `Glass` en los platillos. El motivo está explicado a fondo en
@@ -20,7 +21,16 @@ import { roleSize } from '@/lib/theme/resolve';
    Enter/Espacio y un nombre accesible corto. Sin esto, una tarjeta se anuncia
    concatenando su contenido entero ("Mocha Negra Espresso doble, cacao 70%…
    26.00 Agregar") y el botón «Agregar» de dentro queda anidado en otro
-   control. */
+   control.
+
+   Auditoría «La carta que vende» (CV-05, CV-10): la tarjeta YA NO es un
+   `role="button"` con otro botón dentro. Con teclado, Enter sobre «Agregar»
+   burbujeaba al `onKeyDown` de la tarjeta y abría la ficha en vez de
+   agregar. Ahora la tarjeta es un contenedor que se toca con el dedo o el
+   ratón, y para teclado y lector de pantalla lleva su propio botón «Ver …»
+   (oculto a la vista, con el anillo de foco en la tarjeta) HERMANO de
+   «Agregar», no padre. Y lo agotado también se abre: se puede leer qué era
+   y cuándo vuelve; lo que no se puede es pedirlo (la ficha lo dice). */
 export function MenuSurface({
   className = '',
   style,
@@ -34,33 +44,35 @@ export function MenuSurface({
   children?: ReactNode;
   onClick?: () => void;
   ariaLabel?: string;
-  /** Agotado: se puede mirar, no pedir — deja de ser clicable. */
+  /** Agotado: se puede mirar y abrir, no pedir. */
   unavailable?: boolean;
 }) {
-  const clickable = Boolean(onClick) && !unavailable;
+  const clickable = Boolean(onClick);
   return (
     <div
       className={`m-surface ${clickable ? 'press' : ''} ${className}`}
       data-clickable={clickable ? '1' : undefined}
       data-unavailable={unavailable ? '1' : undefined}
-      onClick={clickable ? onClick : undefined}
-      onKeyDown={
-        clickable
-          ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onClick?.();
-              }
-            }
-          : undefined
-      }
-      role={clickable ? 'button' : undefined}
-      tabIndex={clickable ? 0 : undefined}
-      aria-label={clickable ? ariaLabel : undefined}
+      onClick={clickable ? (e) => { marcarOrigen(e.currentTarget); onClick!(); } : undefined}
       style={style}
     >
+      {clickable && <AbrirPieza label={ariaLabel} onClick={onClick!} />}
       {children}
     </div>
+  );
+}
+
+/** El camino de teclado y lector de pantalla para abrir una pieza de la
+    carta: un botón de verdad, fuera de la vista; el foco se dibuja en la
+    tarjeta entera (`.m-surface-abrir` en globals.css). */
+export function AbrirPieza({ label, onClick }: { label?: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className="m-surface-abrir"
+      aria-label={label}
+      onClick={(e) => { e.stopPropagation(); marcarOrigen(e.currentTarget.parentElement); onClick(); }}
+    />
   );
 }
 
@@ -77,8 +89,10 @@ export function Price({
   muted?: boolean;
   style?: CSSProperties;
 }) {
-  const { symbol, position, format } = usePrice();
+  const { symbol, position } = usePrice();
   const config = useThemeConfig();
+  // «Q52», no «Q52.00» (CV-18).
+  const format = (n: number) => formatAmountCarta(n, config);
   const sz = size * roleSize(config, 'price');
   /* El simbolo de moneda salia a 9,24 px con un precio de 14: es el unico
      texto del menu que seguia por debajo del piso. Se subordina por PROPORCION

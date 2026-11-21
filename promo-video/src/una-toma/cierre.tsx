@@ -5,6 +5,7 @@ import { AbsoluteFill, useCurrentFrame } from 'remotion';
 import QRCode from 'qrcode';
 import { clamp, degradado, easeOut, lerp, marca, pop, prog, useFormato } from './base';
 import { LogoMarca } from './mundo';
+import { Nombre } from '../componentes/Marca';
 import { useGuion } from './guion';
 import { fuente } from '../marca';
 
@@ -49,7 +50,7 @@ export const Cierre: React.FC = () => {
       <div style={{ width: logoTam, height: logoTam, transform: `scale(${escala})`, filter: 'drop-shadow(0 20px 50px rgba(232,83,74,.45))', position: 'relative', zIndex: 2 }}>
         <LogoMarca tam={logoTam} />
       </div>
-      <div style={{ fontFamily: fuente.titular, fontWeight: 800, fontSize: vertical ? 88 : 96, color: '#fff', letterSpacing: -3, lineHeight: 1, ...sube(f, c.inicio + 8) }}>Leogin</div>
+      <div style={{ ...sube(f, c.inicio + 8) }}><Nombre letra={vertical ? 88 : 96} color="#fff" /></div>
     </div>
   );
   const ofertaBloque = (

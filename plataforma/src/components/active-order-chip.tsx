@@ -24,7 +24,9 @@ const POLL_MS = 20000;
 /** Solo miramos pedidos de las últimas 12 h: lo demás ya no es "en curso". */
 const FRESH_MS = 12 * 60 * 60 * 1000;
 
-export default function ActiveOrderChip({ restaurantId }: { restaurantId: string }) {
+/* `enLinea` (auditoría «La carta que vende», CV-14): una franja dentro de la
+   carta, arriba, en vez de flotar sobre ella. Abajo solo queda la barra. */
+export default function ActiveOrderChip({ restaurantId, enLinea = false }: { restaurantId: string; enLinea?: boolean }) {
   const content = useThemeContent();
   const { count } = useCart();
   const stablePrefix = useStableLinkPrefix();
@@ -115,8 +117,11 @@ export default function ActiveOrderChip({ restaurantId }: { restaurantId: string
   return (
     <Link
       href={stablePrefix ? `${stablePrefix}/pedido/${active.token}` : `/pedido/${active.token}`}
-      className="glass-solid press anim-slide-up"
-      style={{
+      className={enLinea ? 'm-surface press' : 'glass-solid press anim-slide-up'}
+      style={enLinea ? {
+        display: 'flex', alignItems: 'center', gap: 10, width: '100%', margin: '12px 0 0',
+        padding: '0 14px', minHeight: 'var(--m-tap)', borderRadius: 'var(--m-r-lg)', textDecoration: 'none',
+      } : {
         // Si la barra del carrito está visible, el chip flota encima de ella.
         // Anclado a la izquierda (no centrado) para no solapar el FAB
         // "Llamar al mesero" que vive en el lado derecho.

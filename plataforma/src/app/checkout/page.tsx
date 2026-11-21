@@ -5,7 +5,7 @@ import { CartProvider } from '@/lib/cart-context';
 import { ThemeProvider } from '@/lib/theme/context';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { hasAnyHours, isOpenNow } from '@/lib/hours';
-import { getMenuDataCached, getTopSellingProductIdsCached } from '@/lib/db/menu';
+import { getMenuDataCached, getTopSellingProductIdsCached, type MenuData } from '@/lib/db/menu';
 import { masPedidos } from '@/lib/menu-pairings';
 import { hasActiveCoupons } from '@/lib/db/cupones';
 import { pausaVigente } from '@/lib/pausa-pedidos';
@@ -56,8 +56,10 @@ export default async function CheckoutPage() {
      en el teléfono, así que aquí no se sabe; las dos lecturas están en
      caché (la carta, un minuto; las ventas, una hora) y la lista viaja
      corta: cuatro platillos con nombre y precio. */
+  // Si la carta no se pudo leer (CV-02), el checkout sigue: solo se queda
+  // sin sugerencias, que son un extra.
   const [menu, topIds] = await Promise.all([
-    getMenuDataCached(restaurant.id),
+    getMenuDataCached(restaurant.id).catch(() => ({ categories: [], products: [], stockLeft: {} }) as MenuData),
     getTopSellingProductIdsCached(restaurant.id),
   ]);
   const tz = restaurant.timezone || 'America/Guatemala';

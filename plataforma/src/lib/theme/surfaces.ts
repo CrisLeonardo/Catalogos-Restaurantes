@@ -32,7 +32,7 @@ export const OWNER_BASIC_KEYS = [
   // Color
   'colorBg', 'colorBg2', 'colorText', 'colorAccent', 'onAccent', 'scheme',
   // Portada
-  'portadaVariant', 'portadaShowLogo', 'portadaShowBadge', 'portadaShowStatus', 'ctaStyle',
+  'portadaVariant', 'portadaShowLogo', 'portadaShowBadge', 'portadaShowStatus', 'portadaCompleta', 'pedidoDeMesa', 'ctaStyle',
   // Estructura y catálogo
   'layoutWidth', 'catalogNav', 'cardStyle', 'catalogColumns',
   'showSearch', 'showCategoryIcons', 'productArt', 'showTags', 'featuredFavorites',

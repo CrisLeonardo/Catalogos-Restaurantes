@@ -51,6 +51,7 @@ export default async function AjustesSalonPage() {
         orderTypes: config.orderTypes,
         dineInTableCount: config.dineInTableCount,
         dineInCourseOptions: config.dineInCourseOptions,
+        pedidoDeMesa: config.pedidoDeMesa === true,
         tipEnabled: config.tipEnabled,
         tipPercent: config.tipPercent,
         acceptsCard: config.acceptsCard,

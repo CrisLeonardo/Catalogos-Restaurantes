@@ -16,7 +16,7 @@
 
 import AssetImage from '@/components/asset-image';
 import { PRODUCT_ART_SIZES } from '@/lib/asset-image';
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { HojaOperativa } from '@/components/ui/hoja-operativa';
 import { Icon } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
@@ -29,12 +29,17 @@ import { edicionPermitePedir, fechaCorta } from '@/lib/vitrina/edicion';
 import { DIETARY_TAG_MAP } from '@/lib/dietary-tags';
 import { useLocale, useLocalized } from '@/lib/locale/context';
 import { Acompanantes, type Sugerencia } from '@/components/menu/pairings';
+import { isUnavailable, type AvailabilityFields } from '@/lib/product-availability';
+import { useTenantPrefix } from '@/lib/tenant-client';
+import { crecerDesdeOrigen } from '@/lib/menu/origen-ficha';
+import { irACategoria } from '@/lib/menu/ir-a-categoria';
+import CifraQueCuenta from '@/components/menu/cifra-que-cuenta';
 import type { CartItem, CartItemOption, Product, ProductOptionGroup } from '@/types';
 import {
   cabeOtra, grupoEsObligatorio, grupoPendiente, reglaDeGrupo, seleccionDeLinea, seleccionInicial, textoPendiente, variantesDeLinea,
 } from '@/lib/menu/opciones';
 
-type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'>;
+type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'> & AvailabilityFields;
 
 /** Variante inicial de cada componente con variantes: la primera. El precio
     SIEMPRE usó la primera como fallback — sin esto, la píldora no se veía
@@ -50,7 +55,7 @@ function initialVariants(groups: ProductOptionGroup[]): Record<string, string> {
 }
 
 export default function ProductSheet({
-  product, icon, ordersEnabled, onClose, acompanantes = [], linea, onGuardado,
+  product, icon, ordersEnabled, onClose, acompanantes = [], linea, onGuardado, aviso, categoria = null, enlace,
 }: {
   product: ProdItem;
   icon: string;
@@ -61,6 +66,14 @@ export default function ProductSheet({
   /** «Cambiar» desde el carrito (1.11, M04): esta línea se reemplaza en su lugar. */
   linea?: CartItem;
   onGuardado?: () => void;
+  /** No se puede pedir ahora (agotado o fuera de horario): la ficha se abre
+      para leer y dice por qué, en vez de «Agregar» (CV-10). */
+  aviso?: string | null;
+  /** Su sección: si no se puede pedir, la ficha ofrece «Ver más de …»
+      (fase 4, F4-6), que lleva a esa sección de la carta. */
+  categoria?: { id: string; nombre: string } | null;
+  /** Lo que va en `?platillo=` al compartir: el nombre legible (F4-8). */
+  enlace?: string;
 }) {
   const config = useThemeConfig();
   const content = useThemeContent();
@@ -70,6 +83,9 @@ export default function ProductSheet({
   const { addItem, replaceItem } = useCart();
   const [qty, setQty] = useState(linea?.quantity ?? 1);
   const [heroReady, setHeroReady] = useState(false);
+  const heroRef = useRef<HTMLDivElement>(null);
+  // La foto de la ficha crece desde la de la tarjeta (antes de pintar, sin salto).
+  useLayoutEffect(() => { crecerDesdeOrigen(heroRef.current); }, []);
   const { locale } = useLocale();
   const name = useLocalized(product.name, product.name_en);
   const description = useLocalized(product.description ?? '', product.description_en);
@@ -185,10 +201,22 @@ export default function ProductSheet({
   }
 
   const usePhoto = product.image_url && config.productArt !== 'pattern';
+  // Si llegó sin aviso (un enlace directo, «Cambiar» desde el carrito…) pero
+  // está agotado, igual se dice: nunca un «Agregar» que el servidor rechaza.
+  const noSePide = aviso ?? (!linea && isUnavailable(product) ? content.product.soldOut : null);
 
   const pie = (
     <div className="hoja-platillo-accion">
-      {ordersEnabled && !edicionPermitePedir(edicion) ? (
+      {ordersEnabled && noSePide ? (
+        <>
+          <div className="m-sheet-closed" role="status">{noSePide}</div>
+          {categoria && (
+            <PrimaryButton size="lg" full onClick={() => { onClose(); irACategoria(categoria.id); }} style={{ flex: 1 }}>
+              {es ? `Ver más de ${categoria.nombre}` : `More ${categoria.nombre}`}
+            </PrimaryButton>
+          )}
+        </>
+      ) : ordersEnabled && !edicionPermitePedir(edicion) ? (
         <div className="m-sheet-closed" role="status">
           {edicion.estado === 'proxima' && edicion.abre !== null ? `Esta edición abre el ${fechaCorta(edicion.abre)}` : content.vitrina.launchClosed}
         </div>
@@ -201,7 +229,7 @@ export default function ProductSheet({
             style={{ flex: 1, ...(missingRequired ? { background: 'var(--surface-2)', color: 'var(--u-text)', boxShadow: 'inset 0 0 0 1px var(--u-hair-2)' } : {}) }}>
             {firstMissing
               ? textoPendiente(firstMissing, selected, es ? 'es' : 'en')
-              : <>{linea ? (es ? 'Guardar cambios' : 'Save changes') : content.product.add} · <span className="t-mono" style={{ fontWeight: 700, color: 'inherit' }}>{formatPrice(unitPrice * qty + (linea ? 0 : extrasTotal), config)}</span></>}
+              : <>{linea ? (es ? 'Guardar cambios' : 'Save changes') : content.product.add} · <span className="t-mono" style={{ fontWeight: 700, color: 'inherit' }}><CifraQueCuenta valor={unitPrice * qty + (linea ? 0 : extrasTotal)} formato={(n) => formatPrice(n, config)} /></span></>}
           </PrimaryButton>
         </>
       ) : (
@@ -218,11 +246,12 @@ export default function ProductSheet({
       title={<span className="t-display" style={{ ...titleT.vars, fontSize: 22 * titleT.size }}>{name}</span>}
       closeLabel={locale === 'en' ? 'Close' : 'Cerrar'}
       className="hoja-platillo"
+      deslizarParaCerrar
       onClose={onClose}
       footer={pie}
     >
-      {/* Hero */}
-      <div style={{ borderRadius: 'var(--m-r-xl)', overflow: 'hidden', position: 'relative', aspectRatio: '1.5', background: 'var(--surface-1)', border: '1px solid var(--u-hair)' }}>
+      {/* Hero · nace de la foto tocada (lib/menu/origen-ficha.ts) */}
+      <div ref={heroRef} style={{ borderRadius: 'var(--m-r-xl)', overflow: 'hidden', position: 'relative', aspectRatio: '1.5', background: 'var(--surface-1)', border: '1px solid var(--u-hair)' }}>
         {usePhoto ? (
           <>
             {/* Capa de fondo: la MISMA foto que la tarjeta que se acaba de
@@ -258,7 +287,10 @@ export default function ProductSheet({
         {description && (
           <p className="hoja-platillo-descripcion">{description}</p>
         )}
-        {ordersEnabled && <Price amount={unitPrice} size={22} />}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          {ordersEnabled ? <Price amount={unitPrice} size={22} /> : <span />}
+          <CompartirPlato clave={enlace ?? product.id} nombre={name} es={es} />
+        </div>
         {product.dietary_tags && product.dietary_tags.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {product.dietary_tags.map((k) => {
@@ -279,11 +311,14 @@ export default function ProductSheet({
           </div>
         )}
         {!(product.dietary_tags && product.dietary_tags.some((k) => DIETARY_TAG_MAP[k]?.kind === 'allergen')) && (
-          /* Sin alérgenos indicados no se calla: callar parece «no contiene» (M08). */
-          <p style={{ margin: 0, fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)', padding: '10px 12px', borderRadius: 'var(--m-r-md)', border: '1px dashed var(--u-hair-2)' }}>
-            {es
-              ? 'Alérgenos: el restaurante no los ha indicado. Pregunta antes de pedir.'
-              : 'Allergens: not provided by the restaurant. Ask before ordering.'}
+          /* Sin alérgenos indicados no se calla: callar parece «no contiene» (M08).
+             Pero tampoco ocupa el sitio de lo que vende: era un recuadro
+             punteado de dos líneas en cada platillo; ahora es una línea
+             discreta (CV-15). El recuadro solo vive cuando el dueño SÍ los
+             indicó (las etiquetas de arriba). */
+          <p style={{ margin: 0, fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="alertCircle" size={13} />
+            {es ? 'Alérgenos sin indicar · pregunta antes de pedir' : 'Allergens not listed · ask before ordering'}
           </p>
         )}
 
@@ -410,7 +445,7 @@ export default function ProductSheet({
           );
         })}
 
-        {ordersEnabled && !linea && (
+        {ordersEnabled && !linea && !noSePide && (
           <Acompanantes
             items={acompanantes}
             elegidos={extras}
@@ -420,5 +455,45 @@ export default function ProductSheet({
         )}
       </div>
     </HojaOperativa>
+  );
+}
+
+/* ── «Compartir» (auditoría «La carta que vende», CV-30) ──────────
+   El enlace de ESTE platillo: abre la carta con su ficha encima y lleva su
+   propia vista previa (foto, nombre y precio). Con la hoja de compartir del
+   teléfono si la hay; si no, se copia. Nunca lleva la mesa: quien lo recibe
+   no está sentado ahí. */
+function CompartirPlato({ clave, nombre, es }: { clave: string; nombre: string; es: boolean }) {
+  const base = useTenantPrefix('/');
+  const [copiado, setCopiado] = useState(false);
+  async function compartir() {
+    const url = `${window.location.origin}${base}?platillo=${clave}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: nombre, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2200);
+    } catch {
+      /* El comensal canceló la hoja de compartir: no es un error. */
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={compartir}
+      className="press"
+      aria-label={es ? `Compartir ${nombre}` : `Share ${nombre}`}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 'var(--m-tap)', padding: '0 14px',
+        borderRadius: 'var(--m-r-pill)', border: '1px solid var(--u-hair-2)', background: 'var(--surface-2)',
+        color: 'var(--u-text-2)', fontSize: 'var(--m-fs-sm)', fontWeight: 600, cursor: 'pointer',
+      }}
+    >
+      <Icon name={copiado ? 'check' : 'upload'} size={15} />
+      <span role="status">{copiado ? (es ? 'Enlace copiado' : 'Link copied') : (es ? 'Compartir' : 'Share')}</span>
+    </button>
   );
 }

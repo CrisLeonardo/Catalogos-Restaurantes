@@ -68,7 +68,7 @@ export function isValidGuatemalaPhone(raw: string): boolean {
   return /^\d{8}$/.test(stripPhoneFormatting(raw));
 }
 
-export const customerSchema = z.object({
+const customerFields = z.object({
   name: z
     .string({ error: (iss) => (iss.input === undefined ? 'El nombre es requerido' : undefined) })
     .min(1, 'El nombre es requerido')
@@ -96,6 +96,20 @@ export const customerSchema = z.object({
   /** Solo para DINE_IN: cuánta gente se sentó (migración 123). */
   partySize: z.number().int().min(1).max(100).optional(),
 });
+
+/* En la mesa el nombre es opcional —el pedido llega a la mesa, no a una
+   persona— y la pantalla siempre lo dijo («Nombre (opcional)»), pero este
+   esquema lo exigía: quien lo dejaba vacío veía «El nombre es requerido».
+   Con el checkout de mesa plegado (CV-17) el campo ni se ve, así que el
+   pedido se quedaba trabado. Sin nombre, un pedido de mesa se llama como
+   su mesa («Mesa 4»), que es como lo nombran cocina y el mesero. */
+export const customerSchema = z.preprocess((v) => {
+  if (!v || typeof v !== 'object') return v;
+  const c = v as { type?: unknown; name?: unknown; tableNumber?: unknown };
+  if (c.type !== 'DINE_IN' || (typeof c.name === 'string' && c.name.trim())) return v;
+  const mesa = typeof c.tableNumber === 'number' && c.tableNumber > 0 ? c.tableNumber : null;
+  return { ...c, name: mesa ? `Mesa ${mesa}` : 'Comensal en mesa' };
+}, customerFields);
 
 /* El pedido, en dos piezas.
    ------------------------------------------------------------------
