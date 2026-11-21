@@ -151,18 +151,8 @@ const LogoMundo: React.FC<{ s: number }> = ({ s }) => {
   );
 };
 
-export const LogoMarca: React.FC<{ tam: number }> = ({ tam }) => (
-  <svg width={tam} height={tam} viewBox="0 0 100 100">
-    <defs>
-      <linearGradient id="lg-logo" x1="27" y1="19" x2="72" y2="81" gradientUnits="userSpaceOnUse">
-        <stop stopColor={marca.brasa} />
-        <stop offset="1" stopColor={marca.mango} />
-      </linearGradient>
-    </defs>
-    <rect width="100" height="100" rx="22" fill={marca.carbon} stroke="rgba(255,255,255,.14)" strokeWidth="1" />
-    <path d="M27 19 h18 v44 h27 v18 H27 Z" fill="url(#lg-logo)" />
-  </svg>
-);
+import { Logo as LogoMarca } from '../componentes/Marca';
+export { LogoMarca };
 
 // ── el mundo completo ────────────────────────────────────────────────────
 export const Mundo: React.FC = () => {

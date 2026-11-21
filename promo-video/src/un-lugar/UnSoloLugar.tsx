@@ -12,6 +12,7 @@ import { AbsoluteFill, Img, Sequence, staticFile, useCurrentFrame, useVideoConfi
 import { Audio } from '@remotion/media';
 import { color, degradado, fuente } from '../marca';
 import { Leo } from '../componentes/Leo';
+import { Nombre } from '../componentes/Marca';
 import { av, azar, salto } from '../otra-vez/base';
 import { Ademas, Logo } from '../otra-vez/OtraVez';
 import { Aparato, seguir } from '../otra-vez/Pasos';
@@ -177,7 +178,7 @@ const Titulo: React.FC = () => {
       <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', gap: vertical ? 50 : 40, padding: vertical ? 70 : 160, opacity: 1 - sale, translate: `0px ${-sale * 60}px` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 34, scale: String(salto(f, 4, 12)) }}>
           <Logo tam={vertical ? 150 : 150} />
-          <span style={{ fontFamily: fuente.titular, fontWeight: 800, fontSize: vertical ? 150 : 160, color: color.carbon, letterSpacing: -4 }}>Leogin</span>
+          <Nombre letra={vertical ? 150 : 160} color={color.carbon} />
         </div>
         <div style={{ fontFamily: fuente.titular, fontWeight: 800, fontSize: vertical ? 74 : 78, lineHeight: 1.12, color: color.carbon, textAlign: 'center', opacity: av(f, 16, 28), translate: `0px ${(1 - av(f, 16, 30)) * 40}px` }}>
           Todo tu restaurante, <span style={{ color: color.brasa }}>en un solo lugar.</span>
@@ -261,7 +262,7 @@ const Cierre: React.FC = () => {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 30, scale: String(salto(f, 6, 12)), transformOrigin: vertical ? 'center' : 'left center' }}>
           <Leo tam={vertical ? 190 : 170} ojos="felices" brazo={90 * av(f, 30, 44) + Math.sin(f / 4) * 8} />
-          <span style={{ fontFamily: fuente.titular, fontWeight: 800, fontSize: vertical ? 150 : 140, color: '#fff', letterSpacing: -3 }}>Leogin</span>
+          <Nombre letra={vertical ? 150 : 140} color="#fff" />
         </div>
         <div style={{ fontFamily: fuente.titular, fontWeight: 800, fontSize: vertical ? 74 : 70, lineHeight: 1.12, color: '#fff', textAlign: vertical ? 'center' : 'left', opacity: av(f, 20, 32), translate: `0px ${(1 - av(f, 20, 34)) * 40}px` }}>
           Todo tu restaurante, <span style={{ color: color.mango }}>en un solo lugar.</span>

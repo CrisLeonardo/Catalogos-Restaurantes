@@ -17,18 +17,8 @@ import { Caos, Reloj } from './Caos';
 import { ADEMAS, ADEMAS_PANTALLAS, GUIONES, type Guion } from './guiones';
 import { Pasos } from './Pasos';
 
-export const Logo: React.FC<{ tam: number }> = ({ tam }) => (
-  <svg width={tam} height={tam} viewBox="0 0 100 100">
-    <defs>
-      <linearGradient id="lgOtraVez" x1="27" y1="19" x2="72" y2="81" gradientUnits="userSpaceOnUse">
-        <stop stopColor={color.brasa} />
-        <stop offset="1" stopColor={color.mango} />
-      </linearGradient>
-    </defs>
-    <rect width="100" height="100" rx="22" fill={color.carbon} />
-    <path d="M27 19 h18 v44 h27 v18 H27 Z" fill="url(#lgOtraVez)" />
-  </svg>
-);
+import { Logo, Nombre } from '../componentes/Marca';
+export { Logo };
 
 // ── el caos se congela y se rebobina ──────────────────────────────────────
 const Antes: React.FC<{ guion: Guion }> = ({ guion }) => {
@@ -89,7 +79,7 @@ const Titulo: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 26, opacity: av(f, 30, 40), scale: String(salto(f, 30, 10)) }}>
           <span style={{ fontFamily: fuente.titular, fontWeight: 800, fontSize: vertical ? 70 : 74, color: color.brasa }}>Ahora con</span>
           <Logo tam={vertical ? 96 : 100} />
-          <span style={{ fontFamily: fuente.titular, fontWeight: 800, fontSize: vertical ? 70 : 74, color: color.carbon }}>Leogin</span>
+          <Nombre letra={vertical ? 70 : 74} color={color.carbon} />
         </div>
       </AbsoluteFill>
     </AbsoluteFill>
@@ -179,7 +169,7 @@ const Cierre: React.FC<{ guion: Guion; publico: Publico }> = ({ guion }) => {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: vertical ? 'center' : 'flex-start', gap: vertical ? 46 : 38, zIndex: 1, maxWidth: vertical ? undefined : 1000 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 30, scale: String(salto(f, CORTE + 4, 12)), transformOrigin: vertical ? 'center' : 'left center' }}>
             <Leo tam={vertical ? 190 : 170} ojos="felices" brazo={90 * av(f, CORTE + 16, CORTE + 30) + Math.sin(f / 4) * 8} />
-            <span style={{ fontFamily: fuente.titular, fontWeight: 800, fontSize: vertical ? 150 : 140, color: '#fff', letterSpacing: -3 }}>Leogin</span>
+            <Nombre letra={vertical ? 150 : 140} color="#fff" />
           </div>
           <div style={{ fontFamily: fuente.titular, fontWeight: 800, fontSize: vertical ? 74 : 70, lineHeight: 1.12, color: '#fff', textAlign: vertical ? 'center' : 'left', opacity: av(f, CORTE + 14, CORTE + 26), translate: `0px ${(1 - av(f, CORTE + 14, CORTE + 28)) * 40}px` }}>
             Tu próximo domingo <span style={{ color: color.mango }}>puede ser este.</span>
