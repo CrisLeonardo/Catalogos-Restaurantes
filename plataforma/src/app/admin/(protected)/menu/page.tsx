@@ -12,6 +12,7 @@ import { withEffectiveAvailability } from '@/lib/product-availability';
 import { corteAHora } from '@/lib/caja/dia';
 import EstadosDelDia from '@/components/admin/estados-del-dia';
 import { getEstadosVigentes } from '@/lib/db/estados';
+import { assetPath } from '@/lib/asset-image';
 
 export const metadata = { title: 'Catálogo – Panel admin' };
 
@@ -77,7 +78,13 @@ export default async function AdminMenuPage({
         estados={estados.estados}
         faltaTabla={estados.faltaTabla}
         ahora={ahora}
-        platillos={products.map((p) => ({ id: p.id as string, name: p.name as string }))}
+        platillos={products.map((p) => {
+          /* Solo fotos de este restaurante en el bucket: son las que el
+             estado puede reusar (publicarEstado rechaza las demás). */
+          const url = (p.image_url as string | null) ?? null;
+          const reusable = url && p.is_active !== false && assetPath(url)?.startsWith(`${restaurantId}/`);
+          return { id: p.id as string, name: p.name as string, foto: reusable ? url : null };
+        })}
       />
       <CatalogPanel
         exportSlot={<ProductosExportButton restaurantId={restaurantId} importarHref={importarHref} />}

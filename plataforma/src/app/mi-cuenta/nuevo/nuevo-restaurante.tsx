@@ -8,7 +8,7 @@ import { borrarEleccionMuestra, leerEleccionMuestra } from '@/lib/muestra-mensaj
 import { borrarPerfil, leerPerfil } from '@/lib/perfil-negocio';
 import { createAnotherRestaurant, type NewRestaurantState } from '@/lib/actions/mi-cuenta';
 import { CartaEnVivo } from '@/components/signup/carta-en-vivo';
-import { defaultPlanPricing, planPriceLabel, type PlanPricing } from '@/lib/plans';
+import { PLANS, defaultPlanPricing, planPriceLabel, type PlanPricing } from '@/lib/plans';
 import {
   leerPlatosDelAlta, modosEstandar, planSugerido,
   type ComoTePiden, type ModoPedido, type PlanAlta,
@@ -56,11 +56,20 @@ const MODO_NOMBRE: Record<ModoPedido, string> = {
   dine_in: 'comer en local', pickup: 'para llevar', delivery: 'a domicilio',
 };
 
+/* Lo que separa a cada plan del de al lado, no lo que tienen en común.
+   Con «Para llevar y a domicilio» elegido, En línea y Estándar decían los
+   dos «para llevar y a domicilio» y parecían el mismo plan a distinto
+   precio (dueño, 2026-11-20). Los números salen de PLANS. */
 function detallePlan(plan: PlanAlta, como: ComoTePiden): string {
-  if (plan === 'BASICO') return 'Menú digital con QR, sin pedidos en línea';
-  if (plan === 'EN_LINEA') return 'Pedidos para llevar y a domicilio';
-  if (plan === 'ESTANDAR') return `Dos modos de pedido: ${modosEstandar(como).map((m) => MODO_NOMBRE[m]).join(' y ')}`;
-  return 'Mesas y meseros, para llevar y a domicilio';
+  if (plan === 'BASICO') return `Solo la carta con QR, sin pedidos en línea · hasta ${PLANS.BASICO.maxProducts} platillos`;
+  if (plan === 'EN_LINEA') {
+    return `Para empezar: para llevar y a domicilio, ${PLANS.EN_LINEA.users} usuario, hasta ${PLANS.EN_LINEA.maxProducts} platillos y unos ${PLANS.EN_LINEA.monthlyOrderCap} pedidos al mes`;
+  }
+  if (plan === 'ESTANDAR') {
+    const modos = modosEstandar(como).map((m) => MODO_NOMBRE[m]).join(' y ');
+    return `Para crecer: ${modos}, sin tope de pedidos ni platillos, ${PLANS.ESTANDAR.users} usuarios, corte de caja y reportes`;
+  }
+  return 'Todo: los tres modos, mesas y meseros, inventario, lealtad y usuarios sin límite';
 }
 
 type Fila = { nombre: string; precio: string };
