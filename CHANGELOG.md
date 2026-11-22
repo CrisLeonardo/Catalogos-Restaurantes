@@ -6,9 +6,27 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
-- El alta comprueba el tema y la mensualidad antes de confirmar el restaurante.
-- El cobro manual exige cubrir el importe completo y permite corregir un monto rechazado desde el mismo formulario.
-- La CI reserva los puertos de Supabase y la ruta de salud identifica el commit desplegado en Render.
+## v0.32.0 · 2026-11-22 · Acceso y equipo por local
+PR #155, #172, #173, #174 y #175 · **sin migraciones**. Sale de la auditoría externa de acceso, equipo y restaurantes del 2026-11-21, verificada punto por punto contra el código; maqueta aprobada en `docs/diseno/MAQUETA_ACCESO_Y_EQUIPO_2026-11-22.html`.
+- **El equipo es de cada local** (#173).
+  - Personal se lee de las membresías del restaurante: quien trabaja en dos locales aparece en los dos.
+  - «Quitar del equipo» ya no borra la cuenta si la persona trabaja en otro local: solo le quita ese local y su PIN de ahí. La cuenta se borra solo si no le queda ningún otro.
+  - PIN y contraseña solo se cambian a cuentas de ese local: el dueño de un restaurante ya no puede ponerle PIN a quien también es dueña de otro.
+  - Quitar un PIN solo lo quita en ese local.
+  - El encargado ve Personal en Ajustes y entra por la dirección directa (antes lo devolvía a Hoy).
+- **El encargado ve, sin poder cambiar, a quien no le toca** (#175). A otro encargado y a sí mismo los ve en una ficha de solo lectura con sus tareas por área y «Lo edita el dueño», con el nombre de a quién pedírselo.
+- **Entrar es más rápido en el teléfono** (#175).
+  - En la dirección del local se elige arriba «Correo o usuario | Con PIN». El primer campo pasa de 381 a 215 px desde arriba de la pantalla; Google queda al final.
+  - En leogin.com la marca va en una fila y Google arriba. El primer campo pasa de 404 a 267 px.
+  - Un error de acceso se anuncia, deja el cursor en el correo y no lo borra.
+- **El ícono de Leogin ya no abre otro restaurante** (#172). Un dueño con varios locales, el super admin o quien trabaja en varios se queda en el acceso general con «Continuar como» → Mi cuenta.
+- **El editor de platillo cabe en el teléfono con un nombre largo** (#172): el nombre se corta con «…» y la página ya no mide más que la pantalla.
+- Textos: Mi cuenta dice «con su propio plan» al crear otro restaurante, y recuperar la contraseña ya no promete atención «en el momento». El grupo de restaurantes se arma solo después de validar la dirección (#173).
+- Cobros y salud (#155):
+  - El alta comprueba el tema y la mensualidad antes de confirmar el restaurante.
+  - El cobro manual exige cubrir el importe completo y permite corregir un monto rechazado desde el mismo formulario.
+  - La CI reserva los puertos de Supabase y la ruta de salud identifica el commit desplegado en Render.
+- Pendiente de decisión del dueño: aplicar o quitar el límite de usuarios que anuncian los planes, y si el segundo restaurante se agrupa solo o lo decide el dueño (`docs/registros/CHECKLIST_CORRECCIONES.md`).
 
 ## v0.31.0 · 2026-11-21 · Logo «La Comanda»
 PR #169 y #170 · **sin migraciones**.
