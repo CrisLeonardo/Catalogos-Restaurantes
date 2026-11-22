@@ -75,7 +75,7 @@ export default function RecuperarClient({
         <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--u-text-3)', margin: 0 }}>
           {porCorreo
             ? 'Escribe el correo con el que entras a tu panel y te mandamos un enlace para crear una contraseña nueva.'
-            : 'Escríbenos y te la cambiamos en el momento. Atendemos nosotros, no un robot.'}
+            : 'Escríbenos y te ayudamos a cambiarla. Atendemos nosotros, no un robot.'}
         </p>
         {/* Se dice ANTES de que lo intente, no después de un error: quien
             entra con el usuario de su restaurante no tiene buzón, y esta
