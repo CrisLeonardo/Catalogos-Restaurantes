@@ -60,6 +60,7 @@ function credencial(m: StaffMember, slug: string | null): string {
 
 export default function StaffPanel({
   restaurantId, slug, staff, activity, enabledKeys, isOwner = true, techo, navBase, arqueoCiego,
+  currentUserId = null, ownerName = null,
 }: {
   restaurantId: string;
   /** La dirección del restaurante: segunda mitad de la credencial por usuario. */
@@ -74,8 +75,18 @@ export default function StaffPanel({
   techo: string[] | null;
   navBase: NavBase;
   arqueoCiego: boolean | null;
+  /** Quién mira: su propia ficha la cambia el dueño, no él. */
+  currentUserId?: string | null;
+  /** A quién pedirle un cambio que esta persona no puede hacer. */
+  ownerName?: string | null;
 }) {
   const [editor, setEditor] = useState<Editor>(null);
+  /* Un encargado no cambia a otro encargado ni a sí mismo: el servidor lo
+     rechaza (lib/auth/personal.ts). Antes la ficha se lo ofrecía igual y el
+     «No autorizado.» llegaba después de intentarlo; ahora se lee, no se
+     edita, y la fila lo avisa antes de abrirla.
+     Maqueta aprobada: docs/diseno/MAQUETA_ACCESO_Y_EQUIPO_2026-11-22.html §1 */
+  const soloLectura = (m: StaffMember) => !isOwner && (m.esResponsable || m.id === currentUserId);
   const fichaRef = useRef<HTMLElement>(null);
   const [verTodaActividad, setVerTodaActividad] = useState(false);
   const [actor, setActor] = useState('');
@@ -144,6 +155,11 @@ export default function StaffPanel({
                             {ex.añadidos.map((k) => <span key={k} className={`${s.chip} ${s.chipExcepcion}`}>+ {etiquetaDeTarea(k)}</span>)}
                             {ex.quitados.map((k) => <span key={k} className={`${s.chip} ${s.chipExcepcion}`}>− {etiquetaDeTarea(k)}</span>)}
                             {m.accesoHeredado && <span className={`${s.chip} ${s.chipRevisar}`}>Revisar</span>}
+                            {soloLectura(m) && (
+                              m.id === currentUserId
+                                ? <span className={s.loEditaElDueno}>Tú</span>
+                                : <span className={s.loEditaElDueno}><Icon name="lock" size={13} />Lo edita el dueño</span>
+                            )}
                           </span>
                           <span className={s.meta}>{credencial(m, slug)}</span>
                         </span>
@@ -164,6 +180,16 @@ export default function StaffPanel({
 
       {editor ? (
         <section ref={fichaRef} className={`${s.card} ${s.ficha}`} aria-labelledby="ficha-titulo" style={{ scrollMarginTop: 16 }}>
+          {editor.member && soloLectura(editor.member) ? (
+            <FichaLectura
+              key={editor.member.id}
+              member={editor.member}
+              slug={slug}
+              esYo={editor.member.id === currentUserId}
+              ownerName={ownerName}
+              onClose={() => setEditor(null)}
+            />
+          ) : (
           <Ficha
             key={editor.member?.id ?? 'nuevo'}
             restaurantId={restaurantId}
@@ -176,6 +202,7 @@ export default function StaffPanel({
             arqueoCiego={arqueoCiego === true}
             onClose={() => setEditor(null)}
           />
+          )}
         </section>
       ) : (
         <Section
@@ -215,6 +242,66 @@ export default function StaffPanel({
         </Section>
       )}
     </div>
+  );
+}
+
+/** La ficha de quien esta persona no puede cambiar: se lee, no se edita. */
+function FichaLectura({ member, slug, esYo, ownerName, onClose }: {
+  member: StaffMember;
+  slug: string | null;
+  esYo: boolean;
+  ownerName: string | null;
+  onClose: () => void;
+}) {
+  const perms = member.permissions ?? [];
+  const areas = AREAS
+    .map((a) => ({ ...a, tareas: a.tareas.filter((t) => perms.includes(t.key)) }))
+    .filter((a) => a.tareas.length > 0);
+  const primerNombre = (member.full_name ?? '').trim().split(/\s+/)[0] || 'esta persona';
+  const aQuien = ownerName ? `pídeselo a ${ownerName}` : 'pídeselo al dueño del restaurante';
+
+  return (
+    <>
+      <div className={s.fichaHead}>
+        <div style={{ minWidth: 0 }}>
+          <h2 id="ficha-titulo">{member.full_name || 'Miembro del equipo'}</h2>
+          <p>{member.puesto ? PUESTO_LABEL[member.puesto] : 'A medida'} · entra con {credencial(member, slug)}</p>
+        </div>
+        <Button type="button" variant="secondary" size="icon" onClick={onClose} aria-label="Cerrar la ficha">
+          <Icon name="x" size={18} />
+        </Button>
+      </div>
+
+      <div className={s.lectura}>
+        <div className={s.nota} role="note">
+          <Icon name="lock" size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+          <div>
+            <strong>{esYo ? 'Tus permisos los cambia el dueño' : 'Solo el dueño cambia a otro encargado'}</strong>
+            <p>Si hay que ajustar algo{esYo ? '' : ` de ${primerNombre}`}, {aQuien}.</p>
+          </div>
+        </div>
+
+        {areas.length === 0 ? (
+          <p className={s.meta}>Todavía no tiene tareas.</p>
+        ) : (
+          <div className={s.areasLectura}>
+            {areas.map((a) => (
+              <div key={a.key}>
+                <h3 className={s.areaLectura}>{a.label}</h3>
+                <ul className={s.tareasLectura}>
+                  {a.tareas.map((t) => (
+                    <li key={t.key}>
+                      <Icon name="check" size={16} style={{ flexShrink: 0, color: 'var(--c-ok)' }} />
+                      {t.label}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 

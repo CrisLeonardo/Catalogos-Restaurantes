@@ -100,6 +100,48 @@
 .chipExcepcion { background: var(--c-info-bg); border-color: var(--c-info-line); color: var(--c-info); }
 .chipRevisar, .chipDelicada { background: var(--c-warn-bg); border-color: var(--c-warn-line); color: var(--c-warn); }
 
+/* Fila de alguien que quien mira no puede cambiar (encargado → encargado). */
+.loEditaElDueno {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--u-text-3);
+  white-space: nowrap;
+}
+
+/* ── Ficha de solo lectura ──────────────────────────────── */
+.lectura { display: flex; flex-direction: column; gap: 16px; }
+.nota {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--c-info-bg);
+  border: 1px solid var(--c-info-line);
+  color: var(--c-info);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.nota strong { display: block; font-size: 14px; font-weight: 600; }
+.nota p { margin: 2px 0 0; color: var(--u-text-2); }
+.areasLectura { display: grid; gap: 14px 24px; grid-template-columns: minmax(0, 1fr); }
+@container (min-width: 520px) {
+  .areasLectura { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.areaLectura {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--u-text-3);
+}
+.tareasLectura { list-style: none; margin: 0; padding: 0; }
+.tareasLectura li { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 14px; color: var(--u-text); }
+
 /* ── Ajuste de arqueo ciego ─────────────────────────────── */
 .ajuste { position: relative; display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
 .ajuste > div { flex: 1; min-width: 0; }
