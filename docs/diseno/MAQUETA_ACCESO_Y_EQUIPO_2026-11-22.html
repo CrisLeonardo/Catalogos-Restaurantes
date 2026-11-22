@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueta · Acceso y equipo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Bricolage+Grotesque:wght@800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F2F1EE;--bg2:#E9E7E3;--card:#FFFFFF;--ink:#17161A;--ink2:rgba(23,22,26,.72);--ink3:rgba(23,22,26,.56);--line:rgba(23,22,26,.12);--line2:rgba(23,22,26,.2);--field:#F4F3F1;--coral:#C2542F;--coralink:#A8461F;--coralbg:#F8E6DF;--on:#fff;--ok:#1E7A46;--okbg:#E4F3E9;--warn:#8A5A00;--warnbg:#FBEFD2;--danger:#B3261E;--dangerbg:#FBE4E2;--info:#1F4E86;--infobg:#E3EDF9;--page:#DEDCD7;--sh:0 1px 2px rgba(0,0,0,.06)}
+[data-theme=dark]{--bg:#0C0B0A;--bg2:#141311;--card:#1A1917;--ink:#F5F3EF;--ink2:rgba(245,243,239,.74);--ink3:rgba(245,243,239,.56);--line:rgba(245,243,239,.12);--line2:rgba(245,243,239,.22);--field:#22211E;--coral:#D9683F;--coralink:#FFAD91;--coralbg:#3A2219;--on:#fff;--ok:#6FD49A;--okbg:#12301F;--warn:#F0C568;--warnbg:#33270B;--danger:#F2867E;--dangerbg:#3A1513;--info:#B9D2F2;--infobg:#13233A;--page:#000;--sh:none}
+*{box-sizing:border-box;margin:0}
+body{font-family:Geist,system-ui,sans-serif;background:var(--page);color:var(--ink);padding:24px 16px 80px;-webkit-font-smoothing:antialiased}
+h1{font-size:28px;font-weight:800;letter-spacing:-.03em}
+h2{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:48px 0 6px}
+.lead{max-width:780px;color:var(--ink2);font-size:15px;line-height:1.5;margin-top:8px}
+.top{display:flex;align-items:flex-start;gap:16px;justify-content:space-between;max-width:1280px;margin:0 auto}
+.wrap{max-width:1280px;margin:0 auto}
+.tog{border:1px solid var(--line2);background:var(--card);color:var(--ink);font:inherit;font-size:14px;font-weight:600;height:44px;padding:0 16px;border-radius:12px;cursor:pointer;flex-shrink:0}
+.pair{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;margin-top:16px}
+.col{display:flex;flex-direction:column;gap:10px}
+.tag{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.tag b{color:var(--coral)}
+.cap{font-size:13px;font-weight:600;color:var(--coral);max-width:390px;line-height:1.45}.cap.old{color:var(--ink2);font-weight:500}
+.i{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.i.s{width:16px;height:16px}
+
+/* Teléfono a la medida de la auditoría: 390 × 844 */
+.ph{width:390px;height:844px;background:var(--bg);border-radius:30px;border:1px solid var(--line2);overflow:hidden;position:relative;display:flex;flex-direction:column;font-size:14px}
+.tercio{position:absolute;left:0;right:0;top:281px;border-top:2px dashed var(--coral);pointer-events:none;z-index:5}
+.tercio span{position:absolute;right:8px;top:-22px;font-size:11px;font-weight:700;color:var(--coral);background:var(--bg);padding:2px 6px;border-radius:6px}
+.mide{position:absolute;left:0;height:0;border-top:2px solid var(--ok);width:22px;z-index:6}
+.mide span{position:absolute;left:26px;top:-10px;font-size:11px;font-weight:700;color:var(--ok);background:var(--bg);padding:1px 5px;border-radius:5px;white-space:nowrap}
+.mide.mal{border-color:var(--danger)}.mide.mal span{color:var(--danger)}
+
+/* Marca */
+.mark{width:32px;height:32px;border-radius:7px;background:var(--coral);display:grid;place-items:center;color:#fff;font-family:'Bricolage Grotesque',Geist,sans-serif;font-weight:800;font-size:19px;flex-shrink:0;position:relative}
+.mark::after{content:"";position:absolute;bottom:-3px;left:3px;right:3px;height:4px;background:radial-gradient(circle at 3px 0,transparent 2px,var(--coral) 2.5px) 0 0/6px 4px repeat-x}
+.mark.lg{width:44px;height:44px;font-size:26px;border-radius:9px}
+.word{font-family:'Bricolage Grotesque',Geist,sans-serif;font-weight:800;letter-spacing:-.04em}
+.rlogo{width:40px;height:40px;border-radius:11px;background:#2F4A3A;color:#F2E8D5;display:grid;place-items:center;font-weight:800;font-size:15px;flex-shrink:0}
+
+/* Login, piezas comunes */
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--sh)}
+.g{height:48px;border-radius:999px;border:1px solid var(--line2);background:#fff;color:#1F1F1F;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;font-size:15px}
+.gl{width:18px;height:18px;border-radius:50%;background:conic-gradient(#EA4335 0 25%,#FBBC05 0 50%,#34A853 0 75%,#4285F4 0)}
+.div{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink3);margin:14px 0}
+.div::before,.div::after{content:"";flex:1;height:1px;background:var(--line2)}
+.lab{display:block;font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:6px}
+.lab.up{font-size:12px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3)}
+.inp{height:48px;border-radius:12px;border:1px solid var(--line2);background:var(--field);display:flex;align-items:center;padding:0 14px;color:var(--ink3);font-size:16px;white-space:nowrap;overflow:hidden}
+.inp.focus{border-color:var(--ink);box-shadow:0 0 0 2px var(--coralbg)}
+.inp.err{border-color:var(--danger);box-shadow:0 0 0 2px var(--dangerbg);color:var(--ink)}
+.help{font-size:12px;color:var(--ink3);margin-top:6px;line-height:1.45}
+.help b{color:var(--ink2);font-weight:600}
+.errl{display:flex;gap:6px;align-items:flex-start;font-size:13px;color:var(--danger);margin-top:6px;line-height:1.4;font-weight:500}
+.btn{height:52px;border-radius:999px;background:var(--coral);color:var(--on);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px}
+.lnk{font-size:13px;color:var(--ink2);text-align:center;text-decoration:underline;text-underline-offset:3px}
+.oldpin{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:16px;border:1.5px solid var(--line2);background:var(--bg2)}
+.oldpin i{width:34px;height:34px;border-radius:10px;background:var(--coralbg);color:var(--coralink);display:grid;place-items:center}
+.oldpin b{display:block;font-size:14px}.oldpin span{display:block;font-size:12px;color:var(--ink3);margin-top:1px}
+
+/* Control segmentado */
+.seg{display:flex;padding:4px;background:var(--bg2);border-radius:14px;gap:4px}
+.seg span{flex:1;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:14px;font-weight:600;color:var(--ink2)}
+.seg .on{background:var(--card);color:var(--ink);box-shadow:var(--sh);border:1px solid var(--line)}
+
+/* Grilla de PIN */
+.who{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.who span{height:84px;border-radius:14px;border:1px solid var(--line);background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600}
+.who em{width:36px;height:36px;border-radius:50%;background:var(--bg2);display:grid;place-items:center;font-style:normal;font-size:13px;font-weight:700;color:var(--ink2)}
+
+/* Panel: Personal */
+.bar{height:56px;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 12px 0 18px;border-bottom:1px solid var(--line);background:var(--bg)}
+.bar b{flex:1;font-size:20px;font-weight:800;letter-spacing:-.03em}
+.ib{width:40px;height:40px;border-radius:12px;background:var(--card);box-shadow:var(--sh);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink);flex-shrink:0}
+.back{display:flex;align-items:center;gap:4px;padding:10px 16px;font-size:14px;font-weight:600;border-bottom:1px solid var(--line)}
+.body{flex:1;overflow:hidden;padding:12px;display:flex;flex-direction:column;gap:10px}
+.nav{flex-shrink:0;border-top:1px solid var(--line);display:flex;padding:6px 4px 12px;background:var(--card);color:var(--ink3)}
+.nav span{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px}
+.nav .on{color:var(--coral);font-weight:600}
+.ls{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--sh)}
+.row{display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;min-height:64px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.av{width:38px;height:38px;border-radius:50%;background:var(--bg2);display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--ink2);flex-shrink:0}
+.row .tx{flex:1;min-width:0}.row .nm{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .mt{font-size:13px;color:var(--ink3);display:flex;align-items:center;gap:5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row.sel{background:var(--bg2)}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:700;background:var(--ink);color:var(--bg);white-space:nowrap}
+.chip.soft{background:var(--infobg);color:var(--info);font-weight:600}
+.sheet{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--sh);display:flex;flex-direction:column;overflow:hidden}
+.sh{display:flex;align-items:flex-start;gap:10px;padding:16px 16px 12px}
+.sh div{flex:1;min-width:0}.sh h3{font-size:20px;font-weight:800;letter-spacing:-.02em}.sh p{font-size:13px;color:var(--ink3);margin-top:2px}
+.sb{padding:0 16px 16px;display:flex;flex-direction:column;gap:14px}
+.note{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:14px;background:var(--infobg);color:var(--info);font-size:13px;line-height:1.45}
+.note b{display:block;font-size:14px;color:var(--info)}
+.kv{display:flex;justify-content:space-between;gap:12px;font-size:14px;padding:10px 0;border-top:1px solid var(--line)}
+.kv span{color:var(--ink3)}.kv b{font-weight:600;text-align:right}
+.area{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3);margin:2px 0 4px}
+.task{display:flex;gap:8px;align-items:center;font-size:14px;padding:5px 0;color:var(--ink)}
+.task svg{color:var(--ok)}
+.task.no{color:var(--ink3)}.task.no svg{color:var(--ink3)}
+.oldfield{height:44px;border-radius:12px;border:1px solid var(--line2);background:var(--field);display:flex;align-items:center;padding:0 12px;font-size:15px}
+.puestos{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.puestos span{border:1px solid var(--line2);border-radius:12px;padding:8px 10px;font-size:13px;font-weight:600;color:var(--ink3)}
+.puestos .on{border:2px solid var(--ink);color:var(--ink)}
+.pie{border-top:1px solid var(--line);padding:10px 16px 14px;background:var(--card)}
+.pie p{font-size:12px;color:var(--ink3);text-align:center;margin-bottom:8px}
+.pie .err{color:var(--danger);font-weight:600;font-size:13px}
+
+/* PC */
+.desk{width:1000px;height:600px;background:var(--bg);border-radius:16px;border:1px solid var(--line2);overflow:hidden;display:flex;font-size:14px}
+.side{width:210px;flex-shrink:0;border-right:1px solid var(--line);padding:14px 10px;display:flex;flex-direction:column;gap:4px;background:var(--bg)}
+.side .h{display:flex;gap:8px;align-items:center;padding:0 6px 12px}.side .h b{font-size:15px}
+.side span{padding:8px 10px;border-radius:10px;font-size:14px;color:var(--ink2);display:flex;gap:8px;align-items:center}
+.side .on{background:var(--coralbg);color:var(--coralink);font-weight:600}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.dgrid{flex:1;display:grid;grid-template-columns:360px 1fr;gap:16px;padding:16px;overflow:hidden;align-items:start}
+.center{flex:1;display:grid;place-items:center}
+@media(max-width:1060px){.deskwrap{display:none}.nodesk{display:block!important}}
+/* Vista en un teléfono: el marco de 390 px se reduce para no desbordar la página. */
+@media(max-width:440px){.ph{zoom:.86}.top{flex-direction:column}}
+.nodesk{display:none;font-size:13px;color:var(--ink3);margin-top:10px}
+
+table.t{border-collapse:collapse;width:100%;max-width:980px;margin-top:14px;background:var(--card);border-radius:16px;overflow:hidden;font-size:14px}
+.t th,.t td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.4}
+.t th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3)}
+.t td.mejor{color:var(--ok);font-weight:600}.t td.peor{color:var(--warn);font-weight:600}
+ol.dec{max-width:820px;margin-top:12px;padding-left:22px;font-size:15px;line-height:1.5;color:var(--ink2)}
+ol.dec li{margin-bottom:10px}ol.dec b{color:var(--ink)}
+.foot{font-size:13px;color:var(--ink3);padding:2px 4px;line-height:1.45;max-width:820px}
+code{font-size:13px;background:var(--bg2);padding:1px 5px;border-radius:5px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M17 6l3 3M14 9l2 2"/></symbol>
+  <symbol id="mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol>
+  <symbol id="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="back" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+  <symbol id="x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+  <symbol id="minus" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
+  <symbol id="alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></symbol>
+  <symbol id="bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></symbol>
+  <symbol id="users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/></symbol>
+  <symbol id="list" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+</svg>
+
+<div class="top">
+  <div>
+    <h1>Acceso y equipo</h1>
+    <p class="lead">Segunda etapa de la auditoría del 21 de noviembre: las dos piezas visuales que quedaron fuera del PR #173. Cada una enseña lo que hay hoy (medido en pantalla real con la base local) y la propuesta. Nada de esto está construido.</p>
+  </div>
+  <button class="tog" onclick="const h=document.documentElement;h.dataset.theme=h.dataset.theme==='dark'?'light':'dark'">Claro / oscuro</button>
+</div>
+
+<div class="wrap">
+
+<!-- ===================================================== 1 -->
+<h2>1 · El encargado abre la ficha de otro encargado</h2>
+<p class="lead"><b>Quién:</b> Carmen, encargada de Rincón 502, entra a Personal para revisar a su equipo. <b>A qué viene:</b> ajustar a un cajero o a un mesero. Hoy, si abre a otro encargado o se abre a sí misma, ve el formulario completo: elige trabajo, mueve interruptores, toca «Guardar» y solo entonces lee «No autorizado.». Lo mismo con «Cambiar PIN» y «Quitar del equipo».</p>
+
+<div class="pair">
+  <div class="col">
+    <span class="tag">Hoy · teléfono</span>
+    <div class="ph">
+      <div class="bar"><b>Personal</b><i class="ib"><svg class="i s"><use href="#bell"/></svg></i><i class="ib"><svg class="i s"><use href="#dots"/></svg></i></div>
+      <div class="body" style="padding-top:10px">
+        <div class="ls">
+          <div class="row sel"><span class="av">LP</span><div class="tx"><div class="nm">Luis Pérez</div><div class="mt"><span class="chip">Encargado</span></div></div><svg class="i s"><use href="#chev"/></svg></div>
+        </div>
+        <div class="sheet" style="flex:1">
+          <div class="sh"><div><h3>Luis Pérez</h3><p>Encargado · entra con luis@rincon-502</p></div><i class="ib"><svg class="i s"><use href="#x"/></svg></i></div>
+          <div class="sb" style="flex:1;overflow:hidden">
+            <div><span class="lab">Nombre</span><div class="oldfield">Luis Pérez</div></div>
+            <div><span class="lab" style="font-size:16px;font-weight:700;color:var(--ink)">¿Qué trabajo hace?</span>
+              <div class="puestos"><span>Mesero</span><span>Cocina</span><span>Caja</span><span>Recepción</span><span>Reparto</span><span class="on">Encargado ✓</span></div></div>
+            <div><span class="lab" style="font-size:16px;font-weight:700;color:var(--ink)">Qué puede hacer</span>
+              <div class="kv" style="border:0"><span>Salón y servicio</span><b>4 de 4</b></div></div>
+          </div>
+          <div class="pie"><p class="err">No autorizado.</p><p>Los cambios surten efecto en su siguiente acción.</p><div class="btn">Guardar a Luis como Encargado</div></div>
+        </div>
+      </div>
+      <div class="nav"><span><svg class="i"><use href="#grid"/></svg>Mesas</span><span><svg class="i"><use href="#list"/></svg>Pedidos</span><span><svg class="i"><use href="#users"/></svg>Espera</span><span class="on"><svg class="i"><use href="#dots"/></svg>Más</span></div>
+    </div>
+    <p class="cap old">Todo parece editable. El error aparece después de intentar, en una línea encima del botón, y no dice por qué ni quién sí puede.</p>
+  </div>
+
+  <div class="col">
+    <span class="tag"><b>Propuesta</b> · teléfono</span>
+    <div class="ph">
+      <div class="bar"><b>Personal</b><i class="ib"><svg class="i s"><use href="#bell"/></svg></i><i class="ib"><svg class="i s"><use href="#dots"/></svg></i></div>
+      <div class="body" style="padding-top:10px">
+        <div class="ls">
+          <div class="row sel"><span class="av">LP</span><div class="tx"><div class="nm">Luis Pérez</div><div class="mt"><span class="chip">Encargado</span><svg class="i s" style="width:14px;height:14px"><use href="#lock"/></svg>Lo edita el dueño</div></div><svg class="i s"><use href="#chev"/></svg></div>
+        </div>
+        <div class="sheet">
+          <div class="sh"><div><h3>Luis Pérez</h3><p>Encargado · entra con luis@rincon-502</p></div><i class="ib"><svg class="i s"><use href="#x"/></svg></i></div>
+          <div class="sb">
+            <div class="note" role="note"><svg class="i s" style="margin-top:1px"><use href="#lock"/></svg><div><b>Solo el dueño cambia a otro encargado</b>Si hay que ajustar algo de Luis, pídeselo a Andrea Morales.</div></div>
+            <div>
+              <div class="area">Salón y servicio</div>
+              <div class="task"><svg class="i s"><use href="#check"/></svg>Tomar pedidos y atender mesas</div>
+              <div class="task"><svg class="i s"><use href="#check"/></svg>Sentar y repartir mesas</div>
+              <div class="task"><svg class="i s"><use href="#check"/></svg>Lista de espera y reservaciones</div>
+              <div class="area" style="margin-top:10px">Caja</div>
+              <div class="task"><svg class="i s"><use href="#check"/></svg>Cobrar, abrir y cerrar caja</div>
+              <div class="area" style="margin-top:10px">Equipo</div>
+              <div class="task"><svg class="i s"><use href="#check"/></svg>Agregar personal y cambiar sus permisos</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="nav"><span><svg class="i"><use href="#grid"/></svg>Mesas</span><span><svg class="i"><use href="#list"/></svg>Pedidos</span><span><svg class="i"><use href="#users"/></svg>Espera</span><span class="on"><svg class="i"><use href="#dots"/></svg>Más</span></div>
+    </div>
+    <p class="cap">La fila ya avisa «Lo edita el dueño». La ficha se lee, no se edita: sin interruptores, sin «Guardar», sin PIN y sin «Quitar». Dice quién puede cambiarlo, con su nombre.</p>
+  </div>
+</div>
+
+<p class="foot" style="margin-top:14px"><b>Su propia ficha</b> usa la misma lectura con otro aviso: «Tus permisos los cambia el dueño». En la lista su fila dice «Tú» en vez de «Lo edita el dueño». <b>Las fichas que sí puede editar</b> (cajeros, meseros, cocina) no cambian.</p>
+
+<div class="deskwrap">
+<div class="pair">
+  <div class="col">
+    <span class="tag"><b>Propuesta</b> · PC 1280 px (reducida)</span>
+    <div class="desk">
+      <div class="side"><div class="h"><span class="rlogo" style="width:32px;height:32px;font-size:12px">R5</span><b>Rincón 502</b></div>
+        <span><svg class="i s"><use href="#grid"/></svg>Mesas</span><span><svg class="i s"><use href="#list"/></svg>Pedidos</span><span><svg class="i s"><use href="#users"/></svg>Espera</span><span class="on"><svg class="i s"><use href="#users"/></svg>Personal y permisos</span></div>
+      <div class="main">
+        <div class="bar"><b>Personal</b><i class="ib"><svg class="i s"><use href="#bell"/></svg></i></div>
+        <div class="dgrid">
+          <div class="ls">
+            <div class="row"><span class="av">AL</span><div class="tx"><div class="nm">Ana López</div><div class="mt"><span class="chip">Caja</span></div></div><svg class="i s"><use href="#chev"/></svg></div>
+            <div class="row"><span class="av">DG</span><div class="tx"><div class="nm">Diego García</div><div class="mt"><span class="chip">Mesero</span></div></div><svg class="i s"><use href="#chev"/></svg></div>
+            <div class="row sel"><span class="av">LP</span><div class="tx"><div class="nm">Luis Pérez</div><div class="mt"><span class="chip">Encargado</span><svg class="i s" style="width:14px;height:14px"><use href="#lock"/></svg>Lo edita el dueño</div></div><svg class="i s"><use href="#chev"/></svg></div>
+            <div class="row"><span class="av">CR</span><div class="tx"><div class="nm">Carmen Ruiz</div><div class="mt"><span class="chip">Encargado</span>Tú</div></div><svg class="i s"><use href="#chev"/></svg></div>
+          </div>
+          <div class="sheet">
+            <div class="sh"><div><h3>Luis Pérez</h3><p>Encargado · entra con luis@rincon-502</p></div><i class="ib"><svg class="i s"><use href="#x"/></svg></i></div>
+            <div class="sb">
+              <div class="note"><svg class="i s" style="margin-top:1px"><use href="#lock"/></svg><div><b>Solo el dueño cambia a otro encargado</b>Si hay que ajustar algo de Luis, pídeselo a Andrea Morales.</div></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 24px">
+                <div><div class="area">Salón y servicio</div><div class="task"><svg class="i s"><use href="#check"/></svg>Tomar pedidos y atender mesas</div><div class="task"><svg class="i s"><use href="#check"/></svg>Sentar y repartir mesas</div><div class="task"><svg class="i s"><use href="#check"/></svg>Lista de espera</div></div>
+                <div><div class="area">Caja</div><div class="task"><svg class="i s"><use href="#check"/></svg>Cobrar, abrir y cerrar caja</div><div class="area" style="margin-top:10px">Equipo</div><div class="task"><svg class="i s"><use href="#check"/></svg>Agregar personal y cambiar sus permisos</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<p class="nodesk">La vista de PC se ve en una pantalla de al menos 1060 px.</p>
+
+<!-- ===================================================== 2 -->
+<h2>2 · Entrar desde la dirección del local</h2>
+<p class="lead"><b>Quién:</b> un mesero en una tableta nueva, o la encargada que entra desde su teléfono. <b>A qué viene:</b> entrar a trabajar. Hoy el primer campo empieza a 381 px y «Soy personal del restaurante» a 670 px, debajo del formulario del dueño. Quien entra con PIN tiene que saber que debe bajar. Medido en Chrome a 375 × 812; la propuesta se mide a 390 × 844, igual que la auditoría.</p>
+
+<div class="pair">
+  <div class="col">
+    <span class="tag">Hoy · aparato sin registrar</span>
+    <div class="ph">
+      <div class="tercio"><span>primer tercio · 281 px</span></div>
+      <div class="mide mal" style="top:381px"><span>primer campo 381 px (medido)</span></div>
+      <div style="padding:84px 20px 0;text-align:center">
+        <div style="display:flex;justify-content:center"><span class="mark lg">L</span></div>
+        <div class="word" style="font-size:26px;margin-top:10px">Rincón 502</div>
+        <div style="font-size:12px;color:var(--ink3)">by Leogin</div>
+        <div style="font-size:14px;color:var(--ink2);margin-top:8px">Acceso al panel de administración</div>
+      </div>
+      <div class="card" style="margin:26px 12px 0;padding:22px 20px">
+        <div class="g"><i class="gl"></i>Continuar con Google</div>
+        <div class="div">o con tu correo</div>
+        <span class="lab up">Correo o usuario</span><div class="inp">tu@email.com · o tu usuario</div>
+        <span class="lab up" style="margin-top:14px">Contraseña</span><div class="inp"></div>
+        <div class="btn" style="margin-top:18px">Entrar</div>
+        <p class="lnk" style="margin-top:14px;text-decoration:none">Olvidé mi contraseña</p>
+      </div>
+      <div class="oldpin" style="margin:14px 12px 0"><i><svg class="i s"><use href="#key"/></svg></i><div style="flex:1"><b>Soy personal del restaurante</b><span>Toca aquí para entrar con tu PIN</span></div><svg class="i s"><use href="#chev"/></svg></div>
+    </div>
+    <p class="cap old">Tres bloques apilados y centrados en vertical. El PIN, que es como entra casi todo el equipo, queda al final y con apariencia de aviso.</p>
+  </div>
+
+  <div class="col">
+    <span class="tag"><b>Propuesta</b> · con correo o usuario</span>
+    <div class="ph">
+      <div class="tercio"><span>primer tercio · 281 px</span></div>
+      <div class="mide" style="top:197px"><span>primer campo ≈ 197 px</span></div>
+      <div style="padding:24px 16px 0;display:flex;align-items:center;gap:12px">
+        <span class="rlogo">R5</span>
+        <div><h3 style="font-size:20px;font-weight:800;letter-spacing:-.02em">Rincón 502</h3><div style="font-size:13px;color:var(--ink3)">Entra a trabajar</div></div>
+      </div>
+      <div style="padding:20px 16px 0">
+        <div class="seg" role="radiogroup" aria-label="Cómo entras"><span class="on" role="radio" aria-checked="true"><svg class="i s"><use href="#mail"/></svg>Correo o usuario</span><span role="radio" aria-checked="false"><svg class="i s"><use href="#key"/></svg>Con PIN</span></div>
+      </div>
+      <div class="card" style="margin:16px 12px 0;padding:20px">
+        <span class="lab">Correo o usuario</span><div class="inp focus">tu@correo.com</div>
+        <p class="help" id="ayuda-usuario">¿Te dieron un usuario? Escríbelo tal cual, por ejemplo <b>carmen</b>.</p>
+        <span class="lab" style="margin-top:14px">Contraseña</span><div class="inp"></div>
+        <div class="btn" style="margin-top:18px">Entrar</div>
+        <p class="lnk" style="margin-top:14px">Olvidé mi contraseña</p>
+        <div class="div" style="margin:16px 0 12px">o</div>
+        <div class="g">
+          <i class="gl"></i>Continuar con Google
+        </div>
+      </div>
+    </div>
+    <p class="cap">El nombre del local, una línea. Debajo, la elección de cómo entras, a la vista y con el mismo peso. El campo empieza dentro del primer tercio. Google baja al final porque aquí casi todos entran con usuario o con PIN.</p>
+  </div>
+
+  <div class="col">
+    <span class="tag"><b>Propuesta</b> · con PIN</span>
+    <div class="ph">
+      <div class="tercio"><span>primer tercio · 281 px</span></div>
+      <div class="mide" style="top:153px"><span>primer nombre ≈ 153 px</span></div>
+      <div style="padding:24px 16px 0;display:flex;align-items:center;gap:12px">
+        <span class="rlogo">R5</span>
+        <div><h3 style="font-size:20px;font-weight:800;letter-spacing:-.02em">Rincón 502</h3><div style="font-size:13px;color:var(--ink3)">Entra a trabajar</div></div>
+      </div>
+      <div style="padding:20px 16px 0">
+        <div class="seg"><span><svg class="i s"><use href="#mail"/></svg>Correo o usuario</span><span class="on"><svg class="i s"><use href="#key"/></svg>Con PIN</span></div>
+      </div>
+      <div style="padding:16px 16px 0">
+        <div class="who">
+          <span><em>AL</em>Ana</span><span><em>DG</em>Diego</span><span><em>JM</em>José</span>
+          <span><em>MC</em>María</span><span><em>PS</em>Pedro</span><span><em>RT</em>Rosa</span>
+        </div>
+        <p class="help" style="margin-top:12px;text-align:center">Toca tu nombre y marca tu PIN de 4 dígitos.</p>
+      </div>
+    </div>
+    <p class="cap">Un toque en «Con PIN» y aparecen los nombres, como hoy. En los aparatos del local sigue abriéndose directo aquí. Si el local exige aparato autorizado, la opción PIN no aparece y queda el aviso de hoy.</p>
+  </div>
+</div>
+
+<!-- ===================================================== 3 -->
+<h2>3 · Entrar desde la página principal</h2>
+<p class="lead"><b>Quién:</b> el dueño que abre <code>leogin.com</code> en el teléfono, o alguien que llega por un enlace sin la dirección de su local. <b>A qué viene:</b> entrar a su restaurante. Hoy el primer campo empieza a 404 px; el ejemplo del campo se corta («o carlos@turestauran»); la página no tiene encabezado y la ayuda del usuario son tres líneas debajo del campo.</p>
+
+<div class="pair">
+  <div class="col">
+    <span class="tag">Hoy · teléfono</span>
+    <div class="ph">
+      <div class="tercio"><span>primer tercio · 281 px</span></div>
+      <div class="mide mal" style="top:404px"><span>primer campo 404 px (auditoría)</span></div>
+      <div style="padding:114px 20px 0;text-align:center">
+        <div style="display:flex;justify-content:center"><span class="mark lg">L</span></div>
+        <div class="word" style="font-size:30px;margin-top:8px">leogin</div>
+        <div style="font-size:14px;color:var(--ink2);margin-top:4px">Acceso al panel de administración</div>
+      </div>
+      <div class="card" style="margin:34px 16px 0;padding:24px 24px">
+        <div class="g"><i class="gl"></i>Continuar con Google</div>
+        <div class="div">o con tu correo</div>
+        <span class="lab up">Correo o usuario</span><div class="inp">tu@email.com · o carlos@turestauran</div>
+        <p class="help">¿Te dieron un usuario? Escríbelo con la dirección de tu restaurante detrás — <b>carlos@turestaurante</b> — o entra directo desde la dirección de tu local.</p>
+        <span class="lab up" style="margin-top:14px">Contraseña</span><div class="inp"></div>
+        <div class="btn" style="margin-top:18px">Entrar</div>
+      </div>
+    </div>
+    <p class="cap old">Centrado en vertical: en un teléfono alto todo baja. El nombre de la marca ocupa más que el formulario.</p>
+  </div>
+
+  <div class="col">
+    <span class="tag"><b>Propuesta</b> · teléfono</span>
+    <div class="ph">
+      <div class="tercio"><span>primer tercio · 281 px</span></div>
+      <div class="mide" style="top:256px"><span>primer campo ≈ 256 px</span></div>
+      <div style="padding:24px 16px 0;display:flex;align-items:center;gap:9px"><span class="mark">L</span><span class="word" style="font-size:22px">leogin</span></div>
+      <h3 style="padding:20px 16px 0;font-size:22px;font-weight:800;letter-spacing:-.02em">Entra a tu restaurante</h3>
+      <div class="card" style="margin:16px 12px 0;padding:20px">
+        <div class="g"><i class="gl"></i>Continuar con Google</div>
+        <div class="div">o con tu correo</div>
+        <span class="lab">Correo o usuario</span><div class="inp focus">tu@correo.com</div>
+        <p class="help">¿Tienes usuario? Escríbelo así: <b>carmen@rincon-502</b>.</p>
+        <span class="lab" style="margin-top:14px">Contraseña</span><div class="inp"></div>
+        <div class="btn" style="margin-top:18px">Entrar</div>
+        <p class="lnk" style="margin-top:14px">Olvidé mi contraseña</p>
+      </div>
+    </div>
+    <p class="cap">Marca en una fila arriba y un encabezado que dice a qué se viene. El ejemplo del campo cabe. La ayuda es una línea. El estado de error se ve en la vista de PC de abajo.</p>
+  </div>
+</div>
+
+<div class="deskwrap">
+<div class="pair">
+  <div class="col">
+    <span class="tag"><b>Propuesta</b> · PC 1280 px (reducida)</span>
+    <div class="desk" style="height:560px;flex-direction:column">
+      <div style="padding:20px 24px;display:flex;align-items:center;gap:9px"><span class="mark">L</span><span class="word" style="font-size:22px">leogin</span></div>
+      <div class="center">
+        <div style="width:400px">
+          <h3 style="font-size:24px;font-weight:800;letter-spacing:-.02em;margin-bottom:16px">Entra a tu restaurante</h3>
+          <div class="card" style="padding:24px">
+            <div class="g"><i class="gl"></i>Continuar con Google</div>
+            <div class="div">o con tu correo</div>
+            <p class="errl" role="alert" style="margin:0 0 10px"><svg class="i s"><use href="#alert"/></svg>Usuario o contraseña incorrectos.</p>
+            <span class="lab">Correo o usuario</span><div class="inp focus" style="color:var(--ink)">andrea.morales@gmail.com</div>
+            <p class="help">¿Tienes usuario? Escríbelo así: <b>carmen@rincon-502</b>.</p>
+            <span class="lab" style="margin-top:14px">Contraseña</span><div class="inp"></div>
+            <div class="btn" style="margin-top:18px">Entrar</div>
+            <p class="lnk" style="margin-top:14px">Olvidé mi contraseña</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">En la PC el formulario sigue centrado, porque sobra espacio. Cambian la marca, que pasa a la esquina, el encabezado y la ayuda de una línea. Aquí se ve el error: va arriba del formulario, lo anuncia el lector de pantalla y el cursor vuelve al primer campo. No dice cuál de los dos falló, a propósito: así no revela qué cuentas existen.</p>
+  </div>
+</div>
+</div>
+<p class="nodesk">La vista de PC se ve en una pantalla de al menos 1060 px.</p>
+
+<!-- ===================================================== 4 -->
+<h2>4 · Toques y medidas</h2>
+<table class="t">
+  <tr><th>Tarea</th><th>Hoy</th><th>Propuesta</th></tr>
+  <tr><td>Encargada que abre a otro encargado y entiende que no puede cambiarlo</td><td>Abrir + cambiar algo + «Guardar» → «No autorizado.»</td><td class="mejor">0: lo dice la fila; 1 si abre la ficha</td></tr>
+  <tr><td>Mesero en una tableta nueva: llegar a su nombre</td><td>Bajar ~400 px + 1 toque</td><td class="mejor">1 toque, sin bajar</td></tr>
+  <tr><td>Encargada en su teléfono: primer campo del acceso del local</td><td>381 px</td><td class="mejor">≈ 197 px</td></tr>
+  <tr><td>Dueño en <code>leogin.com</code>: primer campo</td><td>404 px</td><td class="mejor">≈ 256 px</td></tr>
+  <tr><td>Dueño que entra con Google desde la dirección del local</td><td>1 toque, arriba</td><td class="peor">1 toque, al final de la tarjeta</td></tr>
+  <tr><td>Error de acceso</td><td>Caja roja encima de «Entrar», sin anunciar</td><td class="mejor">Arriba del formulario, anunciado y con el cursor en el primer campo</td></tr>
+</table>
+
+<!-- ===================================================== 5 -->
+<h2>5 · Lo que decides</h2>
+<ol class="dec">
+  <li><b>Ficha de solo lectura para el encargado</b> cuando abre a otro encargado o a sí mismo. Dice quién puede cambiarlo, con el nombre del dueño, y la fila avisa «Lo edita el dueño» antes de abrirla. <b>Recomiendo sí.</b> Es el último caso de la auditoría en que la pantalla ofrece algo que el servidor rechaza.</li>
+  <li><b>Elegir cómo entras arriba, en el acceso del local</b>, con «Correo o usuario | Con PIN» como dos opciones del mismo peso. Sustituye a la tarjeta «Soy personal del restaurante» del final. En los aparatos del local se sigue abriendo directo en el PIN. <b>Recomiendo sí.</b></li>
+  <li><b>Google al final de la tarjeta, solo en el acceso del local.</b> Ahí casi todos entran con usuario o PIN. En <code>leogin.com</code> Google sigue arriba, porque ahí entra el dueño. <b>Recomiendo sí</b>, pero es tu decisión: al dueño que entra con Google por la dirección del local le cuesta bajar un poco.</li>
+  <li><b>Marca en una fila y encabezado «Entra a tu restaurante»</b> en <code>leogin.com</code>, con el formulario arriba en el teléfono y centrado en la PC. Ayuda del usuario en una línea, el ejemplo del campo corto y el error anunciado, con el cursor de vuelta en el primer campo. <b>Recomiendo sí.</b></li>
+  <li><b>Registro no se toca en esta etapa.</b> Su primer campo empieza a 516 px, pero es página de «convencer»: la presentación de arriba es intencional según el sistema visual. Si quieres que suba, va en una maqueta aparte.</li>
+</ol>
+<p class="foot">No cambian: «Continuar como…» cuando hay una sesión viva, el candado de aparatos autorizados, «Olvidé mi contraseña», la grilla y el teclado del PIN, y lo que cada quien puede hacer. Son cambios de pantalla, sin migración. Antes de construir, se corrige también en el PR #173 el candado del armazón, que todavía decide Personal por el papel de gerente y no por la tarea «personal».</p>
+
+</div>
+</body>
+</html>
