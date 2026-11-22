@@ -24,7 +24,13 @@ const PIN_LEN = 4;
 
 interface Props {
   restaurantId: string;
-  onBack: () => void;
+  /**
+   * «Entrar con correo». Sin él, la grilla va debajo del selector
+   * «Correo o usuario | Con PIN» del acceso (maqueta aprobada
+   * MAQUETA_ACCESO_Y_EQUIPO_2026-11-22 §2): el selector ya es la salida, y la
+   * grilla se pinta sola, sin tarjeta ni título que repitan la elección.
+   */
+  onBack?: () => void;
   hubUrl?: string | null;
   hubToken?: string | null;
 }
@@ -143,13 +149,17 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
   };
 
   if (!selected) {
-    return (
-      <Glass style={{ padding: '24px 22px' }}>
-        <button type="button" onClick={onBack} style={linkStyle}>
-          <Icon name="chevronLeft" size={14} /> Entrar con correo
-        </button>
-        <p className="t-display" style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>¿Quién eres?</p>
-        <p className="t-mute" style={{ fontSize: 12, marginBottom: 16 }}>Toca tu nombre para entrar con tu PIN.</p>
+    const grilla = (
+      <>
+        {onBack && (
+          <>
+            <button type="button" onClick={onBack} style={linkStyle}>
+              <Icon name="chevronLeft" size={14} /> Entrar con correo
+            </button>
+            <p className="t-display" style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>¿Quién eres?</p>
+            <p className="t-mute" style={{ fontSize: 12, marginBottom: 16 }}>Toca tu nombre para entrar con tu PIN.</p>
+          </>
+        )}
 
         {members === null ? (
           <p style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Cargando…</p>
@@ -182,8 +192,16 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
             ))}
           </div>
         )}
-      </Glass>
+        {!onBack && members !== null && members.length > 0 && (
+          <p className="t-mute" style={{ fontSize: 13, marginTop: 12, textAlign: 'center' }}>
+            Toca tu nombre y marca tu PIN de 4 dígitos.
+          </p>
+        )}
+      </>
     );
+    return onBack
+      ? <Glass style={{ padding: '24px 22px' }}>{grilla}</Glass>
+      : <div role="group" aria-label="¿Quién eres?">{grilla}</div>;
   }
 
   function backToGrid() {

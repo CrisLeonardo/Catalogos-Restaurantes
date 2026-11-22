@@ -62,10 +62,10 @@ El informe quedó fuera del repo (`Documents/Auditoria-Leogin-2026-11-21/auditor
 - [x] **El candado de sección del armazón también usa la capacidad.** Decidía Personal por el papel de gerente: quien tenía la tarea sin ese papel rebotaba a Hoy al abrir la dirección directo (visto en pantalla el 2026-11-22).
 - [x] **Mi cuenta:** «se suma a tu plan» → «con su propio plan»; el grupo se crea después de validar la dirección del local nuevo.
 - [x] **Recuperar:** ya no promete cambiar la contraseña «en el momento», que nadie ha medido.
-- [ ] **Ficha de solo lectura para el encargado.** Al abrir a otro responsable o a sí mismo ve «Guardar», «Cambiar PIN» y «Quitar», que el servidor rechaza con «No autorizado». Maqueta: `docs/diseno/MAQUETA_ACCESO_Y_EQUIPO_2026-11-22.html` §1, pendiente de aprobación.
+- [x] **Ficha de solo lectura para el encargado.** Hecho en `feat/acceso-y-equipo` (maqueta §1, aprobada por el dueño el 2026-11-22): la fila avisa «Lo edita el dueño» o «Tú», y la ficha se lee, dice a quién pedir el cambio y no ofrece «Guardar», «Cambiar PIN» ni «Quitar».
 - [ ] **Límite de usuarios por plan.** `plans.ts` anuncia «2 usuarios» en Estándar y `createStaff` no lo aplica. Decisión del dueño: aplicarlo (¿cuenta el dueño?, ¿y los PIN?) o quitarlo de los planes.
 - [ ] **Grupo automático al crear el 2.º restaurante.** Hoy se arma solo; el informe propone que vincular locales bajo una marca sea una decisión explícita (ya existe «Crear el link del grupo»). Decisión del dueño.
-- [ ] **Acceso en el teléfono (P2).** Primer campo del login a 404 px y del registro a 516 px en 390 × 844; «Entrar con PIN» después del formulario; el error no enfoca el campo. Maqueta: `docs/diseno/MAQUETA_ACCESO_Y_EQUIPO_2026-11-22.html` §2 y §3, pendiente de aprobación.
+- [x] **Acceso en el teléfono (P2).** Hecho en `feat/acceso-y-equipo` (maqueta §2 y §3, aprobada el 2026-11-22). Medido a 390 × 844: el acceso del local pasa de 381 a 215 px, con «Correo o usuario | Con PIN» arriba; `leogin.com` pasa de 404 a 267 px. El error se anuncia, el cursor vuelve al campo y el correo escrito se conserva. El registro no se toca, por decisión del dueño.
 - [ ] **Recuperación probada de punta a punta (P1).** Con Resend, Google y pérdida del segundo factor en aparatos reales; medir el tiempo de atención real antes de prometer un plazo.
 
 ## Ya corregidos — verificados en código, sin acción pendiente

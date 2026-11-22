@@ -1,0 +1,176 @@
+/* Acceso al panel (leogin.com y la dirección de cada local).
+   Maqueta aprobada: docs/diseno/MAQUETA_ACCESO_Y_EQUIPO_2026-11-22.html §2 y §3.
+   En el teléfono todo va arriba: el primer campo empieza dentro del primer
+   tercio de la pantalla. En la PC, donde sobra espacio, el formulario queda
+   centrado y la marca de Leogin se va a la esquina. */
+
+.pagina {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 32px;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 14px;
+}
+
+.columna {
+  width: 100%;
+  max-width: 400px;
+}
+
+@media (min-width: 768px) {
+  .pagina { justify-content: center; padding: 32px 24px; }
+  .marca { position: absolute; top: 20px; left: 24px; width: auto; margin: 0; }
+}
+
+/* Encabezado del local: logo y nombre en una fila. */
+.local {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.titulo {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--u-text);
+  overflow-wrap: anywhere;
+}
+
+.bajada {
+  margin: 1px 0 0;
+  font-size: 13px;
+  color: var(--u-text-3);
+}
+
+/* «Correo o usuario | Con PIN»: dos opciones del mismo peso. */
+.selector {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 16px;
+  border-radius: 14px;
+  /* Sólido: la mezcla es con el fondo opaco, no con transparente. En claro
+     `--adm-bg-2` es blanco y la opción elegida no se distinguiría. */
+  background: color-mix(in srgb, var(--u-text) 7%, var(--adm-bg));
+}
+
+.selector button {
+  flex: 1;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--u-text-2);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms cubic-bezier(.22, 1, .36, 1), color 150ms cubic-bezier(.22, 1, .36, 1);
+}
+
+.selector button[aria-checked='true'] {
+  background: var(--adm-card);
+  border-color: var(--adm-border);
+  color: var(--u-text);
+  box-shadow: var(--adm-shadow-xs);
+}
+
+/* En oscuro la tarjeta y el fondo del selector casi coinciden: la opción
+   elegida se aclara para que no dependa solo del borde. */
+:global(html[data-scheme='dark']) .selector button[aria-checked='true'] {
+  background: color-mix(in srgb, var(--u-text) 16%, var(--adm-bg));
+  border-color: var(--adm-border-2);
+}
+
+.selector button:focus-visible {
+  outline: 2px solid var(--brand-accent-ink);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .selector button { transition: none; }
+}
+
+.etiqueta {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--u-text-2);
+}
+
+.ayuda {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--u-text-3);
+}
+
+.ayuda strong { color: var(--u-text-2); font-weight: 600; }
+
+.error {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--c-danger);
+}
+
+.divisor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 12px;
+  font-size: 12px;
+  color: var(--u-text-4);
+  white-space: nowrap;
+}
+
+.divisor::before,
+.divisor::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--u-hair-2);
+}
+
+.olvide {
+  margin-top: 2px;
+  font-size: 13px;
+  text-align: center;
+  color: var(--u-text-2);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Aparato sin autorizar: por qué no hay PIN y cuál es la salida. */
+.sinPin {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 13px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--adm-border);
+  background: var(--adm-card);
+}

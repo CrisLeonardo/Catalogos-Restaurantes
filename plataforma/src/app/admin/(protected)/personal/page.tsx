@@ -141,6 +141,24 @@ export default async function AdminPersonalPage() {
     planActual,
   };
 
+  // A quién pedirle lo que un encargado no puede cambiar: el nombre del
+  // dueño, no «el dueño» a secas. Sólo hace falta cuando mira un encargado.
+  let ownerName: string | null = null;
+  if (isManager) {
+    const { data: duenos } = await db
+      .from('restaurant_members')
+      .select('user_id')
+      .eq('restaurant_id', restaurantId)
+      .eq('role', 'OWNER')
+      .eq('status', 'active')
+      .limit(1);
+    const duenoId = duenos?.[0]?.user_id as string | undefined;
+    if (duenoId) {
+      const { data: perfil } = await db.from('profiles').select('full_name').eq('id', duenoId).maybeSingle();
+      ownerName = ((perfil?.full_name as string | null) ?? '').trim() || null;
+    }
+  }
+
   return (
     /* El espaciado entre bloques vive AQUÍ, no en un `marginTop: 16` que cada
        panel se ponía por su cuenta: así el primero no llevaba margen, el
@@ -156,6 +174,8 @@ export default async function AdminPersonalPage() {
         techo={isManager ? (ctx.profile.permissions ?? []) : null}
         navBase={navBase}
         arqueoCiego={arqueoCiego}
+        currentUserId={ctx.userId}
+        ownerName={ownerName}
       />
       {/* Invitaciones por correo: se retiraron de la pantalla. El acceso del
           administrador se crea aquí mismo, con usuario y contraseña, que es
