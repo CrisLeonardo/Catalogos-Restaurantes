@@ -105,12 +105,14 @@ export default async function AdminProtectedLayout({
   // Los permisos por sección solo escondían enlaces: un mesero que tecleaba
   // /panel/<slug>/finanzas entraba igual. La sección que exige la ruta sale
   // del mismo menú (seccionDeRuta), así se bloquea justo lo que el menú
-  // esconde. 'personal' no es delegable: la decide el rol, como en el menú.
+  // esconde. Desde la 1.7 'personal' es una tarea como las demás (la da el
+  // puesto Encargado): se decide con `can`, igual que el menú (canManageStaff)
+  // y la propia página. Antes miraba el papel de gerente, y quien tenía la
+  // tarea sin ese papel veía Personal en el menú pero, al abrir la dirección
+  // directo, rebotaba a Hoy.
   // Sin sección (Hoy, portada de Ajustes, Ayuda) no hay nada que comprobar.
   const seccion = seccionDeRuta(internalPanelPath(headersList.get('x-pathname')));
-  const puedePersonal = ctx.memberRole === 'MANAGER'
-    || profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN';
-  if (seccion && (seccion === 'personal' ? !puedePersonal : !can(profile.role, profile.permissions, seccion))) {
+  if (seccion && !can(profile.role, profile.permissions, seccion)) {
     redirect(await panelLink('/admin'));
   }
 
