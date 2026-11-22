@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useState, type KeyboardEvent } from 'react';
 import { getDeviceId } from '@/lib/device-id';
 import { Glass } from '@/components/glass';
 import { LeoginMark, LeoginNombre } from '@/components/leogin-logo';
@@ -9,6 +9,7 @@ import { login, logout, type AuthState } from '@/lib/actions/auth';
 import type { ResumeSession } from '@/lib/auth/resume';
 import StaffPinLogin from '@/components/admin/staff-pin-login';
 import GoogleStaffButton from '@/components/auth/google-staff-button';
+import s from './login.module.css';
 
 const emptyState: AuthState = null;
 
@@ -50,6 +51,10 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
   const openInPin = pinTrusted && !!restaurantId && !(resume && resume.lowPrivilege);
   const [mode, setMode] = useState<'password' | 'pin'>(openInPin ? 'pin' : 'password');
   const [state, formAction, isPending] = useActionState(login, emptyState);
+  // Controlado a propósito: React 19 vacía los campos no controlados tras
+  // cada envío, y quien se equivoca de contraseña tenía que volver a
+  // escribir su correo. La contraseña sí se borra.
+  const [credencial, setCredencial] = useState('');
 
   // Navegación de DOCUMENTO, no `redirect()` del servidor: mismo motivo que
   // `enterRestaurant` (lib/actions/mi-cuenta.ts) — el destino puede compartir
@@ -69,64 +74,74 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
 
 
   const hasTenant = !!restaurantName;
+  // Con PIN permitido, quien llega a la dirección del local elige arriba cómo
+  // entra. Antes «Soy personal del restaurante» quedaba al final, debajo del
+  // formulario del dueño, a 670 px en un teléfono.
+  const conSelector = !!restaurantId && pinAllowed;
+  const errorDeAcceso = state && 'error' in state ? state.error : null;
+
+  // Un error de acceso se anuncia (role="alert") y deja el cursor en el
+  // primer campo, listo para corregir sin buscarlo.
+  useEffect(() => {
+    if (!errorDeAcceso) return;
+    const campo = document.getElementById('email') as HTMLInputElement | null;
+    campo?.focus();
+    campo?.select();
+  }, [errorDeAcceso, state]);
+
+  function moverSelector(e: KeyboardEvent<HTMLDivElement>) {
+    if (!['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'].includes(e.key)) return;
+    e.preventDefault();
+    const siguiente = mode === 'pin' ? 'password' : 'pin';
+    // Se guarda ya: cuando corre el rAF, el evento de React ya no tiene
+    // `currentTarget` y el foco se quedaba en la opción de antes.
+    const grupo = e.currentTarget;
+    setMode(siguiente);
+    requestAnimationFrame(() => {
+      grupo.querySelector<HTMLButtonElement>(`[data-modo="${siguiente}"]`)?.focus();
+    });
+  }
+
+  const google = googleEnabled ? <GoogleStaffButton next={next ?? undefined} /> : null;
 
   return (
-    <main
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100svh',
-        padding: '24px 16px',
-      }}
-    >
-      <div className="anim-fade-up" style={{ width: '100%', maxWidth: 360 }}>
-        {/* Logo / título */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-            {hasTenant && logoUrl ? (
+    <main className={s.pagina}>
+      {/* La marca de Leogin, en una fila. En la PC se va a la esquina y el
+          formulario queda centrado; en el teléfono va arriba y el primer
+          campo empieza dentro del primer tercio de la pantalla. */}
+      {!hasTenant && (
+        <div className={s.marca}>
+          <LeoginMark size={32} />
+          <LeoginNombre letra={22} />
+        </div>
+      )}
+
+      <div className={`anim-fade-up ${s.columna}`}>
+        {hasTenant ? (
+          <div className={s.local}>
+            {logoUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={slug ? `/api/icon/${slug}` : logoUrl}
-                alt={restaurantName ?? ''}
-                width={56}
-                height={56}
-                style={{
-                  borderRadius: 14,
-                  objectFit: 'cover',
-                  display: 'block',
-                }}
+                alt=""
+                width={40}
+                height={40}
+                style={{ borderRadius: 11, objectFit: 'cover', display: 'block', flexShrink: 0 }}
               />
             ) : (
               <LeoginMark size={40} />
             )}
+            <div style={{ minWidth: 0 }}>
+              <h1 className={s.titulo}>{restaurantName}</h1>
+              <p className={s.bajada}>Entra a trabajar</p>
+            </div>
           </div>
-
-          {hasTenant ? (
-            <>
-              <p
-                className="t-display"
-                style={{ fontSize: 22, fontWeight: 700, marginBottom: 2, letterSpacing: '-0.02em' }}
-              >
-                {restaurantName}
-              </p>
-              <p className="t-mute" style={{ fontSize: 12 }}>
-                by Leogin
-              </p>
-            </>
-          ) : (
-            <p style={{ display: 'flex', justifyContent: 'center', marginTop: 2 }}>
-              <LeoginNombre letra={30} />
-            </p>
-          )}
-
-          <p className="t-mute" style={{ fontSize: 14, marginTop: 6 }}>
-            Acceso al panel de administración
-          </p>
-        </div>
+        ) : (
+          <h1 className={s.titulo} style={{ fontSize: 22, marginBottom: 12 }}>Entra a tu restaurante</h1>
+        )}
 
         {resume && (
-          <Glass style={{ padding: '18px 20px', marginBottom: 14 }}>
+          <Glass variant="solid" style={{ padding: '18px 20px', marginBottom: 14 }}>
             <a
               href={next ?? resume.url}
               className="press btn-accent"
@@ -171,65 +186,70 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
           </Glass>
         )}
 
-        {mode === 'pin' && restaurantId ? (
-          <StaffPinLogin restaurantId={restaurantId} hubUrl={hubUrl ?? null} hubToken={hubToken ?? null} onBack={() => setMode('password')} />
-        ) : (
-        <Glass style={{ padding: '28px 24px' }}>
-          {authError && (
-            <div
-              style={{
-                padding: '10px 14px', marginBottom: 16,
-                borderRadius: 'var(--radius-md)',
-                background: 'rgba(220,50,50,0.12)',
-                border: '1px solid rgba(220,50,50,0.25)',
-                color: 'var(--c-danger)', fontSize: 13,
-              }}
+        {conSelector && (
+          <div className={s.selector} role="radiogroup" aria-label="Cómo entras" onKeyDown={moverSelector}>
+            <button
+              type="button" role="radio" data-modo="password"
+              aria-checked={mode === 'password'} tabIndex={mode === 'password' ? 0 : -1}
+              onClick={() => setMode('password')}
             >
+              <Icon name="mail" size={16} /> Correo o usuario
+            </button>
+            <button
+              type="button" role="radio" data-modo="pin"
+              aria-checked={mode === 'pin'} tabIndex={mode === 'pin' ? 0 : -1}
+              onClick={() => setMode('pin')}
+            >
+              <Icon name="key" size={16} /> Con PIN
+            </button>
+          </div>
+        )}
+
+        {mode === 'pin' && restaurantId ? (
+          <StaffPinLogin
+            restaurantId={restaurantId}
+            hubUrl={hubUrl ?? null}
+            hubToken={hubToken ?? null}
+            onBack={conSelector ? undefined : () => setMode('password')}
+          />
+        ) : (
+        <Glass variant="solid" style={{ padding: 20 }}>
+          {authError && (
+            <p className={s.error} role="alert" style={{ marginBottom: 14 }}>
+              <Icon name="alertCircle" size={16} style={{ flexShrink: 0, marginTop: 1 }} />
               No pudimos completar el acceso con Google. Inténtalo otra vez o entra con tu correo.
+            </p>
+          )}
+
+          {/* En leogin.com Google va ARRIBA: ahí entra el dueño, y para quien
+              creó su cuenta así es un toque contra escribir correo y
+              contraseña. En la dirección del local va al final: ahí casi
+              todos entran con su usuario o con PIN. */}
+          {google && !hasTenant && (
+            <div style={{ marginBottom: 16 }}>
+              {google}
+              <div className={s.divisor}>o con tu correo</div>
             </div>
           )}
 
-          {/* Google va ARRIBA del formulario a propósito: para quien ya creó su
-              cuenta así, es un toque contra escribir correo y contraseña, y es
-              el orden que espera el mercado (Shopify, Square, Toast). */}
-          {googleEnabled && (
-            <div style={{ marginBottom: 18 }}>
-              <GoogleStaffButton next={next ?? undefined} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18 }}>
-                <span style={{ flex: 1, height: 1, background: 'var(--u-hair-2)' }} />
-                <span style={{ fontSize: 11, color: 'var(--u-text-4)', whiteSpace: 'nowrap' }}>o con tu correo</span>
-                <span style={{ flex: 1, height: 1, background: 'var(--u-hair-2)' }} />
-              </div>
-            </div>
-          )}
-
-          <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {next && <input type="hidden" name="next" value={next} />}
+
+            {errorDeAcceso && (
+              <p className={s.error} role="alert">
+                <Icon name="alertCircle" size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+                {errorDeAcceso}
+              </p>
+            )}
+
             <div>
-              <label
-                htmlFor="email"
-                style={{
-                  fontSize: 12,
-                  color: 'var(--u-text-3)',
-                  fontWeight: 500,
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                  display: 'block',
-                  marginBottom: 6,
-                }}
-              >
+              <label htmlFor="email" className={s.etiqueta}>
                 {/* En este campo caben DOS credenciales: el correo del dueño
                     y el usuario que el dueño le dio a su administrador.
                     Nombrar solo el correo dejaba a la mitad del equipo
-                    mirando un campo que creía que no era suyo.
-
-                    Y vale en los DOS sitios, no solo en el subdominio del
-                    restaurante: desde aquí —la página principal— la
-                    credencial se escribe entera (`carlos@rincon-502`), que
-                    es como se entrega. Antes esto decía "Email", con un
-                    campo `type="email"`, y el administrador se quedaba fuera
-                    sin saber por qué: su credencial funcionaba, pero la
-                    pantalla le decía que ahí solo iban correos. */}
+                    mirando un campo que creía que no era suyo. Desde la
+                    página principal la credencial se escribe entera
+                    (`carlos@rincon-502`), que es como se entrega. */}
                 Correo o usuario
               </label>
               <input
@@ -247,33 +267,21 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
                 autoCorrect="off"
                 spellCheck={false}
                 autoFocus
-                placeholder={slug ? 'tu@email.com  ·  o tu usuario' : 'tu@email.com  ·  o carlos@turestaurante'}
+                aria-describedby="ayuda-usuario"
+                value={credencial}
+                onChange={(e) => setCredencial(e.target.value)}
+                placeholder="tu@correo.com"
                 className="adm-field adm-field-lg"
               />
-              {!slug && (
-                <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 6, lineHeight: 1.5 }}>
-                  ¿Te dieron un usuario? Escríbelo con la dirección de tu
-                  restaurante detrás — <strong>carlos@turestaurante</strong> — o entra
-                  directo desde la dirección de tu local.
-                </p>
-              )}
+              <p id="ayuda-usuario" className={s.ayuda}>
+                {slug
+                  ? <>¿Te dieron un usuario? Escríbelo tal cual, por ejemplo <strong>carlos</strong>.</>
+                  : <>¿Tienes usuario? Escríbelo así: <strong>carlos@turestaurante</strong>.</>}
+              </p>
             </div>
 
             <div>
-              <label
-                htmlFor="password"
-                style={{
-                  fontSize: 12,
-                  color: 'var(--u-text-3)',
-                  fontWeight: 500,
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                  display: 'block',
-                  marginBottom: 6,
-                }}
-              >
-                Contraseña
-              </label>
+              <label htmlFor="password" className={s.etiqueta}>Contraseña</label>
               <input
                 id="password"
                 name="password"
@@ -283,21 +291,6 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
                 className="adm-field adm-field-lg"
               />
             </div>
-
-            {state && 'error' in state && (
-              <div
-                style={{
-                  padding: '10px 14px',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'rgba(220,50,50,0.12)',
-                  border: '1px solid rgba(220,50,50,0.25)',
-                  color: 'var(--c-danger)',
-                  fontSize: 14,
-                }}
-              >
-                {state.error}
-              </div>
-            )}
 
             <button
               type="submit"
@@ -321,83 +314,24 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
             {/* Hasta ahora esta salida no existía: quien olvidaba su
                 contraseña tenía que escribir por WhatsApp y esperar a que
                 alguien de Leogin se la cambiara a mano. */}
-            <a
-              href="/admin/recuperar"
-              style={{
-                fontSize: 12, color: 'var(--u-text-3)', textAlign: 'center',
-                textDecoration: 'none', marginTop: 2,
-              }}
-            >
-              Olvidé mi contraseña
-            </a>
+            <a href="/admin/recuperar" className={s.olvide}>Olvidé mi contraseña</a>
           </form>
-        </Glass>
-        )}
 
-        {restaurantId && mode === 'password' && pinAllowed && (
-          <button
-            type="button"
-            onClick={() => setMode('pin')}
-            className="press"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              marginTop: 16,
-              padding: '13px 16px',
-              borderRadius: 'var(--radius-lg)',
-              border: '1.5px solid var(--u-hair-2)',
-              background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-              cursor: 'pointer',
-              textAlign: 'left',
-            }}
-          >
-            <span
-              style={{
-                width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                display: 'grid', placeItems: 'center',
-                background: 'color-mix(in srgb, var(--brand-accent) 15%, transparent)',
-                color: 'var(--brand-accent-ink)',
-              }}
-            >
-              <Icon name="key" size={17} />
-            </span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>
-                Soy personal del restaurante
-              </span>
-              <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)', marginTop: 1 }}>
-                Toca aquí para entrar con tu PIN
-              </span>
-            </span>
-            <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
-          </button>
+          {google && hasTenant && (
+            <div style={{ marginTop: 16 }}>
+              <div className={s.divisor}>o</div>
+              {google}
+            </div>
+          )}
+        </Glass>
         )}
 
         {/* Aparato no autorizado, con el candado puesto. Decir POR QUÉ y cuál
             es la salida: un "no puedes entrar" a secas se lee como una avería
             del sistema y termina en una llamada al dueño a media hora pico. */}
         {restaurantId && mode === 'password' && !pinAllowed && (
-          <div
-            style={{
-              display: 'flex', alignItems: 'flex-start', gap: 12,
-              width: '100%', marginTop: 16, padding: '13px 16px',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--u-hair-2)',
-              background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
-            }}
-          >
-            <span
-              style={{
-                width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                display: 'grid', placeItems: 'center',
-                background: 'color-mix(in srgb, var(--u-text) 7%, transparent)',
-                color: 'var(--u-text-3)',
-              }}
-            >
-              <Icon name="key" size={17} />
-            </span>
+          <div className={s.sinPin}>
+            <Icon name="key" size={17} style={{ flexShrink: 0, marginTop: 1, color: 'var(--u-text-3)' }} />
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--u-text-2)' }}>
                 El PIN solo funciona en los aparatos del local
