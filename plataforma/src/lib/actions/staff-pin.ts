@@ -34,7 +34,8 @@ export async function setStaffPin(prevState: StaffPinState, formData: FormData):
 
   const userId = (formData.get('userId') as string)?.trim();
   const pin = (formData.get('pin') as string) ?? '';
-  if (!userId || !(await assertStaffOfRestaurant(ctx, userId))) return { error: 'No autorizado.' };
+  // Un PIN abre una sesión de esa cuenta: sólo para cuentas de este local.
+  if (!userId || !(await assertStaffOfRestaurant(ctx, userId, { credencial: true }))) return { error: 'No autorizado.' };
   if (!isValidPin(pin)) return { error: `El PIN debe tener ${PIN_LENGTH} dígitos.` };
 
   const salt = newPinSalt();
@@ -61,7 +62,8 @@ export async function clearStaffPin(formData: FormData) {
   if (!ctx) return;
   const userId = (formData.get('userId') as string)?.trim();
   if (!userId || !(await assertStaffOfRestaurant(ctx, userId))) return;
-  await ctx.db.from('staff_pins').delete().eq('profile_id', userId);
+  // Sólo el PIN de este local: el de otra sucursal no es asunto de éste.
+  await ctx.db.from('staff_pins').delete().eq('profile_id', userId).eq('restaurant_id', ctx.restaurantId);
   revalidatePath('/admin/personal');
 }
 

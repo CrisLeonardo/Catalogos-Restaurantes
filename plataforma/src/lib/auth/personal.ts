@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveOwnRestaurantId } from '@/lib/db/membership';
 import { actorEn, tiene, techoDe } from '@/lib/auth/capacidades';
+import { esCuentaDelLocal, esPersonalDelLocal } from '@/lib/equipo-reglas';
 
 /* ============================================================
    QUIÉN ADMINISTRA EL PERSONAL (auditoría 1.7)
@@ -68,28 +69,48 @@ export async function ownerCtx(restaurantIdFromForm?: string | null): Promise<Pe
 }
 
 /**
- * Solo permite operar sobre STAFF/WAITER de ESTE restaurante. Y si quien
+ * Solo permite operar sobre el PERSONAL de este restaurante. Y si quien
  * administra no es el dueño: nunca sobre sí mismo ni sobre otro responsable
  * (membresía OWNER/MANAGER o con «personal»). Sin esa regla, un encargado
  * podía ponerle un PIN a otro encargado y entrar como él.
+ *
+ * Quién es personal de aquí lo dice la membresía de ESTE local, no el
+ * restaurante de casa del perfil (auditoría 2026-11-21): quien trabaja en
+ * dos sucursales es del equipo de las dos.
+ *
+ * `credencial: true` es para cambiarle el PIN o la contraseña: además exige
+ * que la cuenta sea sólo de este local (ver `esCuentaDelLocal`).
  */
-export async function assertStaffOfRestaurant(ctx: PersonalCtx, userId: string): Promise<boolean> {
-  const { data } = await ctx.db.from('profiles').select('role, restaurant_id').eq('id', userId).single();
-  const isStaffHere = !!data
-    && (data.role === 'RESTAURANT_STAFF' || data.role === 'RESTAURANT_WAITER')
-    && data.restaurant_id === ctx.restaurantId;
-  if (!isStaffHere) return false;
-  if (ctx.as === 'OWNER') return true;
+export async function assertStaffOfRestaurant(
+  ctx: PersonalCtx,
+  userId: string,
+  opciones: { credencial?: boolean } = {},
+): Promise<boolean> {
+  const [{ data: perfil }, { data: miembro }] = await Promise.all([
+    ctx.db.from('profiles').select('role, restaurant_id').eq('id', userId).maybeSingle(),
+    ctx.db
+      .from('restaurant_members')
+      .select('role, permissions, status')
+      .eq('user_id', userId)
+      .eq('restaurant_id', ctx.restaurantId)
+      .maybeSingle(),
+  ]);
+  if (!esPersonalDelLocal(perfil, miembro, ctx.restaurantId)) return false;
 
+  if (opciones.credencial) {
+    const { data: otras } = await ctx.db
+      .from('restaurant_members')
+      .select('restaurant_id')
+      .eq('user_id', userId)
+      .eq('status', 'active');
+    const restaurantes = (otras ?? []).map((m) => m.restaurant_id as string);
+    if (!esCuentaDelLocal(perfil, restaurantes, ctx.restaurantId)) return false;
+  }
+
+  if (ctx.as === 'OWNER') return true;
   if (userId === ctx.userId) return false; // no se edita a sí mismo
 
-  const { data: target } = await ctx.db
-    .from('restaurant_members')
-    .select('role, permissions')
-    .eq('user_id', userId)
-    .eq('restaurant_id', ctx.restaurantId)
-    .maybeSingle();
-  const targetRole = (target?.role as string | null) ?? 'STAFF';
-  const targetPerms = Array.isArray(target?.permissions) ? (target.permissions as string[]) : [];
+  const targetRole = (miembro?.role as string | null) ?? 'STAFF';
+  const targetPerms = Array.isArray(miembro?.permissions) ? (miembro.permissions as string[]) : [];
   return targetRole !== 'OWNER' && targetRole !== 'MANAGER' && !targetPerms.includes('personal');
 }
