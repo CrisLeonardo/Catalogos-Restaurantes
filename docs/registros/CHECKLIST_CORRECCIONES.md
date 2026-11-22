@@ -52,6 +52,22 @@ Detalle y mediciones en [`AUDITORIA_2026-09-25.md`](../auditorias/AUDITORIA_2026
 - [x] **«Enviar a cocina» sin espera (F-4).** Hecho 2026-09-26: carrito vacío al tocar, líneas «Enviando…», vuelven al carrito si la nube rechaza; cobrar/liberar/mover bloqueados mientras hay envío en vuelo.
 - [ ] **`router.refresh()` redundantes tras acciones que ya revalidan (P-3)** — quitados en Tomar pedidos, Mesas y Caja; quedan ~60 en pantallas de poco tráfico.
 
+## Auditoría de acceso, equipo y restaurantes 2026-11-21
+
+El informe quedó fuera del repo (`Documents/Auditoria-Leogin-2026-11-21/auditoria.html`, revisó `bad950fd`). Cada hallazgo se comprobó contra el código antes de tocarlo.
+
+- [x] **Personal por membresía (P1 equipo).** Hecho en `fix/equipo-por-membresia`: la lista, editar y quitar leen `restaurant_members` del local (`lib/equipo-reglas.ts`, con pruebas). Quien trabaja en dos sucursales sale en las dos; «Quitar del equipo» retira la membresía y su PIN de ese local y sólo borra la cuenta si no tiene otros; editar ya no escribe sobre el perfil de quien tiene su casa en otro restaurante; un alta cuya membresía falla se deshace entera.
+- [x] **PIN y contraseña sólo para cuentas del local.** Hallazgo nuevo, no estaba en el informe: al abrir la edición por membresía, el dueño de un local habría podido poner un PIN a la cuenta de la dueña de otro y entrar como ella. `assertStaffOfRestaurant(…, { credencial: true })` lo impide; `clearStaffPin` ya no borra el PIN de las otras sucursales.
+- [x] **Ajustes enseña Personal con la capacidad «personal»**, la misma regla que el menú del panel (antes el encargado la veía en el menú y no en Ajustes).
+- [x] **El candado de sección del armazón también usa la capacidad.** Decidía Personal por el papel de gerente: quien tenía la tarea sin ese papel rebotaba a Hoy al abrir la dirección directo (visto en pantalla el 2026-11-22).
+- [x] **Mi cuenta:** «se suma a tu plan» → «con su propio plan»; el grupo se crea después de validar la dirección del local nuevo.
+- [x] **Recuperar:** ya no promete cambiar la contraseña «en el momento», que nadie ha medido.
+- [ ] **Ficha de solo lectura para el encargado.** Al abrir a otro responsable o a sí mismo ve «Guardar», «Cambiar PIN» y «Quitar», que el servidor rechaza con «No autorizado». Maqueta: `docs/diseno/MAQUETA_ACCESO_Y_EQUIPO_2026-11-22.html` §1, pendiente de aprobación.
+- [ ] **Límite de usuarios por plan.** `plans.ts` anuncia «2 usuarios» en Estándar y `createStaff` no lo aplica. Decisión del dueño: aplicarlo (¿cuenta el dueño?, ¿y los PIN?) o quitarlo de los planes.
+- [ ] **Grupo automático al crear el 2.º restaurante.** Hoy se arma solo; el informe propone que vincular locales bajo una marca sea una decisión explícita (ya existe «Crear el link del grupo»). Decisión del dueño.
+- [ ] **Acceso en el teléfono (P2).** Primer campo del login a 404 px y del registro a 516 px en 390 × 844; «Entrar con PIN» después del formulario; el error no enfoca el campo. Maqueta: `docs/diseno/MAQUETA_ACCESO_Y_EQUIPO_2026-11-22.html` §2 y §3, pendiente de aprobación.
+- [ ] **Recuperación probada de punta a punta (P1).** Con Resend, Google y pérdida del segundo factor en aparatos reales; medir el tiempo de atención real antes de prometer un plazo.
+
 ## Ya corregidos — verificados en código, sin acción pendiente
 
 - [x] Comanda de cocina se imprimía hasta 3 veces (tabla `print_jobs` evita reencolar).

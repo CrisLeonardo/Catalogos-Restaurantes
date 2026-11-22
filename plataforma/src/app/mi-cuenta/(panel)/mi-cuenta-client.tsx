@@ -126,7 +126,7 @@ export default function MiCuentaClient({
                     <em>
                       {esElPrimero
                         ? `elige tu plan${pricing.trialDays > 0 ? ` · ${pricing.trialDays} días gratis` : ''}`
-                        : 'se suma a tu plan'}
+                        : 'con su propio plan'}
                     </em>
                   </Link>
                 </li>

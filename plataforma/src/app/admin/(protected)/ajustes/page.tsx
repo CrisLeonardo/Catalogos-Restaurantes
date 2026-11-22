@@ -86,6 +86,10 @@ export default async function AdminAjustesPage() {
   const ordersEnabled = modules?.orders === true;
   const allow = (key: string) => can(profile.role, profile.permissions, key);
   const showStaff = profile.role !== 'RESTAURANT_STAFF';
+  /* Personal se enseña con la MISMA regla que el menú del panel
+     (layout → canManageStaff) y que la propia página: la capacidad
+     «personal». Con el rol, el encargado la veía en el menú y no aquí. */
+  const showPersonal = allow('personal');
 
   // Estado de la PC del local: la fila lo dice sin tener que entrar.
   let pcValue = 'Sin configurar';
@@ -172,7 +176,7 @@ export default async function AdminAjustesPage() {
       : []),
   ];
 
-  const equipo: Row[] = showStaff
+  const equipo: Row[] = showPersonal
     ? [{ href: '/admin/personal', icon: 'users', label: 'Personal y permisos', desc: 'Quién entra al panel y qué puede ver cada quien', key: 'personal' }]
     : [];
 

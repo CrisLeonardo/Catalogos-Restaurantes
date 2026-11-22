@@ -22,6 +22,8 @@ import { rateLimit } from '@/lib/rate-limit';
 import { logActivity } from '@/lib/activity';
 import { isValidPin, newPinSalt, hashPin, PIN_LENGTH } from '@/lib/staff-pin-crypto';
 import { isMeseroOnly } from '@/lib/permissions';
+import { componerEquipo, planDeRetiro, type MiembroEquipo, type PerfilEquipo } from '@/lib/equipo-reglas';
+import type { MemberRole } from '@/lib/membership-roles';
 
 /** Email interno autogenerado por miembro de staff — nunca se le pide al
     dueño ni se le muestra a la persona: solo satisface el requisito de
@@ -117,17 +119,42 @@ async function buildMemberList(
   );
 }
 
+/**
+ * Quién es del equipo de este local: quien tiene membresía aquí (aunque su
+ * restaurante de casa sea otro) más las cuentas viejas que sólo tienen el
+ * perfil. Antes salía sólo del perfil, y quien trabajaba en dos sucursales
+ * faltaba en la lista de una (ver lib/equipo-reglas.ts).
+ */
+async function leerEquipo(
+  db: ReturnType<typeof createServiceClient>,
+  restaurantId: string,
+): Promise<PerfilEquipo[]> {
+  const COLUMNAS = 'id, full_name, permissions, role, restaurant_id';
+  const [{ data: miembros }, { data: deCasa }] = await Promise.all([
+    db.from('restaurant_members').select('user_id, role, status, permissions').eq('restaurant_id', restaurantId),
+    db.from('profiles').select(COLUMNAS).eq('restaurant_id', restaurantId)
+      .in('role', ['RESTAURANT_STAFF', 'RESTAURANT_WAITER']),
+  ]);
+  const yaLeidos = new Set((deCasa ?? []).map((p) => p.id as string));
+  const deFuera = (miembros ?? [])
+    .filter((m) => m.status === 'active' && m.role !== 'OWNER' && !yaLeidos.has(m.user_id as string))
+    .map((m) => m.user_id as string);
+  const { data: otros } = deFuera.length
+    ? await db.from('profiles').select(COLUMNAS).in('id', deFuera)
+    : { data: [] };
+  return componerEquipo(
+    (miembros ?? []) as MiembroEquipo[],
+    [...(deCasa ?? []), ...(otros ?? [])] as PerfilEquipo[],
+    restaurantId,
+  );
+}
+
 export async function listStaff(restaurantId: string): Promise<StaffMember[]> {
   if (!UUID_RE.test(restaurantId)) return [];
   const db = createServiceClient();
-  const { data: profiles } = await db
-    .from('profiles')
-    .select('id, full_name, permissions, role')
-    .eq('restaurant_id', restaurantId)
-    .in('role', ['RESTAURANT_STAFF', 'RESTAURANT_WAITER']);
-
-  if (!profiles?.length) return [];
-  return buildMemberList(db, profiles as { id: unknown; full_name: unknown; permissions: unknown; role: unknown }[], restaurantId);
+  const equipo = await leerEquipo(db, restaurantId);
+  if (!equipo.length) return [];
+  return buildMemberList(db, equipo, restaurantId);
 }
 
 /** Lee y valida las llaves marcadas en el form. */
@@ -256,7 +283,7 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
   // Membresía (migración 113). Desde la 1.7 el papel lo decide el trabajo,
   // no la forma de entrar: es responsable (MANAGER) sólo quien administra
   // personal. Se mantiene en paralelo con el perfil mientras conviven.
-  await ctx.db.from('restaurant_members').insert({
+  const { error: miembroErr } = await ctx.db.from('restaurant_members').insert({
     user_id: created.user.id,
     restaurant_id: ctx.restaurantId,
     role: permissions.includes('personal') ? 'MANAGER' : 'STAFF',
@@ -265,6 +292,13 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
     status: 'active',
     invited_by: ctx.userId,
   });
+  if (miembroErr) {
+    // Sin la membresía, la persona entraría por el perfil con permisos que
+    // Personal no sabría mostrar ni quitar: se deshace el alta entera.
+    console.error('[createStaff] no se pudo crear la membresía', miembroErr.message);
+    await ctx.db.auth.admin.deleteUser(created.user.id); // el profile cae por FK cascade
+    return { error: 'No se pudo agregar a esta persona. Inténtalo de nuevo.' };
+  }
 
   // Solo quien entra por PIN recibe PIN. Un administrador con usuario NO
   // aparece en la grilla "¿Quién eres?" del local, que es justo lo que se
@@ -308,20 +342,15 @@ export async function updateStaffPermissions(prevState: StaffState, formData: Fo
   const techo = errorDeTecho(ctx, permissions);
   if (techo) return { error: techo };
 
-  const { data: antes } = await ctx.db.from('restaurant_members')
-    .select('permissions, puesto')
-    .eq('user_id', userId).eq('restaurant_id', ctx.restaurantId).maybeSingle();
+  const [{ data: antes }, { data: perfil }] = await Promise.all([
+    ctx.db.from('restaurant_members')
+      .select('permissions, puesto, role, acceso_heredado')
+      .eq('user_id', userId).eq('restaurant_id', ctx.restaurantId).maybeSingle(),
+    ctx.db.from('profiles').select('restaurant_id').eq('id', userId).maybeSingle(),
+  ]);
 
-  // Si era un mesero del rol deprecado, lo normalizamos a STAFF al editarlo.
-  const { error } = await ctx.db.from('profiles')
-    .update({ permissions, full_name: fullName, role: 'RESTAURANT_STAFF' })
-    .eq('id', userId);
-  if (error) return { error: error.message };
-
-  // Y la membresía, que es de donde leen los candados nuevos. Si las dos vías
-  // no se actualizan juntas, alguien podría conservar por una lo que se le
-  // acaba de quitar por la otra. Guardar es también revisar un acceso
-  // heredado de la 177.
+  // Primero la membresía, que es de donde leen los candados. Guardar es
+  // también revisar un acceso heredado de la 177.
   const { error: errMiembro } = await ctx.db.from('restaurant_members')
     .update({
       permissions, puesto, acceso_heredado: false,
@@ -331,6 +360,26 @@ export async function updateStaffPermissions(prevState: StaffState, formData: Fo
     .eq('restaurant_id', ctx.restaurantId)
     .neq('role', 'OWNER');
   if (errMiembro) return { error: 'No se pudieron guardar los permisos. Inténtalo de nuevo.' };
+
+  // El perfil sólo si su casa es ESTE local. Si trabaja aquí pero su casa es
+  // otro restaurante —donde quizá es dueña—, el perfil habla de aquél: antes
+  // se le escribía encima el rol y los permisos de éste. Las dos vías deben
+  // quedar iguales (si no, conservaría por una lo que se le quitó por la
+  // otra): si el perfil falla, la membresía vuelve a como estaba.
+  if (perfil?.restaurant_id === ctx.restaurantId) {
+    // Si era un mesero del rol deprecado, lo normalizamos a STAFF al editarlo.
+    const { error } = await ctx.db.from('profiles')
+      .update({ permissions, full_name: fullName, role: 'RESTAURANT_STAFF' })
+      .eq('id', userId);
+    if (error) {
+      if (antes) {
+        await ctx.db.from('restaurant_members')
+          .update({ permissions: antes.permissions, puesto: antes.puesto, role: antes.role, acceso_heredado: antes.acceso_heredado })
+          .eq('user_id', userId).eq('restaurant_id', ctx.restaurantId).neq('role', 'OWNER');
+      }
+      return { error: 'No se pudieron guardar los permisos. Inténtalo de nuevo.' };
+    }
+  }
 
   // Cambiar lo que alguien puede hacer queda en la bitácora del dueño, con
   // el antes y el después (R35).
@@ -362,7 +411,8 @@ export async function resetStaffPassword(prevState: StaffState, formData: FormDa
   if (!ctx || ctx.as !== 'OWNER') return { error: 'No autorizado.' };
 
   const userId = (formData.get('userId') as string)?.trim();
-  if (!userId || !(await assertStaffOfRestaurant(ctx, userId))) return { error: 'No autorizado.' };
+  // La contraseña es de la cuenta entera: sólo se cambia si es de este local.
+  if (!userId || !(await assertStaffOfRestaurant(ctx, userId, { credencial: true }))) return { error: 'No autorizado.' };
   // ACC-09: delicado → «confirma que eres tú» si hace más de 10 min.
   if (!(await identidadReciente())) return reauthRequerida();
 
@@ -396,16 +446,70 @@ export async function removeStaff(_prevState: StaffState, formData: FormData): P
   // ACC-09: delicado → «confirma que eres tú» si hace más de 10 min.
   if (!(await identidadReciente())) return reauthRequerida();
 
-  /* El perfil cae en cascada. Antes no se miraba el resultado: si borrar
-     fallaba —pasaba con quien había anulado algún pedido, porque
-     `order_voids` lo ataba a su perfil hasta la migración 135— la persona
-     seguía en el equipo y la bitácora decía que se había quitado. */
-  const { error } = await ctx.db.auth.admin.deleteUser(userId);
-  if (error) {
-    console.error('[removeStaff] no se pudo borrar la cuenta', userId, error.message);
-    return { error: 'No se pudo quitar a esta persona del equipo. Inténtalo otra vez; si sigue pasando, escríbenos a soporte.' };
+  const FALLO = 'No se pudo quitar a esta persona del equipo. Inténtalo otra vez; si sigue pasando, escríbenos a soporte.';
+
+  /* Quitar a alguien de ESTE local no es borrar su cuenta: si también
+     trabaja (o es dueña) en otro restaurante, borrarla lo sacaba de todos.
+     Con otros locales se retira la membresía de éste y su PIN de aquí; la
+     cuenta, sus otros accesos y su historial siguen (lib/equipo-reglas.ts). */
+  // Si no se pueden leer sus otros locales, no se adivina: un error aquí
+  // acabaría borrando la cuenta de alguien que trabaja en otra sucursal.
+  const [{ data: perfil }, { data: otras, error: errOtras }] = await Promise.all([
+    ctx.db.from('profiles').select('restaurant_id').eq('id', userId).maybeSingle(),
+    ctx.db.from('restaurant_members').select('restaurant_id, role, permissions')
+      .eq('user_id', userId).eq('status', 'active'),
+  ]);
+  if (errOtras) {
+    console.error('[removeStaff] no se pudieron leer sus membresías', userId, errOtras.message);
+    return { error: FALLO };
   }
-  await logActivity({ restaurantId: ctx.restaurantId, actorId: ctx.userId, action: 'staff', entity: userId, meta: { removed: true } });
+  const plan = planDeRetiro(
+    { restaurant_id: (perfil?.restaurant_id as string | null) ?? null },
+    (otras ?? []).map((m) => ({
+      restaurantId: m.restaurant_id as string,
+      role: m.role as MemberRole,
+      permissions: (m.permissions as string[] | null) ?? null,
+    })),
+    ctx.restaurantId,
+  );
+
+  if (plan.tipo === 'retirar-membresia') {
+    if (plan.nuevaCasa) {
+      // Su casa deja de ser este local: si no, el panel lo seguiría dejando
+      // entrar aquí por el camino del perfil.
+      const { error } = await ctx.db.from('profiles')
+        .update({ restaurant_id: plan.nuevaCasa.restaurantId, role: plan.nuevaCasa.role, permissions: plan.nuevaCasa.permissions })
+        .eq('id', userId);
+      if (error) {
+        console.error('[removeStaff] no se pudo mover su perfil', userId, error.message);
+        return { error: FALLO };
+      }
+    }
+    const { error } = await ctx.db.from('restaurant_members')
+      .delete()
+      .eq('user_id', userId)
+      .eq('restaurant_id', ctx.restaurantId)
+      .neq('role', 'OWNER');
+    if (error) {
+      console.error('[removeStaff] no se pudo retirar la membresía', userId, error.message);
+      return { error: FALLO };
+    }
+    await ctx.db.from('staff_pins').delete().eq('profile_id', userId).eq('restaurant_id', ctx.restaurantId);
+  } else {
+    /* El perfil cae en cascada. Antes no se miraba el resultado: si borrar
+       fallaba —pasaba con quien había anulado algún pedido, porque
+       `order_voids` lo ataba a su perfil hasta la migración 135— la persona
+       seguía en el equipo y la bitácora decía que se había quitado. */
+    const { error } = await ctx.db.auth.admin.deleteUser(userId);
+    if (error) {
+      console.error('[removeStaff] no se pudo borrar la cuenta', userId, error.message);
+      return { error: FALLO };
+    }
+  }
+  await logActivity({
+    restaurantId: ctx.restaurantId, actorId: ctx.userId, action: 'staff', entity: userId,
+    meta: { removed: true, ...(plan.tipo === 'retirar-membresia' ? { solo_este_local: true } : {}) },
+  });
   revalidatePath('/admin/personal');
   return { ok: true };
 }
@@ -414,17 +518,7 @@ export async function removeStaff(_prevState: StaffState, formData: FormData): P
 export async function listWaiters(restaurantId: string): Promise<StaffMember[]> {
   if (!UUID_RE.test(restaurantId)) return [];
   const db = createServiceClient();
-  const { data: profiles } = await db
-    .from('profiles')
-    .select('id, full_name, permissions, role')
-    .eq('restaurant_id', restaurantId)
-    .in('role', ['RESTAURANT_STAFF', 'RESTAURANT_WAITER']);
-
-  const members = await buildMemberList(
-    db,
-    (profiles ?? []) as { id: unknown; full_name: unknown; permissions: unknown; role: unknown }[],
-    restaurantId,
-  );
+  const members = await buildMemberList(db, await leerEquipo(db, restaurantId), restaurantId);
   return members.filter((m) => m.permissions?.includes('mesero'));
 }
 
