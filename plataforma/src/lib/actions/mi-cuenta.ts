@@ -248,6 +248,27 @@ export async function createAnotherRestaurant(
 
   const db = createServiceClient();
 
+  // ── Dirección (slug) ───────────────────────────────────────
+  let slug: string;
+  if (rawSlug) {
+    const slugErr = validateSlug(rawSlug);
+    if (slugErr) return { error: slugErr };
+    if (await slugTaken(db, rawSlug)) return { error: `La dirección "${rawSlug}" ya está ocupada. Elige otra.` };
+    const collision = await crossSlugCollision(db, rawSlug, 'restaurants');
+    if (collision) return { error: collision };
+    slug = rawSlug;
+  } else {
+    const base = slugify(name);
+    if (!base || validateSlug(base)) {
+      return { error: 'No pudimos generar una dirección con ese nombre. Escribe una manualmente.' };
+    }
+    slug = await uniqueSlug(db, base);
+  }
+
+  // Va DESPUÉS de validar la dirección: antes se armaba el grupo y luego se
+  // rechazaba el alta por una dirección ocupada, y el dueño quedaba con un
+  // grupo que no había pedido y sin el local nuevo.
+  //
   // Si quien crea ya tiene otro restaurante propio, el local nuevo nace
   // DENTRO de su grupo: es lo que le da al conjunto una marca y un link
   // único de pedidos sin pedírselo a nadie. El PANEL consolidado no depende
@@ -269,23 +290,6 @@ export async function createAnotherRestaurant(
       email: user.email,
       restaurantIds: memberships.filter((m) => m.role === 'OWNER').map((m) => m.restaurantId),
     });
-  }
-
-  // ── Dirección (slug) ───────────────────────────────────────
-  let slug: string;
-  if (rawSlug) {
-    const slugErr = validateSlug(rawSlug);
-    if (slugErr) return { error: slugErr };
-    if (await slugTaken(db, rawSlug)) return { error: `La dirección "${rawSlug}" ya está ocupada. Elige otra.` };
-    const collision = await crossSlugCollision(db, rawSlug, 'restaurants');
-    if (collision) return { error: collision };
-    slug = rawSlug;
-  } else {
-    const base = slugify(name);
-    if (!base || validateSlug(base)) {
-      return { error: 'No pudimos generar una dirección con ese nombre. Escribe una manualmente.' };
-    }
-    slug = await uniqueSlug(db, base);
   }
 
   // ── Restaurante ────────────────────────────────────────────
