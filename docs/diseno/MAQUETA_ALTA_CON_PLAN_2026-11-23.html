@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueta · Alta con el plan elegido</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Bricolage+Grotesque:wght@800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F2F1EE;--bg2:#E9E7E3;--card:#FFFFFF;--ink:#17161A;--ink2:rgba(23,22,26,.72);--ink3:rgba(23,22,26,.56);--line:rgba(23,22,26,.12);--line2:rgba(23,22,26,.2);--field:#F4F3F1;--coral:#C2542F;--coralink:#A8461F;--coralbg:#F8E6DF;--on:#fff;--ok:#1E7A46;--okbg:#E4F3E9;--warn:#8A5A00;--warnbg:#FBEFD2;--danger:#B3261E;--dangerbg:#FBE4E2;--info:#1F4E86;--infobg:#E3EDF9;--page:#DEDCD7;--sh:0 1px 2px rgba(0,0,0,.06)}
+[data-theme=dark]{--bg:#0C0B0A;--bg2:#141311;--card:#1A1917;--ink:#F5F3EF;--ink2:rgba(245,243,239,.74);--ink3:rgba(245,243,239,.56);--line:rgba(245,243,239,.12);--line2:rgba(245,243,239,.22);--field:#22211E;--coral:#D9683F;--coralink:#FFAD91;--coralbg:#3A2219;--on:#fff;--ok:#6FD49A;--okbg:#12301F;--warn:#F0C568;--warnbg:#33270B;--danger:#F2867E;--dangerbg:#3A1513;--info:#B9D2F2;--infobg:#13233A;--page:#000;--sh:none}
+*{box-sizing:border-box;margin:0}
+body{font-family:Geist,system-ui,sans-serif;background:var(--page);color:var(--ink);padding:24px 16px 80px;-webkit-font-smoothing:antialiased}
+h1{font-size:28px;font-weight:800;letter-spacing:-.03em}
+h2{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:48px 0 6px}
+.lead{max-width:780px;color:var(--ink2);font-size:15px;line-height:1.5;margin-top:8px}
+.top{display:flex;align-items:flex-start;gap:16px;justify-content:space-between;max-width:1280px;margin:0 auto}
+.wrap{max-width:1280px;margin:0 auto}
+.tog{border:1px solid var(--line2);background:var(--card);color:var(--ink);font:inherit;font-size:14px;font-weight:600;height:44px;padding:0 16px;border-radius:12px;cursor:pointer;flex-shrink:0}
+.pair{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;margin-top:16px}
+.col{display:flex;flex-direction:column;gap:10px}
+.tag{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.tag b{color:var(--coral)}
+.cap{font-size:13px;font-weight:600;color:var(--coral);max-width:390px;line-height:1.45}.cap.old{color:var(--ink2);font-weight:500}
+.flujo{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:var(--ink2)}
+.flujo span{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+.flujo b{color:var(--coral)}
+
+/* Teléfono 390 × 844 */
+.ph{width:390px;max-width:100%;height:844px;background:var(--bg);border-radius:30px;border:1px solid var(--line2);overflow:hidden;position:relative;display:flex;flex-direction:column;font-size:14px}
+.bar{height:56px;display:flex;align-items:center;gap:8px;padding:0 18px;border-bottom:1px solid var(--line);background:var(--card)}
+.mark{width:28px;height:28px;border-radius:7px;background:var(--coral);display:grid;place-items:center;color:#fff;font-family:'Bricolage Grotesque',Geist,sans-serif;font-weight:800;font-size:17px}
+.word{font-family:'Bricolage Grotesque',Geist,sans-serif;font-weight:800;letter-spacing:-.04em;font-size:20px}
+.body{padding:18px 16px;display:flex;flex-direction:column;gap:14px;flex:1;overflow:hidden}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--sh);padding:18px 16px;display:flex;flex-direction:column;gap:14px}
+.steps{display:flex;gap:8px}
+.steps div{flex:1;display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:600;color:var(--ink3)}
+.steps div::before{content:"";height:4px;border-radius:9px;background:var(--line2)}
+.steps div.on{color:var(--ink2)}.steps div.on::before{background:var(--coral)}
+.g{height:48px;border-radius:999px;border:1px solid var(--line2);background:#fff;color:#1F1F1F;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;font-size:15px}
+.gl{width:18px;height:18px;border-radius:50%;background:conic-gradient(#EA4335 0 25%,#FBBC05 0 50%,#34A853 0 75%,#4285F4 0)}
+.div{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink3)}
+.div::before,.div::after{content:"";flex:1;height:1px;background:var(--line2)}
+.lab{display:block;font-size:12px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.inp{height:48px;border-radius:12px;border:1px solid var(--line2);background:var(--field);display:flex;align-items:center;padding:0 14px;color:var(--ink3);font-size:16px}
+.inp.val{color:var(--ink)}
+.btn{height:52px;border-radius:999px;background:var(--coral);color:var(--on);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;margin-top:auto}
+.q{font-size:15px;font-weight:700}
+.op{display:flex;gap:12px;align-items:center;min-height:60px;padding:10px 14px;border:1px solid var(--line2);border-radius:14px;background:var(--card)}
+.op .r{width:20px;height:20px;border-radius:50%;border:2px solid var(--line2);flex-shrink:0}
+.op.on{border-color:var(--coral);box-shadow:inset 0 0 0 1px var(--coral)}
+.op.on .r{border:6px solid var(--coral)}
+.op b{display:block;font-size:14px}.op small{display:block;font-size:12px;color:var(--ink3);margin-top:2px}
+.op.nuevo{outline:2px dashed var(--coral);outline-offset:3px}
+.err{padding:10px 14px;border-radius:12px;background:var(--dangerbg);color:var(--danger);font-size:13px}
+
+/* La pieza nueva: el plan que eligió, en una línea */
+.plan{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--bg2);font-size:13px;color:var(--ink2);line-height:1.4}
+.plan b{color:var(--ink)}
+.plan .dot{width:8px;height:8px;border-radius:50%;background:var(--coral);flex-shrink:0}
+
+.res{border:1px solid var(--line2);border-radius:14px;overflow:hidden}
+.ren{display:flex;align-items:center;gap:10px;min-height:52px;padding:8px 14px}
+.ren+.ren{border-top:1px solid var(--line)}
+.ren .k{width:52px;color:var(--ink3)}.ren .v{flex:1;font-weight:600}.ren .c{color:var(--coralink);font-weight:600;font-size:13px}
+.nota{font-size:13px;color:var(--ink3);line-height:1.45}
+.nota.nueva{color:var(--ink2)}
+.nota.nueva b{color:var(--ink)}
+.mira{display:block;height:150px;border-radius:16px;background:linear-gradient(160deg,var(--bg2),var(--field));border:1px solid var(--line);display:grid;place-items:center;color:var(--ink3);font-size:12px}
+.marca{position:absolute;right:10px;top:64px;font-size:11px;font-weight:700;color:var(--coral);background:var(--coralbg);padding:3px 8px;border-radius:6px}
+</style>
+</head>
+<body>
+<div class="top">
+  <div>
+    <h1>Alta con el plan elegido</h1>
+    <p class="lead">Auditoría de lanzamiento 2026-11-23, LZ-11 (y el texto del primer cargo de LZ-01). Hoy el plan que alguien eligió en Planes se pierde: solo «En línea» se recuerda, y solo en ese navegador. Quien eligió <b>En mostrador</b> (Estándar) llega a un alta que no tiene esa opción: con «mesas» le propone Premium y con «para llevar», En línea.</p>
+    <div class="flujo">
+      <span>Planes: «En mostrador» → <b>Empezar con Estándar</b></span>
+      <span>→ /registro<b>?plan=ESTANDAR&amp;caso=mostrador</b></span>
+      <span>→ correo de confirmación con el mismo dato</span>
+      <span>→ alta con Estándar ya elegido</span>
+    </div>
+    <p class="lead">El plan viaja en el enlace (sobrevive al cambiar de navegador o abrir el correo en el teléfono); el almacenamiento local queda de respaldo. Sigue siendo editable al final, como hoy.</p>
+  </div>
+  <button class="tog" onclick="var h=document.documentElement;h.dataset.theme=h.dataset.theme==='dark'?'light':'dark'">Claro / oscuro</button>
+</div>
+
+<div class="wrap">
+  <!-- ═════════ 1 · Registro ═════════ -->
+  <h2>1 · Crear la cuenta</h2>
+  <div class="pair">
+    <div class="col">
+      <div class="tag">Antes</div>
+      <div class="ph">
+        <div class="bar"><span class="mark">L</span><span class="word">leogin</span></div>
+        <div class="body">
+          <div class="card">
+            <div class="steps"><div class="on">Tu cuenta</div><div>Tu negocio</div><div>Qué vendes</div><div>Tu carta</div></div>
+            <div class="g"><span class="gl"></span>Registrarme con Google</div>
+            <div class="div">o crea tu cuenta con un correo</div>
+            <div><span class="lab">Tu nombre</span><div class="inp">Tu nombre y apellido</div></div>
+            <div><span class="lab">Correo</span><div class="inp">tu@email.com</div></div>
+            <div><span class="lab">Contraseña</span><div class="inp"></div></div>
+          </div>
+          <div class="btn">Crear mi cuenta</div>
+        </div>
+      </div>
+      <p class="cap old">No dice qué plan eligió: parece que empieza de cero.</p>
+    </div>
+    <div class="col">
+      <div class="tag"><b>Propuesta</b></div>
+      <div class="ph">
+        <div class="bar"><span class="mark">L</span><span class="word">leogin</span></div>
+        <span class="marca">nuevo</span>
+        <div class="body">
+          <div class="card">
+            <div class="steps"><div class="on">Tu cuenta</div><div>Tu negocio</div><div>Qué vendes</div><div>Tu carta</div></div>
+            <div class="plan"><span class="dot"></span><span>Plan elegido: <b>Estándar · Q150/mes</b>. Lo confirmas antes de crear tu restaurante.</span></div>
+            <div class="g"><span class="gl"></span>Registrarme con Google</div>
+            <div class="div">o crea tu cuenta con un correo</div>
+            <div><span class="lab">Tu nombre</span><div class="inp">Tu nombre y apellido</div></div>
+            <div><span class="lab">Correo</span><div class="inp">tu@email.com</div></div>
+            <div><span class="lab">Contraseña</span><div class="inp"></div></div>
+          </div>
+          <div class="btn">Crear mi cuenta</div>
+        </div>
+      </div>
+      <p class="cap">Una sola línea, sin botón: confirma lo que eligió y que nada se cobra en este paso. Solo aparece si llegó con un plan; sin plan, la pantalla queda igual que hoy.</p>
+    </div>
+  </div>
+
+  <!-- ═════════ 2 · Tu negocio ═════════ -->
+  <h2>2 · Tu negocio</h2>
+  <div class="pair">
+    <div class="col">
+      <div class="tag">Antes</div>
+      <div class="ph">
+        <div class="bar"><span class="mark">L</span><span class="word">leogin</span></div>
+        <div class="body">
+          <div class="card">
+            <div class="steps"><div class="on">Tu cuenta</div><div class="on">Tu negocio</div><div>Qué vendes</div><div>Tu carta</div></div>
+            <div><span class="lab">¿Cómo se llama tu negocio?</span><div class="inp val">Café Ana</div></div>
+            <div class="q">¿Cómo te piden tus clientes?</div>
+            <div class="op"><span class="r"></span><span><b>Solo ven la carta</b><small>La consultan con un QR y piden en persona</small></span></div>
+            <div class="op"><span class="r"></span><span><b>Para llevar y a domicilio</b><small>Piden desde la carta en su teléfono</small></span></div>
+            <div class="op"><span class="r"></span><span><b>En mesas, con meseros</b><small>Toman pedidos en el salón y cobran en caja</small></span></div>
+            <div class="err">Elige cómo te piden tus clientes.</div>
+          </div>
+          <div class="btn">Continuar</div>
+        </div>
+      </div>
+      <p class="cap old">Vuelve a preguntar lo que ya respondió en Planes, y sin «En mostrador». El aviso rojo sale antes de que toque algo.</p>
+    </div>
+    <div class="col">
+      <div class="tag"><b>Propuesta</b></div>
+      <div class="ph">
+        <div class="bar"><span class="mark">L</span><span class="word">leogin</span></div>
+        <div class="body">
+          <div class="card">
+            <div class="steps"><div class="on">Tu cuenta</div><div class="on">Tu negocio</div><div>Qué vendes</div><div>Tu carta</div></div>
+            <div><span class="lab">¿Cómo se llama tu negocio?</span><div class="inp val">Café Ana</div></div>
+            <div class="q">¿Cómo te piden tus clientes?</div>
+            <div class="op"><span class="r"></span><span><b>Solo ven la carta</b><small>La consultan con un QR y piden en persona</small></span></div>
+            <div class="op"><span class="r"></span><span><b>Para llevar y a domicilio</b><small>Piden desde la carta en su teléfono</small></span></div>
+            <div class="op on nuevo"><span class="r"></span><span><b>En mostrador</b><small>Piden en el mostrador y pagan en caja</small></span></div>
+            <div class="op"><span class="r"></span><span><b>En mesas, con meseros</b><small>Toman pedidos en el salón y cobran en caja</small></span></div>
+          </div>
+          <div class="btn">Continuar</div>
+        </div>
+      </div>
+      <p class="cap">Las mismas cuatro respuestas que Planes, con la que eligió ya marcada; la puede cambiar. «En mostrador» lleva a Estándar con local y para llevar. El aviso rojo solo aparece si toca «Continuar» sin elegir.</p>
+    </div>
+  </div>
+
+  <!-- ═════════ 3 · Tu carta (resumen) ═════════ -->
+  <h2>3 · Tu carta: el plan y el primer cobro</h2>
+  <div class="pair">
+    <div class="col">
+      <div class="tag">Antes</div>
+      <div class="ph">
+        <div class="bar"><span class="mark">L</span><span class="word">leogin</span></div>
+        <div class="body">
+          <div class="card">
+            <div class="steps"><div class="on">Tu cuenta</div><div class="on">Tu negocio</div><div class="on">Qué vendes</div><div class="on">Tu carta</div></div>
+            <div class="q" style="font-size:22px">Así se ve tu carta</div>
+            <div class="mira">vista de la carta</div>
+            <div class="res">
+              <div class="ren"><span class="k">Estilo</span><span class="v">Lino coral</span><span class="c">Cambiar</span></div>
+              <div class="ren"><span class="k">Plan</span><span class="v">Estándar · Q150/mes</span><span class="c">Cambiar</span></div>
+            </div>
+            <p class="nota">Estándar se cobra desde hoy (Q150/mes). Sin contrato: lo cambias o das de baja cuando quieras.</p>
+          </div>
+          <div class="btn">Crear mi restaurante</div>
+        </div>
+      </div>
+      <p class="cap old">No dice cuándo vence el primer cobro ni dónde se paga.</p>
+    </div>
+    <div class="col">
+      <div class="tag"><b>Propuesta</b></div>
+      <div class="ph">
+        <div class="bar"><span class="mark">L</span><span class="word">leogin</span></div>
+        <div class="body">
+          <div class="card">
+            <div class="steps"><div class="on">Tu cuenta</div><div class="on">Tu negocio</div><div class="on">Qué vendes</div><div class="on">Tu carta</div></div>
+            <div class="q" style="font-size:22px">Así se ve tu carta</div>
+            <div class="mira">vista de la carta</div>
+            <div class="res">
+              <div class="ren"><span class="k">Estilo</span><span class="v">Lino coral</span><span class="c">Cambiar</span></div>
+              <div class="ren"><span class="k">Plan</span><span class="v">Estándar · Q150/mes</span><span class="c">Cambiar</span></div>
+            </div>
+            <p class="nota nueva">Tu primer cobro es de <b>Q150</b> y vence hoy, <b>23 de noviembre</b>; después, cada 23. Lo pagas desde Mi suscripción. Sin contrato: lo cambias o das de baja cuando quieras.</p>
+          </div>
+          <div class="btn">Crear mi restaurante</div>
+        </div>
+      </div>
+      <p class="cap">Mismo lugar y mismo tamaño que hoy; solo el texto dice el monto, la fecha y dónde se paga. Básico sigue diciendo «gratis para siempre».</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>
