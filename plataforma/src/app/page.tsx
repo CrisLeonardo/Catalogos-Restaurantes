@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import MenuShell from '@/components/menu-shell';
 import LeoginLanding from '@/components/landing';
-import BranchSelector from '@/components/branch-selector';
+import { BranchSelector } from '@/components/islas-de-la-raiz';
 import { getRestaurantBySlugCached } from '@/lib/db/restaurants';
 import { getGroupBranches } from '@/lib/db/org-public';
 import { getEstadosVigentesCached } from '@/lib/db/estados';

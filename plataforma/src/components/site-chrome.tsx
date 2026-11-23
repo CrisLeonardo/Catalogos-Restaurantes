@@ -2,8 +2,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { conEvento, EVENTOS } from '@/lib/analytics';
 import LeoginLogo from '@/components/leogin-logo';
-import SiteMenu from '@/components/site-menu';
-import LeoginInstallBanner from '@/components/leogin-install-banner';
+import { SiteMenu, LeoginInstallBanner } from '@/components/islas-de-la-raiz';
 import { subdomainUrl, DEMO_SLUG } from '@/lib/tenant';
 
 /**

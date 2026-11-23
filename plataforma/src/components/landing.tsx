@@ -8,10 +8,9 @@ import { PLANS, PUBLIC_PLANS, planPriceQ, planPresentation, type PlanPricing } f
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { getLandingProof } from '@/lib/db/landing';
 import { Testimonials } from '@/components/landing-proof';
-import { LandingIntro } from '@/components/landing-intro';
+import { LandingIntro, LandingDemo, PlanPorPreguntas } from '@/components/islas-de-la-raiz';
 import { Leo } from '@/components/leo';
-import { LandingDemo } from '@/components/landing-demo';
-import { PlanPorPreguntas, type PlanDeLaWeb } from '@/components/landing-planes';
+import type { PlanDeLaWeb } from '@/components/landing-planes';
 import { enlaceDeAlta, type PlanAlta } from '@/lib/alta';
 import planesCss from '@/components/landing-planes.module.css';
 
