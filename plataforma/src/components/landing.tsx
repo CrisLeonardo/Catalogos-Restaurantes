@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { conEvento, EVENTOS } from '@/lib/analytics';
-import { SiteHeader, SiteFooter, SectionHead, contactHref } from '@/components/site-chrome';
+import { SiteHeader, SiteFooter, SectionHead, contactHref, CONTACT_ICON, CONTACT_VIA } from '@/components/site-chrome';
 import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
 import { PLANS, PUBLIC_PLANS, planPriceQ, planPresentation, type PlanPricing } from '@/lib/plans';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
@@ -12,7 +12,7 @@ import { LandingIntro } from '@/components/landing-intro';
 import { Leo } from '@/components/leo';
 import { LandingDemo } from '@/components/landing-demo';
 import { PlanPorPreguntas, type PlanDeLaWeb } from '@/components/landing-planes';
-import type { PlanAlta } from '@/lib/alta';
+import { enlaceDeAlta, type PlanAlta } from '@/lib/alta';
 import planesCss from '@/components/landing-planes.module.css';
 
 /* ============================================================
@@ -55,7 +55,7 @@ const FAQS = [
   { q: '¿Necesito saber de tecnología?', a: 'No. Te guiamos paso a paso y en minutos tienes tu menú en vivo. Si prefieres configuración asistida, consulta su tarifa en Planes.' },
   { q: '¿Cobran comisión por cada pedido?', a: 'No. Pagas una mensualidad fija según tu plan. Lo que vendes es tuyo: igual en un mes flojo que en tu mejor mes, sin porcentajes sobre tus ventas.' },
   { q: '¿Mis clientes tienen que descargar una app?', a: 'No. Todo abre con el QR en el navegador del celular, al instante. Si tu cliente quiere, puede “instalarlo” en su pantalla de inicio, pero es opcional.' },
-  { q: '¿Y si se va el internet en el restaurante?', a: 'Sigues operando. Con Leogin Escritorio en la computadora de la caja, el local toma pedidos por tu red, imprime las comandas y sincroniza todo con la nube en cuanto vuelve la conexión.' },
+  { q: '¿Y si se va el internet en el restaurante?', a: 'Si configuramos contigo una PC principal con Leogin Escritorio, el local sigue tomando pedidos por tu red (y, en Premium, imprimiendo las comandas) y todo se sincroniza con la nube al volver la conexión. Sin esa PC, el panel necesita internet.' },
   { q: '¿Cómo se verá mi carta?', a: 'Con tus colores, tu logo y tus fotos. Al crear tu restaurante eliges entre ocho maneras de recorrer la carta y decenas de paletas, y la cambias cuando quieras. La demo de Rincón 502 es una de ellas.' },
   { q: '¿Qué pasa cuando crezca?', a: 'Empiezas con lo que necesitas hoy y subes de plan cuando lo pidas, sin cambiar de sistema: mesas, cocina, inventario, lealtad, reservas y varias sucursales viven en el mismo panel.' },
   { q: '¿Puedo cambiar de plan después?', a: 'Sí, cuando quieras y sin penalización. Empiezas en el plan que te convenga hoy y subes a medida que creces.' },
@@ -112,7 +112,7 @@ export default async function LeoginLanding() {
      redes» lleva a /vende-en-linea, su página propia. */
   const casos: { icono: string; titulo: string; texto: string; plan: PlanAlta; href: string }[] = [
     { icono: 'utensils', titulo: 'Tengo mesas y meseros', texto: 'El mesero pide en el celular, cocina lo ve en su pantalla y la caja cobra por mesa.', plan: 'PREMIUM', href: demoUrl },
-    { icono: 'coffee', titulo: 'Cafetería o mostrador', texto: 'Piden en el mostrador o para llevar, sin mesero. Cobras y la comanda sale sola.', plan: 'ESTANDAR', href: demoUrl },
+    { icono: 'coffee', titulo: 'Cafetería o mostrador', texto: 'Piden en el mostrador o para llevar, sin mesero. Cobras y la comanda llega sola a cocina.', plan: 'ESTANDAR', href: demoUrl },
     { icono: 'whatsapp', titulo: 'Vendo por redes', texto: 'Tus clientes piden desde WhatsApp o Instagram, para llevar o a domicilio.', plan: 'EN_LINEA', href: '/vende-en-linea' },
   ];
 
@@ -194,7 +194,7 @@ export default async function LeoginLanding() {
             ))}
           </ul>
           <p className={planesCss.soloCarta}>
-            ¿Solo quieres tu carta con QR? <Link href="/registro">Básico, gratis</Link>.
+            ¿Solo quieres tu carta con QR? <Link href={enlaceDeAlta({ plan: 'BASICO', caso: 'carta' })}>Básico, gratis</Link>.
           </p>
         </section>
 
@@ -311,7 +311,7 @@ export default async function LeoginLanding() {
                 </h2>
                 <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(245,243,239,0.72)', maxWidth: 520, margin: '14px auto 0' }}>
                   Crea tu restaurante en minutos: la carta con QR es gratis. ¿Prefieres que te
-                  acompañemos en la configuración? Escríbenos por WhatsApp y lo armamos juntos.
+                  acompañemos en la configuración? Escríbenos {CONTACT_VIA} y lo armamos juntos.
                 </p>
                 <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 30 }}>
                   <Link href="/registro" {...conEvento('lp-btn lp-btn-lg lp-btn-primary', EVENTOS.clicCrear, 'cierre')}>
@@ -324,7 +324,7 @@ export default async function LeoginLanding() {
                     className="lp-btn lp-btn-lg"
                     style={{ background: 'rgba(245,243,239,0.10)', color: '#F5F3EF', borderColor: 'rgba(245,243,239,0.22)' }}
                   >
-                    <Icon name="whatsapp" size={17} /> Hablar con ventas
+                    <Icon name={CONTACT_ICON} size={17} /> Hablar con ventas
                   </a>
                 </div>
               </div>

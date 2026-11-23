@@ -427,7 +427,7 @@ export const PLAN_POINTS: Record<PlanCode, { text: string; positive: boolean }[]
   ESTANDAR: [
     { text: `Elige ${ESTANDAR_MAX_ORDER_TYPES} de 3 modos de pedido`, positive: true },
     { text: 'Avisos en tiempo real y WhatsApp', positive: true },
-    { text: `Platillos ilimitados · ${PLANS.ESTANDAR.users} usuarios`, positive: true },
+    { text: `Platillos ilimitados · ${PLANS.ESTANDAR.users} usuarios, tú incluido`, positive: true },
     { text: 'Reportes financieros y corte de caja', positive: true },
   ],
   PREMIUM: [
@@ -497,6 +497,8 @@ export function formatPlanAmount(amount: number, currency = 'GTQ'): string {
 export type PlanBillingSnapshot = {
   monthly_fee: number;
   auto_price: boolean;
+  /** Plan con el que se acordó `monthly_fee` (mig. 191). */
+  plan_del_precio?: string | null;
   currency?: string;
   started_at?: string | null;
 };
@@ -532,7 +534,11 @@ export function planPresentation(input: PlanPresentationInput) {
   const publicAmount = input.pricing.prices[code];
   const billing = input.billing;
   const manual = billing?.auto_price === false;
-  const monthlyAmount = manual ? billing.monthly_fee
+  /* Precio acordado (mig. 191): en automático se cobra el precio del plan
+     al contratarlo, aunque la tarifa pública cambie después. Solo si el plan
+     cambió y aún no se volvió a fijar, vale el cálculo del motor. */
+  const agreed = !manual && !!billing && billing.plan_del_precio === code;
+  const monthlyAmount = manual || agreed ? billing!.monthly_fee
     : billing ? input.computedFee ?? billing.monthly_fee : publicAmount;
   const currency = billing?.currency ?? 'GTQ';
   const monthlyLabel = monthlyAmount === 0 ? 'Gratis' : `${formatPlanAmount(monthlyAmount, currency)}${currency === 'GTQ' ? '' : ` ${currency}`} / mes`;
@@ -560,9 +566,10 @@ export function planPresentation(input: PlanPresentationInput) {
     availableOrderTypes, selectedOrderTypes, maxOrderTypes, orderScope, selectedScope, policy,
     publicAmount, publicLabel: planPriceLabel(input.pricing, code),
     setupAmount: input.pricing.setupFees?.[code] ?? plan.setupFee,
-    monthlyAmount, monthlyLabel, currency, manual,
+    monthlyAmount, monthlyLabel, currency, manual, agreed,
     billingConfigured: !!billing,
     priceExplanation: manual ? 'Precio acordado para este restaurante. La tarifa pública es una referencia.'
+      : agreed ? 'Precio del plan al contratarlo. Si la tarifa pública cambia, el tuyo se mantiene mientras sigas en este plan.'
       : billing && input.computedFee == null ? 'Mensualidad guardada; no se pudo comprobar el cálculo actual.'
       : billing ? 'Mensualidad automática del plan; encender o apagar funciones no cambia la tarifa.'
         : 'Tarifa pública de referencia; el cobro de este restaurante aún no está configurado.',
@@ -577,11 +584,14 @@ export function planOperationCopy(presentation: ReturnType<typeof planPresentati
   return `Tu plan ${presentation.name}: ${presentation.orderScope}. ${presentation.selectedScope}.`;
 }
 
-/** Una selección de plan no elimina un acuerdo manual: el motor solo aplica auto_price. */
+/** Una selección de plan no elimina un acuerdo manual: el motor solo aplica
+ *  auto_price. Salvo bajar a un plan gratis, que es cancelar y detiene los
+ *  cobros también para un acuerdo manual (LZ-08, actions/cambiar-plan.ts). */
 export function planChangePresentation(current: ReturnType<typeof planPresentation> | null | undefined, target: PlanCode, pricing: PlanPricing) {
+  const conservaAcuerdo = current?.manual && pricing.prices[target] !== 0;
   return planPresentation({
     plan: target, pricing,
-    billing: current?.manual ? { auto_price: false, monthly_fee: current.monthlyAmount, currency: current.currency } : null,
+    billing: conservaAcuerdo ? { auto_price: false, monthly_fee: current.monthlyAmount, currency: current.currency } : null,
   });
 }
 

@@ -26,6 +26,17 @@ describe('contrato de planes compartido por las superficies', () => {
     expect(c.monthlyAmount).toBe(349);
     expect(c.capabilities.find((item) => item.key === 'loyalty')).toMatchObject({ included: true, enabled: true, active: false, configured: null });
   });
+  it('el precio acordado al contratar se mantiene aunque la tarifa pública cambie (mig. 191)', () => {
+    const c = planPresentation({ plan: 'ESTANDAR', pricing, billing: { auto_price: true, monthly_fee: 150, plan_del_precio: 'ESTANDAR' }, computedFee: 199 });
+    expect(c.monthlyAmount).toBe(150);
+    expect(c.agreed).toBe(true);
+    expect(c.priceExplanation).toContain('se mantiene');
+  });
+  it('si el plan cambió y el precio aún no se fijó, vale el cálculo del motor', () => {
+    const c = planPresentation({ plan: 'PREMIUM', pricing, billing: { auto_price: true, monthly_fee: 99, plan_del_precio: 'EN_LINEA' }, computedFee: 349 });
+    expect(c.monthlyAmount).toBe(349);
+    expect(c.agreed).toBe(false);
+  });
   it('la excepción manual, incluso de cero, no se reemplaza por la tarifa pública', () => {
     for (const amount of [275.25, 0]) {
       const c = planPresentation({ plan: 'PREMIUM', pricing, billing: { auto_price: false, monthly_fee: amount, currency: 'GTQ' }, computedFee: 349 });
@@ -49,7 +60,8 @@ describe('contrato de planes compartido por las superficies', () => {
   it('la vista previa de un cambio conserva el acuerdo manual, incluso al elegir Básico', () => {
     const current = planPresentation({ plan: 'PREMIUM', pricing, billing: { auto_price: false, monthly_fee: 275.25 } });
     expect(planChangePresentation(current, 'ESTANDAR', pricing).monthlyAmount).toBe(275.25);
-    expect(planChangePresentation(current, 'BASICO', pricing).monthlyAmount).toBe(275.25);
+    // Bajar a Básico es cancelar: el acuerdo manual deja de cobrarse (LZ-08).
+    expect(planChangePresentation(current, 'BASICO', pricing).monthlyAmount).toBe(0);
     expect(planChangePresentation(null, 'BASICO', pricing).monthlyAmount).toBe(0);
   });
   it('En línea avisa del tope blando sin prometer pedidos ilimitados ni cortar ventas', () => {

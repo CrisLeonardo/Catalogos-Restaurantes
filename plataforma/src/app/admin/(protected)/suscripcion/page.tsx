@@ -93,10 +93,9 @@ export default async function SuscripcionPage() {
   const { config, invoices, pendingTotal, currency } = billingResult;
   if (!contract) throw new Error('No se pudo leer la información del plan. Intenta de nuevo.');
 
-  // La "Mensualidad" mostrada debe reflejar siempre el precio real vigente.
-  // `config.monthly_fee` es una foto guardada que solo se resincroniza en el
-  // próximo corte de cobro; si el restaurante está en auto_price, usamos el
-  // precio fijo del plan (getFeeBreakdown) para que nunca discrepen.
+  // La "Mensualidad" mostrada es la que se cobra: el precio acordado al
+  // contratar el plan (mig. 191), no la tarifa pública de hoy. Ver
+  // planPresentation.
   const displayedMonthlyFee = contract.monthlyAmount;
 
   // Get current plan

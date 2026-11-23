@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { leerIntencion } from '@/lib/alta';
+import { planPriceLabel } from '@/lib/plans';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import LeoginLogo from '@/components/leogin-logo';
@@ -90,13 +92,17 @@ async function currentStaffAccount(): Promise<{
 export default async function RegistroPage({
   searchParams,
 }: {
-  searchParams: Promise<{ auth_error?: string }>;
+  searchParams: Promise<{ auth_error?: string; plan?: string; caso?: string }>;
 }) {
   const [pricing, account, params] = await Promise.all([
     getEffectivePlanPricing(),
     currentStaffAccount(),
     searchParams,
   ]);
+
+  // Lo que eligió en Planes o en Vende en línea (LZ-11): se valida aquí y
+  // viaja hasta el alta.
+  const intencion = leerIntencion(params.plan, params.caso);
 
   const googleAccount =
     account && !account.hasProfile ? { email: account.email, fullName: account.fullName } : null;
@@ -159,6 +165,8 @@ export default async function RegistroPage({
               googleAccount={googleAccount}
               existingAccount={existingAccount}
               authError={params.auth_error === '1'}
+              intencion={intencion}
+              precioIntencion={intencion ? planPriceLabel(pricing, intencion.plan) : null}
             />
           </Glass>
         </div>

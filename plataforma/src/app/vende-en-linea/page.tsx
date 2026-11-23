@@ -12,7 +12,7 @@ import { planPriceLabel, PLANS } from '@/lib/plans';
 
 /** Pedidos al mes que incluye En línea (tope blando, ver lib/tope-pedidos.ts). */
 const TOPE = PLANS.EN_LINEA.monthlyOrderCap ?? 300;
-import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
+import { subdomainUrl, rootDomainForUrls, marketingUrl, DEMO_SLUG } from '@/lib/tenant';
 
 /* ============================================================
    LEOGIN PARA QUIEN VENDE EN LÍNEA (/vende-en-linea)
@@ -42,7 +42,8 @@ export const metadata: Metadata = {
   title: 'Leogin para vender en línea — tu menú en un link, tus pedidos en orden',
   description:
     'Para quien vende comida por WhatsApp, Instagram o Facebook: tu menú en un link, pedidos completos con dirección y forma de pago, avisos al instante y cuánto vendiste. Sin comisión.',
-  alternates: { canonical: '/vende-en-linea' },
+  // Absoluta: la relativa salía tal cual en el HTML, sin dominio.
+  alternates: { canonical: marketingUrl('/vende-en-linea') },
 };
 
 // El precio sale de lo vigente en /super/configuracion, como en /planes.

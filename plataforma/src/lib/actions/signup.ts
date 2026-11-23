@@ -27,6 +27,7 @@
    Usa service role; no requiere sesión previa.
    ============================================================ */
 
+import { enlaceDeAlta, leerIntencion } from '@/lib/alta';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
@@ -78,6 +79,10 @@ export async function signupAccount(
   const password2 = (formData.get('password2') as string) ?? '';
   const fullName = (formData.get('full_name') as string)?.trim() || null;
   const terms = formData.get('terms');
+  // Lo que eligió en la web (LZ-11), validado: viaja al alta en el enlace y
+  // queda en la cuenta por si vuelve otro día desde otro aparato.
+  const intencion = leerIntencion(formData.get('alta_plan'), formData.get('alta_caso'));
+  const metaIntencion = intencion ? { alta_plan: intencion.plan, alta_caso: intencion.caso } : {};
 
   if (!email || !validEmail(email)) return { error: 'Escribe un correo válido.' };
   // El dominio interno del personal por PIN no es de nadie: no recibe correo,
@@ -103,12 +108,18 @@ export async function signupAccount(
   let userId: string;
   if (withGoogle) {
     userId = googleUser!.id;
+    if (intencion) {
+      // Se suma a lo que ya trae de Google; si falla, el alta sigue igual.
+      await db.auth.admin.updateUserById(userId, {
+        user_metadata: { ...(googleUser!.user_metadata ?? {}), ...metaIntencion },
+      }).catch(() => {});
+    }
   } else {
     const { data: created, error: createErr } = await db.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
-      user_metadata: { full_name: fullName },
+      user_metadata: { full_name: fullName, ...metaIntencion },
     });
     if (createErr || !created?.user) {
       const m = createErr?.message?.toLowerCase() ?? '';
@@ -174,6 +185,7 @@ export async function signupAccount(
   // Embudo de la web (WEB-01): sale después de la respuesta, no la frena.
   await registrarEvento(EVENTOS.cuentaCreada, '/registro');
 
-  // Su casa. Ahí crea su restaurante, que es el siguiente paso real.
-  redirect('/mi-cuenta/nuevo');
+  // Su casa. Ahí crea su restaurante, que es el siguiente paso real, con
+  // el plan que eligió en la web ya puesto.
+  redirect(enlaceDeAlta(intencion, '/mi-cuenta/nuevo'));
 }

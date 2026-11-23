@@ -2,6 +2,7 @@
 
 import { leerPapel } from '@/lib/permisos-trabajo';
 import { createServiceClient } from '@/lib/supabase/service';
+import { diaDeCobroDelAlta } from '@/lib/billing-signup';
 import { verifySuperAdmin, currentSuperAdmin } from '@/lib/auth/super-admin-guard';
 import { logSuper } from '@/lib/super-admin-log';
 import { faltaLaTabla } from '@/lib/db/migracion-ausente';
@@ -75,6 +76,8 @@ export async function createRestaurant(
     restaurant_id: restaurant.id,
     auto_price: true,
     active: true,
+    // Vence en el aniversario del alta, no el día 1 ya pasado (LZ-01).
+    ...diaDeCobroDelAlta(),
   });
   await db.rpc('leogin_apply_auto_price', { p_restaurant_id: restaurant.id });
 

@@ -129,7 +129,7 @@ export function PanelEnVivo({ pedido, dinero, restaurante = 'Rincón 502' }: {
       )}
 
       <p style={{ fontSize: 11.5, color: '#8A8178', margin: '10px 2px 0', lineHeight: 1.45 }}>
-        Así lo ve la cocina de {restaurante}. En tu restaurante, además, sale impreso solo.
+        Así lo ve la cocina de {restaurante}. Con Premium y una impresora compatible, además, sale impreso solo.
       </p>
     </div>
   );

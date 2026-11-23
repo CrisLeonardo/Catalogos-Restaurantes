@@ -16,6 +16,8 @@ Documentos técnicos que viven pegados al código: [`../plataforma/docs/`](../pl
 
 La [validación de lanzamiento del 18 de noviembre](auditorias/AUDITORIA_VALIDACION_LANZAMIENTO_2026-11-18.md) reúne la evidencia de producción, el ensayo de primera mensualidad y los pendientes de venta.
 
+La [auditoría de lanzamiento del 23 de noviembre](auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md) contrasta la oferta pública con el código desplegado, reúne el checklist de salida por flujo y prepara el piloto para los primeros tres clientes de pago.
+
 Para mejorar la carta del comensal como vendedora del restaurante, consulta la [auditoría «La carta que vende»](auditorias/AUDITORIA_CARTA_QUE_VENDE_2026-11-18.md) y su [maqueta](diseno/MAQUETA_CARTA_QUE_VENDE_2026-11-18.html).
 
 ## Convenciones de nombre

@@ -1,0 +1,45 @@
+-- ============================================================
+--  Huellas de las funciones críticas · hasta la migración 191
+--  GENERADO por scripts/huellas-funciones.mjs --escribir. No editar a mano.
+--  ------------------------------------------------------------
+--  Pégalo en el editor SQL de Supabase (producción). Solo lee.
+--  «coincide» = la función desplegada es la del repositorio.
+--  «DIFIERE» o «FALTA» = no abras pedidos hasta aclararlo: falta aplicar
+--  una migración o alguien cambió la función a mano.
+-- ============================================================
+with esperadas(firma, huella) as (
+  values
+    ('leogin_apply_auto_price(p_restaurant_id uuid)', 'e2c814ab06b0022ad78ca52efea85ada'),
+    ('leogin_apply_auto_price_all()', 'a0b3668e5eb34c9acd7fc55f7517fe6b'),
+    ('leogin_cerrar_cuenta_pagada(p_restaurant uuid, p_mesa integer, p_cuenta text, p_actor uuid, p_intento uuid)', '5b779b82c0f1c461dabfe38fea3d3544'),
+    ('leogin_cobrar_parte_mesa(p_restaurant uuid, p_mesa integer, p_items uuid[], p_pagos jsonb, p_actor uuid)', '32af80cb5b92f734a3b10ab9a7a206d6'),
+    ('leogin_cobrar_parte_mesa_idempotente(p_restaurant uuid, p_mesa integer, p_items uuid[], p_pagos jsonb, p_actor uuid, p_intento uuid)', 'd6fb15f930d3e9739bed8f81970811cd'),
+    ('leogin_compute_monthly_fee(p_restaurant_id uuid, p_period_start date)', 'f3c9ade47b7e21c7eaae847337db164e'),
+    ('leogin_confirmar_cierre_caja(p_restaurant uuid, p_revision bigint, p_ultimo uuid, p_hasta timestamp with time zone, p_abierto uuid, p_fila jsonb, p_gastos uuid[], p_actor uuid)', '5dbf0c7dec10cd0a8097bf75e9a95c72'),
+    ('leogin_confirmar_cierre_caja_con_recibo(p_restaurant uuid, p_revision bigint, p_ultimo uuid, p_hasta timestamp with time zone, p_abierto uuid, p_fila jsonb, p_gastos uuid[], p_actor uuid, p_intento uuid, p_solicitud jsonb, p_recibo jsonb)', 'b7a8b0f5b8a8173959928ce436de0919'),
+    ('leogin_confirmar_traspaso_caja(p_restaurant uuid, p_corte uuid, p_recibe uuid)', 'c481caed1baa6a5a95eef38f62f85765'),
+    ('leogin_contexto_pago_mesa(p_restaurant uuid, p_mesa integer)', '20313c85c98b07cf5e25f3700515e3bc'),
+    ('leogin_crear_pedido(p_restaurant_id uuid, p_customer_name text, p_customer_phone text, p_order_type text, p_address text, p_delivery_zone text, p_delivery_lat double precision, p_delivery_lng double precision, p_customer_id uuid, p_subtotal numeric, p_delivery_fee numeric, p_total numeric, p_notes text, p_items jsonb, p_payment_method text, p_cash_amount numeric, p_tip numeric, p_client_id uuid, p_coupon_id uuid, p_discount numeric, p_reward_customer_id uuid, p_reward_ids uuid[])', '8771676b2b534f32fdc3ccff69f1bd35'),
+    ('leogin_fijar_precio_vigente(p_restaurant_id uuid)', 'f9d0bbcc51aee3e1ffcc1ee0ba07056f'),
+    ('leogin_generate_monthly_invoices()', '0c358b9dcfcd8215d9f5b8ce76fb8f4d'),
+    ('leogin_guardar_borrador_caja(p_restaurant uuid, p_periodo timestamp with time zone, p_turno uuid, p_revision uuid, p_corte uuid, p_actor uuid, p_nombre text, p_payload jsonb)', 'f5c894250223c1425b8d83e429d6d423'),
+    ('leogin_permisos_por_trabajo(p_role text, p_perms jsonb)', '9ee6d3dd390f041865e95bdc66ab4939'),
+    ('leogin_process_overdue()', '5d02732197876e3d9f6cdbcaa8cf6f5d'),
+    ('leogin_puede(p_restaurant uuid, VARIADIC p_secciones text[])', 'b7ac055b303097c872dbe950888aebb4'),
+    ('leogin_recuperar_cierre_caja(p_restaurant uuid, p_intento uuid, p_actor uuid, p_solicitud jsonb)', '15e1215732c832ef3d8e651b60e4f7e6'),
+    ('leogin_recuperar_intento_cobro(p_restaurant uuid, p_mesa integer, p_intento uuid, p_operacion text, p_solicitud jsonb, p_actor uuid)', 'd2d0c28a8631853ca16015a3b099a6bc'),
+    ('leogin_solicitar_traspaso_caja(p_restaurant uuid, p_corte uuid, p_entrega uuid, p_recibe uuid, p_nota text)', '7fcb377eb61db55f118ef858c576d109')
+),
+actuales as (
+  select p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' as firma,
+         md5(replace(p.prosrc, chr(13), '') || '|' || pg_get_function_result(p.oid)
+      || '|' || p.prosecdef::text || '|' || coalesce(array_to_string(p.proconfig, ','), '')) as huella
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public'
+)
+select e.firma,
+       case when a.firma is null then 'FALTA'
+            when a.huella = e.huella then 'coincide'
+            else 'DIFIERE' end as estado
+  from esperadas e left join actuales a on a.firma = e.firma
+ order by (a.huella is not distinct from e.huella), e.firma;

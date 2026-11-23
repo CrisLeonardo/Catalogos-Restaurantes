@@ -64,6 +64,17 @@ export async function cambiarMiPlan(restaurantId: string, nuevo: string): Promis
     );
   }
 
+  /* Bajar a un plan gratis es cancelar: Términos promete que «la
+     cancelación detiene cobros futuros». Un precio MANUAL (acordado a
+     mano) no lo toca el precio automático, así que seguía cobrándose en
+     Básico. Al bajar a gratis, el cobro vuelve a automático y queda en
+     0; los cobros ya generados siguen pendientes (auditoría de lanzamiento
+     2026-11-23, LZ-08). */
+  if (PLANS[plan].priceMonthly === 0) {
+    await db.from('restaurant_billing')
+      .update({ auto_price: true, plan_del_precio: null, updated_at: new Date().toISOString() })
+      .eq('restaurant_id', restaurantId);
+  }
   await db.rpc('leogin_apply_auto_price', { p_restaurant_id: restaurantId });
 
   await logActivity({

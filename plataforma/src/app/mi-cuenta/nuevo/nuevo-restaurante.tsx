@@ -11,8 +11,10 @@ import { CartaEnVivo } from '@/components/signup/carta-en-vivo';
 import { PLANS, defaultPlanPricing, planPriceLabel, type PlanPricing } from '@/lib/plans';
 import {
   leerPlatosDelAlta, modosEstandar, planSugerido,
-  type ComoTePiden, type ModoPedido, type PlanAlta,
+  type ComoTePiden, type IntencionAlta, type ModoPedido, type PlanAlta,
 } from '@/lib/alta';
+import { diaDeCobroDelAlta } from '@/lib/billing-signup';
+import { fmtMoney } from '@/lib/money';
 import { ErrorBox, Field, Stepper, WizardNav, localSlugify } from '@/components/signup/wizard-ui';
 import { leerLista } from '@/lib/importar-carta';
 
@@ -37,6 +39,9 @@ import { leerLista } from '@/lib/importar-carta';
 const COMO: { id: ComoTePiden; titulo: string; detalle: string }[] = [
   { id: 'carta', titulo: 'Solo ven la carta', detalle: 'La consultan con un QR y piden en persona' },
   { id: 'llevar', titulo: 'Para llevar y a domicilio', detalle: 'Piden desde la carta en su teléfono' },
+  // La cuarta respuesta de la web (LZ-11): sin ella, quien eligió Estándar
+  // en Planes acababa con Premium o con En línea propuesto.
+  { id: 'mostrador', titulo: 'En mostrador', detalle: 'Piden en el mostrador y pagan en caja' },
   { id: 'mesas', titulo: 'En mesas, con meseros', detalle: 'Toman pedidos en el salón y cobran en caja' },
 ];
 
@@ -45,6 +50,7 @@ const COMO: { id: ComoTePiden; titulo: string; detalle: string }[] = [
 const ESTILOS: Record<ComoTePiden, string[]> = {
   carta: ['lino-coral', 'cafe-barrio', 'carbon-autor'],
   llevar: ['lino-coral', 'naranja-reparto', 'carbon-autor'],
+  mostrador: ['lino-coral', 'cafe-barrio', 'carbon-autor'],
   mesas: ['lino-coral', 'brasa-humo', 'carbon-autor'],
 };
 
@@ -86,7 +92,11 @@ export default function NuevoRestaurante({
   rootDomain,
   pricing = defaultPlanPricing(),
   esElPrimero,
+  intencion = null,
 }: {
+  /** Lo que eligió en la web (LZ-11): la respuesta y el plan llegan puestos,
+   *  y se pueden cambiar. Maqueta: docs/diseno/MAQUETA_ALTA_CON_PLAN_2026-11-23.html §2. */
+  intencion?: IntencionAlta | null;
   rootDomain: string;
   pricing?: PlanPricing;
   /** ¿Todavía no es dueño de ningún restaurante? Decide textos y pasos. */
@@ -109,8 +119,10 @@ export default function NuevoRestaurante({
   const [slug, setSlug] = useState('');
   const [slugEdited, setSlugEdited] = useState(false);
   const [editandoSlug, setEditandoSlug] = useState(false);
-  const [como, setComo] = useState<ComoTePiden | null>(null);
-  const [planElegido, setPlanElegido] = useState<PlanAlta | null>(null);
+  const [como, setComo] = useState<ComoTePiden | null>(intencion?.caso ?? null);
+  // El plan de la web vale mientras no cambie la respuesta: al elegir otra,
+  // vuelve la sugerencia de esa respuesta (como al cambiarla a mano).
+  const [planElegido, setPlanElegido] = useState<PlanAlta | null>(intencion?.plan ?? null);
   const [templateId, setTemplateId] = useState('lino-coral');
   /* El estilo con el que llegó (el de la vitrina de la portada, si eligió
      uno): encabeza las opciones de «Cambiar» y no se mueve al elegir otra. */
@@ -185,13 +197,20 @@ export default function NuevoRestaurante({
 
   const precioPlan = planPriceLabel(pricing, plan);
   const conPrueba = esElPrimero && pricing.trialDays > 0 && plan !== 'BASICO';
+  /* El primer cobro, con monto, fecha y dónde se paga (LZ-01; maqueta
+     §3). La fecha sale de la misma regla que guarda el alta: vence el día
+     del alta, cada mes; del 29 al 31, el 28. Cada restaurante tiene su
+     propio cobro: no «se suma» a otro. */
+  const { billing_day: diaCobro, started_at: hoy } = diaDeCobroDelAlta();
+  const [anio, mes, dia] = hoy.split('-').map(Number);
+  const vence = new Date(Date.UTC(anio, mes - 1, diaCobro));
+  const fechaVence = new Intl.DateTimeFormat('es-GT', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(vence);
+  const monto = fmtMoney(pricing.prices[plan], 'GTQ', Number.isInteger(pricing.prices[plan]) ? 0 : 2);
   const notaCobro = plan === 'BASICO'
     ? 'El plan Básico es gratis para siempre, sin tarjeta.'
     : conPrueba
       ? `Empiezas con ${pricing.trialDays} días gratis; luego ${precioPlan}. Lo cambias o das de baja cuando quieras.`
-      : esElPrimero
-        ? `${PLAN_NOMBRE[plan]} se cobra desde hoy (${precioPlan}). Sin contrato: lo cambias o das de baja cuando quieras.`
-        : `Se suma a tu mensualidad desde hoy (${precioPlan}). Lo puedes dar de baja cuando quieras.`;
+      : `Tu primer cobro es de ${monto} y vence ${diaCobro === dia ? `hoy, ${fechaVence}` : `el ${fechaVence}`}; después, cada ${diaCobro}. Lo pagas desde Mi suscripción. Sin contrato: lo cambias o das de baja cuando quieras.`;
 
   return (
     <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -207,28 +226,33 @@ export default function NuevoRestaurante({
       {/* ── 1 · Tu negocio ── */}
       <div style={{ display: step === 0 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
         <Field label="¿Cómo se llama tu negocio?">
+          {(ids) => (
           <input
+            {...ids}
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ej. Café Ana"
             autoComplete="organization"
             className="adm-field adm-field-lg"
           />
+          )}
         </Field>
         {editandoSlug ? (
           <Field label="Dirección de tu carta" hint="Así llegarán tus clientes.">
+            {(ids) => (
             <div className="adm-field adm-field-lg" style={{ display: 'flex', alignItems: 'center', padding: 0, overflow: 'hidden' }}>
               <input
+                {...ids}
                 value={effectiveSlug}
                 onChange={(e) => { setSlugEdited(true); setSlug(localSlugify(e.target.value)); }}
                 placeholder="turestaurante"
-                aria-label="Dirección de tu carta"
                 style={{ flex: 1, minWidth: 0, padding: '12px 14px', border: 'none', background: 'transparent', color: 'inherit', font: 'inherit', outline: 'none' }}
               />
               <span style={{ fontSize: 13, color: 'var(--u-text-4)', padding: '0 12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                 .{rootDomain.replace(/:\d+$/, '')}
               </span>
             </div>
+            )}
           </Field>
         ) : (
           <p style={{ margin: '-8px 0 0', fontSize: 13, color: 'var(--u-text-3)', overflowWrap: 'anywhere' }}>
@@ -248,7 +272,7 @@ export default function NuevoRestaurante({
                 name="como_te_piden"
                 value={c.id}
                 checked={como === c.id}
-                onChange={() => { setComo(c.id); setPlanElegido(null); }}
+                onChange={() => { setComo(c.id); setPlanElegido(null); setStepError(null); }}
               />
               <span style={{ minWidth: 0 }}>
                 <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: 'var(--u-text)' }}>{c.titulo}</span>

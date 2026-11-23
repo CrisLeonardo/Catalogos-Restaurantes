@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { ownerCtx } from '@/lib/auth/personal';
+import { verificarCupo } from '@/lib/cupo-usuarios';
 import { logActivity } from '@/lib/activity';
 import { STAFF_ASSIGNABLE } from '@/lib/permissions';
 import { isSyntheticStaffEmail } from '@/lib/staff-email';
@@ -78,6 +79,20 @@ export async function inviteToTeam(prevState: InviteState, formData: FormData): 
       .eq('user_id', existingUserId)
       .maybeSingle();
     if (already) return { error: 'Esa persona ya es parte de tu equipo.' };
+  }
+
+  // Usuarios por plan (LZ-08). Reinvitar a un correo con invitación viva la
+  // sustituye y no ocupa otro lugar.
+  const { count: vivas } = await ctx.db
+    .from('restaurant_invitations')
+    .select('id', { count: 'exact', head: true })
+    .eq('restaurant_id', ctx.restaurantId)
+    .eq('email', email)
+    .is('accepted_at', null)
+    .gt('expires_at', new Date().toISOString());
+  if (!vivas) {
+    const sinLugar = await verificarCupo(ctx.db, ctx.restaurantId);
+    if (sinLugar) return { error: sinLugar };
   }
 
   const { token, hash } = newInviteToken();
@@ -251,6 +266,13 @@ export async function acceptInvitation(prevState: AcceptState, formData: FormDat
 
   const db = createServiceClient();
   const supabase = await createClient();
+
+  // El plan pudo bajar desde que se envió: se cuenta solo a quienes ya
+  // están, porque esta misma invitación ocupaba su lugar (LZ-08).
+  const sinLugar = await verificarCupo(db, invitation.restaurantId, { conInvitaciones: false });
+  if (sinLugar) {
+    return { error: 'El equipo de este restaurante ya está completo según su plan. Pídele a quien te invitó que libere un lugar o suba de plan.' };
+  }
 
   // ¿Ya hay alguien con sesión en este navegador?
   const { data: { user: current } } = await supabase.auth.getUser();

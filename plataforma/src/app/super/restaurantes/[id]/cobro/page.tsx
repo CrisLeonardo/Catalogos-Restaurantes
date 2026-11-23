@@ -38,6 +38,7 @@ export default async function FichaCobroPage({
         config={billingConfig}
         invoices={invoices}
         suggestedFee={suggestedFee}
+        planCode={row.plan_actual}
         planName={planLabel(row.plan_actual)}
         globalGraceDays={pricing.graceDays}
       />

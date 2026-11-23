@@ -4389,6 +4389,24 @@ html[data-admin-area][data-scheme="light"] {
 .alta-opcion[data-activa] { border-color: var(--brand-accent); box-shadow: inset 0 0 0 1px var(--brand-accent); }
 .alta-opcion input { width: 20px; height: 20px; margin: 0; flex-shrink: 0; accent-color: var(--brand-accent); }
 .alta-opcion:has(input:focus-visible) { outline: 2px solid var(--brand-accent-ink, var(--brand-accent)); outline-offset: 2px; }
+/* El plan que eligió en la web, en una línea sobre el registro (LZ-11).
+   Maqueta aprobada: docs/diseno/MAQUETA_ALTA_CON_PLAN_2026-11-23.html §1.
+   Mismo relleno que los campos del asistente; sin borde ni botón. */
+.alta-plan-elegido {
+  display: flex; align-items: flex-start; gap: 10px; margin: 0;
+  padding: 10px 12px; border-radius: 12px;
+  background: color-mix(in srgb, var(--u-text) 5%, var(--brand-bg));
+  font-size: 13px; line-height: 1.45; color: var(--u-text-2);
+}
+.alta-plan-elegido strong { color: var(--u-text); font-weight: 600; }
+.alta-plan-punto { width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: var(--brand-accent); flex-shrink: 0; }
+
+/* El pie fijo del registro y del alta (WizardNav) tapaba el campo enfocado
+   con Tab o al abrir el teclado del teléfono. Reservar su alto en el
+   desplazamiento deja el foco a la vista (WCAG 2.4.11; auditoría de
+   lanzamiento 2026-11-23, WEB-04). */
+html:has([data-wizard-nav]) { scroll-padding-bottom: 96px; }
+
 .alta-enlace {
   display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; cursor: pointer;
   font: inherit; font-weight: 600; color: var(--brand-accent-ink, var(--brand-accent)); text-decoration: none;

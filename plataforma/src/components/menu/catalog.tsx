@@ -912,7 +912,39 @@ const ENTRAN_CON_RELOJ = 6;
 /** Piezas que dibuja una repisa de Estantes antes de «Ver los N» (F4-14). */
 const REPISA_MAX = 8;
 
-function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled, qtyOf, onAdd, onOpen, edition, primera = false }: ItemsProps) {
+/* ── Las primeras fotos, primero (auditoría de lanzamiento 2026-11-23, LZ-12)
+   Las fotos salían del servidor con `loading="lazy"` dentro de tarjetas con
+   `content-visibility: auto`: el navegador no las pedía hasta que el JS las
+   adelantaba (useFotosAnticipadas). En un teléfono de gama media con 4G
+   lento eso es tras la hidratación, ~3.5 s, y el LCP de rincon502 quedaba en
+   ~4 s. Las que caben en la primera pantalla de la primera sección salen ya
+   `eager` desde el HTML, y las dos primeras con prioridad alta; las demás
+   siguen como estaban. No cambia nada visible. */
+const FOTOS_EAGER = 4;
+const FOTOS_ALTA = 2;
+type Prioridad = 'alta' | 'eager';
+const FotosPrioritarias = createContext<ReadonlyMap<string, Prioridad>>(new Map());
+
+/** Las primeras piezas que se ven: los destacados van delante en el mosaico. */
+export function fotosPrioritarias(items: { id: string }[], featuredIds: ReadonlySet<string>): Map<string, Prioridad> {
+  const orden = [...items.filter((p) => featuredIds.has(p.id)), ...items.filter((p) => !featuredIds.has(p.id))];
+  return new Map(orden.slice(0, FOTOS_EAGER).map((p, i) => [p.id, i < FOTOS_ALTA ? 'alta' : 'eager']));
+}
+
+function Items(props: ItemsProps) {
+  const { items, featuredIds, primera = false, card } = props;
+  const prioridad = useMemo(
+    () => (primera && card !== 'texto' ? fotosPrioritarias(items, featuredIds) : new Map<string, Prioridad>()),
+    [items, featuredIds, primera, card],
+  );
+  return (
+    <FotosPrioritarias.Provider value={prioridad}>
+      <ItemsCuerpo {...props} />
+    </FotosPrioritarias.Provider>
+  );
+}
+
+function ItemsCuerpo({ items, locked, card, width, featuredIds, catIcon, ordersEnabled, qtyOf, onAdd, onOpen, edition, primera = false }: ItemsProps) {
   const config = useThemeConfig();
   const anim = config.animations;
   /* Estantes con carta grande (CV-38; fase 4, F4-14): la repisa dibuja
@@ -1400,9 +1432,16 @@ function ProductArt({ p, icon, scale = 1, sizes = PRODUCT_ART_SIZES, behindText 
   behindText?: boolean;
 }) {
   const config = useThemeConfig();
+  const prioridad = useContext(FotosPrioritarias).get(p.id);
   const usePhoto = p.image_url && config.productArt !== 'pattern';
   if (usePhoto) {
-    return <AssetImage src={p.image_url!} alt={p.name} fill style={{ objectFit: 'cover' }} sizes={sizes} />;
+    return (
+      <AssetImage
+        src={p.image_url!} alt={p.name} fill style={{ objectFit: 'cover' }} sizes={sizes}
+        {...(prioridad ? { loading: 'eager' as const } : {})}
+        {...(prioridad === 'alta' ? { fetchPriority: 'high' as const } : {})}
+      />
+    );
   }
   /* Sin foto, la destacada pintaba el icono enorme y casi opaco al centro,
      justo debajo del nombre y la descripción: trazo blanco bajo letra blanca,

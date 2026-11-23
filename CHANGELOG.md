@@ -4,7 +4,20 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
-## Sin publicar
+## v0.33.0 · 2026-11-23 · Listo para el primer piloto de pago
+PR #177 · **migración 191, ANTES de desplegar** (`supabase/.produccion/` con `node scripts/armar-migraciones-produccion.mjs 191 191`). Sale de la [auditoría de lanzamiento](docs/auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md), cuyo §4 lleva el avance de cada punto.
+- **El precio que acuerdas se respeta** (migración 191).
+  - La mensualidad se fija al contratar o cambiar de plan. Cambiar precios en superadmin solo afecta altas y cambios de plan; quien ya paga conserva su precio, también en el corte mensual.
+  - En la ficha de cobro, «Pasar a Qx/mes» pasa a un local al precio vigente, con confirmación. Se retira «Recalcular precios».
+  - Si falla la lectura de precios, la web ya no guarda los valores de fábrica 5 minutos como si fueran los vigentes.
+- **El primer cobro ya no nace vencido.** El alta dejaba el día de cobro en 1: quien se daba de alta después del día 11 contaba como moroso desde el principio. Ahora cada mensualidad vence el día del alta (28 como máximo).
+- **Cancelar detiene todos los cobros.** Bajar a Básico deja la mensualidad en 0 aunque el precio fuera acordado a mano; la confirmación dice que la carta y el QR siguen.
+- **Con una mensualidad atrasada, el QR sigue funcionando**: la carta se ve como Básico, sin pedidos. La suspensión manual sí la quita. Términos explica cómo cancelar y qué pasa con el impago.
+- **Usuarios por plan** (decisión del dueño): cuenta todo el equipo, dueño y PIN incluidos (Básico y En línea 1, Estándar 2, Premium sin tope). Quien ya tiene más los conserva y no suma más. Personal avisa antes de llenar la ficha.
+- **El plan elegido en la web llega al alta** (maqueta aprobada `docs/diseno/MAQUETA_ALTA_CON_PLAN_2026-11-23.html`). Viaja en el enlace y queda en la cuenta; el registro lo muestra en una línea; el alta tiene las cuatro respuestas de la web, con «En mostrador» → Estándar, y dice el monto, la fecha y dónde se paga el primer cobro.
+- **Web pública.** Campos del registro con nombre accesible y foco visible sobre el pie fijo. La portada nombra el canal real de ventas. La carta publica una sola dirección (`og:url` y canonical), Planes tiene canonical y tarjeta, y la demo no se indexa. Descargas ofrece Escritorio con instalación acompañada y ya no enseña a saltarse la advertencia de Windows.
+- **La carta pide primero las fotos que se ven al abrir.** En el mismo build local, LCP de 2.08 s a 1.37 s; sin cambios visibles.
+- **Herramientas de salida.** `verificar_huellas.sql` coteja en producción 20 funciones de pedido, cobro, caja, mensualidad y permisos; las pruebas de integración arrancan comprobando la base. `scripts/medir-carta.mjs` mide la carta como un teléfono de gama media con 4G lento. Una prueba vigila que los logs no lleven datos personales.
 
 ## v0.32.0 · 2026-11-22 · Acceso y equipo por local
 PR #155, #172, #173, #174 y #175 · **sin migraciones**. Sale de la auditoría externa de acceso, equipo y restaurantes del 2026-11-21, verificada punto por punto contra el código; maqueta aprobada en `docs/diseno/MAQUETA_ACCESO_Y_EQUIPO_2026-11-22.html`.

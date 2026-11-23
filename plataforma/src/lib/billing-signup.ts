@@ -18,9 +18,28 @@ import type { PlanCode } from '@/lib/plans';
    dentro de Mi cuenta, ese sería el camino fácil, no el rebuscado.
    ============================================================ */
 
+/* ── El día de cobro es el del alta ───────────────────────────
+   Auditoría de lanzamiento 2026-11-23 (LZ-01). Sin esto la fila nacía con
+   billing_day = 1: el cron generaba la mensualidad del mes con vencimiento
+   el día 1, ya pasado, y desde el día 12 (10 de gracia) quien se daba de
+   alta contaba como moroso, con suspensión automática si está encendida.
+   Ahora cada mensualidad vence en el aniversario del alta. El 29, 30 y 31
+   se cobran el 28, como todo el sistema (billing_day va de 1 a 28). */
+export function diaDeCobroDelAlta(now: number = Date.now()): { billing_day: number; started_at: string } {
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Guatemala', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date(now));
+  const v = (t: string) => partes.find((p) => p.type === t)?.value ?? '';
+  return { billing_day: Math.min(28, Number(v('day'))), started_at: `${v('year')}-${v('month')}-${v('day')}` };
+}
+
 /** La fila de `restaurant_billing` con la que nace un restaurante. */
 export type NewRestaurantBilling = {
   auto_price: true;
+  /** Día del mes en que vence cada mensualidad: el del alta (máx. 28). */
+  billing_day: number;
+  /** Inicio del servicio, en fecha de Guatemala. */
+  started_at: string;
   /** Suscripción en marcha (se cobra). En prueba es `false`. */
   active: boolean;
   trial_ends_at: string | null;
@@ -35,7 +54,7 @@ export function newRestaurantBilling(input: {
   isFirstOfOwner: boolean;
   now?: number;
 }): NewRestaurantBilling {
-  const base = { auto_price: true, currency: 'GTQ' } as const;
+  const base = { auto_price: true, currency: 'GTQ', ...diaDeCobroDelAlta(input.now) } as const;
 
   // BÁSICO es gratis para siempre: no hay nada que probar ni que graduar,
   // así que nace activo y sin prueba, sea el primero o el quinto.

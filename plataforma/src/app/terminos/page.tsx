@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'crisleonardo100@gmail.com';
-const UPDATED = '27 de junio de 2026';
+const UPDATED = '23 de noviembre de 2026';
 
 export default function TerminosPage() {
   return (
@@ -43,7 +43,8 @@ export default function TerminosPage() {
         <LegalList items={[
           'No cobramos comisión por pedido: lo que vende el restaurante es del restaurante.',
           'Los precios pueden actualizarse avisando con anticipación razonable.',
-          'Puedes cambiar de plan o cancelar cuando quieras; la cancelación detiene cobros futuros.',
+          'Puedes cambiar de plan o cancelar cuando quieras; la cancelación detiene cobros futuros. Para cancelar, cambia a Básico desde Mi suscripción: tu carta y tu QR siguen gratis, y lo ya facturado sigue pendiente.',
+          'Cada mensualidad vence el mismo día del mes en que activaste tu plan. Si queda sin pagar después del período de gracia, el restaurante puede dejar de recibir pedidos en línea; su carta y su QR siguen visibles hasta que se regularice.',
         ]} />
       </LegalSection>
 
