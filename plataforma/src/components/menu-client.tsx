@@ -8,7 +8,6 @@ import { Icon } from '@/components/icons';
 import Catalog from '@/components/menu/catalog';
 import ProductSheet from '@/components/menu/product-sheet';
 import { CartBar, CartPanel } from '@/components/menu/cart';
-import { PedidoDemo } from '@/components/pidelo/pedido-demo';
 import { DEMO_SLUG } from '@/lib/tenant';
 import ActiveOrderChip from '@/components/active-order-chip';
 import WaiterCallButton from '@/components/menu/waiter-call-button';
@@ -46,6 +45,10 @@ import type { MasPedido } from '@/lib/db/menu';
    escanear un QR es el menú, no el formulario de su cuenta. */
 const AccountSheet = dynamic(() => import('@/components/menu/account-sheet'));
 const MyOrders = dynamic(() => import('@/components/my-orders'));
+/* «Pídelo tú mismo» solo existe en la demo, y trae su canal en vivo (el
+   cliente de Supabase, ~75 KB comprimidos). Importado fijo, lo bajaba
+   cada carta real; así solo lo baja `demo.` (auditoría LZ-12). */
+const PedidoDemo = dynamic(() => import('@/components/pidelo/pedido-demo').then((m) => m.PedidoDemo));
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon' | 'name_en'> & { availability?: WeeklyHours | null };
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'> & {
