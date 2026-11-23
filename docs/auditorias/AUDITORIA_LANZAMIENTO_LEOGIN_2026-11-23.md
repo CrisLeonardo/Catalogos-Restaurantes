@@ -1,0 +1,254 @@
+# Auditoría de lanzamiento de Leogin · 23 de noviembre de 2026
+
+[Dictamen](#1-dictamen) · [Oferta y experiencia pública](#2-oferta-y-experiencia-pública) · [Cobertura técnica](#3-cobertura-técnica) · [Checklist](#4-checklist-de-correcciones-y-salida) · [Primeros tres clientes](#5-primeros-tres-clientes-de-pago) · [Alcance pendiente](#6-evidencia-pendiente-y-mejoras-al-prompt)
+
+## 1. Dictamen
+
+**Piloto controlado.** Empezaría con negocios que ya toman pedidos por WhatsApp o Instagram, una sola sucursal y un dueño que despacha pedidos para llevar. El plan En línea cuesta **Q99 al mes** en la web. Antes de atender pedidos reales, hay que comprobar que el precio acordado llegue intacto al primer cargo y ensayar un turno con el dueño. Se puede prospectar y mostrar la demo desde ya.
+
+| Flujo | Dictamen | Evidencia y condición |
+| --- | --- | --- |
+| **Menú QR · Básico** | **Listo para ofrecer con alta acompañada** | La carta pública y el enlace estable abrieron por separado. Verificar en cada local el QR impreso, la vigencia después de republicar y una edición de precio o agotado hecha por el dueño. Básico es gratuito. |
+| **Pedidos en la nube · En línea** | **Piloto controlado** | Hay un antecedente de pedido de Q18 entregado y cierre cuadrado en producción, un ensayo sintético de mensualidad de Q99 y CI verde sobre el código funcional desplegado. Falta el ensayo del primer cargo en la configuración vigente y un turno de prueba con dos aparatos y conciliación. Limitar el primero a pedidos para llevar con cobro a cargo del restaurante. |
+| **Mostrador con Caja · Estándar y salón · Premium** | **Piloto posterior** | Las pruebas de dinero y navegador cubren varios casos críticos. El turno con el dueño y el personal, la respuesta a avisos y la conciliación con el equipo real siguen pendientes. |
+| **Leogin Escritorio, impresión automática y respaldo local** | **Detener salida comercial de ese flujo** | El instalador público 0.3.4 carece de Authenticode. La configuración del actualizador y las pruebas de código aportan evidencia parcial. La instalación limpia, la impresión en papel y la recuperación de la cola en la red del local requieren ensayo. |
+
+**Cinco prioridades.** (1) Conciliar oferta, alta y primer cargo. (2) Validar el turno En línea y su alternativa manual. (3) Hacer que la invitación de ventas abra el canal anunciado. (4) Asociar los campos del registro con sus etiquetas. (5) Ensayar recuperación, alerta y atención antes de incorporar más locales. Escritorio lleva un criterio de salida propio. [Validación del 18 de noviembre](AUDITORIA_VALIDACION_LANZAMIENTO_2026-11-18.md) · [CI de producción](https://github.com/CrisLeonardo/Catalogos-Restaurantes/actions/runs/45033980028).
+
+## 2. Oferta y experiencia pública
+
+### Oferta del 23 de noviembre
+
+| Plan | Mensualidad por local | Canales y operación | Límites anunciados |
+| --- | --- | --- | --- |
+| Básico | Gratis | Carta con QR e identidad del negocio. | 150 platillos, 1 usuario, sin pedidos. |
+| En línea | Q99 | Para llevar y a domicilio, zonas, seguimiento y avisos. Sin Caja, reporte financiero, impresión ni panel de mesero. Vende en línea anuncia alta sin costo. | 150 platillos, 1 usuario y 300 pedidos al mes como umbral de aviso. El pedido sigue entrando. |
+| Estándar | Q150 | Dos modalidades entre local, para llevar y domicilio. Avisos, reportes y corte de caja. La comparativa excluye impresión. | Platillos y pedidos ilimitados, 2 usuarios anunciados. |
+| Premium | Q299 | Tres modalidades, panel de mesero, plano, impresión, Caja, inventario y módulos adicionales. | Platillos, pedidos y usuarios ilimitados anunciados. |
+
+Precios de visita directa, no de una cotización emitida. Planes y Términos indican cobro desde la activación del plan de pedidos bajo la oferta vigente. Términos contempla excepciones expresamente ofrecidas y detiene futuros cobros al cancelar. El panel consolidado cuesta Q299 al mes por grupo, además del plan de cada local. Quedan por confirmar el cargo efectivo de configuración de Estándar y Premium, impuestos, fecha de vencimiento, exportaciones por plan y vigencia de la carta y el QR al bajar de plan, vencer o cancelar. La opción «pago en efectivo o tarjeta» del pedido registra cómo paga el comensal. El restaurante recibe ese pago por su cuenta. La mensualidad de Leogin sigue otro circuito. [Planes](https://distleogin.com/planes) · [Vende en línea](https://distleogin.com/vende-en-linea) · [Términos](https://distleogin.com/terminos).
+
+El buscador devolvió copias históricas de la portada, Planes y Términos con Q199/Q349 y prueba de 30 días. En visita directa la oferta y Términos ya cambiaron. Por su parte, el documento interno titulado «Precios vigentes» conserva valores históricos, anualidades y módulos a la carta. El código toma los precios efectivos de `platform_settings` y aún tiene Q199/Q349 como valores de fábrica. La lectura no distingue una respuesta fallida de ajustes ausentes antes de llegar a esos valores. Es un riesgo confirmado en código. Falta comprobar cómo se presenta y cobra bajo una falla controlada, sin inducirla en producción. [Precios internos](../negocio/PRECIOS_VIGENTES.md) · [Valores de fábrica](../../plataforma/src/lib/plans.ts#L121) · [Lectura de ajustes](../../plataforma/src/lib/db/billing.ts#L207) · [Migración 182](../../plataforma/supabase/migrations/182_sin_prueba_gratis.sql).
+
+### Recorridos públicos
+
+Visita directa en Chromium con 390 × 844 y 1280 × 900. Comprobación adicional a 320 px en las páginas de venta y alta, que mantuvieron tema claro y no presentaron desborde horizontal. Portada, Planes, Vende en línea, demo, enlace estable, Registro, Descargas, Privacidad y Términos respondieron HTTP 200. Las pruebas de navegador en producción se limitaron a navegación, controles de vista y lectura.
+
+| Evidencia | Observación | Consecuencia |
+| --- | --- | --- |
+| WEB-01 · [Portada](https://distleogin.com/) | A 390 px el botón principal de demo empieza en y=626 y el selector por tipo de negocio en y=835. El beneficio, la demo y el alta se ven en la primera pantalla. El precio por perfil requiere bajar. | El video de 53 segundos ayuda a presentar el producto. Para cotizar en el teléfono, dar un enlace directo a Planes o a Vende en línea. |
+| WEB-02 · [Planes](https://distleogin.com/planes) | Cada perfil recomienda un plan coherente. Abrir Planes desde el menú móvil toma 2 toques y elegir un perfil toma 1 adicional. Los cuatro botones de plan llegan a `/registro`. El código conserva el perfil En línea en almacenamiento de ese navegador. El primer formulario crea una cuenta y aún no muestra el plan elegido. | La intención puede perderse al retomar en otro navegador. Se desconoce el abandono real por etapa. [Selector](../../plataforma/src/components/landing-planes.tsx#L42) · [Alta en Mi cuenta](../../plataforma/src/app/mi-cuenta/nuevo/nuevo-restaurante.tsx#L152). |
+| WEB-03 · [Portada](https://distleogin.com/) | El texto ofrece WhatsApp. «Hablar con ventas» abre `mailto:`; los contactos de Planes también abren correo. | Un dueño que espera un chat recibe un cambio de canal. Se comprobó el destino del enlace sin enviar mensajes. [Fuente](../../plataforma/src/components/landing.tsx#L311). |
+| WEB-04 · [Registro](https://distleogin.com/registro) | Los tres campos visibles tienen etiqueta dibujada y ninguna asociación programática. El árbol de accesibilidad usa los placeholders como nombre de los dos primeros. El campo Contraseña queda sin nombre. A 390 × 844 el primer campo empieza en y=516 y el pie fijo cubre parte del campo de contraseña en la vista inicial. Se puede avanzar con Tab. | Corregir los nombres e instrucciones accesibles y verificar el foco con teclado y lector, en especial cuando aparece el teclado en pantalla. [Campo compartido](../../plataforma/src/components/signup/wizard-ui.tsx#L24) · [WCAG 2.2, 3.3.2, 4.1.2 y 2.4.11](https://www.w3.org/TR/WCAG22/). |
+| WEB-05 · [Vende en línea](https://distleogin.com/vende-en-linea) y [demo](https://demo.distleogin.com/) | En teléfono, el enlace abre la carta de muestra en 1 toque. En PC, el botón abre un diálogo con QR y enlace a otra pestaña. Escape lo cierra y devuelve el foco. La carta muestra un aviso de demo. «Crea el tuyo» del aviso vuelve a la portada. El CTA posterior al pedido se dirige a Registro según el código. | Se puede entrar en ambos formatos. Evaluar si conviene que el CTA del aviso vaya directo a Registro o a la oferta del segmento. [Diálogo](../../plataforma/src/components/landing-demo.tsx#L57) · [Confirmación de prueba](../../plataforma/src/components/pidelo/pedido-demo.tsx#L125). |
+| WEB-06 · [QR estable](https://distleogin.com/m/rincon502) | El enlace abre la carta y publica un `og:url` con una coma y un segundo dominio. En código la metadata construye esa dirección con el valor completo de configuración. Portada y Vende en línea declaran canonical. Planes carece de canonical y tarjeta social propias en el HTML observado. | Compartir una carta puede producir una vista previa inconsistente. Comprobar imágenes y destino en WhatsApp después de corregir. [Metadata](../../plataforma/src/app/page.tsx#L89). |
+| WEB-07 · [Robots](https://distleogin.com/robots.txt), [sitemap](https://distleogin.com/sitemap.xml) y [robots de la demo](https://demo.distleogin.com/robots.txt) | El sitemap emitido contiene seis rutas comerciales y legales. El robots de la demo permite rastrear su raíz y esta no declara `noindex`. La carta estable declara `index, nofollow`. No se verificó el inventario de URLs que un buscador tiene efectivamente indexadas. | Aprobar qué debe ser indexable por host: marketing, demo, carta publicada, platillo, previsualización, panel y seguimiento. Verificar el resultado en Search Console. [Documentación de Google](https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag). |
+| WEB-08 · [Descargas](https://distleogin.com/descargas) | Presenta el modo sin internet como automático y enseña a continuar ante la advertencia de Windows. Vende en línea menciona impresión en el contexto de la demo, aunque su plan la excluye. | Delimitar el hardware y el plan antes de que un dueño cuente con esas funciones en su primer turno. [Texto de Descargas](../../plataforma/src/app/descargas/page.tsx#L36) · [Comparativa](https://distleogin.com/planes). |
+
+**Prueba de comprensión a preparar.** Tres dueños, 30 segundos por persona sin ayuda. Mostrador: precio, cómo recibe pedidos y si requiere impresora. Salón: precio, panel de mesero y equipo. Venta por redes: Q99, qué recibe el panel y cómo pedir ayuda. Registrar aciertos, toques, primera duda y tiempo hasta primer valor. La revisión de navegador describe recorridos. Esta prueba mide comprensión y permite comparar alta autónoma con alta acompañada.
+
+**Textos propuestos, sujetos a la política confirmada**
+
+| Ubicación | Texto |
+| --- | --- |
+| Portada, bloque de contacto mientras el enlace sea de correo | «¿Quieres ayuda para configurar tu restaurante? Escríbenos por correo.» Botón «Escribir a ventas». |
+| Vende en línea, debajo del primer botón | «En línea cuesta Q99 al mes desde que lo activas. Recibe pedidos para llevar o a domicilio en tu panel. Tú acuerdas el pago con tu cliente.» |
+| Planes, debajo de la selección En línea | «Hasta 300 pedidos al mes como referencia. Si lo superas, seguirás recibiendo pedidos y te avisaremos para revisar tu plan.» |
+| Confirmación del alta de un plan de pedidos | «Tu plan es [plan]. El primer cargo es de [total] e incluye [conceptos]. Puedes pagarlo por [medio] hasta [fecha].» Añadir la condición de cancelación en ese punto. |
+| Vende en línea, explicación de la demo | «Así aparece un pedido en el panel. La impresión de comandas está incluida en Premium.» |
+| Descargas, antes del botón y mientras se valida el instalador | «Leogin Escritorio está disponible para pruebas acompañadas. La impresión y el trabajo en red local requieren una PC principal configurada y equipo compatible.» |
+
+## 3. Cobertura técnica
+
+### Entornos y versiones comprobados
+
+| Entorno | Evidencia | Resultado |
+| --- | --- | --- |
+| Producción · HTTPS | `X-Leogin-Commit` devuelto en la comprobación pública de salud. | `f647d3c013a0b1ba0b98514cbb84bb5a06e79085`, HTTP 200, base y autenticación respondieron. `main` auditado, `4c96b363518c4f63551cc177c33d45917babae66`, solo añade cambios de changelog respecto a ese commit desplegado. La etiqueta `prod-2026-11-21` señala un despliegue anterior. |
+| CI | Corridas de [producción](https://github.com/CrisLeonardo/Catalogos-Restaurantes/actions/runs/45033980028) y [main](https://github.com/CrisLeonardo/Catalogos-Restaurantes/actions/runs/45047209759). | En verde. En `main`: 1,731 unitarias aprobadas, 1 omitida, 130 de integración y 31 de navegador. Incluye tipos, lint, build, migraciones en una base efímera, controles de aislamiento y revisión de dependencias. El lock de producción tenía dos avisos moderados y cero altos o críticos en esa corrida. |
+| Local · Node y Postgres | `npm test`, `npm run test:dinero` y comparación de las funciones instaladas. | 1,731 unitarias aprobadas y 1 omitida. En la base de trabajo con última migración registrada 181 pasaron 125/130, con cinco fallos de reparto o redondeo. Su función de cobro por plato carece del reparto introducido en la 164, aunque esta figura aplicada. Con el mismo código, en la base de pruebas hasta la 190, la función usa ese reparto y pasaron 130/130. El hallazgo es una divergencia del entorno local. Falta cotejar la huella de la función desplegada. [Migración 164](../../plataforma/supabase/migrations/164_centavos_reparto_platos.sql#L88). |
+| Local · demo con carta ficticia | Navegador en contextos independientes de teléfono y PC, Realtime local y salida externa bloqueada. | Dos recorridos aprobados. En dos aparatos emulados el pedido apareció en su sala y la segunda siguió esperando. En un solo aparato apareció la confirmación local. Ambos mostraron un enlace a Registro. Audio y escaneo con equipo físico pendientes. |
+| Windows · artefacto público 0.3.4 | Descarga por [el enlace de la web](https://distleogin.com/descargas), [versión publicada](https://github.com/CrisLeonardo/leogin-agente-releases/releases/tag/desktop-v0.3.4), hash y Authenticode. | HTTP 200. SHA-256 `874754BB52885E1BB4190887965030D02EE9A8AEA0C6C1787C70AC250FE7BE90`. `NotSigned`. El manifiesto incluye firma del actualizador y el shell configura su clave pública. La descarga se inspeccionó sin ejecutarla. |
+| Agente y Escritorio · local | `npm test` del agente, `cargo test --locked --offline` de Escritorio. | 11 comprobaciones de reparto por estación y 6 de rutas del shell aprobadas. Quedan el papel, el entorno Windows limpio y el retorno de conexión. |
+| Histórico · 18 de noviembre | [Validación anterior](AUDITORIA_VALIDACION_LANZAMIENTO_2026-11-18.md). | Pedido para llevar por Q18 y cierre cuadrado en otra versión. Mensualidad Q99 y aprobación de un comprobante PDF sintético en ambiente local. Son ensayos previos que informan qué repetir. |
+
+### Arquitectura y datos
+
+La web y el panel ejecutan Next.js 16.4.6 y React 19 en Render. Supabase aporta Auth, Postgres con RLS, almacenamiento y Realtime. El dominio comercial lleva a la carta de un local, al panel autenticado o a la demo. En el pedido real, la carta envía los datos al servidor, que valida y calcula el precio antes de guardar en Postgres. Cocina, Caja e informes usan esos registros. Escritorio usa Tauri y WebView2. El agente separado opera impresión y respaldo en la LAN y reconcilia con la nube al volver la conexión. La demo comparte la carta de muestra y envía una simulación por Realtime cuando hay sala. El envío de simulación prescinde del checkout real. [Dependencias](../../plataforma/package.json) · [Render](../../plataforma/render.yaml) · [Acciones de pedidos](../../plataforma/src/lib/actions/orders.ts#L284) · [Escritorio](../../plataforma/docs/LEOGIN_DESKTOP.md) · [Sala de demo](../../plataforma/src/components/pidelo/use-sala.ts#L9).
+
+| Dato | Uso y frontera | Pendiente |
+| --- | --- | --- |
+| Cuenta, PIN, permisos y sucursal | Auth identifica a la persona. Membresía y rol efectivo deciden acceso al local. Personal y el panel cambian según dueño, encargado y personal por trabajo, incluido Caja, Cocina y Mesero. Superadmin tiene segundo factor. | Probar revocación en sesiones abiertas, aparato compartido, recuperación, cambio y baja entre sucursales, incluyendo credenciales del equipo y el respaldo local. |
+| Comensal y pedido | Carta pública, carrito y checkout. Nombre y teléfono cuando el flujo los solicita, dirección para envío, notas y seguimiento. Panel y avisos consultan los datos según el flujo. | Revisar datos mínimos por canal, expiración del seguimiento, Realtime, notificaciones, caché y registros. Confirmar continuidad y eliminación de datos de dispositivo, nube y copias. |
+| Caja y cobro comercial | La venta del restaurante y el cargo de Leogin usan registros distintos. La suscripción puede recibir comprobantes con datos bancarios. Exportación por función y respaldo descargable en el panel. | Verificar cancelación, exportaciones, acceso a comprobantes, conciliación y retención. El XLSX del restaurante documenta una exportación. La recuperación del servicio exige demostrar una restauración independiente. [Respaldo](../../plataforma/src/lib/actions/backup.ts#L7). |
+
+### Matriz de recorridos operativos
+
+**Web** = visita directa. **Código** = revisión estática. **Prueba** = ejecución en local o CI con datos ficticios. **Histórico** = otra versión o jornada. **Pendiente** = falta evidencia de cierre.
+
+| Caso · plan · rol/dispositivo | Preparación y recorrido funcional | Esperado y resultado observado |
+| --- | --- | --- |
+| OP-01 · Básico · dueño web, comensal móvil | Cargar una carta representativa de 15 platillos con fotos, variantes y agotados, publicar e imprimir QR. Cambiar un precio y republicar. Medir carga asistida y autónoma. | El QR abre la misma carta y refleja cambios. **Web:** enlace estable abrió. **Pendiente:** publicar, republicar, escanear QR físico, probar dos altas y cronometrarlas. |
+| OP-02 · En línea · dueño web y cliente móvil | Usuario nuevo y local ficticio. Pedido para llevar de dos ítems con total conocido. Aceptar, preparar, marcar listo, entregar y conciliar contra registro manual. Luego repetir a domicilio con zona válida y fuera de cobertura. | Un pedido y un total coherente por canal, con estado y método de pago claros. **Prueba:** E2E cubre creación y anulación. **Histórico:** flujo de Q18. **Pendiente:** primer turno En línea, alertas silenciadas, cobertura, horario cerrado, agotado y cambio de precio durante carrito. [E2E](../../plataforma/tests/e2e/pedidos.spec.ts#L165). |
+| OP-03 · Estándar/Premium · dos roles web | Dos operadores, cuenta Q100 repartida Q33.34 + Q33.33 + Q33.33, métodos mixtos, descuento, propina, devolución y cierre que cruza medianoche Guatemala. | Un registro por intento, importe correcto y corte consistente. **Prueba:** cobertura de concurrencia, centavos, respuesta perdida, cierre y recibos. **Pendiente:** repetir con horario real del local, verificar el corte específico de medianoche y ensayar los aparatos que se usarán. [Cobro E2E](../../plataforma/tests/e2e/cobro-concurrente.spec.ts#L507) · [Pruebas Postgres](../../plataforma/tests/integration/dinero.test.ts#L343). |
+| OP-04 · Premium · Cocina y Caja en Windows y LAN | PC principal, impresora y pantalla de cocina. Cortar internet en un equipo de pruebas, reiniciar caja, desconectar impresora y LAN por separado, volver a conectar. | La cola conserva sus eventos y explica su estado. Cero comandas faltantes, extras o mal enrutadas. **Código y prueba:** distribución por estación. **Pendiente:** instalación limpia, actualización, topología, hardware, corte y reconciliación. |
+| OP-05 · Todos · dueño y operador de suscripción | Alta por correo y Google, verificar cuenta, crear local con precio efectivo, registrar pago sintético exacto y parcial, luego cambiar, vencer, cancelar y exportar. Usar un QR ya impreso. | El importe acordado, comprobante y estados coinciden. Se entiende qué queda publicado. **Prueba:** comparativa comercial y permisos de exportación en CI. **Histórico:** primer cargo Q99 sintético. **Pendiente:** ciclo completo con oferta vigente, incluyendo correo de confirmación, avisos de pago y comprobante comercial aplicable. [E2E de planes](../../plataforma/tests/e2e/planes.spec.ts#L132). |
+| OP-06 · Dos locales y dos sucursales · dueño, personal y superadmin | Usuarios ficticios separados y un dueño con membresías en varias sucursales. Entrar, cambiar de local, revocar permiso, revisar carta, exportación, archivos y sesión larga. | Cada rol solo ve lo que puede operar. **Prueba:** acceso, exportación, RLS de almacenamiento, dueño de grupo y MFA de superadmin en CI. **Pendiente:** revocación efectiva y comprobación de suscripciones, caché y archivos adicionales tras cambiar de local. [Casos de acceso](../../plataforma/tests/e2e/acceso-sucursales.spec.ts#L147). |
+| OP-07 · Carta, demo, registro y pedido · 320/390/1280, Android y iPhone | Teclado, lector, zoom, formularios, cambio de orientación y anuncios de estados. Medir arranque en frío y confirmación en laboratorio con móvil de gama media y perfil de red anotado. | **Web:** tamaños, semántica de registro y foco de diálogo revisados. **Pendiente:** lector y foco completo, contraste por paleta, Android/iPhone físicos y rendimiento repetido. Objetivos propuestos: carta visible en ≤3 s y panel con aviso en ≤5 s para el 90% de 10 intentos en el entorno piloto. Reportar muestra y p75 de campo por separado cuando exista. [Core Web Vitals](https://web.dev/articles/vitals) · [WCAG 2.2](https://www.w3.org/TR/WCAG22/). |
+| OP-08 · Demo · teléfono y PC | Entrar por el enlace o desde el diálogo de PC. Armar y enviar un pedido ficticio. Abrir una segunda sala y observar recepción, confirmación y enlace de alta. | **Web:** carta móvil y diálogo de escritorio abrieron. **Prueba:** envío desde las dos entradas, recepción en la sala correcta, segunda sala sin cambios y CTA a Registro. **Pendiente:** escanear el QR con la cámara, validar audio y observar a un dueño sin ayuda. [Componentes de demo](../../plataforma/src/components/pidelo/pedido-demo.tsx). |
+
+### Controles defensivos y preparación
+
+La referencia es ASVS 5.0.0. La matriz toma una muestra de requisitos aplicables. Las pruebas de CI respaldan solo los recursos y condiciones que ejercitan.
+
+| Control | Estado y evidencia | Para cerrar |
+| --- | --- | --- |
+| ASVS 8.2.1, 8.2.2 y 8.3.1 · acciones, datos y autorización en servidor | **Parcial.** Guardas de membresía, roles, aislamiento de Postgres/almacenamiento y exportación ensayados. | Cerrar la matriz por grupo, sucursal y rol para todos los recursos del piloto, incluidos avisos y respaldos. [Requisito](https://github.com/OWASP/ASVS/blob/v5.0.0/5.0/en/0x17-V8-Authorization.md) · [CI](https://github.com/CrisLeonardo/Catalogos-Restaurantes/actions/runs/45047209759). |
+| ASVS 6.4.3 y 7.4.1–7.4.3 · recuperación y sesiones | **Parcial.** Segundo factor probado en E2E y recuperación por canal de soporte revisada en código e historial. | Recuperar cuenta, medir atención y confirmar cierre de sesión o revocación en los dispositivos del personal. [Autenticación](https://github.com/OWASP/ASVS/blob/v5.0.0/5.0/en/0x15-V6-Authentication.md) · [Sesiones](https://github.com/OWASP/ASVS/blob/v5.0.0/5.0/en/0x16-V7-Session-Management.md). |
+| ASVS 14.1.1–14.1.2, 14.2.2 y 14.3.1 · datos, caché y retención | **Parcial.** Política pública, datos de checkout y almacenamiento local descritos. | Inventario con proveedor, acceso, retención y borrado por dato, incluidas suscripciones, archivos, caché y copias. Ensayar una solicitud de exportación o eliminación con datos sintéticos. [Protección de datos](https://github.com/OWASP/ASVS/blob/v5.0.0/5.0/en/0x23-V14-Data-Protection.md) · [Privacidad](https://distleogin.com/privacidad). |
+| ASVS V2, V4, V10, V13 y V15 · validación, API, OAuth, configuración y dependencias | **Parcial.** Schemas, controles revisados en CI, versiones fijadas por lock, checkout que valida y calcula en servidor. | Revisar cobertura de límites por flujo, permisos de integraciones, autenticidad y reintentos de eventos, inventario y rotación de secretos y aislamiento de ambientes. Registrar controles aplicables por ID al recibir configuración redactada. [Estándar](https://github.com/OWASP/ASVS/tree/v5.0.0/5.0/en). |
+| ASVS 16.3.1, 16.3.2 y 16.4.2 · registro de acceso y protección de logs | **Parcial.** Salud profunda responde, existe un cron de salud y se verificó una corrida exitosa. | Confirmar quién recibe las alertas, con qué datos, y ejecutar alerta sintética del cron, de un pedido detenido y de una cola sin sincronizar. Auditar acceso a logs y retención. [Logging](https://github.com/OWASP/ASVS/blob/v5.0.0/5.0/en/0x25-V16-Security-Logging-and-Error-Handling.md) · [Cron](../../.github/workflows/salud-clientes.yml). |
+| Continuidad · nube y Windows | **Parcial.** CI muestra reconstrucción del esquema desde cero, la página de salud compara versiones y hay exportación de datos. El instalador sigue sin Authenticode. | Restaurar copia aislada, medir punto y tiempo de recuperación y ensayar reversión coordinada de web y migraciones. En Windows comprobar firma, actualización, control de red y de acceso local con el equipo de pruebas. |
+
+**Guatemala.** Los textos públicos separan pagos de pedidos y mensualidad. Antes del primer cobro real, el fundador y su contador deben confirmar qué documento emite Leogin por su suscripción y qué operaciones corresponden al restaurante. Tratar FEL como alcance independiente, condicionado a confirmación local y validación con el certificador antes de incluirlo en ventas. [Términos](https://distleogin.com/terminos) · [Documentación técnica de FEL](../../plataforma/docs/FEL.md) · [Portal SAT](https://portal.sat.gob.gt/portal/).
+
+## 4. Checklist de correcciones y salida
+
+Marcar una casilla al adjuntar evidencia de cierre con fecha, versión, entorno y persona que verificó. **P0** bloquea el flujo descrito. **P1** se requiere antes de la salida general o antes del piloto donde se indique. **P2** mejora el recorrido tras comprobar el servicio. Esfuerzo orientativo de una persona, aparte de esperas y compras.
+
+- [ ] **LZ-01** · Conciliar oferta y primer cargo.
+- [ ] **LZ-02** · Ensayar y conciliar el primer turno de pedidos.
+- [ ] **LZ-03** · Alinear la invitación con el canal de ventas.
+- [ ] **LZ-04** · Dar nombre accesible a los campos del registro.
+- [ ] **LZ-05** · Verificar esquema, pausa, conciliación y recuperación.
+- [ ] **LZ-06** · Firmar el instalador y verificar su actualización.
+- [ ] **LZ-07** · Demostrar impresión y respaldo local con equipo.
+- [ ] **LZ-08** · Alinear límites, cancelación y vigencia del QR.
+- [ ] **LZ-09** · Corregir URLs de compartido e indexación.
+- [ ] **LZ-10** · Completar la revisión de privacidad y soporte.
+- [ ] **LZ-11** · Conservar la intención de plan al retomar el alta.
+- [ ] **LZ-12** · Medir rendimiento y completar el recorrido accesible.
+
+| ID · prioridad | Evidencia · módulo | Impacto y ubicación | Responsable · esfuerzo · dependencia | Corrección y criterio de aceptación |
+| --- | --- | --- | --- | --- |
+| **LZ-01 · P0 piloto de pago** | Web + código + histórico · oferta/cobro | La web, el material interno y los valores de respaldo divergen. El primer cargo define la confianza del cliente. §2, OP-05. | Fundador y desarrollo · 1–2 días · decisión de precio, alta, impuestos y ajustes redactados. | Aprobar tabla con fecha. Llevar Q99, alta acordada y vencimiento al presupuesto, confirmación, cargo y recibo. Verificar monto parcial, lectura fallida, cancelación y primer cobro con operador. Si falta evidencia, ofrecer QR y demo. |
+| **LZ-02 · P0 primer turno de pedidos** | CI + histórico · pedidos/Caja | Riesgo de pedidos perdidos o duplicados, diferencias de pago y recuperación. OP-02, OP-03 y OP-06. | QA y dueño piloto · ½–1 día · base verificada, dos aparatos, alcance y horario. | Simular 10 pedidos con dos aparatos, reintento y aviso silenciado. Conciliar estados y totales con un registro independiente. Cubrir acceso por rol y reversión del canal. Ante discrepancia, volver a WhatsApp o papel y reconciliar antes de reabrir. |
+| **LZ-03 · P1 conversión** | Web · marketing | WhatsApp anunciado abre correo. El apoyo previo al alta queda confuso. WEB-03. | Fundador · ½ día · canal atendido y encargado. | Igualar texto y destino real en Portada, Planes y Vende en línea. Verificar el enlace en teléfono y PC y medir tiempo de respuesta desde una prueba consentida. |
+| **LZ-04 · P1 registro** | Web + código · accesibilidad | Etiquetas sin vínculo y contraseña sin nombre accesible. WEB-04. | Desarrollo y QA · ½–1 día · componente compartido. | Cada campo tiene nombre accesible por su etiqueta y descripción asociada. Verificar con teclado, lector, foco tras error y teclado móvil. Si se plantea mover piezas visibles, preparar la maqueta prevista por la guía del repo. |
+| **LZ-05 · P0 antes de operar pedidos** | CI + pendiente · continuidad/aislamiento | Se desconoce la equivalencia operativa de la base desplegada y falta un ensayo de alertas y recuperación. §3. | Operación técnica y fundador · 1–2 días · configuración de solo lectura, copia aislada y guardia. | Cotejar versión, migraciones y huellas de controles críticos. Demostrar que el turno se puede pausar y recuperar. Hacer restauración de prueba y reconciliar pedidos confirmados y último corte antes de ampliar el piloto. |
+| **LZ-06 · P0 Escritorio** | Artefacto + código · distribución | Instalador público `NotSigned`; el texto invita a omitir la advertencia. WEB-08. | Desarrollo y fundador · 1–2 días de trabajo, más provisión de firma. | Publicar instalador con Authenticode válido y procedencia verificable. Comprobar actualización aceptada y rechazo de artefacto inválido en Windows de prueba. El cliente del piloto opera con panel web hasta el cierre de aprobación. |
+| **LZ-07 · P0 Escritorio** | Código + pruebas de agente · local/impresión | La promesa de seguir operando depende de PC principal, LAN y equipo. OP-04. | Operación y QA · 1 día · Windows, impresora, red aislada y LZ-06 para oferta comercial. | Completar prueba de fallos y recuperación, con conteo acertado de pedidos, tickets y cobros tras reconectar. Precisar en Descargas qué se conserva localmente y qué espera a internet. |
+| **LZ-08 · P1 salida general** | Web + código · política de plan | Límites de usuarios anunciados sin aplicación demostrada y condiciones de vencimiento o exportación pendientes. WEB-02, OP-05. | Fundador y desarrollo · 1–2 días · política y compatibilidad con locales existentes. | Decidir si cuenta dueño, personal invitado y PIN. Alinear texto, servidor y UI. Cubrir exportación, reintegro a Básico o pausa, sucursal y QR después de cancelar. [Pendiente existente](../registros/CHECKLIST_CORRECCIONES.md#L66). |
+| **LZ-09 · P1 salida general** | Web + código · SEO y compartidos | Metadatos de cartas con URL incorrecta y política de indexación pendiente. WEB-06 y WEB-07. | Desarrollo y marketing · ½–1 día · dominios aprobados y Search Console. | Canonical y `og:url` válidos para cartas y rutas comerciales, preview real en WhatsApp, sitemap con páginas elegidas y nueva inspección de URLs. |
+| **LZ-10 · P1 salida general** | Código + pendiente · privacidad y soporte | Falta evidencia completa de bajas, retención, restauración y aviso operativo. §3. | Fundador y operación · 1–2 días · inventario redactado y encargado de datos. | Completar pruebas de cuenta y sesión, archivo sensible, retiro de datos y privacidad de logs. Verificar un aviso de turno y medir cuánto tardó en recibirlo el responsable. |
+| **LZ-11 · P2** | Web + código · activación | La intención de plan se puede perder entre Registro y Mi cuenta. Falta medir cuánto importa. WEB-02 y WEB-05. | Producto/desarrollo · 1–2 días · sesión de prueba con dueños. | Mantener opción editable al retomar el alta y medir conversión por origen. Una persona que llega desde la demo identifica una acción siguiente y puede retroceder sin perder avances. |
+| **LZ-12 · P2, o P1 si afecta el turno** | Web + pendiente · rendimiento y UX | Medición de móvil físico, teclado y tiempos del negocio sin completar. OP-07. | QA · 1 día · Android/iPhone y perfil de red. | Guardar métricas de laboratorio por equipo y red, contraste, foco y lector. Fijar presupuesto de rendimiento de carta y panel y repetir después de cada cambio material. |
+
+### Puertas de salida
+
+- [ ] **QR** · El dueño escaneó el QR impreso en dos teléfonos, publicó y corrigió precio/agotado con el mismo enlace. Conservar foto redactada, resultado y fecha. Si falla, usar la carta anterior o un impreso hasta revalidar. Responsable: dueño y fundador.
+- [ ] **Primer turno En línea** · LZ-01 y LZ-02 cerradas. De LZ-05 se requieren la huella de producción cotejada y la pausa y recuperación ensayadas para el local. La revisión de controles cubre el aislamiento en el alcance elegido. Un pedido reconocido equivale a un registro conciliado. Cualquier pérdida, duplicación, importe erróneo, diferencia de caja o recuperación esencial pendiente suspende ese flujo. Responsables del cierre, QA y fundador.
+- [ ] **Venta general de pedidos** · Además del primer turno, confirmar LZ-03, LZ-04, LZ-05 y LZ-08 a LZ-10. Adjuntar restauración medida y comprobantes de uso de los pilotos. Responsable: fundador.
+- [ ] **Escritorio** · LZ-06 y LZ-07 cerradas. Verificar versión firmada, instalación y actualización en PC limpia, impresora compatible, aviso de falla y conciliación después del corte. Responsable: operación técnica.
+
+**Objetivos iniciales para el ensayo, sujetos a acuerdo con el dueño.** Activar el procedimiento manual dentro de 10 minutos. Conservar cero pedidos confirmados sin rastreo mediante registro paralelo y conciliación. Para recuperación central, medir restauración en ≤2 h con copia de antigüedad ≤24 h y declarar la ventana de datos que queda por reconstruir. Durante el turno el responsable anota hora, pedido, total y pago, avisa al fundador por el canal acordado y reabre únicamente después de conciliar.
+
+## 5. Primeros tres clientes de pago
+
+### Segmento, sustitutos y oferta
+
+| Segmento | Urgencia y acceso al dueño | Instalación y soporte inicial | Decisión |
+| --- | --- | --- | --- |
+| Negocio de comida que vende por redes | Pedidos repetidos, disponibilidad y confirmaciones en un chat. Generalmente hay un punto de decisión claro si el dueño opera el canal. | Un local, carta breve y celular. Pedidos para llevar como primer flujo. | **Primero.** Buscar dueños con demanda activa dispuestos a ensayar y revisar su tiempo de gestión. |
+| Cafetería o mostrador | El QR ayuda con cambios de carta. Caja y despacho pueden requerir dos roles y convivencia con el sistema actual. | Carta física, caja y posible impresora. | Segundo, con carta QR y evaluación del mostrador actual. |
+| Restaurante con meseros | Coordinación de mesa, cocina y caja con valor potencial alto. | Más capacitación y dependencias por turno, roles y equipos. | Después del ensayo de salón y, si corresponde, hardware. |
+
+**Zona sugerida.** Ciudad de Guatemala, un radio pequeño alrededor de las zonas 10 y 14 si el fundador puede atenderlo sin traslados largos. Ajustar al radio real del fundador. Es una decisión logística. La disposición a pagar y la frecuencia del problema se miden con entrevistas y pilotos.
+
+WhatsApp Business ya ofrece catálogos, fichas y enlaces. Los PDF, el papel y el chat son sustitutos que debe identificar cada dueño en la entrevista. OlaClick anuncia plan gratuito con cupo de pedidos y opciones de POS y KDS. Su referencia pagada consultada está en COP y no confirma un precio de Guatemala. Sistemas Latam publica un POS de restaurante desde Q150 al mes y Sabor Suite publica Q155 y Q355 por sucursal en Guatemala. Son ofertas de los proveedores consultadas el 23 de noviembre, sin equivalencia supuesta de hardware, FEL o soporte. La hipótesis para Leogin es que un pedido armado desde la carta reduce las preguntas y el trabajo de transcribir. Medirlo en el turno. [WhatsApp Business](https://whatsappbusiness.com/es-la/products/business-app-features/) · [OlaClick](https://olaclick.com/es/punto-de-venta/) · [Sistemas Latam](https://sistemaslatam.com/restaurante.html) · [Sabor Suite](https://saborsuite.com/about/).
+
+**Piloto propuesto** · 30 días desde activación a **Q99 el primer mes** y **Q0 de alta**, con una carta inicial de hasta 15 platillos, 1 local y 1 persona que recibe pedidos. Configuración guiada, un ensayo, presencia del fundador durante el arranque acordado y revisión a 48 h y en semana 4. Mantener el WhatsApp del negocio como contacto y respaldo. El pago del pedido lo recibe el restaurante. Acordar por escrito la fecha y medio de pago de la mensualidad, comprobante, cancelación y salida de datos. Durante el inicio se ensaya solo para llevar. La mensualidad es la publicada y los límites de configuración y acompañamiento son parte de esta propuesta. Medir minutos por pedido, aclaraciones, pedidos recibidos, total conciliado y tiempo del fundador. Recoger una reseña solo después de verificar valor, con permiso y sin condicionar el precio.
+
+| Plan | Cargar carta | Instalar/configurar | Capacitar | Soporte inicial | Horas por local · costo modelo |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Básico | 0.5 h | 0.25 h | 0.25 h | 0.25 h | 1.25 h · Q93.75 |
+| En línea, remoto | 0.75 h | 0.5 h | 0.5 h | 0.75 h | 2.5 h · Q187.50 |
+| Estándar | 1 h | 0.75 h | 1 h | 1.25 h | 4 h · Q300 |
+| Premium con prueba local | 1.5 h | 2 h | 1.5 h | 2 h | 7 h · Q525 |
+
+Estimación con hora del fundador a Q75. Ejemplo de costo directo para En línea presencial: añadir 1 h de traslado a Q75 y Q30 de transporte, total Q292.50 por local. Tres remotos requieren 7.5 h de alta y soporte inicial más prospección y demos. Con una disponibilidad supuesta de 8 h semanales, reservar al menos 2 h para incidencias y abrir a lo sumo dos pilotos nuevos por semana. A Q99, el primer mes queda Q88.50 por debajo del costo de tiempo del escenario remoto, antes de nube y otros costos. Medir soporte del segundo mes, margen, traslados y bajas antes de ampliar. La cifra de clientes iniciales se trata como supuesto del encargo hasta revisar métricas de negocio.
+
+### Piezas de venta
+
+**Demo de cinco minutos**
+
+1. **0–1 min.** Pregunta cómo llegan los pedidos y elige un ejemplo del local.
+2. **1–2 min.** Abre la carta en el teléfono, elige un platillo y muestra el total.
+3. **2–3 min.** Envía la simulación y muestra cómo se vería en el panel. En teléfono único, enseña el resultado en la misma pantalla.
+4. **3–4 min.** Explica qué registra Leogin, cómo sigue cobrando el restaurante y el plan Q99/mes.
+5. **4–5 min.** Acordar alcance, persona responsable y fecha para un ensayo de 15 minutos con una carta breve.
+
+**Guion de visita o llamada.** «¿Me enseñas cómo te llega un pedido cuando estás atendiendo varios chats? Te muestro cómo se vería con tu carta. Si te ahorra una parte de ese trabajo, hacemos un ensayo para llevar y lo comparamos con tu turno habitual.»
+
+| Momento | Borrador |
+| --- | --- |
+| WhatsApp inicial | «Hola, [nombre]. Soy [tu nombre], de Leogin. Si tomas pedidos por WhatsApp o Instagram, puedo mostrarte cómo tus clientes arman el pedido desde tu carta y tú lo ves completo en un panel. ¿Tienes 5 minutos esta semana? La demo está en https://demo.distleogin.com/.» |
+| Seguimiento, 2–3 días | «Hola, [nombre]. Podemos probar con un platillo de tu carta y un pedido para llevar. ¿Te queda mejor [día/hora] o [día/hora]?» |
+| Segundo seguimiento, 5–7 días | «Cierro por acá para no llenarte el chat. Si más adelante quieres comparar un pedido de WhatsApp con uno armado desde tu menú, escríbeme y lo probamos.» |
+
+**Cinco preguntas.** ¿Cuántos pedidos tomaste en el turno más movido de la última semana? ¿Qué datos tienes que pedir otra vez? ¿Quién recibe, prepara y verifica el pago? ¿Qué pasa cuando cambias un precio, se acaba algo o se cae internet? ¿Qué mejora concreta justificaría Q99 al mes y quién lo decide?
+
+| Objeción | Respuesta |
+| --- | --- |
+| «Ya tengo WhatsApp.» | «Puedes seguir usándolo. Vamos a comparar cuánto tardas en aclarar y pasar un pedido de chat frente a recibirlo ya armado desde tu carta.» |
+| «¿Me cobran cada pedido?» | «El plan En línea cuesta Q99 al mes. Leogin cobra la mensualidad y tú recibes del cliente el pago de la comida.» |
+| «¿Tengo que comprar una computadora o impresora?» | «En el primer piloto para llevar puedes revisar tu panel desde el navegador del celular. Acordamos conservar tu canal habitual si se interrumpe la conexión.» |
+| «No quiero volver a cargar todo.» | «Empezamos con los 15 platillos que más vendes y tú revisas precios y disponibilidad antes de publicarlos.» |
+| «¿Qué pasa si ya no lo uso?» | «Acordamos por escrito cómo cancelar, cuándo se detienen los cobros y qué pasa con tu carta, tu QR y tus datos.» |
+
+### Ejecución, medición y primer turno
+
+| Plazo desde la auditoría | Responsable y acciones | Señal de avance |
+| --- | --- | --- |
+| 48 h | Fundador confirma oferta, canal de ventas y disponibilidad. QA prepara un ensayo de pedidos y una conciliación de primer cargo con datos ficticios. Fundador arma 8 prospectos calificados y ofrece demos. | Precio documentado por escrito, responsable de soporte y ensayo agendado. |
+| 7 días | QA y fundador cierran las puertas del primer turno. Hacer 12 contactos acumulados, 6 conversaciones y 3 demos como meta. Ensayar con 1 candidato y confirmar disponibilidad para instalar. | Primer piloto elegible y caso de prueba repetible. |
+| 30 días | Semanas 2 a 4: completar 8 contactos nuevos por semana, hacer demos cortas, abrir 1–2 pilotos semanales tras las condiciones de entrada y revisar cohortes. | Meta acumulada: 36 contactos → 18 conversaciones → 9 demos → 5 pilotos → 4 activaciones → 3 pagos. Uso en cuarta semana se mide por cohorte cuando cumpla la edad, incluso si cruza el día 30. |
+
+El fundador actualiza los denominadores semanalmente. Un **contacto** es un negocio único del perfil elegido y un mensaje válido. Una **conversación** incluye respuesta y dolor identificado. Una **demo** la completa el dueño o decisor. Un **piloto** tiene alcance y fecha acordados. **Activación de pedidos** es el primer turno acordado completo y conciliado. **Activación QR** exige carta publicada y un escaneo verificado en el local. **Cliente de pago** tiene mensualidad efectivamente recibida y conciliada. **Uso en semana 4** exige un turno con pedido conciliado o escaneos en el caso QR, sobre pilotos activados que ya llegaron a esa semana.
+
+Revisar segmentos si, tras 12 contactos, responden menos de 4. Ajustar el guion si, tras 6 conversaciones, hay menos de 2 demos. Revisar oferta o condiciones si menos de 2 de 6 demos llegan a piloto. Si menos de 3 de 5 pilotos se activan, pausar altas para corregir instalación o acompañamiento. Si menos de 2 de 4 activados pagan, entrevistar sobre precio, valor y proceso de pago. Registrar razones y cambiar una variable por vez.
+
+**Checklist de alta y primer turno**
+
+- [ ] Fundador y dueño acuerdan plan, precio final, alcance, responsable, horario, pago, respaldo manual y ventana de soporte.
+- [ ] Dueño valida carta, 15 platillos como máximo inicial, precios, opciones, horarios, disponibilidad y datos mínimos. Escanear QR desde dos teléfonos.
+- [ ] Abrir panel en el dispositivo y ensayar aviso, ingreso, preparación, entrega y registro de pago. Probar visibilidad de un pedido con audio silenciado.
+- [ ] Registrar número esperado, total y forma de pago en soporte paralelo. Validar que el reintento no duplique. Si hay pedido perdido, pausa el canal y conserva el registro para conciliar.
+- [ ] Cerrar turno y conciliar pedidos y montos. Anotar minutos de carga, entrenamiento, soporte y los pasos que el dueño hizo solo.
+- [ ] Revisar con el dueño a 48 h y en semana 4. Confirmar uso, pago y siguiente decisión. Pedir permiso antes de guardar o publicar nombre, logo o testimonio.
+
+**Hoja de seguimiento.** Usar el ID del local y guardar contactos personales fuera de este repositorio.
+
+| ID | Origen · fecha de contacto | Conversación · dolor | Demo · fecha | Piloto · alcance y fecha | Activación · pedidos/QR | Pago · fecha y Q | Semana 4 · uso | Horas · incidencias · siguiente acción |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Piloto 1 | — | — | — | — | — | — | — | — |
+| Piloto 2 | — | — | — | — | — | — | — | — |
+| Piloto 3 | — | — | — | — | — | — | — | — |
+
+**Agenda con cada dueño, 15 minutos.** 4 min para comparar pedidos, aclaraciones y horas frente al método anterior. 4 min para verificar el cierre y qué pasó con pedidos dudosos. 4 min para resolver una fricción y decidir continuar, ajustar o cancelar. 3 min para registrar compromiso, responsable y fecha.
+
+## 6. Evidencia pendiente y mejoras al prompt
+
+El prompt original planteaba una buena secuencia para alguien con acceso limitado a la web. La oferta indexada era una pregunta para comprobar. La visita pública, el código y las pruebas permiten decidir por flujo y distinguir correcciones ya desplegadas de evidencia todavía incompleta. Conviene mantener el siguiente checklist al retomar una fase.
+
+- [x] **Identificar el commit vivo y compararlo con el auditado.** Registrar respuesta, fecha, commit y cambios materiales. Conservar evidencia de configuración y esquema por separado.
+- [x] **Distinguir el catálogo de precios del contrato cobrado.** Registrar precio web, ajustes, valor de respaldo, precio guardado por cliente, excepciones, alta, impuestos y primer vencimiento. Compararlos bajo una falla de lectura simulada en pruebas.
+- [x] **Cuantificar evidencia por tipo.** Una prueba de UI, una suite de CI, un ensayo de campo y un turno con clientes responden preguntas distintas. Registrar cuándo vence cada evidencia tras cambios de versión o configuración.
+- [ ] **Añadir preflight al entorno de ensayos.** Verificar migraciones y huella de funciones de dinero antes de correr suites. Guardar el resultado; si difiere, reproducir sobre una base efímera migrada para ubicar la causa.
+- [ ] **Agregar economía de soporte y dependencia del fundador.** Medir horas, traslado, respuesta durante el turno, capacidad simultánea y costo real de atender y retener cada cliente.
+- [ ] **Agregar portabilidad y operación de salida.** Probar exportaciones útiles, retención, cancelación y QR impreso. Ensayar restauración, reversión, baja de acceso y registro manual durante el corte.
+- [ ] **Separar acceso público del ensayo de uso.** Para demostrar el primer valor, observar a dueños con su teléfono, medir toques y tiempos y probar la carta en las condiciones del local.
+
+**Lo mínimo por conseguir para el siguiente cierre.** (1) Confirmación redactada del tarifario, cargo de alta, vigencia, exportaciones y estado de migraciones aplicadas en producción. (2) Base aislada restaurable y un buzón de prueba para correo y alertas con integraciones externas desactivadas o simuladas. (3) Dos ambientes de operación representados por locales ficticios y dos sucursales, con dueño, encargado, Cocina, Caja y Mesero, y aparatos de prueba. El local actual y CI ya aportan parte de esa evidencia. (4) Windows limpio, impresora compatible y red de laboratorio para Escritorio. (5) Un dueño dispuesto al ensayo y un responsable del primer turno, la conciliación y la atención. Search Console y resultados de campo se añaden cuando haya acceso y muestra.
+
+**Registro de seguimiento.** Para cada LZ consignar en el PR o ticket correspondiente el estado, fecha objetivo, versión, prueba original, prueba de cierre y responsable. Volver a abrir si cambia una condición material del flujo. Las ubicaciones en este informe corresponden al corte `4c96b363`.

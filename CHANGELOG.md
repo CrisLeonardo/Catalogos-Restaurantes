@@ -6,6 +6,8 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
+- Auditoría de lanzamiento del 23 de noviembre. Contrasta la oferta pública con la versión desplegada, documenta las condiciones de salida de QR, pedidos y Escritorio, y deja un checklist de correcciones y un plan de piloto pagado. [Auditoría](docs/auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md).
+
 ## v0.32.0 · 2026-11-22 · Acceso y equipo por local
 PR #155, #172, #173, #174 y #175 · **sin migraciones**. Sale de la auditoría externa de acceso, equipo y restaurantes del 2026-11-21, verificada punto por punto contra el código; maqueta aprobada en `docs/diseno/MAQUETA_ACCESO_Y_EQUIPO_2026-11-22.html`.
 - **El equipo es de cada local** (#173).
