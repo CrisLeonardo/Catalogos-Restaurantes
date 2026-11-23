@@ -17,7 +17,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { conEvento, EVENTOS } from '@/lib/analytics';
-import { planParaTuCaso, type CasoDeLaWeb, type PlanAlta } from '@/lib/alta';
+import { enlaceDeAlta, planParaTuCaso, type CasoDeLaWeb, type PlanAlta } from '@/lib/alta';
 import { guardarPerfil } from '@/lib/perfil-negocio';
 import s from './landing-planes.module.css';
 
@@ -80,10 +80,11 @@ export function PlanPorPreguntas({ planes, origen }: { planes: PlanDeLaWeb[]; or
         ))}
       </ul>
 
-      {/* En línea deja el alta armada para vender en línea (perfil
-          'en-linea', lib/perfil-negocio.ts), igual que su página. */}
+      {/* El plan y el caso viajan en el enlace hasta el alta (LZ-11).
+          En línea además deja el perfil 'en-linea' de respaldo
+          (lib/perfil-negocio.ts), igual que su página. */}
       <Link
-        href="/registro"
+        href={enlaceDeAlta(caso && elegido ? { plan: elegido, caso } : null)}
         {...conEvento(`lp-btn lp-btn-lg lp-btn-primary ${s.cta}`, EVENTOS.clicCrear, `${origen} · ${plan?.nombre ?? 'sin plan'}`)}
         onClick={elegido === 'EN_LINEA' ? () => guardarPerfil('en-linea') : undefined}
       >

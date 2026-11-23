@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { leerPlatosDelAlta, modosEstandar, planParaTuCaso, planSugerido } from '@/lib/alta';
+import { enlaceDeAlta, leerIntencion, leerPlatosDelAlta, modosEstandar, planParaTuCaso, planSugerido } from '@/lib/alta';
 
 describe('planSugerido', () => {
   it('sugiere el plan por cómo le piden, no Premium para todos', () => {
     expect(planSugerido('carta')).toBe('BASICO');
     expect(planSugerido('llevar')).toBe('EN_LINEA');
     expect(planSugerido('mesas')).toBe('PREMIUM');
+  });
+  it('en mostrador sugiere Estándar con local y para llevar (LZ-11)', () => {
+    expect(planSugerido('mostrador')).toBe('ESTANDAR');
+    expect(modosEstandar('mostrador')).toEqual(['dine_in', 'pickup']);
   });
   it('Estándar toma dos modos que encajan', () => {
     expect(modosEstandar('llevar')).toEqual(['pickup', 'delivery']);
@@ -53,5 +57,27 @@ describe('planParaTuCaso (web pública, V.2/V.3)', () => {
   it('para llevar con más de 300 pedidos al mes pasa a Estándar', () => {
     expect(planParaTuCaso('llevar', true)).toBe('ESTANDAR');
     expect(planParaTuCaso('mesas', true)).toBe('PREMIUM');
+  });
+});
+
+describe('intención que viaja de la web al alta (LZ-11)', () => {
+  it('conserva plan y caso válidos', () => {
+    expect(leerIntencion('ESTANDAR', 'mostrador')).toEqual({ plan: 'ESTANDAR', caso: 'mostrador' });
+    expect(leerIntencion('ESTANDAR', 'llevar')).toEqual({ plan: 'ESTANDAR', caso: 'llevar' });
+  });
+  it('con solo el caso, el plan sale de la regla de la web', () => {
+    expect(leerIntencion(null, 'llevar')).toEqual({ plan: 'EN_LINEA', caso: 'llevar' });
+  });
+  it('con solo el plan, el caso es el que lo sugiere', () => {
+    expect(leerIntencion('PREMIUM', undefined)).toEqual({ plan: 'PREMIUM', caso: 'mesas' });
+  });
+  it('ignora valores fuera de lista: no se elige un plan que no existe', () => {
+    expect(leerIntencion('PRO', 'cocina')).toBeNull();
+    expect(leerIntencion('premium', ['mesas'])).toBeNull();
+    expect(leerIntencion('GRATIS', 'carta')).toEqual({ plan: 'BASICO', caso: 'carta' });
+  });
+  it('arma el enlace del registro', () => {
+    expect(enlaceDeAlta({ plan: 'ESTANDAR', caso: 'mostrador' })).toBe('/registro?plan=ESTANDAR&caso=mostrador');
+    expect(enlaceDeAlta(null)).toBe('/registro');
   });
 });

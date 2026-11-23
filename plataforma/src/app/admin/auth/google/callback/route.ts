@@ -54,7 +54,8 @@ export async function GET(request: NextRequest) {
   const failUrl = intent !== 'login' && safeNext ? safeNext : '/admin/login';
   const fail = (reason: string) => {
     console.error(`[admin/auth/google/callback] ${reason}`);
-    return NextResponse.redirect(`${origin}${failUrl}?auth_error=1`);
+    // `next` puede traer el plan elegido (/registro?plan=…): se agrega con &.
+    return NextResponse.redirect(`${origin}${failUrl}${failUrl.includes('?') ? '&' : '?'}auth_error=1`);
   };
   if (!code) return fail('sin parámetro code (Google canceló o el redirect_to no está en la lista blanca de Supabase)');
 

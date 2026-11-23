@@ -12,7 +12,7 @@ import { LandingIntro } from '@/components/landing-intro';
 import { Leo } from '@/components/leo';
 import { LandingDemo } from '@/components/landing-demo';
 import { PlanPorPreguntas, type PlanDeLaWeb } from '@/components/landing-planes';
-import type { PlanAlta } from '@/lib/alta';
+import { enlaceDeAlta, type PlanAlta } from '@/lib/alta';
 import planesCss from '@/components/landing-planes.module.css';
 
 /* ============================================================
@@ -112,7 +112,7 @@ export default async function LeoginLanding() {
      redes» lleva a /vende-en-linea, su página propia. */
   const casos: { icono: string; titulo: string; texto: string; plan: PlanAlta; href: string }[] = [
     { icono: 'utensils', titulo: 'Tengo mesas y meseros', texto: 'El mesero pide en el celular, cocina lo ve en su pantalla y la caja cobra por mesa.', plan: 'PREMIUM', href: demoUrl },
-    { icono: 'coffee', titulo: 'Cafetería o mostrador', texto: 'Piden en el mostrador o para llevar, sin mesero. Cobras y la comanda sale sola.', plan: 'ESTANDAR', href: demoUrl },
+    { icono: 'coffee', titulo: 'Cafetería o mostrador', texto: 'Piden en el mostrador o para llevar, sin mesero. Cobras y la comanda llega sola a cocina.', plan: 'ESTANDAR', href: demoUrl },
     { icono: 'whatsapp', titulo: 'Vendo por redes', texto: 'Tus clientes piden desde WhatsApp o Instagram, para llevar o a domicilio.', plan: 'EN_LINEA', href: '/vende-en-linea' },
   ];
 
@@ -194,7 +194,7 @@ export default async function LeoginLanding() {
             ))}
           </ul>
           <p className={planesCss.soloCarta}>
-            ¿Solo quieres tu carta con QR? <Link href="/registro">Básico, gratis</Link>.
+            ¿Solo quieres tu carta con QR? <Link href={enlaceDeAlta({ plan: 'BASICO', caso: 'carta' })}>Básico, gratis</Link>.
           </p>
         </section>
 
