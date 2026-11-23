@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { conEvento, EVENTOS } from '@/lib/analytics';
-import { SiteHeader, SiteFooter, SectionHead, contactHref } from '@/components/site-chrome';
+import { SiteHeader, SiteFooter, SectionHead, contactHref, CONTACT_ICON, CONTACT_VIA } from '@/components/site-chrome';
 import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
 import { PLANS, PUBLIC_PLANS, planPriceQ, planPresentation, type PlanPricing } from '@/lib/plans';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
@@ -311,7 +311,7 @@ export default async function LeoginLanding() {
                 </h2>
                 <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(245,243,239,0.72)', maxWidth: 520, margin: '14px auto 0' }}>
                   Crea tu restaurante en minutos: la carta con QR es gratis. ¿Prefieres que te
-                  acompañemos en la configuración? Escríbenos por WhatsApp y lo armamos juntos.
+                  acompañemos en la configuración? Escríbenos {CONTACT_VIA} y lo armamos juntos.
                 </p>
                 <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 30 }}>
                   <Link href="/registro" {...conEvento('lp-btn lp-btn-lg lp-btn-primary', EVENTOS.clicCrear, 'cierre')}>
@@ -324,7 +324,7 @@ export default async function LeoginLanding() {
                     className="lp-btn lp-btn-lg"
                     style={{ background: 'rgba(245,243,239,0.10)', color: '#F5F3EF', borderColor: 'rgba(245,243,239,0.22)' }}
                   >
-                    <Icon name="whatsapp" size={17} /> Hablar con ventas
+                    <Icon name={CONTACT_ICON} size={17} /> Hablar con ventas
                   </a>
                 </div>
               </div>
