@@ -4,6 +4,30 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveTheme, type ResolvedTheme } from '@/lib/theme/resolve';
 import type { Restaurant, RestaurantTheme } from '@/types';
+import { modulosAlCambiarDePlan, validPlanCode } from '@/lib/plans';
+
+/* ── Suspendido por impago: la carta sigue, sin pedidos ─────────
+   Decisión del dueño (2026-11-23, auditoría de lanzamiento LZ-08): el QR
+   impreso en las mesas no puede dar «Restaurante no encontrado» porque el
+   local se atrasó con su mensualidad. Mientras dure la suspensión POR
+   IMPAGO la carta se ve como Básico: sin pedidos ni módulos que interactúan.
+   El servidor ya rechaza pedidos de un local que no está activo
+   (actions/orders.ts). La suspensión manual (abuso, riesgo) sí la quita. */
+export function soloCartaPorImpago(restaurant: Restaurant): Restaurant {
+  const plan = validPlanCode(restaurant.plan_actual);
+  return {
+    ...restaurant,
+    modules: modulosAlCambiarDePlan(plan, 'BASICO', (restaurant.modules as Record<string, boolean> | null) ?? {}),
+  } as Restaurant;
+}
+
+/** ¿Esta fila de `restaurants` (con su cobro embebido) se puede mostrar? */
+function estadoPublico(fila: { status: string; restaurant_billing?: unknown }): 'activa' | 'solo-carta' | 'oculta' {
+  if (fila.status === 'active') return 'activa';
+  const cobro = Array.isArray(fila.restaurant_billing) ? fila.restaurant_billing[0] : fila.restaurant_billing;
+  const porImpago = (cobro as { suspended_for_nonpayment?: boolean } | null)?.suspended_for_nonpayment === true;
+  return fila.status === 'suspended' && porImpago ? 'solo-carta' : 'oculta';
+}
 
 export type RestaurantWithTheme = {
   restaurant: Restaurant;
@@ -135,19 +159,21 @@ export const getRestaurantBySlugCached = cache(
     const liveDb = createServiceClient();
     const { data: idRow } = await liveDb
       .from('restaurants')
-      .select('id')
+      .select('id, status, restaurant_billing(suspended_for_nonpayment)')
       .eq('slug', slug)
-      .eq('status', 'active')
+      .in('status', ['active', 'suspended'])
       .single();
 
     if (!idRow) return null;
+    const estado = estadoPublico(idRow as { status: string; restaurant_billing?: unknown });
+    if (estado === 'oculta') return null;
 
     const row = await fetchRestaurantByIdCached(idRow.id as string);
     if (!row) return null;
 
     const themeRow = row.theme ?? defaultTheme(row.restaurant.id);
     return {
-      restaurant: row.restaurant,
+      restaurant: estado === 'solo-carta' ? soloCartaPorImpago(row.restaurant) : row.restaurant,
       theme: themeRow,
       resolved: resolveTheme(themeRow, slug, {
         brandName: row.restaurant.name,
