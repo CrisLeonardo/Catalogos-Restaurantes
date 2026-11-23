@@ -78,12 +78,35 @@ export function Stepper({ steps, step }: { steps: string[]; step: number }) {
   );
 }
 
+/* El error se ANUNCIA (role="alert"): antes aparecía en silencio y quien
+   usa lector de pantalla no se enteraba de por qué no avanzaba. Y va con los
+   tokens --c-danger*: el rojo claro escrito a mano (#f87171) apenas se leía
+   sobre el fondo claro del registro (auditoría de lanzamiento 2026-11-23,
+   LZ-04; WCAG 4.1.3 y 1.4.3). */
 export function ErrorBox({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 13.5 }}>
+    <div role="alert" style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 13.5, lineHeight: 1.45 }}>
       {children}
     </div>
   );
+}
+
+/** Lleva el foco al control que hay que corregir y lo marca como inválido.
+ *  `selector` se busca dentro de `raiz` (el formulario del paso). */
+export function enfocarCampo(raiz: HTMLElement | null, selector: string, reintento = true): void {
+  const el = raiz?.querySelector<HTMLElement>(selector);
+  if (!el) {
+    // El campo puede aparecer con el mismo cambio de estado (la dirección
+    // de la carta se abre al pedirla): se busca otra vez tras dibujar.
+    if (reintento) setTimeout(() => enfocarCampo(raiz, selector, false), 0);
+    return;
+  }
+  el.setAttribute('aria-invalid', 'true');
+  el.focus();
+  // Se limpia al escribir o elegir de nuevo.
+  const limpiar = () => { el.removeAttribute('aria-invalid'); el.removeEventListener('input', limpiar); el.removeEventListener('change', limpiar); };
+  el.addEventListener('input', limpiar);
+  el.addEventListener('change', limpiar);
 }
 
 /**
