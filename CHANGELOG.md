@@ -5,7 +5,7 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
 ## v0.33.0 · 2026-11-23 · Listo para el primer piloto de pago
-PR #177 · **migración 191, ANTES de desplegar** (`supabase/.produccion/` con `node scripts/armar-migraciones-produccion.mjs 191 191`). Sale de la [auditoría de lanzamiento](docs/auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md), cuyo §4 lleva el avance de cada punto.
+PR #177 y #179 · **migración 191, ANTES de desplegar** (`supabase/.produccion/` con `node scripts/armar-migraciones-produccion.mjs 191 191`). Sale de la [auditoría de lanzamiento](docs/auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md), cuyo §4 lleva el avance de cada punto.
 - **El precio que acuerdas se respeta** (migración 191).
   - La mensualidad se fija al contratar o cambiar de plan. Cambiar precios en superadmin solo afecta altas y cambios de plan; quien ya paga conserva su precio, también en el corte mensual.
   - En la ficha de cobro, «Pasar a Qx/mes» pasa a un local al precio vigente, con confirmación. Se retira «Recalcular precios».
@@ -16,7 +16,7 @@ PR #177 · **migración 191, ANTES de desplegar** (`supabase/.produccion/` con `
 - **Usuarios por plan** (decisión del dueño): cuenta todo el equipo, dueño y PIN incluidos (Básico y En línea 1, Estándar 2, Premium sin tope). Quien ya tiene más los conserva y no suma más. Personal avisa antes de llenar la ficha.
 - **El plan elegido en la web llega al alta** (maqueta aprobada `docs/diseno/MAQUETA_ALTA_CON_PLAN_2026-11-23.html`). Viaja en el enlace y queda en la cuenta; el registro lo muestra en una línea; el alta tiene las cuatro respuestas de la web, con «En mostrador» → Estándar, y dice el monto, la fecha y dónde se paga el primer cobro.
 - **Web pública.** Campos del registro con nombre accesible y foco visible sobre el pie fijo. La portada nombra el canal real de ventas. La carta publica una sola dirección (`og:url` y canonical), Planes tiene canonical y tarjeta, y la demo no se indexa. Descargas ofrece Escritorio con instalación acompañada y ya no enseña a saltarse la advertencia de Windows.
-- **La carta pide primero las fotos que se ven al abrir.** En el mismo build local, LCP de 2.08 s a 1.37 s; sin cambios visibles.
+- **Revertido antes de etiquetar (#179):** dar prioridad alta a las primeras fotos de la carta. En local bajaba el LCP, pero en producción React precargaba esas fotos junto al CSS y al JS, y la carta tardaba ~1 s más en verse con 4G lento (3.6 s en vez de 2.5 s). Tras revertir: 9/10 cargas en ≤ 3 s.
 - **Herramientas de salida.** `verificar_huellas.sql` coteja en producción 20 funciones de pedido, cobro, caja, mensualidad y permisos; las pruebas de integración arrancan comprobando la base. `scripts/medir-carta.mjs` mide la carta como un teléfono de gama media con 4G lento. Una prueba vigila que los logs no lleven datos personales.
 
 ## v0.32.0 · 2026-11-22 · Acceso y equipo por local
