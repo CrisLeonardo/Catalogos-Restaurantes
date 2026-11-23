@@ -129,6 +129,14 @@ Marcar una casilla al adjuntar evidencia de cierre con fecha, versión, entorno 
 - [ ] **LZ-11** · Conservar la intención de plan al retomar el alta.
 - [ ] **LZ-12** · Medir rendimiento y completar el recorrido accesible.
 
+**Avance en código (23 de noviembre, rama `audit/lanzamiento-leogin-2026-11-23`).** Las casillas siguen abiertas hasta adjuntar la evidencia de cierre en producción.
+
+| LZ | Hecho en código | Falta para cerrar |
+| --- | --- | --- |
+| LZ-03 | La invitación de la portada nombra el canal y el ícono reales del enlace (`CONTACT_VIA` y `CONTACT_ICON`), como ya hacían Planes y Vende en línea. Sin número configurado dice «por correo». | Decidir si ventas atiende por WhatsApp. En ese caso, cargar `NEXT_PUBLIC_CONTACT_WHATSAPP` en Render y comprobar el enlace en teléfono y PC. |
+| LZ-04 | `Field` asocia la etiqueta con `htmlFor`/`id` y la ayuda con `aria-describedby` en Registro y en el alta del restaurante. Nombre con `autoComplete="name"`. El pie fijo reserva 96 px al desplazar hacia el campo con foco. | Recorrido con lector de pantalla y teclado en pantalla de Android/iPhone después del despliegue. |
+| LZ-09 | `og:url` y canonical de la carta usan el primer dominio raíz (`subdomainUrl`). Planes tiene canonical y tarjeta propias; Vende en línea, canonical absoluta. La demo declara `noindex, follow`. `marketingUrl` unifica robots y sitemap. | Vista previa real en WhatsApp de una carta y de Planes, e inspección en Search Console. |
+
 | ID · prioridad | Evidencia · módulo | Impacto y ubicación | Responsable · esfuerzo · dependencia | Corrección y criterio de aceptación |
 | --- | --- | --- | --- | --- |
 | **LZ-01 · P0 piloto de pago** | Web + código + histórico · oferta/cobro | La web, el material interno y los valores de respaldo divergen. El primer cargo define la confianza del cliente. §2, OP-05. | Fundador y desarrollo · 1–2 días · decisión de precio, alta, impuestos y ajustes redactados. | Aprobar tabla con fecha. Llevar Q99, alta acordada y vencimiento al presupuesto, confirmación, cargo y recibo. Verificar monto parcial, lectura fallida, cancelación y primer cobro con operador. Si falta evidencia, ofrecer QR y demo. |

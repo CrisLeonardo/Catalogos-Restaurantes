@@ -30,6 +30,19 @@ export function rootDomainForUrls(): string {
 }
 
 /**
+ * URL absoluta del sitio comercial (dominio raíz), para canonical, Open Graph,
+ * robots y sitemap. Nunca el valor crudo de NEXT_PUBLIC_ROOT_DOMAIN: trae
+ * varios dominios separados por coma y la carta publicaba un `og:url` con
+ * los dos pegados (auditoría de lanzamiento 2026-11-23, WEB-06).
+ *   marketingUrl("/planes") → https://distleogin.com/planes
+ */
+export function marketingUrl(path = "/"): string {
+  const root = rootDomainForUrls();
+  const isLocal = root.includes("localhost") || root.startsWith("127.");
+  return `${isLocal ? "http" : "https"}://${root}${path}`;
+}
+
+/**
  * URL absoluta a un subdominio (tenant o demo).
  *   subdomainUrl("demo")          → http://demo.localhost:3000   (local)
  *   subdomainUrl("mi-restaurante")  → https://mi-restaurante.leogin.com (prod)

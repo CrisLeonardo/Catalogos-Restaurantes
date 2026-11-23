@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { conEvento, EVENTOS } from '@/lib/analytics';
@@ -7,12 +8,25 @@ import type { PlanPricing } from '@/lib/plans';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { fmtMoney } from '@/lib/money';
+import { marketingUrl } from '@/lib/tenant';
 import { PlanPorPreguntas, type PlanDeLaWeb } from '@/components/landing-planes';
 import type { PlanAlta } from '@/lib/alta';
 
-export const metadata = {
-  title: 'Planes y precios — Leogin',
-  description: 'Menú digital gratis para siempre, con planes de pedidos en línea a precio fijo — sin cobro por tus ventas.',
+const TITULO = 'Planes y precios — Leogin';
+const DESCRIPCION = 'Menú digital gratis para siempre, con planes de pedidos en línea a precio fijo — sin cobro por tus ventas.';
+
+/* Canonical y tarjeta propias: sin ellas, compartir /planes por WhatsApp
+   no tenía vista previa (auditoría de lanzamiento 2026-11-23, WEB-06). */
+export const metadata: Metadata = {
+  title: TITULO,
+  description: DESCRIPCION,
+  alternates: { canonical: marketingUrl('/planes') },
+  openGraph: {
+    title: TITULO, description: DESCRIPCION, url: marketingUrl('/planes'),
+    siteName: 'Leogin', locale: 'es_GT', type: 'website',
+    images: [{ url: marketingUrl('/icon-512.png'), width: 512, height: 512, alt: 'Leogin' }],
+  },
+  twitter: { card: 'summary', title: TITULO, description: DESCRIPCION, images: [marketingUrl('/icon-512.png')] },
 };
 
 // Los precios pueden cambiar desde /super/configuracion: la página se

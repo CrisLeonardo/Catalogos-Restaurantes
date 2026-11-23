@@ -67,7 +67,14 @@ export async function generateMetadata({
   }
 
   if (slug === DEMO_SLUG) {
-    return { title: 'Rincón 502 · Demo de Leogin', description: 'Así se ve un restaurante con Leogin: el menú de Rincón 502, nuestro restaurante de ejemplo.' };
+    /* La demo es un restaurante de mentira: en un buscador competiría con la
+       portada y confundiría a quien busca «Rincón 502». Se sigue pudiendo
+       enlazar y compartir; solo no se indexa (auditoría 2026-11-23, WEB-07). */
+    return {
+      title: 'Rincón 502 · Demo de Leogin',
+      description: 'Así se ve un restaurante con Leogin: el menú de Rincón 502, nuestro restaurante de ejemplo.',
+      robots: { index: false, follow: true },
+    };
   }
 
   const data = await getRestaurantBySlugCached(slug);
@@ -86,8 +93,11 @@ export async function generateMetadata({
 
   const name = data.restaurant.name;
   const description = data.restaurant.tagline ?? `Menú en línea de ${name}`;
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
-  const menuUrl = rootDomain ? `https://${slug}.${rootDomain}` : undefined;
+  /* Con el primer dominio raíz, no con la variable cruda: trae varios
+     separados por coma y la vista previa salía con `og:url`
+     «https://slug.distleogin.com,leogin.online» (auditoría 2026-11-23,
+     WEB-06). */
+  const menuUrl = subdomainUrl(slug);
   // pwaIconUrl tiene prioridad para favicon; si no hay, usa el logo de portada.
   const favicon = data.resolved.config.pwaIconUrl ?? data.resolved.config.logoUrl;
   const logo = data.resolved.config.logoUrl;
@@ -109,7 +119,7 @@ export async function generateMetadata({
         description: desc,
         icons: favicon ? { icon: favicon, apple: favicon } : undefined,
         openGraph: {
-          title: titulo, description: desc, url: menuUrl ? `${menuUrl}/?platillo=${platoId}` : undefined,
+          title: titulo, description: desc, url: `${menuUrl}/?platillo=${platoId}`,
           siteName: name, locale: 'es_GT', type: 'website',
           images: [{ url: img, width: 1200, height: 630, alt: plato.name }],
         },
@@ -126,6 +136,7 @@ export async function generateMetadata({
   return {
     title: `${name} — Menú`,
     description,
+    alternates: { canonical: menuUrl },
     icons: favicon ? { icon: favicon, apple: favicon } : undefined,
     openGraph: {
       title: `${name} — Menú`,
