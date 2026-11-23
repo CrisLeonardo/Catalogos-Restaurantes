@@ -215,14 +215,32 @@ const fetchPricingSettingsCached = unstable_cache(
   { revalidate: 300, tags: [PRICING_SETTINGS_TAG] },
 );
 
-export const getPricingSettings = cache(
-  (): Promise<PricingSettings> => fetchPricingSettingsCached(),
-);
+/* Una lectura FALLIDA no es lo mismo que ajustes ausentes (auditoría de
+   lanzamiento 2026-11-23, LZ-01). Antes el error se ignoraba y los valores
+   de fábrica quedaban 5 minutos en la caché como si fueran los vigentes.
+   Ahora `leerPricingSettings` lanza —unstable_cache no guarda un error— y
+   aquí se avisa en el log y se responde con los de fábrica SOLO en esta
+   petición: la siguiente vuelve a leer. Esto solo afecta lo que se MUESTRA;
+   lo que se cobra lo calcula Postgres con sus propios ajustes. */
+export const getPricingSettings = cache(async (): Promise<PricingSettings> => {
+  try {
+    return await fetchPricingSettingsCached();
+  } catch (e) {
+    console.error('[precios] No se pudo leer platform_settings; valores de fábrica solo en esta petición.', e);
+    return construirPricingSettings(new Map());
+  }
+});
 
 async function leerPricingSettings(): Promise<PricingSettings> {
   const db = createServiceClient();
-  const { data } = await db.from('platform_settings').select('key, value');
-  const map = new Map((data ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
+  const { data, error } = await db.from('platform_settings').select('key, value');
+  if (error) throw new Error(`platform_settings: ${error.message}`);
+  return construirPricingSettings(new Map((data ?? []).map((r: { key: string; value: string }) => [r.key, r.value])));
+}
+
+/** Ajustes de precios a partir de las filas de platform_settings; lo que
+ *  falte toma el valor de fábrica. Exportada para probarla. */
+export function construirPricingSettings(map: Map<string, string>): PricingSettings {
   const n = (k: string, d: number) => { const v = parseFloat(map.get(k) ?? ''); return isNaN(v) ? d : v; };
   const b = (k: string, d: boolean) => { const v = map.get(k); return v == null || v === '' ? d : v === 'true'; };
   return {
