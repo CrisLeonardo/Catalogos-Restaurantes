@@ -13,7 +13,7 @@
 import AssetImage from '@/components/asset-image';
 import { PRODUCT_ART_SIZES } from '@/lib/asset-image';
 import { useCallback, useEffect, useState } from 'react';
-import { Icon, ICON_PATHS } from '@/components/icons';
+import { Icon, ICON_PATHS } from '@/components/icons-carta';
 import { MenuSurface, Tag } from '@/components/menu/ui';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { useCart } from '@/lib/cart-context';

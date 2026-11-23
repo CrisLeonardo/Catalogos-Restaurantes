@@ -10,7 +10,7 @@
    a las fotos. */
 
 import { useEffect, useRef, useState } from 'react';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import { useCart } from '@/lib/cart-context';
 import { useLocale } from '@/lib/locale/context';
 import { useThemeConfig, useThemeContent, usePrice } from '@/lib/theme/context';

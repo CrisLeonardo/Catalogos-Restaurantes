@@ -6,7 +6,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { useId, useState } from 'react';
 import Link from 'next/link';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import { usePrice, useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { formatAmountCarta, roleSize } from '@/lib/theme/resolve';
 import { marcarOrigen } from '@/lib/menu/origen-ficha';

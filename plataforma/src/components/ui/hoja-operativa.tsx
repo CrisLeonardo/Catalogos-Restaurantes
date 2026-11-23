@@ -1,7 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactNode, type TouchEvent } from 'react';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import { cn } from '@/lib/utils';
 
 function sobreVelo(event: MouseEvent<HTMLDialogElement>) {

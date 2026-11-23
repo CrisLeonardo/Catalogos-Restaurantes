@@ -14,7 +14,7 @@ import MenuClient from '@/components/menu-client';
 import VisitTracker from '@/components/visit-tracker';
 import InstallBanner from '@/components/install-banner';
 import OfflineSupport from '@/components/offline-support';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import type { MenuReward } from '@/components/menu/rewards-section';
 import { isVitrina, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
 import { VITRINA_TOP_H } from '@/components/menu/vitrina-bar';

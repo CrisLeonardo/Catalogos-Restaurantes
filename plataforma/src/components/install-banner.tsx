@@ -12,7 +12,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Glass } from '@/components/glass';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 
 /* ── Tipos ──────────────────────────────────────────────── */
 type Platform = 'ios' | 'android';

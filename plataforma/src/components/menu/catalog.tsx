@@ -20,7 +20,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import AssetImage from '@/components/asset-image';
 import { FEATURED_ART_SIZES, PRODUCT_ART_SIZES } from '@/lib/asset-image';
-import { Icon, ICON_PATHS } from '@/components/icons';
+import { Icon, ICON_PATHS } from '@/components/icons-carta';
 import { EVENTO_IR_A_CATEGORIA } from '@/lib/menu/ir-a-categoria';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { MenuSurface, AbrirPieza, Price, Tag, ctaClass } from '@/components/menu/ui';

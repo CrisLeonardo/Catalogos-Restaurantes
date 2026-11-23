@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { Glass } from '@/components/glass';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import Catalog from '@/components/menu/catalog';
 import ProductSheet from '@/components/menu/product-sheet';
 import { CartBar, CartPanel } from '@/components/menu/cart';

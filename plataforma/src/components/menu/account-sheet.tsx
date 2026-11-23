@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import { getLocalProfile, saveLocalProfile, type LocalCustomerProfile } from '@/lib/customer-local';
 import { getMyAccount, linkMyAccountByPhone } from '@/lib/actions/loyalty';
 import GoogleSignInButton from '@/components/menu/google-signin';

@@ -6,7 +6,7 @@
    muestra este patrón de marca para que la tarjeta siga viéndose premium. */
 
 import { createElement, type CSSProperties } from 'react';
-import { ICON_PATHS } from '@/components/icons';
+import { ICON_PATHS } from '@/components/icons-carta';
 
 /** Hash estable string → número, para usar el id del producto como seed. */
 export function seedFromString(s: string): number {

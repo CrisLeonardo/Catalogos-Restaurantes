@@ -11,7 +11,7 @@
    ============================================================ */
 
 import Link from 'next/link';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import { useTenantPrefix } from '@/lib/tenant-client';
 import { useCart } from '@/lib/cart-context';
 import { useThemeConfig, useThemeContent } from '@/lib/theme/context';
