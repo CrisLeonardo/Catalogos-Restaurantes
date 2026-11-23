@@ -1,6 +1,6 @@
 # Inventario de datos personales, retención y borrado · 23 de noviembre de 2026
 
-Auditoría de lanzamiento, **LZ-10** ([auditoría](../auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md), §4). Sirve para responder tres preguntas por cada dato personal: dónde está, cuánto tiempo se guarda y cómo se borra si alguien lo pide. Está hecho a partir del código y las migraciones hasta la 192. Lo marcado **por confirmar** depende de un panel externo (Supabase, Render) y no se puede ver desde el repositorio.
+Auditoría de lanzamiento, **LZ-10** ([auditoría](../auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md), §4). Sirve para responder tres preguntas por cada dato personal: dónde está, cuánto tiempo se guarda y cómo se borra si alguien lo pide. Está hecho a partir del código y las migraciones hasta la 194. Lo marcado **por confirmar** depende de un panel externo (Supabase, Render) y no se puede ver desde el repositorio.
 
 ## Proveedores que tratan los datos
 
@@ -37,13 +37,13 @@ Auditoría de lanzamiento, **LZ-10** ([auditoría](../auditorias/AUDITORIA_LANZA
 | Datos del local: dirección, coordenadas, correo de contacto y logo | `restaurants`, `restaurant_themes` | Sin plazo | Superadmin → borrar restaurante (cascada en las tablas del local; `profiles` y `ayuda_sin_respuesta` solo pierden el enlace) |
 | Nombres en caja, anulaciones, propinas y traspasos | `cash_counts`, `order_voids`, `tip_distribution_shares`, `caja_traspasos` | Sin plazo | Con el local. Son registro contable y antifraude |
 | Repartidores: nombre y teléfono | `drivers` | Sin plazo | El panel solo los desactiva. Se borran con el local |
-| Comprobante de pago de la mensualidad (puede llevar datos bancarios) | Bucket privado `payment-proofs` y `payment_proofs` | Hasta que suba otro (reemplaza el anterior) o sin plazo | **Brecha:** borrar el local deja el archivo en el bucket |
+| Comprobante de pago de la mensualidad (puede llevar datos bancarios) | Bucket privado `payment-proofs` y `payment_proofs` | Hasta que suba otro (reemplaza el anterior) o sin plazo | Al borrar el local se borra su carpeta (`lib/archivos-del-local.ts`) |
 | Avisos del navegador (suscripción push) | `push_subscriptions`, `super_push_subscriptions` | Hasta que el navegador la invalide | Se purgan solas al fallar el envío |
 | Bitácora de accesos al panel: IP y navegador | `panel_access_log` | **180 días** | Purga diaria automática (migración 109) |
 | Bitácora del superadmin: correo e IP | `super_admin_log` | Sin plazo | No tiene purga |
 | Límites de peticiones (pueden llevar IP) | `rate_limit_buckets` | 1 día después de vencer | Purga cada hora (migración 100) |
 | Puentes de inicio de sesión | `cuenta_puentes` | 1 día después de vencer | Purga diaria (migración 146) |
-| Fotos de la carta | Bucket público `restaurant-assets` | Sin plazo | **Brecha:** borrar el local deja los archivos |
+| Fotos de la carta | Bucket público `restaurant-assets` | Sin plazo | Al borrar el local se borran las que nadie más usa. Se conservan las que nombra una copia del local, una plantilla o un grupo (migración 194) |
 | Recibos de gastos | `cash_expenses.receipt_url` | — | Columna sin uso: ninguna pantalla sube recibos |
 
 ## Cómo atender una solicitud de borrado de un comensal
@@ -64,7 +64,7 @@ El teléfono se compara solo por sus dígitos, y basta con que coincidan los úl
 ## Brechas y decisiones pendientes
 
 - **Plazos (decisión del dueño).** Hoy casi todo se guarda mientras exista el local, y la política dice «mientras sean necesarios». Hay que decidir si los datos de contacto de los pedidos cerrados se anonimizan solos después de un plazo (por ejemplo, 24 meses), y si `super_admin_log` lleva purga.
-- **Archivos al borrar un local.** El borrado del restaurante no quita sus fotos de `restaurant-assets` ni sus comprobantes de `payment-proofs`. Falta un paso que los borre del almacenamiento.
+- **Facturas al borrar un local (decisión del dueño).** Borrar un restaurante borra en cascada sus documentos FEL (`fel_documents`) y las facturas de Leogin a ese local (`invoices`, `payment_proofs`). Los FEL se deben conservar por obligación fiscal, y las facturas son la contabilidad de Leogin. Hay que exportarlos antes de borrar, o cambiar el borrado por un cierre que los conserve (se relaciona con el «cierre definitivo» pendiente de LZ-08).
 - **Solicitud desde el panel.** Hoy la atiende Leogin con la función de la 192. Si se quiere que el dueño la haga solo, va en una pantalla, con maqueta según la guía de diseño.
 - **Por confirmar en paneles externos:** plan y antigüedad de las copias de Supabase, retención y acceso de los registros de Render, y quién en Leogin tiene acceso a cada panel.
 - **Ensayo real:** correr el procedimiento completo con una solicitud ficticia en producción y anotar el tiempo de respuesta.

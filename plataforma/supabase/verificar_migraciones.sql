@@ -334,7 +334,10 @@ huellas(n, que, ok, cuando) as (values
      'ANTES de desplegar; independiente'),
   ('192', 'olvidar a un comensal en un local (solicitud de borrado, conserva totales y facturas)',
      to_regprocedure('public.leogin_olvidar_comensal(uuid,text,boolean)') is not null,
-     'cuando sea; sin código que dependa de ella')
+     'cuando sea; sin código que dependa de ella'),
+  ('194', 'archivos en uso: al borrar un local se borran sus fotos sueltas y sus comprobantes',
+     to_regprocedure('public.leogin_archivos_en_uso(uuid)') is not null,
+     'ANTES de desplegar (sin ella, borrar un local deja sus archivos y lo anota en la bitácora)')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,
