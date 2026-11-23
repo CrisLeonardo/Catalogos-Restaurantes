@@ -11,6 +11,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/integration/dinero.test.ts', 'tests/integration/permisos.test.ts', 'tests/integration/recepcion.test.ts', 'tests/integration/catalogo.test.ts', 'tests/integration/inventario.test.ts', 'tests/integration/precio-acordado.test.ts'],
+    // Base al día y funciones críticas iguales al repositorio (auditoría 2026-11-23).
+    globalSetup: ['tests/integration/preflight.ts'],
     fileParallelism: false,
     testTimeout: 30_000,
     hookTimeout: 30_000,
