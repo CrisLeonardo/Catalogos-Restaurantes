@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Section } from '@/components/ui/section';
 import { List, ListButton, ListRow } from '@/components/ui/list';
+import Link from 'next/link';
 import { EmptyState } from '@/components/ui/empty-state';
 import { buildNav, type NavContext } from '@/lib/admin-nav';
 import {
@@ -60,8 +61,15 @@ function credencial(m: StaffMember, slug: string | null): string {
 
 export default function StaffPanel({
   restaurantId, slug, staff, activity, enabledKeys, isOwner = true, techo, navBase, arqueoCiego,
-  currentUserId = null, ownerName = null,
+  currentUserId = null, ownerName = null, equipoCompleto = null, tituloCupo = 'Tu equipo está completo', planesHref = null,
 }: {
+  /** Si el equipo ya llenó los usuarios del plan, por qué (LZ-08). Sin
+   *  «Agregar»: el aviso lo dice antes de llenar una ficha para nada. */
+  equipoCompleto?: string | null;
+  /** «Tu equipo está completo», o que no se pudo revisar. */
+  tituloCupo?: string;
+  /** A dónde ver o cambiar el plan; solo se le da al dueño. */
+  planesHref?: string | null;
   restaurantId: string;
   /** La dirección del restaurante: segunda mitad de la credencial por usuario. */
   slug: string | null;
@@ -108,12 +116,26 @@ export default function StaffPanel({
       <div className={s.columna}>
         <Section
           title="Personal"
-          aside={(
+          aside={equipoCompleto ? undefined : (
             <Button type="button" onClick={() => abrir(null)} size="sm">
               <Icon name="plus" size={14} /> Agregar
             </Button>
           )}
         >
+          {/* Mismo aviso que «accesos heredados». Maqueta aprobada por el
+              dueño el 2026-11-23 (auditoría de lanzamiento, LZ-08). */}
+          {equipoCompleto && staff.length > 0 && (
+            <div className={s.aviso} role="status" style={{ marginBottom: 12 }}>
+              <Icon name="alertCircle" size={16} style={{ flexShrink: 0, marginTop: 2, color: 'var(--c-warn)' }} />
+              <div>
+                <strong>{tituloCupo}</strong>
+                <p>{equipoCompleto}</p>
+                {planesHref && (
+                  <p><Link href={planesHref} className="adm-accent-ink" style={{ fontWeight: 600 }}>Ver planes →</Link></p>
+                )}
+              </div>
+            </div>
+          )}
           {heredados.length > 0 && (
             <div className={s.aviso} role="status" style={{ marginBottom: 12 }}>
               <Icon name="alertCircle" size={16} style={{ flexShrink: 0, marginTop: 2, color: 'var(--c-warn)' }} />
@@ -128,12 +150,21 @@ export default function StaffPanel({
           )}
 
           {staff.length === 0 ? (
+            equipoCompleto ? (
+              <EmptyState
+                icon="users"
+                title="Sin personal todavía"
+                desc={equipoCompleto}
+                action={planesHref ? { label: 'Ver planes', href: planesHref, icon: null } : { label: 'Entendido', onClick: () => {}, icon: null }}
+              />
+            ) : (
             <EmptyState
               icon="users"
               title="Sin personal todavía"
               desc="Agrega a tu equipo eligiendo su trabajo: Mesero, Cocina, Caja, Recepción, Reparto o Encargado. Después puedes ajustar tarea por tarea."
               action={{ label: 'Agregar el primero', onClick: () => abrir(null) }}
             />
+            )
           ) : (
             <div className={s.card}>
               <ul className={s.lista}>

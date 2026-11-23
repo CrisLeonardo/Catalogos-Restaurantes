@@ -427,7 +427,7 @@ export const PLAN_POINTS: Record<PlanCode, { text: string; positive: boolean }[]
   ESTANDAR: [
     { text: `Elige ${ESTANDAR_MAX_ORDER_TYPES} de 3 modos de pedido`, positive: true },
     { text: 'Avisos en tiempo real y WhatsApp', positive: true },
-    { text: `Platillos ilimitados · ${PLANS.ESTANDAR.users} usuarios`, positive: true },
+    { text: `Platillos ilimitados · ${PLANS.ESTANDAR.users} usuarios, tú incluido`, positive: true },
     { text: 'Reportes financieros y corte de caja', positive: true },
   ],
   PREMIUM: [
