@@ -60,7 +60,8 @@ describe('contrato de planes compartido por las superficies', () => {
   it('la vista previa de un cambio conserva el acuerdo manual, incluso al elegir Básico', () => {
     const current = planPresentation({ plan: 'PREMIUM', pricing, billing: { auto_price: false, monthly_fee: 275.25 } });
     expect(planChangePresentation(current, 'ESTANDAR', pricing).monthlyAmount).toBe(275.25);
-    expect(planChangePresentation(current, 'BASICO', pricing).monthlyAmount).toBe(275.25);
+    // Bajar a Básico es cancelar: el acuerdo manual deja de cobrarse (LZ-08).
+    expect(planChangePresentation(current, 'BASICO', pricing).monthlyAmount).toBe(0);
     expect(planChangePresentation(null, 'BASICO', pricing).monthlyAmount).toBe(0);
   });
   it('En línea avisa del tope blando sin prometer pedidos ilimitados ni cortar ventas', () => {

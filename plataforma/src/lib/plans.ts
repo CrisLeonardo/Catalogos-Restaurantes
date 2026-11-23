@@ -584,11 +584,14 @@ export function planOperationCopy(presentation: ReturnType<typeof planPresentati
   return `Tu plan ${presentation.name}: ${presentation.orderScope}. ${presentation.selectedScope}.`;
 }
 
-/** Una selección de plan no elimina un acuerdo manual: el motor solo aplica auto_price. */
+/** Una selección de plan no elimina un acuerdo manual: el motor solo aplica
+ *  auto_price. Salvo bajar a un plan gratis, que es cancelar y detiene los
+ *  cobros también para un acuerdo manual (LZ-08, actions/cambiar-plan.ts). */
 export function planChangePresentation(current: ReturnType<typeof planPresentation> | null | undefined, target: PlanCode, pricing: PlanPricing) {
+  const conservaAcuerdo = current?.manual && pricing.prices[target] !== 0;
   return planPresentation({
     plan: target, pricing,
-    billing: current?.manual ? { auto_price: false, monthly_fee: current.monthlyAmount, currency: current.currency } : null,
+    billing: conservaAcuerdo ? { auto_price: false, monthly_fee: current.monthlyAmount, currency: current.currency } : null,
   });
 }
 

@@ -108,10 +108,10 @@ export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno
             {sube ? 'Subir' : 'Cambiar'} a {PLANS[elegido].name} · {preview.monthlyLabel}
           </div>
           <p style={{ fontSize: 13, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-            {preview.manual
+            {pricing.prices[elegido] === 0
+              ? 'Es gratis: dejas de pagar mensualidad desde tu próximo corte. Tu carta y tu QR siguen funcionando; lo que ya debías sigue pendiente en esta pantalla.'
+              : preview.manual
               ? `El cambio del plan es inmediato. Se conserva tu mensualidad acordada (${preview.monthlyLabel}); la tarifa pública de ${preview.name} es ${preview.publicLabel}.`
-              : pricing.prices[elegido] === 0
-              ? 'Es gratis: dejas de pagar mensualidad desde tu próximo corte.'
               : enPrueba
                 ? `Sigues en tu prueba gratis. Al terminar, se cobra ${planPriceLabel(pricing, elegido)}.`
                 : `El cambio es inmediato. La mensualidad nueva se cobra desde tu próximo corte${proximoCorte ? ` (${proximoCorte})` : ''}.`}
