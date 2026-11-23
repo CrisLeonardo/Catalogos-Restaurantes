@@ -12,7 +12,11 @@
  *   · FCP  primer contenido pintado;
  *   · LCP  el elemento más grande pintado (lo que el comensal siente
  *          como «ya cargó»);
- *   · carta  cuando aparece el primer precio («Q…») en pantalla.
+ *   · carta  cuando aparece el primer precio («Q…») en pantalla;
+ *   · tocar  cuando React ya enganchó los botones (hidratación): antes de
+ *            eso la carta se ve, pero tocar «Agregar» no hace nada. Es lo
+ *            que más mueve el JavaScript que baja la página;
+ *   · JS     los KB de JavaScript transferidos.
  *
  * Uso (desde plataforma/):
  *   node scripts/medir-carta.mjs https://distleogin.com/m/rincon502
@@ -58,17 +62,27 @@ async function unIntento(browser) {
     await page.waitForFunction(() => /Q\s?\d/.test(document.body?.innerText ?? ''), null, { timeout: 30_000, polling: 50 });
     carta = Date.now() - t0;
   } catch { /* sin precios a la vista en 30 s: cuenta como fallo */ }
+  let tocar = null;
+  try {
+    // React deja `__reactProps$…` en cada nodo que ya hidrató.
+    await page.waitForFunction(
+      () => [...document.querySelectorAll('button')].some((b) => Object.keys(b).some((k) => k.startsWith('__reactProps$'))),
+      null, { timeout: 30_000, polling: 50 },
+    );
+    tocar = Date.now() - t0;
+  } catch { /* sin hidratar en 30 s */ }
   await page.waitForTimeout(1500); // deja asentar el LCP
   const m = await page.evaluate(() => ({
     fcp: performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? null,
     lcp: window.__lcp || null,
     transferKB: Math.round(performance.getEntriesByType('resource').reduce((s, r) => s + (r.transferSize || 0), 0) / 1024),
+    jsKB: Math.round(performance.getEntriesByType('resource').filter((r) => r.initiatorType === 'script' || /\.js(\?|$)/.test(r.name)).reduce((s, r) => s + (r.transferSize || 0), 0) / 1024),
     // Respuesta del servidor (incluye redirecciones previas) y el elemento del LCP.
     ttfb: Math.round(performance.getEntriesByType('navigation')[0]?.responseStart ?? 0),
     redirecciones: performance.getEntriesByType('navigation')[0]?.redirectCount ?? 0,
   }));
   await context.close();
-  return { status: resp?.status() ?? null, carta, ...m, fcp: m.fcp && Math.round(m.fcp), lcp: m.lcp && Math.round(m.lcp) };
+  return { status: resp?.status() ?? null, carta, tocar, ...m, fcp: m.fcp && Math.round(m.fcp), lcp: m.lcp && Math.round(m.lcp) };
 }
 
 const pct = (xs, p) => {
@@ -83,7 +97,7 @@ try {
   for (let i = 1; i <= intentos; i++) {
     const r = await unIntento(browser);
     resultados.push(r);
-    console.log(`#${i}  HTTP ${r.status}  TTFB ${r.ttfb} ms  carta ${r.carta ?? 'NO'} ms  FCP ${r.fcp} ms  LCP ${r.lcp} ms  ${r.transferKB} KB`);
+    console.log(`#${i}  HTTP ${r.status}  TTFB ${r.ttfb} ms  carta ${r.carta ?? 'NO'} ms  tocar ${r.tocar ?? 'NO'} ms  FCP ${r.fcp} ms  LCP ${r.lcp} ms  ${r.transferKB} KB (JS ${r.jsKB})`);
   }
 } finally {
   await browser.close();
@@ -97,6 +111,8 @@ const resumen = {
   dentro_del_presupuesto: `${dentro}/${intentos}`,
   cumple: dentro / intentos >= 0.9,
   carta_ms: { p50: pct(resultados.map((r) => r.carta), 50), p90: pct(resultados.map((r) => r.carta), 90) },
+  tocar_ms: { p50: pct(resultados.map((r) => r.tocar), 50), p90: pct(resultados.map((r) => r.tocar), 90) },
+  js_kb_p50: pct(resultados.map((r) => r.jsKB), 50),
   lcp_ms: { p50: pct(resultados.map((r) => r.lcp), 50), p90: pct(resultados.map((r) => r.lcp), 90) },
   fcp_ms: { p50: pct(resultados.map((r) => r.fcp), 50), p90: pct(resultados.map((r) => r.fcp), 90) },
   transferencia_kb_p50: pct(resultados.map((r) => r.transferKB), 50),
@@ -105,5 +121,6 @@ const resumen = {
 };
 console.log(`\nCarta visible ≤ ${PRESUPUESTO_MS} ms: ${resumen.dentro_del_presupuesto} → ${resumen.cumple ? 'CUMPLE' : 'NO CUMPLE'} (meta: 90 %)`);
 console.log(`carta p50 ${resumen.carta_ms.p50} ms · p90 ${resumen.carta_ms.p90} ms · LCP p50 ${resumen.lcp_ms.p50} ms · p90 ${resumen.lcp_ms.p90} ms`);
+console.log(`lista para tocar p50 ${resumen.tocar_ms.p50} ms · p90 ${resumen.tocar_ms.p90} ms · JS p50 ${resumen.js_kb_p50} KB`);
 if (salida) writeFileSync(salida, `${JSON.stringify(resumen, null, 2)}\n`);
 process.exitCode = resumen.cumple ? 0 : 1;
