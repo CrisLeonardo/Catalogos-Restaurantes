@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
-import { SiteHeader, SiteFooter, SectionHead } from '@/components/site-chrome';
+import { SiteHeader, SiteFooter, SectionHead, contactHref, CONTACT_VIA } from '@/components/site-chrome';
 import { DesktopPlatformNotice } from '@/components/desktop-platform-notice';
 import { LeoginMark } from '@/components/leogin-logo';
 import { LEOGIN_CORAL, LEOGIN_CREMA } from '@/lib/marca/trazos.mjs';
@@ -9,7 +9,7 @@ import { LEOGIN_CORAL, LEOGIN_CREMA } from '@/lib/marca/trazos.mjs';
 export const metadata: Metadata = {
   title: 'Leogin Desktop — la app de escritorio de tu restaurante',
   description:
-    'Descarga Leogin Desktop para Windows: tu panel como una app instalada, con impresión, modo cocina y respaldo sin internet. Inicia sesión con tu cuenta de Leogin y listo.',
+    'Leogin Desktop para Windows: tu panel como una app instalada, con modo cocina, impresión de comandas en Premium y respaldo local con una PC principal configurada.',
   robots: { index: true, follow: true },
 };
 
@@ -33,8 +33,8 @@ const BENEFITS = [
   },
   {
     icon: 'plug',
-    title: 'Sigue funcionando sin internet',
-    desc: 'Si la nube se corta, tu restaurante sigue tomando pedidos e imprimiendo con el respaldo local, sin que tu equipo lo note.',
+    title: 'Respaldo cuando se corta internet',
+    desc: 'Con una PC principal configurada en el local, si la nube se corta puedes seguir tomando pedidos con el respaldo local. Al volver la conexión, se sincroniza.',
   },
   {
     icon: 'upload',
@@ -44,21 +44,21 @@ const BENEFITS = [
   {
     icon: 'print',
     title: 'Imprime sin complicaciones',
-    desc: 'Conecta la impresora del local en un clic desde adentro de la app, sin descargar nada aparte ni copiar tokens.',
+    desc: 'En Premium, conecta la impresora del local desde adentro de la app, sin descargar nada aparte ni copiar tokens. Necesita una impresora compatible.',
   },
 ];
 
 const STEPS = [
   { n: '01', title: 'Descarga e instala', body: 'Un solo .exe, sin permisos de administrador. Doble clic y en unos segundos está lista.' },
   { n: '02', title: 'Inicia sesión con tu cuenta', body: 'El mismo correo y contraseña de siempre. La app reconoce sola a qué restaurante perteneces.' },
-  { n: '03', title: 'Ya estás en tu panel', body: 'Tu panel de siempre, ahora como una app instalada: bandeja, atajos e impresión listos desde adentro.' },
+  { n: '03', title: 'Ya estás en tu panel', body: 'Tu panel de siempre, ahora como una app instalada, con bandeja y atajos. En Premium, también la impresión.' },
 ];
 
 const FAQS = [
   { q: '¿Tiene un costo aparte?', a: 'No. Leogin Desktop está incluido en tu cuenta de Leogin — no es un producto ni un cargo separado.' },
   { q: '¿Necesito crear otra cuenta para usarla?', a: 'No. Es la misma cuenta con la que ya entras a tu panel desde el navegador.' },
-  { q: '¿Funciona si se corta el internet?', a: 'Sí. Si la nube no responde, el respaldo local de tu restaurante sigue tomando pedidos e imprimiendo, y todo se sincroniza solo al volver la conexión.' },
-  { q: '¿Windows me va a mostrar una advertencia al instalar?', a: 'La primera vez, sí — Windows marca como «Editor no reconocido» cualquier programa nuevo que todavía no tiene firma digital (la nuestra está en camino). Haz clic en «Más información → Ejecutar de todos modos». Es una advertencia por ser nuevo, no una señal de que algo esté mal.' },
+  { q: '¿Funciona si se corta el internet?', a: 'Sí, si tu local tiene una PC principal configurada con el respaldo local: esa PC sigue recibiendo pedidos (y, en Premium, imprimiéndolos) mientras la nube no responde, y todo se sincroniza al volver la conexión. Esa PC y la red del local tienen que seguir encendidas. La configuramos contigo.' },
+  { q: '¿Windows me va a mostrar una advertencia al instalar?', a: 'Por ahora puede mostrarla: Windows marca como «Editor no reconocido» los programas que aún no tienen firma digital, y la nuestra está en trámite. Mientras tanto instalamos Leogin Escritorio contigo, para que no tengas que decidir solo frente a esa pantalla. Tu panel funciona completo desde el navegador sin instalar nada.' },
   { q: '¿Hay versión para Mac?', a: 'Todavía no — por ahora Leogin Desktop es solo para Windows. En Mac puedes seguir usando tu panel normalmente desde el navegador, sin perder ninguna función.' },
   { q: '¿Cómo la desinstalo?', a: 'Como cualquier programa de Windows: Configuración → Aplicaciones → Leogin → Desinstalar. Se quita por completo, sin dejar residuos.' },
 ];
@@ -77,7 +77,7 @@ export default function DescargasPage() {
           </h1>
           <p className="lp-lead" style={{ margin: '18px auto 0', maxWidth: 560 }}>
             El mismo panel que ya conoces, pero como una app de verdad: ícono propio, siempre a la mano
-            en la bandeja del sistema, con impresión y modo sin internet listos desde adentro.
+            en la bandeja del sistema y con modo cocina a pantalla completa.
           </p>
 
           <div style={{ marginTop: 30 }}>
@@ -86,8 +86,15 @@ export default function DescargasPage() {
             </a>
             <div>
               <span className="lp-body" style={{ fontSize: 13, marginTop: 14, display: 'inline-block', color: 'var(--u-text-4)' }}>
-                Windows 10/11 (64 bits) · gratis · sin tarjeta · sin conocimientos técnicos
+                Windows 10/11 (64 bits) · incluido en tu cuenta
               </span>
+              {/* Auditoría de lanzamiento 2026-11-23 (WEB-08, LZ-06/07): mientras
+                  el instalador no tenga firma y el respaldo local no esté
+                  ensayado con equipo, Escritorio se ofrece con acompañamiento. */}
+              <p className="lp-body" style={{ fontSize: 13, margin: '8px auto 0', maxWidth: 520, color: 'var(--u-text-3)' }}>
+                Por ahora lo instalamos contigo. La impresión y el trabajo en red local requieren una
+                PC principal configurada y equipo compatible.
+              </p>
             </div>
             <DesktopPlatformNotice />
           </div>
@@ -96,9 +103,9 @@ export default function DescargasPage() {
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 28 }}>
             {[
               { icon: 'key', label: 'Reconoce tu restaurante solo' },
-              { icon: 'plug', label: 'Funciona sin internet' },
+              { icon: 'plug', label: 'Respaldo local' },
               { icon: 'upload', label: 'Se actualiza sola' },
-              { icon: 'print', label: 'Impresión en un clic' },
+              { icon: 'print', label: 'Impresión en Premium' },
             ].map((c) => (
               <span key={c.label} className="lp-chip">
                 <Icon name={c.icon} size={14} style={{ color: 'var(--brand-accent-ink)' }} /> {c.label}
@@ -161,10 +168,12 @@ export default function DescargasPage() {
               borderRadius: 14, padding: '14px 18px',
             }}
           >
-            <strong style={{ color: 'var(--c-warn)' }}>Si Windows muestra una pantalla azul</strong> («Windows
-            protegió tu PC») al abrir el instalador, haz clic en <strong style={{ color: 'var(--c-warn)' }}>Más
-            información → Ejecutar de todos modos</strong>. Es normal en programas nuevos que todavía no
-            tienen firma digital — no afecta lo que hace la app.
+            <strong style={{ color: 'var(--c-warn)' }}>Mientras terminamos la firma digital</strong>, Windows
+            puede mostrar «Windows protegió tu PC» al abrir el instalador. Por eso lo instalamos contigo:{' '}
+            <a href={contactHref('Hola, quiero instalar Leogin Escritorio en mi restaurante')} style={{ color: 'var(--brand-accent-ink)', fontWeight: 600 }}>
+              escríbenos {CONTACT_VIA}
+            </a>{' '}
+            y lo dejamos listo juntos.
           </div>
         </section>
 
