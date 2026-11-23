@@ -33,8 +33,13 @@ export interface BillingConfig {
   active: boolean;
   started_at: string | null;
   notes: string | null;
-  /** true = la mensualidad se calcula del plan; false = monto manual (override). */
+  /** true = la mensualidad es el precio del plan al contratarlo; false = monto manual (override). */
   auto_price: boolean;
+  /** Plan con el que se fijó `monthly_fee` (mig. 191). Si no coincide con el
+   *  plan actual, el próximo corte vuelve a fijar el precio. */
+  plan_del_precio: string | null;
+  /** Cuándo se acordó `monthly_fee` por última vez (mig. 191). */
+  precio_fijado_en: string | null;
   /** Override de días de gracia; null = usa el global. */
   grace_days: number | null;
   /** El sistema lo suspendió por impago (no una suspensión manual). */
@@ -162,6 +167,8 @@ function normConfig(data: Record<string, unknown>): BillingConfig {
     started_at: (data.started_at as string | null) ?? null,
     notes: (data.notes as string | null) ?? null,
     auto_price: data.auto_price !== false,
+    plan_del_precio: (data.plan_del_precio as string | null) ?? null,
+    precio_fijado_en: (data.precio_fijado_en as string | null) ?? null,
     grace_days: data.grace_days != null ? Number(data.grace_days) : null,
     suspended_for_nonpayment: data.suspended_for_nonpayment === true,
     admin_override_suspend: data.admin_override_suspend === true,

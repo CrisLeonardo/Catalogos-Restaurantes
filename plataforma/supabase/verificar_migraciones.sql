@@ -318,7 +318,11 @@ huellas(n, que, ok, cuando) as (values
      'antes o después de desplegar; independiente de la 184 y la 185'),
   ('187', 'superadmin: cola de trabajo con asuntos pospuestos o resueltos y notas de soporte',
      to_regclass('public.super_asuntos') is not null and to_regclass('public.super_eventos') is not null,
-     'ANTES de desplegar; independiente de la 184–186')
+     'ANTES de desplegar; independiente de la 184–186'),
+  ('191', 'precio acordado: cambiar precios globales no mueve la mensualidad de quien ya paga',
+     exists (select 1 from information_schema.columns where table_schema='public' and table_name='restaurant_billing' and column_name='plan_del_precio')
+     and to_regprocedure('public.leogin_fijar_precio_vigente(uuid)') is not null,
+     'ANTES de desplegar; independiente')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

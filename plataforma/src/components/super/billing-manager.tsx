@@ -13,6 +13,7 @@ import { fmtMoney } from '@/lib/money';
 import { downloadReceipt } from '@/lib/receipt';
 import {
   saveBillingConfig,
+  fijarPrecioVigente,
   liftSuspension,
   generateMonthlyForRestaurant,
   generateProrate,
@@ -24,6 +25,7 @@ import {
   type BillingState,
 } from '@/lib/actions/billing';
 import type { BillingConfig, Invoice } from '@/lib/db/billing';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { fechaCorta } from '@/lib/dates';
 import { FIELD_LABEL } from '@/components/admin/field-label';
 
@@ -46,7 +48,7 @@ function isOverdue(inv: Invoice) {
 }
 
 export default function BillingManager({
-  restaurantId, restaurantName = 'Restaurante', config, invoices, suggestedFee, planName, globalGraceDays,
+  restaurantId, restaurantName = 'Restaurante', config, invoices, suggestedFee, planCode, planName, globalGraceDays,
 }: {
   restaurantId: string;
   /** Nombre del restaurante (para el recibo PDF). */
@@ -55,6 +57,8 @@ export default function BillingManager({
   invoices: Invoice[];
   /** Precio mensual sugerido por el plan + sucursales (RPC org-aware). */
   suggestedFee: number;
+  /** Código del plan actual: el precio acordado vale si se fijó con este plan. */
+  planCode: string | null;
   /** Nombre legible del plan (Básico / Popular / Premium). */
   planName: string;
   /** Días de gracia globales por defecto (placeholder del campo). */
@@ -88,6 +92,7 @@ export default function BillingManager({
         restaurantId={restaurantId}
         config={config}
         suggestedFee={suggestedFee}
+        planCode={planCode}
         planName={planName}
         globalGraceDays={globalGraceDays}
         onResult={setToast}
@@ -134,11 +139,12 @@ export default function BillingManager({
 
 /* ── Card de configuración ──────────────────────────────────── */
 function ConfigCard({
-  restaurantId, config, suggestedFee, planName, globalGraceDays, onResult,
+  restaurantId, config, suggestedFee, planCode, planName, globalGraceDays, onResult,
 }: {
   restaurantId: string;
   config: BillingConfig | null;
   suggestedFee: number;
+  planCode: string | null;
   planName: string;
   globalGraceDays: number;
   onResult: (t: { ok: boolean; msg: string }) => void;
@@ -147,6 +153,18 @@ function ConfigCard({
   // Modo de precio: automático (del plan) vs manual (override). Default automático.
   const [auto, setAuto] = useState(config?.auto_price ?? true);
   const currency = config?.currency ?? 'GTQ';
+  /* Precio acordado (mig. 191): en automático se cobra el precio del plan al
+     contratarlo. Solo si el plan cambió y aún no se fijó vale la referencia. */
+  const acordado = !!config && config.auto_price && !!planCode && config.plan_del_precio === planCode;
+  const mensualidad = acordado ? config!.monthly_fee : suggestedFee;
+  const difiereDelVigente = acordado && Math.abs(config!.monthly_fee - suggestedFee) >= 1;
+  // Vive aquí y no en la franja: la franja desaparece en cuanto el precio
+  // coincide con el vigente y se llevaba consigo el aviso de éxito.
+  const [vigenteState, vigenteAction, vigentePending] = useActionState<BillingState, FormData>(fijarPrecioVigente, null);
+  useEffect(() => {
+    if (vigenteState && 'ok' in vigenteState) onResult({ ok: true, msg: vigenteState.msg ?? 'Precio actualizado.' });
+    else if (vigenteState && 'error' in vigenteState) onResult({ ok: false, msg: vigenteState.error });
+  }, [vigenteState, onResult]);
 
   useEffect(() => {
     if (state && 'ok' in state) onResult({ ok: true, msg: state.msg ?? 'Guardado.' });
@@ -154,10 +172,24 @@ function ConfigCard({
   }, [state, onResult]);
 
   return (
-    <Glass variant="quiet" style={{ padding: 18 }}>
+    <Glass variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="adm-label">Configuración del cobro</div>
+
+      {/* Fuera del formulario de la ficha: un form no puede ir dentro de otro. */}
+      {difiereDelVigente && (
+        <PrecioVigenteBanner
+          restaurantId={restaurantId}
+          acordado={config!.monthly_fee}
+          vigente={suggestedFee}
+          currency={currency}
+          planName={planName}
+          action={vigenteAction}
+          pending={vigentePending}
+        />
+      )}
+
       <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <input type="hidden" name="restaurantId" value={restaurantId} />
-        <div className="adm-label">Configuración del cobro</div>
 
         {config?.suspended_for_nonpayment && (
           <SuspensionBanner restaurantId={restaurantId} onResult={onResult} />
@@ -199,9 +231,11 @@ function ConfigCard({
               Precio automático según el plan
             </span>
             <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
-              {auto
-                ? `Plan ${planName}: ${fmtMoney(suggestedFee, currency)}/mes (incluye sucursales extra). Se actualiza solo al cambiar de plan.`
-                : 'Precio manual: escribe el monto que quieras (descuento, trato especial).'}
+              {!auto
+                ? 'Precio manual: escribe el monto que quieras (descuento, trato especial).'
+                : acordado
+                  ? `Plan ${planName}: ${fmtMoney(mensualidad, currency)}/mes${config!.precio_fijado_en ? `, acordado el ${fechaCorta(config!.precio_fijado_en)}` : ''}. Cambiar la tarifa del plan no lo mueve; cambiar de plan sí.`
+                  : `Plan ${planName}: ${fmtMoney(suggestedFee, currency)}/mes. Queda acordado al guardar y se mantiene aunque cambie la tarifa del plan.`}
             </span>
           </span>
         </label>
@@ -215,7 +249,7 @@ function ConfigCard({
             <label style={labelStyle}>Mensualidad {auto && <span style={{ color: 'var(--c-ok)' }}>· auto</span>}</label>
             {auto ? (
               <div className="adm-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--u-text)', opacity: 0.85 }}>
-                <span style={{ fontWeight: 700, fontFamily: 'var(--ui-font-mono)' }}>{fmtMoney(suggestedFee, currency)}</span>
+                <span style={{ fontWeight: 700, fontFamily: 'var(--ui-font-mono)' }}>{fmtMoney(mensualidad, currency)}</span>
                 <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{planName}</span>
               </div>
             ) : (
@@ -456,6 +490,55 @@ function PayForm({
 }
 
 /* ── Banner de suspensión por impago con botón de habilitación manual ── */
+/** El restaurante conserva un precio acordado distinto de la tarifa vigente
+ *  de su plan. Pasarlo a la vigente es explícito y con confirmación. */
+function PrecioVigenteBanner({
+  restaurantId, acordado, vigente, currency, planName, action, pending,
+}: {
+  restaurantId: string;
+  acordado: number;
+  vigente: number;
+  currency: string;
+  planName: string;
+  action: (formData: FormData) => void;
+  pending: boolean;
+}) {
+  const { confirmSubmit, dialog } = useConfirm();
+  const nuevo = fmtMoney(vigente, currency);
+  const anterior = fmtMoney(acordado, currency);
+
+  return (
+    <div style={{
+      padding: '12px 14px', borderRadius: 'var(--radius-md)', fontSize: 12,
+      background: 'var(--c-info-bg)', border: '1px solid var(--c-info-line)',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+    }}>
+      <div style={{ color: 'var(--u-text-2)', lineHeight: 1.5 }}>
+        <span style={{ fontWeight: 600, color: 'var(--c-info)' }}>Conserva {anterior}/mes acordado.</span>{' '}
+        La tarifa vigente de {planName} es {nuevo}/mes.
+      </div>
+      <form
+        action={action}
+        onSubmit={confirmSubmit({
+          title: `¿Pasar este restaurante a ${nuevo}/mes?`,
+          description: `Desde el próximo cobro pagará ${nuevo} en vez de ${anterior}. Los cobros ya generados no cambian. Para volver a ${anterior}, usa precio manual.`,
+          confirmLabel: `Pasar a ${nuevo}/mes`,
+          destructive: false,
+        })}
+        style={{ flexShrink: 0 }}
+      >
+        <input type="hidden" name="restaurantId" value={restaurantId} />
+        <button type="submit" disabled={pending} className="press" style={{
+          ...miniBtn('var(--u-text)'), opacity: pending ? 0.6 : 1, cursor: pending ? 'not-allowed' : 'pointer',
+        }}>
+          {pending ? 'Actualizando…' : `Pasar a ${nuevo}/mes`}
+        </button>
+      </form>
+      {dialog}
+    </div>
+  );
+}
+
 function SuspensionBanner({
   restaurantId, onResult,
 }: { restaurantId: string; onResult: (t: { ok: boolean; msg: string }) => void }) {

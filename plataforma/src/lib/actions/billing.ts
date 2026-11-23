@@ -74,19 +74,29 @@ export async function saveBillingConfig(
   const graceRaw = String(formData.get('grace_days') ?? '').trim();
   const graceDays = graceRaw === '' ? null : Math.min(90, Math.max(0, Math.round(parseFloat(graceRaw) || 0)));
 
-  // En modo automático la mensualidad la calcula el plan (RPC org-aware); en
-  // modo manual respeta el monto tecleado (override).
-  let monthlyFee = Math.max(0, num(formData, 'monthly_fee'));
-  if (autoPrice) {
-    const { data } = await db.rpc('leogin_compute_monthly_fee', { p_restaurant_id: restaurantId });
-    if (data != null) monthlyFee = Number(data);
+  /* Precio acordado (mig. 191). En automático la mensualidad es el precio
+     del plan AL CONTRATARLO: guardar esta ficha para cambiar el día de cobro
+     o una nota ya no la reescribe con el precio vigente. Pasar de manual a
+     automático sí es aceptar el precio vigente. En manual manda el monto
+     tecleado y se anota cuándo se acordó. */
+  const previo = await getBillingConfig(restaurantId);
+  const ahora = new Date().toISOString();
+  const precioManual: Record<string, unknown> = {};
+  if (!autoPrice) {
+    const monto = Math.max(0, num(formData, 'monthly_fee'));
+    precioManual.monthly_fee = monto;
+    if (!previo || previo.auto_price || previo.monthly_fee !== monto) {
+      const { data: r } = await db.from('restaurants').select('plan_actual').eq('id', restaurantId).maybeSingle();
+      precioManual.plan_del_precio = (r?.plan_actual as string | null) ?? null;
+      precioManual.precio_fijado_en = ahora;
+    }
   }
 
   const { error } = await db.from('restaurant_billing').upsert({
     restaurant_id: restaurantId,
     currency,
     setup_fee: Math.max(0, num(formData, 'setup_fee')),
-    monthly_fee: monthlyFee,
+    ...precioManual,
     billing_day: billingDay,
     auto_price: autoPrice,
     grace_days: graceDays,
@@ -94,12 +104,35 @@ export async function saveBillingConfig(
     admin_override_suspend: formData.get('admin_override_suspend') === 'on' || formData.get('admin_override_suspend') === 'true',
     started_at: startedAt,
     notes: String(formData.get('notes') ?? '').trim() || null,
-    updated_at: new Date().toISOString(),
+    updated_at: ahora,
   });
-
   if (error) return { error: error.message };
+
+  if (autoPrice) {
+    const rpc = !previo || !previo.auto_price ? 'leogin_fijar_precio_vigente' : 'leogin_apply_auto_price';
+    const { error: precioErr } = await db.rpc(rpc, { p_restaurant_id: restaurantId });
+    if (precioErr) return { error: precioErr.message };
+  }
+
   revalidateBilling(restaurantId);
   return { ok: true, msg: 'Configuración de cobro guardada.' };
+}
+
+/** Pasa a un restaurante en automático al precio VIGENTE de su plan. Es la
+ *  única forma de mover un precio ya acordado (mig. 191): cambiar los
+ *  precios globales solo afecta a altas y cambios de plan. */
+export async function fijarPrecioVigente(
+  prevState: BillingState,
+  formData: FormData,
+): Promise<BillingState> {
+  const db = await verifySuperAdmin();
+  if (!db) return { error: 'No autorizado.' };
+  const restaurantId = String(formData.get('restaurantId') ?? '').trim();
+  if (!UUID_RE.test(restaurantId)) return { error: 'Restaurante inválido.' };
+  const { data, error } = await db.rpc('leogin_fijar_precio_vigente', { p_restaurant_id: restaurantId });
+  if (error) return { error: error.message };
+  revalidateBilling(restaurantId);
+  return { ok: true, msg: `Mensualidad actualizada al precio vigente: ${fmtMoney(Number(data ?? 0), 'GTQ')}/mes.` };
 }
 
 /* ── Generar la mensualidad de un restaurante ───────────────── */
@@ -162,17 +195,6 @@ export async function generateMonthlyInvoices(): Promise<BillingState> {
   return { ok: true, msg: parts.join('. ') + '.' };
 }
 
-/** Recalcula la mensualidad de todos los restaurantes en modo automático
- *  (útil tras cambiar los precios globales o reasignar sucursales). */
-export async function recomputeAutoPrices(): Promise<BillingState> {
-  const db = await verifySuperAdmin();
-  if (!db) return { error: 'No autorizado.' };
-  const { data, error } = await db.rpc('leogin_apply_auto_price_all');
-  if (error) return { error: error.message };
-  revalidateBilling();
-  return { ok: true, msg: `Precios recalculados en ${Number(data ?? 0)} restaurante(s).` };
-}
-
 /** Genera la mensualidad SOLO de un restaurante (desde su ficha). */
 export async function generateMonthlyForRestaurant(
   prevState: BillingState,
@@ -228,8 +250,10 @@ export async function savePricingSettings(
   const { error } = await db.from('platform_settings').upsert(rows, { onConflict: 'key' });
   if (error) return { error: error.message };
 
-  // Aplica los precios nuevos a quienes estén en modo automático.
-  const { data: count } = await db.rpc('leogin_apply_auto_price_all');
+  // Los precios nuevos aplican a altas y cambios de plan; quien ya paga
+  // conserva su precio acordado (mig. 191). Esto solo pone al día a los
+  // automáticos que cambiaron de plan sin volver a fijar su precio.
+  await db.rpc('leogin_apply_auto_price_all');
   // getPricingSettings() cachea esta fila entre peticiones (es config de
   // plataforma, la leen la landing y media app): sin esto, el precio nuevo
   // tardaría hasta 5 minutos en salir en la web.
@@ -241,7 +265,7 @@ export async function savePricingSettings(
   revalidatePath('/planes');
   revalidatePath('/registro');
   revalidatePath('/admin/modulos');
-  return { ok: true, msg: `Precios guardados y publicados en la web. ${Number(count ?? 0)} restaurante(s) recalculado(s).` };
+  return { ok: true, msg: 'Precios guardados y publicados en la web. Aplican a altas y cambios de plan; los restaurantes que ya pagan conservan su precio acordado.' };
 }
 
 /* ── Cobro prorrateado por lo que resta del mes ─────────────── */

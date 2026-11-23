@@ -780,8 +780,9 @@ export async function updateOwnOrderTypes(
   // no esta llamada (ver channel-history.ts).
   await logChannelChanges(restaurantId, previousOrderTypes, orderTypes, user.id);
 
-  // "Plan a tu medida": al cambiar canales, recalcula la mensualidad de los
-  // restaurantes en modo automático (la función solo toca filas auto_price=true).
+  // Desde la mig. 120 los canales no cambian el precio, y desde la 191 esto
+  // solo vuelve a fijar la mensualidad si el plan cambió: apagar o encender
+  // un canal nunca mueve el precio acordado.
   await db.rpc('leogin_apply_auto_price', { p_restaurant_id: restaurantId });
 
   revalidatePath('/admin/modulos');

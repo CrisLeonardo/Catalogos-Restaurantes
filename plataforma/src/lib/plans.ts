@@ -497,6 +497,8 @@ export function formatPlanAmount(amount: number, currency = 'GTQ'): string {
 export type PlanBillingSnapshot = {
   monthly_fee: number;
   auto_price: boolean;
+  /** Plan con el que se acordó `monthly_fee` (mig. 191). */
+  plan_del_precio?: string | null;
   currency?: string;
   started_at?: string | null;
 };
@@ -532,7 +534,11 @@ export function planPresentation(input: PlanPresentationInput) {
   const publicAmount = input.pricing.prices[code];
   const billing = input.billing;
   const manual = billing?.auto_price === false;
-  const monthlyAmount = manual ? billing.monthly_fee
+  /* Precio acordado (mig. 191): en automático se cobra el precio del plan
+     al contratarlo, aunque la tarifa pública cambie después. Solo si el plan
+     cambió y aún no se volvió a fijar, vale el cálculo del motor. */
+  const agreed = !manual && !!billing && billing.plan_del_precio === code;
+  const monthlyAmount = manual || agreed ? billing!.monthly_fee
     : billing ? input.computedFee ?? billing.monthly_fee : publicAmount;
   const currency = billing?.currency ?? 'GTQ';
   const monthlyLabel = monthlyAmount === 0 ? 'Gratis' : `${formatPlanAmount(monthlyAmount, currency)}${currency === 'GTQ' ? '' : ` ${currency}`} / mes`;
@@ -560,9 +566,10 @@ export function planPresentation(input: PlanPresentationInput) {
     availableOrderTypes, selectedOrderTypes, maxOrderTypes, orderScope, selectedScope, policy,
     publicAmount, publicLabel: planPriceLabel(input.pricing, code),
     setupAmount: input.pricing.setupFees?.[code] ?? plan.setupFee,
-    monthlyAmount, monthlyLabel, currency, manual,
+    monthlyAmount, monthlyLabel, currency, manual, agreed,
     billingConfigured: !!billing,
     priceExplanation: manual ? 'Precio acordado para este restaurante. La tarifa pública es una referencia.'
+      : agreed ? 'Precio del plan al contratarlo. Si la tarifa pública cambia, el tuyo se mantiene mientras sigas en este plan.'
       : billing && input.computedFee == null ? 'Mensualidad guardada; no se pudo comprobar el cálculo actual.'
       : billing ? 'Mensualidad automática del plan; encender o apagar funciones no cambia la tarifa.'
         : 'Tarifa pública de referencia; el cobro de este restaurante aún no está configurado.',
