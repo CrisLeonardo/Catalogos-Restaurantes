@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import type React from 'react';
 
 /* ============================================================
@@ -21,14 +22,29 @@ import type React from 'react';
    registro tenía campos blancos con borde y el login grises rellenos — dos
    estilos de campo en el mismo flujo (auditoría 2026-10-02, WEB-06). */
 
-export function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+/** Lo que `Field` le pasa a su control para que el lector de pantalla lo
+ *  anuncie con su etiqueta y su ayuda. Antes la etiqueta solo se dibujaba:
+ *  el lector leía el placeholder como nombre y la contraseña quedaba sin
+ *  nombre (auditoría de lanzamiento 2026-11-23, WEB-04 / LZ-04). */
+export type FieldIds = { id: string; 'aria-describedby'?: string };
+
+export function Field({ label, hint, children }: {
+  label: string;
+  hint?: string;
+  /** Con una función, el campo recibe `id` y `aria-describedby` y la
+   *  etiqueta queda asociada; con un nodo suelto solo se dibuja. */
+  children: React.ReactNode | ((ids: FieldIds) => React.ReactNode);
+}) {
+  const id = useId();
+  const hintId = hint ? `${id}-ayuda` : undefined;
+  const asociado = typeof children === 'function';
   return (
     <div>
-      <label style={{ fontSize: 12, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.03em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+      <label htmlFor={asociado ? id : undefined} style={{ fontSize: 12, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.03em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
         {label}
       </label>
-      {children}
-      {hint && <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '6px 0 0' }}>{hint}</p>}
+      {asociado ? children({ id, 'aria-describedby': hintId }) : children}
+      {hint && <p id={hintId} style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '6px 0 0' }}>{hint}</p>}
     </div>
   );
 }
@@ -94,6 +110,10 @@ export function WizardNav({
   const blocked = isPending || !canSubmit;
   return (
     <div
+      /* Con `data-wizard-nav`, globals.css reserva su alto al llevar el foco
+         a un campo: con Tab el campo de contraseña quedaba debajo de este
+         pie (WCAG 2.4.11, auditoría 2026-11-23 WEB-04). */
+      data-wizard-nav=""
       style={{
         position: 'sticky', bottom: 0, zIndex: 5,
         display: 'flex', gap: 10,

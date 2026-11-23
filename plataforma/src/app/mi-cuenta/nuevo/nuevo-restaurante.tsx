@@ -207,28 +207,33 @@ export default function NuevoRestaurante({
       {/* ── 1 · Tu negocio ── */}
       <div style={{ display: step === 0 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
         <Field label="¿Cómo se llama tu negocio?">
+          {(ids) => (
           <input
+            {...ids}
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ej. Café Ana"
             autoComplete="organization"
             className="adm-field adm-field-lg"
           />
+          )}
         </Field>
         {editandoSlug ? (
           <Field label="Dirección de tu carta" hint="Así llegarán tus clientes.">
+            {(ids) => (
             <div className="adm-field adm-field-lg" style={{ display: 'flex', alignItems: 'center', padding: 0, overflow: 'hidden' }}>
               <input
+                {...ids}
                 value={effectiveSlug}
                 onChange={(e) => { setSlugEdited(true); setSlug(localSlugify(e.target.value)); }}
                 placeholder="turestaurante"
-                aria-label="Dirección de tu carta"
                 style={{ flex: 1, minWidth: 0, padding: '12px 14px', border: 'none', background: 'transparent', color: 'inherit', font: 'inherit', outline: 'none' }}
               />
               <span style={{ fontSize: 13, color: 'var(--u-text-4)', padding: '0 12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                 .{rootDomain.replace(/:\d+$/, '')}
               </span>
             </div>
+            )}
           </Field>
         ) : (
           <p style={{ margin: '-8px 0 0', fontSize: 13, color: 'var(--u-text-3)', overflowWrap: 'anywhere' }}>

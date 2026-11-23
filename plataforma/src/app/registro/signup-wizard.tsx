@@ -202,18 +202,24 @@ export default function SignupWizard({
         ) : null}
 
         <Field label="Tu nombre">
-          <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre y apellido" className="adm-field adm-field-lg" />
+          {(ids) => (
+            <input {...ids} value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre y apellido" autoComplete="name" className="adm-field adm-field-lg" />
+          )}
         </Field>
         {!withGoogle && (
         <Field label="Correo" hint="Con este correo entrarás a tu panel y recuperarás tu contraseña si se te olvida. Revísalo bien.">
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" autoComplete="email" className="adm-field adm-field-lg" />
+          {(ids) => (
+            <input {...ids} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" autoComplete="email" className="adm-field adm-field-lg" />
+          )}
         </Field>
         )}
         {!withGoogle && (
         <>
         <Field label="Contraseña" hint="Mínimo 8 caracteres.">
+          {(ids) => (
           <div style={{ display: 'flex', gap: 8 }}>
             <input
+              {...ids}
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -234,6 +240,7 @@ export default function SignupWizard({
               <Icon name="eye" size={17} />
             </button>
           </div>
+          )}
         </Field>
         </>
         )}
