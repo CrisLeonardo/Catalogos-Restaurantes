@@ -10,6 +10,10 @@ interface DeleteButtonProps {
   confirm?: string;
   /** Una línea debajo con la consecuencia. */
   description?: string;
+  /** Advertencia en rojo dentro de la confirmación. */
+  warning?: string;
+  /** Texto del botón que confirma (por defecto, el mismo `label`). */
+  confirmLabel?: string;
 }
 
 export default function DeleteButton({
@@ -18,6 +22,8 @@ export default function DeleteButton({
   label = 'Eliminar',
   confirm: confirmMsg = '¿Eliminar?',
   description = 'No se puede deshacer.',
+  warning,
+  confirmLabel,
 }: DeleteButtonProps) {
   const { confirmSubmit, dialog } = useConfirm();
   return (
@@ -25,7 +31,7 @@ export default function DeleteButton({
     {dialog}
     <form
       action={action}
-      onSubmit={confirmSubmit({ title: confirmMsg, description, confirmLabel: label })}
+      onSubmit={confirmSubmit({ title: confirmMsg, description, warning, confirmLabel: confirmLabel ?? label })}
     >
       {Object.entries(hiddenFields).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
