@@ -8,6 +8,7 @@ import { Field, PrimaryButton } from '@/components/menu/ui';
 import { useCart } from '@/lib/cart-context';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { formatPrice, shadowCss, tipAppliesToType } from '@/lib/theme/resolve';
+import { avisoDePrecios } from '@/lib/precios-carrito';
 import { createOrder, type CreateOrderResult } from '@/lib/actions/orders';
 import { getMyCheckoutProfile } from '@/lib/actions/loyalty';
 import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer-local';
@@ -88,7 +89,17 @@ export default function CheckoutForm({
   const config  = useThemeConfig();
   const content = useThemeContent();
   const checkoutTitleT = useText('heading', 'checkoutTitle');
-  const { items, total, clearCart, pointsToRedeem } = useCart();
+  const { items, total, clearCart, pointsToRedeem, actualizarPrecios } = useCart();
+  /* Si el servidor dice que cambió un precio (OP-02): el carrito toma los
+     vigentes y el aviso nombra qué cambió, en la moneda de la carta. Las
+     líneas de `items` del pedido son las del carrito sin recompensas, en el
+     mismo orden. */
+  function aplicarPreciosNuevos(result: CreateOrderResult): string | null {
+    if (!result.preciosActualizados || !result.preciosCambiados) return null;
+    const lineas = items.filter((i) => !i.rewardId);
+    actualizarPrecios(lineas.map((l, i) => ({ lineId: l.lineId, price: result.preciosActualizados![i] ?? l.price })));
+    return avisoDePrecios(result.preciosCambiados, (n) => formatPrice(n, config));
+  }
   // Prefijo del link estable de mesa (null hasta montar — ver useStableLinkPrefix).
   const stablePrefix = useStableLinkPrefix();
   const tp = (path: string) => (stablePrefix ? `${stablePrefix}${path}` : path);
@@ -481,7 +492,7 @@ export default function CheckoutForm({
           pendingPayloadRef.current = null;
           pendingSnapshotRef.current = null;
           setStep('form');
-          setError(result.error);
+          setError(aplicarPreciosNuevos(result) ?? result.error);
           return;
         }
         finishSuccess(result);
@@ -637,7 +648,7 @@ export default function CheckoutForm({
         // el reintento de la próxima visita reenviaría un pedido ya
         // rechazado).
         if (clientIdRef.current) removeQueuedOrder(restaurantId, clientIdRef.current);
-        setError(result.error);
+        setError(aplicarPreciosNuevos(result) ?? result.error);
         return;
       }
       finishSuccess(result);

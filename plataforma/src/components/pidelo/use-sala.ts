@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { createDinerClient } from '@/lib/supabase/client';
 import { EVENTO_PEDIDO, canalDeSala, limpiarPedido, type PedidoDemo } from '@/lib/pidelo';
 
 /* La sala de «Pídelo tú mismo» por Supabase Realtime (ver lib/pidelo.ts).
@@ -22,21 +21,31 @@ export function useSala(sala: string | null, alRecibir?: (p: PedidoDemo) => void
 
   useEffect(() => {
     if (!sala) return;
-    const supabase = createDinerClient();
-    const ch = supabase.channel(canalDeSala(sala), { config: { broadcast: { self: false, ack: true } } });
-    ch.on('broadcast', { event: EVENTO_PEDIDO }, ({ payload }) => {
-      const pedido = limpiarPedido(payload);
-      if (pedido) recibir.current?.(pedido);
-    });
-    ch.subscribe((estado) => {
-      if (estado === 'SUBSCRIBED') { setListo(true); setFallo(false); }
-      if (estado === 'CHANNEL_ERROR' || estado === 'TIMED_OUT') setFallo(true);
-    });
-    canal.current = ch;
+    // El cliente de Supabase (~75 KB comprimidos) se pide al conectar la
+    // sala, no con la página: así no retrasa que la portada responda al
+    // tacto (auditoría LZ-12). `listo` ya cubre la espera.
+    let vigente = true;
+    let quitar: (() => void) | null = null;
+    import('@/lib/supabase/client').then(({ createDinerClient }) => {
+      if (!vigente) return;
+      const supabase = createDinerClient();
+      const ch = supabase.channel(canalDeSala(sala), { config: { broadcast: { self: false, ack: true } } });
+      ch.on('broadcast', { event: EVENTO_PEDIDO }, ({ payload }) => {
+        const pedido = limpiarPedido(payload);
+        if (pedido) recibir.current?.(pedido);
+      });
+      ch.subscribe((estado) => {
+        if (estado === 'SUBSCRIBED') { setListo(true); setFallo(false); }
+        if (estado === 'CHANNEL_ERROR' || estado === 'TIMED_OUT') setFallo(true);
+      });
+      canal.current = ch;
+      quitar = () => { supabase.removeChannel(ch); };
+    }).catch(() => { if (vigente) setFallo(true); });
     return () => {
+      vigente = false;
       canal.current = null;
       setListo(false);
-      supabase.removeChannel(ch);
+      quitar?.();
     };
   }, [sala]);
 

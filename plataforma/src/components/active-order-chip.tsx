@@ -11,7 +11,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import { useCart } from '@/lib/cart-context';
 import { useThemeContent } from '@/lib/theme/context';
 import { getPublicOrder, getMyOrderRefs, getOrderRefByClientId } from '@/lib/actions/orders';

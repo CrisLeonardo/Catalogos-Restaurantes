@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AssetImage from '@/components/asset-image';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import type { EstadoDelDia } from '@/lib/db/estados';
 
 const DURACION = 5000;

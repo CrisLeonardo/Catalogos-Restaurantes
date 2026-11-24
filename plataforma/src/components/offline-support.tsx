@@ -13,7 +13,7 @@
    ============================================================ */
 
 import { useEffect, useState } from 'react';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import { getStableLinkPrefix } from '@/lib/tenant-client';
 
 export default function OfflineSupport() {

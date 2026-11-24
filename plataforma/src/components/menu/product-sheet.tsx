@@ -18,7 +18,7 @@ import AssetImage from '@/components/asset-image';
 import { PRODUCT_ART_SIZES } from '@/lib/asset-image';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { HojaOperativa } from '@/components/ui/hoja-operativa';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { Tag, QtyStepper, PrimaryButton, Price } from '@/components/menu/ui';
 import { useCart } from '@/lib/cart-context';

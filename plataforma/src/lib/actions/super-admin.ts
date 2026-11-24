@@ -1,5 +1,6 @@
 'use server';
 
+import { borrarArchivosDelLocal } from '@/lib/archivos-del-local';
 import { leerPapel } from '@/lib/permisos-trabajo';
 import { createServiceClient } from '@/lib/supabase/service';
 import { diaDeCobroDelAlta } from '@/lib/billing-signup';
@@ -497,13 +498,27 @@ export async function deleteRestaurant(formData: FormData) {
   // tuviera en cascada, este borrado se llevaría su propio registro.
   const { data: previo } = await db.from('restaurants').select('name, slug').eq('id', id).maybeSingle();
 
-  await db.from('restaurants').delete().eq('id', id);
+  /* Antes no se miraba el resultado: si el borrado fallaba, la bitácora
+     decía «restaurante.borrar» igual. Ahora además se borran sus archivos,
+     y eso solo puede pasar si el local ya no existe. */
+  const { error } = await db.from('restaurants').delete().eq('id', id);
+  if (error) throw new Error(`No se pudo borrar el restaurante: ${error.message}`);
+
+  // Sus fotos y comprobantes no caen con la cascada (LZ-10).
+  const archivos = await borrarArchivosDelLocal(db, id);
+  if (archivos.error) console.error('[restaurante.borrar] archivos', id, archivos.error);
 
   await logSuper(sesion, {
     action: 'restaurante.borrar',
     targetRestaurantId: id,
     targetLabel: (previo?.name as string | null) ?? null,
-    meta: { slug: previo?.slug ?? null },
+    meta: {
+      slug: previo?.slug ?? null,
+      fotos_borradas: archivos.fotosBorradas,
+      fotos_conservadas: archivos.fotosConservadas,
+      comprobantes_borrados: archivos.comprobantesBorrados,
+      ...(archivos.error ? { archivos_error: archivos.error } : {}),
+    },
   });
 
   revalidatePath('/super/restaurantes');

@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useMemo, useState } from 'react';
+import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { findStructure, findTemplate } from '@/lib/theme/templates';
@@ -15,7 +15,7 @@ import {
 } from '@/lib/alta';
 import { diaDeCobroDelAlta } from '@/lib/billing-signup';
 import { fmtMoney } from '@/lib/money';
-import { ErrorBox, Field, Stepper, WizardNav, localSlugify } from '@/components/signup/wizard-ui';
+import { ErrorBox, Field, Stepper, WizardNav, enfocarCampo, localSlugify } from '@/components/signup/wizard-ui';
 import { leerLista } from '@/lib/importar-carta';
 
 /* ============================================================
@@ -177,12 +177,23 @@ export default function NuevoRestaurante({
   const pasos = esElPrimero ? ['Tu cuenta', 'Tu negocio', 'Qué vendes', 'Tu carta'] : ['Tu negocio', 'Qué vendes', 'Tu carta'];
   const LAST_STEP = 2;
 
+  /* El aviso se anuncia solo (ErrorBox, role="alert"); además el foco va a
+     lo que falta (LZ-04). */
+  const formRef = useRef<HTMLFormElement>(null);
+  const falta = (mensaje: string, selector: string) => {
+    setStepError(mensaje);
+    enfocarCampo(formRef.current, selector);
+  };
+
   function next() {
     setStepError(null);
     if (step === 0) {
-      if (name.trim().length < 2) return setStepError('Escribe el nombre de tu negocio.');
-      if (effectiveSlug.length < 3) return setStepError('La dirección de tu carta debe tener al menos 3 letras.');
-      if (!como) return setStepError('Elige cómo te piden tus clientes.');
+      if (name.trim().length < 2) return falta('Escribe el nombre de tu negocio.', 'input[autocomplete="organization"]');
+      if (effectiveSlug.length < 3) {
+        setEditandoSlug(true);
+        return falta('La dirección de tu carta debe tener al menos 3 letras.', 'input[placeholder="turestaurante"]');
+      }
+      if (!como) return falta('Elige cómo te piden tus clientes.', 'input[name="como_te_piden"]');
     }
     if (step === 1) {
       const r = leerPlatosDelAlta(JSON.stringify(filas));
@@ -213,7 +224,7 @@ export default function NuevoRestaurante({
       : `Tu primer cobro es de ${monto} y vence ${diaCobro === dia ? `hoy, ${fechaVence}` : `el ${fechaVence}`}; después, cada ${diaCobro}. Lo pagas desde Mi suscripción. Sin contrato: lo cambias o das de baja cuando quieras.`;
 
   return (
-    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <input type="hidden" name="plan_code" value={plan} />
       <input type="hidden" name="estandar_order_types" value={modosEstandar(comoEfectivo).join(',')} />
       <input type="hidden" name="template_id" value={templateId} />

@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import styles from './bottom-nav.module.css';
 
 /** Alto de la navegación y su separación inferior, sin safe area. */

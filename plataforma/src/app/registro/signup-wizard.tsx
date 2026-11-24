@@ -8,7 +8,7 @@ import GoogleStaffButton from '@/components/auth/google-staff-button';
 import GoogleG from '@/components/auth/google-g';
 import { signupAccount, type SignupState } from '@/lib/actions/signup';
 import type { PlanPricing } from '@/lib/plans';
-import { ErrorBox, Field, Stepper, WizardNav } from '@/components/signup/wizard-ui';
+import { ErrorBox, Field, Stepper, WizardNav, enfocarCampo } from '@/components/signup/wizard-ui';
 import { enlaceDeAlta, type IntencionAlta } from '@/lib/alta';
 
 const PLAN_NOMBRE_ALTA: Record<IntencionAlta['plan'], string> = {
@@ -123,16 +123,18 @@ export default function SignupWizard({
      términos se aceptan al crear la cuenta, dicho junto al botón. */
   function validar(e: React.FormEvent<HTMLFormElement>) {
     setStepError(null);
-    const error = fullName.trim().length < 2
-      ? 'Escribe tu nombre.'
+    const [error, campo] = fullName.trim().length < 2
+      ? ['Escribe tu nombre.', 'input[autocomplete="name"]']
       : !withGoogle && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-        ? 'Escribe un correo válido.'
+        ? ['Escribe un correo válido.', 'input[type="email"]']
         : !withGoogle && password.length < 8
-          ? 'La contraseña debe tener al menos 8 caracteres.'
-          : null;
+          ? ['La contraseña debe tener al menos 8 caracteres.', 'input[autocomplete="new-password"]']
+          : [null, null];
     if (error) {
       e.preventDefault();
       setStepError(error);
+      // El aviso se anuncia solo (role="alert"); el foco va a lo que falta.
+      enfocarCampo(e.currentTarget, campo!);
     }
   }
 

@@ -12,7 +12,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Glass } from '@/components/glass';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import { Price, PrimaryButton } from '@/components/menu/ui';
 import { useThemeContent } from '@/lib/theme/context';
 import { getPublicOrder, getMyOrderRefs, getOrderRefByClientId } from '@/lib/actions/orders';

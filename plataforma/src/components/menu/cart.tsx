@@ -3,7 +3,7 @@
 /* Carrito del cliente — barra inferior (resumen) + panel (bottom-sheet).
    Moneda y textos vienen del motor. Portado de ClientScreens.jsx. */
 
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import { Price, QtyStepper, PrimaryButton } from '@/components/menu/ui';
 import { useCart } from '@/lib/cart-context';
 import { useThemeContent, useThemeConfig, useText } from '@/lib/theme/context';

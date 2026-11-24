@@ -331,7 +331,13 @@ huellas(n, que, ok, cuando) as (values
   ('191', 'precio acordado: cambiar precios globales no mueve la mensualidad de quien ya paga',
      exists (select 1 from information_schema.columns where table_schema='public' and table_name='restaurant_billing' and column_name='plan_del_precio')
      and to_regprocedure('public.leogin_fijar_precio_vigente(uuid)') is not null,
-     'ANTES de desplegar; independiente')
+     'ANTES de desplegar; independiente'),
+  ('192', 'olvidar a un comensal en un local (solicitud de borrado, conserva totales y facturas)',
+     to_regprocedure('public.leogin_olvidar_comensal(uuid,text,boolean)') is not null,
+     'cuando sea; sin código que dependa de ella'),
+  ('193', 'archivos en uso: al borrar un local se borran sus fotos sueltas y sus comprobantes',
+     to_regprocedure('public.leogin_archivos_en_uso(uuid)') is not null,
+     'ANTES de desplegar (sin ella, borrar un local deja sus archivos y lo anota en la bitácora)')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

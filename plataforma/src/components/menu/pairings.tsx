@@ -12,7 +12,7 @@
    ============================================================ */
 
 import AssetImage from '@/components/asset-image';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import { formatPriceCarta } from '@/lib/theme/resolve';
 import { useThemeConfig } from '@/lib/theme/context';
 import { useLocale } from '@/lib/locale/context';
