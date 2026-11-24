@@ -169,6 +169,10 @@ export default function PagaTuPlan({ restaurantId, amount, currency, vencido, co
               type="file"
               accept={ACEPTA}
               className="sr-only"
+              // Lo abre el botón de abajo: sin esto era una parada de
+              // tabulación invisible y sin nombre antes del botón (LZ-12).
+              tabIndex={-1}
+              aria-label="Comprobante de pago"
               onChange={(e) => elegir(e.target.files?.[0] ?? null)}
             />
             <Button

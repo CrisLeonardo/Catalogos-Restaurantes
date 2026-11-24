@@ -95,7 +95,7 @@ export function PrinterPicker({
   return (
     <div>
       <label style={labelStyle}>{label}</label>
-      <Select
+      <Select aria-label={label}
         options={options}
         value={selectValue}
         onValueChange={(v) => {

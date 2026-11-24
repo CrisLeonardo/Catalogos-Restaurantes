@@ -113,7 +113,7 @@ export default function CanalesPanel({
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>
           <div>
             <label style={labelStyle}>App</label>
-            <Select
+            <Select aria-label="App"
               options={CHANNELS.map((c) => ({ value: c, label: CANAL_LABEL[c] }))}
               value={channel}
               onValueChange={setChannel}
@@ -130,7 +130,7 @@ export default function CanalesPanel({
           </div>
           <div>
             <label style={labelStyle}>Tu producto</label>
-            <Select
+            <Select aria-label="Tu producto"
               options={[
                 { value: '', label: 'Elige un producto…' },
                 ...products.map((p) => ({

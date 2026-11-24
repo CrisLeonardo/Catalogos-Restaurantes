@@ -189,7 +189,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
               </div>
               <div>
                 <label style={labelStyle}>Unidad</label>
-                <Select options={UNIT_OPTIONS} value={newUnit} onValueChange={setNewUnit} />
+                <Select aria-label="Unidad" options={UNIT_OPTIONS} value={newUnit} onValueChange={setNewUnit} />
               </div>
               <div>
                 <label style={labelStyle}>Costo / unidad</label>
@@ -246,7 +246,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
                       </div>
                       <div>
                         <label style={labelStyle}>Unidad</label>
-                        <Select options={UNIT_OPTIONS} value={editState.unit} onValueChange={(v) => setEditState({ ...editState, unit: v })} />
+                        <Select aria-label="Unidad" options={UNIT_OPTIONS} value={editState.unit} onValueChange={(v) => setEditState({ ...editState, unit: v })} />
                       </div>
                       <div>
                         <label style={labelStyle}>Costo / unidad</label>

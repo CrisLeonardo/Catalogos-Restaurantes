@@ -228,7 +228,7 @@ export default function PrintStationsSettings() {
                   )}
                 </span>
                 <div style={{ width: 210 }}>
-                  <Select
+                  <Select aria-label={`Estación de ${c.name}`}
                     value={c.stationId ?? ''}
                     onValueChange={(v) => hacer(() => asignarCategoria(c.id, v || null), `${c.name} guardada.`)}
                     options={[

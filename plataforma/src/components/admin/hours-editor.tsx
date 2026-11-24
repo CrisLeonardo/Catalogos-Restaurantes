@@ -433,7 +433,7 @@ export default function HoursEditor({ restaurant, pintadoEn }: { restaurant: Res
       <Card className="p-4">
         <label htmlFor="timezone" style={labelStyle}>Zona horaria</label>
         <input type="hidden" name="timezone" value={timezone} />
-        <Select
+        <Select aria-label="Zona horaria"
           options={TIMEZONES.map((tz) => ({ value: tz, label: tz.replace('America/', '').replace(/_/g, ' ') }))}
           value={timezone}
           onValueChange={setTimezone}

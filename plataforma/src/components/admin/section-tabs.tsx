@@ -38,7 +38,7 @@ export default function SectionTabs({ group, pathname, preview = false }: Props)
      `isActivePath` siga valiendo; el prefijo del origen único se saca aparte,
      de la ruta real del navegador. Ver lib/panel-links.ts. */
   const base = panelBaseFrom(useRealPathname());
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLElement>(null);
 
   /* En un teléfono cinco pestañas no caben (484 px de pestañas en 347 px de
      barra), así que la fila se desplaza. Sin esto se podía aterrizar en
@@ -56,7 +56,9 @@ export default function SectionTabs({ group, pathname, preview = false }: Props)
   if (group.index || group.items.length < 2) return null;
 
   return (
-    <div className="admin-tabs" role="tablist" aria-label={group.label} ref={ref}>
+    // Son enlaces entre pantallas: navegación con `aria-current`, no un
+    // `tablist` (que exige hijos `tab` y el lector anunciaba vacío). LZ-12.
+    <nav className="admin-tabs" aria-label={group.label} ref={ref}>
       {group.items.map((it) => {
         const active = isActivePath(pathname, it.href);
         const content = (
@@ -87,6 +89,6 @@ export default function SectionTabs({ group, pathname, preview = false }: Props)
           </Link>
         );
       })}
-    </div>
+    </nav>
   );
 }
