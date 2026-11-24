@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { causaNoGuardado, getQueuedOrders, removeQueuedOrder, saveQueuedOrder } from './order-queue';
+import { causaNoGuardado, getQueuedOrders, pedidoParaRetomar, removeQueuedOrder, saveQueuedOrder } from './order-queue';
+import { noSeEnvio } from '@/components/checkout/checkout-model';
 
 /** localStorage de mentira: guarda en memoria y puede fallar a voluntad. */
 function almacen(falla?: () => Error, mudo = false) {
@@ -67,5 +68,29 @@ describe('cola de pedidos del aparato (auditoría 0.11)', () => {
   it('explica la causa', () => {
     expect(causaNoGuardado('lleno')).toMatch(/llena/);
     expect(causaNoGuardado('bloqueado')).toMatch(/no deja guardar/);
+  });
+});
+
+describe('pedido en espera al volver (LZ-02)', () => {
+  const q = (clientId: string, queuedAt: string, snapshot?: unknown) => ({ clientId, payload: {}, queuedAt, snapshot });
+
+  it('retoma el más reciente que trae su resumen', () => {
+    const lista = [
+      q('viejo', '2026-11-24T10:00:00Z', { totalSnapshot: 10 }),
+      q('nuevo', '2026-11-24T11:00:00Z', { totalSnapshot: 20 }),
+      q('sin-resumen', '2026-11-24T12:00:00Z'),
+    ];
+    expect(pedidoParaRetomar(lista)?.clientId).toBe('nuevo');
+  });
+
+  it('los de antes, sin resumen, no se retoman en pantalla', () => {
+    expect(pedidoParaRetomar([q('a', '2026-11-24T10:00:00Z')])).toBeNull();
+    expect(pedidoParaRetomar([])).toBeNull();
+  });
+
+  it('si el local lo rechaza, dice que no salió y por qué', () => {
+    expect(noSeEnvio('Los pedidos están pausados por el momento. Intenta más tarde.'))
+      .toBe('Tu pedido no se envió: los pedidos están pausados por el momento. Intenta más tarde.');
+    expect(noSeEnvio('')).toBe('Tu pedido no se envió.');
   });
 });

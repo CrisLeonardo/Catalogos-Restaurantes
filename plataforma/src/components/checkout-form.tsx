@@ -12,7 +12,7 @@ import { avisoDePrecios } from '@/lib/precios-carrito';
 import { createOrder, type CreateOrderResult } from '@/lib/actions/orders';
 import { getMyCheckoutProfile } from '@/lib/actions/loyalty';
 import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer-local';
-import { getQueuedOrders, removeQueuedOrder, saveQueuedOrder, type MotivoNoGuardado } from '@/lib/order-queue';
+import { getQueuedOrders, pedidoParaRetomar, removeQueuedOrder, saveQueuedOrder, type MotivoNoGuardado } from '@/lib/order-queue';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { isValidGuatemalaPhone } from '@/lib/schemas';
 import { getScannedTable, clearScannedTable, watchScannedTable } from '@/lib/table-session';
@@ -21,7 +21,7 @@ import { guardarUltimoPedido } from '@/lib/menu/lo-de-siempre';
 import { contarPaso } from '@/lib/menu/embudo';
 import { useStableLinkPrefix } from '@/lib/tenant-client';
 import {
-  NO_ZONE, haversineKm, buildWhatsAppUrl,
+  NO_ZONE, haversineKm, buildWhatsAppUrl, noSeEnvio,
   type OrderType, type PendingSnapshot, type CheckoutDone,
 } from '@/components/checkout/checkout-model';
 import OrderSummary, { type AppliedCoupon } from '@/components/checkout/order-summary';
@@ -157,6 +157,11 @@ export default function CheckoutForm({
   const pendingPayloadRef = useRef<unknown>(null);
   const pendingSnapshotRef = useRef<PendingSnapshot | null>(null);
   const retryingRef = useRef(false);
+  /** Al volver con un pedido en espera: reintentarlo en cuanto se vea. */
+  const retomarRef = useRef(false);
+  /** El formulario trae los datos del pedido retomado: el perfil guardado
+      (que llega después, por red) no los pisa. */
+  const formularioRetomadoRef = useRef(false);
 
   const [name, setName]       = useState('');
   const [phone, setPhone]     = useState('');
@@ -222,7 +227,7 @@ export default function CheckoutForm({
         // Prioridad: cuenta de Google enlazada (sigue al comensal a cualquier
         // dispositivo) sobre el perfil local de este dispositivo únicamente.
         const remote = await getMyCheckoutProfile(restaurantId).catch(() => null);
-        if (cancelled) return;
+        if (cancelled || formularioRetomadoRef.current) return;
         if (remote) {
           setName(remote.name);
           setPhone(remote.phone);
@@ -453,6 +458,7 @@ export default function CheckoutForm({
       payload,
       queuedAt: new Date().toISOString(),
       total: pendingSnapshotRef.current?.totalSnapshot,
+      snapshot: pendingSnapshotRef.current ?? undefined,
     });
     setNoGuardado(guardado.ok ? null : guardado.motivo);
     setStep('queued');
@@ -469,6 +475,7 @@ export default function CheckoutForm({
       payload,
       queuedAt: new Date().toISOString(),
       total: pendingSnapshotRef.current?.totalSnapshot,
+      snapshot: pendingSnapshotRef.current ?? undefined,
     });
     setNoGuardado(guardado.ok ? null : guardado.motivo);
   }
@@ -492,7 +499,8 @@ export default function CheckoutForm({
           pendingPayloadRef.current = null;
           pendingSnapshotRef.current = null;
           setStep('form');
-          setError(aplicarPreciosNuevos(result) ?? result.error);
+          // Que diga que NO salió: quien vuelve no sabía si había entrado.
+          setError(aplicarPreciosNuevos(result) ?? noSeEnvio(result.error));
           return;
         }
         finishSuccess(result);
@@ -509,6 +517,10 @@ export default function CheckoutForm({
   // siempre dispara, notablemente en iOS Safari).
   useEffect(() => {
     if (step !== 'queued') return;
+    if (retomarRef.current) {
+      retomarRef.current = false;
+      retryQueued();
+    }
     const onOnline = () => retryQueued();
     window.addEventListener('online', onOnline);
     const timer = setInterval(() => retryQueued(), 15_000);
@@ -520,11 +532,54 @@ export default function CheckoutForm({
   }, [step]);
 
   // Al montar: si quedó algo en la cola de una visita anterior (la pestaña
-  // se cerró a mitad de un corte de conexión), reintenta en segundo plano
-  // sin tocar la pantalla actual — si se confirma, queda en "Mis pedidos".
+  // se cerró a mitad de un corte de conexión), el más reciente se RETOMA en
+  // pantalla: «Aún no se envía» mientras se reintenta, la confirmación de
+  // siempre si entra, o el carrito con la causa si el local lo rechaza (en
+  // pausa, por ejemplo). Antes se reintentaba a escondidas: un rechazo lo
+  // borraba sin decir nada y un éxito dejaba el carrito lleno, listo para
+  // pedir dos veces (LZ-02). En el kiosko no: el aparato es de todos y el
+  // pedido sería de otra persona. Los demás (y los de antes, sin resumen)
+  // siguen en segundo plano; si se confirman, quedan en «Mis pedidos».
   useEffect(() => {
+    const cola = getQueuedOrders(restaurantId);
+    const retomar = isKioskMode() ? null : pedidoParaRetomar(cola);
+    if (retomar) {
+      const p = retomar.payload as {
+        paymentMethod?: 'CASH' | 'CARD';
+        cashAmount?: number;
+        customer?: {
+          name?: string; phone?: string; type?: OrderType; address?: string; notes?: string; zone?: string;
+          tableNumber?: number; coursePreference?: string; deliveryLat?: number; deliveryLng?: number;
+        };
+      };
+      const c = p.customer ?? {};
+      clientIdRef.current = retomar.clientId;
+      pendingPayloadRef.current = retomar.payload;
+      pendingSnapshotRef.current = retomar.snapshot as PendingSnapshot;
+      // El formulario vuelve como lo dejó: si el local lo rechaza, corrige y
+      // reenvía sin escribir todo otra vez; si entra, el perfil y el mensaje
+      // de WhatsApp salen con sus datos.
+      if (c.name) setName(c.name);
+      if (c.phone) setPhone(c.phone);
+      if (c.type && typeOptions.some((o) => o.id === c.type)) setType(c.type);
+      if (c.address) setAddress(c.address);
+      if (c.notes) setNotes(c.notes);
+      if (c.zone) setZone(c.zone);
+      if (typeof c.tableNumber === 'number') setTableNumber(c.tableNumber);
+      if (c.coursePreference) setCoursePreference(c.coursePreference);
+      if (typeof c.deliveryLat === 'number' && typeof c.deliveryLng === 'number') {
+        setDeliveryLat(c.deliveryLat);
+        setDeliveryLng(c.deliveryLng);
+      }
+      if (p.paymentMethod) setPaymentMethod(p.paymentMethod);
+      if (p.cashAmount) setCashAmount(String(p.cashAmount));
+      formularioRetomadoRef.current = true;
+      retomarRef.current = true;
+      setStep('queued');
+    }
     (async () => {
-      for (const q of getQueuedOrders(restaurantId)) {
+      for (const q of cola) {
+        if (q.clientId === retomar?.clientId) continue;
         try {
           const result = await createOrder(q.payload);
           if (result.success) {
@@ -623,6 +678,7 @@ export default function CheckoutForm({
       payload,
       queuedAt: new Date().toISOString(),
       total: totalSnapshot,
+      snapshot: pendingSnapshotRef.current,
     });
     setNoGuardado(guardado.ok ? null : guardado.motivo);
 
