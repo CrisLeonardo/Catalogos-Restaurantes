@@ -3,6 +3,7 @@ import { after } from 'next/server';
 import { headers } from 'next/headers';
 import { analiticaConfig, type Evento } from '@/lib/analytics';
 import { rootDomainForUrls } from '@/lib/tenant';
+import { ipDelCliente } from '@/lib/rate-limit';
 
 /* ============================================================
    EVENTOS DEL EMBUDO DESDE EL SERVIDOR (WEB-01)
@@ -27,7 +28,7 @@ export async function registrarEvento(evento: Evento, ruta: string): Promise<voi
   try {
     const h = await headers();
     ua = h.get('user-agent') ?? '';
-    ip = (h.get('x-forwarded-for') ?? '').split(',')[0].trim();
+    ip = ipDelCliente(h) ?? '';
   } catch {
     return; // fuera de una petición (build, pruebas): nada que contar
   }
