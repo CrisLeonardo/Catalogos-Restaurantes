@@ -1052,7 +1052,7 @@ export default function CheckoutForm({
         )}
 
         {error && (
-          <p style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--c-danger, #ff6b6b)', background: 'color-mix(in srgb, var(--c-danger, #ff6b6b) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #ff6b6b) 20%, transparent)', borderRadius: 'var(--radius-lg)', padding: '10px 14px' }}>{error}</p>
+          <p role="alert" style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--c-danger, #ff6b6b)', background: 'color-mix(in srgb, var(--c-danger, #ff6b6b) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #ff6b6b) 20%, transparent)', borderRadius: 'var(--radius-lg)', padding: '10px 14px' }}>{error}</p>
         )}
 
         <PrimaryButton size="lg" full iconRight="arrowRight" disabled={isPending} style={{ opacity: isPending ? 0.7 : 1, marginTop: 4 }}>
