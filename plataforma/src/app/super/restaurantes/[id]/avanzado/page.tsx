@@ -65,7 +65,8 @@ export default async function FichaAvanzadoPage({
               Eliminar restaurante
             </div>
             <div style={{ fontSize: 13, color: 'var(--u-text-4)', marginTop: 2 }}>
-              Se borrará todo: menú, categorías, productos y tema. Irreversible.
+              Se borra todo: carta, pedidos, clientes y facturas FEL. Pídele al dueño que
+              use «Exportar tus datos» antes. Lo que Leogin le cobró queda en la bitácora.
             </div>
           </div>
           <DeleteButton
@@ -73,7 +74,7 @@ export default async function FichaAvanzadoPage({
             hiddenFields={{ id: row.id }}
             label="Eliminar"
             confirm={`¿Eliminar «${row.name}»?`}
-            description="Se borran el restaurante y todos sus datos. No se puede deshacer."
+            description="Se borran el restaurante y todos sus datos. Sus cobros de Leogin quedan en la bitácora. No se puede deshacer."
           />
         </Glass>
       </section>
