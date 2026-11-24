@@ -30,7 +30,7 @@ import { findTemplate } from '@/lib/theme/templates';
 import type { OrderType } from '@/lib/theme/defaults';
 import { registrarEvento } from '@/lib/analytics-server';
 import { EVENTOS } from '@/lib/analytics';
-import { leerPlatosDelAlta } from '@/lib/alta';
+import { leerIntencion, leerPlatosDelAlta } from '@/lib/alta';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
@@ -393,7 +393,13 @@ export async function createAnotherRestaurant(
      paso del alta, así que la pantalla «listo» sobraba. El panel es la raíz
      de otro host, por eso navega el cliente; mismo motivo que
      `enterRestaurant`. */
-  if (esElPrimero) await registrarEvento(EVENTOS.restauranteCreado, '/mi-cuenta/nuevo');
+  // El plan con que lo creó y el caso que traía de la web (LZ-11).
+  if (esElPrimero) {
+    await registrarEvento(EVENTOS.restauranteCreado, '/mi-cuenta/nuevo', {
+      plan: planCode,
+      caso: leerIntencion(user.user_metadata?.alta_plan, user.user_metadata?.alta_caso)?.caso ?? 'sin elegir',
+    });
+  }
   return { url: `${adminUrl(slug)}?welcome=1` };
 }
 

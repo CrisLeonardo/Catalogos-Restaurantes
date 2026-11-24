@@ -183,7 +183,9 @@ export async function signupAccount(
   }
 
   // Embudo de la web (WEB-01): sale después de la respuesta, no la frena.
-  await registrarEvento(EVENTOS.cuentaCreada, '/registro');
+  await registrarEvento(EVENTOS.cuentaCreada, '/registro', {
+    plan: intencion?.plan ?? 'sin elegir', caso: intencion?.caso ?? 'sin elegir',
+  });
 
   // Su casa. Ahí crea su restaurante, que es el siguiente paso real, con
   // el plan que eligió en la web ya puesto.

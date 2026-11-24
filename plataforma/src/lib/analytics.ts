@@ -71,6 +71,17 @@ export const EVENTOS = {
 } as const;
 export type Evento = (typeof EVENTOS)[keyof typeof EVENTOS];
 
+/** Lo único que acompaña a un evento: el plan y el caso de la web (LZ-11). */
+export type PropsDeEvento = { plan?: string; caso?: string };
+
+/** Lo que se manda al proveedor por un evento del servidor. */
+export function cuerpoDelEvento(cfg: AnaliticaConfig, evento: Evento, url: string, props?: PropsDeEvento) {
+  const datos = props && Object.keys(props).length ? props : undefined;
+  return cfg.proveedor === 'umami'
+    ? { type: 'event', payload: { website: cfg.id, hostname: new URL(url).hostname, url: new URL(url).pathname, name: evento, language: 'es-GT', ...(datos ? { data: datos } : {}) } }
+    : { name: evento, domain: cfg.id, url, ...(datos ? { props: datos } : {}) };
+}
+
 /**
  * Atributos para que un clic cuente como evento SIN JavaScript propio:
  * Umami lee `data-umami-event` y Plausible las clases `plausible-event-*`.
