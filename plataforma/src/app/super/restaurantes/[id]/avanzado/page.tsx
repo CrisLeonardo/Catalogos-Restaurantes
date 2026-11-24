@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation';
 import { Glass } from '@/components/glass';
+import { Icon } from '@/components/icons';
 import DeleteButton from '@/components/admin/delete-button';
 import { getRestaurantFullById } from '@/lib/db/super-admin';
 import { deleteRestaurant, duplicateRestaurant } from '@/lib/actions/super-admin';
+import { avisoDeExportacion } from '@/lib/aviso-exportacion';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Avanzado — Super Admin' };
@@ -15,6 +17,8 @@ export default async function FichaAvanzadoPage({
   const { id } = await params;
   const row = await getRestaurantFullById(id);
   if (!row) notFound();
+  // Se avisa, no se exige (LZ-10, decisión del dueño del 24 de noviembre).
+  const exportacion = avisoDeExportacion(row.datos_exportados_at, row.timezone || undefined);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
@@ -65,9 +69,20 @@ export default async function FichaAvanzadoPage({
               Eliminar restaurante
             </div>
             <div style={{ fontSize: 13, color: 'var(--u-text-4)', marginTop: 2 }}>
-              Se borra todo: carta, pedidos, clientes y facturas FEL. Pídele al dueño que
-              use «Exportar tus datos» antes. Lo que Leogin le cobró queda en la bitácora.
+              Se borra todo: carta, pedidos, clientes y facturas FEL. Lo que Leogin le
+              cobró queda en la bitácora.
             </div>
+            {exportacion && (
+              <div
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, marginTop: 8,
+                  color: exportacion.exporto ? 'var(--c-ok)' : 'var(--c-warn)',
+                }}
+              >
+                <Icon name={exportacion.exporto ? 'checkCircle' : 'alertCircle'} size={16} />
+                {exportacion.linea}
+              </div>
+            )}
           </div>
           <DeleteButton
             action={deleteRestaurant}
@@ -75,6 +90,8 @@ export default async function FichaAvanzadoPage({
             label="Eliminar"
             confirm={`¿Eliminar «${row.name}»?`}
             description="Se borran el restaurante y todos sus datos. Sus cobros de Leogin quedan en la bitácora. No se puede deshacer."
+            warning={exportacion?.aviso}
+            confirmLabel={exportacion?.confirmar ?? 'Eliminar'}
           />
         </Glass>
       </section>

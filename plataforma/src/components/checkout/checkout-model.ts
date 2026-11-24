@@ -33,6 +33,14 @@ export interface PendingSnapshot {
   orderTypeSnapshot: OrderType;
 }
 
+/** Un pedido en espera que el servidor rechazó al reintentarlo: se dice
+    que NO salió, con la causa del servidor (p. ej. la pausa del local). */
+export function noSeEnvio(error: string): string {
+  const causa = error.trim();
+  if (!causa) return 'Tu pedido no se envió.';
+  return `Tu pedido no se envió: ${causa.charAt(0).toLocaleLowerCase('es')}${causa.slice(1)}`;
+}
+
 /** Lo que enseña la confirmación. Se fija al confirmarse el pedido y no se
     relee del formulario: si la sesión de mesa caduca después (se cierra al
     pedir), el formulario saltaba a «Para llevar» y la confirmación de un

@@ -32,6 +32,8 @@ import {
 export type ConfirmOptions = {
   title: string;
   description?: string;
+  /** Una advertencia en rojo debajo de la descripción (lo que se pierde). */
+  warning?: string;
   /** Texto del botón que confirma. Por defecto «Eliminar» si es destructiva, si no «Aceptar». */
   confirmLabel?: string;
   cancelLabel?: string;
@@ -101,6 +103,11 @@ export function useConfirm() {
             <DialogDescription className="text-[13px] leading-relaxed text-adm-text-2">
               {opts.description}
             </DialogDescription>
+          )}
+          {opts?.warning && (
+            <p className="mt-2 rounded-adm-lg border border-[var(--c-danger-line)] bg-[var(--c-danger-bg)] px-3 py-2 text-[13px] font-medium leading-snug text-[var(--c-danger)]">
+              {opts.warning}
+            </p>
           )}
         </DialogHeader>
         <DialogFooter className="mt-5 max-sm:[&>*]:flex-1">

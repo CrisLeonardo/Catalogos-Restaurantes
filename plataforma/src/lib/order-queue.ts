@@ -25,6 +25,18 @@ export interface QueuedOrder {
   queuedAt: string; // ISO
   /** Total del pedido — solo para mostrarlo en "Mis pedidos" si se confirma en background. */
   total?: number;
+  /** Resumen congelado del checkout (`PendingSnapshot`). Con él, quien
+      vuelve ve su pedido en espera en pantalla en vez de que se reintente
+      a escondidas (auditoría de lanzamiento 2026-11-23, LZ-02). */
+  snapshot?: unknown;
+}
+
+/** El pedido en espera que se retoma en pantalla al volver: el más reciente
+    que trae su resumen. Los de antes (sin resumen) siguen el camino viejo. */
+export function pedidoParaRetomar(list: QueuedOrder[]): QueuedOrder | null {
+  const conResumen = list.filter((o) => o.snapshot && typeof o.snapshot === 'object');
+  if (conResumen.length === 0) return null;
+  return conResumen.reduce((a, b) => (Date.parse(b.queuedAt) > Date.parse(a.queuedAt) ? b : a));
 }
 
 /** 'waiter' usa una clave de localStorage separada de 'customer' — el panel
