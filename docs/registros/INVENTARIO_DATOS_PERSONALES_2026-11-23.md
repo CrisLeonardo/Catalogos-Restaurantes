@@ -1,6 +1,6 @@
 # Inventario de datos personales, retención y borrado · 23 de noviembre de 2026
 
-Auditoría de lanzamiento, **LZ-10** ([auditoría](../auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md), §4). Sirve para responder tres preguntas por cada dato personal: dónde está, cuánto tiempo se guarda y cómo se borra si alguien lo pide. Está hecho a partir del código y las migraciones hasta la 194. Lo marcado **por confirmar** depende de un panel externo (Supabase, Render) y no se puede ver desde el repositorio.
+Auditoría de lanzamiento, **LZ-10** ([auditoría](../auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md), §4). Sirve para responder tres preguntas por cada dato personal: dónde está, cuánto tiempo se guarda y cómo se borra si alguien lo pide. Está hecho a partir del código y las migraciones hasta la 193. Lo marcado **por confirmar** depende de un panel externo (Supabase, Render) y no se puede ver desde el repositorio.
 
 ## Proveedores que tratan los datos
 
@@ -43,7 +43,7 @@ Auditoría de lanzamiento, **LZ-10** ([auditoría](../auditorias/AUDITORIA_LANZA
 | Bitácora del superadmin: correo e IP | `super_admin_log` | Sin plazo | No tiene purga |
 | Límites de peticiones (pueden llevar IP) | `rate_limit_buckets` | 1 día después de vencer | Purga cada hora (migración 100) |
 | Puentes de inicio de sesión | `cuenta_puentes` | 1 día después de vencer | Purga diaria (migración 146) |
-| Fotos de la carta | Bucket público `restaurant-assets` | Sin plazo | Al borrar el local se borran las que nadie más usa. Se conservan las que nombra una copia del local, una plantilla o un grupo (migración 194) |
+| Fotos de la carta | Bucket público `restaurant-assets` | Sin plazo | Al borrar el local se borran las que nadie más usa. Se conservan las que nombra una copia del local, una plantilla o un grupo (migración 193) |
 | Recibos de gastos | `cash_expenses.receipt_url` | — | Columna sin uso: ninguna pantalla sube recibos |
 
 ## Cómo atender una solicitud de borrado de un comensal

@@ -1,5 +1,5 @@
 /**
- * Migración 194 y lib/archivos-del-local.ts, contra Supabase local real
+ * Migración 193 y lib/archivos-del-local.ts, contra Supabase local real
  * (base y almacenamiento): al borrar un local se van sus comprobantes y las
  * fotos que nadie más usa; se conservan las que nombra una copia del local
  * o una plantilla (LZ-10). Crea sus propias filas y archivos y los quita.
@@ -38,11 +38,11 @@ async function subir(bucket: string, ruta: string, tipo: string) {
 
 beforeAll(async () => {
   await sql.connect();
-  await sql.query(`insert into restaurants (id, name, slug, status) values ($1, 'AUD 194 A', $3, 'active'), ($2, 'AUD 194 B', $4, 'active')`,
-    [A, B, `aud-194-a-${A}`, `aud-194-b-${B}`]);
+  await sql.query(`insert into restaurants (id, name, slug, status) values ($1, 'AUD 193 A', $3, 'active'), ($2, 'AUD 193 B', $4, 'active')`,
+    [A, B, `aud-193-a-${A}`, `aud-193-b-${B}`]);
   await sql.query(`insert into products (restaurant_id, name, price, image_url) values ($1, 'Copia', 10, $2), ($3, 'Original', 10, $4)`,
     [B, url(RUTAS.compartida), A, url(RUTAS.suelta)]);
-  await sql.query(`insert into theme_templates (id, name, config) values ($1, 'AUD 194', $2)`,
+  await sql.query(`insert into theme_templates (id, name, config) values ($1, 'AUD 193', $2)`,
     [plantilla, JSON.stringify({ background: { image: url(RUTAS.dePlantilla) } })]);
   for (const ruta of Object.values(RUTAS)) await subir(BUCKET_FOTOS, ruta, 'image/webp');
   await subir(BUCKET_COMPROBANTES, COMPROBANTE, 'application/pdf');
@@ -56,7 +56,7 @@ afterAll(async () => {
   await sql.end();
 });
 
-describe('archivos de un local borrado (194)', () => {
+describe('archivos de un local borrado (193)', () => {
   it('mientras existe, sus propias filas no cuentan como «en uso por otro»', async () => {
     const { rows } = await sql.query('select public.leogin_archivos_en_uso($1) as ruta', [A]);
     expect(rows.map((r) => r.ruta).sort()).toEqual([RUTAS.compartida, RUTAS.dePlantilla].sort());

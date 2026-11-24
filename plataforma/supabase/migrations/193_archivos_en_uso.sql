@@ -1,5 +1,5 @@
 -- ============================================================
--- 194 · Qué archivos de un local siguen en uso
+-- 193 · Qué archivos de un local siguen en uso
 -- ------------------------------------------------------------
 -- Auditoría de lanzamiento 2026-11-23, LZ-10. Borrar un restaurante se
 -- llevaba sus filas, pero dejaba sus fotos en el bucket público

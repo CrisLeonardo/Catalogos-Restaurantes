@@ -11,7 +11,7 @@
      · restaurant-assets: se borra lo que ya no nombra ninguna fila.
        «Duplicar restaurante» copia la carta con las mismas URLs, y las
        plantillas y el logo de un grupo pueden apuntar a esta carpeta: esas
-       rutas las devuelve `leogin_archivos_en_uso` (migración 194) y se
+       rutas las devuelve `leogin_archivos_en_uso` (migración 193) y se
        conservan.
 
    Un fallo aquí no deshace el borrado del local: se informa y se puede
