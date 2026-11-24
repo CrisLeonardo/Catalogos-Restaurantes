@@ -1,0 +1,236 @@
+-- ============================================================
+--  ACTUALIZACIÓN 194 a 195 — auditoría de lanzamiento, 24 de noviembre de 2026
+--  Pega TODO este archivo en el SQL Editor de Supabase (producción) y pulsa Run.
+--
+--  Requiere la 193 aplicada (ya lo está desde el 23 de noviembre).
+--  Se puede correr antes o después del despliegue: ninguna rompe el código
+--  que está en producción, y el código nuevo no falla si todavía no están.
+--  Si se corre dos veces no pasa nada: las dos usan «create or replace» y
+--  «if not exists».
+--
+--  194 · Al terminar una prueba gratis, el día de cobro pasa a ser ese día
+--        (antes la primera mensualidad podía nacer vencida).
+--  195 · Plazos de los datos personales: purga diaria a las 4:45 (UTC) de lo
+--        vencido (24 meses pedidos y reseñas, 12 reservas y WhatsApp, 13
+--        visitas). Y la fecha en que cada local exportó sus datos, para
+--        avisar antes de borrarlo.
+--
+--  Al terminar, la última consulta debe decir «sí» en 194 y 195.
+--  Después, corre también supabase/verificar_huellas.sql.
+-- ============================================================
+
+begin;
+
+-- ============================================================
+-- ========== migrations/194_prueba_gradua_con_su_dia.sql ==========
+-- ============================================================
+
+-- 194 · Al terminar la prueba gratis, el cobro empieza ese día (LZ-01)
+--
+-- Auditoría de lanzamiento 2026-11-23, LZ-01. El alta ya fija el día de
+-- cobro en el día del alta (billing-signup.ts, `diaDeCobroDelAlta`). Pero un
+-- local con prueba gratis no paga desde el alta: paga desde que la prueba
+-- termina, y leogin_graduate_trials() lo pasaba a cobro sin tocar ni
+-- billing_day ni started_at. Ejemplo: alta el día 1 con 14 días de prueba →
+-- empieza a pagar el 15, pero el corte del mes le crea la mensualidad con
+-- vencimiento el 1: nace vencida y, pasados los días de gracia, se suspende.
+--
+-- Ahora, al graduar, el día de cobro y el inicio del servicio son los del
+-- día en que termina la prueba (fecha de Guatemala, como el alta). Del 29
+-- en adelante se cobra el 28, como en todo el sistema.
+--
+-- Hoy las pruebas están apagadas (migración 182, trial_days = 0): esto
+-- importa el día que se vuelvan a encender, y para quien aún tenga una.
+--
+-- Orden: se puede aplicar antes o después de desplegar; no hay código que
+-- dependa de ella.
+
+create or replace function public.leogin_graduate_trials()
+returns integer
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+declare
+  v_count int := 0;
+  v_hoy   date := (now() at time zone 'America/Guatemala')::date;
+begin
+  with graduated as (
+    update restaurant_billing
+       set active        = true,
+           started_at    = v_hoy,
+           billing_day   = least(28, extract(day from v_hoy)::int),
+           updated_at    = now()
+     where active = false
+       and trial_ends_at is not null
+       and trial_ends_at <= now()
+    returning restaurant_id
+  )
+  select count(*) into v_count from graduated;
+  return v_count;
+end;
+$function$;
+
+revoke execute on function public.leogin_graduate_trials() from public, anon, authenticated;
+grant execute on function public.leogin_graduate_trials() to service_role;
+
+
+-- ============================================================
+-- ========== migrations/195_plazos_de_datos.sql ==========
+-- ============================================================
+
+-- ============================================================
+-- 195 · PLAZOS DE LOS DATOS PERSONALES Y ÚLTIMA EXPORTACIÓN (LZ-10)
+-- ------------------------------------------------------------
+-- Decisión del 24 de noviembre de 2026 (el dueño la delegó: «toma la
+-- mejor decisión»). Hasta ahora casi todo se guardaba mientras existiera
+-- el local. Desde aquí, una purga diaria quita lo que ya no sirve:
+--
+--   · Pedidos cerrados con más de 24 meses: nombre «Cliente eliminado»,
+--     sin teléfono, notas, dirección ni coordenadas (igual que la 192).
+--     Totales, platillos y cobros se quedan: son la contabilidad del local.
+--   · Reseñas con más de 24 meses: sin nombre ni comentario; queda la nota.
+--   · Fichas de cliente sin pedidos en 24 meses y sin puntos por canjear.
+--   · Reservas y lista de espera con más de 12 meses: sin nombre,
+--     teléfono ni notas.
+--   · Mensajes de WhatsApp con más de 12 meses, y las conversaciones que
+--     se queden sin mensajes.
+--   · Visitas y embudo de la carta con más de 13 meses (13 y no 12 para
+--     poder comparar un mes con el mismo mes del año anterior).
+--
+-- Se conservan sin plazo, mientras exista el local: facturas FEL (ley
+-- fiscal), caja, anulaciones y propinas (registro contable y antifraude).
+-- La bitácora del superadmin tampoco se purga: es de solo escritura (132)
+-- y guarda lo que Leogin cobró a cada local. La de accesos al panel ya
+-- tiene su purga de 180 días (109).
+--
+-- Además: `restaurants.datos_exportados_at`, la última vez que el local
+-- usó «Exportar tus datos». El superadmin la ve antes de borrar un local.
+--
+-- Orden: cuando sea respecto al despliegue. El código nuevo escribe la
+-- columna y no falla si todavía no existe (se anota en el log).
+-- ============================================================
+
+alter table public.restaurants
+  add column if not exists datos_exportados_at timestamptz;
+
+comment on column public.restaurants.datos_exportados_at is
+  'Última vez que el local descargó «Exportar tus datos» (LZ-10). Se muestra antes de borrar el local.';
+
+create or replace function public.leogin_purgar_datos_vencidos()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_24m timestamptz := now() - interval '24 months';
+  v_12m timestamptz := now() - interval '12 months';
+  v_13m timestamptz := now() - interval '13 months';
+  v_pedidos int; v_resenas int; v_clientes int; v_reservas int;
+  v_espera int; v_mensajes int; v_conversaciones int; v_visitas int; v_embudo int;
+begin
+  update public.orders
+     set customer_name = 'Cliente eliminado',
+         customer_phone = '',
+         notes = null,
+         address = case when order_type = 'DINE_IN' then address else null end,
+         delivery_lat = case when order_type = 'DINE_IN' then delivery_lat else null end,
+         delivery_lng = case when order_type = 'DINE_IN' then delivery_lng else null end
+   where status in ('DELIVERED', 'CANCEL')
+     and created_at < v_24m
+     and (customer_name is distinct from 'Cliente eliminado' or customer_phone <> ''
+          or notes is not null or (order_type <> 'DINE_IN' and address is not null));
+  get diagnostics v_pedidos = row_count;
+
+  update public.order_ratings
+     set customer_name = null, comment = null
+   where created_at < v_24m
+     and (customer_name is not null or comment is not null);
+  get diagnostics v_resenas = row_count;
+
+  delete from public.customers c
+   where coalesce(c.last_order_at, c.created_at) < v_24m
+     and c.created_at < v_24m
+     and not exists (select 1 from public.loyalty_accounts l
+                      where l.customer_id = c.id and l.points_balance > 0)
+     and not exists (select 1 from public.orders o
+                      where o.customer_id = c.id and o.created_at >= v_24m);
+  get diagnostics v_clientes = row_count;
+
+  update public.reservations
+     set customer_name = 'Cliente eliminado', customer_phone = null, notes = null
+   where coalesce(date::timestamptz, created_at) < v_12m
+     and (customer_name is distinct from 'Cliente eliminado' or customer_phone is not null or notes is not null);
+  get diagnostics v_reservas = row_count;
+
+  update public.waitlist_entries
+     set customer_name = 'Cliente eliminado', phone = null, notes = null
+   where created_at < v_12m
+     and (customer_name is distinct from 'Cliente eliminado' or phone is not null or notes is not null);
+  get diagnostics v_espera = row_count;
+
+  delete from public.whatsapp_messages where created_at < v_12m;
+  get diagnostics v_mensajes = row_count;
+
+  delete from public.whatsapp_conversations w
+   where greatest(w.updated_at, w.created_at, coalesce(w.last_inbound_at, w.created_at)) < v_12m
+     and not exists (select 1 from public.whatsapp_messages m where m.conversation_id = w.id);
+  get diagnostics v_conversaciones = row_count;
+
+  delete from public.page_visits where created_at < v_13m;
+  get diagnostics v_visitas = row_count;
+
+  delete from public.menu_embudo where created_at < v_13m;
+  get diagnostics v_embudo = row_count;
+
+  return jsonb_build_object(
+    'pedidos_anonimizados', v_pedidos,
+    'resenas_sin_nombre', v_resenas,
+    'fichas_de_cliente_borradas', v_clientes,
+    'reservas_anonimizadas', v_reservas,
+    'lista_de_espera_anonimizada', v_espera,
+    'mensajes_whatsapp_borrados', v_mensajes,
+    'conversaciones_whatsapp_borradas', v_conversaciones,
+    'visitas_borradas', v_visitas,
+    'embudo_borrado', v_embudo
+  );
+end;
+$$;
+
+revoke all on function public.leogin_purgar_datos_vencidos() from public, anon, authenticated;
+grant execute on function public.leogin_purgar_datos_vencidos() to service_role;
+
+comment on function public.leogin_purgar_datos_vencidos() is
+  'Purga diaria de datos personales vencidos (LZ-10, 195): 24 meses pedidos, reseñas y fichas; 12 meses reservas, espera y WhatsApp; 13 meses visitas y embudo.';
+
+-- Todos los días a las 4:45 (UTC). Mismo patrón que la 109: sin pg_cron la
+-- migración no falla; la función se puede correr a mano.
+do $$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    if exists (select 1 from cron.job where jobname = 'leogin_purga_datos_vencidos') then
+      perform cron.unschedule('leogin_purga_datos_vencidos');
+    end if;
+    perform cron.schedule(
+      'leogin_purga_datos_vencidos',
+      '45 4 * * *',
+      $cmd$select public.leogin_purgar_datos_vencidos()$cmd$
+    );
+  end if;
+exception when others then
+  null;
+end $$;
+
+
+commit;
+
+-- ¿Quedaron aplicadas?
+select '194' as migracion,
+       case when pg_get_functiondef(to_regprocedure('public.leogin_graduate_trials()')) like '%v_hoy%' then 'sí' else 'NO' end as aplicada
+union all
+select '195',
+       case when to_regprocedure('public.leogin_purgar_datos_vencidos()') is not null
+             and exists (select 1 from information_schema.columns
+                          where table_schema = 'public' and table_name = 'restaurants' and column_name = 'datos_exportados_at')
+            then 'sí' else 'NO' end;

@@ -9,10 +9,14 @@ const RID = '11111111-1111-4111-8111-111111111111';
 const tablas: Record<string, Record<string, unknown>[]> = {};
 const rangos: Record<string, [number, number][]> = {};
 let fallaEn: string | null = null;
+const anotado: { tabla: string; valores: Record<string, unknown>; id: unknown }[] = [];
 
 function consulta(tabla: string) {
   const q: Record<string, unknown> = {};
   for (const f of ['select', 'eq', 'order']) q[f] = () => q;
+  q.update = (valores: Record<string, unknown>) => ({
+    eq: async (_c: string, id: unknown) => { anotado.push({ tabla, valores, id }); return { error: null }; },
+  });
   q.single = async () => ({ data: { slug: 'rincon-prueba', timezone: 'America/Guatemala' }, error: null });
   q.range = async (desde: number, hasta: number) => {
     (rangos[tabla] ??= []).push([desde, hasta]);
@@ -65,6 +69,7 @@ beforeEach(() => {
   for (const k of Object.keys(tablas)) delete tablas[k];
   for (const k of Object.keys(rangos)) delete rangos[k];
   fallaEn = null;
+  anotado.length = 0;
 });
 
 describe('Exportar tus datos', () => {
@@ -118,5 +123,11 @@ describe('Exportar tus datos', () => {
     const r = await exportBackupXlsx(RID);
     expect(r.xlsx).toBeUndefined();
     expect(r.error).toMatch(/No se pudo leer todo/);
+    expect(anotado).toEqual([]);
+  });
+
+  it('anota cuándo exportó el local, para avisar antes de borrarlo', async () => {
+    await exportBackupXlsx(RID);
+    expect(anotado).toEqual([{ tabla: 'restaurants', valores: { datos_exportados_at: expect.any(String) }, id: RID }]);
   });
 });

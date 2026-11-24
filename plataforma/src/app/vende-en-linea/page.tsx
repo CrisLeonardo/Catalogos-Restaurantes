@@ -38,12 +38,23 @@ import { subdomainUrl, rootDomainForUrls, marketingUrl, DEMO_SLUG } from '@/lib/
    cupones e inventario, de Premium: aquí no se prometen.
    ============================================================ */
 
+const TITULO = 'Leogin para vender en línea — tu menú en un link, tus pedidos en orden';
+const DESCRIPCION =
+  'Para quien vende comida por WhatsApp, Instagram o Facebook: tu menú en un link, pedidos completos con dirección y forma de pago, avisos al instante y cuánto vendiste. Sin comisión.';
+
 export const metadata: Metadata = {
-  title: 'Leogin para vender en línea — tu menú en un link, tus pedidos en orden',
-  description:
-    'Para quien vende comida por WhatsApp, Instagram o Facebook: tu menú en un link, pedidos completos con dirección y forma de pago, avisos al instante y cuánto vendiste. Sin comisión.',
+  title: TITULO,
+  description: DESCRIPCION,
   // Absoluta: la relativa salía tal cual en el HTML, sin dominio.
   alternates: { canonical: marketingUrl('/vende-en-linea') },
+  // Es la página que más se comparte por WhatsApp: sin estas etiquetas la
+  // vista previa salía sin título ni imagen (LZ-09). Igual que /planes.
+  openGraph: {
+    title: TITULO, description: DESCRIPCION, url: marketingUrl('/vende-en-linea'),
+    siteName: 'Leogin', locale: 'es_GT', type: 'website',
+    images: [{ url: marketingUrl('/icon-512.png'), width: 512, height: 512, alt: 'Leogin' }],
+  },
+  twitter: { card: 'summary', title: TITULO, description: DESCRIPCION, images: [marketingUrl('/icon-512.png')] },
 };
 
 // El precio sale de lo vigente en /super/configuracion, como en /planes.

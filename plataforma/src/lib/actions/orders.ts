@@ -10,6 +10,7 @@ import { after } from 'next/server';
 import { headers } from 'next/headers';
 import { createOrderSchema, waiterOrderSchema, type CreateOrderInput } from '@/lib/schemas';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { cubosDelPedido } from '@/lib/limite-pedidos';
 import { sendPushToRestaurant } from '@/lib/push';
 import { resolveTheme, computeTip, type ThemeRow } from '@/lib/theme/resolve';
 import { mesaExiste } from '@/lib/mesa-valida';
@@ -385,10 +386,13 @@ export async function createOrder(
   }
 
   // Rate-limit: endpoint público sin login. Frena inundación de pedidos
-  // (spam de push/sonido al restaurante + crecimiento de tabla). 6/min por IP.
+  // (spam de push/sonido al restaurante + crecimiento de tabla). 30/min por
+  // IP (el wifi del local la comparte) y 6/min por teléfono: lib/limite-pedidos.
   const ip = clientIp(await headers());
-  if (!(await rateLimit(`order:${ip}:${restaurantId}`, 6, 60_000))) {
-    return { error: 'Has enviado varios pedidos muy seguido. Espera un momento e intenta de nuevo.' };
+  for (const cubo of cubosDelPedido(ip, restaurantId, customer.phone)) {
+    if (!(await rateLimit(cubo.clave, cubo.max, cubo.ventanaMs))) {
+      return { error: 'Has enviado varios pedidos muy seguido. Espera un momento e intenta de nuevo.' };
+    }
   }
 
   const { authUserId, loyaltyCustomerId } = diner;

@@ -5,17 +5,29 @@ import { planPriceLabel } from '@/lib/plans';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import LeoginLogo from '@/components/leogin-logo';
-import { adminUrl } from '@/lib/tenant';
+import { adminUrl, marketingUrl } from '@/lib/tenant';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { isGoogleAuthEnabled } from '@/lib/auth-config';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import SignupWizard from './signup-wizard';
 
+const TITULO = 'Crea tu cuenta — Leogin';
+const DESCRIPCION = 'Crea tu cuenta y pon tu restaurante en línea en minutos. Tu menú digital con QR es gratis para siempre.';
+
 export const metadata: Metadata = {
-  title: 'Crea tu cuenta — Leogin',
-  description: 'Crea tu cuenta y pon tu restaurante en línea en minutos. Tu menú digital con QR es gratis para siempre.',
+  title: TITULO,
+  description: DESCRIPCION,
   robots: { index: true, follow: true },
+  // El enlace viaja con ?plan=…&caso=… (LZ-11): para Google es una sola
+  // página, y al compartirlo sale con título e imagen (LZ-09).
+  alternates: { canonical: marketingUrl('/registro') },
+  openGraph: {
+    title: TITULO, description: DESCRIPCION, url: marketingUrl('/registro'),
+    siteName: 'Leogin', locale: 'es_GT', type: 'website',
+    images: [{ url: marketingUrl('/icon-512.png'), width: 512, height: 512, alt: 'Leogin' }],
+  },
+  twitter: { card: 'summary', title: TITULO, description: DESCRIPCION, images: [marketingUrl('/icon-512.png')] },
 };
 
 const perks = (trialDays: number) => [

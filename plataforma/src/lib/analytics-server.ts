@@ -1,7 +1,7 @@
 import 'server-only';
 import { after } from 'next/server';
 import { headers } from 'next/headers';
-import { analiticaConfig, type Evento } from '@/lib/analytics';
+import { analiticaConfig, cuerpoDelEvento, type Evento, type PropsDeEvento } from '@/lib/analytics';
 import { rootDomainForUrls } from '@/lib/tenant';
 import { ipDelCliente } from '@/lib/rate-limit';
 
@@ -16,10 +16,11 @@ import { ipDelCliente } from '@/lib/rate-limit';
    tope: la analítica nunca hace esperar ni tumba un alta. Viajan el
    navegador y la IP del visitante (las dos analíticas los usan para
    contar personas sin cookies) y la ruta, nunca un correo, un nombre
-   ni el restaurante.
+   ni el restaurante. Como propiedades, solo el plan y el caso que eligió
+   en la web (LZ-11: medir la conversión por origen).
    ============================================================ */
 
-export async function registrarEvento(evento: Evento, ruta: string): Promise<void> {
+export async function registrarEvento(evento: Evento, ruta: string, props?: PropsDeEvento): Promise<void> {
   const cfg = analiticaConfig();
   if (!cfg) return;
 
@@ -39,9 +40,7 @@ export async function registrarEvento(evento: Evento, ruta: string): Promise<voi
   after(async () => {
     const hdrs: Record<string, string> = { 'Content-Type': 'application/json', 'User-Agent': ua || 'Mozilla/5.0' };
     if (ip) hdrs['X-Forwarded-For'] = ip;
-    const body = cfg.proveedor === 'umami'
-      ? { type: 'event', payload: { website: cfg.id, hostname: host, url: new URL(url).pathname, name: evento, language: 'es-GT' } }
-      : { name: evento, domain: cfg.id, url };
+    const body = cuerpoDelEvento(cfg, evento, url, props);
     const endpoint = cfg.proveedor === 'umami' ? `${cfg.origen}/api/send` : `${cfg.origen}/api/event`;
     try {
       await fetch(endpoint, { method: 'POST', headers: hdrs, body: JSON.stringify(body), signal: AbortSignal.timeout(2000) });
