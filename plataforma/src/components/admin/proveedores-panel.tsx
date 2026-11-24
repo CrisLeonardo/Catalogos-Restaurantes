@@ -242,7 +242,7 @@ function OrdersTab({
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
               <label style={labelStyle}>Proveedor</label>
-              <Select
+              <Select aria-label="Proveedor"
                 options={[{ value: '', label: 'Sin asignar' }, ...suppliers.filter((s) => s.active).map((s) => ({ value: s.id, label: s.name }))]}
                 value={supplierId}
                 onValueChange={setSupplierId}
@@ -258,7 +258,7 @@ function OrdersTab({
                 columnas fijas dejaban la descripción en ~30px, inusable). */}
             {lines.map((l, i) => (
               <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 9px', borderRadius: 'var(--radius-md)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)' }}>
-                <Select
+                <Select aria-label={`Qué compras en el renglón ${i + 1}`}
                   options={linkOptions}
                   value={l.linkValue}
                   onValueChange={(v) => setLink(i, v)}

@@ -1,6 +1,8 @@
 'use server';
 
-import { borrarArchivosDelLocal } from '@/lib/archivos-del-local';
+import { borrarLocal } from '@/lib/borrar-local';
+import { clientIp } from '@/lib/rate-limit';
+import { headers } from 'next/headers';
 import { leerPapel } from '@/lib/permisos-trabajo';
 import { createServiceClient } from '@/lib/supabase/service';
 import { diaDeCobroDelAlta } from '@/lib/billing-signup';
@@ -491,29 +493,20 @@ export async function deleteRestaurant(formData: FormData) {
   const { db } = sesion;
 
   const id = formData.get('id') as string;
+  if (!id) return;
 
-  // El nombre se guarda ANTES de borrar. Después ya no existe, y una fila
-  // que dijera solo «se borró el restaurante 3f2a…» no le explica nada a
-  // nadie. Por lo mismo la tabla no tiene clave foránea aquí: si la
-  // tuviera en cascada, este borrado se llevaría su propio registro.
-  const { data: previo } = await db.from('restaurants').select('name, slug').eq('id', id).maybeSingle();
-
-  /* Antes no se miraba el resultado: si el borrado fallaba, la bitácora
-     decía «restaurante.borrar» igual. Ahora además se borran sus archivos,
-     y eso solo puede pasar si el local ya no existe. */
-  const { error } = await db.from('restaurants').delete().eq('id', id);
-  if (error) throw new Error(`No se pudo borrar el restaurante: ${error.message}`);
-
-  // Sus fotos y comprobantes no caen con la cascada (LZ-10).
-  const archivos = await borrarArchivosDelLocal(db, id);
-  if (archivos.error) console.error('[restaurante.borrar] archivos', id, archivos.error);
+  // Guarda sus cobros de Leogin en la bitácora antes de borrar, y no
+  // borra si no puede guardarlos (LZ-08 y LZ-10). Ver lib/borrar-local.ts.
+  const quien = { actorId: sesion.actorId, actorEmail: sesion.actorEmail, ip: clientIp(await headers()) };
+  const { nombre, slug, cobrosGuardados, archivos } = await borrarLocal(db, quien, id);
 
   await logSuper(sesion, {
     action: 'restaurante.borrar',
     targetRestaurantId: id,
-    targetLabel: (previo?.name as string | null) ?? null,
+    targetLabel: nombre,
     meta: {
-      slug: previo?.slug ?? null,
+      slug,
+      cobros_guardados: cobrosGuardados,
       fotos_borradas: archivos.fotosBorradas,
       fotos_conservadas: archivos.fotosConservadas,
       comprobantes_borrados: archivos.comprobantesBorrados,
@@ -522,6 +515,7 @@ export async function deleteRestaurant(formData: FormData) {
   });
 
   revalidatePath('/super/restaurantes');
+  revalidatePath('/super/finanzas', 'layout');
   redirect('/super/restaurantes');
 }
 

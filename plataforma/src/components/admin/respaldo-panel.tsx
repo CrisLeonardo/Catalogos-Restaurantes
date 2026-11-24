@@ -24,10 +24,16 @@ const HOJAS = [
   { icon: 'bag', label: 'Catálogo', desc: 'Todos tus platillos, con precio, costo y existencias.' },
   { icon: 'grid', label: 'Categorías', desc: 'Tu menú tal como está organizado hoy.' },
   { icon: 'users', label: 'Clientes', desc: 'Nombre, contacto, dirección y su historial de compra.' },
-  { icon: 'receipt', label: 'Pedidos', desc: 'Hasta los últimos 5.000, con sus platillos y totales.' },
+  // Los cobros van en su propia hoja, pero aquí se nombran con los
+  // pedidos: son el mismo dato para quien lo lee (LZ-08).
+  { icon: 'receipt', label: 'Pedidos', desc: 'Todos, con sus platillos, cómo se pagaron y cada cobro o devolución.' },
 ];
 
-export default function RespaldoPanel({ restaurantId }: { restaurantId: string }) {
+// Solo la ve quien factura: a los demás no les dice nada (nada saturado).
+const HOJA_FEL = { icon: 'ticket', label: 'Facturas FEL', desc: 'Las que emitiste, con su número de autorización.' };
+
+export default function RespaldoPanel({ restaurantId, conFacturas = false }: { restaurantId: string; conFacturas?: boolean }) {
+  const hojas = conFacturas ? [...HOJAS, HOJA_FEL] : HOJAS;
   const [pending, start] = useTransition();
   const toast = useToastManager();
 
@@ -58,7 +64,7 @@ export default function RespaldoPanel({ restaurantId }: { restaurantId: string }
   return (
     <div className="adm-w-read flex flex-col gap-6">
       <p className="text-[14px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
-        Tu catálogo, tus clientes y tus pedidos recientes en un solo archivo de
+        Tu catálogo, tus clientes y todos tus pedidos en un solo archivo de
         Excel, para guardarlos donde quieras. Abajo está exactamente lo que
         incluye: sirve para tener tus datos a la mano, no para restaurar el
         restaurante completo. Para los reportes del día a día están Catálogo,
@@ -67,7 +73,7 @@ export default function RespaldoPanel({ restaurantId }: { restaurantId: string }
 
       <Section title="Qué te llevas">
         <List>
-          {HOJAS.map((h) => (
+          {hojas.map((h) => (
             <ListRow key={h.label}>
               <span
                 className="grid size-7 shrink-0 place-items-center rounded-adm-md"

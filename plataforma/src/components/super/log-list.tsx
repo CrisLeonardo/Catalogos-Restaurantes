@@ -75,6 +75,10 @@ const ACCION: Record<AccionSuper, {
   'restaurante.borrar': {
     conObjetivo: 'Borró el restaurante', solo: 'Borró su restaurante', icon: 'trash', grave: true, borraElObjetivo: true,
   },
+  'restaurante.cobros-guardados': {
+    conObjetivo: 'Guardó los cobros de Leogin de', solo: 'Guardó sus cobros de Leogin', icon: 'wallet',
+    borraElObjetivo: true,
+  },
   'restaurante.plan': {
     conObjetivo: 'Cambió el plan de', solo: 'Cambió el plan', icon: 'wallet',
   },
@@ -190,6 +194,10 @@ function detalle(row: LogRow): string | null {
   if (row.action === 'cuenta.correo' && m.antes) return `antes ${String(m.antes)}`;
   if (row.action === 'restaurante.plan') {
     return `${m.antes ? String(m.antes) : '—'} → ${m.despues ? String(m.despues) : '—'}`;
+  }
+  if (row.action === 'restaurante.cobros-guardados' && Number(m.cuantos) > 0) {
+    const n = Number(m.cuantos);
+    return `${n} ${n === 1 ? 'cobro' : 'cobros'}, antes de borrarlo`;
   }
   if (row.action === 'restaurante.estado') {
     return m.estado === 'suspended' ? 'suspendido' : 'activo';

@@ -244,12 +244,12 @@ function SettingsForm({ restaurantId, settings, estado }: { restaurantId: string
       </p>
       <div style={grid}>
         <Fila label="Régimen de IVA">
-          <Select options={OPCIONES_REGIMEN_IVA.map((o) => ({ value: o.value, label: o.label }))}
+          <Select aria-label="Régimen de IVA" options={OPCIONES_REGIMEN_IVA.map((o) => ({ value: o.value, label: o.label }))}
             value={p.regimen_iva} onValueChange={(v) => set('regimen_iva', v as RegimenIva)} />
           {notaIva && <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: '4px 0 0' }}>{notaIva}</p>}
         </Fila>
         <Fila label="Régimen de ISR">
-          <Select options={OPCIONES_REGIMEN_ISR.map((o) => ({ value: o.value, label: o.label }))}
+          <Select aria-label="Régimen de ISR" options={OPCIONES_REGIMEN_ISR.map((o) => ({ value: o.value, label: o.label }))}
             value={p.regimen_isr} onValueChange={(v) => set('regimen_isr', v as RegimenIsr)} />
           {notaIsr && <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: '4px 0 0' }}>{notaIsr}</p>}
         </Fila>
@@ -286,7 +286,7 @@ function SettingsForm({ restaurantId, settings, estado }: { restaurantId: string
       <div className="adm-label" style={seccion}>Cómo cobra y factura tu caja</div>
       <div style={grid}>
         <Fila label="Precios de la carta">
-          <Select
+          <Select aria-label="Precios de la carta"
             options={[{ value: 'si', label: 'Ya incluyen IVA (lo normal)' }, { value: 'no', label: 'Sin IVA (se agrega encima)' }]}
             value={p.iva_incluido ? 'si' : 'no'}
             onValueChange={(v) => set('iva_incluido', v === 'si')}
@@ -309,11 +309,11 @@ function SettingsForm({ restaurantId, settings, estado }: { restaurantId: string
       <div className="adm-label" style={seccion}>Certificador</div>
       <div style={grid}>
         <Fila label="Proveedor">
-          <Select options={PROVIDERS.map((pv) => ({ value: pv, label: PROVIDER_META[pv].label }))}
+          <Select aria-label="Proveedor del certificador" options={PROVIDERS.map((pv) => ({ value: pv, label: PROVIDER_META[pv].label }))}
             value={p.provider} onValueChange={(v) => set('provider', v as FelProvider)} />
         </Fila>
         <Fila label="Ambiente">
-          <Select options={[{ value: 'PRUEBAS', label: 'Pruebas' }, { value: 'PRODUCCION', label: 'Producción' }]}
+          <Select aria-label="Ambiente del certificador" options={[{ value: 'PRUEBAS', label: 'Pruebas' }, { value: 'PRODUCCION', label: 'Producción' }]}
             value={p.ambiente} onValueChange={(v) => set('ambiente', v as 'PRUEBAS' | 'PRODUCCION')} />
         </Fila>
         {p.provider === 'MANUAL' && (
@@ -439,7 +439,7 @@ function EmitForm({ restaurantId, settings, invoiceable, listo, onGoConfig }: { 
           {pendientes.length === 0 ? (
             <p style={{ fontSize: 13, color: 'var(--u-text-4)' }}>No hay pedidos pendientes de facturar.</p>
           ) : (
-            <Select
+            <Select aria-label="Pedido a facturar"
               options={pendientes.map((o) => ({ value: o.id, label: `${o.order_number} · ${o.customer_name} · ${money(o.total)}` }))}
               value={orderId}
               onValueChange={setOrderId}
