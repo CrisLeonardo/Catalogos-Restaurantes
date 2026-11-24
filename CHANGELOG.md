@@ -4,6 +4,45 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
+## v0.35.0 · 2026-11-24 · Seguridad, plazos de los datos y avisos antes de perder algo
+PR #182, #183 y #184 · **migraciones 194 y 195** (`supabase/actualizacion_194_a_195.sql`, antes o después del despliegue: el código funciona sin ellas y se pueden repetir). Cierra la parte de código de la [auditoría de lanzamiento](docs/auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md) con las decisiones del dueño del 24 de noviembre.
+- **Los límites de intentos ya no se saltan con una IP falsa** (#182).
+  - Antes bastaba escribir otra IP en `X-Forwarded-For` para saltar los límites del PIN, el acceso, el código de dos pasos, recuperar la contraseña y los pedidos.
+  - Ahora la IP sale de Cloudflare (`cf-connecting-ip`), y las IPv6 se agrupan por /64.
+  - Comprobado en producción: con 35 peticiones con IP falsa, la 31.ª ya da 429.
+- **Un comedor lleno en el mismo wifi ya no choca** (#183). El tope era de 6 pedidos por minuto por IP. Ahora es de 30 por IP y local, y de 6 por teléfono.
+- **El comensal que vuelve con un pedido en espera lo ve** (#184).
+  - Antes el reintento iba a escondidas: si el local lo rechazaba se borraba sin avisar, y si entraba el carrito seguía lleno, listo para pedir dos veces.
+  - Ahora el pedido aparece en «Aún no se envía». Si entra, sale la confirmación y el carrito se vacía.
+  - Si se rechaza, vuelve el carrito con «Tu pedido no se envió: …» y los datos ya escritos.
+  - En el kiosko sigue en segundo plano.
+- **Antes de borrar un local, el superadmin sabe si el dueño exportó sus datos** (#184).
+  - La zona peligrosa dice si el dueño exportó y cuándo.
+  - Si no exportó, la confirmación lo advierte en rojo y el botón dice «Eliminar de todos modos». Se avisa, no se bloquea (decisión del dueño).
+- **«Exportar tus datos» trae todo** (#182). Antes cortaba en 5,000 pedidos sin decirlo; ahora trae todos los pedidos, más una hoja de Cobros y otra de Facturas FEL.
+- **Los cobros de Leogin quedan en la bitácora al borrar un local** (#182). Si no se pueden guardar, el local no se borra.
+- **Los datos personales tienen plazo** (migración 195).
+  - Una purga diaria quita el nombre y el contacto del comensal en los pedidos, las reseñas y las fichas después de 24 meses. Las reservas y WhatsApp tienen 12 meses, y las visitas a la carta 13.
+  - Se conservan los totales, las facturas FEL y las fichas con puntos por canjear.
+  - La política de privacidad dice los plazos.
+- **Al terminar una prueba gratis, el cobro empieza ese día** (migración 194). Antes la primera mensualidad podía nacer vencida. `supabase/revisar_mensualidad_vencida_al_nacer.sql` lista los locales que ya quedaron así.
+- Vista previa al compartir Vende en línea y el registro: título e imagen en WhatsApp.
+- Las altas se miden por plan y caso con `supabase/medir_altas_por_origen.sql`.
+- **Ensayos.**
+  - `scripts/ensayo-turno.mjs`: 10 pedidos con doble toque, respuesta perdida y sin señal, con 2 teléfonos y 2 paneles.
+  - Pausar los pedidos a mitad del turno.
+  - Acceso por rol: Caja ve pedidos, Cocina no, y quitar el acceso funciona con el panel abierto.
+  - `scripts/revisar-accesibilidad.mjs` (axe): el panel baja de 8 fallas críticas a 0.
+
+## v0.34.0 · 2026-11-23 · Carta más ligera, precios al día y borrar a un comensal
+PR #181 · **migraciones 192 y 193, ANTES de desplegar** (`node scripts/armar-migraciones-produccion.mjs 192 193`). Las dos solo agregan funciones.
+- **La carta carga menos** (de 323 a 235 KB de JS en producción). La demo y el cliente de Supabase se cargan solo donde se usan, y los 48 íconos de la carta van aparte de los del panel. En producción la carta se ve en 2.44 s (mediana) y se puede tocar en 2.86 s.
+- **Si un precio cambia con el carrito abierto, el comensal se entera.** Antes el servidor cobraba el precio nuevo sin avisar. Ahora el pedido no se crea, el carrito toma el precio vigente y el pago dice qué cambió.
+- **Errores del registro y del alta que se leen.** Se anuncian a los lectores de pantalla, el cursor va al campo que falta y el aviso usa el rojo del sistema (el anterior apenas se leía).
+- **Borrar los datos de un comensal en un local** (migración 192, `leogin_olvidar_comensal`). Por defecto hace un ensayo, y conserva los totales y las facturas FEL. Hay un inventario de los datos personales que guarda Leogin.
+- **Borrar un local ya no deja archivos sueltos** (migración 193). Se van sus comprobantes y las fotos que no usa nadie más. Se conservan las de copias, plantillas y grupos.
+- `scripts/medir-aviso-panel.mjs` mide cuánto tarda un pedido en verse en el panel (≤ 5 s); `medir-carta.mjs` mide también cuándo la carta se puede tocar.
+
 ## v0.33.0 · 2026-11-23 · Listo para el primer piloto de pago
 PR #177 y #179 · **migración 191, ANTES de desplegar** (`supabase/.produccion/` con `node scripts/armar-migraciones-produccion.mjs 191 191`). Sale de la [auditoría de lanzamiento](docs/auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md), cuyo §4 lleva el avance de cada punto.
 - **El precio que acuerdas se respeta** (migración 191).
