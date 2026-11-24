@@ -16,16 +16,16 @@ Auditoría de lanzamiento, **LZ-10** ([auditoría](../auditorias/AUDITORIA_LANZA
 
 | Dato | Dónde | Quién lo ve | Se guarda hoy | Cómo se borra |
 | --- | --- | --- | --- | --- |
-| Ficha de cliente: nombre, teléfono, correo, dirección y coordenadas | `customers` | El restaurante | Sin plazo | `leogin_olvidar_comensal` (migración 192), o con el local |
+| Ficha de cliente: nombre, teléfono, correo, dirección y coordenadas | `customers` | El restaurante | 24 meses sin pedidos, salvo puntos por canjear (195) | `leogin_olvidar_comensal` (migración 192), o con el local |
 | Puntos de lealtad | `loyalty_accounts`, `loyalty_transactions` | El restaurante y el comensal | Sin plazo | Caen con la ficha |
-| Pedido: nombre, teléfono, dirección, coordenadas y notas | `orders` | El restaurante. El seguimiento público muestra solo el nombre | Sin plazo | La 192 en los pedidos cerrados: deja «Cliente eliminado» y conserva los totales |
-| Reseña: nombre y comentario | `order_ratings` | El restaurante | Sin plazo | La 192 borra nombre y comentario, y deja la calificación |
-| Reservas y lista de espera: nombre, teléfono y notas | `reservations`, `waitlist_entries` | El restaurante | Sin plazo | La 192 |
-| Conversación de WhatsApp: número y mensajes | `whatsapp_conversations`, `whatsapp_messages` | El restaurante | Sin plazo | La 192 las borra |
+| Pedido: nombre, teléfono, dirección, coordenadas y notas | `orders` | El restaurante. El seguimiento público muestra solo el nombre | 24 meses si está cerrado; quedan los totales (195) | La 192 en los pedidos cerrados: deja «Cliente eliminado» y conserva los totales |
+| Reseña: nombre y comentario | `order_ratings` | El restaurante | 24 meses; queda la calificación (195) | La 192 borra nombre y comentario, y deja la calificación |
+| Reservas y lista de espera: nombre, teléfono y notas | `reservations`, `waitlist_entries` | El restaurante | 12 meses (195) | La 192 |
+| Conversación de WhatsApp: número y mensajes | `whatsapp_conversations`, `whatsapp_messages` | El restaurante | 12 meses (195) | La 192 las borra |
 | Factura: NIT, nombre, dirección y correo del receptor | `fel_documents` | El restaurante | Se conserva | **No se borra**: obligación fiscal. La 192 la informa como conservada |
 | Nombres en la cuenta compartida de la mesa | `mesa_cuenta_lineas.nombre` | La mesa y el restaurante | Sin plazo | Solo con el local. Es un nombre de pila escrito por la mesa, sin teléfono que lo enlace |
 | Cuenta de Google del comensal | Supabase Auth | Leogin | Sin plazo | El superadmin, desde Cuentas |
-| Identificador anónimo del aparato (`visitor_id`) | `page_visits`, `menu_embudo` | Métricas del restaurante | Sin plazo | Solo con el local. No identifica a nadie por sí solo |
+| Identificador anónimo del aparato (`visitor_id`) | `page_visits`, `menu_embudo` | Métricas del restaurante | 13 meses (195) | Solo con el local. No identifica a nadie por sí solo |
 | En su teléfono: nombre, teléfono, dirección, carrito, sus pedidos e identificador anónimo | `localStorage` del navegador (`customer-<local>`, `myorders-<local>`, `leogin-visitor-id`) | Solo ese navegador | Hasta que borre los datos del sitio | Lo borra el propio comensal (la política lo dice) |
 
 ## Restaurantes, dueños y personal
@@ -63,7 +63,7 @@ El teléfono se compara solo por sus dígitos, y basta con que coincidan los úl
 
 ## Brechas y decisiones pendientes
 
-- **Plazos (decisión del dueño).** Hoy casi todo se guarda mientras exista el local, y la política dice «mientras sean necesarios». Hay que decidir si los datos de contacto de los pedidos cerrados se anonimizan solos después de un plazo (por ejemplo, 24 meses), y si `super_admin_log` lleva purga.
+- **Plazos: decididos el 24 de noviembre (migración 195).** `leogin_purgar_datos_vencidos()` corre cada día a las 4:45 UTC: 24 meses para pedidos cerrados, reseñas y fichas sin pedidos (salvo puntos por canjear); 12 meses para reservas, lista de espera y WhatsApp; 13 meses para visitas y embudo. `super_admin_log` no se purga: es de solo escritura (132) y guarda lo que Leogin cobró. Se puede correr a mano en el editor SQL: `select public.leogin_purgar_datos_vencidos();` devuelve cuánto tocó.
 - **Facturas al borrar un local (decisión del dueño).** Borrar un restaurante borra en cascada sus documentos FEL (`fel_documents`) y las facturas de Leogin a ese local (`invoices`, `payment_proofs`). Los FEL se deben conservar por obligación fiscal, y las facturas son la contabilidad de Leogin. Hay que exportarlos antes de borrar, o cambiar el borrado por un cierre que los conserve (se relaciona con el «cierre definitivo» pendiente de LZ-08). **Desde el 24 de noviembre el dueño ya puede exportarlos él mismo:** «Exportar tus datos» trae todos los pedidos, los cobros y una hoja «Facturas FEL» con serie, número, autorización, receptor, montos y anulación. **Y lo de Leogin ya no se pierde:** desde el 24 de noviembre, borrar un local desde superadmin copia antes sus `invoices` (mensualidades, implementación, prorrateos) a la bitácora del superadmin, que es de solo escritura y no cae con la cascada; si no se pueden guardar, no se borra (`lib/borrar-local.ts`). Sigue pendiente de decisión: si el borrado debe exigir que el dueño haya exportado antes, o cambiarse por un cierre que conserve.
 - **Solicitud desde el panel.** Hoy la atiende Leogin con la función de la 192. Si se quiere que el dueño la haga solo, va en una pantalla, con maqueta según la guía de diseño.
 - **Por confirmar en paneles externos:** plan y antigüedad de las copias de Supabase, retención y acceso de los registros de Render, y quién en Leogin tiene acceso a cada panel.

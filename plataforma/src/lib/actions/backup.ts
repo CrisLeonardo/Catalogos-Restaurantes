@@ -309,5 +309,10 @@ export async function exportBackupXlsx(
   }
 
   const xlsx = await workbookToBase64(wb);
+  // El superadmin la ve antes de borrar el local (LZ-10, migración 195). Si
+  // no se puede anotar, el respaldo se entrega igual: es solo un aviso.
+  const { error: sinFecha } = await db.from('restaurants')
+    .update({ datos_exportados_at: new Date().toISOString() }).eq('id', restaurantId);
+  if (sinFecha) console.error('[respaldo] no se anotó la fecha de exportación', restaurantId, sinFecha.message);
   return { xlsx, filename: `respaldo-${slug}-${today}.xlsx` };
 }

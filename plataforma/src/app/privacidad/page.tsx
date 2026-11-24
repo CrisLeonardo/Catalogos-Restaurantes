@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'crisleonardo100@gmail.com';
-const UPDATED = '27 de junio de 2026';
+const UPDATED = '24 de noviembre de 2026';
 
 export default function PrivacidadPage() {
   return (
@@ -76,8 +76,19 @@ export default function PrivacidadPage() {
       <LegalSection n={7} title="Conservación">
         <LegalP>
           Conservamos los datos mientras sean necesarios para prestar el servicio y cumplir
-          obligaciones legales o contables. Al cerrar una cuenta, el restaurante puede solicitar la
-          eliminación de los datos que no debamos conservar por ley.
+          obligaciones legales o contables, con estos plazos:
+        </LegalP>
+        <LegalP>
+          Los pedidos y las reseñas pierden el nombre, el teléfono, la dirección y las notas del
+          cliente a los 24 meses; los montos se conservan porque son la contabilidad del
+          restaurante. La ficha de un cliente que no pide en 24 meses se borra, salvo que tenga
+          puntos por canjear. Las reservas, la lista de espera y los mensajes de WhatsApp se borran
+          o anonimizan a los 12 meses, y las visitas a la carta, a los 13. Las facturas
+          electrónicas se conservan por ley.
+        </LegalP>
+        <LegalP>
+          Al cerrar una cuenta, el restaurante puede solicitar la eliminación de los datos que no
+          debamos conservar por ley.
         </LegalP>
       </LegalSection>
 
