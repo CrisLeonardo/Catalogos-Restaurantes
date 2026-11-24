@@ -5,6 +5,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { can } from '@/lib/permissions';
 import RespaldoPanel from '@/components/admin/respaldo-panel';
 import { panelLink } from '@/lib/panel-links-server';
+import { createServiceClient } from '@/lib/supabase/service';
 
 export const metadata = { title: 'Exportar datos – Panel admin' };
 
@@ -37,9 +38,15 @@ export default async function AdminRespaldoPage() {
 
   if (!restaurantId) redirect('/admin/login');
 
+  // ¿Factura este local? Solo entonces se nombra la hoja de facturas.
+  const { count: facturas } = await createServiceClient()
+    .from('fel_documents')
+    .select('id', { count: 'exact', head: true })
+    .eq('restaurant_id', restaurantId);
+
   return (
     <div className="anim-fade-up">
-      <RespaldoPanel restaurantId={restaurantId} />
+      <RespaldoPanel restaurantId={restaurantId} conFacturas={(facturas ?? 0) > 0} />
     </div>
   );
 }
