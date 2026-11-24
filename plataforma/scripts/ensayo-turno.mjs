@@ -31,8 +31,18 @@
  * desde antes y confirma en plena pausa; el otro dejó su pedido en cola sin
  * señal y la recupera durante la pausa. Ninguno debe entrar ni quedarse
  * creyendo que pidió: los dos tienen que ver el aviso de pausa. Al reanudar
- * vuelven a confirmar y cada uno entra una sola vez. Borra lo que creó y
- * deja el local recibiendo pedidos.
+ * vuelven a confirmar y cada uno entra una sola vez.
+ *
+ * Por último, el ACCESO POR ROL: entra personal de prueba con dos puestos.
+ * Caja (tiene «pedidos») abre Pedidos y ve llegar un pedido en vivo; Cocina
+ * (no lo tiene) rebota al abrir Pedidos. Luego se le quita el acceso a Caja
+ * con su panel abierto, como «Quitar» en Personal cuando solo trabaja en ese
+ * local (se borra su cuenta; la pantalla pide la contraseña del dueño, así
+ * que el script lo hace por la base): el siguiente pedido NO debe llegarle
+ * en vivo y al recargar tiene que quedar fuera.
+ *
+ * Borra lo que creó (pedidos, clientes y personal de prueba) y deja el local
+ * recibiendo pedidos.
  *
  * Uso (desde plataforma/, con `npm run dev` y Supabase local arriba):
  *   node scripts/ensayo-turno.mjs
@@ -93,6 +103,8 @@ const registro = [];
 /** Pedidos de la fase de pausa: se concilian aparte, pero se limpian igual. */
 const extras = [];
 let pausamos = false;
+/** Personal de prueba creado para el acceso por rol (ids de auth). */
+const personal = [];
 const fallas = [];
 const falla = (msg) => { fallas.push(msg); console.log(`   ✗ ${msg}`); };
 
@@ -272,8 +284,13 @@ try {
   // El dueño pausa desde Ajustes, en la PC.
   const ajustes = await panelPC.context().newPage();
   await ajustes.goto(`${base}/panel/${slug}/ajustes/restaurante`, { waitUntil: 'networkidle', timeout: 120_000 });
-  await ajustes.getByRole('button', { name: 'Pausar pedidos' }).click();
-  await ajustes.getByRole('button', { name: 'Hasta reactivar', exact: true }).click();
+  // Un toque antes de que la página hidrate no abre las opciones: se repite.
+  const duraciones = ajustes.getByRole('group', { name: 'Duración de la pausa' });
+  for (let intento = 0; intento < 5 && !(await duraciones.isVisible()); intento++) {
+    await ajustes.getByRole('button', { name: 'Pausar pedidos' }).click();
+    await duraciones.waitFor({ timeout: 3000 }).catch(() => {});
+  }
+  await duraciones.getByRole('button', { name: 'Hasta reactivar', exact: true }).click();
   await ajustes.getByRole('button', { name: 'Pausar hasta reactivar' }).click();
   pausamos = true;
   const pausado = await ajustes.getByText('Pedidos en pausa', { exact: true })
@@ -316,6 +333,71 @@ try {
     console.log(`   ${nombre}: ${n} pedido en la base`);
     if (n !== 1) falla(`pausa: «${nombre}» quedó ${n} veces en la base, se esperaba 1`);
   }
+
+  // ── Acceso por rol ───────────────────────────────────────────
+  console.log('\nAcceso por rol');
+  const PUESTOS = {
+    caja: ['caja.cobrar', 'caja.abrir', 'caja.salida', 'caja.cerrar', 'pedidos', 'mesas'],
+    cocina: ['cocina'],
+  };
+  const crearPersonal = async (puesto) => {
+    const email = `ensayo-${puesto}-${sello}@ejemplo.test`;
+    const { data, error } = await db.auth.admin.createUser({ email, email_confirm: true, user_metadata: { full_name: `Ensayo ${puesto}` } });
+    if (error) throw new Error(`no se pudo crear el personal ${puesto}: ${error.message}`);
+    const id = data.user.id;
+    personal.push(id);
+    const permissions = PUESTOS[puesto];
+    const { error: e1 } = await db.from('profiles').upsert({ id, restaurant_id: rest.id, role: 'RESTAURANT_STAFF', full_name: `Ensayo ${puesto}`, permissions });
+    const { error: e2 } = await db.from('restaurant_members').upsert(
+      { user_id: id, restaurant_id: rest.id, role: 'STAFF', permissions, puesto, status: 'active' },
+      { onConflict: 'user_id,restaurant_id' },
+    );
+    if (e1 || e2) throw new Error(`no se pudo dar acceso a ${puesto}: ${(e1 ?? e2).message}`);
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await ctx.newPage();
+    await page.goto(`${base}/api/dev-login?email=${encodeURIComponent(email)}&next=/panel/${slug}/pedidos`, { waitUntil: 'networkidle', timeout: 120_000 });
+    return { id, page };
+  };
+  const caja = await crearPersonal('caja');
+  const cocina = await crearPersonal('cocina');
+
+  const cajaEnPedidos = new URL(caja.page.url()).pathname.endsWith('/pedidos');
+  const cajaVe = cajaEnPedidos && (await tarjeta(caja.page, nombreA).count()) > 0;
+  console.log(`   Caja abre Pedidos: ${cajaEnPedidos ? 'entra' : `rebota a ${new URL(caja.page.url()).pathname}`}${cajaVe ? ' y ve los pedidos del turno' : ''}`);
+  if (!cajaVe) falla('rol: Caja (con «pedidos») no ve los pedidos del turno');
+
+  const rutaCocina = new URL(cocina.page.url()).pathname;
+  const cocinaVe = await cocina.page.locator('article.adm-pedido').count();
+  console.log(`   Cocina abre Pedidos: ${rutaCocina.endsWith('/pedidos') ? 'entra' : `rebota a ${rutaCocina}`} · ${cocinaVe} tarjetas de pedido`);
+  if (rutaCocina.endsWith('/pedidos') || cocinaVe) falla('rol: Cocina (sin «pedidos») pudo abrir Pedidos');
+
+  await caja.page.waitForTimeout(3000); // que se suscriba en vivo
+  const nombreC = `Rol C ${sello}`;
+  const nombreD = `Rol D ${sello}`;
+  extras.push(nombreC, nombreD);
+  await (await prepararCheckout(telA, nombreC, 1, 92)).click();
+  await llegaALosPaneles(nombreC, 'rol: ');
+  const cajaVeC = await tarjeta(caja.page, nombreC).first()
+    .waitFor({ timeout: ESPERA_PANEL_MS }).then(() => true, () => false);
+  console.log(`   Caja ve llegar un pedido nuevo en vivo: ${cajaVeC ? 'sí' : 'no'}`);
+  if (!cajaVeC) falla('rol: a Caja no le llegó en vivo un pedido nuevo');
+
+  // Se le quita el acceso a Caja con su panel abierto.
+  const { error: errQuitar } = await db.auth.admin.deleteUser(caja.id);
+  if (errQuitar) falla(`rol: no se pudo quitar el acceso a Caja: ${errQuitar.message}`);
+  else personal.splice(personal.indexOf(caja.id), 1);
+  await caja.page.waitForTimeout(2000);
+  await (await prepararCheckout(telB, nombreD, 1, 93)).click();
+  await llegaALosPaneles(nombreD, 'rol: ');
+  await caja.page.waitForTimeout(5000); // lo que tardó en llegar a los paneles, y más
+  const cajaVeD = await tarjeta(caja.page, nombreD).count();
+  console.log(`   Con el acceso quitado y el panel abierto, a Caja ${cajaVeD ? 'SÍ le llegó' : 'no le llegó'} el pedido siguiente`);
+  if (cajaVeD) falla('rol: a Caja le siguieron llegando pedidos en vivo después de quitarle el acceso');
+  await caja.page.reload({ waitUntil: 'networkidle', timeout: 120_000 });
+  const rutaCaja = new URL(caja.page.url()).pathname;
+  const fuera = !rutaCaja.endsWith('/pedidos') && (await caja.page.locator('article.adm-pedido').count()) === 0;
+  console.log(`   Caja recarga: ${fuera ? `queda fuera (${rutaCaja})` : 'SIGUE DENTRO'}`);
+  if (!fuera) falla('rol: Caja siguió en Pedidos al recargar después de quitarle el acceso');
 } finally {
   await browser.close();
   // Si el ensayo se cayó a media pausa, el local vuelve a recibir pedidos.
@@ -323,6 +405,12 @@ try {
     await db.from('restaurants').update({ orders_paused: false, orders_paused_until: null }).eq('id', rest.id);
     console.log('Limpieza: se quitó la pausa que dejó el ensayo.');
   }
+  // El personal de prueba que quedó (Cocina, o Caja si el ensayo se cayó).
+  for (const id of personal) {
+    const { error } = await db.auth.admin.deleteUser(id);
+    if (error) console.log(`Limpieza incompleta del personal ${id}: ${error.message}`);
+  }
+  if (personal.length) console.log(`Limpieza: ${personal.length} persona(s) de prueba borrada(s).`);
   // Limpieza: los pedidos y clientes de este ensayo.
   const nombres = [...registro.map((r) => r.nombre), ...extras];
   const { data: pedidos } = nombres.length
@@ -340,6 +428,6 @@ try {
 }
 
 console.log(fallas.length === 0
-  ? `\nENSAYO SUPERADO: ${registro.length} pedidos, ninguno perdido ni duplicado, totales y estados cuadran en la base y en los dos paneles. La pausa a mitad del turno avisó a los dos comensales y, al reanudar, cada pedido entró una vez.`
+  ? `\nENSAYO SUPERADO: ${registro.length} pedidos, ninguno perdido ni duplicado, totales y estados cuadran en la base y en los dos paneles. La pausa a mitad del turno avisó a los dos comensales y, al reanudar, cada pedido entró una vez. Caja ve los pedidos en vivo, Cocina no entra a Pedidos y quitar el acceso corta los pedidos en vivo y la sesión.`
   : `\nENSAYO CON ${fallas.length} FALLA(S):\n- ${fallas.join('\n- ')}`);
 process.exitCode = fallas.length === 0 ? 0 : 1;
