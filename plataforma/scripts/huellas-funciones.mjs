@@ -48,7 +48,9 @@ export const FUNCIONES_CRITICAS = [
   'leogin_solicitar_traspaso_caja',
   'leogin_confirmar_traspaso_caja',
   // Mensualidad de Leogin
+  'leogin_catalog_plan_fee',
   'leogin_compute_monthly_fee',
+  'leogin_confirmar_cambio_de_plan',
   'leogin_apply_auto_price',
   'leogin_apply_auto_price_all',
   'leogin_fijar_precio_vigente',
