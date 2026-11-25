@@ -20,6 +20,8 @@ La [auditoría de lanzamiento del 23 de noviembre](auditorias/AUDITORIA_LANZAMIE
 
 La [auditoría de experiencia de la web pública del 24 de noviembre](auditorias/AUDITORIA_EXPERIENCIA_WEB_PUBLICA_2026-11-24.md) evalúa cómo un dueño entiende la oferta, compara, prueba y se registra desde distintos dispositivos.
 
+La [auditoría funcional para el piloto del 25 de noviembre](auditorias/AUDITORIA_FUNCIONAL_PILOTO_2026-11-25.md) clasifica y corrige los hallazgos de caja, demo, alta y planes, y trae el mapa de dependencias del plan Básico.
+
 Para mejorar la carta del comensal como vendedora del restaurante, consulta la [auditoría «La carta que vende»](auditorias/AUDITORIA_CARTA_QUE_VENDE_2026-11-18.md) y su [maqueta](diseno/MAQUETA_CARTA_QUE_VENDE_2026-11-18.html).
 
 ## Convenciones de nombre

@@ -685,7 +685,14 @@ export function loQueSePierde(antes: PlanCode, despues: PlanCode): string[] {
  * regla es la de lib/tope-pedidos.ts: tope blando, se avisa y se sube el mes
  * siguiente.
  */
-export function reglaDelTopeEnLinea(): string {
+/* PLAN-02 (auditoría funcional 2026-11-25): la regla vigente en código es
+   un tope BLANDO (lib/tope-pedidos.ts): ningún pedido se corta, el panel
+   avisa al 80 % y al pasarlo, y pide subir el mes siguiente. No hay ningún
+   cambio de plan automático: lo confirma el dueño en Mi suscripción. El
+   texto anterior («al mes siguiente pasas a Estándar») sonaba automático y
+   no decía cuánto costaba Estándar. */
+export function reglaDelTopeEnLinea(precioEstandar?: string): string {
   const tope = PLANS.EN_LINEA.monthlyOrderCap ?? 300;
-  return `En línea incluye hasta ${tope} pedidos al mes. Si un mes los pasas, no se corta ningún pedido: te avisamos y al mes siguiente pasas a Estándar.`;
+  const estandar = precioEstandar ? `Estándar (${precioEstandar})` : 'Estándar';
+  return `En línea incluye hasta ${tope} pedidos al mes. Si un mes los pasas, ningún pedido se corta: te avisamos y desde el mes siguiente te pedimos pasar a ${estandar}. El cambio lo confirmas tú.`;
 }

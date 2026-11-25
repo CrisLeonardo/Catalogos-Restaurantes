@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MAX_LINEAS, canalDeSala, limpiarPedido, nuevaSala, pedidoDesdeCarrito, salaValida,
+  MAX_LINEAS, canalDeSala, etapaSiguiente, limpiarEtapa, limpiarPedido, nuevaSala, pedidoDesdeCarrito, salaValida,
 } from './pidelo';
 import type { CartItem } from '@/types';
 
@@ -97,5 +97,20 @@ describe('limpiarPedido', () => {
     const base = { lineas: [{ nombre: 'Pizza', cantidad: 1 }] };
     expect(limpiarPedido({ ...base, total: -5 }, ahora)!.total).toBe(0);
     expect(limpiarPedido({ ...base, total: 'mucho' }, ahora)!.total).toBe(0);
+  });
+});
+
+
+describe('PEDIDOS-02 · la etapa de la demo viaja entre pantallas', () => {
+  it('acepta solo las tres etapas', () => {
+    expect(limpiarEtapa({ etapa: 'listo' })).toBe('listo');
+    expect(limpiarEtapa({ etapa: 'cobrado' })).toBeNull();
+    expect(limpiarEtapa('listo')).toBeNull();
+    expect(limpiarEtapa(null)).toBeNull();
+  });
+  it('un aviso viejo no devuelve a «Nuevo» un pedido ya listo', () => {
+    expect(etapaSiguiente('listo', 'cocina')).toBe('listo');
+    expect(etapaSiguiente('nuevo', 'cocina')).toBe('cocina');
+    expect(etapaSiguiente('cocina', 'listo')).toBe('listo');
   });
 });

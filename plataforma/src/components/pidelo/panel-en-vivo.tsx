@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { PedidoDemo } from '@/lib/pidelo';
+import type { EtapaDemo, PedidoDemo } from '@/lib/pidelo';
 
 /* ============================================================
    «Pedidos en vivo» de mentira — lo que ve la cocina
@@ -17,9 +17,15 @@ import type { PedidoDemo } from '@/lib/pidelo';
 
    Se puede tocar: «Aceptar» lo manda a cocina y «Marcar listo»
    lo termina. Son tres toques y es exactamente el ciclo real.
+
+   PEDIDOS-02 (auditoría funcional 2026-11-25): con celular y PC
+   abiertos, cada panel guardaba su propia etapa y uno decía «Listo»
+   mientras el otro seguía en «Nuevo» con «Aceptar». Ahora la etapa la
+   lleva quien monta el panel y viaja por la sala. Y al terminar ya no
+   dice «Le avisamos al cliente»: en la demo nadie recibe ese aviso.
    ============================================================ */
 
-type Etapa = 'nuevo' | 'cocina' | 'listo';
+type Etapa = EtapaDemo;
 
 const ETAPA: Record<Etapa, { etiqueta: string; fondo: string; tinta: string }> = {
   nuevo:  { etiqueta: 'NUEVO',     fondo: '#FDE7DF', tinta: '#B4472A' },
@@ -33,17 +39,22 @@ function haceCuanto(desde: number, ahora: number): string {
   return `hace ${Math.floor(s / 60)} min`;
 }
 
-export function PanelEnVivo({ pedido, dinero, restaurante = 'Rincón 502' }: {
+export function PanelEnVivo({ pedido, dinero, restaurante = 'Rincón 502', etapa: etapaControlada, onEtapa }: {
   /** null = todavía esperando el pedido. */
   pedido: PedidoDemo | null;
   dinero: (n: number) => string;
   restaurante?: string;
+  /** Con sala, la etapa la comparten las dos pantallas. */
+  etapa?: Etapa;
+  onEtapa?: (e: Etapa) => void;
 }) {
-  const [etapa, setEtapa] = useState<Etapa>('nuevo');
+  const [etapaPropia, setEtapaPropia] = useState<Etapa>('nuevo');
+  const etapa = etapaControlada ?? etapaPropia;
+  const setEtapa = (e: Etapa) => { setEtapaPropia(e); onEtapa?.(e); };
   const [ahora, setAhora] = useState(() => Date.now());
 
   // Un pedido nuevo vuelve a empezar como NUEVO.
-  useEffect(() => { setEtapa('nuevo'); }, [pedido?.enviado]);
+  useEffect(() => { setEtapaPropia('nuevo'); }, [pedido?.enviado]);
 
   useEffect(() => {
     if (!pedido) return;
@@ -110,7 +121,7 @@ export function PanelEnVivo({ pedido, dinero, restaurante = 'Rincón 502' }: {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, gap: 10 }}>
             <span style={{ fontWeight: 700, fontSize: 15, fontVariantNumeric: 'tabular-nums' }}>{dinero(pedido.total)}</span>
             {etapa === 'listo' ? (
-              <span style={{ fontSize: 12.5, color: '#1F7A3D', fontWeight: 600 }}>Le avisamos al cliente ✓</span>
+              <span style={{ fontSize: 12.5, color: '#1F7A3D', fontWeight: 600 }}>Listo para entregar ✓</span>
             ) : (
               <button
                 type="button"

@@ -588,6 +588,8 @@ export default async function AdminHomePage() {
             menuUrl={menuUrl}
             platilloHref={href('/admin/menu/productos/new')}
             qrHref={href('/admin/qr')}
+            conPedidos={ordersEnabled}
+            personas={visitStats?.unique30 ?? 0}
           />
           {dinero}
           {widgets?.online && <OnlineWidget data={widgets.online} showOrders={ordersEnabled} />}

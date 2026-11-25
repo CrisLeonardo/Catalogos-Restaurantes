@@ -30,6 +30,8 @@ interface Props {
   enlaceCorto: string;
   /** Las frases que el cartel puede decir (la primera, por defecto). */
   frases: Frase[];
+  /** El plan incluye el salón: se ofrecen los QR de cada mesa. */
+  conQrPorMesa: boolean;
 }
 
 const USOS: { id: Uso; label: string }[] = [
@@ -50,7 +52,7 @@ const ALT: Record<Uso, string> = {
   codigo: 'Vista previa del código QR',
 };
 
-export default function QRDisplay({ restaurantName, restaurantId, accent, hasLogo, urlEstable, enlaceCorto, frases }: Props) {
+export default function QRDisplay({ restaurantName, restaurantId, accent, hasLogo, urlEstable, enlaceCorto, frases, conQrPorMesa }: Props) {
   const toast = useToastManager();
   const [uso, setUso] = useState<Uso>('redes');
   const [fraseId, setFraseId] = useState<IdFrase>(frases[0].id);
@@ -118,6 +120,9 @@ export default function QRDisplay({ restaurantName, restaurantId, accent, hasLog
       if (uso === 'imprimir') await art.descargarHojaPdf(canvas, nombre);
       else await art.descargarPng(canvas, nombre);
       toast.add({ title: 'Archivo listo', description: nombre, type: 'success' });
+      /* ALTA-04: la guía de Hoy distingue «ya lo descargaste» de «ya lo vio
+         la gente». La descarga se recuerda en este aparato. */
+      try { localStorage.setItem(`leogin:qr-descargado:${restaurantId}`, new Date().toISOString()); } catch { /* sin almacenamiento */ }
     } catch {
       setError(uso === 'imprimir'
         ? 'No se pudo armar el cartel. Revisa tu conexión y vuelve a intentarlo.'
@@ -193,9 +198,11 @@ export default function QRDisplay({ restaurantName, restaurantId, accent, hasLog
         {bajando ? 'Preparando el archivo…' : BOTON[uso]}
       </Button>
 
-      <Link href="/admin/ajustes/salon" className={s.mesas}>
-        QR de cada mesa <span>Ajustes › Salón ›</span>
-      </Link>
+      {conQrPorMesa && (
+        <Link href="/admin/ajustes/salon" className={s.mesas}>
+          QR de cada mesa <span>Ajustes › Salón ›</span>
+        </Link>
+      )}
     </div>
   );
 }

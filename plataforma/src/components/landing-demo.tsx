@@ -4,7 +4,7 @@ import { useCallback, useId, useRef, useState } from 'react';
 import { Icon } from '@/components/icons';
 import { PanelEnVivo } from '@/components/pidelo/panel-en-vivo';
 import { useSala } from '@/components/pidelo/use-sala';
-import { nuevaSala, type PedidoDemo } from '@/lib/pidelo';
+import { etapaSiguiente, nuevaSala, type EtapaDemo, type PedidoDemo } from '@/lib/pidelo';
 import { playOrderSound, primeAudio } from '@/lib/sounds';
 import { fmtMoney } from '@/lib/money';
 
@@ -36,11 +36,14 @@ export function LandingDemo({ href, primaria = false }: { href: string; primaria
   const [qr, setQr] = useState<string | null>(null);
   const [pedido, setPedido] = useState<PedidoDemo | null>(null);
 
+  const [etapa, setEtapa] = useState<EtapaDemo>('nuevo');
   const alRecibir = useCallback((p: PedidoDemo) => {
     setPedido(p);
+    setEtapa('nuevo');
     playOrderSound(0.6, 2, { force: true });
   }, []);
-  const { fallo } = useSala(sala, alRecibir);
+  const alCambiarEtapa = useCallback((e: EtapaDemo) => setEtapa((actual) => etapaSiguiente(actual, e)), []);
+  const { fallo, enviarEtapa } = useSala(sala, alRecibir, alCambiarEtapa);
 
   async function abrir() {
     // El clic desbloquea el audio: el pedido llega después, sin gesto, y sin
@@ -101,7 +104,8 @@ export function LandingDemo({ href, primaria = false }: { href: string; primaria
             </a>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-            <PanelEnVivo pedido={pedido} dinero={(n) => fmtMoney(n)} />
+            <PanelEnVivo pedido={pedido} dinero={(n) => fmtMoney(n)}
+              etapa={etapa} onEtapa={(e) => { setEtapa(e); enviarEtapa(e); }} />
             {fallo && !pedido && (
               <p style={{ fontSize: 12.5, color: '#8A8178', margin: 0, textAlign: 'center' }}>
                 No pudimos conectar esta pantalla. Tu celular te enseña igual cómo llega el pedido.

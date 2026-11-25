@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Price, PrimaryButton } from '@/components/menu/ui';
 import { useCart } from '@/lib/cart-context';
 import { useThemeConfig } from '@/lib/theme/context';
 import { formatPrice } from '@/lib/theme/resolve';
-import { pedidoDesdeCarrito, salaValida, type PedidoDemo } from '@/lib/pidelo';
+import { etapaSiguiente, pedidoDesdeCarrito, salaValida, type EtapaDemo, type PedidoDemo } from '@/lib/pidelo';
 import { playOrderSound, primeAudio } from '@/lib/sounds';
 import { PanelEnVivo } from '@/components/pidelo/panel-en-vivo';
 import { useSala } from '@/components/pidelo/use-sala';
@@ -44,7 +44,9 @@ export function PedidoDemo({ open, onClose }: { open: boolean; onClose: () => vo
   const [enviado, setEnviado] = useState<PedidoDemo | null>(null);
   const [enLaPc, setEnLaPc] = useState(false);
   const [enviando, setEnviando] = useState(false);
-  const { listo, enviar } = useSala(sala);
+  const [etapa, setEtapa] = useState<EtapaDemo>('nuevo');
+  const alCambiarEtapa = useCallback((e: EtapaDemo) => setEtapa((actual) => etapaSiguiente(actual, e)), []);
+  const { listo, enviar, enviarEtapa } = useSala(sala, undefined, alCambiarEtapa);
 
   useEffect(() => {
     setSala(salaValida(new URLSearchParams(window.location.search).get('sala')));
@@ -73,6 +75,7 @@ export function PedidoDemo({ open, onClose }: { open: boolean; onClose: () => vo
   }, [open]);
 
   if (!open) return null;
+  const enMuestra = window.location.pathname.startsWith('/preview/');
 
   async function mandar() {
     if (enviando || items.length === 0) return;
@@ -84,6 +87,7 @@ export function PedidoDemo({ open, onClose }: { open: boolean; onClose: () => vo
     // Un respiro antes del sonido: así se siente como algo que viaja.
     window.setTimeout(() => {
       setEnviado(pedido);
+      setEtapa('nuevo');
       setEnLaPc(llego);
       setEnviando(false);
       clearCart();
@@ -130,11 +134,12 @@ export function PedidoDemo({ open, onClose }: { open: boolean; onClose: () => vo
   ) : (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <PanelEnVivo pedido={enviado} dinero={(n) => formatPrice(n, config)} />
+        <PanelEnVivo pedido={enviado} dinero={(n) => formatPrice(n, config)}
+          etapa={etapa} onEtapa={(e) => { setEtapa(e); if (enLaPc) enviarEtapa(e); }} />
       </div>
       {enLaPc && (
         <p style={{ margin: 0, fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)', textAlign: 'center' }}>
-          Mira la computadora: allá también sonó.
+          Mira la computadora: allá también sonó. Lo que toques en una pantalla se ve en la otra.
         </p>
       )}
     </div>
@@ -145,9 +150,14 @@ export function PedidoDemo({ open, onClose }: { open: boolean; onClose: () => vo
     </PrimaryButton>
   ) : (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <PrimaryButton href={urlDeRegistro()} size="lg" full iconRight="arrowRight">
-        Quiero esto en mi restaurante
-      </PrimaryButton>
+      {/* Dentro de la carta de muestra (el alta o la vitrina de la portada,
+          en un iframe) ya se está creando el restaurante o el enlace
+          navegaría dentro del marco: ahí solo se vuelve a la carta. */}
+      {!enMuestra && (
+        <PrimaryButton href={urlDeRegistro()} size="lg" full iconRight="arrowRight">
+          Quiero esto en mi restaurante
+        </PrimaryButton>
+      )}
       <button
         type="button"
         onClick={cerrar}

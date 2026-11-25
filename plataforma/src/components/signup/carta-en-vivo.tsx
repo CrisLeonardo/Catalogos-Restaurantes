@@ -9,11 +9,13 @@ import { esMuestraAviso } from '@/lib/muestra-mensajes';
    con el nombre, el estilo y los platillos que el dueño va escribiendo. No
    toca la base: todo viaja por postMessage del mismo origen. */
 export function CartaEnVivo({
-  estilo, nombre, platos,
+  estilo, nombre, platos, pedidos = true,
 }: {
   estilo: string;
   nombre: string;
   platos: { nombre: string; precio: number }[];
+  /** El plan elegido recibe pedidos (Básico no). */
+  pedidos?: boolean;
 }) {
   const marco = useRef<HTMLIFrameElement>(null);
   const [lista, setLista] = useState(false);
@@ -34,9 +36,9 @@ export function CartaEnVivo({
 
   useEffect(() => {
     if (!lista) return;
-    const msg: MuestraPedido = { type: 'leogin-muestra', estilo, nombre: nombre.trim() || 'Tu restaurante', platos };
+    const msg: MuestraPedido = { type: 'leogin-muestra', estilo, nombre: nombre.trim() || 'Tu restaurante', platos, pedidos };
     marco.current?.contentWindow?.postMessage(msg, window.location.origin);
-  }, [lista, estilo, nombre, platos]);
+  }, [lista, estilo, nombre, platos, pedidos]);
 
   return (
     <div className="listo-telefono" style={{ margin: '0 auto' }}>
