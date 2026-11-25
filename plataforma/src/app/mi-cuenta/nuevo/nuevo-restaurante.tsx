@@ -213,7 +213,7 @@ export default function NuevoRestaurante({
   }
 
   const precioPlan = planPriceLabel(pricing, plan);
-  const conPrueba = esElPrimero && pricing.trialDays > 0 && plan !== 'BASICO';
+  const conPrueba = pricing.trialDays > 0 && plan !== 'BASICO';
   /* El primer cobro, con monto, fecha y dónde se paga (LZ-01; maqueta
      §3). La fecha sale de la misma regla que guarda el alta: vence el día
      del alta, cada mes; del 29 al 31, el 28. Cada restaurante tiene su
@@ -226,7 +226,7 @@ export default function NuevoRestaurante({
   const notaCobro = plan === 'BASICO'
     ? 'El plan Básico es gratis para siempre, sin tarjeta.'
     : conPrueba
-      ? `Empiezas con ${pricing.trialDays} días gratis; luego ${precioPlan}. Lo cambias o das de baja cuando quieras.`
+      ? `Empiezas con ${pricing.trialDays} días gratis, sin tarjeta. Si quieres seguir por ${precioPlan}, confirma la contratación en Mi suscripción.`
       : `Tu primer cobro es de ${monto} y vence ${diaCobro === dia ? `hoy, ${fechaVence}` : `el ${fechaVence}`}; después, cada ${diaCobro}. Lo pagas desde Mi suscripción. Sin contrato: lo cambias o das de baja cuando quieras.`;
 
   return (
@@ -456,7 +456,7 @@ export default function NuevoRestaurante({
         onBack={() => { setStepError(null); setCambiando(null); setStep((s) => Math.max(0, s - 1)); }}
         onNext={next}
         nextLabel={step === 1 ? 'Ver mi carta' : 'Continuar'}
-        submitLabel={esElPrimero ? 'Crear mi restaurante' : 'Crear restaurante'}
+        submitLabel={conPrueba ? 'Iniciar prueba' : esElPrimero ? 'Crear mi restaurante' : 'Crear restaurante'}
         pendingLabel="Creando tu restaurante…"
         isPending={isPending || (!!state && 'url' in state)}
       />

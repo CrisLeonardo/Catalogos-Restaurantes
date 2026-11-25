@@ -59,6 +59,11 @@ describe('construirPricingSettings', () => {
     expect(s.trialDays).toBe(0);
   });
 
+  it('solo anuncia la prueba voluntaria con su ajuste propio', () => {
+    expect(construirPricingSettings(new Map([['trial_days', '14']])).trialDays).toBe(0);
+    expect(construirPricingSettings(new Map([['prueba_voluntaria_activa', '1']])).trialDays).toBe(14);
+  });
+
   it('un valor ilegible no se convierte en 0: queda el de fábrica', () => {
     expect(construirPricingSettings(new Map([['plan_price_EN_LINEA', 'abc']])).enLinea).toBe(75);
   });

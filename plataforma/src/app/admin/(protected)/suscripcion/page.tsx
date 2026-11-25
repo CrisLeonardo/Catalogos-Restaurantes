@@ -28,6 +28,7 @@ import { ultimoComprobante } from '@/lib/db/comprobantes';
 import { codigoDePago } from '@/lib/pago-plan';
 import PagaTuPlan from '@/components/admin/paga-tu-plan';
 import CambiarPlan from '@/components/admin/cambiar-plan';
+import PruebaDePlan from '@/components/admin/prueba-de-plan';
 import { duenoDelRestaurante } from '@/lib/auth/acceso-cobro';
 import { estadoDelTope } from '@/lib/tope-pedidos';
 import { pedidosDelMes } from '@/lib/db/tope-pedidos';
@@ -116,6 +117,15 @@ export default async function SuscripcionPage() {
   const hasOverdue = pending.some((i) => isOverdue(i));
   const onTrial = isOnTrial(config);
   const trialLeft = trialDaysLeft(config);
+  const pruebaVoluntaria = config?.trial_started_at != null;
+  const puedeProbar = currentPlan === 'BASICO' && !config?.trial_ends_at && pricing.trialDays > 0;
+  const pendientesDePrueba = pruebaVoluntaria && !!config?.trial_finished_at
+    && !config.trial_confirmed_at && currentPlan === 'BASICO'
+    ? (await db.from('orders').select('id', { count: 'exact', head: true })
+        .eq('restaurant_id', restaurantId).in('status', ['NEW', 'PREP', 'READY', 'TRANSIT', 'SERVED'])).count ?? 0
+    : 0;
+
+  const pedidosHref = pendientesDePrueba > 0 ? await panelLink('/admin/pedidos') : null;
 
   /* «Enviar comprobante»: WhatsApp de soporte (Super › Configuración) o, si
      no está, el del entorno. Con el monto y el restaurante ya escritos. */
@@ -135,7 +145,18 @@ export default async function SuscripcionPage() {
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 640 }}>
 
       {/* ── Trial banner ─────────────────────────────────────── */}
-      {onTrial && (
+      {onTrial && pruebaVoluntaria && config?.trial_ends_at && (
+        <PruebaDePlan restaurantId={restaurantId} plan={currentPlan} amount={displayedMonthlyFee}
+          endsAt={config.trial_ends_at} confirmed={!!config.trial_confirmed_at} esDueno={esDueno} />
+      )}
+      {pedidosHref && (
+        <Card className="p-5">
+          <h2 className="text-[16px] font-semibold">Tu carta sigue en Básico</h2>
+          <p className="mt-1 text-[14px] text-adm-text-3">Puedes resolver los pedidos que recibiste durante la prueba.</p>
+          <Button render={<a href={pedidosHref} />} className="mt-3">Ver pedidos</Button>
+        </Card>
+      )}
+      {onTrial && !pruebaVoluntaria && (
         <Card
           className="p-5"
           style={{
@@ -215,7 +236,7 @@ export default async function SuscripcionPage() {
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0, maxWidth: '100%' }}>
             <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 20, color: 'var(--u-text)' }}>
-              {contract.monthlyLabel}
+              {onTrial && pruebaVoluntaria ? 'Q0 durante la prueba' : contract.monthlyLabel}
             </div>
             <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>
               {contract.policy}
@@ -254,21 +275,22 @@ export default async function SuscripcionPage() {
       </Card>
 
       {/* ── Lo que pagarás este mes ───────────────────────────── */}
-      <MeasureCard contract={contract} />
+      {!(onTrial && pruebaVoluntaria) && <MeasureCard contract={contract} />}
 
       {/* ── Cambiar de plan (fase 3 del plan 2026-10-28) ─────────
           Antes: una tarjeta de Premium para el Básico, otra con el
           «siguiente plan» y otra con «más opciones», y las tres abrían un
           WhatsApp a Leogin. Ahora el dueño lo cambia aquí mismo. */}
-      <CambiarPlan
+      {!(onTrial && pruebaVoluntaria) && <CambiarPlan
         restaurantId={restaurantId}
         planActual={currentPlan}
         pricing={pricing}
         currentPresentation={contract}
         esDueno={esDueno}
         enPrueba={onTrial}
+        puedeProbar={puedeProbar}
         proximoCorte={config ? nextChargeLabel(config.billing_day) : null}
-      />
+      />}
 
       {/* ── ¿Varias sucursales? ───────────────────────────────── */}
       <Card className="flex flex-wrap items-center justify-between gap-3 p-3.5">

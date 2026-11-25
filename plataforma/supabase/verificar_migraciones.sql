@@ -363,6 +363,15 @@ huellas(n, que, ok, cuando) as (values
      'antes de desplegar el código'),
   ('201', 'una estación de impresión nueva por local Estándar',
      to_regprocedure('public.leogin_validar_cupo_de_estaciones()') is not null,
+     'antes de desplegar el código'),
+  ('202', 'ranking de platillos por unidades en el reporte de ventas',
+     pg_get_functiondef(to_regprocedure('public.leogin_sales_report(uuid,date,date,text,integer)')) like '%topByQuantity%',
+     'antes de desplegar el código'),
+  ('203', 'prueba voluntaria por restaurante con confirmación de cobro',
+     to_regprocedure('public.leogin_cerrar_pruebas_voluntarias()') is not null,
+     'antes de desplegar el código'),
+  ('204', 'recordatorios de prueba por correo',
+     to_regprocedure('public.leogin_tomar_avisos_de_prueba()') is not null,
      'antes de desplegar el código')
 )
 select n as migracion,

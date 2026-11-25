@@ -38,9 +38,10 @@ const CASOS: { valor: CasoDeLaWeb; texto: string }[] = [
   { valor: 'mesas', texto: 'En mesas con mesero' },
 ];
 
-export function PlanPorPreguntas({ planes, origen, contacto }: {
+export function PlanPorPreguntas({ planes, origen, contacto, trialDays = 0 }: {
   planes: PlanDeLaWeb[];
   origen: 'portada' | 'planes';
+  trialDays?: number;
   /** Canal de ventas real (site-chrome): «¿Dudas? Escríbenos por correo» bajo
       el botón, donde se decide el plan (WEB-UX-06). Lo pasa la página porque
       la configuración del canal vive en el servidor. */
@@ -95,8 +96,11 @@ export function PlanPorPreguntas({ planes, origen, contacto }: {
         {...conEvento(`lp-btn lp-btn-lg lp-btn-primary ${s.cta}`, EVENTOS.clicCrear, `${origen} · ${plan?.nombre ?? 'sin plan'}`)}
         onClick={elegido === 'EN_LINEA' ? () => guardarPerfil('en-linea') : undefined}
       >
-        {plan ? (plan.gratis ? 'Empezar gratis con Básico' : `Empezar con ${plan.nombre}`) : 'Crear mi restaurante'}
+        {plan ? (plan.gratis ? 'Empezar gratis con Básico' : trialDays > 0 ? 'Iniciar prueba' : `Empezar con ${plan.nombre}`) : 'Crear mi restaurante'}
       </Link>
+      {plan && !plan.gratis && trialDays > 0 && (
+        <p className={s.mas}>{trialDays} días gratis. Empieza sin tarjeta.</p>
+      )}
       {origen === 'portada' && (
         <Link href="/planes#comparativa" className={s.mas}>Ver los cuatro planes lado a lado →</Link>
       )}

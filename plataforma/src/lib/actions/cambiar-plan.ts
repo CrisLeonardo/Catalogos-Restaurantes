@@ -32,7 +32,7 @@ export type CambioDePlanResult = { error: string } | { ok: true; plan: PlanCode 
 export async function cambiarMiPlan(
   restaurantId: string,
   nuevo: string,
-  confirmacion: { planActual: PlanCode; importe: number; moneda: string },
+  confirmacion: { planActual: PlanCode; importe: number; moneda: string; iniciarPrueba?: boolean },
 ): Promise<CambioDePlanResult> {
   if (!UUID_RE.test(restaurantId)) return { error: 'Restaurante inválido.' };
   if (!(PUBLIC_PLANS as string[]).includes(nuevo)) return { error: 'Ese plan no está disponible.' };
@@ -61,10 +61,9 @@ export async function cambiarMiPlan(
   const modules = modulosAlCambiarDePlan(antes, plan, (rest.modules as Record<string, boolean> | null) ?? {});
   const config = (tema?.config as Record<string, unknown> | null) ?? {};
   const modosAntes = (config.orderTypes as OrderType[] | undefined) ?? ['dine_in', 'delivery', 'pickup'];
-  const { data: aplicado, error } = await db.rpc('leogin_confirmar_cambio_de_plan', {
+  const cambio = {
     p_restaurante: restaurantId,
     p_actor: userId,
-    p_anterior: confirmacion.planActual,
     p_nuevo: plan,
     p_nombre: PLANS[plan].name,
     p_modulos_anteriores: rest.modules ?? null,
@@ -72,8 +71,12 @@ export async function cambiarMiPlan(
     p_modos_anteriores: config.orderTypes ?? null,
     p_modos_nuevos: modosAlCambiarDePlan(plan, modosAntes),
     p_importe: confirmacion.importe,
-    p_moneda: confirmacion.moneda,
-  });
+  };
+  const { data: aplicado, error } = confirmacion.iniciarPrueba === true
+    ? await db.rpc('leogin_iniciar_prueba_de_plan', cambio)
+    : await db.rpc('leogin_confirmar_cambio_de_plan', {
+        ...cambio, p_anterior: confirmacion.planActual, p_moneda: confirmacion.moneda,
+      });
   if (error) return { error: error.code === 'LGP01' ? error.message : 'No se pudo cambiar el plan. Inténtalo de nuevo.' };
   if (aplicado) await avisarALeogin(rest.name as string, antes, plan);
 
@@ -81,6 +84,28 @@ export async function cambiarMiPlan(
   revalidatePath('/');
   updateTag(`restaurant:${restaurantId}`);
   return { ok: true, plan };
+}
+
+export async function confirmarPlanTrasPrueba(
+  restaurantId: string,
+  quote: { plan: PlanCode; amount: number; endsAt: string },
+  acepta: boolean,
+): Promise<{ error?: string }> {
+  if (!UUID_RE.test(restaurantId) || !quote || typeof acepta !== 'boolean' ||
+      quote.plan === 'BASICO' || !PUBLIC_PLANS.includes(quote.plan) ||
+      !Number.isFinite(quote.amount) || quote.amount < 0 ||
+      !Number.isFinite(Date.parse(quote.endsAt))) {
+    return { error: 'Revisa los datos de tu prueba y vuelve a intentarlo.' };
+  }
+  const userId = await duenoDelRestaurante(restaurantId);
+  if (!userId) return { error: 'Solo el dueño puede confirmar la contratación.' };
+  const { error } = await createServiceClient().rpc('leogin_confirmar_prueba_de_plan', {
+    p_restaurante: restaurantId, p_actor: userId, p_plan: quote.plan,
+    p_importe: quote.amount, p_vencimiento: quote.endsAt, p_acepta: acepta,
+  });
+  if (error) return { error: error.code === 'LGP01' ? error.message : 'No se pudo guardar tu decisión. Inténtalo de nuevo.' };
+  revalidatePath('/admin', 'layout');
+  return {};
 }
 
 async function avisarALeogin(nombre: string, antes: PlanCode, despues: PlanCode) {

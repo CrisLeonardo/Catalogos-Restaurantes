@@ -28,12 +28,13 @@ interface Props {
   /** Solo el dueño cambia el plan; el personal ve los planes sin botón. */
   esDueno: boolean;
   enPrueba: boolean;
+  puedeProbar?: boolean;
   /** «1 dic 2026» */
   proximoCorte: string | null;
   currentPresentation?: ReturnType<typeof planPresentation> | null;
 }
 
-export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno, enPrueba, proximoCorte, currentPresentation }: Props) {
+export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno, enPrueba, puedeProbar = false, proximoCorte, currentPresentation }: Props) {
   const router = useRouter();
   const [elegido, setElegido] = useState<PlanCode | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +43,7 @@ export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno
 
   const pierde = elegido ? loQueSePierde(planActual, elegido) : [];
   const sube = elegido ? isUpgrade(planActual, elegido) : false;
+  const iniciaPrueba = puedeProbar && !!elegido && elegido !== 'BASICO';
   const preview = elegido ? planChangePresentation(currentPresentation, elegido, pricing) : null;
 
   function confirmar() {
@@ -49,7 +51,7 @@ export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno
     setError(null);
     start(async () => {
       const r = await cambiarMiPlan(restaurantId, elegido, {
-        planActual, importe: preview.monthlyAmount, moneda: preview.currency,
+        planActual, importe: preview.monthlyAmount, moneda: preview.currency, iniciarPrueba: iniciaPrueba,
       });
       if ('error' in r) return setError(r.error);
       setHecho(`Listo: ya estás en ${PLANS[r.plan].name}.`);
@@ -107,10 +109,12 @@ export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno
       {elegido && preview && (
         <Card className="p-4" style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--u-text)' }}>
-            {sube ? 'Subir' : 'Cambiar'} a {PLANS[elegido].name} · {preview.monthlyLabel}
+            {iniciaPrueba ? 'Probar ' : sube ? 'Subir a ' : 'Cambiar a '}{PLANS[elegido].name} · {preview.monthlyLabel}
           </div>
           <p style={{ fontSize: 13, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-            {pricing.prices[elegido] === 0
+            {iniciaPrueba
+              ? `Prueba el plan durante ${pricing.trialDays} días sin tarjeta. Si quieres seguir, confirma la mensualidad antes del vencimiento.`
+              : pricing.prices[elegido] === 0
               ? 'Es gratis: dejas de pagar mensualidad desde tu próximo corte. Tu carta y tu QR siguen funcionando; lo que ya debías sigue pendiente en esta pantalla.'
               : preview.manual
               ? `El cambio del plan es inmediato. Se conserva tu mensualidad acordada (${preview.monthlyLabel}); la tarifa pública de ${preview.name} es ${preview.publicLabel}.`
@@ -129,7 +133,7 @@ export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno
           {error && <p role="alert" style={{ fontSize: 13, color: 'var(--c-danger)', margin: 0 }}>{error}</p>}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <Button type="button" onClick={confirmar} disabled={pending} className="rounded-adm-full">
-              {pending ? 'Cambiando…' : `Confirmar cambio a ${PLANS[elegido].name}`}
+              {pending ? 'Guardando…' : iniciaPrueba ? 'Iniciar prueba' : `Confirmar cambio a ${PLANS[elegido].name}`}
             </Button>
             <Button type="button" variant="ghost" onClick={() => setElegido(null)} disabled={pending}>Cancelar</Button>
           </div>

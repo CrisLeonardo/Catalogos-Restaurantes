@@ -212,8 +212,6 @@ export async function createAnotherRestaurant(
   }
 
   const memberships = await getMyMemberships();
-  // La prueba gratis es de la PERSONA y va en su primer restaurante propio:
-  // ser gerente en el local de otro no la gasta. Ver lib/billing-signup.ts.
   const esElPrimero = !memberships.some((m) => canBill(m.role));
 
   const name = ((formData.get('name') as string) ?? '').trim();
@@ -225,9 +223,7 @@ export async function createAnotherRestaurant(
   const template = findTemplate(((formData.get('template_id') as string) ?? '').trim());
   const whatsapp = ((formData.get('whatsapp') as string) ?? '').trim() || null;
 
-  // Estándar lleva 2 de los 3 modos de pedido. Un valor inválido o con conteo
-  // distinto cae al par de siempre — misma regla que aplicaba el alta de la
-  // calle, que es de donde vino esta pantalla.
+  // Estándar puede activar las tres modalidades. Conserva las elecciones del alta.
   const VALID_ORDER_TYPES: OrderType[] = ['dine_in', 'pickup', 'delivery'];
   const rawTypes = ((formData.get('estandar_order_types') as string | null) ?? '').split(',').map((t) => t.trim());
   const requestedEstandarTypes = [...new Set(rawTypes)].filter((t): t is OrderType => VALID_ORDER_TYPES.includes(t as OrderType));
@@ -331,15 +327,14 @@ export async function createAnotherRestaurant(
   });
 
   // ── Cobro ──────────────────────────────────────────────────
-  // La prueba gratis es UNA por persona, en su primer restaurante. Ver la
-  // regla y el porqué en lib/billing-signup.ts.
+  // El local nace en prueba si el plan elegido es de pago y la oferta está activa.
   const pricing = await getPricingSettings();
   const { error: cobroErr } = await db.from('restaurant_billing').insert({
     restaurant_id: restaurantId,
     ...newRestaurantBilling({
       planCode,
       trialDays: pricing.trialDays,
-      isFirstOfOwner: esElPrimero,
+      ownerId: user.id,
     }),
   });
   const altaErr = temaErr ?? cobroErr ?? (await db.rpc('leogin_apply_auto_price', {

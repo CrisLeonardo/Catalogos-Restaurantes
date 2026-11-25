@@ -35,6 +35,8 @@
 import { ACTIVATABLE_MODULES, isModuleActive, type ActivatableModuleKey, type ModuleSettings } from './modules';
 import { fmtMoney } from './money';
 
+export const DIAS_PRUEBA = 14;
+
 export type PlanCode = 'BASICO' | 'EN_LINEA' | 'ESTANDAR' | 'PREMIUM' | 'PRO';
 
 export interface PlanFeatures {
@@ -265,8 +267,7 @@ export function defaultPlanPricing(): PlanPricing {
       PLAN_ORDER.map((code) => [code, PLANS[code].priceMonthly]),
     ) as Record<PlanCode, number>,
     groupPanelFee: GROUP_PANEL_FEE,
-    // Sin prueba gratis de fábrica (dueño, 2026-11-15): los planes con
-    // pedidos se cobran desde el día uno. Se reactiva en /super/configuracion.
+    // El servidor la anuncia solo si leyó el ajuste de la base.
     trialDays: 0,
   };
 }
@@ -438,7 +439,7 @@ export const PLAN_POINTS: Record<PlanCode, { text: string; positive: boolean }[]
   EN_LINEA: [
     { text: 'Para llevar y a domicilio', positive: true },
     { text: 'Zonas de reparto y seguimiento del pedido', positive: true },
-    { text: 'Cupones, avisos y seguimiento', positive: true },
+    { text: 'Cupones y resumen de ventas', positive: true },
     { text: `Hasta ${PLANS.EN_LINEA.monthlyOrderCap} pedidos/mes sin cortar pedidos · ${PLANS.EN_LINEA.maxProducts} platillos activos · ${PLANS.EN_LINEA.users} usuario`, positive: true },
   ],
   ESTANDAR: [
@@ -480,6 +481,7 @@ export type PlanCapability = {
 export const PLAN_CAPABILITIES: PlanCapability[] = [
   { key: 'catalogue', label: 'Menú digital con código QR', always: true },
   { key: 'orders', label: 'Pedidos en línea', feature: 'hasOrders', flag: 'orders' },
+  { key: 'sales-summary', label: 'Resumen de ventas', feature: 'hasOrders' },
   { key: 'whatsapp', label: 'Avisos por WhatsApp', feature: 'hasWhatsapp', flag: 'whatsapp_notify' },
   { key: 'realtime', label: 'Alertas en tiempo real', feature: 'hasRealtime', flag: 'orders' },
   { key: 'theme', label: 'Personalización completa', feature: 'hasFullTheme' },

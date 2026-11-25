@@ -18,6 +18,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { getClientHealth } from '@/lib/db/client-health';
 import { alertasDeSalud, alertasPorAvisar } from '@/lib/client-health';
 import { sendPushToSuperAdmins } from '@/lib/push';
+import { enviarAvisosDePrueba } from '@/lib/db/avisos-de-prueba';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
   if (!esperado) return new Response('Not found', { status: 404 });
   if (!autorizado(req, esperado)) return Response.json({ error: 'No autorizado.' }, { status: 401 });
 
-  const salud = await getClientHealth();
+  const [salud, pruebas] = await Promise.all([getClientHealth(), enviarAvisosDePrueba()]);
   if (salud.estado === 'falta-migracion') {
     return Response.json({ ok: true, faltaMigracion: true, avisos: 0 }, { headers: { 'Cache-Control': 'no-store' } });
   }
@@ -76,7 +77,7 @@ export async function POST(req: Request) {
   await db.from('super_alertas_enviadas').delete().lt('enviada_en', new Date(Date.now() - 7 * 86_400_000).toISOString());
 
   return Response.json(
-    { ok: true, alertas: alertas.length, graves: graves.length, avisadas: nuevas.length, aparatos },
-    { headers: { 'Cache-Control': 'no-store' } },
+    { ok: pruebas.fallidos === 0, alertas: alertas.length, graves: graves.length, avisadas: nuevas.length, aparatos, avisosPrueba: pruebas },
+    { status: pruebas.fallidos ? 503 : 200, headers: { 'Cache-Control': 'no-store' } },
   );
 }
