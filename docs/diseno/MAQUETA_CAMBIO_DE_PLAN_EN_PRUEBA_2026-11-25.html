@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leogin · Cambiar de plan durante la prueba</title>
+<style>
+  :root {
+    color-scheme: light;
+    --adm-bg: #f2f1ee; --adm-card: #fff; --adm-border: #d6d1cc; --adm-border-2: #bdb6af;
+    --u-text: #17161a; --u-text-3: #5c5550; --u-text-4: #7a726b;
+    --adm-accent-fill: #c2542f; --brand-accent-ink: #973c23;
+    --c-ok: #2f7a4b; --c-ok-bg: #e5f2ea; --c-warn-bg: #fbefdc; --c-warn-line: #e9c58e; --c-warn: #8a5a12;
+    --plan-linea: #2f7a9a; --plan-estandar: #2f7a4b; --plan-premium: #c2542f; --plan-basico: #7a726b;
+  }
+  :root[data-tema="oscuro"] {
+    color-scheme: dark;
+    --adm-bg: #0c0b0a; --adm-card: #1a1917; --adm-border: #514b45; --adm-border-2: #6a635c;
+    --u-text: #f5f3ef; --u-text-3: #beb6ad; --u-text-4: #9b938a;
+    --adm-accent-fill: #ac4728; --brand-accent-ink: #ff9e7f;
+    --c-ok: #7fd3a0; --c-ok-bg: #18301f; --c-warn-bg: #33270f; --c-warn-line: #6b5121; --c-warn: #f2c77c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--adm-bg); color: var(--u-text); font: 16px/1.5 system-ui, sans-serif; }
+  main { max-width: 1180px; margin: auto; padding: 22px 16px 60px; }
+  h1, h2, h3, p, ul { margin: 0; }
+  h1 { font-size: 28px; line-height: 1.2; }
+  h2 { font-size: 20px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .intro { color: var(--u-text-3); font-size: 14px; max-width: 760px; }
+  section { margin-top: 32px; }
+  .columnas { display: grid; gap: 20px; margin-top: 12px; }
+  .etiqueta { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--u-text-4); margin-bottom: 8px; }
+  .pantalla { display: flex; flex-direction: column; gap: 14px; }
+  .tarjeta { padding: 18px; background: var(--adm-card); border: 1px solid var(--adm-border); border-radius: 18px; }
+  .tarjeta > * + * { margin-top: 10px; }
+  .tarjeta h3 { font-size: 18px; }
+  .gris { color: var(--u-text-3); font-size: 14px; }
+  .titulo-seccion { font-size: 15px; font-weight: 700; }
+  .planes { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+  .plan { text-align: left; padding: 14px; border-radius: 14px; background: var(--adm-card); border: 1px solid var(--adm-border); color: inherit; font: inherit; display: flex; flex-direction: column; gap: 8px; cursor: pointer; min-height: 44px; }
+  .plan[aria-pressed="true"] { border: 2px solid var(--color); }
+  .plan[aria-disabled="true"] { border-color: var(--adm-border-2); cursor: default; }
+  .plan:focus-visible, button:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: 2px; }
+  .plan-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .plan-nombre { font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 7px; }
+  .punto { width: 8px; height: 8px; border-radius: 99px; background: var(--color); }
+  .precio { font: 700 13px ui-monospace, monospace; color: var(--u-text-3); font-variant-numeric: tabular-nums; }
+  .chip { align-self: flex-start; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--c-ok-bg); color: var(--c-ok); }
+  .plan ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--u-text-3); }
+  .plan li::before { content: "✓ "; color: var(--c-ok); }
+  .pierde { padding: 10px 12px; border-radius: 12px; background: var(--c-warn-bg); border: 1px solid var(--c-warn-line); color: var(--c-warn); font-size: 14px; }
+  .pierde ul { padding-left: 18px; margin-top: 4px; }
+  .acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { display: inline-flex; min-height: 48px; padding: 8px 16px; align-items: center; justify-content: center; border-radius: 12px; font: inherit; font-size: 15px; font-weight: 650; border: 1px solid var(--adm-border); background: var(--adm-card); color: var(--u-text); cursor: pointer; }
+  .btn.primario { background: var(--adm-accent-fill); border-color: var(--adm-accent-fill); color: #fff; }
+  .btn.fantasma { border-color: transparent; background: transparent; }
+  .aviso { font-size: 14px; color: var(--u-text-3); padding: 12px 14px; border: 1px dashed var(--adm-border-2); border-radius: 12px; }
+  .nota { margin-top: 10px; font-size: 13px; color: var(--u-text-3); }
+  .selector { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .selector button { min-height: 44px; }
+  .selector button[aria-pressed="true"] { border-color: var(--brand-accent-ink); color: var(--brand-accent-ink); }
+  @media (min-width: 900px) { .columnas { grid-template-columns: 1fr 1.25fr; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Cambiar de plan durante la prueba</h1>
+    <button class="btn" id="tema" aria-pressed="false">Oscuro</button>
+  </header>
+  <p class="intro">Dueño de «Pastelería Ana», con 4 días de prueba de En línea por delante, quiere probar Premium antes de decidir, o dejar la prueba y seguir gratis. Hoy no tiene cómo hacerlo desde el panel. La propuesta reutiliza la lista «Cambiar de plan» que ya aparece en todos los otros estados de Mi suscripción: no se agrega ningún componente.</p>
+
+  <section>
+    <div class="columnas">
+      <div>
+        <div class="etiqueta">Hoy · Mi suscripción en prueba</div>
+        <div class="pantalla">
+          <div class="tarjeta">
+            <h3>Tu prueba termina el 9 de diciembre de 2026</h3>
+            <p class="gris">Estás probando En línea. Si quieres seguir, confirma la mensualidad de Q75. Tu primer cobro será el 9 de diciembre de 2026.</p>
+            <p class="gris">Si vence sin confirmación, tu carta sigue en Básico. Puedes resolver los pedidos que ya aceptaste.</p>
+            <button class="btn primario">Contratar En línea</button>
+          </div>
+          <div class="aviso">No hay lista de planes. Si el dueño intenta cambiar por otro camino, la respuesta es «Contacta a Leogin para cambiar de plan mientras tienes una prueba».</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="etiqueta">Propuesta · la misma pantalla con «Cambiar de plan»</div>
+        <div class="pantalla">
+          <div class="tarjeta">
+            <h3>Tu prueba termina el 9 de diciembre de 2026</h3>
+            <p class="gris">Estás probando En línea. Si quieres seguir, confirma la mensualidad de Q75. Tu primer cobro será el 9 de diciembre de 2026.</p>
+            <p class="gris">Si vence sin confirmación, tu carta sigue en Básico. Puedes resolver los pedidos que ya aceptaste.</p>
+            <button class="btn primario">Contratar En línea</button>
+          </div>
+
+          <div class="titulo-seccion">Cambiar de plan</div>
+          <div class="planes">
+            <button class="plan" style="--color: var(--plan-basico)" data-plan="basico" aria-pressed="false">
+              <span class="plan-cab"><span class="plan-nombre"><span class="punto"></span>Básico</span><span class="precio">Gratis</span></span>
+              <ul><li>Menú digital con código QR</li><li>Hasta 150 platillos activos · 1 usuario</li></ul>
+            </button>
+            <button class="plan" style="--color: var(--plan-linea)" aria-disabled="true">
+              <span class="plan-cab"><span class="plan-nombre"><span class="punto"></span>En línea</span><span class="precio">Q75 / mes</span></span>
+              <span class="chip">Lo estás probando</span>
+              <ul><li>Para llevar y a domicilio</li><li>Cupones y resumen de ventas</li></ul>
+            </button>
+            <button class="plan" style="--color: var(--plan-estandar)" data-plan="estandar" aria-pressed="false">
+              <span class="plan-cab"><span class="plan-nombre"><span class="punto"></span>Estándar</span><span class="precio">Q149 / mes</span></span>
+              <ul><li>Mostrador, para llevar y a domicilio</li><li>Caja, reportes e inventario de platillos</li></ul>
+            </button>
+            <button class="plan" style="--color: var(--plan-premium)" data-plan="premium" aria-pressed="true">
+              <span class="plan-cab"><span class="plan-nombre"><span class="punto"></span>Premium</span><span class="precio">Q299 / mes</span></span>
+              <ul><li>Panel de mesero y plano de mesas</li><li>Lealtad, encuestas y reservaciones</li></ul>
+            </button>
+          </div>
+
+          <div class="tarjeta" id="confirmacion" aria-live="polite"></div>
+        </div>
+        <p class="nota">Toca Básico, Estándar o Premium para ver su confirmación. Con «Contratar» ya confirmado, cambiar de plan retira esa contratación y el texto lo dice.</p>
+        <div class="selector" role="group" aria-label="¿Ya confirmó la contratación?">
+          <button class="btn" data-confirmada="no" aria-pressed="true">Sin contratar</button>
+          <button class="btn" data-confirmada="si" aria-pressed="false">Ya contrató En línea</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Reglas que no cambian</h2>
+    <p class="gris" style="margin-top:8px">La prueba conserva su fecha: cambiar de plan no reinicia los 14 días. Probar otro plan no cobra nada; el primer cobro solo existe si el dueño confirma. Volver a Básico termina la prueba en ese momento y no se puede iniciar otra en este restaurante. Si hay pedidos abiertos que el plan nuevo no puede atender, se pide terminarlos antes, igual que en cualquier cambio de plan.</p>
+  </section>
+</main>
+<script>
+  const tema = document.getElementById('tema');
+  tema.addEventListener('click', () => {
+    const oscuro = tema.getAttribute('aria-pressed') === 'true';
+    document.documentElement.dataset.tema = oscuro ? 'claro' : 'oscuro';
+    tema.setAttribute('aria-pressed', String(!oscuro));
+    tema.textContent = oscuro ? 'Oscuro' : 'Claro';
+  });
+  let plan = 'premium';
+  let confirmada = false;
+  const datos = {
+    basico: { nombre: 'Básico', precio: 'Gratis' },
+    estandar: { nombre: 'Estándar', precio: 'Q149 / mes', monto: 'Q149', pierde: [] },
+    premium: { nombre: 'Premium', precio: 'Q299 / mes', monto: 'Q299', pierde: [] },
+  };
+  const caja = document.getElementById('confirmacion');
+  function pintar() {
+    const d = datos[plan];
+    const retiro = confirmada ? ' Se retira la contratación de En línea que confirmaste.' : '';
+    if (plan === 'basico') {
+      caja.innerHTML = `
+        <h3>Volver a Básico · Gratis</h3>
+        <p class="gris">Tu prueba termina ahora, sin cobro.${retiro} Tu carta, tus platillos y tus datos se conservan. No podrás iniciar otra prueba en este restaurante.</p>
+        <div class="pierde"><strong>Dejarás de tener:</strong><ul><li>Pedidos en línea</li><li>Cupones y resumen de ventas</li></ul></div>
+        <div class="acciones"><button class="btn">Terminar prueba y volver a Básico</button><button class="btn fantasma">Cancelar</button></div>`;
+    } else {
+      caja.innerHTML = `
+        <h3>Probar ${d.nombre} · ${d.precio}</h3>
+        <p class="gris">Sigues en tu prueba hasta el 9 de diciembre, ahora con ${d.nombre}.${retiro} Si quieres seguir, confirma la mensualidad de ${d.monto} antes de esa fecha.</p>
+        <div class="acciones"><button class="btn primario">Probar ${d.nombre}</button><button class="btn fantasma">Cancelar</button></div>`;
+    }
+  }
+  document.querySelectorAll('.plan[data-plan]').forEach((b) => b.addEventListener('click', () => {
+    plan = b.dataset.plan;
+    document.querySelectorAll('.plan[data-plan]').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+    pintar();
+  }));
+  document.querySelectorAll('[data-confirmada]').forEach((b) => b.addEventListener('click', () => {
+    confirmada = b.dataset.confirmada === 'si';
+    document.querySelectorAll('[data-confirmada]').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+    pintar();
+  }));
+  pintar();
+</script>
+</body>
+</html>

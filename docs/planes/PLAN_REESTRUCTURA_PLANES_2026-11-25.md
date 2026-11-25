@@ -44,6 +44,8 @@ Revisión de Claude sobre los commits de esta rama. Cada punto se corrigió en s
 
 La [maqueta de prueba y resumen de ventas](../diseno/MAQUETA_PRUEBA_Y_RESUMEN_DE_VENTAS_2026-11-25.html) muestra cómo iniciar la prueba, cuándo se confirman los cobros y cómo cambiar el período de ventas. Se probó a 390 y 1280 px, en claro y oscuro, con teclado. El dueño aprobó la maqueta para implementar ambas pantallas en el PR #195.
 
+La [maqueta de cambio de plan durante la prueba](../diseno/MAQUETA_CAMBIO_DE_PLAN_EN_PRUEBA_2026-11-25.html) espera aprobación. Reutiliza la lista «Cambiar de plan» de los demás estados de Mi suscripción, marca el plan en prueba como «Lo estás probando» y muestra las dos confirmaciones: probar otro plan con la misma fecha o volver a Básico terminando la prueba. Se revisó a 375 y 1280 px, en claro y oscuro, sin desborde.
+
 ## Orden y reversión
 
 1. Integrar primero el PR #194 y apuntar el PR de la reestructuración a `main`. Si el #194 se fusiona con squash, comprobar que el nuevo diff solo contiene la reestructuración.
