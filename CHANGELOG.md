@@ -7,6 +7,7 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 ## Pendiente
 
 - La [auditoría de experiencia de la web pública](docs/auditorias/AUDITORIA_EXPERIENCIA_WEB_PUBLICA_2026-11-24.md) registra el recorrido de venta por tipo de negocio y prioriza 11 hallazgos de comprensión, diseño adaptable, accesibilidad y rendimiento.
+- **Web pública más fácil de recorrer** (WEB-UX-01, 03, 04, 05, 06, 08, 09): saltar al contenido con el teclado, menú que devuelve el foco y cabe en horizontal, la comparativa de planes se abre al llegar y se lee en el teléfono, el precio de En línea junto al primer botón y una sola regla de los 300 pedidos, la demo conserva el caso hasta el alta y su pedido de prueba es una hoja accesible. Lo visual nuevo espera la [maqueta](docs/diseno/MAQUETA_WEB_PUBLICA_EXPERIENCIA_2026-11-24.html).
 
 ## v0.35.0 · 2026-11-24 · Seguridad, plazos de los datos y avisos antes de perder algo
 PR #182, #183 y #184 · **migraciones 194 y 195** (`supabase/actualizacion_194_a_195.sql`, antes o después del despliegue: el código funciona sin ellas y se pueden repetir). Cierra la parte de código de la [auditoría de lanzamiento](docs/auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md) con las decisiones del dueño del 24 de noviembre.

@@ -22,6 +22,26 @@ La medición `y` indica la distancia en píxeles CSS desde el inicio del documen
 | Dueña que solo quiere un menú compartible. Quiere confirmar que la carta es gratis, con su QR. | El texto lo indica en la portada. El enlace «Básico, gratis» queda debajo de los tres perfiles y abre Registro con Básico seleccionado. | Alcanzar Básico en un toque desde la primera decisión y entender que el plan publica la carta sin tomar pedidos. |
 | Dueño que quiere comparar o hablar antes de registrarse. | Menú → Planes en dos toques. Elegir el perfil toma uno más. La invitación de ventas de la portada está cerca del final y abre el correo anunciado. | Acceder a precios desde el primer recorrido y encontrar el canal de contacto atendido sin recorrer toda la portada. |
 
+## Avance en código
+
+Rama `fix/experiencia-web-publica`, apilada sobre esta auditoría. Cada hallazgo se comprobó primero en local (Chromium, 390 × 844, 667 × 375, 861, 961 y 1280 px). Lo visual nuevo espera el visto bueno del dueño en la [maqueta del 24 de noviembre](../diseno/MAQUETA_WEB_PUBLICA_EXPERIENCIA_2026-11-24.html).
+
+| Hallazgo | Estado | Qué se hizo o qué falta |
+| --- | --- | --- |
+| WEB-UX-01 | Parcial | Mesas y Mostrador abren la demo con `?caso=`; la barra de la demo dice qué probar y «Empezar con Premium/Estándar →», y «Quiero esto en mi restaurante» llega a `/registro?plan=&caso=`. Falta, con maqueta: «Probar la demo» en la cabecera en lugar de «Demo». |
+| WEB-UX-02 | Maqueta | Video debajo de los casos en el teléfono y «Ver planes y precios» como segundo botón (decisiones 1 y 2). |
+| WEB-UX-03 | Hecho | «Q99 / mes» junto al primer botón de Vende en línea (y=5822 → y=551). Planes decía «sin importar cuántos pedidos recibas»; ahora Planes y Vende en línea usan `reglaDelTopeEnLinea()` (`lib/plans.ts`), la regla ya vigente en `lib/tope-pedidos.ts`. Queda por decidir el periodo de prueba de En línea (ver abajo). |
+| WEB-UX-04 | Hecho | «Ver los cuatro planes lado a lado» abre la comparativa al llegar (`AbrirPorAncla`). Encabezados de fila y columna con `scope`; en el teléfono la columna de la función queda fija y deja ver casi dos planes; la caja es región enfocable que se recorre con flechas. |
+| WEB-UX-05 | Parcial | Al enfocar un campo, si él o su ayuda tocan el pie fijo, la página sube lo justo (el `scroll-padding` de WEB-04 no actuaba con el campo visible a medias: la contraseña quedaba en 779 con el pie en 767). Pie sólido y ayuda a 12 px. Falta, con maqueta: entradilla de un renglón en el teléfono. |
+| WEB-UX-06 | Parcial | Descargas: junto al botón, «escríbenos por correo» y la opción de usar el panel en el navegador. Falta, con maqueta: «Hablar con nosotros» en el menú y bajo el recomendador. |
+| WEB-UX-07 | Maqueta | Botón de pausa de 44 px en el bucle (decisión 3). |
+| WEB-UX-08 | Hecho | Esc devuelve el foco al botón; el panel no pasa de la pantalla y se recorre por dentro; el corte de «Escritorio» bajó de 1080 a 960 px (a 961 la barra completa mide 783 px y sobran 38) y entre 861 y 960 el panel solo enseña lo que no cupo. |
+| WEB-UX-09 | Hecho | «Saltar al contenido» común y `<main id="contenido">` en portada, Planes, Vende en línea, Descargas y legales; enlaces de párrafo subrayados; cada diálogo de la demo con `useId`; la hoja del pedido de prueba es `HojaOperativa` (foco al título, Esc, Tab dentro) y al cerrarse devuelve el foco al carrito o a «Empezar…». La barra de la demo es un `aside` con nombre. axe: sin violaciones graves en las siete rutas y en la demo. |
+| WEB-UX-10 | Pendiente | Medir contra producción con el perfil de esta auditoría antes de tocar fuentes o precargas (lección de las fotos de la carta, v0.33.0). |
+| WEB-UX-11 | Maqueta | Tarjetas 1200 × 630 con promesa y precio (decisión 7). |
+
+**Sobre la auditoría.** Las mediciones se reprodujeron en local salvo las de red limitada. Tres matices: WEB-UX-05 no estaba resuelto por WEB-04 como sugiere el texto (el foco no desplaza un campo visible a medias); la contradicción de WEB-UX-03 no necesitaba decisión del dueño porque la regla ya estaba escrita en `lib/tope-pedidos.ts`, solo la nota de Planes la contradecía; y faltaba una tabla de avance como esta para que la siguiente sesión sepa qué quedó. Apareció una contradicción que la auditoría no menciona: la FAQ de Planes dice que solo Estándar y Premium tienen días de prueba y Vende en línea los ofrece en En línea.
+
 ## Hallazgos y criterios de cierre
 
 Se detectaron seis hallazgos **P1**, que conviene corregir antes de impulsar la captación, y cinco **P2**, con alternativas disponibles o de impacto más acotado.
