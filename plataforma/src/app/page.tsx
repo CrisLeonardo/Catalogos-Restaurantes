@@ -23,6 +23,9 @@ import { getPublicLoyaltyCached, type PublicReward } from '@/lib/db/loyalty';
 import { isGoogleAuthEnabled } from '@/lib/auth-config';
 import { resolverPlatillo, valorPlatillo } from '@/lib/menu/enlace-platillo';
 import { platilloEstrella } from '@/lib/menu/estrella';
+import { enlaceDeAlta, leerIntencion, type IntencionAlta } from '@/lib/alta';
+import { PLANS } from '@/lib/plans';
+import { imagenesWeb } from '@/lib/og-web';
 
 /* ── Metadata dinámica por restaurante ─────────────────────── */
 /** `?platillo=` (CV-30): el código o el nombre legible (`doble-bacon`, F4-8);
@@ -60,9 +63,9 @@ export async function generateMetadata({
         locale: 'es_GT',
         type: 'website',
         ...(base ? { url: base } : {}),
-        images: [{ url: '/icon-512.png', width: 512, height: 512, alt: 'Leogin' }],
+        images: imagenesWeb('portada', 'Leogin: tu restaurante, bajo control').og,
       },
-      twitter: { card: 'summary', title, description, images: ['/icon-512.png'] },
+      twitter: { ...imagenesWeb('portada', 'Leogin: tu restaurante, bajo control').twitter, title, description },
     };
   }
 
@@ -208,7 +211,7 @@ export default async function Home({
       ]);
       return (
         <>
-          <DemoBar />
+          <DemoBar intencion={leerIntencion(params.plan, params.caso)} />
           <MenuShell
             config={real.resolved.config}
             content={real.resolved.content}
@@ -225,7 +228,7 @@ export default async function Home({
     const demo = resolveTheme(DEMO_THEME, DEMO_SLUG);
     return (
       <>
-        <DemoBar />
+        <DemoBar intencion={leerIntencion(params.plan, params.caso)} />
         <MenuShell
           config={demo.config}
           content={demo.content}
@@ -342,27 +345,36 @@ export default async function Home({
   );
 }
 
-/* Barra superior solo en la demo. */
-function DemoBar() {
-  // El enlace debe llevar a la landing del DOMINIO RAÍZ, no a "/" del
-  // subdominio demo (que volvería a cargar la misma demo).
+/* Barra superior solo en la demo.
+ *
+ * Con `?caso=` (las tarjetas «¿Cómo es tu negocio?» de la portada) dice qué
+ * se va a probar y lleva al alta con ese plan y ese caso: antes «Crea el
+ * tuyo» volvía siempre a la portada y el visitante tenía que elegir otra
+ * vez lo que ya había elegido (WEB-UX-01). Sin caso, como siempre. */
+function DemoBar({ intencion }: { intencion: IntencionAlta | null }) {
+  // El enlace debe llevar al DOMINIO RAÍZ, no a "/" del subdominio demo (que
+  // volvería a cargar la misma demo).
   const root = rootDomainForUrls();
   const isLocal = root.includes('localhost') || root.startsWith('127.');
   const rootUrl = `${isLocal ? 'http' : 'https'}://${root}`;
+  const destino = intencion ? `${rootUrl}${enlaceDeAlta(intencion)}` : rootUrl;
 
   return (
-    <div
+    <aside
+      aria-label="Demo de Leogin"
       className="glass-solid"
       style={{
         position: 'sticky', top: 0, zIndex: 50,
         borderRadius: 0, borderLeft: 'none', borderRight: 'none', borderTop: 'none',
-        padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontSize: 12.5,
+        padding: '8px 16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', columnGap: 10, rowGap: 2, fontSize: 12.5,
       }}
     >
-      <span className="t-mute">Demo de Leogin · así se vería tu restaurante</span>
-      <a href={rootUrl} className="press" style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-        Crea el tuyo →
+      <span className="t-mute">
+        {intencion ? 'Demo · pide y mira la cocina' : 'Demo de Leogin · así se vería tu restaurante'}
+      </span>
+      <a href={destino} className="press" style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+        {intencion ? `Empezar con ${PLANS[intencion.plan].name} →` : 'Crea el tuyo →'}
       </a>
-    </div>
+    </aside>
   );
 }

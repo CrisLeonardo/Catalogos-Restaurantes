@@ -1,6 +1,6 @@
 'use client';
 
-import { useId } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import type React from 'react';
 
 /* ============================================================
@@ -44,7 +44,7 @@ export function Field({ label, hint, children }: {
         {label}
       </label>
       {asociado ? children({ id, 'aria-describedby': hintId }) : children}
-      {hint && <p id={hintId} style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '6px 0 0' }}>{hint}</p>}
+      {hint && <p id={hintId} style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '6px 0 0' }}>{hint}</p>}
     </div>
   );
 }
@@ -131,8 +131,39 @@ export function WizardNav({
   nextLabel?: string;
 }) {
   const blocked = isPending || !canSubmit;
+  const pie = useRef<HTMLDivElement>(null);
+
+  /* El navegador no desplaza al enfocar un campo que ya se ve en parte, y
+     `scroll-padding-bottom` solo cuenta cuando sí desplaza: a 390 × 844 la
+     contraseña quedaba medio debajo de este pie al llegar con Tab o al
+     tocarla (WEB-UX-05). Si el campo enfocado o su ayuda tocan el pie, se
+     sube lo justo. */
+  useEffect(() => {
+    const form = pie.current?.closest('form') ?? document;
+    const alEnfocar = (e: Event) => {
+      const el = e.target as HTMLElement | null;
+      if (!el || pie.current?.contains(el)) return;
+      // Después de pintar: la ayuda de la contraseña aparece al enfocarla.
+      requestAnimationFrame(() => subirSiTapa(el));
+    };
+    const subirSiTapa = (el: HTMLElement) => {
+      const barra = pie.current;
+      if (!barra || document.activeElement !== el) return;
+      const ayuda = el.getAttribute('aria-describedby');
+      const abajo = Math.max(
+        el.getBoundingClientRect().bottom,
+        (ayuda && document.getElementById(ayuda)?.getBoundingClientRect().bottom) || 0,
+      );
+      const tope = barra.getBoundingClientRect().top - 12;
+      if (abajo > tope) window.scrollBy({ top: abajo - tope });
+    };
+    form.addEventListener('focusin', alEnfocar);
+    return () => form.removeEventListener('focusin', alEnfocar);
+  }, []);
+
   return (
     <div
+      ref={pie}
       /* Con `data-wizard-nav`, globals.css reserva su alto al llevar el foco
          a un campo: con Tab el campo de contraseña quedaba debajo de este
          pie (WCAG 2.4.11, auditoría 2026-11-23 WEB-04). */
@@ -141,8 +172,9 @@ export function WizardNav({
         position: 'sticky', bottom: 0, zIndex: 5,
         display: 'flex', gap: 10,
         margin: '0 -24px', padding: '14px 24px',
-        background: 'linear-gradient(to top, var(--brand-bg) 60%, color-mix(in srgb, var(--brand-bg) 72%, transparent))',
-        backdropFilter: 'blur(8px)',
+        // Sólido: con el degradado translúcido el campo de abajo se
+        // transparentaba a medias detrás del botón.
+        background: 'var(--brand-bg)',
         borderTop: '1px solid var(--u-hair)',
       }}
     >

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { imagenesWeb } from '@/lib/og-web';
 import Link from 'next/link';
 import { leerIntencion } from '@/lib/alta';
 import { planPriceLabel } from '@/lib/plans';
@@ -25,9 +26,9 @@ export const metadata: Metadata = {
   openGraph: {
     title: TITULO, description: DESCRIPCION, url: marketingUrl('/registro'),
     siteName: 'Leogin', locale: 'es_GT', type: 'website',
-    images: [{ url: marketingUrl('/icon-512.png'), width: 512, height: 512, alt: 'Leogin' }],
+    images: imagenesWeb('registro', 'Leogin: tu menú en línea, en vivo hoy mismo').og,
   },
-  twitter: { card: 'summary', title: TITULO, description: DESCRIPCION, images: [marketingUrl('/icon-512.png')] },
+  twitter: { ...imagenesWeb('registro', 'Leogin: tu menú en línea, en vivo hoy mismo').twitter, title: TITULO, description: DESCRIPCION },
 };
 
 const perks = (trialDays: number) => [
@@ -152,9 +153,14 @@ export default async function RegistroPage({
             <h1 className="t-display" style={{ fontSize: 'var(--fs-display)', lineHeight: 1.05 }}>
               Tu menú en línea, en vivo hoy mismo.
             </h1>
+            {/* En el teléfono va en un renglón: con cuatro, el pie fijo tapaba
+                la contraseña al entrar (WEB-UX-05, maqueta del 2026-11-24). */}
             <p className="t-mute" style={{ fontSize: 15, lineHeight: 1.55, marginTop: 14, maxWidth: 420 }}>
-              Primero tu cuenta; después, el nombre de tu negocio y lo que vendes.
-              En unos minutos ves tu carta funcionando. Sin instalar nada, sin saber de tecnología.
+              <span className="registro-entradilla-larga">
+                Primero tu cuenta; después, el nombre de tu negocio y lo que vendes.
+                En unos minutos ves tu carta funcionando. Sin instalar nada, sin saber de tecnología.
+              </span>
+              <span className="registro-entradilla-corta">Primero tu cuenta; en minutos ves tu carta.</span>
             </p>
             {/* En el teléfono se ocultan (ficha 2.3): el formulario sube. */}
             <ul className="registro-ventajas" style={{ listStyle: 'none', margin: '22px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>

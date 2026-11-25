@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
+import { imagenesWeb } from '@/lib/og-web';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { conEvento, EVENTOS } from '@/lib/analytics';
-import { SiteHeader, SiteFooter, SectionHead, contactHref, CONTACT_ICON } from '@/components/site-chrome';
-import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceLabel, planPriceQ, PLAN_ACCENT_INK, publicPlanCapabilities, planPresentation, planGrowthCopy, planComparisonCopy } from '@/lib/plans';
+import { SiteHeader, SiteFooter, SectionHead, contactHref, CONTACT_ICON, CONTACT_VIA } from '@/components/site-chrome';
+import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceLabel, planPriceQ, PLAN_ACCENT_INK, publicPlanCapabilities, planPresentation, planGrowthCopy, planComparisonCopy, reglaDelTopeEnLinea } from '@/lib/plans';
 import type { PlanPricing } from '@/lib/plans';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
@@ -11,6 +12,7 @@ import { fmtMoney } from '@/lib/money';
 import { marketingUrl } from '@/lib/tenant';
 import { PlanPorPreguntas, type PlanDeLaWeb } from '@/components/landing-planes';
 import type { PlanAlta } from '@/lib/alta';
+import { AbrirPorAncla } from '@/components/abrir-por-ancla';
 
 const TITULO = 'Planes y precios — Leogin';
 const DESCRIPCION = 'Menú digital gratis para siempre, con planes de pedidos en línea a precio fijo — sin cobro por tus ventas.';
@@ -24,9 +26,9 @@ export const metadata: Metadata = {
   openGraph: {
     title: TITULO, description: DESCRIPCION, url: marketingUrl('/planes'),
     siteName: 'Leogin', locale: 'es_GT', type: 'website',
-    images: [{ url: marketingUrl('/icon-512.png'), width: 512, height: 512, alt: 'Leogin' }],
+    images: imagenesWeb('planes', 'Leogin: precio fijo, nunca un % de tus ventas').og,
   },
-  twitter: { card: 'summary', title: TITULO, description: DESCRIPCION, images: [marketingUrl('/icon-512.png')] },
+  twitter: { ...imagenesWeb('planes', 'Leogin: precio fijo, nunca un % de tus ventas').twitter, title: TITULO, description: DESCRIPCION },
 };
 
 // Los precios pueden cambiar desde /super/configuracion: la página se
@@ -127,6 +129,9 @@ export default async function PlanesPage() {
     <div style={{ width: '100%', minHeight: '100svh' }}>
       <SiteHeader />
 
+      {/* Sin <main> la página entera quedaba fuera de una región principal y
+          el salto al contenido no tenía destino (WEB-UX-09). */}
+      <main id="contenido" tabIndex={-1}>
       {/* Hero */}
       <section className="lp-shell" style={{ textAlign: 'center', padding: 'clamp(48px, 7vw, 88px) 20px clamp(36px, 5vw, 56px)' }}>
         <div className="lp-eyebrow">Planes y precios</div>
@@ -142,7 +147,7 @@ export default async function PlanesPage() {
           el plan y los cuatro caben en una tarjeta con el precio en una
           línea. Antes eran cuatro tarjetas largas que había que leer enteras. */}
       <section style={{ maxWidth: 1100, margin: '0 auto', padding: '0 18px 24px' }}>
-        <PlanPorPreguntas planes={planesDeLaWeb(pricing)} origen="planes" />
+        <PlanPorPreguntas planes={planesDeLaWeb(pricing)} origen="planes" contacto={{ href: contactHref('Hola, tengo dudas sobre qué plan de Leogin me conviene'), via: CONTACT_VIA }} />
       </section>
 
       {/* Nota de uso justo */}
@@ -150,9 +155,7 @@ export default async function PlanesPage() {
         <div className="lp-card-quiet" style={{ padding: '18px 22px' }}>
           <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', lineHeight: 1.6, margin: 0 }}>
             <strong style={{ color: 'var(--u-text-2)' }}>Sin cobro por ventas:</strong>{' '}
-            Todos los planes son de precio fijo, sin importar cuántos pedidos recibas ni cuánto
-            factures. Subes de plan por las funciones que necesitas — nunca porque tu restaurante
-            vendió más este mes.
+            ningún plan cobra comisión ni un porcentaje de lo que facturas. {reglaDelTopeEnLinea()}
           </p>
         </div>
       </section>
@@ -179,28 +182,32 @@ export default async function PlanesPage() {
       </section>
 
       {/* Tabla de comparación completa */}
-      <section id="comparativa" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 18px 64px' }}>
+      <section id="comparativa" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 18px 64px', scrollMarginTop: 84 }}>
+        <AbrirPorAncla id="comparativa" />
         <details className="lp-incluye">
           <summary className="lp-btn lp-btn-soft">
             Ver todo lado a lado <Icon name="chevronDown" size={16} />
           </summary>
           <div style={{ height: 14 }} />
-        <div className="lp-card" style={{ overflowX: 'auto' }}>
+        {/* En el teléfono la tabla (620 px) se desliza dentro de su tarjeta:
+            la columna de la función se queda fija para no perder qué fila se
+            lee, y la caja se puede recorrer con las flechas (WEB-UX-04). */}
+        <div className="lp-card lp-comparativa" style={{ overflowX: 'auto' }} tabIndex={0} role="region" aria-label="Comparativa de los cuatro planes">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5, minWidth: 620 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--u-hair)' }}>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--u-text-4)', width: '34%' }}>Función</th>
+                <th scope="col" style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--u-text-4)' }}>Función</th>
                 {PUBLIC_PLANS.map((code) => {
                   const p = PLANS[code];
                   return (
-                    <th key={code} style={{ padding: '12px 8px', textAlign: 'center', fontSize: 11.5, fontWeight: 700, color: p.highlight ? PLAN_ACCENT_INK[code] : 'var(--u-text-3)', whiteSpace: 'nowrap' }}>
+                    <th key={code} scope="col" style={{ padding: '12px 8px', textAlign: 'center', fontSize: 11.5, fontWeight: 700, color: p.highlight ? PLAN_ACCENT_INK[code] : 'var(--u-text-3)', whiteSpace: 'nowrap' }}>
                       {p.name}
                     </th>
                   );
                 })}
               </tr>
               <tr style={{ borderBottom: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 3.5%, transparent)' }}>
-                <td style={{ padding: '10px 16px', fontSize: 12, color: 'var(--u-text-4)' }}>Precio mensual</td>
+                <th scope="row" style={{ padding: '10px 16px', fontSize: 12, fontWeight: 400, textAlign: 'left', color: 'var(--u-text-4)', background: 'color-mix(in srgb, var(--u-text) 3.5%, var(--lp-card))' }}>Precio mensual</th>
                 {PUBLIC_PLANS.map((code) => {
                   return (
                     <td key={code} style={{ padding: '10px 8px', textAlign: 'center', fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 13, color: PLAN_ACCENT_INK[code] }}>
@@ -210,7 +217,7 @@ export default async function PlanesPage() {
                 })}
               </tr>
               <tr style={{ borderBottom: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 3.5%, transparent)' }}>
-                <td style={{ padding: '10px 16px', fontSize: 12, color: 'var(--u-text-4)' }}>Usuarios del panel</td>
+                <th scope="row" style={{ padding: '10px 16px', fontSize: 12, fontWeight: 400, textAlign: 'left', color: 'var(--u-text-4)', background: 'color-mix(in srgb, var(--u-text) 3.5%, var(--lp-card))' }}>Usuarios del panel</th>
                 {PUBLIC_PLANS.map((code) => {
                   const p = PLANS[code];
                   return (
@@ -226,15 +233,15 @@ export default async function PlanesPage() {
             <tbody>
               {(['orderScope', 'productsLabel', 'policy'] as const).map((key) => (
                 <tr key={key} style={{ borderBottom: '1px solid var(--u-hair)' }}>
-                  <td style={{ padding: '10px 16px', fontSize: 13, color: 'var(--u-text-3)' }}>
+                  <th scope="row" style={{ padding: '10px 16px', fontSize: 13, fontWeight: 400, textAlign: 'left', color: 'var(--u-text-3)' }}>
                     {key === 'orderScope' ? 'Modalidades de pedido' : key === 'productsLabel' ? 'Platillos' : 'Límite de pedidos'}
-                  </td>
+                  </th>
                   {PUBLIC_PLANS.map((code) => <td key={code} style={{ padding: '10px 8px', textAlign: 'center', fontSize: 12 }}>{planPresentation({ plan: code, pricing })[key]}</td>)}
                 </tr>
               ))}
               {FEATURE_ROWS.map(({ label, key }, i) => (
                 <tr key={key} style={{ borderBottom: i < FEATURE_ROWS.length - 1 ? '1px solid var(--u-hair)' : 'none', background: i % 2 === 0 ? 'color-mix(in srgb, var(--u-text) 2.5%, transparent)' : 'transparent' }}>
-                  <td style={{ padding: '10px 16px', fontSize: 13, color: 'var(--u-text-3)' }}>{label}</td>
+                  <th scope="row" style={{ padding: '10px 16px', fontSize: 13, fontWeight: 400, textAlign: 'left', color: 'var(--u-text-3)', background: i % 2 === 0 ? 'color-mix(in srgb, var(--u-text) 2.5%, var(--lp-card))' : 'var(--lp-card)' }}>{label}</th>
                   {PUBLIC_PLANS.map((code) => {
                     const val = planPresentation({ plan: code, pricing }).capabilities.find((item) => item.key === key)!.included;
                     return (
@@ -316,6 +323,7 @@ export default async function PlanesPage() {
           </div>
         </div>
       </section>
+      </main>
 
       <SiteFooter />
     </div>
