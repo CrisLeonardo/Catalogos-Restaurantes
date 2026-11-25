@@ -16,6 +16,8 @@ import DeleteButton from '@/components/admin/delete-button';
 import { deleteProduct } from '@/lib/actions/products';
 import { withEffectiveAvailability } from '@/lib/product-availability';
 import { createServiceClient } from '@/lib/supabase/service';
+import { cupoVigente } from '@/lib/db/cupo';
+import { PLANS, PLAN_ORDER, withPlanFloor, type PlanCode } from '@/lib/plans';
 import DuplicarPlatillo from '@/components/admin/duplicar-platillo';
 
 export const metadata = { title: 'Editar platillo – Panel admin' };
@@ -61,13 +63,20 @@ export default async function EditProductPage({
 
   const canIngredientes = can(ctx.profile.role, ctx.profile.permissions, 'ingredientes');
 
-  const [product, { categories }, ingredients, recipe, idiomas] = await Promise.all([
+  const [product, { categories }, ingredients, recipe, idiomas, cupo] = await Promise.all([
     getProductById(id, restaurantId),
     getAdminMenu(restaurantId),
     canIngredientes ? getIngredients(restaurantId) : Promise.resolve(undefined),
     canIngredientes ? getProductRecipe(id) : Promise.resolve(undefined),
-    createServiceClient().from('restaurants').select('menu_languages, timezone, day_cutoff_minutes').eq('id', restaurantId).maybeSingle(),
+    createServiceClient().from('restaurants').select('menu_languages, timezone, day_cutoff_minutes, plan_actual, modules').eq('id', restaurantId).maybeSingle(),
+    cupoVigente(restaurantId, id),
   ]);
+  /* Cupo de la tanda (3.ª ronda de la auditoría funcional): con Inventario
+     encendido (Premium) las existencias se llevan allá; si no, en la ficha. */
+  const planActual = idiomas.data?.plan_actual as string | null | undefined;
+  const plan = ((PLAN_ORDER as string[]).includes(planActual ?? '') ? planActual : 'BASICO') as PlanCode;
+  const inventarioActivo = PLANS[plan].hasAnalytics
+    && withPlanFloor(plan, (idiomas.data?.modules as Record<string, boolean> | null) ?? {}).inventario === true;
   const bilingue = ((idiomas.data?.menu_languages as string[] | null) ?? []).includes('en');
 
   if (!product) notFound();
@@ -123,6 +132,7 @@ export default async function EditProductPage({
         initialRecipe={recipe}
         bilingue={bilingue}
         timezone={(idiomas.data?.timezone as string | null) ?? undefined}
+        cupo={{ vigente: cupo, inventarioActivo }}
         horaCorte={corteAHora(Number(idiomas.data?.day_cutoff_minutes ?? 300))}
         duplicado={duplicado === '1'}
         volver={volverAlCatalogo(desde)}
