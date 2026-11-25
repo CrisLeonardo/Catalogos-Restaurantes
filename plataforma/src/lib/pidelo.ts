@@ -40,6 +40,24 @@ export interface PedidoDemo {
 }
 
 export const EVENTO_PEDIDO = 'pedido';
+/** PEDIDOS-02: «Aceptar» y «Marcar listo» viajan por la misma sala para que
+    la cocina de la portada y la vista del celular no se contradigan. */
+export const EVENTO_ETAPA = 'etapa';
+export type EtapaDemo = 'nuevo' | 'cocina' | 'listo';
+const ETAPAS: readonly EtapaDemo[] = ['nuevo', 'cocina', 'listo'];
+
+/** La etapa que llegó por el canal, o null si no es una de las tres. */
+export function limpiarEtapa(crudo: unknown): EtapaDemo | null {
+  if (!crudo || typeof crudo !== 'object') return null;
+  const e = (crudo as Record<string, unknown>).etapa;
+  return typeof e === 'string' && (ETAPAS as readonly string[]).includes(e) ? e as EtapaDemo : null;
+}
+
+/** Una etapa no retrocede: un mensaje viejo que llega tarde no devuelve a
+    «Nuevo» un pedido que ya está listo. */
+export function etapaSiguiente(actual: EtapaDemo, llegada: EtapaDemo): EtapaDemo {
+  return ETAPAS.indexOf(llegada) > ETAPAS.indexOf(actual) ? llegada : actual;
+}
 export const MAX_LINEAS = 12;
 const MAX_NOMBRE = 24;
 const MAX_PLATILLO = 40;
