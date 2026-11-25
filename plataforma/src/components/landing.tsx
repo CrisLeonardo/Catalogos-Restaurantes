@@ -108,10 +108,13 @@ export default async function LeoginLanding() {
 
   /* Los tres casos de V.2, con la misma regla que el alta (lib/alta.ts):
      mesas → Premium, mostrador → Estándar, redes → En línea. «Vendo por
-     redes» lleva a /vende-en-linea, su página propia. */
+     redes» lleva a /vende-en-linea, su página propia. Mesas y mostrador
+     abren la demo CON su caso: la barra de la demo dice qué probar, y su
+     «Empezar» y el «Quiero esto» del pedido de prueba llegan al alta con
+     ese plan (WEB-UX-01). */
   const casos: { icono: string; titulo: string; texto: string; plan: PlanAlta; href: string }[] = [
-    { icono: 'utensils', titulo: 'Tengo mesas y meseros', texto: 'El mesero pide en el celular, cocina lo ve en su pantalla y la caja cobra por mesa.', plan: 'PREMIUM', href: demoUrl },
-    { icono: 'coffee', titulo: 'Cafetería o mostrador', texto: 'Piden en el mostrador o para llevar, sin mesero. Cobras y la comanda llega sola a cocina.', plan: 'ESTANDAR', href: demoUrl },
+    { icono: 'utensils', titulo: 'Tengo mesas y meseros', texto: 'El mesero pide en el celular, cocina lo ve en su pantalla y la caja cobra por mesa.', plan: 'PREMIUM', href: `${demoUrl}/?caso=mesas` },
+    { icono: 'coffee', titulo: 'Cafetería o mostrador', texto: 'Piden en el mostrador o para llevar, sin mesero. Cobras y la comanda llega sola a cocina.', plan: 'ESTANDAR', href: `${demoUrl}/?caso=mostrador` },
     { icono: 'whatsapp', titulo: 'Vendo por redes', texto: 'Tus clientes piden desde WhatsApp o Instagram, para llevar o a domicilio.', plan: 'EN_LINEA', href: '/vende-en-linea' },
   ];
 
