@@ -239,7 +239,8 @@ test('1.6 · conserva el historial abierto y revela una incidencia fuera del fil
     const page = await context.newPage();
     await expect(async () => {
       await page.goto(`${origin}/panel/${slug}/pedidos`, { waitUntil: 'domcontentloaded' });
-      await expect(page.getByRole('heading', { name: 'Pedidos en vivo', exact: true })).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Estado de Pedidos en vivo' })
+        .getByText('1 pedido requiere atención', { exact: true })).toBeVisible();
     }).toPass({ timeout: 60_000 });
     const tarjeta = page.getByRole('article', { name: 'Pedido AUD-R02' });
     const filtro = page.getByRole('button', { name: /^Comer en local/ });
