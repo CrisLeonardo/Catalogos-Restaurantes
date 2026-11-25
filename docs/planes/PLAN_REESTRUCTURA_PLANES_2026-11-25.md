@@ -36,6 +36,8 @@ Revisión de Claude sobre los commits de esta rama. Cada punto se corrigió en s
 
 3. **Premium sin mostrador.** El checkout solo daba «Comer aquí» sin mesa a Estándar, y los planes son acumulativos. `tieneMostrador` lo da a Estándar, Premium y Pro; con mesa escaneada el pedido sigue yendo a esa mesa. Además «Comer aquí» llegaba elegido por defecto a quien pedía desde su casa: ahora se elige el primer canal que no es en el local. La prueba de navegador cubre Estándar y Premium.
 
+4. **Cobro de hoy durante la prueba.** «Estado de cuenta» mostraba «Próximo cobro: hoy» y la mensualidad, mientras la tarjeta de la prueba decía «Q0 durante la prueba» y el primer cobro al vencer. Durante la prueba voluntaria esos datos se quitan; la tarjeta de la prueba ya los dice.
+
 ## Maqueta para aprobar
 
 La [maqueta de prueba y resumen de ventas](../diseno/MAQUETA_PRUEBA_Y_RESUMEN_DE_VENTAS_2026-11-25.html) muestra cómo iniciar la prueba, cuándo se confirman los cobros y cómo cambiar el período de ventas. Se probó a 390 y 1280 px, en claro y oscuro, con teclado. El dueño aprobó la maqueta para implementar ambas pantallas en el PR #195.

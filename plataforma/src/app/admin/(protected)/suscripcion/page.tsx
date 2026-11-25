@@ -316,7 +316,10 @@ export default async function SuscripcionPage() {
       </Card>
 
       {/* ── Estado de cuenta ─────────────────────────────────── */}
-      {config && (config.monthly_fee > 0 || invoices.length > 0) && (
+      {/* En la prueba voluntaria la tarjeta de arriba ya dice el importe y la
+          fecha del primer cobro; aquí «Próximo cobro» salía con el día del
+          alta (hoy), que contradecía «Q0 durante la prueba». */}
+      {config && !(enPruebaVoluntaria && invoices.length === 0) && (config.monthly_fee > 0 || invoices.length > 0) && (
         <>
           {/* Con algo pendiente, el estado de cuenta ES la tarjeta «Paga tu
               mensualidad» de arriba (monto, cuenta y comprobante); aquí solo
@@ -333,10 +336,10 @@ export default async function SuscripcionPage() {
 
           {/* Detalles del plan */}
           <StatGroup>
-            <Stat label="Mensualidad" value={fmtMoney(displayedMonthlyFee, currency)} />
+            {!enPruebaVoluntaria && <Stat label="Mensualidad" value={fmtMoney(displayedMonthlyFee, currency)} />}
             {config.setup_fee > 0 && <Stat label="Implementación" value={fmtMoney(config.setup_fee, currency)} />}
-            <Stat label="Próximo cobro" value={nextChargeLabel(config.billing_day)} />
-            {config.started_at && <Stat label="Cliente desde" value={fechaCorta(config.started_at)} />}
+            {!enPruebaVoluntaria && <Stat label="Próximo cobro" value={nextChargeLabel(config.billing_day)} />}
+            {!enPruebaVoluntaria && config.started_at && <Stat label="Cliente desde" value={fechaCorta(config.started_at)} />}
             {tope && (
               <Stat
                 label="Pedidos este mes"
