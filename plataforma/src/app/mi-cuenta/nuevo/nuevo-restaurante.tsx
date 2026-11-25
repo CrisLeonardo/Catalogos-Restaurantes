@@ -171,7 +171,11 @@ export default function NuevoRestaurante({
   const plan: PlanAlta = planElegido ?? planSugerido(comoEfectivo);
   const effectiveSlug = slugEdited ? slug : localSlugify(name);
   const host = `${effectiveSlug || 'turestaurante'}.${rootDomain.replace(/:\d+$/, '')}`;
-  const demoHref = `${/localhost|^127\./.test(rootDomain) ? 'http' : 'https'}://demo.${rootDomain}/?caso=${comoEfectivo}&plan=${plan}`;
+  /* La demo enseña lo que se paga: si la respuesta no corresponde al plan
+     elegido («Solo ven la carta» con Estándar), manda el caso del plan. */
+  const casoDemo: ComoTePiden = planSugerido(comoEfectivo) === plan ? comoEfectivo
+    : plan === 'PREMIUM' ? 'mesas' : plan === 'EN_LINEA' ? 'llevar' : comoEfectivo === 'llevar' ? 'llevar' : 'mostrador';
+  const demoHref = `${/localhost|^127\./.test(rootDomain) ? 'http' : 'https'}://demo.${rootDomain}/?caso=${casoDemo}&plan=${plan}`;
 
   /* Lo que ya se puede pintar en la carta: filas completas y válidas. */
   const platos = useMemo(() => filas
