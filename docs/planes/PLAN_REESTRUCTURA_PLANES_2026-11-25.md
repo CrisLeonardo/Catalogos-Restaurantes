@@ -27,6 +27,10 @@ El PR #194 corrige el aviso de 300 pedidos, reconoce la personalización complet
 | LG-15 · Métricas | Alta, primer platillo y embudo de carta ya tienen eventos. Queda pendiente medir conversión de la prueba, cambios, cancelaciones y costo de soporte. |
 | LG-16 · Multisucursal | La política actual anuncia un cargo fijo. Falta confirmar el criterio de sucursal activa y la integración de los tramos con renovación y cobro del grupo. |
 
+## Maqueta para aprobar
+
+La [maqueta de prueba y resumen de ventas](../diseno/MAQUETA_PRUEBA_Y_RESUMEN_DE_VENTAS_2026-11-25.html) muestra cómo iniciar la prueba, cuándo se confirman los cobros y cómo cambiar el período de ventas. Se probó a 390 y 1280 px, en claro y oscuro, con teclado. Estas pantallas quedan pendientes de aprobación.
+
 ## Orden y reversión
 
 1. Integrar primero el PR #194 y apuntar el PR de la reestructuración a `main`. Si el #194 se fusiona con squash, comprobar que el nuevo diff solo contiene la reestructuración.
