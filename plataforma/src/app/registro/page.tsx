@@ -32,13 +32,13 @@ export const metadata: Metadata = {
 };
 
 /* ALTA-01 (auditoría funcional 2026-11-25): con Básico elegido se
-   anunciaban «pedidos con alerta» y «personalización total», que Básico no
-   trae (su carta es de consulta y la personalización completa es de
-   Premium). Lo que se promete sale del plan que llega en el enlace; sin
-   plan, se dice desde cuál aplica cada cosa. */
+   anunciaban «pedidos con alerta», que Básico no trae (su carta es de
+   consulta). Lo que se promete sale del plan que llega en el enlace; sin
+   plan, se dice desde cuál aplica cada cosa. La personalización completa
+   la tienen todos los planes (decisión del dueño, 2026-11-25). */
 const perks = (trialDays: number, plan: PlanCode | null) => {
   const conPedidos = plan !== null && plan !== 'BASICO';
-  const completa = plan !== null && PLANS[plan].hasFullTheme;
+  const completa = plan === null || PLANS[plan].hasFullTheme;
   return [
     { icon: 'bag', text: 'Menú web por QR, rápido y a tu marca' },
     plan === 'BASICO'

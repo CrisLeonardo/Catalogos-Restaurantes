@@ -45,6 +45,9 @@ export interface PlanFeatures {
   hasOrders: boolean;
   hasWhatsapp: boolean;
   hasRealtime: boolean;
+  /** Editor completo de la carta (estructuras, diseños, Vitrina). Decisión
+      del dueño (2026-11-25): lo tienen TODOS los planes, como ya pasaba en el
+      panel; antes la comparativa lo anunciaba solo en Premium. */
   hasFullTheme: boolean;
   hasWaiterPanel: boolean;
   /** Impresión de comandas a cocina (agente de impresión). */
@@ -85,7 +88,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasOrders: false,
     hasWhatsapp: false,
     hasRealtime: false,
-    hasFullTheme: false,
+    hasFullTheme: true,
     hasWaiterPanel: false,
     hasPrinting: false,
     hasFinance: false,
@@ -115,7 +118,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasOrders: true,
     hasWhatsapp: true,
     hasRealtime: true,
-    hasFullTheme: false,
+    hasFullTheme: true,
     hasWaiterPanel: false,
     hasPrinting: false,
     hasFinance: false,
@@ -134,7 +137,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasOrders: true,
     hasWhatsapp: true,
     hasRealtime: true,
-    hasFullTheme: false,
+    hasFullTheme: true,
     hasWaiterPanel: false,
     hasPrinting: false,
     hasFinance: true,
