@@ -204,7 +204,7 @@ export default async function VendeEnLinea() {
                 <strong style={{ color: 'var(--u-text-2)', fontWeight: 650 }}>{enLineaLabel}</strong>
                 {pricing.trialDays > 0 ? ` · ${pricing.trialDays} días gratis · sin tarjeta · ` : ' · sin alta · sin contrato · '}sin comisión por pedido
                 {/* PLAN-02: el umbral y lo que cuesta después, junto al precio. */}
-                {` · hasta ${TOPE} pedidos al mes; si los pasas, nada se corta y te pedimos pasar a Estándar (${planPriceLabel(pricing, 'ESTANDAR')})`}
+                {` · hasta ${TOPE} pedidos al mes; si los pasas, nada se corta y decides tú si pasas a Estándar (${planPriceLabel(pricing, 'ESTANDAR')})`}
               </p>
             </div>
           </div>

@@ -370,8 +370,8 @@ export default async function AdminHomePage() {
         ? `¡${tope.usados.toLocaleString('es-GT')} pedidos este mes! Pasaste los ${tope.tope} de En línea`
         : `Llevas ${tope.usados.toLocaleString('es-GT')} de ${tope.tope} pedidos este mes`,
       detalle: tope.nivel === 'pasado'
-        ? 'Tu menú sigue vendiendo: no se corta ningún pedido. Desde el próximo mes tu negocio necesita Estándar.'
-        : 'Si pasas el tope tu menú sigue vendiendo, y el próximo mes te pediremos pasar a Estándar.',
+        ? 'Tu menú sigue vendiendo: no se corta ningún pedido. Te proponemos pasar a Estándar; si prefieres quedarte, sigues en En línea al mismo precio.'
+        : 'Si pasas el tope tu menú sigue vendiendo. Te propondremos pasar a Estándar y tú decides.',
     });
   }
   if (visitWarning && visitStats) {

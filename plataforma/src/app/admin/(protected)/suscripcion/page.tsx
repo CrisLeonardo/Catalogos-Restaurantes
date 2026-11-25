@@ -315,7 +315,7 @@ export default async function SuscripcionPage() {
                 value={`${tope.usados.toLocaleString('es-GT')} de ${tope.tope.toLocaleString('es-GT')}`}
                 tone={tope.nivel === 'pasado' ? 'danger' : tope.nivel === 'cerca' ? 'warn' : undefined}
                 sub={tope.nivel === 'pasado'
-                  ? 'Pasaste el tope de tu plan. Ningún pedido se corta; el próximo mes te toca Estándar.'
+                  ? 'Pasaste el tope de tu plan. Ningún pedido se corta. Te conviene Estándar, pero si prefieres quedarte sigues en En línea al mismo precio.'
                   : tope.nivel === 'cerca'
                     ? `Te quedan ${tope.restantes}. Al pasarlos tu menú sigue vendiendo.`
                     : 'Se reinicia el día 1. Si lo pasas, tu menú sigue vendiendo.'}

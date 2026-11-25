@@ -45,6 +45,9 @@ export interface PlanFeatures {
   hasOrders: boolean;
   hasWhatsapp: boolean;
   hasRealtime: boolean;
+  /** Editor completo de la carta (estructuras, diseños, Vitrina). Decisión
+      del dueño (2026-11-25): lo tienen TODOS los planes, como ya pasaba en el
+      panel; antes la comparativa lo anunciaba solo en Premium. */
   hasFullTheme: boolean;
   hasWaiterPanel: boolean;
   /** Impresión de comandas a cocina (agente de impresión). */
@@ -85,7 +88,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasOrders: false,
     hasWhatsapp: false,
     hasRealtime: false,
-    hasFullTheme: false,
+    hasFullTheme: true,
     hasWaiterPanel: false,
     hasPrinting: false,
     hasFinance: false,
@@ -115,7 +118,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasOrders: true,
     hasWhatsapp: true,
     hasRealtime: true,
-    hasFullTheme: false,
+    hasFullTheme: true,
     hasWaiterPanel: false,
     hasPrinting: false,
     hasFinance: false,
@@ -134,7 +137,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasOrders: true,
     hasWhatsapp: true,
     hasRealtime: true,
-    hasFullTheme: false,
+    hasFullTheme: true,
     hasWaiterPanel: false,
     hasPrinting: false,
     hasFinance: true,
@@ -690,9 +693,12 @@ export function loQueSePierde(antes: PlanCode, despues: PlanCode): string[] {
    avisa al 80 % y al pasarlo, y pide subir el mes siguiente. No hay ningún
    cambio de plan automático: lo confirma el dueño en Mi suscripción. El
    texto anterior («al mes siguiente pasas a Estándar») sonaba automático y
-   no decía cuánto costaba Estándar. */
+   no decía cuánto costaba Estándar.
+   Decisión del dueño (2026-11-25): si no acepta el cambio, se queda en En
+   línea al mismo precio, ningún pedido se corta y el aviso vuelve cada mes
+   que pase el tope. */
 export function reglaDelTopeEnLinea(precioEstandar?: string): string {
   const tope = PLANS.EN_LINEA.monthlyOrderCap ?? 300;
   const estandar = precioEstandar ? `Estándar (${precioEstandar})` : 'Estándar';
-  return `En línea incluye hasta ${tope} pedidos al mes. Si un mes los pasas, ningún pedido se corta: te avisamos y desde el mes siguiente te pedimos pasar a ${estandar}. El cambio lo confirmas tú.`;
+  return `En línea incluye hasta ${tope} pedidos al mes. Si un mes los pasas, ningún pedido se corta: te avisamos y te proponemos pasar a ${estandar}. El cambio lo confirmas tú; si prefieres quedarte, sigues en En línea al mismo precio y recibiendo pedidos, y el aviso vuelve cada mes que pases el tope.`;
 }
