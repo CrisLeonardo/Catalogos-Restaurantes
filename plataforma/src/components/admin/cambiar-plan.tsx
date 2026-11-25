@@ -54,8 +54,9 @@ export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno
         planActual, importe: preview.monthlyAmount, moneda: preview.currency, iniciarPrueba: iniciaPrueba,
       });
       if ('error' in r) return setError(r.error);
-      setHecho(`Listo: ya estás en ${PLANS[r.plan].name}.`);
+      setHecho(iniciaPrueba ? 'Tu prueba empezó.' : `Listo: ya estás en ${PLANS[r.plan].name}.`);
       setElegido(null);
+      if (iniciaPrueba) window.scrollTo(0, 0);
       router.refresh();
     });
   }
