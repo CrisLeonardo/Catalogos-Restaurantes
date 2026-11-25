@@ -168,3 +168,11 @@ describe('mostrador', () => {
     expect(tieneMostrador(null)).toBe(false);
   });
 });
+
+describe('loQueSePierde', () => {
+  it('de Básico a En línea no anuncia que se pierde comer en local', async () => {
+    const { loQueSePierde } = await import('./plans');
+    expect(loQueSePierde('BASICO', 'EN_LINEA')).not.toContain('Pedidos para comer en local');
+    expect(loQueSePierde('ESTANDAR', 'EN_LINEA')).toContain('Pedidos para comer en local');
+  });
+});

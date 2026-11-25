@@ -690,7 +690,8 @@ export function loQueSePierde(antes: PlanCode, despues: PlanCode): string[] {
   const d = PLANS[despues];
   const fuera: string[] = [];
   if (a.hasOrders && !d.hasOrders) fuera.push('Pedidos en línea');
-  if (!orderTypesForPlan(despues, ['dine_in']).length && orderTypesForPlan(antes, ['dine_in']).length && d.hasOrders) fuera.push('Pedidos para comer en local');
+  // Básico no recibe pedidos: pasar de Básico a En línea no quita «comer en local».
+  if (a.hasOrders && d.hasOrders && !orderTypesForPlan(despues, ['dine_in']).length && orderTypesForPlan(antes, ['dine_in']).length) fuera.push('Pedidos para comer en local');
   if (a.hasWaiterPanel && !d.hasWaiterPanel) fuera.push('Panel de mesero y mapa de mesas');
   if (a.hasPrinting && !d.hasPrinting) fuera.push('Impresión de comandas');
   if (a.hasFinance && !d.hasFinance) fuera.push('Reportes financieros y corte de caja');

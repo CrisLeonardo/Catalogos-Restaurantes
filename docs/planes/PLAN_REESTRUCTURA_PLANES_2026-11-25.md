@@ -38,6 +38,8 @@ Revisión de Claude sobre los commits de esta rama. Cada punto se corrigió en s
 
 4. **Cobro de hoy durante la prueba.** «Estado de cuenta» mostraba «Próximo cobro: hoy» y la mensualidad, mientras la tarjeta de la prueba decía «Q0 durante la prueba» y el primer cobro al vencer. Durante la prueba voluntaria esos datos se quitan; la tarjeta de la prueba ya los dice.
 
+5. **Aviso falso al subir desde Básico.** Al elegir En línea desde Básico, la confirmación decía «Dejarás de tener: Pedidos para comer en local», aunque Básico no recibe pedidos. Venía de antes de esta rama; `loQueSePierde` ahora exige que el plan anterior tuviera pedidos.
+
 ## Maqueta para aprobar
 
 La [maqueta de prueba y resumen de ventas](../diseno/MAQUETA_PRUEBA_Y_RESUMEN_DE_VENTAS_2026-11-25.html) muestra cómo iniciar la prueba, cuándo se confirman los cobros y cómo cambiar el período de ventas. Se probó a 390 y 1280 px, en claro y oscuro, con teclado. El dueño aprobó la maqueta para implementar ambas pantallas en el PR #195.
