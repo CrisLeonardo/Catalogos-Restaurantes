@@ -4,10 +4,22 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
-## Pendiente
-
-- La [auditoría de experiencia de la web pública](docs/auditorias/AUDITORIA_EXPERIENCIA_WEB_PUBLICA_2026-11-24.md) registra el recorrido de venta por tipo de negocio y prioriza 11 hallazgos de comprensión, diseño adaptable, accesibilidad y rendimiento.
-- **Web pública más fácil de recorrer** (WEB-UX-01 a 09 y 11): saltar al contenido con el teclado, menú que devuelve el foco y cabe en horizontal, la comparativa de planes se abre al llegar y se lee en el teléfono, el precio de En línea junto al primer botón y una sola regla de los 300 pedidos, la demo conserva el caso hasta el alta y su pedido de prueba es una hoja accesible. Con la [maqueta aprobada](docs/diseno/MAQUETA_WEB_PUBLICA_EXPERIENCIA_2026-11-24.html): en el teléfono los casos van antes del video, «Ver planes y precios» como segundo botón, pausa del video en bucle, «Hablar con nosotros» en el menú y en Planes, registro con la contraseña a la vista, «Probar la demo» en la cabecera e imagen propia al compartir cada página.
+## v0.36.0 · 2026-11-25 · La web pública se entiende y se recorre desde el teléfono
+PR #187 y #188 · sin migraciones. Cierra la [auditoría de experiencia de la web pública](docs/auditorias/AUDITORIA_EXPERIENCIA_WEB_PUBLICA_2026-11-24.md) (11 hallazgos de comprensión, diseño adaptable, accesibilidad y rendimiento) salvo WEB-UX-10, que se mide contra producción.
+- **Quien llega por el teléfono ve su caso y el precio sin bajar** (WEB-UX-02, 03).
+  - En la portada los casos van antes del video: empiezan en y=477 a 390 px (antes en y=859), y el segundo botón es «Ver planes y precios».
+  - En Vende en línea, «Q99 / mes» va junto al primer botón (antes en y≈5800).
+  - Planes y Vende en línea explican el tope de 300 pedidos con la misma frase.
+- **La demo conserva lo que elegiste** (WEB-UX-01). Mesas y Mostrador abren la demo con su caso, y «Quiero esto en mi restaurante» llega al alta con ese plan. «Probar la demo» de la cabecera lleva a «Pídelo tú mismo».
+- **Teclado y lector de pantalla** (WEB-UX-07, 08, 09).
+  - «Saltar al contenido» en todas las páginas, y Planes con región principal.
+  - El menú devuelve el foco y ya no se corta en horizontal.
+  - Enlaces legales subrayados.
+  - El pedido de prueba usa la misma hoja del carrito, con foco, Esc y retorno.
+  - El video en bucle se puede pausar y el aparato lo recuerda.
+- **Comparar y decidir** (WEB-UX-04, 05, 06). La comparativa de planes se abre al llegar y en el teléfono deja fija la columna de la función. En el registro la contraseña ya no queda debajo del botón fijo. «Hablar con nosotros» está en el menú y en Planes, y Descargas ofrece pedir la instalación junto al botón.
+- **Imagen propia al compartir** (WEB-UX-11). Portada, Planes, Vende en línea, Registro y Descargas tienen su tarjeta de 1200 × 630 con la promesa y el precio vigente.
+- Maqueta aprobada: [MAQUETA_WEB_PUBLICA_EXPERIENCIA_2026-11-24](docs/diseno/MAQUETA_WEB_PUBLICA_EXPERIENCIA_2026-11-24.html).
 
 ## v0.35.0 · 2026-11-24 · Seguridad, plazos de los datos y avisos antes de perder algo
 PR #182, #183 y #184 · **migraciones 194 y 195** (`supabase/actualizacion_194_a_195.sql`, antes o después del despliegue: el código funciona sin ellas y se pueden repetir). Cierra la parte de código de la [auditoría de lanzamiento](docs/auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md) con las decisiones del dueño del 24 de noviembre.
