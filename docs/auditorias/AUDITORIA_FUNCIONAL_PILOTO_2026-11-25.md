@@ -14,7 +14,7 @@ Cada hallazgo se buscó en el código antes de tocarlo y quedó clasificado como
 | SALON-01 | Reproducido | «Modo aprendiz» pasa a «Mostrar ayuda», con aviso de que se opera el restaurante real y acceso al turno de práctica aislado que ya existía (`/admin/mesero/practica`) | En pantalla |
 | PEDIDOS-01 | Reproducido | El Q69.78 no era un descuento: era la animación del total congelada a medio camino cuando el navegador deja de dar cuadros. El total se fija con un temporizador y cambia de golpe si la página está oculta | En pantalla: con los cuadros detenidos, la animación quedó en Q25.34 y se fijó en Q50.00 exactos |
 | PEDIDOS-02 | Reproducido | La etapa del pedido de prueba (Nuevo, En cocina, Listo) viaja por la sala y no retrocede; «Le avisamos al cliente» pasa a «Listo para entregar», que es lo que ocurre en la demo | 2 pruebas unitarias; en pantalla, aceptar y marcar listo en la portada dejó la otra pestaña en «LISTO» sin «Aceptar» |
-| CARTA-01 | Pendiente de evidencia | Sin cambio de código | Ver la sección propia |
+| CARTA-01 | No se reproduce fuera de un despliegue | Sin cambio de código; script de medición | Medido en producción: las dos rutas cambiaron en la misma lectura (ver la sección propia) |
 | CAJA-02 | Reproducido | El recibo y el texto para compartir dicen «turno de 10:27 a 10:28» o «sin apertura · cuenta desde las 05:00», y marcan el cierre «del día siguiente» si cruza medianoche | 3 pruebas unitarias |
 | ENTREGA-01 | Reproducido, **más grave de lo reportado** | El pin sin ubicación guardada ya no se da por confirmado. Antes, sin moverlo, el checkout aceptaba enviar un domicilio a la puerta del propio restaurante (0.0 km) | Lectura del código; falta probar en teléfono |
 | ALTA-01 | Reproducido | Las ventajas del registro salen del plan del enlace: Básico ya no promete pedidos con alerta y la «personalización completa» solo se anuncia en Premium, el único que la trae | En pantalla con `?plan=BASICO` |
@@ -40,6 +40,10 @@ Lo que se comprobó:
 La hipótesis más fuerte es un **despliegue solapado**: `render.yaml` tiene `autoDeploy: true` y el 25 de noviembre se fusionaron #188 y #189. Durante un despliegue sin corte, Render mantiene dos instancias, cada una con su caché en memoria; la que no atendió el guardado sirve el precio anterior hasta 60 s (`revalidate: 60`). Coincide con lo observado (un acceso al día y el otro no, y ambos al día en la recarga siguiente).
 
 Para confirmarlo: cambiar un precio en producción fuera de un despliegue mientras corre `node plataforma/scripts/medir-publicacion-carta.mjs <slug> "<platillo>" <precio-nuevo>`, que lee las dos rutas cada 2 s y anota cuándo cada una muestra el precio nuevo. El 2026-11-25, ya desplegada la v0.37.0, las dos rutas de Café Cedro QA 2511 mostraban Q16 (`DYNAMIC`). Si se reproduce fuera de un despliegue, la causa es otra y hay que investigar más. Si solo ocurre durante despliegues, basta con decirlo al dueño en el guardado («puede tardar hasta un minuto en verse en todos lados») o mover la caché a un almacén compartido.
+
+**Medición del 2026-11-25, fuera de un despliegue.** Con `main` ya desplegado (#191) y sin otra fusión en curso, el dueño cambió Café americano de Café Cedro QA 2511 de Q16 a Q17. El script leyó las dos rutas cada 2.4 s aproximadamente: en la lectura de los 708.8 s las dos decían Q16 y en la de los 711.2 s las dos decían Q17, con `cf-cache-status: DYNAMIC` y sin errores. No hubo diferencia entre accesos.
+
+**Conclusión.** Fuera de un despliegue el cambio aparece a la vez en los dos accesos, así que la diferencia que vio la auditoría se explica por el despliegue automático de ese día. No hace falta tocar la caché. Si molesta durante los despliegues, la medida barata es avisar al guardar («puede tardar hasta un minuto en verse en todos lados» mientras se publica una versión). Café Cedro QA 2511 quedó con el café a **Q17**.
 
 ## Aportes que no estaban en la auditoría
 
@@ -97,7 +101,6 @@ La geolocalización se simuló en el navegador de escritorio con vista de teléf
 
 ## Pendiente antes del piloto
 
-- **CARTA-01**: la medición fuera de despliegue descrita arriba (el dueño cambia el precio; el script mide).
 - **Teléfono físico**: el diálogo de permiso de ubicación real y el pin justo en el límite del radio; uso táctil de Salón, Caja y checkout.
 - **Caja Estándar activa**: el circuito completo de mostrador con un restaurante Estándar real, no el panel Premium.
 - **Lo que la auditoría ya listaba**: alta desde cero con verificación de correo, cobro mixto, cancelación de línea y devolución, impresión con PC principal, operación sin internet, instalador de Escritorio firmado y permisos por rol.
@@ -105,4 +108,4 @@ La geolocalización se simuló en el navegador de escritorio con vista de teléf
 ## Datos ficticios que quedaron
 
 - **Base local**: pedido `AUD-CAJA01-…` de Rincón 502 en la Mesa 9 con un cobro en efectivo de Q70, usado para comprobar Caja en vivo.
-- **Producción**: sin cambios. El pedido #117, el corte de prueba de Rincón 502 y Café Cedro QA 2511 son de la auditoría externa.
+- **Producción**: el pedido #117, el corte de prueba de Rincón 502 y Café Cedro QA 2511 son de la auditoría externa. El único cambio posterior lo hizo el dueño para medir CARTA-01: el café de Café Cedro QA 2511 pasó de Q16 a Q17.
