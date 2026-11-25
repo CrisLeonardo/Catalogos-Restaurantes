@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { imagenesWeb } from '@/lib/og-web';
+import { marketingUrl } from '@/lib/tenant';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { SiteHeader, SiteFooter, SectionHead, contactHref, CONTACT_VIA } from '@/components/site-chrome';
@@ -6,11 +8,23 @@ import { DesktopPlatformNotice } from '@/components/desktop-platform-notice';
 import { LeoginMark } from '@/components/leogin-logo';
 import { LEOGIN_CORAL, LEOGIN_CREMA } from '@/lib/marca/trazos.mjs';
 
+const TITULO = 'Leogin Desktop — la app de escritorio de tu restaurante';
+const DESCRIPCION =
+  'Leogin Desktop para Windows: tu panel como una app instalada, con modo cocina, impresión de comandas en Premium y respaldo local con una PC principal configurada.';
+const ALT = 'Leogin Escritorio: tu restaurante, instalado en tu PC';
+
 export const metadata: Metadata = {
-  title: 'Leogin Desktop — la app de escritorio de tu restaurante',
-  description:
-    'Leogin Desktop para Windows: tu panel como una app instalada, con modo cocina, impresión de comandas en Premium y respaldo local con una PC principal configurada.',
+  title: TITULO,
+  description: DESCRIPCION,
   robots: { index: true, follow: true },
+  // Sin estas etiquetas, compartir Descargas salía sin imagen (WEB-UX-11).
+  alternates: { canonical: marketingUrl('/descargas') },
+  openGraph: {
+    title: TITULO, description: DESCRIPCION, url: marketingUrl('/descargas'),
+    siteName: 'Leogin', locale: 'es_GT', type: 'website',
+    images: imagenesWeb('descargas', ALT).og,
+  },
+  twitter: { ...imagenesWeb('descargas', ALT).twitter, title: TITULO, description: DESCRIPCION },
 };
 
 const DOWNLOAD_HREF = '/api/desktop/download-exe';

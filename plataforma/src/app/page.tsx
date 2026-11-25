@@ -25,6 +25,7 @@ import { resolverPlatillo, valorPlatillo } from '@/lib/menu/enlace-platillo';
 import { platilloEstrella } from '@/lib/menu/estrella';
 import { enlaceDeAlta, leerIntencion, type IntencionAlta } from '@/lib/alta';
 import { PLANS } from '@/lib/plans';
+import { imagenesWeb } from '@/lib/og-web';
 
 /* ── Metadata dinámica por restaurante ─────────────────────── */
 /** `?platillo=` (CV-30): el código o el nombre legible (`doble-bacon`, F4-8);
@@ -62,9 +63,9 @@ export async function generateMetadata({
         locale: 'es_GT',
         type: 'website',
         ...(base ? { url: base } : {}),
-        images: [{ url: '/icon-512.png', width: 512, height: 512, alt: 'Leogin' }],
+        images: imagenesWeb('portada', 'Leogin: tu restaurante, bajo control').og,
       },
-      twitter: { card: 'summary', title, description, images: ['/icon-512.png'] },
+      twitter: { ...imagenesWeb('portada', 'Leogin: tu restaurante, bajo control').twitter, title, description },
     };
   }
 

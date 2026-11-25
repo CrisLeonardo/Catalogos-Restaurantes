@@ -41,7 +41,6 @@ export const CONTACT_MAIL = CONTACT_EMAIL;
  * hacía scroll a ninguna parte.
  */
 export function SiteHeader({ home = false }: { home?: boolean }) {
-  const demoUrl = subdomainUrl(DEMO_SLUG);
   const anchor = (id: string) => (home ? `#${id}` : `/#${id}`);
 
   return (
@@ -61,7 +60,11 @@ export function SiteHeader({ home = false }: { home?: boolean }) {
           <a href={anchor('casos')} className="lp-navlink">Tu caso</a>
           <Link href="/vende-en-linea" className="lp-navlink">Vende en línea</Link>
           <Link href="/planes" className="lp-navlink">Planes</Link>
-          <a href={demoUrl} className="lp-navlink">Demo</a>
+          {/* «Demo» abría la carta y «Probar la demo» el QR con la cocina:
+              dos recorridos con casi el mismo nombre. Ahora los dos llevan a
+              «Pídelo tú mismo», donde están el QR, «ábrelo aquí» y la carta
+              (WEB-UX-01, maqueta del 2026-11-24). */}
+          <a href={anchor('demo')} className="lp-navlink">Probar la demo</a>
           <Link href="/descargas" className="lp-navlink lp-navlink-extra">Escritorio</Link>
           <Link href="/login" className="lp-btn lp-btn-sm lp-btn-soft lp-nav-secondary" style={{ marginLeft: 8 }}>
             Acceder
@@ -72,7 +75,7 @@ export function SiteHeader({ home = false }: { home?: boolean }) {
           </Link>
           {/* En el teléfono los cinco enlaces de arriba se ocultan; aquí es a
               donde se van (antes no iban a ningún sitio). */}
-          <SiteMenu home={home} demoUrl={demoUrl} />
+          <SiteMenu home={home} contacto={contactHref('Hola, quiero saber más de Leogin para mi restaurante')} />
         </nav>
       </div>
     </header>

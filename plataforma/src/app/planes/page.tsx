@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
+import { imagenesWeb } from '@/lib/og-web';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { conEvento, EVENTOS } from '@/lib/analytics';
-import { SiteHeader, SiteFooter, SectionHead, contactHref, CONTACT_ICON } from '@/components/site-chrome';
+import { SiteHeader, SiteFooter, SectionHead, contactHref, CONTACT_ICON, CONTACT_VIA } from '@/components/site-chrome';
 import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceLabel, planPriceQ, PLAN_ACCENT_INK, publicPlanCapabilities, planPresentation, planGrowthCopy, planComparisonCopy, reglaDelTopeEnLinea } from '@/lib/plans';
 import type { PlanPricing } from '@/lib/plans';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
@@ -25,9 +26,9 @@ export const metadata: Metadata = {
   openGraph: {
     title: TITULO, description: DESCRIPCION, url: marketingUrl('/planes'),
     siteName: 'Leogin', locale: 'es_GT', type: 'website',
-    images: [{ url: marketingUrl('/icon-512.png'), width: 512, height: 512, alt: 'Leogin' }],
+    images: imagenesWeb('planes', 'Leogin: precio fijo, nunca un % de tus ventas').og,
   },
-  twitter: { card: 'summary', title: TITULO, description: DESCRIPCION, images: [marketingUrl('/icon-512.png')] },
+  twitter: { ...imagenesWeb('planes', 'Leogin: precio fijo, nunca un % de tus ventas').twitter, title: TITULO, description: DESCRIPCION },
 };
 
 // Los precios pueden cambiar desde /super/configuracion: la página se
@@ -146,7 +147,7 @@ export default async function PlanesPage() {
           el plan y los cuatro caben en una tarjeta con el precio en una
           línea. Antes eran cuatro tarjetas largas que había que leer enteras. */}
       <section style={{ maxWidth: 1100, margin: '0 auto', padding: '0 18px 24px' }}>
-        <PlanPorPreguntas planes={planesDeLaWeb(pricing)} origen="planes" />
+        <PlanPorPreguntas planes={planesDeLaWeb(pricing)} origen="planes" contacto={{ href: contactHref('Hola, tengo dudas sobre qué plan de Leogin me conviene'), via: CONTACT_VIA }} />
       </section>
 
       {/* Nota de uso justo */}

@@ -25,10 +25,12 @@ interface Props {
       booleano y no la función que lo resuelve porque una función no cruza
       la frontera servidor → cliente. */
   home?: boolean;
-  demoUrl: string;
+  /** Canal de ventas real (correo o WhatsApp, site-chrome). En el teléfono
+      el contacto quedaba a y≈5300 de la portada (WEB-UX-06). */
+  contacto?: string;
 }
 
-export default function SiteMenu({ home = false, demoUrl }: Props) {
+export default function SiteMenu({ home = false, contacto }: Props) {
   const anchor = (id: string) => (home ? `#${id}` : `/#${id}`);
 
   const [open, setOpen] = useState(false);
@@ -92,8 +94,11 @@ export default function SiteMenu({ home = false, demoUrl }: Props) {
           <a href={anchor('casos')} className="lp-menu-link lp-menu-en-barra">Elige tu caso</a>
           <Link href="/vende-en-linea" className="lp-menu-link lp-menu-en-barra">Vende en línea</Link>
           <Link href="/planes" className="lp-menu-link lp-menu-en-barra">Planes y precios</Link>
-          <a href={demoUrl} className="lp-menu-link lp-menu-en-barra">Ver una demo</a>
+          <a href={anchor('demo')} className="lp-menu-link lp-menu-en-barra">Probar la demo</a>
           <Link href="/descargas" className="lp-menu-link">Leogin Escritorio</Link>
+          {contacto && (
+            <a href={contacto} target="_blank" rel="noopener noreferrer" className="lp-menu-link lp-menu-link-contacto">Hablar con nosotros</a>
+          )}
           <Link href="/login" className="lp-menu-link lp-menu-link-strong lp-menu-en-barra">Acceder al panel</Link>
         </nav>
       )}

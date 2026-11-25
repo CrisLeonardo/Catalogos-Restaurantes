@@ -132,8 +132,9 @@ export default async function LeoginLanding() {
         {/* ── 1 · Titular y video ──────────────────────────────
             El titular y el video «Un solo lugar» son los aprobados. La
             acción principal es probar la demo: es lo que mejor explica
-            Leogin. Crear el restaurante va segundo, y lo que es gratis se
-            dice DEBAJO del botón, no dentro (V.1, F01). */}
+            Leogin. Ver planes y precios va segundo (crear la cuenta vive en
+            la cabecera), y lo que es gratis se dice DEBAJO del botón, no
+            dentro (V.1, F01; maqueta del 2026-11-24). */}
         <section className="lp-shell" style={{ paddingTop: 'clamp(28px, 7vw, 84px)' }}>
           <div className="lp-hero-grid">
             <div className="lp-hero-copy">
@@ -152,6 +153,45 @@ export default async function LeoginLanding() {
               </p>
             </div>
 
+            <div className="lp-hero-acciones">
+              <div className="lp-hero-ctas">
+                <LandingDemo href={demoUrl} primaria />
+                {/* Crear la cuenta sigue en la cabecera; aquí, lo segundo que
+                    pregunta quien llega: cuánto cuesta (decisión del dueño,
+                    maqueta del 2026-11-24). */}
+                <Link href="/planes" className="lp-btn lp-btn-lg lp-btn-soft">
+                  Ver planes y precios
+                </Link>
+              </div>
+              <p className="lp-body" style={{ fontSize: 14, marginTop: 14, color: 'var(--u-text-3)' }}>
+                La carta con QR es gratis para siempre. Los pedidos van con un plan.
+              </p>
+            </div>
+            {/* ── 2 · ¿Cuál es tu caso? (V.2) ─────────────────────
+                Dentro de la rejilla del encabezado: en la PC va debajo, a lo
+                ancho, como antes; en el teléfono va ANTES del video, para que
+                los casos empiecen en la primera pantalla (WEB-UX-02, maqueta
+                del 2026-11-24). */}
+            <section id="casos" className="lp-hero-casos">
+              <SectionHead eyebrow="¿Cómo es tu negocio?" title="Elige el que se parece al tuyo" center />
+              <ul className={`lp-card ${planesCss.casos}`} style={{ marginTop: 24 }}>
+                {casos.map((c) => (
+                  <li key={c.titulo}>
+                    <Link href={c.href} className={planesCss.caso}>
+                      <span className={planesCss.casoIcono} aria-hidden><Icon name={c.icono} size={20} /></span>
+                      <span style={{ minWidth: 0 }}>
+                        <b>{c.titulo}</b>
+                        <span>{c.texto}</span>
+                      </span>
+                      <em>{PLANS[c.plan].name}<small>{precio(c.plan)}</small></em>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <p className={planesCss.soloCarta}>
+                ¿Solo quieres tu carta con QR? <Link href={enlaceDeAlta({ plan: 'BASICO', caso: 'carta' })}>Básico, gratis</Link>.
+              </p>
+            </section>
             <div className="lp-hero-media" style={{ display: 'flex', justifyContent: 'center' }}>
               <div className="lp-hero-tarjeta" style={{ width: '100%' }}>
                 <LandingIntro
@@ -163,41 +203,7 @@ export default async function LeoginLanding() {
                 />
               </div>
             </div>
-
-            <div className="lp-hero-acciones">
-              <div className="lp-hero-ctas">
-                <LandingDemo href={demoUrl} primaria />
-                <Link href="/registro" {...conEvento('lp-btn lp-btn-lg lp-btn-soft', EVENTOS.clicCrear, 'portada')}>
-                  Crear mi restaurante
-                </Link>
-              </div>
-              <p className="lp-body" style={{ fontSize: 14, marginTop: 14, color: 'var(--u-text-3)' }}>
-                La carta con QR es gratis para siempre. Los pedidos van con un plan.
-              </p>
-            </div>
           </div>
-        </section>
-
-        {/* ── 2 · ¿Cuál es tu caso? (V.2) ───────────────────── */}
-        <section id="casos" className="lp-shell lp-section-tight">
-          <SectionHead eyebrow="¿Cómo es tu negocio?" title="Elige el que se parece al tuyo" center />
-          <ul className={`lp-card ${planesCss.casos}`} style={{ marginTop: 24 }}>
-            {casos.map((c) => (
-              <li key={c.titulo}>
-                <Link href={c.href} className={planesCss.caso}>
-                  <span className={planesCss.casoIcono} aria-hidden><Icon name={c.icono} size={20} /></span>
-                  <span style={{ minWidth: 0 }}>
-                    <b>{c.titulo}</b>
-                    <span>{c.texto}</span>
-                  </span>
-                  <em>{PLANS[c.plan].name}<small>{precio(c.plan)}</small></em>
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <p className={planesCss.soloCarta}>
-            ¿Solo quieres tu carta con QR? <Link href={enlaceDeAlta({ plan: 'BASICO', caso: 'carta' })}>Básico, gratis</Link>.
-          </p>
         </section>
 
         {/* ── Ya lo usan (solo con testimonios guardados en el Super, WEB-02) ── */}

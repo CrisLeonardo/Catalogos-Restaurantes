@@ -3084,6 +3084,7 @@ html[data-platform] .asphalt::after { display: none; }
 @media (hover: hover) {
   .lp-menu-link:hover { background: color-mix(in srgb, var(--u-text) 6%, transparent); color: var(--u-text); }
 }
+.lp-menu-link-contacto { color: var(--brand-accent-ink); font-weight: 650; }
 .lp-menu-link-strong {
   margin-top: 4px; padding-top: 4px;
   border-top: 1px solid var(--lp-line);
@@ -3091,14 +3092,19 @@ html[data-platform] .asphalt::after { display: none; }
   color: var(--u-text); font-weight: 650;
 }
 @media (max-width: 860px) { .lp-menu { display: block; } }
-/* Entre 861 y 960 px no caben siete enlaces y los dos botones: «Escritorio»
+/* Entre 861 y 1000 px no caben siete enlaces y los dos botones: «Escritorio»
    se va al menú desplegable (que ya lo tiene) y el menú aparece. El corte
-   estaba en 1080, pero a 961 px la barra completa mide 783 px y le sobran
-   ~40: de 961 a 1080 el menú solo repetía lo que ya se veía (WEB-UX-08). */
+   estaba en 1080, pero con «Probar la demo» la barra completa pide ~993 px:
+   de 1001 a 1080 el menú solo repetía lo que ya se veía (WEB-UX-08). */
 .lp-navlink { white-space: nowrap; }
-@media (max-width: 960px) {
+@media (max-width: 1000px) {
   .lp-navlink-extra { display: none; }
   .lp-menu { display: block; }
+  /* A 861 px «Crear mi restaurante» se partía en dos renglones: los
+     enlaces se juntan y el botón dice «Crear cuenta» (regla más abajo,
+     después de la que lo oculta). */
+  .lp-navlink { padding-inline: 7px; }
+  .lp-nav .lp-btn-sm { white-space: nowrap; }
 }
 /* …y en ese tramo el panel enseña solo lo que no cupo: antes repetía los
    seis destinos que ya estaban a la vista en la barra (WEB-UX-08). */
@@ -3137,6 +3143,10 @@ html[data-platform] .asphalt::after { display: none; }
    fila del menú, separada del resto. Sacarlo de la barra es lo que devuelve
    el sitio al wordmark y al CTA con su texto completo. */
 .lp-cta-short { display: none; }
+@media (min-width: 861px) and (max-width: 1000px) {
+  .lp-cta-full { display: none; }
+  .lp-cta-short { display: inline; }
+}
 @media (max-width: 860px) {
   .lp-nav-secondary { display: none; }
 }
@@ -3157,10 +3167,12 @@ html[data-platform] .asphalt::after { display: none; }
   /* El titular manda: con 50/50 el h1 de 68 px caía a cuatro líneas cortas
      en una columna de 500 px. */
   grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
-  /* Tres piezas: en la computadora el video ocupa la columna derecha entera;
-     en el teléfono va entre el titular y los botones (ver abajo). */
-  grid-template-areas: "copia media" "acciones media";
+  /* Cuatro piezas: en la computadora el video ocupa la columna derecha junto
+     al titular y los botones, y los casos van debajo a lo ancho. En el
+     teléfono el video baja después de los casos (ver abajo). */
+  grid-template-areas: "copia media" "acciones media" "casos casos";
 }
+.lp-hero-casos { grid-area: casos; margin-top: clamp(44px, 6vw, 72px); scroll-margin-top: 84px; }
 .lp-hero-copy { grid-area: copia; align-self: end; }
 .lp-hero-media { grid-area: media; align-self: center; }
 .lp-hero-acciones { grid-area: acciones; align-self: start; padding-top: 30px; }
@@ -3173,7 +3185,11 @@ html[data-platform] .asphalt::after { display: none; }
 }
 @media (max-width: 940px) {
   .lp-hero-grid, .lp-split { grid-template-columns: minmax(0, 1fr); }
-  .lp-hero-grid { grid-template-areas: "copia" "media" "acciones"; row-gap: 22px; }
+  /* Titular, botones y casos dentro de la primera pantalla; el video
+     después (WEB-UX-02): antes medía 350 px y dejaba los casos en y=859. */
+  .lp-hero-grid { grid-template-areas: "copia" "acciones" "casos" "media"; row-gap: 22px; }
+  .lp-hero-casos { margin-top: 12px; }
+  .lp-hero-media { margin-top: 18px; }
   .lp-hero-acciones { padding-top: 0; }
   /* En una sola columna el texto va SIEMPRE primero: en la sección del
      panel el mockup iba antes que el titular y en móvil abría con una
@@ -3411,8 +3427,8 @@ html[data-platform] .asphalt::after { display: none; }
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
     /* Al bajar, el texto se va más rápido que la tarjeta: profundidad. Solo
-       en la computadora: en el teléfono el video va entre el texto y los
-       botones, y los botones se le montaban encima al subir. */
+       en la computadora: en el teléfono las piezas van una tras otra y se
+       montaban al subir. */
     @media (min-width: 941px) {
       .lp-hero-copy, .lp-hero-acciones { animation: lp-hero-sube linear both; animation-timeline: view(); animation-range: exit 0% exit 100%; }
       .lp-hero-media { animation: lp-hero-atras linear both; animation-timeline: view(); animation-range: exit 0% exit 100%; }
@@ -3811,6 +3827,18 @@ html[data-platform] .asphalt::after { display: none; }
   background: rgba(18, 18, 20, 0.72); padding: 9px 12px; border-radius: 999px;
 }
 .lp-intro:focus-visible { outline: 3px solid var(--brand-accent); outline-offset: 3px; }
+/* La tarjeta y su botón de pausa (WEB-UX-07) comparten caja: el botón va
+   encima, en la esquina de abajo a la derecha, y no dentro de la tarjeta. */
+.lp-intro-caja { position: relative; width: 100%; max-width: 620px; margin: 0 auto; }
+.lp-intro-caja-v { max-width: 320px; }
+.lp-intro-pausa {
+  position: absolute; right: 12px; bottom: 12px; z-index: 2;
+  width: 44px; height: 44px; border-radius: 999px; border: 0;
+  display: grid; place-items: center; cursor: pointer;
+  background: #ffffff; color: #17161A;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.lp-intro-pausa:focus-visible { outline: 3px solid var(--brand-accent); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) {
   .lp-intro-img, .lp-intro-play { transition: none; }
 }
@@ -4413,6 +4441,11 @@ html[data-admin-area][data-scheme="light"] {
 
 /* Alta hasta el primer valor (ficha 2.3): app/registro y app/mi-cuenta/nuevo. */
 @media (max-width: 640px) { .registro-ventajas { display: none !important; } }
+.registro-entradilla-corta { display: none; }
+@media (max-width: 640px) {
+  .registro-entradilla-larga { display: none; }
+  .registro-entradilla-corta { display: inline; }
+}
 .alta-pagina { flex: 1; width: 100%; max-width: 640px; margin: 0 auto; padding: 20px 16px 64px; }
 @media (min-width: 900px) { .alta-pagina { max-width: 920px; padding-top: 32px; } }
 .alta-dos { display: grid; gap: 20px; }

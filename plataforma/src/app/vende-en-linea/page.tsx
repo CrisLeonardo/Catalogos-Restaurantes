@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { Metadata } from 'next';
+import { imagenesWeb } from '@/lib/og-web';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { Leo } from '@/components/leo';
@@ -52,9 +53,9 @@ export const metadata: Metadata = {
   openGraph: {
     title: TITULO, description: DESCRIPCION, url: marketingUrl('/vende-en-linea'),
     siteName: 'Leogin', locale: 'es_GT', type: 'website',
-    images: [{ url: marketingUrl('/icon-512.png'), width: 512, height: 512, alt: 'Leogin' }],
+    images: imagenesWeb('vende-en-linea', 'Leogin: tu menú en un link, tus pedidos en orden').og,
   },
-  twitter: { card: 'summary', title: TITULO, description: DESCRIPCION, images: [marketingUrl('/icon-512.png')] },
+  twitter: { ...imagenesWeb('vende-en-linea', 'Leogin: tu menú en un link, tus pedidos en orden').twitter, title: TITULO, description: DESCRIPCION },
 };
 
 // El precio sale de lo vigente en /super/configuracion, como en /planes.
