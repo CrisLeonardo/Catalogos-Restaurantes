@@ -45,10 +45,12 @@ export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno
   const preview = elegido ? planChangePresentation(currentPresentation, elegido, pricing) : null;
 
   function confirmar() {
-    if (!elegido) return;
+    if (!elegido || !preview) return;
     setError(null);
     start(async () => {
-      const r = await cambiarMiPlan(restaurantId, elegido);
+      const r = await cambiarMiPlan(restaurantId, elegido, {
+        planActual, importe: preview.monthlyAmount, moneda: preview.currency,
+      });
       if ('error' in r) return setError(r.error);
       setHecho(`Listo: ya estás en ${PLANS[r.plan].name}.`);
       setElegido(null);

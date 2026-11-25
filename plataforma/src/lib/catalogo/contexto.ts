@@ -63,11 +63,12 @@ export async function topeDeProductos(ctx: ContextoCatalogo, nuevos = 1): Promis
   const { count } = await ctx.db
     .from('products')
     .select('id', { count: 'exact', head: true })
-    .eq('restaurant_id', ctx.restaurantId);
+    .eq('restaurant_id', ctx.restaurantId)
+    .eq('is_active', true);
 
   const actuales = count ?? 0;
   if (actuales >= maxProducts) {
-    return `Llegaste al límite de ${maxProducts} platillos de tu plan. Sube de plan para agregar platillos ilimitados.`;
+    return `Llegaste al límite de ${maxProducts} platillos activos de tu plan. Oculta un platillo o cambia de plan para publicar más.`;
   }
   if (actuales + nuevos > maxProducts) {
     return `Tu plan permite ${maxProducts} platillos y ya tienes ${actuales}: caben ${maxProducts - actuales} más. Quita algunos de la importación o sube de plan.`;

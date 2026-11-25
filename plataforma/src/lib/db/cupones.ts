@@ -1,6 +1,28 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { lecturaDe, type Lectura } from '@/lib/db/lectura';
+import { isModuleActive, type ModuleSettings } from '@/lib/modules';
+import { hasModuleEntitlement, hasPlanFeature, PLANS, validPlanCode } from '@/lib/plans';
 import { estadoDelCupon, type CuponVigencia } from '@/lib/cupones/vigencia';
+
+export async function accesoCupones(restaurantId: string) {
+  const { data: local } = await createServiceClient()
+    .from('restaurants')
+    .select('plan_actual, modules, module_settings, timezone')
+    .eq('id', restaurantId)
+    .maybeSingle();
+  if (!local) return null;
+
+  const plan = validPlanCode(local.plan_actual);
+  const modules = local.modules as Record<string, boolean> | null;
+  const enabled = hasModuleEntitlement(plan, modules, 'cupones');
+  const active = isModuleActive({ cupones: enabled }, local.module_settings as ModuleSettings | null, 'cupones');
+  return {
+    active,
+    acceptsOrders: hasPlanFeature(plan, modules, 'orders'),
+    advanced: PLANS[plan].hasAdvancedCoupons,
+    timezone: (local.timezone as string | null) || 'America/Guatemala',
+  };
+}
 
 export type DiscountType = 'PERCENT' | 'FIXED';
 
@@ -69,6 +91,8 @@ export async function resolveCoupon(
   subtotal: number,
 ): Promise<{ coupon: Coupon; discount: number } | null> {
   if (!code?.trim()) return null;
+  const acceso = await accesoCupones(restaurantId);
+  if (!acceso?.active || !acceso.acceptsOrders) return null;
   const coupon = await getCouponByCode(restaurantId, code);
   if (!coupon || !isCouponLive(coupon, subtotal)) return null;
   const discount = computeCouponDiscount(coupon, subtotal);
@@ -86,6 +110,8 @@ export async function resolveCoupon(
  * los usos se miran aquí porque PostgREST no compara dos columnas.
  */
 export async function hasActiveCoupons(restaurantId: string): Promise<boolean> {
+  const acceso = await accesoCupones(restaurantId);
+  if (!acceso?.active || !acceso.acceptsOrders) return false;
   const db = createServiceClient();
   const ahora = new Date().toISOString();
   const { data } = await db

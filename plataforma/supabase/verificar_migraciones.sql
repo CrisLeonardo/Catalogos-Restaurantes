@@ -345,7 +345,25 @@ huellas(n, que, ok, cuando) as (values
   ('195', 'plazos de los datos personales (purga diaria) y fecha de la última exportación',
      to_regprocedure('public.leogin_purgar_datos_vencidos()') is not null
      and exists (select 1 from information_schema.columns where table_schema='public' and table_name='restaurants' and column_name='datos_exportados_at'),
-     'antes o después de desplegar; el código no falla sin ella')
+     'antes o después de desplegar; el código no falla sin ella'),
+  ('196', 'tarifas mensuales de contratación y conservación de acuerdos',
+     to_regprocedure('public.leogin_catalog_plan_fee(text)') is not null,
+     'antes de desplegar el código'),
+  ('197', 'cupones en En línea y Estándar',
+     to_regprocedure('public.leogin_validar_plan_del_cupon()') is not null,
+     'antes de desplegar el código'),
+  ('198', 'confirma el precio y cambia plan, cobro, modalidades y auditoría juntos',
+     to_regprocedure('public.leogin_confirmar_cambio_de_plan(uuid,uuid,text,text,text,jsonb,jsonb,jsonb,jsonb,numeric,text)') is not null,
+     'después de la 196 y antes de desplegar el código'),
+  ('199', 'inventario de productos en Estándar',
+     public.leogin_plan_module_floor('ESTANDAR')->'inventario' = 'true'::jsonb,
+     'antes de desplegar el código'),
+  ('200', 'cupo de platillos activos en Básico y En línea',
+     to_regprocedure('public.leogin_validar_cupo_del_catalogo()') is not null,
+     'antes de desplegar el código'),
+  ('201', 'una estación de impresión nueva por local Estándar',
+     to_regprocedure('public.leogin_validar_cupo_de_estaciones()') is not null,
+     'antes de desplegar el código')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

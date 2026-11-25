@@ -52,10 +52,14 @@ export interface PlanFeatures {
   hasWaiterPanel: boolean;
   /** Impresión de comandas a cocina (agente de impresión). */
   hasPrinting: boolean;
+  hasPrintStations: boolean;
+  /** Compra mínima y límite de usos al configurar cupones. */
+  hasAdvancedCoupons: boolean;
   /** Reportes financieros (ingreso/utilidad/margen) + corte de caja. */
   hasFinance: boolean;
   /** Analítica avanzada + inventario + personal (finanzas va aparte, ver hasFinance). */
   hasAnalytics: boolean;
+  hasProductInventory: boolean;
   /** Visitas mensuales al menú público a partir de las que se avisa (solo aviso, nunca bloquea el menú). */
   monthlyVisitWarning?: number;
   /** Pedidos al mes incluidos (tope BLANDO: avisa y pide subir, nunca corta un pedido). Ver lib/tope-pedidos.ts. */
@@ -76,7 +80,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
   BASICO: {
     code: 'BASICO',
     name: 'Básico',
-    tagline: 'Menú digital con QR, gratis para siempre — sin pedidos en línea',
+    tagline: 'Digitaliza tu menú gratis con tu propio código QR',
     badge: 'GRATIS',
     priceMonthly: 0,
     priceLabel: 'Gratis',
@@ -91,23 +95,26 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasFullTheme: true,
     hasWaiterPanel: false,
     hasPrinting: false,
+    hasPrintStations: false,
+    hasAdvancedCoupons: false,
     hasFinance: false,
     hasAnalytics: false,
+    hasProductInventory: false,
     highlight: false,
   },
   /* Para quien solo vende en línea (WhatsApp, Instagram, cocina oculta,
-     cocina de casa) y va empezando: Q99 y sin alta. A cambio, solo para
+     cocina de casa): solo para
      llevar y a domicilio (nada de comer en local: quien tiene mesas sigue
      necesitando Estándar o Premium), un usuario, 150 productos y sin
-     finanzas, cupones, lealtad, impresión ni mesero. Los encargos con
+     caja, lealtad, impresión ni mesero. Los encargos con
      cupo y la transferencia del comensal (mig. 149) se retiraron el
      2026-11-02 por decisión del dueño (mig. 153). */
   EN_LINEA: {
     code: 'EN_LINEA',
     name: 'En línea',
-    tagline: 'Vende para llevar y a domicilio desde tu WhatsApp o Instagram, sin comisión por pedido',
-    priceMonthly: 99,
-    priceLabel: 'Q99 / mes',
+    tagline: 'Recibe y organiza tus pedidos para llevar y a domicilio',
+    priceMonthly: 75,
+    priceLabel: 'Q75 / mes',
     setupFee: 0,
     products: 'unlimited',
     maxProducts: 150,
@@ -121,37 +128,43 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasFullTheme: true,
     hasWaiterPanel: false,
     hasPrinting: false,
+    hasPrintStations: false,
+    hasAdvancedCoupons: false,
     hasFinance: false,
     hasAnalytics: false,
+    hasProductInventory: false,
     highlight: false,
   },
   ESTANDAR: {
     code: 'ESTANDAR',
     name: 'Estándar',
-    tagline: 'Elige 2 de 3 modos de pedido, con avisos en tiempo real y reportes financieros',
-    priceMonthly: 199,
-    priceLabel: 'Q199 / mes',
+    tagline: 'Administra las ventas, caja y cocina de tu establecimiento',
+    priceMonthly: 149,
+    priceLabel: 'Q149 / mes',
     setupFee: 300,
     products: 'unlimited',
-    users: 2,
+    users: 3,
     hasOrders: true,
     hasWhatsapp: true,
     hasRealtime: true,
     hasFullTheme: true,
     hasWaiterPanel: false,
-    hasPrinting: false,
+    hasPrinting: true,
+    hasPrintStations: false,
+    hasAdvancedCoupons: false,
     hasFinance: true,
     hasAnalytics: false,
+    hasProductInventory: true,
     highlight: false,
   },
   PREMIUM: {
     code: 'PREMIUM',
     name: 'Premium',
-    tagline: 'Para llevar, comer en local y a domicilio — panel de mesero, analítica e inventario',
+    tagline: 'Controla la operación de tu restaurante, desde el salón hasta la cocina',
     badge: 'RECOMENDADO',
     highlight: true,
-    priceMonthly: 349,
-    priceLabel: 'Q349 / mes',
+    priceMonthly: 299,
+    priceLabel: 'Q299 / mes',
     setupFee: 300,
     products: 'unlimited',
     users: 'unlimited',
@@ -161,8 +174,11 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasFullTheme: true,
     hasWaiterPanel: true,
     hasPrinting: true,
+    hasPrintStations: true,
+    hasAdvancedCoupons: true,
     hasFinance: true,
     hasAnalytics: true,
+    hasProductInventory: true,
   },
   PRO: {
     code: 'PRO',
@@ -183,8 +199,11 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasFullTheme: true,
     hasWaiterPanel: true,
     hasPrinting: true,
+    hasPrintStations: true,
+    hasAdvancedCoupons: true,
     hasFinance: true,
     hasAnalytics: true,
+    hasProductInventory: true,
   },
 };
 
@@ -199,11 +218,6 @@ export const PLAN_ORDER: PlanCode[] = ['BASICO', 'EN_LINEA', 'ESTANDAR', 'PREMIU
 export function isUpgrade(current: PlanCode, target: PlanCode): boolean {
   return PLAN_ORDER.indexOf(target) > PLAN_ORDER.indexOf(current);
 }
-
-/** El plan Estándar da a elegir 2 de los 3 modos de pedido (comer en local,
- *  para llevar, a domicilio). Para tener los 3 a la vez hay que subir a
- *  Premium — este número es la única fuente de verdad de ese tope. */
-export const ESTANDAR_MAX_ORDER_TYPES = 2;
 
 /** Modos de pedido que un plan NO permite, aunque el tema los pida. En
  *  línea es para llevar y a domicilio: comer en local es de Estándar en
@@ -271,8 +285,8 @@ export function planPriceLabel(pricing: PlanPricing, code: PlanCode): string {
 /** Módulos incluidos en cada plan — es lo que el plan trae, sin costo extra ni compra suelta. */
 export const INCLUDED_MODULES: Record<PlanCode, ActivatableModuleKey[]> = {
   BASICO: [],
-  EN_LINEA: [],
-  ESTANDAR: [],
+  EN_LINEA: ['cupones'],
+  ESTANDAR: ['cupones'],
   PREMIUM: ['llamada_mesero', 'encuestas', 'cupones', 'loyalty', 'recetas', 'reservaciones', 'lista_espera'],
   PRO: ['reservaciones', 'lista_espera', 'llamada_mesero', 'encuestas', 'cupones', 'loyalty', 'recetas', 'proveedores', 'fel'],
 };
@@ -322,7 +336,7 @@ export function planFeatureFloor(plan: PlanCode): Record<PlanFeatureFlag, boolea
     whatsapp_notify: f.hasWhatsapp,
     finanzas:        f.hasFinance,
     analitica:       f.hasAnalytics,
-    inventario:      f.hasAnalytics,
+    inventario:      f.hasProductInventory,
     personal:        f.hasAnalytics,
   };
 }
@@ -409,7 +423,7 @@ export const GROUP_PANEL_FEE = 299;
    LO QUE SE DICE DE CADA PLAN (auditoría 2026-10-02, MIC-05)
    ------------------------------------------------------------
    La portada, «Crear otro restaurante» y Suscripción describían los
-   planes cada una a su manera («Lealtad, cupones y reservaciones»
+   planes cada una a su manera («Lealtad, encuestas y reservaciones»
    aquí, «Panel de mesero, recetas y cupones» allá). Cuatro puntos por
    plan, aquí, y todas las pantallas los leen de este sitio. `false`
    marca lo que el plan NO trae (se pinta tachado o en gris).
@@ -417,27 +431,27 @@ export const GROUP_PANEL_FEE = 299;
 export const PLAN_POINTS: Record<PlanCode, { text: string; positive: boolean }[]> = {
   BASICO: [
     { text: 'Menú digital con código QR', positive: true },
-    { text: `Hasta ${PLANS.BASICO.maxProducts} platillos · ${PLANS.BASICO.users} usuario`, positive: true },
+    { text: `Hasta ${PLANS.BASICO.maxProducts} platillos activos · ${PLANS.BASICO.users} usuario`, positive: true },
     { text: 'Tu logo y color de marca', positive: true },
     { text: 'Sin pedidos en línea', positive: false },
   ],
   EN_LINEA: [
     { text: 'Para llevar y a domicilio', positive: true },
     { text: 'Zonas de reparto y seguimiento del pedido', positive: true },
-    { text: 'Avisos en tiempo real y WhatsApp', positive: true },
-    { text: `Hasta ${PLANS.EN_LINEA.monthlyOrderCap} pedidos/mes sin cortar pedidos · ${PLANS.EN_LINEA.maxProducts} platillos · ${PLANS.EN_LINEA.users} usuario`, positive: true },
+    { text: 'Cupones, avisos y seguimiento', positive: true },
+    { text: `Hasta ${PLANS.EN_LINEA.monthlyOrderCap} pedidos/mes sin cortar pedidos · ${PLANS.EN_LINEA.maxProducts} platillos activos · ${PLANS.EN_LINEA.users} usuario`, positive: true },
   ],
   ESTANDAR: [
-    { text: `Elige ${ESTANDAR_MAX_ORDER_TYPES} de 3 modos de pedido`, positive: true },
-    { text: 'Avisos en tiempo real y WhatsApp', positive: true },
+    { text: 'Mostrador, para llevar y a domicilio', positive: true },
+    { text: 'Pantalla de cocina y avisos en tiempo real', positive: true },
     { text: `Platillos ilimitados · ${PLANS.ESTANDAR.users} usuarios, tú incluido`, positive: true },
-    { text: 'Reportes financieros y corte de caja', positive: true },
+    { text: 'Caja, reportes e inventario de productos', positive: true },
   ],
   PREMIUM: [
     { text: 'Para llevar, comer en local y a domicilio', positive: true },
     { text: 'Panel de mesero y plano de mesas', positive: true },
-    { text: 'Lealtad, cupones y reservaciones', positive: true },
-    { text: 'Analítica, inventario y personal', positive: true },
+    { text: 'Lealtad, encuestas y reservaciones', positive: true },
+    { text: 'Analítica, ingredientes y personal', positive: true },
   ],
   PRO: [
     { text: 'Todo lo de Premium', positive: true },
@@ -452,7 +466,7 @@ export const PLAN_POINTS: Record<PlanCode, { text: string; positive: boolean }[]
 export const PLAN_CONTRACT_VERSION = '2026-11-05';
 
 type BooleanPlanFeature = 'hasOrders' | 'hasWhatsapp' | 'hasRealtime' | 'hasFullTheme'
-  | 'hasWaiterPanel' | 'hasPrinting' | 'hasFinance' | 'hasAnalytics';
+  | 'hasWaiterPanel' | 'hasPrinting' | 'hasPrintStations' | 'hasFinance' | 'hasAnalytics' | 'hasAdvancedCoupons' | 'hasProductInventory';
 export type PlanCapability = {
   key: string;
   label: string;
@@ -470,10 +484,12 @@ export const PLAN_CAPABILITIES: PlanCapability[] = [
   { key: 'realtime', label: 'Alertas en tiempo real', feature: 'hasRealtime', flag: 'orders' },
   { key: 'theme', label: 'Personalización completa', feature: 'hasFullTheme' },
   { key: 'waiter', label: 'Panel de mesero y mesas', feature: 'hasWaiterPanel' },
-  { key: 'printing', label: 'Impresión de comandas', feature: 'hasPrinting' },
+  { key: 'printing', label: 'Impresión de comandas en una impresora', feature: 'hasPrinting' },
+  { key: 'print-stations', label: 'Impresión por estaciones de cocina', feature: 'hasPrintStations' },
+  { key: 'advanced-coupons', label: 'Cupones con compra mínima y límite de usos', feature: 'hasAdvancedCoupons' },
   { key: 'finance', label: 'Reportes financieros y corte de caja', feature: 'hasFinance', flag: 'finanzas' },
   { key: 'analytics', label: 'Analítica', feature: 'hasAnalytics', flag: 'analitica' },
-  { key: 'inventory', label: 'Inventario', feature: 'hasAnalytics', flag: 'inventario' },
+  { key: 'inventory', label: 'Inventario de productos', feature: 'hasProductInventory', flag: 'inventario' },
   { key: 'staff', label: 'Personal', feature: 'hasAnalytics', flag: 'personal' },
   ...ACTIVATABLE_MODULES.map((m) => ({ key: m.key, label: m.label, module: m.key })),
 ];
@@ -533,7 +549,7 @@ export function planPresentation(input: PlanPresentationInput) {
   }).filter((item) => item.enabled || publicKeys.has(item.key));
   const availableOrderTypes = plan.hasOrders ? orderTypesForPlan(code, ALL_PLAN_ORDER_TYPES) : [];
   const selectedOrderTypes = (input.orderTypes ?? []).filter((type) => availableOrderTypes.includes(type));
-  const maxOrderTypes = code === 'ESTANDAR' ? ESTANDAR_MAX_ORDER_TYPES : availableOrderTypes.length;
+  const maxOrderTypes = availableOrderTypes.length;
   const publicAmount = input.pricing.prices[code];
   const billing = input.billing;
   const manual = billing?.auto_price === false;
@@ -549,8 +565,8 @@ export function planPresentation(input: PlanPresentationInput) {
     ? `Hasta ${plan.monthlyOrderCap} pedidos al mes · límite blando: ningún pedido se corta`
     : plan.hasOrders ? 'Sin tope de pedidos ni comisión por venta' : 'Menú digital · sin pedidos';
   const orderScope = !plan.hasOrders ? 'Menú digital · sin pedidos'
-    : code === 'ESTANDAR' ? `Elige ${maxOrderTypes} de ${availableOrderTypes.length} modalidades de pedido`
-      : availableOrderTypes.map((type) => PLAN_ORDER_TYPE_LABELS[type]).join(' · ');
+    : availableOrderTypes.map((type) => code === 'ESTANDAR' && type === 'dine_in'
+      ? 'Comer en local (mostrador)' : PLAN_ORDER_TYPE_LABELS[type]).join(' · ');
   const selectedScope = selectedOrderTypes.length
     ? `Modalidades activas: ${selectedOrderTypes.map((type) => PLAN_ORDER_TYPE_LABELS[type]).join(' · ')}`
     : 'Modalidades activas: sin comprobar';
@@ -578,7 +594,7 @@ export function planPresentation(input: PlanPresentationInput) {
         : 'Tarifa pública de referencia; el cobro de este restaurante aún no está configurado.',
     billingStartedAt: billing?.started_at ?? null,
     usersLabel: plan.users === 'unlimited' ? 'Usuarios ilimitados' : `${plan.users} ${plan.users === 1 ? 'usuario' : 'usuarios'} del panel`,
-    productsLabel: plan.maxProducts ? `Hasta ${plan.maxProducts} platillos` : 'Platillos ilimitados',
+    productsLabel: plan.maxProducts ? `Hasta ${plan.maxProducts} platillos activos` : 'Platillos ilimitados',
   };
 }
 
@@ -608,7 +624,7 @@ export function capabilityStateLabel(item: ReturnType<typeof planPresentation>['
 /** La misma política se utiliza en las tarjetas y en la FAQ; no promete pedidos ilimitados en En línea. */
 export function planGrowthCopy(pricing: PlanPricing): string {
   const online = planPresentation({ plan: 'EN_LINEA', pricing });
-  return `No cobramos un porcentaje de tus ventas. En línea: ${online.policy}. Si superas ese límite, te avisamos para pasar a Estándar el siguiente mes. Estándar y Premium no tienen tope de pedidos. Encender o apagar canales no cambia el precio del plan.`;
+  return `No cobramos un porcentaje de tus ventas. En línea: ${online.policy}. Al superar ese umbral, recibes un aviso. Puedes seguir en En línea al mismo precio y los pedidos siguen entrando. Estándar y Premium no tienen tope de pedidos. Encender o apagar canales no cambia el precio del plan.`;
 }
 
 export function planComparisonCopy(pricing: PlanPricing): string {
@@ -653,12 +669,7 @@ export function modosAlCambiarDePlan(
   actuales: ('dine_in' | 'pickup' | 'delivery')[],
 ): ('dine_in' | 'pickup' | 'delivery')[] {
   if (plan === 'BASICO') return ['pickup'];
-  let modos = orderTypesForPlan(plan, actuales);
-  if (plan === 'ESTANDAR' && modos.length > ESTANDAR_MAX_ORDER_TYPES) {
-    // Se quedan los de vender fuera antes que el salón: es lo que se pierde
-    // con menos ruido (las mesas se vuelven a encender en Funciones).
-    modos = (['pickup', 'delivery', 'dine_in'] as const).filter((m) => modos.includes(m)).slice(0, ESTANDAR_MAX_ORDER_TYPES);
-  }
+  const modos = orderTypesForPlan(plan, actuales);
   if (modos.length > 0) return modos;
   return plan === 'EN_LINEA' ? ['pickup', 'delivery'] : plan === 'ESTANDAR' ? ['pickup', 'dine_in'] : ['dine_in', 'delivery', 'pickup'];
 }
@@ -671,8 +682,10 @@ export function loQueSePierde(antes: PlanCode, despues: PlanCode): string[] {
   if (a.hasOrders && !d.hasOrders) fuera.push('Pedidos en línea');
   if (!orderTypesForPlan(despues, ['dine_in']).length && orderTypesForPlan(antes, ['dine_in']).length && d.hasOrders) fuera.push('Pedidos para comer en local');
   if (a.hasWaiterPanel && !d.hasWaiterPanel) fuera.push('Panel de mesero y mapa de mesas');
+  if (a.hasPrinting && !d.hasPrinting) fuera.push('Impresión de comandas');
   if (a.hasFinance && !d.hasFinance) fuera.push('Reportes financieros y corte de caja');
-  if (a.hasAnalytics && !d.hasAnalytics) fuera.push('Analítica, inventario y personal');
+  if (a.hasAnalytics && !d.hasAnalytics) fuera.push('Analítica y gestión avanzada de personal');
+  if (a.hasProductInventory && !d.hasProductInventory) fuera.push('Inventario de productos');
   if (a.hasFullTheme && !d.hasFullTheme) fuera.push('Personalización completa');
   const modulos = (INCLUDED_MODULES[antes] ?? []).filter((k) => !INCLUDED_MODULES[despues].includes(k));
   if (modulos.length > 0) fuera.push(`${modulos.length} ${modulos.length === 1 ? 'herramienta incluida' : 'herramientas incluidas'} (lealtad, cupones y más)`);

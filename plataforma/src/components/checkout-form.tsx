@@ -56,6 +56,7 @@ interface Props {
   restaurantLng?: number | null;
   deliveryRadiusKm?: number | null;
   hasCoupons?: boolean;
+  mostrador?: boolean;
   encuestasActive?: boolean;
   /** URL LAN del hub local del restaurante (Fase 2 offline), si tiene uno
       vinculado. Se intenta ANTES de encolar el pedido en el dispositivo. */
@@ -81,6 +82,7 @@ export default function CheckoutForm({
   restaurantLng,
   deliveryRadiusKm,
   hasCoupons = false,
+  mostrador = false,
   encuestasActive = false,
   hubUrl = null,
   hubToken = null,
@@ -104,7 +106,7 @@ export default function CheckoutForm({
   const stablePrefix = useStableLinkPrefix();
   const tp = (path: string) => (stablePrefix ? `${stablePrefix}${path}` : path);
 
-  // "Comer en local" solo se ofrece si el comensal escaneó el QR de su mesa.
+  // En mostrador se puede pedir para comer en local sin escanear una mesa.
   const [hasScannedTable, setHasScannedTable] = useState(false);
 
   // MODO KIOSKO (autoservicio, dispositivo compartido del mostrador): el
@@ -121,7 +123,7 @@ export default function CheckoutForm({
   const typeOptions = kiosk
     ? [{ id: 'PICKUP' as const, label: content.checkout.pickup, icon: 'bag' }]
     : ([
-        config.orderTypes.includes('dine_in')  && hasScannedTable && { id: 'DINE_IN'   as const, label: content.checkout.dineIn, icon: 'utensils' },
+        config.orderTypes.includes('dine_in') && (mostrador || hasScannedTable) && { id: 'DINE_IN' as const, label: content.checkout.dineIn, icon: 'utensils' },
         config.orderTypes.includes('delivery') && { id: 'DELIVERY'  as const, label: content.checkout.delivery, icon: 'truck' },
         config.orderTypes.includes('pickup')   && { id: 'PICKUP'    as const, label: content.checkout.pickup, icon: 'bag' },
       ].filter(Boolean) as { id: OrderType; label: string; icon: string }[]);
@@ -206,6 +208,7 @@ export default function CheckoutForm({
   const [cambiarTipo, setCambiarTipo] = useState(false);
   const enMesa = type === 'DINE_IN' && !!tableNumber && !kiosk;
   const verDetalles = !enMesa || detallesMesa;
+  const pideContacto = type !== 'DINE_IN' || (mostrador && !enMesa);
 
   // Geo: coordenadas del pin del cliente en el mapa
   const [deliveryLat, setDeliveryLat] = useState<number | undefined>(undefined);
@@ -276,7 +279,7 @@ export default function CheckoutForm({
       } else {
         setTableNumber(null);
         setType((prev) => {
-          if (prev !== 'DINE_IN') return prev;
+          if (prev !== 'DINE_IN' || mostrador) return prev;
           return config.orderTypes.includes('delivery') ? 'DELIVERY' : 'PICKUP';
         });
       }
@@ -305,8 +308,8 @@ export default function CheckoutForm({
   }, [type, paymentMethod]);
 
   const errs = {
-    name:  type !== 'DINE_IN' && !name.trim() ? content.checkout.errName : '',
-    phone: type === 'DINE_IN'
+    name:  pideContacto && !name.trim() ? content.checkout.errName : '',
+    phone: !pideContacto
       ? (phone.trim() && !isValidGuatemalaPhone(phone) ? 'Número inválido. Ingresa 8 dígitos (ej. 5555 0000)' : '')
       : (!phone.trim()
           ? content.checkout.errPhone
@@ -317,7 +320,7 @@ export default function CheckoutForm({
     zone:    type === 'DELIVERY' && zonesActive && !zone ? 'Elige tu zona' : '',
     geo:     geoActive && (deliveryLat === undefined || deliveryLng === undefined)
               ? 'Coloca tu ubicación en el mapa' : '',
-    table:   type === 'DINE_IN' && !tableNumber ? 'Escanea el QR de tu mesa para continuar' : '',
+    table:   type === 'DINE_IN' && !mostrador && !tableNumber ? 'Escanea el QR de tu mesa para continuar' : '',
   };
 
   // Envío: manda la tarifa de la zona elegida; sin zonas configuradas (o antes
@@ -638,7 +641,7 @@ export default function CheckoutForm({
         name, phone, type,
         ...(type === 'DELIVERY' ? { address, notes } : { notes }),
         ...(type === 'DINE_IN' && tableNumber  ? { tableNumber }      : {}),
-        ...(type === 'DINE_IN' && coursePreference ? { coursePreference } : {}),
+        ...(enMesa && coursePreference ? { coursePreference } : {}),
         ...(type === 'DELIVERY' && zonesActive ? { zone } : {}),
         ...(type === 'DELIVERY' && deliveryLat !== undefined && deliveryLng !== undefined
           ? { deliveryLat, deliveryLng }
@@ -795,18 +798,18 @@ export default function CheckoutForm({
            el pedido y dejarlo a medias. */}
         {verDetalles && (<>
         <Field
-          label={type === 'DINE_IN' ? `${content.checkout.name} (opcional)` : content.checkout.name}
+          label={!pideContacto ? `${content.checkout.name} (opcional)` : content.checkout.name}
           icon="user" value={name} onChange={setName}
           placeholder={content.checkout.namePh}
           autoComplete="name"
           error={tried && errs.name}
         />
         <Field
-          label={type === 'DINE_IN' ? `${content.checkout.phone} (opcional)` : content.checkout.phone}
+          label={!pideContacto ? `${content.checkout.phone} (opcional)` : content.checkout.phone}
           icon="phone" type="tel" inputMode="tel" value={phone} onChange={setPhone}
           placeholder={content.checkout.phonePh}
           autoComplete="tel"
-          hint={type === 'DINE_IN' ? undefined : 'Lo usamos solo para avisarte sobre este pedido.'}
+          hint={!pideContacto ? undefined : 'Lo usamos solo para avisarte sobre este pedido.'}
           error={(tried || phone.trim().length > 0) && errs.phone}
         />
         {phone.trim().length > 0 && !errs.phone && (
@@ -816,8 +819,8 @@ export default function CheckoutForm({
         )}
         </>)}
 
-        {/* ── DINE_IN: mesa asignada por QR (solo lectura) ── */}
-        {type === 'DINE_IN' && (
+        {/* ── Mesa asignada por QR (solo lectura) ── */}
+        {type === 'DINE_IN' && (!mostrador || enMesa) && (
           <div>
             <label className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)', textShadow: labelShadow }}>{content.checkout.mesa}</label>
             {tableNumber ? (
@@ -871,7 +874,7 @@ export default function CheckoutForm({
           </div>
         )}
 
-        {type === 'DINE_IN' && verDetalles && config.dineInCourseOptions.length > 0 && (
+        {enMesa && verDetalles && config.dineInCourseOptions.length > 0 && (
           <div>
             <label className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)', textShadow: labelShadow }}>{content.checkout.courseLabel} <span style={{ color: 'var(--u-text-4)', fontWeight: 400 }}>(opcional)</span></label>
             <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 7 }}>

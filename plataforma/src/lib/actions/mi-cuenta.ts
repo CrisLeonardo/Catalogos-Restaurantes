@@ -23,7 +23,7 @@ import { logPanelAccess } from '@/lib/auth/access-log';
 import { adminUrl } from '@/lib/tenant';
 import { slugify, validateSlug, crossSlugCollision, slugTaken, uniqueSlug } from '@/lib/slug';
 import { ensureOwnerOrganization } from '@/lib/db/organizations';
-import { withPlanFloor, ESTANDAR_MAX_ORDER_TYPES } from '@/lib/plans';
+import { withPlanFloor } from '@/lib/plans';
 import { newRestaurantBilling } from '@/lib/billing-signup';
 import { getPricingSettings } from '@/lib/db/billing';
 import { findTemplate } from '@/lib/theme/templates';
@@ -232,7 +232,7 @@ export async function createAnotherRestaurant(
   const rawTypes = ((formData.get('estandar_order_types') as string | null) ?? '').split(',').map((t) => t.trim());
   const requestedEstandarTypes = [...new Set(rawTypes)].filter((t): t is OrderType => VALID_ORDER_TYPES.includes(t as OrderType));
   const estandarOrderTypes: OrderType[] =
-    requestedEstandarTypes.length === ESTANDAR_MAX_ORDER_TYPES ? requestedEstandarTypes : ['pickup', 'dine_in'];
+    requestedEstandarTypes.length ? requestedEstandarTypes : ['pickup', 'dine_in'];
 
   /* Los primeros platillos (ficha 2.3): nombre y precio, escritos en el
      alta. Se descartan las filas vacías; una fila a medias se rechaza para

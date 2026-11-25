@@ -49,7 +49,7 @@ import {
   type ModulesMap,
   type ModuleSettings,
 } from '@/lib/modules';
-import { ESTANDAR_MAX_ORDER_TYPES, INCLUDED_MODULES, PLANS, PUBLIC_PLANS, planPriceLabel, planPresentation, capabilityStateLabel, withPlanFloor, formatPlanAmount, type PlanCode } from '@/lib/plans';
+import { INCLUDED_MODULES, PLANS, PUBLIC_PLANS, planPriceLabel, planPresentation, capabilityStateLabel, withPlanFloor, formatPlanAmount, type PlanCode } from '@/lib/plans';
 import { usePlanPricing } from '@/components/plan-pricing-context';
 import type { OrderType } from '@/lib/theme/defaults';
 import { usePathname as useRutaNavegador } from 'next/navigation';
@@ -182,8 +182,6 @@ export default function ModulesPanel({ restaurantId, modules: rawModules, settin
   const contract = planPresentation({ plan: planActual, pricing, modules: rawModules ?? {}, settings: localSettings, orderTypes: localOrderTypes });
   const modules = withPlanFloor(contract.code, rawModules ?? {});
 
-  // Estándar: el dueño elige libremente sus modos de pedido, con tope de
-  // ESTANDAR_MAX_ORDER_TYPES (2 de 3) — el 3ero requiere subir a Premium.
   const isEstandar = planActual === 'ESTANDAR';
   const isBasico = planActual === 'BASICO';
   // En línea: para llevar y a domicilio; comer en local pide Estándar.
@@ -216,11 +214,6 @@ export default function ModulesPanel({ restaurantId, modules: rawModules, settin
 
   function toggleType(m: typeof CHANNEL_META[number]) {
     const isOn = localOrderTypes.includes(m.id);
-
-    if (!isOn && isEstandar && localOrderTypes.length >= ESTANDAR_MAX_ORDER_TYPES) {
-      setError(`Tu plan Estándar permite hasta ${ESTANDAR_MAX_ORDER_TYPES} modos de pedido activos. Desactiva otro primero, o actualiza a Premium para tener los 3.`);
-      return;
-    }
 
     const next = isOn
       ? localOrderTypes.filter((t) => t !== m.id)
@@ -363,14 +356,7 @@ export default function ModulesPanel({ restaurantId, modules: rawModules, settin
             const on = localOrderTypes.includes(m.id);
             const activeTypes = localOrderTypes.length;
             // BASICO: solo "para llevar" (sin pedidos reales todavía).
-            // ESTANDAR: cualquier modo, hasta el tope de 2 — el que falta pide Premium.
-            const locked = isBasico
-              ? m.id !== 'pickup'
-              : isEnLinea
-                ? m.id === 'dine_in'
-              : isEstandar
-                ? (!on && activeTypes >= ESTANDAR_MAX_ORDER_TYPES)
-                : false;
+            const locked = isBasico || (isEnLinea && m.id === 'dine_in');
             const busy = orderBusy === m.id && isPending;
             const isLast = activeTypes === 1 && on;
 
@@ -381,7 +367,7 @@ export default function ModulesPanel({ restaurantId, modules: rawModules, settin
                   icon={m.icon}
                   label={m.label}
                   description={m.description}
-                  lockLabel={isBasico || isEnLinea ? 'Requiere Estándar' : 'Requiere Premium'}
+                  lockLabel={m.id === 'dine_in' ? 'Requiere Estándar' : 'Requiere En línea'}
                 />
               );
             }
@@ -418,9 +404,9 @@ export default function ModulesPanel({ restaurantId, modules: rawModules, settin
         </List>
         <SectionNote>
           Al menos uno tiene que estar activo.
-          {isBasico && <> El plan Básico es solo menú digital: los pedidos en línea empiezan en Estándar ({planPriceLabel(pricing, 'ESTANDAR')}).</>}
-          {isEnLinea && <> Tu plan En línea es para llevar y a domicilio; para recibir pedidos en tus mesas, Estándar ({planPriceLabel(pricing, 'ESTANDAR')}).</>}
-          {isEstandar && <> Tu plan Estándar incluye {ESTANDAR_MAX_ORDER_TYPES} de los 3 modos y tú eliges cuáles; para tener los tres a la vez, Premium ({premiumLabel}).</>}
+          {isBasico && <> El plan Básico es solo menú digital: los pedidos en línea empiezan en En línea ({planPriceLabel(pricing, 'EN_LINEA')}).</>}
+          {isEnLinea && <> Tu plan En línea es para llevar y a domicilio; para recibir pedidos de mostrador, Estándar ({planPriceLabel(pricing, 'ESTANDAR')}).</>}
+          {isEstandar && <> Puedes activar los tres modos. Comer en local funciona desde el mostrador.</>}
         </SectionNote>
       </Section>
 

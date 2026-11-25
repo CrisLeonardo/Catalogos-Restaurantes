@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { actorEn, tiene } from '@/lib/auth/capacidades';
 import { createServiceClient } from '@/lib/supabase/service';
-import { resolveCoupon, type DiscountType } from '@/lib/db/cupones';
+import { accesoCupones, resolveCoupon, type DiscountType } from '@/lib/db/cupones';
 import { conservarSiNoCambio, vigenciaDesdeFormulario } from '@/lib/cupones/vigencia';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { logActivity } from '@/lib/activity';
@@ -12,6 +12,7 @@ import { logActivity } from '@/lib/activity';
 export type CouponResult = { error?: string; ok?: boolean };
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
+const REGLAS_AVANZADAS = 'La compra mínima y el límite de usos se configuran con Premium.';
 
 /* ── Preview público (checkout) ─────────────────────────────── */
 /**
@@ -48,22 +49,15 @@ async function getAuthorized(restaurantId: string) {
   const actor = await actorEn(restaurantId);
   if (!actor) return { ok: false as const, error: 'No autorizado.' };
   if (!tiene(actor, 'cupones')) return { ok: false as const, error: 'No tienes permiso para gestionar cupones.' };
-  return { ok: true as const, userId: actor.userId };
+  const acceso = await accesoCupones(restaurantId);
+  if (!acceso?.active) return { ok: false as const, error: 'Los cupones no están activos en este restaurante.' };
+  return { ok: true as const, userId: actor.userId, ...acceso };
 }
 
 /* Las fechas del formulario son días del calendario del LOCAL ("AAAA-MM-DD").
    Antes iban sueltas a una columna timestamptz y Postgres las guardaba como
    medianoche UTC: el cupón vencía a las 18:00 del día anterior en Guatemala
    (auditoría 2026-11-03, X05). Ver lib/cupones/vigencia. */
-async function zonaDelRestaurante(restaurantId: string): Promise<string> {
-  const { data } = await createServiceClient()
-    .from('restaurants')
-    .select('timezone')
-    .eq('id', restaurantId)
-    .maybeSingle();
-  return (data as { timezone?: string | null } | null)?.timezone || 'America/Guatemala';
-}
-
 /** Datos del formulario. En las fechas, `null` = sin límite por ese lado. */
 export interface CouponInput {
   code: string;
@@ -101,9 +95,11 @@ export async function createCoupon(
   if (!code) return { error: 'El código es requerido.' };
   if (!/^[A-Z0-9_-]{3,20}$/.test(code)) return { error: 'Código inválido (3-20 caracteres, letras, números, guión o guión bajo).' };
   if (!data.discount_value || data.discount_value <= 0) return { error: 'El valor del descuento debe ser mayor a 0.' };
+  if (data.discount_type !== 'PERCENT' && data.discount_type !== 'FIXED') return { error: 'Elige un monto fijo o un porcentaje.' };
   if (data.discount_type === 'PERCENT' && data.discount_value > 100) return { error: 'El porcentaje no puede superar 100%.' };
 
-  const vigencia = vigenciaDesdeFormulario(data.valid_from, data.valid_until, await zonaDelRestaurante(restaurantId));
+  if (!auth.advanced && (data.min_order || data.max_uses)) return { error: REGLAS_AVANZADAS };
+  const vigencia = vigenciaDesdeFormulario(data.valid_from, data.valid_until, auth.timezone);
   if ('error' in vigencia) return { error: vigencia.error };
 
   const db = createServiceClient();
@@ -144,22 +140,28 @@ export async function updateCoupon(
   if (!code) return { error: 'El código es requerido.' };
   if (!/^[A-Z0-9_-]{3,20}$/.test(code)) return { error: 'Código inválido (3-20 caracteres, letras, números, guión o guión bajo).' };
   if (!data.discount_value || data.discount_value <= 0) return { error: 'El valor del descuento debe ser mayor a 0.' };
+  if (data.discount_type !== 'PERCENT' && data.discount_type !== 'FIXED') return { error: 'Elige un monto fijo o un porcentaje.' };
   if (data.discount_type === 'PERCENT' && data.discount_value > 100) return { error: 'El porcentaje no puede superar 100%.' };
 
-  const zona = await zonaDelRestaurante(restaurantId);
+  const zona = auth.timezone;
   const pedida = vigenciaDesdeFormulario(data.valid_from, data.valid_until, zona);
   if ('error' in pedida) return { error: pedida.error };
 
   const db = createServiceClient();
-  const { data: previo } = await db
+  const { data: previo, error: errorPrevio } = await db
     .from('coupons')
-    .select('discount_type, discount_value, valid_from, valid_until')
+    .select('discount_type, discount_value, valid_from, valid_until, min_order, max_uses')
     .eq('id', couponId)
     .eq('restaurant_id', restaurantId)
     .maybeSingle();
-  const vigencia = previo
-    ? conservarSiNoCambio(pedida, { valid_from: previo.valid_from, valid_until: previo.valid_until }, zona)
-    : pedida;
+  if (errorPrevio || !previo) return { error: 'No se pudo leer el cupón de este restaurante.' };
+  if (!auth.advanced && (
+    (data.min_order && data.min_order !== Number(previo.min_order)) ||
+    (data.max_uses && data.max_uses !== Number(previo.max_uses))
+  )) return { error: REGLAS_AVANZADAS };
+  const vigencia = conservarSiNoCambio(
+    pedida, { valid_from: previo.valid_from, valid_until: previo.valid_until }, zona,
+  );
   const { error } = await db.from('coupons').update({
     code,
     description: data.description?.trim() || null,
@@ -175,13 +177,11 @@ export async function updateCoupon(
     return { error: error.message };
   }
 
-  if (previo) {
-    await anotarCupon(restaurantId, auth.userId, code, 'editado', {
-      tipo: data.discount_type,
-      valor: data.discount_value,
-      antes: { tipo: previo.discount_type, valor: Number(previo.discount_value) },
-    });
-  }
+  await anotarCupon(restaurantId, auth.userId, code, 'editado', {
+    tipo: data.discount_type,
+    valor: data.discount_value,
+    antes: { tipo: previo.discount_type, valor: Number(previo.discount_value) },
+  });
 
   revalidatePath('/admin/cupones');
   return { ok: true };

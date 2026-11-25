@@ -72,11 +72,9 @@ function detallePlan(plan: PlanAlta, como: ComoTePiden): string {
     return `Para empezar: para llevar y a domicilio, ${PLANS.EN_LINEA.users} usuario, hasta ${PLANS.EN_LINEA.maxProducts} platillos y unos ${PLANS.EN_LINEA.monthlyOrderCap} pedidos al mes`;
   }
   if (plan === 'ESTANDAR') {
-    /* PLAN-01: Planes promete «2 de 3 modos» y aquí solo se veían los dos
-       ya puestos, sin decir que se eligen ni dónde. «Comer en local» en
-       Estándar es venta en mostrador, sin meseros ni mesas. */
-    const modos = modosEstandar(como).map((m) => (m === 'dine_in' ? 'comer en local (sin meseros)' : MODO_NOMBRE[m])).join(' y ');
-    return `Para crecer: 2 de 3 modos, empiezas con ${modos} y los cambias en tu panel, en Funciones. Sin tope de pedidos ni platillos, ${PLANS.ESTANDAR.users} usuarios, corte de caja y reportes`;
+
+    const modos = modosEstandar(como).map((m) => (m === 'dine_in' ? 'comer en local por mostrador' : MODO_NOMBRE[m])).join(' y ');
+    return `Empiezas con ${modos} y puedes activar los tres modos en Funciones. Sin tope de pedidos ni platillos, ${PLANS.ESTANDAR.users} usuarios, corte de caja y reportes`;
   }
   return 'Todo: los tres modos, mesas y meseros, inventario, lealtad y usuarios sin límite';
 }

@@ -8,8 +8,7 @@
 
      · el plan y sus módulos (subir trae lo incluido; bajar apaga lo
        que el plan nuevo no da — ver modulosAlCambiarDePlan);
-     · los modos de pedido del tema (En línea sin comer en local,
-       Estándar con 2 como máximo);
+     · los modos de pedido del tema según el nuevo plan;
      · la mensualidad, si está en automático (leogin_apply_auto_price).
 
    Sin prorrateo: el precio nuevo cuenta desde el próximo corte, que es
@@ -21,7 +20,6 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { duenoDelRestaurante } from '@/lib/auth/acceso-cobro';
 import { getPlatformContactSettings } from '@/lib/actions/super-admin';
 import { emailEnabled, sendEmail } from '@/lib/email';
-import { logActivity } from '@/lib/activity';
 import {
   PLANS, PUBLIC_PLANS, modosAlCambiarDePlan, modulosAlCambiarDePlan, type PlanCode,
 } from '@/lib/plans';
@@ -31,10 +29,18 @@ const UUID_RE = /^[0-9a-f-]{36}$/i;
 
 export type CambioDePlanResult = { error: string } | { ok: true; plan: PlanCode };
 
-export async function cambiarMiPlan(restaurantId: string, nuevo: string): Promise<CambioDePlanResult> {
+export async function cambiarMiPlan(
+  restaurantId: string,
+  nuevo: string,
+  confirmacion: { planActual: PlanCode; importe: number; moneda: string },
+): Promise<CambioDePlanResult> {
   if (!UUID_RE.test(restaurantId)) return { error: 'Restaurante inválido.' };
   if (!(PUBLIC_PLANS as string[]).includes(nuevo)) return { error: 'Ese plan no está disponible.' };
   const plan = nuevo as PlanCode;
+  if (!confirmacion || !Number.isFinite(confirmacion.importe) || confirmacion.importe < 0 ||
+      typeof confirmacion.moneda !== 'string') {
+    return { error: 'Revisa la mensualidad y confirma el cambio.' };
+  }
 
   const userId = await duenoDelRestaurante(restaurantId);
   if (!userId) return { error: 'Solo el dueño del restaurante puede cambiar el plan.' };
@@ -42,46 +48,34 @@ export async function cambiarMiPlan(restaurantId: string, nuevo: string): Promis
   // Service role a propósito: el candado de la 139 no deja que una sesión
   // cambie su propio plan. La autorización es la de arriba.
   const db = createServiceClient();
-  const [{ data: rest }, { data: tema }] = await Promise.all([
+  const [{ data: rest }, { data: tema, error: errorTema }] = await Promise.all([
     db.from('restaurants').select('name, plan_actual, modules').eq('id', restaurantId).single(),
     db.from('restaurant_themes').select('config').eq('restaurant_id', restaurantId).maybeSingle(),
   ]);
   if (!rest) return { error: 'Restaurante no encontrado.' };
   const antes = ((rest.plan_actual as PlanCode | null) ?? 'BASICO');
-  if (antes === plan) return { error: `Ya estás en el plan ${PLANS[plan].name}.` };
-
+  if (errorTema) return { error: 'No se pudo leer la configuración de pedidos. Inténtalo de nuevo.' };
+  if (antes !== confirmacion.planActual && antes !== plan) {
+    return { error: 'Tu plan cambió. Actualiza la página y vuelve a confirmar.' };
+  }
   const modules = modulosAlCambiarDePlan(antes, plan, (rest.modules as Record<string, boolean> | null) ?? {});
-  const { error } = await db.from('restaurants').update({ plan_actual: plan, modules }).eq('id', restaurantId);
-  if (error) return { error: error.message };
-
   const config = (tema?.config as Record<string, unknown> | null) ?? {};
   const modosAntes = (config.orderTypes as OrderType[] | undefined) ?? ['dine_in', 'delivery', 'pickup'];
-  const modos = modosAlCambiarDePlan(plan, modosAntes);
-  if (modos.join() !== modosAntes.join()) {
-    await db.from('restaurant_themes').upsert(
-      { restaurant_id: restaurantId, config: { ...config, orderTypes: modos } },
-      { onConflict: 'restaurant_id' },
-    );
-  }
-
-  /* Bajar a un plan gratis es cancelar: Términos promete que «la
-     cancelación detiene cobros futuros». Un precio MANUAL (acordado a
-     mano) no lo toca el precio automático, así que seguía cobrándose en
-     Básico. Al bajar a gratis, el cobro vuelve a automático y queda en
-     0; los cobros ya generados siguen pendientes (auditoría de lanzamiento
-     2026-11-23, LZ-08). */
-  if (PLANS[plan].priceMonthly === 0) {
-    await db.from('restaurant_billing')
-      .update({ auto_price: true, plan_del_precio: null, updated_at: new Date().toISOString() })
-      .eq('restaurant_id', restaurantId);
-  }
-  await db.rpc('leogin_apply_auto_price', { p_restaurant_id: restaurantId });
-
-  await logActivity({
-    restaurantId, actorId: userId, action: 'plan_cambiado', entity: PLANS[plan].name,
-    meta: { antes, despues: plan },
+  const { data: aplicado, error } = await db.rpc('leogin_confirmar_cambio_de_plan', {
+    p_restaurante: restaurantId,
+    p_actor: userId,
+    p_anterior: confirmacion.planActual,
+    p_nuevo: plan,
+    p_nombre: PLANS[plan].name,
+    p_modulos_anteriores: rest.modules ?? null,
+    p_modulos_nuevos: modules,
+    p_modos_anteriores: config.orderTypes ?? null,
+    p_modos_nuevos: modosAlCambiarDePlan(plan, modosAntes),
+    p_importe: confirmacion.importe,
+    p_moneda: confirmacion.moneda,
   });
-  await avisarALeogin(rest.name as string, antes, plan);
+  if (error) return { error: error.code === 'LGP01' ? error.message : 'No se pudo cambiar el plan. Inténtalo de nuevo.' };
+  if (aplicado) await avisarALeogin(rest.name as string, antes, plan);
 
   revalidatePath('/admin', 'layout');
   revalidatePath('/');

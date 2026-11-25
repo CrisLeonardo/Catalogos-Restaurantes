@@ -23,6 +23,7 @@ import { puedeEnSeccion } from '@/lib/auth/seccion';
 import { revalidatePath, updateTag } from 'next/cache';
 import { logActivity } from '@/lib/activity';
 import { getProductMovements as fetchProductMovements, type StockMovement } from '@/lib/db/kardex';
+import { estadoInventarioDelLocal } from '@/lib/db/inventario-plan';
 import { type SectionKey as Seccion } from '@/lib/permissions';
 
 type Ctx = { db: ReturnType<typeof createServiceClient>; restaurantId: string; userId: string };
@@ -49,7 +50,11 @@ async function resolveContext(restaurantIdFromForm?: string | null, ...secciones
   if (!restaurantId) return null;
   if (!(await puedeEnSeccion(restaurantId, ...(secciones.length ? secciones : ['inventario' as Seccion])))) return null;
 
-  return { db: createServiceClient(), restaurantId, userId: user.id };
+  const db = createServiceClient();
+  const inventario = await estadoInventarioDelLocal(restaurantId, db);
+  if (secciones.includes('ingredientes') ? !inventario?.ingredientes : !inventario?.productos) return null;
+
+  return { db, restaurantId, userId: user.id };
 }
 
 function refrescar(restaurantId: string) {
@@ -161,7 +166,9 @@ export type LowStock = { low: number; out: number };
 /** Conteo de productos con stock bajo (>0 y <= umbral) y agotados (=0). */
 export async function getLowStock(restaurantId: string): Promise<LowStock> {
   if (!UUID.test(restaurantId)) return { low: 0, out: 0 };
-  const db = createServiceClient();
+  const ctx = await resolveContext(restaurantId);
+  if (!ctx || ctx.restaurantId !== restaurantId) return { low: 0, out: 0 };
+  const { db } = ctx;
   const { data } = await db
     .from('products')
     .select('stock, low_stock_threshold, track_stock')

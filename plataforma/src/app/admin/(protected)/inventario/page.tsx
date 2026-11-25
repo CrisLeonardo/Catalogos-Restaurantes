@@ -4,6 +4,7 @@ import { getAdminContext, getAdminMenu } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { can } from '@/lib/permissions';
 import InventoryPanel, { type IngredienteAgotado } from '@/components/admin/inventory-panel';
+import { estadoInventarioDelLocal } from '@/lib/db/inventario-plan';
 import { createServiceClient } from '@/lib/supabase/service';
 import { panelLink } from '@/lib/panel-links-server';
 
@@ -36,10 +37,13 @@ export default async function AdminInventarioPage() {
   if (!restaurantId) redirect('/admin/login');
 
   const db = createServiceClient();
-  const [{ categories, products }, { data: rest }, { data: ingAgotados }] = await Promise.all([
+  const inventario = await estadoInventarioDelLocal(restaurantId, db);
+  if (!inventario?.productos) redirect(await panelLink('/admin/modulos'));
+  const [{ categories, products }, { data: ingAgotados }] = await Promise.all([
     getAdminMenu(restaurantId),
-    db.from('restaurants').select('timezone').eq('id', restaurantId).maybeSingle(),
-    db.from('ingredients').select('id, name').eq('restaurant_id', restaurantId).not('agotado_at', 'is', null).order('name'),
+    inventario.ingredientes
+      ? db.from('ingredients').select('id, name').eq('restaurant_id', restaurantId).not('agotado_at', 'is', null).order('name')
+      : { data: [] },
   ]);
 
   /* Cuántos platillos tiene fuera cada ingrediente que se acabó. */
@@ -57,7 +61,7 @@ export default async function AdminInventarioPage() {
   return (
     <div className="anim-fade-up">
       <InventoryPanel restaurantId={restaurantId} categories={categories} products={products}
-        ingredientesAgotados={ingredientesAgotados} timezone={(rest?.timezone as string | null) ?? undefined} />
+        ingredientesAgotados={ingredientesAgotados} timezone={inventario.timezone ?? undefined} />
     </div>
   );
 }

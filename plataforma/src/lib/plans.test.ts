@@ -126,7 +126,7 @@ describe('cambiar de plan desde el panel', () => {
     expect(m.finanzas).toBe(false);
     expect(m.analitica).toBe(false);
     expect(m.loyalty).toBe(false);
-    expect(m.cupones).toBe(false);
+    expect(m.cupones).toBe(true);
     expect(m.multi_branch).toBe(false);
   });
 
@@ -142,7 +142,7 @@ describe('cambiar de plan desde el panel', () => {
     const { modosAlCambiarDePlan } = await import('./plans');
     expect(modosAlCambiarDePlan('EN_LINEA', ['dine_in', 'pickup', 'delivery'])).toEqual(['pickup', 'delivery']);
     expect(modosAlCambiarDePlan('EN_LINEA', ['dine_in'])).toEqual(['pickup', 'delivery']);
-    expect(modosAlCambiarDePlan('ESTANDAR', ['dine_in', 'pickup', 'delivery'])).toEqual(['pickup', 'delivery']);
+    expect(modosAlCambiarDePlan('ESTANDAR', ['dine_in', 'pickup', 'delivery'])).toEqual(['dine_in', 'pickup', 'delivery']);
     expect(modosAlCambiarDePlan('PREMIUM', ['pickup'])).toEqual(['pickup']);
     expect(modosAlCambiarDePlan('BASICO', ['delivery'])).toEqual(['pickup']);
   });

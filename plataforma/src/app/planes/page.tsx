@@ -51,7 +51,7 @@ function buildFaqs(pricing: PlanPricing) {
     },
     {
       q: '¿Qué incluye cada plan?',
-      a: 'Cada plan ya trae definido lo suyo — no hay funciones sueltas que comprar aparte. Si vendes solo para llevar y a domicilio y vas empezando, En línea te alcanza; si además tienes mesas o quieres reportes y corte de caja, Estándar; si quieres reservaciones, lealtad, cupones, encuestas y todo lo demás sin ir activando una cosa a la vez, Premium lo incluye todo por su precio fijo.',
+      a: 'Cada plan ya trae definido lo suyo — no hay funciones sueltas que comprar aparte. Si vendes solo para llevar y a domicilio y vas empezando, En línea te alcanza; si además atiendes en mostrador y necesitas cocina, caja y reportes, Estándar. Si atiendes en mesas con meseros o necesitas reservaciones, lealtad y encuestas, elige Premium.',
     },
     {
       q: '¿Cuál es la diferencia entre los planes?',
