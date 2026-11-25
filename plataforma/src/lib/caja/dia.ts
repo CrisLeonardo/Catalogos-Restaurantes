@@ -110,3 +110,34 @@ export function sumarDias(dateKey: string, dias: number): string {
   d.setUTCDate(d.getUTCDate() + dias);
   return d.toISOString().slice(0, 10);
 }
+
+/** "22:40" en la zona del restaurante. */
+function horaCorta(iso: string, timezone: string): string {
+  return new Date(iso).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: timezone });
+}
+
+/** "2026-11-25" del calendario (no del día de caja) en la zona del restaurante. */
+function fechaCalendario(iso: string, timezone: string): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
+}
+
+/**
+ * Cómo se nombra el periodo de un cierre (CAJA-02, auditoría funcional
+ * 2026-11-25). El recibo decía «de 05:00 a 10:28» para un turno abierto a
+ * las 10:27: mezclaba el inicio del DÍA DE CAJA con el turno. Ahora:
+ *   · turno abierto → «turno de 10:27 a 10:28»
+ *   · sin apertura  → «sin apertura · cuenta desde las 05:00 hasta las 10:28»
+ * y si el cierre cae en otro día del calendario, se dice («01:30 del día
+ * siguiente»), que es lo que pasa en un bar que cierra después de medianoche.
+ */
+export function rangoDelCierre(
+  r: { openedAt: string | null; periodStart: string; closedAt: string },
+  timezone: string,
+): string {
+  const desde = r.openedAt ?? r.periodStart;
+  const otroDia = fechaCalendario(desde, timezone) !== fechaCalendario(r.closedAt, timezone);
+  const hasta = `${horaCorta(r.closedAt, timezone)}${otroDia ? ' del día siguiente' : ''}`;
+  return r.openedAt
+    ? `turno de ${horaCorta(r.openedAt, timezone)} a ${hasta}`
+    : `sin apertura · cuenta desde las ${horaCorta(r.periodStart, timezone)} hasta las ${hasta}`;
+}

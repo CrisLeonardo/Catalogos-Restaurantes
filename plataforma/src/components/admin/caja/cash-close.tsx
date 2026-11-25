@@ -37,7 +37,7 @@ import {
   type CajaState, type TipShare, type CajaCloseResult, type SolicitudCierre,
 } from '@/lib/actions/finanzas';
 import type { Pendientes } from '@/lib/caja/turno-servidor';
-import { corteAHora } from '@/lib/caja/dia';
+import { corteAHora, rangoDelCierre } from '@/lib/caja/dia';
 import { fmtMoney } from '@/lib/money';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -1204,7 +1204,7 @@ function CierreHecho({ restaurantId, result, actualizandoCierre, dateLabel, shif
   onOtro: () => void;
 }) {
   const cuadra = Math.abs(result.difference) < 0.005;
-  const periodo = `de ${hora(result.periodStart, timezone)} a ${hora(result.closedAt, timezone)}`;
+  const periodo = rangoDelCierre({ openedAt: result.openedAt ?? null, periodStart: result.periodStart, closedAt: result.closedAt }, timezone);
 
   /* El resumen por WhatsApp es cómo se manda de verdad un cierre a un
      dueño que no está en el local: texto plano, sin adjuntos y sin
