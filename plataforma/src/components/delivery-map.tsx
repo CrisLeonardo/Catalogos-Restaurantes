@@ -177,8 +177,13 @@ export default function DeliveryMap({
       markerRef.current   = clientMarker;
       notifyChangeRef.current = notifyChange;
 
-      // Notificar posición inicial
-      notifyChange(startLat, startLng);
+      // Solo un pin GUARDADO cuenta como ubicación desde el principio. Sin
+      // él, el pin arranca en el restaurante y antes se notificaba igual:
+      // el checkout decía «Dentro del rango — a 0.0 km» y dejaba enviar un
+      // domicilio a la puerta del propio restaurante (ENTREGA-01). Ahora
+      // queda pendiente hasta que el comensal lo mueva, toque el mapa o
+      // comparta su ubicación.
+      if (initialLat !== undefined && initialLng !== undefined) notifyChange(startLat, startLng);
 
       // El contenedor vive dentro de un sheet/checkout que entra con
       // animación (fade-up, blur de Glass): Leaflet calcula el tamaño del

@@ -986,6 +986,11 @@ export default function CheckoutForm({
                 Cargando mapa…
               </div>
             )}
+            {geoDistanceKm === null && !(tried && errs.geo) && (
+              <p role="status" style={{ marginTop: 8, fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-3)' }}>
+                Falta confirmar tu ubicación: mueve el pin o toca el mapa en tu puerta.
+              </p>
+            )}
             {geoDistanceKm !== null && (
               <div style={{
                 marginTop: 8, display: 'flex', alignItems: 'center', gap: 7,
