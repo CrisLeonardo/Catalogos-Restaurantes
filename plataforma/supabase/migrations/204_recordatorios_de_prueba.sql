@@ -1,6 +1,6 @@
 -- 204 · Recordatorios de prueba con una reserva temporal por envío.
 -- Aplicar antes de desplegar el endpoint que ejecuta el reloj de salud.
-create table public.prueba_aviso_envios (
+create table if not exists public.prueba_aviso_envios (
   restaurant_id uuid not null references public.restaurants(id) on delete cascade,
   tipo text not null check (tipo in ('previo','vence')),
   reservado_hasta timestamptz not null,
@@ -8,7 +8,12 @@ create table public.prueba_aviso_envios (
   primary key (restaurant_id, tipo)
 );
 alter table public.prueba_aviso_envios enable row level security;
-revoke all on public.prueba_aviso_envios from anon, authenticated;
+drop policy if exists super_admin_segundo_factor on public.prueba_aviso_envios;
+create policy super_admin_segundo_factor on public.prueba_aviso_envios
+  as restrictive for all to authenticated
+  using ((select public.leogin_sesion_con_segundo_factor()))
+  with check ((select public.leogin_sesion_con_segundo_factor()));
+revoke all on public.prueba_aviso_envios from public, anon, authenticated, service_role;
 grant select, update on public.prueba_aviso_envios to service_role;
 
 create or replace function public.leogin_tomar_avisos_de_prueba()
