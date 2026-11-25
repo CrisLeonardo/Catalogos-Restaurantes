@@ -4,6 +4,10 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
+## Sin publicar
+
+- [Recta final de lanzamiento](docs/auditorias/AUDITORIA_RECTA_FINAL_LEOGIN_2026-11-24.md): matriz de cambios de precio, verificación del historial de pedidos y tarifas vigentes de venta.
+
 ## v0.35.0 · 2026-11-24 · Seguridad, plazos de los datos y avisos antes de perder algo
 PR #182, #183 y #184 · **migraciones 194 y 195** (`supabase/actualizacion_194_a_195.sql`, antes o después del despliegue: el código funciona sin ellas y se pueden repetir). Cierra la parte de código de la [auditoría de lanzamiento](docs/auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md) con las decisiones del dueño del 24 de noviembre.
 - **Los límites de intentos ya no se saltan con una IP falsa** (#182).
