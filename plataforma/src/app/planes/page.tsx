@@ -155,7 +155,7 @@ export default async function PlanesPage() {
         <div className="lp-card-quiet" style={{ padding: '18px 22px' }}>
           <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', lineHeight: 1.6, margin: 0 }}>
             <strong style={{ color: 'var(--u-text-2)' }}>Sin cobro por ventas:</strong>{' '}
-            ningún plan cobra comisión ni un porcentaje de lo que facturas. {reglaDelTopeEnLinea()}
+            ningún plan cobra comisión ni un porcentaje de lo que facturas. {reglaDelTopeEnLinea(planPriceLabel(pricing, 'ESTANDAR'))}
           </p>
         </div>
       </section>

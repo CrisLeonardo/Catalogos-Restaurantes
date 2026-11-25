@@ -251,8 +251,8 @@ export default async function LeoginLanding() {
               </div>
               <div className="lp-cc-paso" data-p="3">
                 <div className="lp-eyebrow">Tú, bajo control</div>
-                <h2 className="lp-h2">Al cerrar, sabes cuánto vendiste y cuánto ganaste.</h2>
-                <p className="lp-lead">Desde tu celular, aunque no estés en el local. Sin cuadernos y sin sorpresas.</p>
+                <h2 className="lp-h2">Al cerrar, sabes cuánto vendiste y si la caja cuadra.</h2>
+                <p className="lp-lead">Desde tu celular, aunque no estés en el local. Y si cargas tus costos, también cuánto ganaste.</p>
               </div>
             </div>
             <CaosControl />

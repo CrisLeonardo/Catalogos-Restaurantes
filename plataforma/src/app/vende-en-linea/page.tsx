@@ -79,7 +79,7 @@ const DOLORES = [
   },
   {
     chat: '¿Cuánto vendí esta semana?',
-    titulo: 'Al final no sabes cuánto ganaste',
+    titulo: 'Al final no sabes cuánto vendiste',
     texto: 'Sumas notas, capturas y lo que te acuerdas. Nunca cuadra, y no sabes qué se vende más ni qué día te conviene abrir.',
   },
 ];
@@ -91,7 +91,7 @@ const PASOS = [
   },
   {
     titulo: 'Tus clientes piden solos',
-    texto: 'Eligen, marcan su casa en el mapa y dicen cómo pagan. A las once de la noche también, sin que tengas que contestar.',
+    texto: 'Eligen, marcan su casa en el mapa y dicen cómo te pagan: efectivo al recibir o tarjeta con tu POS. El dinero te llega a ti, no pasa por Leogin.',
   },
   {
     titulo: 'Te suena y despachas',
@@ -112,7 +112,7 @@ const SI = [
    para tu restaurante» le suena a algo que no va a saber usar. */
 const NO = ['Mesas y meseros', 'Pantalla de cocina', 'Impresoras de comandas', 'Caja por turnos', 'Inventario con recetas'];
 
-function faqs(trialDays: number, enLinea: string, basico: string) {
+function faqs(trialDays: number, enLinea: string, basico: string, estandar: string) {
   return [
     {
       q: '¿Necesito tener un local?',
@@ -136,7 +136,7 @@ function faqs(trialDays: number, enLinea: string, basico: string) {
     },
     {
       q: '¿Cuánto cuesta?',
-      a: `El plan En línea cuesta ${enLinea}, sin costo de alta${trialDays > 0 ? `, y empiezas con ${trialDays} días gratis, sin tarjeta` : ', sin contrato'}. ${reglaDelTopeEnLinea()} Estándar suma más personas, reportes y corte de caja. Si por ahora solo quieres tu catálogo en un link, sin pedidos en línea, el Básico es ${basico.toLowerCase()} para siempre.`,
+      a: `El plan En línea cuesta ${enLinea}, sin costo de alta${trialDays > 0 ? `, y empiezas con ${trialDays} días gratis, sin tarjeta` : ', sin contrato'}. ${reglaDelTopeEnLinea(estandar)} Estándar suma más personas, reportes y corte de caja. Si por ahora solo quieres tu catálogo en un link, sin pedidos en línea, el Básico es ${basico.toLowerCase()} para siempre.`,
     },
   ];
 }
@@ -150,7 +150,7 @@ export default async function VendeEnLinea() {
   // «Menos de Q4 al día»: el precio partido en días se compara con un
   // refresco, no con una mensualidad (contabilidad mental).
   const alDia = Math.ceil(enLineaMes / 30);
-  const preguntas = faqs(pricing.trialDays, enLineaLabel, basicoLabel);
+  const preguntas = faqs(pricing.trialDays, enLineaLabel, basicoLabel, planPriceLabel(pricing, 'ESTANDAR'));
 
   const root = rootDomainForUrls();
   const base = `${root.includes('localhost') || root.startsWith('127.') ? 'http' : 'https'}://${root}`;
@@ -203,6 +203,8 @@ export default async function VendeEnLinea() {
               <p className="lp-body" style={{ fontSize: 13.5, marginTop: 14, color: 'var(--u-text-4)' }}>
                 <strong style={{ color: 'var(--u-text-2)', fontWeight: 650 }}>{enLineaLabel}</strong>
                 {pricing.trialDays > 0 ? ` · ${pricing.trialDays} días gratis · sin tarjeta · ` : ' · sin alta · sin contrato · '}sin comisión por pedido
+                {/* PLAN-02: el umbral y lo que cuesta después, junto al precio. */}
+                {` · hasta ${TOPE} pedidos al mes; si los pasas, nada se corta y te pedimos pasar a Estándar (${planPriceLabel(pricing, 'ESTANDAR')})`}
               </p>
             </div>
           </div>
