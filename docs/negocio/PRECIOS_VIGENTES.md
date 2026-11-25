@@ -1,8 +1,14 @@
 # Precios vigentes — Leogin
 
-**Precios de lanzamiento 2026 — oficiales desde 2026-08-17.** Referencia rápida de un vistazo antes de una demo o visita. Esto **no** es la fuente de verdad de código — esa es [`plataforma/src/lib/plans.ts`](../../plataforma/src/lib/plans.ts), y a nivel de base de datos manda `platform_settings` (ver migración `111_precios_lanzamiento.sql`). Si algún día no coinciden, gana la base de datos y hay que actualizar este archivo.
+**Para cotizar.** El 24 de noviembre de 2026, la web pública mostró Básico gratis, En línea a Q99/mes, Estándar a Q150/mes y Premium a Q299/mes. Abre [Planes](https://distleogin.com/planes) antes de cada cotización. Para un cliente de pago, confirma por escrito el plan, la mensualidad, el cargo de configuración si aplica, el vencimiento y el medio de pago. En línea es el alcance del primer piloto acompañado. [Auditoría de lanzamiento](../auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md#5-primeros-tres-clientes-de-pago)
 
-## Planes
+`platform_settings` define las tarifas públicas. En una suscripción existente, consulta la mensualidad acordada en la ficha del local. Los valores por defecto del código y las referencias históricas de abajo pueden diferir de ambas. [Tarifas y planes en el código](../../plataforma/src/lib/plans.ts)
+
+## Referencia histórica del 17 de agosto de 2026
+
+Este registro conserva los precios y propuestas de esa fecha. Las tablas de anualidad, alta, módulos sueltos, descuentos y competencia requieren confirmación comercial antes de reutilizarlas. Consulta también el cotizador y los documentos de venta antes de distribuirlos.
+
+### Planes
 
 | Plan | Precio | Alta (pago único) | Qué incluye |
 |---|---|---|---|
@@ -13,7 +19,7 @@
 
 Ningún plan tiene tope de ventas (GMV). "Alta" se cobra una sola vez, manual desde la ficha del restaurante — no es automático.
 
-## Pago anual (nuevo)
+### Pago anual
 
 Oferta comercial, no requiere nada en código: el cobro hoy es manual, así que basta con generar una sola factura por los 12 meses desde el panel de super admin.
 
@@ -24,7 +30,7 @@ Oferta comercial, no requiere nada en código: el cobro hoy es manual, así que 
 
 El costo de alta (Q300) se cobra igual, aparte, la primera vez.
 
-## Módulos a la carta (9)
+### Módulos a la carta (9)
 
 Se compran sueltos sobre cualquier plan que los soporte. Si el plan actual ya los incluye gratis, no se cobran de nuevo.
 
@@ -44,14 +50,14 @@ Proveedores y FEL no se ofrecen a nadie todavía, sueltos ni en Pro — se react
 
 **Argumento de venta que salió gratis con los precios nuevos:** los 7 módulos que Premium incluye suman **Q503 al mes** comprados sueltos (99+49+49+49+79+99+79). Premium cuesta Q349. Está sobre la mesa decirlo tal cual: *"solo los módulos ya valen más que el plan completo."*
 
-## Descuentos
+### Descuentos
 
 - **"Plan a tu medida"** (solo Premium y Pro): Q50 de descuento por cada canal de pedido que el restaurante **no** usa, hasta un máximo de **2 canales** desactivados — siempre se paga al menos 1 canal completo. Premium con 2 canales apagados queda en **Q249**.
 - **Grupos / franquicias** (a partir de la 2ª sucursal, sobre el precio del plan de cada una, no sobre módulos): 2–4 sucursales **−10%** · 5–9 sucursales **−15%** · 10+ sucursales **−20%**. La sucursal fundadora siempre paga el precio completo.
 - **Panel central de grupo**: Q299 /mes (métricas consolidadas de todas las sucursales).
 - **Prueba gratis**: **quitada el 2026-11-15** (migración 182, `trial_days = 0`). Los planes con pedidos se cobran desde el día uno; el gancho gratis es el plan Básico. Los restaurantes que ya estaban en prueba la terminan normal. Se puede reactivar en /super/configuracion.
 
-## Dónde queda Leogin en el mercado guatemalteco
+### Dónde quedaba Leogin en el mercado guatemalteco
 
 Referencia verificada el 2026-08-17, para responder en la puerta sin dudar:
 
@@ -67,7 +73,7 @@ Referencia verificada el 2026-08-17, para responder en la puerta sin dudar:
 
 Estándar queda claramente debajo de toda la banda del mercado. Premium queda dentro de la banda y en línea con Sabor Suite. **El costo de alta de Q300 sigue siendo el más barato del mercado** — PosFile cobra entre Q700 y Q2,150 por lo mismo.
 
-## Notas
+### Notas históricas
 
 - Aplicado el 2026-08-17 en `plans.ts` y en la migración `111_precios_lanzamiento.sql` (que reconcilia `platform_settings`, la fuente real que leen `leogin_compute_monthly_fee` y `leogin_fee_breakdown`). **Falta correr la migración 111 en producción** para que el cambio tenga efecto real.
 - Los restaurantes con `auto_price = false` conservan su precio congelado a propósito; la migración no los toca.
