@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { imagenesWeb } from '@/lib/og-web';
 import Link from 'next/link';
 import { leerIntencion } from '@/lib/alta';
-import { planPriceLabel } from '@/lib/plans';
+import { planPriceLabel, PLANS, type PlanCode } from '@/lib/plans';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import LeoginLogo from '@/components/leogin-logo';
@@ -31,12 +31,25 @@ export const metadata: Metadata = {
   twitter: { ...imagenesWeb('registro', 'Leogin: tu menú en línea, en vivo hoy mismo').twitter, title: TITULO, description: DESCRIPCION },
 };
 
-const perks = (trialDays: number) => [
-  { icon: 'bag', text: 'Menú web por QR, rápido y a tu marca' },
-  { icon: 'list', text: 'Pedidos en línea con alerta en tiempo real' },
-  { icon: 'sparkle', text: 'Personalización total: colores, logo y estilo' },
-  { icon: 'wallet', text: trialDays > 0 ? `${trialDays} días gratis · sin tarjeta · cancela cuando quieras` : 'Menú digital gratis para siempre · sin contrato · cancela cuando quieras' },
-];
+/* ALTA-01 (auditoría funcional 2026-11-25): con Básico elegido se
+   anunciaban «pedidos con alerta» y «personalización total», que Básico no
+   trae (su carta es de consulta y la personalización completa es de
+   Premium). Lo que se promete sale del plan que llega en el enlace; sin
+   plan, se dice desde cuál aplica cada cosa. */
+const perks = (trialDays: number, plan: PlanCode | null) => {
+  const conPedidos = plan !== null && plan !== 'BASICO';
+  const completa = plan !== null && PLANS[plan].hasFullTheme;
+  return [
+    { icon: 'bag', text: 'Menú web por QR, rápido y a tu marca' },
+    plan === 'BASICO'
+      ? { icon: 'list', text: 'Carta para consultar; los pedidos en línea llegan con En línea' }
+      : { icon: 'list', text: conPedidos ? 'Pedidos en línea con alerta en tiempo real' : 'Pedidos en línea con alerta, desde el plan En línea' },
+    { icon: 'sparkle', text: completa ? 'Personalización completa: colores, logo, estilo y diseño' : 'Tu logo y tu color, con estilos listos para elegir' },
+    { icon: 'wallet', text: plan === 'BASICO' || trialDays <= 0
+      ? 'Menú digital gratis para siempre · sin contrato · cancela cuando quieras'
+      : `${trialDays} días gratis · sin tarjeta · cancela cuando quieras` },
+  ];
+};
 
 /* Esta página ya no se puede pre-renderizar: mira la sesión del visitante para
    saber si vuelve de Google (y con qué cuenta). Los precios siguen saliendo de
@@ -164,7 +177,7 @@ export default async function RegistroPage({
             </p>
             {/* En el teléfono se ocultan (ficha 2.3): el formulario sube. */}
             <ul className="registro-ventajas" style={{ listStyle: 'none', margin: '22px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {perks(pricing.trialDays).map((p) => (
+              {perks(pricing.trialDays, intencion?.plan ?? null).map((p) => (
                 <li key={p.text} style={{ display: 'flex', gap: 11, alignItems: 'center', fontSize: 14 }}>
                   <span style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb, 99,102,241),0.12)', color: 'var(--brand-accent-ink)' }}>
                     <Icon name={p.icon} size={16} />

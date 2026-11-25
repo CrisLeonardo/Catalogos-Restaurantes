@@ -72,8 +72,11 @@ function detallePlan(plan: PlanAlta, como: ComoTePiden): string {
     return `Para empezar: para llevar y a domicilio, ${PLANS.EN_LINEA.users} usuario, hasta ${PLANS.EN_LINEA.maxProducts} platillos y unos ${PLANS.EN_LINEA.monthlyOrderCap} pedidos al mes`;
   }
   if (plan === 'ESTANDAR') {
-    const modos = modosEstandar(como).map((m) => MODO_NOMBRE[m]).join(' y ');
-    return `Para crecer: ${modos}, sin tope de pedidos ni platillos, ${PLANS.ESTANDAR.users} usuarios, corte de caja y reportes`;
+    /* PLAN-01: Planes promete «2 de 3 modos» y aquí solo se veían los dos
+       ya puestos, sin decir que se eligen ni dónde. «Comer en local» en
+       Estándar es venta en mostrador, sin meseros ni mesas. */
+    const modos = modosEstandar(como).map((m) => (m === 'dine_in' ? 'comer en local (sin meseros)' : MODO_NOMBRE[m])).join(' y ');
+    return `Para crecer: 2 de 3 modos, empiezas con ${modos} y los cambias en tu panel, en Funciones. Sin tope de pedidos ni platillos, ${PLANS.ESTANDAR.users} usuarios, corte de caja y reportes`;
   }
   return 'Todo: los tres modos, mesas y meseros, inventario, lealtad y usuarios sin límite';
 }
@@ -168,6 +171,7 @@ export default function NuevoRestaurante({
   const plan: PlanAlta = planElegido ?? planSugerido(comoEfectivo);
   const effectiveSlug = slugEdited ? slug : localSlugify(name);
   const host = `${effectiveSlug || 'turestaurante'}.${rootDomain.replace(/:\d+$/, '')}`;
+  const demoHref = `${/localhost|^127\./.test(rootDomain) ? 'http' : 'https'}://demo.${rootDomain}/?caso=${comoEfectivo}&plan=${plan}`;
 
   /* Lo que ya se puede pintar en la carta: filas completas y válidas. */
   const platos = useMemo(() => filas
@@ -300,7 +304,7 @@ export default function NuevoRestaurante({
           <div>
             <h2 className="t-display" style={{ fontSize: 24, margin: 0, lineHeight: 1.15 }}>¿Qué vendes?</h2>
             <p style={{ fontSize: 14, color: 'var(--u-text-3)', margin: '6px 0 0', lineHeight: 1.45 }}>
-              Escribe tres o más. Con nombre y precio basta; la foto y la descripción, después.
+              Con uno basta para ver tu carta: nombre y precio. La foto, la descripción y los demás, cuando quieras.
             </p>
           </div>
           {filas.map((f, i) => (
@@ -363,7 +367,7 @@ export default function NuevoRestaurante({
           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--u-text-3)', textAlign: 'center', marginBottom: 10 }}>
             Tu carta, en vivo
           </div>
-          {step >= 1 && <CartaEnVivo estilo={templateId} nombre={name} platos={platos} />}
+          {step >= 1 && <CartaEnVivo estilo={templateId} nombre={name} platos={platos} pedidos={plan !== 'BASICO'} />}
         </div>
       </div>
 
@@ -371,7 +375,7 @@ export default function NuevoRestaurante({
       {step === 2 && <h2 className="t-display" style={{ fontSize: 24, margin: 0, lineHeight: 1.15 }}>Así se ve tu carta</h2>}
       <div className="alta-dos" style={{ display: step === 2 ? undefined : 'none' }}>
         <div className="alta-telefono">
-          {step === 2 && <CartaEnVivo estilo={templateId} nombre={name} platos={platos} />}
+          {step === 2 && <CartaEnVivo estilo={templateId} nombre={name} platos={platos} pedidos={plan !== 'BASICO'} />}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
           <div className="alta-resumen">
@@ -416,6 +420,13 @@ export default function NuevoRestaurante({
             )}
           </div>
           <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.45 }}>{notaCobro}</p>
+          {/* PLAN-03: antes del primer cobro, ver funcionando lo que se paga
+              (la demo del mismo caso: mostrador, mesas o para llevar). */}
+          {plan !== 'BASICO' && (
+            <a href={demoHref} target="_blank" rel="noopener noreferrer" className="alta-enlace" style={{ fontSize: 13, alignSelf: 'flex-start' }}>
+              Ver cómo funciona {PLAN_NOMBRE[plan]} en la demo <Icon name="arrowRight" size={13} />
+            </a>
+          )}
           {platos.length === 0 && (
             <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.45 }}>
               Aún no escribiste platillos: tu panel te pedirá el primero.

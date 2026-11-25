@@ -75,6 +75,7 @@ export function PedidoDemo({ open, onClose }: { open: boolean; onClose: () => vo
   }, [open]);
 
   if (!open) return null;
+  const enMuestra = window.location.pathname.startsWith('/preview/');
 
   async function mandar() {
     if (enviando || items.length === 0) return;
@@ -149,9 +150,14 @@ export function PedidoDemo({ open, onClose }: { open: boolean; onClose: () => vo
     </PrimaryButton>
   ) : (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <PrimaryButton href={urlDeRegistro()} size="lg" full iconRight="arrowRight">
-        Quiero esto en mi restaurante
-      </PrimaryButton>
+      {/* Dentro de la carta de muestra (el alta o la vitrina de la portada,
+          en un iframe) ya se está creando el restaurante o el enlace
+          navegaría dentro del marco: ahí solo se vuelve a la carta. */}
+      {!enMuestra && (
+        <PrimaryButton href={urlDeRegistro()} size="lg" full iconRight="arrowRight">
+          Quiero esto en mi restaurante
+        </PrimaryButton>
+      )}
       <button
         type="button"
         onClick={cerrar}
