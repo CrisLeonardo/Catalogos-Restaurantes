@@ -15,7 +15,7 @@ import { fmtMoney } from '@/lib/money';
 import { Icon } from '@/components/icons';
 import { createServiceClient } from '@/lib/supabase/service';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Section } from '@/components/ui/section';
 import { Stat, StatGroup } from '@/components/ui/stat';
 import { List, ListRow, ListText } from '@/components/ui/list';
@@ -153,7 +153,7 @@ export default async function SuscripcionPage() {
         <Card className="p-5">
           <h2 className="text-[16px] font-semibold">Tu carta sigue en Básico</h2>
           <p className="mt-1 text-[14px] text-adm-text-3">Puedes resolver los pedidos que recibiste durante la prueba.</p>
-          <Button render={<a href={pedidosHref} />} className="mt-3">Ver pedidos</Button>
+          <a href={pedidosHref} className={buttonVariants({ size: 'touch', className: 'mt-3 no-underline' })}>Ver pedidos</a>
         </Card>
       )}
       {onTrial && !pruebaVoluntaria && (
