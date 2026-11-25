@@ -4,6 +4,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { stableMenuSlugUrl, subdomainUrl } from '@/lib/tenant';
 import { frasesDelCartel } from '@/lib/qr-material';
 import QRDisplay from '@/components/admin/qr-display';
+import { PLANS, type PlanCode } from '@/lib/plans';
 
 export const metadata = { title: 'Código QR – Panel admin' };
 
@@ -37,6 +38,12 @@ export default async function QRPage() {
       urlEstable={stableMenuSlugUrl(restaurant.slug)}
       enlaceCorto={subdomainUrl(restaurant.slug)}
       frases={frases}
+      /* ALTA-04: el enlace a los QR por mesa llevaba a una pantalla
+         bloqueada en Básico, En línea y Estándar. Solo se ofrece si el
+         salón está disponible (mismo candado que Ajustes › Salón). */
+      conQrPorMesa={ctx?.profile.role === 'SUPER_ADMIN'
+        || (PLANS[((fuente.plan_actual ?? 'BASICO') as PlanCode)]?.hasWaiterPanel ?? false)
+        || (resolved.config.orderTypes ?? []).includes('dine_in')}
     />
   );
 }
