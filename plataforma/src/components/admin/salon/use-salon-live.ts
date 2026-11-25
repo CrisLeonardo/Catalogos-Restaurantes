@@ -107,8 +107,16 @@ export function useSalonLive(canal: string) {
 
     const red = setInterval(() => router.refresh(), FALLBACK_MS);
 
+    /* Volver a la pestaña (o despertar el portátil) también pide datos:
+       mientras estuvo oculta el canal pudo perder eventos (CAJA-01). */
+    const alVolver = () => { if (document.visibilityState === 'visible') refreshSoon(); };
+    document.addEventListener('visibilitychange', alVolver);
+    window.addEventListener('online', alVolver);
+
     return () => {
       cancelled = true;
+      document.removeEventListener('visibilitychange', alVolver);
+      window.removeEventListener('online', alVolver);
       clearInterval(red);
       if (retry) clearTimeout(retry);
       if (channel) supabase.removeChannel(channel);

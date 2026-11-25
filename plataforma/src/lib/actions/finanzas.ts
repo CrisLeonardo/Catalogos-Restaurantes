@@ -938,12 +938,22 @@ export interface CajaCloseResult extends CajaReceipt {
   dia: { ventas: number; pedidos: number; record: RecordDelDia | null } | null;
 }
 
-export type SolicitudCierre = CajaPayload & { confirmPending?: boolean; cashCounted?: boolean; borradorRevision?: string | null } & (
+export type SolicitudCierre = CajaPayload & {
+  confirmPending?: boolean; cashCounted?: boolean; borradorRevision?: string | null;
+  /** El «efectivo esperado» que veía el cajero al tocar «Cerrar el turno»
+      (CAJA-01). Si entró un cobro mientras contaba, el servidor no cierra:
+      devuelve el importe nuevo para que se vea antes de registrar el corte. */
+  esperadoVisto?: number;
+} & (
   | { intentoId: string; turno: AlcanceCaja }
   | { intentoId?: never; turno?: never }
 );
 
-type RespuestaCierre = { result?: CajaCloseResult; pending?: Pendientes; error?: string; incierto?: boolean };
+type RespuestaCierre = {
+  result?: CajaCloseResult; pending?: Pendientes; error?: string; incierto?: boolean;
+  /** El esperado cambió desde que se pintó la pantalla: no se cerró. */
+  esperadoCambio?: { antes: number; ahora: number };
+};
 
 const SIN_170 = 'Falta la migración 170 para conservar el recibo del cierre de caja.';
 
@@ -1017,6 +1027,13 @@ export async function closeCaja(
   }
   if (c.counted <= 0 && (input.cashCounted === false || (input.cashCounted === undefined && c.esperadoEnCaja > 0))) {
     return { error: 'Cuenta el efectivo o confirma el conteo en cero antes de cerrar.' };
+  }
+  /* CAJA-01: la pantalla de Caja pudo quedarse con un esperado viejo (un
+     cobro desde la pestaña del mesero mientras se contaba). El corte no se
+     registra contra un número que el cajero no vio. */
+  if (typeof input.esperadoVisto === 'number' && Number.isFinite(input.esperadoVisto)
+    && Math.abs(round2(input.esperadoVisto) - c.esperadoEnCaja) >= 0.005) {
+    return { esperadoCambio: { antes: round2(input.esperadoVisto), ahora: c.esperadoEnCaja } };
   }
   if (hayPendientes(c.l.pendientes) && !input.confirmPending) return { pending: c.l.pendientes };
 
