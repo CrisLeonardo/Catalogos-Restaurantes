@@ -39,7 +39,7 @@ Lo que se comprobó:
 
 La hipótesis más fuerte es un **despliegue solapado**: `render.yaml` tiene `autoDeploy: true` y el 25 de noviembre se fusionaron #188 y #189. Durante un despliegue sin corte, Render mantiene dos instancias, cada una con su caché en memoria; la que no atendió el guardado sirve el precio anterior hasta 60 s (`revalidate: 60`). Coincide con lo observado (un acceso al día y el otro no, y ambos al día en la recarga siguiente).
 
-Para confirmarlo: cambiar un precio en producción fuera de un despliegue y abrir los dos accesos a los 5 s y a los 70 s. Si se reproduce fuera de un despliegue, la causa es otra y hay que investigar más. Si solo ocurre durante despliegues, basta con decirlo al dueño en el guardado («puede tardar hasta un minuto en verse en todos lados») o mover la caché a un almacén compartido.
+Para confirmarlo: cambiar un precio en producción fuera de un despliegue mientras corre `node plataforma/scripts/medir-publicacion-carta.mjs <slug> "<platillo>" <precio-nuevo>`, que lee las dos rutas cada 2 s y anota cuándo cada una muestra el precio nuevo. El 2026-11-25, ya desplegada la v0.37.0, las dos rutas de Café Cedro QA 2511 mostraban Q16 (`DYNAMIC`). Si se reproduce fuera de un despliegue, la causa es otra y hay que investigar más. Si solo ocurre durante despliegues, basta con decirlo al dueño en el guardado («puede tardar hasta un minuto en verse en todos lados») o mover la caché a un almacén compartido.
 
 ## Aportes que no estaban en la auditoría
 
@@ -79,11 +79,26 @@ La decisión comercial está en evaluación. Este mapa separa **quitarlo de la c
 
 **Recomendación.** Si se decide, empezar solo por la captación: el recomendador deja de proponer Básico, los enlaces dicen «Probar la demo» en vez de «Crear mi restaurante gratis», y Básico queda como destino de bajas y suspensiones. Así se mantiene una forma de probar Leogin antes del primer cobro sin migrar a nadie.
 
+## Segunda ronda · 2026-11-25, después del despliegue
+
+v0.37.0 desplegada (`prod-2026-11-25` sobre `8e5bc522`); producción ya muestra los textos nuevos de Vende en línea y la portada.
+
+| Qué se probó | Resultado |
+|---|---|
+| Alta en Básico, en local | La carta de muestra no ofrece agregar ni carrito; no aparece el enlace a la demo |
+| Alta en Estándar, en local | Se agrega a la carta de muestra y el carrito termina en «Enviar mi pedido de prueba», sin «Ir a pagar» ni «Quiero esto». **Dos detalles corregidos**: el enlace abría la demo en el caso «carta» (ahora, el del plan: mostrador) y la cocina de prueba se llamaba «Rincón 502» (ahora, el negocio que se crea) |
+| ENTREGA-01 a 375 px, permiso denegado | «Falta confirmar tu ubicación»; «Confirmar pedido» marca «Coloca tu ubicación en el mapa» y no envía |
+| ENTREGA-01, toque en el mapa y cambio a llevar y de vuelta | «Dentro del rango — a 0.2 km» y se conserva |
+| ENTREGA-01, ubicación a 78 km | «Fuera del rango — estás a 78.3 km (máx. 6 km)» y no envía |
+| ENTREGA-01, ubicación compartida cerca | «Dentro del rango — a 0.3 km» sin tocar el mapa |
+| Mapa de entrega | **Error previo corregido**: montar y desmontar el mapa rápido lo inicializaba dos veces («Map container is already initialized») y la primera carga ya no pedía la ubicación |
+
+La geolocalización se simuló en el navegador de escritorio con vista de teléfono; sigue faltando un teléfono físico con el diálogo de permiso real.
+
 ## Pendiente antes del piloto
 
-- **CARTA-01**: la prueba fuera de despliegue descrita arriba.
-- **Teléfono físico**: ENTREGA-01 con permiso de ubicación aceptado y denegado, pin en el límite del radio y cambio entre recogida y domicilio; uso táctil de Salón, Caja y checkout.
-- **Alta**: recorrer en pantalla la vista previa de Básico (sin carrito) y de Estándar (pedido de prueba) y el enlace a la demo del caso.
+- **CARTA-01**: la medición fuera de despliegue descrita arriba (el dueño cambia el precio; el script mide).
+- **Teléfono físico**: el diálogo de permiso de ubicación real y el pin justo en el límite del radio; uso táctil de Salón, Caja y checkout.
 - **Caja Estándar activa**: el circuito completo de mostrador con un restaurante Estándar real, no el panel Premium.
 - **Lo que la auditoría ya listaba**: alta desde cero con verificación de correo, cobro mixto, cancelación de línea y devolución, impresión con PC principal, operación sin internet, instalador de Escritorio firmado y permisos por rol.
 
