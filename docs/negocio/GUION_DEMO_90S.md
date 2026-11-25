@@ -1,6 +1,6 @@
 # Guión de demo — 90 segundos
 
-**Actualizado 2026-08-17 con los precios de lanzamiento.** Para mostrar en tu propio celular, parado frente al dueño del restaurante. No es para leer palabra por palabra — es para que la primera visita no te agarre en blanco. Ajusta el tono a como hablas normalmente.
+**Actualizado el 24 de noviembre de 2026.** Confirma las [tarifas vigentes](PRECIOS_VIGENTES.md) antes de cotizar. Para mostrar en tu propio celular, parado frente al dueño del restaurante. No es para leer palabra por palabra — es para que la primera visita no te agarre en blanco. Ajusta el tono a como hablas normalmente.
 
 **Antes de tocar la puerta:** ten abierto en tu celular el menú de un restaurante de ejemplo (o el de él mismo, si ya tiene fotos de sus platillos que puedas cargar rápido). No dependas del wifi del local — usa tus datos o ten la página ya cargada de antes.
 
@@ -29,7 +29,7 @@
 *(Muestra el panel de pedidos o la pantalla de cocina, si la tiene configurada.)*
 
 **1:10 – 1:25 — El precio, sin rodeos**
-> "Lo básico — el menú digital así como se lo estoy mostrando — es gratis para siempre, no tiene truco. Si más adelante quiere que la gente pida en línea, hay un plan de Q199 al mes, y uno más completo con mesero y reportes en Q349. Usted empieza donde le haga sentido, y sube cuando lo necesite — nunca antes."
+> "Lo básico — el menú digital así como se lo estoy mostrando — es gratis para siempre, no tiene truco. Si quiere recibir pedidos para llevar, En línea cuesta Q99 al mes. Podemos preparar su carta y ensayar el primer turno con usted. Para mostrador o salón, revisamos el plan que se ajusta a cómo trabaja."
 
 **1:25 – 1:30 — El cierre**
 > "¿Se lo dejo armado con su carta ahorita mismo, o prefiere que vuelva otro día con más calma?"
