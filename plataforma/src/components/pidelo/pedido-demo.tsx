@@ -134,7 +134,10 @@ export function PedidoDemo({ open, onClose }: { open: boolean; onClose: () => vo
   ) : (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'center' }}>
+        {/* En la carta de muestra del alta la cocina es la del negocio que
+            se está creando, no la de Rincón 502. */}
         <PanelEnVivo pedido={enviado} dinero={(n) => formatPrice(n, config)}
+          restaurante={enMuestra ? (config.brandName?.trim() || 'tu restaurante') : undefined}
           etapa={etapa} onEtapa={(e) => { setEtapa(e); if (enLaPc) enviarEtapa(e); }} />
       </div>
       {enLaPc && (
