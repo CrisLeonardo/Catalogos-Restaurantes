@@ -229,6 +229,14 @@ export const PLAN_ORDER_TYPES_BLOCKED: Partial<Record<PlanCode, ('dine_in' | 'pi
 };
 
 /** Los modos que el plan deja usar, de una lista pedida. */
+/** Comer en local por mostrador, sin QR de mesa: Estándar lo trae y los
+ *  planes superiores lo heredan (los planes son acumulativos). En Premium
+ *  convive con el servicio por mesa: si el comensal escaneó su mesa, el
+ *  pedido va a esa mesa. */
+export function tieneMostrador(plan: PlanCode | string | null | undefined): boolean {
+  return plan === 'ESTANDAR' || plan === 'PREMIUM' || plan === 'PRO';
+}
+
 export function orderTypesForPlan<T extends string>(plan: PlanCode | string | null | undefined, types: T[]): T[] {
   const bloqueados = (PLAN_ORDER_TYPES_BLOCKED[(plan ?? 'BASICO') as PlanCode] ?? []) as string[];
   return types.filter((t) => !bloqueados.includes(t));

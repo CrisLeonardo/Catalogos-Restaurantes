@@ -156,3 +156,15 @@ describe('cambiar de plan desde el panel', () => {
     expect(loQueSePierde('EN_LINEA', 'PREMIUM')).toEqual([]);
   });
 });
+
+describe('mostrador', () => {
+  it('Estándar lo trae y los planes superiores lo heredan', async () => {
+    const { tieneMostrador } = await import('./plans');
+    expect(tieneMostrador('BASICO')).toBe(false);
+    expect(tieneMostrador('EN_LINEA')).toBe(false);
+    expect(tieneMostrador('ESTANDAR')).toBe(true);
+    expect(tieneMostrador('PREMIUM')).toBe(true);
+    expect(tieneMostrador('PRO')).toBe(true);
+    expect(tieneMostrador(null)).toBe(false);
+  });
+});

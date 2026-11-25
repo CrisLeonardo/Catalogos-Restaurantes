@@ -14,7 +14,7 @@ import { isModuleActive } from '@/lib/modules';
 import { getAgentHubInfo } from '@/lib/print-agent';
 import CheckoutForm from '@/components/checkout-form';
 import CheckoutBlocked from '@/components/checkout-blocked';
-import { orderTypesForPlan } from '@/lib/plans';
+import { orderTypesForPlan, tieneMostrador } from '@/lib/plans';
 
 export const metadata: Metadata = { title: 'Hacer pedido' };
 
@@ -100,7 +100,7 @@ export default async function CheckoutPage() {
           restaurantLng={restaurant.location_lng}
           deliveryRadiusKm={restaurant.delivery_radius_km}
           hasCoupons={hasCoupons}
-          mostrador={planActual === 'ESTANDAR'}
+          mostrador={tieneMostrador(planActual)}
           encuestasActive={encuestasActive}
           hubUrl={hubUrl}
           hubToken={hubToken}

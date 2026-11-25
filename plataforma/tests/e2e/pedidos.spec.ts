@@ -106,9 +106,9 @@ async function cleanupTenant(t: TestTenant | undefined) {
   try { await admin.auth.admin.deleteUser(t.ownerId); } catch { /* ya no existe */ }
 }
 
-test('Estándar recibe pedidos de mostrador con las tres modalidades activas', async ({ page }) => {
+for (const plan of ['ESTANDAR', 'PREMIUM'] as const) test(`${plan === 'ESTANDAR' ? 'Estándar' : 'Premium'} recibe pedidos de mostrador con las tres modalidades activas`, async ({ page }) => {
   test.setTimeout(240_000);
-  const local = await makeTenant('mostrador', 'ESTANDAR');
+  const local = await makeTenant(`mostrador-${plan.toLowerCase()}`, plan);
   try {
     await page.goto(tenantUrl(local.slug));
     const verMenu = page.getByRole('button', { name: 'Ver el menú' });
@@ -124,6 +124,8 @@ test('Estándar recibe pedidos de mostrador con las tres modalidades activas', a
     await page.goto(tenantUrl(local.slug, '/checkout'));
     await expect(page.getByRole('button', { name: 'Para llevar' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'A domicilio' })).toBeVisible();
+    // Sin mesa escaneada, «Comer aquí» se ofrece pero no llega elegido.
+    await expect(page.getByRole('button', { name: 'Comer aquí' })).toHaveAttribute('aria-pressed', 'false');
     await page.getByRole('button', { name: 'Comer aquí' }).click();
     await page.getByPlaceholder('¿Cómo te llamas?').fill('Cliente de mostrador');
     await page.getByPlaceholder('5xxx xxxx').fill('55551234');

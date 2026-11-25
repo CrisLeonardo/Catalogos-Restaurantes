@@ -167,7 +167,11 @@ export default function CheckoutForm({
 
   const [name, setName]       = useState('');
   const [phone, setPhone]     = useState('');
-  const [type, setType]       = useState<OrderType>(typeOptions[0]?.id ?? 'DINE_IN');
+  /* Con mostrador, «Comer aquí» se ofrece sin mesa, pero no llega elegido:
+     quien pide desde su casa no debe encontrarlo marcado. Si escanea el QR
+     de su mesa, el efecto de abajo lo elige. */
+  const tipoInicial = (mostrador ? typeOptions.find((o) => o.id !== 'DINE_IN') : undefined) ?? typeOptions[0];
+  const [type, setType]       = useState<OrderType>(tipoInicial?.id ?? 'DINE_IN');
   const [address, setAddress] = useState('');
   const [zone, setZone]       = useState('');
   const [notes, setNotes]     = useState('');
@@ -772,7 +776,7 @@ export default function CheckoutForm({
               {typeOptions.map((o) => {
                 const on = type === o.id;
                 return (
-                  <button key={o.id} type="button" onClick={() => setType(o.id)} className="press"
+                  <button key={o.id} type="button" onClick={() => setType(o.id)} className="press" aria-pressed={on}
                     /* Es la PRIMERA decisión del checkout (a domicilio / para
                        llevar / en el local) y medía 40 px de alto. */
                     style={{ flex: 1, padding: '0 6px', minHeight: 'var(--m-tap)', borderRadius: 'var(--m-r-sm)', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: on ? activeBg : 'transparent', color: on ? activeText : 'var(--u-text-2)', fontWeight: 600, fontSize: 'var(--m-fs-sm)', transition: 'all 160ms', whiteSpace: 'nowrap' }}>
