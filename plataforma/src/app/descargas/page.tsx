@@ -73,7 +73,10 @@ const FAQS = [
   { q: '¿Necesito crear otra cuenta para usarla?', a: 'No. Es la misma cuenta con la que ya entras a tu panel desde el navegador.' },
   { q: '¿Funciona si se corta el internet?', a: 'Sí, si tu local tiene una PC principal configurada con el respaldo local: esa PC sigue recibiendo pedidos (y, en Premium, imprimiéndolos) mientras la nube no responde, y todo se sincroniza al volver la conexión. Esa PC y la red del local tienen que seguir encendidas. La configuramos contigo.' },
   { q: '¿Windows me va a mostrar una advertencia al instalar?', a: 'Por ahora puede mostrarla: Windows marca como «Editor no reconocido» los programas que aún no tienen firma digital, y la nuestra está en trámite. Mientras tanto instalamos Leogin Escritorio contigo, para que no tengas que decidir solo frente a esa pantalla. Tu panel funciona completo desde el navegador sin instalar nada.' },
-  { q: '¿Hay versión para Mac?', a: 'Todavía no — por ahora Leogin Desktop es solo para Windows. En Mac puedes seguir usando tu panel normalmente desde el navegador, sin perder ninguna función.' },
+  /* Escritorio (auditoría funcional, 2.ª ronda): «sin perder ninguna
+     función» chocaba con la misma página, que pide una PC principal con
+     Windows para imprimir sola y para el respaldo sin internet. */
+  { q: '¿Hay versión para Mac?', a: 'Todavía no: Leogin Desktop es solo para Windows. En una Mac usas el panel completo desde el navegador: pedidos, cocina, caja y reportes. Lo que necesita Windows es la PC principal, que imprime las comandas sola (en Premium) y sirve de respaldo si se corta el internet. Si tu local tiene una PC con Windows configurada como principal, la Mac trabaja junto a ella: lo que pidas desde la Mac también sale impreso. Sin esa PC, la Mac necesita internet y no imprime por su cuenta.' },
   { q: '¿Cómo la desinstalo?', a: 'Como cualquier programa de Windows: Configuración → Aplicaciones → Leogin → Desinstalar. Se quita por completo, sin dejar residuos.' },
 ];
 
