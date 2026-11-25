@@ -75,10 +75,16 @@ export default function DeliveryMap({
     const startLat = initialLat ?? restaurantLat ?? 14.64072;
     const startLng = initialLng ?? restaurantLng ?? -90.51327;
 
+    /* Si el efecto se limpia antes de que llegue Leaflet (montar y
+       desmontar rápido, o el doble efecto de desarrollo), la segunda carga
+       chocaba con «Map container is already initialized» y la primera ya no
+       pedía la ubicación del comensal. */
+    let vigente = true;
     import('leaflet').then((mod) => {
+      if (!vigente || !containerRef.current || mapRef.current) return;
       const L = mod.default;
 
-      const map = L.map(containerRef.current!, {
+      const map = L.map(containerRef.current, {
         center: [startLat, startLng],
         zoom:   15,
       });
@@ -213,6 +219,7 @@ export default function DeliveryMap({
     });
 
     return () => {
+      vigente = false;
       resizeObserverRef.current?.disconnect();
       resizeObserverRef.current = null;
       (mapRef.current as { remove?: () => void })?.remove?.();
