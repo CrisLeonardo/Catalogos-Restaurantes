@@ -17,7 +17,7 @@ Cada hallazgo se buscó en el código antes de tocarlo y quedó clasificado como
 | CARTA-01 | No se reproduce fuera de un despliegue | Sin cambio de código; script de medición | Medido en producción: las dos rutas cambiaron en la misma lectura (ver la sección propia) |
 | CAJA-02 | Reproducido | El recibo y el texto para compartir dicen «turno de 10:27 a 10:28» o «sin apertura · cuenta desde las 05:00», y marcan el cierre «del día siguiente» si cruza medianoche | 3 pruebas unitarias |
 | ENTREGA-01 | Reproducido, **más grave de lo reportado** | El pin sin ubicación guardada ya no se da por confirmado. Antes, sin moverlo, el checkout aceptaba enviar un domicilio a la puerta del propio restaurante (0.0 km) | Lectura del código; falta probar en teléfono |
-| ALTA-01 | Reproducido | Las ventajas del registro salen del plan del enlace: Básico ya no promete pedidos con alerta y la «personalización completa» solo se anuncia en Premium, el único que la trae | En pantalla con `?plan=BASICO` |
+| ALTA-01 | Reproducido | Las ventajas del registro salen del plan del enlace: Básico ya no promete pedidos con alerta. La personalización completa pasó a figurar en todos los planes (ver la tercera ronda) | En pantalla con `?plan=BASICO` |
 | ALTA-02 | Reproducido | La vista previa del alta sigue al plan: en Básico no se arma pedido; en planes con pedidos, el carrito termina en el pedido de prueba identificado de la demo | Typecheck; falta recorrerlo en pantalla |
 | ALTA-03 | Reproducido | «Escribe tres o más» pasa a «Con uno basta para ver tu carta», que es el mínimo real | Lectura de `leerPlatosDelAlta` |
 | ALTA-04 | Reproducido | Sin pedidos, la guía se llama «Publica y comparte tu carta» y su último paso, «Comparte tu carta». La descarga del QR se reconoce aparte de las visitas. El acceso a QR por mesa solo aparece si el plan tiene salón | Typecheck |
@@ -49,7 +49,7 @@ Para confirmarlo: cambiar un precio en producción fuera de un despliegue mientr
 
 1. **ENTREGA-01 era un riesgo de pedido, no de texto.** El mapa notificaba la posición inicial (el restaurante) como si fuera la del cliente: un domicilio podía salir con la dirección del local.
 2. **Mostrador cobrado antes de preparar.** «Sin cobrar todavía» solo descontaba lo pagado de las mesas: en mostrador, que es el caso del piloto, un pedido para llevar ya cobrado que esperaba en cocina aparecía como pendiente y el cierre preguntaba por él.
-3. **La «personalización total» del registro es de Premium.** No solo estaba mal en Básico: En línea y Estándar tampoco la traen (`hasFullTheme`).
+3. **«Personalización completa» se anunciaba solo en Premium, pero el código no la restringe**: todos los planes tienen el editor de diseño completo. Corregido en la tercera ronda.
 4. **La base local de pruebas iba en la migración 181** y con `leogin_cobrar_parte_mesa` en una versión vieja de la 164. Se puso al día con `supabase migration up` y reaplicando la 164 y la 165. Conviene correr `node scripts/huellas-funciones.mjs` antes de las pruebas de dinero.
 5. **Precios en la auditoría.** El documento externo cita Estándar a Q150 y Premium a Q299; los textos los toman de Super › Configuración, así que no hay cifras escritas a mano que corregir. La base local tiene otros precios (Estándar a Q199).
 6. **Básico es el piso del sistema**, no solo una oferta. Ver el mapa de abajo.
@@ -98,6 +98,18 @@ v0.37.0 desplegada (`prod-2026-11-25` sobre `8e5bc522`); producción ya muestra 
 | Mapa de entrega | **Error previo corregido**: montar y desmontar el mapa rápido lo inicializaba dos veces («Map container is already initialized») y la primera carga ya no pedía la ubicación |
 
 La geolocalización se simuló en el navegador de escritorio con vista de teléfono; sigue faltando un teléfono físico con el diálogo de permiso real.
+
+## Tercera ronda · 2026-11-25, revisión de la oferta
+
+Cuatro hallazgos de una revisión externa de la web en producción. Decisiones del dueño del mismo día.
+
+| Hallazgo | Qué dice el código | Decisión y cambio |
+|---|---|---|
+| El aviso de 300 pedidos no dice qué pasa si el dueño no acepta el cambio | Nada automático: sigue en En línea, al mismo precio, recibiendo pedidos, y solo ve el aviso | **Se queda en En línea.** Planes, Vende en línea, Hoy y Mi suscripción lo dicen: ningún pedido se corta, el cambio lo decide el dueño y el aviso vuelve cada mes que pase el tope |
+| Vende en línea ofrece la Vitrina en Q99 sin decir qué entra | Cuenta regresiva, «Avísame cuando abra» y archivo de ediciones están en todos los planes. «Quedan 4 de 30» sale del conteo de existencias, que hoy solo se edita desde Inventario (Premium) | **Cupo por pieza en todos los planes**, reutilizando el conteo de Inventario. Maqueta: [MAQUETA_DEMO_POR_CASO_Y_CUPO_2026-11-25](../diseno/MAQUETA_DEMO_POR_CASO_Y_CUPO_2026-11-25.html) §2, **pendiente de aprobación** |
+| «Personalización completa» solo en Premium (hallazgo propio) | `hasFullTheme` no restringe nada: el editor de diseño es igual en todos los planes | **Todos los planes la tienen.** `hasFullTheme` en verdadero para todos; la comparativa y el registro lo dicen |
+| Escritorio promete que una Mac no pierde «ninguna función» | La impresión automática (Premium) y el respaldo sin internet dependen de una PC principal con Windows | La respuesta dice qué hace una Mac sola (el panel completo con internet) y qué gana si el local tiene una PC principal con Windows |
+| Las demos de mostrador y de mesas muestran la misma carta | `?caso=` solo cambia la cinta de arriba | Propuesta: mostrador en cuatro pasos (pedido, cobro con cambio, cocina, cierre de caja) y mesas con el turno de práctica, ambos en memoria. Misma maqueta §1, **pendiente de aprobación** |
 
 ## Pendiente antes del piloto
 
