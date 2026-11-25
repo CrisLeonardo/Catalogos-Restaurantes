@@ -91,9 +91,16 @@ export default function DescargasPage() {
               {/* Auditoría de lanzamiento 2026-11-23 (WEB-08, LZ-06/07): mientras
                   el instalador no tenga firma y el respaldo local no esté
                   ensayado con equipo, Escritorio se ofrece con acompañamiento. */}
+              {/* El aviso de firma pendiente vive más abajo; aquí, junto al
+                  botón, el camino para pedir la instalación y la opción de no
+                  instalar nada (WEB-UX-06). */}
               <p className="lp-body" style={{ fontSize: 13, margin: '8px auto 0', maxWidth: 520, color: 'var(--u-text-3)' }}>
-                Por ahora lo instalamos contigo. La impresión y el trabajo en red local requieren una
-                PC principal configurada y equipo compatible.
+                Por ahora lo instalamos contigo:{' '}
+                <a href={contactHref('Hola, quiero instalar Leogin Escritorio en mi restaurante')} style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 3 }}>
+                  escríbenos {CONTACT_VIA}
+                </a>
+                . Si no quieres instalar nada, el mismo panel funciona en el navegador. La impresión y el
+                trabajo en red local requieren una PC principal configurada y equipo compatible.
               </p>
             </div>
             <DesktopPlatformNotice />
