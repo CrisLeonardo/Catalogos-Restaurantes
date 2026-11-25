@@ -8,7 +8,7 @@ import { LandingIntro } from '@/components/landing-intro';
 import { CtaEnLinea } from '@/components/en-linea/cta-en-linea';
 import { SiteHeader, SiteFooter, SectionHead, contactHref, CONTACT_ICON } from '@/components/site-chrome';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
-import { planPriceLabel, PLANS } from '@/lib/plans';
+import { planPriceLabel, PLANS, reglaDelTopeEnLinea } from '@/lib/plans';
 
 /** Pedidos al mes que incluye En línea (tope blando, ver lib/tope-pedidos.ts). */
 const TOPE = PLANS.EN_LINEA.monthlyOrderCap ?? 300;
@@ -135,7 +135,7 @@ function faqs(trialDays: number, enLinea: string, basico: string) {
     },
     {
       q: '¿Cuánto cuesta?',
-      a: `El plan En línea cuesta ${enLinea}, sin costo de alta, incluye hasta ${TOPE} pedidos al mes${trialDays > 0 ? ` y empiezas con ${trialDays} días gratis, sin tarjeta` : ', sin contrato'}. Si por ahora solo quieres tu catálogo en un link, sin pedidos en línea, el Básico es ${basico.toLowerCase()} para siempre. Cuando crezcas (más de ${TOPE} pedidos al mes, más personas, reportes y corte de caja, mesas), subes a Estándar. Si un mes pasas los ${TOPE}, no se corta ningún pedido: te avisamos y al mes siguiente cambias.`,
+      a: `El plan En línea cuesta ${enLinea}, sin costo de alta${trialDays > 0 ? `, y empiezas con ${trialDays} días gratis, sin tarjeta` : ', sin contrato'}. ${reglaDelTopeEnLinea()} Estándar suma más personas, reportes y corte de caja. Si por ahora solo quieres tu catálogo en un link, sin pedidos en línea, el Básico es ${basico.toLowerCase()} para siempre.`,
     },
   ];
 }
@@ -196,8 +196,12 @@ export default async function VendeEnLinea() {
                 </CtaEnLinea>
                 <LandingDemo href={demoUrl} />
               </div>
+              {/* La mensualidad junto a la primera acción: antes el precio
+                  aparecía hasta y≈5800 en el teléfono, después de invitar a
+                  empezar (WEB-UX-03). */}
               <p className="lp-body" style={{ fontSize: 13.5, marginTop: 14, color: 'var(--u-text-4)' }}>
-                {pricing.trialDays > 0 ? `${pricing.trialDays} días gratis · sin tarjeta · ` : 'Sin alta · sin contrato · '}sin comisión por pedido
+                <strong style={{ color: 'var(--u-text-2)', fontWeight: 650 }}>{enLineaLabel}</strong>
+                {pricing.trialDays > 0 ? ` · ${pricing.trialDays} días gratis · sin tarjeta · ` : ' · sin alta · sin contrato · '}sin comisión por pedido
               </p>
             </div>
           </div>

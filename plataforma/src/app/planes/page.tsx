@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { conEvento, EVENTOS } from '@/lib/analytics';
 import { SiteHeader, SiteFooter, SectionHead, contactHref, CONTACT_ICON } from '@/components/site-chrome';
-import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceLabel, planPriceQ, PLAN_ACCENT_INK, publicPlanCapabilities, planPresentation, planGrowthCopy, planComparisonCopy } from '@/lib/plans';
+import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceLabel, planPriceQ, PLAN_ACCENT_INK, publicPlanCapabilities, planPresentation, planGrowthCopy, planComparisonCopy, reglaDelTopeEnLinea } from '@/lib/plans';
 import type { PlanPricing } from '@/lib/plans';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
@@ -150,9 +150,7 @@ export default async function PlanesPage() {
         <div className="lp-card-quiet" style={{ padding: '18px 22px' }}>
           <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', lineHeight: 1.6, margin: 0 }}>
             <strong style={{ color: 'var(--u-text-2)' }}>Sin cobro por ventas:</strong>{' '}
-            Todos los planes son de precio fijo, sin importar cuántos pedidos recibas ni cuánto
-            factures. Subes de plan por las funciones que necesitas — nunca porque tu restaurante
-            vendió más este mes.
+            ningún plan cobra comisión ni un porcentaje de lo que facturas. {reglaDelTopeEnLinea()}
           </p>
         </div>
       </section>

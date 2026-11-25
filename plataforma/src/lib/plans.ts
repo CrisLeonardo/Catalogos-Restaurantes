@@ -676,3 +676,16 @@ export function loQueSePierde(antes: PlanCode, despues: PlanCode): string[] {
   if (d.maxProducts && !a.maxProducts) fuera.push(`Platillos ilimitados (el plan nuevo llega a ${d.maxProducts})`);
   return fuera;
 }
+
+/**
+ * La regla del tope de En línea, con las MISMAS palabras en Planes, Vende en
+ * línea y donde haga falta explicarla (WEB-UX-03). Antes Planes decía que el
+ * precio era fijo «sin importar cuántos pedidos recibas» mientras Vende en
+ * línea hablaba de 300 al mes: el dueño tenía que adivinar cuál valía. La
+ * regla es la de lib/tope-pedidos.ts: tope blando, se avisa y se sube el mes
+ * siguiente.
+ */
+export function reglaDelTopeEnLinea(): string {
+  const tope = PLANS.EN_LINEA.monthlyOrderCap ?? 300;
+  return `En línea incluye hasta ${tope} pedidos al mes. Si un mes los pasas, no se corta ningún pedido: te avisamos y al mes siguiente pasas a Estándar.`;
+}
