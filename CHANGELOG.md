@@ -4,6 +4,32 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
+## v0.37.0 · 2026-11-25 · Caja, demo y alta listas para el piloto de mostrador
+PR #190 · sin migraciones. Implementa la [auditoría funcional para el piloto](docs/auditorias/AUDITORIA_FUNCIONAL_PILOTO_2026-11-25.md). CARTA-01 queda pendiente de evidencia en producción.
+- **Caja no cierra contra un esperado viejo** (CAJA-01, CAJA-02).
+  - Se actualiza sola con cada cobro y al volver a la pestaña.
+  - Si entra dinero mientras se cuenta, el servidor no registra el corte y muestra el importe nuevo.
+  - Una mesa pagada que sigue ocupada y un para llevar ya cobrado ya no aparecen como «sin cobrar».
+  - El recibo distingue el turno («de 10:27 a 10:28») del día de caja, y marca el cierre del día siguiente.
+- **«Modo aprendiz» ahora es «Mostrar ayuda»** (SALON-01). Avisa que lo enviado y cobrado es real y lleva al turno de práctica aislado.
+- **La demo dice lo mismo en todas partes** (PEDIDOS-01, 02).
+  - El total de la ficha ya no se queda a medio contar (Q69.78 en vez de Q70.00).
+  - La portada y la vista del cliente comparten la etapa del pedido.
+  - «Le avisamos al cliente» pasa a «Listo para entregar».
+- **El domicilio ya no sale con la ubicación del restaurante** (ENTREGA-01). La ubicación queda pendiente hasta que el comensal mueve el pin, toca el mapa o comparte su ubicación.
+- **El alta promete lo que el plan entrega** (ALTA-01 a 04, PLAN-01 a 03).
+  - Las ventajas del registro y la vista previa siguen al plan elegido; la personalización completa solo se anuncia en Premium.
+  - Con uno o más platillos basta para ver la carta.
+  - Estándar dice «2 de 3 modos» y dónde se cambian.
+  - Antes de crear, enlace a la demo del mismo caso.
+  - En Básico, la guía es «Publica y comparte tu carta», y el QR por mesa solo aparece con salón.
+- **Textos honestos** (PLAN-02, COPY-01, COCINA-01, METRICAS-01).
+  - El tope de En línea dice que nada se corta, el precio de Estándar y que el cambio de plan lo confirma el dueño.
+  - La ganancia requiere cargar costos, y el cliente le paga al negocio, no a Leogin.
+  - Sin impresora no se promete papel.
+  - Con poco historial se dan conteos en vez de porcentajes.
+- Incluye el mapa de dependencias del plan Básico, que está en evaluación comercial.
+
 ## v0.36.0 · 2026-11-25 · La web pública se entiende y se recorre desde el teléfono
 PR #187 y #188 · sin migraciones. Cierra la [auditoría de experiencia de la web pública](docs/auditorias/AUDITORIA_EXPERIENCIA_WEB_PUBLICA_2026-11-24.md) (11 hallazgos de comprensión, diseño adaptable, accesibilidad y rendimiento) salvo WEB-UX-10, que se mide contra producción.
 - **Quien llega por el teléfono ve su caso y el precio sin bajar** (WEB-UX-02, 03).
