@@ -199,3 +199,26 @@ describe('concurrencia real (180, matriz M§8)', () => {
     }
   });
 });
+
+describe('cupo de la tanda (auditoría funcional 2026-11-25, 3.ª ronda)', () => {
+  beforeEach(async () => { await sql.query('begin'); });
+  afterEach(async () => { await sql.query('rollback'); });
+
+  it('poner cupo, agotarse y empezar otra tanda deja el cupo vigente en el último conteo', async () => {
+    const r = await local();
+    const id = await platillo(r, 'Caja de 6 cupcakes');
+    // «Poner cupo de 30» = activar el control con 30 (lo que hace fijarCupo sin conteo previo).
+    await sql.query('select public.leogin_activar_control($1, $2::jsonb, $3)', [r, JSON.stringify([{ id, stock: '30', minimo: '0' }]), ACTOR]);
+    // Se venden las 30: queda agotada «hasta reponer».
+    await sql.query('select public.leogin_ajustar_existencias($1, $2, $3, $4, $5, $6, $7)', [r, id, 'restar', 30, 'consumo', null, ACTOR]);
+    expect(await fila(id)).toMatchObject({ is_available: false, agotado_motivo: 'reponer', stock: 0 });
+    // «Empezar tanda de 6» = fijar con motivo conteo: vuelve a venderse.
+    await sql.query('select public.leogin_ajustar_existencias($1, $2, $3, $4, $5, $6, $7)', [r, id, 'fijar', 6, 'conteo', 'Cupo de la tanda', ACTOR]);
+    expect(await fila(id)).toMatchObject({ is_available: true, stock: 6 });
+    // cupoVigente lee el saldo del último conteo. Dentro de esta transacción
+    // los dos conteos comparten hora, así que se identifica la tanda por su nota;
+    // en uso real cada tanda es otra petición y el más reciente gana.
+    const { rows } = await sql.query(`select reason, balance_after from stock_movements where product_id = $1 and nota = 'Cupo de la tanda'`, [id]);
+    expect(rows.map((x) => [x.reason, Number(x.balance_after)])).toEqual([['conteo', 6]]);
+  });
+});

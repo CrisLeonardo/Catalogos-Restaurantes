@@ -685,7 +685,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 />
               )}
               <Note>
-                Muestra «¡Solo quedan 4!» en los platillos que llevan inventario. El cliente solo ve el
+                Muestra «¡Solo quedan 4!» en los platillos con cupo o inventario. El cliente solo ve el
                 número cuando ya quedan pocas; tu inventario completo no sale del panel.
               </Note>
             </Section>

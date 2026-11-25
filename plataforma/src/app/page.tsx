@@ -16,7 +16,10 @@ import { estadoEdicion } from '@/lib/vitrina/edicion';
 import { resolveTheme } from '@/lib/theme/resolve';
 import { isOpenNow, minutosParaCerrar, nextOpenLabel } from '@/lib/hours';
 import { isModuleActive } from '@/lib/modules';
-import { DEMO_SLUG, rootDomainForUrls, isAdminSubdomain, isGroupSubdomain, subdomainUrl } from '@/lib/tenant';
+import { DEMO_SLUG, rootDomainForUrls, isAdminSubdomain, isGroupSubdomain, subdomainUrl, marketingUrl } from '@/lib/tenant';
+import { DemoOperativa } from '@/components/pidelo/demo-operativa';
+import { casoDemo, platosDeDemo } from '@/lib/demo-operativa';
+import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { currencyCodeFor, jsonLdScript, restaurantJsonLd } from '@/lib/seo/restaurant-jsonld';
 import { DEMO_CATEGORIES, DEMO_PRODUCTS, DEMO_THEME } from '@/lib/demo-menu';
 import { getPublicLoyaltyCached, type PublicReward } from '@/lib/db/loyalty';
@@ -24,7 +27,7 @@ import { isGoogleAuthEnabled } from '@/lib/auth-config';
 import { resolverPlatillo, valorPlatillo } from '@/lib/menu/enlace-platillo';
 import { platilloEstrella } from '@/lib/menu/estrella';
 import { enlaceDeAlta, leerIntencion, type IntencionAlta } from '@/lib/alta';
-import { PLANS } from '@/lib/plans';
+import { PLANS, planPriceLabel } from '@/lib/plans';
 import { imagenesWeb } from '@/lib/og-web';
 
 /* ── Metadata dinámica por restaurante ─────────────────────── */
@@ -204,6 +207,28 @@ export default async function Home({
        ese restaurante (o con su lectura caída), la copia fija de siempre. */
     const real = await getRestaurantBySlugCached(process.env.DEMO_RESTAURANT_SLUG || 'rincon502').catch(() => null);
     const menuReal = real ? await getMenuDataCached(real.restaurant.id).catch(() => null) : null;
+
+    /* Demo por caso (maqueta MAQUETA_DEMO_POR_CASO_Y_CUPO_2026-11-25, aprobada
+       el 2026-11-25): mostrador y mesas enseñan la operación —pedido, cobro,
+       cocina y caja, o la mesa completa— en vez de la carta del comensal.
+       `&vista=carta` vuelve a la carta y al pedido de prueba de siempre. */
+    const caso = casoDemo(params.caso);
+    if (caso && params.vista !== 'carta') {
+      const plan = caso === 'mostrador' ? 'ESTANDAR' : 'PREMIUM';
+      const pricing = await getEffectivePlanPricing().catch(() => null);
+      const fuente = menuReal && menuReal.products.length > 0 ? menuReal.products : DEMO_PRODUCTS;
+      const q = new URLSearchParams({ caso, vista: 'carta', ...(typeof params.plan === 'string' ? { plan: params.plan } : {}) });
+      return (
+        <DemoOperativa
+          caso={caso}
+          platos={platosDeDemo(fuente as { id: string; name: string; price: number; is_available?: boolean | null }[])}
+          cartaHref={`/?${q.toString()}`}
+          registroHref={marketingUrl(enlaceDeAlta({ plan, caso }))}
+          plan={PLANS[plan].name}
+          precio={pricing ? planPriceLabel(pricing, plan) : ''}
+        />
+      );
+    }
     if (real && menuReal && menuReal.products.length > 0) {
       const [masPedidosDemo, estadosDemo] = await Promise.all([
         getMasPedidosSemanaCached(real.restaurant.id).catch(() => []),

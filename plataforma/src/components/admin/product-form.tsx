@@ -41,6 +41,7 @@ import { usePathname as useRutaNavegador } from 'next/navigation';
 import { panelBaseFrom, panelHref } from '@/lib/panel-links';
 import { fmtMoney } from '@/lib/money';
 import s from './product-form.module.css';
+import CupoTanda from '@/components/admin/cupo-tanda';
 import { OpcionesAgotado } from '@/components/admin/hoja-agotar';
 import { AGOTADO_POR_OMISION, razonDeAgotado, type AgotadoHasta } from '@/lib/product-availability';
 import { descripcionVaga, GUIA_DESCRIPCION } from '@/lib/menu/descripcion';
@@ -63,6 +64,8 @@ interface ProductFormProps {
   /** Hora de corte del local («05:00»), para decir cuándo vuelve lo agotado. */
   horaCorte?: string;
   timezone?: string;
+  /** Cupo de la tanda (solo al editar): el cupo vigente y si Inventario lleva las existencias. */
+  cupo?: { vigente: number | null; inventarioActivo: boolean };
 }
 
 const emptyState: ProductState = null;
@@ -142,7 +145,7 @@ function Seccion({ titulo, resumen, abierta = false, children }: {
 }
 
 export default function ProductForm({
-  restaurantId, categories, product, defaultCategoryId, ingredients, initialRecipe, bilingue = false, creado, duplicado = false, volver, horaCorte, timezone,
+  restaurantId, categories, product, defaultCategoryId, ingredients, initialRecipe, bilingue = false, creado, duplicado = false, volver, horaCorte, timezone, cupo,
 }: ProductFormProps) {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = panelBaseFrom(useRutaNavegador());
@@ -243,7 +246,7 @@ export default function ProductForm({
     dietas: dietaryTags.length ? dietaryTags.map((k) => DIETARY_TAG_MAP[k]?.label ?? k).join(', ') : 'Ninguna',
     sellos: tags.length ? tags.map(etiquetaDeSello).join(', ') : 'Ninguno',
     costo: conCosto ? `${fmtMoney(c)}${margen != null ? ` · margen ${margen} %` : ''}` : 'Sin costo',
-    estado: `${isAvailable ? 'Disponible' : 'Agotado'} · ${isActive ? 'visible' : 'oculto'}`,
+    estado: `${isAvailable ? 'Disponible' : 'Agotado'} · ${isActive ? 'visible' : 'oculto'}${product?.track_stock ? ` · quedan ${product.stock ?? 0}` : ''}`,
   };
 
   return (
@@ -542,6 +545,16 @@ export default function ProductForm({
         </div>
         {!isAvailable && (
           <OpcionesAgotado value={agotadoHasta} onChange={setAgotadoHasta} name="ficha-agotado-hasta" horaCorte={horaCorte} />
+        )}
+        {product && cupo && (
+          <CupoTanda
+            restaurantId={restaurantId}
+            productId={product.id}
+            contando={product.track_stock === true}
+            quedan={product.track_stock ? (product.stock ?? 0) : null}
+            cupo={cupo.vigente}
+            inventarioActivo={cupo.inventarioActivo}
+          />
         )}
         <div className={s.estado}>
           <div>
