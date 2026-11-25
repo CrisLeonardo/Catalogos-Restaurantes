@@ -445,7 +445,7 @@ export const PLAN_POINTS: Record<PlanCode, { text: string; positive: boolean }[]
     { text: 'Mostrador, para llevar y a domicilio', positive: true },
     { text: 'Pantalla de cocina y avisos en tiempo real', positive: true },
     { text: `Platillos ilimitados · ${PLANS.ESTANDAR.users} usuarios, tú incluido`, positive: true },
-    { text: 'Caja, reportes e inventario de productos', positive: true },
+    { text: 'Caja, reportes e inventario de platillos', positive: true },
   ],
   PREMIUM: [
     { text: 'Para llevar, comer en local y a domicilio', positive: true },
@@ -489,7 +489,7 @@ export const PLAN_CAPABILITIES: PlanCapability[] = [
   { key: 'advanced-coupons', label: 'Cupones con compra mínima y límite de usos', feature: 'hasAdvancedCoupons' },
   { key: 'finance', label: 'Reportes financieros y corte de caja', feature: 'hasFinance', flag: 'finanzas' },
   { key: 'analytics', label: 'Analítica', feature: 'hasAnalytics', flag: 'analitica' },
-  { key: 'inventory', label: 'Inventario de productos', feature: 'hasProductInventory', flag: 'inventario' },
+  { key: 'inventory', label: 'Inventario de platillos', feature: 'hasProductInventory', flag: 'inventario' },
   { key: 'staff', label: 'Personal', feature: 'hasAnalytics', flag: 'personal' },
   ...ACTIVATABLE_MODULES.map((m) => ({ key: m.key, label: m.label, module: m.key })),
 ];
@@ -685,7 +685,7 @@ export function loQueSePierde(antes: PlanCode, despues: PlanCode): string[] {
   if (a.hasPrinting && !d.hasPrinting) fuera.push('Impresión de comandas');
   if (a.hasFinance && !d.hasFinance) fuera.push('Reportes financieros y corte de caja');
   if (a.hasAnalytics && !d.hasAnalytics) fuera.push('Analítica y gestión avanzada de personal');
-  if (a.hasProductInventory && !d.hasProductInventory) fuera.push('Inventario de productos');
+  if (a.hasProductInventory && !d.hasProductInventory) fuera.push('Inventario de platillos');
   if (a.hasFullTheme && !d.hasFullTheme) fuera.push('Personalización completa');
   const modulos = (INCLUDED_MODULES[antes] ?? []).filter((k) => !INCLUDED_MODULES[despues].includes(k));
   if (modulos.length > 0) fuera.push(`${modulos.length} ${modulos.length === 1 ? 'herramienta incluida' : 'herramientas incluidas'} (lealtad, cupones y más)`);
