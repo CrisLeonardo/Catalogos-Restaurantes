@@ -91,7 +91,7 @@ export function PlanPorPreguntas({ planes, origen }: { planes: PlanDeLaWeb[]; or
         {plan ? (plan.gratis ? 'Empezar gratis con Básico' : `Empezar con ${plan.nombre}`) : 'Crear mi restaurante'}
       </Link>
       {origen === 'portada' && (
-        <Link href="/planes" className={s.mas}>Ver los cuatro planes lado a lado →</Link>
+        <Link href="/planes#comparativa" className={s.mas}>Ver los cuatro planes lado a lado →</Link>
       )}
     </div>
   );

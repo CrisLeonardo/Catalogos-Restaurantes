@@ -111,7 +111,7 @@ export default function PrivacidadPage() {
         <LegalP>
           Podemos actualizar esta política; publicaremos la versión vigente con su fecha. Para ejercer
           tus derechos o cualquier consulta de privacidad, escríbenos a{' '}
-          <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--brand-accent-ink)' }}>{CONTACT_EMAIL}</a>.
+          <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--brand-accent-ink)', textDecoration: 'underline', textUnderlineOffset: 3 }}>{CONTACT_EMAIL}</a>.
         </LegalP>
       </LegalSection>
     </LegalShell>

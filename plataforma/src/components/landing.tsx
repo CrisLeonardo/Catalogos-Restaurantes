@@ -125,7 +125,7 @@ export default async function LeoginLanding() {
       <div className="lp-avance" aria-hidden />
       <SiteHeader home />
 
-      <main className="lp-main">
+      <main id="contenido" tabIndex={-1} className="lp-main">
         {/* ── 1 · Titular y video ──────────────────────────────
             El titular y el video «Un solo lugar» son los aprobados. La
             acción principal es probar la demo: es lo que mejor explica

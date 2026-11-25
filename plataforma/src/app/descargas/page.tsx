@@ -68,7 +68,7 @@ export default function DescargasPage() {
     <div style={{ width: '100%' }}>
       <SiteHeader />
 
-      <main className="anim-fade-up">
+      <main id="contenido" tabIndex={-1} className="anim-fade-up">
         {/* ── Portada ───────────────────────────────────────── */}
         <section className="lp-shell" style={{ textAlign: 'center', padding: 'clamp(48px, 7vw, 88px) 20px clamp(28px, 4vw, 40px)' }}>
           <div className="lp-eyebrow">Leogin Escritorio</div>

@@ -45,6 +45,12 @@ export function SiteHeader({ home = false }: { home?: boolean }) {
   const anchor = (id: string) => (home ? `#${id}` : `/#${id}`);
 
   return (
+    <>
+    {/* Con teclado, lo primero es saltarse la cabecera: cada página del
+        sitio repite siete enlaces antes de su contenido (WEB-UX-09). Solo
+        se ve al enfocarlo; el destino es el <main id="contenido"> de cada
+        página. */}
+    <a href="#contenido" className="lp-saltar">Saltar al contenido</a>
     <header className="lp-header">
       <div className="lp-header-inner">
         <Link href="/" aria-label="Leogin — inicio" style={{ flex: '0 0 auto', textDecoration: 'none' }}>
@@ -70,6 +76,7 @@ export function SiteHeader({ home = false }: { home?: boolean }) {
         </nav>
       </div>
     </header>
+    </>
   );
 }
 

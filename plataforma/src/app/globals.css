@@ -3065,6 +3065,12 @@ html[data-platform] .asphalt::after { display: none; }
   border-radius: 18px;
   background: var(--lp-card); border: 1px solid var(--lp-line-2);
   box-shadow: var(--lp-shadow-md);
+  /* Con el teléfono en horizontal (375 px de alto) el panel pasaba del
+     borde y «Acceder al panel» quedaba cortado: ahora no pasa de lo que se
+     ve y se recorre por dentro, sin mover la página (WEB-UX-08). */
+  max-height: calc(100dvh - 84px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .lp-menu-link {
   /* 44 px de alto: es un menú que se toca con el pulgar. Los enlaces del
@@ -3085,13 +3091,46 @@ html[data-platform] .asphalt::after { display: none; }
   color: var(--u-text); font-weight: 650;
 }
 @media (max-width: 860px) { .lp-menu { display: block; } }
-/* Entre 861 y 1080 px no caben siete enlaces y los dos botones: «Escritorio»
-   se va al menú desplegable (que ya lo tiene) y el menú aparece. */
+/* Entre 861 y 960 px no caben siete enlaces y los dos botones: «Escritorio»
+   se va al menú desplegable (que ya lo tiene) y el menú aparece. El corte
+   estaba en 1080, pero a 961 px la barra completa mide 783 px y le sobran
+   ~40: de 961 a 1080 el menú solo repetía lo que ya se veía (WEB-UX-08). */
 .lp-navlink { white-space: nowrap; }
-@media (max-width: 1080px) {
+@media (max-width: 960px) {
   .lp-navlink-extra { display: none; }
   .lp-menu { display: block; }
 }
+/* …y en ese tramo el panel enseña solo lo que no cupo: antes repetía los
+   seis destinos que ya estaban a la vista en la barra (WEB-UX-08). */
+@media (min-width: 861px) {
+  .lp-menu-en-barra { display: none; }
+}
+
+/* Saltar al contenido (WEB-UX-09): fuera de la vista hasta que el teclado
+   lo enfoca; entonces aparece arriba a la izquierda, encima de la cabecera. */
+.lp-saltar {
+  position: absolute; left: 12px; top: 8px; z-index: 100;
+  padding: 10px 16px; border-radius: 999px;
+  background: var(--lp-card); color: var(--u-text);
+  border: 1px solid var(--lp-line-2); box-shadow: var(--lp-shadow-md);
+  font-size: 14px; font-weight: 650; text-decoration: none;
+  transform: translateY(-160%);
+}
+.lp-saltar:focus-visible { transform: none; }
+#contenido:focus { outline: none; }
+
+/* Comparativa de /planes (WEB-UX-04): la columna de la función se queda
+   fija al deslizar y una sombra en su borde avisa que hay más a la derecha. */
+.lp-comparativa th:first-child {
+  position: sticky; left: 0; z-index: 1;
+  background: var(--lp-card);
+  box-shadow: 1px 0 0 var(--u-hair), 8px 0 12px -10px rgba(0, 0, 0, 0.18);
+}
+.lp-comparativa:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: 2px; }
+.lp-comparativa thead th:first-child { width: 34%; }
+@media (min-width: 700px) { .lp-comparativa th:first-child { box-shadow: none; } }
+/* En el teléfono la etiqueta va en dos renglones y deja ver casi dos planes. */
+@media (max-width: 699px) { .lp-comparativa thead th:first-child { width: 128px; } }
 /* En el teléfono la cabecera es logo + CTA + menú. "Acceder" sale de la
    barra pero NO desaparece —ese fue el error de una versión anterior, que
    dejó a cualquier celular sin botón de login a la vista—: vive como última

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useId, useRef, useState } from 'react';
 import { Icon } from '@/components/icons';
 import { PanelEnVivo } from '@/components/pidelo/panel-en-vivo';
 import { useSala } from '@/components/pidelo/use-sala';
@@ -28,6 +28,10 @@ import { fmtMoney } from '@/lib/money';
 export function LandingDemo({ href, primaria = false }: { href: string; primaria?: boolean }) {
   const estilo = primaria ? 'lp-btn-primary' : 'lp-btn-soft';
   const ref = useRef<HTMLDialogElement>(null);
+  // La portada pinta este botón dos veces (arriba y en «Pídelo tú mismo»):
+  // con un id fijo había dos títulos «lp-demo-titulo» y cada diálogo podía
+  // anunciarse con el del otro (WEB-UX-09).
+  const titulo = useId();
   const [sala, setSala] = useState<string | null>(null);
   const [qr, setQr] = useState<string | null>(null);
   const [pedido, setPedido] = useState<PedidoDemo | null>(null);
@@ -71,7 +75,7 @@ export function LandingDemo({ href, primaria = false }: { href: string; primaria
       <dialog
         ref={ref}
         className="lp-demo-dialog lp-pidelo"
-        aria-labelledby="lp-demo-titulo"
+        aria-labelledby={titulo}
         onClick={(e) => { if (e.target === e.currentTarget) close(); }}
       >
         <button type="button" className="lp-demo-cerrar" onClick={close} aria-label="Cerrar">
@@ -81,7 +85,7 @@ export function LandingDemo({ href, primaria = false }: { href: string; primaria
         </button>
         <div className="lp-pidelo-grid">
           <div>
-            <h2 id="lp-demo-titulo" className="lp-h3">Pídelo tú mismo</h2>
+            <h2 id={titulo} className="lp-h3">Pídelo tú mismo</h2>
             <ol className="lp-pidelo-pasos">
               <li>Escanea el código con la cámara de tu celular.</li>
               <li>Elige algo de Rincón 502 y envíalo.</li>

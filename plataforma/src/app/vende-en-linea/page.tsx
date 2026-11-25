@@ -166,7 +166,7 @@ export default async function VendeEnLinea() {
       <div className="lp-avance" aria-hidden />
       <SiteHeader />
 
-      <main className="lp-main">
+      <main id="contenido" tabIndex={-1} className="lp-main">
         {/* ── Portada: el espejo y el alivio en una sola pantalla ── */}
         <section className="lp-shell" style={{ paddingTop: 'clamp(36px, 6vw, 76px)' }}>
           <div className="el-hero">
