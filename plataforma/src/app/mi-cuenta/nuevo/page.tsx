@@ -9,6 +9,7 @@ import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { isSyntheticStaffEmail } from '@/lib/staff-email';
 import { rootDomainForUrls } from '@/lib/tenant';
 import { leerIntencion } from '@/lib/alta';
+import { motivoSinPrueba } from '@/lib/db/prueba-del-dueno';
 import NuevoRestaurante from './nuevo-restaurante';
 
 export const metadata: Metadata = {
@@ -47,9 +48,10 @@ export default async function NuevoRestaurantePage({
   // pantalla que iba a terminar en un rechazo.
   if (isSyntheticStaffEmail(user.email)) redirect('/mi-cuenta');
 
-  const [memberships, pricing] = await Promise.all([
+  const [memberships, pricing, sinPrueba] = await Promise.all([
     getMyMemberships(),
     getEffectivePlanPricing(),
+    motivoSinPrueba(user.id),
   ]);
   const esElPrimero = !memberships.some((m) => canBill(m.role));
 
@@ -91,6 +93,7 @@ export default async function NuevoRestaurantePage({
             rootDomain={rootDomainForUrls()}
             pricing={pricing}
             esElPrimero={esElPrimero}
+            sinPrueba={sinPrueba}
             intencion={intencion}
           />
         </Glass>

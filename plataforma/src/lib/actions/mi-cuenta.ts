@@ -26,6 +26,7 @@ import { ensureOwnerOrganization } from '@/lib/db/organizations';
 import { withPlanFloor } from '@/lib/plans';
 import { newRestaurantBilling } from '@/lib/billing-signup';
 import { getPricingSettings } from '@/lib/db/billing';
+import { motivoSinPrueba } from '@/lib/db/prueba-del-dueno';
 import { findTemplate } from '@/lib/theme/templates';
 import type { OrderType } from '@/lib/theme/defaults';
 import { registrarEvento } from '@/lib/analytics-server';
@@ -327,13 +328,15 @@ export async function createAnotherRestaurant(
   });
 
   // ── Cobro ──────────────────────────────────────────────────
-  // El local nace en prueba si el plan elegido es de pago y la oferta está activa.
-  const pricing = await getPricingSettings();
+  // El local nace en prueba si el plan elegido es de pago, la oferta está
+  // activa y el dueño no tiene otra prueba abierta ni una sin contratar
+  // (migración 205; la base vuelve a comprobarlo al guardar).
+  const [pricing, sinPrueba] = await Promise.all([getPricingSettings(), motivoSinPrueba(user.id)]);
   const { error: cobroErr } = await db.from('restaurant_billing').insert({
     restaurant_id: restaurantId,
     ...newRestaurantBilling({
       planCode,
-      trialDays: pricing.trialDays,
+      trialDays: sinPrueba ? 0 : pricing.trialDays,
       ownerId: user.id,
     }),
   });
@@ -344,6 +347,8 @@ export async function createAnotherRestaurant(
     // Sin tema o mensualidad, el restaurante todavía no está listo para abrir.
     const { error: limpiezaErr } = await db.from('restaurants').delete().eq('id', restaurantId);
     console.error('[alta] no se pudo configurar el restaurante', restaurantId, altaErr.message, limpiezaErr?.message);
+    // Otra prueba del mismo dueño empezó a la vez (disparador de la 205).
+    if (cobroErr?.code === 'LGP01') return { error: `${cobroErr.message} Vuelve a crear el restaurante.` };
     return { error: 'No se pudo terminar de crear el restaurante. Inténtalo de nuevo.' };
   }
 

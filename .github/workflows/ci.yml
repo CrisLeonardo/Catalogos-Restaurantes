@@ -124,6 +124,7 @@ jobs:
         run: |
           docker exec -i supabase_db_plataforma psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 < supabase/pruebas/201_reestructura_planes.sql
           docker exec -i supabase_db_plataforma psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 < supabase/pruebas/204_prueba_y_resumen.sql
+          docker exec -i supabase_db_plataforma psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 < supabase/pruebas/205_prueba_por_dueno.sql
 
       - name: Instalar Chromium de Playwright
         run: npx playwright install --with-deps chromium

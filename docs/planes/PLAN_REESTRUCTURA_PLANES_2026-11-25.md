@@ -23,9 +23,16 @@ El PR #194 corrige el aviso de 300 pedidos, reconoce la personalización complet
 | LG-11 · Cambios | El dueño confirma importe y moneda. Se guardan el plan, las modalidades, el cobro y la auditoría en una transacción. Se rechaza una reducción si hay pedidos abiertos que perderían su modalidad o su mesa. Se conserva la política de cambio inmediato con nueva tarifa al siguiente corte. Queda pendiente programar reducciones al final del período y la regresión de todos los caminos de cobro. |
 | LG-12 · Oferta | Tarifas, modalidades y herramientas actualizadas en los componentes compartidos. Se reutilizan la comparativa y el alta aprobadas. Queda pendiente auditar todo el material promocional y verificar visualmente los flujos autenticados. |
 | LG-13 · Regresión | La prueba SQL cubre precios, acuerdo anterior, factura, cupo de platillos activos, cupones pausados y avanzados, una estación y reintento de cambio. El CI ejecuta la prueba SQL y el caso de mostrador de Estándar. La prueba de mostrador pasó con Edge y Supabase local. Falta la aceptación con un establecimiento de cada plan. |
-| LG-14 · Prueba | 14 días por establecimiento en los tres planes de pago. El dueño puede confirmar o retirar la contratación hasta el vencimiento. Al vencer, solo se genera la primera mensualidad si hay confirmación. Si vence sin confirmación, vuelve a Básico y se conservan los datos y los pedidos. El reloj de salud envía los avisos por correo. |
+| LG-14 · Prueba | 14 días por establecimiento en los tres planes de pago. El dueño puede confirmar o retirar la contratación hasta el vencimiento. Al vencer, solo se genera la primera mensualidad si hay confirmación. Si vence sin confirmación, vuelve a Básico y se conservan los datos y los pedidos. El reloj de salud envía los avisos por correo. Desde la 205, un dueño tiene una sola prueba en curso y sus locales nuevos no llevan prueba si una anterior terminó sin contratar; quien contrató sí puede probar en su siguiente local. |
 | LG-15 · Métricas | Alta, primer platillo y embudo de carta ya tienen eventos. Queda pendiente medir conversión de la prueba, cambios, cancelaciones y costo de soporte. |
 | LG-16 · Multisucursal | La política actual anuncia un cargo fijo. Falta confirmar el criterio de sucursal activa y la integración de los tramos con renovación y cobro del grupo. |
+
+## Correcciones de la revisión (25 de noviembre)
+
+Revisión de Claude sobre los commits de esta rama. Cada punto se corrigió en su propio commit.
+
+1. **Prueba sin control por persona.** La 203 quitó la regla de «una prueba por persona» y no puso ninguna otra: bastaba con crear un restaurante cada 14 días para no pagar. La migración 205 agrega `leogin_motivo_sin_prueba` y un disparador en `restaurant_billing` que vale para el alta de Mi cuenta y para la prueba desde Suscripción. El alta y Suscripción dejan de ofrecer la prueba y dicen por qué. Prueba: `supabase/pruebas/205_prueba_por_dueno.sql` (falla si se apaga el disparador).
+2. **Cambio de plan durante la prueba.** La 198 respondía «Contacta a Leogin». La 205 agrega `leogin_cambiar_plan_en_prueba`: otro plan de pago conserva la fecha de vencimiento y retira la contratación confirmada; Básico termina la prueba sin cobro ni recordatorios. `cambiarMiPlan` ya lo usa durante una prueba. **Falta la pantalla**: la lista de planes sigue oculta en prueba hasta que el dueño apruebe la maqueta.
 
 ## Maqueta para aprobar
 

@@ -4,6 +4,9 @@ begin;
 do $$
 declare
   persona uuid := gen_random_uuid();
+  -- Un dueño por restaurante: la 205 no deja dos pruebas en curso por persona.
+  duenos uuid[] := array[persona, gen_random_uuid(), gen_random_uuid()];
+  i int;
   gratis uuid;
   paga uuid;
   control uuid;
@@ -14,8 +17,8 @@ declare
   fechaVencimiento date;
   fecha date := (now() at time zone 'America/Guatemala')::date;
 begin
-  insert into auth.users (id, email) values (persona, persona::text || '@test.local');
-  insert into profiles (id, role, full_name) values (persona, 'RESTAURANT_OWNER', 'Prueba') on conflict (id) do nothing;
+  insert into auth.users (id, email) select d, d::text || '@test.local' from unnest(duenos) d;
+  insert into profiles (id, role, full_name) select d, 'RESTAURANT_OWNER', 'Prueba' from unnest(duenos) d on conflict (id) do nothing;
   insert into restaurants (name, slug, status, plan_actual)
     values ('Prueba que vuelve a Básico', 'qa-prueba-basico', 'active', 'BASICO') returning id into gratis;
   insert into restaurants (name, slug, status, plan_actual)
@@ -23,9 +26,10 @@ begin
   insert into restaurants (name, slug, status, plan_actual)
     values ('Prueba que retira', 'qa-prueba-retira', 'active', 'BASICO') returning id into control;
 
-  for comida in select unnest(array[gratis,paga,control]) loop
+  for i in 1..3 loop
+    comida := (array[gratis,paga,control])[i];
     realizado := leogin_iniciar_prueba_de_plan(
-      comida, persona, 'EN_LINEA', 'En línea',
+      comida, duenos[i], 'EN_LINEA', 'En línea',
       (select modules from restaurants where id = comida),
       leogin_plan_module_floor('EN_LINEA'), null, '["pickup","delivery"]', 75
     );

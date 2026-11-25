@@ -15,6 +15,7 @@ import {
 } from '@/lib/alta';
 import { diaDeCobroDelAlta } from '@/lib/billing-signup';
 import { fmtMoney } from '@/lib/money';
+import { TEXTO_SIN_PRUEBA, type MotivoSinPrueba } from '@/lib/prueba-del-dueno';
 import { ErrorBox, Field, Stepper, WizardNav, enfocarCampo, localSlugify } from '@/components/signup/wizard-ui';
 import { leerLista } from '@/lib/importar-carta';
 
@@ -93,6 +94,7 @@ export default function NuevoRestaurante({
   rootDomain,
   pricing = defaultPlanPricing(),
   esElPrimero,
+  sinPrueba = null,
   intencion = null,
 }: {
   /** Lo que eligió en la web (LZ-11): la respuesta y el plan llegan puestos,
@@ -102,6 +104,8 @@ export default function NuevoRestaurante({
   pricing?: PlanPricing;
   /** ¿Todavía no es dueño de ningún restaurante? Decide textos y pasos. */
   esElPrimero: boolean;
+  /** Por qué este dueño ya no lleva prueba (migración 205); null si puede probar. */
+  sinPrueba?: MotivoSinPrueba;
 }) {
   const [state, formAction, isPending] = useActionState<NewRestaurantState, FormData>(createAnotherRestaurant, null);
   /* El panel del local nuevo es la raíz de otro host: navega el navegador,
@@ -213,7 +217,7 @@ export default function NuevoRestaurante({
   }
 
   const precioPlan = planPriceLabel(pricing, plan);
-  const conPrueba = pricing.trialDays > 0 && plan !== 'BASICO';
+  const conPrueba = pricing.trialDays > 0 && plan !== 'BASICO' && !sinPrueba;
   /* El primer cobro, con monto, fecha y dónde se paga (LZ-01; maqueta
      §3). La fecha sale de la misma regla que guarda el alta: vence el día
      del alta, cada mes; del 29 al 31, el 28. Cada restaurante tiene su
@@ -227,7 +231,7 @@ export default function NuevoRestaurante({
     ? 'El plan Básico es gratis para siempre, sin tarjeta.'
     : conPrueba
       ? `Empiezas con ${pricing.trialDays} días gratis, sin tarjeta. Si quieres seguir por ${precioPlan}, confirma la contratación en Mi suscripción.`
-      : `Tu primer cobro es de ${monto} y vence ${diaCobro === dia ? `hoy, ${fechaVence}` : `el ${fechaVence}`}; después, cada ${diaCobro}. Lo pagas desde Mi suscripción. Sin contrato: lo cambias o das de baja cuando quieras.`;
+      : `${sinPrueba && pricing.trialDays > 0 ? `${TEXTO_SIN_PRUEBA[sinPrueba]} ` : ''}Tu primer cobro es de ${monto} y vence ${diaCobro === dia ? `hoy, ${fechaVence}` : `el ${fechaVence}`}; después, cada ${diaCobro}. Lo pagas desde Mi suscripción. Sin contrato: lo cambias o das de baja cuando quieras.`;
 
   return (
     <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>

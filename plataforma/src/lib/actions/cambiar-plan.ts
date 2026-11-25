@@ -48,11 +48,15 @@ export async function cambiarMiPlan(
   // Service role a propósito: el candado de la 139 no deja que una sesión
   // cambie su propio plan. La autorización es la de arriba.
   const db = createServiceClient();
-  const [{ data: rest }, { data: tema, error: errorTema }] = await Promise.all([
+  const [{ data: rest }, { data: tema, error: errorTema }, { data: cobro, error: errorCobro }] = await Promise.all([
     db.from('restaurants').select('name, plan_actual, modules').eq('id', restaurantId).single(),
     db.from('restaurant_themes').select('config').eq('restaurant_id', restaurantId).maybeSingle(),
+    db.from('restaurant_billing')
+      .select('active, trial_started_at, trial_finished_at, trial_ends_at')
+      .eq('restaurant_id', restaurantId).maybeSingle(),
   ]);
   if (!rest) return { error: 'Restaurante no encontrado.' };
+  if (errorCobro) return { error: 'No se pudo leer tu suscripción. Inténtalo de nuevo.' };
   const antes = ((rest.plan_actual as PlanCode | null) ?? 'BASICO');
   if (errorTema) return { error: 'No se pudo leer la configuración de pedidos. Inténtalo de nuevo.' };
   if (antes !== confirmacion.planActual && antes !== plan) {
@@ -72,11 +76,18 @@ export async function cambiarMiPlan(
     p_modos_nuevos: modosAlCambiarDePlan(plan, modosAntes),
     p_importe: confirmacion.importe,
   };
+  /* Durante una prueba voluntaria el cambio no toca el cobro: cambia el plan
+     que se prueba (misma fecha de vencimiento) o, con Básico, termina la
+     prueba en ese momento (migración 205). */
+  const enPrueba = !!cobro?.trial_started_at && !cobro.trial_finished_at && cobro.active === false
+    && !!cobro.trial_ends_at && Date.parse(cobro.trial_ends_at as string) > Date.now();
   const { data: aplicado, error } = confirmacion.iniciarPrueba === true
     ? await db.rpc('leogin_iniciar_prueba_de_plan', cambio)
-    : await db.rpc('leogin_confirmar_cambio_de_plan', {
-        ...cambio, p_anterior: confirmacion.planActual, p_moneda: confirmacion.moneda,
-      });
+    : enPrueba
+      ? await db.rpc('leogin_cambiar_plan_en_prueba', { ...cambio, p_anterior: confirmacion.planActual })
+      : await db.rpc('leogin_confirmar_cambio_de_plan', {
+          ...cambio, p_anterior: confirmacion.planActual, p_moneda: confirmacion.moneda,
+        });
   if (error) return { error: error.code === 'LGP01' ? error.message : 'No se pudo cambiar el plan. Inténtalo de nuevo.' };
   if (aplicado) await avisarALeogin(rest.name as string, antes, plan);
 

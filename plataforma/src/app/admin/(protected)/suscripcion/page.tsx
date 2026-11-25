@@ -30,6 +30,7 @@ import PagaTuPlan from '@/components/admin/paga-tu-plan';
 import CambiarPlan from '@/components/admin/cambiar-plan';
 import PruebaDePlan from '@/components/admin/prueba-de-plan';
 import { duenoDelRestaurante } from '@/lib/auth/acceso-cobro';
+import { motivoSinPrueba } from '@/lib/db/prueba-del-dueno';
 import { estadoDelTope } from '@/lib/tope-pedidos';
 import { pedidosDelMes } from '@/lib/db/tope-pedidos';
 import AvisoLectura from '@/components/admin/aviso-lectura';
@@ -118,7 +119,11 @@ export default async function SuscripcionPage() {
   const onTrial = isOnTrial(config);
   const trialLeft = trialDaysLeft(config);
   const pruebaVoluntaria = config?.trial_started_at != null;
-  const puedeProbar = currentPlan === 'BASICO' && !config?.trial_ends_at && pricing.trialDays > 0;
+  const enPruebaVoluntaria = onTrial && pruebaVoluntaria;
+  const ofrecePrueba = currentPlan === 'BASICO' && !config?.trial_ends_at && pricing.trialDays > 0;
+  // Una prueba en curso por dueño y ninguna tras una prueba sin contratar (migración 205).
+  const sinPrueba = ofrecePrueba && dueno ? await motivoSinPrueba(dueno, restaurantId) : null;
+  const puedeProbar = ofrecePrueba && !sinPrueba;
   const pendientesDePrueba = pruebaVoluntaria && !!config?.trial_finished_at
     && !config.trial_confirmed_at && currentPlan === 'BASICO'
     ? (await db.from('orders').select('id', { count: 'exact', head: true })
@@ -289,6 +294,7 @@ export default async function SuscripcionPage() {
         esDueno={esDueno}
         enPrueba={onTrial}
         puedeProbar={puedeProbar}
+        sinPrueba={sinPrueba}
         proximoCorte={config ? nextChargeLabel(config.billing_day) : null}
       />}
 

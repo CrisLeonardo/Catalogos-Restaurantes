@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Section } from '@/components/ui/section';
 import { Icon } from '@/components/icons';
 import { cambiarMiPlan } from '@/lib/actions/cambiar-plan';
+import { TEXTO_SIN_PRUEBA, type MotivoSinPrueba } from '@/lib/prueba-del-dueno';
 import {
   PLANS, PLAN_POINTS, PUBLIC_PLANS, PLAN_COLOR_VAR, isUpgrade, loQueSePierde, planPriceLabel,
   planChangePresentation, type planPresentation, type PlanCode, type PlanPricing,
@@ -29,12 +30,14 @@ interface Props {
   esDueno: boolean;
   enPrueba: boolean;
   puedeProbar?: boolean;
+  /** Por qué este dueño ya no lleva prueba aquí (migración 205). */
+  sinPrueba?: MotivoSinPrueba;
   /** «1 dic 2026» */
   proximoCorte: string | null;
   currentPresentation?: ReturnType<typeof planPresentation> | null;
 }
 
-export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno, enPrueba, puedeProbar = false, proximoCorte, currentPresentation }: Props) {
+export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno, enPrueba, puedeProbar = false, sinPrueba = null, proximoCorte, currentPresentation }: Props) {
   const router = useRouter();
   const [elegido, setElegido] = useState<PlanCode | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -121,7 +124,7 @@ export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno
               ? `El cambio del plan es inmediato. Se conserva tu mensualidad acordada (${preview.monthlyLabel}); la tarifa pública de ${preview.name} es ${preview.publicLabel}.`
               : enPrueba
                 ? `Sigues en tu prueba gratis. Al terminar, se cobra ${planPriceLabel(pricing, elegido)}.`
-                : `El cambio es inmediato. La mensualidad nueva se cobra desde tu próximo corte${proximoCorte ? ` (${proximoCorte})` : ''}.`}
+                : `${sinPrueba ? `${TEXTO_SIN_PRUEBA[sinPrueba]} ` : ''}El cambio es inmediato. La mensualidad nueva se cobra desde tu próximo corte${proximoCorte ? ` (${proximoCorte})` : ''}.`}
           </p>
           {pierde.length > 0 && (
             <div className="note note-warn" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 4 }}>

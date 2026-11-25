@@ -1,5 +1,5 @@
 -- ============================================================
---  Huellas de las funciones críticas · hasta la migración 204
+--  Huellas de las funciones críticas · hasta la migración 205
 --  GENERADO por scripts/huellas-funciones.mjs --escribir. No editar a mano.
 --  ------------------------------------------------------------
 --  Pégalo en el editor SQL de Supabase (producción). Solo lee.
@@ -11,6 +11,7 @@ with esperadas(firma, huella) as (
   values
     ('leogin_apply_auto_price(p_restaurant_id uuid)', 'e2c814ab06b0022ad78ca52efea85ada'),
     ('leogin_apply_auto_price_all()', 'a0b3668e5eb34c9acd7fc55f7517fe6b'),
+    ('leogin_cambiar_plan_en_prueba(p_restaurante uuid, p_actor uuid, p_anterior text, p_nuevo text, p_nombre text, p_modulos_anteriores jsonb, p_modulos_nuevos jsonb, p_modos_anteriores jsonb, p_modos_nuevos jsonb, p_importe numeric)', 'd9df1bd9fde6581988c573be140bc1ea'),
     ('leogin_catalog_plan_fee(p_plan text)', '43022c1405d13af9d6ad5c9e23a6d4c0'),
     ('leogin_cerrar_cuenta_pagada(p_restaurant uuid, p_mesa integer, p_cuenta text, p_actor uuid, p_intento uuid)', '5b779b82c0f1c461dabfe38fea3d3544'),
     ('leogin_cerrar_pruebas_voluntarias()', '97570c11df7de64c25a4490412f8bf11'),
@@ -29,12 +30,14 @@ with esperadas(firma, huella) as (
     ('leogin_graduate_trials()', 'd9ee3d166b14ee94d9403255619aeaba'),
     ('leogin_guardar_borrador_caja(p_restaurant uuid, p_periodo timestamp with time zone, p_turno uuid, p_revision uuid, p_corte uuid, p_actor uuid, p_nombre text, p_payload jsonb)', 'f5c894250223c1425b8d83e429d6d423'),
     ('leogin_iniciar_prueba_de_plan(p_restaurante uuid, p_actor uuid, p_nuevo text, p_nombre text, p_modulos_anteriores jsonb, p_modulos_nuevos jsonb, p_modos_anteriores jsonb, p_modos_nuevos jsonb, p_importe numeric)', '07be76d51b4db62aa7f27e0bfbbe9c28'),
+    ('leogin_motivo_sin_prueba(p_dueno uuid, p_restaurante uuid)', '744221548db018714584f842823e15f5'),
     ('leogin_permisos_por_trabajo(p_role text, p_perms jsonb)', '9ee6d3dd390f041865e95bdc66ab4939'),
     ('leogin_process_overdue()', '5d02732197876e3d9f6cdbcaa8cf6f5d'),
     ('leogin_puede(p_restaurant uuid, VARIADIC p_secciones text[])', 'b7ac055b303097c872dbe950888aebb4'),
     ('leogin_recuperar_cierre_caja(p_restaurant uuid, p_intento uuid, p_actor uuid, p_solicitud jsonb)', '15e1215732c832ef3d8e651b60e4f7e6'),
     ('leogin_recuperar_intento_cobro(p_restaurant uuid, p_mesa integer, p_intento uuid, p_operacion text, p_solicitud jsonb, p_actor uuid)', 'd2d0c28a8631853ca16015a3b099a6bc'),
-    ('leogin_solicitar_traspaso_caja(p_restaurant uuid, p_corte uuid, p_entrega uuid, p_recibe uuid, p_nota text)', '7fcb377eb61db55f118ef858c576d109')
+    ('leogin_solicitar_traspaso_caja(p_restaurant uuid, p_corte uuid, p_entrega uuid, p_recibe uuid, p_nota text)', '7fcb377eb61db55f118ef858c576d109'),
+    ('leogin_validar_prueba_del_dueno()', '3444bfaa5160c829f0f22beeb7004145')
 ),
 actuales as (
   select p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' as firma,
