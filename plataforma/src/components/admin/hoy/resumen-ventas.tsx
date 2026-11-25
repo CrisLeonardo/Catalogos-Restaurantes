@@ -59,9 +59,9 @@ export async function ResumenVentas({ restaurantId, timezone, periodo, href, din
             {report.topByQuantity.length > 0 && (
               <div>
                 <h4 className="mb-2 text-[14px] font-semibold text-adm-text">Platillos más pedidos</h4>
-                <List>
+                <List role="list" className="rounded-none border-0 bg-transparent shadow-none">
                   {report.topByQuantity.map(({ name, qty }) => (
-                    <ListRow key={name}>
+                    <ListRow key={name} role="listitem" className="px-0">
                       <ListText title={name} />
                       <span className="shrink-0 text-[14px] font-semibold tabular-nums text-adm-text">{qty}</span>
                     </ListRow>
