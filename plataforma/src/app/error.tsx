@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import { isStaleBuildError, recoverFromStaleBuild } from '@/lib/stale-build';
 import { useReportarError } from '@/lib/observability/report-client-error';
 

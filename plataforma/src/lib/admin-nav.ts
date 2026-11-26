@@ -148,7 +148,7 @@ export function buildNav(ctx: NavContext): NavGroup[] {
         { href: '/admin/menu', label: 'Platillos', key: 'catalogo' },
         { href: '/admin/categorias', label: 'Categorías', key: 'categorias' },
         ...(on(ctx.ingredientesEnabled) ? [{ href: '/admin/ingredientes', label: 'Ingredientes', key: 'ingredientes' }] : []),
-        ...lockable(ctx, ctx.inventarioEnabled, plan.hasAnalytics, { href: '/admin/inventario', label: 'Inventario', key: 'inventario' }),
+        ...lockable(ctx, ctx.inventarioEnabled, plan.hasProductInventory, { href: '/admin/inventario', label: 'Inventario', key: 'inventario' }),
         ...(on(ctx.proveedoresActive) ? [{ href: '/admin/proveedores', label: 'Proveedores', key: 'proveedores' }] : []),
       ],
     },

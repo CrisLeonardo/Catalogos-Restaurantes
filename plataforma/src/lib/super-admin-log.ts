@@ -61,6 +61,8 @@ export type AccionSuper =
   // irreversibles ni tocan la cuenta de nadie, y una bitácora que
   // apunta todo es una que nadie lee.
   | 'restaurante.borrar'
+  // Lo que Leogin le cobró, copiado aquí antes de borrarlo (lib/borrar-local.ts).
+  | 'restaurante.cobros-guardados'
   | 'restaurante.plan'
   | 'restaurante.estado'
   // Grupos

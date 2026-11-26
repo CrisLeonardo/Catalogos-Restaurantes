@@ -42,6 +42,8 @@ export interface Restaurant {
   status: 'active' | 'suspended';
   whatsapp_number: string | null;
   contact_email: string | null;
+  /** Última vez que el dueño usó «Exportar tus datos» (migración 195). */
+  datos_exportados_at?: string | null;
   // Operación (migración 009)
   timezone: string;
   /** Minutos tras la medianoche en que empieza el día de caja (migración 145). */

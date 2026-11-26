@@ -8,7 +8,12 @@ import GoogleStaffButton from '@/components/auth/google-staff-button';
 import GoogleG from '@/components/auth/google-g';
 import { signupAccount, type SignupState } from '@/lib/actions/signup';
 import type { PlanPricing } from '@/lib/plans';
-import { ErrorBox, Field, Stepper, WizardNav } from '@/components/signup/wizard-ui';
+import { ErrorBox, Field, Stepper, WizardNav, enfocarCampo } from '@/components/signup/wizard-ui';
+import { enlaceDeAlta, type IntencionAlta } from '@/lib/alta';
+
+const PLAN_NOMBRE_ALTA: Record<IntencionAlta['plan'], string> = {
+  BASICO: 'Básico', EN_LINEA: 'En línea', ESTANDAR: 'Estándar', PREMIUM: 'Premium',
+};
 
 const empty: SignupState = null;
 
@@ -43,7 +48,13 @@ export default function SignupWizard({
   googleAccount = null,
   existingAccount = null,
   authError = false,
+  intencion = null,
+  precioIntencion = null,
 }: {
+  /** Lo que eligió en la web (LZ-11). Se muestra en una línea y viaja al alta. */
+  intencion?: IntencionAlta | null;
+  /** «Q150 / mes» o «Gratis», con los precios vigentes. */
+  precioIntencion?: string | null;
   /** Ya no se usa en esta pantalla (ficha 2.3); se conserva la firma. */
   pricing?: PlanPricing;
   /** ¿Está configurado el acceso con Google? (NEXT_PUBLIC_GOOGLE_AUTH_ENABLED) */
@@ -112,16 +123,18 @@ export default function SignupWizard({
      términos se aceptan al crear la cuenta, dicho junto al botón. */
   function validar(e: React.FormEvent<HTMLFormElement>) {
     setStepError(null);
-    const error = fullName.trim().length < 2
-      ? 'Escribe tu nombre.'
+    const [error, campo] = fullName.trim().length < 2
+      ? ['Escribe tu nombre.', 'input[autocomplete="name"]']
       : !withGoogle && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-        ? 'Escribe un correo válido.'
+        ? ['Escribe un correo válido.', 'input[type="email"]']
         : !withGoogle && password.length < 8
-          ? 'La contraseña debe tener al menos 8 caracteres.'
-          : null;
+          ? ['La contraseña debe tener al menos 8 caracteres.', 'input[autocomplete="new-password"]']
+          : [null, null];
     if (error) {
       e.preventDefault();
       setStepError(error);
+      // El aviso se anuncia solo (role="alert"); el foco va a lo que falta.
+      enfocarCampo(e.currentTarget, campo!);
     }
   }
 
@@ -139,6 +152,24 @@ export default function SignupWizard({
 
       <Stepper steps={['Tu cuenta', 'Tu negocio', 'Qué vendes', 'Tu carta']} step={0} />
 
+      {/* Maqueta aprobada: docs/diseno/MAQUETA_ALTA_CON_PLAN_2026-11-23.html §1.
+          Una línea, sin botón: confirma lo que eligió y que aquí no se cobra. */}
+      {intencion && (
+        <p className="alta-plan-elegido">
+          <span aria-hidden className="alta-plan-punto" />
+          <span>
+            Plan elegido: <strong>{PLAN_NOMBRE_ALTA[intencion.plan]} · {precioIntencion}</strong>.
+            {' '}Lo confirmas antes de crear tu restaurante.
+          </span>
+        </p>
+      )}
+      {intencion && (
+        <>
+          <input type="hidden" name="alta_plan" value={intencion.plan} />
+          <input type="hidden" name="alta_caso" value={intencion.caso} />
+        </>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Ya hay una sesión abierta con cuenta de Leogin. Decirlo aquí evita
             el "ya existe ese correo" al final, cuando ya se llenó todo. */}
@@ -155,7 +186,7 @@ export default function SignupWizard({
               No hace falta otra: con la que ya tienes puedes abrir todos los
               restaurantes que quieras.
               {' '}
-              <a href="/mi-cuenta/nuevo" style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'none' }}>
+              <a href={enlaceDeAlta(intencion, '/mi-cuenta/nuevo')} style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'none' }}>
                 Crear un restaurante
               </a>
               {existingAccount.panelUrl && (
@@ -190,7 +221,7 @@ export default function SignupWizard({
             <GoogleStaffButton
               intent="signup"
               label="Registrarme con Google"
-              next="/registro"
+              next={enlaceDeAlta(intencion)}
               onBeforeRedirect={saveDraft}
             />
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -202,18 +233,24 @@ export default function SignupWizard({
         ) : null}
 
         <Field label="Tu nombre">
-          <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre y apellido" className="adm-field adm-field-lg" />
+          {(ids) => (
+            <input {...ids} value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre y apellido" autoComplete="name" className="adm-field adm-field-lg" />
+          )}
         </Field>
         {!withGoogle && (
         <Field label="Correo" hint="Con este correo entrarás a tu panel y recuperarás tu contraseña si se te olvida. Revísalo bien.">
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" autoComplete="email" className="adm-field adm-field-lg" />
+          {(ids) => (
+            <input {...ids} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" autoComplete="email" className="adm-field adm-field-lg" />
+          )}
         </Field>
         )}
         {!withGoogle && (
         <>
         <Field label="Contraseña" hint="Mínimo 8 caracteres.">
+          {(ids) => (
           <div style={{ display: 'flex', gap: 8 }}>
             <input
+              {...ids}
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -234,6 +271,7 @@ export default function SignupWizard({
               <Icon name="eye" size={17} />
             </button>
           </div>
+          )}
         </Field>
         </>
         )}

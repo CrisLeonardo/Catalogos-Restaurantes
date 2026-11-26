@@ -11,7 +11,9 @@ import type { EstadoComprobante } from '@/lib/pago-plan';
    (el dueño por usuarioDelCobro, el super admin por su layout).
    ============================================================ */
 
-export const BUCKET_COMPROBANTES = 'payment-proofs';
+import { BUCKET_COMPROBANTES } from '@/lib/archivos-del-local';
+
+export { BUCKET_COMPROBANTES };
 
 /** Cuánto vive el enlace firmado para ver un comprobante. */
 const FIRMA_SEGUNDOS = 10 * 60;

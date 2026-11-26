@@ -8,29 +8,61 @@
    modos de pedido. Reglas puras, con pruebas en alta.test.ts.
    ============================================================ */
 
-export type ComoTePiden = 'carta' | 'llevar' | 'mesas';
+/* Las MISMAS cuatro respuestas que la web (Planes y la portada). Antes el
+   alta tenía tres y quien eligió «En mostrador» en Planes no encontraba su
+   caso: con «mesas» le proponía Premium y con «para llevar», En línea
+   (auditoría de lanzamiento 2026-11-23, LZ-11; maqueta
+   docs/diseno/MAQUETA_ALTA_CON_PLAN_2026-11-23.html). */
+export type ComoTePiden = 'carta' | 'llevar' | 'mostrador' | 'mesas';
 export type PlanAlta = 'BASICO' | 'EN_LINEA' | 'ESTANDAR' | 'PREMIUM';
 export type ModoPedido = 'dine_in' | 'pickup' | 'delivery';
 
+const COMOS: ComoTePiden[] = ['carta', 'llevar', 'mostrador', 'mesas'];
+const PLANES_ALTA: PlanAlta[] = ['BASICO', 'EN_LINEA', 'ESTANDAR', 'PREMIUM'];
+
 /** Solo ven la carta → Básico; para llevar y a domicilio → En línea;
-    mesas con meseros → Premium. Estándar se elige a mano. */
+    en mostrador → Estándar; mesas con meseros → Premium. */
 export function planSugerido(como: ComoTePiden): PlanAlta {
-  return como === 'carta' ? 'BASICO' : como === 'llevar' ? 'EN_LINEA' : 'PREMIUM';
+  if (como === 'carta') return 'BASICO';
+  if (como === 'llevar') return 'EN_LINEA';
+  if (como === 'mostrador') return 'ESTANDAR';
+  return 'PREMIUM';
 }
 
-/** Los casos de la web pública (fichas V.2 y V.3, 2026-11-18): los tres del
-    alta más «mostrador» (cafetería sin meseros), que en el alta se elige a
-    mano como Estándar. La web recomienda con ESTA regla para que no diga
-    una cosa y el alta otra. */
-export type CasoDeLaWeb = ComoTePiden | 'mostrador';
+/** Los casos de la web pública son los mismos del alta. */
+export type CasoDeLaWeb = ComoTePiden;
 
 /** El plan para un caso de la web. Para llevar con más de 300 pedidos al
     mes pasa a Estándar: En línea los deja pasar (límite blando), pero
     Estándar no tiene tope y trae reportes. */
 export function planParaTuCaso(caso: CasoDeLaWeb, masDe300 = false): PlanAlta {
-  if (caso === 'mostrador') return 'ESTANDAR';
   if (caso === 'llevar' && masDe300) return 'ESTANDAR';
   return planSugerido(caso);
+}
+
+/** Lo que eligió en la web y viaja hasta el alta. */
+export interface IntencionAlta { plan: PlanAlta; caso: ComoTePiden }
+
+/**
+ * Lee el plan y el caso que llegan por el enlace (o guardados en la cuenta)
+ * sin confiar en ellos: cualquier valor fuera de lista se ignora. Con solo
+ * el caso, el plan sale de la regla de la web; con solo el plan, del caso
+ * que lo sugiere.
+ */
+export function leerIntencion(plan: unknown, caso: unknown): IntencionAlta | null {
+  const c = typeof caso === 'string' && (COMOS as string[]).includes(caso) ? caso as ComoTePiden : null;
+  const p = typeof plan === 'string' && (PLANES_ALTA as string[]).includes(plan) ? plan as PlanAlta : null;
+  if (c && p) return { plan: p, caso: c };
+  if (c) return { plan: planSugerido(c), caso: c };
+  if (p) return { plan: p, caso: COMOS.find((x) => planSugerido(x) === p) ?? 'carta' };
+  return null;
+}
+
+/** La dirección del registro con lo que eligió en la web. */
+export function enlaceDeAlta(intencion: IntencionAlta | null, base = '/registro'): string {
+  if (!intencion) return base;
+  const q = new URLSearchParams({ plan: intencion.plan, caso: intencion.caso });
+  return `${base}?${q.toString()}`;
 }
 
 /** Los dos modos de Estándar según cómo le piden. */

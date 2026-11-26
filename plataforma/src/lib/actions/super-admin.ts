@@ -1,7 +1,11 @@
 'use server';
 
+import { borrarLocal } from '@/lib/borrar-local';
+import { clientIp } from '@/lib/rate-limit';
+import { headers } from 'next/headers';
 import { leerPapel } from '@/lib/permisos-trabajo';
 import { createServiceClient } from '@/lib/supabase/service';
+import { diaDeCobroDelAlta } from '@/lib/billing-signup';
 import { verifySuperAdmin, currentSuperAdmin } from '@/lib/auth/super-admin-guard';
 import { logSuper } from '@/lib/super-admin-log';
 import { faltaLaTabla } from '@/lib/db/migracion-ausente';
@@ -75,6 +79,8 @@ export async function createRestaurant(
     restaurant_id: restaurant.id,
     auto_price: true,
     active: true,
+    // Vence en el aniversario del alta, no el día 1 ya pasado (LZ-01).
+    ...diaDeCobroDelAlta(),
   });
   await db.rpc('leogin_apply_auto_price', { p_restaurant_id: restaurant.id });
 
@@ -487,23 +493,29 @@ export async function deleteRestaurant(formData: FormData) {
   const { db } = sesion;
 
   const id = formData.get('id') as string;
+  if (!id) return;
 
-  // El nombre se guarda ANTES de borrar. Después ya no existe, y una fila
-  // que dijera solo «se borró el restaurante 3f2a…» no le explica nada a
-  // nadie. Por lo mismo la tabla no tiene clave foránea aquí: si la
-  // tuviera en cascada, este borrado se llevaría su propio registro.
-  const { data: previo } = await db.from('restaurants').select('name, slug').eq('id', id).maybeSingle();
-
-  await db.from('restaurants').delete().eq('id', id);
+  // Guarda sus cobros de Leogin en la bitácora antes de borrar, y no
+  // borra si no puede guardarlos (LZ-08 y LZ-10). Ver lib/borrar-local.ts.
+  const quien = { actorId: sesion.actorId, actorEmail: sesion.actorEmail, ip: clientIp(await headers()) };
+  const { nombre, slug, cobrosGuardados, archivos } = await borrarLocal(db, quien, id);
 
   await logSuper(sesion, {
     action: 'restaurante.borrar',
     targetRestaurantId: id,
-    targetLabel: (previo?.name as string | null) ?? null,
-    meta: { slug: previo?.slug ?? null },
+    targetLabel: nombre,
+    meta: {
+      slug,
+      cobros_guardados: cobrosGuardados,
+      fotos_borradas: archivos.fotosBorradas,
+      fotos_conservadas: archivos.fotosConservadas,
+      comprobantes_borrados: archivos.comprobantesBorrados,
+      ...(archivos.error ? { archivos_error: archivos.error } : {}),
+    },
   });
 
   revalidatePath('/super/restaurantes');
+  revalidatePath('/super/finanzas', 'layout');
   redirect('/super/restaurantes');
 }
 

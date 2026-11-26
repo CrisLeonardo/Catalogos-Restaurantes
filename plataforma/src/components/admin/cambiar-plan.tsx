@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Section } from '@/components/ui/section';
 import { Icon } from '@/components/icons';
 import { cambiarMiPlan } from '@/lib/actions/cambiar-plan';
+import { TEXTO_SIN_PRUEBA, type MotivoSinPrueba } from '@/lib/prueba-del-dueno';
 import {
-  PLANS, PLAN_POINTS, PUBLIC_PLANS, PLAN_COLOR_VAR, isUpgrade, loQueSePierde, planPriceLabel,
+  PLANS, PLAN_POINTS, PUBLIC_PLANS, PLAN_COLOR_VAR, isUpgrade, loQueSePierde, planPriceLabel, planPriceQ,
   planChangePresentation, type planPresentation, type PlanCode, type PlanPricing,
 } from '@/lib/plans';
 
@@ -19,6 +20,11 @@ import {
    con lo que cambia: el precio, desde cuándo, y —si es bajar— lo que
    se deja de tener, dicho antes y no después. Antes cada «Actualizar»
    abría un WhatsApp a Leogin.
+
+   Durante una prueba voluntaria (migración 205) la misma lista sirve
+   para probar otro plan con la misma fecha de vencimiento o para volver
+   a Básico terminando la prueba. Maqueta aprobada:
+   docs/diseno/MAQUETA_CAMBIO_DE_PLAN_EN_PRUEBA_2026-11-25.html.
    ============================================================ */
 
 interface Props {
@@ -28,12 +34,17 @@ interface Props {
   /** Solo el dueño cambia el plan; el personal ve los planes sin botón. */
   esDueno: boolean;
   enPrueba: boolean;
+  puedeProbar?: boolean;
+  /** Por qué este dueño ya no lleva prueba aquí (migración 205). */
+  sinPrueba?: MotivoSinPrueba;
   /** «1 dic 2026» */
   proximoCorte: string | null;
+  /** Prueba voluntaria en curso: vencimiento y si ya confirmó la contratación. */
+  pruebaEnCurso?: { endsAt: string; confirmada: boolean } | null;
   currentPresentation?: ReturnType<typeof planPresentation> | null;
 }
 
-export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno, enPrueba, proximoCorte, currentPresentation }: Props) {
+export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno, enPrueba, puedeProbar = false, sinPrueba = null, proximoCorte, pruebaEnCurso = null, currentPresentation }: Props) {
   const router = useRouter();
   const [elegido, setElegido] = useState<PlanCode | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,16 +53,29 @@ export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno
 
   const pierde = elegido ? loQueSePierde(planActual, elegido) : [];
   const sube = elegido ? isUpgrade(planActual, elegido) : false;
+  const iniciaPrueba = puedeProbar && !!elegido && elegido !== 'BASICO';
   const preview = elegido ? planChangePresentation(currentPresentation, elegido, pricing) : null;
+  const terminaPrueba = !!pruebaEnCurso && elegido === 'BASICO';
+  const cambiaPrueba = !!pruebaEnCurso && !!elegido && elegido !== 'BASICO';
+  const vencePrueba = pruebaEnCurso
+    ? new Intl.DateTimeFormat('es-GT', { day: 'numeric', month: 'long', timeZone: 'America/Guatemala' }).format(new Date(pruebaEnCurso.endsAt))
+    : '';
+  const retiro = pruebaEnCurso?.confirmada ? ` Se retira la contratación de ${PLANS[planActual].name} que confirmaste.` : '';
 
   function confirmar() {
-    if (!elegido) return;
+    if (!elegido || !preview) return;
     setError(null);
     start(async () => {
-      const r = await cambiarMiPlan(restaurantId, elegido);
+      const r = await cambiarMiPlan(restaurantId, elegido, {
+        planActual, importe: preview.monthlyAmount, moneda: preview.currency, iniciarPrueba: iniciaPrueba,
+      });
       if ('error' in r) return setError(r.error);
-      setHecho(`Listo: ya estás en ${PLANS[r.plan].name}.`);
+      setHecho(iniciaPrueba ? 'Tu prueba empezó.'
+        : terminaPrueba ? 'Tu prueba terminó. Tu carta sigue en Básico.'
+        : cambiaPrueba ? `Ahora pruebas ${PLANS[r.plan].name}.`
+        : `Listo: ya estás en ${PLANS[r.plan].name}.`);
       setElegido(null);
+      if (iniciaPrueba || cambiaPrueba) window.scrollTo(0, 0);
       router.refresh();
     });
   }
@@ -84,7 +108,7 @@ export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno
                 </span>
                 <span className="t-mono" style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text-2)' }}>{actual && currentPresentation ? currentPresentation.monthlyLabel : planPriceLabel(pricing, code)}</span>
               </div>
-              {actual && <span className="chip chip-ok" style={{ alignSelf: 'flex-start' }}>{currentPresentation?.manual ? 'Tu plan · precio acordado' : 'Tu plan'}</span>}
+              {actual && <span className="chip chip-ok" style={{ alignSelf: 'flex-start' }}>{pruebaEnCurso ? 'Lo estás probando' : currentPresentation?.manual ? 'Tu plan · precio acordado' : 'Tu plan'}</span>}
               <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {PLAN_POINTS[code].map((pt) => (
                   <li key={pt.text} style={{ display: 'flex', gap: 6, fontSize: 12, color: pt.positive ? 'var(--u-text-3)' : 'var(--u-text-4)' }}>
@@ -105,16 +129,22 @@ export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno
       {elegido && preview && (
         <Card className="p-4" style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--u-text)' }}>
-            {sube ? 'Subir' : 'Cambiar'} a {PLANS[elegido].name} · {preview.monthlyLabel}
+            {terminaPrueba ? 'Volver a ' : iniciaPrueba || cambiaPrueba ? 'Probar ' : sube ? 'Subir a ' : 'Cambiar a '}{PLANS[elegido].name} · {preview.monthlyLabel}
           </div>
           <p style={{ fontSize: 13, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-            {preview.manual
-              ? `El cambio del plan es inmediato. Se conserva tu mensualidad acordada (${preview.monthlyLabel}); la tarifa pública de ${preview.name} es ${preview.publicLabel}.`
+            {terminaPrueba
+              ? `Tu prueba termina ahora, sin cobro.${retiro} Tu carta, tus platillos y tus datos se conservan. No podrás iniciar otra prueba en este restaurante.`
+              : cambiaPrueba
+              ? `Sigues en tu prueba hasta el ${vencePrueba}, ahora con ${PLANS[elegido].name}.${retiro} Si quieres seguir, confirma la mensualidad de ${planPriceQ(pricing, elegido)} antes de esa fecha.`
+              : iniciaPrueba
+              ? `Prueba el plan durante ${pricing.trialDays} días sin tarjeta. Si quieres seguir, confirma la mensualidad antes del vencimiento.`
               : pricing.prices[elegido] === 0
-              ? 'Es gratis: dejas de pagar mensualidad desde tu próximo corte.'
+              ? 'Es gratis: dejas de pagar mensualidad desde tu próximo corte. Tu carta y tu QR siguen funcionando; lo que ya debías sigue pendiente en esta pantalla.'
+              : preview.manual
+              ? `El cambio del plan es inmediato. Se conserva tu mensualidad acordada (${preview.monthlyLabel}); la tarifa pública de ${preview.name} es ${preview.publicLabel}.`
               : enPrueba
                 ? `Sigues en tu prueba gratis. Al terminar, se cobra ${planPriceLabel(pricing, elegido)}.`
-                : `El cambio es inmediato. La mensualidad nueva se cobra desde tu próximo corte${proximoCorte ? ` (${proximoCorte})` : ''}.`}
+                : `${sinPrueba ? `${TEXTO_SIN_PRUEBA[sinPrueba]} ` : ''}El cambio es inmediato. La mensualidad nueva se cobra desde tu próximo corte${proximoCorte ? ` (${proximoCorte})` : ''}.`}
           </p>
           {pierde.length > 0 && (
             <div className="note note-warn" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 4 }}>
@@ -126,8 +156,11 @@ export default function CambiarPlan({ restaurantId, planActual, pricing, esDueno
           )}
           {error && <p role="alert" style={{ fontSize: 13, color: 'var(--c-danger)', margin: 0 }}>{error}</p>}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Button type="button" onClick={confirmar} disabled={pending} className="rounded-adm-full">
-              {pending ? 'Cambiando…' : `Confirmar cambio a ${PLANS[elegido].name}`}
+            <Button type="button" variant={terminaPrueba ? 'outline' : 'primary'} onClick={confirmar} disabled={pending} className="rounded-adm-full">
+              {pending ? 'Guardando…'
+                : terminaPrueba ? 'Terminar prueba y volver a Básico'
+                : cambiaPrueba ? `Probar ${PLANS[elegido].name}`
+                : iniciaPrueba ? 'Iniciar prueba' : `Confirmar cambio a ${PLANS[elegido].name}`}
             </Button>
             <Button type="button" variant="ghost" onClick={() => setElegido(null)} disabled={pending}>Cancelar</Button>
           </div>

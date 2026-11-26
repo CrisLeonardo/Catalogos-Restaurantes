@@ -2,17 +2,16 @@ import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { conEvento, EVENTOS } from '@/lib/analytics';
-import { SiteHeader, SiteFooter, SectionHead, contactHref } from '@/components/site-chrome';
+import { SiteHeader, SiteFooter, SectionHead, contactHref, CONTACT_ICON, CONTACT_VIA } from '@/components/site-chrome';
 import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
 import { PLANS, PUBLIC_PLANS, planPriceQ, planPresentation, type PlanPricing } from '@/lib/plans';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { getLandingProof } from '@/lib/db/landing';
 import { Testimonials } from '@/components/landing-proof';
-import { LandingIntro } from '@/components/landing-intro';
+import { LandingIntro, LandingDemo, PlanPorPreguntas } from '@/components/islas-de-la-raiz';
 import { Leo } from '@/components/leo';
-import { LandingDemo } from '@/components/landing-demo';
-import { PlanPorPreguntas, type PlanDeLaWeb } from '@/components/landing-planes';
-import type { PlanAlta } from '@/lib/alta';
+import type { PlanDeLaWeb } from '@/components/landing-planes';
+import { enlaceDeAlta, type PlanAlta } from '@/lib/alta';
 import planesCss from '@/components/landing-planes.module.css';
 
 /* ============================================================
@@ -55,7 +54,7 @@ const FAQS = [
   { q: '¿Necesito saber de tecnología?', a: 'No. Te guiamos paso a paso y en minutos tienes tu menú en vivo. Si prefieres configuración asistida, consulta su tarifa en Planes.' },
   { q: '¿Cobran comisión por cada pedido?', a: 'No. Pagas una mensualidad fija según tu plan. Lo que vendes es tuyo: igual en un mes flojo que en tu mejor mes, sin porcentajes sobre tus ventas.' },
   { q: '¿Mis clientes tienen que descargar una app?', a: 'No. Todo abre con el QR en el navegador del celular, al instante. Si tu cliente quiere, puede “instalarlo” en su pantalla de inicio, pero es opcional.' },
-  { q: '¿Y si se va el internet en el restaurante?', a: 'Sigues operando. Con Leogin Escritorio en la computadora de la caja, el local toma pedidos por tu red, imprime las comandas y sincroniza todo con la nube en cuanto vuelve la conexión.' },
+  { q: '¿Y si se va el internet en el restaurante?', a: 'Si configuramos contigo una PC principal con Leogin Escritorio, el local sigue tomando pedidos por tu red (y, en Premium, imprimiendo las comandas) y todo se sincroniza con la nube al volver la conexión. Sin esa PC, el panel necesita internet.' },
   { q: '¿Cómo se verá mi carta?', a: 'Con tus colores, tu logo y tus fotos. Al crear tu restaurante eliges entre ocho maneras de recorrer la carta y decenas de paletas, y la cambias cuando quieras. La demo de Rincón 502 es una de ellas.' },
   { q: '¿Qué pasa cuando crezca?', a: 'Empiezas con lo que necesitas hoy y subes de plan cuando lo pidas, sin cambiar de sistema: mesas, cocina, inventario, lealtad, reservas y varias sucursales viven en el mismo panel.' },
   { q: '¿Puedo cambiar de plan después?', a: 'Sí, cuando quieras y sin penalización. Empiezas en el plan que te convenga hoy y subes a medida que creces.' },
@@ -109,10 +108,13 @@ export default async function LeoginLanding() {
 
   /* Los tres casos de V.2, con la misma regla que el alta (lib/alta.ts):
      mesas → Premium, mostrador → Estándar, redes → En línea. «Vendo por
-     redes» lleva a /vende-en-linea, su página propia. */
+     redes» lleva a /vende-en-linea, su página propia. Mesas y mostrador
+     abren la demo CON su caso: la barra de la demo dice qué probar, y su
+     «Empezar» y el «Quiero esto» del pedido de prueba llegan al alta con
+     ese plan (WEB-UX-01). */
   const casos: { icono: string; titulo: string; texto: string; plan: PlanAlta; href: string }[] = [
-    { icono: 'utensils', titulo: 'Tengo mesas y meseros', texto: 'El mesero pide en el celular, cocina lo ve en su pantalla y la caja cobra por mesa.', plan: 'PREMIUM', href: demoUrl },
-    { icono: 'coffee', titulo: 'Cafetería o mostrador', texto: 'Piden en el mostrador o para llevar, sin mesero. Cobras y la comanda sale sola.', plan: 'ESTANDAR', href: demoUrl },
+    { icono: 'utensils', titulo: 'Tengo mesas y meseros', texto: 'El mesero pide en el celular, cocina lo ve en su pantalla y la caja cobra por mesa.', plan: 'PREMIUM', href: `${demoUrl}/?caso=mesas` },
+    { icono: 'coffee', titulo: 'Cafetería o mostrador', texto: 'Piden en el mostrador o para llevar, sin mesero. Cobras y la comanda llega sola a cocina.', plan: 'ESTANDAR', href: `${demoUrl}/?caso=mostrador` },
     { icono: 'whatsapp', titulo: 'Vendo por redes', texto: 'Tus clientes piden desde WhatsApp o Instagram, para llevar o a domicilio.', plan: 'EN_LINEA', href: '/vende-en-linea' },
   ];
 
@@ -126,12 +128,13 @@ export default async function LeoginLanding() {
       <div className="lp-avance" aria-hidden />
       <SiteHeader home />
 
-      <main className="lp-main">
+      <main id="contenido" tabIndex={-1} className="lp-main">
         {/* ── 1 · Titular y video ──────────────────────────────
             El titular y el video «Un solo lugar» son los aprobados. La
             acción principal es probar la demo: es lo que mejor explica
-            Leogin. Crear el restaurante va segundo, y lo que es gratis se
-            dice DEBAJO del botón, no dentro (V.1, F01). */}
+            Leogin. Ver planes y precios va segundo (crear la cuenta vive en
+            la cabecera), y lo que es gratis se dice DEBAJO del botón, no
+            dentro (V.1, F01; maqueta del 2026-11-24). */}
         <section className="lp-shell" style={{ paddingTop: 'clamp(28px, 7vw, 84px)' }}>
           <div className="lp-hero-grid">
             <div className="lp-hero-copy">
@@ -150,6 +153,45 @@ export default async function LeoginLanding() {
               </p>
             </div>
 
+            <div className="lp-hero-acciones">
+              <div className="lp-hero-ctas">
+                <LandingDemo href={demoUrl} primaria />
+                {/* Crear la cuenta sigue en la cabecera; aquí, lo segundo que
+                    pregunta quien llega: cuánto cuesta (decisión del dueño,
+                    maqueta del 2026-11-24). */}
+                <Link href="/planes" className="lp-btn lp-btn-lg lp-btn-soft">
+                  Ver planes y precios
+                </Link>
+              </div>
+              <p className="lp-body" style={{ fontSize: 14, marginTop: 14, color: 'var(--u-text-3)' }}>
+                La carta con QR es gratis para siempre. Los pedidos van con un plan.
+              </p>
+            </div>
+            {/* ── 2 · ¿Cuál es tu caso? (V.2) ─────────────────────
+                Dentro de la rejilla del encabezado: en la PC va debajo, a lo
+                ancho, como antes; en el teléfono va ANTES del video, para que
+                los casos empiecen en la primera pantalla (WEB-UX-02, maqueta
+                del 2026-11-24). */}
+            <section id="casos" className="lp-hero-casos">
+              <SectionHead eyebrow="¿Cómo es tu negocio?" title="Elige el que se parece al tuyo" center />
+              <ul className={`lp-card ${planesCss.casos}`} style={{ marginTop: 24 }}>
+                {casos.map((c) => (
+                  <li key={c.titulo}>
+                    <Link href={c.href} className={planesCss.caso}>
+                      <span className={planesCss.casoIcono} aria-hidden><Icon name={c.icono} size={20} /></span>
+                      <span style={{ minWidth: 0 }}>
+                        <b>{c.titulo}</b>
+                        <span>{c.texto}</span>
+                      </span>
+                      <em>{PLANS[c.plan].name}<small>{precio(c.plan)}</small></em>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <p className={planesCss.soloCarta}>
+                ¿Solo quieres tu carta con QR? <Link href={enlaceDeAlta({ plan: 'BASICO', caso: 'carta' })}>Básico, gratis</Link>.
+              </p>
+            </section>
             <div className="lp-hero-media" style={{ display: 'flex', justifyContent: 'center' }}>
               <div className="lp-hero-tarjeta" style={{ width: '100%' }}>
                 <LandingIntro
@@ -161,41 +203,7 @@ export default async function LeoginLanding() {
                 />
               </div>
             </div>
-
-            <div className="lp-hero-acciones">
-              <div className="lp-hero-ctas">
-                <LandingDemo href={demoUrl} primaria />
-                <Link href="/registro" {...conEvento('lp-btn lp-btn-lg lp-btn-soft', EVENTOS.clicCrear, 'portada')}>
-                  Crear mi restaurante
-                </Link>
-              </div>
-              <p className="lp-body" style={{ fontSize: 14, marginTop: 14, color: 'var(--u-text-3)' }}>
-                La carta con QR es gratis para siempre. Los pedidos van con un plan.
-              </p>
-            </div>
           </div>
-        </section>
-
-        {/* ── 2 · ¿Cuál es tu caso? (V.2) ───────────────────── */}
-        <section id="casos" className="lp-shell lp-section-tight">
-          <SectionHead eyebrow="¿Cómo es tu negocio?" title="Elige el que se parece al tuyo" center />
-          <ul className={`lp-card ${planesCss.casos}`} style={{ marginTop: 24 }}>
-            {casos.map((c) => (
-              <li key={c.titulo}>
-                <Link href={c.href} className={planesCss.caso}>
-                  <span className={planesCss.casoIcono} aria-hidden><Icon name={c.icono} size={20} /></span>
-                  <span style={{ minWidth: 0 }}>
-                    <b>{c.titulo}</b>
-                    <span>{c.texto}</span>
-                  </span>
-                  <em>{PLANS[c.plan].name}<small>{precio(c.plan)}</small></em>
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <p className={planesCss.soloCarta}>
-            ¿Solo quieres tu carta con QR? <Link href="/registro">Básico, gratis</Link>.
-          </p>
         </section>
 
         {/* ── Ya lo usan (solo con testimonios guardados en el Super, WEB-02) ── */}
@@ -243,8 +251,8 @@ export default async function LeoginLanding() {
               </div>
               <div className="lp-cc-paso" data-p="3">
                 <div className="lp-eyebrow">Tú, bajo control</div>
-                <h2 className="lp-h2">Al cerrar, sabes cuánto vendiste y cuánto ganaste.</h2>
-                <p className="lp-lead">Desde tu celular, aunque no estés en el local. Sin cuadernos y sin sorpresas.</p>
+                <h2 className="lp-h2">Al cerrar, sabes cuánto vendiste y si la caja cuadra.</h2>
+                <p className="lp-lead">Desde tu celular, aunque no estés en el local. Y si cargas tus costos, también cuánto ganaste.</p>
               </div>
             </div>
             <CaosControl />
@@ -260,7 +268,7 @@ export default async function LeoginLanding() {
             center
           />
           <div style={{ marginTop: 28 }}>
-            <PlanPorPreguntas planes={planesDeLaWeb(pricing)} origen="portada" />
+            <PlanPorPreguntas planes={planesDeLaWeb(pricing)} origen="portada" trialDays={pricing.trialDays} />
           </div>
         </section>
 
@@ -311,7 +319,7 @@ export default async function LeoginLanding() {
                 </h2>
                 <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(245,243,239,0.72)', maxWidth: 520, margin: '14px auto 0' }}>
                   Crea tu restaurante en minutos: la carta con QR es gratis. ¿Prefieres que te
-                  acompañemos en la configuración? Escríbenos por WhatsApp y lo armamos juntos.
+                  acompañemos en la configuración? Escríbenos {CONTACT_VIA} y lo armamos juntos.
                 </p>
                 <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 30 }}>
                   <Link href="/registro" {...conEvento('lp-btn lp-btn-lg lp-btn-primary', EVENTOS.clicCrear, 'cierre')}>
@@ -324,7 +332,7 @@ export default async function LeoginLanding() {
                     className="lp-btn lp-btn-lg"
                     style={{ background: 'rgba(245,243,239,0.10)', color: '#F5F3EF', borderColor: 'rgba(245,243,239,0.22)' }}
                   >
-                    <Icon name="whatsapp" size={17} /> Hablar con ventas
+                    <Icon name={CONTACT_ICON} size={17} /> Hablar con ventas
                   </a>
                 </div>
               </div>

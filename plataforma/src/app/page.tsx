@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import MenuShell from '@/components/menu-shell';
 import LeoginLanding from '@/components/landing';
-import BranchSelector from '@/components/branch-selector';
+import { BranchSelector } from '@/components/islas-de-la-raiz';
 import { getRestaurantBySlugCached } from '@/lib/db/restaurants';
 import { getGroupBranches } from '@/lib/db/org-public';
 import { getEstadosVigentesCached } from '@/lib/db/estados';
@@ -16,13 +16,19 @@ import { estadoEdicion } from '@/lib/vitrina/edicion';
 import { resolveTheme } from '@/lib/theme/resolve';
 import { isOpenNow, minutosParaCerrar, nextOpenLabel } from '@/lib/hours';
 import { isModuleActive } from '@/lib/modules';
-import { DEMO_SLUG, rootDomainForUrls, isAdminSubdomain, isGroupSubdomain, subdomainUrl } from '@/lib/tenant';
+import { DEMO_SLUG, rootDomainForUrls, isAdminSubdomain, isGroupSubdomain, subdomainUrl, marketingUrl } from '@/lib/tenant';
+import { DemoOperativa } from '@/components/pidelo/demo-operativa';
+import { casoDemo, platosDeDemo } from '@/lib/demo-operativa';
+import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { currencyCodeFor, jsonLdScript, restaurantJsonLd } from '@/lib/seo/restaurant-jsonld';
 import { DEMO_CATEGORIES, DEMO_PRODUCTS, DEMO_THEME } from '@/lib/demo-menu';
 import { getPublicLoyaltyCached, type PublicReward } from '@/lib/db/loyalty';
 import { isGoogleAuthEnabled } from '@/lib/auth-config';
 import { resolverPlatillo, valorPlatillo } from '@/lib/menu/enlace-platillo';
 import { platilloEstrella } from '@/lib/menu/estrella';
+import { enlaceDeAlta, leerIntencion, type IntencionAlta } from '@/lib/alta';
+import { PLANS, planPriceLabel } from '@/lib/plans';
+import { imagenesWeb } from '@/lib/og-web';
 
 /* ── Metadata dinámica por restaurante ─────────────────────── */
 /** `?platillo=` (CV-30): el código o el nombre legible (`doble-bacon`, F4-8);
@@ -60,14 +66,21 @@ export async function generateMetadata({
         locale: 'es_GT',
         type: 'website',
         ...(base ? { url: base } : {}),
-        images: [{ url: '/icon-512.png', width: 512, height: 512, alt: 'Leogin' }],
+        images: imagenesWeb('portada', 'Leogin: tu restaurante, bajo control').og,
       },
-      twitter: { card: 'summary', title, description, images: ['/icon-512.png'] },
+      twitter: { ...imagenesWeb('portada', 'Leogin: tu restaurante, bajo control').twitter, title, description },
     };
   }
 
   if (slug === DEMO_SLUG) {
-    return { title: 'Rincón 502 · Demo de Leogin', description: 'Así se ve un restaurante con Leogin: el menú de Rincón 502, nuestro restaurante de ejemplo.' };
+    /* La demo es un restaurante de mentira: en un buscador competiría con la
+       portada y confundiría a quien busca «Rincón 502». Se sigue pudiendo
+       enlazar y compartir; solo no se indexa (auditoría 2026-11-23, WEB-07). */
+    return {
+      title: 'Rincón 502 · Demo de Leogin',
+      description: 'Así se ve un restaurante con Leogin: el menú de Rincón 502, nuestro restaurante de ejemplo.',
+      robots: { index: false, follow: true },
+    };
   }
 
   const data = await getRestaurantBySlugCached(slug);
@@ -86,8 +99,11 @@ export async function generateMetadata({
 
   const name = data.restaurant.name;
   const description = data.restaurant.tagline ?? `Menú en línea de ${name}`;
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
-  const menuUrl = rootDomain ? `https://${slug}.${rootDomain}` : undefined;
+  /* Con el primer dominio raíz, no con la variable cruda: trae varios
+     separados por coma y la vista previa salía con `og:url`
+     «https://slug.distleogin.com,leogin.online» (auditoría 2026-11-23,
+     WEB-06). */
+  const menuUrl = subdomainUrl(slug);
   // pwaIconUrl tiene prioridad para favicon; si no hay, usa el logo de portada.
   const favicon = data.resolved.config.pwaIconUrl ?? data.resolved.config.logoUrl;
   const logo = data.resolved.config.logoUrl;
@@ -109,7 +125,7 @@ export async function generateMetadata({
         description: desc,
         icons: favicon ? { icon: favicon, apple: favicon } : undefined,
         openGraph: {
-          title: titulo, description: desc, url: menuUrl ? `${menuUrl}/?platillo=${platoId}` : undefined,
+          title: titulo, description: desc, url: `${menuUrl}/?platillo=${platoId}`,
           siteName: name, locale: 'es_GT', type: 'website',
           images: [{ url: img, width: 1200, height: 630, alt: plato.name }],
         },
@@ -126,6 +142,7 @@ export async function generateMetadata({
   return {
     title: `${name} — Menú`,
     description,
+    alternates: { canonical: menuUrl },
     icons: favicon ? { icon: favicon, apple: favicon } : undefined,
     openGraph: {
       title: `${name} — Menú`,
@@ -190,6 +207,28 @@ export default async function Home({
        ese restaurante (o con su lectura caída), la copia fija de siempre. */
     const real = await getRestaurantBySlugCached(process.env.DEMO_RESTAURANT_SLUG || 'rincon502').catch(() => null);
     const menuReal = real ? await getMenuDataCached(real.restaurant.id).catch(() => null) : null;
+
+    /* Demo por caso (maqueta MAQUETA_DEMO_POR_CASO_Y_CUPO_2026-11-25, aprobada
+       el 2026-11-25): mostrador y mesas enseñan la operación —pedido, cobro,
+       cocina y caja, o la mesa completa— en vez de la carta del comensal.
+       `&vista=carta` vuelve a la carta y al pedido de prueba de siempre. */
+    const caso = casoDemo(params.caso);
+    if (caso && params.vista !== 'carta') {
+      const plan = caso === 'mostrador' ? 'ESTANDAR' : 'PREMIUM';
+      const pricing = await getEffectivePlanPricing().catch(() => null);
+      const fuente = menuReal && menuReal.products.length > 0 ? menuReal.products : DEMO_PRODUCTS;
+      const q = new URLSearchParams({ caso, vista: 'carta', ...(typeof params.plan === 'string' ? { plan: params.plan } : {}) });
+      return (
+        <DemoOperativa
+          caso={caso}
+          platos={platosDeDemo(fuente as { id: string; name: string; price: number; is_available?: boolean | null }[])}
+          cartaHref={`/?${q.toString()}`}
+          registroHref={marketingUrl(enlaceDeAlta({ plan, caso }))}
+          plan={PLANS[plan].name}
+          precio={pricing ? planPriceLabel(pricing, plan) : ''}
+        />
+      );
+    }
     if (real && menuReal && menuReal.products.length > 0) {
       const [masPedidosDemo, estadosDemo] = await Promise.all([
         getMasPedidosSemanaCached(real.restaurant.id).catch(() => []),
@@ -197,7 +236,7 @@ export default async function Home({
       ]);
       return (
         <>
-          <DemoBar />
+          <DemoBar intencion={leerIntencion(params.plan, params.caso)} />
           <MenuShell
             config={real.resolved.config}
             content={real.resolved.content}
@@ -214,7 +253,7 @@ export default async function Home({
     const demo = resolveTheme(DEMO_THEME, DEMO_SLUG);
     return (
       <>
-        <DemoBar />
+        <DemoBar intencion={leerIntencion(params.plan, params.caso)} />
         <MenuShell
           config={demo.config}
           content={demo.content}
@@ -331,27 +370,36 @@ export default async function Home({
   );
 }
 
-/* Barra superior solo en la demo. */
-function DemoBar() {
-  // El enlace debe llevar a la landing del DOMINIO RAÍZ, no a "/" del
-  // subdominio demo (que volvería a cargar la misma demo).
+/* Barra superior solo en la demo.
+ *
+ * Con `?caso=` (las tarjetas «¿Cómo es tu negocio?» de la portada) dice qué
+ * se va a probar y lleva al alta con ese plan y ese caso: antes «Crea el
+ * tuyo» volvía siempre a la portada y el visitante tenía que elegir otra
+ * vez lo que ya había elegido (WEB-UX-01). Sin caso, como siempre. */
+function DemoBar({ intencion }: { intencion: IntencionAlta | null }) {
+  // El enlace debe llevar al DOMINIO RAÍZ, no a "/" del subdominio demo (que
+  // volvería a cargar la misma demo).
   const root = rootDomainForUrls();
   const isLocal = root.includes('localhost') || root.startsWith('127.');
   const rootUrl = `${isLocal ? 'http' : 'https'}://${root}`;
+  const destino = intencion ? `${rootUrl}${enlaceDeAlta(intencion)}` : rootUrl;
 
   return (
-    <div
+    <aside
+      aria-label="Demo de Leogin"
       className="glass-solid"
       style={{
         position: 'sticky', top: 0, zIndex: 50,
         borderRadius: 0, borderLeft: 'none', borderRight: 'none', borderTop: 'none',
-        padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontSize: 12.5,
+        padding: '8px 16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', columnGap: 10, rowGap: 2, fontSize: 12.5,
       }}
     >
-      <span className="t-mute">Demo de Leogin · así se vería tu restaurante</span>
-      <a href={rootUrl} className="press" style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-        Crea el tuyo →
+      <span className="t-mute">
+        {intencion ? 'Demo · pide y mira la cocina' : 'Demo de Leogin · así se vería tu restaurante'}
+      </span>
+      <a href={destino} className="press" style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+        {intencion ? `Empezar con ${PLANS[intencion.plan].name} →` : 'Crea el tuyo →'}
       </a>
-    </div>
+    </aside>
   );
 }

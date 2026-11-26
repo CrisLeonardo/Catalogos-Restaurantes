@@ -10,7 +10,7 @@
    ============================================================ */
 
 import type { CSSProperties } from 'react';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 
 export default function CartaNoCargo({
   nombre,

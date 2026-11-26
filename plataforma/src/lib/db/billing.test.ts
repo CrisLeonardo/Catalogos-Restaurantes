@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { currentPeriod, isOverdue, type Invoice } from './billing';
+import { construirPricingSettings, currentPeriod, isOverdue, type Invoice } from './billing';
 
 const BASE_INVOICE: Invoice = {
   id: 'inv1',
@@ -47,5 +47,24 @@ describe('currentPeriod', () => {
 
   it('rellena el mes con cero a la izquierda', () => {
     expect(currentPeriod(new Date('2026-01-05T00:00:00Z'))).toBe('2026-01-01');
+  });
+});
+
+describe('construirPricingSettings', () => {
+  it('toma los precios guardados y deja de fábrica lo que falte', () => {
+    const s = construirPricingSettings(new Map([['plan_price_ESTANDAR', '150'], ['plan_price_PREMIUM', '299'], ['trial_days', '0']]));
+    expect(s.estandar).toBe(150);
+    expect(s.premium).toBe(299);
+    expect(s.enLinea).toBe(75);
+    expect(s.trialDays).toBe(0);
+  });
+
+  it('solo anuncia la prueba voluntaria con su ajuste propio', () => {
+    expect(construirPricingSettings(new Map([['trial_days', '14']])).trialDays).toBe(0);
+    expect(construirPricingSettings(new Map([['prueba_voluntaria_activa', '1']])).trialDays).toBe(14);
+  });
+
+  it('un valor ilegible no se convierte en 0: queda el de fábrica', () => {
+    expect(construirPricingSettings(new Map([['plan_price_EN_LINEA', 'abc']])).enLinea).toBe(75);
   });
 });

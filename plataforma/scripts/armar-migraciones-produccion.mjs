@@ -52,8 +52,12 @@ function huella(n) {
   if (!parte) return null;
   // ('NNN', 'qué', <condición>, 'cuándo')
   const cuerpo = parte.replace(/^ {2}\('\d{3}',\s*'(?:[^']|'')*',\s*/, '');
-  const fin = cuerpo.lastIndexOf(',\n');
-  return fin > 0 ? cuerpo.slice(0, fin).trim() : null;
+  // La condición termina donde empieza el texto de «cuándo», que cierra la
+  // entrada. Antes se cortaba en la última «,\n» del trozo, y en la ÚLTIMA
+  // entrada del verificador ese trozo incluye el `select` final: el script
+  // salía con la consulta entera metida en la guarda.
+  const m = cuerpo.match(/^([\s\S]*?),\s*\n\s*'(?:[^']|'')*'\)\s*(?:,|\n\)|$)/);
+  return m ? m[1].trim() : null;
 }
 
 const quitarTransaccion = (sql) => sql

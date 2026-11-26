@@ -48,6 +48,8 @@ interface CartContextValue {
   replaceItem: (lineId: string, item: Omit<CartItem, 'quantity' | 'lineId'>, quantity: number) => void;
   removeItem: (lineId: string) => void;
   updateQuantity: (lineId: string, quantity: number) => void;
+  /** Pone el precio vigente en las líneas cuyo precio cambió (OP-02). */
+  actualizarPrecios: (cambios: { lineId: string; price: number }[]) => void;
   clearCart: () => void;
   total: number;
   count: number;
@@ -164,6 +166,12 @@ export function CartProvider({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
+  const actualizarPrecios = useCallback((cambios: { lineId: string; price: number }[]) => {
+    const nuevo = new Map(cambios.map((c) => [c.lineId, c.price]));
+    setItems((prev) => save(prev.map((i) => (nuevo.has(i.lineId) ? { ...i, price: nuevo.get(i.lineId)! } : i))));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
   const clearCart = useCallback(() => {
     setItems([]);
     try { localStorage.removeItem(key); } catch {}
@@ -182,7 +190,7 @@ export function CartProvider({
 
   return (
     <CartContext.Provider
-      value={{ items, addItem, replaceItem, removeItem, updateQuantity, clearCart, total, count, qtyOfProduct, pointsToRedeem, hasRewards }}
+      value={{ items, addItem, replaceItem, removeItem, updateQuantity, actualizarPrecios, clearCart, total, count, qtyOfProduct, pointsToRedeem, hasRewards }}
     >
       {children}
     </CartContext.Provider>

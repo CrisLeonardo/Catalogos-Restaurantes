@@ -11,6 +11,9 @@ export interface MuestraPedido {
   /** Los platillos que escribió en el alta (ficha 2.3). Sin ellos, la carta
       de muestra de Rincón 502. */
   platos?: { nombre: string; precio: number }[];
+  /** ALTA-01: el plan elegido en el alta recibe pedidos. En Básico la carta
+      es de consulta y la vista previa no debe dejar armar un pedido. */
+  pedidos?: boolean;
 }
 
 /** El menú avisa que ya puede recibir (`lista`) o que ya pintó un estilo
@@ -23,6 +26,7 @@ export interface MuestraAviso {
 export function esMuestraPedido(d: unknown): d is MuestraPedido {
   const m = d as Partial<MuestraPedido> | null;
   return !!m && m.type === 'leogin-muestra' && typeof m.estilo === 'string' && typeof m.nombre === 'string'
+    && (m.pedidos === undefined || typeof m.pedidos === 'boolean')
     && (m.platos === undefined || (Array.isArray(m.platos) && m.platos.length <= 20
       && m.platos.every((p) => !!p && typeof p.nombre === 'string' && typeof p.precio === 'number')));
 }

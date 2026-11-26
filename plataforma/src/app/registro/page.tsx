@@ -1,27 +1,55 @@
 import type { Metadata } from 'next';
+import { imagenesWeb } from '@/lib/og-web';
 import Link from 'next/link';
+import { leerIntencion } from '@/lib/alta';
+import { planPriceLabel, PLANS, type PlanCode } from '@/lib/plans';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import LeoginLogo from '@/components/leogin-logo';
-import { adminUrl } from '@/lib/tenant';
+import { adminUrl, marketingUrl } from '@/lib/tenant';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { isGoogleAuthEnabled } from '@/lib/auth-config';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import SignupWizard from './signup-wizard';
 
+const TITULO = 'Crea tu cuenta — Leogin';
+const DESCRIPCION = 'Crea tu cuenta y pon tu restaurante en línea en minutos. Tu menú digital con QR es gratis para siempre.';
+
 export const metadata: Metadata = {
-  title: 'Crea tu cuenta — Leogin',
-  description: 'Crea tu cuenta y pon tu restaurante en línea en minutos. Tu menú digital con QR es gratis para siempre.',
+  title: TITULO,
+  description: DESCRIPCION,
   robots: { index: true, follow: true },
+  // El enlace viaja con ?plan=…&caso=… (LZ-11): para Google es una sola
+  // página, y al compartirlo sale con título e imagen (LZ-09).
+  alternates: { canonical: marketingUrl('/registro') },
+  openGraph: {
+    title: TITULO, description: DESCRIPCION, url: marketingUrl('/registro'),
+    siteName: 'Leogin', locale: 'es_GT', type: 'website',
+    images: imagenesWeb('registro', 'Leogin: tu menú en línea, en vivo hoy mismo').og,
+  },
+  twitter: { ...imagenesWeb('registro', 'Leogin: tu menú en línea, en vivo hoy mismo').twitter, title: TITULO, description: DESCRIPCION },
 };
 
-const perks = (trialDays: number) => [
-  { icon: 'bag', text: 'Menú web por QR, rápido y a tu marca' },
-  { icon: 'list', text: 'Pedidos en línea con alerta en tiempo real' },
-  { icon: 'sparkle', text: 'Personalización total: colores, logo y estilo' },
-  { icon: 'wallet', text: trialDays > 0 ? `${trialDays} días gratis · sin tarjeta · cancela cuando quieras` : 'Menú digital gratis para siempre · sin contrato · cancela cuando quieras' },
-];
+/* ALTA-01 (auditoría funcional 2026-11-25): con Básico elegido se
+   anunciaban «pedidos con alerta», que Básico no trae (su carta es de
+   consulta). Lo que se promete sale del plan que llega en el enlace; sin
+   plan, se dice desde cuál aplica cada cosa. La personalización completa
+   la tienen todos los planes (decisión del dueño, 2026-11-25). */
+const perks = (trialDays: number, plan: PlanCode | null) => {
+  const conPedidos = plan !== null && plan !== 'BASICO';
+  const completa = plan === null || PLANS[plan].hasFullTheme;
+  return [
+    { icon: 'bag', text: 'Menú web por QR, rápido y a tu marca' },
+    plan === 'BASICO'
+      ? { icon: 'list', text: 'Carta para consultar; los pedidos en línea llegan con En línea' }
+      : { icon: 'list', text: conPedidos ? 'Pedidos en línea con alerta en tiempo real' : 'Pedidos en línea con alerta, desde el plan En línea' },
+    { icon: 'sparkle', text: completa ? 'Personalización completa: colores, logo, estilo y diseño' : 'Tu logo y tu color, con estilos listos para elegir' },
+    { icon: 'wallet', text: plan === 'BASICO' || trialDays <= 0
+      ? 'Menú digital gratis para siempre · sin contrato · cancela cuando quieras'
+      : `${trialDays} días gratis · sin tarjeta · cancela cuando quieras` },
+  ];
+};
 
 /* Esta página ya no se puede pre-renderizar: mira la sesión del visitante para
    saber si vuelve de Google (y con qué cuenta). Los precios siguen saliendo de
@@ -90,13 +118,17 @@ async function currentStaffAccount(): Promise<{
 export default async function RegistroPage({
   searchParams,
 }: {
-  searchParams: Promise<{ auth_error?: string }>;
+  searchParams: Promise<{ auth_error?: string; plan?: string; caso?: string }>;
 }) {
   const [pricing, account, params] = await Promise.all([
     getEffectivePlanPricing(),
     currentStaffAccount(),
     searchParams,
   ]);
+
+  // Lo que eligió en Planes o en Vende en línea (LZ-11): se valida aquí y
+  // viaja hasta el alta.
+  const intencion = leerIntencion(params.plan, params.caso);
 
   const googleAccount =
     account && !account.hasProfile ? { email: account.email, fullName: account.fullName } : null;
@@ -134,13 +166,18 @@ export default async function RegistroPage({
             <h1 className="t-display" style={{ fontSize: 'var(--fs-display)', lineHeight: 1.05 }}>
               Tu menú en línea, en vivo hoy mismo.
             </h1>
+            {/* En el teléfono va en un renglón: con cuatro, el pie fijo tapaba
+                la contraseña al entrar (WEB-UX-05, maqueta del 2026-11-24). */}
             <p className="t-mute" style={{ fontSize: 15, lineHeight: 1.55, marginTop: 14, maxWidth: 420 }}>
-              Primero tu cuenta; después, el nombre de tu negocio y lo que vendes.
-              En unos minutos ves tu carta funcionando. Sin instalar nada, sin saber de tecnología.
+              <span className="registro-entradilla-larga">
+                Primero tu cuenta; después, el nombre de tu negocio y lo que vendes.
+                En unos minutos ves tu carta funcionando. Sin instalar nada, sin saber de tecnología.
+              </span>
+              <span className="registro-entradilla-corta">Primero tu cuenta; en minutos ves tu carta.</span>
             </p>
             {/* En el teléfono se ocultan (ficha 2.3): el formulario sube. */}
             <ul className="registro-ventajas" style={{ listStyle: 'none', margin: '22px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {perks(pricing.trialDays).map((p) => (
+              {perks(pricing.trialDays, intencion?.plan ?? null).map((p) => (
                 <li key={p.text} style={{ display: 'flex', gap: 11, alignItems: 'center', fontSize: 14 }}>
                   <span style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb, 99,102,241),0.12)', color: 'var(--brand-accent-ink)' }}>
                     <Icon name={p.icon} size={16} />
@@ -159,6 +196,8 @@ export default async function RegistroPage({
               googleAccount={googleAccount}
               existingAccount={existingAccount}
               authError={params.auth_error === '1'}
+              intencion={intencion}
+              precioIntencion={intencion ? planPriceLabel(pricing, intencion.plan) : null}
             />
           </Glass>
         </div>

@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { Metadata } from 'next';
+import { imagenesWeb } from '@/lib/og-web';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { Leo } from '@/components/leo';
@@ -8,11 +9,11 @@ import { LandingIntro } from '@/components/landing-intro';
 import { CtaEnLinea } from '@/components/en-linea/cta-en-linea';
 import { SiteHeader, SiteFooter, SectionHead, contactHref, CONTACT_ICON } from '@/components/site-chrome';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
-import { planPriceLabel, PLANS } from '@/lib/plans';
+import { planPriceLabel, PLANS, reglaDelTopeEnLinea } from '@/lib/plans';
 
 /** Pedidos al mes que incluye En línea (tope blando, ver lib/tope-pedidos.ts). */
 const TOPE = PLANS.EN_LINEA.monthlyOrderCap ?? 300;
-import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
+import { subdomainUrl, rootDomainForUrls, marketingUrl, DEMO_SLUG } from '@/lib/tenant';
 
 /* ============================================================
    LEOGIN PARA QUIEN VENDE EN LÍNEA (/vende-en-linea)
@@ -38,11 +39,23 @@ import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
    cupones e inventario, de Premium: aquí no se prometen.
    ============================================================ */
 
+const TITULO = 'Leogin para vender en línea — tu menú en un link, tus pedidos en orden';
+const DESCRIPCION =
+  'Para quien vende comida por WhatsApp, Instagram o Facebook: tu menú en un link, pedidos completos con dirección y forma de pago, avisos al instante y cuánto vendiste. Sin comisión.';
+
 export const metadata: Metadata = {
-  title: 'Leogin para vender en línea — tu menú en un link, tus pedidos en orden',
-  description:
-    'Para quien vende comida por WhatsApp, Instagram o Facebook: tu menú en un link, pedidos completos con dirección y forma de pago, avisos al instante y cuánto vendiste. Sin comisión.',
-  alternates: { canonical: '/vende-en-linea' },
+  title: TITULO,
+  description: DESCRIPCION,
+  // Absoluta: la relativa salía tal cual en el HTML, sin dominio.
+  alternates: { canonical: marketingUrl('/vende-en-linea') },
+  // Es la página que más se comparte por WhatsApp: sin estas etiquetas la
+  // vista previa salía sin título ni imagen (LZ-09). Igual que /planes.
+  openGraph: {
+    title: TITULO, description: DESCRIPCION, url: marketingUrl('/vende-en-linea'),
+    siteName: 'Leogin', locale: 'es_GT', type: 'website',
+    images: imagenesWeb('vende-en-linea', 'Leogin: tu menú en un link, tus pedidos en orden').og,
+  },
+  twitter: { ...imagenesWeb('vende-en-linea', 'Leogin: tu menú en un link, tus pedidos en orden').twitter, title: TITULO, description: DESCRIPCION },
 };
 
 // El precio sale de lo vigente en /super/configuracion, como en /planes.
@@ -66,7 +79,7 @@ const DOLORES = [
   },
   {
     chat: '¿Cuánto vendí esta semana?',
-    titulo: 'Al final no sabes cuánto ganaste',
+    titulo: 'Al final no sabes cuánto vendiste',
     texto: 'Sumas notas, capturas y lo que te acuerdas. Nunca cuadra, y no sabes qué se vende más ni qué día te conviene abrir.',
   },
 ];
@@ -78,7 +91,7 @@ const PASOS = [
   },
   {
     titulo: 'Tus clientes piden solos',
-    texto: 'Eligen, marcan su casa en el mapa y dicen cómo pagan. A las once de la noche también, sin que tengas que contestar.',
+    texto: 'Eligen, marcan su casa en el mapa y dicen cómo te pagan: efectivo al recibir o tarjeta con tu POS. El dinero te llega a ti, no pasa por Leogin.',
   },
   {
     titulo: 'Te suena y despachas',
@@ -99,7 +112,7 @@ const SI = [
    para tu restaurante» le suena a algo que no va a saber usar. */
 const NO = ['Mesas y meseros', 'Pantalla de cocina', 'Impresoras de comandas', 'Caja por turnos', 'Inventario con recetas'];
 
-function faqs(trialDays: number, enLinea: string, basico: string) {
+function faqs(trialDays: number, enLinea: string, basico: string, estandar: string) {
   return [
     {
       q: '¿Necesito tener un local?',
@@ -123,7 +136,7 @@ function faqs(trialDays: number, enLinea: string, basico: string) {
     },
     {
       q: '¿Cuánto cuesta?',
-      a: `El plan En línea cuesta ${enLinea}, sin costo de alta, incluye hasta ${TOPE} pedidos al mes${trialDays > 0 ? ` y empiezas con ${trialDays} días gratis, sin tarjeta` : ', sin contrato'}. Si por ahora solo quieres tu catálogo en un link, sin pedidos en línea, el Básico es ${basico.toLowerCase()} para siempre. Cuando crezcas (más de ${TOPE} pedidos al mes, más personas, reportes y corte de caja, mesas), subes a Estándar. Si un mes pasas los ${TOPE}, no se corta ningún pedido: te avisamos y al mes siguiente cambias.`,
+      a: `El plan En línea cuesta ${enLinea}, sin costo de alta${trialDays > 0 ? `, y empiezas con ${trialDays} días gratis, sin tarjeta` : ', sin contrato'}. ${reglaDelTopeEnLinea(estandar)} Estándar suma más personas, reportes y corte de caja. Si por ahora solo quieres tu catálogo en un link, sin pedidos en línea, el Básico es ${basico.toLowerCase()} para siempre.`,
     },
   ];
 }
@@ -137,7 +150,7 @@ export default async function VendeEnLinea() {
   // «Menos de Q4 al día»: el precio partido en días se compara con un
   // refresco, no con una mensualidad (contabilidad mental).
   const alDia = Math.ceil(enLineaMes / 30);
-  const preguntas = faqs(pricing.trialDays, enLineaLabel, basicoLabel);
+  const preguntas = faqs(pricing.trialDays, enLineaLabel, basicoLabel, planPriceLabel(pricing, 'ESTANDAR'));
 
   const root = rootDomainForUrls();
   const base = `${root.includes('localhost') || root.startsWith('127.') ? 'http' : 'https'}://${root}`;
@@ -154,7 +167,7 @@ export default async function VendeEnLinea() {
       <div className="lp-avance" aria-hidden />
       <SiteHeader />
 
-      <main className="lp-main">
+      <main id="contenido" tabIndex={-1} className="lp-main">
         {/* ── Portada: el espejo y el alivio en una sola pantalla ── */}
         <section className="lp-shell" style={{ paddingTop: 'clamp(36px, 6vw, 76px)' }}>
           <div className="el-hero">
@@ -184,8 +197,14 @@ export default async function VendeEnLinea() {
                 </CtaEnLinea>
                 <LandingDemo href={demoUrl} />
               </div>
+              {/* La mensualidad junto a la primera acción: antes el precio
+                  aparecía hasta y≈5800 en el teléfono, después de invitar a
+                  empezar (WEB-UX-03). */}
               <p className="lp-body" style={{ fontSize: 13.5, marginTop: 14, color: 'var(--u-text-4)' }}>
-                {pricing.trialDays > 0 ? `${pricing.trialDays} días gratis · sin tarjeta · ` : 'Sin alta · sin contrato · '}sin comisión por pedido
+                <strong style={{ color: 'var(--u-text-2)', fontWeight: 650 }}>{enLineaLabel}</strong>
+                {pricing.trialDays > 0 ? ` · ${pricing.trialDays} días gratis · sin tarjeta · ` : ' · sin alta · sin contrato · '}sin comisión por pedido
+                {/* PLAN-02: el umbral y lo que cuesta después, junto al precio. */}
+                {` · hasta ${TOPE} pedidos al mes; si los pasas, nada se corta y decides tú si pasas a Estándar (${planPriceLabel(pricing, 'ESTANDAR')})`}
               </p>
             </div>
           </div>

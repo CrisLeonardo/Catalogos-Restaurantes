@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { authPathFor, isPlatformSurface } from './tenant';
+import { afterEach, describe, expect, it } from 'vitest';
+import { authPathFor, isPlatformSurface, marketingUrl, subdomainUrl } from './tenant';
 
 describe('isPlatformSurface', () => {
   it('sin slug y fuera de la vista previa es el sitio de Leogin', () => {
@@ -34,5 +34,24 @@ describe('authPathFor', () => {
     expect(authPathFor('/admin/logout-operator', 'rincon502')).toBe(
       '/panel/rincon502/logout-operator',
     );
+  });
+});
+
+describe('URLs públicas con varios dominios raíz', () => {
+  const original = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+  afterEach(() => { process.env.NEXT_PUBLIC_ROOT_DOMAIN = original; });
+
+  // Producción declara dos dominios separados por coma; la carta publicaba
+  // `og:url` con los dos pegados (auditoría 2026-11-23, WEB-06).
+  it('usan solo el primer dominio, sin la coma ni el segundo', () => {
+    process.env.NEXT_PUBLIC_ROOT_DOMAIN = 'distleogin.com, leogin.online';
+    expect(subdomainUrl('rincon502')).toBe('https://rincon502.distleogin.com');
+    expect(marketingUrl('/planes')).toBe('https://distleogin.com/planes');
+    expect(marketingUrl()).toBe('https://distleogin.com/');
+  });
+
+  it('en local van por http y conservan el puerto', () => {
+    process.env.NEXT_PUBLIC_ROOT_DOMAIN = 'localhost:3000';
+    expect(marketingUrl('/sitemap.xml')).toBe('http://localhost:3000/sitemap.xml');
   });
 });

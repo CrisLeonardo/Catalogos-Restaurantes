@@ -8,6 +8,8 @@ import { getMyMemberships, canBill } from '@/lib/db/membership';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { isSyntheticStaffEmail } from '@/lib/staff-email';
 import { rootDomainForUrls } from '@/lib/tenant';
+import { leerIntencion } from '@/lib/alta';
+import { motivoSinPrueba } from '@/lib/db/prueba-del-dueno';
 import NuevoRestaurante from './nuevo-restaurante';
 
 export const metadata: Metadata = {
@@ -28,7 +30,11 @@ export const dynamic = 'force-dynamic';
  * El candado es el mismo que aplica la acción del servidor: crea quien tiene
  * una identidad propia, no la cuenta de PIN del local.
  */
-export default async function NuevoRestaurantePage() {
+export default async function NuevoRestaurantePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ plan?: string; caso?: string }>;
+}) {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     redirect('/');
   }
@@ -42,11 +48,20 @@ export default async function NuevoRestaurantePage() {
   // pantalla que iba a terminar en un rechazo.
   if (isSyntheticStaffEmail(user.email)) redirect('/mi-cuenta');
 
-  const [memberships, pricing] = await Promise.all([
+  const [memberships, pricing, sinPrueba] = await Promise.all([
     getMyMemberships(),
     getEffectivePlanPricing(),
+    motivoSinPrueba(user.id),
   ]);
   const esElPrimero = !memberships.some((m) => canBill(m.role));
+
+  /* Lo que eligió en la web (LZ-11): primero el enlace; si no, lo que quedó
+     guardado en su cuenta al registrarse — así sobrevive aunque vuelva otro
+     día desde otro aparato. Lo guardado solo vale para su primer local. */
+  const params = await searchParams;
+  const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+  const intencion = leerIntencion(params.plan, params.caso)
+    ?? (esElPrimero ? leerIntencion(meta.alta_plan, meta.alta_caso) : null);
 
   return (
     <main style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column' }}>
@@ -78,6 +93,8 @@ export default async function NuevoRestaurantePage() {
             rootDomain={rootDomainForUrls()}
             pricing={pricing}
             esElPrimero={esElPrimero}
+            sinPrueba={sinPrueba}
+            intencion={intencion}
           />
         </Glass>
       </div>

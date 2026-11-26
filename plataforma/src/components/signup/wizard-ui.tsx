@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useId, useRef } from 'react';
 import type React from 'react';
 
 /* ============================================================
@@ -21,14 +22,29 @@ import type React from 'react';
    registro tenía campos blancos con borde y el login grises rellenos — dos
    estilos de campo en el mismo flujo (auditoría 2026-10-02, WEB-06). */
 
-export function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+/** Lo que `Field` le pasa a su control para que el lector de pantalla lo
+ *  anuncie con su etiqueta y su ayuda. Antes la etiqueta solo se dibujaba:
+ *  el lector leía el placeholder como nombre y la contraseña quedaba sin
+ *  nombre (auditoría de lanzamiento 2026-11-23, WEB-04 / LZ-04). */
+export type FieldIds = { id: string; 'aria-describedby'?: string };
+
+export function Field({ label, hint, children }: {
+  label: string;
+  hint?: string;
+  /** Con una función, el campo recibe `id` y `aria-describedby` y la
+   *  etiqueta queda asociada; con un nodo suelto solo se dibuja. */
+  children: React.ReactNode | ((ids: FieldIds) => React.ReactNode);
+}) {
+  const id = useId();
+  const hintId = hint ? `${id}-ayuda` : undefined;
+  const asociado = typeof children === 'function';
   return (
     <div>
-      <label style={{ fontSize: 12, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.03em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+      <label htmlFor={asociado ? id : undefined} style={{ fontSize: 12, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.03em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
         {label}
       </label>
-      {children}
-      {hint && <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '6px 0 0' }}>{hint}</p>}
+      {asociado ? children({ id, 'aria-describedby': hintId }) : children}
+      {hint && <p id={hintId} style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '6px 0 0' }}>{hint}</p>}
     </div>
   );
 }
@@ -62,12 +78,35 @@ export function Stepper({ steps, step }: { steps: string[]; step: number }) {
   );
 }
 
+/* El error se ANUNCIA (role="alert"): antes aparecía en silencio y quien
+   usa lector de pantalla no se enteraba de por qué no avanzaba. Y va con los
+   tokens --c-danger*: el rojo claro escrito a mano (#f87171) apenas se leía
+   sobre el fondo claro del registro (auditoría de lanzamiento 2026-11-23,
+   LZ-04; WCAG 4.1.3 y 1.4.3). */
 export function ErrorBox({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 13.5 }}>
+    <div role="alert" style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 13.5, lineHeight: 1.45 }}>
       {children}
     </div>
   );
+}
+
+/** Lleva el foco al control que hay que corregir y lo marca como inválido.
+ *  `selector` se busca dentro de `raiz` (el formulario del paso). */
+export function enfocarCampo(raiz: HTMLElement | null, selector: string, reintento = true): void {
+  const el = raiz?.querySelector<HTMLElement>(selector);
+  if (!el) {
+    // El campo puede aparecer con el mismo cambio de estado (la dirección
+    // de la carta se abre al pedirla): se busca otra vez tras dibujar.
+    if (reintento) setTimeout(() => enfocarCampo(raiz, selector, false), 0);
+    return;
+  }
+  el.setAttribute('aria-invalid', 'true');
+  el.focus();
+  // Se limpia al escribir o elegir de nuevo.
+  const limpiar = () => { el.removeAttribute('aria-invalid'); el.removeEventListener('input', limpiar); el.removeEventListener('change', limpiar); };
+  el.addEventListener('input', limpiar);
+  el.addEventListener('change', limpiar);
 }
 
 /**
@@ -92,14 +131,50 @@ export function WizardNav({
   nextLabel?: string;
 }) {
   const blocked = isPending || !canSubmit;
+  const pie = useRef<HTMLDivElement>(null);
+
+  /* El navegador no desplaza al enfocar un campo que ya se ve en parte, y
+     `scroll-padding-bottom` solo cuenta cuando sí desplaza: a 390 × 844 la
+     contraseña quedaba medio debajo de este pie al llegar con Tab o al
+     tocarla (WEB-UX-05). Si el campo enfocado o su ayuda tocan el pie, se
+     sube lo justo. */
+  useEffect(() => {
+    const form = pie.current?.closest('form') ?? document;
+    const alEnfocar = (e: Event) => {
+      const el = e.target as HTMLElement | null;
+      if (!el || pie.current?.contains(el)) return;
+      // Después de pintar: la ayuda de la contraseña aparece al enfocarla.
+      requestAnimationFrame(() => subirSiTapa(el));
+    };
+    const subirSiTapa = (el: HTMLElement) => {
+      const barra = pie.current;
+      if (!barra || document.activeElement !== el) return;
+      const ayuda = el.getAttribute('aria-describedby');
+      const abajo = Math.max(
+        el.getBoundingClientRect().bottom,
+        (ayuda && document.getElementById(ayuda)?.getBoundingClientRect().bottom) || 0,
+      );
+      const tope = barra.getBoundingClientRect().top - 12;
+      if (abajo > tope) window.scrollBy({ top: abajo - tope });
+    };
+    form.addEventListener('focusin', alEnfocar);
+    return () => form.removeEventListener('focusin', alEnfocar);
+  }, []);
+
   return (
     <div
+      ref={pie}
+      /* Con `data-wizard-nav`, globals.css reserva su alto al llevar el foco
+         a un campo: con Tab el campo de contraseña quedaba debajo de este
+         pie (WCAG 2.4.11, auditoría 2026-11-23 WEB-04). */
+      data-wizard-nav=""
       style={{
         position: 'sticky', bottom: 0, zIndex: 5,
         display: 'flex', gap: 10,
         margin: '0 -24px', padding: '14px 24px',
-        background: 'linear-gradient(to top, var(--brand-bg) 60%, color-mix(in srgb, var(--brand-bg) 72%, transparent))',
-        backdropFilter: 'blur(8px)',
+        // Sólido: con el degradado translúcido el campo de abajo se
+        // transparentaba a medias detrás del botón.
+        background: 'var(--brand-bg)',
         borderTop: '1px solid var(--u-hair)',
       }}
     >

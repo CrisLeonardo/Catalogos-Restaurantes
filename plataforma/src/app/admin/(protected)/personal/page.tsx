@@ -17,6 +17,7 @@ import { listPendingInvitations } from '@/lib/auth/invitations';
 import { getPanelAccessLog } from '@/lib/auth/access-log';
 import { listTrustedDevices } from '@/lib/auth/trusted-device';
 import { panelLink } from '@/lib/panel-links-server';
+import { esFallaDeLectura, verificarCupo } from '@/lib/cupo-usuarios';
 
 export const metadata = { title: 'Personal – Panel admin' };
 
@@ -143,6 +144,15 @@ export default async function AdminPersonalPage() {
 
   // A quién pedirle lo que un encargado no puede cambiar: el nombre del
   // dueño, no «el dueño» a secas. Sólo hace falta cuando mira un encargado.
+  // Usuarios por plan (LZ-08): el mismo cálculo que aplica el servidor al
+  // dar de alta, para avisar ANTES de llenar la ficha. Un encargado no
+  // puede subir de plan: se le dice a quién pedirlo.
+  const sinLugar = await verificarCupo(db, restaurantId);
+  const equipoCompleto = sinLugar && isManager && !esFallaDeLectura(sinLugar)
+    ? 'El equipo ya tiene todos los usuarios que incluye el plan. Pídele al dueño que libere un lugar o suba de plan.'
+    : sinLugar;
+  const tituloCupo = sinLugar && esFallaDeLectura(sinLugar) ? 'No se pudo revisar tu equipo' : 'Tu equipo está completo';
+
   let ownerName: string | null = null;
   if (isManager) {
     const { data: duenos } = await db
@@ -176,6 +186,9 @@ export default async function AdminPersonalPage() {
         arqueoCiego={arqueoCiego}
         currentUserId={ctx.userId}
         ownerName={ownerName}
+        equipoCompleto={equipoCompleto}
+        tituloCupo={tituloCupo}
+        planesHref={isManager ? null : await panelLink('/admin/suscripcion')}
       />
       {/* Invitaciones por correo: se retiraron de la pantalla. El acceso del
           administrador se crea aquí mismo, con usuario y contraseña, que es

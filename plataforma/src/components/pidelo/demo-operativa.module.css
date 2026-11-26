@@ -1,0 +1,606 @@
+/* Demo operativa (mostrador y mesas). Maqueta aprobada:
+   docs/diseno/MAQUETA_DEMO_POR_CASO_Y_CUPO_2026-11-25.html §1.
+   Colores fijos del panel de Leogin (como PanelEnVivo): la demo vive en el
+   subdominio de una carta y no debe heredar la paleta del restaurante. */
+
+.demo {
+  --d-bg: #F2F1EE;
+  --d-bg2: #E9E7E2;
+  --d-card: #FFFFFF;
+  --d-border: #E3E0DA;
+  --d-border2: #D6D2CA;
+  --d-t1: #17161A;
+  --d-t2: #45424A;
+  --d-t3: #6E6A72;
+  --d-accent: #C2542F;
+  --d-accent-ink: #A8441F;
+  --d-on-accent: #FFFFFF;
+  --d-ok: #1F7A3D;
+  --d-ok-bg: #E3F3E8;
+  --d-ok-line: #B9DFC5;
+  --d-warn: #8A5A00;
+  --d-warn-bg: #FDF1D8;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--d-bg);
+  color: var(--d-t1);
+  font-family: var(--font-geist, var(--font-sans, system-ui)), system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  .demo {
+    --d-bg: #0C0B0A;
+    --d-bg2: #151413;
+    --d-card: #1A1917;
+    --d-border: #2A2826;
+    --d-border2: #36332F;
+    --d-t1: #F5F3EF;
+    --d-t2: #D3CFC8;
+    --d-t3: #A39E96;
+    --d-accent: #D9693F;
+    --d-accent-ink: #F08A60;
+    --d-ok: #5CC77D;
+    --d-ok-bg: #16281C;
+    --d-ok-line: #24452F;
+    --d-warn: #E8B44C;
+    --d-warn-bg: #2B2210;
+  }
+}
+
+.cinta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #1C1B1E;
+  color: #E9E6E1;
+  font-size: 13px;
+}
+
+.cinta a {
+  color: #F0A07E;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.cinta a:focus-visible {
+  outline: 2px solid #F0A07E;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.cuerpo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+/* ── Columna de pasos: solo en PC ── */
+.lado {
+  display: none;
+}
+
+.ladoTitulo {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lista li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  color: var(--d-t3);
+}
+
+.lista li i {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 2px solid var(--d-border2);
+  font-size: 11px;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.lista li[data-estado='hecho'] {
+  color: var(--d-t2);
+}
+
+.lista li[data-estado='hecho'] i {
+  border-color: transparent;
+  background: var(--d-ok-bg);
+  color: var(--d-ok);
+}
+
+.lista li[data-estado='actual'] {
+  background: var(--d-bg2);
+  color: var(--d-t1);
+  font-weight: 600;
+}
+
+.lista li[data-estado='actual'] i {
+  border-color: var(--d-accent);
+  color: var(--d-accent-ink);
+}
+
+.nota {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--d-t3);
+}
+
+/* ── Centro ── */
+.principal {
+  flex: 1;
+  padding-bottom: 8px;
+}
+
+.progreso {
+  display: flex;
+  gap: 6px;
+  padding: 12px 16px 0;
+}
+
+.progreso i {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--d-border2);
+}
+
+.progreso i[data-on] {
+  background: var(--d-accent);
+}
+
+.guia {
+  padding: 12px 16px 4px;
+}
+
+.guia small {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--d-t3);
+}
+
+.guia h1 {
+  margin: 2px 0 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.guia p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--d-t3);
+}
+
+.rejilla,
+.salon {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+.plato,
+.mesa {
+  position: relative;
+  min-height: 72px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--d-border);
+  background: var(--d-card);
+  color: var(--d-t1);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.plato b,
+.mesa b {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.plato span,
+.mesa span {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--d-t3);
+}
+
+.plato[data-sel],
+.mesa[data-sel] {
+  border-color: var(--d-accent);
+  box-shadow: inset 0 0 0 1px var(--d-accent);
+}
+
+.plato em {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  min-width: 22px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--d-accent);
+  color: var(--d-on-accent);
+  font-size: 12px;
+  font-weight: 700;
+  font-style: normal;
+  text-align: center;
+}
+
+.mesa:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.plato:focus-visible,
+.mesa:focus-visible,
+.billetes button:focus-visible,
+.boton:focus-visible,
+.boton2:focus-visible,
+.botonSec:focus-visible,
+.notaBtn:focus-visible,
+.pedido button:focus-visible {
+  outline: 2px solid var(--d-accent-ink);
+  outline-offset: 2px;
+}
+
+.cuadro {
+  margin: 12px 16px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--d-border);
+  background: var(--d-card);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cuadro hr {
+  border: 0;
+  border-top: 1px solid var(--d-border);
+  margin: 2px 0;
+}
+
+.fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--d-t2);
+}
+
+.fila b {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--d-t1);
+}
+
+.fila b[data-tono='ok'] {
+  color: var(--d-ok);
+}
+
+.billetes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.billetes button {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--d-border2);
+  background: var(--d-card);
+  color: var(--d-t1);
+  font: inherit;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.billetes button[data-sel] {
+  border-color: var(--d-accent);
+  color: var(--d-accent-ink);
+  box-shadow: inset 0 0 0 1px var(--d-accent);
+}
+
+.comanda {
+  margin: 12px 16px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1.5px solid #E8A48E;
+  background: var(--d-card);
+}
+
+.comanda[data-listo] {
+  border-color: var(--d-ok-line);
+}
+
+.comandaCab {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--d-t3);
+}
+
+.pill {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--d-warn-bg);
+  color: var(--d-warn);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.pill[data-tono='ok'] {
+  background: var(--d-ok-bg);
+  color: var(--d-ok);
+}
+
+.comandaTitulo {
+  margin-top: 8px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.comanda ul {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.comanda small {
+  display: block;
+  font-size: 13px;
+  color: var(--d-warn);
+  font-weight: 600;
+}
+
+.aviso {
+  margin: 0 16px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--d-ok-line);
+  background: var(--d-ok-bg);
+  color: var(--d-ok);
+  font-size: 14px;
+}
+
+/* ── Pie: el pedido y la acción ── */
+.pie {
+  position: sticky;
+  bottom: 0;
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+  background: var(--d-card);
+  border-top: 1px solid var(--d-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pedido {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 30vh;
+  overflow: auto;
+}
+
+.pedido li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--d-t2);
+}
+
+.pedido li span:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.pedido li span:nth-child(2) {
+  font-variant-numeric: tabular-nums;
+}
+
+.pedido li > button:not(.notaBtn) {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid var(--d-border2);
+  background: var(--d-bg2);
+  color: var(--d-t1);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.notaBtn {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--d-border2);
+  background: var(--d-card);
+  color: var(--d-t2);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.notaBtn[aria-pressed='true'] {
+  border-color: var(--d-warn);
+  color: var(--d-warn);
+  font-weight: 600;
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: var(--d-t2);
+}
+
+.total b {
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--d-t1);
+}
+
+.boton {
+  min-height: 56px;
+  width: 100%;
+  border: 0;
+  border-radius: 16px;
+  background: var(--d-accent);
+  color: var(--d-on-accent);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.boton:disabled {
+  background: var(--d-border2);
+  color: var(--d-t3);
+  cursor: default;
+}
+
+.boton2 {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 0;
+  background: var(--d-accent);
+  color: var(--d-on-accent);
+  font: inherit;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.botonSec {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--d-t2);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ── PC: pasos a la izquierda, pedido a la derecha ── */
+@media (min-width: 900px) {
+  .cuerpo {
+    flex-direction: row;
+    align-items: stretch;
+    margin: 24px auto;
+    border: 1px solid var(--d-border2);
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--d-bg);
+    min-height: 560px;
+  }
+
+  .lado {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 280px;
+    flex-shrink: 0;
+    padding: 20px;
+    background: var(--d-card);
+    border-right: 1px solid var(--d-border);
+  }
+
+  .progreso {
+    display: none;
+  }
+
+  .rejilla,
+  .salon {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .pie {
+    position: static;
+    width: 320px;
+    flex-shrink: 0;
+    justify-content: flex-end;
+    border-top: 0;
+    border-left: 1px solid var(--d-border);
+    padding: 20px;
+  }
+
+  .pedido {
+    max-height: none;
+    margin-bottom: auto;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .plato,
+  .mesa,
+  .billetes button,
+  .boton {
+    transition: transform 150ms cubic-bezier(.22, 1, .36, 1), box-shadow 150ms cubic-bezier(.22, 1, .36, 1);
+  }
+
+  .plato:active,
+  .mesa:active:not(:disabled),
+  .boton:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+}

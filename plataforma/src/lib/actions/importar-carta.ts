@@ -134,7 +134,7 @@ export async function importarCarta(input: {
     }))).select('id');
     if (error) {
       if (categoriasCreadas.length) await db.from('categories').delete().in('id', categoriasCreadas);
-      return { error: 'No se pudieron agregar los platillos. No se cambió nada.' };
+      return { error: error.code === 'LGD02' ? error.message : 'No se pudieron agregar los platillos. No se cambió nada.' };
     }
     creados = (data ?? []).map((d) => d.id as string);
   }

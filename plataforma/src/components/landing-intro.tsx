@@ -28,6 +28,8 @@ import { useEffect, useRef, useState } from 'react';
  * `vertical.mp4` en las verticales. Así va «Un solo lugar» en la portada
  * (promo-video/, docs/negocio/GUION_VIDEO_UN_SOLO_LUGAR_2026-11-15.md). */
 const CUADRADA = '(max-width: 560px)';
+/** Si la persona pausó el bucle, el aparato lo recuerda. */
+const CLAVE_PAUSA = 'leogin-bucle-pausado';
 
 export function LandingIntro({
   ruta = 'intro',
@@ -52,23 +54,37 @@ export function LandingIntro({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [src, setSrc] = useState<string | null>(null);
   const [enMovimiento, setEnMovimiento] = useState(false);
+  /* Pausa del bucle (WEB-UX-07, WCAG 2.2.2): el movimiento se repetía sin
+     fin y solo se detenía abriendo el video. `null` = sin bucle en este
+     aparato (movimiento reducido, ahorro de datos): no hay botón. El
+     teléfono recuerda la elección. */
+  const [pausado, setPausado] = useState<boolean | null>(null);
+  const pausadoRef = useRef(false);
+  const empezarRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     const ahorro = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
     if (matchMedia('(prefers-reduced-motion: reduce)').matches || ahorro) return;
+    let guardado = false;
+    try { guardado = localStorage.getItem(CLAVE_PAUSA) === '1'; } catch { /* sin almacenamiento */ }
+    pausadoRef.current = guardado;
+    setPausado(guardado);
     let visible = true;
     const io = new IntersectionObserver(([e]) => {
       visible = e.isIntersecting;
-      if (!v.src) return;
+      if (!v.src || pausadoRef.current) return;
       if (visible) v.play().catch(() => {}); else v.pause();
     });
     io.observe(v);
     const empezar = () => {
-      v.src = cuadrada && matchMedia(CUADRADA).matches ? `/${ruta}/bucle-cuadrado.webm` : `/${ruta}/bucle.webm`;
+      // En pausa no se descarga: el bucle se pide al reanudar.
+      if (pausadoRef.current) return;
+      if (!v.src) v.src = cuadrada && matchMedia(CUADRADA).matches ? `/${ruta}/bucle-cuadrado.webm` : `/${ruta}/bucle.webm`;
       if (visible) v.play().catch(() => {});
     };
+    empezarRef.current = empezar;
     // Al terminar de cargar la página, o a los dos segundos si algo pesado
     // (el iframe de la vitrina) la hace esperar: lo que pase primero.
     let empezado = false;
@@ -103,8 +119,18 @@ export function LandingIntro({
   };
   const close = () => dialogRef.current?.close();
 
+  const alternarPausa = () => {
+    const nuevo = !pausadoRef.current;
+    pausadoRef.current = nuevo;
+    setPausado(nuevo);
+    try { localStorage.setItem(CLAVE_PAUSA, nuevo ? '1' : '0'); } catch { /* sin almacenamiento */ }
+    if (nuevo) videoRef.current?.pause();
+    else empezarRef.current();
+  };
+
   return (
     <>
+      <div className={`lp-intro-caja${vertical ? ' lp-intro-caja-v' : ''}`}>
       <button
         type="button"
         className={`lp-intro${vertical ? ' lp-intro-v' : ''}${cuadrada ? ' lp-intro-cuadrada' : ''}`}
@@ -141,6 +167,23 @@ export function LandingIntro({
         </span>
         <span className="lp-intro-chip">{etiqueta}</span>
       </button>
+      {/* Fuera de la tarjeta: un botón no puede ir dentro de otro. */}
+      {pausado !== null && (
+        <button
+          type="button"
+          className="lp-intro-pausa"
+          onClick={alternarPausa}
+          aria-label={pausado ? 'Reanudar la animación' : 'Pausar la animación'}
+          title={pausado ? 'Reanudar la animación' : 'Pausar la animación'}
+        >
+          {pausado ? (
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden><path d="M8 5.5v13l11-6.5z" fill="currentColor" /></svg>
+          ) : (
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor" /></svg>
+          )}
+        </button>
+      )}
+      </div>
 
       {/* Un clic fuera del video (en el fondo oscuro) también cierra. */}
       <dialog

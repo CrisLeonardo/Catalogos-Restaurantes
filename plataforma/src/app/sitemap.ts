@@ -1,16 +1,11 @@
 import type { MetadataRoute } from 'next';
-import { rootDomainForUrls } from '@/lib/tenant';
+import { marketingUrl } from '@/lib/tenant';
 
 /* Sitemap del sitio comercial (dominio raíz). Los menús de cada restaurante
    viven en subdominios dinámicos y se indexan por su propia metadata. */
-function marketingBase(): string {
-  const root = rootDomainForUrls();
-  const isLocal = root.includes('localhost') || root.startsWith('127.');
-  return `${isLocal ? 'http' : 'https'}://${root}`;
-}
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = marketingBase();
+  const base = marketingUrl('');
   const now = new Date();
   return [
     { url: `${base}/`,          lastModified: now, changeFrequency: 'weekly',  priority: 1 },

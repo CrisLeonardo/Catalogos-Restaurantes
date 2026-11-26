@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import PanelLink from '@/components/admin/panel-link';
 import { Icon } from '@/components/icons';
@@ -27,21 +27,33 @@ const TEXTO: Record<ClavePaso, { titulo: string; detalle: string }> = {
     titulo: 'Recibe un pedido de prueba',
     detalle: 'Pídelo tú desde tu carta, acéptalo en Pedidos y míralo llegar a cocina. No cuenta en tus cifras.',
   },
+  /* ALTA-04: en Básico la guía no lleva a un pedido (la carta es de
+     consulta) y no todos tienen mesas. El paso es compartirla. */
   qr: {
-    titulo: 'Pon tu QR en las mesas',
-    detalle: 'Descárgalo e imprímelo. Este paso se marca cuando tres personas abran tu carta.',
+    titulo: 'Comparte tu carta',
+    detalle: 'Descarga tu QR para el mostrador o tus redes, o copia el enlace. Se marca cuando tres personas distintas la abran.',
   },
 };
 
 export function PrimerPedido({
-  restaurantId, pasos, menuUrl, platilloHref, qrHref,
+  restaurantId, pasos, menuUrl, platilloHref, qrHref, conPedidos = true, personas = 0,
 }: {
   restaurantId: string;
   pasos: PasoPrimerPedido[];
   menuUrl: string;
   platilloHref: string;
   qrHref: string;
+  /** Sin pedidos (Básico) la guía es «publica y comparte». */
+  conPedidos?: boolean;
+  /** Personas distintas que abrieron la carta en 30 días. */
+  personas?: number;
 }) {
+  /* La descarga del QR se recuerda en el aparato (qr-display): se reconoce
+     aparte de las visitas, que dependen de la gente y no del dueño. */
+  const [qrDescargado, setQrDescargado] = useState(false);
+  useEffect(() => {
+    try { setQrDescargado(!!localStorage.getItem(`leogin:qr-descargado:${restaurantId}`)); } catch { /* sin almacenamiento */ }
+  }, [restaurantId]);
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState('');
@@ -83,7 +95,18 @@ export function PrimerPedido({
         </div>
       );
     }
-    if (clave === 'qr') return <PanelLink href={qrHref} className={clase}>Descargar mi QR</PanelLink>;
+    if (clave === 'qr') {
+      return (
+        <>
+          {qrDescargado && (
+            <p className="mt-2 text-[13px] text-adm-text-2">
+              <Icon name="check" size={13} strokeWidth={2.6} /> QR descargado · {personas === 1 ? 'la abrió 1 persona' : `la abrieron ${personas} personas`} de 3
+            </p>
+          )}
+          <PanelLink href={qrHref} className={clase}>{qrDescargado ? 'Ver mi QR' : 'Descargar mi QR'}</PanelLink>
+        </>
+      );
+    }
     return (
       <button type="button" onClick={pedidoDePrueba} disabled={pending} className={`${clase} cursor-pointer border-0`}>
         {pending ? 'Abriendo tu carta…' : 'Hacer pedido de prueba'}
@@ -94,7 +117,7 @@ export function PrimerPedido({
   return (
     <section aria-labelledby="guia-primer-pedido" className="rounded-adm-xl border border-adm-border bg-adm-card shadow-adm-sm">
       <div className="px-4 pt-4 pb-1 md:px-5">
-        <h2 id="guia-primer-pedido" className="text-[18px] font-bold tracking-[-0.02em] text-adm-text">Llega a tu primer pedido</h2>
+        <h2 id="guia-primer-pedido" className="text-[18px] font-bold tracking-[-0.02em] text-adm-text">{conPedidos ? 'Llega a tu primer pedido' : 'Publica y comparte tu carta'}</h2>
         <p className="mt-0.5 text-[13px] text-adm-text-3">
           {faltan === pasos.length ? 'Tres pasos · unos 10 minutos' : faltan === 1 ? 'Te falta un paso' : `Te faltan ${faltan} pasos`}
         </p>

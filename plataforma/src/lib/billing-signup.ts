@@ -1,4 +1,4 @@
-import type { PlanCode } from '@/lib/plans';
+import { DIAS_PRUEBA, type PlanCode } from '@/lib/plans';
 
 /* ============================================================
    COBRO DE UN RESTAURANTE RECIÉN CREADO
@@ -9,21 +9,37 @@ import type { PlanCode } from '@/lib/plans';
    que es como una regla de negocio acaba diciendo dos cosas distintas sin
    que nadie lo note.
 
-   LA REGLA: la prueba gratis es UNA por persona, en su primer restaurante.
-
-   El motivo es que la prueba existe para que alguien que no conoce Leogin
-   se atreva a probarlo. Quien ya tiene un restaurante aquí ya lo conoce: si
-   cada local nuevo trajera 30 días gratis, bastaría con abrir uno al mes
-   para no pagar nunca — y ahora que crear restaurantes es un botón cómodo
-   dentro de Mi cuenta, ese sería el camino fácil, no el rebuscado.
+   La prueba voluntaria es una por establecimiento.
    ============================================================ */
+
+/* ── El día de cobro es el del alta ───────────────────────────
+   Auditoría de lanzamiento 2026-11-23 (LZ-01). Sin esto la fila nacía con
+   billing_day = 1: el cron generaba la mensualidad del mes con vencimiento
+   el día 1, ya pasado, y desde el día 12 (10 de gracia) quien se daba de
+   alta contaba como moroso, con suspensión automática si está encendida.
+   Ahora cada mensualidad vence en el aniversario del alta. El 29, 30 y 31
+   se cobran el 28, como todo el sistema (billing_day va de 1 a 28). */
+export function diaDeCobroDelAlta(now: number = Date.now()): { billing_day: number; started_at: string } {
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Guatemala', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date(now));
+  const v = (t: string) => partes.find((p) => p.type === t)?.value ?? '';
+  return { billing_day: Math.min(28, Number(v('day'))), started_at: `${v('year')}-${v('month')}-${v('day')}` };
+}
 
 /** La fila de `restaurant_billing` con la que nace un restaurante. */
 export type NewRestaurantBilling = {
   auto_price: true;
+  /** Día del mes en que vence cada mensualidad: el del alta (máx. 28). */
+  billing_day: number;
+  /** Inicio del servicio, en fecha de Guatemala. */
+  started_at: string;
   /** Suscripción en marcha (se cobra). En prueba es `false`. */
   active: boolean;
   trial_ends_at: string | null;
+  trial_started_at?: string;
+  trial_started_by?: string;
+  trial_plan?: PlanCode;
   currency: 'GTQ';
 };
 
@@ -31,11 +47,10 @@ export function newRestaurantBilling(input: {
   planCode: PlanCode;
   /** Días de prueba configurados en /super/configuracion. */
   trialDays: number;
-  /** ¿Es el primer restaurante de esta persona? Solo ese lleva prueba. */
-  isFirstOfOwner: boolean;
+  ownerId?: string;
   now?: number;
 }): NewRestaurantBilling {
-  const base = { auto_price: true, currency: 'GTQ' } as const;
+  const base = { auto_price: true, currency: 'GTQ', ...diaDeCobroDelAlta(input.now) } as const;
 
   // BÁSICO es gratis para siempre: no hay nada que probar ni que graduar,
   // así que nace activo y sin prueba, sea el primero o el quinto.
@@ -43,16 +58,17 @@ export function newRestaurantBilling(input: {
     return { ...base, active: true, trial_ends_at: null };
   }
 
-  const days = Math.max(0, Math.round(input.trialDays));
-  if (!input.isFirstOfOwner || days === 0) {
-    // Cobro desde el día uno. `active: true` lo mete en la facturación
-    // mensual de inmediato; `leogin_apply_auto_price` le pone la tarifa.
+  if (!(input.trialDays > 0)) {
     return { ...base, active: true, trial_ends_at: null };
   }
 
+  const inicio = input.now ?? Date.now();
   return {
     ...base,
     active: false,
-    trial_ends_at: new Date((input.now ?? Date.now()) + days * 86_400_000).toISOString(),
+    trial_started_at: new Date(inicio).toISOString(),
+    trial_started_by: input.ownerId,
+    trial_plan: input.planCode,
+    trial_ends_at: new Date(inicio + DIAS_PRUEBA * 86_400_000).toISOString(),
   };
 }

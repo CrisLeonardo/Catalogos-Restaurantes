@@ -47,7 +47,7 @@ function avisar(msg: MuestraAviso) {
 
 export default function MuestraClient({ estiloInicial, nombreInicial, alta = false }: { estiloInicial: string | null; nombreInicial: string; alta?: boolean }) {
   const inicial = useMemo(() => estadoMuestra(estiloInicial, nombreInicial), [estiloInicial, nombreInicial]);
-  const [pedido, setPedido] = useState<{ estilo: string | null; nombre: string; platos: { nombre: string; precio: number }[] | null } | null>(null);
+  const [pedido, setPedido] = useState<{ estilo: string | null; nombre: string; platos: { nombre: string; precio: number }[] | null; pedidos: boolean } | null>(null);
   /* Con los platillos del alta, la carta abre directo en ellos —como al
      escanear el QR de una mesa—: la portada a pantalla completa los dejaba
      fuera de la vista del teléfono de muestra. */
@@ -61,7 +61,7 @@ export default function MuestraClient({ estiloInicial, nombreInicial, alta = fal
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (e.origin !== window.location.origin || !esMuestraPedido(e.data)) return;
-      setPedido({ estilo: e.data.estilo, nombre: e.data.nombre, platos: e.data.platos ?? null });
+      setPedido({ estilo: e.data.estilo, nombre: e.data.nombre, platos: e.data.platos ?? null, pedidos: e.data.pedidos ?? true });
     };
     window.addEventListener('message', onMessage);
     avisar({ type: 'leogin-muestra-lista' });
@@ -83,7 +83,7 @@ export default function MuestraClient({ estiloInicial, nombreInicial, alta = fal
       initialCss=""
       categories={carta.categories}
       products={carta.products}
-      ordersEnabled
+      ordersEnabled={pedido?.pedidos ?? true}
       estado={estado}
       muestra
     />

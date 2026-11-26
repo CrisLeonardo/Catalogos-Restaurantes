@@ -8,10 +8,11 @@ import { Field, PrimaryButton } from '@/components/menu/ui';
 import { useCart } from '@/lib/cart-context';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { formatPrice, shadowCss, tipAppliesToType } from '@/lib/theme/resolve';
+import { avisoDePrecios } from '@/lib/precios-carrito';
 import { createOrder, type CreateOrderResult } from '@/lib/actions/orders';
 import { getMyCheckoutProfile } from '@/lib/actions/loyalty';
 import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer-local';
-import { getQueuedOrders, removeQueuedOrder, saveQueuedOrder, type MotivoNoGuardado } from '@/lib/order-queue';
+import { getQueuedOrders, pedidoParaRetomar, removeQueuedOrder, saveQueuedOrder, type MotivoNoGuardado } from '@/lib/order-queue';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { isValidGuatemalaPhone } from '@/lib/schemas';
 import { getScannedTable, clearScannedTable, watchScannedTable } from '@/lib/table-session';
@@ -20,7 +21,7 @@ import { guardarUltimoPedido } from '@/lib/menu/lo-de-siempre';
 import { contarPaso } from '@/lib/menu/embudo';
 import { useStableLinkPrefix } from '@/lib/tenant-client';
 import {
-  NO_ZONE, haversineKm, buildWhatsAppUrl,
+  NO_ZONE, haversineKm, buildWhatsAppUrl, noSeEnvio,
   type OrderType, type PendingSnapshot, type CheckoutDone,
 } from '@/components/checkout/checkout-model';
 import OrderSummary, { type AppliedCoupon } from '@/components/checkout/order-summary';
@@ -55,6 +56,7 @@ interface Props {
   restaurantLng?: number | null;
   deliveryRadiusKm?: number | null;
   hasCoupons?: boolean;
+  mostrador?: boolean;
   encuestasActive?: boolean;
   /** URL LAN del hub local del restaurante (Fase 2 offline), si tiene uno
       vinculado. Se intenta ANTES de encolar el pedido en el dispositivo. */
@@ -80,6 +82,7 @@ export default function CheckoutForm({
   restaurantLng,
   deliveryRadiusKm,
   hasCoupons = false,
+  mostrador = false,
   encuestasActive = false,
   hubUrl = null,
   hubToken = null,
@@ -88,12 +91,22 @@ export default function CheckoutForm({
   const config  = useThemeConfig();
   const content = useThemeContent();
   const checkoutTitleT = useText('heading', 'checkoutTitle');
-  const { items, total, clearCart, pointsToRedeem } = useCart();
+  const { items, total, clearCart, pointsToRedeem, actualizarPrecios } = useCart();
+  /* Si el servidor dice que cambió un precio (OP-02): el carrito toma los
+     vigentes y el aviso nombra qué cambió, en la moneda de la carta. Las
+     líneas de `items` del pedido son las del carrito sin recompensas, en el
+     mismo orden. */
+  function aplicarPreciosNuevos(result: CreateOrderResult): string | null {
+    if (!result.preciosActualizados || !result.preciosCambiados) return null;
+    const lineas = items.filter((i) => !i.rewardId);
+    actualizarPrecios(lineas.map((l, i) => ({ lineId: l.lineId, price: result.preciosActualizados![i] ?? l.price })));
+    return avisoDePrecios(result.preciosCambiados, (n) => formatPrice(n, config));
+  }
   // Prefijo del link estable de mesa (null hasta montar — ver useStableLinkPrefix).
   const stablePrefix = useStableLinkPrefix();
   const tp = (path: string) => (stablePrefix ? `${stablePrefix}${path}` : path);
 
-  // "Comer en local" solo se ofrece si el comensal escaneó el QR de su mesa.
+  // En mostrador se puede pedir para comer en local sin escanear una mesa.
   const [hasScannedTable, setHasScannedTable] = useState(false);
 
   // MODO KIOSKO (autoservicio, dispositivo compartido del mostrador): el
@@ -110,7 +123,7 @@ export default function CheckoutForm({
   const typeOptions = kiosk
     ? [{ id: 'PICKUP' as const, label: content.checkout.pickup, icon: 'bag' }]
     : ([
-        config.orderTypes.includes('dine_in')  && hasScannedTable && { id: 'DINE_IN'   as const, label: content.checkout.dineIn, icon: 'utensils' },
+        config.orderTypes.includes('dine_in') && (mostrador || hasScannedTable) && { id: 'DINE_IN' as const, label: content.checkout.dineIn, icon: 'utensils' },
         config.orderTypes.includes('delivery') && { id: 'DELIVERY'  as const, label: content.checkout.delivery, icon: 'truck' },
         config.orderTypes.includes('pickup')   && { id: 'PICKUP'    as const, label: content.checkout.pickup, icon: 'bag' },
       ].filter(Boolean) as { id: OrderType; label: string; icon: string }[]);
@@ -146,10 +159,19 @@ export default function CheckoutForm({
   const pendingPayloadRef = useRef<unknown>(null);
   const pendingSnapshotRef = useRef<PendingSnapshot | null>(null);
   const retryingRef = useRef(false);
+  /** Al volver con un pedido en espera: reintentarlo en cuanto se vea. */
+  const retomarRef = useRef(false);
+  /** El formulario trae los datos del pedido retomado: el perfil guardado
+      (que llega después, por red) no los pisa. */
+  const formularioRetomadoRef = useRef(false);
 
   const [name, setName]       = useState('');
   const [phone, setPhone]     = useState('');
-  const [type, setType]       = useState<OrderType>(typeOptions[0]?.id ?? 'DINE_IN');
+  /* Con mostrador, «Comer aquí» se ofrece sin mesa, pero no llega elegido:
+     quien pide desde su casa no debe encontrarlo marcado. Si escanea el QR
+     de su mesa, el efecto de abajo lo elige. */
+  const tipoInicial = (mostrador ? typeOptions.find((o) => o.id !== 'DINE_IN') : undefined) ?? typeOptions[0];
+  const [type, setType]       = useState<OrderType>(tipoInicial?.id ?? 'DINE_IN');
   const [address, setAddress] = useState('');
   const [zone, setZone]       = useState('');
   const [notes, setNotes]     = useState('');
@@ -190,6 +212,7 @@ export default function CheckoutForm({
   const [cambiarTipo, setCambiarTipo] = useState(false);
   const enMesa = type === 'DINE_IN' && !!tableNumber && !kiosk;
   const verDetalles = !enMesa || detallesMesa;
+  const pideContacto = type !== 'DINE_IN' || (mostrador && !enMesa);
 
   // Geo: coordenadas del pin del cliente en el mapa
   const [deliveryLat, setDeliveryLat] = useState<number | undefined>(undefined);
@@ -211,7 +234,7 @@ export default function CheckoutForm({
         // Prioridad: cuenta de Google enlazada (sigue al comensal a cualquier
         // dispositivo) sobre el perfil local de este dispositivo únicamente.
         const remote = await getMyCheckoutProfile(restaurantId).catch(() => null);
-        if (cancelled) return;
+        if (cancelled || formularioRetomadoRef.current) return;
         if (remote) {
           setName(remote.name);
           setPhone(remote.phone);
@@ -260,7 +283,7 @@ export default function CheckoutForm({
       } else {
         setTableNumber(null);
         setType((prev) => {
-          if (prev !== 'DINE_IN') return prev;
+          if (prev !== 'DINE_IN' || mostrador) return prev;
           return config.orderTypes.includes('delivery') ? 'DELIVERY' : 'PICKUP';
         });
       }
@@ -289,8 +312,8 @@ export default function CheckoutForm({
   }, [type, paymentMethod]);
 
   const errs = {
-    name:  type !== 'DINE_IN' && !name.trim() ? content.checkout.errName : '',
-    phone: type === 'DINE_IN'
+    name:  pideContacto && !name.trim() ? content.checkout.errName : '',
+    phone: !pideContacto
       ? (phone.trim() && !isValidGuatemalaPhone(phone) ? 'Número inválido. Ingresa 8 dígitos (ej. 5555 0000)' : '')
       : (!phone.trim()
           ? content.checkout.errPhone
@@ -301,7 +324,7 @@ export default function CheckoutForm({
     zone:    type === 'DELIVERY' && zonesActive && !zone ? 'Elige tu zona' : '',
     geo:     geoActive && (deliveryLat === undefined || deliveryLng === undefined)
               ? 'Coloca tu ubicación en el mapa' : '',
-    table:   type === 'DINE_IN' && !tableNumber ? 'Escanea el QR de tu mesa para continuar' : '',
+    table:   type === 'DINE_IN' && !mostrador && !tableNumber ? 'Escanea el QR de tu mesa para continuar' : '',
   };
 
   // Envío: manda la tarifa de la zona elegida; sin zonas configuradas (o antes
@@ -442,6 +465,7 @@ export default function CheckoutForm({
       payload,
       queuedAt: new Date().toISOString(),
       total: pendingSnapshotRef.current?.totalSnapshot,
+      snapshot: pendingSnapshotRef.current ?? undefined,
     });
     setNoGuardado(guardado.ok ? null : guardado.motivo);
     setStep('queued');
@@ -458,6 +482,7 @@ export default function CheckoutForm({
       payload,
       queuedAt: new Date().toISOString(),
       total: pendingSnapshotRef.current?.totalSnapshot,
+      snapshot: pendingSnapshotRef.current ?? undefined,
     });
     setNoGuardado(guardado.ok ? null : guardado.motivo);
   }
@@ -481,7 +506,8 @@ export default function CheckoutForm({
           pendingPayloadRef.current = null;
           pendingSnapshotRef.current = null;
           setStep('form');
-          setError(result.error);
+          // Que diga que NO salió: quien vuelve no sabía si había entrado.
+          setError(aplicarPreciosNuevos(result) ?? noSeEnvio(result.error));
           return;
         }
         finishSuccess(result);
@@ -498,6 +524,10 @@ export default function CheckoutForm({
   // siempre dispara, notablemente en iOS Safari).
   useEffect(() => {
     if (step !== 'queued') return;
+    if (retomarRef.current) {
+      retomarRef.current = false;
+      retryQueued();
+    }
     const onOnline = () => retryQueued();
     window.addEventListener('online', onOnline);
     const timer = setInterval(() => retryQueued(), 15_000);
@@ -509,11 +539,54 @@ export default function CheckoutForm({
   }, [step]);
 
   // Al montar: si quedó algo en la cola de una visita anterior (la pestaña
-  // se cerró a mitad de un corte de conexión), reintenta en segundo plano
-  // sin tocar la pantalla actual — si se confirma, queda en "Mis pedidos".
+  // se cerró a mitad de un corte de conexión), el más reciente se RETOMA en
+  // pantalla: «Aún no se envía» mientras se reintenta, la confirmación de
+  // siempre si entra, o el carrito con la causa si el local lo rechaza (en
+  // pausa, por ejemplo). Antes se reintentaba a escondidas: un rechazo lo
+  // borraba sin decir nada y un éxito dejaba el carrito lleno, listo para
+  // pedir dos veces (LZ-02). En el kiosko no: el aparato es de todos y el
+  // pedido sería de otra persona. Los demás (y los de antes, sin resumen)
+  // siguen en segundo plano; si se confirman, quedan en «Mis pedidos».
   useEffect(() => {
+    const cola = getQueuedOrders(restaurantId);
+    const retomar = isKioskMode() ? null : pedidoParaRetomar(cola);
+    if (retomar) {
+      const p = retomar.payload as {
+        paymentMethod?: 'CASH' | 'CARD';
+        cashAmount?: number;
+        customer?: {
+          name?: string; phone?: string; type?: OrderType; address?: string; notes?: string; zone?: string;
+          tableNumber?: number; coursePreference?: string; deliveryLat?: number; deliveryLng?: number;
+        };
+      };
+      const c = p.customer ?? {};
+      clientIdRef.current = retomar.clientId;
+      pendingPayloadRef.current = retomar.payload;
+      pendingSnapshotRef.current = retomar.snapshot as PendingSnapshot;
+      // El formulario vuelve como lo dejó: si el local lo rechaza, corrige y
+      // reenvía sin escribir todo otra vez; si entra, el perfil y el mensaje
+      // de WhatsApp salen con sus datos.
+      if (c.name) setName(c.name);
+      if (c.phone) setPhone(c.phone);
+      if (c.type && typeOptions.some((o) => o.id === c.type)) setType(c.type);
+      if (c.address) setAddress(c.address);
+      if (c.notes) setNotes(c.notes);
+      if (c.zone) setZone(c.zone);
+      if (typeof c.tableNumber === 'number') setTableNumber(c.tableNumber);
+      if (c.coursePreference) setCoursePreference(c.coursePreference);
+      if (typeof c.deliveryLat === 'number' && typeof c.deliveryLng === 'number') {
+        setDeliveryLat(c.deliveryLat);
+        setDeliveryLng(c.deliveryLng);
+      }
+      if (p.paymentMethod) setPaymentMethod(p.paymentMethod);
+      if (p.cashAmount) setCashAmount(String(p.cashAmount));
+      formularioRetomadoRef.current = true;
+      retomarRef.current = true;
+      setStep('queued');
+    }
     (async () => {
-      for (const q of getQueuedOrders(restaurantId)) {
+      for (const q of cola) {
+        if (q.clientId === retomar?.clientId) continue;
         try {
           const result = await createOrder(q.payload);
           if (result.success) {
@@ -572,7 +645,7 @@ export default function CheckoutForm({
         name, phone, type,
         ...(type === 'DELIVERY' ? { address, notes } : { notes }),
         ...(type === 'DINE_IN' && tableNumber  ? { tableNumber }      : {}),
-        ...(type === 'DINE_IN' && coursePreference ? { coursePreference } : {}),
+        ...(enMesa && coursePreference ? { coursePreference } : {}),
         ...(type === 'DELIVERY' && zonesActive ? { zone } : {}),
         ...(type === 'DELIVERY' && deliveryLat !== undefined && deliveryLng !== undefined
           ? { deliveryLat, deliveryLng }
@@ -612,6 +685,7 @@ export default function CheckoutForm({
       payload,
       queuedAt: new Date().toISOString(),
       total: totalSnapshot,
+      snapshot: pendingSnapshotRef.current,
     });
     setNoGuardado(guardado.ok ? null : guardado.motivo);
 
@@ -637,7 +711,7 @@ export default function CheckoutForm({
         // el reintento de la próxima visita reenviaría un pedido ya
         // rechazado).
         if (clientIdRef.current) removeQueuedOrder(restaurantId, clientIdRef.current);
-        setError(result.error);
+        setError(aplicarPreciosNuevos(result) ?? result.error);
         return;
       }
       finishSuccess(result);
@@ -702,7 +776,7 @@ export default function CheckoutForm({
               {typeOptions.map((o) => {
                 const on = type === o.id;
                 return (
-                  <button key={o.id} type="button" onClick={() => setType(o.id)} className="press"
+                  <button key={o.id} type="button" onClick={() => setType(o.id)} className="press" aria-pressed={on}
                     /* Es la PRIMERA decisión del checkout (a domicilio / para
                        llevar / en el local) y medía 40 px de alto. */
                     style={{ flex: 1, padding: '0 6px', minHeight: 'var(--m-tap)', borderRadius: 'var(--m-r-sm)', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: on ? activeBg : 'transparent', color: on ? activeText : 'var(--u-text-2)', fontWeight: 600, fontSize: 'var(--m-fs-sm)', transition: 'all 160ms', whiteSpace: 'nowrap' }}>
@@ -728,18 +802,18 @@ export default function CheckoutForm({
            el pedido y dejarlo a medias. */}
         {verDetalles && (<>
         <Field
-          label={type === 'DINE_IN' ? `${content.checkout.name} (opcional)` : content.checkout.name}
+          label={!pideContacto ? `${content.checkout.name} (opcional)` : content.checkout.name}
           icon="user" value={name} onChange={setName}
           placeholder={content.checkout.namePh}
           autoComplete="name"
           error={tried && errs.name}
         />
         <Field
-          label={type === 'DINE_IN' ? `${content.checkout.phone} (opcional)` : content.checkout.phone}
+          label={!pideContacto ? `${content.checkout.phone} (opcional)` : content.checkout.phone}
           icon="phone" type="tel" inputMode="tel" value={phone} onChange={setPhone}
           placeholder={content.checkout.phonePh}
           autoComplete="tel"
-          hint={type === 'DINE_IN' ? undefined : 'Lo usamos solo para avisarte sobre este pedido.'}
+          hint={!pideContacto ? undefined : 'Lo usamos solo para avisarte sobre este pedido.'}
           error={(tried || phone.trim().length > 0) && errs.phone}
         />
         {phone.trim().length > 0 && !errs.phone && (
@@ -749,8 +823,8 @@ export default function CheckoutForm({
         )}
         </>)}
 
-        {/* ── DINE_IN: mesa asignada por QR (solo lectura) ── */}
-        {type === 'DINE_IN' && (
+        {/* ── Mesa asignada por QR (solo lectura) ── */}
+        {type === 'DINE_IN' && (!mostrador || enMesa) && (
           <div>
             <label className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)', textShadow: labelShadow }}>{content.checkout.mesa}</label>
             {tableNumber ? (
@@ -804,7 +878,7 @@ export default function CheckoutForm({
           </div>
         )}
 
-        {type === 'DINE_IN' && verDetalles && config.dineInCourseOptions.length > 0 && (
+        {enMesa && verDetalles && config.dineInCourseOptions.length > 0 && (
           <div>
             <label className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)', textShadow: labelShadow }}>{content.checkout.courseLabel} <span style={{ color: 'var(--u-text-4)', fontWeight: 400 }}>(opcional)</span></label>
             <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 7 }}>
@@ -918,6 +992,11 @@ export default function CheckoutForm({
               }}>
                 Cargando mapa…
               </div>
+            )}
+            {geoDistanceKm === null && !(tried && errs.geo) && (
+              <p role="status" style={{ marginTop: 8, fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-3)' }}>
+                Falta confirmar tu ubicación: mueve el pin o toca el mapa en tu puerta.
+              </p>
             )}
             {geoDistanceKm !== null && (
               <div style={{
@@ -1041,7 +1120,7 @@ export default function CheckoutForm({
         )}
 
         {error && (
-          <p style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--c-danger, #ff6b6b)', background: 'color-mix(in srgb, var(--c-danger, #ff6b6b) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #ff6b6b) 20%, transparent)', borderRadius: 'var(--radius-lg)', padding: '10px 14px' }}>{error}</p>
+          <p role="alert" style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--c-danger, #ff6b6b)', background: 'color-mix(in srgb, var(--c-danger, #ff6b6b) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #ff6b6b) 20%, transparent)', borderRadius: 'var(--radius-lg)', padding: '10px 14px' }}>{error}</p>
         )}
 
         <PrimaryButton size="lg" full iconRight="arrowRight" disabled={isPending} style={{ opacity: isPending ? 0.7 : 1, marginTop: 4 }}>

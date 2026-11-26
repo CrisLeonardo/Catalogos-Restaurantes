@@ -13,7 +13,7 @@ import { DAY_LABELS, type HourInterval, type WeeklyHours, type HourExceptions } 
 import { problemaDeTiempos, turnosQueSePisan } from '@/lib/ajustes-estado';
 import type { ThemeConfig, ThemeContent, OrderType } from '@/lib/theme/defaults';
 import { extractVisualConfig, type TemplateConfig } from '@/lib/theme/templates';
-import { ESTANDAR_MAX_ORDER_TYPES, orderTypesForPlan } from '@/lib/plans';
+import { orderTypesForPlan } from '@/lib/plans';
 
 const PLAN_SIN_LOCAL = 'El plan En línea es para llevar y a domicilio. Para recibir pedidos en tus mesas, sube a Estándar.';
 import { panelLink } from '@/lib/panel-links-server';
@@ -637,18 +637,13 @@ export async function saveOrdersAndCurrency(input: {
 
   const db = createServiceClient();
 
-  // Mismo tope que updateOwnOrderTypes: esta acción también puede escribir
-  // orderTypes (p.ej. el toggle "Comer en local" de /admin/mesas), así que
-  // ESTANDAR no puede colarse a los 3 modos por esta vía tampoco.
+  // Ajustes y Funciones validan las modalidades permitidas por el plan.
   if (!isSuperAdmin) {
     const { data: rest } = await db
       .from('restaurants')
       .select('plan_actual')
       .eq('id', input.restaurantId)
       .single();
-    if (rest?.plan_actual === 'ESTANDAR' && input.patch.orderTypes.length > ESTANDAR_MAX_ORDER_TYPES) {
-      return { error: `El plan Estándar permite hasta ${ESTANDAR_MAX_ORDER_TYPES} modos de pedido a la vez. Para activar los 3, actualiza a Premium.` };
-    }
     if (orderTypesForPlan(rest?.plan_actual, input.patch.orderTypes).length !== input.patch.orderTypes.length) {
       return { error: PLAN_SIN_LOCAL };
     }
@@ -741,10 +736,7 @@ export async function updateOwnOrderTypes(
 
   const db = createServiceClient();
 
-  // BASICO no tiene pedidos en línea (hasOrders=false): sus canales los fija
-  // Leogin y solo el super admin los cambia. ESTANDAR sí administra sus
-  // propios canales, pero tope de ESTANDAR_MAX_ORDER_TYPES (2 de 3) — para
-  // tener los 3 a la vez hay que subir a Premium. Premium+ no tiene tope.
+  // Los planes con pedidos administran las modalidades que tienen incluidas.
   if (!isSuperAdmin) {
     const { data: rest } = await db
       .from('restaurants')
@@ -754,9 +746,6 @@ export async function updateOwnOrderTypes(
     const plan = (rest?.plan_actual as string | null) ?? null;
     if (plan === 'BASICO') {
       return { error: 'Tu plan no permite cambiar los canales de pedido. Escríbenos para ajustar tu paquete.' };
-    }
-    if (plan === 'ESTANDAR' && orderTypes.length > ESTANDAR_MAX_ORDER_TYPES) {
-      return { error: `El plan Estándar permite hasta ${ESTANDAR_MAX_ORDER_TYPES} modos de pedido a la vez. Para activar los 3, actualiza a Premium.` };
     }
     if (orderTypesForPlan(plan, orderTypes).length !== orderTypes.length) {
       return { error: PLAN_SIN_LOCAL };
@@ -780,8 +769,9 @@ export async function updateOwnOrderTypes(
   // no esta llamada (ver channel-history.ts).
   await logChannelChanges(restaurantId, previousOrderTypes, orderTypes, user.id);
 
-  // "Plan a tu medida": al cambiar canales, recalcula la mensualidad de los
-  // restaurantes en modo automático (la función solo toca filas auto_price=true).
+  // Desde la mig. 120 los canales no cambian el precio, y desde la 191 esto
+  // solo vuelve a fijar la mensualidad si el plan cambió: apagar o encender
+  // un canal nunca mueve el precio acordado.
   await db.rpc('leogin_apply_auto_price', { p_restaurant_id: restaurantId });
 
   revalidatePath('/admin/modulos');

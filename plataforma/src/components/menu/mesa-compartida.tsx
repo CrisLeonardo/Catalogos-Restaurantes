@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import { useCart } from '@/lib/cart-context';
 import { useThemeConfig } from '@/lib/theme/context';
 import { formatPrice } from '@/lib/theme/resolve';

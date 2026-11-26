@@ -23,14 +23,15 @@ import { logPanelAccess } from '@/lib/auth/access-log';
 import { adminUrl } from '@/lib/tenant';
 import { slugify, validateSlug, crossSlugCollision, slugTaken, uniqueSlug } from '@/lib/slug';
 import { ensureOwnerOrganization } from '@/lib/db/organizations';
-import { withPlanFloor, ESTANDAR_MAX_ORDER_TYPES } from '@/lib/plans';
+import { withPlanFloor } from '@/lib/plans';
 import { newRestaurantBilling } from '@/lib/billing-signup';
 import { getPricingSettings } from '@/lib/db/billing';
+import { motivoSinPrueba } from '@/lib/db/prueba-del-dueno';
 import { findTemplate } from '@/lib/theme/templates';
 import type { OrderType } from '@/lib/theme/defaults';
 import { registrarEvento } from '@/lib/analytics-server';
 import { EVENTOS } from '@/lib/analytics';
-import { leerPlatosDelAlta } from '@/lib/alta';
+import { leerIntencion, leerPlatosDelAlta } from '@/lib/alta';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
@@ -212,8 +213,6 @@ export async function createAnotherRestaurant(
   }
 
   const memberships = await getMyMemberships();
-  // La prueba gratis es de la PERSONA y va en su primer restaurante propio:
-  // ser gerente en el local de otro no la gasta. Ver lib/billing-signup.ts.
   const esElPrimero = !memberships.some((m) => canBill(m.role));
 
   const name = ((formData.get('name') as string) ?? '').trim();
@@ -225,14 +224,12 @@ export async function createAnotherRestaurant(
   const template = findTemplate(((formData.get('template_id') as string) ?? '').trim());
   const whatsapp = ((formData.get('whatsapp') as string) ?? '').trim() || null;
 
-  // Estándar lleva 2 de los 3 modos de pedido. Un valor inválido o con conteo
-  // distinto cae al par de siempre — misma regla que aplicaba el alta de la
-  // calle, que es de donde vino esta pantalla.
+  // Estándar puede activar las tres modalidades. Conserva las elecciones del alta.
   const VALID_ORDER_TYPES: OrderType[] = ['dine_in', 'pickup', 'delivery'];
   const rawTypes = ((formData.get('estandar_order_types') as string | null) ?? '').split(',').map((t) => t.trim());
   const requestedEstandarTypes = [...new Set(rawTypes)].filter((t): t is OrderType => VALID_ORDER_TYPES.includes(t as OrderType));
   const estandarOrderTypes: OrderType[] =
-    requestedEstandarTypes.length === ESTANDAR_MAX_ORDER_TYPES ? requestedEstandarTypes : ['pickup', 'dine_in'];
+    requestedEstandarTypes.length ? requestedEstandarTypes : ['pickup', 'dine_in'];
 
   /* Los primeros platillos (ficha 2.3): nombre y precio, escritos en el
      alta. Se descartan las filas vacías; una fila a medias se rechaza para
@@ -331,15 +328,16 @@ export async function createAnotherRestaurant(
   });
 
   // ── Cobro ──────────────────────────────────────────────────
-  // La prueba gratis es UNA por persona, en su primer restaurante. Ver la
-  // regla y el porqué en lib/billing-signup.ts.
-  const pricing = await getPricingSettings();
+  // El local nace en prueba si el plan elegido es de pago, la oferta está
+  // activa y el dueño no tiene otra prueba abierta ni una sin contratar
+  // (migración 205; la base vuelve a comprobarlo al guardar).
+  const [pricing, sinPrueba] = await Promise.all([getPricingSettings(), motivoSinPrueba(user.id)]);
   const { error: cobroErr } = await db.from('restaurant_billing').insert({
     restaurant_id: restaurantId,
     ...newRestaurantBilling({
       planCode,
-      trialDays: pricing.trialDays,
-      isFirstOfOwner: esElPrimero,
+      trialDays: sinPrueba ? 0 : pricing.trialDays,
+      ownerId: user.id,
     }),
   });
   const altaErr = temaErr ?? cobroErr ?? (await db.rpc('leogin_apply_auto_price', {
@@ -349,6 +347,8 @@ export async function createAnotherRestaurant(
     // Sin tema o mensualidad, el restaurante todavía no está listo para abrir.
     const { error: limpiezaErr } = await db.from('restaurants').delete().eq('id', restaurantId);
     console.error('[alta] no se pudo configurar el restaurante', restaurantId, altaErr.message, limpiezaErr?.message);
+    // Otra prueba del mismo dueño empezó a la vez (disparador de la 205).
+    if (cobroErr?.code === 'LGP01') return { error: `${cobroErr.message} Vuelve a crear el restaurante.` };
     return { error: 'No se pudo terminar de crear el restaurante. Inténtalo de nuevo.' };
   }
 
@@ -393,7 +393,13 @@ export async function createAnotherRestaurant(
      paso del alta, así que la pantalla «listo» sobraba. El panel es la raíz
      de otro host, por eso navega el cliente; mismo motivo que
      `enterRestaurant`. */
-  if (esElPrimero) await registrarEvento(EVENTOS.restauranteCreado, '/mi-cuenta/nuevo');
+  // El plan con que lo creó y el caso que traía de la web (LZ-11).
+  if (esElPrimero) {
+    await registrarEvento(EVENTOS.restauranteCreado, '/mi-cuenta/nuevo', {
+      plan: planCode,
+      caso: leerIntencion(user.user_metadata?.alta_plan, user.user_metadata?.alta_caso)?.caso ?? 'sin elegir',
+    });
+  }
   return { url: `${adminUrl(slug)}?welcome=1` };
 }
 

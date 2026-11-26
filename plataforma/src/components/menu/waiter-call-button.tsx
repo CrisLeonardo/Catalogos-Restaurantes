@@ -5,7 +5,7 @@
    Lee la mesa desde el helper table-session y envía la llamada. */
 
 import { useEffect, useState, useTransition } from 'react';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import { callWaiter, type CallReason } from '@/lib/actions/waiter-call';
 import { getScannedTable, watchScannedTable } from '@/lib/table-session';
 import navStyles from './bottom-nav.module.css';

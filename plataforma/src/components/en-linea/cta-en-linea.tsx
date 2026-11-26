@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 import { conEvento, EVENTOS } from '@/lib/analytics';
 import { guardarPerfil } from '@/lib/perfil-negocio';
+import { enlaceDeAlta } from '@/lib/alta';
 
 /* El botón de alta de /vende-en-linea: el mismo /registro de siempre, pero
    antes de irse deja dicho que el negocio vende en línea, para que el alta
@@ -11,7 +12,7 @@ import { guardarPerfil } from '@/lib/perfil-negocio';
 export function CtaEnLinea({ className, lugar, children, style }: { className: string; lugar: string; children: ReactNode; style?: CSSProperties }) {
   return (
     <Link
-      href="/registro"
+      href={enlaceDeAlta({ plan: 'EN_LINEA', caso: 'llevar' })}
       {...conEvento(className, EVENTOS.clicCrear, `en línea · ${lugar}`)}
       onClick={() => guardarPerfil('en-linea')}
       style={style}

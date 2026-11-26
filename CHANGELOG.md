@@ -4,7 +4,119 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
-## Sin publicar
+## v0.38.0 · 2026-11-25 · Demo por caso, cupo por pieza y una oferta que dice lo que hay
+PR #192, #193, #194 y #196 · sin migraciones. Segunda y tercera ronda de la [auditoría funcional para el piloto](docs/auditorias/AUDITORIA_FUNCIONAL_PILOTO_2026-11-25.md), con las decisiones del dueño del 25 de noviembre. Maqueta aprobada: [MAQUETA_DEMO_POR_CASO_Y_CUPO_2026-11-25](docs/diseno/MAQUETA_DEMO_POR_CASO_Y_CUPO_2026-11-25.html).
+- **La demo enseña lo que se compra** (#196).
+  - `?caso=mostrador` recorre tomar el pedido, cobrar con cambio, cocina y cerrar caja.
+  - `?caso=mesas` recorre abrir la mesa, comanda con nota, cocina, servir, dividir Q70 en 23.34 + 23.33 + 23.33 y liberar la mesa.
+  - Todo en memoria, sin base. `&vista=carta` vuelve a la carta del comensal.
+- **Cupo por pieza en todos los planes** (#196). «Cupo de esta tanda» va en la ficha del platillo: al venderse todas, queda agotada sola. Usa el mismo conteo de Inventario y queda en el historial; con Inventario encendido (Premium), la ficha manda allá.
+- **La oferta dice lo que el código hace** (#194).
+  - Si un local de En línea pasa los 300 pedidos y no acepta pasar a Estándar, se queda en En línea al mismo precio, sin cortes de pedidos; el aviso vuelve cada mes.
+  - La personalización completa aparece en todos los planes, como ya funcionaba el editor.
+  - Escritorio dice qué hace una Mac sola y qué gana con una PC principal con Windows.
+- **Alta y entrega** (#192).
+  - El enlace a la demo abre el caso del plan elegido, y la cocina de prueba lleva el nombre del negocio nuevo.
+  - El mapa de entrega ya no se inicializa dos veces al cambiar rápido entre llevar y domicilio.
+  - Nuevo `scripts/medir-publicacion-carta.mjs`.
+- **CARTA-01 cerrado** (#193). Fuera de un despliegue, el subdominio y el enlace del QR muestran el precio nuevo a la vez; la diferencia vista en la auditoría venía del despliegue automático.
+
+## v0.37.0 · 2026-11-25 · Caja, demo y alta listas para el piloto de mostrador
+PR #190 · sin migraciones. Implementa la [auditoría funcional para el piloto](docs/auditorias/AUDITORIA_FUNCIONAL_PILOTO_2026-11-25.md). CARTA-01 queda pendiente de evidencia en producción.
+- **Caja no cierra contra un esperado viejo** (CAJA-01, CAJA-02).
+  - Se actualiza sola con cada cobro y al volver a la pestaña.
+  - Si entra dinero mientras se cuenta, el servidor no registra el corte y muestra el importe nuevo.
+  - Una mesa pagada que sigue ocupada y un para llevar ya cobrado ya no aparecen como «sin cobrar».
+  - El recibo distingue el turno («de 10:27 a 10:28») del día de caja, y marca el cierre del día siguiente.
+- **«Modo aprendiz» ahora es «Mostrar ayuda»** (SALON-01). Avisa que lo enviado y cobrado es real y lleva al turno de práctica aislado.
+- **La demo dice lo mismo en todas partes** (PEDIDOS-01, 02).
+  - El total de la ficha ya no se queda a medio contar (Q69.78 en vez de Q70.00).
+  - La portada y la vista del cliente comparten la etapa del pedido.
+  - «Le avisamos al cliente» pasa a «Listo para entregar».
+- **El domicilio ya no sale con la ubicación del restaurante** (ENTREGA-01). La ubicación queda pendiente hasta que el comensal mueve el pin, toca el mapa o comparte su ubicación.
+- **El alta promete lo que el plan entrega** (ALTA-01 a 04, PLAN-01 a 03).
+  - Las ventajas del registro y la vista previa siguen al plan elegido; la personalización completa solo se anuncia en Premium.
+  - Con uno o más platillos basta para ver la carta.
+  - Estándar dice «2 de 3 modos» y dónde se cambian.
+  - Antes de crear, enlace a la demo del mismo caso.
+  - En Básico, la guía es «Publica y comparte tu carta», y el QR por mesa solo aparece con salón.
+- **Textos honestos** (PLAN-02, COPY-01, COCINA-01, METRICAS-01).
+  - El tope de En línea dice que nada se corta, el precio de Estándar y que el cambio de plan lo confirma el dueño.
+  - La ganancia requiere cargar costos, y el cliente le paga al negocio, no a Leogin.
+  - Sin impresora no se promete papel.
+  - Con poco historial se dan conteos en vez de porcentajes.
+- Incluye el mapa de dependencias del plan Básico, que está en evaluación comercial.
+
+## v0.36.0 · 2026-11-25 · La web pública se entiende y se recorre desde el teléfono
+PR #187 y #188 · sin migraciones. Cierra la [auditoría de experiencia de la web pública](docs/auditorias/AUDITORIA_EXPERIENCIA_WEB_PUBLICA_2026-11-24.md) (11 hallazgos de comprensión, diseño adaptable, accesibilidad y rendimiento) salvo WEB-UX-10, que se mide contra producción.
+- **Quien llega por el teléfono ve su caso y el precio sin bajar** (WEB-UX-02, 03).
+  - En la portada los casos van antes del video: empiezan en y=477 a 390 px (antes en y=859), y el segundo botón es «Ver planes y precios».
+  - En Vende en línea, «Q99 / mes» va junto al primer botón (antes en y≈5800).
+  - Planes y Vende en línea explican el tope de 300 pedidos con la misma frase.
+- **La demo conserva lo que elegiste** (WEB-UX-01). Mesas y Mostrador abren la demo con su caso, y «Quiero esto en mi restaurante» llega al alta con ese plan. «Probar la demo» de la cabecera lleva a «Pídelo tú mismo».
+- **Teclado y lector de pantalla** (WEB-UX-07, 08, 09).
+  - «Saltar al contenido» en todas las páginas, y Planes con región principal.
+  - El menú devuelve el foco y ya no se corta en horizontal.
+  - Enlaces legales subrayados.
+  - El pedido de prueba usa la misma hoja del carrito, con foco, Esc y retorno.
+  - El video en bucle se puede pausar y el aparato lo recuerda.
+- **Comparar y decidir** (WEB-UX-04, 05, 06). La comparativa de planes se abre al llegar y en el teléfono deja fija la columna de la función. En el registro la contraseña ya no queda debajo del botón fijo. «Hablar con nosotros» está en el menú y en Planes, y Descargas ofrece pedir la instalación junto al botón.
+- **Imagen propia al compartir** (WEB-UX-11). Portada, Planes, Vende en línea, Registro y Descargas tienen su tarjeta de 1200 × 630 con la promesa y el precio vigente.
+- Maqueta aprobada: [MAQUETA_WEB_PUBLICA_EXPERIENCIA_2026-11-24](docs/diseno/MAQUETA_WEB_PUBLICA_EXPERIENCIA_2026-11-24.html).
+
+## v0.35.0 · 2026-11-24 · Seguridad, plazos de los datos y avisos antes de perder algo
+PR #182, #183 y #184 · **migraciones 194 y 195** (`supabase/actualizacion_194_a_195.sql`, antes o después del despliegue: el código funciona sin ellas y se pueden repetir). Cierra la parte de código de la [auditoría de lanzamiento](docs/auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md) con las decisiones del dueño del 24 de noviembre.
+- **Los límites de intentos ya no se saltan con una IP falsa** (#182).
+  - Antes bastaba escribir otra IP en `X-Forwarded-For` para saltar los límites del PIN, el acceso, el código de dos pasos, recuperar la contraseña y los pedidos.
+  - Ahora la IP sale de Cloudflare (`cf-connecting-ip`), y las IPv6 se agrupan por /64.
+  - Comprobado en producción: con 35 peticiones con IP falsa, la 31.ª ya da 429.
+- **Un comedor lleno en el mismo wifi ya no choca** (#183). El tope era de 6 pedidos por minuto por IP. Ahora es de 30 por IP y local, y de 6 por teléfono.
+- **El comensal que vuelve con un pedido en espera lo ve** (#184).
+  - Antes el reintento iba a escondidas: si el local lo rechazaba se borraba sin avisar, y si entraba el carrito seguía lleno, listo para pedir dos veces.
+  - Ahora el pedido aparece en «Aún no se envía». Si entra, sale la confirmación y el carrito se vacía.
+  - Si se rechaza, vuelve el carrito con «Tu pedido no se envió: …» y los datos ya escritos.
+  - En el kiosko sigue en segundo plano.
+- **Antes de borrar un local, el superadmin sabe si el dueño exportó sus datos** (#184).
+  - La zona peligrosa dice si el dueño exportó y cuándo.
+  - Si no exportó, la confirmación lo advierte en rojo y el botón dice «Eliminar de todos modos». Se avisa, no se bloquea (decisión del dueño).
+- **«Exportar tus datos» trae todo** (#182). Antes cortaba en 5,000 pedidos sin decirlo; ahora trae todos los pedidos, más una hoja de Cobros y otra de Facturas FEL.
+- **Los cobros de Leogin quedan en la bitácora al borrar un local** (#182). Si no se pueden guardar, el local no se borra.
+- **Los datos personales tienen plazo** (migración 195).
+  - Una purga diaria quita el nombre y el contacto del comensal en los pedidos, las reseñas y las fichas después de 24 meses. Las reservas y WhatsApp tienen 12 meses, y las visitas a la carta 13.
+  - Se conservan los totales, las facturas FEL y las fichas con puntos por canjear.
+  - La política de privacidad dice los plazos.
+- **Al terminar una prueba gratis, el cobro empieza ese día** (migración 194). Antes la primera mensualidad podía nacer vencida. `supabase/revisar_mensualidad_vencida_al_nacer.sql` lista los locales que ya quedaron así.
+- Vista previa al compartir Vende en línea y el registro: título e imagen en WhatsApp.
+- Las altas se miden por plan y caso con `supabase/medir_altas_por_origen.sql`.
+- **Ensayos.**
+  - `scripts/ensayo-turno.mjs`: 10 pedidos con doble toque, respuesta perdida y sin señal, con 2 teléfonos y 2 paneles.
+  - Pausar los pedidos a mitad del turno.
+  - Acceso por rol: Caja ve pedidos, Cocina no, y quitar el acceso funciona con el panel abierto.
+  - `scripts/revisar-accesibilidad.mjs` (axe): el panel baja de 8 fallas críticas a 0.
+
+## v0.34.0 · 2026-11-23 · Carta más ligera, precios al día y borrar a un comensal
+PR #181 · **migraciones 192 y 193, ANTES de desplegar** (`node scripts/armar-migraciones-produccion.mjs 192 193`). Las dos solo agregan funciones.
+- **La carta carga menos** (de 323 a 235 KB de JS en producción). La demo y el cliente de Supabase se cargan solo donde se usan, y los 48 íconos de la carta van aparte de los del panel. En producción la carta se ve en 2.44 s (mediana) y se puede tocar en 2.86 s.
+- **Si un precio cambia con el carrito abierto, el comensal se entera.** Antes el servidor cobraba el precio nuevo sin avisar. Ahora el pedido no se crea, el carrito toma el precio vigente y el pago dice qué cambió.
+- **Errores del registro y del alta que se leen.** Se anuncian a los lectores de pantalla, el cursor va al campo que falta y el aviso usa el rojo del sistema (el anterior apenas se leía).
+- **Borrar los datos de un comensal en un local** (migración 192, `leogin_olvidar_comensal`). Por defecto hace un ensayo, y conserva los totales y las facturas FEL. Hay un inventario de los datos personales que guarda Leogin.
+- **Borrar un local ya no deja archivos sueltos** (migración 193). Se van sus comprobantes y las fotos que no usa nadie más. Se conservan las de copias, plantillas y grupos.
+- `scripts/medir-aviso-panel.mjs` mide cuánto tarda un pedido en verse en el panel (≤ 5 s); `medir-carta.mjs` mide también cuándo la carta se puede tocar.
+
+## v0.33.0 · 2026-11-23 · Listo para el primer piloto de pago
+PR #177 y #179 · **migración 191, ANTES de desplegar** (`supabase/.produccion/` con `node scripts/armar-migraciones-produccion.mjs 191 191`). Sale de la [auditoría de lanzamiento](docs/auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md), cuyo §4 lleva el avance de cada punto.
+- **El precio que acuerdas se respeta** (migración 191).
+  - La mensualidad se fija al contratar o cambiar de plan. Cambiar precios en superadmin solo afecta altas y cambios de plan; quien ya paga conserva su precio, también en el corte mensual.
+  - En la ficha de cobro, «Pasar a Qx/mes» pasa a un local al precio vigente, con confirmación. Se retira «Recalcular precios».
+  - Si falla la lectura de precios, la web ya no guarda los valores de fábrica 5 minutos como si fueran los vigentes.
+- **El primer cobro ya no nace vencido.** El alta dejaba el día de cobro en 1: quien se daba de alta después del día 11 contaba como moroso desde el principio. Ahora cada mensualidad vence el día del alta (28 como máximo).
+- **Cancelar detiene todos los cobros.** Bajar a Básico deja la mensualidad en 0 aunque el precio fuera acordado a mano; la confirmación dice que la carta y el QR siguen.
+- **Con una mensualidad atrasada, el QR sigue funcionando**: la carta se ve como Básico, sin pedidos. La suspensión manual sí la quita. Términos explica cómo cancelar y qué pasa con el impago.
+- **Usuarios por plan** (decisión del dueño): cuenta todo el equipo, dueño y PIN incluidos (Básico y En línea 1, Estándar 2, Premium sin tope). Quien ya tiene más los conserva y no suma más. Personal avisa antes de llenar la ficha.
+- **El plan elegido en la web llega al alta** (maqueta aprobada `docs/diseno/MAQUETA_ALTA_CON_PLAN_2026-11-23.html`). Viaja en el enlace y queda en la cuenta; el registro lo muestra en una línea; el alta tiene las cuatro respuestas de la web, con «En mostrador» → Estándar, y dice el monto, la fecha y dónde se paga el primer cobro.
+- **Web pública.** Campos del registro con nombre accesible y foco visible sobre el pie fijo. La portada nombra el canal real de ventas. La carta publica una sola dirección (`og:url` y canonical), Planes tiene canonical y tarjeta, y la demo no se indexa. Descargas ofrece Escritorio con instalación acompañada y ya no enseña a saltarse la advertencia de Windows.
+- **Revertido antes de etiquetar (#179):** dar prioridad alta a las primeras fotos de la carta. En local bajaba el LCP, pero en producción React precargaba esas fotos junto al CSS y al JS, y la carta tardaba ~1 s más en verse con 4G lento (3.6 s en vez de 2.5 s). Tras revertir: 9/10 cargas en ≤ 3 s.
+- **Herramientas de salida.** `verificar_huellas.sql` coteja en producción 20 funciones de pedido, cobro, caja, mensualidad y permisos; las pruebas de integración arrancan comprobando la base. `scripts/medir-carta.mjs` mide la carta como un teléfono de gama media con 4G lento. Una prueba vigila que los logs no lleven datos personales.
 
 ## v0.32.0 · 2026-11-22 · Acceso y equipo por local
 PR #155, #172, #173, #174 y #175 · **sin migraciones**. Sale de la auditoría externa de acceso, equipo y restaurantes del 2026-11-21, verificada punto por punto contra el código; maqueta aprobada en `docs/diseno/MAQUETA_ACCESO_Y_EQUIPO_2026-11-22.html`.

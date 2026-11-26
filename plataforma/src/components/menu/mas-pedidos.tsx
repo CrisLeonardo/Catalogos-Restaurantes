@@ -10,7 +10,7 @@
    ============================================================ */
 
 import AssetImage from '@/components/asset-image';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import { Price } from '@/components/menu/ui';
 import { useLocale, useLocalized } from '@/lib/locale/context';
 import type { DestacadoVentas } from '@/lib/menu/mas-pedidos';

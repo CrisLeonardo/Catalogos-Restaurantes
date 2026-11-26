@@ -19,6 +19,7 @@ import {
   validateUsername, staffUsernameEmail, parseStaffUsername,
 } from '@/lib/staff-email';
 import { rateLimit } from '@/lib/rate-limit';
+import { verificarCupo } from '@/lib/cupo-usuarios';
 import { logActivity } from '@/lib/activity';
 import { isValidPin, newPinSalt, hashPin, PIN_LENGTH } from '@/lib/staff-pin-crypto';
 import { isMeseroOnly } from '@/lib/permissions';
@@ -223,6 +224,10 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
   }
   const techo = errorDeTecho(ctx, permissions);
   if (techo) return { error: techo };
+
+  // Usuarios por plan (LZ-08): cuenta todo el equipo, dueño y PIN incluidos.
+  const sinLugar = await verificarCupo(ctx.db, ctx.restaurantId);
+  if (sinLugar) return { error: sinLugar };
 
   let email: string;
   let password: string;

@@ -6,7 +6,7 @@
 
 import AssetImage from '@/components/asset-image';
 import { useEffect, useState, type CSSProperties } from 'react';
-import { Icon } from '@/components/icons';
+import { Icon } from '@/components/icons-carta';
 import { PrimaryButton } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { useEdicion } from '@/lib/vitrina/use-edicion';

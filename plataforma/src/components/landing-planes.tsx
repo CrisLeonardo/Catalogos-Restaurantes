@@ -17,7 +17,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { conEvento, EVENTOS } from '@/lib/analytics';
-import { planParaTuCaso, type CasoDeLaWeb, type PlanAlta } from '@/lib/alta';
+import { enlaceDeAlta, planParaTuCaso, type CasoDeLaWeb, type PlanAlta } from '@/lib/alta';
 import { guardarPerfil } from '@/lib/perfil-negocio';
 import s from './landing-planes.module.css';
 
@@ -38,7 +38,15 @@ const CASOS: { valor: CasoDeLaWeb; texto: string }[] = [
   { valor: 'mesas', texto: 'En mesas con mesero' },
 ];
 
-export function PlanPorPreguntas({ planes, origen }: { planes: PlanDeLaWeb[]; origen: 'portada' | 'planes' }) {
+export function PlanPorPreguntas({ planes, origen, contacto, trialDays = 0 }: {
+  planes: PlanDeLaWeb[];
+  origen: 'portada' | 'planes';
+  trialDays?: number;
+  /** Canal de ventas real (site-chrome): «¿Dudas? Escríbenos por correo» bajo
+      el botón, donde se decide el plan (WEB-UX-06). Lo pasa la página porque
+      la configuración del canal vive en el servidor. */
+  contacto?: { href: string; via: string };
+}) {
   const [caso, setCaso] = useState<CasoDeLaWeb | null>(null);
   const [mas300, setMas300] = useState(false);
   const elegido = caso ? planParaTuCaso(caso, mas300) : null;
@@ -80,17 +88,26 @@ export function PlanPorPreguntas({ planes, origen }: { planes: PlanDeLaWeb[]; or
         ))}
       </ul>
 
-      {/* En línea deja el alta armada para vender en línea (perfil
-          'en-linea', lib/perfil-negocio.ts), igual que su página. */}
+      {/* El plan y el caso viajan en el enlace hasta el alta (LZ-11).
+          En línea además deja el perfil 'en-linea' de respaldo
+          (lib/perfil-negocio.ts), igual que su página. */}
       <Link
-        href="/registro"
+        href={enlaceDeAlta(caso && elegido ? { plan: elegido, caso } : null)}
         {...conEvento(`lp-btn lp-btn-lg lp-btn-primary ${s.cta}`, EVENTOS.clicCrear, `${origen} · ${plan?.nombre ?? 'sin plan'}`)}
         onClick={elegido === 'EN_LINEA' ? () => guardarPerfil('en-linea') : undefined}
       >
-        {plan ? (plan.gratis ? 'Empezar gratis con Básico' : `Empezar con ${plan.nombre}`) : 'Crear mi restaurante'}
+        {plan ? (plan.gratis ? 'Empezar gratis con Básico' : trialDays > 0 ? 'Iniciar prueba' : `Empezar con ${plan.nombre}`) : 'Crear mi restaurante'}
       </Link>
+      {plan && !plan.gratis && trialDays > 0 && (
+        <p className={s.mas}>{trialDays} días gratis. Empieza sin tarjeta.</p>
+      )}
       {origen === 'portada' && (
-        <Link href="/planes" className={s.mas}>Ver los cuatro planes lado a lado →</Link>
+        <Link href="/planes#comparativa" className={s.mas}>Ver los cuatro planes lado a lado →</Link>
+      )}
+      {contacto && (
+        <a href={contacto.href} target="_blank" rel="noopener noreferrer" className={s.mas}>
+          ¿Dudas? Escríbenos {contacto.via}
+        </a>
       )}
     </div>
   );

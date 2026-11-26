@@ -1614,3 +1614,32 @@ describe('0.18 · pertenencia durable y cierre de caja coordinado', () => {
     expect(table.rows[0]).toEqual({ auth: false, anon: false, mfa: true });
   });
 });
+
+describe('Auditoría funcional 2026-11-25 · CAJA-01', () => {
+  it('un cobro durante el conteo detiene el cierre con el esperado nuevo y luego cuadra Q170 en Q0.00', async () => {
+    success(await abrirTurno({ restaurantId: rid(), openingFloat: 100 }));
+    const o = await order([52, 18]);
+    const turno = await turnoLeido();
+    // La pantalla de Caja se quedó con Q100: entra el cobro de Q70 desde el mesero.
+    success(await pay(o.items.map((i: { id: string }) => i.id), 70));
+    const l = await period();
+    // Mesa 1 pagada y todavía ocupada no es dinero pendiente.
+    expect(l.pendientes.mesas).toEqual([]);
+    expect(l.pendientes.total).toBe(0);
+    const conteo = { bil_100: 1, bil_50: 1, bil_20: 1 };
+    const viejo = await closeCaja({ restaurantId: rid(), counts: conteo, openingFloat: 100, esperadoVisto: 100, intentoId: randomUUID(), turno });
+    expect(viejo).toEqual({ esperadoCambio: { antes: 100, ahora: 170 } });
+    expect(checked(await db.from('cash_counts').select('id').eq('restaurant_id', rid()).eq('status', 'CLOSED'))).toEqual([]);
+    const cierre = await closeCaja({ restaurantId: rid(), counts: conteo, openingFloat: 100, esperadoVisto: 170, intentoId: randomUUID(), turno });
+    success(cierre);
+    expect(cierre.result).toMatchObject({ counted: 170, expectedDrawer: 170, difference: 0 });
+  });
+
+  it('un para llevar ya cobrado que espera en cocina no aparece como pendiente', async () => {
+    const o = await order([25]);
+    checked(await db.from('orders').update({ order_type: 'PICKUP', table_number: null, address: null, status: 'PREP' }).eq('id', o.id));
+    checked(await db.from('order_payments').insert({ restaurant_id: rid(), order_id: o.id, method: 'CASH', amount: 25 }));
+    const l = await period();
+    expect(l.pendientes.paraLlevar.find((p) => p.orderId === o.id)).toBeUndefined();
+  });
+});

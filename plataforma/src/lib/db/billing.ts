@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service';
-import { PLANS, planPresentation, type PlanCode, type PlanPricing } from '@/lib/plans';
+import { DIAS_PRUEBA, PLANS, planPresentation, type PlanCode, type PlanPricing } from '@/lib/plans';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import type { ModuleSettings } from '@/lib/modules';
 
@@ -33,8 +33,13 @@ export interface BillingConfig {
   active: boolean;
   started_at: string | null;
   notes: string | null;
-  /** true = la mensualidad se calcula del plan; false = monto manual (override). */
+  /** true = la mensualidad es el precio del plan al contratarlo; false = monto manual (override). */
   auto_price: boolean;
+  /** Plan con el que se fijó `monthly_fee` (mig. 191). Si no coincide con el
+   *  plan actual, el próximo corte vuelve a fijar el precio. */
+  plan_del_precio: string | null;
+  /** Cuándo se acordó `monthly_fee` por última vez (mig. 191). */
+  precio_fijado_en: string | null;
   /** Override de días de gracia; null = usa el global. */
   grace_days: number | null;
   /** El sistema lo suspendió por impago (no una suspensión manual). */
@@ -43,6 +48,9 @@ export interface BillingConfig {
   admin_override_suspend: boolean;
   /** Fin de la prueba gratis (null = sin prueba). En prueba: active=false y esta fecha futura. */
   trial_ends_at: string | null;
+  trial_started_at?: string | null;
+  trial_confirmed_at?: string | null;
+  trial_finished_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -162,10 +170,15 @@ function normConfig(data: Record<string, unknown>): BillingConfig {
     started_at: (data.started_at as string | null) ?? null,
     notes: (data.notes as string | null) ?? null,
     auto_price: data.auto_price !== false,
+    plan_del_precio: (data.plan_del_precio as string | null) ?? null,
+    precio_fijado_en: (data.precio_fijado_en as string | null) ?? null,
     grace_days: data.grace_days != null ? Number(data.grace_days) : null,
     suspended_for_nonpayment: data.suspended_for_nonpayment === true,
     admin_override_suspend: data.admin_override_suspend === true,
     trial_ends_at: (data.trial_ends_at as string | null) ?? null,
+    trial_started_at: (data.trial_started_at as string | null) ?? null,
+    trial_confirmed_at: (data.trial_confirmed_at as string | null) ?? null,
+    trial_finished_at: (data.trial_finished_at as string | null) ?? null,
     created_at: data.created_at as string,
     updated_at: data.updated_at as string,
   };
@@ -208,14 +221,32 @@ const fetchPricingSettingsCached = unstable_cache(
   { revalidate: 300, tags: [PRICING_SETTINGS_TAG] },
 );
 
-export const getPricingSettings = cache(
-  (): Promise<PricingSettings> => fetchPricingSettingsCached(),
-);
+/* Una lectura FALLIDA no es lo mismo que ajustes ausentes (auditoría de
+   lanzamiento 2026-11-23, LZ-01). Antes el error se ignoraba y los valores
+   de fábrica quedaban 5 minutos en la caché como si fueran los vigentes.
+   Ahora `leerPricingSettings` lanza —unstable_cache no guarda un error— y
+   aquí se avisa en el log y se responde con los de fábrica SOLO en esta
+   petición: la siguiente vuelve a leer. Esto solo afecta lo que se MUESTRA;
+   lo que se cobra lo calcula Postgres con sus propios ajustes. */
+export const getPricingSettings = cache(async (): Promise<PricingSettings> => {
+  try {
+    return await fetchPricingSettingsCached();
+  } catch (e) {
+    console.error('[precios] No se pudo leer platform_settings; valores de fábrica solo en esta petición.', e);
+    return construirPricingSettings(new Map());
+  }
+});
 
 async function leerPricingSettings(): Promise<PricingSettings> {
   const db = createServiceClient();
-  const { data } = await db.from('platform_settings').select('key, value');
-  const map = new Map((data ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
+  const { data, error } = await db.from('platform_settings').select('key, value');
+  if (error) throw new Error(`platform_settings: ${error.message}`);
+  return construirPricingSettings(new Map((data ?? []).map((r: { key: string; value: string }) => [r.key, r.value])));
+}
+
+/** Ajustes de precios a partir de las filas de platform_settings; lo que
+ *  falte toma el valor de fábrica. Exportada para probarla. */
+export function construirPricingSettings(map: Map<string, string>): PricingSettings {
   const n = (k: string, d: number) => { const v = parseFloat(map.get(k) ?? ''); return isNaN(v) ? d : v; };
   const b = (k: string, d: boolean) => { const v = map.get(k); return v == null || v === '' ? d : v === 'true'; };
   return {
@@ -234,7 +265,7 @@ async function leerPricingSettings(): Promise<PricingSettings> {
     graceDays:          n('billing_grace_days',  10),
     autoSuspend:        b('billing_auto_suspend', true),
     autoGenerate:       b('billing_auto_generate', true),
-    trialDays:          n('trial_days',            0),
+    trialDays:          n('prueba_voluntaria_activa', 0) === 1 ? DIAS_PRUEBA : 0,
   };
 }
 

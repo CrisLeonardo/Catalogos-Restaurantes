@@ -10,12 +10,14 @@ import { after } from 'next/server';
 import { headers } from 'next/headers';
 import { createOrderSchema, waiterOrderSchema, type CreateOrderInput } from '@/lib/schemas';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { cubosDelPedido } from '@/lib/limite-pedidos';
 import { sendPushToRestaurant } from '@/lib/push';
 import { resolveTheme, computeTip, type ThemeRow } from '@/lib/theme/resolve';
 import { mesaExiste } from '@/lib/mesa-valida';
 import type { ThemeConfig } from '@/lib/theme/defaults';
 import { edicionPermitePedir, estadoEdicion, motivoSinPedidos } from '@/lib/vitrina/edicion';
 import { isOpenNow, type WeeklyHours, type HourExceptions } from '@/lib/hours';
+import { preciosCambiados, type PrecioCambiado } from '@/lib/precios-carrito';
 import { resolveCoupon } from '@/lib/db/cupones';
 import { getDeliveryZones, zoneFeeFrom, type DeliveryZone } from '@/lib/db/zones';
 import { logActivity } from '@/lib/activity';
@@ -80,6 +82,10 @@ export interface CreateOrderResult {
   /** Token de la página pública de seguimiento (/pedido/[token]). */
   publicToken?: string;
   error?: string;
+  /** Si cambió un precio con el carrito abierto (OP-02): los precios
+   *  unitarios vigentes, en el mismo orden que `items`, y qué cambió. */
+  preciosActualizados?: number[];
+  preciosCambiados?: PrecioCambiado[];
 }
 
 export type VerifiedOrderItem = {
@@ -380,10 +386,13 @@ export async function createOrder(
   }
 
   // Rate-limit: endpoint público sin login. Frena inundación de pedidos
-  // (spam de push/sonido al restaurante + crecimiento de tabla). 6/min por IP.
+  // (spam de push/sonido al restaurante + crecimiento de tabla). 30/min por
+  // IP (el wifi del local la comparte) y 6/min por teléfono: lib/limite-pedidos.
   const ip = clientIp(await headers());
-  if (!(await rateLimit(`order:${ip}:${restaurantId}`, 6, 60_000))) {
-    return { error: 'Has enviado varios pedidos muy seguido. Espera un momento e intenta de nuevo.' };
+  for (const cubo of cubosDelPedido(ip, restaurantId, customer.phone)) {
+    if (!(await rateLimit(cubo.clave, cubo.max, cubo.ventanaMs))) {
+      return { error: 'Has enviado varios pedidos muy seguido. Espera un momento e intenta de nuevo.' };
+    }
   }
 
   const { authUserId, loyaltyCustomerId } = diner;
@@ -507,6 +516,19 @@ export async function createOrder(
 
   if ('error' in priced) return { error: priced.error };
   const verifiedItems: VerifiedOrderItem[] = priced.items;
+
+  /* Precio que cambió con el carrito abierto (auditoría de lanzamiento
+     2026-11-23, OP-02; ver lib/precios-carrito.ts). Se cobra siempre el
+     precio de la base, pero si no es el que vio el comensal, el pedido no se
+     crea: se le devuelven los vigentes para que confirme el total nuevo. */
+  const cambios = preciosCambiados(items, verifiedItems);
+  if (cambios.length > 0) {
+    return {
+      error: 'Cambió el precio de algo de tu carrito. Revisa el total y vuelve a enviar.',
+      preciosActualizados: verifiedItems.map((v) => v.price),
+      preciosCambiados: cambios,
+    };
+  }
 
   // ── Recompensas de lealtad canjeadas (migración 058) ──────────
   // El cliente solo manda ids; aquí verificamos que el saldo alcance. Si algo
