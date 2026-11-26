@@ -28,6 +28,7 @@ import s from './fidelidad.module.css';
 interface Props {
   restaurantId: string;
   coupons: Coupon[];
+  advanced: boolean;
   /** Si la consulta falló, la lista vacía NO significa «sin cupones». */
   estado: EstadoLectura;
   leidoEn: string;
@@ -82,7 +83,7 @@ function Frase({ tipo, valor, minimo, maxUsos, desde, hasta, usado, vencido }: {
   );
 }
 
-export default function CuponesPanel({ restaurantId, coupons, estado, leidoEn, timezone }: Props) {
+export default function CuponesPanel({ restaurantId, coupons, estado, leidoEn, timezone, advanced }: Props) {
   const { add: toast } = useToastManager();
   const { confirm, dialog } = useConfirm();
   const [abierto, setAbierto] = useState<string | null>(null);
@@ -160,6 +161,7 @@ export default function CuponesPanel({ restaurantId, coupons, estado, leidoEn, t
         <HojaFormulario
           restaurantId={restaurantId}
           cupon={editando === 'nuevo' ? null : editando}
+          advanced={advanced}
           timezone={timezone}
           onClose={() => setEditando(null)}
           onHecho={(t) => { setEditando(null); hecho(t); }}
@@ -283,8 +285,8 @@ function HojaCupon({ restaurantId, cupon, timezone, onClose, onCambiar, onElimin
 }
 
 /* ── Nuevo cupón o cambiarlo: código, descuento y hasta cuándo ──── */
-function HojaFormulario({ restaurantId, cupon, timezone, onClose, onHecho }: {
-  restaurantId: string; cupon: Coupon | null; timezone: string;
+function HojaFormulario({ restaurantId, cupon, timezone, advanced, onClose, onHecho }: {
+  restaurantId: string; cupon: Coupon | null; timezone: string; advanced: boolean;
   onClose: () => void; onHecho: (t: string) => void;
 }) {
   const [codigo, setCodigo] = useState(cupon?.code ?? '');
@@ -370,20 +372,20 @@ function HojaFormulario({ restaurantId, cupon, timezone, onClose, onHecho }: {
 
         {verCondiciones ? (
           <>
-            <div className={s.dos}>
+            {(advanced || !!cupon?.min_order || !!cupon?.max_uses) && <div className={s.dos}>
               <label className={s.campo}>Compra mínima (Q)
-                <input className="adm-field tabular-nums" inputMode="decimal" placeholder="Sin mínimo" value={minimo} onChange={(e) => setMinimo(e.target.value.replace(/[^\d.]/g, ''))} />
+                <input className="adm-field tabular-nums" inputMode="decimal" placeholder="Sin mínimo" readOnly={!advanced} value={minimo} onChange={(e) => setMinimo(e.target.value.replace(/[^\d.]/g, ''))} />
               </label>
               <label className={s.campo}>Límite de usos
-                <input className="adm-field tabular-nums" inputMode="numeric" placeholder="Sin límite" value={maxUsos} onChange={(e) => setMaxUsos(e.target.value.replace(/\D/g, ''))} />
+                <input className="adm-field tabular-nums" inputMode="numeric" placeholder="Sin límite" readOnly={!advanced} value={maxUsos} onChange={(e) => setMaxUsos(e.target.value.replace(/\D/g, ''))} />
               </label>
-            </div>
+            </div>}
             <label className={s.campo}><span>Empieza el <small>· vacío, desde hoy</small></span>
               <input className="adm-field" type="date" value={desde} max={fin || undefined} onChange={(e) => setDesde(e.target.value)} />
             </label>
           </>
         ) : (
-          <button type="button" className={s.agregar} onClick={() => setVerCondiciones(true)}>+ Compra mínima, límite de usos o inicio</button>
+          <button type="button" className={s.agregar} onClick={() => setVerCondiciones(true)}>{advanced ? '+ Compra mínima, límite de usos o inicio' : '+ Elegir fecha de inicio'}</button>
         )}
 
         {verNota ? (

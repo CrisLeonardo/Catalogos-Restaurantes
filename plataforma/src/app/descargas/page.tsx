@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { imagenesWeb } from '@/lib/og-web';
+import { marketingUrl } from '@/lib/tenant';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { SiteHeader, SiteFooter, SectionHead, contactHref, CONTACT_VIA } from '@/components/site-chrome';
@@ -6,11 +8,23 @@ import { DesktopPlatformNotice } from '@/components/desktop-platform-notice';
 import { LeoginMark } from '@/components/leogin-logo';
 import { LEOGIN_CORAL, LEOGIN_CREMA } from '@/lib/marca/trazos.mjs';
 
+const TITULO = 'Leogin Desktop — la app de escritorio de tu restaurante';
+const DESCRIPCION =
+  'Leogin Desktop para Windows: tu panel como una app instalada, con modo cocina, impresión de comandas en Premium y respaldo local con una PC principal configurada.';
+const ALT = 'Leogin Escritorio: tu restaurante, instalado en tu PC';
+
 export const metadata: Metadata = {
-  title: 'Leogin Desktop — la app de escritorio de tu restaurante',
-  description:
-    'Leogin Desktop para Windows: tu panel como una app instalada, con modo cocina, impresión de comandas en Premium y respaldo local con una PC principal configurada.',
+  title: TITULO,
+  description: DESCRIPCION,
   robots: { index: true, follow: true },
+  // Sin estas etiquetas, compartir Descargas salía sin imagen (WEB-UX-11).
+  alternates: { canonical: marketingUrl('/descargas') },
+  openGraph: {
+    title: TITULO, description: DESCRIPCION, url: marketingUrl('/descargas'),
+    siteName: 'Leogin', locale: 'es_GT', type: 'website',
+    images: imagenesWeb('descargas', ALT).og,
+  },
+  twitter: { ...imagenesWeb('descargas', ALT).twitter, title: TITULO, description: DESCRIPCION },
 };
 
 const DOWNLOAD_HREF = '/api/desktop/download-exe';
@@ -59,7 +73,10 @@ const FAQS = [
   { q: '¿Necesito crear otra cuenta para usarla?', a: 'No. Es la misma cuenta con la que ya entras a tu panel desde el navegador.' },
   { q: '¿Funciona si se corta el internet?', a: 'Sí, si tu local tiene una PC principal configurada con el respaldo local: esa PC sigue recibiendo pedidos (y, en Premium, imprimiéndolos) mientras la nube no responde, y todo se sincroniza al volver la conexión. Esa PC y la red del local tienen que seguir encendidas. La configuramos contigo.' },
   { q: '¿Windows me va a mostrar una advertencia al instalar?', a: 'Por ahora puede mostrarla: Windows marca como «Editor no reconocido» los programas que aún no tienen firma digital, y la nuestra está en trámite. Mientras tanto instalamos Leogin Escritorio contigo, para que no tengas que decidir solo frente a esa pantalla. Tu panel funciona completo desde el navegador sin instalar nada.' },
-  { q: '¿Hay versión para Mac?', a: 'Todavía no — por ahora Leogin Desktop es solo para Windows. En Mac puedes seguir usando tu panel normalmente desde el navegador, sin perder ninguna función.' },
+  /* Escritorio (auditoría funcional, 2.ª ronda): «sin perder ninguna
+     función» chocaba con la misma página, que pide una PC principal con
+     Windows para imprimir sola y para el respaldo sin internet. */
+  { q: '¿Hay versión para Mac?', a: 'Todavía no: Leogin Desktop es solo para Windows. En una Mac usas el panel completo desde el navegador: pedidos, cocina, caja y reportes. Lo que necesita Windows es la PC principal, que imprime las comandas sola (en Premium) y sirve de respaldo si se corta el internet. Si tu local tiene una PC con Windows configurada como principal, la Mac trabaja junto a ella: lo que pidas desde la Mac también sale impreso. Sin esa PC, la Mac necesita internet y no imprime por su cuenta.' },
   { q: '¿Cómo la desinstalo?', a: 'Como cualquier programa de Windows: Configuración → Aplicaciones → Leogin → Desinstalar. Se quita por completo, sin dejar residuos.' },
 ];
 
@@ -68,7 +85,7 @@ export default function DescargasPage() {
     <div style={{ width: '100%' }}>
       <SiteHeader />
 
-      <main className="anim-fade-up">
+      <main id="contenido" tabIndex={-1} className="anim-fade-up">
         {/* ── Portada ───────────────────────────────────────── */}
         <section className="lp-shell" style={{ textAlign: 'center', padding: 'clamp(48px, 7vw, 88px) 20px clamp(28px, 4vw, 40px)' }}>
           <div className="lp-eyebrow">Leogin Escritorio</div>
@@ -91,9 +108,16 @@ export default function DescargasPage() {
               {/* Auditoría de lanzamiento 2026-11-23 (WEB-08, LZ-06/07): mientras
                   el instalador no tenga firma y el respaldo local no esté
                   ensayado con equipo, Escritorio se ofrece con acompañamiento. */}
+              {/* El aviso de firma pendiente vive más abajo; aquí, junto al
+                  botón, el camino para pedir la instalación y la opción de no
+                  instalar nada (WEB-UX-06). */}
               <p className="lp-body" style={{ fontSize: 13, margin: '8px auto 0', maxWidth: 520, color: 'var(--u-text-3)' }}>
-                Por ahora lo instalamos contigo. La impresión y el trabajo en red local requieren una
-                PC principal configurada y equipo compatible.
+                Por ahora lo instalamos contigo:{' '}
+                <a href={contactHref('Hola, quiero instalar Leogin Escritorio en mi restaurante')} style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 3 }}>
+                  escríbenos {CONTACT_VIA}
+                </a>
+                . Si no quieres instalar nada, el mismo panel funciona en el navegador. La impresión y el
+                trabajo en red local requieren una PC principal configurada y equipo compatible.
               </p>
             </div>
             <DesktopPlatformNotice />

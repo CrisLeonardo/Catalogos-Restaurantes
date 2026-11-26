@@ -1,4 +1,4 @@
-import type { PlanCode } from '@/lib/plans';
+import { DIAS_PRUEBA, type PlanCode } from '@/lib/plans';
 
 /* ============================================================
    COBRO DE UN RESTAURANTE RECIÉN CREADO
@@ -9,13 +9,7 @@ import type { PlanCode } from '@/lib/plans';
    que es como una regla de negocio acaba diciendo dos cosas distintas sin
    que nadie lo note.
 
-   LA REGLA: la prueba gratis es UNA por persona, en su primer restaurante.
-
-   El motivo es que la prueba existe para que alguien que no conoce Leogin
-   se atreva a probarlo. Quien ya tiene un restaurante aquí ya lo conoce: si
-   cada local nuevo trajera 30 días gratis, bastaría con abrir uno al mes
-   para no pagar nunca — y ahora que crear restaurantes es un botón cómodo
-   dentro de Mi cuenta, ese sería el camino fácil, no el rebuscado.
+   La prueba voluntaria es una por establecimiento.
    ============================================================ */
 
 /* ── El día de cobro es el del alta ───────────────────────────
@@ -43,6 +37,9 @@ export type NewRestaurantBilling = {
   /** Suscripción en marcha (se cobra). En prueba es `false`. */
   active: boolean;
   trial_ends_at: string | null;
+  trial_started_at?: string;
+  trial_started_by?: string;
+  trial_plan?: PlanCode;
   currency: 'GTQ';
 };
 
@@ -50,8 +47,7 @@ export function newRestaurantBilling(input: {
   planCode: PlanCode;
   /** Días de prueba configurados en /super/configuracion. */
   trialDays: number;
-  /** ¿Es el primer restaurante de esta persona? Solo ese lleva prueba. */
-  isFirstOfOwner: boolean;
+  ownerId?: string;
   now?: number;
 }): NewRestaurantBilling {
   const base = { auto_price: true, currency: 'GTQ', ...diaDeCobroDelAlta(input.now) } as const;
@@ -62,16 +58,17 @@ export function newRestaurantBilling(input: {
     return { ...base, active: true, trial_ends_at: null };
   }
 
-  const days = Math.max(0, Math.round(input.trialDays));
-  if (!input.isFirstOfOwner || days === 0) {
-    // Cobro desde el día uno. `active: true` lo mete en la facturación
-    // mensual de inmediato; `leogin_apply_auto_price` le pone la tarifa.
+  if (!(input.trialDays > 0)) {
     return { ...base, active: true, trial_ends_at: null };
   }
 
+  const inicio = input.now ?? Date.now();
   return {
     ...base,
     active: false,
-    trial_ends_at: new Date((input.now ?? Date.now()) + days * 86_400_000).toISOString(),
+    trial_started_at: new Date(inicio).toISOString(),
+    trial_started_by: input.ownerId,
+    trial_plan: input.planCode,
+    trial_ends_at: new Date(inicio + DIAS_PRUEBA * 86_400_000).toISOString(),
   };
 }

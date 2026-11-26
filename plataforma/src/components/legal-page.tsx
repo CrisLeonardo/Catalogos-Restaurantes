@@ -25,7 +25,7 @@ export function LegalShell({
   return (
     <>
       <SiteHeader />
-      <main style={{ minHeight: '60svh' }}>
+      <main id="contenido" tabIndex={-1} style={{ minHeight: '60svh' }}>
         <article
           className="anim-fade-up"
           style={{ width: '100%', maxWidth: 760, margin: '0 auto', padding: 'clamp(40px, 6vw, 72px) 20px 80px' }}

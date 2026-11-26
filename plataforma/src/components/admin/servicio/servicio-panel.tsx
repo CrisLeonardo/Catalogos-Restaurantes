@@ -361,7 +361,9 @@ export default function ServicioPanel({
   useSalonLive(`servicio-${restaurantId}`);
   useEffect(() => { if (hubUrl) warmUpHub(hubUrl); }, [hubUrl]);
 
-  /* ── Modo aprendiz: se recuerda por aparato ───────────────── */
+  /* ── «Mostrar ayuda» (antes «Modo aprendiz»): se recuerda por aparato.
+     Solo enciende indicaciones; NO aísla pedidos (SALON-01). Practicar sin
+     tocar el restaurante es /admin/mesero/practica. ── */
   useEffect(() => {
     try { setAprendiz(localStorage.getItem('leogin:servicio-aprendiz') === '1'); } catch { /* sin almacenamiento */ }
   }, []);
@@ -1420,7 +1422,7 @@ export default function ServicioPanel({
     { label: 'Pedido para llevar', hint: 'sin mesa', run: () => { setPaleta(false); setHoja({ k: 'llevar' }); }, enabled: pickupEnabled },
     { label: 'Juntar o mover mesa', hint: 'la mesa abierta', run: () => { setPaleta(false); setHoja({ k: 'mesa' }); }, enabled: sel.kind === 'mesa' },
     { label: 'Cobrar algo que no está en la carta', hint: 'artículo libre', run: () => { setPaleta(false); setHoja({ k: 'libre', nombre: '' }); }, enabled: sel.kind !== 'none' },
-    { label: 'Modo aprendiz', hint: aprendiz ? 'activo' : 'apagado', run: () => { setPaleta(false); cambiarAprendiz(); } },
+    { label: 'Mostrar ayuda', hint: aprendiz ? 'activa' : 'apagada', run: () => { setPaleta(false); cambiarAprendiz(); } },
     { label: 'Modo servicio', hint: 'pantalla completa', run: () => { setPaleta(false); servicio?.toggle(); }, enabled: !!servicio && !servicio.active },
     { label: 'Atajos de teclado', hint: '?', run: () => { setPaleta(false); setHoja({ k: 'atajos' }); } },
     { label: 'Preparar turno', hint: 'favoritos', run: () => { setPaleta(false); setHoja({ k: 'turno' }); } },
@@ -1591,7 +1593,7 @@ export default function ServicioPanel({
             {planoVisible ? 'Buscar platillo, mesa o acción' : 'Acciones'}
             {conTeclado && <Key>{atajo(mod, 'K')}</Key>}
           </Ghost>
-          {!servicio?.active && <Ghost onClick={cambiarAprendiz} on={aprendiz} title="Modo aprendiz">Modo aprendiz</Ghost>}
+          {!servicio?.active && <Ghost onClick={cambiarAprendiz} on={aprendiz} title="Muestra indicaciones en pantalla. Los pedidos siguen siendo reales.">Mostrar ayuda</Ghost>}
           {servicio && !servicio.active && (
             <Ghost
               onClick={servicio.toggle}
@@ -1661,6 +1663,15 @@ export default function ServicioPanel({
                 <div className="sv-hint">
                   Toca una mesa para abrir su pedido. El color te dice qué le falta:
                   ámbar = sin enviar, azul = falta servir, verde = por cobrar.
+                  {/* SALON-01: la ayuda no aísla nada. El nombre anterior, «Modo
+                      aprendiz», hacía creer que los pedidos eran de práctica. */}
+                  <strong style={{ display: 'block', marginTop: 6 }}>
+                    Estás en el restaurante real: lo que envíes llega a cocina y lo que cobres entra a caja.
+                  </strong>
+                  <button type="button" onClick={() => window.location.assign(panelHref(panelBaseFrom(window.location.pathname), '/admin/mesero/practica'))}
+                    style={{ all: 'unset', cursor: 'pointer', color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                    Para practicar sin afectar nada, abre el turno de práctica
+                  </button>
                 </div>
               )}
             </div>

@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service';
-import { PLANS, planPresentation, type PlanCode, type PlanPricing } from '@/lib/plans';
+import { DIAS_PRUEBA, PLANS, planPresentation, type PlanCode, type PlanPricing } from '@/lib/plans';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import type { ModuleSettings } from '@/lib/modules';
 
@@ -48,6 +48,9 @@ export interface BillingConfig {
   admin_override_suspend: boolean;
   /** Fin de la prueba gratis (null = sin prueba). En prueba: active=false y esta fecha futura. */
   trial_ends_at: string | null;
+  trial_started_at?: string | null;
+  trial_confirmed_at?: string | null;
+  trial_finished_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -173,6 +176,9 @@ function normConfig(data: Record<string, unknown>): BillingConfig {
     suspended_for_nonpayment: data.suspended_for_nonpayment === true,
     admin_override_suspend: data.admin_override_suspend === true,
     trial_ends_at: (data.trial_ends_at as string | null) ?? null,
+    trial_started_at: (data.trial_started_at as string | null) ?? null,
+    trial_confirmed_at: (data.trial_confirmed_at as string | null) ?? null,
+    trial_finished_at: (data.trial_finished_at as string | null) ?? null,
     created_at: data.created_at as string,
     updated_at: data.updated_at as string,
   };
@@ -259,7 +265,7 @@ export function construirPricingSettings(map: Map<string, string>): PricingSetti
     graceDays:          n('billing_grace_days',  10),
     autoSuspend:        b('billing_auto_suspend', true),
     autoGenerate:       b('billing_auto_generate', true),
-    trialDays:          n('trial_days',            0),
+    trialDays:          n('prueba_voluntaria_activa', 0) === 1 ? DIAS_PRUEBA : 0,
   };
 }
 

@@ -121,7 +121,7 @@ export default function Comanda({
           <Kicker tone="warn" rule>Sin enviar · {nNuevas}</Kicker>
           {aprendiz && (
             <div className="sv-hint">
-              Esto todavía no lo ha visto cocina. Toca «Enviar a cocina» abajo y sale el papel.
+              Esto todavía no lo ha visto cocina. Toca «Enviar a cocina» abajo y le aparece en su pantalla (y en papel, si hay impresora configurada).
             </div>
           )}
           {nuevas.map((l) => (

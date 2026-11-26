@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient, getStaffUser } from '@/lib/supabase/server';
-import { contextoDeCatalogo, topeDeProductos, type ContextoCatalogo } from '@/lib/catalogo/contexto';
+import { contextoDeCatalogo, topeDeProductos } from '@/lib/catalogo/contexto';
 import { createServiceClient } from '@/lib/supabase/service';
 import { canActOnGroupBranch, getAdminMenu } from '@/lib/db/admin';
 import { resolveEffectiveRole } from '@/lib/db/membership';
@@ -32,14 +32,9 @@ async function resolveContext(formData: FormData) {
   return contextoDeCatalogo((formData.get('restaurantId') as string | null) ?? null);
 }
 
-/** Tope de productos del plan gratuito (ver lib/catalogo/contexto.ts). */
-async function checkProductLimit(ctx: ContextoCatalogo): Promise<string | null> {
-  return topeDeProductos(ctx, 1);
-}
-
 /** Los errores que la base explica (candados LGD01) se dicen tal cual; el resto, genérico. */
 function mensajeDeError(error: { code?: string; message: string }): string {
-  return error.code === 'LGD01' ? error.message : 'No se pudo guardar el platillo. Intenta de nuevo.';
+  return ['LGD01', 'LGD02'].includes(error.code ?? '') ? error.message : 'No se pudo guardar el platillo. Intenta de nuevo.';
 }
 
 function parseTags(raw: string | null): string[] | null {
@@ -138,8 +133,12 @@ export async function createProduct(prevState: ProductState, formData: FormData)
   const ctx = await resolveContext(formData);
   if (!ctx) return { error: 'No autorizado.' };
 
-  const limitError = await checkProductLimit(ctx);
-  if (limitError) return { error: limitError };
+
+  const isActive = formData.get('is_active') !== 'false';
+  if (isActive) {
+    const limitError = await topeDeProductos(ctx);
+    if (limitError) return { error: limitError };
+  }
 
   const name = (formData.get('name') as string)?.trim().slice(0, 120);
   if (!name) return { error: 'Escribe el nombre del platillo.' };
@@ -189,7 +188,7 @@ export async function createProduct(prevState: ProductState, formData: FormData)
     dietary_tags: marcas.dietas,
     options,
     is_available: formData.get('is_available') === 'true',
-    is_active: formData.get('is_active') !== 'false',
+    is_active: isActive,
     sort_order,
   }).select('id').single();
 
@@ -214,6 +213,12 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
   if (!ctx) return { error: 'No autorizado.' };
 
   const id = formData.get('id') as string;
+  const isActive = formData.get('is_active') !== 'false';
+  if (isActive) {
+    const limitError = await topeDeProductos(ctx);
+    if (limitError) return { error: limitError };
+  }
+
   const name = (formData.get('name') as string)?.trim().slice(0, 120);
   if (!name) return { error: 'Escribe el nombre del platillo.' };
   const precio = validarPrecio(formData.get('price'));
@@ -549,8 +554,6 @@ export async function exportProductsXlsx(
 export async function duplicateProduct(formData: FormData): Promise<ProductState> {
   const ctx = await resolveContext(formData);
   if (!ctx) return { error: 'No autorizado.' };
-  const limitError = await checkProductLimit(ctx);
-  if (limitError) return { error: limitError };
 
   const id = formData.get('id') as string;
   const { data: o, error: errLeer } = await ctx.db.from('products').select('*')

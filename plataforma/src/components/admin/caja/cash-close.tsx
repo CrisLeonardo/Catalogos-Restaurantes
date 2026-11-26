@@ -37,7 +37,7 @@ import {
   type CajaState, type TipShare, type CajaCloseResult, type SolicitudCierre,
 } from '@/lib/actions/finanzas';
 import type { Pendientes } from '@/lib/caja/turno-servidor';
-import { corteAHora } from '@/lib/caja/dia';
+import { corteAHora, rangoDelCierre } from '@/lib/caja/dia';
 import { fmtMoney } from '@/lib/money';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -47,6 +47,7 @@ import { Rodillo } from '@/components/ui/rodillo';
 import { Confeti } from '@/components/confeti';
 import { datosConteo, useBorradorCaja } from './use-borrador-caja';
 import { TraspasoDeRecibo } from './traspaso-caja';
+import { useSalonLive } from '@/components/admin/salon/use-salon-live';
 
 const BILLETES = DENOM_FIELDS.filter((d) => d.kind === 'B');
 const MONEDAS = DENOM_FIELDS.filter((d) => d.kind === 'M');
@@ -65,6 +66,15 @@ function hora(iso: string | null | undefined, tz: string): string {
   } catch {
     return iso.slice(11, 16);
   }
+}
+
+/** Por qué no se registró el corte. CAJA-01: si entró dinero mientras se
+    contaba, el servidor no cierra y aquí se dice el importe nuevo. */
+function textoDeFallo(res: { error?: string; esperadoCambio?: { antes: number; ahora: number } }): string {
+  if (res.esperadoCambio) {
+    return `Entró dinero mientras contabas: el efectivo esperado pasó de ${money(res.esperadoCambio.antes)} a ${money(res.esperadoCambio.ahora)}. Revisa el cuadre y vuelve a cerrar.`;
+  }
+  return res.error ?? 'No se pudo confirmar el cierre.';
 }
 
 type Paso = 1 | 2 | 3;
@@ -87,6 +97,10 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
      de nuevo a mano después de cada cambio de dinero. */
   const router = useRouter();
   const refrescar = useCallback(() => router.refresh(), [router]);
+  /* CAJA-01: un cobro hecho desde Tomar pedidos (otra pestaña, otro
+     aparato) no movía el «esperado» hasta recargar. Caja escucha los mismos
+     cambios que el salón y se repinta al volver a la pestaña. */
+  useSalonLive('caja');
 
   const abierto = !!state.shift?.openedAt;
   const turno = { desde: state.periodStart, id: state.shift?.id ?? null };
@@ -141,6 +155,10 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
   const cuadra = Math.abs(diferencia) < 0.005;
   const hayConteo = centavos > 0 || conteo.cashCounted;
   const puedeCerrar = hayConteo && !bloqueo && guardado.estado !== 'conflicto' && !state.draftUnavailable;
+  /* El esperado que el cajero tiene a la vista viaja con el cierre (CAJA-01);
+     en el arqueo a ciegas no se ve, así que no se manda. */
+  const esperadoVisto = useRef<number | undefined>(undefined);
+  useEffect(() => { esperadoVisto.current = state.ciego ? undefined : esperadoEnCaja; }, [state.ciego, esperadoEnCaja]);
 
   /* Desde cuándo cuenta: «desde el cierre de Ana a las 15:00» o «desde
      las 05:00», que es lo que el cajero necesita para creerse el número. */
@@ -165,7 +183,8 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
         if (!res.incierto) localStorage.removeItem(claveCierre);
         setRecuperar(!!res.incierto);
         if (res.pending) setPorConfirmar(res.pending);
-        else setAviso({ text: res.error ?? 'No se pudo confirmar el cierre.', bad: true });
+        else setAviso({ text: textoDeFallo(res), bad: true });
+        if (res.esperadoCambio) router.refresh();
         pausar(false);
         return;
       }
@@ -182,7 +201,7 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
       cierreActivo.current = false;
       setGuardando(false);
     }
-  }, [claveCierre, limpiarLocal, pausar, refrescar]);
+  }, [claveCierre, limpiarLocal, pausar, refrescar, router]);
 
   const recuperarCierre = useCallback(async () => {
     try {
@@ -211,6 +230,7 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
     const solicitud: CierrePendiente = {
       ...datosConteo({ ...conteo, opening, tips }), restaurantId, turno, intentoId: crypto.randomUUID(),
       borradorRevision: revision.current, confirmPending,
+      esperadoVisto: esperadoVisto.current,
     };
     try {
       localStorage.setItem(claveCierre, JSON.stringify({ solicitud }));
@@ -1184,7 +1204,7 @@ function CierreHecho({ restaurantId, result, actualizandoCierre, dateLabel, shif
   onOtro: () => void;
 }) {
   const cuadra = Math.abs(result.difference) < 0.005;
-  const periodo = `de ${hora(result.periodStart, timezone)} a ${hora(result.closedAt, timezone)}`;
+  const periodo = rangoDelCierre({ openedAt: result.openedAt ?? null, periodStart: result.periodStart, closedAt: result.closedAt }, timezone);
 
   /* El resumen por WhatsApp es cómo se manda de verdad un cierre a un
      dueño que no está en el local: texto plano, sin adjuntos y sin

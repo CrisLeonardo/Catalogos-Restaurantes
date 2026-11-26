@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="es" data-tema="claro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueta · Demo por caso y cupo por pieza · 2026-11-25</title>
+<style>
+  :root {
+    --bg: #F2F1EE; --bg2: #E9E7E2; --card: #FFFFFF; --border: #E3E0DA; --border2: #D6D2CA;
+    --t1: #17161A; --t2: #45424A; --t3: #6E6A72; --t4: #8F8B92;
+    --accent: #C2542F; --accent-ink: #A8441F; --on-accent: #FFFFFF;
+    --ok: #1F7A3D; --ok-bg: #E3F3E8; --ok-line: #B9DFC5;
+    --warn: #8A5A00; --warn-bg: #FDF1D8; --info: #2457A6; --info-bg: #E4EDFA;
+    --shadow: 0 1px 2px rgba(23,22,26,.06), 0 4px 14px rgba(23,22,26,.06);
+    --menu-bg: #1A1714; --menu-card: #262220; --menu-t: #F5F3EF; --menu-t2: #BDB5AC;
+    font-family: Geist, "Segoe UI", system-ui, sans-serif; color: var(--t1); background: var(--bg);
+  }
+  [data-tema="oscuro"] {
+    --bg: #0C0B0A; --bg2: #151413; --card: #1A1917; --border: #2A2826; --border2: #36332F;
+    --t1: #F5F3EF; --t2: #D3CFC8; --t3: #A39E96; --t4: #7F7A73;
+    --accent: #D9693F; --accent-ink: #F08A60; --ok: #5CC77D; --ok-bg: #16281C; --ok-line: #24452F;
+    --warn: #E8B44C; --warn-bg: #2B2210; --info: #7FA8EC; --info-bg: #15202F;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); }
+  .hoja { max-width: 1320px; margin: 0 auto; padding: 32px 24px 80px; }
+  header.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+  h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: -.02em; }
+  h2 { font-size: 22px; margin: 48px 0 6px; letter-spacing: -.02em; }
+  h3 { font-size: 15px; margin: 0 0 10px; color: var(--t3); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+  p.lead { color: var(--t2); font-size: 15px; line-height: 1.55; max-width: 760px; margin: 0; }
+  .temas { display: flex; gap: 8px; }
+  .temas button { height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border2); background: var(--card); color: var(--t1); font: 600 14px inherit; cursor: pointer; }
+  .temas button[aria-pressed="true"] { background: var(--t1); color: var(--bg); }
+  .fila { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; margin-top: 18px; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+  .etiqueta { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--t3); }
+  .etiqueta b { color: var(--accent-ink); }
+  .por-que { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 16px 18px; font-size: 14px; color: var(--t2); line-height: 1.55; max-width: 760px; margin-top: 14px; }
+  .por-que ul { margin: 6px 0 0; padding-left: 18px; }
+
+  /* Teléfono */
+  .tel { width: 390px; border-radius: 34px; border: 10px solid #1C1B1E; background: var(--bg); overflow: hidden; box-shadow: var(--shadow); flex-shrink: 0; }
+  .tel .pantalla { height: 760px; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+  .pc { width: 860px; border-radius: 14px; border: 1px solid var(--border2); background: var(--bg); overflow: hidden; box-shadow: var(--shadow); }
+  .pc .barra-nav { height: 30px; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; padding: 0 12px; }
+  .pc .barra-nav i { width: 10px; height: 10px; border-radius: 99px; background: var(--border2); }
+  .pc .barra-nav span { margin-left: 10px; font-size: 12px; color: var(--t3); }
+
+  /* Panel: ficha del platillo */
+  .panel-top { padding: 16px 16px 8px; display: flex; align-items: center; gap: 10px; }
+  .panel-top b { font-size: 20px; letter-spacing: -.02em; }
+  .volver { height: 32px; padding: 0 12px; border-radius: 99px; background: var(--bg2); border: 1px solid var(--border); font-size: 13px; color: var(--t2); display: inline-flex; align-items: center; }
+  .secc { margin: 8px 16px 0; background: var(--card); border: 1px solid var(--border); border-radius: 18px; }
+  .secc .cab { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; font-size: 15px; font-weight: 600; }
+  .secc .cab small { font-size: 13px; font-weight: 400; color: var(--t3); }
+  .secc .cuerpo { padding: 2px 16px 16px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 14px; }
+  .linea { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 12px; }
+  .linea .t { font-size: 14px; font-weight: 600; }
+  .linea .s { font-size: 13px; color: var(--t3); margin-top: 2px; line-height: 1.4; }
+  .switch { width: 44px; height: 26px; border-radius: 99px; background: var(--ok); position: relative; flex-shrink: 0; }
+  .switch::after { content: ""; position: absolute; width: 20px; height: 20px; border-radius: 99px; background: #fff; top: 3px; right: 3px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { height: 36px; padding: 0 14px; border-radius: 99px; border: 1px solid var(--border2); font-size: 13px; display: inline-flex; align-items: center; color: var(--t2); background: var(--card); }
+  .chip.on { border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .nuevo { outline: 2px dashed var(--accent); outline-offset: 4px; border-radius: 14px; }
+  .cupo { display: flex; align-items: center; gap: 10px; }
+  .paso { display: inline-flex; align-items: center; border: 1px solid var(--border2); border-radius: 14px; overflow: hidden; height: 48px; }
+  .paso button { width: 48px; height: 48px; border: 0; background: var(--bg2); color: var(--t1); font-size: 20px; }
+  .paso output { width: 64px; text-align: center; font: 700 18px ui-monospace, "Geist Mono", monospace; font-variant-numeric: tabular-nums; color: var(--t1); }
+  .nota { font-size: 13px; color: var(--t3); line-height: 1.45; }
+  .estado { display: flex; gap: 8px; align-items: center; font-size: 13px; padding: 10px 12px; border-radius: 12px; }
+  .estado.ok { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok-line); }
+  .estado.warn { background: var(--warn-bg); color: var(--warn); }
+  .estado.info { background: var(--info-bg); color: var(--info); }
+  .enlace { color: var(--accent-ink); font-weight: 600; font-size: 13px; text-decoration: none; }
+
+  /* Carta (comensal) en la propuesta del cupo */
+  .carta { background: var(--menu-bg); color: var(--menu-t); padding: 16px; flex: 1; }
+  .pieza { background: var(--menu-card); border-radius: 16px; overflow: hidden; }
+  .pieza .foto { height: 150px; background: linear-gradient(135deg, #E8C9A0, #B98A5B); display: grid; place-items: center; font-size: 46px; }
+  .pieza .cinta { background: #C2542F; color: #fff; font: 700 11px/1 inherit; letter-spacing: .08em; padding: 7px 12px; }
+  .pieza .pie { padding: 12px 14px; display: flex; justify-content: space-between; align-items: baseline; }
+  .barra { height: 6px; background: #3A3430; border-radius: 99px; margin: 0 14px 14px; overflow: hidden; }
+  .barra span { display: block; height: 100%; width: 13%; background: #E8A48E; }
+
+  /* Demo por caso */
+  .cinta-demo { background: #1C1B1E; color: #E9E6E1; font-size: 12px; padding: 8px 14px; display: flex; justify-content: space-between; gap: 8px; }
+  .cinta-demo a { color: #F0A07E; font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .menu-antes { background: var(--menu-bg); color: var(--menu-t); flex: 1; padding: 14px 16px; }
+  .menu-antes .tarj { background: var(--menu-card); border-radius: 16px; height: 210px; margin-bottom: 12px; position: relative; }
+  .menu-antes .tarj b { position: absolute; left: 14px; bottom: 34px; font-size: 16px; }
+  .menu-antes .tarj span { position: absolute; left: 14px; bottom: 14px; font-size: 13px; color: var(--menu-t2); }
+  .pasos-demo { display: flex; gap: 6px; padding: 12px 16px 0; }
+  .pasos-demo i { flex: 1; height: 4px; border-radius: 99px; background: var(--border2); }
+  .pasos-demo i.on { background: var(--accent); }
+  .guia { padding: 10px 16px 4px; }
+  .guia small { font-size: 12px; color: var(--t3); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+  .guia div { font-size: 18px; font-weight: 700; letter-spacing: -.01em; margin-top: 2px; }
+  .guia p { margin: 4px 0 0; font-size: 13px; color: var(--t3); line-height: 1.45; }
+  .rejilla { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 16px; }
+  .plato { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; min-height: 64px; display: flex; flex-direction: column; justify-content: space-between; }
+  .plato b { font-size: 14px; }
+  .plato span { font: 600 13px ui-monospace, monospace; color: var(--t3); }
+  .plato.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .plato .n { font-style: normal; align-self: flex-end; background: var(--accent); color: var(--on-accent); font: 700 12px inherit; border-radius: 99px; padding: 2px 8px; margin-top: -18px; }
+  .pie-accion { margin-top: auto; padding: 12px 16px 16px; background: var(--card); border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+  .resumen { display: flex; justify-content: space-between; font-size: 14px; color: var(--t2); }
+  .resumen b { font: 700 16px ui-monospace, monospace; color: var(--t1); }
+  .btn { height: 56px; border-radius: 16px; border: 0; background: var(--accent); color: var(--on-accent); font: 700 16px inherit; width: 100%; }
+  .btn.sec { height: 44px; background: transparent; color: var(--t2); font-weight: 600; font-size: 14px; }
+  .cuadro { margin: 10px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .cuadro .r { display: flex; justify-content: space-between; font-size: 14px; color: var(--t2); }
+  .cuadro .r b { font: 600 15px ui-monospace, monospace; color: var(--t1); }
+  .cuadro hr { border: 0; border-top: 1px solid var(--border); margin: 2px 0; }
+  .billetes { display: flex; gap: 6px; flex-wrap: wrap; }
+  .billetes span { height: 40px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--border2); display: inline-flex; align-items: center; font: 600 14px ui-monospace, monospace; }
+  .billetes span.on { border-color: var(--accent); color: var(--accent-ink); }
+  .comanda { margin: 10px 16px; background: var(--card); border: 1.5px solid #E8A48E; border-radius: 16px; padding: 14px; }
+  .comanda .cab2 { display: flex; justify-content: space-between; font-size: 12px; }
+  .pill { font: 800 10.5px inherit; letter-spacing: .06em; padding: 3px 8px; border-radius: 99px; background: var(--warn-bg); color: var(--warn); }
+  .pill.ok { background: var(--ok-bg); color: var(--ok); }
+
+  /* PC */
+  .pc-demo { display: grid; grid-template-columns: 300px 1fr; min-height: 520px; }
+  .pc-demo aside { background: var(--card); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .pc-demo aside ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  .pc-demo aside li { padding: 10px 12px; border-radius: 12px; font-size: 14px; color: var(--t3); display: flex; gap: 10px; align-items: center; }
+  .pc-demo aside li i { width: 22px; height: 22px; border-radius: 99px; border: 2px solid var(--border2); display: grid; place-items: center; font: 700 11px inherit; font-style: normal; }
+  .pc-demo aside li.hecho { color: var(--t2); }
+  .pc-demo aside li.hecho i { background: var(--ok-bg); border-color: transparent; color: var(--ok); }
+  .pc-demo aside li.on { background: var(--bg2); color: var(--t1); font-weight: 600; }
+  .pc-demo aside li.on i { border-color: var(--accent); color: var(--accent-ink); }
+  .pc-demo main { display: grid; grid-template-columns: 1fr 300px; }
+  .pc-demo main .izq { padding: 6px 0; }
+  .pc-demo main .der { border-left: 1px solid var(--border); background: var(--card); display: flex; flex-direction: column; }
+</style>
+</head>
+<body>
+<div class="hoja">
+  <header class="top">
+    <div>
+      <h1>Demo por caso y cupo por pieza</h1>
+      <p class="lead">Maqueta para aprobar antes de construir. Sale de la segunda ronda de la auditoría funcional del 2026-11-25. Datos de Rincón 502 (demo) y de una repostería ficticia. Lo marcado con línea punteada es lo nuevo.</p>
+    </div>
+    <div class="temas" role="group" aria-label="Tema">
+      <button type="button" aria-pressed="true" data-t="claro">Claro</button>
+      <button type="button" aria-pressed="false" data-t="oscuro">Oscuro</button>
+    </div>
+  </header>
+
+  <!-- ═══════════════ 1 · DEMO DE MOSTRADOR ═══════════════ -->
+  <h2>1 · Demo de mostrador (Estándar)</h2>
+  <p class="lead">Quien compara Estándar quiere ver <b>tomar el pedido, cobrar y cerrar caja</b>. Hoy la demo de mostrador abre la misma carta del comensal que la de mesas; solo cambia el botón de arriba.</p>
+
+  <div class="fila">
+    <div class="col">
+      <div class="etiqueta">Antes · demo.distleogin.com/?caso=mostrador</div>
+      <div class="tel"><div class="pantalla">
+        <div class="cinta-demo"><span>Demo · pide y mira la cocina</span><a href="#">Empezar con Estándar →</a></div>
+        <div class="menu-antes">
+          <div style="font-weight:800;font-size:20px;margin:6px 0 14px">Rincón 502</div>
+          <div class="tarj"><b>Rincón Clásica</b><span>Q52</span></div>
+          <div class="tarj"><b>Doble Bacon</b><span>Q68</span></div>
+          <div class="tarj"><b>Pepperoni (mediana)</b><span>Q85</span></div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="col">
+      <div class="etiqueta"><b>Propuesta</b> · paso 1 de 4 · tomar el pedido</div>
+      <div class="tel nuevo"><div class="pantalla">
+        <div class="cinta-demo"><span>Demo de mostrador · nada se guarda</span><a href="#">Ver la carta del cliente</a></div>
+        <div class="pasos-demo"><i class="on"></i><i></i><i></i><i></i></div>
+        <div class="guia"><small>Paso 1 de 4</small><div>Llega un cliente al mostrador</div><p>Toca lo que pide. Es la misma pantalla que usará tu cajero.</p></div>
+        <div class="rejilla">
+          <div class="plato sel"><b>Rincón Clásica</b><span>Q52.00</span><em class="n">1</em></div>
+          <div class="plato sel"><b>Limonada con Menta</b><span>Q18.00</span><em class="n">1</em></div>
+          <div class="plato"><b>Doble Bacon</b><span>Q68.00</span></div>
+          <div class="plato"><b>Café Americano</b><span>Q15.00</span></div>
+          <div class="plato"><b>Papas con Queso</b><span>Q35.00</span></div>
+          <div class="plato"><b>Tres Leches</b><span>Q28.00</span></div>
+        </div>
+        <div class="pie-accion">
+          <div class="resumen"><span>2 platillos · para llevar</span><b>Q70.00</b></div>
+          <button class="btn" type="button">Cobrar Q70.00</button>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="col">
+      <div class="etiqueta"><b>Propuesta</b> · paso 2 · cobrar</div>
+      <div class="tel nuevo"><div class="pantalla">
+        <div class="cinta-demo"><span>Demo de mostrador · nada se guarda</span><a href="#">Ver la carta del cliente</a></div>
+        <div class="pasos-demo"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+        <div class="guia"><small>Paso 2 de 4</small><div>Paga con un billete de Q100</div><p>Leogin te dice el cambio. El cobro entra solo a la caja del turno.</p></div>
+        <div class="cuadro">
+          <div class="r"><span>Total</span><b>Q70.00</b></div>
+          <div class="billetes"><span>Q70</span><span>Q75</span><span class="on">Q100</span><span>Otro</span></div>
+          <hr>
+          <div class="r"><span>Cambio</span><b style="color:var(--ok)">Q30.00</b></div>
+        </div>
+        <div class="estado info" style="margin:0 16px">Tarjeta y transferencia también: se eligen aquí mismo.</div>
+        <div class="pie-accion">
+          <button class="btn" type="button">Cobrar y enviar a cocina</button>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="fila">
+    <div class="col">
+      <div class="etiqueta"><b>Propuesta</b> · paso 3 · cocina</div>
+      <div class="tel nuevo"><div class="pantalla">
+        <div class="cinta-demo"><span>Demo de mostrador · nada se guarda</span><a href="#">Ver la carta del cliente</a></div>
+        <div class="pasos-demo"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+        <div class="guia"><small>Paso 3 de 4</small><div>Así le llega a la cocina</div><p>Pagado y en cola. Tócalo cuando esté listo para entregar.</p></div>
+        <div class="comanda">
+          <div class="cab2"><span class="pill">EN COCINA</span><span style="color:var(--t3)">#121 · hace 1 min</span></div>
+          <div style="font-weight:700;margin-top:8px">Para llevar · pagado</div>
+          <div style="font-size:14px;margin-top:6px"><b>1×</b> Rincón Clásica<br><b>1×</b> Limonada con Menta</div>
+        </div>
+        <div class="pie-accion"><button class="btn" type="button">Marcar listo</button></div>
+      </div></div>
+    </div>
+
+    <div class="col">
+      <div class="etiqueta"><b>Propuesta</b> · paso 4 · cerrar caja</div>
+      <div class="tel nuevo"><div class="pantalla">
+        <div class="cinta-demo"><span>Demo de mostrador · nada se guarda</span><a href="#">Ver la carta del cliente</a></div>
+        <div class="pasos-demo"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+        <div class="guia"><small>Paso 4 de 4</small><div>Fin del turno: cuenta el cajón</div><p>Abriste con Q100 y entraron Q70 en efectivo.</p></div>
+        <div class="cuadro">
+          <div class="r"><span>Fondo inicial</span><b>Q100.00</b></div>
+          <div class="r"><span>Cobrado en efectivo</span><b>Q70.00</b></div>
+          <hr>
+          <div class="r"><span>Debe haber</span><b>Q170.00</b></div>
+          <div class="r"><span>Contaste</span><b>Q170.00</b></div>
+        </div>
+        <div class="estado ok" style="margin:0 16px">✓ Caja cuadrada · lo vería el dueño desde su teléfono</div>
+        <div class="pie-accion">
+          <button class="btn" type="button">Empezar con Estándar · Q150 / mes</button>
+          <button class="btn sec" type="button">Volver a empezar la demo</button>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="col">
+      <div class="etiqueta"><b>Propuesta</b> · PC 1280 · paso 1</div>
+      <div class="pc nuevo">
+        <div class="barra-nav"><i></i><i></i><i></i><span>demo.distleogin.com/?caso=mostrador</span></div>
+        <div class="cinta-demo"><span>Demo de mostrador · nada se guarda</span><a href="#">Ver la carta del cliente</a></div>
+        <div class="pc-demo">
+          <aside>
+            <div style="font-weight:700;font-size:16px">Así se atiende en mostrador</div>
+            <ol>
+              <li class="on"><i>1</i>Tomar el pedido</li>
+              <li><i>2</i>Cobrar y dar cambio</li>
+              <li><i>3</i>Cocina lo prepara</li>
+              <li><i>4</i>Cerrar caja</li>
+            </ol>
+            <div class="nota">Unos 2 minutos. Usa la carta de Rincón 502; nada se guarda.</div>
+            <div style="margin-top:auto" class="nota">Estándar · Q150 / mes · 2 usuarios · corte de caja y reportes</div>
+          </aside>
+          <main>
+            <div class="izq">
+              <div class="guia"><small>Paso 1 de 4</small><div>Llega un cliente al mostrador</div><p>Toca lo que pide.</p></div>
+              <div class="rejilla" style="grid-template-columns:1fr 1fr 1fr">
+                <div class="plato sel"><b>Rincón Clásica</b><span>Q52.00</span><em class="n">1</em></div>
+                <div class="plato sel"><b>Limonada</b><span>Q18.00</span><em class="n">1</em></div>
+                <div class="plato"><b>Doble Bacon</b><span>Q68.00</span></div>
+                <div class="plato"><b>Café Americano</b><span>Q15.00</span></div>
+                <div class="plato"><b>Papas con Queso</b><span>Q35.00</span></div>
+                <div class="plato"><b>Tres Leches</b><span>Q28.00</span></div>
+              </div>
+            </div>
+            <div class="der">
+              <div class="guia"><small>Pedido</small><div style="font-size:15px">Para llevar</div></div>
+              <div style="padding:4px 16px;font-size:14px;display:flex;flex-direction:column;gap:6px">
+                <div class="resumen"><span>1× Rincón Clásica</span><span>Q52.00</span></div>
+                <div class="resumen"><span>1× Limonada con Menta</span><span>Q18.00</span></div>
+              </div>
+              <div class="pie-accion"><div class="resumen"><span>Total</span><b>Q70.00</b></div><button class="btn" type="button">Cobrar Q70.00</button></div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="por-que">
+    <b>Cómo se construye.</b> Con las mismas piezas del <i>turno de práctica</i> del panel (carta, comanda y hoja de cobro), que ya funcionan en memoria y sin escribir nada. No hay base ni pedido real: el cobro no toca ninguna caja.
+    <ul>
+      <li><b>?caso=mostrador</b> abre esta guía de cuatro pasos. «Ver la carta del cliente» lleva a la carta y al pedido de prueba de hoy.</li>
+      <li><b>?caso=mesas</b> abre el turno de práctica del panel (ya existe, con mesa, comanda, cocina y cobro en memoria), adaptado a la demo: abrir la mesa, nota «sin cebolla», cocina, marcar servido, dividir Q70 en tres y liberar la mesa. Al final, «Empezar con Premium».</li>
+      <li>Sin caso (la demo general) sigue igual: la carta y «Pídelo tú mismo».</li>
+      <li>El precio del botón final sale de la configuración vigente, no va escrito.</li>
+    </ul>
+  </div>
+
+  <!-- ═══════════════ 2 · CUPO POR PIEZA ═══════════════ -->
+  <h2>2 · Cupo por pieza (todos los planes)</h2>
+  <p class="lead">Para quien vende por tandas o ediciones: cuántas hay de cada pieza. Al venderse todas queda agotada sola y la Vitrina enseña «Quedan 4 de 30». Hoy solo se puede con Inventario (Premium), aunque Vende en línea lo anuncia para Q99.</p>
+
+  <div class="fila">
+    <div class="col">
+      <div class="etiqueta">Antes · ficha del platillo › Disponibilidad</div>
+      <div class="tel"><div class="pantalla">
+        <div class="panel-top"><span class="volver">← Volver</span><b>Caja de 6 cupcakes</b></div>
+        <div class="secc"><div class="cab">Opciones <small>Ninguna</small></div></div>
+        <div class="secc">
+          <div class="cab">Disponibilidad <small>Disponible · visible</small></div>
+          <div class="cuerpo">
+            <div class="linea"><div><div class="t">Hay existencias</div><div class="s">Se puede pedir.</div></div><span class="switch"></span></div>
+            <div class="linea"><div><div class="t">Mostrar en el menú</div></div><span class="switch"></span></div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="col">
+      <div class="etiqueta"><b>Propuesta</b> · sin cupo (por omisión)</div>
+      <div class="tel"><div class="pantalla">
+        <div class="panel-top"><span class="volver">← Volver</span><b>Caja de 6 cupcakes</b></div>
+        <div class="secc"><div class="cab">Opciones <small>Ninguna</small></div></div>
+        <div class="secc">
+          <div class="cab">Disponibilidad <small>Disponible · visible · sin cupo</small></div>
+          <div class="cuerpo">
+            <div class="linea"><div><div class="t">Hay existencias</div><div class="s">Se puede pedir.</div></div><span class="switch"></span></div>
+            <div class="nuevo" style="padding:10px 0">
+              <div class="t" style="font-size:14px;font-weight:600">Cupo de esta tanda</div>
+              <div class="s" style="font-size:13px;color:var(--t3);margin:2px 0 10px">¿Cuántas preparas? Al venderse todas, se agota sola.</div>
+              <div class="chips"><span class="chip on">Sin límite</span><span class="chip">Poner cupo</span></div>
+            </div>
+            <div class="linea"><div><div class="t">Mostrar en el menú</div></div><span class="switch"></span></div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="col">
+      <div class="etiqueta"><b>Propuesta</b> · con cupo de 30, van 26</div>
+      <div class="tel"><div class="pantalla">
+        <div class="panel-top"><span class="volver">← Volver</span><b>Caja de 6 cupcakes</b></div>
+        <div class="secc">
+          <div class="cab">Disponibilidad <small>Disponible · quedan 4 de 30</small></div>
+          <div class="cuerpo">
+            <div class="nuevo" style="padding:10px 0;display:flex;flex-direction:column;gap:10px">
+              <div class="t" style="font-size:14px;font-weight:600">Cupo de esta tanda</div>
+              <div class="cupo">
+                <div class="paso" role="group" aria-label="Cupo"><button type="button" aria-label="Uno menos">−</button><output>30</output><button type="button" aria-label="Uno más">+</button></div>
+                <span class="enlace">Quitar cupo</span>
+              </div>
+              <div class="estado warn">Quedan 4 · vendidas 26 desde que pusiste el cupo</div>
+              <div class="nota">En la carta se ve «Quedan 4 de 30». Al llegar a 0 se marca agotada; para otra tanda, sube el cupo.</div>
+            </div>
+            <div class="linea"><div><div class="t">Mostrar en el menú</div></div><span class="switch"></span></div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="col">
+      <div class="etiqueta">Así lo ve el cliente · Vitrina</div>
+      <div class="tel"><div class="pantalla">
+        <div class="carta">
+          <div style="font-weight:800;font-size:20px;margin:4px 0 12px">Dulce Tanda</div>
+          <div class="pieza">
+            <div class="cinta">EDICIÓN Nº 06 · CIERRA EN 2 D 14 H</div>
+            <div class="foto">🧁</div>
+            <div class="pie"><b>Caja de 6 cupcakes</b><span style="font-family:ui-monospace">Q120</span></div>
+            <div style="padding:0 14px 8px;font-size:13px;color:#E8A48E;font-weight:600">Quedan 4 de 30</div>
+            <div class="barra"><span></span></div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="col">
+      <div class="etiqueta">Con Inventario (Premium)</div>
+      <div class="tel"><div class="pantalla">
+        <div class="panel-top"><span class="volver">← Volver</span><b>Rincón Clásica</b></div>
+        <div class="secc">
+          <div class="cab">Disponibilidad <small>Disponible · 18 en existencia</small></div>
+          <div class="cuerpo">
+            <div class="linea"><div><div class="t">Hay existencias</div><div class="s">Se puede pedir.</div></div><span class="switch"></span></div>
+            <div class="nuevo" style="padding:10px 0">
+              <div class="t" style="font-size:14px;font-weight:600">Existencias: 18</div>
+              <div class="nota" style="margin-top:4px">Las llevas en Inventario, con entradas, mermas y costo. <a class="enlace" href="#">Abrir Inventario</a></div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="por-que">
+    <b>Cómo funciona por dentro.</b> Es el mismo conteo de existencias de Inventario, sin el resto del módulo, así que no hay dos números distintos:
+    <ul>
+      <li>«Poner cupo» usa la misma función que «Activar control» de Inventario y deja el movimiento en el historial. «Quitar cupo» apaga el conteo.</li>
+      <li>Cada pedido descuenta igual que hoy y, al llegar a 0, el platillo queda agotado con el motivo «reponer».</li>
+      <li>Lo puede cambiar quien edita el menú (sección Catálogo), sin necesitar la sección Inventario.</li>
+      <li>Con Inventario encendido (Premium), la ficha muestra las existencias y manda a Inventario: no hay dos lugares para editar lo mismo.</li>
+      <li>Sin cupo no cambia nada: la sección se ve como hoy, con una fila más y plegada.</li>
+    </ul>
+  </div>
+</div>
+<script>
+  document.querySelectorAll('.temas button').forEach((b) => b.addEventListener('click', () => {
+    document.documentElement.dataset.tema = b.dataset.t;
+    document.querySelectorAll('.temas button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  }));
+</script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { resolveModuleContext } from '@/lib/modules-server';
-import { createServiceClient } from '@/lib/supabase/service';
-import { getCoupons } from '@/lib/db/cupones';
+import { actorEn, tiene } from '@/lib/auth/capacidades';
+import { accesoCupones, getCoupons } from '@/lib/db/cupones';
 import CuponesPanel from '@/components/admin/cupones-panel';
 import { panelLink } from '@/lib/panel-links-server';
 
@@ -11,21 +11,18 @@ export default async function CuponesPage() {
   const mc = await resolveModuleContext('cupones');
   if (!mc.ok) redirect(await panelLink('/admin/modulos'));
 
-  const db = createServiceClient();
-  const { data: rest } = await db
-    .from('restaurants')
-    .select('modules, timezone')
-    .eq('id', mc.restaurantId)
-    .single();
-  const ordersEnabled = (rest?.modules as { orders?: boolean } | null)?.orders === true;
+  const actor = await actorEn(mc.restaurantId);
+  if (!actor || !tiene(actor, 'cupones')) redirect(await panelLink('/admin'));
+  const acceso = await accesoCupones(mc.restaurantId);
+  if (!acceso?.active) redirect(await panelLink('/admin/modulos'));
 
   const lectura = await getCoupons(mc.restaurantId);
 
   return (
     <div className="anim-fade-up">
-      {!ordersEnabled && (
+      {!acceso.acceptsOrders && (
         <div className="glass-quiet" style={{ borderRadius: 'var(--radius-lg)', padding: '12px 16px', fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5, marginBottom: 14 }}>
-          Los cupones se aplican en los pedidos en línea. Enciende la función <strong>Pedidos</strong> (plan Estándar) para que tus clientes los usen al pagar.
+          Los cupones se aplican en los pedidos en línea. Enciende la función <strong>Pedidos</strong> (desde En línea) para que tus clientes los usen al pagar.
         </div>
       )}
       <CuponesPanel
@@ -33,7 +30,8 @@ export default async function CuponesPage() {
         coupons={lectura.datos}
         estado={lectura.estado}
         leidoEn={lectura.leidoEn}
-        timezone={(rest as { timezone?: string | null } | null)?.timezone || 'America/Guatemala'}
+        timezone={acceso.timezone}
+        advanced={acceso.advanced}
       />
     </div>
   );

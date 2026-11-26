@@ -162,7 +162,12 @@ export default async function AdminAnaliticaPage({
         <div>
           {pico && a.heatMax > 0 && (
             <section className={`${s.tarjeta} ${s.bloque}`} aria-labelledby="horas-fuertes">
-              <h2 className={s.titulo} id="horas-fuertes">Se llena el {DIA_LARGO[pico.day]} {aLa(pico.hour)}</h2>
+              {/* METRICAS-01: con dos pedidos en la franja, «se llena» exageraba.
+                  El título dice cuántas observaciones lo sostienen. */}
+              <h2 className={s.titulo} id="horas-fuertes">
+                {pico.count >= 5 ? 'Se llena el' : 'Más pedidos:'} {DIA_LARGO[pico.day]} {aLa(pico.hour)}
+                <span style={{ fontWeight: 500, color: 'var(--u-text-3)' }}> · {pedidos(pico.count)}</span>
+              </h2>
               <div
                 className={s.mapa}
                 style={{ gridTemplateColumns: `30px repeat(${horas.length}, minmax(0, 1fr))` }}

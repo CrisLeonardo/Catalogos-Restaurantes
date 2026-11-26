@@ -15,6 +15,7 @@ import {
 } from '@/lib/alta';
 import { diaDeCobroDelAlta } from '@/lib/billing-signup';
 import { fmtMoney } from '@/lib/money';
+import { TEXTO_SIN_PRUEBA, type MotivoSinPrueba } from '@/lib/prueba-del-dueno';
 import { ErrorBox, Field, Stepper, WizardNav, enfocarCampo, localSlugify } from '@/components/signup/wizard-ui';
 import { leerLista } from '@/lib/importar-carta';
 
@@ -72,8 +73,9 @@ function detallePlan(plan: PlanAlta, como: ComoTePiden): string {
     return `Para empezar: para llevar y a domicilio, ${PLANS.EN_LINEA.users} usuario, hasta ${PLANS.EN_LINEA.maxProducts} platillos y unos ${PLANS.EN_LINEA.monthlyOrderCap} pedidos al mes`;
   }
   if (plan === 'ESTANDAR') {
-    const modos = modosEstandar(como).map((m) => MODO_NOMBRE[m]).join(' y ');
-    return `Para crecer: ${modos}, sin tope de pedidos ni platillos, ${PLANS.ESTANDAR.users} usuarios, corte de caja y reportes`;
+
+    const modos = modosEstandar(como).map((m) => (m === 'dine_in' ? 'comer en local por mostrador' : MODO_NOMBRE[m])).join(' y ');
+    return `Empiezas con ${modos} y puedes activar los tres modos en Funciones. Sin tope de pedidos ni platillos, ${PLANS.ESTANDAR.users} usuarios, corte de caja y reportes`;
   }
   return 'Todo: los tres modos, mesas y meseros, inventario, lealtad y usuarios sin límite';
 }
@@ -92,6 +94,7 @@ export default function NuevoRestaurante({
   rootDomain,
   pricing = defaultPlanPricing(),
   esElPrimero,
+  sinPrueba = null,
   intencion = null,
 }: {
   /** Lo que eligió en la web (LZ-11): la respuesta y el plan llegan puestos,
@@ -101,6 +104,8 @@ export default function NuevoRestaurante({
   pricing?: PlanPricing;
   /** ¿Todavía no es dueño de ningún restaurante? Decide textos y pasos. */
   esElPrimero: boolean;
+  /** Por qué este dueño ya no lleva prueba (migración 205); null si puede probar. */
+  sinPrueba?: MotivoSinPrueba;
 }) {
   const [state, formAction, isPending] = useActionState<NewRestaurantState, FormData>(createAnotherRestaurant, null);
   /* El panel del local nuevo es la raíz de otro host: navega el navegador,
@@ -168,6 +173,11 @@ export default function NuevoRestaurante({
   const plan: PlanAlta = planElegido ?? planSugerido(comoEfectivo);
   const effectiveSlug = slugEdited ? slug : localSlugify(name);
   const host = `${effectiveSlug || 'turestaurante'}.${rootDomain.replace(/:\d+$/, '')}`;
+  /* La demo enseña lo que se paga: si la respuesta no corresponde al plan
+     elegido («Solo ven la carta» con Estándar), manda el caso del plan. */
+  const casoDemo: ComoTePiden = planSugerido(comoEfectivo) === plan ? comoEfectivo
+    : plan === 'PREMIUM' ? 'mesas' : plan === 'EN_LINEA' ? 'llevar' : comoEfectivo === 'llevar' ? 'llevar' : 'mostrador';
+  const demoHref = `${/localhost|^127\./.test(rootDomain) ? 'http' : 'https'}://demo.${rootDomain}/?caso=${casoDemo}&plan=${plan}`;
 
   /* Lo que ya se puede pintar en la carta: filas completas y válidas. */
   const platos = useMemo(() => filas
@@ -207,7 +217,7 @@ export default function NuevoRestaurante({
   }
 
   const precioPlan = planPriceLabel(pricing, plan);
-  const conPrueba = esElPrimero && pricing.trialDays > 0 && plan !== 'BASICO';
+  const conPrueba = pricing.trialDays > 0 && plan !== 'BASICO' && !sinPrueba;
   /* El primer cobro, con monto, fecha y dónde se paga (LZ-01; maqueta
      §3). La fecha sale de la misma regla que guarda el alta: vence el día
      del alta, cada mes; del 29 al 31, el 28. Cada restaurante tiene su
@@ -220,8 +230,8 @@ export default function NuevoRestaurante({
   const notaCobro = plan === 'BASICO'
     ? 'El plan Básico es gratis para siempre, sin tarjeta.'
     : conPrueba
-      ? `Empiezas con ${pricing.trialDays} días gratis; luego ${precioPlan}. Lo cambias o das de baja cuando quieras.`
-      : `Tu primer cobro es de ${monto} y vence ${diaCobro === dia ? `hoy, ${fechaVence}` : `el ${fechaVence}`}; después, cada ${diaCobro}. Lo pagas desde Mi suscripción. Sin contrato: lo cambias o das de baja cuando quieras.`;
+      ? `Empiezas con ${pricing.trialDays} días gratis, sin tarjeta. Si quieres seguir por ${precioPlan}, confirma la contratación en Mi suscripción.`
+      : `${sinPrueba && pricing.trialDays > 0 ? `${TEXTO_SIN_PRUEBA[sinPrueba]} ` : ''}Tu primer cobro es de ${monto} y vence ${diaCobro === dia ? `hoy, ${fechaVence}` : `el ${fechaVence}`}; después, cada ${diaCobro}. Lo pagas desde Mi suscripción. Sin contrato: lo cambias o das de baja cuando quieras.`;
 
   return (
     <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -300,7 +310,7 @@ export default function NuevoRestaurante({
           <div>
             <h2 className="t-display" style={{ fontSize: 24, margin: 0, lineHeight: 1.15 }}>¿Qué vendes?</h2>
             <p style={{ fontSize: 14, color: 'var(--u-text-3)', margin: '6px 0 0', lineHeight: 1.45 }}>
-              Escribe tres o más. Con nombre y precio basta; la foto y la descripción, después.
+              Con uno basta para ver tu carta: nombre y precio. La foto, la descripción y los demás, cuando quieras.
             </p>
           </div>
           {filas.map((f, i) => (
@@ -363,7 +373,7 @@ export default function NuevoRestaurante({
           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--u-text-3)', textAlign: 'center', marginBottom: 10 }}>
             Tu carta, en vivo
           </div>
-          {step >= 1 && <CartaEnVivo estilo={templateId} nombre={name} platos={platos} />}
+          {step >= 1 && <CartaEnVivo estilo={templateId} nombre={name} platos={platos} pedidos={plan !== 'BASICO'} />}
         </div>
       </div>
 
@@ -371,7 +381,7 @@ export default function NuevoRestaurante({
       {step === 2 && <h2 className="t-display" style={{ fontSize: 24, margin: 0, lineHeight: 1.15 }}>Así se ve tu carta</h2>}
       <div className="alta-dos" style={{ display: step === 2 ? undefined : 'none' }}>
         <div className="alta-telefono">
-          {step === 2 && <CartaEnVivo estilo={templateId} nombre={name} platos={platos} />}
+          {step === 2 && <CartaEnVivo estilo={templateId} nombre={name} platos={platos} pedidos={plan !== 'BASICO'} />}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
           <div className="alta-resumen">
@@ -416,6 +426,13 @@ export default function NuevoRestaurante({
             )}
           </div>
           <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.45 }}>{notaCobro}</p>
+          {/* PLAN-03: antes del primer cobro, ver funcionando lo que se paga
+              (la demo del mismo caso: mostrador, mesas o para llevar). */}
+          {plan !== 'BASICO' && (
+            <a href={demoHref} target="_blank" rel="noopener noreferrer" className="alta-enlace" style={{ fontSize: 13, alignSelf: 'flex-start' }}>
+              Ver cómo funciona {PLAN_NOMBRE[plan]} en la demo <Icon name="arrowRight" size={13} />
+            </a>
+          )}
           {platos.length === 0 && (
             <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.45 }}>
               Aún no escribiste platillos: tu panel te pedirá el primero.
@@ -443,7 +460,7 @@ export default function NuevoRestaurante({
         onBack={() => { setStepError(null); setCambiando(null); setStep((s) => Math.max(0, s - 1)); }}
         onNext={next}
         nextLabel={step === 1 ? 'Ver mi carta' : 'Continuar'}
-        submitLabel={esElPrimero ? 'Crear mi restaurante' : 'Crear restaurante'}
+        submitLabel={conPrueba ? 'Iniciar prueba' : esElPrimero ? 'Crear mi restaurante' : 'Crear restaurante'}
         pendingLabel="Creando tu restaurante…"
         isPending={isPending || (!!state && 'url' in state)}
       />

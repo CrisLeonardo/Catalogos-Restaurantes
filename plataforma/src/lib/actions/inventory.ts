@@ -23,6 +23,7 @@ import { puedeEnSeccion } from '@/lib/auth/seccion';
 import { revalidatePath, updateTag } from 'next/cache';
 import { logActivity } from '@/lib/activity';
 import { getProductMovements as fetchProductMovements, type StockMovement } from '@/lib/db/kardex';
+import { estadoInventarioDelLocal } from '@/lib/db/inventario-plan';
 import { type SectionKey as Seccion } from '@/lib/permissions';
 
 type Ctx = { db: ReturnType<typeof createServiceClient>; restaurantId: string; userId: string };
@@ -49,7 +50,11 @@ async function resolveContext(restaurantIdFromForm?: string | null, ...secciones
   if (!restaurantId) return null;
   if (!(await puedeEnSeccion(restaurantId, ...(secciones.length ? secciones : ['inventario' as Seccion])))) return null;
 
-  return { db: createServiceClient(), restaurantId, userId: user.id };
+  const db = createServiceClient();
+  const inventario = await estadoInventarioDelLocal(restaurantId, db);
+  if (secciones.includes('ingredientes') ? !inventario?.ingredientes : !inventario?.productos) return null;
+
+  return { db, restaurantId, userId: user.id };
 }
 
 function refrescar(restaurantId: string) {
@@ -156,12 +161,67 @@ export async function activarControl(restaurantIdForm: string, filas: FilaActiva
   return { ok: true, activados: (data as { activados?: number })?.activados ?? limpias.length };
 }
 
+/* ── Cupo de la tanda (auditoría funcional 2026-11-25, 3.ª ronda) ──────
+   Quien vende por ediciones necesita «hay 30 de esta pieza» sin el módulo
+   de Inventario (Premium). Decisión del dueño: el cupo va en todos los
+   planes, y es el MISMO conteo de existencias que usa Inventario —no un
+   número aparte—, con su movimiento en el historial:
+     · poner cupo sin conteo   → leogin_activar_control (existencias = cupo)
+     · cambiar un cupo vigente → leogin_ajustar_existencias «fijar», motivo
+       «conteo»: empieza una tanda nueva con esa cantidad
+     · quitar cupo             → deja de contar, como en Inventario
+   Lo puede hacer quien edita la carta (Catálogo) o quien lleva Inventario. */
+export async function fijarCupo(
+  restaurantIdForm: string, productId: string, cupo: number | null,
+): Promise<{ ok?: true; quedan?: number | null; error?: string }> {
+  const ctx = await resolveContext(restaurantIdForm, 'catalogo', 'inventario');
+  if (!ctx) return { error: 'No autorizado.' };
+  if (!UUID.test(productId)) return { error: 'Platillo inválido.' };
+
+  const { data: prev } = await ctx.db.from('products').select('name, track_stock, agotado_motivo, is_available')
+    .eq('id', productId).eq('restaurant_id', ctx.restaurantId).maybeSingle();
+  if (!prev) return { error: 'Ese platillo ya no existe.' };
+
+  if (cupo === null) {
+    if (!prev.track_stock) return { ok: true, quedan: null };
+    const { error } = await ctx.db.from('products').update({
+      track_stock: false,
+      stock: null,
+      ...(prev.is_available === false && prev.agotado_motivo === 'reponer' ? { is_available: true, unavailable_at: null } : {}),
+    }).eq('id', productId).eq('restaurant_id', ctx.restaurantId);
+    if (error) return { error: 'No se pudo quitar el cupo.' };
+    await logActivity({ restaurantId: ctx.restaurantId, actorId: ctx.userId, action: 'inventario_desactivado', entity: prev.name as string, meta: { productId, cupo: true } });
+    refrescar(ctx.restaurantId);
+    return { ok: true, quedan: null };
+  }
+
+  const n = Math.trunc(Number(cupo));
+  if (!Number.isFinite(n) || n < 1 || n > 9999) return { error: 'El cupo va de 1 a 9,999.' };
+
+  if (!prev.track_stock) {
+    const { error } = await ctx.db.rpc('leogin_activar_control', {
+      p_restaurant: ctx.restaurantId, p_filas: [{ id: productId, stock: String(n), minimo: '0' }], p_actor: ctx.userId,
+    });
+    if (error) return { error: errorDeBase(error, 'No se pudo poner el cupo. No cambió nada.') };
+  } else {
+    const { error } = await ctx.db.rpc('leogin_ajustar_existencias', {
+      p_restaurant: ctx.restaurantId, p_producto: productId, p_modo: 'fijar', p_cantidad: n,
+      p_motivo: 'conteo', p_nota: 'Cupo de la tanda', p_actor: ctx.userId,
+    });
+    if (error) return { error: errorDeBase(error, 'No se pudo cambiar el cupo. No cambió nada.') };
+  }
+  refrescar(ctx.restaurantId);
+  return { ok: true, quedan: n };
+}
+
 export type LowStock = { low: number; out: number };
 
 /** Conteo de productos con stock bajo (>0 y <= umbral) y agotados (=0). */
 export async function getLowStock(restaurantId: string): Promise<LowStock> {
   if (!UUID.test(restaurantId)) return { low: 0, out: 0 };
-  const db = createServiceClient();
+  const ctx = await resolveContext(restaurantId);
+  if (!ctx || ctx.restaurantId !== restaurantId) return { low: 0, out: 0 };
+  const { db } = ctx;
   const { data } = await db
     .from('products')
     .select('stock, low_stock_threshold, track_stock')

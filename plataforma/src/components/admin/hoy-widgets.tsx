@@ -5,6 +5,7 @@ import { Stat, StatGroup } from '@/components/ui/stat';
 import type { OnlineData, RatingsData, StockData } from '@/lib/db/hoy';
 import { panelBase } from '@/lib/panel-links-server';
 import { panelHref } from '@/lib/panel-links';
+import { compararVisitas } from '@/lib/metricas/comparar';
 
 /* ============================================================
    WIDGETS DE "HOY"
@@ -56,12 +57,6 @@ function durationLabel(iso: string, now: number): string | null {
   }
   const dias = Math.floor(mins / 1440);
   return dias === 1 ? '1 día' : `${dias} días`;
-}
-
-/** Diferencia porcentual redondeada, o null si no hay con qué comparar. */
-function diffPercent(actual: number, referencia: number): number | null {
-  if (referencia <= 0) return null;
-  return Math.round(((actual - referencia) / referencia) * 100);
 }
 
 /* ── 3 · La casa: desde la ficha 2.1 vive dentro de «Servicio»
@@ -215,7 +210,7 @@ export function OnlineWidget({ data, showOrders }: { data: OnlineData; showOrder
      TODOS los pedidos del día (también los del mesero) entre las visitas y
      salía «Piden 263 %». */
   const conversion = data.uniqueToday > 0 ? Math.min(100, Math.round((data.orders / data.uniqueToday) * 100)) : 0;
-  const delta = diffPercent(data.today, data.typicalDay);
+  const comparacion = compararVisitas(data.today, data.typicalDay);
 
   return (
     <Section title="Tu menú en línea">
@@ -225,14 +220,19 @@ export function OnlineWidget({ data, showOrders }: { data: OnlineData; showOrder
           <Stat label="Personas distintas" value={String(data.uniqueToday)} />
           {showOrders && <Stat label="Piden" value={`${conversion}%`} />}
         </StatGroup>
-        {delta !== null && Math.abs(delta) >= 5 && (
+        {comparacion?.tipo === 'porcentaje' && (
           <div className="border-t border-adm-border px-4 py-2.5 text-[13px] leading-snug text-adm-text-2 md:px-5.5">
-            Un día normal recibe <span className="t-mono">{Math.round(data.typicalDay)}</span> visitas.
+            Un día normal recibe <span className="t-mono">{comparacion.tipico}</span> visitas.
             Hoy vas{' '}
-            <span className="t-mono" style={{ color: delta > 0 ? 'var(--c-ok)' : 'var(--u-text-2)' }}>
-              {Math.abs(delta)}%
+            <span className="t-mono" style={{ color: comparacion.delta > 0 ? 'var(--c-ok)' : 'var(--u-text-2)' }}>
+              {Math.abs(comparacion.delta)}%
             </span>{' '}
-            {delta > 0 ? 'arriba' : 'abajo'}.
+            {comparacion.delta > 0 ? 'arriba' : 'abajo'}.
+          </div>
+        )}
+        {comparacion?.tipo === 'conteo' && (
+          <div className="border-t border-adm-border px-4 py-2.5 text-[13px] leading-snug text-adm-text-2 md:px-5.5">
+            Todavía hay poco historial para comparar días. Cuando tengas más visitas, aquí verás si hoy vas arriba o abajo.
           </div>
         )}
       </div>

@@ -134,7 +134,10 @@ export default function MenuClient({
   const [kiosk, setKiosk] = useState(false);
   // La demo pública (Rincón 502, sin base): el carrito termina en «Pídelo tú
   // mismo» y no hay «Mis pedidos» ni pedido activo que consultar (EV-01).
-  const demo = restaurantId === DEMO_SLUG;
+  // ALTA-02: la carta de muestra (alta y vitrina de la portada) tampoco tiene
+  // checkout. «Ir a pagar» cerraba el carrito y volvía a la carta sin decir
+  // nada; ahora termina en el mismo pedido de prueba identificado de la demo.
+  const demo = restaurantId === DEMO_SLUG || restaurantId === 'preview-muestra';
   const [demoOpen, setDemoOpen] = useState(false);
 
   useEffect(() => {

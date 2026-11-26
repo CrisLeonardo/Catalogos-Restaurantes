@@ -6,7 +6,73 @@ Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop 
 
 ## Sin publicar
 
-- [Recta final de lanzamiento](docs/auditorias/AUDITORIA_RECTA_FINAL_LEOGIN_2026-11-24.md): matriz de cambios de precio, verificación del historial de pedidos y tarifas vigentes de venta.
+- **Reestructura de planes** (PR #195) · **migraciones 196 a 206** (`supabase/actualizacion_196_a_206.sql`, aplicadas en producción el 26 de noviembre antes del despliegue). Implementa la [especificación del 25 de noviembre](docs/planes/PLAN_REESTRUCTURA_PLANES_2026-11-25.md).
+  - Tarifas Q0, Q75, Q149 y Q299. Las mensualidades automáticas que quedaron por encima bajan a la tarifa nueva; ninguna sube y los precios manuales y las facturas emitidas no cambian (206).
+  - Estándar con las tres modalidades (mostrador sin mesa), tres usuarios, cocina, caja, una impresora e inventario de platillos. Premium hereda el mostrador.
+  - Cupones básicos en En línea y Estándar; compra mínima y límite de usos en Premium. Tope de 150 platillos activos en Básico y En línea.
+  - Resumen de ventas de En línea por día, semana y mes.
+  - Prueba gratis de 14 días sin tarjeta, encendida: el dueño confirma o retira la contratación, puede probar otro plan o volver a Básico, y al vencer sin confirmar la carta vuelve a Básico con sus datos. Una prueba en curso por dueño y ninguna si otra suya terminó sin contratar.
+- [Recta final de lanzamiento](docs/auditorias/AUDITORIA_RECTA_FINAL_LEOGIN_2026-11-24.md) (PR #186): matriz de cambios de precio, verificación del historial de pedidos y tarifas vigentes de venta.
+
+## v0.38.0 · 2026-11-25 · Demo por caso, cupo por pieza y una oferta que dice lo que hay
+PR #192, #193, #194 y #196 · sin migraciones. Segunda y tercera ronda de la [auditoría funcional para el piloto](docs/auditorias/AUDITORIA_FUNCIONAL_PILOTO_2026-11-25.md), con las decisiones del dueño del 25 de noviembre. Maqueta aprobada: [MAQUETA_DEMO_POR_CASO_Y_CUPO_2026-11-25](docs/diseno/MAQUETA_DEMO_POR_CASO_Y_CUPO_2026-11-25.html).
+- **La demo enseña lo que se compra** (#196).
+  - `?caso=mostrador` recorre tomar el pedido, cobrar con cambio, cocina y cerrar caja.
+  - `?caso=mesas` recorre abrir la mesa, comanda con nota, cocina, servir, dividir Q70 en 23.34 + 23.33 + 23.33 y liberar la mesa.
+  - Todo en memoria, sin base. `&vista=carta` vuelve a la carta del comensal.
+- **Cupo por pieza en todos los planes** (#196). «Cupo de esta tanda» va en la ficha del platillo: al venderse todas, queda agotada sola. Usa el mismo conteo de Inventario y queda en el historial; con Inventario encendido (Premium), la ficha manda allá.
+- **La oferta dice lo que el código hace** (#194).
+  - Si un local de En línea pasa los 300 pedidos y no acepta pasar a Estándar, se queda en En línea al mismo precio, sin cortes de pedidos; el aviso vuelve cada mes.
+  - La personalización completa aparece en todos los planes, como ya funcionaba el editor.
+  - Escritorio dice qué hace una Mac sola y qué gana con una PC principal con Windows.
+- **Alta y entrega** (#192).
+  - El enlace a la demo abre el caso del plan elegido, y la cocina de prueba lleva el nombre del negocio nuevo.
+  - El mapa de entrega ya no se inicializa dos veces al cambiar rápido entre llevar y domicilio.
+  - Nuevo `scripts/medir-publicacion-carta.mjs`.
+- **CARTA-01 cerrado** (#193). Fuera de un despliegue, el subdominio y el enlace del QR muestran el precio nuevo a la vez; la diferencia vista en la auditoría venía del despliegue automático.
+
+## v0.37.0 · 2026-11-25 · Caja, demo y alta listas para el piloto de mostrador
+PR #190 · sin migraciones. Implementa la [auditoría funcional para el piloto](docs/auditorias/AUDITORIA_FUNCIONAL_PILOTO_2026-11-25.md). CARTA-01 queda pendiente de evidencia en producción.
+- **Caja no cierra contra un esperado viejo** (CAJA-01, CAJA-02).
+  - Se actualiza sola con cada cobro y al volver a la pestaña.
+  - Si entra dinero mientras se cuenta, el servidor no registra el corte y muestra el importe nuevo.
+  - Una mesa pagada que sigue ocupada y un para llevar ya cobrado ya no aparecen como «sin cobrar».
+  - El recibo distingue el turno («de 10:27 a 10:28») del día de caja, y marca el cierre del día siguiente.
+- **«Modo aprendiz» ahora es «Mostrar ayuda»** (SALON-01). Avisa que lo enviado y cobrado es real y lleva al turno de práctica aislado.
+- **La demo dice lo mismo en todas partes** (PEDIDOS-01, 02).
+  - El total de la ficha ya no se queda a medio contar (Q69.78 en vez de Q70.00).
+  - La portada y la vista del cliente comparten la etapa del pedido.
+  - «Le avisamos al cliente» pasa a «Listo para entregar».
+- **El domicilio ya no sale con la ubicación del restaurante** (ENTREGA-01). La ubicación queda pendiente hasta que el comensal mueve el pin, toca el mapa o comparte su ubicación.
+- **El alta promete lo que el plan entrega** (ALTA-01 a 04, PLAN-01 a 03).
+  - Las ventajas del registro y la vista previa siguen al plan elegido; la personalización completa solo se anuncia en Premium.
+  - Con uno o más platillos basta para ver la carta.
+  - Estándar dice «2 de 3 modos» y dónde se cambian.
+  - Antes de crear, enlace a la demo del mismo caso.
+  - En Básico, la guía es «Publica y comparte tu carta», y el QR por mesa solo aparece con salón.
+- **Textos honestos** (PLAN-02, COPY-01, COCINA-01, METRICAS-01).
+  - El tope de En línea dice que nada se corta, el precio de Estándar y que el cambio de plan lo confirma el dueño.
+  - La ganancia requiere cargar costos, y el cliente le paga al negocio, no a Leogin.
+  - Sin impresora no se promete papel.
+  - Con poco historial se dan conteos en vez de porcentajes.
+- Incluye el mapa de dependencias del plan Básico, que está en evaluación comercial.
+
+## v0.36.0 · 2026-11-25 · La web pública se entiende y se recorre desde el teléfono
+PR #187 y #188 · sin migraciones. Cierra la [auditoría de experiencia de la web pública](docs/auditorias/AUDITORIA_EXPERIENCIA_WEB_PUBLICA_2026-11-24.md) (11 hallazgos de comprensión, diseño adaptable, accesibilidad y rendimiento) salvo WEB-UX-10, que se mide contra producción.
+- **Quien llega por el teléfono ve su caso y el precio sin bajar** (WEB-UX-02, 03).
+  - En la portada los casos van antes del video: empiezan en y=477 a 390 px (antes en y=859), y el segundo botón es «Ver planes y precios».
+  - En Vende en línea, «Q99 / mes» va junto al primer botón (antes en y≈5800).
+  - Planes y Vende en línea explican el tope de 300 pedidos con la misma frase.
+- **La demo conserva lo que elegiste** (WEB-UX-01). Mesas y Mostrador abren la demo con su caso, y «Quiero esto en mi restaurante» llega al alta con ese plan. «Probar la demo» de la cabecera lleva a «Pídelo tú mismo».
+- **Teclado y lector de pantalla** (WEB-UX-07, 08, 09).
+  - «Saltar al contenido» en todas las páginas, y Planes con región principal.
+  - El menú devuelve el foco y ya no se corta en horizontal.
+  - Enlaces legales subrayados.
+  - El pedido de prueba usa la misma hoja del carrito, con foco, Esc y retorno.
+  - El video en bucle se puede pausar y el aparato lo recuerda.
+- **Comparar y decidir** (WEB-UX-04, 05, 06). La comparativa de planes se abre al llegar y en el teléfono deja fija la columna de la función. En el registro la contraseña ya no queda debajo del botón fijo. «Hablar con nosotros» está en el menú y en Planes, y Descargas ofrece pedir la instalación junto al botón.
+- **Imagen propia al compartir** (WEB-UX-11). Portada, Planes, Vende en línea, Registro y Descargas tienen su tarjeta de 1200 × 630 con la promesa y el precio vigente.
+- Maqueta aprobada: [MAQUETA_WEB_PUBLICA_EXPERIENCIA_2026-11-24](docs/diseno/MAQUETA_WEB_PUBLICA_EXPERIENCIA_2026-11-24.html).
 
 ## v0.35.0 · 2026-11-24 · Seguridad, plazos de los datos y avisos antes de perder algo
 PR #182, #183 y #184 · **migraciones 194 y 195** (`supabase/actualizacion_194_a_195.sql`, antes o después del despliegue: el código funciona sin ellas y se pueden repetir). Cierra la parte de código de la [auditoría de lanzamiento](docs/auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md) con las decisiones del dueño del 24 de noviembre.

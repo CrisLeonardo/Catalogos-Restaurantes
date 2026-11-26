@@ -1,0 +1,155 @@
+/* Cupo de esta tanda (ficha del platillo › Disponibilidad).
+   Maqueta: docs/diseno/MAQUETA_DEMO_POR_CASO_Y_CUPO_2026-11-25.html §2.
+   Mismas opciones que «Hasta cuándo queda agotado» (hoja-agotar). */
+
+.bloque {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--adm-border);
+  border-bottom: 1px solid var(--adm-border);
+}
+
+.titulo {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--u-text);
+}
+
+.nota {
+  font-size: 12px;
+  color: var(--u-text-3);
+  line-height: 1.5;
+  margin: 2px 0 0;
+}
+
+.opciones {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.op {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--adm-border-2);
+  background: var(--adm-card);
+  font-size: 14px;
+  color: var(--u-text-2);
+  cursor: pointer;
+}
+
+.op[data-sel] {
+  border-color: var(--u-text);
+  box-shadow: inset 0 0 0 1px var(--u-text);
+  color: var(--u-text);
+  font-weight: 600;
+}
+
+.op input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--u-text);
+}
+
+.op:has(input:focus-visible) {
+  outline: 2px solid var(--brand-accent-ink, var(--adm-accent-500));
+  outline-offset: 2px;
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.paso {
+  display: inline-flex;
+  align-items: stretch;
+  height: 48px;
+  border: 1px solid var(--adm-border-2);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--adm-card);
+}
+
+.paso button {
+  width: 48px;
+  border: 0;
+  background: var(--adm-bg-2);
+  color: var(--u-text);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.paso button:disabled {
+  color: var(--u-text-4);
+  cursor: default;
+}
+
+.paso button:focus-visible,
+.paso input:focus-visible {
+  outline: 2px solid var(--brand-accent-ink, var(--adm-accent-500));
+  outline-offset: -2px;
+}
+
+.paso input {
+  width: 72px;
+  border: 0;
+  background: transparent;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--u-text);
+  -moz-appearance: textfield;
+}
+
+.paso input::-webkit-outer-spin-button,
+.paso input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.enlace {
+  border: 0;
+  background: none;
+  padding: 0;
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand-accent-ink, var(--adm-accent-500));
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.estado {
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  background: var(--adm-bg-2);
+  color: var(--u-text-2);
+}
+
+.estado[data-tono='pocas'] {
+  background: var(--c-warn-bg);
+  color: var(--c-warn);
+}
+
+.estado[data-tono='agotado'] {
+  background: var(--c-danger-bg);
+  color: var(--c-danger);
+}
+
+.error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--c-danger);
+}

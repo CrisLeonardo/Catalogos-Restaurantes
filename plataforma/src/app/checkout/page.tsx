@@ -14,7 +14,7 @@ import { isModuleActive } from '@/lib/modules';
 import { getAgentHubInfo } from '@/lib/print-agent';
 import CheckoutForm from '@/components/checkout-form';
 import CheckoutBlocked from '@/components/checkout-blocked';
-import { orderTypesForPlan } from '@/lib/plans';
+import { orderTypesForPlan, tieneMostrador } from '@/lib/plans';
 
 export const metadata: Metadata = { title: 'Hacer pedido' };
 
@@ -31,7 +31,7 @@ export default async function CheckoutPage() {
   if (!modules?.orders || restaurant.status !== 'active') notFound();
 
   // BASICO solo soporta pickup. ESTANDAR y Premium+ honran sus orderTypes
-  // configurados (en Estándar son los 2 de 3 modos elegidos por el dueño).
+  // configurados por el dueño.
   const planActual = (restaurant.plan_actual as string | null) ?? null;
   // En línea: el plan quita «comer en local» aunque el tema lo tenga guardado.
   const safeConfig = planActual === 'BASICO'
@@ -100,6 +100,7 @@ export default async function CheckoutPage() {
           restaurantLng={restaurant.location_lng}
           deliveryRadiusKm={restaurant.delivery_radius_km}
           hasCoupons={hasCoupons}
+          mostrador={tieneMostrador(planActual)}
           encuestasActive={encuestasActive}
           hubUrl={hubUrl}
           hubToken={hubToken}

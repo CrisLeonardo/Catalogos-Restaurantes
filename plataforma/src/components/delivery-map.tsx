@@ -75,10 +75,16 @@ export default function DeliveryMap({
     const startLat = initialLat ?? restaurantLat ?? 14.64072;
     const startLng = initialLng ?? restaurantLng ?? -90.51327;
 
+    /* Si el efecto se limpia antes de que llegue Leaflet (montar y
+       desmontar rápido, o el doble efecto de desarrollo), la segunda carga
+       chocaba con «Map container is already initialized» y la primera ya no
+       pedía la ubicación del comensal. */
+    let vigente = true;
     import('leaflet').then((mod) => {
+      if (!vigente || !containerRef.current || mapRef.current) return;
       const L = mod.default;
 
-      const map = L.map(containerRef.current!, {
+      const map = L.map(containerRef.current, {
         center: [startLat, startLng],
         zoom:   15,
       });
@@ -177,8 +183,13 @@ export default function DeliveryMap({
       markerRef.current   = clientMarker;
       notifyChangeRef.current = notifyChange;
 
-      // Notificar posición inicial
-      notifyChange(startLat, startLng);
+      // Solo un pin GUARDADO cuenta como ubicación desde el principio. Sin
+      // él, el pin arranca en el restaurante y antes se notificaba igual:
+      // el checkout decía «Dentro del rango — a 0.0 km» y dejaba enviar un
+      // domicilio a la puerta del propio restaurante (ENTREGA-01). Ahora
+      // queda pendiente hasta que el comensal lo mueva, toque el mapa o
+      // comparta su ubicación.
+      if (initialLat !== undefined && initialLng !== undefined) notifyChange(startLat, startLng);
 
       // El contenedor vive dentro de un sheet/checkout que entra con
       // animación (fade-up, blur de Glass): Leaflet calcula el tamaño del
@@ -208,6 +219,7 @@ export default function DeliveryMap({
     });
 
     return () => {
+      vigente = false;
       resizeObserverRef.current?.disconnect();
       resizeObserverRef.current = null;
       (mapRef.current as { remove?: () => void })?.remove?.();

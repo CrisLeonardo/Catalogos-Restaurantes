@@ -25,22 +25,31 @@ interface Props {
       booleano y no la función que lo resuelve porque una función no cruza
       la frontera servidor → cliente. */
   home?: boolean;
-  demoUrl: string;
+  /** Canal de ventas real (correo o WhatsApp, site-chrome). En el teléfono
+      el contacto quedaba a y≈5300 de la portada (WEB-UX-06). */
+  contacto?: string;
 }
 
-export default function SiteMenu({ home = false, demoUrl }: Props) {
+export default function SiteMenu({ home = false, contacto }: Props) {
   const anchor = (id: string) => (home ? `#${id}` : `/#${id}`);
 
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
+  const boton = useRef<HTMLButtonElement>(null);
 
-  // Tocar fuera o pulsar Esc lo cierra, como cualquier menú.
+  // Tocar fuera o pulsar Esc lo cierra, como cualquier menú. Con Esc el foco
+  // vuelve al botón: antes caía en <body> y quien usa teclado tenía que
+  // recorrer la página desde arriba (WEB-UX-08).
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => {
       if (!box.current?.contains(e.target as Node)) setOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setOpen(false);
+      boton.current?.focus();
+    };
     document.addEventListener('pointerdown', onDown);
     document.addEventListener('keydown', onKey);
     return () => {
@@ -52,6 +61,7 @@ export default function SiteMenu({ home = false, demoUrl }: Props) {
   return (
     <div className="lp-menu" ref={box}>
       <button
+        ref={boton}
         type="button"
         className="lp-menu-btn"
         aria-expanded={open}
@@ -77,14 +87,19 @@ export default function SiteMenu({ home = false, demoUrl }: Props) {
       {open && (
         // Cerrar al tocar cualquier enlace: da igual si es ancla de la misma
         // página o navegación de verdad, el panel no debe sobrevivir al toque.
+        // `lp-menu-en-barra`: entre 861 y 1080 px esos destinos ya están en la
+        // cabecera y el panel solo enseña lo que no cupo (globals.css).
         <nav className="lp-menu-panel" aria-label="Navegación del sitio" onClick={() => setOpen(false)}>
-          <a href={anchor('producto')} className="lp-menu-link">Producto</a>
-          <a href={anchor('casos')} className="lp-menu-link">Elige tu caso</a>
-          <Link href="/vende-en-linea" className="lp-menu-link">Vende en línea</Link>
-          <Link href="/planes" className="lp-menu-link">Planes y precios</Link>
-          <a href={demoUrl} className="lp-menu-link">Ver una demo</a>
+          <a href={anchor('producto')} className="lp-menu-link lp-menu-en-barra">Producto</a>
+          <a href={anchor('casos')} className="lp-menu-link lp-menu-en-barra">Elige tu caso</a>
+          <Link href="/vende-en-linea" className="lp-menu-link lp-menu-en-barra">Vende en línea</Link>
+          <Link href="/planes" className="lp-menu-link lp-menu-en-barra">Planes y precios</Link>
+          <a href={anchor('demo')} className="lp-menu-link lp-menu-en-barra">Probar la demo</a>
           <Link href="/descargas" className="lp-menu-link">Leogin Escritorio</Link>
-          <Link href="/login" className="lp-menu-link lp-menu-link-strong">Acceder al panel</Link>
+          {contacto && (
+            <a href={contacto} target="_blank" rel="noopener noreferrer" className="lp-menu-link lp-menu-link-contacto">Hablar con nosotros</a>
+          )}
+          <Link href="/login" className="lp-menu-link lp-menu-link-strong lp-menu-en-barra">Acceder al panel</Link>
         </nav>
       )}
     </div>

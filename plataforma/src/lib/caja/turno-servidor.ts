@@ -432,7 +432,10 @@ export async function leerTurno(db: Db, opts: {
     .sort((a, b) => b.amount - a.amount);
 
   /* ── 6. Lo que queda sin cobrar ── */
-  const pagadoVivo = await filasDePedidos(db, restaurantId, vivos.filter((o) => o.order_type === 'DINE_IN').map((o) => o.id));
+  /* Se lee lo pagado de TODO lo vivo, no solo de las mesas: en mostrador se
+     cobra antes de preparar, y un para llevar ya pagado que espera en cocina
+     no es dinero pendiente. */
+  const pagadoVivo = await filasDePedidos(db, restaurantId, vivos.map((o) => o.id));
   const pagadoPorPedido = new Map<string, number>();
   for (const f of pagadoVivo) pagadoPorPedido.set(f.order_id, cent((pagadoPorPedido.get(f.order_id) ?? 0) + Number(f.amount)));
 
@@ -449,13 +452,18 @@ export async function leerTurno(db: Db, opts: {
       m.pedidos += 1;
       m.porCobrar = cent(m.porCobrar + Math.max(0, total - (pagadoPorPedido.get(o.id) ?? 0)));
       mesas.set(n, m);
-    } else if (o.order_type === 'DELIVERY') {
-      domicilios.push({ orderId: o.id, orderNumber: o.order_number ?? '', total, status: o.status });
     } else {
-      paraLlevar.push({ orderId: o.id, orderNumber: o.order_number ?? '', total, status: o.status });
+      const saldo = cent(Math.max(0, total - (pagadoPorPedido.get(o.id) ?? 0)));
+      if (total > 0 && saldo <= 0.004) continue;
+      const fila = { orderId: o.id, orderNumber: o.order_number ?? '', total: total > 0 ? saldo : total, status: o.status };
+      if (o.order_type === 'DELIVERY') domicilios.push(fila);
+      else paraLlevar.push(fila);
     }
   }
-  const listaMesas = [...mesas.values()].sort((a, b) => a.tableNumber - b.tableNumber);
+  /* Una mesa ya pagada que sigue ocupada (falta servir, limpiar o liberar)
+     no es dinero pendiente: con saldo Q0.00 aparecía en «Sin cobrar
+     todavía» y el cierre preguntaba por ella (CAJA-01). */
+  const listaMesas = [...mesas.values()].filter((m) => m.porCobrar > 0.004).sort((a, b) => a.tableNumber - b.tableNumber);
   const pendientes: Pendientes = {
     mesas: listaMesas,
     domicilios,

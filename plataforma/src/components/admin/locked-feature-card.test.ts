@@ -12,7 +12,7 @@ describe('Hoy describe el alcance efectivo de Estándar', () => {
   it('no vende como exclusivas de Premium las modalidades que Estándar permite', () => {
     const html = renderToStaticMarkup(createElement(LockedFeatureSection, { planActual: 'ESTANDAR' }));
     expect(html).not.toContain('Tu plan Estándar incluye pedidos para llevar.');
-    expect(html).toContain('2 de 3');
+    expect(html).toContain('Comer en local (mostrador)');
   });
   it('no ofrece como bloqueada una función habilitada por excepción', () => {
     const presentation = planPresentation({ plan: 'ESTANDAR', pricing: defaultPlanPricing(), modules: { loyalty: true }, orderTypes: ['delivery', 'dine_in'] });

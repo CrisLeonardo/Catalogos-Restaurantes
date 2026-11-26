@@ -8,6 +8,14 @@
    qué movió el precio. Con «reducir movimiento», cambia al instante.
    La lectura asistida recibe solo el valor final (el botón ya lo
    anuncia); los pasos intermedios son visuales.
+
+   PEDIDOS-01 (auditoría funcional 2026-11-25): la ficha mostró Q69.78
+   mientras carrito y comanda decían Q70.00. No era un descuento: la
+   cuenta se quedó a medio camino porque el navegador dejó de dar
+   cuadros (pestaña en segundo plano, panel oculto). Un número de dinero
+   no puede depender de la animación: si la página no está visible se
+   cambia de golpe, y un temporizador fija el valor exacto pase lo que
+   pase con requestAnimationFrame.
    ============================================================ */
 
 import { useEffect, useRef, useState } from 'react';
@@ -21,23 +29,30 @@ export default function CifraQueCuenta({ valor, formato }: { valor: number; form
   useEffect(() => {
     const inicio = desde.current;
     if (inicio === valor) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.visibilityState !== 'visible') {
       desde.current = valor;
       setMostrado(valor);
       return;
     }
     const t0 = performance.now();
     let cuadro = 0;
+    const fijar = () => {
+      cancelAnimationFrame(cuadro);
+      desde.current = valor;
+      setMostrado(valor);
+    };
+    const red = setTimeout(fijar, DURACION_MS + 80);
     const paso = (t: number) => {
-      const p = Math.min(1, (t - t0) / DURACION_MS);
+      const p = Math.max(0, Math.min(1, (t - t0) / DURACION_MS));
       const suave = 1 - Math.pow(1 - p, 3);
       const actual = inicio + (valor - inicio) * suave;
       desde.current = actual;
       setMostrado(p < 1 ? Math.round(actual * 100) / 100 : valor);
       if (p < 1) cuadro = requestAnimationFrame(paso);
+      else { clearTimeout(red); desde.current = valor; }
     };
     cuadro = requestAnimationFrame(paso);
-    return () => cancelAnimationFrame(cuadro);
+    return () => { cancelAnimationFrame(cuadro); clearTimeout(red); };
   }, [valor]);
 
   return <>{formato(mostrado)}</>;
