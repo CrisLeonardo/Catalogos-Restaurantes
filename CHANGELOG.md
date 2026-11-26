@@ -4,15 +4,17 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
-## Sin publicar
-
-- **Reestructura de planes** (PR #195) · **migraciones 196 a 206** (`supabase/actualizacion_196_a_206.sql`, aplicadas en producción el 26 de noviembre antes del despliegue). Implementa la [especificación del 25 de noviembre](docs/planes/PLAN_REESTRUCTURA_PLANES_2026-11-25.md).
+## v0.39.0 · 2026-11-26 · Cuatro planes claros: Q0, Q75, Q149 y Q299, con 14 días de prueba
+PR #195, #186, #198, #178, #29 y #30 · **migraciones 196 a 206** (`supabase/actualizacion_196_a_206.sql`, aplicadas en producción el 26 de noviembre antes del despliegue). Maquetas aprobadas: [prueba y resumen de ventas](docs/diseno/MAQUETA_PRUEBA_Y_RESUMEN_DE_VENTAS_2026-11-25.html) y [cambio de plan durante la prueba](docs/diseno/MAQUETA_CAMBIO_DE_PLAN_EN_PRUEBA_2026-11-25.html).
+- **Reestructura de planes** (#195). Implementa la [especificación del 25 de noviembre](docs/planes/PLAN_REESTRUCTURA_PLANES_2026-11-25.md).
   - Tarifas Q0, Q75, Q149 y Q299. Las mensualidades automáticas que quedaron por encima bajan a la tarifa nueva; ninguna sube y los precios manuales y las facturas emitidas no cambian (206).
   - Estándar con las tres modalidades (mostrador sin mesa), tres usuarios, cocina, caja, una impresora e inventario de platillos. Premium hereda el mostrador.
   - Cupones básicos en En línea y Estándar; compra mínima y límite de usos en Premium. Tope de 150 platillos activos en Básico y En línea.
   - Resumen de ventas de En línea por día, semana y mes.
   - Prueba gratis de 14 días sin tarjeta, encendida: el dueño confirma o retira la contratación, puede probar otro plan o volver a Básico, y al vencer sin confirmar la carta vuelve a Básico con sus datos. Una prueba en curso por dueño y ninguna si otra suya terminó sin contratar.
-- [Recta final de lanzamiento](docs/auditorias/AUDITORIA_RECTA_FINAL_LEOGIN_2026-11-24.md) (PR #186): matriz de cambios de precio, verificación del historial de pedidos y tarifas vigentes de venta.
+- **[Recta final de lanzamiento](docs/auditorias/AUDITORIA_RECTA_FINAL_LEOGIN_2026-11-24.md)** (#186): matriz de cambios de precio, verificación del historial de pedidos y tarifas vigentes de venta, ya con los precios nuevos.
+- **Archivo** (#198): la auditoría de navegación del 14 de octubre pasa a `docs/archivo/auditorias/` como superada.
+- **Dependencias** (#178, #29, #30): actualizaciones menores de la plataforma, el agente de impresión y Leogin Desktop. ESLint 10 (#32) se cerró sin fusionar: `eslint-config-next` 16.4.6 todavía no lo admite.
 
 ## v0.38.0 · 2026-11-25 · Demo por caso, cupo por pieza y una oferta que dice lo que hay
 PR #192, #193, #194 y #196 · sin migraciones. Segunda y tercera ronda de la [auditoría funcional para el piloto](docs/auditorias/AUDITORIA_FUNCIONAL_PILOTO_2026-11-25.md), con las decisiones del dueño del 25 de noviembre. Maqueta aprobada: [MAQUETA_DEMO_POR_CASO_Y_CUPO_2026-11-25](docs/diseno/MAQUETA_DEMO_POR_CASO_Y_CUPO_2026-11-25.html).
