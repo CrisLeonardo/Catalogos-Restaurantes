@@ -376,7 +376,10 @@ huellas(n, que, ok, cuando) as (values
   ('205', 'una prueba por dueño a la vez y cambio de plan durante la prueba',
      to_regprocedure('public.leogin_cambiar_plan_en_prueba(uuid,uuid,text,text,text,jsonb,jsonb,jsonb,jsonb,numeric)') is not null
      and exists (select 1 from pg_trigger where tgname = 'leogin_validar_prueba_del_dueno'),
-     'después de la 204 y antes de desplegar el código')
+     'después de la 204 y antes de desplegar el código'),
+  ('206', 'mensualidades automáticas bajadas a la tarifa vigente (nunca sube)',
+     to_regprocedure('public.leogin_bajar_a_tarifa_vigente()') is not null,
+     'después de la 196, antes o junto con el despliegue')
 )
 select n as migracion,
        case when ok is null then '—' when ok then 'sí' else 'NO' end as aplicada,

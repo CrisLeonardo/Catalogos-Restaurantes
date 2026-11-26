@@ -11,7 +11,7 @@ El PR #194 corrige el aviso de 300 pedidos, reconoce la personalización complet
 | Tarea | Estado |
 |---|---|
 | LG-01 · Auditoría | Tarifas efectivas en `platform_settings`, contrato de planes en `src/lib/plans.ts`, precio acordado en migración 191. El plan y sus excepciones se reflejan en `restaurants.modules`; cada acción comprueba los roles correspondientes. |
-| LG-02 · Tarifas | Q0, Q75, Q149 y Q299 mensuales para nuevas contrataciones y cambios confirmados. Se conservan acuerdos existentes, configuración asistida y facturas emitidas. |
+| LG-02 · Tarifas | Q0, Q75, Q149 y Q299 mensuales para nuevas contrataciones y cambios confirmados. Se conservan la configuración asistida, los precios manuales y las facturas emitidas. Por decisión del dueño (26 nov, sin clientes de pago todavía), la migración 206 baja a la tarifa vigente las mensualidades automáticas que quedaron por encima; nunca sube una. |
 | LG-03 · Contrato | Catálogo compartido con el panel y la web. Los pisos que materializa PostgreSQL se comprueban en la regresión SQL. Queda por revisar toda la matriz de accesos directos de órdenes, salón, Escritorio y procesos en segundo plano. |
 | LG-04 · Vitrina y ventas | Hoy muestra el resumen de En línea con total, pedidos y platillos más vendidos por unidades. Usa el día de negocio y los períodos Hoy, Semana y Mes. Vitrina conserva las publicaciones y el archivo del editor. Falta verificar su cupo por pieza con un establecimiento del piloto. |
 | LG-05 · Cupones | En línea y Estándar tienen monto fijo o porcentaje, vigencia y activación. Compra mínima y límite de usos se configuran en Premium. Las reglas avanzadas guardadas antes pueden seguir aplicándose en planes con cupones. La aplicación y los cambios de reglas se verifican en PostgreSQL. |
@@ -49,7 +49,7 @@ La [maqueta de cambio de plan durante la prueba](../diseno/MAQUETA_CAMBIO_DE_PLA
 ## Orden y reversión
 
 1. Integrar primero el PR #194 y apuntar el PR de la reestructuración a `main`. Si el #194 se fusiona con squash, comprobar que el nuevo diff solo contiene la reestructuración.
-2. En una base de pruebas, ejecutar las migraciones 196 a 204 en orden antes de desplegar la plataforma. La 196 cambia los precios del catálogo, por lo que durante un despliegue debe coordinarse con la web y el alta.
+2. En una base de pruebas, ejecutar las migraciones 196 a 206 en orden antes de desplegar la plataforma. La 196 cambia los precios del catálogo y la 206 baja a esas tarifas las mensualidades automáticas que quedaron por encima (imprime cada cambio), por lo que durante un despliegue debe coordinarse con la web y el alta.
 3. Verificar el cron de vencimiento en Supabase y el reloj de salud en GitHub con las variables `SALUD_CRON_URL`, `SALUD_CRON_SECRET` y el correo `RESEND_API_KEY` en la plataforma. Las pruebas voluntarias tienen su propio ajuste, separado del anterior, para que el código desplegado antes de la migración conserve su comportamiento.
-4. Ejecutar `plataforma/supabase/verificar_migraciones.sql` y las pruebas `201_reestructura_planes.sql` y `204_prueba_y_resumen.sql`. Las pruebas revierten sus datos.
+4. Ejecutar `plataforma/supabase/verificar_migraciones.sql` y las pruebas `201_reestructura_planes.sql`, `204_prueba_y_resumen.sql`, `205_prueba_por_dueno.sql` y `206_bajar_mensualidades.sql`. Las pruebas revierten sus datos.
 5. Si el despliegue debe revertirse, revertir el código y, si corresponde, preparar una migración que reponga los valores previos del catálogo y las reglas de acceso. Conservar los acuerdos contratados y las facturas generadas mientras estuvo vigente la oferta.

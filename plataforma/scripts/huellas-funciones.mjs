@@ -61,6 +61,7 @@ export const FUNCIONES_CRITICAS = [
   'leogin_apply_auto_price',
   'leogin_apply_auto_price_all',
   'leogin_fijar_precio_vigente',
+  'leogin_bajar_a_tarifa_vigente',
   'leogin_generate_monthly_invoices',
   'leogin_process_overdue',
   // Permisos

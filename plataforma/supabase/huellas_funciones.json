@@ -1,8 +1,9 @@
 {
-  "hasta_migracion": "205",
+  "hasta_migracion": "206",
   "funciones": {
     "leogin_apply_auto_price(p_restaurant_id uuid)": "e2c814ab06b0022ad78ca52efea85ada",
     "leogin_apply_auto_price_all()": "a0b3668e5eb34c9acd7fc55f7517fe6b",
+    "leogin_bajar_a_tarifa_vigente()": "1504b8d00a8757ee55fe9ac413ebf134",
     "leogin_cambiar_plan_en_prueba(p_restaurante uuid, p_actor uuid, p_anterior text, p_nuevo text, p_nombre text, p_modulos_anteriores jsonb, p_modulos_nuevos jsonb, p_modos_anteriores jsonb, p_modos_nuevos jsonb, p_importe numeric)": "d9df1bd9fde6581988c573be140bc1ea",
     "leogin_catalog_plan_fee(p_plan text)": "43022c1405d13af9d6ad5c9e23a6d4c0",
     "leogin_cerrar_cuenta_pagada(p_restaurant uuid, p_mesa integer, p_cuenta text, p_actor uuid, p_intento uuid)": "5b779b82c0f1c461dabfe38fea3d3544",
