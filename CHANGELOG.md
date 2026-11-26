@@ -4,6 +4,23 @@ Cada versión es una etiqueta de git sobre un commit de `main` (`git show v0.7.0
 
 Esto es la plataforma (`plataforma/`). El agente de impresión y Leogin Desktop llevan su propia versión (ver sus `package.json`).
 
+## v0.38.0 · 2026-11-25 · Demo por caso, cupo por pieza y una oferta que dice lo que hay
+PR #192, #193, #194 y #196 · sin migraciones. Segunda y tercera ronda de la [auditoría funcional para el piloto](docs/auditorias/AUDITORIA_FUNCIONAL_PILOTO_2026-11-25.md), con las decisiones del dueño del 25 de noviembre. Maqueta aprobada: [MAQUETA_DEMO_POR_CASO_Y_CUPO_2026-11-25](docs/diseno/MAQUETA_DEMO_POR_CASO_Y_CUPO_2026-11-25.html).
+- **La demo enseña lo que se compra** (#196).
+  - `?caso=mostrador` recorre tomar el pedido, cobrar con cambio, cocina y cerrar caja.
+  - `?caso=mesas` recorre abrir la mesa, comanda con nota, cocina, servir, dividir Q70 en 23.34 + 23.33 + 23.33 y liberar la mesa.
+  - Todo en memoria, sin base. `&vista=carta` vuelve a la carta del comensal.
+- **Cupo por pieza en todos los planes** (#196). «Cupo de esta tanda» va en la ficha del platillo: al venderse todas, queda agotada sola. Usa el mismo conteo de Inventario y queda en el historial; con Inventario encendido (Premium), la ficha manda allá.
+- **La oferta dice lo que el código hace** (#194).
+  - Si un local de En línea pasa los 300 pedidos y no acepta pasar a Estándar, se queda en En línea al mismo precio, sin cortes de pedidos; el aviso vuelve cada mes.
+  - La personalización completa aparece en todos los planes, como ya funcionaba el editor.
+  - Escritorio dice qué hace una Mac sola y qué gana con una PC principal con Windows.
+- **Alta y entrega** (#192).
+  - El enlace a la demo abre el caso del plan elegido, y la cocina de prueba lleva el nombre del negocio nuevo.
+  - El mapa de entrega ya no se inicializa dos veces al cambiar rápido entre llevar y domicilio.
+  - Nuevo `scripts/medir-publicacion-carta.mjs`.
+- **CARTA-01 cerrado** (#193). Fuera de un despliegue, el subdominio y el enlace del QR muestran el precio nuevo a la vez; la diferencia vista en la auditoría venía del despliegue automático.
+
 ## v0.37.0 · 2026-11-25 · Caja, demo y alta listas para el piloto de mostrador
 PR #190 · sin migraciones. Implementa la [auditoría funcional para el piloto](docs/auditorias/AUDITORIA_FUNCIONAL_PILOTO_2026-11-25.md). CARTA-01 queda pendiente de evidencia en producción.
 - **Caja no cierra contra un esperado viejo** (CAJA-01, CAJA-02).
