@@ -18,6 +18,10 @@ La [validación de lanzamiento del 18 de noviembre](auditorias/AUDITORIA_VALIDAC
 
 La [auditoría de lanzamiento del 23 de noviembre](auditorias/AUDITORIA_LANZAMIENTO_LEOGIN_2026-11-23.md) contrasta la oferta pública con el código desplegado, reúne el checklist de salida por flujo y prepara el piloto para los primeros tres clientes de pago.
 
+La [reestructura de planes del 25 de noviembre](planes/PLAN_REESTRUCTURA_PLANES_2026-11-25.md) fija las tarifas Q0, Q75, Q149 y Q299, la prueba gratis de 14 días y lo que trae cada plan; registra lo implementado y lo pendiente.
+
+La [auditoría de recta final del 24 de noviembre](auditorias/AUDITORIA_RECTA_FINAL_LEOGIN_2026-11-24.md) reúne las pruebas recientes, los bloqueos de salida y las condiciones del primer piloto.
+
 La [auditoría de experiencia de la web pública del 24 de noviembre](auditorias/AUDITORIA_EXPERIENCIA_WEB_PUBLICA_2026-11-24.md) evalúa cómo un dueño entiende la oferta, compara, prueba y se registra desde distintos dispositivos.
 
 La [auditoría funcional para el piloto del 25 de noviembre](auditorias/AUDITORIA_FUNCIONAL_PILOTO_2026-11-25.md) clasifica y corrige los hallazgos de caja, demo, alta y planes, y trae el mapa de dependencias del plan Básico.

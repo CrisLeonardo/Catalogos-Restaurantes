@@ -24,3 +24,35 @@ describe('precio que cambia con el carrito abierto (OP-02)', () => {
     expect(avisoDePrecios(c, q)).toContain('«A», «B»');
   });
 });
+
+const centavosBase = [
+  100, 101, 110, 125, 199, 249, 499, 999, 1_000, 1_101,
+  1_210, 1_499, 1_500, 1_501, 1_699, 2_349, 2_998, 2_999, 3_000, 4_500,
+  4_959, 5_500, 7_900, 9_899, 9_900, 9_999, 10_000, 15_000, 29_999, 100_000,
+];
+const movimientos = [-99, -50, -10, -2, -1, 1, 2, 10, 50, 99];
+const platillos = ['Café', 'Pan', 'Tostada', 'Caldo'];
+
+describe('matriz de precios de lanzamiento', () => {
+  it.each(centavosBase)('comprueba las 160 combinaciones con base de %i centavos', (base) => {
+    for (const movimiento of movimientos) {
+      for (let mascara = 0; mascara < 2 ** platillos.length; mascara++) {
+        const escenario = `base ${base}, cambio ${movimiento}, líneas ${mascara.toString(2)}`;
+        const vistos = platillos.map((name, indice) => ({ name, price: (base + indice) / 100 }));
+        const esperados = vistos.flatMap(({ name, price }, indice) => {
+          if ((mascara & (1 << indice)) === 0) return [];
+          return [{ indice, nombre: name, antes: price, ahora: (base + indice + movimiento) / 100 }];
+        });
+        const vigentes = vistos.map(({ price }, indice) => ({
+          price: esperados.find((cambio) => cambio.indice === indice)?.ahora ?? price + 1e-9,
+        }));
+
+        const cambios = preciosCambiados(vistos, vigentes);
+        expect(cambios, escenario).toEqual(esperados);
+        const aviso = avisoDePrecios(cambios, q);
+        if (esperados.length === 0) expect(aviso, escenario).toBe('');
+        for (const cambio of esperados) expect(aviso, escenario).toContain(`«${cambio.nombre}»`);
+      }
+    }
+  });
+});
