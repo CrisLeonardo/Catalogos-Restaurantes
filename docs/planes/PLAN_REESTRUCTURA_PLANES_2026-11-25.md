@@ -32,7 +32,7 @@ El PR #194 corrige el aviso de 300 pedidos, reconoce la personalización complet
 Revisión de Claude sobre los commits de esta rama. Cada punto se corrigió en su propio commit.
 
 1. **Prueba sin control por persona.** La 203 quitó la regla de «una prueba por persona» y no puso ninguna otra: bastaba con crear un restaurante cada 14 días para no pagar. La migración 205 agrega `leogin_motivo_sin_prueba` y un disparador en `restaurant_billing` que vale para el alta de Mi cuenta y para la prueba desde Suscripción. El alta y Suscripción dejan de ofrecer la prueba y dicen por qué. Prueba: `supabase/pruebas/205_prueba_por_dueno.sql` (falla si se apaga el disparador).
-2. **Cambio de plan durante la prueba.** La 198 respondía «Contacta a Leogin». La 205 agrega `leogin_cambiar_plan_en_prueba`: otro plan de pago conserva la fecha de vencimiento y retira la contratación confirmada; Básico termina la prueba sin cobro ni recordatorios. `cambiarMiPlan` ya lo usa durante una prueba. **Falta la pantalla**: la lista de planes sigue oculta en prueba hasta que el dueño apruebe la maqueta.
+2. **Cambio de plan durante la prueba.** La 198 respondía «Contacta a Leogin». La 205 agrega `leogin_cambiar_plan_en_prueba`: otro plan de pago conserva la fecha de vencimiento y retira la contratación confirmada; Básico termina la prueba sin cobro ni recordatorios. `cambiarMiPlan` ya lo usa durante una prueba. Con la maqueta aprobada, Mi suscripción muestra «Cambiar de plan» también en prueba, con el plan probado marcado «Lo estás probando». Se comprobó en pantalla: cambio de En línea a Premium con la misma fecha, contratación confirmada y vuelta a Básico sin facturas.
 
 3. **Premium sin mostrador.** El checkout solo daba «Comer aquí» sin mesa a Estándar, y los planes son acumulativos. `tieneMostrador` lo da a Estándar, Premium y Pro; con mesa escaneada el pedido sigue yendo a esa mesa. Además «Comer aquí» llegaba elegido por defecto a quien pedía desde su casa: ahora se elige el primer canal que no es en el local. La prueba de navegador cubre Estándar y Premium.
 
@@ -44,7 +44,7 @@ Revisión de Claude sobre los commits de esta rama. Cada punto se corrigió en s
 
 La [maqueta de prueba y resumen de ventas](../diseno/MAQUETA_PRUEBA_Y_RESUMEN_DE_VENTAS_2026-11-25.html) muestra cómo iniciar la prueba, cuándo se confirman los cobros y cómo cambiar el período de ventas. Se probó a 390 y 1280 px, en claro y oscuro, con teclado. El dueño aprobó la maqueta para implementar ambas pantallas en el PR #195.
 
-La [maqueta de cambio de plan durante la prueba](../diseno/MAQUETA_CAMBIO_DE_PLAN_EN_PRUEBA_2026-11-25.html) espera aprobación. Reutiliza la lista «Cambiar de plan» de los demás estados de Mi suscripción, marca el plan en prueba como «Lo estás probando» y muestra las dos confirmaciones: probar otro plan con la misma fecha o volver a Básico terminando la prueba. Se revisó a 375 y 1280 px, en claro y oscuro, sin desborde.
+La [maqueta de cambio de plan durante la prueba](../diseno/MAQUETA_CAMBIO_DE_PLAN_EN_PRUEBA_2026-11-25.html) fue aprobada por el dueño e implementada en este PR. Reutiliza la lista «Cambiar de plan» de los demás estados de Mi suscripción, marca el plan en prueba como «Lo estás probando» y muestra las dos confirmaciones: probar otro plan con la misma fecha o volver a Básico terminando la prueba. Se revisó a 375 y 1280 px, en claro y oscuro, sin desborde.
 
 ## Orden y reversión
 

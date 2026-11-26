@@ -286,7 +286,8 @@ export default async function SuscripcionPage() {
           Antes: una tarjeta de Premium para el Básico, otra con el
           «siguiente plan» y otra con «más opciones», y las tres abrían un
           WhatsApp a Leogin. Ahora el dueño lo cambia aquí mismo. */}
-      {!(onTrial && pruebaVoluntaria) && <CambiarPlan
+      {/* En la prueba voluntaria sirve para probar otro plan o volver a Básico (migración 205). */}
+      <CambiarPlan
         restaurantId={restaurantId}
         planActual={currentPlan}
         pricing={pricing}
@@ -296,7 +297,10 @@ export default async function SuscripcionPage() {
         puedeProbar={puedeProbar}
         sinPrueba={sinPrueba}
         proximoCorte={config ? nextChargeLabel(config.billing_day) : null}
-      />}
+        pruebaEnCurso={enPruebaVoluntaria && config?.trial_ends_at
+          ? { endsAt: config.trial_ends_at, confirmada: !!config.trial_confirmed_at }
+          : null}
+      />
 
       {/* ── ¿Varias sucursales? ───────────────────────────────── */}
       <Card className="flex flex-wrap items-center justify-between gap-3 p-3.5">
