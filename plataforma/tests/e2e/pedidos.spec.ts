@@ -58,16 +58,20 @@ function panelUrl(slug: string, path = ''): string {
   return `http://${rootDomain}/panel/${slug}${path}`;
 }
 
-async function makeTenant(tag: string): Promise<TestTenant> {
+async function makeTenant(tag: string, plan: 'ESTANDAR' | 'PREMIUM' = 'PREMIUM'): Promise<TestTenant> {
   const slug = `pw-${tag}-${SUFFIX}`;
   const { data: r, error: rErr } = await admin
     .from('restaurants')
-    .insert({ name: `Playwright ${tag} ${SUFFIX}`, slug, status: 'active', plan_actual: 'PREMIUM', modules: { orders: true } })
+    .insert({ name: `Playwright ${tag} ${SUFFIX}`, slug, status: 'active', plan_actual: plan, modules: { orders: true } })
     .select('id')
     .single();
   if (rErr || !r) throw new Error(`crear restaurante ${tag}: ${rErr?.message}`);
 
-  const { error: themeErr } = await admin.from('restaurant_themes').insert({ restaurant_id: r.id, brand_name: `Playwright ${tag}` });
+  const { error: themeErr } = await admin.from('restaurant_themes').insert({
+    restaurant_id: r.id,
+    brand_name: `Playwright ${tag}`,
+    ...(plan === 'ESTANDAR' ? { config: { orderTypes: ['dine_in', 'pickup', 'delivery'] } } : {}),
+  });
   if (themeErr) throw new Error(`crear tema ${tag}: ${themeErr.message}`);
 
   const { data: cat, error: catErr } = await admin
@@ -101,6 +105,41 @@ async function cleanupTenant(t: TestTenant | undefined) {
   try { await admin.from('restaurants').delete().eq('id', t.id); } catch { /* ya no existe */ }
   try { await admin.auth.admin.deleteUser(t.ownerId); } catch { /* ya no existe */ }
 }
+
+for (const plan of ['ESTANDAR', 'PREMIUM'] as const) test(`${plan === 'ESTANDAR' ? 'Estándar' : 'Premium'} recibe pedidos de mostrador con las tres modalidades activas`, async ({ page }) => {
+  test.setTimeout(240_000);
+  const local = await makeTenant(`mostrador-${plan.toLowerCase()}`, plan);
+  try {
+    await page.goto(tenantUrl(local.slug));
+    const verMenu = page.getByRole('button', { name: 'Ver el menú' });
+    if (await verMenu.isVisible()) await verMenu.click();
+
+    const agregar = page.getByRole('button', { name: `Agregar ${local.productName}` });
+    const hayPedido = page.getByRole('button', { name: /^Ver carrito/ })
+      .or(page.getByRole('complementary', { name: 'Tu pedido' }).getByRole('link', { name: /pagar/i }));
+    await expect(async () => {
+      await agregar.click();
+      await expect(hayPedido.first()).toBeVisible({ timeout: 3_000 });
+    }).toPass({ timeout: 60_000 });
+    await page.goto(tenantUrl(local.slug, '/checkout'));
+    await expect(page.getByRole('button', { name: 'Para llevar' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'A domicilio' })).toBeVisible();
+    // Sin mesa escaneada, «Comer aquí» se ofrece pero no llega elegido.
+    await expect(page.getByRole('button', { name: 'Comer aquí' })).toHaveAttribute('aria-pressed', 'false');
+    await page.getByRole('button', { name: 'Comer aquí' }).click();
+    await page.getByPlaceholder('¿Cómo te llamas?').fill('Cliente de mostrador');
+    await page.getByPlaceholder('5xxx xxxx').fill('55551234');
+    await page.getByRole('button', { name: 'Confirmar pedido' }).click();
+    await expect(page.getByText('¡Pedido enviado!')).toBeVisible({ timeout: 60_000 });
+
+    const { data, error } = await admin.from('orders').select('order_type, table_number')
+      .eq('restaurant_id', local.id).single();
+    expect(error).toBeNull();
+    expect(data).toEqual({ order_type: 'DINE_IN', table_number: null });
+  } finally {
+    await cleanupTenant(local);
+  }
+});
 
 test.describe('Fase 0 — cobertura mínima E2E', () => {
   let tenantA: TestTenant;

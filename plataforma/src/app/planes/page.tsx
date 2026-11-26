@@ -51,7 +51,7 @@ function buildFaqs(pricing: PlanPricing) {
     },
     {
       q: '¿Qué incluye cada plan?',
-      a: 'Cada plan ya trae definido lo suyo — no hay funciones sueltas que comprar aparte. Si vendes solo para llevar y a domicilio y vas empezando, En línea te alcanza; si además tienes mesas o quieres reportes y corte de caja, Estándar; si quieres reservaciones, lealtad, cupones, encuestas y todo lo demás sin ir activando una cosa a la vez, Premium lo incluye todo por su precio fijo.',
+      a: 'Cada plan ya trae definido lo suyo — no hay funciones sueltas que comprar aparte. Si vendes solo para llevar y a domicilio y vas empezando, En línea te alcanza; si además atiendes en mostrador y necesitas cocina, caja y reportes, Estándar. Si atiendes en mesas con meseros o necesitas reservaciones, lealtad y encuestas, elige Premium.',
     },
     {
       q: '¿Cuál es la diferencia entre los planes?',
@@ -64,7 +64,7 @@ function buildFaqs(pricing: PlanPricing) {
     {
       q: '¿Hay periodo de prueba?',
       a: pricing.trialDays > 0
-        ? `El plan Básico es gratis para siempre, sin necesidad de probarlo. Estándar y Premium tienen ${pricing.trialDays} días de prueba gratis, sin tarjeta — si decides no continuar, tu menú simplemente se pausa, no hay cobro ni compromiso.`
+        ? `El plan Básico es gratis para siempre, sin necesidad de probarlo. En línea, Estándar y Premium tienen ${pricing.trialDays} días de prueba gratis, sin tarjeta — tu carta vuelve a Básico al vencer. Para seguir en tu plan, confirma expresamente la mensualidad antes de esa fecha.`
         : 'El plan Básico es gratis para siempre: con él ya tienes tu menú digital con QR y puedes conocer Leogin sin pagar. Los planes con pedidos se cobran desde que los activas, sin contrato: puedes cancelar cuando quieras.',
     },
   ];
@@ -147,7 +147,7 @@ export default async function PlanesPage() {
           el plan y los cuatro caben en una tarjeta con el precio en una
           línea. Antes eran cuatro tarjetas largas que había que leer enteras. */}
       <section style={{ maxWidth: 1100, margin: '0 auto', padding: '0 18px 24px' }}>
-        <PlanPorPreguntas planes={planesDeLaWeb(pricing)} origen="planes" contacto={{ href: contactHref('Hola, tengo dudas sobre qué plan de Leogin me conviene'), via: CONTACT_VIA }} />
+        <PlanPorPreguntas planes={planesDeLaWeb(pricing)} origen="planes" trialDays={pricing.trialDays} contacto={{ href: contactHref('Hola, tengo dudas sobre qué plan de Leogin me conviene'), via: CONTACT_VIA }} />
       </section>
 
       {/* Nota de uso justo */}

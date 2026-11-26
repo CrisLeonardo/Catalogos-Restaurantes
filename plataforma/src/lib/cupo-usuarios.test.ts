@@ -3,10 +3,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { cupoDeUsuarios, errorDeCupo, lugaresOcupados, verificarCupo } from './cupo-usuarios';
 
 describe('cupo de usuarios por plan (LZ-08)', () => {
-  it('Básico y En línea: solo el dueño; Estándar: dos; Premium y Pro: sin tope', () => {
+  it('Básico y En línea: solo el dueño; Estándar: tres; Premium y Pro: sin tope', () => {
     expect(cupoDeUsuarios('BASICO')).toBe(1);
     expect(cupoDeUsuarios('EN_LINEA')).toBe(1);
-    expect(cupoDeUsuarios('ESTANDAR')).toBe(2);
+    expect(cupoDeUsuarios('ESTANDAR')).toBe(3);
     expect(cupoDeUsuarios('PREMIUM')).toBeNull();
     expect(cupoDeUsuarios('PRO')).toBeNull();
   });
@@ -21,9 +21,10 @@ describe('cupo de usuarios por plan (LZ-08)', () => {
     expect(errorDeCupo('EN_LINEA', 1)).toBe('Tu plan En línea incluye 1 usuario: tú. Para sumar a tu equipo, sube a Estándar.');
   });
 
-  it('Estándar deja sumar a una persona y después pide liberar o subir a Premium', () => {
+  it('Estándar deja sumar a dos personas y después pide liberar o subir a Premium', () => {
     expect(errorDeCupo('ESTANDAR', 1)).toBeNull();
-    expect(errorDeCupo('ESTANDAR', 2)).toMatch(/incluye 2 usuarios contándote a ti.*sube a Premium/);
+    expect(errorDeCupo('ESTANDAR', 2)).toBeNull();
+    expect(errorDeCupo('ESTANDAR', 3)).toMatch(/incluye 3 usuarios contándote a ti.*sube a Premium/);
   });
 
   it('quien ya excede no pierde a nadie: solo no puede sumar más', () => {

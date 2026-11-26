@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { resolveOwnRestaurantId } from '@/lib/db/membership';
+import { estadoInventarioDelLocal } from '@/lib/db/inventario-plan';
 import { getProductRecipe, type RecipeItem } from '@/lib/db/recipes';
 import { getIngredientMovements as fetchIngredientMovements, type StockMovement } from '@/lib/db/kardex';
 
@@ -24,19 +25,15 @@ async function resolveRestaurantId(formRestaurantId?: string | null): Promise<Re
     .single();
   if (!profile) return { error: 'Perfil no encontrado' };
 
-  if (profile.role === 'SUPER_ADMIN') {
-    if (!formRestaurantId) return { error: 'Falta restaurant_id' };
-    return { restaurantId: formRestaurantId };
-  }
-  // Sucursal del grupo que administra, si administra alguno (migración 116).
-  const groupBranchId = await resolveGroupBranchId();
-  if (groupBranchId) return { restaurantId: groupBranchId };
-  const own = await resolveOwnRestaurantId(profile.restaurant_id);
-  if (!own) return { error: 'Sin restaurante' };
-  // SEC-06: ingredientes y recetas se editan desde Ingredientes, desde la
-  // ficha del platillo (Catálogo) o desde Inventario.
-  if (!(await puedeEnSeccion(own, 'ingredientes', 'catalogo', 'inventario'))) return { error: SIN_SECCION };
-  return { restaurantId: own };
+  const restaurantId = profile.role === 'SUPER_ADMIN'
+    ? formRestaurantId
+    : ((await resolveGroupBranchId()) ?? (await resolveOwnRestaurantId(profile.restaurant_id)));
+  if (!restaurantId) return { error: 'Sin restaurante' };
+
+  if (!(await puedeEnSeccion(restaurantId, 'ingredientes', 'catalogo', 'inventario'))) return { error: SIN_SECCION };
+  const inventario = await estadoInventarioDelLocal(restaurantId);
+  if (!inventario?.ingredientes) return { error: 'Activa Ingredientes y recetas para usar esta función.' };
+  return { restaurantId };
 }
 
 // ── Ingredientes ─────────────────────────────────────────────

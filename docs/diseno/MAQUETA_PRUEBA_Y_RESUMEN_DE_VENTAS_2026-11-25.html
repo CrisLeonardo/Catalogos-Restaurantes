@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leogin · Prueba y resumen de ventas</title>
+<style>
+  :root {
+    color-scheme: light;
+    --adm-bg: #f2f1ee;
+    --adm-card: #fff;
+    --adm-border: #d6d1cc;
+    --u-text: #17161a;
+    --u-text-3: #5c5550;
+    --adm-accent-fill: #ac4728;
+    --brand-accent-ink: #973c23;
+  }
+  :root[data-tema="oscuro"] {
+    color-scheme: dark;
+    --adm-bg: #0c0b0a;
+    --adm-card: #1a1917;
+    --adm-border: #514b45;
+    --u-text: #f5f3ef;
+    --u-text-3: #beb6ad;
+    --adm-accent-fill: #ac4728;
+    --brand-accent-ink: #ff9e7f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--adm-bg); color: var(--u-text); font: 16px/1.5 system-ui, sans-serif; }
+  main { max-width: 1060px; margin: auto; padding: 22px 16px 52px; }
+  h1, h2, h3, p { margin: 0; }
+  h1 { font-size: clamp(24px, 4vw, 34px); line-height: 1.2; }
+  h2 { font-size: 20px; }
+  h3 { font-size: 19px; }
+  p { font-size: 14px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  section + section { margin-top: 32px; }
+  .comparacion { display: grid; gap: 12px; margin-top: 12px; }
+  article { padding: 16px; background: var(--adm-card); border: 1px solid var(--adm-border); border-radius: 18px; }
+  article > * + * { margin-top: 10px; }
+  .estado, .secundario { color: var(--u-text-3); }
+  .monto, .importe { font-variant-numeric: tabular-nums; }
+  .monto { font-size: 22px; font-weight: 700; }
+  .importe { text-align: right; }
+  .registro { margin-top: 12px; }
+  details { border-top: 1px solid var(--adm-border); padding-top: 12px; }
+  summary { cursor: pointer; min-height: 44px; align-content: center; font-size: 14px; }
+  details > div { margin-top: 10px; }
+  details p + p { margin-top: 6px; }
+  .accion, button { display: inline-flex; min-height: 44px; padding: 8px 14px; align-items: center; justify-content: center; border-radius: 9px; font: inherit; font-size: 14px; font-weight: 650; }
+  .accion { background: var(--adm-accent-fill); color: #fff; }
+  button { border: 1px solid var(--adm-border); background: var(--adm-card); color: var(--u-text); cursor: pointer; }
+  button:focus-visible, summary:focus-visible { outline: 2px solid var(--brand-accent-ink); outline-offset: 2px; }
+  .selector { display: flex; gap: 8px; }
+  .selector button { flex: 1; }
+  .selector button[aria-pressed="true"] { border-color: var(--brand-accent-ink); color: var(--brand-accent-ink); }
+  ol { margin: 8px 0 0; padding-left: 24px; }
+  li { padding: 6px 0; }
+  .fila { display: flex; justify-content: space-between; gap: 12px; }
+  .nota { margin-top: 12px; }
+  @media (min-width: 760px) {
+    main { padding: 26px 24px 60px; }
+    .comparacion { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+<main>
+  <header>
+    <h1>Prueba y resumen de ventas</h1>
+    <button type="button" id="tema" aria-pressed="false">Oscuro</button>
+  </header>
+
+  <section aria-labelledby="prueba">
+    <h2 id="prueba">Probar En línea por 14 días</h2>
+    <div class="comparacion">
+      <article>
+        <p class="estado">Hoy · Planes</p>
+        <h3>En línea</h3>
+        <p class="monto">Q75 <small>/ mes</small></p>
+        <p>Para llevar y a domicilio.</p>
+        <span class="accion">Crear cuenta</span>
+        <p class="secundario">El flujo actual cobra desde el alta de un plan de pago.</p>
+      </article>
+      <article>
+        <p class="estado">Propuesta · Planes</p>
+        <h3>En línea</h3>
+        <p class="monto">Q75 <small>/ mes</small></p>
+        <p>14 días gratis. Empieza sin tarjeta.</p>
+        <span class="accion">Iniciar prueba</span>
+        <details>
+          <summary>Cómo se vería en Mi suscripción</summary>
+          <div>
+            <h3>Tu prueba termina el 9 de diciembre</h3>
+            <p>Estás probando En línea. Si quieres seguir, confirma la mensualidad de Q75. Tu primer cobro será el 9 de diciembre.</p>
+            <p>Si vence sin confirmación, tu carta sigue en Básico. Puedes resolver los pedidos que ya aceptaste.</p>
+            <div class="registro"><span class="accion">Contratar En línea</span></div>
+          </div>
+        </details>
+      </article>
+    </div>
+    <p class="nota">El dueño decide en un toque desde Planes. En Mi suscripción ve el vencimiento al abrir la pantalla y confirma la contratación con el precio y la fecha visibles. El ejemplo usa una prueba que empieza el 25 de noviembre.</p>
+  </section>
+
+  <section aria-labelledby="ventas">
+    <h2 id="ventas">Consultar las ventas de En línea</h2>
+    <div class="comparacion">
+      <article>
+        <p class="estado">Hoy · Panel</p>
+        <h3>Ventas de hoy</h3>
+        <p class="monto">Q420.00</p>
+        <p>6 pedidos</p>
+      </article>
+      <article>
+        <p class="estado">Propuesta · Resumen de ventas</p>
+        <div class="selector" role="group" aria-label="Período de ventas">
+          <button type="button" data-periodo="dia" aria-pressed="true">Hoy</button>
+          <button type="button" data-periodo="semana" aria-pressed="false">Semana</button>
+          <button type="button" data-periodo="mes" aria-pressed="false">Mes</button>
+        </div>
+        <div id="lectura" aria-live="polite">
+          <p class="monto" id="total">Q420.00</p>
+          <p id="pedidos">6 pedidos</p>
+        </div>
+        <h3>Platillos más pedidos</h3>
+        <ol>
+          <li><div class="fila"><span id="platillo1">Torta de chocolate</span><span class="importe" id="unidades1">3</span></div></li>
+          <li><div class="fila"><span id="platillo2">Caja de brownies</span><span class="importe" id="unidades2">2</span></div></li>
+        </ol>
+      </article>
+    </div>
+    <p class="nota">El dueño usa el período en un toque. El importe y el conteo quedan antes que los platillos. En producción se mostraría la moneda de la sucursal y se usaría su día de negocio.</p>
+  </section>
+</main>
+<script>
+  const tema = document.getElementById('tema');
+  tema.addEventListener('click', () => {
+    const oscuro = tema.getAttribute('aria-pressed') === 'true';
+    document.documentElement.dataset.tema = oscuro ? 'claro' : 'oscuro';
+    tema.setAttribute('aria-pressed', String(!oscuro));
+    tema.textContent = oscuro ? 'Oscuro' : 'Claro';
+  });
+  const periodos = {
+    dia: ['Q420.00', '6 pedidos', 'Torta de chocolate', '3', 'Caja de brownies', '2'],
+    semana: ['Q2,940.00', '38 pedidos', 'Caja de brownies', '18', 'Torta de chocolate', '12'],
+    mes: ['Q9,880.00', '121 pedidos', 'Caja de brownies', '45', 'Rollos de canela', '34'],
+  };
+  const campos = ['total', 'pedidos', 'platillo1', 'unidades1', 'platillo2', 'unidades2'];
+  const botones = document.querySelectorAll('[data-periodo]');
+  botones.forEach((boton) => boton.addEventListener('click', () => {
+    botones.forEach((otro) => otro.setAttribute('aria-pressed', String(otro === boton)));
+    periodos[boton.dataset.periodo].forEach((valor, indice) => {
+      document.getElementById(campos[indice]).textContent = valor;
+    });
+  }));
+</script>
+</html>

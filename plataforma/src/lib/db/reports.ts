@@ -29,6 +29,8 @@ export type ReportProduct = {
   hasCost: boolean;
 };
 
+export type PlatilloVendido = { name: string; qty: number };
+
 export interface SalesReport {
   from: string;
   to: string;
@@ -59,6 +61,7 @@ export interface SalesReport {
   byPayment: Split[];
   byZone: Split[];
   topByRevenue: ReportProduct[];
+  topByQuantity: PlatilloVendido[];
   topByProfit: ReportProduct[];
   /** «error» cuando la lectura falló: los ceros de arriba NO dicen que no
       se vendió (auditoría 2026-11-03, X20). Sin el campo, es una lectura buena. */
@@ -75,7 +78,7 @@ const EMPTY = (from: string, to: string, estado?: EstadoLectura): SalesReport =>
   ...(estado ? { estado } : {}),
   from, to, orders: 0, revenue: 0, productRevenue: 0, deliveryRevenue: 0, tips: 0,
   cost: 0, profit: 0, marginPct: null, costedRevenue: 0, avgTicket: 0, refunds: 0, refundOrders: 0,
-  series: [], byChannel: [], byPayment: [], byZone: [], topByRevenue: [], topByProfit: [],
+  series: [], byChannel: [], byPayment: [], byZone: [], topByRevenue: [], topByProfit: [], topByQuantity: [],
 });
 
 /** jsonb crudo que devuelve leogin_sales_report (mig. 098). */
@@ -98,6 +101,7 @@ export interface RawSalesReport {
   byPayment: RawSplit[];
   byZone: RawSplit[];
   topByRevenue: RawProduct[];
+  topByQuantity?: PlatilloVendido[];
   topByProfit: RawProduct[];
 }
 
@@ -166,6 +170,7 @@ export function buildSalesReport(from: string, to: string, d: RawSalesReport): S
     byPayment: mapSplit(d.byPayment, (key) => labelOf(key)),
     byZone: mapSplit(d.byZone, (key) => key),
     topByRevenue: mapProducts(d.topByRevenue),
+    topByQuantity: (d.topByQuantity ?? []).map(({ name, qty }) => ({ name, qty: Number(qty) })),
     topByProfit: mapProducts(d.topByProfit),
   };
 }

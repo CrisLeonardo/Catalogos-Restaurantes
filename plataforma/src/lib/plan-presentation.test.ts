@@ -4,9 +4,10 @@ import { defaultPlanPricing, planPresentation, planChangePresentation, planGrowt
 const pricing = defaultPlanPricing();
 describe('contrato de planes compartido por las superficies', () => {
   it.each([
-    ['ESTANDAR', 199, 2, 0], ['PREMIUM', 349, 3, 7], ['EN_LINEA', 99, 2, 0],
+    ['BASICO', 0, 0, 0], ['ESTANDAR', 149, 3, 1], ['PREMIUM', 299, 3, 7], ['EN_LINEA', 75, 2, 1],
   ] as [PlanCode, number, number, number][])('%s conserva precio, modalidades y módulos incluidos', (plan, amount, modes, includedModules) => {
     const c = planPresentation({ plan, pricing, modules: {}, billing: { auto_price: true, monthly_fee: 10 }, computedFee: amount });
+    expect(c.publicAmount).toBe(amount);
     expect(c.monthlyAmount).toBe(amount);
     expect(c.maxOrderTypes).toBe(modes);
     expect(c.moduleCounts.included).toBe(includedModules);
@@ -16,7 +17,8 @@ describe('contrato de planes compartido por las superficies', () => {
     const c = planPresentation({ plan: 'ESTANDAR', pricing, orderTypes: ['dine_in', 'delivery'] });
     expect(c.availableOrderTypes).toHaveLength(3);
     expect(c.selectedOrderTypes).toEqual(['dine_in', 'delivery']);
-    expect(c.orderScope).toContain('2 de 3');
+    expect(c.orderScope).toContain('Comer en local (mostrador)');
+    expect(c.orderScope).toContain('Para llevar');
     expect(c.selectedScope).not.toContain('Para llevar');
     expect(c.selectedScope).toContain('A domicilio');
   });
@@ -41,7 +43,7 @@ describe('contrato de planes compartido por las superficies', () => {
     for (const amount of [275.25, 0]) {
       const c = planPresentation({ plan: 'PREMIUM', pricing, billing: { auto_price: false, monthly_fee: amount, currency: 'GTQ' }, computedFee: 349 });
       expect(c.monthlyAmount).toBe(amount);
-      expect(c.publicAmount).toBe(349);
+      expect(c.publicAmount).toBe(299);
       expect(c.manual).toBe(true);
     }
   });
@@ -55,7 +57,7 @@ describe('contrato de planes compartido por las superficies', () => {
     const c = planPresentation({ plan: 'PREMIUM', pricing, billing: { auto_price: false, monthly_fee: 80, currency: 'USD' } });
     expect(c.currency).toBe('USD');
     expect(c.monthlyLabel).toBe('$80 USD / mes');
-    expect(c.publicLabel).toBe('Q349 / mes');
+    expect(c.publicLabel).toBe('Q299 / mes');
   });
   it('la vista previa de un cambio conserva el acuerdo manual, incluso al elegir Básico', () => {
     const current = planPresentation({ plan: 'PREMIUM', pricing, billing: { auto_price: false, monthly_fee: 275.25 } });
@@ -86,8 +88,9 @@ describe('contrato de planes compartido por las superficies', () => {
     expect(c.capabilities.find((item) => item.key === 'catalogue')?.included).toBe(true);
     expect(c.capabilities.find((item) => item.key === 'orders')?.included).toBe(false);
   });
-  it('una excepción de inventario no promete también analítica y personal', () => {
-    const c = planPresentation({ plan: 'ESTANDAR', pricing, modules: { inventario: true } });
+  it('Estándar incluye inventario de productos y separa recetas, analítica y personal', () => {
+    const c = planPresentation({ plan: 'ESTANDAR', pricing });
+    expect(c.capabilities.find((item) => item.key === 'recetas')?.included).toBe(false);
     expect(c.capabilities.find((item) => item.key === 'inventory')?.enabled).toBe(true);
     expect(c.capabilities.find((item) => item.key === 'analytics')?.enabled).toBe(false);
     expect(c.capabilities.find((item) => item.key === 'staff')?.enabled).toBe(false);

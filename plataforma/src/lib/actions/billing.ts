@@ -226,7 +226,7 @@ export async function savePricingSettings(
 
   const nonNeg = (key: string) => String(Math.max(0, num(formData, key)));
   const graceDays = String(Math.min(90, Math.max(0, Math.round(num(formData, 'grace_days') || 0))));
-  const trialDays = String(Math.min(365, Math.max(0, Math.round(num(formData, 'trial_days') || 0))));
+  const pruebaActiva = (num(formData, 'trial_days') || 0) > 0 ? '1' : '0';
 
   const rows = [
     { key: 'plan_price_BASICO',        value: nonNeg('plan_price_BASICO') },
@@ -242,7 +242,7 @@ export async function savePricingSettings(
     { key: 'group_panel_fee',              value: nonNeg('group_panel_fee') },
     { key: 'setup_fee_default',            value: nonNeg('setup_fee_default') },
     { key: 'billing_grace_days',           value: graceDays },
-    { key: 'trial_days',                   value: trialDays },
+    { key: 'prueba_voluntaria_activa',     value: pruebaActiva },
     { key: 'billing_auto_suspend',  value: formData.get('billing_auto_suspend')  === 'on' || formData.get('billing_auto_suspend')  === 'true' ? 'true' : 'false' },
     { key: 'billing_auto_generate', value: formData.get('billing_auto_generate') === 'on' || formData.get('billing_auto_generate') === 'true' ? 'true' : 'false' },
   ];

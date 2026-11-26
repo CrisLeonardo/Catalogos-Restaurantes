@@ -15,7 +15,7 @@ import { fmtMoney } from '@/lib/money';
 import { Icon } from '@/components/icons';
 import { createServiceClient } from '@/lib/supabase/service';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Section } from '@/components/ui/section';
 import { Stat, StatGroup } from '@/components/ui/stat';
 import { List, ListRow, ListText } from '@/components/ui/list';
@@ -28,7 +28,9 @@ import { ultimoComprobante } from '@/lib/db/comprobantes';
 import { codigoDePago } from '@/lib/pago-plan';
 import PagaTuPlan from '@/components/admin/paga-tu-plan';
 import CambiarPlan from '@/components/admin/cambiar-plan';
+import PruebaDePlan from '@/components/admin/prueba-de-plan';
 import { duenoDelRestaurante } from '@/lib/auth/acceso-cobro';
+import { motivoSinPrueba } from '@/lib/db/prueba-del-dueno';
 import { estadoDelTope } from '@/lib/tope-pedidos';
 import { pedidosDelMes } from '@/lib/db/tope-pedidos';
 import AvisoLectura from '@/components/admin/aviso-lectura';
@@ -116,6 +118,19 @@ export default async function SuscripcionPage() {
   const hasOverdue = pending.some((i) => isOverdue(i));
   const onTrial = isOnTrial(config);
   const trialLeft = trialDaysLeft(config);
+  const pruebaVoluntaria = config?.trial_started_at != null;
+  const enPruebaVoluntaria = onTrial && pruebaVoluntaria;
+  const ofrecePrueba = currentPlan === 'BASICO' && !config?.trial_ends_at && pricing.trialDays > 0;
+  // Una prueba en curso por dueño y ninguna tras una prueba sin contratar (migración 205).
+  const sinPrueba = ofrecePrueba && dueno ? await motivoSinPrueba(dueno, restaurantId) : null;
+  const puedeProbar = ofrecePrueba && !sinPrueba;
+  const pendientesDePrueba = pruebaVoluntaria && !!config?.trial_finished_at
+    && !config.trial_confirmed_at && currentPlan === 'BASICO'
+    ? (await db.from('orders').select('id', { count: 'exact', head: true })
+        .eq('restaurant_id', restaurantId).in('status', ['NEW', 'PREP', 'READY', 'TRANSIT', 'SERVED'])).count ?? 0
+    : 0;
+
+  const pedidosHref = pendientesDePrueba > 0 ? await panelLink('/admin/pedidos') : null;
 
   /* «Enviar comprobante»: WhatsApp de soporte (Super › Configuración) o, si
      no está, el del entorno. Con el monto y el restaurante ya escritos. */
@@ -135,7 +150,18 @@ export default async function SuscripcionPage() {
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 640 }}>
 
       {/* ── Trial banner ─────────────────────────────────────── */}
-      {onTrial && (
+      {onTrial && pruebaVoluntaria && config?.trial_ends_at && (
+        <PruebaDePlan restaurantId={restaurantId} plan={currentPlan} amount={displayedMonthlyFee}
+          endsAt={config.trial_ends_at} confirmed={!!config.trial_confirmed_at} esDueno={esDueno} />
+      )}
+      {pedidosHref && (
+        <Card className="p-5">
+          <h2 className="text-[16px] font-semibold">Tu carta sigue en Básico</h2>
+          <p className="mt-1 text-[14px] text-adm-text-3">Puedes resolver los pedidos que recibiste durante la prueba.</p>
+          <a href={pedidosHref} className={buttonVariants({ size: 'touch', className: 'mt-3 no-underline' })}>Ver pedidos</a>
+        </Card>
+      )}
+      {onTrial && !pruebaVoluntaria && (
         <Card
           className="p-5"
           style={{
@@ -215,7 +241,7 @@ export default async function SuscripcionPage() {
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0, maxWidth: '100%' }}>
             <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 20, color: 'var(--u-text)' }}>
-              {contract.monthlyLabel}
+              {onTrial && pruebaVoluntaria ? 'Q0 durante la prueba' : contract.monthlyLabel}
             </div>
             <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>
               {contract.policy}
@@ -254,12 +280,13 @@ export default async function SuscripcionPage() {
       </Card>
 
       {/* ── Lo que pagarás este mes ───────────────────────────── */}
-      <MeasureCard contract={contract} />
+      {!(onTrial && pruebaVoluntaria) && <MeasureCard contract={contract} />}
 
       {/* ── Cambiar de plan (fase 3 del plan 2026-10-28) ─────────
           Antes: una tarjeta de Premium para el Básico, otra con el
           «siguiente plan» y otra con «más opciones», y las tres abrían un
           WhatsApp a Leogin. Ahora el dueño lo cambia aquí mismo. */}
+      {/* En la prueba voluntaria sirve para probar otro plan o volver a Básico (migración 205). */}
       <CambiarPlan
         restaurantId={restaurantId}
         planActual={currentPlan}
@@ -267,7 +294,12 @@ export default async function SuscripcionPage() {
         currentPresentation={contract}
         esDueno={esDueno}
         enPrueba={onTrial}
+        puedeProbar={puedeProbar}
+        sinPrueba={sinPrueba}
         proximoCorte={config ? nextChargeLabel(config.billing_day) : null}
+        pruebaEnCurso={enPruebaVoluntaria && config?.trial_ends_at
+          ? { endsAt: config.trial_ends_at, confirmada: !!config.trial_confirmed_at }
+          : null}
       />
 
       {/* ── ¿Varias sucursales? ───────────────────────────────── */}
@@ -288,7 +320,10 @@ export default async function SuscripcionPage() {
       </Card>
 
       {/* ── Estado de cuenta ─────────────────────────────────── */}
-      {config && (config.monthly_fee > 0 || invoices.length > 0) && (
+      {/* En la prueba voluntaria la tarjeta de arriba ya dice el importe y la
+          fecha del primer cobro; aquí «Próximo cobro» salía con el día del
+          alta (hoy), que contradecía «Q0 durante la prueba». */}
+      {config && !(enPruebaVoluntaria && invoices.length === 0) && (config.monthly_fee > 0 || invoices.length > 0) && (
         <>
           {/* Con algo pendiente, el estado de cuenta ES la tarjeta «Paga tu
               mensualidad» de arriba (monto, cuenta y comprobante); aquí solo
@@ -305,10 +340,10 @@ export default async function SuscripcionPage() {
 
           {/* Detalles del plan */}
           <StatGroup>
-            <Stat label="Mensualidad" value={fmtMoney(displayedMonthlyFee, currency)} />
+            {!enPruebaVoluntaria && <Stat label="Mensualidad" value={fmtMoney(displayedMonthlyFee, currency)} />}
             {config.setup_fee > 0 && <Stat label="Implementación" value={fmtMoney(config.setup_fee, currency)} />}
-            <Stat label="Próximo cobro" value={nextChargeLabel(config.billing_day)} />
-            {config.started_at && <Stat label="Cliente desde" value={fechaCorta(config.started_at)} />}
+            {!enPruebaVoluntaria && <Stat label="Próximo cobro" value={nextChargeLabel(config.billing_day)} />}
+            {!enPruebaVoluntaria && config.started_at && <Stat label="Cliente desde" value={fechaCorta(config.started_at)} />}
             {tope && (
               <Stat
                 label="Pedidos este mes"

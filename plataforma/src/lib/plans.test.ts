@@ -126,7 +126,7 @@ describe('cambiar de plan desde el panel', () => {
     expect(m.finanzas).toBe(false);
     expect(m.analitica).toBe(false);
     expect(m.loyalty).toBe(false);
-    expect(m.cupones).toBe(false);
+    expect(m.cupones).toBe(true);
     expect(m.multi_branch).toBe(false);
   });
 
@@ -142,7 +142,7 @@ describe('cambiar de plan desde el panel', () => {
     const { modosAlCambiarDePlan } = await import('./plans');
     expect(modosAlCambiarDePlan('EN_LINEA', ['dine_in', 'pickup', 'delivery'])).toEqual(['pickup', 'delivery']);
     expect(modosAlCambiarDePlan('EN_LINEA', ['dine_in'])).toEqual(['pickup', 'delivery']);
-    expect(modosAlCambiarDePlan('ESTANDAR', ['dine_in', 'pickup', 'delivery'])).toEqual(['pickup', 'delivery']);
+    expect(modosAlCambiarDePlan('ESTANDAR', ['dine_in', 'pickup', 'delivery'])).toEqual(['dine_in', 'pickup', 'delivery']);
     expect(modosAlCambiarDePlan('PREMIUM', ['pickup'])).toEqual(['pickup']);
     expect(modosAlCambiarDePlan('BASICO', ['delivery'])).toEqual(['pickup']);
   });
@@ -154,5 +154,25 @@ describe('cambiar de plan desde el panel', () => {
     expect(bajar).toContain('Reportes financieros y corte de caja');
     expect(bajar.some((t) => t.startsWith('Platillos ilimitados'))).toBe(true);
     expect(loQueSePierde('EN_LINEA', 'PREMIUM')).toEqual([]);
+  });
+});
+
+describe('mostrador', () => {
+  it('Estándar lo trae y los planes superiores lo heredan', async () => {
+    const { tieneMostrador } = await import('./plans');
+    expect(tieneMostrador('BASICO')).toBe(false);
+    expect(tieneMostrador('EN_LINEA')).toBe(false);
+    expect(tieneMostrador('ESTANDAR')).toBe(true);
+    expect(tieneMostrador('PREMIUM')).toBe(true);
+    expect(tieneMostrador('PRO')).toBe(true);
+    expect(tieneMostrador(null)).toBe(false);
+  });
+});
+
+describe('loQueSePierde', () => {
+  it('de Básico a En línea no anuncia que se pierde comer en local', async () => {
+    const { loQueSePierde } = await import('./plans');
+    expect(loQueSePierde('BASICO', 'EN_LINEA')).not.toContain('Pedidos para comer en local');
+    expect(loQueSePierde('ESTANDAR', 'EN_LINEA')).toContain('Pedidos para comer en local');
   });
 });

@@ -398,7 +398,7 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
         id: 'activar',
         title: 'Elige cómo te pueden pedir',
         description:
-          'En «Funciones», arriba, enciendes los modos que ofreces: comer en el local, para llevar y a domicilio. En el plan Estándar eliges dos de los tres.',
+          'En «Funciones», arriba, enciendes los modos que ofreces: comer en el local, para llevar y a domicilio. Con Estándar y Premium puedes activar los tres.',
         route: 'Ajustes → Funciones → Modos de pedido',
       },
       {

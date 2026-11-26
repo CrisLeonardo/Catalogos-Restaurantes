@@ -15,6 +15,7 @@ import {
 } from '@/lib/alta';
 import { diaDeCobroDelAlta } from '@/lib/billing-signup';
 import { fmtMoney } from '@/lib/money';
+import { TEXTO_SIN_PRUEBA, type MotivoSinPrueba } from '@/lib/prueba-del-dueno';
 import { ErrorBox, Field, Stepper, WizardNav, enfocarCampo, localSlugify } from '@/components/signup/wizard-ui';
 import { leerLista } from '@/lib/importar-carta';
 
@@ -72,11 +73,9 @@ function detallePlan(plan: PlanAlta, como: ComoTePiden): string {
     return `Para empezar: para llevar y a domicilio, ${PLANS.EN_LINEA.users} usuario, hasta ${PLANS.EN_LINEA.maxProducts} platillos y unos ${PLANS.EN_LINEA.monthlyOrderCap} pedidos al mes`;
   }
   if (plan === 'ESTANDAR') {
-    /* PLAN-01: Planes promete «2 de 3 modos» y aquí solo se veían los dos
-       ya puestos, sin decir que se eligen ni dónde. «Comer en local» en
-       Estándar es venta en mostrador, sin meseros ni mesas. */
-    const modos = modosEstandar(como).map((m) => (m === 'dine_in' ? 'comer en local (sin meseros)' : MODO_NOMBRE[m])).join(' y ');
-    return `Para crecer: 2 de 3 modos, empiezas con ${modos} y los cambias en tu panel, en Funciones. Sin tope de pedidos ni platillos, ${PLANS.ESTANDAR.users} usuarios, corte de caja y reportes`;
+
+    const modos = modosEstandar(como).map((m) => (m === 'dine_in' ? 'comer en local por mostrador' : MODO_NOMBRE[m])).join(' y ');
+    return `Empiezas con ${modos} y puedes activar los tres modos en Funciones. Sin tope de pedidos ni platillos, ${PLANS.ESTANDAR.users} usuarios, corte de caja y reportes`;
   }
   return 'Todo: los tres modos, mesas y meseros, inventario, lealtad y usuarios sin límite';
 }
@@ -95,6 +94,7 @@ export default function NuevoRestaurante({
   rootDomain,
   pricing = defaultPlanPricing(),
   esElPrimero,
+  sinPrueba = null,
   intencion = null,
 }: {
   /** Lo que eligió en la web (LZ-11): la respuesta y el plan llegan puestos,
@@ -104,6 +104,8 @@ export default function NuevoRestaurante({
   pricing?: PlanPricing;
   /** ¿Todavía no es dueño de ningún restaurante? Decide textos y pasos. */
   esElPrimero: boolean;
+  /** Por qué este dueño ya no lleva prueba (migración 205); null si puede probar. */
+  sinPrueba?: MotivoSinPrueba;
 }) {
   const [state, formAction, isPending] = useActionState<NewRestaurantState, FormData>(createAnotherRestaurant, null);
   /* El panel del local nuevo es la raíz de otro host: navega el navegador,
@@ -215,7 +217,7 @@ export default function NuevoRestaurante({
   }
 
   const precioPlan = planPriceLabel(pricing, plan);
-  const conPrueba = esElPrimero && pricing.trialDays > 0 && plan !== 'BASICO';
+  const conPrueba = pricing.trialDays > 0 && plan !== 'BASICO' && !sinPrueba;
   /* El primer cobro, con monto, fecha y dónde se paga (LZ-01; maqueta
      §3). La fecha sale de la misma regla que guarda el alta: vence el día
      del alta, cada mes; del 29 al 31, el 28. Cada restaurante tiene su
@@ -228,8 +230,8 @@ export default function NuevoRestaurante({
   const notaCobro = plan === 'BASICO'
     ? 'El plan Básico es gratis para siempre, sin tarjeta.'
     : conPrueba
-      ? `Empiezas con ${pricing.trialDays} días gratis; luego ${precioPlan}. Lo cambias o das de baja cuando quieras.`
-      : `Tu primer cobro es de ${monto} y vence ${diaCobro === dia ? `hoy, ${fechaVence}` : `el ${fechaVence}`}; después, cada ${diaCobro}. Lo pagas desde Mi suscripción. Sin contrato: lo cambias o das de baja cuando quieras.`;
+      ? `Empiezas con ${pricing.trialDays} días gratis, sin tarjeta. Si quieres seguir por ${precioPlan}, confirma la contratación en Mi suscripción.`
+      : `${sinPrueba && pricing.trialDays > 0 ? `${TEXTO_SIN_PRUEBA[sinPrueba]} ` : ''}Tu primer cobro es de ${monto} y vence ${diaCobro === dia ? `hoy, ${fechaVence}` : `el ${fechaVence}`}; después, cada ${diaCobro}. Lo pagas desde Mi suscripción. Sin contrato: lo cambias o das de baja cuando quieras.`;
 
   return (
     <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -458,7 +460,7 @@ export default function NuevoRestaurante({
         onBack={() => { setStepError(null); setCambiando(null); setStep((s) => Math.max(0, s - 1)); }}
         onNext={next}
         nextLabel={step === 1 ? 'Ver mi carta' : 'Continuar'}
-        submitLabel={esElPrimero ? 'Crear mi restaurante' : 'Crear restaurante'}
+        submitLabel={conPrueba ? 'Iniciar prueba' : esElPrimero ? 'Crear mi restaurante' : 'Crear restaurante'}
         pendingLabel="Creando tu restaurante…"
         isPending={isPending || (!!state && 'url' in state)}
       />

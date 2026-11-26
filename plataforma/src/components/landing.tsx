@@ -268,7 +268,7 @@ export default async function LeoginLanding() {
             center
           />
           <div style={{ marginTop: 28 }}>
-            <PlanPorPreguntas planes={planesDeLaWeb(pricing)} origen="portada" />
+            <PlanPorPreguntas planes={planesDeLaWeb(pricing)} origen="portada" trialDays={pricing.trialDays} />
           </div>
         </section>
 

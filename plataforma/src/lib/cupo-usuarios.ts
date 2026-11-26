@@ -1,13 +1,13 @@
 /**
  * Usuarios por plan (auditoría de lanzamiento 2026-11-23, LZ-08).
  * ------------------------------------------------------------
- * Los planes anunciaban 1, 1, 2 e ilimitados y nada lo aplicaba: cualquier
+ * Los planes anunciaban un cupo por plan y nada lo aplicaba: cualquier
  * dueño, incluso en Básico, podía dar de alta a todo su equipo.
  *
  * Política decidida por el dueño el 2026-11-23:
  *  · Cuenta TODA persona con acceso al panel de ese local, dueño incluido,
  *    entre con correo, usuario o PIN. Básico y En línea: solo el dueño;
- *    Estándar: el dueño y una persona más; Premium y Pro: sin tope.
+ *    Estándar: el dueño y dos personas más; Premium y Pro: sin tope.
  *  · Una invitación pendiente ocupa lugar: si no, se podían mandar cinco y
  *    que entraran todas.
  *  · Quien ya tiene más personas que su plan las conserva: nadie pierde el

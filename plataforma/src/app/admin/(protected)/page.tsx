@@ -20,6 +20,7 @@ import { formatPrice } from '@/lib/theme/resolve';
 import { List, ListLink, ListText } from '@/components/ui/list';
 import { Section } from '@/components/ui/section';
 import { OnlineWidget, RatingsWidget, StockWidget } from '@/components/admin/hoy-widgets';
+import { ResumenVentas, periodoDeVentas } from '@/components/admin/hoy/resumen-ventas';
 import { SalesTrendWidget, TopTodayWidget } from '@/components/admin/sales-widgets';
 import HitoTarjeta from '@/components/admin/momentos/hito-tarjeta';
 import FiestaPrimerPedido from '@/components/admin/momentos/fiesta-primer-pedido';
@@ -71,7 +72,9 @@ export const metadata = { title: 'Hoy – Panel admin' };
 /** Un aviso de la cuenta (pago, PC, tope…), ya resuelto. */
 type AvisoCuenta = Excepcion;
 
-export default async function AdminHomePage() {
+export default async function AdminHomePage({ searchParams }: {
+  searchParams: Promise<{ ventas?: string | string[] }>;
+}) {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = await panelBase();
   const href = (ruta: string) => panelHref(base, ruta);
@@ -507,6 +510,15 @@ export default async function AdminHomePage() {
     );
   }
 
+  const verResumen = planActual === 'EN_LINEA' && !!restaurantId && allow('metricas');
+  if (verResumen) {
+    const periodo = periodoDeVentas((await searchParams).ventas);
+    dinero = (
+      <ResumenVentas restaurantId={restaurantId} timezone={timezone}
+        periodo={periodo} href={href} dinero={fmt} />
+    );
+  }
+
   const encabezado = etapa === 'nuevo' ? null : (
     <div className="flex items-center gap-3">
       <h2 className="min-w-0 flex-1 text-[14px] font-medium text-adm-text-3">
@@ -532,7 +544,7 @@ export default async function AdminHomePage() {
     />
   ) : null;
 
-  const tendencia = stats && ((stats.series.length > 0 && stats.totalLast14 > 0) || stats.topToday.length > 0) ? (
+  const tendencia = !verResumen && stats && ((stats.series.length > 0 && stats.totalLast14 > 0) || stats.topToday.length > 0) ? (
     <>
       {stats.series.length > 0 && stats.totalLast14 > 0 && (
         <SalesTrendWidget

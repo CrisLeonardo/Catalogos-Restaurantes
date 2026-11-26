@@ -55,11 +55,16 @@ describe('construirPricingSettings', () => {
     const s = construirPricingSettings(new Map([['plan_price_ESTANDAR', '150'], ['plan_price_PREMIUM', '299'], ['trial_days', '0']]));
     expect(s.estandar).toBe(150);
     expect(s.premium).toBe(299);
-    expect(s.enLinea).toBe(99);
+    expect(s.enLinea).toBe(75);
     expect(s.trialDays).toBe(0);
   });
 
+  it('solo anuncia la prueba voluntaria con su ajuste propio', () => {
+    expect(construirPricingSettings(new Map([['trial_days', '14']])).trialDays).toBe(0);
+    expect(construirPricingSettings(new Map([['prueba_voluntaria_activa', '1']])).trialDays).toBe(14);
+  });
+
   it('un valor ilegible no se convierte en 0: queda el de fábrica', () => {
-    expect(construirPricingSettings(new Map([['plan_price_EN_LINEA', 'abc']])).enLinea).toBe(99);
+    expect(construirPricingSettings(new Map([['plan_price_EN_LINEA', 'abc']])).enLinea).toBe(75);
   });
 });
