@@ -1,5 +1,6 @@
 'use client';
 
+import { esperadoDelCorte } from '@/lib/caja/libro';
 import { useTransition } from 'react';
 import { Icon } from '@/components/icons';
 import { useToastManager } from '@/components/ui/toast';
@@ -54,14 +55,14 @@ export default function CashHistoryExportButton({ restaurantId }: { restaurantId
 
       await brandedAutoTable(doc, branding, {
         startY: y,
-        head: [['Fecha', 'Turno', 'Cajero', 'Fondo inicial', 'Esperado', 'Contado', 'Diferencia', 'Por método', 'Notas']],
+        head: [['Fecha', 'Turno', 'Cajero', 'Fondo inicial', 'Ventas en efectivo', 'Efectivo esperado', 'Contado', 'Diferencia', 'Por método', 'Notas']],
         body: rows.map((c) => [
           c.business_date, c.shift_label ?? '', c.cashier_name ?? '',
-          money(Number(c.opening_float)), money(Number(c.expected_cash)), money(Number(c.counted_cash)), money(Number(c.difference)),
+          money(Number(c.opening_float)), money(Number(c.expected_cash)), money(esperadoDelCorte(c)), money(Number(c.counted_cash)), money(Number(c.difference)),
           methodSummary(c.by_method, money), c.notes ?? '',
         ]),
         styles: { fontSize: 8 },
-        columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' } },
+        columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' } },
       });
 
       finalizePdf(doc, { branding, generatedAtLabel: longDate(new Date().toISOString()) });
