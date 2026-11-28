@@ -62,7 +62,9 @@ async function makeTenant(tag: string, plan: 'ESTANDAR' | 'PREMIUM' = 'PREMIUM')
   const slug = `pw-${tag}-${SUFFIX}`;
   const { data: r, error: rErr } = await admin
     .from('restaurants')
-    .insert({ name: `Playwright ${tag} ${SUFFIX}`, slug, status: 'active', plan_actual: plan, modules: { orders: true } })
+    // Reparto ya confirmado (migración 207): estas pruebas reciben domicilios.
+    .insert({ name: `Playwright ${tag} ${SUFFIX}`, slug, status: 'active', plan_actual: plan, modules: { orders: true },
+      reparto_confirmado_en: new Date().toISOString() })
     .select('id')
     .single();
   if (rErr || !r) throw new Error(`crear restaurante ${tag}: ${rErr?.message}`);
@@ -116,7 +118,7 @@ for (const plan of ['ESTANDAR', 'PREMIUM'] as const) test(`${plan === 'ESTANDAR'
 
     const agregar = page.getByRole('button', { name: `Agregar ${local.productName}` });
     const hayPedido = page.getByRole('button', { name: /^Ver carrito/ })
-      .or(page.getByRole('complementary', { name: 'Tu pedido' }).getByRole('link', { name: /pagar/i }));
+      .or(page.getByRole('complementary', { name: 'Tu pedido' }).getByRole('link', { name: /pagar|continuar con el pedido/i }));
     await expect(async () => {
       await agregar.click();
       await expect(hayPedido.first()).toBeVisible({ timeout: 3_000 });
@@ -246,7 +248,7 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
        PC la barra se va y el pedido queda a la derecha con «Ir a pagar»
        (fase 4 de «La carta que vende», F4-4). Esta prueba corre en PC. */
     const hayPedido = page.getByRole('button', { name: /^Ver carrito/ })
-      .or(page.getByRole('complementary', { name: 'Tu pedido' }).getByRole('link', { name: /pagar/i }));
+      .or(page.getByRole('complementary', { name: 'Tu pedido' }).getByRole('link', { name: /pagar|continuar con el pedido/i }));
     await expect(async () => {
       await agregar.click();
       await expect(hayPedido.first()).toBeVisible({ timeout: 3_000 });
