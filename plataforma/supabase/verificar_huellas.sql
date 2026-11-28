@@ -1,5 +1,5 @@
 -- ============================================================
---  Huellas de las funciones críticas · hasta la migración 206
+--  Huellas de las funciones críticas · hasta la migración 207
 --  GENERADO por scripts/huellas-funciones.mjs --escribir. No editar a mano.
 --  ------------------------------------------------------------
 --  Pégalo en el editor SQL de Supabase (producción). Solo lee.
@@ -18,6 +18,7 @@ with esperadas(firma, huella) as (
     ('leogin_cerrar_pruebas_voluntarias()', '97570c11df7de64c25a4490412f8bf11'),
     ('leogin_cobrar_parte_mesa(p_restaurant uuid, p_mesa integer, p_items uuid[], p_pagos jsonb, p_actor uuid)', '32af80cb5b92f734a3b10ab9a7a206d6'),
     ('leogin_cobrar_parte_mesa_idempotente(p_restaurant uuid, p_mesa integer, p_items uuid[], p_pagos jsonb, p_actor uuid, p_intento uuid)', 'd6fb15f930d3e9739bed8f81970811cd'),
+    ('leogin_cobrar_pedido(p_restaurante uuid, p_pedido uuid, p_actor uuid, p_metodo text, p_recibido numeric)', 'e35b07ec2024760bc895f1148c248934'),
     ('leogin_compute_monthly_fee(p_restaurant_id uuid, p_period_start date)', '802f95050c5773603e1c8a1020d0c002'),
     ('leogin_confirmar_cambio_de_plan(p_restaurante uuid, p_actor uuid, p_anterior text, p_nuevo text, p_nombre text, p_modulos_anteriores jsonb, p_modulos_nuevos jsonb, p_modos_anteriores jsonb, p_modos_nuevos jsonb, p_importe numeric, p_moneda text)', 'dad16acdeaa26641d16396836e89b12a'),
     ('leogin_confirmar_cierre_caja(p_restaurant uuid, p_revision bigint, p_ultimo uuid, p_hasta timestamp with time zone, p_abierto uuid, p_fila jsonb, p_gastos uuid[], p_actor uuid)', '5dbf0c7dec10cd0a8097bf75e9a95c72'),
