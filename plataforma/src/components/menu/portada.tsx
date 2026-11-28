@@ -68,12 +68,14 @@ function BrandMark({ size = 96, cssSize }: { size?: number; cssSize?: string }) 
 /** `onDark`: sobre una foto a sangre el velo es siempre oscuro, así que los
     tokens del tema (que se invierten con la paleta clara) dejarían el badge
     ilegible. Ahí se fuerza blanco sobre translúcido. */
-function OpenBadge({ isOpen, onDark = false }: { isOpen: boolean; onDark?: boolean }) {
+function OpenBadge({ isOpen, pausado = false, onDark = false }: { isOpen: boolean; pausado?: boolean; onDark?: boolean }) {
   const config = useThemeConfig();
   const content = useThemeContent();
-  const label = isOpen ? content.portada.badgeOpen : content.portada.badgeClosed;
+  /* Abierto pero sin recibir pedidos (auditoría 26-nov, hallazgo 4): decir
+     «Abierto ahora» invitaba a llenar un carrito que el checkout rechazaba. */
+  const label = !isOpen ? content.portada.badgeClosed : pausado ? PAUSA_BADGE : content.portada.badgeOpen;
   const text = [label, config.zone].filter(Boolean).join(' · ');
-  const dotColor = isOpen ? (onDark ? '#fff' : 'var(--u-text)') : 'var(--c-danger, #f87171)';
+  const dotColor = isOpen && !pausado ? (onDark ? '#fff' : 'var(--u-text)') : pausado && isOpen ? 'var(--c-warn, #f59e0b)' : 'var(--c-danger, #f87171)';
   return (
     <span
       style={{
@@ -85,7 +87,7 @@ function OpenBadge({ isOpen, onDark = false }: { isOpen: boolean; onDark?: boole
       }}
     >
       {config.portadaShowStatus && (
-        <span style={{ width: 7, height: 7, borderRadius: 'var(--m-r-pill)', background: dotColor, boxShadow: `0 0 8px ${dotColor}`, animation: config.animations && isOpen ? 'pulse-ring 2.2s infinite' : undefined }} />
+        <span style={{ width: 7, height: 7, borderRadius: 'var(--m-r-pill)', background: dotColor, boxShadow: `0 0 8px ${dotColor}`, animation: config.animations && isOpen && !pausado ? 'pulse-ring 2.2s infinite' : undefined }} />
       )}
       {text}
     </span>
@@ -168,8 +170,12 @@ function tamañoCartel(texto: string): number {
   return Math.min(26, 90 / (larga * 0.5));
 }
 
-export default function Portada({ isOpen = true, cierraEn = null, fallbackImage = null, whatsappNumber = null }: {
+export const PAUSA_BADGE = 'Pedidos en pausa';
+
+export default function Portada({ isOpen = true, pausado = false, cierraEn = null, fallbackImage = null, whatsappNumber = null }: {
   isOpen?: boolean;
+  /** Abierto, pero los pedidos en línea están en pausa. */
+  pausado?: boolean;
   /** Minutos para cerrar, si está abierto (CV-13). */
   cierraEn?: number | null;
   /** Foto para la portada Vitrina si el dueño no subió imagen de fondo: la de
@@ -226,7 +232,7 @@ export default function Portada({ isOpen = true, cierraEn = null, fallbackImage 
           )}
         </div>
         <div className={`menu-hero-cta ${anim ? 'anim-fade-up' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--m-sp-3)', alignItems: 'center', width: '100%', maxWidth: 320 }}>
-          {config.portadaShowBadge && <OpenBadge isOpen={isOpen} />}
+          {config.portadaShowBadge && <OpenBadge isOpen={isOpen} pausado={pausado} />}
           <PrimaryButton size="lg" full iconRight="arrowDown" onClick={scrollToMenu} elementKey="portadaCta" style={{ marginTop: 4 }}>
             {content.portada.cta}
           </PrimaryButton>
@@ -240,7 +246,7 @@ export default function Portada({ isOpen = true, cierraEn = null, fallbackImage 
     return (
       <section className="menu-hero" style={{ ...heroWrap, alignItems: 'stretch', textAlign: 'left' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          {config.portadaShowBadge ? <OpenBadge isOpen={isOpen} /> : <span />}
+          {config.portadaShowBadge ? <OpenBadge isOpen={isOpen} pausado={pausado} /> : <span />}
           {config.portadaShowLogo && <BrandMark size={46} />}
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -306,7 +312,7 @@ export default function Portada({ isOpen = true, cierraEn = null, fallbackImage 
               </p>
             )}
           </div>
-          {config.portadaShowBadge && <OpenBadge isOpen={isOpen} onDark />}
+          {config.portadaShowBadge && <OpenBadge isOpen={isOpen} pausado={pausado} onDark />}
           <div style={{ width: '100%', maxWidth: 340, marginTop: 4 }}>
             <PrimaryButton size="lg" full iconRight="arrowDown" onClick={scrollToMenu} elementKey="portadaCta">
               {content.portada.cta}
@@ -335,7 +341,7 @@ export default function Portada({ isOpen = true, cierraEn = null, fallbackImage 
     const kicker = launch
       ? (proxima && edicion.abre !== null ? `Muy pronto · abre el ${fechaCorta(edicion.abre)}` : content.vitrina.launchKicker)
       : config.portadaShowBadge
-        ? [isOpen ? content.portada.badgeOpen : content.portada.badgeClosed, config.zone].filter(Boolean).join(' · ')
+        ? [!isOpen ? content.portada.badgeClosed : pausado ? PAUSA_BADGE : content.portada.badgeOpen, config.zone].filter(Boolean).join(' · ')
         : '';
     const foto = config.backgroundImage || fallbackImage;
     return (
@@ -461,7 +467,7 @@ export default function Portada({ isOpen = true, cierraEn = null, fallbackImage 
 
           {config.portadaShowBadge && (
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
-              <OpenBadge isOpen={isOpen} />
+              <OpenBadge isOpen={isOpen} pausado={pausado} />
             </div>
           )}
           <PrimaryButton size="lg" full iconRight="arrowDown" onClick={scrollToMenu} elementKey="portadaCta">
@@ -491,7 +497,7 @@ export default function Portada({ isOpen = true, cierraEn = null, fallbackImage 
      lo normal y se calla; «Cierra en 40 min» sí se dice. Cerrado lo explica
      el aviso de arriba de la carta, con cuándo vuelve a abrir. */
   if (config.portadaVariant === 'directo') {
-    const cierraPronto = isOpen && cierraEn !== null && cierraEn <= 60;
+    const cierraPronto = isOpen && !pausado && cierraEn !== null && cierraEn <= 60;
     return (
       <section style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 0 0' }}>
         {config.portadaShowLogo && <BrandMark size={48} />}
@@ -537,7 +543,7 @@ export default function Portada({ isOpen = true, cierraEn = null, fallbackImage 
         ))}
       </div>
       <div style={{ width: '100%', maxWidth: 360 }}>
-        {config.portadaShowBadge && <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><OpenBadge isOpen={isOpen} /></div>}
+        {config.portadaShowBadge && <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><OpenBadge isOpen={isOpen} pausado={pausado} /></div>}
         <PrimaryButton size="lg" full iconRight="arrowDown" onClick={scrollToMenu} elementKey="portadaCta">{content.portada.cta}</PrimaryButton>
       </div>
     </section>

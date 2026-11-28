@@ -392,7 +392,7 @@ function TarjetaCocina({ pedido, estacion, nombres, porPuesto, ronda, amarillo, 
     <article className={styles.comanda} aria-label={'Comanda ' + shortOrderNumber(pedido.order_number) + ' · ' + nombrePedido(pedido)}>
       <header className={styles.cabecera}>
         <div><h3>{nombrePedido(pedido)}</h3><p className={styles.menor}>
-          {shortOrderNumber(pedido.order_number)}{ronda ? ' · ' + (ronda > 1 ? 'Ronda ' + ronda : 'Primera ronda') : ''}
+          {pedido.es_prueba ? 'Prueba · ' : ''}{shortOrderNumber(pedido.order_number)}{ronda ? ' · ' + (ronda > 1 ? 'Ronda ' + ronda : 'Primera ronda') : ''}
         </p></div>
         {cerrada ? <strong className={styles.estado} data-tono={etapa === 'cancelada' ? 'alerta' : 'ok'}>
           {etapa === 'cancelada' ? 'Cancelada' : 'Salida confirmada'}

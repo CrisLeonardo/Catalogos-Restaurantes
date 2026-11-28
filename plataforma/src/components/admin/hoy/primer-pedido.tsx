@@ -21,7 +21,8 @@ const TEXTO: Record<ClavePaso, { titulo: string; detalle: string }> = {
   },
   carta: {
     titulo: 'Ábrelo como cliente',
-    detalle: 'Abre tu carta en el teléfono, o escanea tu QR, y mírala como la verá la gente.',
+    // Solo mirar: un pedido hecho desde aquí es real y cuenta (auditoría 26-nov, hallazgo 3).
+    detalle: 'Abre tu carta en el teléfono, o escanea tu QR, y mírala como la verá la gente. Para probar un pedido usa el paso siguiente: ese no cuenta en tus cifras.',
   },
   prueba: {
     titulo: 'Recibe un pedido de prueba',

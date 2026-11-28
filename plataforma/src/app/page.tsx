@@ -15,6 +15,7 @@ import { isVitrina } from '@/lib/theme/defaults';
 import { estadoEdicion } from '@/lib/vitrina/edicion';
 import { resolveTheme } from '@/lib/theme/resolve';
 import { isOpenNow, minutosParaCerrar, nextOpenLabel } from '@/lib/hours';
+import { conPunto, fraseDeRegreso, pausaVigente } from '@/lib/pausa-pedidos';
 import { isModuleActive } from '@/lib/modules';
 import { DEMO_SLUG, rootDomainForUrls, isAdminSubdomain, isGroupSubdomain, subdomainUrl, marketingUrl } from '@/lib/tenant';
 import { DemoOperativa } from '@/components/pidelo/demo-operativa';
@@ -295,6 +296,16 @@ export default async function Home({
   const isOpen = isOpenNow(data.restaurant.hours, tz, new Date(), data.restaurant.hour_exceptions);
   const cierraEn = isOpen ? minutosParaCerrar(data.restaurant.hours, tz, new Date(), data.restaurant.hour_exceptions) : null;
   const reopenHint = !isOpen ? nextOpenLabel(data.restaurant.hours, tz, new Date(), data.restaurant.hour_exceptions) : null;
+  /* La pausa se ve desde que se abre la carta (auditoría 26-nov, hallazgo 4):
+     antes solo la decía el checkout, con el carrito ya lleno. */
+  const r = data.restaurant as { orders_paused?: boolean | null; orders_paused_until?: string | null; pause_message?: string | null };
+  const pausa = ordersEnabled && pausaVigente({ orders_paused: r.orders_paused, orders_paused_until: r.orders_paused_until ?? null })
+    ? {
+        mensaje: conPunto(r.pause_message?.trim() || 'Los pedidos están pausados por el momento.'),
+        regreso: fraseDeRegreso(r.orders_paused_until ?? null, tz),
+        hasta: r.orders_paused_until ?? null,
+      }
+    : null;
 
   const mod = data.restaurant.modules as Record<string, boolean> | null;
   const modSettings = data.restaurant.module_settings ?? null;
@@ -348,6 +359,7 @@ export default async function Home({
       restaurantId={data.restaurant.id}
       ordersEnabled={ordersEnabled}
       isOpen={isOpen}
+      pausa={pausa}
       reopenHint={reopenHint}
       cierraEn={cierraEn}
       timezone={tz}
