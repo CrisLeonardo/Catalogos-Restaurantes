@@ -65,6 +65,8 @@ export interface Restaurant {
   location_lat: number | null;
   location_lng: number | null;
   delivery_radius_km: number | null;
+  /** Migración 207: cuándo confirmó el dueño su reparto. null = sin domicilios todavía. */
+  reparto_confirmado_en?: string | null;
   /** Grupo dueño (migración 024); null = independiente. */
   organization_id: string | null;
   /** Dirección legible del local (migración 026). Se muestra en el selector de sucursal. */

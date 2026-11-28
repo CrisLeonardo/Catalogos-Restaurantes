@@ -1120,3 +1120,34 @@ export async function elegirModoDeEntrega(
   updateTag(`restaurant:${ctx.restaurantId}`);
   return { ok: true };
 }
+
+/**
+ * «Empezar a recibir domicilios» (auditoría 26-nov, hallazgo 5, migración 207).
+ *
+ * Un local nuevo publica su carta sin domicilios: antes nacía repartiendo a
+ * cualquier dirección y a toda hora sin que nadie lo hubiera decidido. El
+ * dueño ve su cobertura, su tarifa y su horario y los confirma aquí; desde
+ * ese momento la carta ofrece «A domicilio». `confirmar: false` lo apaga.
+ */
+export async function confirmarReparto(
+  restaurantId: string, confirmar = true,
+): Promise<{ ok: true } | { error: string }> {
+  const fd = new FormData();
+  fd.set('restaurantId', restaurantId);
+  const ctx = await resolveContext(fd, 'ajustes');
+  if (!ctx) return { error: 'No autorizado.' };
+
+  const { error } = await ctx.db.from('restaurants')
+    .update({ reparto_confirmado_en: confirmar ? new Date().toISOString() : null })
+    .eq('id', ctx.restaurantId);
+  if (error) {
+    return { error: faltaLaColumna(error) ? 'Falta aplicar la migración 207.' : 'No se pudo guardar. Inténtalo de nuevo.' };
+  }
+  await logActivity({ restaurantId: ctx.restaurantId, actorId: ctx.userId, action: 'reparto_confirmado', meta: { confirmar } });
+
+  revalidatePath('/admin/ajustes/entrega');
+  revalidatePath('/admin/ajustes');
+  revalidatePath('/admin');
+  updateTag(`restaurant:${ctx.restaurantId}`);
+  return { ok: true };
+}

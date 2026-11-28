@@ -34,9 +34,11 @@ export default async function CheckoutPage() {
   // configurados por el dueño.
   const planActual = (restaurant.plan_actual as string | null) ?? null;
   // En línea: el plan quita «comer en local» aunque el tema lo tenga guardado.
+  // Sin reparto confirmado (207) no se ofrece domicilio; sin la columna, como antes.
+  const sinReparto = restaurant.reparto_confirmado_en === null;
   const safeConfig = planActual === 'BASICO'
     ? { ...resolved.config, orderTypes: ['pickup' as const] }
-    : { ...resolved.config, orderTypes: orderTypesForPlan(planActual, resolved.config.orderTypes) };
+    : { ...resolved.config, orderTypes: orderTypesForPlan(planActual, resolved.config.orderTypes).filter((t) => !(sinReparto && t === 'delivery')) };
 
   // Operación: pausa manual ("cocina saturada") y horario real.
   // createOrder vuelve a validar en el servidor; esto es solo la UX.
