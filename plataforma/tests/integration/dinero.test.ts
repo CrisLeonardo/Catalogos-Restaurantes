@@ -846,6 +846,10 @@ describe('0.19 · límites exactos del periodo de caja', () => {
       method: 'CASH', amount, ...(gestionado ? {} : { created_at: at }) }));
     checked(await db.from('orders').update({ status: 'DELIVERED', order_type: 'PICKUP',
       delivered_at: at, payment_method: 'CASH', tip: amount }).eq('id', entrega.id));
+    // Desde la 207 entregar no es cobrar: la entrega del fixture se cobró al
+    // entregarse, con su fila en el mismo instante (lo que la 207 concilió).
+    checked(await db.from('order_payments').insert({ restaurant_id: rid(), order_id: entrega.id,
+      method: 'CASH', amount, ...(gestionado ? {} : { created_at: at }) }));
     const gasto = checked(await db.from('cash_expenses').insert({ restaurant_id: rid(),
       business_date: '2026-11-05', concept: 'AUD límite', amount,
       ...(gestionado ? {} : { created_at: at }) }).select('id').single())!;
@@ -853,7 +857,7 @@ describe('0.19 · límites exactos del periodo de caja', () => {
     // precisión de Postgres; no cambia el reloj ni las consultas de producción.
     await sql.query('update public.orders set caja_registrado_en=$2 where id=$1', [entrega.id, gestionado ? at : null]);
     if (gestionado) {
-      await sql.query('update public.order_payments set caja_registrado_en=$2 where order_id=$1', [pago.id, at]);
+      await sql.query('update public.order_payments set caja_registrado_en=$2 where order_id = any($1::uuid[])', [[pago.id, entrega.id], at]);
       await sql.query('update public.cash_expenses set caja_registrado_en=$2 where id=$1', [gasto.id, at]);
     }
     return { pago, entrega, gasto };
@@ -880,7 +884,8 @@ describe('0.19 · límites exactos del periodo de caja', () => {
         p_restaurant: rid(), p_desde: inicio, p_gestion_desde: inicio,
         p_hasta: hasta, p_incluir_desde: true,
       }));
-      expect(primero.pagos.map((p: { amount: number }) => Number(p.amount)).sort()).toEqual([1, 2]);
+      // Cada fuente tiene dos cobros (el pago y la entrega cobrada, 207).
+      expect(primero.pagos.map((p: { amount: number }) => Number(p.amount)).sort()).toEqual([1, 1, 2, 2]);
       expect(primero.entregados).toHaveLength(2);
       expect(primero.gastos.reduce((s: number, g: { amount: number }) => s + Number(g.amount), 0)).toBe(3);
       const previo = await corte(hasta, 6);
@@ -1537,26 +1542,25 @@ describe('0.18 · pertenencia durable y cierre de caja coordinado', () => {
     expect(checked(await db.from('cash_expenses').select('*').eq('id', gasto.id).single())).toEqual(gasto);
   });
 
-  it('una entrega sin filas que confirma después del corte queda en el periodo siguiente', async () => {
+  it('una entrega sin cobro no es dinero: el cobro cuenta en el turno en que se registra, una sola vez (207)', async () => {
     const o = await order([10]);
-    checked(await db.from('orders').update({ order_type: 'PICKUP' }).eq('id', o.id));
+    checked(await db.from('orders').update({ order_type: 'PICKUP', status: 'DELIVERED', delivered_at: new Date().toISOString() }).eq('id', o.id));
     success(await abrirTurno({ restaurantId: rid(), openingFloat: 0 }));
-    await sql.query('begin');
-    const lock = await sql.query('select pg_backend_pid() pid,id from public.orders where id=$1 for update', [o.id]);
-    const antes = (await sql.query('select clock_timestamp() ahora')).rows[0].ahora.toISOString();
-    const entrega = db.from('orders').update({ status: 'DELIVERED', delivered_at: antes }).eq('id', o.id).then(checked);
-    let close: Awaited<ReturnType<typeof cerrar>>;
-    try {
-      await waitForBlockedPayment(lock.rows[0].pid);
-      close = await cerrar();
-      success(close);
-    } finally { await sql.query('rollback'); await entrega; }
-    expect(close!.result?.expected).toBe(0);
+    const antes = await period();
+    expect(antes.cuadre.efectivo).toBe(0);
+    expect(antes.cuadre.cobrado).toBe(0);
+    expect(antes.cuadre.entregadosSinCobro).toEqual({ pedidos: 1, total: 10 });
+    expect(antes.pendientes.paraLlevar.find((p) => p.orderId === o.id)?.entregado).toBe(true);
+    const first = await cerrar({}); success(first);
+    expect(first.result?.expected).toBe(0);
+    const cobrar = () => db.rpc('leogin_cobrar_pedido', { p_restaurante: rid(), p_pedido: o.id, p_actor: state.users[0], p_metodo: 'CASH', p_recibido: 20 });
+    const [uno, dos] = await Promise.all([cobrar(), cobrar()]);
+    const cobros = [checked(uno), checked(dos)] as { cobrado: number; yaCobrado: boolean }[];
+    expect(cobros.filter((c) => !c.yaCobrado).map((c) => Number(c.cobrado))).toEqual([10]);
+    expect(await ledger(o.id)).toHaveLength(1);
     const next = await period();
     expect(next.cuadre.efectivo).toBe(10);
-    expect(next.cuadre.cobrado).toBe(10);
-    expect(next.cobros.find((c) => c.orderId === o.id)!.at > close!.result!.closedAt).toBe(true);
-    expect(await ledger(o.id)).toEqual([]);
+    expect(next.pendientes.paraLlevar.find((p) => p.orderId === o.id)).toBeUndefined();
     const second = await cerrar({ bil_10: 1 });
     success(second);
     expect(second.result?.expected).toBe(10);

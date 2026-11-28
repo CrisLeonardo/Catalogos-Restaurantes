@@ -23,7 +23,7 @@ function lectura(): LecturaDelTurno {
     abierto: null, ultimoCierre: null, cobros: [], gastos: [], gastosTotal: 0, propinas: [], propinasTotal: 0,
     pendientes: { mesas: [], domicilios: [], paraLlevar: [], total: 0 }, sinMigracion: false,
     cuadre: { porMetodo: {}, efectivo: 0, cobrado: 0, devoluciones: 0, devolucionesEfectivo: 0, pedidos: 0,
-      liberadasSinCobrar: { pedidos: 0, total: 0 } } };
+      liberadasSinCobrar: { pedidos: 0, total: 0 }, entregadosSinCobro: { pedidos: 0, total: 0 } } };
 }
 beforeEach(() => {
   vi.clearAllMocks();

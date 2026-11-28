@@ -118,7 +118,12 @@ export default async function AdminHomePage({ searchParams }: {
     ordersEnabled && restaurantId && allow('caja') ? getCajaState(restaurantId) : null,
     needsGuideCheck && restaurantId ? getAvanceGuia(restaurantId) : null,
   ]);
-  const cajaVisible = !!caja && !caja.ciego && !caja.needsMigration;
+  /* Caja solo donde el plan la incluye, igual que el menú (auditoría 26-nov,
+     hallazgo 9): en En línea el aviso de Hoy llevaba a Caja mientras el
+     acceso habitual mandaba a Mi suscripción. */
+  const planDeCaja = (restaurant?.plan_actual ?? null) as PlanCode | null;
+  const cajaDelPlan = !planDeCaja || !PLANS[planDeCaja] || PLANS[planDeCaja].hasFinance;
+  const cajaVisible = !!caja && !caja.ciego && !caja.needsMigration && cajaDelPlan;
   const cierres = cajaVisible && restaurantId ? await getCierresDelDia(restaurantId, caja.date) : null;
 
   /* Primeros pasos por resultado (2.2). La guía se va sola al cumplirse los
@@ -389,6 +394,16 @@ export default async function AdminHomePage({ searchParams }: {
       key: 'trial', ruta: '/admin/suscripcion', nivel: 'info', accion: 'Ver planes',
       titulo: trialLeft === 1 ? 'Te queda 1 día de prueba' : `Te quedan ${trialLeft} días de prueba`,
       detalle: 'Tu menú ya está en vivo. Aprovéchalo al máximo.',
+    });
+  }
+  /* Domicilio sin confirmar (auditoría 26-nov, hallazgo 5, migración 207):
+     la carta recibe para recoger, pero no domicilios hasta que el dueño
+     confirme cobertura, tarifa y horario. */
+  if (restaurant?.reparto_confirmado_en === null && resolved?.config.orderTypes.includes('delivery') && allow('ajustes')) {
+    avisos.push({
+      key: 'reparto', ruta: '/admin/ajustes/entrega', nivel: 'aviso', accion: 'Confirmar',
+      titulo: 'Tu carta todavía no recibe domicilios',
+      detalle: 'Confirma hasta dónde repartes, cuánto cobras y a qué hora. Mientras tanto recibe pedidos para recoger.',
     });
   }
   if (recordarCandado > 0) {

@@ -310,7 +310,7 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
         id: 'textos',
         title: 'Los textos de tu menú',
         description:
-          'En «Textos» cambias lo que dicen los botones y avisos del menú: «Ver el menú», «Ir a pagar», el mensaje cuando estás cerrado…',
+          'En «Textos» cambias lo que dicen los botones y avisos del menú: «Ver el menú», «Continuar con el pedido», el mensaje cuando estás cerrado…',
         route: 'Personalizar el sitio → Textos',
       },
       {

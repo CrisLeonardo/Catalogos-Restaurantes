@@ -98,8 +98,13 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
 
       {/* Lista */}
       {devices.length === 0 ? (
-        <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>
-          Todavía no hay ningún aparato reconocido.
+        /* Primer acceso con PIN (auditoría 26-nov, hallazgo 6): sin aparatos
+           del local, nadie ve la lista de nombres; se dice qué hacer. */
+        <div className="note note-warn" style={{ fontSize: 13 }}>
+          <span>
+            Registra los aparatos del local: abre esta pantalla en cada tablet, teléfono de caja o PC del restaurante y toca
+            <strong> Autorizar</strong>. En ellos tu personal toca su nombre y marca su PIN.
+          </span>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -156,8 +161,8 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
             </div>
             <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: '3px 0 0', lineHeight: 1.5 }}>
               {requiresTrusted
-                ? 'Encendido. Desde cualquier otro aparato hay que entrar con correo, y la lista de nombres de tu personal deja de verse fuera del local.'
-                : 'Apagado. Hoy tu personal puede entrar con su PIN desde cualquier lugar del mundo, y la lista con sus nombres se ve sin iniciar sesión.'}
+                ? 'Encendido. Desde cualquier otro aparato hay que entrar con correo.'
+                : 'Apagado. Tu personal también puede entrar con su PIN desde fuera del local, escribiendo su nombre. La lista del personal solo se ve en los aparatos de aquí arriba.'}
             </p>
           </div>
           <Button

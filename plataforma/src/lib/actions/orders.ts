@@ -412,6 +412,18 @@ export async function createOrder(
     return { error: 'Este restaurante recibe pedidos para llevar y a domicilio.' };
   }
 
+  /* Un local nuevo no recibe domicilios hasta que el dueño confirma
+     cobertura, tarifa y horario (auditoría 26-nov, hallazgo 5, migración
+     207). Consulta aparte y solo para domicilios: sin la 207 la columna no
+     existe y el pedido sigue como antes. */
+  if (customer.type === 'DELIVERY') {
+    const { data: reparto, error: sinColumna } = await db
+      .from('restaurants').select('reparto_confirmado_en').eq('id', restaurantId).maybeSingle();
+    if (!sinColumna && reparto && (reparto as { reparto_confirmado_en: string | null }).reparto_confirmado_en == null) {
+      return { error: 'Este restaurante todavía no recibe pedidos a domicilio. Puedes pedir para recoger.' };
+    }
+  }
+
   // Operación: pausa manual y horario real también se validan AQUÍ
   // (el cliente puede tener la página abierta desde antes del cierre).
   if (restaurant.orders_paused) {
@@ -2591,6 +2603,8 @@ export interface PublicOrder {
   /** Platos que pasan por cocina y cuántos ya marcó preparados (1.5). */
   platos: { listos: number; total: number } | null;
   items: PublicOrderItem[];
+  /** Pedido de prueba del dueño (183): el seguimiento lo dice. */
+  esPrueba?: boolean;
 }
 
 /**
@@ -2663,7 +2677,7 @@ export async function getPublicOrder(
   const { data } = await db
     .from('orders')
     .select(
-      'order_number, status, order_type, customer_name, subtotal, delivery_fee, discount, loyalty_points_redeemed, loyalty_discount, total, created_at, accepted_at, ready_at, served_at, delivered_at, restaurant_id, items:order_items(name_snapshot, quantity, subtotal, options_snapshot, cocina_estacion_id, cocina_preparada_at)',
+      'order_number, status, order_type, customer_name, subtotal, delivery_fee, discount, loyalty_points_redeemed, loyalty_discount, total, created_at, accepted_at, ready_at, served_at, delivered_at, restaurant_id, es_prueba, items:order_items(name_snapshot, quantity, subtotal, options_snapshot, cocina_estacion_id, cocina_preparada_at)',
     )
     .eq('public_token', token)
     .single();
@@ -2686,6 +2700,7 @@ export async function getPublicOrder(
     acceptedAt: (data.accepted_at as string | null) ?? null,
     readyAt: (data.ready_at as string | null) ?? null,
     finishedAt: ((data.served_at ?? data.delivered_at) as string | null) ?? null,
+    esPrueba: data.es_prueba === true,
     platos: (() => {
       const deCocina = ((data.items as Record<string, unknown>[] | null) ?? []).filter((it) => it.cocina_estacion_id);
       return deCocina.length ? { listos: deCocina.filter((it) => it.cocina_preparada_at).length, total: deCocina.length } : null;

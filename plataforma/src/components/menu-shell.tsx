@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { setScannedTable, isStandaloneLaunch } from '@/lib/table-session';
-import { capturarPasePrueba } from '@/lib/pedido-prueba-cliente';
+import { capturarPasePrueba, leerPasePrueba } from '@/lib/pedido-prueba-cliente';
 import { mesaExiste } from '@/lib/mesa-valida';
 import { CartProvider } from '@/lib/cart-context';
 import { ThemeProvider } from '@/lib/theme/context';
@@ -73,13 +73,31 @@ interface Props {
       sin contar visitas y sin ofrecer instalarlo. Vive en el dominio de
       Leogin, y su service worker se quedaría controlando la web comercial. */
   muestra?: boolean;
+  /** Pedidos en línea en pausa (auditoría 26-nov, hallazgo 4): la carta queda de consulta. */
+  pausa?: { mensaje: string; regreso: string | null; hasta: string | null } | null;
 }
 
-export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, cierraEn = null, timezone = 'America/Guatemala', initialMesa, initialPlato = null, masPedidos = [], estados = [], llamadaMeseroEnabled = false, loyaltyOn = false, rewardsCatalog = null, googleAuthEnabled = false, whatsappNumber = null, restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null, menuLanguages = [], archivo = [], muestra = false }: Props) {
+export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, cierraEn = null, timezone = 'America/Guatemala', initialMesa, initialPlato = null, masPedidos = [], estados = [], llamadaMeseroEnabled = false, loyaltyOn = false, rewardsCatalog = null, googleAuthEnabled = false, whatsappNumber = null, restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null, menuLanguages = [], archivo = [], muestra = false, pausa = null }: Props) {
   /* Una mesa que no existe en el local no se guarda: la carta lo dice y no
      deja pedir a esa mesa (auditoría 1.12, M01). */
   /* Pedido de prueba del dueño (ficha 2.2): guarda el pase de la URL. */
-  useEffect(() => { capturarPasePrueba(restaurantId); }, [restaurantId]);
+  /* Mientras el pase vale, la carta lo dice (auditoría 26-nov, hallazgo 3):
+     una nota escrita en el pedido no lo vuelve prueba; este modo sí. */
+  const [enPrueba, setEnPrueba] = useState(false);
+  useEffect(() => {
+    capturarPasePrueba(restaurantId);
+    setEnPrueba(!!leerPasePrueba(restaurantId));
+  }, [restaurantId]);
+  /* Una pausa con hora de fin termina sola: la carta se recarga a esa hora
+     y vuelven el carrito y los botones, sin que el comensal tenga que saberlo. */
+  useEffect(() => {
+    if (!pausa?.hasta) return;
+    const falta = new Date(pausa.hasta).getTime() - Date.now();
+    if (!(falta > 0) || falta > 6 * 3600_000) return;
+    const t = setTimeout(() => window.location.reload(), falta + 1500);
+    return () => clearTimeout(t);
+  }, [pausa?.hasta]);
+  const pedidos = ordersEnabled && !pausa;
   const mesaInvalida = initialMesa && initialMesa > 0 && !mesaExiste(initialMesa, config.dineInTableCount) ? initialMesa : null;
   useEffect(() => {
     if (initialMesa && initialMesa > 0) {
@@ -149,7 +167,7 @@ export default function MenuShell({ config, content, categories, products, resta
             // Vitrina: la barra de arriba es fija, así que el contenido arranca
             // debajo de ella; y abajo ya no hay barra de navegación que reservar.
             paddingTop: vitrina ? `calc(${VITRINA_TOP_H}px + env(safe-area-inset-top, 0px))` : undefined,
-            paddingBottom: `calc(${vitrina ? '24px' : ordersEnabled ? 'var(--m-nav-h)' : '64px'} + env(safe-area-inset-bottom, 0px))`,
+            paddingBottom: `calc(${vitrina ? '24px' : pedidos ? 'var(--m-nav-h)' : '64px'} + env(safe-area-inset-bottom, 0px))`,
           }}
         >
           <Cinta />
@@ -157,9 +175,34 @@ export default function MenuShell({ config, content, categories, products, resta
               ([data-portada-viva] en globals.css). `contents`: la envoltura no
               crea caja, así que no cambia nada de cómo se maqueta. */}
           <div data-portada-viva={cfg.animations ? '' : undefined} style={{ display: 'contents' }}>
-            <Portada isOpen={isOpen} cierraEn={cierraEn} fallbackImage={vitrinaFoto} whatsappNumber={whatsappNumber} />
+            <Portada isOpen={isOpen} pausado={!!pausa} cierraEn={cierraEn} fallbackImage={vitrinaFoto} whatsappNumber={whatsappNumber} />
           </div>
           <div id="menu" style={{ scrollMarginTop: 16, paddingTop: 12 }}>
+            {enPrueba && pedidos && (
+              <p role="status" className="note note-alt" style={{ marginBottom: 14, fontSize: 13 }}>
+                <Icon name="sparkle" size={15} /> Modo prueba: este pedido no contará en tus ventas, caja ni existencias, y no avisa a nadie.
+              </p>
+            )}
+            {isOpen && pausa && (
+              <div
+                role="status"
+                style={{
+                  display: 'flex', gap: 12, alignItems: 'flex-start',
+                  background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)',
+                  borderRadius: 'var(--radius-lg)', padding: '13px 15px', marginBottom: 14,
+                }}
+              >
+                <span style={{ color: 'var(--c-warn)', flexShrink: 0, marginTop: 1 }}>
+                  <Icon name="clock" size={18} />
+                </span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>{pausa.mensaje}</div>
+                  <p style={{ fontSize: 12.5, color: 'var(--u-text-2)', marginTop: 2, lineHeight: 1.5 }}>
+                    Puedes ver el menú. {pausa.regreso ?? 'Vuelve a intentarlo en un rato.'}
+                  </p>
+                </div>
+              </div>
+            )}
             {!isOpen && (
               <div
                 role="status"
@@ -185,7 +228,7 @@ export default function MenuShell({ config, content, categories, products, resta
                 </div>
               </div>
             )}
-            <MenuClient initialPlato={initialPlato} masPedidos={masPedidos} estados={estados} categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} timezone={timezone} llamadaMeseroEnabled={llamadaMeseroEnabled} initialMesa={mesaInvalida ? undefined : initialMesa}
+            <MenuClient initialPlato={initialPlato} masPedidos={masPedidos} estados={estados} categories={categories} products={products} ordersEnabled={pedidos} restaurantId={restaurantId} timezone={timezone} llamadaMeseroEnabled={llamadaMeseroEnabled} initialMesa={mesaInvalida ? undefined : initialMesa}
           mesaInvalida={mesaInvalida} loyaltyOn={loyaltyOn} rewardsCatalog={rewardsCatalog} googleAuthEnabled={googleAuthEnabled} whatsappNumber={whatsappNumber} restaurantLat={restaurantLat} restaurantLng={restaurantLng} deliveryRadiusKm={deliveryRadiusKm} />
           </div>
           {vitrina && cfg.launchMode && (

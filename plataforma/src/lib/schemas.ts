@@ -63,9 +63,37 @@ export function stripPhoneFormatting(v: string): string {
   return v.replace(/[\s\-\(\)\.]/g, '').trim();
 }
 
-/** Returns true if v is a valid 8-digit Guatemala local number (after stripping). */
+/**
+ * Los 8 dígitos de un número de Guatemala, o null si no lo es
+ * (auditoría 26-nov, hallazgo 10: `00000000` pasaba como «Número válido»).
+ *
+ * Acepta los formatos que la gente escribe —«5555 0000», «5555-0000»,
+ * «+502 5555 0000», «00502…»— y rechaza lo que no puede ser un número:
+ * los de Guatemala empiezan con 2 a 7 (fijos 2, 6 y 7; móviles 3, 4 y 5),
+ * y uno con el mismo dígito repetido no es de nadie.
+ */
+export function telefonoGuatemala(raw: string): string | null {
+  let d = stripPhoneFormatting(raw ?? '').replace(/^\+/, '');
+  if (/^(00)?502\d{8}$/.test(d)) d = d.slice(-8);
+  if (!/^\d{8}$/.test(d)) return null;
+  if (!/^[2-7]/.test(d)) return null;
+  if (/^(\d)\1{7}$/.test(d)) return null;
+  return d;
+}
+
+/** Por qué un teléfono no vale, en palabras del comensal; null si vale. */
+export function problemaDeTelefono(raw: string): string | null {
+  if (telefonoGuatemala(raw)) return null;
+  let d = stripPhoneFormatting(raw ?? '').replace(/^\+/, '');
+  if (/^(00)?502\d{8}$/.test(d)) d = d.slice(-8);
+  if (!/^\d{8}$/.test(d)) return 'Ingresa los 8 dígitos de tu número (ej. 5555 0000).';
+  if (/^(\d)\1{7}$/.test(d)) return 'Ese número no parece real. Escribe uno donde te podamos llamar.';
+  return 'Los números de Guatemala empiezan con 2, 3, 4, 5, 6 o 7. Revisa el primer dígito.';
+}
+
+/** Returns true if v is a valid 8-digit Guatemala number (con o sin +502). */
 export function isValidGuatemalaPhone(raw: string): boolean {
-  return /^\d{8}$/.test(stripPhoneFormatting(raw));
+  return telefonoGuatemala(raw) !== null;
 }
 
 const customerFields = z.object({
@@ -76,9 +104,9 @@ const customerFields = z.object({
     .transform((v) => v.trim()),
   phone: z
     .string()
-    .transform((v) => stripPhoneFormatting(v))
-    .refine((v) => !v || /^\d{8}$/.test(v), {
-      message: 'Número inválido. Ingresa 8 dígitos guatemaltecos (ej. 5555 0000)',
+    .transform((v) => telefonoGuatemala(v) ?? stripPhoneFormatting(v))
+    .refine((v) => !v || telefonoGuatemala(v) !== null, {
+      message: 'Número inválido. Ingresa un número de Guatemala de 8 dígitos (ej. 5555 0000)',
     })
     .default(''),
   type: z.enum(['PICKUP', 'DELIVERY', 'DINE_IN']),

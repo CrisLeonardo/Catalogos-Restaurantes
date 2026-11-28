@@ -268,9 +268,10 @@ test('1.6 · conserva el historial abierto y revela una incidencia fuera del fil
     await expect(tarjeta).toBeVisible();
     await context.setOffline(true);
     await expect(page.getByText('Sin conexión · mostrando la última lectura')).toBeVisible();
-    await expect(tarjeta.getByRole('button', { name: 'Entregado', exact: true })).toBeDisabled();
+    // Domicilio con saldo: desde la 207 el botón entrega y abre el cobro.
+    await expect(tarjeta.getByRole('button', { name: 'Entregar y cobrar', exact: true })).toBeDisabled();
     await context.setOffline(false);
-    await expect(tarjeta.getByRole('button', { name: 'Entregado', exact: true })).toBeEnabled();
+    await expect(tarjeta.getByRole('button', { name: 'Entregar y cobrar', exact: true })).toBeEnabled();
   } finally {
     await context.close();
     check(await db.from('profiles').update({ permissions: ['mesero', 'caja.cobrar'] }).eq('id', users[0].id));

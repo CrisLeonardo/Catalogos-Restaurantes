@@ -365,6 +365,21 @@ export default async function SuscripcionPage() {
             <strong style={{ color: 'var(--c-ok)' }}>Pagado</strong>.
           </Card>
 
+          {/* Las tres preguntas que el dueño hace antes de comprometerse
+              (auditoría 26-nov, hallazgo 8). Plegadas: se leen una vez. */}
+          <Card className="p-3.5" style={{ fontSize: 13, color: 'var(--u-text-2)', lineHeight: 1.5 }}>
+            <details>
+              <summary style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--u-text)', minHeight: 32, display: 'flex', alignItems: 'center' }}>
+                ¿Qué pasa si cancelo o un pago queda pendiente?
+              </summary>
+              <ul style={{ margin: '8px 0 0', paddingLeft: 18, display: 'grid', gap: 6 }}>
+                <li><strong>Si cancelas:</strong> cambia a Básico. No hay cobros nuevos, tu carta y tu QR siguen gratis y los pedidos en línea dejan de entrar. Lo ya facturado sigue pendiente.</li>
+                <li><strong>Si un cobro queda sin pagar:</strong> después del período de gracia la carta deja de recibir pedidos en línea, pero sigue visible con tu QR. En cuanto se confirma tu pago, vuelve a recibirlos.</li>
+                <li><strong>Si estás en prueba:</strong> no se cobra nada. Al terminar vuelves a Básico, salvo que antes confirmes la mensualidad.</li>
+              </ul>
+            </details>
+          </Card>
+
           {/* Historial */}
           <Section title="Historial de cobros">
             {invoices.length === 0 ? (

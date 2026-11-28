@@ -8,6 +8,7 @@
        queda tachado a la vista y el turno vuelve a abrirse para contarlo
        de nuevo (PROD-06). */
 
+import { esperadoDelCorte } from '@/lib/caja/libro';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { anularCorte, getCajaReceipt, type CajaReceipt, type CashCount } from '@/lib/actions/finanzas';
@@ -135,9 +136,10 @@ function CashCountCard({
       </div>
 
       <div className="t-mono" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 5, fontSize: 11, color: 'var(--u-text-4)' }}>
-        <span>Esp. {money(Number(entry.expected_cash))}</span>
+        <span>Efectivo esperado {money(esperadoDelCorte(entry))}</span>
         <span aria-hidden>·</span>
-        <span>Cont. {money(Number(entry.counted_cash))}</span>
+        <span>Contado {money(Number(entry.counted_cash))}</span>
+        {Number(entry.expected_cash) > 0 && (<><span aria-hidden>·</span><span>Ventas en efectivo {money(Number(entry.expected_cash))}</span></>)}
         {Number(entry.opening_float) > 0 && (<><span aria-hidden>·</span><span>Fondo {money(Number(entry.opening_float))}</span></>)}
         {Number(entry.expenses_total ?? 0) > 0 && (<><span aria-hidden>·</span><span>Gastos {money(Number(entry.expenses_total))}</span></>)}
       </div>

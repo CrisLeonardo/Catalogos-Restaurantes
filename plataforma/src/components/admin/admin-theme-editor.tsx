@@ -773,7 +773,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 ['shipping', 'Envío'],
                 ['free', 'Gratis'],
                 ['total', 'Total'],
-                ['checkout', 'Botón "Ir a pagar"'],
+                ['checkout', 'Botón «Continuar con el pedido»'],
                 ['barCta', 'Barra flotante'],
               ]],
               ['checkout', 'Al pagar', [

@@ -194,6 +194,11 @@ export default function OrderTracker({
           <h1 className="t-display" style={{ ...trackTitleT.vars, fontSize: 28 * trackTitleT.size }}>{content.tracking.title}</h1>
           <span className="t-mono" style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{order.orderNumber}</span>
         </div>
+        {order.esPrueba && (
+          <p className="note note-alt" style={{ marginTop: 8 }}>
+            <Icon name="flask" size={14} /> Pedido de prueba: no cuenta en tus cifras ni avisa a nadie.
+          </p>
+        )}
         {!cancelled && !TERMINAL.includes(order.status) && (
           <p className="t-serif" style={{ fontStyle: 'italic', fontSize: 15.5, color: 'var(--u-text-2)', marginTop: 6 }}>{subtitle}</p>
         )}
@@ -301,8 +306,18 @@ export default function OrderTracker({
         )}
       </div>
 
-      {/* Cancelado */}
-      {cancelled ? (
+      {/* Una prueba terminada no es un pedido cancelado. */}
+      {cancelled && order.esPrueba ? (
+        <div style={{ ...SOLIDA, padding: '22px 20px', textAlign: 'center', marginBottom: 18 }}>
+          <div style={{ width: 56, height: 56, borderRadius: '50%', margin: '0 auto 12px', display: 'grid', placeItems: 'center', background: 'var(--c-ok-bg)', color: 'var(--c-ok)' }}>
+            <Icon name="check" size={26} strokeWidth={2.4} />
+          </div>
+          <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--u-text)' }}>Prueba terminada</div>
+          <p style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-3)', lineHeight: 1.5, margin: '8px auto 0', maxWidth: 320 }}>
+            Así ven tus clientes su pedido. Las existencias y cupones volvieron a su lugar.
+          </p>
+        </div>
+      ) : cancelled ? (
         <div style={{ ...SOLIDA, padding: '22px 20px', textAlign: 'center', marginBottom: 18 }}>
           <div style={{ width: 56, height: 56, borderRadius: '50%', margin: '0 auto 12px', display: 'grid', placeItems: 'center', background: 'var(--c-danger-bg)', color: 'var(--c-danger)' }}>
             <Icon name="x" size={26} strokeWidth={2.4} />

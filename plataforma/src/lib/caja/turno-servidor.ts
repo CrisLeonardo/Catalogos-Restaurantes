@@ -76,10 +76,23 @@ export interface CobroDelTurno {
   sinCobrar: boolean;
 }
 
+/** Un pedido en línea por cobrar: en curso, o ya entregado sin cobro registrado. */
+export interface PedidoPorCobrar {
+  orderId: string;
+  orderNumber: string;
+  /** El saldo que falta cobrar. */
+  total: number;
+  status: string;
+  /** El método que indicó el cliente: el que se propone al cobrar. */
+  metodo: string;
+  /** Ya se entregó: el dinero está en la mano de alguien, no en el cajón. */
+  entregado: boolean;
+}
+
 export interface Pendientes {
   mesas: { tableNumber: number; label: string; pedidos: number; porCobrar: number }[];
-  domicilios: { orderId: string; orderNumber: string; total: number; status: string }[];
-  paraLlevar: { orderId: string; orderNumber: string; total: number; status: string }[];
+  domicilios: PedidoPorCobrar[];
+  paraLlevar: PedidoPorCobrar[];
   total: number;
 }
 
@@ -296,6 +309,8 @@ export async function leerTurno(db: Db, opts: {
   } else entregados.push(...await pedidos(db, (cols) => db.from('orders').select(cols)
     .eq('restaurant_id', restaurantId).eq('status', 'DELIVERED')
     .filter('delivered_at', incluirDesde ? 'gte' : 'gt', desdeIso).lte('delivered_at', hastaIso).limit(5000)));
+  // El pedido de prueba del dueño (183) nunca es dinero (desde la 207 ni siquiera se entrega).
+  for (let i = entregados.length - 1; i >= 0; i--) if (entregados[i].es_prueba) entregados.splice(i, 1);
 
   /* Un pedido entregado usa sus filas si tiene ALGUNA, de cuando sea: un
      domicilio que se entregó hoy y se cobró por partes ayer no puede contar
@@ -372,9 +387,12 @@ export async function leerTurno(db: Db, opts: {
       sinCobrar: false,
     });
   }
+  /* Un pedido en línea entregado sin cobro no es un cobro de este turno:
+     sale en «Sin cobrar todavía» (punto 6). Aquí solo quedan las mesas
+     liberadas sin cobrar. */
   for (const p of sinFilas) {
     const o = porId.get(p.orderId);
-    if (!o) continue;
+    if (!o || o.order_type !== 'DINE_IN') continue;
     const mesa = mesaDeFila(o);
     cobros.push({
       orderId: o.id,
@@ -384,12 +402,12 @@ export async function leerTurno(db: Db, opts: {
       tableNumber: mesa,
       at: p.at,
       total: Number(o.total ?? 0),
-      neto: o.order_type === 'DINE_IN' ? {} : { [(o.payment_method ?? 'CASH').toUpperCase()]: Number(o.total ?? 0) },
+      neto: {},
       devuelto: 0,
       corregido: false,
       reabierta: false,
       reabrible: false,
-      sinCobrar: o.order_type === 'DINE_IN',
+      sinCobrar: true,
     });
   }
   cobros.sort((a, b) => (a.at < b.at ? 1 : -1));
@@ -435,14 +453,24 @@ export async function leerTurno(db: Db, opts: {
   /* Se lee lo pagado de TODO lo vivo, no solo de las mesas: en mostrador se
      cobra antes de preparar, y un para llevar ya pagado que espera en cocina
      no es dinero pendiente. */
-  const pagadoVivo = await filasDePedidos(db, restaurantId, vivos.map((o) => o.id));
+  /* Y los entregados sin cobro de la última semana (auditoría 26-nov):
+     entregar ya no cobra, así que el dinero sigue pendiente hasta que
+     alguien lo registre. Más atrás que una semana ya no es «del turno». */
+  const entregadosRecientes = (await pedidos(db, (cols) => db.from('orders').select(cols)
+    .eq('restaurant_id', restaurantId).eq('status', 'DELIVERED').neq('order_type', 'DINE_IN')
+    .gte('delivered_at', new Date(ahora.getTime() - 7 * 24 * 3600_000).toISOString())
+    .limit(1000))).filter((o) => !o.es_prueba && Number(o.total ?? 0) > 0);
+  const pagadoVivo = await filasDePedidos(db, restaurantId, [...vivos, ...entregadosRecientes].map((o) => o.id));
   const pagadoPorPedido = new Map<string, number>();
-  for (const f of pagadoVivo) pagadoPorPedido.set(f.order_id, cent((pagadoPorPedido.get(f.order_id) ?? 0) + Number(f.amount)));
+  for (const f of pagadoVivo) {
+    if (f.kind === 'REFUND') continue;
+    pagadoPorPedido.set(f.order_id, cent((pagadoPorPedido.get(f.order_id) ?? 0) + Number(f.amount)));
+  }
 
   const mesas = new Map<number, { tableNumber: number; label: string; pedidos: number; porCobrar: number }>();
   const domicilios: Pendientes['domicilios'] = [];
   const paraLlevar: Pendientes['paraLlevar'] = [];
-  for (const o of vivos) {
+  for (const o of [...vivos, ...entregadosRecientes]) {
     if (o.es_prueba) continue;
     const total = Number(o.total ?? 0);
     if (o.order_type === 'DINE_IN') {
@@ -455,7 +483,11 @@ export async function leerTurno(db: Db, opts: {
     } else {
       const saldo = cent(Math.max(0, total - (pagadoPorPedido.get(o.id) ?? 0)));
       if (total > 0 && saldo <= 0.004) continue;
-      const fila = { orderId: o.id, orderNumber: o.order_number ?? '', total: total > 0 ? saldo : total, status: o.status };
+      if (o.status === 'DELIVERED' && saldo <= 0.004) continue;
+      const fila: PedidoPorCobrar = {
+        orderId: o.id, orderNumber: o.order_number ?? '', total: total > 0 ? saldo : total, status: o.status,
+        metodo: (o.payment_method ?? 'CASH').toUpperCase(), entregado: o.status === 'DELIVERED',
+      };
       if (o.order_type === 'DELIVERY') domicilios.push(fila);
       else paraLlevar.push(fila);
     }

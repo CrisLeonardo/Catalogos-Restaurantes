@@ -128,7 +128,8 @@ export function SiteFooter({ home = false }: { home?: boolean }) {
           <FooterCol title="Legal">
             <Link href="/terminos" className="lp-footer-link">Términos</Link>
             <Link href="/privacidad" className="lp-footer-link">Privacidad</Link>
-            <a href={`mailto:${CONTACT_EMAIL}`} className="lp-footer-link">Contacto</a>
+            {/* El mismo canal que los botones: WhatsApp si está configurado (auditoría 26-nov). */}
+            <a href={contactHref('Hola, quiero saber más de Leogin para mi restaurante')} className="lp-footer-link">Contacto {CONTACT_VIA}</a>
           </FooterCol>
         </div>
 

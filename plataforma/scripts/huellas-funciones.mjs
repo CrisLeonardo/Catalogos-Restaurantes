@@ -40,6 +40,8 @@ export const FUNCIONES_CRITICAS = [
   'leogin_cobrar_parte_mesa_idempotente',
   'leogin_cerrar_cuenta_pagada',
   'leogin_recuperar_intento_cobro',
+  // Cobro de un pedido en línea (migración 207)
+  'leogin_cobrar_pedido',
   // Caja
   'leogin_guardar_borrador_caja',
   'leogin_confirmar_cierre_caja',

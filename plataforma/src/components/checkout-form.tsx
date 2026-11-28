@@ -14,7 +14,7 @@ import { getMyCheckoutProfile } from '@/lib/actions/loyalty';
 import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer-local';
 import { getQueuedOrders, pedidoParaRetomar, removeQueuedOrder, saveQueuedOrder, type MotivoNoGuardado } from '@/lib/order-queue';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
-import { isValidGuatemalaPhone } from '@/lib/schemas';
+import { problemaDeTelefono } from '@/lib/schemas';
 import { getScannedTable, clearScannedTable, watchScannedTable } from '@/lib/table-session';
 import { isKioskMode } from '@/lib/kiosk';
 import { guardarUltimoPedido } from '@/lib/menu/lo-de-siempre';
@@ -314,12 +314,8 @@ export default function CheckoutForm({
   const errs = {
     name:  pideContacto && !name.trim() ? content.checkout.errName : '',
     phone: !pideContacto
-      ? (phone.trim() && !isValidGuatemalaPhone(phone) ? 'Número inválido. Ingresa 8 dígitos (ej. 5555 0000)' : '')
-      : (!phone.trim()
-          ? content.checkout.errPhone
-          : !isValidGuatemalaPhone(phone)
-            ? 'Número inválido. Ingresa 8 dígitos (ej. 5555 0000)'
-            : ''),
+      ? (phone.trim() ? problemaDeTelefono(phone) ?? '' : '')
+      : (!phone.trim() ? content.checkout.errPhone : problemaDeTelefono(phone) ?? ''),
     address: type === 'DELIVERY' && !geoActive && !address.trim() ? content.checkout.errAddress : '',
     zone:    type === 'DELIVERY' && zonesActive && !zone ? 'Elige tu zona' : '',
     geo:     geoActive && (deliveryLat === undefined || deliveryLng === undefined)

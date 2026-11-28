@@ -90,11 +90,13 @@ export async function notifyOrderStatus(orderId: string, status: OrderStatus): P
     const db = createServiceClient();
     const { data: order } = await db
       .from('orders')
-      .select('id, restaurant_id, order_number, customer_name, customer_phone, order_type, public_token')
+      .select('id, restaurant_id, order_number, customer_name, customer_phone, order_type, public_token, es_prueba')
       .eq('id', orderId)
       .single();
 
     if (!order) return;
+    // El pedido de prueba del dueño no avisa a nadie (auditoría 26-nov, hallazgo 3).
+    if (order.es_prueba === true) return;
 
     // DINE_IN nunca (ver cabecera).
     const orderType = order.order_type as string;

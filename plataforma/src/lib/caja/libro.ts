@@ -11,19 +11,22 @@
  * esperaba el efectivo del de la mañana y un bar que cierra a la 1:30
  * cerraba la caja del día siguiente.
  *
- * El libro tiene dos fuentes, y un pedido usa UNA de las dos, nunca
- * mezcladas (mezclar a medias es lo que descuadra):
+ * Desde la migración 207 el dinero tiene UNA sola fuente: las filas de
+ * `order_payments` — cobro de mesa, cobro por partes, para llevar, cobro
+ * de un pedido en línea y las filas negativas de devoluciones,
+ * correcciones y reaperturas. Cada una cuenta en la hora en que el dinero
+ * entró o salió.
  *
- *   1. Sus filas en `order_payments`, si tiene alguna — cobro de mesa,
- *      cobro por partes, para llevar y, desde la 145, las filas negativas
- *      de devoluciones, correcciones y reaperturas. Cada una cuenta en la
- *      hora en que el dinero entró o salió.
- *   2. Si no tiene ninguna, y es un domicilio o un pedido para recoger que
- *      ya se ENTREGÓ (los del menú en línea): su total con su
- *      `payment_method`, en la hora de entrega.
+ * Antes, un domicilio o un «para recoger» del menú en línea ENTREGADO sin
+ * filas contaba su total con el método que eligió el cliente: entregar
+ * equivalía a cobrar, y la caja esperaba efectivo que nadie había
+ * registrado (auditoría del 26-nov-2026). La 207 le escribió a cada
+ * pedido histórico la fila que se le suponía, así que ya no hace falta.
  *
- * Una mesa cerrada sin filas es una mesa «liberada sin cobrar»: no entró
- * dinero y no se espera, pero se enseña aparte porque al dueño le interesa.
+ * Un pedido entregado sin filas, entonces, no puso dinero en el cajón:
+ *   · si es de mesa, es una mesa «liberada sin cobrar»;
+ *   · si es en línea, está «entregado sin cobro» y espera a que se cobre.
+ * Las dos se enseñan aparte porque al dueño le interesan.
  *
  * Sin base de datos a propósito: de aquí sale lo que el cajero cuenta con
  * el billete en la mano, y se prueba entero en `libro.test.ts`.
@@ -70,6 +73,8 @@ export interface CuadreDelPeriodo {
   pedidos: number;
   /** Mesas que se cerraron sin cobrar: no esperan dinero. */
   liberadasSinCobrar: { pedidos: number; total: number };
+  /** Pedidos en línea entregados sin cobro registrado: no cuentan hasta cobrarse. */
+  entregadosSinCobro: { pedidos: number; total: number };
 }
 
 const cent = (n: number) => Math.round(n * 100) / 100;
@@ -90,6 +95,8 @@ export function cuadrarPeriodo(
   let devolucionesEfectivo = 0;
   let sinCobrarN = 0;
   let sinCobrarTotal = 0;
+  let entregadosN = 0;
+  let entregadosTotal = 0;
 
   const sumar = (m: string, monto: number) => {
     const k = metodo(m);
@@ -117,11 +124,10 @@ export function cuadrarPeriodo(
     if (p.orderType === 'DINE_IN') {
       sinCobrarN += 1;
       sinCobrarTotal = cent(sinCobrarTotal + total);
-      continue;
+    } else {
+      entregadosN += 1;
+      entregadosTotal = cent(entregadosTotal + total);
     }
-    sumar(p.method, total);
-    cobrado = cent(cobrado + total);
-    pedidos.add(p.orderId);
   }
 
   for (const k of Object.keys(porMetodo)) if (porMetodo[k] === 0) delete porMetodo[k];
@@ -134,6 +140,7 @@ export function cuadrarPeriodo(
     devolucionesEfectivo,
     pedidos: pedidos.size,
     liberadasSinCobrar: { pedidos: sinCobrarN, total: sinCobrarTotal },
+    entregadosSinCobro: { pedidos: entregadosN, total: entregadosTotal },
   };
 }
 
@@ -163,6 +170,19 @@ export function inicioDelPeriodo(opts: {
 /** En el cajón tiene que haber: el fondo + el efectivo neto − los gastos. */
 export function esperadoEnCajon(fondo: number, efectivo: number, gastos: number): number {
   return cent((Number(fondo) || 0) + (Number(efectivo) || 0) - (Number(gastos) || 0));
+}
+
+/**
+ * El efectivo que el cajón tenía que tener en un corte ya guardado.
+ *
+ * `cash_counts.expected_cash` guarda las VENTAS en efectivo del turno, no
+ * lo esperado: el historial decía «Esp. Q0.00» de un turno que esperaba
+ * Q92.75 (auditoría 26-nov, hallazgo 7). Lo esperado es lo contado menos
+ * la diferencia, que es como se calculó la diferencia en su momento —con
+ * fondo y gastos—, así que vale para cortes de cualquier época.
+ */
+export function esperadoDelCorte(c: { counted_cash: number | string; difference: number | string }): number {
+  return cent((Number(c.counted_cash) || 0) - (Number(c.difference) || 0));
 }
 
 /* ── Corregir un cobro ─────────────────────────────────────────── */

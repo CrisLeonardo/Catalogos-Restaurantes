@@ -27,7 +27,7 @@ import { formatDateRangeLabel, formatDocMoney, longDate } from '@/lib/documents/
 import { labelOf } from '@/lib/payment-method';
 import { logActivity } from '@/lib/activity';
 import type { DocumentBranding } from '@/lib/documents/types';
-import { esperadoEnCajon, type CuadreDelPeriodo } from '@/lib/caja/libro';
+import { esperadoDelCorte, esperadoEnCajon, type CuadreDelPeriodo } from '@/lib/caja/libro';
 import {
   leerTurno, hayPendientes,
   type CobroDelTurno, type Pendientes, type LecturaDelTurno,
@@ -407,17 +407,17 @@ export async function exportCashHistoryXlsx(
   const subtitle = `${rows.length} corte${rows.length === 1 ? '' : 's'} · Generado el ${longDate(new Date().toISOString())}`;
   const wb = await createBrandedWorkbook();
   const ws = wb.addWorksheet('Arqueo de caja');
-  const headers = ['Fecha', 'Turno', 'Cajero', 'Fondo inicial', 'Esperado', 'Contado', 'Diferencia', 'Por método', 'Notas'];
+  const headers = ['Fecha', 'Turno', 'Cajero', 'Fondo inicial', 'Ventas en efectivo', 'Efectivo esperado', 'Contado', 'Diferencia', 'Por método', 'Notas'];
   addBrandedHeader(ws, { branding, title: 'Arqueo de caja', subtitle, columnsSpan: headers.length });
 
   const { headerRow } = writeStyledTable(
     ws, branding, headers,
     rows.map((c) => [
       c.business_date, c.shift_label ?? '', c.cashier_name ?? '',
-      Number(c.opening_float), Number(c.expected_cash), Number(c.counted_cash), Number(c.difference),
+      Number(c.opening_float), Number(c.expected_cash), esperadoDelCorte(c), Number(c.counted_cash), Number(c.difference),
       summarizeByMethod(c.by_method, branding), c.notes ?? '',
     ]),
-    { currencyCols: [4, 5, 6, 7] },
+    { currencyCols: [4, 5, 6, 7, 8] },
   );
   freezeHeaderRow(ws, headerRow);
   autoFitColumns(ws, { max: 46 });

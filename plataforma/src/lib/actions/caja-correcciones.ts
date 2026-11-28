@@ -32,7 +32,7 @@ import { isPaymentMethod, labelOf } from '@/lib/payment-method';
 import { logActivity } from '@/lib/activity';
 import { revalidarSalon } from '@/lib/salon-cache';
 import { mesaDeFila } from '@/lib/mesa';
-import { faltaLaColumna, faltaLaTabla } from '@/lib/db/migracion-ausente';
+import { faltaLaColumna } from '@/lib/db/migracion-ausente';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 const cent = (n: number) => Math.round(n * 100) / 100;
@@ -81,38 +81,21 @@ const aMov = (f: { id: string; order_id: string; method: string; amount: number 
 });
 
 /**
- * Las filas del pedido, y si no tiene ninguna, la del cobro que el libro
- * le suponía.
+ * Las filas del pedido. Sin filas no hay cobro que corregir.
  *
- * Un domicilio del menú en línea entregado no tiene filas: el libro lo
- * cuenta con su total y su método. Si se le escribiera SOLO la corrección,
- * pasaría a tener filas y el libro dejaría de suponerle el cobro — la caja
- * perdería el pedido entero. Así que primero se escribe el cobro tal como
- * se supuso (con la hora de entrega) y encima la corrección.
+ * Antes de la 207 un domicilio entregado sin filas contaba como cobrado
+ * con su método, y aquí se escribía ese cobro supuesto antes de la
+ * corrección. Desde la 207 el histórico ya tiene su fila y entregar no
+ * cobra: un pedido sin filas no ha puesto dinero en la caja, y lo que
+ * toca es cobrarlo (Pedidos o Caja), no corregirlo.
  */
 async function asegurarFilas(
-  db: Db, ctx: CajaCtx, o: PedidoCobrado,
+  db: Db, _ctx: CajaCtx, o: PedidoCobrado,
 ): Promise<{ filas: Movimiento[] } | { error: string }> {
   const crudas = await filasDePedidos(db, o.restaurant_id, [o.id]);
   if (crudas.length > 0) return { filas: crudas.map(aMov) };
-
   if (o.order_type === 'DINE_IN') return { error: 'Esta mesa se liberó sin cobrar: no hay cobro que corregir.' };
-  if (o.status !== 'DELIVERED' || !(o.total > 0)) return { error: 'Este pedido todavía no se ha cobrado.' };
-
-  const { data, error } = await db.from('order_payments').insert({
-    restaurant_id: o.restaurant_id,
-    order_id: o.id,
-    method: (o.payment_method ?? 'CASH').toUpperCase(),
-    amount: o.total,
-    kind: 'PAYMENT',
-    taken_by: ctx.userId,
-    created_at: o.delivered_at ?? o.created_at,
-  }).select('id, order_id, method, amount, kind, created_at').single();
-  if (error) {
-    if (faltaLaTabla(error) || faltaLaColumna(error)) return { error: 'Falta la migración 145 para poder corregir cobros.' };
-    return { error: error.message };
-  }
-  return { filas: [aMov(data)] };
+  return { error: 'Este pedido todavía no tiene un cobro registrado. Cóbralo primero desde Pedidos o desde Caja.' };
 }
 
 async function escribirFilas(db: Db, ctx: CajaCtx, o: PedidoCobrado, filas: {

@@ -23,10 +23,14 @@ import { logActivity } from '@/lib/activity';
 import { cambiosDePrecio, hayCambioDePrecio } from '@/lib/activity-diff';
 import { validarPrecio, separarSellos, problemaDeGrupo, type CambioDePrecio } from '@/lib/catalogo/reglas';
 import { AGOTADO_POR_OMISION, type AgotadoHasta } from '@/lib/product-availability';
+import {
+  canonicoDeFila, canonicoDeFormulario, fusionarEdicion, leerBase, nombrarCampos, type CampoFicha, type FilaPlatillo,
+} from '@/lib/catalogo/fusion-edicion';
 
 const esHasta = (v: unknown): v is AgotadoHasta => v === 'manana' || v === 'reponer' || v === 'manual';
 
-export type ProductState = { error: string } | null;
+/** `conflicto`: otra persona cambió lo mismo mientras se editaba (se puede guardar encima). */
+export type ProductState = { error: string; conflicto?: boolean } | null;
 
 async function resolveContext(formData: FormData) {
   return contextoDeCatalogo((formData.get('restaurantId') as string | null) ?? null);
@@ -229,47 +233,63 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
   const options = parseOptions(formData.get('options') as string | null);
   if (options && 'error' in options) return options;
 
-  // El precio de antes, para la bitácora (PROD-10): «¿quién bajó el precio?».
+  /* Solo se escribe lo que esta persona cambió (auditoría 26-nov, hallazgo 2):
+     una ficha abierta desde antes no puede devolver a «agotado» un platillo
+     que otra persona acaba de reactivar, ni al revés. */
   const { data: previo } = await ctx.db
     .from('products')
-    .select('price, options, is_available, agotado_motivo')
+    .select('category_id, name, description, name_en, description_en, price, cost, loyalty_points, image_url, icon, tags, dietary_tags, options, is_active, is_available, agotado_motivo')
     .eq('id', id)
     .eq('restaurant_id', ctx.restaurantId)
     .maybeSingle();
+  if (!previo) return { error: 'Ese platillo ya no existe.' };
+
+  const enviado = canonicoDeFormulario((k) => formData.get(k) as string | null);
+  const { cambiados, conflictos } = fusionarEdicion(leerBase(formData.get('base')), enviado, canonicoDeFila(previo as FilaPlatillo));
+  if (conflictos.length > 0 && formData.get('forzar') !== '1') {
+    return {
+      error: `Mientras editabas, alguien más cambió ${nombrarCampos(conflictos)}. Recarga la ficha para ver el cambio, o guarda la tuya encima.`,
+      conflicto: true,
+    };
+  }
+  const cambia = (c: CampoFicha) => cambiados.includes(c);
 
   const newAvailable = formData.get('is_available') === 'true';
-  const { error } = await ctx.db
-    .from('products')
-    .update({
-      category_id: (formData.get('category_id') as string) || null,
-      name,
-      description: (formData.get('description') as string)?.trim() || null,
-    name_en: (formData.get('name_en') as string)?.trim() || null,
-    description_en: (formData.get('description_en') as string)?.trim() || null,
-      price: parseFloat(priceRaw),
-      cost: parseCost(formData.get('cost') as string),
-    loyalty_points: parseLoyaltyPoints(formData.get('loyalty_points') as string),
-      image_url: (formData.get('image_url') as string) || null,
-      icon: (formData.get('icon') as string) || null,
-      tags: marcas.sellos.length ? marcas.sellos : null,
-      dietary_tags: marcas.dietas,
-      options,
-      is_available: newAvailable,
-      ...(newAvailable ? { unavailable_at: null } : {}),
-      is_active: formData.get('is_active') !== 'false',
-    })
-    .eq('id', id)
-    .eq('restaurant_id', ctx.restaurantId);
+  const fila: Record<string, unknown> = {};
+  if (cambia('categoria')) fila.category_id = (formData.get('category_id') as string) || null;
+  if (cambia('nombre')) fila.name = name;
+  if (cambia('descripcion')) fila.description = (formData.get('description') as string)?.trim() || null;
+  if (cambia('nombreEn')) fila.name_en = (formData.get('name_en') as string)?.trim() || null;
+  if (cambia('descripcionEn')) fila.description_en = (formData.get('description_en') as string)?.trim() || null;
+  if (cambia('precio')) fila.price = parseFloat(priceRaw);
+  if (cambia('costo')) fila.cost = parseCost(formData.get('cost') as string);
+  if (cambia('puntos')) fila.loyalty_points = parseLoyaltyPoints(formData.get('loyalty_points') as string);
+  if (cambia('foto')) fila.image_url = (formData.get('image_url') as string) || null;
+  if (cambia('icono')) fila.icon = (formData.get('icon') as string) || null;
+  if (cambia('sellos')) { fila.tags = marcas.sellos.length ? marcas.sellos : null; fila.dietary_tags = marcas.dietas; }
+  if (cambia('opciones')) fila.options = options;
+  if (cambia('visible')) fila.is_active = isActive;
+  if (cambia('disponibilidad')) {
+    fila.is_available = newAvailable;
+    if (newAvailable) fila.unavailable_at = null;
+  }
 
-  if (error) return { error: mensajeDeError(error) };
+  if (Object.keys(fila).length > 0) {
+    const { error } = await ctx.db
+      .from('products')
+      .update(fila)
+      .eq('id', id)
+      .eq('restaurant_id', ctx.restaurantId);
+    if (error) return { error: mensajeDeError(error) };
+  }
 
   // Agotado con intención (auditoría 1.10): lo que se eligió en Disponibilidad.
   const hasta = formData.get('agotado_hasta');
-  if (!newAvailable && esHasta(hasta) && (previo?.is_available !== false || previo?.agotado_motivo !== hasta)) {
+  if (cambia('disponibilidad') && !newAvailable && esHasta(hasta)) {
     await createServiceClient().rpc('leogin_marcar_agotado', { p_restaurant: ctx.restaurantId, p_ids: [id], p_hasta: hasta, p_actor: ctx.userId });
   }
 
-  if (previo) {
+  if (cambia('precio') || cambia('opciones')) {
     const cambios = cambiosDePrecio(
       { price: previo.price, options: previo.options as ProductOptionGroup[] | null },
       { price: parseFloat(priceRaw), options },
