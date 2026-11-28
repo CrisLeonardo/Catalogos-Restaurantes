@@ -84,8 +84,11 @@ export type PinStaffMember = { id: string; full_name: string | null };
 export async function listStaffForPin(restaurantId: string): Promise<PinStaffMember[]> {
   if (!UUID_RE.test(restaurantId)) return [];
 
+  /* La lista de nombres solo en los aparatos del local (auditoría 26-nov,
+     hallazgo 6). Con el candado apagado el PIN también sirve fuera, pero
+     ahí la persona escribe su nombre: nadie ve al personal sin entrar. */
   const access = await getPinAccess(restaurantId);
-  if (!access.allowed) return [];
+  if (!access.allowed || !access.trusted) return [];
 
   const db = createServiceClient();
   const { data } = await db
@@ -109,6 +112,39 @@ export async function listStaffForPin(restaurantId: string): Promise<PinStaffMem
  * manda a buscar el problema donde no está— en vez de "este aparato no está
  * autorizado".
  */
+/**
+ * Cómo se entra con PIN desde ESTE aparato:
+ *   · 'lista'     — aparato del local: la grilla de nombres;
+ *   · 'nombre'    — otro aparato con el candado apagado: escribe tu nombre;
+ *   · 'bloqueado' — otro aparato con el candado encendido: con correo.
+ */
+export async function modoDePin(restaurantId: string): Promise<'lista' | 'nombre' | 'bloqueado'> {
+  if (!UUID_RE.test(restaurantId)) return 'bloqueado';
+  const access = await getPinAccess(restaurantId);
+  if (!access.allowed) return 'bloqueado';
+  return access.trusted ? 'lista' : 'nombre';
+}
+
+const plegar = (t: string) => t.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/\s+/g, ' ').trim();
+
+/** El perfil con PIN de este local que se llama así: nombre completo, o el primer nombre si es único. */
+async function perfilPorNombre(restaurantId: string, nombre: string): Promise<string | 'varios' | null> {
+  const buscado = plegar(nombre);
+  if (buscado.length < 2) return null;
+  const { data } = await createServiceClient()
+    .from('staff_pins').select('profile_id, profiles(full_name)').eq('restaurant_id', restaurantId);
+  const filas = (data ?? []).map((r) => ({
+    id: r.profile_id as string,
+    nombre: plegar(((r.profiles as unknown as { full_name: string | null } | null))?.full_name ?? ''),
+  })).filter((r) => r.nombre);
+  const exactos = filas.filter((r) => r.nombre === buscado);
+  if (exactos.length === 1) return exactos[0].id;
+  if (exactos.length > 1) return 'varios';
+  const primeros = filas.filter((r) => r.nombre.split(' ')[0] === buscado);
+  if (primeros.length === 1) return primeros[0].id;
+  return primeros.length > 1 ? 'varios' : null;
+}
+
 export async function isPinAllowedHere(restaurantId: string): Promise<boolean> {
   if (!UUID_RE.test(restaurantId)) return false;
   const access = await getPinAccess(restaurantId);
@@ -124,10 +160,13 @@ export type PinVerifyState = { error: string } | { url: string } | null;
 
 export async function verifyStaffPin(prevState: PinVerifyState, formData: FormData): Promise<PinVerifyState> {
   const restaurantId = (formData.get('restaurantId') as string)?.trim();
-  const profileId = (formData.get('profileId') as string)?.trim();
+  let profileId = (formData.get('profileId') as string)?.trim() ?? '';
+  /* Fuera de los aparatos del local no hay lista: llega el nombre escrito. */
+  const nombre = ((formData.get('nombre') as string | null) ?? '').slice(0, 80);
+  const porNombre = !profileId && nombre.trim().length > 0;
   const pin = (formData.get('pin') as string) ?? '';
 
-  if (!UUID_RE.test(restaurantId) || !UUID_RE.test(profileId)) return { error: 'Solicitud inválida.' };
+  if (!UUID_RE.test(restaurantId) || (!porNombre && !UUID_RE.test(profileId))) return { error: 'Solicitud inválida.' };
   if (!isValidPin(pin)) return { error: 'PIN inválido.' };
 
   // Anti fuerza bruta: por IP y por restaurante+persona (mismo patrón que login()).
@@ -136,7 +175,7 @@ export async function verifyStaffPin(prevState: PinVerifyState, formData: FormDa
   // aparato antes dejaría esa consulta fuera de todo límite.
   const ip = clientIp(await headers());
   if (!(await rateLimit(`pin:${ip}`, 20, 5 * 60_000)) ||
-      !(await rateLimit(`pin:${restaurantId}:${profileId}`, 8, 5 * 60_000))) {
+      (!porNombre && !(await rateLimit(`pin:${restaurantId}:${profileId}`, 8, 5 * 60_000)))) {
     return { error: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' };
   }
 
@@ -151,6 +190,17 @@ export async function verifyStaffPin(prevState: PinVerifyState, formData: FormDa
     return { error: 'Este dispositivo no está autorizado para entrar con PIN. Entra con tu correo o pídele al dueño que lo autorice.' };
   }
 
+  if (porNombre) {
+    if (!(await rateLimit(`pin:${restaurantId}:nombre:${plegar(nombre)}`, 8, 5 * 60_000))) {
+      return { error: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' };
+    }
+    const encontrado = await perfilPorNombre(restaurantId, nombre);
+    if (encontrado === 'varios') return { error: 'Hay más de una persona con ese nombre. Escribe tu nombre y apellido.' };
+    // Mismo mensaje para nombre desconocido y PIN incorrecto: no se confirma quién trabaja aquí.
+    if (!encontrado) return { error: 'Nombre o PIN incorrecto.' };
+    profileId = encontrado;
+  }
+
   const db = createServiceClient();
   const { data: row } = await db
     .from('staff_pins')
@@ -158,7 +208,7 @@ export async function verifyStaffPin(prevState: PinVerifyState, formData: FormDa
     .eq('profile_id', profileId)
     .eq('restaurant_id', restaurantId)
     .maybeSingle();
-  if (!row) return { error: 'PIN incorrecto.' };
+  if (!row) return { error: porNombre ? 'Nombre o PIN incorrecto.' : 'PIN incorrecto.' };
 
   if (row.locked_until && new Date(row.locked_until as string) > new Date()) {
     return { error: 'Demasiados intentos fallidos. Espera unos minutos.' };
@@ -172,7 +222,7 @@ export async function verifyStaffPin(prevState: PinVerifyState, formData: FormDa
       failed_attempts: locked ? 0 : attempts,
       locked_until: locked ? new Date(Date.now() + PIN_LOCK_MS).toISOString() : null,
     }).eq('profile_id', profileId);
-    return { error: locked ? 'Demasiados intentos fallidos. Espera unos minutos.' : 'PIN incorrecto.' };
+    return { error: locked ? 'Demasiados intentos fallidos. Espera unos minutos.' : porNombre ? 'Nombre o PIN incorrecto.' : 'PIN incorrecto.' };
   }
 
   await db.from('staff_pins').update({ failed_attempts: 0, locked_until: null }).eq('profile_id', profileId);
@@ -215,8 +265,10 @@ export async function verifyStaffPin(prevState: PinVerifyState, formData: FormDa
   // sigue funcionando. Con el candado puesto solo refresca la última visita —
   // getPinAccess ya cortó arriba a cualquier aparato desconocido, así que esto
   // nunca puede AÑADIR uno nuevo estando encendido.
+  // Entrar escribiendo el nombre (fuera del local) NO registra el aparato:
+  // si lo hiciera, el teléfono de casa empezaría a ver la lista del personal.
   const deviceId = await readDeviceId();
-  if (deviceId) {
+  if (deviceId && !porNombre) {
     await rememberDevice({ restaurantId, deviceId });
   }
 

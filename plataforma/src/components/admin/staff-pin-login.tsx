@@ -17,7 +17,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
-import { listStaffForPin, verifyStaffPin, isPinAllowedHere, type PinStaffMember } from '@/lib/actions/staff-pin';
+import { listStaffForPin, verifyStaffPin, modoDePin, type PinStaffMember } from '@/lib/actions/staff-pin';
 import { tryHubPinStaffList, tryHubPinVerify } from '@/lib/hub-fallback';
 
 const PIN_LEN = 4;
@@ -39,6 +39,10 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
   const [members, setMembers] = useState<PinStaffMember[] | null>(null);
   /** Lista vacía porque este aparato no está autorizado, no porque falte personal. */
   const [deviceBlocked, setDeviceBlocked] = useState(false);
+  /* Fuera de los aparatos del local no se enseña la lista (auditoría
+     26-nov, hallazgo 6): si el dueño permite el PIN ahí, se escribe el nombre. */
+  const [porNombre, setPorNombre] = useState(false);
+  const [nombre, setNombre] = useState('');
   const [selected, setSelected] = useState<PinStaffMember | null>(null);
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -56,8 +60,8 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
         // no hay nadie con PIN, o este aparato no está autorizado.
         if (m.length === 0) {
           try {
-            const allowed = await isPinAllowedHere(restaurantId);
-            if (!cancelled) setDeviceBlocked(!allowed);
+            const modo = await modoDePin(restaurantId);
+            if (!cancelled) { setDeviceBlocked(modo === 'bloqueado'); setPorNombre(modo === 'nombre'); }
           } catch {
             /* sin respuesta → se deja el mensaje genérico */
           }
@@ -95,7 +99,8 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
       try {
         const fd = new FormData();
         fd.set('restaurantId', restaurantId);
-        fd.set('profileId', selected.id);
+        if (selected.id) fd.set('profileId', selected.id);
+        else fd.set('nombre', selected.full_name ?? '');
         fd.set('pin', fullPin);
         const result = await verifyStaffPin(null, fd);
         if (result && 'error' in result) {
@@ -113,7 +118,7 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
       } catch {
         // Fallo de red de verdad (no un PIN incorrecto): intentar identificar
         // contra el hub local, si hay uno vinculado a este restaurante.
-        if (!hubUrl) {
+        if (!hubUrl || !selected.id) {
           setError('Sin conexión. Inténtalo de nuevo.');
           setPin('');
           return;
@@ -157,12 +162,37 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
               <Icon name="chevronLeft" size={14} /> Entrar con correo
             </button>
             <p className="t-display" style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>¿Quién eres?</p>
-            <p className="t-mute" style={{ fontSize: 12, marginBottom: 16 }}>Toca tu nombre para entrar con tu PIN.</p>
+            <p className="t-mute" style={{ fontSize: 12, marginBottom: 16 }}>{porNombre ? 'Escribe tu nombre y después tu PIN.' : 'Toca tu nombre para entrar con tu PIN.'}</p>
           </>
         )}
 
         {members === null ? (
           <p style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Cargando…</p>
+        ) : members.length === 0 && porNombre ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const limpio = nombre.trim();
+              if (limpio.length >= 2) { setError(null); setSelected({ id: '', full_name: limpio }); }
+            }}
+            style={{ display: 'grid', gap: 10 }}
+          >
+            <label style={{ display: 'grid', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--u-text)' }}>
+              Tu nombre
+              <input
+                className="adm-field" value={nombre} onChange={(e) => setNombre(e.target.value)}
+                autoComplete="name" autoCapitalize="words" maxLength={80} placeholder="Como te registró el dueño"
+                style={{ minHeight: 48 }}
+              />
+            </label>
+            <button type="submit" className="press btn-accent" disabled={nombre.trim().length < 2}
+              style={{ minHeight: 48, borderRadius: 'var(--radius-lg)', border: 'none', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+              Seguir con mi PIN
+            </button>
+            <p className="t-mute" style={{ fontSize: 12, margin: 0, lineHeight: 1.5 }}>
+              Este aparato no es del local, así que no mostramos la lista del personal.
+            </p>
+          </form>
         ) : members.length === 0 ? (
           <p style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.55 }}>
             {deviceBlocked
