@@ -37,8 +37,12 @@ export default function TerminosPage() {
       <LegalSection n={3} title="Planes, prueba gratis y cobros">
         <LegalP>
           Ofrecemos distintos planes con una mensualidad fija. El plan Básico es gratuito. Los planes
-          con pedidos se cobran desde su activación, salvo que al registrarte se te ofrezca un período
-          de prueba gratuito; en ese caso, concluida la prueba aplica la mensualidad del plan elegido.
+          con pedidos se cobran desde su activación, salvo durante un período de prueba gratuito. La
+          prueba no genera cobros: al terminar, el restaurante vuelve a Básico, a menos que antes
+          confirmes expresamente la mensualidad del plan. En ese caso el primer cobro vence en la fecha
+          que aceptaste al confirmarla. Un restaurante nuevo no tiene prueba si tu cuenta ya tiene una
+          en curso o terminó otra sin contratar: se cobra desde su activación, y lo verás al elegir su
+          plan, antes de configurarlo.
         </LegalP>
         <LegalList items={[
           'No cobramos comisión por pedido: lo que vende el restaurante es del restaurante.',

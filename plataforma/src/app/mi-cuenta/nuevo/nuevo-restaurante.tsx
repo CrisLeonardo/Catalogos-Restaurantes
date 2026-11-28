@@ -302,6 +302,16 @@ export default function NuevoRestaurante({
             </label>
           ))}
         </fieldset>
+        {/* Sin prueba (205): el cobro se dice al elegir el plan, no en el
+            último paso (auditoría 26-nov, hallazgo 8). */}
+        {sinPrueba && plan !== 'BASICO' && pricing.trialDays > 0 && (
+          <p role="status" className="note note-warn" style={{ margin: 0, fontSize: 13 }}>
+            <span>
+              {TEXTO_SIN_PRUEBA[sinPrueba]} Este restaurante no tiene días gratis: se cobra {precioPlan} desde que lo crees
+              (primer cobro {diaCobro === dia ? `hoy, ${fechaVence}` : `el ${fechaVence}`}). Si solo quieres la carta, elige «Solo ven la carta»: es gratis.
+            </span>
+          </p>
+        )}
       </div>
 
       {/* ── 2 · Qué vendes ── */}
