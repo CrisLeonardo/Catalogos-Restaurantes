@@ -22,6 +22,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { fmtCurrency, type PanelCurrency } from '@/lib/money';
+import CobroPedido from '@/components/admin/cobro-pedido';
 import { estadoDelCobro, type ResumenPedidoVivo } from '@/lib/pedidos-en-vivo';
 import styles from './pedidos-en-vivo.module.css';
 import { estacionDe, lineasVivas } from '@/lib/cocina/tablero';
@@ -354,6 +355,12 @@ export default function OrderCard({
      y no cuenta en cifras, caja, puntos ni existencias. */
   const esPrueba = order.es_prueba === true;
   const terminaPrueba = esPrueba && !!restaurantId && (order.status === 'READY' || order.status === 'TRANSIT');
+  /* Entregar no es cobrar (auditoría 26-nov, migración 207): un pedido en
+     línea con saldo abre la hoja de cobro al entregarse, y uno entregado
+     sin cobro ofrece cobrarlo. Las mesas se cobran en Servicio. */
+  const porCobrar = Math.max(0, Math.round((Number(order.total) - (resumen?.cobrado ?? 0)) * 100) / 100);
+  const pideCobro = !esPrueba && !!restaurantId && order.order_type !== 'DINE_IN' && Number(order.total) > 0 && porCobrar > 0.004;
+  const [hojaCobro, setHojaCobro] = useState<null | 'entregar' | 'cobrar'>(null);
   const lineasEnCocina = order.status === 'PREP' ? lineasVivas(order) : [];
   const esperaEstaciones = new Set(lineasEnCocina.map(estacionDe)).size > 1 && lineasEnCocina.some((l) => !l.cocina_preparada_at);
 
@@ -403,13 +410,29 @@ export default function OrderCard({
      su cerveza. */
   const fallos = fallosDeImpresion[order.id] ?? [];
 
-  async function handleAdvance() {
-    if (!next || !online || enviando.current) return;
-    enviando.current = true;
+  function intentoActual(): IntentoPedido {
     if (ultimoIntento.current?.version !== order.updated_at) {
       ultimoIntento.current = { id: crypto.randomUUID(), estado: order.status, version: order.updated_at };
     }
-    const intento = ultimoIntento.current;
+    return ultimoIntento.current;
+  }
+
+  /** La entrega desde la hoja de cobro: devuelve el error, o null. */
+  async function entregarDesdeCobro(): Promise<string | null> {
+    if (!next) return 'Este pedido ya no se puede entregar.';
+    try {
+      const res = await updateOrderStatus(order.id, next, intentoActual());
+      return res.error ?? null;
+    } catch {
+      return 'Se perdió la respuesta. Revisa el estado del pedido.';
+    }
+  }
+
+  async function handleAdvance() {
+    if (!next || !online || enviando.current) return;
+    if (next === 'DELIVERED' && pideCobro && !terminaPrueba) { setHojaCobro('entregar'); return; }
+    enviando.current = true;
+    const intento = intentoActual();
     onError('');
     // La comanda por navegador NO se dispara aquí: la imprime el panel al ver
     // que el pedido entró a cocina, venga de donde venga (este botón, la
@@ -718,6 +741,28 @@ export default function OrderCard({
         </div>
       )}
 
+      {order.status === 'DELIVERED' && pideCobro && (
+        <button type="button" onClick={() => setHojaCobro('cobrar')} disabled={!online}
+          className="press btn-tinted" style={{ minHeight: 44, borderRadius: 'var(--radius-lg)', fontWeight: 700, fontSize: 14, cursor: 'pointer', border: '1px solid var(--u-hair)' }}>
+          Cobrar {money(porCobrar, currency)}
+        </button>
+      )}
+
+      {hojaCobro && restaurantId && (
+        <CobroPedido
+          restaurantId={restaurantId}
+          orderId={order.id}
+          numero={shortOrderNumber(order.order_number)}
+          saldo={porCobrar}
+          metodoIndicado={order.payment_method}
+          pagaCon={order.cash_amount != null ? Number(order.cash_amount) : null}
+          entregar={hojaCobro === 'entregar' ? entregarDesdeCobro : undefined}
+          money={(n) => money(n, currency)}
+          onClose={() => setHojaCobro(null)}
+          onListo={(texto) => { setHojaCobro(null); flashPrint(texto, !texto.includes('No se')); onCambios(); }}
+        />
+      )}
+
       {/* Acciones (PED-02): UN botón principal —lo que toca ahora— y «⋯» con
           lo que se usa de vez en cuando (recibo, copia de comanda) y anular,
           que es destructivo y no debe estar a un dedo del principal. */}
@@ -738,7 +783,8 @@ export default function OrderCard({
                 opacity: isPending ? 0.7 : 1,
               }}
             >
-              {isPending ? '…' : terminaPrueba ? 'Terminar la prueba' : nextLabel(order.status, order.order_type)}
+              {isPending ? '…' : terminaPrueba ? 'Terminar la prueba'
+                : next === 'DELIVERED' && pideCobro ? 'Entregar y cobrar' : nextLabel(order.status, order.order_type)}
             </button>
           )}
           <DropdownMenu>

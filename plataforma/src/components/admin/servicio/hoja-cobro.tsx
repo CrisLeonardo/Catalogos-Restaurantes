@@ -355,7 +355,7 @@ function PartePagada({ parte, money }: { parte: RepartoCobro['partes'][number]; 
   );
 }
 
-function CampoImporte({ label, value, onChange, disabled }: {
+export function CampoImporte({ label, value, onChange, disabled }: {
   label: string; value: string; onChange: (value: string) => void; disabled: boolean;
 }) {
   return (
@@ -367,7 +367,7 @@ function CampoImporte({ label, value, onChange, disabled }: {
   );
 }
 
-function Fila({ label, valor, tone, destacada = false }: {
+export function Fila({ label, valor, tone, destacada = false }: {
   label: string; valor: string; tone?: 'ok'; destacada?: boolean;
 }) {
   return (

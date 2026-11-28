@@ -36,7 +36,9 @@ import {
   addCashExpense, deleteCashExpense, closeCaja, abrirTurno, getCajaReceipt,
   type CajaState, type TipShare, type CajaCloseResult, type SolicitudCierre,
 } from '@/lib/actions/finanzas';
-import type { Pendientes } from '@/lib/caja/turno-servidor';
+import type { Pendientes, PedidoPorCobrar } from '@/lib/caja/turno-servidor';
+import CobroPedido from '@/components/admin/cobro-pedido';
+import { shortOrderNumber } from '@/lib/order-number';
 import { corteAHora, rangoDelCierre } from '@/lib/caja/dia';
 import { fmtMoney } from '@/lib/money';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -433,7 +435,8 @@ export default function CashClose({ restaurantId, operador, state, dateLabel, ca
             hayConteo={hayConteo}
           />}
 
-          <TarjetaPendientes pending={state.pending} liberadas={state.releasedUnpaid} />
+          <TarjetaPendientes restaurantId={restaurantId} pending={state.pending} liberadas={state.releasedUnpaid}
+            onAviso={(a) => { setAviso(a); if (!a.bad) refrescar(); }} />
 
           <TarjetaGastos state={state} onAnotar={() => irA(2)} />
         </div>
@@ -562,10 +565,13 @@ function AbrirTurno({ restaurantId, shift, cobradoEnEfectivo, desde, onAviso }: 
 }
 
 /* ── Lo que queda sin cobrar ──────────────────────────────────── */
-function TarjetaPendientes({ pending, liberadas }: {
+function TarjetaPendientes({ restaurantId, pending, liberadas, onAviso }: {
+  restaurantId: string;
   pending: Pendientes;
   liberadas: CajaState['releasedUnpaid'];
+  onAviso: (a: { text: string; bad: boolean }) => void;
 }) {
+  const [cobrando, setCobrando] = useState<PedidoPorCobrar | null>(null);
   const n = pending.mesas.length + pending.domicilios.length + pending.paraLlevar.length;
   if (n === 0 && liberadas.pedidos === 0) return null;
   return (
@@ -573,7 +579,7 @@ function TarjetaPendientes({ pending, liberadas }: {
       {n > 0 && (
         <>
           <div className="adm-label adm-label-caps" style={{ color: 'var(--u-text-3)' }}>Sin cobrar todavía</div>
-          <ListaPendientes pending={pending} />
+          <ListaPendientes pending={pending} onCobrar={setCobrando} />
           <p style={{ margin: 0, fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.45 }}>
             No cuentan en este cuadre: entran en el turno en que se cobren.
           </p>
@@ -585,22 +591,43 @@ function TarjetaPendientes({ pending, liberadas }: {
           ({money(liberadas.total)}). No se espera ese dinero en el cajón.
         </p>
       )}
+      {cobrando && (
+        <CobroPedido
+          restaurantId={restaurantId}
+          orderId={cobrando.orderId}
+          numero={shortOrderNumber(cobrando.orderNumber)}
+          saldo={cobrando.total}
+          metodoIndicado={cobrando.metodo}
+          money={money}
+          onClose={() => setCobrando(null)}
+          onListo={(text) => { setCobrando(null); onAviso({ text, bad: false }); }}
+        />
+      )}
     </div>
   );
 }
 
-function ListaPendientes({ pending }: { pending: Pendientes }) {
-  const filas: { k: string; nombre: string; monto: number }[] = [
+function ListaPendientes({ pending, onCobrar }: { pending: Pendientes; onCobrar?: (p: PedidoPorCobrar) => void }) {
+  const enLinea = (d: PedidoPorCobrar, tipo: string) => ({
+    k: d.orderId, nombre: `${tipo} ${d.orderNumber.slice(-5)}${d.entregado ? ' · entregado' : ''}`, monto: d.total,
+    cobrar: d.entregado && onCobrar ? () => onCobrar(d) : undefined,
+  });
+  const filas: { k: string; nombre: string; monto: number; cobrar?: () => void }[] = [
     ...pending.mesas.map((m) => ({ k: `m${m.tableNumber}`, nombre: m.label, monto: m.porCobrar })),
-    ...pending.domicilios.map((d) => ({ k: d.orderId, nombre: `Domicilio ${d.orderNumber.slice(-5)}`, monto: d.total })),
-    ...pending.paraLlevar.map((d) => ({ k: d.orderId, nombre: `Para llevar ${d.orderNumber.slice(-5)}`, monto: d.total })),
+    ...pending.domicilios.map((d) => enLinea(d, 'A domicilio')),
+    ...pending.paraLlevar.map((d) => enLinea(d, 'Para llevar')),
   ];
+  // Lo entregado primero: es dinero que ya está en la mano de alguien.
+  filas.sort((a, b) => Number(!!b.cobrar) - Number(!!a.cobrar));
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       {filas.slice(0, 6).map((f) => (
-        <div key={f.k} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, fontSize: 13 }}>
-          <span style={{ color: 'var(--u-text-2)' }}>{f.nombre}</span>
+        <div key={f.k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 13, minHeight: f.cobrar ? 44 : undefined }}>
+          <span style={{ color: 'var(--u-text-2)', minWidth: 0, flex: 1 }}>{f.nombre}</span>
           <span className="t-mono" style={{ fontWeight: 600, color: 'var(--u-text)' }}>{money(f.monto)}</span>
+          {f.cobrar && (
+            <Button type="button" variant="secondary" size="md" onClick={f.cobrar}>Cobrar</Button>
+          )}
         </div>
       ))}
       {filas.length > 6 && (

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   cuadrarPeriodo, inicioDelPeriodo, esperadoEnCajon, netoPorMetodo,
   filasDeCambioDeMetodo, metodoPrincipal, devolvible, montoDeLinea,
-  type Movimiento, type PedidoSinFilas,
+  esperadoDelCorte, type Movimiento, type PedidoSinFilas,
 } from './libro';
 import {
   diaDeNegocio, inicioDelDia, bordesDelDia, minutosDelDia, horaACorte, corteAHora,
@@ -85,14 +85,30 @@ describe('cuadrarPeriodo · lo que no se ha cobrado no se espera (PROD-02)', () 
     expect(c.efectivo).toBe(80);
   });
 
-  it('domicilio del menú en línea entregado sin filas: cuenta con su método', () => {
+  it('domicilio en línea entregado sin cobro: no pone dinero en el cajón (auditoría 26-nov)', () => {
     const sinFilas: PedidoSinFilas[] = [
-      { orderId: 'd1', orderType: 'DELIVERY', method: 'CASH', total: 95, at: '2026-10-09T20:00:00Z' },
+      { orderId: 'd1', orderType: 'DELIVERY', method: 'CASH', total: 22.1, at: '2026-10-09T20:00:00Z' },
       { orderId: 'd2', orderType: 'PICKUP', method: 'card', total: 60, at: '2026-10-09T20:00:00Z' },
     ];
     const c = cuadrarPeriodo([], sinFilas);
-    expect(c.porMetodo).toEqual({ CASH: 95, CARD: 60 });
-    expect(c.pedidos).toBe(2);
+    expect(c.porMetodo).toEqual({});
+    expect(c.efectivo).toBe(0);
+    expect(c.cobrado).toBe(0);
+    expect(c.pedidos).toBe(0);
+    expect(c.entregadosSinCobro).toEqual({ pedidos: 2, total: 82.1 });
+    expect(esperadoEnCajon(100, c.efectivo, 0)).toBe(100);
+  });
+
+  it('cobrarlo después en efectivo suma exactamente su total', () => {
+    const c = cuadrarPeriodo([mov({ orderId: 'd1', amount: 22.1, kind: 'PAYMENT' })], []);
+    expect(c.efectivo).toBe(22.1);
+    expect(esperadoEnCajon(100, c.efectivo, 0)).toBe(122.1);
+  });
+
+  it('cobrado con tarjeta queda fuera del efectivo esperado', () => {
+    const c = cuadrarPeriodo([mov({ orderId: 'd1', amount: 22.1, method: 'CARD', kind: 'PAYMENT' })], []);
+    expect(c.porMetodo).toEqual({ CARD: 22.1 });
+    expect(c.efectivo).toBe(0);
   });
 
   it('mesa liberada sin cobrar: no se espera, pero se enseña', () => {
@@ -208,5 +224,13 @@ describe('inicioDelPeriodo · el turno cubre desde el cierre anterior (PROD-03)'
     const c = cuadrarPeriodo(deLaNoche, []);
     // Antes esperaba Q500 y salía «faltan Q300».
     expect(esperadoEnCajon(500, c.efectivo, 0)).toBe(700);
+  });
+});
+
+describe('historial de cortes (auditoría 26-nov, hallazgo 7)', () => {
+  it('el efectivo esperado del corte incluye fondo y gastos, no solo las ventas', () => {
+    // Fondo Q100, gasto Q7.25, ventas en efectivo Q0, contado Q91.75, faltante Q1.
+    expect(esperadoDelCorte({ counted_cash: '91.75', difference: '-1.00' })).toBe(92.75);
+    expect(esperadoEnCajon(100, 0, 7.25)).toBe(92.75);
   });
 });

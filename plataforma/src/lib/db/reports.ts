@@ -167,7 +167,8 @@ export function buildSalesReport(from: string, to: string, d: RawSalesReport): S
       date: r.date, label: dayLabel(r.date), revenue: Number(r.revenue), orders: Number(r.orders),
     })),
     byChannel: mapSplit(d.byChannel, (key) => CHANNEL_LABEL[key] ?? key),
-    byPayment: mapSplit(d.byPayment, (key) => labelOf(key)),
+    // Desde la 207 es lo COBRADO por método; PENDING = lo vendido sin cobro registrado.
+    byPayment: mapSplit(d.byPayment, (key) => (key === 'PENDING' ? 'Sin cobro registrado' : labelOf(key))),
     byZone: mapSplit(d.byZone, (key) => key),
     topByRevenue: mapProducts(d.topByRevenue),
     topByQuantity: (d.topByQuantity ?? []).map(({ name, qty }) => ({ name, qty: Number(qty) })),
