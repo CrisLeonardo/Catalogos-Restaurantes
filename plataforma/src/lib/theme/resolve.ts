@@ -109,6 +109,10 @@ const LEGACY_DEFAULTS: Record<string, string> = {
   'Pagás cuando llega tu pedido': 'Pagas cuando llega tu pedido',
   'Nada por aquí. Probá otra cosa.': 'Nada por aquí. Prueba otra cosa.',
   'Volvé en nuestro horario de atención. ¡Te esperamos!': 'Vuelve en nuestro horario de atención. ¡Te esperamos!',
+  // No hay pago en línea: se paga al recibir o en el local (auditoría 26-nov, hallazgo 10).
+  'Ir a pagar': 'Continuar con el pedido',
+  'Efectivo contra entrega': 'Efectivo al recibir',
+  'Tarjeta (paga al recibir)': 'Tarjeta al recibir con POS',
 };
 
 /** Merge de 2 niveles para content (sección → claves). */
