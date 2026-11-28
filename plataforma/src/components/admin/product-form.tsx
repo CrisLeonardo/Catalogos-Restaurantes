@@ -19,7 +19,7 @@
    no borra nada.
    ============================================================ */
 
-import { useActionState, useRef, useState, useTransition } from 'react';
+import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
 import { Icon } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -157,6 +157,26 @@ export default function ProductForm({
      cambios y avisa si te vas sin guardar. */
   const { ref: formRef, dirty } = useFormDirty();
   const siguienteRef = useRef<HTMLInputElement>(null);
+  /* Cómo estaba la ficha al abrirla (auditoría 26-nov, hallazgo 2): el
+     servidor escribe solo lo que cambió respecto a esto, y avisa si otra
+     persona cambió lo mismo mientras tanto. */
+  const baseFicha = useRef<string>('');
+  const forzar = useRef(false);
+  useEffect(() => {
+    const form = formRef.current;
+    if (!isEdit || !form) return;
+    const campos: Record<string, string> = {};
+    for (const [k, v] of new FormData(form).entries()) if (typeof v === 'string') campos[k] = v;
+    baseFicha.current = JSON.stringify(campos);
+  }, [isEdit, formRef]);
+  function enviar(fd: FormData) {
+    if (isEdit) {
+      fd.set('base', baseFicha.current);
+      if (forzar.current) fd.set('forzar', '1');
+      forzar.current = false;
+    }
+    return formAction(fd);
+  }
 
   const [imageUrl, setImageUrl] = useState<string>(product?.image_url ?? '');
   const [isAvailable, setIsAvailable] = useState(product?.is_available ?? true);
@@ -250,7 +270,7 @@ export default function ProductForm({
   };
 
   return (
-    <form ref={formRef} action={formAction} className={s.ficha}>
+    <form ref={formRef} action={enviar} className={s.ficha}>
       {/* Campos ocultos */}
       <input type="hidden" name="restaurantId" value={restaurantId} />
       {isEdit && <input type="hidden" name="id" value={product!.id} />}
@@ -570,8 +590,18 @@ export default function ProductForm({
       </Seccion>
 
       {/* ── Guardar ── */}
+      {isEdit && state?.conflicto && (
+        <div role="alert" className="note note-warn" style={{ flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+          <span style={{ flex: '1 1 16rem' }}>{state.error}</span>
+          <Button type="button" variant="secondary" size="lg" onClick={() => window.location.reload()}>Recargar la ficha</Button>
+          <Button type="button" variant="outline" size="lg" disabled={isPending}
+            onClick={() => { forzar.current = true; formRef.current?.requestSubmit(); }}>
+            Guardar la mía encima
+          </Button>
+        </div>
+      )}
       {isEdit ? (
-        <SaveBar dirty={dirty} pending={isPending} status={state?.error ? { error: state.error } : null} label="Guardar cambios" />
+        <SaveBar dirty={dirty} pending={isPending} status={state?.error && !state.conflicto ? { error: state.error } : null} label="Guardar cambios" />
       ) : (
         <div className="pform-savebar">
           {state?.error && (
